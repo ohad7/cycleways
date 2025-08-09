@@ -1065,8 +1065,8 @@ function initMap() {
         // Convert pixel threshold to approximate degree threshold
         const degreeThreshold = threshold * 0.00005; // Rough conversion
         const candidateSegment = spatialIndex.findNearestSegment(
-          mousePoint.lat, 
-          mousePoint.lng, 
+          mousePoint.lat,
+          mousePoint.lng,
           degreeThreshold
         );
 
@@ -1074,7 +1074,7 @@ function initMap() {
         if (candidateSegment) {
           const coords = candidateSegment.coordinates;
           let minPixelDistance = Infinity;
-          
+
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
             const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
@@ -1175,11 +1175,15 @@ function initMap() {
         }
 
         segmentDisplay.style.display = "block";
+
+        // Show arrow pointing to segment
+        showSegmentArrow(closestSegment, segmentDisplay);
       } else {
         // No segment close enough - reset cursor and hide display
         map.getCanvas().style.cursor = "";
         const segmentDisplay = document.getElementById("segment-name-display");
         segmentDisplay.style.display = "none";
+        hideSegmentArrow();
       }
     });
 
@@ -1202,8 +1206,8 @@ function initMap() {
         // Convert pixel threshold to approximate degree threshold
         const degreeThreshold = threshold * 0.00005; // Rough conversion
         const candidateSegment = spatialIndex.findNearestSegment(
-          clickPoint.lat, 
-          clickPoint.lng, 
+          clickPoint.lat,
+          clickPoint.lng,
           degreeThreshold
         );
 
@@ -1213,7 +1217,7 @@ function initMap() {
           let minPixelDistance = Infinity;
           let bestSegmentStart = null;
           let bestSegmentEnd = null;
-          
+
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
             const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
