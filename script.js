@@ -3447,11 +3447,11 @@ function showExamplePoint() {
     
     // Position tooltip above and to the left of the point (lowered to make room for arrow)
     tooltip.style.left = (rect.left - 80) + 'px';
-    tooltip.style.top = (rect.top - 55) + 'px';
+    tooltip.style.top = (rect.top - 85) + 'px';
     
     // Position arrow above the tooltip pointing down to marker
     arrow.style.left = (rect.left + 2) + 'px';
-    arrow.style.top = (rect.top - 40) + 'px';
+    arrow.style.top = (rect.top - 70) + 'px';
   };
 
   updateTooltipPosition();
