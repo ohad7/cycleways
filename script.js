@@ -1174,9 +1174,13 @@ function initMap() {
           }
         }
 
-        // Check if this is the first time showing segment display in this session
-        if (!window.hasShownSegmentDisplay) {
-          window.hasShownSegmentDisplay = true;
+        // Check if this is within the first 5 times showing segment display in this session
+        if (!window.segmentDisplayCount) {
+          window.segmentDisplayCount = 0;
+        }
+        
+        if (window.segmentDisplayCount < 5) {
+          window.segmentDisplayCount++;
           segmentDisplay.classList.add('bounce-intro');
           // Remove the bounce class after animation completes
           setTimeout(() => {
