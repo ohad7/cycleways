@@ -1177,13 +1177,20 @@ function initMap() {
 
         // Show hover preview dot at the closest point on segment
         if (closestPointOnSegment && !isDraggingPoint) {
-          // Check if hover point is too close to any existing route points
-          const minDistanceFromPoints = 30; // 30 meters threshold
+          // Check if hover point is too close to any existing route points using pixel distance
+          const minPixelDistanceFromPoints = 30; // 30 pixels threshold
           let tooCloseToExistingPoint = false;
 
+          const hoverPointPixel = map.project([closestPointOnSegment.lng, closestPointOnSegment.lat]);
+
           for (const routePoint of routePoints) {
-            const distance = getDistance(closestPointOnSegment, routePoint);
-            if (distance < minDistanceFromPoints) {
+            const routePointPixel = map.project([routePoint.lng, routePoint.lat]);
+            const pixelDistance = Math.sqrt(
+              Math.pow(hoverPointPixel.x - routePointPixel.x, 2) + 
+              Math.pow(hoverPointPixel.y - routePointPixel.y, 2)
+            );
+            
+            if (pixelDistance < minPixelDistanceFromPoints) {
               tooCloseToExistingPoint = true;
               break;
             }
