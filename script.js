@@ -1177,27 +1177,47 @@ function initMap() {
 
         // Show hover preview dot at the closest point on segment
         if (closestPointOnSegment && !isDraggingPoint) {
-          // Remove existing hover preview marker
-          if (window.hoverPreviewMarker) {
-            window.hoverPreviewMarker.remove();
+          // Check if hover point is too close to any existing route points
+          const minDistanceFromPoints = 30; // 30 meters threshold
+          let tooCloseToExistingPoint = false;
+
+          for (const routePoint of routePoints) {
+            const distance = getDistance(closestPointOnSegment, routePoint);
+            if (distance < minDistanceFromPoints) {
+              tooCloseToExistingPoint = true;
+              break;
+            }
           }
 
-          // Create red circle marker for hover preview
-          const el = document.createElement("div");
-          el.className = "hover-preview-marker";
-          el.style.cssText = `
-            width: 10px;
-            height: 10px;
-            background: ${COLORS.ELEVATION_MARKER};
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(255, 68, 68, 0.4);
-            pointer-events: none;
-          `;
+          if (!tooCloseToExistingPoint) {
+            // Remove existing hover preview marker
+            if (window.hoverPreviewMarker) {
+              window.hoverPreviewMarker.remove();
+            }
 
-          window.hoverPreviewMarker = new mapboxgl.Marker(el)
-            .setLngLat([closestPointOnSegment.lng, closestPointOnSegment.lat])
-            .addTo(map);
+            // Create red circle marker for hover preview
+            const el = document.createElement("div");
+            el.className = "hover-preview-marker";
+            el.style.cssText = `
+              width: 10px;
+              height: 10px;
+              background: ${COLORS.ELEVATION_MARKER};
+              border: 2px solid white;
+              border-radius: 50%;
+              box-shadow: 0 2px 6px rgba(255, 68, 68, 0.4);
+              pointer-events: none;
+            `;
+
+            window.hoverPreviewMarker = new mapboxgl.Marker(el)
+              .setLngLat([closestPointOnSegment.lng, closestPointOnSegment.lat])
+              .addTo(map);
+          } else {
+            // Remove hover preview marker if too close to existing point
+            if (window.hoverPreviewMarker) {
+              window.hoverPreviewMarker.remove();
+              window.hoverPreviewMarker = null;
+            }
+          }
         }
 
         // Show segment info using pre-calculated data
