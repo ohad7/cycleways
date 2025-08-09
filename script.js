@@ -191,7 +191,6 @@ function createPointMarker(point, index) {
       draggedFeature = { ...e.features[0] }; // Create a copy
       draggedPointIndex = draggedFeature.properties.index;
 
-      map.getCanvas().style.cursor = "grabbing";
       map.dragPan.disable();
       document.body.style.userSelect = "none";
     });
@@ -265,7 +264,6 @@ function createPointMarker(point, index) {
       draggedPointIndex = -1;
       draggedFeature = null;
 
-      map.getCanvas().style.cursor = "";
       map.dragPan.enable();
       document.body.style.userSelect = "";
 
@@ -366,17 +364,6 @@ function createPointMarker(point, index) {
       const feature = e.features[0];
       if (feature) {
         removeRoutePoint(feature.properties.index);
-      }
-    });
-
-    // Hover effects
-    map.on("mouseenter", "route-points-circle", () => {
-      map.getCanvas().style.cursor = "grab";
-    });
-
-    map.on("mouseleave", "route-points-circle", () => {
-      if (!isDragging) {
-        map.getCanvas().style.cursor = "";
       }
     });
   }
@@ -1178,18 +1165,24 @@ function initMap() {
         // Show hover preview dot at the closest point on segment
         if (closestPointOnSegment && !isDraggingPoint) {
           // Check if hover point is too close to any existing route points using pixel distance
-          const minPixelDistanceFromPoints = 30; // 30 pixels threshold
+          const minPixelDistanceFromPoints = 15; // 30 pixels threshold
           let tooCloseToExistingPoint = false;
 
-          const hoverPointPixel = map.project([closestPointOnSegment.lng, closestPointOnSegment.lat]);
+          const hoverPointPixel = map.project([
+            closestPointOnSegment.lng,
+            closestPointOnSegment.lat,
+          ]);
 
           for (const routePoint of routePoints) {
-            const routePointPixel = map.project([routePoint.lng, routePoint.lat]);
+            const routePointPixel = map.project([
+              routePoint.lng,
+              routePoint.lat,
+            ]);
             const pixelDistance = Math.sqrt(
-              Math.pow(hoverPointPixel.x - routePointPixel.x, 2) + 
-              Math.pow(hoverPointPixel.y - routePointPixel.y, 2)
+              Math.pow(hoverPointPixel.x - routePointPixel.x, 2) +
+                Math.pow(hoverPointPixel.y - routePointPixel.y, 2),
             );
-            
+
             if (pixelDistance < minPixelDistanceFromPoints) {
               tooCloseToExistingPoint = true;
               break;
@@ -1272,7 +1265,6 @@ function initMap() {
         segmentDisplay.style.display = "block";
       } else {
         // No segment close enough - reset cursor and hide display
-        map.getCanvas().style.cursor = "";
         const segmentDisplay = document.getElementById("segment-name-display");
         segmentDisplay.style.display = "none";
 
@@ -2101,7 +2093,6 @@ async function parseGeoJSON(geoJsonData) {
       });
 
       map.on("mouseleave", layerId, () => {
-        map.getCanvas().style.cursor = "";
         if (!selectedSegments.includes(name)) {
           map.setPaintProperty(layerId, "line-width", originalWeight);
           map.setPaintProperty(layerId, "line-opacity", originalOpacity);
@@ -3558,8 +3549,8 @@ function showExamplePoint() {
       arrow.parentNode.removeChild(arrow);
     }
     map.off("move", updatePositionHandler);
-    document.removeEventListener("mousemove", removeExample);
-    document.removeEventListener("touchstart", removeExample);
+    // document.removeEventListener("mousemove", removeExample);
+    // document.removeEventListener("touchstart", removeExample);
   };
 
   // Remove on mouse move or touch
@@ -3567,7 +3558,7 @@ function showExamplePoint() {
   // document.addEventListener("touchstart", removeExample, { once: true });
 
   // Remove after 2 seconds
-  setTimeout(removeExample, 2000);
+  //setTimeout(removeExample, 2000);
 }
 
 // Function to scroll to top of page
