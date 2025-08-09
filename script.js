@@ -1174,6 +1174,16 @@ function initMap() {
           }
         }
 
+        // Check if this is the first time showing segment display in this session
+        if (!window.hasShownSegmentDisplay) {
+          window.hasShownSegmentDisplay = true;
+          segmentDisplay.classList.add('bounce-intro');
+          // Remove the bounce class after animation completes
+          setTimeout(() => {
+            segmentDisplay.classList.remove('bounce-intro');
+          }, 600);
+        }
+
         segmentDisplay.style.display = "block";
       } else {
         // No segment close enough - reset cursor and hide display
