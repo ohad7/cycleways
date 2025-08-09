@@ -3486,9 +3486,11 @@ function showExamplePoint() {
   tooltip.innerHTML = "לחץ להוספה למסלול";
   tooltip.style.cssText = `
     position: absolute;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
+    background: white;
+    color: black;
+    font-weight: bold;
     padding: 8px 12px;
+    border: 2px solid red;
     border-radius: 4px;
     font-size: 12px;
     white-space: nowrap;
