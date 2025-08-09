@@ -1745,6 +1745,11 @@ async function loadKMLFile() {
       if (typeof initTutorial === "function") {
         initTutorial();
       }
+
+      // Show example point after map is fully loaded
+      setTimeout(() => {
+        showExamplePoint();
+      }, 2000);
     }, 1000);
   } catch (error) {
     document.getElementById("error-message").style.display = "block";
@@ -3368,6 +3373,112 @@ function searchLocation() {
       searchError.textContent = "שגיאה בחיפוש מיקום. נא לנסות שוב.";
       searchError.style.display = "block";
     });
+}
+
+// Function to show example point with tooltip
+function showExamplePoint() {
+  // Don't show if user already has segments selected or if tutorial is active
+  if (selectedSegments.length > 0 || (window.tutorial && window.tutorial.isActive)) {
+    return;
+  }
+
+  const exampleLat = 33.19692644679666;
+  const exampleLng = 35.58858972227379;
+
+  // Create example point marker
+  const exampleElement = document.createElement('div');
+  exampleElement.className = 'example-point';
+  exampleElement.style.cssText = `
+    width: 12px;
+    height: 12px;
+    background: #ff4444;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
+    cursor: pointer;
+    animation: pulse 1.5s infinite;
+  `;
+
+  const exampleMarker = new mapboxgl.Marker(exampleElement)
+    .setLngLat([exampleLng, exampleLat])
+    .addTo(map);
+
+  // Create tooltip
+  const tooltip = document.createElement('div');
+  tooltip.className = 'example-tooltip';
+  tooltip.innerHTML = 'לחץ להוספה למסלול';
+  tooltip.style.cssText = `
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  `;
+
+  // Create arrow pointing to the example point
+  const arrow = document.createElement('div');
+  arrow.className = 'example-arrow';
+  arrow.style.cssText = `
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid rgba(0, 0, 0, 0.8);
+    z-index: 999;
+    pointer-events: none;
+  `;
+
+  document.body.appendChild(tooltip);
+  document.body.appendChild(arrow);
+
+  // Position tooltip and arrow relative to the marker
+  const updateTooltipPosition = () => {
+    const markerElement = exampleElement;
+    const rect = markerElement.getBoundingClientRect();
+    
+    // Position tooltip above and to the left of the point
+    tooltip.style.left = (rect.left - 80) + 'px';
+    tooltip.style.top = (rect.top - 40) + 'px';
+    
+    // Position arrow to point from tooltip to marker
+    arrow.style.left = (rect.left + 2) + 'px';
+    arrow.style.top = (rect.top - 8) + 'px';
+  };
+
+  updateTooltipPosition();
+
+  // Update position when map moves
+  const updatePositionHandler = () => updateTooltipPosition();
+  map.on('move', updatePositionHandler);
+
+  // Remove example after 2 seconds or on mouse move
+  const removeExample = () => {
+    if (exampleMarker) {
+      exampleMarker.remove();
+    }
+    if (tooltip && tooltip.parentNode) {
+      tooltip.parentNode.removeChild(tooltip);
+    }
+    if (arrow && arrow.parentNode) {
+      arrow.parentNode.removeChild(arrow);
+    }
+    map.off('move', updatePositionHandler);
+    document.removeEventListener('mousemove', removeExample);
+    document.removeEventListener('touchstart', removeExample);
+  };
+
+  // Remove on mouse move or touch
+  document.addEventListener('mousemove', removeExample, { once: true });
+  document.addEventListener('touchstart', removeExample, { once: true });
+
+  // Remove after 2 seconds
+  setTimeout(removeExample, 2000);
 }
 
 // Function to scroll to top of page
