@@ -987,6 +987,11 @@ function resetRoute() {
     window.elevationMarker = null;
   }
 
+  if (window.hoverPreviewMarker) {
+    window.hoverPreviewMarker.remove();
+    window.hoverPreviewMarker = null;
+  }
+
   // Hide segment name display
   const segmentDisplay = document.getElementById("segment-name-display");
   segmentDisplay.style.display = "none";
@@ -1063,6 +1068,7 @@ function initMap() {
       const mousePixel = map.project(mousePoint);
       const threshold = 15; // pixels
       let closestSegment = null;
+      let closestPointOnSegment = null;
 
       // Use spatial index for efficient segment lookup
       if (spatialIndex) {
@@ -1078,6 +1084,8 @@ function initMap() {
         if (candidateSegment) {
           const coords = candidateSegment.coordinates;
           let minPixelDistance = Infinity;
+          let bestSegmentStart = null;
+          let bestSegmentEnd = null;
 
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
@@ -1094,11 +1102,18 @@ function initMap() {
 
             if (distance < minPixelDistance) {
               minPixelDistance = distance;
+              bestSegmentStart = coords[i];
+              bestSegmentEnd = coords[i + 1];
             }
           }
 
-          if (minPixelDistance < threshold) {
+          if (minPixelDistance < threshold && bestSegmentStart && bestSegmentEnd) {
             closestSegment = candidateSegment;
+            closestPointOnSegment = getClosestPointOnLineSegment(
+              { lat: mousePoint.lat, lng: mousePoint.lng },
+              bestSegmentStart,
+              bestSegmentEnd,
+            );
           }
         }
       }
@@ -1156,6 +1171,31 @@ function initMap() {
           );
         }
 
+        // Show hover preview dot at the closest point on segment
+        if (closestPointOnSegment && !isDraggingPoint) {
+          // Remove existing hover preview marker
+          if (window.hoverPreviewMarker) {
+            window.hoverPreviewMarker.remove();
+          }
+
+          // Create red circle marker for hover preview
+          const el = document.createElement("div");
+          el.className = "hover-preview-marker";
+          el.style.cssText = `
+            width: 8px;
+            height: 8px;
+            background: ${COLORS.ELEVATION_MARKER};
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(255, 68, 68, 0.4);
+            pointer-events: none;
+          `;
+
+          window.hoverPreviewMarker = new mapboxgl.Marker(el)
+            .setLngLat([closestPointOnSegment.lng, closestPointOnSegment.lat])
+            .addTo(map);
+        }
+
         // Show segment info using pre-calculated data
         const name = closestSegment.segmentName;
         const metrics = segmentMetrics[name];
@@ -1204,6 +1244,12 @@ function initMap() {
         map.getCanvas().style.cursor = "";
         const segmentDisplay = document.getElementById("segment-name-display");
         segmentDisplay.style.display = "none";
+        
+        // Remove hover preview marker
+        if (window.hoverPreviewMarker) {
+          window.hoverPreviewMarker.remove();
+          window.hoverPreviewMarker = null;
+        }
       }
     });
 
@@ -1275,6 +1321,12 @@ function initMap() {
 
       // Only add point if close enough to a segment and snap it to the segment
       if (closestSegment && closestPointOnSegment) {
+        // Remove hover preview marker since we're adding the actual point
+        if (window.hoverPreviewMarker) {
+          window.hoverPreviewMarker.remove();
+          window.hoverPreviewMarker = null;
+        }
+        
         addRoutePoint({
           lng: closestPointOnSegment.lng,
           lat: closestPointOnSegment.lat,
