@@ -3418,9 +3418,10 @@ function showExamplePoint() {
     pointer-events: none;
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    animation: tooltipBounce 1s ease-in-out infinite alternate;
   `;
 
-  // Create arrow pointing to the example point
+  // Create arrow pointing down to the example point
   const arrow = document.createElement('div');
   arrow.className = 'example-arrow';
   arrow.style.cssText = `
@@ -3429,9 +3430,11 @@ function showExamplePoint() {
     height: 0;
     border-left: 8px solid transparent;
     border-right: 8px solid transparent;
-    border-top: 8px solid rgba(0, 0, 0, 0.8);
+    border-bottom: 8px solid #ff4444;
+    border-top: 2px solid white;
     z-index: 999;
     pointer-events: none;
+    filter: drop-shadow(0 0 2px white);
   `;
 
   document.body.appendChild(tooltip);
@@ -3442,13 +3445,13 @@ function showExamplePoint() {
     const markerElement = exampleElement;
     const rect = markerElement.getBoundingClientRect();
     
-    // Position tooltip above and to the left of the point
+    // Position tooltip above and to the left of the point (lowered to make room for arrow)
     tooltip.style.left = (rect.left - 80) + 'px';
-    tooltip.style.top = (rect.top - 40) + 'px';
+    tooltip.style.top = (rect.top - 55) + 'px';
     
-    // Position arrow to point from tooltip to marker
+    // Position arrow above the tooltip pointing down to marker
     arrow.style.left = (rect.left + 2) + 'px';
-    arrow.style.top = (rect.top - 8) + 'px';
+    arrow.style.top = (rect.top - 40) + 'px';
   };
 
   updateTooltipPosition();

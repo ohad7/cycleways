@@ -435,6 +435,15 @@ html {
   }
 }
 
+@keyframes tooltipBounce {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-3px);
+  }
+}
+
 @media (max-width: 768px) {
   .segment-name-display {
     position: absolute;
