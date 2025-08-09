@@ -25,8 +25,6 @@ const COLORS = {
   HIGHLIGHT_WHITE: "#ffffff", // White for highlighting all segments
 };
 
-
-
 const MIN_ZOOM_LEVEL = 13; // Minimum zoom level when focusing on segments
 
 // Function to highlight all segments in white and then return to original colors
@@ -112,7 +110,10 @@ function addRoutePoint(lngLat, fromClick = true) {
   // Use RouteManager to add the point and get updated segments
   if (routeManager) {
     try {
-      const updatedSegments = routeManager.addPoint({ lat: lngLat.lat, lng: lngLat.lng });
+      const updatedSegments = routeManager.addPoint({
+        lat: lngLat.lat,
+        lng: lngLat.lng,
+      });
       selectedSegments = updatedSegments;
 
       // Create marker for the new point
@@ -708,7 +709,10 @@ function undo() {
         selectedSegments = restoredSegments;
 
         // If restoration failed, fallback to the saved segments
-        if (selectedSegments.length === 0 && previousState.segments.length > 0) {
+        if (
+          selectedSegments.length === 0 &&
+          previousState.segments.length > 0
+        ) {
           console.warn("RouteManager restoration failed, using saved segments");
           selectedSegments = [...previousState.segments];
           // Update RouteManager's internal state to match
@@ -1065,19 +1069,22 @@ function initMap() {
         // Convert pixel threshold to approximate degree threshold
         const degreeThreshold = threshold * 0.00005; // Rough conversion
         const candidateSegment = spatialIndex.findNearestSegment(
-          mousePoint.lat, 
-          mousePoint.lng, 
-          degreeThreshold
+          mousePoint.lat,
+          mousePoint.lng,
+          degreeThreshold,
         );
 
         // Verify the candidate with precise pixel distance if found
         if (candidateSegment) {
           const coords = candidateSegment.coordinates;
           let minPixelDistance = Infinity;
-          
+
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
-            const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
+            const endPixel = map.project([
+              coords[i + 1].lng,
+              coords[i + 1].lat,
+            ]);
 
             const distance = distanceToLineSegmentPixels(
               mousePixel,
@@ -1178,13 +1185,16 @@ function initMap() {
         if (!window.displayedSegmentNames) {
           window.displayedSegmentNames = new Set();
         }
-        
-        if (window.displayedSegmentNames.size < 5 && !window.displayedSegmentNames.has(closestSegment.segmentName)) {
+
+        if (
+          window.displayedSegmentNames.size < 10 &&
+          !window.displayedSegmentNames.has(closestSegment.segmentName)
+        ) {
           window.displayedSegmentNames.add(closestSegment.segmentName);
-          segmentDisplay.classList.add('bounce-intro');
+          segmentDisplay.classList.add("bounce-intro");
           // Remove the bounce class after animation completes
           setTimeout(() => {
-            segmentDisplay.classList.remove('bounce-intro');
+            segmentDisplay.classList.remove("bounce-intro");
           }, 600);
         }
 
@@ -1216,9 +1226,9 @@ function initMap() {
         // Convert pixel threshold to approximate degree threshold
         const degreeThreshold = threshold * 0.00005; // Rough conversion
         const candidateSegment = spatialIndex.findNearestSegment(
-          clickPoint.lat, 
-          clickPoint.lng, 
-          degreeThreshold
+          clickPoint.lat,
+          clickPoint.lng,
+          degreeThreshold,
         );
 
         // Verify the candidate with precise pixel distance if found
@@ -1227,10 +1237,13 @@ function initMap() {
           let minPixelDistance = Infinity;
           let bestSegmentStart = null;
           let bestSegmentEnd = null;
-          
+
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
-            const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
+            const endPixel = map.project([
+              coords[i + 1].lng,
+              coords[i + 1].lat,
+            ]);
 
             const distance = distanceToLineSegmentPixels(
               clickPixel,
@@ -1245,7 +1258,11 @@ function initMap() {
             }
           }
 
-          if (minPixelDistance < threshold && bestSegmentStart && bestSegmentEnd) {
+          if (
+            minPixelDistance < threshold &&
+            bestSegmentStart &&
+            bestSegmentEnd
+          ) {
             closestSegment = candidateSegment;
             closestPointOnSegment = getClosestPointOnLineSegment(
               { lat: clickPoint.lat, lng: clickPoint.lng },
@@ -2019,10 +2036,12 @@ async function parseGeoJSON(geoJsonData) {
 
     // Initialize spatial index and populate it with all segments
     spatialIndex = new SpatialIndex();
-    routePolylines.forEach(polylineData => {
+    routePolylines.forEach((polylineData) => {
       spatialIndex.addSegment(polylineData);
     });
-    console.log(`Spatial index initialized with ${routePolylines.length} segments`);
+    console.log(
+      `Spatial index initialized with ${routePolylines.length} segments`,
+    );
 
     // Initialize RouteManager and load data
     routeManager = new RouteManager();
