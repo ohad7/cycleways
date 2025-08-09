@@ -49,18 +49,9 @@ class Tutorial {
   }
 
   shouldShowTutorial() {
-    // Don't show if tutorial was already seen
-    if (localStorage.getItem('bikeRouteTutorialSeen') === 'true') {
-      return false;
-    }
-
-    // Don't show if there's a route parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('route')) {
-      return false;
-    }
-
-    return true;
+    // Always return false to disable automatic tutorial
+    // Tutorial can only be started manually via the help button
+    return false;
   }
 
   start() {
