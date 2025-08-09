@@ -389,24 +389,34 @@ html {
 }
 
 .segment-name-display.bounce-intro {
-  animation: bounceIntro 0.6s ease-out;
+  animation: pulseGlow 1.2s ease-in-out;
 }
 
-@keyframes bounceIntro {
+@keyframes pulseGlow {
   0% {
-    transform: scale(0.3) translateY(-10px);
+    transform: scale(0.8);
     opacity: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(70, 130, 180, 0.7);
+  }
+  25% {
+    transform: scale(1.05);
+    opacity: 0.8;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 20px 5px rgba(70, 130, 180, 0.6);
   }
   50% {
-    transform: scale(1.1) translateY(-5px);
+    transform: scale(1.1);
     opacity: 1;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 30px 10px rgba(70, 130, 180, 0.8);
   }
-  70% {
-    transform: scale(0.9) translateY(0px);
+  75% {
+    transform: scale(1.05);
+    opacity: 1;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 20px 5px rgba(70, 130, 180, 0.6);
   }
   100% {
-    transform: scale(1) translateY(0px);
+    transform: scale(1);
     opacity: 1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 }
 
