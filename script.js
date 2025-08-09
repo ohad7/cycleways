@@ -1174,13 +1174,13 @@ function initMap() {
           }
         }
 
-        // Check if this is within the first 5 times showing segment display in this session
-        if (!window.segmentDisplayCount) {
-          window.segmentDisplayCount = 0;
+        // Check if this segment has been displayed before (track by segment name)
+        if (!window.displayedSegmentNames) {
+          window.displayedSegmentNames = new Set();
         }
         
-        if (window.segmentDisplayCount < 5) {
-          window.segmentDisplayCount++;
+        if (window.displayedSegmentNames.size < 5 && !window.displayedSegmentNames.has(closestSegment.segmentName)) {
+          window.displayedSegmentNames.add(closestSegment.segmentName);
           segmentDisplay.classList.add('bounce-intro');
           // Remove the bounce class after animation completes
           setTimeout(() => {
