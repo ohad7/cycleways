@@ -3378,7 +3378,10 @@ function searchLocation() {
 // Function to show example point with tooltip
 function showExamplePoint() {
   // Don't show if user already has segments selected or if tutorial is active
-  if (selectedSegments.length > 0 || (window.tutorial && window.tutorial.isActive)) {
+  if (
+    selectedSegments.length > 0 ||
+    (window.tutorial && window.tutorial.isActive)
+  ) {
     return;
   }
 
@@ -3386,8 +3389,8 @@ function showExamplePoint() {
   const exampleLng = 35.58858972227379;
 
   // Create example point marker
-  const exampleElement = document.createElement('div');
-  exampleElement.className = 'example-point';
+  const exampleElement = document.createElement("div");
+  exampleElement.className = "example-point";
   exampleElement.style.cssText = `
     width: 12px;
     height: 12px;
@@ -3404,9 +3407,9 @@ function showExamplePoint() {
     .addTo(map);
 
   // Create tooltip
-  const tooltip = document.createElement('div');
-  tooltip.className = 'example-tooltip';
-  tooltip.innerHTML = 'לחץ להוספה למסלול';
+  const tooltip = document.createElement("div");
+  tooltip.className = "example-tooltip";
+  tooltip.innerHTML = "לחץ להוספה למסלול";
   tooltip.style.cssText = `
     position: absolute;
     background: rgba(0, 0, 0, 0.8);
@@ -3422,8 +3425,8 @@ function showExamplePoint() {
   `;
 
   // Create arrow pointing down to the example point
-  const arrow = document.createElement('div');
-  arrow.className = 'example-arrow';
+  const arrow = document.createElement("div");
+  arrow.className = "example-arrow";
   arrow.style.cssText = `
     position: absolute;
     width: 0;
@@ -3444,21 +3447,21 @@ function showExamplePoint() {
   const updateTooltipPosition = () => {
     const markerElement = exampleElement;
     const rect = markerElement.getBoundingClientRect();
-    
+
     // Position tooltip above and to the left of the point (lowered to make room for arrow)
-    tooltip.style.left = (rect.left - 80) + 'px';
-    tooltip.style.top = (rect.top - 85) + 'px';
-    
+    tooltip.style.left = rect.left - 80 + "px";
+    tooltip.style.top = rect.top - 20 + "px";
+
     // Position arrow above the tooltip pointing down to marker
-    arrow.style.left = (rect.left + 2) + 'px';
-    arrow.style.top = (rect.top - 70) + 'px';
+    arrow.style.left = rect.left - 5 + "px";
+    arrow.style.top = rect.top - 40 + "px";
   };
 
   updateTooltipPosition();
 
   // Update position when map moves
   const updatePositionHandler = () => updateTooltipPosition();
-  map.on('move', updatePositionHandler);
+  map.on("move", updatePositionHandler);
 
   // Remove example after 2 seconds or on mouse move
   const removeExample = () => {
@@ -3471,14 +3474,14 @@ function showExamplePoint() {
     if (arrow && arrow.parentNode) {
       arrow.parentNode.removeChild(arrow);
     }
-    map.off('move', updatePositionHandler);
-    document.removeEventListener('mousemove', removeExample);
-    document.removeEventListener('touchstart', removeExample);
+    map.off("move", updatePositionHandler);
+    document.removeEventListener("mousemove", removeExample);
+    document.removeEventListener("touchstart", removeExample);
   };
 
   // Remove on mouse move or touch
-  document.addEventListener('mousemove', removeExample, { once: true });
-  document.addEventListener('touchstart', removeExample, { once: true });
+  // document.addEventListener("mousemove", removeExample, { once: true });
+  // document.addEventListener("touchstart", removeExample, { once: true });
 
   // Remove after 2 seconds
   setTimeout(removeExample, 2000);
