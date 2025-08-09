@@ -1065,8 +1065,8 @@ function initMap() {
         // Convert pixel threshold to approximate degree threshold
         const degreeThreshold = threshold * 0.00005; // Rough conversion
         const candidateSegment = spatialIndex.findNearestSegment(
-          mousePoint.lat,
-          mousePoint.lng,
+          mousePoint.lat, 
+          mousePoint.lng, 
           degreeThreshold
         );
 
@@ -1074,7 +1074,7 @@ function initMap() {
         if (candidateSegment) {
           const coords = candidateSegment.coordinates;
           let minPixelDistance = Infinity;
-
+          
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
             const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
@@ -1175,15 +1175,11 @@ function initMap() {
         }
 
         segmentDisplay.style.display = "block";
-
-        // Show arrow pointing to segment
-        showSegmentArrow(closestSegment, segmentDisplay);
       } else {
         // No segment close enough - reset cursor and hide display
         map.getCanvas().style.cursor = "";
         const segmentDisplay = document.getElementById("segment-name-display");
         segmentDisplay.style.display = "none";
-        hideSegmentArrow();
       }
     });
 
@@ -1206,8 +1202,8 @@ function initMap() {
         // Convert pixel threshold to approximate degree threshold
         const degreeThreshold = threshold * 0.00005; // Rough conversion
         const candidateSegment = spatialIndex.findNearestSegment(
-          clickPoint.lat,
-          clickPoint.lng,
+          clickPoint.lat, 
+          clickPoint.lng, 
           degreeThreshold
         );
 
@@ -1217,7 +1213,7 @@ function initMap() {
           let minPixelDistance = Infinity;
           let bestSegmentStart = null;
           let bestSegmentEnd = null;
-
+          
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
             const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
@@ -2260,64 +2256,6 @@ function distanceToLineSegmentPixels(point, lineStart, lineEnd) {
   const dx = point.x - xx;
   const dy = point.y - yy;
   return Math.sqrt(dx * dx + dy * dy);
-}
-
-// Function to show arrow pointing from segment display to segment
-function showSegmentArrow(segment, segmentDisplay) {
-  if (!segment || !segmentDisplay) return;
-
-  // Remove existing arrow
-  hideSegmentArrow();
-
-  // Get the middle point of the segment
-  const coords = segment.coordinates;
-  if (!coords || coords.length === 0) return;
-
-  const middleIndex = Math.floor(coords.length / 2);
-  const middleCoord = coords[middleIndex];
-
-  // Convert to screen coordinates
-  const segmentPoint = map.project([middleCoord.lng, middleCoord.lat]);
-
-  // Get segment display position
-  const displayRect = segmentDisplay.getBoundingClientRect();
-  const displayCenterX = displayRect.left + displayRect.width / 2;
-  const displayCenterY = displayRect.top + displayRect.height / 2;
-
-  // Calculate arrow position and rotation
-  const deltaX = segmentPoint.x - displayCenterX;
-  const deltaY = segmentPoint.y - displayCenterY;
-  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-  // Only show arrow if there's enough distance
-  if (distance < 50) return;
-
-  // Calculate angle for rotation
-  const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-
-  // Position arrow at the edge of the display
-  const arrowDistance = Math.min(distance * 0.3, 80); // Max 80px from display
-  const arrowX = displayCenterX + (deltaX / distance) * arrowDistance;
-  const arrowY = displayCenterY + (deltaY / distance) * arrowDistance;
-
-  // Create and position arrow element
-  const arrow = document.createElement('div');
-  arrow.className = 'segment-pointer-arrow';
-  arrow.id = 'segment-pointer-arrow';
-  arrow.style.left = arrowX + 'px';
-  arrow.style.top = arrowY + 'px';
-  arrow.style.transform = `rotate(${angle + 90}deg)`;
-  arrow.style.display = 'block';
-
-  document.body.appendChild(arrow);
-}
-
-// Function to hide the segment arrow
-function hideSegmentArrow() {
-  const existingArrow = document.getElementById('segment-pointer-arrow');
-  if (existingArrow) {
-    existingArrow.remove();
-  }
 }
 
 // Helper function to find closest point on line segment

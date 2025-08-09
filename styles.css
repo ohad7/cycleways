@@ -388,19 +388,6 @@ html {
   margin-bottom: 8px;
 }
 
-.segment-pointer-arrow {
-  position: absolute;
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 15px solid rgba(70, 130, 180, 0.5);
-  transform-origin: center top;
-  z-index: 999;
-  display: none;
-  pointer-events: none;
-}
-
 @media (max-width: 768px) {
   .segment-name-display {
     position: absolute;
