@@ -1107,7 +1107,11 @@ function initMap() {
             }
           }
 
-          if (minPixelDistance < threshold && bestSegmentStart && bestSegmentEnd) {
+          if (
+            minPixelDistance < threshold &&
+            bestSegmentStart &&
+            bestSegmentEnd
+          ) {
             closestSegment = candidateSegment;
             closestPointOnSegment = getClosestPointOnLineSegment(
               { lat: mousePoint.lat, lng: mousePoint.lng },
@@ -1182,8 +1186,8 @@ function initMap() {
           const el = document.createElement("div");
           el.className = "hover-preview-marker";
           el.style.cssText = `
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             background: ${COLORS.ELEVATION_MARKER};
             border: 2px solid white;
             border-radius: 50%;
@@ -1244,7 +1248,7 @@ function initMap() {
         map.getCanvas().style.cursor = "";
         const segmentDisplay = document.getElementById("segment-name-display");
         segmentDisplay.style.display = "none";
-        
+
         // Remove hover preview marker
         if (window.hoverPreviewMarker) {
           window.hoverPreviewMarker.remove();
@@ -1326,7 +1330,7 @@ function initMap() {
           window.hoverPreviewMarker.remove();
           window.hoverPreviewMarker = null;
         }
-        
+
         addRoutePoint({
           lng: closestPointOnSegment.lng,
           lat: closestPointOnSegment.lat,
