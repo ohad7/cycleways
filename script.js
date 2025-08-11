@@ -3449,147 +3449,16 @@ function searchLocation() {
     });
 }
 
-// Function to show example point with tooltip
+// Initialize light tutorial instance
+let lightTutorial = null;
+
+// Function to show example point with tooltip (using LightTutorial)
 function showExamplePoint() {
-  // Don't show if user already has segments selected or if tutorial is active
-  if (
-    selectedSegments.length > 0 ||
-    (window.tutorial && window.tutorial.isActive)
-  ) {
-    return;
+  if (!lightTutorial) {
+    lightTutorial = new LightTutorial(map);
   }
-
-  const exampleLat = 33.19692644679666;
-  const exampleLng = 35.58858972227379;
-
-  // Create example point marker
-  const exampleElement = document.createElement("div");
-  exampleElement.className = "example-point";
-  exampleElement.style.cssText = `
-    width: 12px;
-    height: 12px;
-    background: #ff4444;
-    border: 3px solid white;
-    border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
-    cursor: pointer;
-    animation: pulse 1.5s infinite;
-    display:none;
-  `;
-
-  const exampleMarker = new mapboxgl.Marker(exampleElement)
-    .setLngLat([exampleLng, exampleLat])
-    .addTo(map);
-
-  // Create tooltip
-  const tooltip = document.createElement("div");
-  tooltip.className = "example-tooltip";
-  tooltip.innerHTML = "לחץ להוספה <br>למסלול";
-  tooltip.style.cssText = `
-    position: absolute;
-    background: white;
-    color: black;
-    font-weight: bold;
-    padding: 4px 6px;
-    border: 2px solid red;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    animation: tooltipBounce 1s ease-in-out infinite alternate;
-    display: none;
-  `;
-
-  // Create arrow pointing down to the example point using inline SVG
-  const arrow = document.createElement("div");
-  arrow.className = "example-arrow";
-
-  arrow.style.cssText = `
-    position: absolute;
-    width: 32px;
-    height: 32px;
-    z-index: 999;
-    pointer-events: none;
-    filter: drop-shadow(0 0 2px white);
-    transform: rotate(-20deg);
-    animation: tooltipBounce 1s ease-in-out infinite alternate;
-    display: none;
-  `;
-
-  document.body.appendChild(arrow);
-  document.body.appendChild(tooltip);
-
-  // Position tooltip and arrow relative to the marker
-  const updateTooltipPosition = () => {
-    const rect = exampleElement.getBoundingClientRect();
-
-    // Position tooltip above and to the left of the point (lowered to make room for arrow)
-    tooltip.style.left = rect.left - 90 + "px";
-    tooltip.style.top = rect.top - 18 + "px";
-
-    // Position arrow above the tooltip pointing down to marker
-    arrow.style.left = rect.left - 24 + "px";
-    arrow.style.top = rect.top - 50 + "px";
-  };
-
-  // Function to show both tooltip and arrow together
-  const showTooltipAndArrow = () => {
-    exampleElement.style.display = "";
-    updateTooltipPosition();
-    arrow.style.display = "";
-    tooltip.style.display = "";
-  };
-
-  // Wait for SVG to load before showing anything
-  fetch("arrow.svg")
-    .then((response) => response.text())
-    .then((svgContent) => {
-      arrow.innerHTML = svgContent;
-      // Show both elements together after SVG is loaded
-      showTooltipAndArrow();
-    })
-    .catch((error) => {
-      console.warn("Could not load arrow SVG:", error);
-      // Fallback to a simple arrow if SVG fails to load
-      arrow.innerHTML = "↓";
-      arrow.style.fontSize = "24px";
-      arrow.style.color = "#ff4444";
-      // Show both elements together even with fallback
-      showTooltipAndArrow();
-    });
-
-  // Update position when map moves
-  const updatePositionHandler = () => {
-    if (tooltip.style.display !== "none" && arrow.style.display !== "none") {
-      updateTooltipPosition();
-    }
-  };
-  map.on("move", updatePositionHandler);
-
-  // Remove example after 2 seconds or on mouse move
-  const removeExample = () => {
-    if (exampleMarker) {
-      exampleMarker.remove();
-    }
-    if (tooltip && tooltip.parentNode) {
-      tooltip.parentNode.removeChild(tooltip);
-    }
-    if (arrow && arrow.parentNode) {
-      arrow.parentNode.removeChild(arrow);
-    }
-    map.off("move", updatePositionHandler);
-    // document.removeEventListener("mousemove", removeExample);
-    // document.removeEventListener("touchstart", removeExample);
-  };
-
-  // Remove on mouse move or touch
-  // document.addEventListener("mousemove", removeExample, { once: true });
-  // document.addEventListener("touchstart", removeExample, { once: true });
-
-  // Remove after 2 seconds
-  setTimeout(removeExample, 3000);
+  
+  lightTutorial.showDefaultExample();
 }
 
 // Function to scroll to top of page
