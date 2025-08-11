@@ -3501,10 +3501,24 @@ function showExamplePoint() {
     display: none;
   `;
 
-  // Create arrow pointing down to the example point using SVG
-  const arrow = document.createElement("img");
+  // Create arrow pointing down to the example point using inline SVG
+  const arrow = document.createElement("div");
   arrow.className = "example-arrow";
-  arrow.src = "arrow.svg";
+  
+  // Fetch and insert SVG content inline
+  fetch("arrow.svg")
+    .then(response => response.text())
+    .then(svgContent => {
+      arrow.innerHTML = svgContent;
+    })
+    .catch(error => {
+      console.warn("Could not load arrow SVG:", error);
+      // Fallback to a simple arrow if SVG fails to load
+      arrow.innerHTML = "↓";
+      arrow.style.fontSize = "24px";
+      arrow.style.color = "#ff4444";
+    });
+  
   arrow.style.cssText = `
     position: absolute;
     width: 32px;
