@@ -3500,17 +3500,14 @@ function showExamplePoint() {
     animation: tooltipBounce 1s ease-in-out infinite alternate;
   `;
 
-  // Create arrow pointing down to the example point
-  const arrow = document.createElement("div");
+  // Create arrow pointing down to the example point using SVG
+  const arrow = document.createElement("img");
   arrow.className = "example-arrow";
+  arrow.src = "arrow.svg";
   arrow.style.cssText = `
     position: absolute;
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid #ff4444;
-    border-top: 2px solid white;
+    width: 16px;
+    height: 16px;
     z-index: 999;
     pointer-events: none;
     filter: drop-shadow(0 0 2px white);
@@ -3529,8 +3526,8 @@ function showExamplePoint() {
     tooltip.style.top = rect.top - 20 + "px";
 
     // Position arrow above the tooltip pointing down to marker
-    arrow.style.left = rect.left - 5 + "px";
-    arrow.style.top = rect.top - 40 + "px";
+    arrow.style.left = rect.left - 8 + "px";
+    arrow.style.top = rect.top - 36 + "px";
   };
 
   updateTooltipPosition();
