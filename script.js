@@ -3483,13 +3483,13 @@ function showExamplePoint() {
   // Create tooltip
   const tooltip = document.createElement("div");
   tooltip.className = "example-tooltip";
-  tooltip.innerHTML = "לחץ להוספה למסלול";
+  tooltip.innerHTML = "לחץ להוספה <br>למסלול";
   tooltip.style.cssText = `
     position: absolute;
     background: white;
     color: black;
     font-weight: bold;
-    padding: 8px 12px;
+    padding: 4px 6px;
     border: 2px solid red;
     border-radius: 4px;
     font-size: 12px;
@@ -3498,6 +3498,7 @@ function showExamplePoint() {
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     animation: tooltipBounce 1s ease-in-out infinite alternate;
+    display: none;
   `;
 
   // Create arrow pointing down to the example point using SVG
@@ -3506,15 +3507,18 @@ function showExamplePoint() {
   arrow.src = "arrow.svg";
   arrow.style.cssText = `
     position: absolute;
-    width: 16px;
-    height: 16px;
+    width: 32px;
+    height: 32px;
     z-index: 999;
     pointer-events: none;
     filter: drop-shadow(0 0 2px white);
+    transform: rotate(-20deg);
+    animation: tooltipBounce 1s ease-in-out infinite alternate;
+    display: none;
   `;
 
-  document.body.appendChild(tooltip);
   document.body.appendChild(arrow);
+  document.body.appendChild(tooltip);
 
   // Position tooltip and arrow relative to the marker
   const updateTooltipPosition = () => {
@@ -3522,12 +3526,15 @@ function showExamplePoint() {
     const rect = markerElement.getBoundingClientRect();
 
     // Position tooltip above and to the left of the point (lowered to make room for arrow)
-    tooltip.style.left = rect.left - 80 + "px";
+    tooltip.style.left = rect.left - 90 + "px";
     tooltip.style.top = rect.top - 20 + "px";
 
     // Position arrow above the tooltip pointing down to marker
-    arrow.style.left = rect.left - 8 + "px";
-    arrow.style.top = rect.top - 36 + "px";
+    arrow.style.left = rect.left - 24 + "px";
+    arrow.style.top = rect.top - 50 + "px";
+
+    arrow.style.display = "";
+    tooltip.style.display = "";
   };
 
   updateTooltipPosition();
@@ -3557,7 +3564,7 @@ function showExamplePoint() {
   // document.addEventListener("touchstart", removeExample, { once: true });
 
   // Remove after 2 seconds
-  setTimeout(removeExample, 2000);
+  setTimeout(removeExample, 3000);
 }
 
 // Function to scroll to top of page
