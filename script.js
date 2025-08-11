@@ -3474,6 +3474,7 @@ function showExamplePoint() {
     box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
     cursor: pointer;
     animation: pulse 1.5s infinite;
+    display:none;
   `;
 
   const exampleMarker = new mapboxgl.Marker(exampleElement)
@@ -3504,21 +3505,7 @@ function showExamplePoint() {
   // Create arrow pointing down to the example point using inline SVG
   const arrow = document.createElement("div");
   arrow.className = "example-arrow";
-  
-  // Fetch and insert SVG content inline
-  fetch("arrow.svg")
-    .then(response => response.text())
-    .then(svgContent => {
-      arrow.innerHTML = svgContent;
-    })
-    .catch(error => {
-      console.warn("Could not load arrow SVG:", error);
-      // Fallback to a simple arrow if SVG fails to load
-      arrow.innerHTML = "↓";
-      arrow.style.fontSize = "24px";
-      arrow.style.color = "#ff4444";
-    });
-  
+
   arrow.style.cssText = `
     position: absolute;
     width: 32px;
@@ -3536,12 +3523,11 @@ function showExamplePoint() {
 
   // Position tooltip and arrow relative to the marker
   const updateTooltipPosition = () => {
-    const markerElement = exampleElement;
-    const rect = markerElement.getBoundingClientRect();
+    const rect = exampleElement.getBoundingClientRect();
 
     // Position tooltip above and to the left of the point (lowered to make room for arrow)
     tooltip.style.left = rect.left - 90 + "px";
-    tooltip.style.top = rect.top - 20 + "px";
+    tooltip.style.top = rect.top - 18 + "px";
 
     // Position arrow above the tooltip pointing down to marker
     arrow.style.left = rect.left - 24 + "px";
@@ -3550,6 +3536,7 @@ function showExamplePoint() {
 
   // Function to show both tooltip and arrow together
   const showTooltipAndArrow = () => {
+    exampleElement.style.display = "";
     updateTooltipPosition();
     arrow.style.display = "";
     tooltip.style.display = "";
@@ -3557,13 +3544,13 @@ function showExamplePoint() {
 
   // Wait for SVG to load before showing anything
   fetch("arrow.svg")
-    .then(response => response.text())
-    .then(svgContent => {
+    .then((response) => response.text())
+    .then((svgContent) => {
       arrow.innerHTML = svgContent;
       // Show both elements together after SVG is loaded
       showTooltipAndArrow();
     })
-    .catch(error => {
+    .catch((error) => {
       console.warn("Could not load arrow SVG:", error);
       // Fallback to a simple arrow if SVG fails to load
       arrow.innerHTML = "↓";
