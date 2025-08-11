@@ -3560,7 +3560,7 @@ function showExamplePoint() {
   // document.addEventListener("touchstart", removeExample, { once: true });
 
   // Remove after 2 seconds
-  //setTimeout(removeExample, 2000);
+  setTimeout(removeExample, 2000);
 }
 
 // Function to scroll to top of page
