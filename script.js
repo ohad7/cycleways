@@ -3546,15 +3546,39 @@ function showExamplePoint() {
     // Position arrow above the tooltip pointing down to marker
     arrow.style.left = rect.left - 24 + "px";
     arrow.style.top = rect.top - 50 + "px";
+  };
 
+  // Function to show both tooltip and arrow together
+  const showTooltipAndArrow = () => {
+    updateTooltipPosition();
     arrow.style.display = "";
     tooltip.style.display = "";
   };
 
-  updateTooltipPosition();
+  // Wait for SVG to load before showing anything
+  fetch("arrow.svg")
+    .then(response => response.text())
+    .then(svgContent => {
+      arrow.innerHTML = svgContent;
+      // Show both elements together after SVG is loaded
+      showTooltipAndArrow();
+    })
+    .catch(error => {
+      console.warn("Could not load arrow SVG:", error);
+      // Fallback to a simple arrow if SVG fails to load
+      arrow.innerHTML = "↓";
+      arrow.style.fontSize = "24px";
+      arrow.style.color = "#ff4444";
+      // Show both elements together even with fallback
+      showTooltipAndArrow();
+    });
 
   // Update position when map moves
-  const updatePositionHandler = () => updateTooltipPosition();
+  const updatePositionHandler = () => {
+    if (tooltip.style.display !== "none" && arrow.style.display !== "none") {
+      updateTooltipPosition();
+    }
+  };
   map.on("move", updatePositionHandler);
 
   // Remove example after 2 seconds or on mouse move
