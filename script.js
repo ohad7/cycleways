@@ -1970,6 +1970,34 @@ async function parseGeoJSON(geoJsonData) {
         }
       });
 
+      // Add touch events for mobile segment selection
+      map.on("touchstart", layerId, (e) => {
+        if (e.points.length !== 1) return;
+        
+        // Prevent default touch behavior
+        e.preventDefault();
+        
+        // Check if we're on mobile (touch device)
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isMobile) return;
+        
+        // Don't add segments if we're dragging a point
+        if (isDraggingPoint) return;
+        
+        // Add segment to route if not already selected
+        if (!selectedSegments.includes(name)) {
+          saveState();
+          
+          // Log the operation
+          logOperation("addSegment", { segmentName: name });
+          
+          selectedSegments.push(name);
+          updateSegmentStyles();
+          updateRouteListAndDescription();
+          clearRouteFromUrl();
+        }
+      });
+
       // Add hover functionality for selected segments to show distance from start
       map.on("mousemove", layerId, (e) => {
         if (selectedSegments.includes(name)) {
