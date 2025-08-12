@@ -178,112 +178,194 @@ function createPointMarker(point, index) {
       },
     });
 
-    // Check if we're on mobile device
-    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-    // Add drag functionality (desktop only)
+    // Add drag functionality
     let isDragging = false;
     let draggedFeature = null;
 
-    if (!isMobile) {
-      map.on("mousedown", "route-points-circle", (e) => {
-        if (e.features.length === 0) return;
+    map.on("mousedown", "route-points-circle", (e) => {
+      if (e.features.length === 0) return;
 
-        e.preventDefault();
-        isDragging = true;
-        isDraggingPoint = true;
-        draggedFeature = { ...e.features[0] }; // Create a copy
-        draggedPointIndex = draggedFeature.properties.index;
+      e.preventDefault();
+      isDragging = true;
+      isDraggingPoint = true;
+      draggedFeature = { ...e.features[0] }; // Create a copy
+      draggedPointIndex = draggedFeature.properties.index;
 
-        map.dragPan.disable();
-        document.body.style.userSelect = "none";
+      map.dragPan.disable();
+      document.body.style.userSelect = "none";
+    });
+
+    map.on("mousemove", (e) => {
+      if (!isDragging || !draggedFeature || draggedPointIndex === -1) return;
+
+      const coords = [e.lngLat.lng, e.lngLat.lat];
+
+      // Update route point data
+      if (routePoints[draggedPointIndex]) {
+        routePoints[draggedPointIndex].lng = e.lngLat.lng;
+        routePoints[draggedPointIndex].lat = e.lngLat.lat;
+      }
+
+      // Update the source data by recreating all features
+      const features = routePoints.map((point, idx) => ({
+        type: "Feature",
+        id: `route-point-${point.id}`,
+        geometry: {
+          type: "Point",
+          coordinates: [point.lng, point.lat],
+        },
+        properties: {
+          index: idx,
+          pointId: point.id,
+          type: "route-point",
+        },
+      }));
+
+      map.getSource("route-points").setData({
+        type: "FeatureCollection",
+        features: features,
       });
 
-      map.on("mousemove", (e) => {
-        if (!isDragging || !draggedFeature || draggedPointIndex === -1) return;
-
-        const coords = [e.lngLat.lng, e.lngLat.lat];
-
-        // Update route point data
-        if (routePoints[draggedPointIndex]) {
-          routePoints[draggedPointIndex].lng = e.lngLat.lng;
-          routePoints[draggedPointIndex].lat = e.lngLat.lat;
-        }
-
-        // Update the source data by recreating all features
-        const features = routePoints.map((point, idx) => ({
-          type: "Feature",
-          id: `route-point-${point.id}`,
-          geometry: {
-            type: "Point",
-            coordinates: [point.lng, point.lat],
-          },
-          properties: {
-            index: idx,
-            pointId: point.id,
-            type: "route-point",
-          },
-        }));
-
-        map.getSource("route-points").setData({
-          type: "FeatureCollection",
-          features: features,
-        });
-
-        // Update dragging logic to use RouteManager's recalculateRoute method
-        if (routeManager) {
-          try {
-            const updatedSegments = routeManager.recalculateRoute(routePoints);
-            selectedSegments = updatedSegments;
-            updateSegmentStyles();
-            updateRouteListAndDescription();
-          } catch (error) {
-            console.error("Error updating route during drag:", error);
-            // Fallback to old method if RouteManager fails
-            recalculateRoute();
-          }
-        } else {
+      // Update dragging logic to use RouteManager's recalculateRoute method
+      if (routeManager) {
+        try {
+          const updatedSegments = routeManager.recalculateRoute(routePoints);
+          selectedSegments = updatedSegments;
+          updateSegmentStyles();
+          updateRouteListAndDescription();
+        } catch (error) {
+          console.error("Error updating route during drag:", error);
+          // Fallback to old method if RouteManager fails
           recalculateRoute();
         }
-      });
+      } else {
+        recalculateRoute();
+      }
+    });
 
-      map.on("mouseup", () => {
-        if (!isDragging) return;
+    map.on("mouseup", () => {
+      if (!isDragging) return;
 
-        isDragging = false;
-        isDraggingPoint = false;
+      isDragging = false;
+      isDraggingPoint = false;
 
-        // Validate that the dragged point is still close enough to a segment
-        if (draggedPointIndex !== -1 && routePoints[draggedPointIndex]) {
-          const draggedPoint = routePoints[draggedPointIndex];
-          const snappedPoint = findClosestSegment(draggedPoint);
+      // Validate that the dragged point is still close enough to a segment
+      if (draggedPointIndex !== -1 && routePoints[draggedPointIndex]) {
+        const draggedPoint = routePoints[draggedPointIndex];
+        const snappedPoint = findClosestSegment(draggedPoint);
 
-          if (!snappedPoint) {
-            // No segment close enough - remove this point
-            console.log("Dragged point too far from segments, removing point");
-            removeRoutePoint(draggedPointIndex);
-          }
+        if (!snappedPoint) {
+          // No segment close enough - remove this point
+          console.log("Dragged point too far from segments, removing point");
+          removeRoutePoint(draggedPointIndex);
         }
+      }
 
-        draggedPointIndex = -1;
-        draggedFeature = null;
+      draggedPointIndex = -1;
+      draggedFeature = null;
 
-        map.dragPan.enable();
-        document.body.style.userSelect = "";
+      map.dragPan.enable();
+      document.body.style.userSelect = "";
 
-        saveState();
-        clearRouteFromUrl();
+      saveState();
+      clearRouteFromUrl();
+    });
+
+    // Touch events for mobile
+    map.on("touchstart", "route-points-circle", (e) => {
+      if (e.points.length !== 1 || e.features.length === 0) return;
+
+      e.preventDefault();
+      isDragging = true;
+      isDraggingPoint = true;
+      draggedFeature = { ...e.features[0] }; // Create a copy
+      draggedPointIndex = draggedFeature.properties.index;
+
+      map.dragPan.disable();
+    });
+
+    map.on("touchmove", (e) => {
+      if (!isDragging || !draggedFeature || draggedPointIndex === -1) return;
+      e.preventDefault();
+
+      // Update route point data
+      if (routePoints[draggedPointIndex]) {
+        routePoints[draggedPointIndex].lng = e.lngLat.lng;
+        routePoints[draggedPointIndex].lat = e.lngLat.lat;
+      }
+
+      // Update the source data by recreating all features
+      const features = routePoints.map((point, idx) => ({
+        type: "Feature",
+        id: `route-point-${point.id}`,
+        geometry: {
+          type: "Point",
+          coordinates: [point.lng, point.lat],
+        },
+        properties: {
+          index: idx,
+          pointId: point.id,
+          type: "route-point",
+        },
+      }));
+
+      map.getSource("route-points").setData({
+        type: "FeatureCollection",
+        features: features,
       });
 
-      // Right-click to remove point (desktop only)
-      map.on("contextmenu", "route-points-circle", (e) => {
-        e.preventDefault();
-        const feature = e.features[0];
-        if (feature) {
-          removeRoutePoint(feature.properties.index);
+      // Update touch dragging logic to use RouteManager's recalculateRoute method
+      if (routeManager) {
+        try {
+          const updatedSegments = routeManager.recalculateRoute(routePoints);
+          selectedSegments = updatedSegments;
+          updateSegmentStyles();
+          updateRouteListAndDescription();
+        } catch (error) {
+          console.error("Error updating route during drag:", error);
+          // Fallback to old method if RouteManager fails
+          recalculateRoute();
         }
-      });
-    }
+      } else {
+        recalculateRoute();
+      }
+    });
+
+    map.on("touchend", () => {
+      if (!isDragging) return;
+
+      isDragging = false;
+      isDraggingPoint = false;
+
+      // Validate that the dragged point is still close enough to a segment
+      if (draggedPointIndex !== -1 && routePoints[draggedPointIndex]) {
+        const draggedPoint = routePoints[draggedPointIndex];
+        const snappedPoint = findClosestSegment(draggedPoint);
+
+        if (!snappedPoint) {
+          // No segment close enough - remove this point
+          console.log("Dragged point too far from segments, removing point");
+          removeRoutePoint(draggedPointIndex);
+        }
+      }
+
+      draggedPointIndex = -1;
+      draggedFeature = null;
+
+      map.dragPan.enable();
+
+      saveState();
+      clearRouteFromUrl();
+    });
+
+    // Right-click to remove point
+    map.on("contextmenu", "route-points-circle", (e) => {
+      e.preventDefault();
+      const feature = e.features[0];
+      if (feature) {
+        removeRoutePoint(feature.properties.index);
+      }
+    });
   }
 
   // Update the source data with the new point
@@ -1888,62 +1970,6 @@ async function parseGeoJSON(geoJsonData) {
         }
       });
 
-      // Add touch events for mobile - add points immediately on touch
-      map.on("touchstart", layerId, (e) => {
-        if (e.points.length !== 1) return;
-        
-        // Check if we're on mobile (touch device)
-        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        if (!isMobile) return;
-        
-        // Prevent default touch behavior
-        e.preventDefault();
-        
-        // Don't add points if we're dragging a point
-        if (isDraggingPoint) return;
-        
-        // Get the touch point
-        const touchPoint = e.lngLat;
-        const touchPixel = map.project(touchPoint);
-        const threshold = 15; // Same threshold as desktop
-        
-        // Find the closest point on this segment
-        let closestPointOnSegment = null;
-        let minPixelDistance = Infinity;
-        
-        const coords = coordObjects;
-        for (let i = 0; i < coords.length - 1; i++) {
-          const startPixel = map.project([coords[i].lng, coords[i].lat]);
-          const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
-          
-          const distance = distanceToLineSegmentPixels(
-            touchPixel,
-            startPixel,
-            endPixel
-          );
-          
-          if (distance < minPixelDistance) {
-            minPixelDistance = distance;
-            
-            if (distance < threshold) {
-              closestPointOnSegment = getClosestPointOnLineSegment(
-                { lat: touchPoint.lat, lng: touchPoint.lng },
-                coords[i],
-                coords[i + 1]
-              );
-            }
-          }
-        }
-        
-        // Add point immediately if close enough to segment
-        if (closestPointOnSegment && minPixelDistance < threshold) {
-          addRoutePoint({
-            lng: closestPointOnSegment.lng,
-            lat: closestPointOnSegment.lat,
-          });
-        }
-      });
-
       // Add hover functionality for selected segments to show distance from start
       map.on("mousemove", layerId, (e) => {
         if (selectedSegments.includes(name)) {
@@ -3409,14 +3435,14 @@ function searchLocation() {
           if (window.searchHighlightMarker) {
             window.searchHighlightMarker.remove();
           }
-          if (map.getSource("search-highlight-circle")) {
-            map.removeLayer("search-highlight-circle");
-            map.removeSource("search-highlight-circle");
+          if (map.getSource('search-highlight-circle')) {
+            map.removeLayer('search-highlight-circle');
+            map.removeSource('search-highlight-circle');
           }
 
           // Create a pulsing marker element
-          const markerElement = document.createElement("div");
-          markerElement.className = "search-location-marker";
+          const markerElement = document.createElement('div');
+          markerElement.className = 'search-location-marker';
           markerElement.style.cssText = `
             width: 20px;
             height: 20px;
@@ -3434,35 +3460,35 @@ function searchLocation() {
             .addTo(map);
 
           // Add a circle around the location
-          map.addSource("search-highlight-circle", {
-            type: "geojson",
+          map.addSource('search-highlight-circle', {
+            type: 'geojson',
             data: {
-              type: "Feature",
+              type: 'Feature',
               geometry: {
-                type: "Point",
-                coordinates: [lon, lat],
-              },
-            },
+                type: 'Point',
+                coordinates: [lon, lat]
+              }
+            }
           });
 
           map.addLayer({
-            id: "search-highlight-circle",
-            type: "circle",
-            source: "search-highlight-circle",
+            id: 'search-highlight-circle',
+            type: 'circle',
+            source: 'search-highlight-circle',
             paint: {
-              "circle-radius": {
-                base: 1.75,
-                stops: [
+              'circle-radius': {
+                'base': 1.75,
+                'stops': [
                   [12, 30],
-                  [22, 180],
-                ],
+                  [22, 180]
+                ]
               },
-              "circle-color": "#ff4444",
-              "circle-opacity": 0.2,
-              "circle-stroke-width": 2,
-              "circle-stroke-color": "#ff4444",
-              "circle-stroke-opacity": 0.8,
-            },
+              'circle-color': '#ff4444',
+              'circle-opacity': 0.2,
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#ff4444',
+              'circle-stroke-opacity': 0.8
+            }
           });
 
           // Remove the highlight after 4 seconds
@@ -3471,11 +3497,11 @@ function searchLocation() {
               window.searchHighlightMarker.remove();
               window.searchHighlightMarker = null;
             }
-            if (map.getSource("search-highlight-circle")) {
-              map.removeLayer("search-highlight-circle");
-              map.removeSource("search-highlight-circle");
+            if (map.getSource('search-highlight-circle')) {
+              map.removeLayer('search-highlight-circle');
+              map.removeSource('search-highlight-circle');
             }
-          }, 1000);
+          }, 4000);
         };
 
         // Pan to the location and then add highlight
