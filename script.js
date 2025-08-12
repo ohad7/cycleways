@@ -136,6 +136,9 @@ function addRoutePoint(lngLat, fromClick = true) {
   clearRouteFromUrl();
 }
 
+
+
+
 // Create a map-integrated point feature for a route point
 function createPointMarker(point, index) {
   const pointId = `route-point-${point.id}`;
@@ -1049,241 +1052,247 @@ function initMap() {
       loadKMLFile();
     });
 
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
     // Add global mouse move handler for proximity-based highlighting
-    map.on("mousemove", (e) => {
-      const mousePoint = e.lngLat;
-      const mousePixel = map.project(mousePoint);
-      const threshold = 15; // pixels
-      let closestSegment = null;
-      let closestPointOnSegment = null;
+    if (!isTouchDevice) {
+      map.on("mousemove", (e) => {
+        if (isDraggingPoint || map.isMoving()) {
+          return;
+        }
+        const mousePoint = e.lngLat;
+        const mousePixel = map.project(mousePoint);
+        const threshold = 15; // pixels
+        let closestSegment = null;
+        let closestPointOnSegment = null;
 
-      // Use spatial index for efficient segment lookup
-      if (spatialIndex) {
-        // Convert pixel threshold to approximate degree threshold
-        const degreeThreshold = threshold * 0.00005; // Rough conversion
-        const candidateSegment = spatialIndex.findNearestSegment(
-          mousePoint.lat,
-          mousePoint.lng,
-          degreeThreshold,
-        );
+        // Use spatial index for efficient segment lookup
+        if (spatialIndex) {
+          // Convert pixel threshold to approximate degree threshold
+          const degreeThreshold = threshold * 0.00005; // Rough conversion
+          const candidateSegment = spatialIndex.findNearestSegment(
+            mousePoint.lat,
+            mousePoint.lng,
+            degreeThreshold,
+          );
 
-        // Verify the candidate with precise pixel distance if found
-        if (candidateSegment) {
-          const coords = candidateSegment.coordinates;
-          let minPixelDistance = Infinity;
-          let bestSegmentStart = null;
-          let bestSegmentEnd = null;
+          // Verify the candidate with precise pixel distance if found
+          if (candidateSegment) {
+            const coords = candidateSegment.coordinates;
+            let minPixelDistance = Infinity;
+            let bestSegmentStart = null;
+            let bestSegmentEnd = null;
 
-          for (let i = 0; i < coords.length - 1; i++) {
-            const startPixel = map.project([coords[i].lng, coords[i].lat]);
-            const endPixel = map.project([
-              coords[i + 1].lng,
-              coords[i + 1].lat,
+            for (let i = 0; i < coords.length - 1; i++) {
+              const startPixel = map.project([coords[i].lng, coords[i].lat]);
+              const endPixel = map.project([
+                coords[i + 1].lng,
+                coords[i + 1].lat,
+              ]);
+
+              const distance = distanceToLineSegmentPixels(
+                mousePixel,
+                startPixel,
+                endPixel,
+              );
+
+              if (distance < minPixelDistance) {
+                minPixelDistance = distance;
+                bestSegmentStart = coords[i];
+                bestSegmentEnd = coords[i + 1];
+              }
+            }
+
+            if (
+              minPixelDistance < threshold &&
+              bestSegmentStart &&
+              bestSegmentEnd
+            ) {
+              closestSegment = candidateSegment;
+              closestPointOnSegment = getClosestPointOnLineSegment(
+                { lat: mousePoint.lat, lng: mousePoint.lng },
+                bestSegmentStart,
+                bestSegmentEnd,
+              );
+            }
+          }
+        }
+
+        // Reset all segments to normal style first
+        routePolylines.forEach((polylineData) => {
+          const layerId = polylineData.layerId;
+          if (selectedSegments.includes(polylineData.segmentName)) {
+            // Keep selected segments green
+            map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_SELECTED);
+            map.setPaintProperty(
+              layerId,
+              "line-width",
+              polylineData.originalStyle.weight + 1,
+            );
+          } else {
+            // Reset non-selected segments to original style
+            map.setPaintProperty(
+              layerId,
+              "line-color",
+              polylineData.originalStyle.color,
+            );
+            map.setPaintProperty(
+              layerId,
+              "line-width",
+              polylineData.originalStyle.weight,
+            );
+          }
+        });
+
+        // Highlight closest segment if found
+        if (closestSegment) {
+          const layerId = closestSegment.layerId;
+          map.getCanvas().style.cursor = "pointer";
+
+          if (!selectedSegments.includes(closestSegment.segmentName)) {
+            // Highlight non-selected segment
+            map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_HOVER);
+            map.setPaintProperty(
+              layerId,
+              "line-width",
+              closestSegment.originalStyle.weight + 2,
+            );
+          } else {
+            // Make selected segment more prominent
+            map.setPaintProperty(
+              layerId,
+              "line-color",
+              COLORS.SEGMENT_HOVER_SELECTED,
+            );
+            map.setPaintProperty(
+              layerId,
+              "line-width",
+              closestSegment.originalStyle.weight + 3,
+            );
+          }
+
+          // Show hover preview dot at the closest point on segment
+          if (closestPointOnSegment && !isDraggingPoint) {
+            // Check if hover point is too close to any existing route points using pixel distance
+            const minPixelDistanceFromPoints = 15; // 30 pixels threshold
+            let tooCloseToExistingPoint = false;
+
+            const hoverPointPixel = map.project([
+              closestPointOnSegment.lng,
+              closestPointOnSegment.lat,
             ]);
 
-            const distance = distanceToLineSegmentPixels(
-              mousePixel,
-              startPixel,
-              endPixel,
-            );
+            for (const routePoint of routePoints) {
+              const routePointPixel = map.project([
+                routePoint.lng,
+                routePoint.lat,
+              ]);
+              const pixelDistance = Math.sqrt(
+                Math.pow(hoverPointPixel.x - routePointPixel.x, 2) +
+                  Math.pow(hoverPointPixel.y - routePointPixel.y, 2),
+              );
 
-            if (distance < minPixelDistance) {
-              minPixelDistance = distance;
-              bestSegmentStart = coords[i];
-              bestSegmentEnd = coords[i + 1];
+              if (pixelDistance < minPixelDistanceFromPoints) {
+                tooCloseToExistingPoint = true;
+                break;
+              }
             }
+
+            if (!tooCloseToExistingPoint) {
+              // Remove existing hover preview marker
+              if (window.hoverPreviewMarker) {
+                window.hoverPreviewMarker.remove();
+              }
+
+              // Create red circle marker for hover preview
+              const el = document.createElement("div");
+              el.className = "hover-preview-marker";
+              el.style.cssText = `
+                width: 10px;
+                height: 10px;
+                background: ${COLORS.ELEVATION_MARKER};
+                border: 2px solid white;
+                border-radius: 50%;
+                box-shadow: 0 2px 6px rgba(255, 68, 68, 0.4);
+                pointer-events: none;
+              `;
+
+              window.hoverPreviewMarker = new mapboxgl.Marker(el)
+                .setLngLat([closestPointOnSegment.lng, closestPointOnSegment.lat])
+                .addTo(map);
+            } else {
+              // Remove hover preview marker if too close to existing point
+              if (window.hoverPreviewMarker) {
+                window.hoverPreviewMarker.remove();
+                window.hoverPreviewMarker = null;
+              }
+            }
+          }
+
+          // Show segment info using pre-calculated data
+          const name = closestSegment.segmentName;
+          const metrics = segmentMetrics[name];
+          const segmentDistanceKm = metrics ? metrics.distanceKm : "0.0";
+          const segmentElevationGain = metrics
+            ? metrics.forward.elevationGain
+            : 0;
+          const segmentElevationLoss = metrics
+            ? metrics.forward.elevationLoss
+            : 0;
+
+          const segmentDisplay = document.getElementById("segment-name-display");
+          segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
+
+          // Check for warnings in segments data and add to segment display
+          const segmentInfo = segmentsData[name];
+          if (segmentInfo) {
+            if (segmentInfo.winter === false) {
+              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
+            }
+            if (segmentInfo.warning) {
+              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
+            }
+          }
+
+          // Check if this segment has been displayed before (track by segment name)
+          if (!window.displayedSegmentNames) {
+            window.displayedSegmentNames = new Set();
           }
 
           if (
-            minPixelDistance < threshold &&
-            bestSegmentStart &&
-            bestSegmentEnd
+            window.displayedSegmentNames.size < 10 &&
+            !window.displayedSegmentNames.has(closestSegment.segmentName)
           ) {
-            closestSegment = candidateSegment;
-            closestPointOnSegment = getClosestPointOnLineSegment(
-              { lat: mousePoint.lat, lng: mousePoint.lng },
-              bestSegmentStart,
-              bestSegmentEnd,
-            );
+            window.displayedSegmentNames.add(closestSegment.segmentName);
+            segmentDisplay.classList.add("bounce-intro");
+            // Remove the bounce class after animation completes
+            setTimeout(() => {
+              segmentDisplay.classList.remove("bounce-intro");
+            }, 600);
           }
-        }
-      }
 
-      // Reset all segments to normal style first
-      routePolylines.forEach((polylineData) => {
-        const layerId = polylineData.layerId;
-        if (selectedSegments.includes(polylineData.segmentName)) {
-          // Keep selected segments green
-          map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_SELECTED);
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polylineData.originalStyle.weight + 1,
-          );
+          segmentDisplay.style.display = "block";
         } else {
-          // Reset non-selected segments to original style
-          map.setPaintProperty(
-            layerId,
-            "line-color",
-            polylineData.originalStyle.color,
-          );
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polylineData.originalStyle.weight,
-          );
+          // No segment close enough - reset cursor and hide display
+          const segmentDisplay = document.getElementById("segment-name-display");
+          segmentDisplay.style.display = "none";
+
+          // Remove hover preview marker
+          if (window.hoverPreviewMarker) {
+            window.hoverPreviewMarker.remove();
+            window.hoverPreviewMarker = null;
+          }
         }
       });
+    }
 
-      // Highlight closest segment if found
-      if (closestSegment) {
-        const layerId = closestSegment.layerId;
-        map.getCanvas().style.cursor = "pointer";
+    // 5) Drag handlers (sketch): only preventDefault when dragging is confirmed
+    // Example tweak inside your touch drag code:
+    let dragStartPx = null;
+    let dragging = false;
+    const DRAG_THRESHOLD = 6;
 
-        if (!selectedSegments.includes(closestSegment.segmentName)) {
-          // Highlight non-selected segment
-          map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_HOVER);
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            closestSegment.originalStyle.weight + 2,
-          );
-        } else {
-          // Make selected segment more prominent
-          map.setPaintProperty(
-            layerId,
-            "line-color",
-            COLORS.SEGMENT_HOVER_SELECTED,
-          );
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            closestSegment.originalStyle.weight + 3,
-          );
-        }
-
-        // Show hover preview dot at the closest point on segment
-        if (closestPointOnSegment && !isDraggingPoint) {
-          // Check if hover point is too close to any existing route points using pixel distance
-          const minPixelDistanceFromPoints = 15; // 30 pixels threshold
-          let tooCloseToExistingPoint = false;
-
-          const hoverPointPixel = map.project([
-            closestPointOnSegment.lng,
-            closestPointOnSegment.lat,
-          ]);
-
-          for (const routePoint of routePoints) {
-            const routePointPixel = map.project([
-              routePoint.lng,
-              routePoint.lat,
-            ]);
-            const pixelDistance = Math.sqrt(
-              Math.pow(hoverPointPixel.x - routePointPixel.x, 2) +
-                Math.pow(hoverPointPixel.y - routePointPixel.y, 2),
-            );
-
-            if (pixelDistance < minPixelDistanceFromPoints) {
-              tooCloseToExistingPoint = true;
-              break;
-            }
-          }
-
-          if (!tooCloseToExistingPoint) {
-            // Remove existing hover preview marker
-            if (window.hoverPreviewMarker) {
-              window.hoverPreviewMarker.remove();
-            }
-
-            // Create red circle marker for hover preview
-            const el = document.createElement("div");
-            el.className = "hover-preview-marker";
-            el.style.cssText = `
-              width: 10px;
-              height: 10px;
-              background: ${COLORS.ELEVATION_MARKER};
-              border: 2px solid white;
-              border-radius: 50%;
-              box-shadow: 0 2px 6px rgba(255, 68, 68, 0.4);
-              pointer-events: none;
-            `;
-
-            window.hoverPreviewMarker = new mapboxgl.Marker(el)
-              .setLngLat([closestPointOnSegment.lng, closestPointOnSegment.lat])
-              .addTo(map);
-          } else {
-            // Remove hover preview marker if too close to existing point
-            if (window.hoverPreviewMarker) {
-              window.hoverPreviewMarker.remove();
-              window.hoverPreviewMarker = null;
-            }
-          }
-        }
-
-        // Show segment info using pre-calculated data
-        const name = closestSegment.segmentName;
-        const metrics = segmentMetrics[name];
-        const segmentDistanceKm = metrics ? metrics.distanceKm : "0.0";
-        const segmentElevationGain = metrics
-          ? metrics.forward.elevationGain
-          : 0;
-        const segmentElevationLoss = metrics
-          ? metrics.forward.elevationLoss
-          : 0;
-
-        const segmentDisplay = document.getElementById("segment-name-display");
-        segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
-
-        // Check for warnings in segments data and add to segment display
-        const segmentInfo = segmentsData[name];
-        if (segmentInfo) {
-          if (segmentInfo.winter === false) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
-          }
-          if (segmentInfo.warning) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
-          }
-        }
-
-        // Check if this segment has been displayed before (track by segment name)
-        if (!window.displayedSegmentNames) {
-          window.displayedSegmentNames = new Set();
-        }
-
-        if (
-          window.displayedSegmentNames.size < 10 &&
-          !window.displayedSegmentNames.has(closestSegment.segmentName)
-        ) {
-          window.displayedSegmentNames.add(closestSegment.segmentName);
-          segmentDisplay.classList.add("bounce-intro");
-          // Remove the bounce class after animation completes
-          setTimeout(() => {
-            segmentDisplay.classList.remove("bounce-intro");
-          }, 600);
-        }
-
-        segmentDisplay.style.display = "block";
-      } else {
-        // No segment close enough - reset cursor and hide display
-        const segmentDisplay = document.getElementById("segment-name-display");
-        segmentDisplay.style.display = "none";
-
-        // Remove hover preview marker
-        if (window.hoverPreviewMarker) {
-          window.hoverPreviewMarker.remove();
-          window.hoverPreviewMarker = null;
-        }
-      }
-    });
-
-    // Add global click handler for adding route points
-    map.on("click", (e) => {
-      // Don't add points if we're dragging a point
-      if (isDraggingPoint) {
-        return;
-      }
-
-      const clickPoint = e.lngLat;
+    function addPointFromLngLat(clickPoint) {
       const clickPixel = map.project(clickPoint);
       const threshold = 15; // Use same threshold as hover logic
 
@@ -1354,7 +1363,58 @@ function initMap() {
           lng: closestPointOnSegment.lng,
           lat: closestPointOnSegment.lat,
         });
+      }      
+    }
+
+    map.on('touchstart', 'route-points-circle', (e) => {
+      dragStartPx = e.points && e.points[0];
+      dragging = false;
+    });
+
+    map.on('touchend', (e) => {
+      if (!isTouchDevice) return;
+      if (isDraggingPoint) return; // don't add while dragging
+      if (!e.points || e.points.length !== 1) return;
+
+      const endPx = e.points[0];
+      const moved = tapStartPx
+        ? Math.hypot(endPx.x - tapStartPx.x, endPx.y - tapStartPx.y)
+        : 0;
+      tapStartPx = null;
+      if (moved > 10) return; // treat as pan/zoom, not a tap
+
+      addPointFromLngLat(e.lngLat);
+    });
+
+    map.on('touchmove', 'route-points-circle', (e) => {
+      if (!dragStartPx || !e.points || e.points.length !== 1) return;
+      const p = e.points[0];
+      if (!dragging) {
+        const moved = Math.hypot(p.x - dragStartPx.x, p.y - dragStartPx.y);
+        if (moved < DRAG_THRESHOLD) return; // not yet a drag
+        dragging = true;
       }
+      // Now that it's a real drag, it's safe to prevent default scrolling
+      if (e.originalEvent && e.originalEvent.preventDefault) e.originalEvent.preventDefault();
+
+      // ... your existing drag logic ...
+      window.alert('dragging point');
+    });
+
+    map.on('touchend', 'route-points-circle', () => {
+      dragging = false;
+      dragStartPx = null;
+    });
+
+
+
+    // Add global click handler for adding route points
+    map.on("click", (e) => {
+      // Don't add points if we're dragging a point
+      if (isDraggingPoint) {
+        return;
+      }
+      addPointFromLngLat(e.lngLat);      
     });
 
     // Map move handlers are no longer needed with custom drag implementation
