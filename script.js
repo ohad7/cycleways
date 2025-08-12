@@ -1243,16 +1243,16 @@ function initMap() {
           const segmentDisplay = document.getElementById("segment-name-display");
           segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
 
-          // Check for warnings in segments data and add to segment display
-          const segmentInfo = segmentsData[name];
-          if (segmentInfo) {
-            if (segmentInfo.winter === false) {
-              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
-            }
-            if (segmentInfo.warning) {
-              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
-            }
+        // Check for warnings in segments data and add to segment display
+        const segmentInfo = segmentsData[name];
+        if (segmentInfo) {
+          if (segmentInfo.winter === false) {
+            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
           }
+          if (segmentInfo.warning) {
+            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; background-color: beige; padding:5px; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
+          }
+        }
 
           // Check if this segment has been displayed before (track by segment name)
           if (!window.displayedSegmentNames) {
@@ -3489,12 +3489,90 @@ function searchLocation() {
           return;
         }
 
-        // Only pan to the location without showing markers or popups
+        // Add a temporary marker and circle to highlight the searched location
+        const highlightSearchedLocation = () => {
+          // Remove any existing search highlight
+          if (window.searchHighlightMarker) {
+            window.searchHighlightMarker.remove();
+          }
+          if (map.getSource("search-highlight-circle")) {
+            map.removeLayer("search-highlight-circle");
+            map.removeSource("search-highlight-circle");
+          }
+
+          // Create a pulsing marker element
+          const markerElement = document.createElement("div");
+          markerElement.className = "search-location-marker";
+          markerElement.style.cssText = `
+            width: 20px;
+            height: 20px;
+            background: #ff4444;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
+            animation: searchPulse 2s infinite;
+            z-index: 1000;
+          `;
+
+          // Add the marker to the map
+          window.searchHighlightMarker = new mapboxgl.Marker(markerElement)
+            .setLngLat([lon, lat])
+            .addTo(map);
+
+          // Add a circle around the location
+          map.addSource("search-highlight-circle", {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              geometry: {
+                type: "Point",
+                coordinates: [lon, lat],
+              },
+            },
+          });
+
+          map.addLayer({
+            id: "search-highlight-circle",
+            type: "circle",
+            source: "search-highlight-circle",
+            paint: {
+              "circle-radius": {
+                base: 1.75,
+                stops: [
+                  [12, 30],
+                  [22, 180],
+                ],
+              },
+              "circle-color": "#ff4444",
+              "circle-opacity": 0.2,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#ff4444",
+              "circle-stroke-opacity": 0.8,
+            },
+          });
+
+          // Remove the highlight after 4 seconds
+          setTimeout(() => {
+            if (window.searchHighlightMarker) {
+              window.searchHighlightMarker.remove();
+              window.searchHighlightMarker = null;
+            }
+            if (map.getSource("search-highlight-circle")) {
+              map.removeLayer("search-highlight-circle");
+              map.removeSource("search-highlight-circle");
+            }
+          }, 1500);
+        };
+
+        // Pan to the location and then add highlight
         map.flyTo({
           center: [lon, lat],
           zoom: 11.5,
           duration: 1000,
         });
+
+        // Add highlight after the animation completes
+        setTimeout(highlightSearchedLocation, 1200);
 
         searchInput.value = "";
       } else {
