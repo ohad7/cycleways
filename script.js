@@ -3459,8 +3459,8 @@ function showExamplePoint() {
     return;
   }
 
-  const exampleLat = 33.19692644679666;
-  const exampleLng = 35.58858972227379;
+  const exampleLat = 33.181281300095684;
+  const exampleLng = 35.62218007147424;
 
   // Create example point marker
   const exampleElement = document.createElement("div");
