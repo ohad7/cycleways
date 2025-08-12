@@ -1241,7 +1241,7 @@ function initMap() {
             segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
           }
           if (segmentInfo.warning) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
+            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; background-color: beige; padding:5px; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
           }
         }
 
