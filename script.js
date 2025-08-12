@@ -25,8 +25,6 @@ const COLORS = {
   HIGHLIGHT_WHITE: "#ffffff", // White for highlighting all segments
 };
 
-
-
 const MIN_ZOOM_LEVEL = 13; // Minimum zoom level when focusing on segments
 
 // Function to highlight all segments in white and then return to original colors
@@ -112,7 +110,10 @@ function addRoutePoint(lngLat, fromClick = true) {
   // Use RouteManager to add the point and get updated segments
   if (routeManager) {
     try {
-      const updatedSegments = routeManager.addPoint({ lat: lngLat.lat, lng: lngLat.lng });
+      const updatedSegments = routeManager.addPoint({
+        lat: lngLat.lat,
+        lng: lngLat.lng,
+      });
       selectedSegments = updatedSegments;
 
       // Create marker for the new point
@@ -190,7 +191,6 @@ function createPointMarker(point, index) {
       draggedFeature = { ...e.features[0] }; // Create a copy
       draggedPointIndex = draggedFeature.properties.index;
 
-      map.getCanvas().style.cursor = "grabbing";
       map.dragPan.disable();
       document.body.style.userSelect = "none";
     });
@@ -264,7 +264,6 @@ function createPointMarker(point, index) {
       draggedPointIndex = -1;
       draggedFeature = null;
 
-      map.getCanvas().style.cursor = "";
       map.dragPan.enable();
       document.body.style.userSelect = "";
 
@@ -365,17 +364,6 @@ function createPointMarker(point, index) {
       const feature = e.features[0];
       if (feature) {
         removeRoutePoint(feature.properties.index);
-      }
-    });
-
-    // Hover effects
-    map.on("mouseenter", "route-points-circle", () => {
-      map.getCanvas().style.cursor = "grab";
-    });
-
-    map.on("mouseleave", "route-points-circle", () => {
-      if (!isDragging) {
-        map.getCanvas().style.cursor = "";
       }
     });
   }
@@ -708,7 +696,10 @@ function undo() {
         selectedSegments = restoredSegments;
 
         // If restoration failed, fallback to the saved segments
-        if (selectedSegments.length === 0 && previousState.segments.length > 0) {
+        if (
+          selectedSegments.length === 0 &&
+          previousState.segments.length > 0
+        ) {
           console.warn("RouteManager restoration failed, using saved segments");
           selectedSegments = [...previousState.segments];
           // Update RouteManager's internal state to match
@@ -983,6 +974,11 @@ function resetRoute() {
     window.elevationMarker = null;
   }
 
+  if (window.hoverPreviewMarker) {
+    window.hoverPreviewMarker.remove();
+    window.hoverPreviewMarker = null;
+  }
+
   // Hide segment name display
   const segmentDisplay = document.getElementById("segment-name-display");
   segmentDisplay.style.display = "none";
@@ -1059,25 +1055,31 @@ function initMap() {
       const mousePixel = map.project(mousePoint);
       const threshold = 15; // pixels
       let closestSegment = null;
+      let closestPointOnSegment = null;
 
       // Use spatial index for efficient segment lookup
       if (spatialIndex) {
         // Convert pixel threshold to approximate degree threshold
         const degreeThreshold = threshold * 0.00005; // Rough conversion
         const candidateSegment = spatialIndex.findNearestSegment(
-          mousePoint.lat, 
-          mousePoint.lng, 
-          degreeThreshold
+          mousePoint.lat,
+          mousePoint.lng,
+          degreeThreshold,
         );
 
         // Verify the candidate with precise pixel distance if found
         if (candidateSegment) {
           const coords = candidateSegment.coordinates;
           let minPixelDistance = Infinity;
-          
+          let bestSegmentStart = null;
+          let bestSegmentEnd = null;
+
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
-            const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
+            const endPixel = map.project([
+              coords[i + 1].lng,
+              coords[i + 1].lat,
+            ]);
 
             const distance = distanceToLineSegmentPixels(
               mousePixel,
@@ -1087,11 +1089,22 @@ function initMap() {
 
             if (distance < minPixelDistance) {
               minPixelDistance = distance;
+              bestSegmentStart = coords[i];
+              bestSegmentEnd = coords[i + 1];
             }
           }
 
-          if (minPixelDistance < threshold) {
+          if (
+            minPixelDistance < threshold &&
+            bestSegmentStart &&
+            bestSegmentEnd
+          ) {
             closestSegment = candidateSegment;
+            closestPointOnSegment = getClosestPointOnLineSegment(
+              { lat: mousePoint.lat, lng: mousePoint.lng },
+              bestSegmentStart,
+              bestSegmentEnd,
+            );
           }
         }
       }
@@ -1149,6 +1162,64 @@ function initMap() {
           );
         }
 
+        // Show hover preview dot at the closest point on segment
+        if (closestPointOnSegment && !isDraggingPoint) {
+          // Check if hover point is too close to any existing route points using pixel distance
+          const minPixelDistanceFromPoints = 15; // 30 pixels threshold
+          let tooCloseToExistingPoint = false;
+
+          const hoverPointPixel = map.project([
+            closestPointOnSegment.lng,
+            closestPointOnSegment.lat,
+          ]);
+
+          for (const routePoint of routePoints) {
+            const routePointPixel = map.project([
+              routePoint.lng,
+              routePoint.lat,
+            ]);
+            const pixelDistance = Math.sqrt(
+              Math.pow(hoverPointPixel.x - routePointPixel.x, 2) +
+                Math.pow(hoverPointPixel.y - routePointPixel.y, 2),
+            );
+
+            if (pixelDistance < minPixelDistanceFromPoints) {
+              tooCloseToExistingPoint = true;
+              break;
+            }
+          }
+
+          if (!tooCloseToExistingPoint) {
+            // Remove existing hover preview marker
+            if (window.hoverPreviewMarker) {
+              window.hoverPreviewMarker.remove();
+            }
+
+            // Create red circle marker for hover preview
+            const el = document.createElement("div");
+            el.className = "hover-preview-marker";
+            el.style.cssText = `
+              width: 10px;
+              height: 10px;
+              background: ${COLORS.ELEVATION_MARKER};
+              border: 2px solid white;
+              border-radius: 50%;
+              box-shadow: 0 2px 6px rgba(255, 68, 68, 0.4);
+              pointer-events: none;
+            `;
+
+            window.hoverPreviewMarker = new mapboxgl.Marker(el)
+              .setLngLat([closestPointOnSegment.lng, closestPointOnSegment.lat])
+              .addTo(map);
+          } else {
+            // Remove hover preview marker if too close to existing point
+            if (window.hoverPreviewMarker) {
+              window.hoverPreviewMarker.remove();
+              window.hoverPreviewMarker = null;
+            }
+          }
+        }
+
         // Show segment info using pre-calculated data
         const name = closestSegment.segmentName;
         const metrics = segmentMetrics[name];
@@ -1174,12 +1245,34 @@ function initMap() {
           }
         }
 
+        // Check if this segment has been displayed before (track by segment name)
+        if (!window.displayedSegmentNames) {
+          window.displayedSegmentNames = new Set();
+        }
+
+        if (
+          window.displayedSegmentNames.size < 10 &&
+          !window.displayedSegmentNames.has(closestSegment.segmentName)
+        ) {
+          window.displayedSegmentNames.add(closestSegment.segmentName);
+          segmentDisplay.classList.add("bounce-intro");
+          // Remove the bounce class after animation completes
+          setTimeout(() => {
+            segmentDisplay.classList.remove("bounce-intro");
+          }, 600);
+        }
+
         segmentDisplay.style.display = "block";
       } else {
         // No segment close enough - reset cursor and hide display
-        map.getCanvas().style.cursor = "";
         const segmentDisplay = document.getElementById("segment-name-display");
         segmentDisplay.style.display = "none";
+
+        // Remove hover preview marker
+        if (window.hoverPreviewMarker) {
+          window.hoverPreviewMarker.remove();
+          window.hoverPreviewMarker = null;
+        }
       }
     });
 
@@ -1202,9 +1295,9 @@ function initMap() {
         // Convert pixel threshold to approximate degree threshold
         const degreeThreshold = threshold * 0.00005; // Rough conversion
         const candidateSegment = spatialIndex.findNearestSegment(
-          clickPoint.lat, 
-          clickPoint.lng, 
-          degreeThreshold
+          clickPoint.lat,
+          clickPoint.lng,
+          degreeThreshold,
         );
 
         // Verify the candidate with precise pixel distance if found
@@ -1213,10 +1306,13 @@ function initMap() {
           let minPixelDistance = Infinity;
           let bestSegmentStart = null;
           let bestSegmentEnd = null;
-          
+
           for (let i = 0; i < coords.length - 1; i++) {
             const startPixel = map.project([coords[i].lng, coords[i].lat]);
-            const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
+            const endPixel = map.project([
+              coords[i + 1].lng,
+              coords[i + 1].lat,
+            ]);
 
             const distance = distanceToLineSegmentPixels(
               clickPixel,
@@ -1231,7 +1327,11 @@ function initMap() {
             }
           }
 
-          if (minPixelDistance < threshold && bestSegmentStart && bestSegmentEnd) {
+          if (
+            minPixelDistance < threshold &&
+            bestSegmentStart &&
+            bestSegmentEnd
+          ) {
             closestSegment = candidateSegment;
             closestPointOnSegment = getClosestPointOnLineSegment(
               { lat: clickPoint.lat, lng: clickPoint.lng },
@@ -1244,6 +1344,12 @@ function initMap() {
 
       // Only add point if close enough to a segment and snap it to the segment
       if (closestSegment && closestPointOnSegment) {
+        // Remove hover preview marker since we're adding the actual point
+        if (window.hoverPreviewMarker) {
+          window.hoverPreviewMarker.remove();
+          window.hoverPreviewMarker = null;
+        }
+
         addRoutePoint({
           lng: closestPointOnSegment.lng,
           lat: closestPointOnSegment.lat,
@@ -1714,6 +1820,11 @@ async function loadKMLFile() {
       if (typeof initTutorial === "function") {
         initTutorial();
       }
+
+      // Show example point after map is fully loaded
+      setTimeout(() => {
+        showExamplePoint();
+      }, 2000);
     }, 1000);
   } catch (error) {
     document.getElementById("error-message").style.display = "block";
@@ -1982,7 +2093,6 @@ async function parseGeoJSON(geoJsonData) {
       });
 
       map.on("mouseleave", layerId, () => {
-        map.getCanvas().style.cursor = "";
         if (!selectedSegments.includes(name)) {
           map.setPaintProperty(layerId, "line-width", originalWeight);
           map.setPaintProperty(layerId, "line-opacity", originalOpacity);
@@ -2005,10 +2115,12 @@ async function parseGeoJSON(geoJsonData) {
 
     // Initialize spatial index and populate it with all segments
     spatialIndex = new SpatialIndex();
-    routePolylines.forEach(polylineData => {
+    routePolylines.forEach((polylineData) => {
       spatialIndex.addSegment(polylineData);
     });
-    console.log(`Spatial index initialized with ${routePolylines.length} segments`);
+    console.log(
+      `Spatial index initialized with ${routePolylines.length} segments`,
+    );
 
     // Initialize RouteManager and load data
     routeManager = new RouteManager();
@@ -3335,6 +3447,149 @@ function searchLocation() {
       searchError.textContent = "שגיאה בחיפוש מיקום. נא לנסות שוב.";
       searchError.style.display = "block";
     });
+}
+
+// Function to show example point with tooltip
+function showExamplePoint() {
+  // Don't show if user already has segments selected or if tutorial is active
+  if (
+    selectedSegments.length > 0 ||
+    (window.tutorial && window.tutorial.isActive)
+  ) {
+    return;
+  }
+
+  const exampleLat = 33.181281300095684;
+  const exampleLng = 35.62218007147424;
+
+  // Create example point marker
+  const exampleElement = document.createElement("div");
+  exampleElement.className = "example-point";
+  exampleElement.style.cssText = `
+    width: 12px;
+    height: 12px;
+    background: #ff4444;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
+    cursor: pointer;
+    animation: pulse 1.5s infinite;
+    display:none;
+  `;
+
+  const exampleMarker = new mapboxgl.Marker(exampleElement)
+    .setLngLat([exampleLng, exampleLat])
+    .addTo(map);
+
+  // Create tooltip
+  const tooltip = document.createElement("div");
+  tooltip.className = "example-tooltip";
+  tooltip.innerHTML = "לחץ להוספה <br>למסלול";
+  tooltip.style.cssText = `
+    position: absolute;
+    background: white;
+    color: black;
+    font-weight: bold;
+    padding: 4px 6px;
+    border: 2px solid red;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    animation: tooltipBounce 1s ease-in-out infinite alternate;
+    display: none;
+  `;
+
+  // Create arrow pointing down to the example point using inline SVG
+  const arrow = document.createElement("div");
+  arrow.className = "example-arrow";
+
+  arrow.style.cssText = `
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    z-index: 999;
+    pointer-events: none;
+    filter: drop-shadow(0 0 2px white);
+    transform: rotate(-20deg);
+    animation: tooltipBounce 1s ease-in-out infinite alternate;
+    display: none;
+  `;
+
+  document.body.appendChild(arrow);
+  document.body.appendChild(tooltip);
+
+  // Position tooltip and arrow relative to the marker
+  const updateTooltipPosition = () => {
+    const rect = exampleElement.getBoundingClientRect();
+
+    // Position tooltip above and to the left of the point (lowered to make room for arrow)
+    tooltip.style.left = rect.left - 90 + "px";
+    tooltip.style.top = rect.top - 18 + "px";
+
+    // Position arrow above the tooltip pointing down to marker
+    arrow.style.left = rect.left - 24 + "px";
+    arrow.style.top = rect.top - 50 + "px";
+  };
+
+  // Function to show both tooltip and arrow together
+  const showTooltipAndArrow = () => {
+    exampleElement.style.display = "";
+    updateTooltipPosition();
+    arrow.style.display = "";
+    tooltip.style.display = "";
+  };
+
+  // Wait for SVG to load before showing anything
+  fetch("arrow.svg")
+    .then((response) => response.text())
+    .then((svgContent) => {
+      arrow.innerHTML = svgContent;
+      // Show both elements together after SVG is loaded
+      showTooltipAndArrow();
+    })
+    .catch((error) => {
+      console.warn("Could not load arrow SVG:", error);
+      // Fallback to a simple arrow if SVG fails to load
+      arrow.innerHTML = "↓";
+      arrow.style.fontSize = "24px";
+      arrow.style.color = "#ff4444";
+      // Show both elements together even with fallback
+      showTooltipAndArrow();
+    });
+
+  // Update position when map moves
+  const updatePositionHandler = () => {
+    if (tooltip.style.display !== "none" && arrow.style.display !== "none") {
+      updateTooltipPosition();
+    }
+  };
+  map.on("move", updatePositionHandler);
+
+  // Remove example after 2 seconds or on mouse move
+  const removeExample = () => {
+    if (exampleMarker) {
+      exampleMarker.remove();
+    }
+    if (tooltip && tooltip.parentNode) {
+      tooltip.parentNode.removeChild(tooltip);
+    }
+    if (arrow && arrow.parentNode) {
+      arrow.parentNode.removeChild(arrow);
+    }
+    map.off("move", updatePositionHandler);
+    // document.removeEventListener("mousemove", removeExample);
+    // document.removeEventListener("touchstart", removeExample);
+  };
+
+  // Remove on mouse move or touch
+  // document.addEventListener("mousemove", removeExample, { once: true });
+  // document.addEventListener("touchstart", removeExample, { once: true });
+
+  // Remove after 2 seconds
+  setTimeout(removeExample, 3000);
 }
 
 // Function to scroll to top of page

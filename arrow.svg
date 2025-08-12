@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: SketchAPI 2022.10.24.12 https://api.sketch.io -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketchjs="https://sketch.io/dtd/" sketchjs:metadata="eyJuYW1lIjoiRHJhd2luZyIsInN1cmZhY2UiOnsiaXNQYWludCI6dHJ1ZSwibWV0aG9kIjoiZmlsbCIsImJsZW5kIjoibm9ybWFsIiwiZW5hYmxlZCI6dHJ1ZSwib3BhY2l0eSI6MSwidHlwZSI6InBhdHRlcm4iLCJwYXR0ZXJuIjp7InR5cGUiOiJwYXR0ZXJuIiwicmVmbGVjdCI6Im5vLXJlZmxlY3QiLCJyZXBlYXQiOiJyZXBlYXQiLCJzbW9vdGhpbmciOmZhbHNlLCJzcmMiOiJ0cmFuc3BhcmVudExpZ2h0Iiwic3giOjEsInN5IjoxLCJ4MCI6MC41LCJ4MSI6MSwieTAiOjAuNSwieTEiOjF9LCJpc0ZpbGwiOnRydWV9LCJjbGlwUGF0aCI6eyJlbmFibGVkIjp0cnVlLCJzdHlsZSI6eyJzdHJva2VTdHlsZSI6ImJsYWNrIiwibGluZVdpZHRoIjoxfX0sImRlc2NyaXB0aW9uIjoiTWFkZSB3aXRoIFNrZXRjaHBhZCIsIm1ldGFkYXRhIjp7fSwiZXhwb3J0RFBJIjo3MiwiZXhwb3J0Rm9ybWF0IjoicG5nIiwiZXhwb3J0UXVhbGl0eSI6MC45NSwidW5pdHMiOiJweCIsIndpZHRoIjozNywiaGVpZ2h0Ijo0MiwicGFnZXMiOlt7IndpZHRoIjozNywiaGVpZ2h0Ijo0Mn1dLCJ1dWlkIjoiOTQ4NjkzYmItNzE1Ni00MmQ1LTk2OTgtOTVkNzA2N2E2ZTk3In0=" width="37" height="42" viewBox="0 0 37 42">
+<g style="mix-blend-mode: source-over;" sketchjs:tool="arrow" transform="matrix(0.1940642407617592,-0.1033391056772073,0.2136082151692098,0.40114258610649384,-1.3695193853256455,18.466385186157755)">
+	<g sketchjs:uid="1">
+		<g sketchjs:uid="2">
+			<g sketchjs:uid="3" style="paint-order: fill stroke markers;">
+				<path d="M 127.80000305175781 29L 88.79999923706055 9.5L 94.45274353027344 20.80548858642578L 9.5 27.5L 9.5 30.5L 94.45274353027344 37.19451141357422L 88.79999923706055 48.5L 127.80000305175781 29ZZ" sketchjs:uid="4" style="fill: #ff3737; stroke: #ffffff; stroke-width: 9.13; stroke-linecap: round; paint-order: stroke fill markers;"/>
+			</g>
+		</g>
+	</g>
+</g>
+</svg>
