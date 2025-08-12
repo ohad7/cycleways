@@ -1276,10 +1276,118 @@ function initMap() {
       }
     });
 
+    // Add mobile touch start handler for better mobile interaction
+    map.on("touchstart", (e) => {
+      // Store the touch start position and time for detecting taps vs drags
+      window.touchStartTime = Date.now();
+      window.touchStartPosition = e.lngLat ? { lat: e.lngLat.lat, lng: e.lngLat.lng } : null;
+    });
+
+    // Add mobile touch end handler
+    map.on("touchend", (e) => {
+      const touchDuration = Date.now() - (window.touchStartTime || 0);
+      const isTap = touchDuration < 200; // Less than 200ms is considered a tap
+      
+      if (isTap && window.touchStartPosition && e.lngLat) {
+        const touchEndPosition = { lat: e.lngLat.lat, lng: e.lngLat.lng };
+        const touchDistance = getDistance(window.touchStartPosition, touchEndPosition);
+        
+        // If the touch didn't move much (less than 10 meters), treat it as a tap
+        if (touchDistance < 10) {
+          // Check if we're tapping near a segment
+          const clickPoint = e.lngLat;
+          const clickPixel = map.project(clickPoint);
+          const threshold = 25; // Larger threshold for mobile (25 pixels)
+
+          let closestSegment = null;
+          let closestPointOnSegment = null;
+
+          if (spatialIndex) {
+            const degreeThreshold = threshold * 0.00005;
+            const candidateSegment = spatialIndex.findNearestSegment(
+              clickPoint.lat,
+              clickPoint.lng,
+              degreeThreshold,
+            );
+
+            if (candidateSegment) {
+              const coords = candidateSegment.coordinates;
+              let minPixelDistance = Infinity;
+              let bestSegmentStart = null;
+              let bestSegmentEnd = null;
+
+              for (let i = 0; i < coords.length - 1; i++) {
+                const startPixel = map.project([coords[i].lng, coords[i].lat]);
+                const endPixel = map.project([
+                  coords[i + 1].lng,
+                  coords[i + 1].lat,
+                ]);
+
+                const distance = distanceToLineSegmentPixels(
+                  clickPixel,
+                  startPixel,
+                  endPixel,
+                );
+
+                if (distance < minPixelDistance) {
+                  minPixelDistance = distance;
+                  bestSegmentStart = coords[i];
+                  bestSegmentEnd = coords[i + 1];
+                }
+              }
+
+              if (
+                minPixelDistance < threshold &&
+                bestSegmentStart &&
+                bestSegmentEnd
+              ) {
+                closestSegment = candidateSegment;
+                closestPointOnSegment = getClosestPointOnLineSegment(
+                  { lat: clickPoint.lat, lng: clickPoint.lng },
+                  bestSegmentStart,
+                  bestSegmentEnd,
+                );
+              }
+            }
+          }
+
+          if (closestSegment) {
+            // Mobile tap on segment - toggle selection
+            const segmentName = closestSegment.segmentName;
+            if (selectedSegments.includes(segmentName)) {
+              removeSegment(segmentName);
+            } else {
+              saveState();
+              selectedSegments.push(segmentName);
+              updateSegmentStyles();
+              updateRouteListAndDescription();
+              clearRouteFromUrl();
+              logOperation("addSegment", { segmentName: segmentName });
+            }
+          } else if (closestPointOnSegment) {
+            // Add route point if not near any segment
+            addRoutePoint({
+              lng: closestPointOnSegment.lng,
+              lat: closestPointOnSegment.lat,
+            });
+          }
+        }
+      }
+      
+      // Clear touch tracking
+      window.touchStartTime = null;
+      window.touchStartPosition = null;
+    });
+
     // Add global click handler for adding route points
     map.on("click", (e) => {
       // Don't add points if we're dragging a point
       if (isDraggingPoint) {
+        return;
+      }
+      
+      // Don't handle clicks on mobile if we just processed a touch event
+      if (window.touchStartTime !== null) {
         return;
       }
 
@@ -1970,6 +2078,30 @@ async function parseGeoJSON(geoJsonData) {
         }
       });
 
+      // Add click handler for segment selection
+      map.on("click", layerId, (e) => {
+        e.preventDefault();
+        
+        // Toggle segment selection
+        if (selectedSegments.includes(name)) {
+          removeSegment(name);
+        } else {
+          // Add segment to selection
+          saveState();
+          selectedSegments.push(name);
+          
+          // Update the segment style immediately
+          map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_SELECTED);
+          map.setPaintProperty(layerId, "line-width", originalWeight + 1);
+          
+          updateRouteListAndDescription();
+          clearRouteFromUrl();
+          
+          // Log the operation
+          logOperation("addSegment", { segmentName: name });
+        }
+      });
+
       // Add hover functionality for selected segments to show distance from start
       map.on("mousemove", layerId, (e) => {
         if (selectedSegments.includes(name)) {
@@ -2152,6 +2284,58 @@ function getDistance(point1, point2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
+}
+
+// Helper function to detect if device is mobile
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         ('ontouchstart' in window) || 
+         (navigator.maxTouchPoints > 0);
+}
+
+// Helper function to find closest segment to a touch point with mobile-optimized threshold
+function findClosestSegmentForTouch(touchPoint) {
+  const threshold = isMobileDevice() ? 30 : 15; // Larger threshold for mobile
+  let closestSegment = null;
+  let closestPointOnSegment = null;
+
+  if (spatialIndex) {
+    const degreeThreshold = threshold * 0.00005;
+    const candidateSegment = spatialIndex.findNearestSegment(
+      touchPoint.lat,
+      touchPoint.lng,
+      degreeThreshold,
+    );
+
+    if (candidateSegment) {
+      const coords = candidateSegment.coordinates;
+      let minPixelDistance = Infinity;
+      const touchPixel = map.project(touchPoint);
+
+      for (let i = 0; i < coords.length - 1; i++) {
+        const startPixel = map.project([coords[i].lng, coords[i].lat]);
+        const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
+
+        const distance = distanceToLineSegmentPixels(
+          touchPixel,
+          startPixel,
+          endPixel,
+        );
+
+        if (distance < minPixelDistance && distance < threshold) {
+          minPixelDistance = distance;
+          closestSegment = candidateSegment;
+          closestPointOnSegment = getClosestPointOnLineSegment(
+            touchPoint,
+            coords[i],
+            coords[i + 1],
+          );
+        }
+      }
+    }
+  }
+
+  return closestSegment ? { segment: closestSegment, point: closestPointOnSegment } : null;
 }
 
 // Function to smooth elevation values using distance-based window smoothing
