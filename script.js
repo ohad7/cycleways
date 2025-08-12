@@ -1970,7 +1970,7 @@ async function parseGeoJSON(geoJsonData) {
         }
       });
 
-      // Add touch events for mobile segment selection
+      // Add touch events for mobile - same behavior as desktop click
       map.on("touchstart", layerId, (e) => {
         if (e.points.length !== 1) return;
         
@@ -1981,20 +1981,48 @@ async function parseGeoJSON(geoJsonData) {
         const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         if (!isMobile) return;
         
-        // Don't add segments if we're dragging a point
+        // Don't add points if we're dragging a point
         if (isDraggingPoint) return;
         
-        // Add segment to route if not already selected
-        if (!selectedSegments.includes(name)) {
-          saveState();
+        // Get the touch point
+        const touchPoint = e.lngLat;
+        const touchPixel = map.project(touchPoint);
+        const threshold = 15; // Same threshold as desktop
+        
+        // Find the closest point on this segment
+        let closestPointOnSegment = null;
+        let minPixelDistance = Infinity;
+        
+        const coords = coordObjects;
+        for (let i = 0; i < coords.length - 1; i++) {
+          const startPixel = map.project([coords[i].lng, coords[i].lat]);
+          const endPixel = map.project([coords[i + 1].lng, coords[i + 1].lat]);
           
-          // Log the operation
-          logOperation("addSegment", { segmentName: name });
+          const distance = distanceToLineSegmentPixels(
+            touchPixel,
+            startPixel,
+            endPixel
+          );
           
-          selectedSegments.push(name);
-          updateSegmentStyles();
-          updateRouteListAndDescription();
-          clearRouteFromUrl();
+          if (distance < minPixelDistance) {
+            minPixelDistance = distance;
+            
+            if (distance < threshold) {
+              closestPointOnSegment = getClosestPointOnLineSegment(
+                { lat: touchPoint.lat, lng: touchPoint.lng },
+                coords[i],
+                coords[i + 1]
+              );
+            }
+          }
+        }
+        
+        // Add point if close enough to segment
+        if (closestPointOnSegment && minPixelDistance < threshold) {
+          addRoutePoint({
+            lng: closestPointOnSegment.lng,
+            lat: closestPointOnSegment.lat,
+          });
         }
       });
 
