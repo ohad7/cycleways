@@ -186,71 +186,54 @@ function createPointMarker(point, index) {
       },
     });
 
-    // Ensure icons are available - check if map is already loaded
-    const setupIcons = () => {
-      if (!map.hasImage("default-dot-icon")) {
-        // Create a simple red circle icon as a canvas
-        const size = 12;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        
-        // Draw red circle
-        ctx.beginPath();
-        ctx.arc(size/2, size/2, size/2 - 1, 0, 2 * Math.PI);
-        ctx.fillStyle = '#ff4444';
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        map.addImage("default-dot-icon", canvas);
-      }
-      
-      if (!map.hasImage("snowflake-icon")) {
-        // Create a simple snowflake icon as a canvas
-        const size = 16;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        
-        // Draw snowflake symbol
-        ctx.strokeStyle = '#00aaff';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        
-        const center = size / 2;
-        const radius = size / 2 - 2;
-        
-        // Draw 6 lines radiating from center
-        for (let i = 0; i < 6; i++) {
-          const angle = (i * Math.PI) / 3;
-          const x = center + Math.cos(angle) * radius;
-          const y = center + Math.sin(angle) * radius;
-          
-          ctx.beginPath();
-          ctx.moveTo(center, center);
-          ctx.lineTo(x, y);
-          ctx.stroke();
-        }
-        
-        // Draw center circle
-        ctx.beginPath();
-        ctx.arc(center, center, 2, 0, 2 * Math.PI);
-        ctx.fillStyle = '#00aaff';
-        ctx.fill();
-        
-        map.addImage("snowflake-icon", canvas);
-      }
-    };
+    // Add default red dot icon and snowflake icon definitions
+    map.once("load", () => {
+      // Add default red dot icon for points
+      map.addSource("default-dot-icon", {
+        type: "image",
+        url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAv0lEQVQ4ja2TgQ3CQBBEt0p2L/vC4I07gE24A74C9w24A+4BE9Yj2P4l7y1h4N1U1e5N87y07sP0t4/a+b3A2d8f0wU+uL1d+/m7i954B4v239r+j97gC81F4+Q7f7m5/l2128T7Hw5r8W0r8H9M8yO1J9B5p6Jm83m0+7p72r+035X9P+25t+r2z0v2jV6z371f9u0h8/zM1L8A7p6n6l7x+h6+M7A+d/fN9P+l8HhD8B3p8X8x4oN7gIAAAAAElFTkSuQmCC",
+        coordinates: [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+        ],
+      });
+      map.addLayer({
+        id: "default-dot",
+        type: "symbol",
+        source: "default-dot-icon",
+        layout: {
+          "icon-image": "default-dot-icon",
+          "icon-size": 1,
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
+      });
 
-    if (map.loaded()) {
-      setupIcons();
-    } else {
-      map.once("load", setupIcons);
-    }
+      // Add snowflake icon for winter warning
+      map.addSource("snowflake-icon", {
+        type: "image",
+        url: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2FjY2NmZiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwaDE4djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTE4LjQ3IDMuNzdhMS42IDIgMCAwIDAtMS4xNS40M0w4Ljg0IDEyLjIyYTIuMTEgMi4xMSAwIDAgMS4yMSAyLjM1YTEuNjUgMS42NSAwIDAgMC0wLjcyIDEuMzljMCAxLjIgMS41NSAxLjcgMi41IDEuMTRhMS41IDEuNSAwIDAgMCAuNTktMS45MWwxLjMtMi41NWEyLjgyIDIuODIgMCAwIDAtLjMtMi43MSAxLjMgMS4zIDAgMSAwIC41OS4zMmwxLjMzIDIuNTRhMS41IDEuNSAwIDAgMCAuNTggMS45MSAxLjQxIDEuNDEgMCAwIDAtMS44Ni4xNGE1LjA0IDUuMDQgMCAwIDAtMi4yNi44OGwtOC45OCA0LjE5YTUuMDQgNS4wNCAwIDAgMC0yLjQ1IDIuMWE0LjI2IDQuMjYgMCAwIDAtMS41MiA0LjY2Yy40MSAxLjUzIDEuNDUgMi40MyAzLjEzIDMuMzhhNy41IDcuNSAwIDAgMCA0LjM0IDEuMjVhOC43MiA4LjcyIDAgMCAwIDMuNTgtMC43OWw4Ljk1LTQuMTljMS4zLS42MSAxLjktMS43IDEuOS0yLjhzLS42MS0yLjItMS45MS0yLjhMNjkgNy43MmEyLjMxIDIuMzEgMCAwIDAtLjY0LTEuNDlhMS42IDEuNiAwIDAgMC0xLjE0LS40M3oiLz48L3N2Zz4=",
+        coordinates: [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+        ],
+      });
+      map.addLayer({
+        id: "snowflake-icon",
+        type: "symbol",
+        source: "snowflake-icon",
+        layout: {
+          "icon-image": "snowflake-icon",
+          "icon-size": 0.5, // Adjust size as needed
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
+      });
+    });
 
     // Add drag functionality
     let isDragging = false;
