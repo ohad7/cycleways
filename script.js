@@ -171,14 +171,71 @@ function createPointMarker(point, index) {
     // Add circle layer for points
     map.addLayer({
       id: "route-points-circle",
-      type: "circle",
+      type: "symbol", // Changed to symbol layer to handle custom icons
       source: "route-points",
-      paint: {
-        "circle-radius": 4,
-        "circle-color": "#ff4444",
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#ffffff",
+      layout: {
+        "icon-image": [
+          "case",
+          ["boolean", ["get", "hasWinterWarning"], false],
+          "snowflake-icon", // Use snowflake icon for winter warning
+          "default-dot", // Use default icon (red dot) otherwise
+        ],
+        "icon-size": 0.7, // Adjust size as needed, should be similar to circle-radius 4px
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
       },
+      paint: {
+        // Circle layer properties are no longer needed for the main points
+      },
+    });
+
+    // Add default red dot icon and snowflake icon definitions
+    map.once("load", () => {
+      // Add default red dot icon for points
+      map.addSource("default-dot-icon", {
+        type: "image",
+        url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAAv0lEQVQ4ja2TgQ3CQBBEt0p2L/vC4I07gE24A74C9w24A+4BE9Yj2P4l7y1h4N1U1e5N87y07sP0t4/a+b3A2d8f0wU+uL1d+/m7i954B4v239r+j97gC81F4+Q7f7m5/l2128T7Hw5r8W0r8H9M8yO1J9B5p6Jm83m0+7p72r+035X9P+25t+r2z0v2jV6z371f9u0h8/zM1L8A7p6n6l7x+h6+M7A+d/fN9P+l8HhD8B3p8X8x4oN7gIAAAAAElFTkSuQmCC",
+        coordinates: [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+        ],
+      });
+      map.addLayer({
+        id: "default-dot",
+        type: "symbol",
+        source: "default-dot-icon",
+        layout: {
+          "icon-image": "default-dot-icon",
+          "icon-size": 1,
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
+      });
+
+      // Add snowflake icon for winter warning
+      map.addSource("snowflake-icon", {
+        type: "image",
+        url: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2FjY2NmZiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwaDE4djI0SDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTE4LjQ3IDMuNzdhMS42IDIgMCAwIDAtMS4xNS40M0w4Ljg0IDEyLjIyYTIuMTEgMi4xMSAwIDAgMS4yMSAyLjM1YTEuNjUgMS42NSAwIDAgMC0wLjcyIDEuMzljMCAxLjIgMS41NSAxLjcgMi41IDEuMTRhMS41IDEuNSAwIDAgMCAuNTktMS45MWwxLjMtMi41NWEyLjgyIDIuODIgMCAwIDAtLjMtMi43MSAxLjMgMS4zIDAgMSAwIC41OS4zMmwxLjMzIDIuNTRhMS41IDEuNSAwIDAgMCAuNTggMS45MSAxLjQxIDEuNDEgMCAwIDAtMS44Ni4xNGE1LjA0IDUuMDQgMCAwIDAtMi4yNi44OGwtOC45OCA0LjE5YTUuMDQgNS4wNCAwIDAgMC0yLjQ1IDIuMWE0LjI2IDQuMjYgMCAwIDAtMS41MiA0LjY2Yy40MSAxLjUzIDEuNDUgMi40MyAzLjEzIDMuMzhhNy41IDcuNSAwIDAgMCA0LjM0IDEuMjVhOC43MiA4LjcyIDAgMCAwIDMuNTgtMC43OWw4Ljk1LTQuMTljMS4zLS42MSAxLjktMS43IDEuOS0yLjhzLS42MS0yLjItMS45MS0yLjhMNjkgNy43MmEyLjMxIDIuMzEgMCAwIDAtLjY0LTEuNDlhMS42IDEuNiAwIDAgMC0xLjE0LS40M3oiLz48L3N2Zz4=",
+        coordinates: [
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+        ],
+      });
+      map.addLayer({
+        id: "snowflake-icon",
+        type: "symbol",
+        source: "snowflake-icon",
+        layout: {
+          "icon-image": "snowflake-icon",
+          "icon-size": 0.5, // Adjust size as needed
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
+      });
     });
 
     // Add drag functionality
@@ -210,19 +267,25 @@ function createPointMarker(point, index) {
       }
 
       // Update the source data by recreating all features
-      const features = routePoints.map((point, idx) => ({
-        type: "Feature",
-        id: `route-point-${point.id}`,
-        geometry: {
-          type: "Point",
-          coordinates: [point.lng, point.lat],
-        },
-        properties: {
-          index: idx,
-          pointId: point.id,
-          type: "route-point",
-        },
-      }));
+      const features = routePoints.map((point, idx) => {
+        const segmentHasWinterWarning = point.segmentName ?
+          (segmentsData[point.segmentName] && segmentsData[point.segmentName].winter === false) : false;
+
+        return {
+          type: "Feature",
+          id: `route-point-${point.id}`,
+          geometry: {
+            type: "Point",
+            coordinates: [point.lng, point.lat],
+          },
+          properties: {
+            index: idx,
+            pointId: point.id,
+            type: "route-point",
+            hasWinterWarning: segmentHasWinterWarning,
+          },
+        };
+      });
 
       map.getSource("route-points").setData({
         type: "FeatureCollection",
@@ -298,19 +361,25 @@ function createPointMarker(point, index) {
       }
 
       // Update the source data by recreating all features
-      const features = routePoints.map((point, idx) => ({
-        type: "Feature",
-        id: `route-point-${point.id}`,
-        geometry: {
-          type: "Point",
-          coordinates: [point.lng, point.lat],
-        },
-        properties: {
-          index: idx,
-          pointId: point.id,
-          type: "route-point",
-        },
-      }));
+      const features = routePoints.map((point, idx) => {
+        const segmentHasWinterWarning = point.segmentName ?
+          (segmentsData[point.segmentName] && segmentsData[point.segmentName].winter === false) : false;
+
+        return {
+          type: "Feature",
+          id: `route-point-${point.id}`,
+          geometry: {
+            type: "Point",
+            coordinates: [point.lng, point.lat],
+          },
+          properties: {
+            index: idx,
+            pointId: point.id,
+            type: "route-point",
+            hasWinterWarning: segmentHasWinterWarning,
+          },
+        };
+      });
 
       map.getSource("route-points").setData({
         type: "FeatureCollection",
@@ -1363,7 +1432,7 @@ function initMap() {
           lng: closestPointOnSegment.lng,
           lat: closestPointOnSegment.lat,
         });
-      }      
+      }
     }
 
     map.on('touchstart', 'route-points-circle', (e) => {
@@ -1414,7 +1483,7 @@ function initMap() {
       if (isDraggingPoint) {
         return;
       }
-      addPointFromLngLat(e.lngLat);      
+      addPointFromLngLat(e.lngLat);
     });
 
     // Map move handlers are no longer needed with custom drag implementation
