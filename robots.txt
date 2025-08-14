@@ -9,7 +9,6 @@ Sitemap: https://www.cycleways.app/sitemap.xml
 Crawl-delay: 1
 
 # Block unnecessary files
-Disallow: /*.json$
 Disallow: /tests/
 Disallow: /.config/
 Disallow: /conversation.md
