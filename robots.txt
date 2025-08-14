@@ -1,0 +1,12 @@
+
+User-agent: *
+Allow: /
+Disallow: /tests/
+Disallow: /.config/
+Disallow: /attached_assets/
+
+# Sitemap location
+Sitemap: https://bike-map-golan-galil.replit.app/sitemap.xml
+
+# Crawl delay to be respectful to our server
+Crawl-delay: 1

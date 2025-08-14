@@ -281,6 +281,55 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Performance optimizations */
+* {
+  box-sizing: border-box;
+}
+
+/* Improve font loading */
+@font-display: swap;
+
+/* Loading state for map */
+#map[data-loading="true"]::before {
+  content: "טוען מפה...";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  border-radius: 8px;
+  z-index: 1000;
+  font-weight: bold;
+}
+
+/* Optimize images */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Critical loading improvements */
+.critical-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #748873 0%, #748873 50%, transparent 50%);
+  animation: loading-bar 2s linear infinite;
+  z-index: 9999;
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .content-section {
   background: #F8F8F8;
   border-radius: 12px;

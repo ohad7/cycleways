@@ -1954,6 +1954,9 @@ async function loadKMLFile() {
       setTimeout(() => {
         showExamplePoint();
       }, 2000);
+      
+      // Hide loading indicator
+      hideLoadingIndicator();
     }, 1000);
   } catch (error) {
     document.getElementById("error-message").style.display = "block";
@@ -3282,6 +3285,16 @@ function updateRouteListAndDescription() {
   downloadButton.disabled = false;
   updateRouteWarning();
   updateUndoRedoButtons(); // Update reset button state
+  
+  // Update SEO meta tags with route information
+  const routeInfo = {
+    distance: parseFloat(totalDistanceKm),
+    elevationGain: totalElevationGain,
+    elevationLoss: totalElevationLoss
+  };
+  updateMetaDescription(routeInfo);
+  updatePageTitle(routeInfo);
+  updateCanonicalUrl();
 
   // Add elevation profile hover functionality after DOM is updated
   setTimeout(() => {
@@ -4002,8 +4015,52 @@ function scrollToSection(sectionId) {
   }
 }
 
+// SEO and Performance Functions
+function updateMetaDescription(routeInfo) {
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (routeInfo && routeInfo.distance) {
+    const newDesc = `מסלול רכיבה בגליל העליון: ${routeInfo.distance.toFixed(1)} ק"מ, ${routeInfo.elevationGain} מ' עליות. תכנון מסלולי אופניים עם הורדת GPX.`;
+    metaDesc.content = newDesc;
+    
+    // Update Open Graph description too
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.content = newDesc;
+  }
+}
+
+function updatePageTitle(routeInfo) {
+  if (routeInfo && routeInfo.distance) {
+    document.title = `מסלול ${routeInfo.distance.toFixed(1)} ק"מ | מפת שבילי אופניים - גליל עליון וגולן`;
+  } else {
+    document.title = 'מפת שבילי אופניים - גליל עליון וגולן | מתכנן מסלולי רכיבה';
+  }
+}
+
+function updateCanonicalUrl() {
+  const canonical = document.querySelector('link[rel="canonical"]');
+  const currentUrl = new URL(window.location);
+  if (canonical) {
+    canonical.href = currentUrl.toString();
+  }
+}
+
+// Add loading indicator
+function showLoadingIndicator() {
+  const loading = document.createElement('div');
+  loading.className = 'critical-loading';
+  loading.id = 'critical-loading';
+  document.body.appendChild(loading);
+}
+
+function hideLoadingIndicator() {
+  const loading = document.getElementById('critical-loading');
+  if (loading) loading.remove();
+}
+
 // Event listeners
 document.addEventListener("DOMContentLoaded", function () {
+  showLoadingIndicator();
+  
   // Initialize the map when page loads
   initMap();
 
