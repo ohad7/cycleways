@@ -1,0 +1,15 @@
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.cycleways.app/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
+
+# Block unnecessary files
+Disallow: /tests/
+Disallow: /.config/
+Disallow: /conversation.md
+Disallow: /test-*.js
