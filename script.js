@@ -136,9 +136,6 @@ function addRoutePoint(lngLat, fromClick = true) {
   clearRouteFromUrl();
 }
 
-
-
-
 // Create a map-integrated point feature for a route point
 function createPointMarker(point, index) {
   const pointId = `route-point-${point.id}`;
@@ -1052,7 +1049,8 @@ function initMap() {
       loadKMLFile();
     });
 
-    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const isTouchDevice =
+      "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
     // Add global mouse move handler for proximity-based highlighting
     if (!isTouchDevice) {
@@ -1123,7 +1121,11 @@ function initMap() {
           const layerId = polylineData.layerId;
           if (selectedSegments.includes(polylineData.segmentName)) {
             // Keep selected segments green
-            map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_SELECTED);
+            map.setPaintProperty(
+              layerId,
+              "line-color",
+              COLORS.SEGMENT_SELECTED,
+            );
             map.setPaintProperty(
               layerId,
               "line-width",
@@ -1218,7 +1220,10 @@ function initMap() {
               `;
 
               window.hoverPreviewMarker = new mapboxgl.Marker(el)
-                .setLngLat([closestPointOnSegment.lng, closestPointOnSegment.lat])
+                .setLngLat([
+                  closestPointOnSegment.lng,
+                  closestPointOnSegment.lat,
+                ])
                 .addTo(map);
             } else {
               // Remove hover preview marker if too close to existing point
@@ -1240,19 +1245,21 @@ function initMap() {
             ? metrics.forward.elevationLoss
             : 0;
 
-          const segmentDisplay = document.getElementById("segment-name-display");
+          const segmentDisplay = document.getElementById(
+            "segment-name-display",
+          );
           segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
 
-        // Check for warnings in segments data and add to segment display
-        const segmentInfo = segmentsData[name];
-        if (segmentInfo) {
-          if (segmentInfo.winter === false) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
+          // Check for warnings in segments data and add to segment display
+          const segmentInfo = segmentsData[name];
+          if (segmentInfo) {
+            if (segmentInfo.winter === false) {
+              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
+            }
+            if (segmentInfo.warning) {
+              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; background-color: beige; padding:5px; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
+            }
           }
-          if (segmentInfo.warning) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; background-color: beige; padding:5px; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
-          }
-        }
 
           // Check if this segment has been displayed before (track by segment name)
           if (!window.displayedSegmentNames) {
@@ -1274,7 +1281,9 @@ function initMap() {
           segmentDisplay.style.display = "block";
         } else {
           // No segment close enough - reset cursor and hide display
-          const segmentDisplay = document.getElementById("segment-name-display");
+          const segmentDisplay = document.getElementById(
+            "segment-name-display",
+          );
           segmentDisplay.style.display = "none";
 
           // Remove hover preview marker
@@ -1363,15 +1372,15 @@ function initMap() {
           lng: closestPointOnSegment.lng,
           lat: closestPointOnSegment.lat,
         });
-      }      
+      }
     }
 
-    map.on('touchstart', 'route-points-circle', (e) => {
+    map.on("touchstart", "route-points-circle", (e) => {
       dragStartPx = e.points && e.points[0];
       dragging = false;
     });
 
-    map.on('touchend', (e) => {
+    map.on("touchend", (e) => {
       if (!isTouchDevice) return;
       if (isDraggingPoint) return; // don't add while dragging
       if (!e.points || e.points.length !== 1) return;
@@ -1386,7 +1395,7 @@ function initMap() {
       addPointFromLngLat(e.lngLat);
     });
 
-    map.on('touchmove', 'route-points-circle', (e) => {
+    map.on("touchmove", "route-points-circle", (e) => {
       if (!dragStartPx || !e.points || e.points.length !== 1) return;
       const p = e.points[0];
       if (!dragging) {
@@ -1395,18 +1404,17 @@ function initMap() {
         dragging = true;
       }
       // Now that it's a real drag, it's safe to prevent default scrolling
-      if (e.originalEvent && e.originalEvent.preventDefault) e.originalEvent.preventDefault();
+      if (e.originalEvent && e.originalEvent.preventDefault)
+        e.originalEvent.preventDefault();
 
       // ... your existing drag logic ...
-      window.alert('dragging point');
+      window.alert("dragging point");
     });
 
-    map.on('touchend', 'route-points-circle', () => {
+    map.on("touchend", "route-points-circle", () => {
       dragging = false;
       dragStartPx = null;
     });
-
-
 
     // Add global click handler for adding route points
     map.on("click", (e) => {
@@ -1414,7 +1422,7 @@ function initMap() {
       if (isDraggingPoint) {
         return;
       }
-      addPointFromLngLat(e.lngLat);      
+      addPointFromLngLat(e.lngLat);
     });
 
     // Map move handlers are no longer needed with custom drag implementation
@@ -1872,6 +1880,8 @@ async function loadKMLFile() {
     const geoJsonData = await response.json();
     await parseGeoJSON(geoJsonData);
 
+    showExamplePoint();
+
     // Try to load route from URL after everything is loaded
     setTimeout(() => {
       loadRouteFromUrl();
@@ -1880,11 +1890,6 @@ async function loadKMLFile() {
       if (typeof initTutorial === "function") {
         initTutorial();
       }
-
-      // Show example point after map is fully loaded
-      setTimeout(() => {
-        showExamplePoint();
-      }, 2000);
     }, 1000);
   } catch (error) {
     document.getElementById("error-message").style.display = "block";
@@ -3718,16 +3723,10 @@ function showExamplePoint() {
       arrow.parentNode.removeChild(arrow);
     }
     map.off("move", updatePositionHandler);
-    // document.removeEventListener("mousemove", removeExample);
-    // document.removeEventListener("touchstart", removeExample);
   };
 
-  // Remove on mouse move or touch
-  // document.addEventListener("mousemove", removeExample, { once: true });
-  // document.addEventListener("touchstart", removeExample, { once: true });
-
   // Remove after 2 seconds
-  setTimeout(removeExample, 3000);
+  setTimeout(removeExample, 4000);
 }
 
 // Function to scroll to top of page
