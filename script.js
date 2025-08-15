@@ -4270,9 +4270,6 @@ function createSegmentDataMarkers() {
 
         // Add hover interaction for tooltips
         map.on("mouseenter", layerId, (e) => {
-          e.originalEvent.preventDefault();
-          e.originalEvent.stopPropagation();
-          
           map.getCanvas().style.cursor = "pointer";
           
           // Set flag to prevent segment hover detection
@@ -4281,8 +4278,8 @@ function createSegmentDataMarkers() {
           const feature = e.features[0];
           if (feature) {
             const description = feature.properties.description;
-            const segmentName = feature.properties.segment;
             const markerType = feature.properties.type;
+            const coordinates = feature.geometry.coordinates;
 
             // Create emoji mapping for display
             const typeEmojis = {
@@ -4296,12 +4293,35 @@ function createSegmentDataMarkers() {
 
             const emoji = typeEmojis[markerType] || "ℹ️";
 
-            // Update the main segment display
-            const segmentDisplay = document.getElementById(
-              "segment-name-display",
-            );
-            segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> ${emoji} ${description}`;
-            segmentDisplay.style.display = "block";
+            // Create tooltip next to the marker
+            if (window.dataMarkerTooltip) {
+              window.dataMarkerTooltip.remove();
+            }
+
+            const tooltipEl = document.createElement('div');
+            tooltipEl.className = 'data-marker-tooltip';
+            tooltipEl.innerHTML = `${emoji} ${description}`;
+            tooltipEl.style.cssText = `
+              position: absolute;
+              background: rgba(0, 0, 0, 0.8);
+              color: white;
+              padding: 6px 10px;
+              border-radius: 4px;
+              font-size: 12px;
+              white-space: nowrap;
+              pointer-events: none;
+              z-index: 1000;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+              max-width: 200px;
+              word-wrap: break-word;
+              white-space: normal;
+            `;
+
+            window.dataMarkerTooltip = new mapboxgl.Marker(tooltipEl, {
+              offset: [15, -15] // Position tooltip to the right and above the marker
+            })
+            .setLngLat(coordinates)
+            .addTo(map);
 
             // Make the marker more visible on hover
             map.setPaintProperty(layerId, "circle-opacity", 1.0);
@@ -4314,10 +4334,12 @@ function createSegmentDataMarkers() {
           window.dataMarkerHovered = false;
           
           map.getCanvas().style.cursor = "";
-          const segmentDisplay = document.getElementById(
-            "segment-name-display",
-          );
-          segmentDisplay.style.display = "none";
+          
+          // Remove tooltip
+          if (window.dataMarkerTooltip) {
+            window.dataMarkerTooltip.remove();
+            window.dataMarkerTooltip = null;
+          }
 
           // Restore original appearance based on selection state
           const feature = e.features && e.features[0];
@@ -4343,8 +4365,8 @@ function createSegmentDataMarkers() {
           const feature = e.features[0];
           if (feature) {
             const description = feature.properties.description;
-            const segmentName = feature.properties.segment;
             const markerType = feature.properties.type;
+            const coordinates = feature.geometry.coordinates;
 
             // Create emoji mapping for display
             const typeEmojis = {
@@ -4359,17 +4381,40 @@ function createSegmentDataMarkers() {
             const emoji = typeEmojis[markerType] || "ℹ️";
 
             // Show tooltip for mobile/touch devices
-            const segmentDisplay = document.getElementById(
-              "segment-name-display",
-            );
-            segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> ${emoji} ${description}`;
-            segmentDisplay.style.display = "block";
+            if (window.dataMarkerTooltip) {
+              window.dataMarkerTooltip.remove();
+            }
+
+            const tooltipEl = document.createElement('div');
+            tooltipEl.className = 'data-marker-tooltip';
+            tooltipEl.innerHTML = `${emoji} ${description}`;
+            tooltipEl.style.cssText = `
+              position: absolute;
+              background: rgba(0, 0, 0, 0.8);
+              color: white;
+              padding: 6px 10px;
+              border-radius: 4px;
+              font-size: 12px;
+              white-space: nowrap;
+              pointer-events: none;
+              z-index: 1000;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+              max-width: 200px;
+              word-wrap: break-word;
+              white-space: normal;
+            `;
+
+            window.dataMarkerTooltip = new mapboxgl.Marker(tooltipEl, {
+              offset: [15, -15]
+            })
+            .setLngLat(coordinates)
+            .addTo(map);
             
             // Keep tooltip visible for a longer duration on mobile
             setTimeout(() => {
-              if (segmentDisplay.style.display === "block" && 
-                  segmentDisplay.innerHTML.includes(description)) {
-                segmentDisplay.style.display = "none";
+              if (window.dataMarkerTooltip) {
+                window.dataMarkerTooltip.remove();
+                window.dataMarkerTooltip = null;
               }
             }, 3000);
           }
@@ -4390,8 +4435,8 @@ function createSegmentDataMarkers() {
           const feature = e.features[0];
           if (feature) {
             const description = feature.properties.description;
-            const segmentName = feature.properties.segment;
             const markerType = feature.properties.type;
+            const coordinates = feature.geometry.coordinates;
 
             const typeEmojis = {
               payment: "💰",
@@ -4404,11 +4449,35 @@ function createSegmentDataMarkers() {
 
             const emoji = typeEmojis[markerType] || "ℹ️";
 
-            const segmentDisplay = document.getElementById(
-              "segment-name-display",
-            );
-            segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> ${emoji} ${description}`;
-            segmentDisplay.style.display = "block";
+            // Create tooltip for touch
+            if (window.dataMarkerTooltip) {
+              window.dataMarkerTooltip.remove();
+            }
+
+            const tooltipEl = document.createElement('div');
+            tooltipEl.className = 'data-marker-tooltip';
+            tooltipEl.innerHTML = `${emoji} ${description}`;
+            tooltipEl.style.cssText = `
+              position: absolute;
+              background: rgba(0, 0, 0, 0.8);
+              color: white;
+              padding: 6px 10px;
+              border-radius: 4px;
+              font-size: 12px;
+              white-space: nowrap;
+              pointer-events: none;
+              z-index: 1000;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+              max-width: 200px;
+              word-wrap: break-word;
+              white-space: normal;
+            `;
+
+            window.dataMarkerTooltip = new mapboxgl.Marker(tooltipEl, {
+              offset: [15, -15]
+            })
+            .setLngLat(coordinates)
+            .addTo(map);
             
             // Make marker more prominent
             map.setPaintProperty(layerId, "circle-opacity", 1.0);
@@ -4419,6 +4488,14 @@ function createSegmentDataMarkers() {
         map.on("touchend", layerId, (e) => {
           setTimeout(() => {
             window.dataMarkerTouched = false;
+            
+            // Remove tooltip after a delay
+            setTimeout(() => {
+              if (window.dataMarkerTooltip) {
+                window.dataMarkerTooltip.remove();
+                window.dataMarkerTooltip = null;
+              }
+            }, 2000);
             
             // Restore marker appearance
             const segmentName = selectedSegments.length > 0 ? selectedSegments[0] : null;
