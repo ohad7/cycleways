@@ -1015,6 +1015,19 @@ function updateSegmentStyles() {
       }
     }
   });
+
+  // Update data marker opacity based on selected segments
+  if (map.getLayer("data-markers-layer")) {
+    // Create expression to set opacity based on whether the segment is selected
+    const opacityExpression = [
+      "case",
+      ["in", ["get", "segmentName"], ["literal", selectedSegments]],
+      1.0, // opacity for selected segments
+      0.6  // default opacity for non-selected segments
+    ];
+    
+    map.setPaintProperty("data-markers-layer", "icon-opacity", opacityExpression);
+  }
 }
 
 function initMap() {
