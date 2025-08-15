@@ -15,7 +15,7 @@ let operationsLog = []; // Log of user operations for export
 let spatialIndex = null; // Spatial index for efficient segment lookup
 
 const COLORS = {
-  WARNING_ORANGE: "#ff9800",
+  WARNING_ORANGE: "#882211",
   WARNING_RED: "#f44336",
   SEGMENT_SELECTED: "#006699", // Green for selected segments
   SEGMENT_HOVER: "#666633", // Orange for hovered segments
@@ -1023,7 +1023,7 @@ function updateSegmentStyles() {
       "case",
       ["in", ["get", "segmentName"], ["literal", selectedSegments]],
       1.0, // opacity for selected segments
-      0.6, // default opacity for non-selected segments
+      0.45, // default opacity for non-selected segments
     ];
 
     map.setPaintProperty(
@@ -1072,7 +1072,7 @@ function initMap() {
     // Add global mouse move handler for proximity-based highlighting
     if (!isTouchDevice) {
       let lastCursorState = "default";
-      
+
       map.on("mousemove", (e) => {
         if (isDraggingPoint || map.isMoving()) {
           return;
@@ -1229,9 +1229,12 @@ function initMap() {
 
             // Check distance from data markers if not already too close to route points
             if (!tooCloseToExistingPoint && map.getSource("data-markers")) {
-              const markerFeatures = map.queryRenderedFeatures(hoverPointPixel, {
-                layers: ["data-markers-layer"],
-              });
+              const markerFeatures = map.queryRenderedFeatures(
+                hoverPointPixel,
+                {
+                  layers: ["data-markers-layer"],
+                },
+              );
 
               // If there are any data markers within the pixel threshold, don't show hover point
               if (markerFeatures.length > 0) {
@@ -1305,23 +1308,13 @@ function initMap() {
           // Show data points instead of legacy warnings
           const dataPoints = getSegmentDataPoints(name);
           if (dataPoints.length > 0) {
-            segmentDisplay.innerHTML +=
-              '<div style="margin-top: 5px; font-size: 12px;">';
+            let segmentDataHTML =
+              '<div style="margin-top: 5px; font-size: 12px; background-color: white; padding:5px;">';
             dataPoints.forEach((dataPoint) => {
-              segmentDisplay.innerHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE};">${dataPoint.emoji} ${dataPoint.information}</div>`;
+              segmentDataHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE}; background-color: white; ">${dataPoint.emoji} ${dataPoint.information}</div>`;
             });
-            segmentDisplay.innerHTML += "</div>";
-          }
-
-          // Keep legacy warnings as fallback
-          const segmentInfo = segmentsData[name];
-          if (segmentInfo && dataPoints.length === 0) {
-            if (segmentInfo.winter === false) {
-              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
-            }
-            if (segmentInfo.warning) {
-              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; background-color: beige; padding:5px; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
-            }
+            segmentDataHTML += "</div>";
+            segmentDisplay.innerHTML += segmentDataHTML;
           }
 
           // Check if this segment has been displayed before (track by segment name)
@@ -4302,12 +4295,13 @@ let dataMarkersLayer = null;
 
 // Emoji mapping for marker types
 const MARKER_EMOJIS = {
-  payment: "💰",
-  gate: "🚪",
-  mud: "🟫",
+  payment: "💵",
+  gate: "🚧",
+  mud: "⚠️",
   warning: "⚠️",
   slope: "⛰️",
-  narrow: "↔️",
+  narrow: "⛍",
+  severe: "‼️",
 };
 
 // Maki icon mapping for marker types
@@ -4318,6 +4312,7 @@ const MARKER_ICONS = {
   warning: "caution-11",
   slope: "mountain-11",
   narrow: "car-11",
+  severe: "roadblock-11",
 };
 
 // Load custom SVG icons as map images
@@ -4329,6 +4324,7 @@ async function loadCustomIcons() {
     "caution-11": "caution.svg",
     "mountain-11": "mountain.svg",
     "car-11": "car.svg",
+    "roadblock-11": "roadblock.svg",
   };
 
   for (const [iconName, svgFile] of Object.entries(iconMappings)) {
@@ -4429,7 +4425,7 @@ async function initDataMarkers() {
         "icon-ignore-placement": true,
       },
       paint: {
-        "icon-opacity": 0.6,
+        "icon-opacity": 0.45,
       },
     });
 
