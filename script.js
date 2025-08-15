@@ -2215,7 +2215,7 @@ async function parseGeoJSON(geoJsonData) {
     console.log("RouteManager initialized.");
 
     // Initialize data markers
-    initDataMarkers();
+    await initDataMarkers();
 
     // Keep map at current position instead of auto-fitting to all segments
     // if (!bounds.isEmpty()) {
@@ -4238,9 +4238,52 @@ const MARKER_ICONS = {
   narrow: "roadblock-11",
 };
 
+// Load custom SVG icons as map images
+async function loadCustomIcons() {
+  const iconMappings = {
+    'bank-11': 'bank.svg',
+    'barrier-11': 'barrier.svg', 
+    'wetland-11': 'wetland.svg',
+    'danger-11': 'danger.svg',
+    'mountain-11': 'mountain.svg',
+    'roadblock-11': 'roadblock.svg'
+  };
+
+  for (const [iconName, svgFile] of Object.entries(iconMappings)) {
+    try {
+      const response = await fetch(svgFile);
+      const svgText = await response.text();
+      
+      // Convert SVG to image
+      const img = new Image();
+      const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(svgBlob);
+      
+      await new Promise((resolve, reject) => {
+        img.onload = () => {
+          if (!map.hasImage(iconName)) {
+            map.addImage(iconName, img);
+          }
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+      
+      console.log(`Loaded custom icon: ${iconName}`);
+    } catch (error) {
+      console.warn(`Failed to load custom icon ${iconName}:`, error);
+    }
+  }
+}
+
 // Initialize data markers system
-function initDataMarkers() {
+async function initDataMarkers() {
   if (!map || !segmentsData) return;
+
+  // Load custom icons first
+  await loadCustomIcons();
 
   // Collect all data points from segments
   const dataFeatures = [];
