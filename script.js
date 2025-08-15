@@ -1108,7 +1108,7 @@ function initMap() {
             ) {
               closestSegment = candidateSegment;
               closestPointOnSegment = getClosestPointOnLineSegment(
-                { lat: mousePoint.lat, lng: mousePoint.lng },
+                { lat: mousePoint.lat, lng: mousePoint.lat },
                 bestSegmentStart,
                 bestSegmentEnd,
               );
@@ -1352,7 +1352,7 @@ function initMap() {
           ) {
             closestSegment = candidateSegment;
             closestPointOnSegment = getClosestPointOnLineSegment(
-              { lat: clickPoint.lat, lng: clickPoint.lng },
+              { lat: clickPoint.lat, lng: clickPoint.lat },
               bestSegmentStart,
               bestSegmentEnd,
             );
@@ -1882,9 +1882,12 @@ async function loadKMLFile() {
 
     showExamplePoint();
 
-    // Try to load route from URL after everything is loaded
+    // Initialize tutorial after everything is loaded
     setTimeout(() => {
       loadRouteFromUrl();
+
+      // Create segment data markers
+      createSegmentDataMarkers();
 
       // Initialize tutorial after everything is loaded
       if (typeof initTutorial === "function") {
@@ -2054,13 +2057,13 @@ async function parseGeoJSON(geoJsonData) {
 
               // Calculate closest point on line segment
               const closestPoint = getClosestPointOnLineSegment(
-                { lat: hoverPoint.lat, lng: hoverPoint.lng },
+                { lat: hoverPoint.lat, lng: hoverPoint.lat },
                 segmentStart,
                 segmentEnd,
               );
 
               const distance = getDistance(
-                { lat: hoverPoint.lat, lng: hoverPoint.lng },
+                { lat: hoverPoint.lat, lng: hoverPoint.lat },
                 closestPoint,
               );
 
@@ -4144,3 +4147,210 @@ document.addEventListener("DOMContentLoaded", function () {
 const ROUTE_VERSION = 2;
 
 // RouteManager is imported from route-manager.js
+
+// Function to create markers for segment data
+function createSegmentDataMarkers() {
+  if (!segmentsData) {
+    console.warn("Segments data not loaded, cannot create segment data markers.");
+    return;
+  }
+
+  // Remove any existing data markers to prevent duplicates
+  // We'll use a specific layer ID prefix for cleanup
+  const existingLayers = map.getStyle().layers;
+  existingLayers.forEach((layer) => {
+    if (layer.id.startsWith("segment-data-marker-")) {
+      if (map.getLayer(layer.id)) {
+        map.removeLayer(layer.id);
+      }
+      if (map.getSource(layer.id.replace("layer-", ""))) {
+        map.removeSource(layer.id.replace("layer-", ""));
+      }
+    }
+  });
+
+  // Process each segment that has data
+  for (const segmentName in segmentsData) {
+    const segmentInfo = segmentsData[segmentName];
+
+    // Check if the segment has extra data and if it's an array of data objects
+    if (segmentInfo && segmentInfo.data && Array.isArray(segmentInfo.data)) {
+      const segmentDataArray = segmentInfo.data;
+
+      // Filter and prepare features for each marker type
+      const features = [];
+      const iconMap = {
+        payment: "dollar-sign", // Example: use Mapbox Maki icons
+        gate: "roadblock",
+        mud: "water",
+        warning: "triangle-exclamation-mark",
+        slope: "slope",
+        narrow: "arrow-narrow",
+      };
+
+      segmentDataArray.forEach((dataItem, index) => {
+        const markerType = dataItem.type;
+        const markerIcon = iconMap[markerType] || "circle"; // Default to circle if type unknown
+
+        // Get the GeoJSON feature for the segment to find its coordinates
+        const segmentFeature = routePolylines.find(
+          (p) => p.segmentName === segmentName,
+        );
+
+        if (!segmentFeature || !segmentFeature.coordinates) return;
+
+        // For simplicity, we'll place markers at the start of the segment for now.
+        // A more advanced implementation would place markers at dataItem.location.
+        // If dataItem.location is provided, use that. Otherwise, default to segment start.
+        let markerLngLat;
+        if (dataItem.location && dataItem.location.lng && dataItem.location.lat) {
+          markerLngLat = [dataItem.location.lng, dataItem.location.lat];
+        } else {
+          // Default to the first coordinate of the segment if no specific location is given
+          markerLngLat = [
+            segmentFeature.coordinates[0].lng,
+            segmentFeature.coordinates[0].lat,
+          ];
+        }
+
+        const feature = {
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: markerLngLat,
+          },
+          properties: {
+            id: `segment-data-${segmentName}-${index}`,
+            type: markerType,
+            description: dataItem.description || `Information for ${markerType}`,
+            segment: segmentName,
+          },
+        };
+        features.push(feature);
+      });
+
+      // Add a source and layer for these markers
+      if (features.length > 0) {
+        const sourceId = `segment-data-source-${segmentName}`;
+        const layerId = `segment-data-marker-${segmentName}`;
+
+        map.addSource(sourceId, {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: features,
+          },
+        });
+
+        // Add the layer for the markers
+        map.addLayer({
+          id: layerId,
+          type: "symbol",
+          source: sourceId,
+          layout: {
+            "icon-image": [
+              "concat",
+              markerType,
+              "-11",
+            ], // Assumes Maki icons are available and named like 'star-11'
+            "icon-allow-overlap": true,
+            "text-field": ["get", "description"], // Use description for tooltip
+            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+            "text-offset": [0, 1.25],
+            "text-anchor": "top",
+            "text-size": 10,
+            "text-allow-overlap": true,
+            "text-ignore-placement": true,
+          },
+          paint: {
+            // Initial transparency
+            "icon-opacity": 0.7,
+            "text-opacity": 0.7,
+          },
+        });
+
+        // Add hover interaction for tooltips
+        map.on("mouseenter", layerId, (e) => {
+          map.getCanvas().style.cursor = "pointer";
+
+          const feature = e.features[0];
+          if (feature) {
+            const description = feature.properties.description;
+            const segmentName = feature.properties.segment;
+
+            // Update the main segment display
+            const segmentDisplay = document.getElementById(
+              "segment-name-display",
+            );
+            segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> ℹ️ ${description}`;
+            segmentDisplay.style.display = "block";
+
+            // Make the marker more visible on hover
+            map.setPaintProperty(layerId, "icon-opacity", 1.0);
+            map.setPaintProperty(layerId, "text-opacity", 1.0);
+          }
+        });
+
+        map.on("mouseleave", layerId, () => {
+          map.getCanvas().style.cursor = "";
+          const segmentDisplay = document.getElementById(
+            "segment-name-display",
+          );
+          segmentDisplay.style.display = "none";
+
+          // Restore original opacity
+          map.setPaintProperty(layerId, "icon-opacity", 0.7);
+          map.setPaintProperty(layerId, "text-opacity", 0.7);
+        });
+
+        // Logic to remove transparency when segment is selected
+        // This requires a way to track segment selection and update marker styles
+        // We can listen to changes in `selectedSegments` or trigger an update when segments are selected/deselected.
+
+        // For now, let's add a placeholder to show how it might work:
+        // When a segment is selected, we'd find its corresponding layer and update opacity.
+        // This logic would typically be part of `updateSegmentStyles` or a new function.
+      }
+    }
+  }
+}
+
+// Placeholder function to update marker opacity when a segment is selected
+// This needs to be integrated with the segment selection logic
+function updateSegmentDataMarkerVisibility() {
+  routePolylines.forEach((polylineData) => {
+    const layerId = `segment-data-marker-${polylineData.segmentName}`;
+    const isSelected = selectedSegments.includes(polylineData.segmentName);
+
+    if (map.getLayer(layerId)) {
+      if (isSelected) {
+        // Make markers fully visible when segment is selected
+        map.setPaintProperty(layerId, "icon-opacity", 1.0);
+        map.setPaintProperty(layerId, "text-opacity", 1.0);
+      } else {
+        // Keep markers semi-transparent when not selected
+        map.setPaintProperty(layerId, "icon-opacity", 0.7);
+        map.setPaintProperty(layerId, "text-opacity", 0.7);
+      }
+    }
+  });
+}
+
+// Call this function whenever `selectedSegments` changes
+// For example, within `updateSegmentStyles` or `addRoutePoint` after `selectedSegments` is updated.
+
+// Example integration:
+// In `updateSegmentStyles()` after `selectedSegments` is updated:
+// `updateSegmentDataMarkerVisibility();`
+// Also consider calling it after `loadRouteFromUrl` and `loadRouteFromEncoding`.
+
+// Need to ensure that Maki icons are available in Mapbox GL JS or use custom icons.
+// For now, assuming Maki icons are available and named like 'icon-name-11'.
+// Example usage for custom icons if Maki icons are not sufficient:
+// map.loadImage('path/to/custom-icon.png', (error, image) => {
+//   if (error) throw error;
+//   if (!map.hasImage('custom-marker-icon')) {
+//     map.addImage('custom-marker-icon', image);
+//   }
+//   // Then use 'custom-marker-icon' in 'icon-image' layout property.
+// });
