@@ -4309,7 +4309,7 @@ function createSegmentDataMarkers() {
           }
         });
 
-        map.on("mouseleave", layerId, () => {
+        map.on("mouseleave", layerId, (e) => {
           // Clear the flag
           window.dataMarkerHovered = false;
           
@@ -4416,7 +4416,7 @@ function createSegmentDataMarkers() {
           }
         });
 
-        map.on("touchend", layerId, () => {
+        map.on("touchend", layerId, (e) => {
           setTimeout(() => {
             window.dataMarkerTouched = false;
             
