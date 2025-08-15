@@ -1403,6 +1403,16 @@ function initMap() {
       tapStartPx = null;
       if (moved > 10) return; // treat as pan/zoom, not a tap
 
+      // Check if touch was on a data marker
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: ["data-markers-layer"]
+      });
+      
+      if (features.length > 0) {
+        // Touch was on a data marker, don't add route point
+        return;
+      }
+
       addPointFromLngLat(e.lngLat);
     });
 
@@ -1433,6 +1443,17 @@ function initMap() {
       if (isDraggingPoint) {
         return;
       }
+
+      // Check if click was on a data marker
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: ["data-markers-layer"]
+      });
+      
+      if (features.length > 0) {
+        // Click was on a data marker, don't add route point
+        return;
+      }
+
       addPointFromLngLat(e.lngLat);
     });
 
@@ -4354,6 +4375,8 @@ async function initDataMarkers() {
     // Add click event for data markers
     map.on("click", "data-markers-layer", (e) => {
       if (e.features.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
         const feature = e.features[0];
         showDataMarkerTooltip(e, feature);
       }
@@ -4363,8 +4386,17 @@ async function initDataMarkers() {
     map.on("touchstart", "data-markers-layer", (e) => {
       if (e.features.length > 0) {
         e.preventDefault();
+        e.stopPropagation();
         const feature = e.features[0];
         showDataMarkerTooltip(e, feature);
+      }
+    });
+
+    // Add touchend event for mobile to prevent bubbling
+    map.on("touchend", "data-markers-layer", (e) => {
+      if (e.features.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
       }
     });
 
