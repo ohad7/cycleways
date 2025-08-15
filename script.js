@@ -1023,10 +1023,14 @@ function updateSegmentStyles() {
       "case",
       ["in", ["get", "segmentName"], ["literal", selectedSegments]],
       1.0, // opacity for selected segments
-      0.6  // default opacity for non-selected segments
+      0.6, // default opacity for non-selected segments
     ];
-    
-    map.setPaintProperty("data-markers-layer", "icon-opacity", opacityExpression);
+
+    map.setPaintProperty(
+      "data-markers-layer",
+      "icon-opacity",
+      opacityExpression,
+    );
   }
 }
 
@@ -2607,7 +2611,7 @@ function hasSegmentWarnings() {
   for (let i = 0; i < selectedSegments.length; i++) {
     const segmentName = selectedSegments[i];
     const dataPoints = getSegmentDataPoints(segmentName);
-    
+
     // Check if segment has any data points (warnings, payment, gates, etc.)
     if (dataPoints.length > 0) {
       warningSegments.push(segmentName);
@@ -3681,8 +3685,8 @@ function showExamplePoint() {
     return;
   }
 
-  const exampleLat = 33.181281300095684;
-  const exampleLng = 35.62218007147424;
+  const exampleLat = 33.185714;
+  const exampleLng = 35.614232;
 
   // Create example point marker
   const exampleElement = document.createElement("div");
