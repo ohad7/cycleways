@@ -4250,9 +4250,9 @@ function createSegmentDataMarkers() {
           layout: {
             "icon-image": [
               "concat",
-              markerType,
+              ["get", "type"],
               "-11",
-            ], // Assumes Maki icons are available and named like 'star-11'
+            ], // Uses the type property from each feature
             "icon-allow-overlap": true,
             "text-field": ["get", "description"], // Use description for tooltip
             "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
