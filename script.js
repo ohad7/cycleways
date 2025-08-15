@@ -4375,8 +4375,10 @@ async function initDataMarkers() {
     // Add click event for data markers
     map.on("click", "data-markers-layer", (e) => {
       if (e.features.length > 0) {
-        e.preventDefault();
-        e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+        if (e.originalEvent && e.originalEvent.stopPropagation) {
+          e.originalEvent.stopPropagation();
+        }
         const feature = e.features[0];
         showDataMarkerTooltip(e, feature);
       }
@@ -4385,8 +4387,10 @@ async function initDataMarkers() {
     // Add touch events for mobile
     map.on("touchstart", "data-markers-layer", (e) => {
       if (e.features.length > 0) {
-        e.preventDefault();
-        e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+        if (e.originalEvent && e.originalEvent.stopPropagation) {
+          e.originalEvent.stopPropagation();
+        }
         const feature = e.features[0];
         showDataMarkerTooltip(e, feature);
       }
@@ -4395,8 +4399,10 @@ async function initDataMarkers() {
     // Add touchend event for mobile to prevent bubbling
     map.on("touchend", "data-markers-layer", (e) => {
       if (e.features.length > 0) {
-        e.preventDefault();
-        e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+        if (e.originalEvent && e.originalEvent.stopPropagation) {
+          e.originalEvent.stopPropagation();
+        }
       }
     });
 
