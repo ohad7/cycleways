@@ -1025,7 +1025,7 @@ function updateSegmentStyles() {
       1.0, // opacity for selected segments
       0.6  // default opacity for non-selected segments
     ];
-    
+
     map.setPaintProperty("data-markers-layer", "icon-opacity", opacityExpression);
   }
 }
@@ -1277,9 +1277,6 @@ function initMap() {
           // Keep legacy warnings as fallback
           const segmentInfo = segmentsData[name];
           if (segmentInfo && dataPoints.length === 0) {
-            if (segmentInfo.winter === false) {
-              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
-            }
             if (segmentInfo.warning) {
               segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; background-color: beige; padding:5px; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
             }
@@ -2082,11 +2079,8 @@ async function parseGeoJSON(geoJsonData) {
         // Keep legacy warnings as fallback
         const segmentInfo = segmentsData[name];
         if (segmentInfo && dataPoints.length === 0) {
-          if (segmentInfo.winter === false) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️ בוץ בחורף</div>`;
-          }
           if (segmentInfo.warning) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
+            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; background-color: beige; padding:5px; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
           }
         }
       });
@@ -2607,7 +2601,7 @@ function hasSegmentWarnings() {
   for (let i = 0; i < selectedSegments.length; i++) {
     const segmentName = selectedSegments[i];
     const dataPoints = getSegmentDataPoints(segmentName);
-    
+
     // Check if segment has any data points (warnings, payment, gates, etc.)
     if (dataPoints.length > 0) {
       warningSegments.push(segmentName);
@@ -2718,9 +2712,6 @@ function focusOnSegment(segmentName) {
   // Keep legacy warnings as fallback
   const segmentInfo = segmentsData[segmentName];
   if (segmentInfo && dataPoints.length === 0) {
-    if (segmentInfo.winter === false) {
-      segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️ בוץ בחורף</div>`;
-    }
     if (segmentInfo.warning) {
       segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
     }
@@ -3883,13 +3874,6 @@ function showDownloadModal() {
       // Add legacy warnings as fallback
       const segmentInfo = segmentsData[segmentName];
       if (segmentInfo && dataPoints.length === 0) {
-        if (segmentInfo.winter === false) {
-          segmentsHtml += `
-            <div style="color: #ff9800; font-size: 12px; margin-top: 5px; margin-right: 20px;">
-              ❄️ מסלול בוצי בחורף
-            </div>
-          `;
-        }
         if (segmentInfo.warning) {
           segmentsHtml += `
             <div style="color: #f44336; font-size: 12px; margin-top: 5px; margin-right: 20px;">
