@@ -1405,9 +1405,9 @@ function initMap() {
 
       // Check if touch was on a data marker
       const features = map.queryRenderedFeatures(e.point, {
-        layers: ["data-markers-layer"]
+        layers: ["data-markers-layer"],
       });
-      
+
       if (features.length > 0) {
         // Touch was on a data marker, don't add route point
         return;
@@ -1446,9 +1446,9 @@ function initMap() {
 
       // Check if click was on a data marker
       const features = map.queryRenderedFeatures(e.point, {
-        layers: ["data-markers-layer"]
+        layers: ["data-markers-layer"],
       });
-      
+
       if (features.length > 0) {
         // Click was on a data marker, don't add route point
         return;
@@ -4254,32 +4254,32 @@ const MARKER_ICONS = {
   payment: "bank-11",
   gate: "barrier-11",
   mud: "wetland-11",
-  warning: "danger-11",
+  warning: "caution-11",
   slope: "mountain-11",
-  narrow: "roadblock-11",
+  narrow: "car-11",
 };
 
 // Load custom SVG icons as map images
 async function loadCustomIcons() {
   const iconMappings = {
-    'bank-11': 'bank.svg',
-    'barrier-11': 'barrier.svg', 
-    'wetland-11': 'wetland.svg',
-    'danger-11': 'danger.svg',
-    'mountain-11': 'mountain.svg',
-    'roadblock-11': 'roadblock.svg'
+    "bank-11": "bank.svg",
+    "barrier-11": "barrier.svg",
+    "wetland-11": "wetland.svg",
+    "caution-11": "caution.svg",
+    "mountain-11": "mountain.svg",
+    "car-11": "car.svg",
   };
 
   for (const [iconName, svgFile] of Object.entries(iconMappings)) {
     try {
       const response = await fetch(svgFile);
       const svgText = await response.text();
-      
+
       // Convert SVG to image
       const img = new Image();
-      const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+      const svgBlob = new Blob([svgText], { type: "image/svg+xml" });
       const url = URL.createObjectURL(svgBlob);
-      
+
       await new Promise((resolve, reject) => {
         img.onload = () => {
           if (!map.hasImage(iconName)) {
@@ -4291,7 +4291,7 @@ async function loadCustomIcons() {
         img.onerror = reject;
         img.src = url;
       });
-      
+
       console.log(`Loaded custom icon: ${iconName}`);
     } catch (error) {
       console.warn(`Failed to load custom icon ${iconName}:`, error);
@@ -4368,7 +4368,7 @@ async function initDataMarkers() {
         "icon-ignore-placement": true,
       },
       paint: {
-        "icon-opacity": 0.8,
+        "icon-opacity": 0.6,
       },
     });
 
