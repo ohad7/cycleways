@@ -1022,24 +1022,9 @@ function initMap() {
     mapboxgl.accessToken =
       "pk.eyJ1Ijoib3NlcmZhdHkiLCJhIjoiY21kNmdzb3NnMDlqZTJrc2NzNmh3aGk1aCJ9.dvA6QY0N5pQ2IISZHp53kg";
 
-    const map = new mapboxgl.Map({
+    map = new mapboxgl.Map({
       container: "map",
-      style: {
-        version: 8,
-        sources: {
-          'mapbox': {
-            type: 'raster',
-            url: 'mapbox://mapbox.outdoors'
-          }
-        },
-        layers: [{
-          id: 'mapbox',
-          type: 'raster',
-          source: 'mapbox'
-        }],
-        sprite: 'mapbox://sprites/mapbox/bright-v9',
-        glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf'
-      },
+      style: "mapbox://styles/mapbox/outdoors-v12",
       center: [35.617497, 33.183536], // Centered on the bike routes area
       zoom: 11.5,
     });
