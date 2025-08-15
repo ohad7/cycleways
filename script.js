@@ -1193,7 +1193,8 @@ function initMap() {
           // Show hover preview dot at the closest point on segment
           if (closestPointOnSegment && !isDraggingPoint) {
             // Check if hover point is too close to any existing route points using pixel distance
-            const minPixelDistanceFromPoints = 15; // 30 pixels threshold
+            const minPixelDistanceFromPoints = 15; // 15 pixels threshold for route points
+            const minPixelDistanceFromMarkers = 25; // 25 pixels threshold for data markers
             let tooCloseToExistingPoint = false;
 
             const hoverPointPixel = map.project([
@@ -1201,6 +1202,7 @@ function initMap() {
               closestPointOnSegment.lat,
             ]);
 
+            // Check distance from existing route points
             for (const routePoint of routePoints) {
               const routePointPixel = map.project([
                 routePoint.lng,
@@ -1214,6 +1216,31 @@ function initMap() {
               if (pixelDistance < minPixelDistanceFromPoints) {
                 tooCloseToExistingPoint = true;
                 break;
+              }
+            }
+
+            // Check distance from data markers if not already too close to route points
+            if (!tooCloseToExistingPoint && map.getSource("data-markers")) {
+              const markerFeatures = map.queryRenderedFeatures(hoverPointPixel, {
+                layers: ["data-markers-layer"],
+              });
+
+              // If there are any data markers within the pixel threshold, don't show hover point
+              if (markerFeatures.length > 0) {
+                // Get the actual marker coordinates to check precise distance
+                for (const feature of markerFeatures) {
+                  const markerCoords = feature.geometry.coordinates;
+                  const markerPixel = map.project(markerCoords);
+                  const pixelDistance = Math.sqrt(
+                    Math.pow(hoverPointPixel.x - markerPixel.x, 2) +
+                      Math.pow(hoverPointPixel.y - markerPixel.y, 2),
+                  );
+
+                  if (pixelDistance < minPixelDistanceFromMarkers) {
+                    tooCloseToExistingPoint = true;
+                    break;
+                  }
+                }
               }
             }
 
