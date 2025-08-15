@@ -47,6 +47,45 @@ body::before {
 }
 
 .header {
+
+/* Data marker tooltip styles */
+.data-marker-tooltip {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  direction: rtl;
+  text-align: right;
+}
+
+.data-marker-tooltip .tooltip-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-marker-tooltip .tooltip-emoji {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.data-marker-tooltip .tooltip-text {
+  flex: 1;
+}
+
+/* Modal route list improvements */
+.modal-route-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.modal-segment-item {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-segment-item:last-child {
+  border-bottom: none;
+}
+
   background: #F8F8F8;
   background-image: url('./attached_assets/background.png');
   background-size: cover;

@@ -1250,9 +1250,19 @@ function initMap() {
           );
           segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
 
-          // Check for warnings in segments data and add to segment display
+          // Show data points instead of legacy warnings
+          const dataPoints = getSegmentDataPoints(name);
+          if (dataPoints.length > 0) {
+            segmentDisplay.innerHTML += '<div style="margin-top: 5px; font-size: 12px;">';
+            dataPoints.forEach(dataPoint => {
+              segmentDisplay.innerHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE};">${dataPoint.emoji} ${dataPoint.information}</div>`;
+            });
+            segmentDisplay.innerHTML += '</div>';
+          }
+
+          // Keep legacy warnings as fallback
           const segmentInfo = segmentsData[name];
-          if (segmentInfo) {
+          if (segmentInfo && dataPoints.length === 0) {
             if (segmentInfo.winter === false) {
               segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
             }
@@ -2023,9 +2033,19 @@ async function parseGeoJSON(geoJsonData) {
         segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
         segmentDisplay.style.display = "block";
 
-        // Check for warnings in segments data and add to segment display
+        // Show data points instead of legacy warnings
+        const dataPoints = getSegmentDataPoints(name);
+        if (dataPoints.length > 0) {
+          segmentDisplay.innerHTML += '<div style="margin-top: 5px; font-size: 12px;">';
+          dataPoints.forEach(dataPoint => {
+            segmentDisplay.innerHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE};">${dataPoint.emoji} ${dataPoint.information}</div>`;
+          });
+          segmentDisplay.innerHTML += '</div>';
+        }
+
+        // Keep legacy warnings as fallback
         const segmentInfo = segmentsData[name];
-        if (segmentInfo) {
+        if (segmentInfo && dataPoints.length === 0) {
           if (segmentInfo.winter === false) {
             segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️ בוץ בחורף</div>`;
           }
@@ -2191,6 +2211,9 @@ async function parseGeoJSON(geoJsonData) {
     routeManager = new RouteManager();
     await routeManager.load(geoJsonData, segmentsData);
     console.log("RouteManager initialized.");
+
+    // Initialize data markers
+    initDataMarkers();
 
     // Keep map at current position instead of auto-fitting to all segments
     // if (!bounds.isEmpty()) {
@@ -2636,9 +2659,19 @@ function focusOnSegment(segmentName) {
   const segmentDisplay = document.getElementById("segment-name-display");
   segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
 
-  // Check for warnings in segments data and add to segment display
+  // Show data points instead of legacy warnings
+  const dataPoints = getSegmentDataPoints(segmentName);
+  if (dataPoints.length > 0) {
+    segmentDisplay.innerHTML += '<div style="margin-top: 5px; font-size: 12px;">';
+    dataPoints.forEach(dataPoint => {
+      segmentDisplay.innerHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE};">${dataPoint.emoji} ${dataPoint.information}</div>`;
+    });
+    segmentDisplay.innerHTML += '</div>';
+  }
+
+  // Keep legacy warnings as fallback
   const segmentInfo = segmentsData[segmentName];
-  if (segmentInfo) {
+  if (segmentInfo && dataPoints.length === 0) {
     if (segmentInfo.winter === false) {
       segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️ בוץ בחורף</div>`;
     }
@@ -3760,6 +3793,9 @@ function showDownloadModal() {
         <h4>קטעי מסלול נבחרים</h4>
         <div id="route-segments-list"></div>
 
+        <h4>מידע חשוב על המסלול</h4>
+        <div id="route-data-summary"></div>
+
         <h4>תיאור המסלול</h4>
         <div id="download-route-description"></div>
 
@@ -3781,25 +3817,26 @@ function showDownloadModal() {
   } else {
     let segmentsHtml = '<div class="modal-route-list">';
     selectedSegments.forEach((segmentName, index) => {
-      // Check for warnings
-      let warningIcons = "";
-      const segmentInfo = segmentsData[segmentName];
-      // if (segmentInfo) {
-      //   if (segmentInfo.winter === false) {
-      //     warningIcons += ' ❄️';
-      //   }
-      //   if (segmentInfo.warning) {
-      //     warningIcons += ' ⚠️';
-      //   }
-      // }
-
       segmentsHtml += `
         <div class="modal-segment-item">
-          <span><strong>${index + 1}.</strong> ${segmentName}${warningIcons}</span>
+          <span><strong>${index + 1}.</strong> ${segmentName}</span>
       `;
 
-      // Add warning details below the segment name
-      if (segmentInfo) {
+      // Add data points for each segment
+      const dataPoints = getSegmentDataPoints(segmentName);
+      if (dataPoints.length > 0) {
+        dataPoints.forEach(dataPoint => {
+          segmentsHtml += `
+            <div style="color: #ff9800; font-size: 12px; margin-top: 5px; margin-right: 20px;">
+              ${dataPoint.emoji} ${dataPoint.information}
+            </div>
+          `;
+        });
+      }
+
+      // Add legacy warnings as fallback
+      const segmentInfo = segmentsData[segmentName];
+      if (segmentInfo && dataPoints.length === 0) {
         if (segmentInfo.winter === false) {
           segmentsHtml += `
             <div style="color: #ff9800; font-size: 12px; margin-top: 5px; margin-right: 20px;">
@@ -3820,6 +3857,29 @@ function showDownloadModal() {
     });
     segmentsHtml += "</div>";
     routeSegmentsList.innerHTML = segmentsHtml;
+  }
+
+  // Populate route data summary
+  const routeDataSummary = modal.querySelector("#route-data-summary");
+  const allDataPoints = [];
+  selectedSegments.forEach(segmentName => {
+    const dataPoints = getSegmentDataPoints(segmentName);
+    dataPoints.forEach(dataPoint => {
+      if (!allDataPoints.some(existing => existing.type === dataPoint.type && existing.information === dataPoint.information)) {
+        allDataPoints.push(dataPoint);
+      }
+    });
+  });
+
+  if (allDataPoints.length > 0) {
+    let dataSummaryHtml = '<div style="background: #f5f5f5; padding: 10px; border-radius: 8px; margin-bottom: 15px;">';
+    allDataPoints.forEach(dataPoint => {
+      dataSummaryHtml += `<div style="margin: 5px 0;">${dataPoint.emoji} ${dataPoint.information}</div>`;
+    });
+    dataSummaryHtml += '</div>';
+    routeDataSummary.innerHTML = dataSummaryHtml;
+  } else {
+    routeDataSummary.innerHTML = '<p style="color: #666; font-style: italic;">אין מידע מיוחד למסלול זה</p>';
   }
 
   // Populate route description
@@ -4142,5 +4202,195 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 const ROUTE_VERSION = 2;
+
+// Data markers management
+let dataMarkersSource = null;
+let dataMarkersLayer = null;
+
+// Emoji mapping for marker types
+const MARKER_EMOJIS = {
+  payment: '💰',
+  gate: '🚪',
+  mud: '🟫',
+  warning: '⚠️',
+  slope: '⛰️',
+  narrow: '↔️'
+};
+
+// Maki icon mapping for marker types
+const MARKER_ICONS = {
+  payment: 'bank-11',
+  gate: 'barrier-11',
+  mud: 'wetland-11',
+  warning: 'danger-11',
+  slope: 'mountain-11',
+  narrow: 'roadblock-11'
+};
+
+// Initialize data markers system
+function initDataMarkers() {
+  if (!map || !segmentsData) return;
+
+  // Collect all data points from segments
+  const dataFeatures = [];
+  
+  Object.entries(segmentsData).forEach(([segmentName, segmentInfo]) => {
+    if (segmentInfo.data && Array.isArray(segmentInfo.data)) {
+      segmentInfo.data.forEach((dataPoint, index) => {
+        if (dataPoint.location && Array.isArray(dataPoint.location) && dataPoint.location.length >= 2) {
+          const [lat, lng] = dataPoint.location;
+          
+          dataFeatures.push({
+            type: 'Feature',
+            id: `${segmentName}-${index}`,
+            geometry: {
+              type: 'Point',
+              coordinates: [lng, lat] // Convert [lat, lng] to [lng, lat] for Mapbox
+            },
+            properties: {
+              type: dataPoint.type,
+              information: dataPoint.information || '',
+              segmentName: segmentName,
+              emoji: MARKER_EMOJIS[dataPoint.type] || '📍',
+              icon: MARKER_ICONS[dataPoint.type] || 'marker-11'
+            }
+          });
+        }
+      });
+    }
+  });
+
+  if (dataFeatures.length === 0) return;
+
+  // Add source for data markers
+  if (map.getSource('data-markers')) {
+    map.getSource('data-markers').setData({
+      type: 'FeatureCollection',
+      features: dataFeatures
+    });
+  } else {
+    map.addSource('data-markers', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: dataFeatures
+      }
+    });
+
+    // Add symbol layer for data markers
+    map.addLayer({
+      id: 'data-markers-layer',
+      type: 'symbol',
+      source: 'data-markers',
+      layout: {
+        'icon-image': ['get', 'icon'],
+        'icon-size': 1,
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true
+      },
+      paint: {
+        'icon-opacity': 0.8
+      }
+    });
+
+    // Add click event for data markers
+    map.on('click', 'data-markers-layer', (e) => {
+      if (e.features.length > 0) {
+        const feature = e.features[0];
+        showDataMarkerTooltip(e, feature);
+      }
+    });
+
+    // Add touch events for mobile
+    map.on('touchstart', 'data-markers-layer', (e) => {
+      if (e.features.length > 0) {
+        e.preventDefault();
+        const feature = e.features[0];
+        showDataMarkerTooltip(e, feature);
+      }
+    });
+
+    // Change cursor on hover
+    map.on('mouseenter', 'data-markers-layer', () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', 'data-markers-layer', () => {
+      map.getCanvas().style.cursor = '';
+      hideDataMarkerTooltip();
+    });
+  }
+}
+
+// Show tooltip for data marker
+function showDataMarkerTooltip(e, feature) {
+  const properties = feature.properties;
+  
+  // Remove existing tooltip
+  hideDataMarkerTooltip();
+  
+  // Create tooltip element
+  const tooltip = document.createElement('div');
+  tooltip.className = 'data-marker-tooltip';
+  tooltip.innerHTML = `
+    <div class="tooltip-content">
+      <span class="tooltip-emoji">${properties.emoji}</span>
+      <span class="tooltip-text">${properties.information}</span>
+    </div>
+  `;
+  
+  tooltip.style.cssText = `
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    max-width: 250px;
+    white-space: normal;
+    line-height: 1.3;
+  `;
+
+  // Position tooltip
+  const point = map.project(e.lngLat);
+  tooltip.style.left = (point.x + 15) + 'px';
+  tooltip.style.top = (point.y - 15) + 'px';
+  
+  document.body.appendChild(tooltip);
+  window.currentDataTooltip = tooltip;
+  
+  // Auto-hide on mobile after delay
+  if ('ontouchstart' in window) {
+    setTimeout(() => {
+      hideDataMarkerTooltip();
+    }, 3000);
+  }
+}
+
+// Hide data marker tooltip
+function hideDataMarkerTooltip() {
+  if (window.currentDataTooltip) {
+    window.currentDataTooltip.remove();
+    window.currentDataTooltip = null;
+  }
+}
+
+// Get segment data points for display
+function getSegmentDataPoints(segmentName) {
+  const segmentInfo = segmentsData[segmentName];
+  if (!segmentInfo || !segmentInfo.data || !Array.isArray(segmentInfo.data)) {
+    return [];
+  }
+  
+  return segmentInfo.data.map(dataPoint => ({
+    type: dataPoint.type,
+    information: dataPoint.information || '',
+    emoji: MARKER_EMOJIS[dataPoint.type] || '📍'
+  }));
+}
 
 // RouteManager is imported from route-manager.js
