@@ -4225,7 +4225,7 @@ function createSegmentDataMarkers() {
           properties: {
             id: `segment-data-${segmentName}-${index}`,
             type: markerType,
-            description: dataItem.description || `Information for ${markerType}`,
+            description: dataItem.information || `Information for ${markerType}`,
             segment: segmentName,
             color: markerColors[markerType] || "#666666", // Default gray
           },
