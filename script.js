@@ -1015,6 +1015,9 @@ function updateSegmentStyles() {
       }
     }
   });
+  
+  // Update segment data marker visibility
+  updateSegmentDataMarkerVisibility();
 }
 
 function initMap() {
@@ -4156,7 +4159,6 @@ function createSegmentDataMarkers() {
   }
 
   // Remove any existing data markers to prevent duplicates
-  // We'll use a specific layer ID prefix for cleanup
   const existingLayers = map.getStyle().layers;
   existingLayers.forEach((layer) => {
     if (layer.id.startsWith("segment-data-marker-")) {
@@ -4169,6 +4171,16 @@ function createSegmentDataMarkers() {
     }
   });
 
+  // Create simple circle markers for each data type with different colors
+  const markerColors = {
+    payment: "#4CAF50", // Green
+    gate: "#FF9800", // Orange  
+    mud: "#795548", // Brown
+    warning: "#F44336", // Red
+    slope: "#9C27B0", // Purple
+    narrow: "#FF5722", // Deep Orange
+  };
+
   // Process each segment that has data
   for (const segmentName in segmentsData) {
     const segmentInfo = segmentsData[segmentName];
@@ -4179,18 +4191,9 @@ function createSegmentDataMarkers() {
 
       // Filter and prepare features for each marker type
       const features = [];
-      const iconMap = {
-        payment: "dollar-sign", // Example: use Mapbox Maki icons
-        gate: "roadblock",
-        mud: "water",
-        warning: "triangle-exclamation-mark",
-        slope: "slope",
-        narrow: "arrow-narrow",
-      };
 
       segmentDataArray.forEach((dataItem, index) => {
         const markerType = dataItem.type;
-        const markerIcon = iconMap[markerType] || "circle"; // Default to circle if type unknown
 
         // Get the GeoJSON feature for the segment to find its coordinates
         const segmentFeature = routePolylines.find(
@@ -4199,8 +4202,6 @@ function createSegmentDataMarkers() {
 
         if (!segmentFeature || !segmentFeature.coordinates) return;
 
-        // For simplicity, we'll place markers at the start of the segment for now.
-        // A more advanced implementation would place markers at dataItem.location.
         // If dataItem.location is provided, use that. Otherwise, default to segment start.
         let markerLngLat;
         if (dataItem.location && dataItem.location.lng && dataItem.location.lat) {
@@ -4224,6 +4225,7 @@ function createSegmentDataMarkers() {
             type: markerType,
             description: dataItem.description || `Information for ${markerType}`,
             segment: segmentName,
+            color: markerColors[markerType] || "#666666", // Default gray
           },
         };
         features.push(feature);
@@ -4242,30 +4244,18 @@ function createSegmentDataMarkers() {
           },
         });
 
-        // Add the layer for the markers
+        // Add the layer for the markers using circle symbols instead of icons
         map.addLayer({
           id: layerId,
-          type: "symbol",
+          type: "circle",
           source: sourceId,
-          layout: {
-            "icon-image": [
-              "concat",
-              ["get", "type"],
-              "-11",
-            ], // Uses the type property from each feature
-            "icon-allow-overlap": true,
-            "text-field": ["get", "description"], // Use description for tooltip
-            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-            "text-offset": [0, 1.25],
-            "text-anchor": "top",
-            "text-size": 10,
-            "text-allow-overlap": true,
-            "text-ignore-placement": true,
-          },
           paint: {
-            // Initial transparency
-            "icon-opacity": 0.7,
-            "text-opacity": 0.7,
+            "circle-radius": 6,
+            "circle-color": ["get", "color"],
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+            "circle-opacity": 0.7,
+            "circle-stroke-opacity": 0.9,
           },
         });
 
@@ -4277,17 +4267,30 @@ function createSegmentDataMarkers() {
           if (feature) {
             const description = feature.properties.description;
             const segmentName = feature.properties.segment;
+            const markerType = feature.properties.type;
+
+            // Create emoji mapping for display
+            const typeEmojis = {
+              payment: "💰",
+              gate: "🚪", 
+              mud: "🟫",
+              warning: "⚠️",
+              slope: "⛰️",
+              narrow: "↔️",
+            };
+
+            const emoji = typeEmojis[markerType] || "ℹ️";
 
             // Update the main segment display
             const segmentDisplay = document.getElementById(
               "segment-name-display",
             );
-            segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> ℹ️ ${description}`;
+            segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> ${emoji} ${description}`;
             segmentDisplay.style.display = "block";
 
             // Make the marker more visible on hover
-            map.setPaintProperty(layerId, "icon-opacity", 1.0);
-            map.setPaintProperty(layerId, "text-opacity", 1.0);
+            map.setPaintProperty(layerId, "circle-opacity", 1.0);
+            map.setPaintProperty(layerId, "circle-radius", 8);
           }
         });
 
@@ -4298,25 +4301,16 @@ function createSegmentDataMarkers() {
           );
           segmentDisplay.style.display = "none";
 
-          // Restore original opacity
-          map.setPaintProperty(layerId, "icon-opacity", 0.7);
-          map.setPaintProperty(layerId, "text-opacity", 0.7);
+          // Restore original appearance
+          map.setPaintProperty(layerId, "circle-opacity", 0.7);
+          map.setPaintProperty(layerId, "circle-radius", 6);
         });
-
-        // Logic to remove transparency when segment is selected
-        // This requires a way to track segment selection and update marker styles
-        // We can listen to changes in `selectedSegments` or trigger an update when segments are selected/deselected.
-
-        // For now, let's add a placeholder to show how it might work:
-        // When a segment is selected, we'd find its corresponding layer and update opacity.
-        // This logic would typically be part of `updateSegmentStyles` or a new function.
       }
     }
   }
 }
 
-// Placeholder function to update marker opacity when a segment is selected
-// This needs to be integrated with the segment selection logic
+// Function to update marker opacity when a segment is selected
 function updateSegmentDataMarkerVisibility() {
   routePolylines.forEach((polylineData) => {
     const layerId = `segment-data-marker-${polylineData.segmentName}`;
@@ -4325,12 +4319,12 @@ function updateSegmentDataMarkerVisibility() {
     if (map.getLayer(layerId)) {
       if (isSelected) {
         // Make markers fully visible when segment is selected
-        map.setPaintProperty(layerId, "icon-opacity", 1.0);
-        map.setPaintProperty(layerId, "text-opacity", 1.0);
+        map.setPaintProperty(layerId, "circle-opacity", 1.0);
+        map.setPaintProperty(layerId, "circle-stroke-opacity", 1.0);
       } else {
         // Keep markers semi-transparent when not selected
-        map.setPaintProperty(layerId, "icon-opacity", 0.7);
-        map.setPaintProperty(layerId, "text-opacity", 0.7);
+        map.setPaintProperty(layerId, "circle-opacity", 0.7);
+        map.setPaintProperty(layerId, "circle-stroke-opacity", 0.9);
       }
     }
   });
