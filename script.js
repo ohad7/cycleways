@@ -1015,9 +1015,6 @@ function updateSegmentStyles() {
       }
     }
   });
-  
-  // Update segment data marker visibility
-  updateSegmentDataMarkerVisibility();
 }
 
 function initMap() {
@@ -1058,21 +1055,7 @@ function initMap() {
     // Add global mouse move handler for proximity-based highlighting
     if (!isTouchDevice) {
       map.on("mousemove", (e) => {
-        if (isDraggingPoint || map.isMoving() || window.dataMarkerHovered) {
-          // Hide segment display and hover preview when data marker is being hovered
-          if (window.dataMarkerHovered) {
-            const segmentDisplay = document.getElementById("segment-name-display");
-            segmentDisplay.style.display = "none";
-            
-            // Remove hover preview marker
-            if (window.hoverPreviewMarker) {
-              window.hoverPreviewMarker.remove();
-              window.hoverPreviewMarker = null;
-            }
-            
-            // Reset cursor to default
-            map.getCanvas().style.cursor = "pointer";
-          }
+        if (isDraggingPoint || map.isMoving()) {
           return;
         }
         const mousePoint = e.lngLat;
@@ -1125,7 +1108,7 @@ function initMap() {
             ) {
               closestSegment = candidateSegment;
               closestPointOnSegment = getClosestPointOnLineSegment(
-                { lat: mousePoint.lat, lng: mousePoint.lat },
+                { lat: mousePoint.lat, lng: mousePoint.lng },
                 bestSegmentStart,
                 bestSegmentEnd,
               );
@@ -1369,7 +1352,7 @@ function initMap() {
           ) {
             closestSegment = candidateSegment;
             closestPointOnSegment = getClosestPointOnLineSegment(
-              { lat: clickPoint.lat, lng: clickPoint.lat },
+              { lat: clickPoint.lat, lng: clickPoint.lng },
               bestSegmentStart,
               bestSegmentEnd,
             );
@@ -1400,7 +1383,6 @@ function initMap() {
     map.on("touchend", (e) => {
       if (!isTouchDevice) return;
       if (isDraggingPoint) return; // don't add while dragging
-      if (window.dataMarkerTouched) return; // don't add while touching a data marker
       if (!e.points || e.points.length !== 1) return;
 
       const endPx = e.points[0];
@@ -1436,8 +1418,8 @@ function initMap() {
 
     // Add global click handler for adding route points
     map.on("click", (e) => {
-      // Don't add points if we're dragging a point or clicking on a data marker
-      if (isDraggingPoint || window.dataMarkerClicked) {
+      // Don't add points if we're dragging a point
+      if (isDraggingPoint) {
         return;
       }
       addPointFromLngLat(e.lngLat);
@@ -1900,12 +1882,9 @@ async function loadKMLFile() {
 
     showExamplePoint();
 
-    // Initialize tutorial after everything is loaded
+    // Try to load route from URL after everything is loaded
     setTimeout(() => {
       loadRouteFromUrl();
-
-      // Create segment data markers
-      createSegmentDataMarkers();
 
       // Initialize tutorial after everything is loaded
       if (typeof initTutorial === "function") {
@@ -2023,11 +2002,6 @@ async function parseGeoJSON(geoJsonData) {
 
       // Add hover effects with segment name display
       map.on("mouseenter", layerId, (e) => {
-        // Don't show segment hover if data marker is being hovered
-        if (window.dataMarkerHovered) {
-          return;
-        }
-        
         map.getCanvas().style.cursor = "pointer";
         if (!selectedSegments.includes(name)) {
           map.setPaintProperty(layerId, "line-width", originalWeight + 2);
@@ -2063,11 +2037,6 @@ async function parseGeoJSON(geoJsonData) {
 
       // Add hover functionality for selected segments to show distance from start
       map.on("mousemove", layerId, (e) => {
-        // Don't show segment hover if data marker is being hovered
-        if (window.dataMarkerHovered) {
-          return;
-        }
-        
         if (selectedSegments.includes(name)) {
           const hoverPoint = e.lngLat;
           const orderedCoords = getOrderedCoordinates();
@@ -2085,13 +2054,13 @@ async function parseGeoJSON(geoJsonData) {
 
               // Calculate closest point on line segment
               const closestPoint = getClosestPointOnLineSegment(
-                { lat: hoverPoint.lat, lng: hoverPoint.lat },
+                { lat: hoverPoint.lat, lng: hoverPoint.lng },
                 segmentStart,
                 segmentEnd,
               );
 
               const distance = getDistance(
-                { lat: hoverPoint.lat, lng: hoverPoint.lat },
+                { lat: hoverPoint.lat, lng: hoverPoint.lng },
                 closestPoint,
               );
 
@@ -2189,24 +2158,17 @@ async function parseGeoJSON(geoJsonData) {
       });
 
       map.on("mouseleave", layerId, () => {
-        // Don't reset segment styles if data marker is being hovered
-        if (window.dataMarkerHovered) {
-          return;
-        }
-        
         if (!selectedSegments.includes(name)) {
           map.setPaintProperty(layerId, "line-width", originalWeight);
           map.setPaintProperty(layerId, "line-opacity", originalOpacity);
         }
 
-        // Hide segment name display only if no data marker is being hovered
-        if (!window.dataMarkerHovered) {
-          const segmentDisplay = document.getElementById("segment-name-display");
-          segmentDisplay.style.display = "none";
-        }
+        // Hide segment name display
+        const segmentDisplay = document.getElementById("segment-name-display");
+        segmentDisplay.style.display = "none";
 
-        // Remove hover marker only if no data marker is being hovered
-        if (window.hoverMarker && !window.dataMarkerHovered) {
+        // Remove hover marker
+        if (window.hoverMarker) {
           window.hoverMarker.remove();
           window.hoverMarker = null;
         }
@@ -4182,415 +4144,3 @@ document.addEventListener("DOMContentLoaded", function () {
 const ROUTE_VERSION = 2;
 
 // RouteManager is imported from route-manager.js
-
-// Function to create markers for segment data
-function createSegmentDataMarkers() {
-  if (!segmentsData) {
-    console.warn("Segments data not loaded, cannot create segment data markers.");
-    return;
-  }
-
-  // Remove any existing data markers to prevent duplicates
-  const existingLayers = map.getStyle().layers;
-  existingLayers.forEach((layer) => {
-    if (layer.id.startsWith("segment-data-marker-")) {
-      if (map.getLayer(layer.id)) {
-        map.removeLayer(layer.id);
-      }
-      if (map.getSource(layer.id.replace("layer-", ""))) {
-        map.removeSource(layer.id.replace("layer-", ""));
-      }
-    }
-  });
-
-  // Create simple circle markers for each data type with different colors
-  const markerColors = {
-    payment: "#4CAF50", // Green
-    gate: "#FF9800", // Orange  
-    mud: "#795548", // Brown
-    warning: "#F44336", // Red
-    slope: "#9C27B0", // Purple
-    narrow: "#FF5722", // Deep Orange
-  };
-
-  // Process each segment that has data
-  for (const segmentName in segmentsData) {
-    const segmentInfo = segmentsData[segmentName];
-
-    // Check if the segment has extra data and if it's an array of data objects
-    if (segmentInfo && segmentInfo.data && Array.isArray(segmentInfo.data)) {
-      const segmentDataArray = segmentInfo.data;
-
-      // Filter and prepare features for each marker type
-      const features = [];
-
-      segmentDataArray.forEach((dataItem, index) => {
-        const markerType = dataItem.type;
-
-        // Get the GeoJSON feature for the segment to find its coordinates
-        const segmentFeature = routePolylines.find(
-          (p) => p.segmentName === segmentName,
-        );
-
-        if (!segmentFeature || !segmentFeature.coordinates) return;
-
-        // If dataItem.location is provided, use that. Otherwise, default to segment start.
-        let markerLngLat;
-        if (dataItem.location && Array.isArray(dataItem.location) && dataItem.location.length === 2) {
-          // dataItem.location is [lat, lng] format, convert to [lng, lat] for Mapbox
-          markerLngLat = [dataItem.location[1], dataItem.location[0]];
-        } else {
-          // Default to the first coordinate of the segment if no specific location is given
-          markerLngLat = [
-            segmentFeature.coordinates[0].lng,
-            segmentFeature.coordinates[0].lat,
-          ];
-        }
-
-        const feature = {
-          type: "Feature",
-          geometry: {
-            type: "Point",
-            coordinates: markerLngLat,
-          },
-          properties: {
-            id: `segment-data-${segmentName}-${index}`,
-            type: markerType,
-            description: dataItem.information || `Information for ${markerType}`,
-            segment: segmentName,
-            color: markerColors[markerType] || "#666666", // Default gray
-          },
-        };
-        features.push(feature);
-      });
-
-      // Add a source and layer for these markers
-      if (features.length > 0) {
-        const sourceId = `segment-data-source-${segmentName}`;
-        const layerId = `segment-data-marker-${segmentName}`;
-
-        map.addSource(sourceId, {
-          type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: features,
-          },
-        });
-
-        // Add the layer for the markers using circle symbols instead of icons
-        // Place these layers above all segment layers by adding them after route layers are created
-        map.addLayer({
-          id: layerId,
-          type: "circle",
-          source: sourceId,
-          paint: {
-            "circle-radius": 8,
-            "circle-color": ["get", "color"],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-            "circle-opacity": 0.8,
-            "circle-stroke-opacity": 1.0,
-          },
-        });
-
-        // Store layer info for later z-index management
-        if (!window.dataMarkerLayers) {
-          window.dataMarkerLayers = [];
-        }
-        window.dataMarkerLayers.push(layerId);
-
-        // Add hover interaction for tooltips
-        map.on("mouseenter", layerId, (e) => {
-          // Set flag to prevent segment hover detection FIRST
-          window.dataMarkerHovered = true;
-          
-          // Hide any existing segment display immediately
-          const segmentDisplay = document.getElementById("segment-name-display");
-          segmentDisplay.style.display = "none";
-          
-          // Remove any hover preview marker immediately
-          if (window.hoverPreviewMarker) {
-            window.hoverPreviewMarker.remove();
-            window.hoverPreviewMarker = null;
-          }
-          
-          map.getCanvas().style.cursor = "pointer";
-
-          const feature = e.features[0];
-          if (feature) {
-            const description = feature.properties.description;
-            const markerType = feature.properties.type;
-            const coordinates = feature.geometry.coordinates;
-
-            // Create emoji mapping for display
-            const typeEmojis = {
-              payment: "💰",
-              gate: "🚪", 
-              mud: "🟫",
-              warning: "⚠️",
-              slope: "⛰️",
-              narrow: "↔️",
-            };
-
-            const emoji = typeEmojis[markerType] || "ℹ️";
-
-            // Create tooltip next to the marker
-            if (window.dataMarkerTooltip) {
-              window.dataMarkerTooltip.remove();
-            }
-
-            const tooltipEl = document.createElement('div');
-            tooltipEl.className = 'data-marker-tooltip';
-            tooltipEl.innerHTML = `${emoji} ${description}`;
-            tooltipEl.style.cssText = `
-              position: absolute;
-              background: rgba(0, 0, 0, 0.8);
-              color: white;
-              padding: 6px 10px;
-              border-radius: 4px;
-              font-size: 12px;
-              white-space: nowrap;
-              pointer-events: none;
-              z-index: 1000;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-              max-width: 200px;
-              word-wrap: break-word;
-              white-space: normal;
-            `;
-
-            window.dataMarkerTooltip = new mapboxgl.Marker(tooltipEl, {
-              offset: [15, -15] // Position tooltip to the right and above the marker
-            })
-            .setLngLat(coordinates)
-            .addTo(map);
-
-            // Make the marker more visible on hover
-            map.setPaintProperty(layerId, "circle-opacity", 1.0);
-            map.setPaintProperty(layerId, "circle-radius", 10);
-          }
-        });
-
-        map.on("mouseleave", layerId, (e) => {
-          // Remove tooltip immediately
-          if (window.dataMarkerTooltip) {
-            window.dataMarkerTooltip.remove();
-            window.dataMarkerTooltip = null;
-          }
-
-          // Restore original appearance based on selection state
-          const feature = e.features && e.features[0];
-          const segmentName = feature ? feature.properties.segment : null;
-          const isSelected = selectedSegments.includes(segmentName);
-          
-          if (isSelected) {
-            map.setPaintProperty(layerId, "circle-opacity", 1.0);
-          } else {
-            map.setPaintProperty(layerId, "circle-opacity", 0.8);
-          }
-          map.setPaintProperty(layerId, "circle-radius", 8);
-          
-          // Clear the flag with a small delay to prevent immediate segment hover activation
-          setTimeout(() => {
-            window.dataMarkerHovered = false;
-          }, 50);
-        });
-
-        // Add click handler to prevent segment selection and show tooltip
-        map.on("click", layerId, (e) => {
-          e.originalEvent.preventDefault();
-          e.originalEvent.stopPropagation();
-          
-          // Set flag to prevent segment click handling
-          window.dataMarkerClicked = true;
-          
-          const feature = e.features[0];
-          if (feature) {
-            const description = feature.properties.description;
-            const markerType = feature.properties.type;
-            const coordinates = feature.geometry.coordinates;
-
-            // Create emoji mapping for display
-            const typeEmojis = {
-              payment: "💰",
-              gate: "🚪", 
-              mud: "🟫",
-              warning: "⚠️",
-              slope: "⛰️",
-              narrow: "↔️",
-            };
-
-            const emoji = typeEmojis[markerType] || "ℹ️";
-
-            // Show tooltip for mobile/touch devices
-            if (window.dataMarkerTooltip) {
-              window.dataMarkerTooltip.remove();
-            }
-
-            const tooltipEl = document.createElement('div');
-            tooltipEl.className = 'data-marker-tooltip';
-            tooltipEl.innerHTML = `${emoji} ${description}`;
-            tooltipEl.style.cssText = `
-              position: absolute;
-              background: rgba(0, 0, 0, 0.8);
-              color: white;
-              padding: 6px 10px;
-              border-radius: 4px;
-              font-size: 12px;
-              white-space: nowrap;
-              pointer-events: none;
-              z-index: 1000;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-              max-width: 200px;
-              word-wrap: break-word;
-              white-space: normal;
-            `;
-
-            window.dataMarkerTooltip = new mapboxgl.Marker(tooltipEl, {
-              offset: [15, -15]
-            })
-            .setLngLat(coordinates)
-            .addTo(map);
-            
-            // Keep tooltip visible for a longer duration on mobile
-            setTimeout(() => {
-              if (window.dataMarkerTooltip) {
-                window.dataMarkerTooltip.remove();
-                window.dataMarkerTooltip = null;
-              }
-            }, 3000);
-          }
-          
-          // Clear the flag after a brief delay
-          setTimeout(() => {
-            window.dataMarkerClicked = false;
-          }, 10);
-        });
-
-        // Add touch handlers for mobile support
-        map.on("touchstart", layerId, (e) => {
-          e.originalEvent.preventDefault();
-          e.originalEvent.stopPropagation();
-          
-          window.dataMarkerTouched = true;
-          
-          const feature = e.features[0];
-          if (feature) {
-            const description = feature.properties.description;
-            const markerType = feature.properties.type;
-            const coordinates = feature.geometry.coordinates;
-
-            const typeEmojis = {
-              payment: "💰",
-              gate: "🚪", 
-              mud: "🟫",
-              warning: "⚠️",
-              slope: "⛰️",
-              narrow: "↔️",
-            };
-
-            const emoji = typeEmojis[markerType] || "ℹ️";
-
-            // Create tooltip for touch
-            if (window.dataMarkerTooltip) {
-              window.dataMarkerTooltip.remove();
-            }
-
-            const tooltipEl = document.createElement('div');
-            tooltipEl.className = 'data-marker-tooltip';
-            tooltipEl.innerHTML = `${emoji} ${description}`;
-            tooltipEl.style.cssText = `
-              position: absolute;
-              background: rgba(0, 0, 0, 0.8);
-              color: white;
-              padding: 6px 10px;
-              border-radius: 4px;
-              font-size: 12px;
-              white-space: nowrap;
-              pointer-events: none;
-              z-index: 1000;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-              max-width: 200px;
-              word-wrap: break-word;
-              white-space: normal;
-            `;
-
-            window.dataMarkerTooltip = new mapboxgl.Marker(tooltipEl, {
-              offset: [15, -15]
-            })
-            .setLngLat(coordinates)
-            .addTo(map);
-            
-            // Make marker more prominent
-            map.setPaintProperty(layerId, "circle-opacity", 1.0);
-            map.setPaintProperty(layerId, "circle-radius", 10);
-          }
-        });
-
-        map.on("touchend", layerId, (e) => {
-          setTimeout(() => {
-            window.dataMarkerTouched = false;
-            
-            // Remove tooltip after a delay
-            setTimeout(() => {
-              if (window.dataMarkerTooltip) {
-                window.dataMarkerTooltip.remove();
-                window.dataMarkerTooltip = null;
-              }
-            }, 2000);
-            
-            // Restore marker appearance
-            const segmentName = selectedSegments.length > 0 ? selectedSegments[0] : null;
-            const layerSegmentName = layerId.replace('segment-data-marker-', '');
-            const isSelected = selectedSegments.includes(layerSegmentName);
-            
-            if (isSelected) {
-              map.setPaintProperty(layerId, "circle-opacity", 1.0);
-            } else {
-              map.setPaintProperty(layerId, "circle-opacity", 0.8);
-            }
-            map.setPaintProperty(layerId, "circle-radius", 8);
-          }, 100);
-        });
-      }
-    }
-  }
-}
-
-// Function to update marker opacity when a segment is selected
-function updateSegmentDataMarkerVisibility() {
-  routePolylines.forEach((polylineData) => {
-    const layerId = `segment-data-marker-${polylineData.segmentName}`;
-    const isSelected = selectedSegments.includes(polylineData.segmentName);
-
-    if (map.getLayer(layerId)) {
-      if (isSelected) {
-        // Make markers fully visible when segment is selected
-        map.setPaintProperty(layerId, "circle-opacity", 1.0);
-        map.setPaintProperty(layerId, "circle-stroke-opacity", 1.0);
-      } else {
-        // Keep markers semi-transparent when not selected
-        map.setPaintProperty(layerId, "circle-opacity", 0.7);
-        map.setPaintProperty(layerId, "circle-stroke-opacity", 0.9);
-      }
-    }
-  });
-}
-
-// Call this function whenever `selectedSegments` changes
-// For example, within `updateSegmentStyles` or `addRoutePoint` after `selectedSegments` is updated.
-
-// Example integration:
-// In `updateSegmentStyles()` after `selectedSegments` is updated:
-// `updateSegmentDataMarkerVisibility();`
-// Also consider calling it after `loadRouteFromUrl` and `loadRouteFromEncoding`.
-
-// Need to ensure that Maki icons are available in Mapbox GL JS or use custom icons.
-// For now, assuming Maki icons are available and named like 'icon-name-11'.
-// Example usage for custom icons if Maki icons are not sufficient:
-// map.loadImage('path/to/custom-icon.png', (error, image) => {
-//   if (error) throw error;
-//   if (!map.hasImage('custom-marker-icon')) {
-//     map.addImage('custom-marker-icon', image);
-//   }
-//   // Then use 'custom-marker-icon' in 'icon-image' layout property.
-// });

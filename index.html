@@ -100,7 +100,7 @@
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-P1TK7GTD2J"></script>
 <script>
   var host = window.location.hostname;
-  if(host != "localhost" && !host.startsWith("10.0.") && !host.endsWith("replit.dev"))
+  if(host != "localhost" && !host.startsWith("10.0."))
   {
       // your google analytic code here
       window.dataLayer = window.dataLayer || [];
@@ -109,7 +109,6 @@
 
       gtag('config', 'G-P1TK7GTD2J');
   } else {
-    console.log("Disabling GA for localhost");
      window['ga-disable-UA-G-P1TK7GTD2J'] = true; 
   }
   
