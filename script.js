@@ -2592,9 +2592,18 @@ function hasWinterSegments() {
 function hasSegmentWarnings() {
   const warningSegments = [];
   for (let i = 0; i < selectedSegments.length; i++) {
-    const segmentInfo = segmentsData[selectedSegments[i]];
-    if (segmentInfo && segmentInfo.warning) {
-      warningSegments.push(selectedSegments[i]);
+    const segmentName = selectedSegments[i];
+    const dataPoints = getSegmentDataPoints(segmentName);
+    
+    // Check if segment has any data points (warnings, payment, gates, etc.)
+    if (dataPoints.length > 0) {
+      warningSegments.push(segmentName);
+    } else {
+      // Fallback to legacy warning system
+      const segmentInfo = segmentsData[segmentName];
+      if (segmentInfo && segmentInfo.warning) {
+        warningSegments.push(segmentName);
+      }
     }
   }
   return {
@@ -2645,7 +2654,7 @@ function updateRouteWarning() {
   if (warningsResult.hasWarnings) {
     const countText =
       warningsResult.count > 1 ? ` (${warningsResult.count})` : "";
-    segmentWarning.innerHTML = `⚠️ אזהרות ${countText}`;
+    segmentWarning.innerHTML = `⚠️ מידע חשוב ${countText}`;
     segmentWarning.style.display = "block";
 
     // Reset segment warning cycling index when warnings change
