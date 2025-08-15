@@ -4204,8 +4204,9 @@ function createSegmentDataMarkers() {
 
         // If dataItem.location is provided, use that. Otherwise, default to segment start.
         let markerLngLat;
-        if (dataItem.location && dataItem.location.lng && dataItem.location.lat) {
-          markerLngLat = [dataItem.location.lng, dataItem.location.lat];
+        if (dataItem.location && Array.isArray(dataItem.location) && dataItem.location.length === 2) {
+          // dataItem.location is [lat, lng] format, convert to [lng, lat] for Mapbox
+          markerLngLat = [dataItem.location[1], dataItem.location[0]];
         } else {
           // Default to the first coordinate of the segment if no specific location is given
           markerLngLat = [
