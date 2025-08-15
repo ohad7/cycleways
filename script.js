@@ -1071,6 +1071,8 @@ function initMap() {
 
     // Add global mouse move handler for proximity-based highlighting
     if (!isTouchDevice) {
+      let lastCursorState = "default";
+      
       map.on("mousemove", (e) => {
         if (isDraggingPoint || map.isMoving()) {
           return;
@@ -1133,6 +1135,13 @@ function initMap() {
           }
         }
 
+        // Update cursor only when state changes
+        const newCursorState = closestSegment ? "pointer" : "default";
+        if (newCursorState !== lastCursorState) {
+          map.getCanvas().style.cursor = newCursorState;
+          lastCursorState = newCursorState;
+        }
+
         // Reset all segments to normal style first
         routePolylines.forEach((polylineData) => {
           const layerId = polylineData.layerId;
@@ -1166,7 +1175,6 @@ function initMap() {
         // Highlight closest segment if found
         if (closestSegment) {
           const layerId = closestSegment.layerId;
-          map.getCanvas().style.cursor = "pointer";
 
           if (!selectedSegments.includes(closestSegment.segmentName)) {
             // Highlight non-selected segment
@@ -2078,7 +2086,7 @@ async function parseGeoJSON(geoJsonData) {
 
       // Add hover effects with segment name display
       map.on("mouseenter", layerId, (e) => {
-        map.getCanvas().style.cursor = "pointer";
+        // Cursor is now managed by global mousemove handler
         if (!selectedSegments.includes(name)) {
           map.setPaintProperty(layerId, "line-width", originalWeight + 2);
           map.setPaintProperty(layerId, "line-opacity", 1);
@@ -4459,13 +4467,13 @@ async function initDataMarkers() {
       }
     });
 
-    // Change cursor on hover
+    // Change cursor on hover - cursor is managed by global handler
     map.on("mouseenter", "data-markers-layer", () => {
-      map.getCanvas().style.cursor = "pointer";
+      // Cursor is managed by global mousemove handler
     });
 
     map.on("mouseleave", "data-markers-layer", () => {
-      map.getCanvas().style.cursor = "";
+      // Cursor is managed by global mousemove handler
       hideDataMarkerTooltip();
     });
   }
