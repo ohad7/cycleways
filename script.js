@@ -1059,6 +1059,20 @@ function initMap() {
     if (!isTouchDevice) {
       map.on("mousemove", (e) => {
         if (isDraggingPoint || map.isMoving() || window.dataMarkerHovered) {
+          // Hide segment display and hover preview when data marker is being hovered
+          if (window.dataMarkerHovered) {
+            const segmentDisplay = document.getElementById("segment-name-display");
+            segmentDisplay.style.display = "none";
+            
+            // Remove hover preview marker
+            if (window.hoverPreviewMarker) {
+              window.hoverPreviewMarker.remove();
+              window.hoverPreviewMarker = null;
+            }
+            
+            // Reset cursor to default
+            map.getCanvas().style.cursor = "pointer";
+          }
           return;
         }
         const mousePoint = e.lngLat;
@@ -2009,6 +2023,11 @@ async function parseGeoJSON(geoJsonData) {
 
       // Add hover effects with segment name display
       map.on("mouseenter", layerId, (e) => {
+        // Don't show segment hover if data marker is being hovered
+        if (window.dataMarkerHovered) {
+          return;
+        }
+        
         map.getCanvas().style.cursor = "pointer";
         if (!selectedSegments.includes(name)) {
           map.setPaintProperty(layerId, "line-width", originalWeight + 2);
@@ -2044,6 +2063,11 @@ async function parseGeoJSON(geoJsonData) {
 
       // Add hover functionality for selected segments to show distance from start
       map.on("mousemove", layerId, (e) => {
+        // Don't show segment hover if data marker is being hovered
+        if (window.dataMarkerHovered) {
+          return;
+        }
+        
         if (selectedSegments.includes(name)) {
           const hoverPoint = e.lngLat;
           const orderedCoords = getOrderedCoordinates();
@@ -2165,17 +2189,24 @@ async function parseGeoJSON(geoJsonData) {
       });
 
       map.on("mouseleave", layerId, () => {
+        // Don't reset segment styles if data marker is being hovered
+        if (window.dataMarkerHovered) {
+          return;
+        }
+        
         if (!selectedSegments.includes(name)) {
           map.setPaintProperty(layerId, "line-width", originalWeight);
           map.setPaintProperty(layerId, "line-opacity", originalOpacity);
         }
 
-        // Hide segment name display
-        const segmentDisplay = document.getElementById("segment-name-display");
-        segmentDisplay.style.display = "none";
+        // Hide segment name display only if no data marker is being hovered
+        if (!window.dataMarkerHovered) {
+          const segmentDisplay = document.getElementById("segment-name-display");
+          segmentDisplay.style.display = "none";
+        }
 
-        // Remove hover marker
-        if (window.hoverMarker) {
+        // Remove hover marker only if no data marker is being hovered
+        if (window.hoverMarker && !window.dataMarkerHovered) {
           window.hoverMarker.remove();
           window.hoverMarker = null;
         }
@@ -4270,10 +4301,20 @@ function createSegmentDataMarkers() {
 
         // Add hover interaction for tooltips
         map.on("mouseenter", layerId, (e) => {
-          map.getCanvas().style.cursor = "pointer";
-          
-          // Set flag to prevent segment hover detection
+          // Set flag to prevent segment hover detection FIRST
           window.dataMarkerHovered = true;
+          
+          // Hide any existing segment display immediately
+          const segmentDisplay = document.getElementById("segment-name-display");
+          segmentDisplay.style.display = "none";
+          
+          // Remove any hover preview marker immediately
+          if (window.hoverPreviewMarker) {
+            window.hoverPreviewMarker.remove();
+            window.hoverPreviewMarker = null;
+          }
+          
+          map.getCanvas().style.cursor = "pointer";
 
           const feature = e.features[0];
           if (feature) {
@@ -4330,12 +4371,7 @@ function createSegmentDataMarkers() {
         });
 
         map.on("mouseleave", layerId, (e) => {
-          // Clear the flag
-          window.dataMarkerHovered = false;
-          
-          map.getCanvas().style.cursor = "";
-          
-          // Remove tooltip
+          // Remove tooltip immediately
           if (window.dataMarkerTooltip) {
             window.dataMarkerTooltip.remove();
             window.dataMarkerTooltip = null;
@@ -4352,6 +4388,11 @@ function createSegmentDataMarkers() {
             map.setPaintProperty(layerId, "circle-opacity", 0.8);
           }
           map.setPaintProperty(layerId, "circle-radius", 8);
+          
+          // Clear the flag with a small delay to prevent immediate segment hover activation
+          setTimeout(() => {
+            window.dataMarkerHovered = false;
+          }, 50);
         });
 
         // Add click handler to prevent segment selection and show tooltip
