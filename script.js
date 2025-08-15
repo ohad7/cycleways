@@ -1058,7 +1058,7 @@ function initMap() {
     // Add global mouse move handler for proximity-based highlighting
     if (!isTouchDevice) {
       map.on("mousemove", (e) => {
-        if (isDraggingPoint || map.isMoving()) {
+        if (isDraggingPoint || map.isMoving() || window.dataMarkerHovered) {
           return;
         }
         const mousePoint = e.lngLat;
@@ -1386,6 +1386,7 @@ function initMap() {
     map.on("touchend", (e) => {
       if (!isTouchDevice) return;
       if (isDraggingPoint) return; // don't add while dragging
+      if (window.dataMarkerTouched) return; // don't add while touching a data marker
       if (!e.points || e.points.length !== 1) return;
 
       const endPx = e.points[0];
@@ -1421,8 +1422,8 @@ function initMap() {
 
     // Add global click handler for adding route points
     map.on("click", (e) => {
-      // Don't add points if we're dragging a point
-      if (isDraggingPoint) {
+      // Don't add points if we're dragging a point or clicking on a data marker
+      if (isDraggingPoint || window.dataMarkerClicked) {
         return;
       }
       addPointFromLngLat(e.lngLat);
@@ -4246,23 +4247,36 @@ function createSegmentDataMarkers() {
         });
 
         // Add the layer for the markers using circle symbols instead of icons
+        // Place these layers above all segment layers by adding them after route layers are created
         map.addLayer({
           id: layerId,
           type: "circle",
           source: sourceId,
           paint: {
-            "circle-radius": 6,
+            "circle-radius": 8,
             "circle-color": ["get", "color"],
             "circle-stroke-width": 2,
             "circle-stroke-color": "#ffffff",
-            "circle-opacity": 0.7,
-            "circle-stroke-opacity": 0.9,
+            "circle-opacity": 0.8,
+            "circle-stroke-opacity": 1.0,
           },
         });
 
+        // Store layer info for later z-index management
+        if (!window.dataMarkerLayers) {
+          window.dataMarkerLayers = [];
+        }
+        window.dataMarkerLayers.push(layerId);
+
         // Add hover interaction for tooltips
         map.on("mouseenter", layerId, (e) => {
+          e.originalEvent.preventDefault();
+          e.originalEvent.stopPropagation();
+          
           map.getCanvas().style.cursor = "pointer";
+          
+          // Set flag to prevent segment hover detection
+          window.dataMarkerHovered = true;
 
           const feature = e.features[0];
           if (feature) {
@@ -4291,20 +4305,133 @@ function createSegmentDataMarkers() {
 
             // Make the marker more visible on hover
             map.setPaintProperty(layerId, "circle-opacity", 1.0);
-            map.setPaintProperty(layerId, "circle-radius", 8);
+            map.setPaintProperty(layerId, "circle-radius", 10);
           }
         });
 
         map.on("mouseleave", layerId, () => {
+          // Clear the flag
+          window.dataMarkerHovered = false;
+          
           map.getCanvas().style.cursor = "";
           const segmentDisplay = document.getElementById(
             "segment-name-display",
           );
           segmentDisplay.style.display = "none";
 
-          // Restore original appearance
-          map.setPaintProperty(layerId, "circle-opacity", 0.7);
-          map.setPaintProperty(layerId, "circle-radius", 6);
+          // Restore original appearance based on selection state
+          const feature = e.features && e.features[0];
+          const segmentName = feature ? feature.properties.segment : null;
+          const isSelected = selectedSegments.includes(segmentName);
+          
+          if (isSelected) {
+            map.setPaintProperty(layerId, "circle-opacity", 1.0);
+          } else {
+            map.setPaintProperty(layerId, "circle-opacity", 0.8);
+          }
+          map.setPaintProperty(layerId, "circle-radius", 8);
+        });
+
+        // Add click handler to prevent segment selection and show tooltip
+        map.on("click", layerId, (e) => {
+          e.originalEvent.preventDefault();
+          e.originalEvent.stopPropagation();
+          
+          // Set flag to prevent segment click handling
+          window.dataMarkerClicked = true;
+          
+          const feature = e.features[0];
+          if (feature) {
+            const description = feature.properties.description;
+            const segmentName = feature.properties.segment;
+            const markerType = feature.properties.type;
+
+            // Create emoji mapping for display
+            const typeEmojis = {
+              payment: "💰",
+              gate: "🚪", 
+              mud: "🟫",
+              warning: "⚠️",
+              slope: "⛰️",
+              narrow: "↔️",
+            };
+
+            const emoji = typeEmojis[markerType] || "ℹ️";
+
+            // Show tooltip for mobile/touch devices
+            const segmentDisplay = document.getElementById(
+              "segment-name-display",
+            );
+            segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> ${emoji} ${description}`;
+            segmentDisplay.style.display = "block";
+            
+            // Keep tooltip visible for a longer duration on mobile
+            setTimeout(() => {
+              if (segmentDisplay.style.display === "block" && 
+                  segmentDisplay.innerHTML.includes(description)) {
+                segmentDisplay.style.display = "none";
+              }
+            }, 3000);
+          }
+          
+          // Clear the flag after a brief delay
+          setTimeout(() => {
+            window.dataMarkerClicked = false;
+          }, 10);
+        });
+
+        // Add touch handlers for mobile support
+        map.on("touchstart", layerId, (e) => {
+          e.originalEvent.preventDefault();
+          e.originalEvent.stopPropagation();
+          
+          window.dataMarkerTouched = true;
+          
+          const feature = e.features[0];
+          if (feature) {
+            const description = feature.properties.description;
+            const segmentName = feature.properties.segment;
+            const markerType = feature.properties.type;
+
+            const typeEmojis = {
+              payment: "💰",
+              gate: "🚪", 
+              mud: "🟫",
+              warning: "⚠️",
+              slope: "⛰️",
+              narrow: "↔️",
+            };
+
+            const emoji = typeEmojis[markerType] || "ℹ️";
+
+            const segmentDisplay = document.getElementById(
+              "segment-name-display",
+            );
+            segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> ${emoji} ${description}`;
+            segmentDisplay.style.display = "block";
+            
+            // Make marker more prominent
+            map.setPaintProperty(layerId, "circle-opacity", 1.0);
+            map.setPaintProperty(layerId, "circle-radius", 10);
+          }
+        });
+
+        map.on("touchend", layerId, () => {
+          setTimeout(() => {
+            window.dataMarkerTouched = false;
+            
+            // Restore marker appearance
+            const segmentName = selectedSegments.length > 0 ? selectedSegments[0] : null;
+            const layerSegmentName = layerId.replace('segment-data-marker-', '');
+            const isSelected = selectedSegments.includes(layerSegmentName);
+            
+            if (isSelected) {
+              map.setPaintProperty(layerId, "circle-opacity", 1.0);
+            } else {
+              map.setPaintProperty(layerId, "circle-opacity", 0.8);
+            }
+            map.setPaintProperty(layerId, "circle-radius", 8);
+          }, 100);
         });
       }
     }
