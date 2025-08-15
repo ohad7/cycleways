@@ -1022,9 +1022,24 @@ function initMap() {
     mapboxgl.accessToken =
       "pk.eyJ1Ijoib3NlcmZhdHkiLCJhIjoiY21kNmdzb3NnMDlqZTJrc2NzNmh3aGk1aCJ9.dvA6QY0N5pQ2IISZHp53kg";
 
-    map = new mapboxgl.Map({
+    const map = new mapboxgl.Map({
       container: "map",
-      style: "mapbox://styles/mapbox/outdoors-v12",
+      style: {
+        version: 8,
+        sources: {
+          'mapbox': {
+            type: 'raster',
+            url: 'mapbox://mapbox.outdoors'
+          }
+        },
+        layers: [{
+          id: 'mapbox',
+          type: 'raster',
+          source: 'mapbox'
+        }],
+        sprite: 'mapbox://sprites/mapbox/bright-v9',
+        glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf'
+      },
       center: [35.617497, 33.183536], // Centered on the bike routes area
       zoom: 11.5,
     });
@@ -2640,7 +2655,7 @@ function updateRouteWarning() {
   }
 }
 
-// Function to focus map on a specific segment
+// Function to focus on a specific segment
 function focusOnSegment(segmentName) {
   const polyline = routePolylines.find((p) => p.segmentName === segmentName);
   if (!polyline) return;
@@ -4233,13 +4248,13 @@ function initDataMarkers() {
 
   // Collect all data points from segments
   const dataFeatures = [];
-  
+
   Object.entries(segmentsData).forEach(([segmentName, segmentInfo]) => {
     if (segmentInfo.data && Array.isArray(segmentInfo.data)) {
       segmentInfo.data.forEach((dataPoint, index) => {
         if (dataPoint.location && Array.isArray(dataPoint.location) && dataPoint.location.length >= 2) {
           const [lat, lng] = dataPoint.location;
-          
+
           dataFeatures.push({
             type: 'Feature',
             id: `${segmentName}-${index}`,
@@ -4325,10 +4340,10 @@ function initDataMarkers() {
 // Show tooltip for data marker
 function showDataMarkerTooltip(e, feature) {
   const properties = feature.properties;
-  
+
   // Remove existing tooltip
   hideDataMarkerTooltip();
-  
+
   // Create tooltip element
   const tooltip = document.createElement('div');
   tooltip.className = 'data-marker-tooltip';
@@ -4338,7 +4353,7 @@ function showDataMarkerTooltip(e, feature) {
       <span class="tooltip-text">${properties.information}</span>
     </div>
   `;
-  
+
   tooltip.style.cssText = `
     position: absolute;
     background: rgba(0, 0, 0, 0.9);
@@ -4359,10 +4374,10 @@ function showDataMarkerTooltip(e, feature) {
   const point = map.project(e.lngLat);
   tooltip.style.left = (point.x + 15) + 'px';
   tooltip.style.top = (point.y - 15) + 'px';
-  
+
   document.body.appendChild(tooltip);
   window.currentDataTooltip = tooltip;
-  
+
   // Auto-hide on mobile after delay
   if ('ontouchstart' in window) {
     setTimeout(() => {
@@ -4385,7 +4400,7 @@ function getSegmentDataPoints(segmentName) {
   if (!segmentInfo || !segmentInfo.data || !Array.isArray(segmentInfo.data)) {
     return [];
   }
-  
+
   return segmentInfo.data.map(dataPoint => ({
     type: dataPoint.type,
     information: dataPoint.information || '',
