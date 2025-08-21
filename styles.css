@@ -1437,6 +1437,7 @@ html {
 
 .gpx-download-button {
   font-size: 14px;
+  max-width: 50px;
 }
 
 .control-btn:hover:not(:disabled) {
