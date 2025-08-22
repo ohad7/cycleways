@@ -85,10 +85,8 @@ function saveState() {
 }
 
 // Add a new route point
-function addRoutePoint(lngLat, fromClick = true) {
-  if (fromClick) {
-    saveState();
-  }
+function addRoutePoint(lngLat) {
+  saveState();  
 
   const point = {
     lng: lngLat.lng,
@@ -96,13 +94,11 @@ function addRoutePoint(lngLat, fromClick = true) {
     id: Date.now() + Math.random(),
   };
 
-  // Log the operation before making changes
-  if (fromClick) {
-    logOperation("addPoint", {
-      point: { lat: lngLat.lat, lng: lngLat.lng },
-      fromClick: fromClick,
-    });
-  }
+// Log the operation before making changes
+  logOperation("addPoint", {
+    point: { lat: lngLat.lat, lng: lngLat.lng },
+    fromClick: true,
+  });
 
   // Add to local routePoints first
   routePoints.push(point);
@@ -256,7 +252,6 @@ function createPointMarker(point, index) {
 
         if (!snappedPoint) {
           // No segment close enough - remove this point
-          console.log("Dragged point too far from segments, removing point");
           removeRoutePoint(draggedPointIndex);
         }
       }
@@ -344,7 +339,6 @@ function createPointMarker(point, index) {
 
         if (!snappedPoint) {
           // No segment close enough - remove this point
-          console.log("Dragged point too far from segments, removing point");
           removeRoutePoint(draggedPointIndex);
         }
       }
@@ -789,8 +783,6 @@ function logOperation(type, data) {
     data: data,
     routeState: currentState,
   });
-
-  console.log("Logged operation:", operationsLog[operationsLog.length - 1]);
 }
 
 // Function to export operations as JSON
@@ -834,7 +826,6 @@ function exportOperationsJSON() {
     },
   };
 
-  console.log("Exported test case:", exportData);
   return exportData;
 }
 
@@ -1441,12 +1432,12 @@ function initMap() {
       if (isDraggingPoint) return; // don't add while dragging
       if (!e.points || e.points.length !== 1) return;
 
-      const endPx = e.points[0];
-      const moved = tapStartPx
-        ? Math.hypot(endPx.x - tapStartPx.x, endPx.y - tapStartPx.y)
-        : 0;
-      tapStartPx = null;
-      if (moved > 10) return; // treat as pan/zoom, not a tap
+      // const endPx = e.points[0];
+      // const moved = tapStartPx
+      //   ? Math.hypot(endPx.x - tapStartPx.x, endPx.y - tapStartPx.y)
+      //   : 0;
+      // tapStartPx = null;
+      // if (moved > 10) return; // treat as pan/zoom, not a tap
 
       // Check if touch was on a data marker
       const features = map.queryRenderedFeatures(e.point, {
@@ -1473,8 +1464,6 @@ function initMap() {
       if (e.originalEvent && e.originalEvent.preventDefault)
         e.originalEvent.preventDefault();
 
-      // ... your existing drag logic ...
-      window.alert("dragging point");
     });
 
     map.on("touchend", "route-points-circle", () => {
@@ -1485,7 +1474,7 @@ function initMap() {
     // Add global click handler for adding route points
     map.on("click", (e) => {
       // Don't add points if we're dragging a point
-      if (isDraggingPoint) {
+      if (isDraggingPoint || isTouchDevice) {
         return;
       }
 
@@ -1937,11 +1926,6 @@ async function loadSegmentsData() {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     segmentsData = await response.json();
-    console.log(
-      "Successfully loaded segments.json with",
-      Object.keys(segmentsData).length,
-      "segments",
-    );
   } catch (error) {
     console.warn("Could not load segments.json:", error);
     // Initialize with empty object to prevent errors
@@ -2271,14 +2255,10 @@ async function parseGeoJSON(geoJsonData) {
     routePolylines.forEach((polylineData) => {
       spatialIndex.addSegment(polylineData);
     });
-    console.log(
-      `Spatial index initialized with ${routePolylines.length} segments`,
-    );
 
     // Initialize RouteManager and load data
     routeManager = new RouteManager();
     await routeManager.load(geoJsonData, segmentsData);
-    console.log("RouteManager initialized.");
 
     // Initialize data markers
     await initDataMarkers();
@@ -2939,7 +2919,6 @@ function loadRouteFromEncoding(routeEncoding) {
       focusMapOnRoute();
     }, 200);
 
-    console.log(`Loaded route with ${selectedSegments.length} segments`);
     return true;
   } catch (error) {
     console.error("Error loading route from encoding:", error);
@@ -4272,7 +4251,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Keyboard shortcuts for undo/redo and export
   document.addEventListener("keydown", function (e) {
-    //console.log('e.ctrlKey:' + e.ctrlKey + ' key:' + e.key)
 
     if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
       e.preventDefault();
@@ -4349,7 +4327,6 @@ async function loadCustomIcons() {
         img.src = url;
       });
 
-      console.log(`Loaded custom icon: ${iconName}`);
     } catch (error) {
       console.warn(`Failed to load custom icon ${iconName}:`, error);
     }

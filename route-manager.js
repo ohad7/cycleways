@@ -60,7 +60,6 @@ class RouteManager {
     this._buildAdjacencyMap(); // legacy segment-level (still used elsewhere)
     this._buildEndpointGraph(); // new endpoint-level weighted graph
 
-    console.log(`Loaded ${this.segments.size} segments with connectivity data`);
   }
 
   /**
@@ -614,7 +613,6 @@ class RouteManager {
           allSegments,
         );
 
-        console.log("Pushing extension segments:", extensionSegments);
         allSegments.push(...extensionSegments);
       }
     }
@@ -623,7 +621,6 @@ class RouteManager {
   }
 
   _findRouteExtensionToPoint(targetPoint, currentRouteSegments) {
-    console.log("_findRouteExtensionToPoint");
     if (!targetPoint.segmentName) return [];
 
     const closestSegmentToPoint = targetPoint.segmentName;
@@ -649,19 +646,7 @@ class RouteManager {
     const connectionsFromLastSegment =
       this.adjacencyMap.get(lastSegmentOfRoute) || [];
 
-    console.log(
-      "Adjacent to",
-      lastSegmentOfRoute,
-      ":",
-      connectionsFromLastSegment,
-    );
-
     if (connectionsFromLastSegment.includes(closestSegmentToPoint)) {
-      console.log(
-        "Directly connected to target segment :",
-        closestSegmentToPoint,
-      );
-      console.log("currentRouteSegments:", currentRouteSegments);
       // If it's only the second segment being added and it's adjacent, return it directly
       if (currentRouteSegments.length == 1) {
         return [closestSegmentToPoint];
@@ -694,10 +679,7 @@ class RouteManager {
         return [lastSegmentOfRoute, closestSegmentToPoint];
       }
     } else {
-      console.log(
-        "Finding shortest path to target segment ",
-        closestSegmentToPoint,
-      );
+
       // Not directly connected - find the shortest path using endpoint graph
       const targetSegmentData = this.segments.get(closestSegmentToPoint);
       if (!targetSegmentData) return [closestSegmentToPoint];
@@ -911,7 +893,6 @@ class RouteManager {
         }
       }
     }
-    console.log("segments", segments);
     return segments;
   }
 
@@ -1041,7 +1022,6 @@ class RouteManager {
     if (path.length > 0 && path[path.length - 1] !== targetSegmentName) {
       path.push(targetSegmentName);
     }
-    console.log("path:", path);
 
     return path || [];
   }
