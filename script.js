@@ -84,6 +84,13 @@ function saveState() {
   clearRouteFromUrl(); // Clear route parameter when making changes
 }
 
+// Google Analytics event tracking helper
+function trackEvent(eventName, parameters = {}) {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', eventName, parameters);
+  }
+}
+
 // Add a new route point
 function addRoutePoint(lngLat) {
   saveState();  
@@ -94,11 +101,20 @@ function addRoutePoint(lngLat) {
     id: Date.now() + Math.random(),
   };
 
-// Log the operation before making changes
-  logOperation("addPoint", {
-    point: { lat: lngLat.lat, lng: lngLat.lng },
-    fromClick: true,
-  });
+  // Log the operation before making changes
+  if (fromClick) {
+    logOperation("addPoint", {
+      point: { lat: lngLat.lat, lng: lngLat.lng },
+      fromClick: true,
+    });
+    
+    // Track analytics event for route point addition
+    trackEvent('route_point_added', {
+      point_count: routePoints.length + 1,
+      segments_count: selectedSegments.length,
+      method: 'click'
+    });
+  }
 
   // Add to local routePoints first
   routePoints.push(point);
@@ -398,6 +414,13 @@ function removeRoutePoint(index) {
       ? { lat: routePoints[index].lat, lng: routePoints[index].lng }
       : null,
   });
+  
+  // Track analytics event for route point removal
+  trackEvent('route_point_removed', {
+    point_count: routePoints.length - 1,
+    segments_count: selectedSegments.length,
+    method: 'right_click'
+  });
 
   if (!routeManager) {
     console.warn("RouteManager not initialized");
@@ -667,6 +690,13 @@ function clearRouteFromUrl() {
 
 function undo() {
   if (undoStack.length > 0) {
+    // Track analytics event for undo
+    trackEvent('route_undo', {
+      undo_stack_size: undoStack.length,
+      current_segments: selectedSegments.length,
+      current_points: routePoints.length
+    });
+    
     // Save current state to redo stack
     redoStack.push({
       segments: [...selectedSegments],
@@ -720,6 +750,13 @@ function undo() {
 
 function redo() {
   if (redoStack.length > 0) {
+    // Track analytics event for redo
+    trackEvent('route_redo', {
+      redo_stack_size: redoStack.length,
+      current_segments: selectedSegments.length,
+      current_points: routePoints.length
+    });
+    
     // Save current state to undo stack
     undoStack.push({
       segments: [...selectedSegments],
@@ -829,6 +866,23 @@ function exportOperationsJSON() {
   return exportData;
 }
 
+// Helper function to get route info for analytics
+function getRouteInfo() {
+  let totalDistance = 0;
+  selectedSegments.forEach((segmentName) => {
+    const metrics = segmentMetrics[segmentName];
+    if (metrics) {
+      totalDistance += metrics.distance;
+    }
+  });
+  
+  return {
+    distance: totalDistance,
+    segments: selectedSegments.length,
+    points: routePoints.length
+  };
+}
+
 // Function to show export modal
 function showExportModal() {
   const exportData = exportOperationsJSON();
@@ -919,6 +973,12 @@ function resetRoute() {
   logOperation("reset", {
     clearedPointsCount: routePoints.length,
     clearedSegmentsCount: selectedSegments.length,
+  });
+  
+  // Track analytics event for route reset
+  trackEvent('route_reset', {
+    cleared_points: routePoints.length,
+    cleared_segments: selectedSegments.length
   });
 
   // Save current state for potential undo
@@ -1717,6 +1777,13 @@ function shareRoute() {
     alert("אין מסלול לשיתוף. בחרו קטעים כדי ליצור מסלול.");
     return;
   }
+  
+  // Track analytics event for route sharing
+  trackEvent('route_share', {
+    route_segments: selectedSegments.length,
+    route_points: routePoints.length,
+    route_id: routeId.substring(0, 10) // First 10 chars for privacy
+  });
 
   const url = new URL(window.location);
   url.searchParams.set("route", routeId);
@@ -1849,6 +1916,13 @@ function showShareModal(shareUrl) {
 }
 
 function shareToTwitter(url) {
+  // Track analytics event for Twitter sharing
+  trackEvent('social_share', {
+    platform: 'twitter',
+    route_segments: selectedSegments.length,
+    route_points: routePoints.length
+  });
+  
   const text =
     "בדקו את מסלול הרכיבה שיצרתי במפת שבילי אופניים - גליל עליון וגולן!";
   window.open(
@@ -1858,10 +1932,24 @@ function shareToTwitter(url) {
 }
 
 function shareToFacebook(url) {
+  // Track analytics event for Facebook sharing
+  trackEvent('social_share', {
+    platform: 'facebook',
+    route_segments: selectedSegments.length,
+    route_points: routePoints.length
+  });
+  
   window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, "_blank");
 }
 
 function shareToWhatsApp(url) {
+  // Track analytics event for WhatsApp sharing
+  trackEvent('social_share', {
+    platform: 'whatsapp',
+    route_segments: selectedSegments.length,
+    route_points: routePoints.length
+  });
+  
   const text =
     "בדקו את מסלול הרכיבה שיצרתי במפת שבילי אופניים - גליל עליון וגולן!";
   window.open(
@@ -1881,6 +1969,12 @@ function loadRouteFromUrl() {
   if (routeParam && segmentsData) {
     const decodedSegments = decodeRoute(routeParam);
     if (decodedSegments.length > 0) {
+      // Track analytics event for route loading from URL
+      trackEvent('route_loaded_from_url', {
+        segments_count: decodedSegments.length,
+        route_param_length: routeParam.length
+      });
+      
       selectedSegments = decodedSegments;
       // Wait a bit for map to be fully loaded before updating styles
       setTimeout(() => {
@@ -2709,6 +2803,12 @@ function updateRouteWarning() {
 function focusOnSegment(segmentName) {
   const polyline = routePolylines.find((p) => p.segmentName === segmentName);
   if (!polyline) return;
+  
+  // Track analytics event for segment focus
+  trackEvent('segment_focus', {
+    segment_name: segmentName,
+    source: 'recommendation_click'
+  });
 
   const coords = polyline.coordinates;
   if (coords.length === 0) return;
@@ -3563,6 +3663,12 @@ function searchLocation() {
     searchError.style.display = "block";
     return;
   }
+  
+  // Track analytics event for search
+  trackEvent('location_search', {
+    query_length: query.length,
+    has_current_route: selectedSegments.length > 0
+  });
 
   searchError.style.display = "none";
 
@@ -3676,6 +3782,14 @@ function searchLocation() {
 
         // Add highlight after the animation completes
         setTimeout(highlightSearchedLocation, 1200);
+        
+        // Track successful search
+        trackEvent('location_search_success', {
+          query: query,
+          lat: lat,
+          lng: lon,
+          within_bounds: bounds && isPointWithinBounds(lat, lon, bounds)
+        });
 
         searchInput.value = "";
       } else {
@@ -4000,6 +4114,13 @@ function showDownloadModal() {
 function downloadGPX() {
   if (!kmlData) return;
 
+  // Track analytics event for GPX download
+  trackEvent('gpx_download', {
+    route_segments: selectedSegments.length,
+    route_points: routePoints.length,
+    route_distance_km: parseFloat((getRouteInfo().distance / 1000).toFixed(1))
+  });
+
   const orderedCoords = getOrderedCoordinates();
 
   let gpx = `<?xml version="1.0" encoding="UTF-8"?>
@@ -4067,6 +4188,12 @@ function scrollToSection(sectionId) {
 
 // Event listeners
 document.addEventListener("DOMContentLoaded", function () {
+  // Track page load
+  trackEvent('page_load', {
+    has_route_param: !!getRouteParameter(),
+    user_agent: navigator.userAgent.includes('Mobile') ? 'mobile' : 'desktop'
+  });
+  
   // Initialize the map when page loads
   initMap();
 
@@ -4110,6 +4237,12 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("route-warning")
     .addEventListener("click", function () {
+      // Track analytics event for warning interaction
+      trackEvent('warning_clicked', {
+        warning_type: 'route_continuity',
+        segments_count: selectedSegments.length
+      });
+      
       const continuityResult = checkRouteContinuity();
       if (
         !continuityResult.isContinuous &&
@@ -4127,6 +4260,12 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("winter-warning")
     .addEventListener("click", function () {
+      // Track analytics event for winter warning interaction
+      trackEvent('warning_clicked', {
+        warning_type: 'winter_warning',
+        warning_segments_count: hasWinterSegments().count
+      });
+      
       const winterResult = hasWinterSegments();
       if (winterResult.hasWinter && winterResult.winterSegments.length > 0) {
         // Initialize index if not set
@@ -4148,6 +4287,12 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("segment-warning")
     .addEventListener("click", function () {
+      // Track analytics event for segment warning interaction
+      trackEvent('warning_clicked', {
+        warning_type: 'segment_warning',
+        warning_segments_count: hasSegmentWarnings().count
+      });
+      
       const warningsResult = hasSegmentWarnings();
       if (
         warningsResult.hasWarnings &&
@@ -4174,6 +4319,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const helpBtn = document.getElementById("help-tutorial-btn");
   if (helpBtn) {
     helpBtn.addEventListener("click", () => {
+      // Track analytics event for tutorial start
+      trackEvent('tutorial_started', {
+        has_current_route: selectedSegments.length > 0,
+        source: 'help_button'
+      });
+      
       if (
         typeof tutorial !== "undefined" &&
         tutorial !== null &&
