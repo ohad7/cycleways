@@ -1427,18 +1427,26 @@ function initMap() {
       dragging = false;
     });
 
+    let tapStartPx = null;
+
+    map.on("touchstart", (e) => {
+      if (e.points && e.points.length > 0) {
+        tapStartPx = e.points[0];
+      }
+    });
+
     map.on("touchend", (e) => {
       if (!isTouchDevice) return;
       if (isDraggingPoint) return; // don't add while dragging
       if (!e.points || e.points.length !== 1) return;
 
-      // const endPx = e.points[0];
-      // const moved = tapStartPx
-      //   ? Math.hypot(endPx.x - tapStartPx.x, endPx.y - tapStartPx.y)
-      //   : 0;
-      // tapStartPx = null;
-      // if (moved > 10) return; // treat as pan/zoom, not a tap
+      const endPx = e.points[0];
+      const moved = tapStartPx
+        ? Math.hypot(endPx.x - tapStartPx.x, endPx.y - tapStartPx.y)
+        : 0;      
+      if (moved > 10) return; // treat as pan/zoom, not a tap
 
+      tapStartPx = null;
       // Check if touch was on a data marker
       const features = map.queryRenderedFeatures(e.point, {
         layers: ["data-markers-layer"],
@@ -1449,7 +1457,7 @@ function initMap() {
         return;
       }
 
-      addPointFromLngLat(e.lngLat);
+      addPointFromLngLat(e.lngLat);      
     });
 
     map.on("touchmove", "route-points-circle", (e) => {
@@ -4408,18 +4416,6 @@ async function initDataMarkers() {
 
     // Add click event for data markers
     map.on("click", "data-markers-layer", (e) => {
-      if (e.features.length > 0) {
-        if (e.preventDefault) e.preventDefault();
-        if (e.originalEvent && e.originalEvent.stopPropagation) {
-          e.originalEvent.stopPropagation();
-        }
-        const feature = e.features[0];
-        showDataMarkerTooltip(e, feature);
-      }
-    });
-
-    // Add touch events for mobile
-    map.on("touchstart", "data-markers-layer", (e) => {
       if (e.features.length > 0) {
         if (e.preventDefault) e.preventDefault();
         if (e.originalEvent && e.originalEvent.stopPropagation) {
