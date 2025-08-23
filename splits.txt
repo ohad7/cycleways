@@ -1,0 +1,19 @@
+שביל ישראל ושביל אדום הרי נפתלי
+    עוקף סינגל הרי נפתלי
+    שביל אדום הרי נפתלי
+
+דרך נוף הרי נפתלי קרית שמונה
+    דרך נוף הרי נפתלי מצפה לירן
+    דרך נוף הרי נפתלי פארק גאולוגי
+
+Examples:
+    http://localhost:8888/?route=QGbGTiNT8zcDMrX7TrSQsYA52RPE2MKCmVza1hjm
+    http://localhost:8888/?route=7X4B2nJTFDXTd
+    http://localhost:8888/?route=3C3hHgu4PfhsNoou
+
+
+רחוב הוורדים קריית שמונה
+    רחוב הוורדים דרום קריית שמונה
+    רחוב החצב קריית שמונה
+
+

@@ -15,7 +15,7 @@ let operationsLog = []; // Log of user operations for export
 let spatialIndex = null; // Spatial index for efficient segment lookup
 
 const COLORS = {
-  WARNING_ORANGE: "#ff9800",
+  WARNING_ORANGE: "#882211",
   WARNING_RED: "#f44336",
   SEGMENT_SELECTED: "#006699", // Green for selected segments
   SEGMENT_HOVER: "#666633", // Orange for hovered segments
@@ -92,10 +92,8 @@ function trackEvent(eventName, parameters = {}) {
 }
 
 // Add a new route point
-function addRoutePoint(lngLat, fromClick = true) {
-  if (fromClick) {
-    saveState();
-  }
+function addRoutePoint(lngLat) {
+  saveState();  
 
   const point = {
     lng: lngLat.lng,
@@ -107,7 +105,7 @@ function addRoutePoint(lngLat, fromClick = true) {
   if (fromClick) {
     logOperation("addPoint", {
       point: { lat: lngLat.lat, lng: lngLat.lng },
-      fromClick: fromClick,
+      fromClick: true,
     });
     
     // Track analytics event for route point addition
@@ -270,7 +268,6 @@ function createPointMarker(point, index) {
 
         if (!snappedPoint) {
           // No segment close enough - remove this point
-          console.log("Dragged point too far from segments, removing point");
           removeRoutePoint(draggedPointIndex);
         }
       }
@@ -358,7 +355,6 @@ function createPointMarker(point, index) {
 
         if (!snappedPoint) {
           // No segment close enough - remove this point
-          console.log("Dragged point too far from segments, removing point");
           removeRoutePoint(draggedPointIndex);
         }
       }
@@ -824,8 +820,6 @@ function logOperation(type, data) {
     data: data,
     routeState: currentState,
   });
-
-  console.log("Logged operation:", operationsLog[operationsLog.length - 1]);
 }
 
 // Function to export operations as JSON
@@ -853,7 +847,7 @@ function exportOperationsJSON() {
       .replace(/[/:]/g, "-")
       .replace(", ", " ")}`,
     description: `Test case generated from user operations (${operationsLog.length} operations)`,
-    geoJsonFile: "bike_roads_v12.geojson",
+    geoJsonFile: "bike_roads_v14.geojson",
     segmentsFile: "segments.json",
     operations: operationsLog.map((op) => ({
       type: op.type,
@@ -869,7 +863,6 @@ function exportOperationsJSON() {
     },
   };
 
-  console.log("Exported test case:", exportData);
   return exportData;
 }
 
@@ -1073,6 +1066,23 @@ function updateSegmentStyles() {
       }
     }
   });
+
+  // Update data marker opacity based on selected segments
+  if (map.getLayer("data-markers-layer")) {
+    // Create expression to set opacity based on whether the segment is selected
+    const opacityExpression = [
+      "case",
+      ["in", ["get", "segmentName"], ["literal", selectedSegments]],
+      1.0, // opacity for selected segments
+      0.45, // default opacity for non-selected segments
+    ];
+
+    map.setPaintProperty(
+      "data-markers-layer",
+      "icon-opacity",
+      opacityExpression,
+    );
+  }
 }
 
 function initMap() {
@@ -1112,6 +1122,8 @@ function initMap() {
 
     // Add global mouse move handler for proximity-based highlighting
     if (!isTouchDevice) {
+      let lastCursorState = "default";
+
       map.on("mousemove", (e) => {
         if (isDraggingPoint || map.isMoving()) {
           return;
@@ -1174,6 +1186,13 @@ function initMap() {
           }
         }
 
+        // Update cursor only when state changes
+        const newCursorState = closestSegment ? "pointer" : "default";
+        if (newCursorState !== lastCursorState) {
+          map.getCanvas().style.cursor = newCursorState;
+          lastCursorState = newCursorState;
+        }
+
         // Reset all segments to normal style first
         routePolylines.forEach((polylineData) => {
           const layerId = polylineData.layerId;
@@ -1207,7 +1226,6 @@ function initMap() {
         // Highlight closest segment if found
         if (closestSegment) {
           const layerId = closestSegment.layerId;
-          map.getCanvas().style.cursor = "pointer";
 
           if (!selectedSegments.includes(closestSegment.segmentName)) {
             // Highlight non-selected segment
@@ -1234,7 +1252,8 @@ function initMap() {
           // Show hover preview dot at the closest point on segment
           if (closestPointOnSegment && !isDraggingPoint) {
             // Check if hover point is too close to any existing route points using pixel distance
-            const minPixelDistanceFromPoints = 15; // 30 pixels threshold
+            const minPixelDistanceFromPoints = 15; // 15 pixels threshold for route points
+            const minPixelDistanceFromMarkers = 25; // 25 pixels threshold for data markers
             let tooCloseToExistingPoint = false;
 
             const hoverPointPixel = map.project([
@@ -1242,6 +1261,7 @@ function initMap() {
               closestPointOnSegment.lat,
             ]);
 
+            // Check distance from existing route points
             for (const routePoint of routePoints) {
               const routePointPixel = map.project([
                 routePoint.lng,
@@ -1255,6 +1275,34 @@ function initMap() {
               if (pixelDistance < minPixelDistanceFromPoints) {
                 tooCloseToExistingPoint = true;
                 break;
+              }
+            }
+
+            // Check distance from data markers if not already too close to route points
+            if (!tooCloseToExistingPoint && map.getSource("data-markers")) {
+              const markerFeatures = map.queryRenderedFeatures(
+                hoverPointPixel,
+                {
+                  layers: ["data-markers-layer"],
+                },
+              );
+
+              // If there are any data markers within the pixel threshold, don't show hover point
+              if (markerFeatures.length > 0) {
+                // Get the actual marker coordinates to check precise distance
+                for (const feature of markerFeatures) {
+                  const markerCoords = feature.geometry.coordinates;
+                  const markerPixel = map.project(markerCoords);
+                  const pixelDistance = Math.sqrt(
+                    Math.pow(hoverPointPixel.x - markerPixel.x, 2) +
+                      Math.pow(hoverPointPixel.y - markerPixel.y, 2),
+                  );
+
+                  if (pixelDistance < minPixelDistanceFromMarkers) {
+                    tooCloseToExistingPoint = true;
+                    break;
+                  }
+                }
               }
             }
 
@@ -1308,15 +1356,16 @@ function initMap() {
           );
           segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
 
-          // Check for warnings in segments data and add to segment display
-          const segmentInfo = segmentsData[name];
-          if (segmentInfo) {
-            if (segmentInfo.winter === false) {
-              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️  בוץ בחורף</div>`;
-            }
-            if (segmentInfo.warning) {
-              segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; background-color: beige; padding:5px; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
-            }
+          // Show data points instead of legacy warnings
+          const dataPoints = getSegmentDataPoints(name);
+          if (dataPoints.length > 0) {
+            let segmentDataHTML =
+              '<div style="margin-top: 5px; font-size: 12px; background-color: white; padding:5px;">';
+            dataPoints.forEach((dataPoint) => {
+              segmentDataHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE}; background-color: white; ">${dataPoint.emoji} ${dataPoint.information}</div>`;
+            });
+            segmentDataHTML += "</div>";
+            segmentDisplay.innerHTML += segmentDataHTML;
           }
 
           // Check if this segment has been displayed before (track by segment name)
@@ -1438,6 +1487,14 @@ function initMap() {
       dragging = false;
     });
 
+    let tapStartPx = null;
+
+    map.on("touchstart", (e) => {
+      if (e.points && e.points.length > 0) {
+        tapStartPx = e.points[0];
+      }
+    });
+
     map.on("touchend", (e) => {
       if (!isTouchDevice) return;
       if (isDraggingPoint) return; // don't add while dragging
@@ -1446,11 +1503,21 @@ function initMap() {
       const endPx = e.points[0];
       const moved = tapStartPx
         ? Math.hypot(endPx.x - tapStartPx.x, endPx.y - tapStartPx.y)
-        : 0;
-      tapStartPx = null;
+        : 0;      
       if (moved > 10) return; // treat as pan/zoom, not a tap
 
-      addPointFromLngLat(e.lngLat);
+      tapStartPx = null;
+      // Check if touch was on a data marker
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: ["data-markers-layer"],
+      });
+
+      if (features.length > 0) {
+        // Touch was on a data marker, don't add route point
+        return;
+      }
+
+      addPointFromLngLat(e.lngLat);      
     });
 
     map.on("touchmove", "route-points-circle", (e) => {
@@ -1465,8 +1532,6 @@ function initMap() {
       if (e.originalEvent && e.originalEvent.preventDefault)
         e.originalEvent.preventDefault();
 
-      // ... your existing drag logic ...
-      window.alert("dragging point");
     });
 
     map.on("touchend", "route-points-circle", () => {
@@ -1477,9 +1542,20 @@ function initMap() {
     // Add global click handler for adding route points
     map.on("click", (e) => {
       // Don't add points if we're dragging a point
-      if (isDraggingPoint) {
+      if (isDraggingPoint || isTouchDevice) {
         return;
       }
+
+      // Check if click was on a data marker
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: ["data-markers-layer"],
+      });
+
+      if (features.length > 0) {
+        // Click was on a data marker, don't add route point
+        return;
+      }
+
       addPointFromLngLat(e.lngLat);
     });
 
@@ -1952,11 +2028,6 @@ async function loadSegmentsData() {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     segmentsData = await response.json();
-    console.log(
-      "Successfully loaded segments.json with",
-      Object.keys(segmentsData).length,
-      "segments",
-    );
   } catch (error) {
     console.warn("Could not load segments.json:", error);
     // Initialize with empty object to prevent errors
@@ -1968,7 +2039,7 @@ async function loadKMLFile() {
   try {
     await loadSegmentsData();
     showRouteLoadingIndicator();
-    const response = await fetch("./bike_roads_v12.geojson");
+    const response = await fetch("./bike_roads_v14.geojson");
     const geoJsonData = await response.json();
     await parseGeoJSON(geoJsonData);
 
@@ -2094,7 +2165,7 @@ async function parseGeoJSON(geoJsonData) {
 
       // Add hover effects with segment name display
       map.on("mouseenter", layerId, (e) => {
-        map.getCanvas().style.cursor = "pointer";
+        // Cursor is now managed by global mousemove handler
         if (!selectedSegments.includes(name)) {
           map.setPaintProperty(layerId, "line-width", originalWeight + 2);
           map.setPaintProperty(layerId, "line-opacity", 1);
@@ -2115,9 +2186,20 @@ async function parseGeoJSON(geoJsonData) {
         segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
         segmentDisplay.style.display = "block";
 
-        // Check for warnings in segments data and add to segment display
+        // Show data points instead of legacy warnings
+        const dataPoints = getSegmentDataPoints(name);
+        if (dataPoints.length > 0) {
+          segmentDisplay.innerHTML +=
+            '<div style="margin-top: 5px; font-size: 12px;">';
+          dataPoints.forEach((dataPoint) => {
+            segmentDisplay.innerHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE};">${dataPoint.emoji} ${dataPoint.information}</div>`;
+          });
+          segmentDisplay.innerHTML += "</div>";
+        }
+
+        // Keep legacy warnings as fallback
         const segmentInfo = segmentsData[name];
-        if (segmentInfo) {
+        if (segmentInfo && dataPoints.length === 0) {
           if (segmentInfo.winter === false) {
             segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️ בוץ בחורף</div>`;
           }
@@ -2275,14 +2357,13 @@ async function parseGeoJSON(geoJsonData) {
     routePolylines.forEach((polylineData) => {
       spatialIndex.addSegment(polylineData);
     });
-    console.log(
-      `Spatial index initialized with ${routePolylines.length} segments`,
-    );
 
     // Initialize RouteManager and load data
     routeManager = new RouteManager();
     await routeManager.load(geoJsonData, segmentsData);
-    console.log("RouteManager initialized.");
+
+    // Initialize data markers
+    await initDataMarkers();
 
     // Keep map at current position instead of auto-fitting to all segments
     // if (!bounds.isEmpty()) {
@@ -2638,9 +2719,18 @@ function hasWinterSegments() {
 function hasSegmentWarnings() {
   const warningSegments = [];
   for (let i = 0; i < selectedSegments.length; i++) {
-    const segmentInfo = segmentsData[selectedSegments[i]];
-    if (segmentInfo && segmentInfo.warning) {
-      warningSegments.push(selectedSegments[i]);
+    const segmentName = selectedSegments[i];
+    const dataPoints = getSegmentDataPoints(segmentName);
+
+    // Check if segment has any data points (warnings, payment, gates, etc.)
+    if (dataPoints.length > 0) {
+      warningSegments.push(segmentName);
+    } else {
+      // Fallback to legacy warning system
+      const segmentInfo = segmentsData[segmentName];
+      if (segmentInfo && segmentInfo.warning) {
+        warningSegments.push(segmentName);
+      }
     }
   }
   return {
@@ -2691,7 +2781,7 @@ function updateRouteWarning() {
   if (warningsResult.hasWarnings) {
     const countText =
       warningsResult.count > 1 ? ` (${warningsResult.count})` : "";
-    segmentWarning.innerHTML = `⚠️ אזהרות ${countText}`;
+    segmentWarning.innerHTML = `⚠️ מידע חשוב ${countText}`;
     segmentWarning.style.display = "block";
 
     // Reset segment warning cycling index when warnings change
@@ -2709,7 +2799,7 @@ function updateRouteWarning() {
   }
 }
 
-// Function to focus map on a specific segment
+// Function to focus on a specific segment
 function focusOnSegment(segmentName) {
   const polyline = routePolylines.find((p) => p.segmentName === segmentName);
   if (!polyline) return;
@@ -2734,9 +2824,20 @@ function focusOnSegment(segmentName) {
   const segmentDisplay = document.getElementById("segment-name-display");
   segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
 
-  // Check for warnings in segments data and add to segment display
+  // Show data points instead of legacy warnings
+  const dataPoints = getSegmentDataPoints(segmentName);
+  if (dataPoints.length > 0) {
+    segmentDisplay.innerHTML +=
+      '<div style="margin-top: 5px; font-size: 12px;">';
+    dataPoints.forEach((dataPoint) => {
+      segmentDisplay.innerHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE};">${dataPoint.emoji} ${dataPoint.information}</div>`;
+    });
+    segmentDisplay.innerHTML += "</div>";
+  }
+
+  // Keep legacy warnings as fallback
   const segmentInfo = segmentsData[segmentName];
-  if (segmentInfo) {
+  if (segmentInfo && dataPoints.length === 0) {
     if (segmentInfo.winter === false) {
       segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️ בוץ בחורף</div>`;
     }
@@ -2926,7 +3027,6 @@ function loadRouteFromEncoding(routeEncoding) {
       focusMapOnRoute();
     }, 200);
 
-    console.log(`Loaded route with ${selectedSegments.length} segments`);
     return true;
   } catch (error) {
     console.error("Error loading route from encoding:", error);
@@ -3714,8 +3814,8 @@ function showExamplePoint() {
     return;
   }
 
-  const exampleLat = 33.181281300095684;
-  const exampleLng = 35.62218007147424;
+  const exampleLat = 33.185714;
+  const exampleLng = 35.614232;
 
   // Create example point marker
   const exampleElement = document.createElement("div");
@@ -3872,6 +3972,9 @@ function showDownloadModal() {
         <h4>קטעי מסלול נבחרים</h4>
         <div id="route-segments-list"></div>
 
+        <h4>מידע חשוב על המסלול</h4>
+        <div id="route-data-summary"></div>
+
         <h4>תיאור המסלול</h4>
         <div id="download-route-description"></div>
 
@@ -3893,25 +3996,26 @@ function showDownloadModal() {
   } else {
     let segmentsHtml = '<div class="modal-route-list">';
     selectedSegments.forEach((segmentName, index) => {
-      // Check for warnings
-      let warningIcons = "";
-      const segmentInfo = segmentsData[segmentName];
-      // if (segmentInfo) {
-      //   if (segmentInfo.winter === false) {
-      //     warningIcons += ' ❄️';
-      //   }
-      //   if (segmentInfo.warning) {
-      //     warningIcons += ' ⚠️';
-      //   }
-      // }
-
       segmentsHtml += `
         <div class="modal-segment-item">
-          <span><strong>${index + 1}.</strong> ${segmentName}${warningIcons}</span>
+          <span><strong>${index + 1}.</strong> ${segmentName}</span>
       `;
 
-      // Add warning details below the segment name
-      if (segmentInfo) {
+      // Add data points for each segment
+      const dataPoints = getSegmentDataPoints(segmentName);
+      if (dataPoints.length > 0) {
+        dataPoints.forEach((dataPoint) => {
+          segmentsHtml += `
+            <div style="color: #ff9800; font-size: 12px; margin-top: 5px; margin-right: 20px;">
+              ${dataPoint.emoji} ${dataPoint.information}
+            </div>
+          `;
+        });
+      }
+
+      // Add legacy warnings as fallback
+      const segmentInfo = segmentsData[segmentName];
+      if (segmentInfo && dataPoints.length === 0) {
         if (segmentInfo.winter === false) {
           segmentsHtml += `
             <div style="color: #ff9800; font-size: 12px; margin-top: 5px; margin-right: 20px;">
@@ -3932,6 +4036,37 @@ function showDownloadModal() {
     });
     segmentsHtml += "</div>";
     routeSegmentsList.innerHTML = segmentsHtml;
+  }
+
+  // Populate route data summary
+  const routeDataSummary = modal.querySelector("#route-data-summary");
+  const allDataPoints = [];
+  selectedSegments.forEach((segmentName) => {
+    const dataPoints = getSegmentDataPoints(segmentName);
+    dataPoints.forEach((dataPoint) => {
+      if (
+        !allDataPoints.some(
+          (existing) =>
+            existing.type === dataPoint.type &&
+            existing.information === dataPoint.information,
+        )
+      ) {
+        allDataPoints.push(dataPoint);
+      }
+    });
+  });
+
+  if (allDataPoints.length > 0) {
+    let dataSummaryHtml =
+      '<div style="background: #f5f5f5; padding: 10px; border-radius: 8px; margin-bottom: 15px;">';
+    allDataPoints.forEach((dataPoint) => {
+      dataSummaryHtml += `<div style="margin: 5px 0;">${dataPoint.emoji} ${dataPoint.information}</div>`;
+    });
+    dataSummaryHtml += "</div>";
+    routeDataSummary.innerHTML = dataSummaryHtml;
+  } else {
+    routeDataSummary.innerHTML =
+      '<p style="color: #666; font-style: italic;">אין מידע מיוחד למסלול זה</p>';
   }
 
   // Populate route description
@@ -4275,7 +4410,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Keyboard shortcuts for undo/redo and export
   document.addEventListener("keydown", function (e) {
-    //console.log('e.ctrlKey:' + e.ctrlKey + ' key:' + e.key)
 
     if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
       e.preventDefault();
@@ -4291,5 +4425,249 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 const ROUTE_VERSION = 2;
+
+// Data markers management
+let dataMarkersSource = null;
+let dataMarkersLayer = null;
+
+// Emoji mapping for marker types
+const MARKER_EMOJIS = {
+  payment: "💵",
+  gate: "🚧",
+  mud: "⚠️",
+  warning: "⚠️",
+  slope: "⛰️",
+  narrow: "⛍",
+  severe: "‼️",
+};
+
+// Maki icon mapping for marker types
+const MARKER_ICONS = {
+  payment: "bank-11",
+  gate: "barrier-11",
+  mud: "wetland-11",
+  warning: "caution-11",
+  slope: "mountain-11",
+  narrow: "car-11",
+  severe: "roadblock-11",
+};
+
+// Load custom SVG icons as map images
+async function loadCustomIcons() {
+  const iconMappings = {
+    "bank-11": "bank.svg",
+    "barrier-11": "barrier.svg",
+    "wetland-11": "wetland.svg",
+    "caution-11": "caution.svg",
+    "mountain-11": "mountain.svg",
+    "car-11": "car.svg",
+    "roadblock-11": "roadblock.svg",
+  };
+
+  for (const [iconName, svgFile] of Object.entries(iconMappings)) {
+    try {
+      const response = await fetch(svgFile);
+      const svgText = await response.text();
+
+      // Convert SVG to image
+      const img = new Image();
+      const svgBlob = new Blob([svgText], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(svgBlob);
+
+      await new Promise((resolve, reject) => {
+        img.onload = () => {
+          if (!map.hasImage(iconName)) {
+            map.addImage(iconName, img);
+          }
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+
+    } catch (error) {
+      console.warn(`Failed to load custom icon ${iconName}:`, error);
+    }
+  }
+}
+
+// Initialize data markers system
+async function initDataMarkers() {
+  if (!map || !segmentsData) return;
+
+  // Load custom icons first
+  await loadCustomIcons();
+
+  // Collect all data points from segments
+  const dataFeatures = [];
+
+  Object.entries(segmentsData).forEach(([segmentName, segmentInfo]) => {
+    if (segmentInfo.data && Array.isArray(segmentInfo.data)) {
+      segmentInfo.data.forEach((dataPoint, index) => {
+        if (
+          dataPoint.location &&
+          Array.isArray(dataPoint.location) &&
+          dataPoint.location.length >= 2
+        ) {
+          const [lat, lng] = dataPoint.location;
+
+          dataFeatures.push({
+            type: "Feature",
+            id: `${segmentName}-${index}`,
+            geometry: {
+              type: "Point",
+              coordinates: [lng, lat], // Convert [lat, lng] to [lng, lat] for Mapbox
+            },
+            properties: {
+              type: dataPoint.type,
+              information: dataPoint.information || "",
+              segmentName: segmentName,
+              emoji: MARKER_EMOJIS[dataPoint.type] || "📍",
+              icon: MARKER_ICONS[dataPoint.type] || "marker-11",
+            },
+          });
+        }
+      });
+    }
+  });
+
+  if (dataFeatures.length === 0) return;
+
+  // Add source for data markers
+  if (map.getSource("data-markers")) {
+    map.getSource("data-markers").setData({
+      type: "FeatureCollection",
+      features: dataFeatures,
+    });
+  } else {
+    map.addSource("data-markers", {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: dataFeatures,
+      },
+    });
+
+    // Add symbol layer for data markers
+    map.addLayer({
+      id: "data-markers-layer",
+      type: "symbol",
+      source: "data-markers",
+      layout: {
+        "icon-image": ["get", "icon"],
+        "icon-size": 1,
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+      },
+      paint: {
+        "icon-opacity": 0.45,
+      },
+    });
+
+    // Add click event for data markers
+    map.on("click", "data-markers-layer", (e) => {
+      if (e.features.length > 0) {
+        if (e.preventDefault) e.preventDefault();
+        if (e.originalEvent && e.originalEvent.stopPropagation) {
+          e.originalEvent.stopPropagation();
+        }
+        const feature = e.features[0];
+        showDataMarkerTooltip(e, feature);
+      }
+    });
+
+    // Add touchend event for mobile to prevent bubbling
+    map.on("touchend", "data-markers-layer", (e) => {
+      if (e.features.length > 0) {
+        if (e.preventDefault) e.preventDefault();
+        if (e.originalEvent && e.originalEvent.stopPropagation) {
+          e.originalEvent.stopPropagation();
+        }
+      }
+    });
+
+    // Change cursor on hover - cursor is managed by global handler
+    map.on("mouseenter", "data-markers-layer", () => {
+      // Cursor is managed by global mousemove handler
+    });
+
+    map.on("mouseleave", "data-markers-layer", () => {
+      // Cursor is managed by global mousemove handler
+      hideDataMarkerTooltip();
+    });
+  }
+}
+
+// Show tooltip for data marker
+function showDataMarkerTooltip(e, feature) {
+  const properties = feature.properties;
+
+  // Remove existing tooltip
+  hideDataMarkerTooltip();
+
+  // Create tooltip element
+  const tooltip = document.createElement("div");
+  tooltip.className = "data-marker-tooltip";
+  tooltip.innerHTML = `
+    <div class="tooltip-content">
+      <span class="tooltip-emoji">${properties.emoji}</span>
+      <span class="tooltip-text">${properties.information}</span>
+    </div>
+  `;
+
+  tooltip.style.cssText = `
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    max-width: 250px;
+    white-space: normal;
+    line-height: 1.3;
+  `;
+
+  // Position tooltip
+  const point = map.project(e.lngLat);
+  tooltip.style.left = point.x + 15 + "px";
+  tooltip.style.top = point.y - 15 + "px";
+
+  document.body.appendChild(tooltip);
+  window.currentDataTooltip = tooltip;
+
+  // Auto-hide on mobile after delay
+  if ("ontouchstart" in window) {
+    setTimeout(() => {
+      hideDataMarkerTooltip();
+    }, 3000);
+  }
+}
+
+// Hide data marker tooltip
+function hideDataMarkerTooltip() {
+  if (window.currentDataTooltip) {
+    window.currentDataTooltip.remove();
+    window.currentDataTooltip = null;
+  }
+}
+
+// Get segment data points for display
+function getSegmentDataPoints(segmentName) {
+  const segmentInfo = segmentsData[segmentName];
+  if (!segmentInfo || !segmentInfo.data || !Array.isArray(segmentInfo.data)) {
+    return [];
+  }
+
+  return segmentInfo.data.map((dataPoint) => ({
+    type: dataPoint.type,
+    information: dataPoint.information || "",
+    emoji: MARKER_EMOJIS[dataPoint.type] || "📍",
+  }));
+}
 
 // RouteManager is imported from route-manager.js
