@@ -86,14 +86,14 @@ function saveState() {
 
 // Google Analytics event tracking helper
 function trackEvent(eventName, parameters = {}) {
-  if (typeof gtag !== 'undefined') {
-    gtag('event', eventName, parameters);
+  if (typeof gtag !== "undefined") {
+    gtag("event", eventName, parameters);
   }
 }
 
 // Add a new route point
 function addRoutePoint(lngLat) {
-  saveState();  
+  saveState();
 
   const point = {
     lng: lngLat.lng,
@@ -102,19 +102,17 @@ function addRoutePoint(lngLat) {
   };
 
   // Log the operation before making changes
-  if (fromClick) {
-    logOperation("addPoint", {
-      point: { lat: lngLat.lat, lng: lngLat.lng },
-      fromClick: true,
-    });
-    
-    // Track analytics event for route point addition
-    trackEvent('route_point_added', {
-      point_count: routePoints.length + 1,
-      segments_count: selectedSegments.length,
-      method: 'click'
-    });
-  }
+  logOperation("addPoint", {
+    point: { lat: lngLat.lat, lng: lngLat.lng },
+    fromClick: true,
+  });
+
+  // Track analytics event for route point addition
+  trackEvent("route_point_added", {
+    point_count: routePoints.length + 1,
+    segments_count: selectedSegments.length,
+    method: "click",
+  });
 
   // Add to local routePoints first
   routePoints.push(point);
@@ -414,12 +412,12 @@ function removeRoutePoint(index) {
       ? { lat: routePoints[index].lat, lng: routePoints[index].lng }
       : null,
   });
-  
+
   // Track analytics event for route point removal
-  trackEvent('route_point_removed', {
+  trackEvent("route_point_removed", {
     point_count: routePoints.length - 1,
     segments_count: selectedSegments.length,
-    method: 'right_click'
+    method: "right_click",
   });
 
   if (!routeManager) {
@@ -691,12 +689,12 @@ function clearRouteFromUrl() {
 function undo() {
   if (undoStack.length > 0) {
     // Track analytics event for undo
-    trackEvent('route_undo', {
+    trackEvent("route_undo", {
       undo_stack_size: undoStack.length,
       current_segments: selectedSegments.length,
-      current_points: routePoints.length
+      current_points: routePoints.length,
     });
-    
+
     // Save current state to redo stack
     redoStack.push({
       segments: [...selectedSegments],
@@ -751,12 +749,12 @@ function undo() {
 function redo() {
   if (redoStack.length > 0) {
     // Track analytics event for redo
-    trackEvent('route_redo', {
+    trackEvent("route_redo", {
       redo_stack_size: redoStack.length,
       current_segments: selectedSegments.length,
-      current_points: routePoints.length
+      current_points: routePoints.length,
     });
-    
+
     // Save current state to undo stack
     undoStack.push({
       segments: [...selectedSegments],
@@ -875,11 +873,11 @@ function getRouteInfo() {
       totalDistance += metrics.distance;
     }
   });
-  
+
   return {
     distance: totalDistance,
     segments: selectedSegments.length,
-    points: routePoints.length
+    points: routePoints.length,
   };
 }
 
@@ -974,11 +972,11 @@ function resetRoute() {
     clearedPointsCount: routePoints.length,
     clearedSegmentsCount: selectedSegments.length,
   });
-  
+
   // Track analytics event for route reset
-  trackEvent('route_reset', {
+  trackEvent("route_reset", {
     cleared_points: routePoints.length,
-    cleared_segments: selectedSegments.length
+    cleared_segments: selectedSegments.length,
   });
 
   // Save current state for potential undo
@@ -1503,7 +1501,7 @@ function initMap() {
       const endPx = e.points[0];
       const moved = tapStartPx
         ? Math.hypot(endPx.x - tapStartPx.x, endPx.y - tapStartPx.y)
-        : 0;      
+        : 0;
       if (moved > 10) return; // treat as pan/zoom, not a tap
 
       tapStartPx = null;
@@ -1517,7 +1515,7 @@ function initMap() {
         return;
       }
 
-      addPointFromLngLat(e.lngLat);      
+      addPointFromLngLat(e.lngLat);
     });
 
     map.on("touchmove", "route-points-circle", (e) => {
@@ -1531,7 +1529,6 @@ function initMap() {
       // Now that it's a real drag, it's safe to prevent default scrolling
       if (e.originalEvent && e.originalEvent.preventDefault)
         e.originalEvent.preventDefault();
-
     });
 
     map.on("touchend", "route-points-circle", () => {
@@ -1777,12 +1774,12 @@ function shareRoute() {
     alert("אין מסלול לשיתוף. בחרו קטעים כדי ליצור מסלול.");
     return;
   }
-  
+
   // Track analytics event for route sharing
-  trackEvent('route_share', {
+  trackEvent("route_share", {
     route_segments: selectedSegments.length,
     route_points: routePoints.length,
-    route_id: routeId.substring(0, 10) // First 10 chars for privacy
+    route_id: routeId.substring(0, 10), // First 10 chars for privacy
   });
 
   const url = new URL(window.location);
@@ -1893,17 +1890,42 @@ function showShareModal(shareUrl) {
 
   copyBtn.addEventListener("click", () => {
     urlInput.select();
-    navigator.clipboard
-      .writeText(shareUrl)
-      .then(() => {
-        copyBtn.textContent = "הועתק!";
-        copyBtn.style.background = "#4CAF50";
-        setTimeout(() => {
-          copyBtn.textContent = "העתק קישור";
-          copyBtn.style.background = "#4682B4";
-        }, 2000);
-      })
-      .catch(() => {
+
+    // Check if clipboard API is available
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(() => {
+          copyBtn.textContent = "הועתק!";
+          copyBtn.style.background = "#4CAF50";
+          setTimeout(() => {
+            copyBtn.textContent = "העתק קישור";
+            copyBtn.style.background = "#4682B4";
+          }, 2000);
+        })
+        .catch(() => {
+          // Fallback to execCommand
+          try {
+            document.execCommand("copy");
+            copyBtn.textContent = "הועתק!";
+            copyBtn.style.background = "#4CAF50";
+            setTimeout(() => {
+              copyBtn.textContent = "העתק קישור";
+              copyBtn.style.background = "#4682B4";
+            }, 2000);
+          } catch (err) {
+            console.warn("Copy failed:", err);
+            copyBtn.textContent = "העתקה נכשלה";
+            copyBtn.style.background = "#f44336";
+            setTimeout(() => {
+              copyBtn.textContent = "העתק קישור";
+              copyBtn.style.background = "#4682B4";
+            }, 2000);
+          }
+        });
+    } else {
+      // Direct fallback to execCommand if clipboard API not available
+      try {
         document.execCommand("copy");
         copyBtn.textContent = "הועתק!";
         copyBtn.style.background = "#4CAF50";
@@ -1911,18 +1933,27 @@ function showShareModal(shareUrl) {
           copyBtn.textContent = "העתק קישור";
           copyBtn.style.background = "#4682B4";
         }, 2000);
-      });
+      } catch (err) {
+        console.warn("Copy failed:", err);
+        copyBtn.textContent = "העתקה נכשלה";
+        copyBtn.style.background = "#f44336";
+        setTimeout(() => {
+          copyBtn.textContent = "העתק קישור";
+          copyBtn.style.background = "#4682B4";
+        }, 2000);
+      }
+    }
   });
 }
 
 function shareToTwitter(url) {
   // Track analytics event for Twitter sharing
-  trackEvent('social_share', {
-    platform: 'twitter',
+  trackEvent("social_share", {
+    platform: "twitter",
     route_segments: selectedSegments.length,
-    route_points: routePoints.length
+    route_points: routePoints.length,
   });
-  
+
   const text =
     "בדקו את מסלול הרכיבה שיצרתי במפת שבילי אופניים - גליל עליון וגולן!";
   window.open(
@@ -1933,23 +1964,23 @@ function shareToTwitter(url) {
 
 function shareToFacebook(url) {
   // Track analytics event for Facebook sharing
-  trackEvent('social_share', {
-    platform: 'facebook',
+  trackEvent("social_share", {
+    platform: "facebook",
     route_segments: selectedSegments.length,
-    route_points: routePoints.length
+    route_points: routePoints.length,
   });
-  
+
   window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, "_blank");
 }
 
 function shareToWhatsApp(url) {
   // Track analytics event for WhatsApp sharing
-  trackEvent('social_share', {
-    platform: 'whatsapp',
+  trackEvent("social_share", {
+    platform: "whatsapp",
     route_segments: selectedSegments.length,
-    route_points: routePoints.length
+    route_points: routePoints.length,
   });
-  
+
   const text =
     "בדקו את מסלול הרכיבה שיצרתי במפת שבילי אופניים - גליל עליון וגולן!";
   window.open(
@@ -1970,11 +2001,11 @@ function loadRouteFromUrl() {
     const decodedSegments = decodeRoute(routeParam);
     if (decodedSegments.length > 0) {
       // Track analytics event for route loading from URL
-      trackEvent('route_loaded_from_url', {
+      trackEvent("route_loaded_from_url", {
         segments_count: decodedSegments.length,
-        route_param_length: routeParam.length
+        route_param_length: routeParam.length,
       });
-      
+
       selectedSegments = decodedSegments;
       // Wait a bit for map to be fully loaded before updating styles
       setTimeout(() => {
@@ -2803,11 +2834,11 @@ function updateRouteWarning() {
 function focusOnSegment(segmentName) {
   const polyline = routePolylines.find((p) => p.segmentName === segmentName);
   if (!polyline) return;
-  
+
   // Track analytics event for segment focus
-  trackEvent('segment_focus', {
+  trackEvent("segment_focus", {
     segment_name: segmentName,
-    source: 'recommendation_click'
+    source: "recommendation_click",
   });
 
   const coords = polyline.coordinates;
@@ -3663,11 +3694,11 @@ function searchLocation() {
     searchError.style.display = "block";
     return;
   }
-  
+
   // Track analytics event for search
-  trackEvent('location_search', {
+  trackEvent("location_search", {
     query_length: query.length,
-    has_current_route: selectedSegments.length > 0
+    has_current_route: selectedSegments.length > 0,
   });
 
   searchError.style.display = "none";
@@ -3782,13 +3813,13 @@ function searchLocation() {
 
         // Add highlight after the animation completes
         setTimeout(highlightSearchedLocation, 1200);
-        
+
         // Track successful search
-        trackEvent('location_search_success', {
+        trackEvent("location_search_success", {
           query: query,
           lat: lat,
           lng: lon,
-          within_bounds: bounds && isPointWithinBounds(lat, lon, bounds)
+          within_bounds: bounds && isPointWithinBounds(lat, lon, bounds),
         });
 
         searchInput.value = "";
@@ -4115,10 +4146,10 @@ function downloadGPX() {
   if (!kmlData) return;
 
   // Track analytics event for GPX download
-  trackEvent('gpx_download', {
+  trackEvent("gpx_download", {
     route_segments: selectedSegments.length,
     route_points: routePoints.length,
-    route_distance_km: parseFloat((getRouteInfo().distance / 1000).toFixed(1))
+    route_distance_km: parseFloat((getRouteInfo().distance / 1000).toFixed(1)),
   });
 
   const orderedCoords = getOrderedCoordinates();
@@ -4189,11 +4220,11 @@ function scrollToSection(sectionId) {
 // Event listeners
 document.addEventListener("DOMContentLoaded", function () {
   // Track page load
-  trackEvent('page_load', {
+  trackEvent("page_load", {
     has_route_param: !!getRouteParameter(),
-    user_agent: navigator.userAgent.includes('Mobile') ? 'mobile' : 'desktop'
+    user_agent: navigator.userAgent.includes("Mobile") ? "mobile" : "desktop",
   });
-  
+
   // Initialize the map when page loads
   initMap();
 
@@ -4238,11 +4269,11 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("route-warning")
     .addEventListener("click", function () {
       // Track analytics event for warning interaction
-      trackEvent('warning_clicked', {
-        warning_type: 'route_continuity',
-        segments_count: selectedSegments.length
+      trackEvent("warning_clicked", {
+        warning_type: "route_continuity",
+        segments_count: selectedSegments.length,
       });
-      
+
       const continuityResult = checkRouteContinuity();
       if (
         !continuityResult.isContinuous &&
@@ -4261,11 +4292,11 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("winter-warning")
     .addEventListener("click", function () {
       // Track analytics event for winter warning interaction
-      trackEvent('warning_clicked', {
-        warning_type: 'winter_warning',
-        warning_segments_count: hasWinterSegments().count
+      trackEvent("warning_clicked", {
+        warning_type: "winter_warning",
+        warning_segments_count: hasWinterSegments().count,
       });
-      
+
       const winterResult = hasWinterSegments();
       if (winterResult.hasWinter && winterResult.winterSegments.length > 0) {
         // Initialize index if not set
@@ -4288,11 +4319,11 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("segment-warning")
     .addEventListener("click", function () {
       // Track analytics event for segment warning interaction
-      trackEvent('warning_clicked', {
-        warning_type: 'segment_warning',
-        warning_segments_count: hasSegmentWarnings().count
+      trackEvent("warning_clicked", {
+        warning_type: "segment_warning",
+        warning_segments_count: hasSegmentWarnings().count,
       });
-      
+
       const warningsResult = hasSegmentWarnings();
       if (
         warningsResult.hasWarnings &&
@@ -4320,11 +4351,11 @@ document.addEventListener("DOMContentLoaded", function () {
   if (helpBtn) {
     helpBtn.addEventListener("click", () => {
       // Track analytics event for tutorial start
-      trackEvent('tutorial_started', {
+      trackEvent("tutorial_started", {
         has_current_route: selectedSegments.length > 0,
-        source: 'help_button'
+        source: "help_button",
       });
-      
+
       if (
         typeof tutorial !== "undefined" &&
         tutorial !== null &&
@@ -4410,7 +4441,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Keyboard shortcuts for undo/redo and export
   document.addEventListener("keydown", function (e) {
-
     if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
       e.preventDefault();
       undo();
@@ -4485,7 +4515,6 @@ async function loadCustomIcons() {
         img.onerror = reject;
         img.src = url;
       });
-
     } catch (error) {
       console.warn(`Failed to load custom icon ${iconName}:`, error);
     }
