@@ -810,7 +810,7 @@ function exportOperationsJSON() {
       .replace(/[/:]/g, "-")
       .replace(", ", " ")}`,
     description: `Test case generated from user operations (${operationsLog.length} operations)`,
-    geoJsonFile: "bike_roads_v13.geojson",
+    geoJsonFile: "bike_roads_v14.geojson",
     segmentsFile: "segments.json",
     operations: operationsLog.map((op) => ({
       type: op.type,
@@ -1945,7 +1945,7 @@ async function loadKMLFile() {
   try {
     await loadSegmentsData();
     showRouteLoadingIndicator();
-    const response = await fetch("./bike_roads_v13.geojson");
+    const response = await fetch("./bike_roads_v14.geojson");
     const geoJsonData = await response.json();
     await parseGeoJSON(geoJsonData);
 
