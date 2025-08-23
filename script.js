@@ -1893,17 +1893,42 @@ function showShareModal(shareUrl) {
 
   copyBtn.addEventListener("click", () => {
     urlInput.select();
-    navigator.clipboard
-      .writeText(shareUrl)
-      .then(() => {
-        copyBtn.textContent = "הועתק!";
-        copyBtn.style.background = "#4CAF50";
-        setTimeout(() => {
-          copyBtn.textContent = "העתק קישור";
-          copyBtn.style.background = "#4682B4";
-        }, 2000);
-      })
-      .catch(() => {
+    
+    // Check if clipboard API is available
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(() => {
+          copyBtn.textContent = "הועתק!";
+          copyBtn.style.background = "#4CAF50";
+          setTimeout(() => {
+            copyBtn.textContent = "העתק קישור";
+            copyBtn.style.background = "#4682B4";
+          }, 2000);
+        })
+        .catch(() => {
+          // Fallback to execCommand
+          try {
+            document.execCommand("copy");
+            copyBtn.textContent = "הועתק!";
+            copyBtn.style.background = "#4CAF50";
+            setTimeout(() => {
+              copyBtn.textContent = "העתק קישור";
+              copyBtn.style.background = "#4682B4";
+            }, 2000);
+          } catch (err) {
+            console.warn("Copy failed:", err);
+            copyBtn.textContent = "העתקה נכשלה";
+            copyBtn.style.background = "#f44336";
+            setTimeout(() => {
+              copyBtn.textContent = "העתק קישור";
+              copyBtn.style.background = "#4682B4";
+            }, 2000);
+          }
+        });
+    } else {
+      // Direct fallback to execCommand if clipboard API not available
+      try {
         document.execCommand("copy");
         copyBtn.textContent = "הועתק!";
         copyBtn.style.background = "#4CAF50";
@@ -1911,7 +1936,16 @@ function showShareModal(shareUrl) {
           copyBtn.textContent = "העתק קישור";
           copyBtn.style.background = "#4682B4";
         }, 2000);
-      });
+      } catch (err) {
+        console.warn("Copy failed:", err);
+        copyBtn.textContent = "העתקה נכשלה";
+        copyBtn.style.background = "#f44336";
+        setTimeout(() => {
+          copyBtn.textContent = "העתק קישור";
+          copyBtn.style.background = "#4682B4";
+        }, 2000);
+      }
+    }
   });
 }
 
