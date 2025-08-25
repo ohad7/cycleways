@@ -3729,7 +3729,7 @@ function showExamplePoint() {
   };
 
   // Wait for SVG to load before showing anything
-  fetch("arrow.svg")
+  fetch("icons/arrow.svg")
     .then((response) => response.text())
     .then((svgContent) => {
       arrow.innerHTML = svgContent;
@@ -4251,13 +4251,13 @@ const MARKER_ICONS = {
 // Load custom SVG icons as map images
 async function loadCustomIcons() {
   const iconMappings = {
-    "bank-11": "bank.svg",
-    "barrier-11": "barrier.svg",
-    "wetland-11": "wetland.svg",
-    "caution-11": "caution.svg",
-    "mountain-11": "mountain.svg",
-    "car-11": "car.svg",
-    "roadblock-11": "roadblock.svg",
+    "bank-11": "icons/bank.svg",
+    "barrier-11": "icons/barrier.svg",
+    "wetland-11": "icons/wetland.svg",
+    "caution-11": "icons/caution.svg",
+    "mountain-11": "icons/mountain.svg",
+    "car-11": "icons/car.svg",
+    "roadblock-11": "icons/roadblock.svg",
   };
 
   for (const [iconName, svgFile] of Object.entries(iconMappings)) {
