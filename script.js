@@ -27,52 +27,6 @@ const COLORS = {
 
 const MIN_ZOOM_LEVEL = 13; // Minimum zoom level when focusing on segments
 
-// Function to highlight all segments in white and then return to original colors
-function highlightAllSegments() {
-  // First phase: highlight all segments in white
-  routePolylines.forEach((polylineData) => {
-    const layerId = polylineData.layerId;
-    if (map.getLayer(layerId)) {
-      map.setPaintProperty(layerId, "line-color", COLORS.HIGHLIGHT_WHITE);
-      map.setPaintProperty(
-        layerId,
-        "line-width",
-        polylineData.originalStyle.weight + 2,
-      );
-    }
-  });
-
-  // Second phase: return to original colors after 800ms
-  setTimeout(() => {
-    routePolylines.forEach((polylineData) => {
-      const layerId = polylineData.layerId;
-      if (map.getLayer(layerId)) {
-        if (selectedSegments.includes(polylineData.segmentName)) {
-          // Return selected segments to green
-          map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_SELECTED);
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polylineData.originalStyle.weight + 1,
-          );
-        } else {
-          // Return non-selected segments to original style
-          map.setPaintProperty(
-            layerId,
-            "line-color",
-            polylineData.originalStyle.color,
-          );
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polylineData.originalStyle.weight,
-          );
-        }
-      }
-    });
-  }, 800);
-}
-
 // Save state for undo/redo
 function saveState() {
   undoStack.push({
@@ -237,18 +191,14 @@ function createPointMarker(point, index) {
       });
 
       // Update dragging logic to use RouteManager's recalculateRoute method
-      if (routeManager) {
-        try {
-          const updatedSegments = routeManager.recalculateRoute(routePoints);
-          selectedSegments = updatedSegments;
-          updateSegmentStyles();
-          updateRouteListAndDescription();
-        } catch (error) {
-          console.error("Error updating route during drag:", error);
-          // Fallback to old method if RouteManager fails
-          recalculateRoute();
-        }
-      } else {
+      try {
+        const updatedSegments = routeManager.recalculateRoute(routePoints);
+        selectedSegments = updatedSegments;
+        updateSegmentStyles();
+        updateRouteListAndDescription();
+      } catch (error) {
+        console.error("Error updating route during drag:", error);
+        // Fallback to old method if RouteManager fails
         recalculateRoute();
       }
     });
@@ -262,7 +212,7 @@ function createPointMarker(point, index) {
       // Validate that the dragged point is still close enough to a segment
       if (draggedPointIndex !== -1 && routePoints[draggedPointIndex]) {
         const draggedPoint = routePoints[draggedPointIndex];
-        const snappedPoint = findClosestSegment(draggedPoint);
+        const snappedPoint = routeManager.findClosestSegment(draggedPoint);
 
         if (!snappedPoint) {
           // No segment close enough - remove this point
@@ -349,7 +299,7 @@ function createPointMarker(point, index) {
       // Validate that the dragged point is still close enough to a segment
       if (draggedPointIndex !== -1 && routePoints[draggedPointIndex]) {
         const draggedPoint = routePoints[draggedPointIndex];
-        const snappedPoint = findClosestSegment(draggedPoint);
+        const snappedPoint = routeManager.findClosestSegment(draggedPoint);
 
         if (!snappedPoint) {
           // No segment close enough - remove this point
@@ -419,29 +369,6 @@ function removeRoutePoint(index) {
     segments_count: selectedSegments.length,
     method: "right_click",
   });
-
-  if (!routeManager) {
-    console.warn("RouteManager not initialized");
-    // Fallback to old logic if RouteManager is not available
-    // Remove the marker safely
-    try {
-      if (pointMarkers[index] && pointMarkers[index].remove) {
-        pointMarkers[index].remove();
-      }
-    } catch (error) {
-      console.warn("Error removing marker:", error);
-    }
-
-    // Remove from arrays
-    routePoints.splice(index, 1);
-    pointMarkers.splice(index, 1);
-
-    // Update remaining markers with correct numbering
-    updatePointMarkers();
-    recalculateRoute();
-    clearRouteFromUrl();
-    return;
-  }
 
   try {
     // Use RouteManager to remove point and get updated segments
@@ -521,12 +448,6 @@ function removeRoutePoint(index) {
   }
 }
 
-// Update all point markers with correct numbering
-function updatePointMarkers() {
-  // With custom drag implementation, markers stay in sync automatically
-  // This function is kept for compatibility but no longer needs to force positioning
-}
-
 // Clear all route points
 function clearRoutePoints() {
   // Clear map-integrated points
@@ -539,15 +460,6 @@ function clearRoutePoints() {
 
   pointMarkers = [];
   routePoints = [];
-}
-
-// Find the closest segment to a point
-function findClosestSegment(point) {
-  if (!routeManager) {
-    console.warn("RouteManager not initialized, cannot find closest segment.");
-    return null;
-  }
-  return routeManager.findClosestSegment(point);
 }
 
 // Recalculate the route based on current points
@@ -571,7 +483,7 @@ function recalculateRoute() {
     // Find path through all route points
     if (routePoints.length === 1) {
       // Single point - find closest segment
-      const closestSegment = findClosestSegment(routePoints[0]);
+      const closestSegment = routeManager.findClosestSegment(routePoints[0]);
       if (closestSegment) {
         selectedSegments = [closestSegment];
       }
@@ -584,7 +496,10 @@ function recalculateRoute() {
         const startPoint = routePoints[i];
         const endPoint = routePoints[i + 1];
 
-        const segmentPath = findPathBetweenPoints(startPoint, endPoint);
+        const segmentPath = routeManager.findPathBetweenPoints(
+          startPoint,
+          endPoint,
+        );
 
         // Add segments to path, avoiding duplicates
         for (const segmentName of segmentPath) {
@@ -605,77 +520,6 @@ function recalculateRoute() {
   } catch (error) {
     console.error("Error recalculating route:", error);
   }
-}
-
-// Find path between two points using breadth-first search on connected segments
-function findPathBetweenPoints(startPoint, endPoint) {
-  if (!routeManager) {
-    console.warn(
-      "RouteManager not initialized, cannot find path between points.",
-    );
-    return [];
-  }
-  return routeManager.findPathBetweenPoints(startPoint, endPoint);
-}
-
-// Enhanced pathfinding that considers used segments and tries to minimize backtracking
-function findPathBetweenPointsOptimal(
-  startPoint,
-  endPoint,
-  usedSegments = new Set(),
-) {
-  if (!routeManager) {
-    console.warn(
-      "RouteManager not initialized, cannot find optimal path between points.",
-    );
-    return [];
-  }
-  return routeManager.findPathBetweenPointsOptimal(
-    startPoint,
-    endPoint,
-    usedSegments,
-  );
-}
-
-// Find shortest path between two segments using BFS
-function findShortestSegmentPath(startSegmentName, endSegmentName) {
-  if (!routeManager) {
-    console.warn(
-      "RouteManager not initialized, cannot find shortest segment path.",
-    );
-    return [];
-  }
-  return routeManager.findShortestSegmentPath(startSegmentName, endSegmentName);
-}
-
-// Enhanced pathfinding that considers already used segments and prefers unused routes
-function findShortestSegmentPathOptimal(
-  startSegmentName,
-  endSegmentName,
-  usedSegments = new Set(),
-) {
-  if (!routeManager) {
-    console.warn(
-      "RouteManager not initialized, cannot find optimal shortest segment path.",
-    );
-    return [];
-  }
-  return routeManager.findShortestSegmentPathOptimal(
-    startSegmentName,
-    endSegmentName,
-    usedSegments,
-  );
-}
-
-// Helper function to check continuity of a list of segments
-function checkSegmentsContinuity(segments) {
-  if (!routeManager) {
-    console.warn(
-      "RouteManager not initialized, cannot check segment continuity.",
-    );
-    return { isContinuous: true, brokenSegmentIndex: -1 };
-  }
-  return routeManager.checkSegmentsContinuity(segments);
 }
 
 function clearRouteFromUrl() {
@@ -1955,7 +1799,7 @@ function shareToTwitter(url) {
   });
 
   const text =
-    "בדקו את מסלול הרכיבה שיצרתי במפת שבילי אופניים - גליל עליון וגולן!";
+    "בדקו את מסלול הרכיבה e�יצרתי במפת שבילי אופניים - גליל עליון וגולן!";
   window.open(
     `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${url}`,
     "_blank",
@@ -2231,9 +2075,6 @@ async function parseGeoJSON(geoJsonData) {
         // Keep legacy warnings as fallback
         const segmentInfo = segmentsData[name];
         if (segmentInfo && dataPoints.length === 0) {
-          if (segmentInfo.winter === false) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️ בוץ בחורף</div>`;
-          }
           if (segmentInfo.warning) {
             segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
           }
@@ -2730,22 +2571,6 @@ function checkRouteContinuity() {
   return { isContinuous: true, brokenSegmentIndex: -1 };
 }
 
-// Function to check if any selected segments have winter warning and find all of them
-function hasWinterSegments() {
-  const winterSegments = [];
-  for (let i = 0; i < selectedSegments.length; i++) {
-    const segmentInfo = segmentsData[selectedSegments[i]];
-    if (segmentInfo && segmentInfo.winter === false) {
-      winterSegments.push(selectedSegments[i]);
-    }
-  }
-  return {
-    hasWinter: winterSegments.length > 0,
-    winterSegments: winterSegments,
-    count: winterSegments.length,
-  };
-}
-
 // Function to check if any selected segments have warnings and find all of them
 function hasSegmentWarnings() {
   const warningSegments = [];
@@ -2774,11 +2599,9 @@ function hasSegmentWarnings() {
 // Function to update route warning visibility
 function updateRouteWarning() {
   const routeWarning = document.getElementById("route-warning");
-  const winterWarning = document.getElementById("winter-warning");
   const segmentWarning = document.getElementById("segment-warning");
 
   const continuityResult = checkRouteContinuity();
-  const winterResult = hasWinterSegments();
   const warningsResult = hasSegmentWarnings();
 
   // Show broken route warning
@@ -2786,26 +2609,6 @@ function updateRouteWarning() {
     routeWarning.style.display = "block";
   } else {
     routeWarning.style.display = "none";
-  }
-
-  // Show winter warning with count
-  if (winterResult.hasWinter) {
-    const countText = winterResult.count > 1 ? ` (${winterResult.count})` : "";
-    winterWarning.innerHTML = `❄️בוץ בחורף${countText}`;
-    winterWarning.style.display = "block";
-
-    // Reset winter warning cycling index when warnings change
-    if (
-      !window.winterWarningIndex ||
-      winterResult.winterSegments.length !== window.lastWinterCount
-    ) {
-      window.winterWarningIndex = 0;
-      window.lastWinterCount = winterResult.winterSegments.length;
-    }
-  } else {
-    winterWarning.style.display = "none";
-    window.winterWarningIndex = 0;
-    window.lastWinterCount = 0;
   }
 
   // Show segment warnings indicator with count
@@ -2869,9 +2672,6 @@ function focusOnSegment(segmentName) {
   // Keep legacy warnings as fallback
   const segmentInfo = segmentsData[segmentName];
   if (segmentInfo && dataPoints.length === 0) {
-    if (segmentInfo.winter === false) {
-      segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_ORANGE}; font-size: 12px; margin-top: 5px;">❄️ בוץ בחורף</div>`;
-    }
     if (segmentInfo.warning) {
       segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
     }
@@ -3929,7 +3729,7 @@ function showExamplePoint() {
   };
 
   // Wait for SVG to load before showing anything
-  fetch("arrow.svg")
+  fetch("icons/arrow.svg")
     .then((response) => response.text())
     .then((svgContent) => {
       arrow.innerHTML = svgContent;
@@ -4047,13 +3847,6 @@ function showDownloadModal() {
       // Add legacy warnings as fallback
       const segmentInfo = segmentsData[segmentName];
       if (segmentInfo && dataPoints.length === 0) {
-        if (segmentInfo.winter === false) {
-          segmentsHtml += `
-            <div style="color: #ff9800; font-size: 12px; margin-top: 5px; margin-right: 20px;">
-              ❄️ מסלול בוצי בחורף
-            </div>
-          `;
-        }
         if (segmentInfo.warning) {
           segmentsHtml += `
             <div style="color: #f44336; font-size: 12px; margin-top: 5px; margin-right: 20px;">
@@ -4289,33 +4082,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
   document
-    .getElementById("winter-warning")
-    .addEventListener("click", function () {
-      // Track analytics event for winter warning interaction
-      trackEvent("warning_clicked", {
-        warning_type: "winter_warning",
-        warning_segments_count: hasWinterSegments().count,
-      });
-
-      const winterResult = hasWinterSegments();
-      if (winterResult.hasWinter && winterResult.winterSegments.length > 0) {
-        // Initialize index if not set
-        if (window.winterWarningIndex === undefined) {
-          window.winterWarningIndex = 0;
-        }
-
-        // Focus on current segment
-        const segmentName =
-          winterResult.winterSegments[window.winterWarningIndex];
-        focusOnSegment(segmentName);
-
-        // Move to next segment for next click
-        window.winterWarningIndex =
-          (window.winterWarningIndex + 1) % winterResult.winterSegments.length;
-      }
-    });
-
-  document
     .getElementById("segment-warning")
     .addEventListener("click", function () {
       // Track analytics event for segment warning interaction
@@ -4485,13 +4251,13 @@ const MARKER_ICONS = {
 // Load custom SVG icons as map images
 async function loadCustomIcons() {
   const iconMappings = {
-    "bank-11": "bank.svg",
-    "barrier-11": "barrier.svg",
-    "wetland-11": "wetland.svg",
-    "caution-11": "caution.svg",
-    "mountain-11": "mountain.svg",
-    "car-11": "car.svg",
-    "roadblock-11": "roadblock.svg",
+    "bank-11": "icons/bank.svg",
+    "barrier-11": "icons/barrier.svg",
+    "wetland-11": "icons/wetland.svg",
+    "caution-11": "icons/caution.svg",
+    "mountain-11": "icons/mountain.svg",
+    "car-11": "icons/car.svg",
+    "roadblock-11": "icons/roadblock.svg",
   };
 
   for (const [iconName, svgFile] of Object.entries(iconMappings)) {

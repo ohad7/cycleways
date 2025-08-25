@@ -1,8 +1,8 @@
 {
   "name": "User Test Case - 2025-08-06 18-00-14",
   "description": "Testing of simple reverse of a route",
-  "geoJsonFile": "bike_roads_v12.geojson",
-  "segmentsFile": "segments.json",
+  "geoJsonFile": "bike_roads_test.geojson",
+  "segmentsFile": "segments-test.json",
   "operations": [
     {
       "type": "addPoint",
