@@ -1,3 +1,5 @@
+import * as D from './utils/distance.js';
+
 let map;
 let selectedSegments = [];
 let routePolylines = [];
@@ -1000,7 +1002,7 @@ function initMap() {
                 coords[i + 1].lat,
               ]);
 
-              const distance = distanceToLineSegmentPixels(
+              const distance = D.distanceToLineSegmentPixels(
                 mousePixel,
                 startPixel,
                 endPixel,
@@ -1281,7 +1283,7 @@ function initMap() {
               coords[i + 1].lat,
             ]);
 
-            const distance = distanceToLineSegmentPixels(
+            const distance = D.distanceToLineSegmentPixels(
               clickPixel,
               startPixel,
               endPixel,
@@ -2105,7 +2107,7 @@ async function parseGeoJSON(geoJsonData) {
                 segmentEnd,
               );
 
-              const distance = getDistance(
+              const distance = D.getDistance(
                 { lat: hoverPoint.lat, lng: hoverPoint.lng },
                 closestPoint,
               );
@@ -2136,7 +2138,7 @@ async function parseGeoJSON(geoJsonData) {
                     j < prevPolyline.coordinates.length - 1;
                     j++
                   ) {
-                    distanceFromStart += getDistance(
+                    distanceFromStart += D.getDistance(
                       prevPolyline.coordinates[j],
                       prevPolyline.coordinates[j + 1],
                     );
@@ -2146,7 +2148,7 @@ async function parseGeoJSON(geoJsonData) {
 
               // Add distance within current segment up to hover point
               for (let i = 0; i < closestSegmentIndex; i++) {
-                distanceFromStart += getDistance(
+                distanceFromStart += D.getDistance(
                   coordObjects[i],
                   coordObjects[i + 1],
                 );
@@ -2155,8 +2157,8 @@ async function parseGeoJSON(geoJsonData) {
               // Add partial distance to closest point on segment
               const segmentStart = coordObjects[closestSegmentIndex];
               const segmentEnd = coordObjects[closestSegmentIndex + 1];
-              const segmentLength = getDistance(segmentStart, segmentEnd);
-              const distanceToClosest = getDistance(
+              const segmentLength = D.getDistance(segmentStart, segmentEnd);
+              const distanceToClosest = D.getDistance(
                 segmentStart,
                 closestPointOnSegment,
               );
@@ -2248,22 +2250,6 @@ async function parseGeoJSON(geoJsonData) {
   }
 }
 
-// Helper function to calculate distance between two points
-function getDistance(point1, point2) {
-  const R = 6371e3; // Earth's radius in meters
-  const φ1 = (point1.lat * Math.PI) / 180;
-  const φ2 = (point2.lat * Math.PI) / 180;
-  const Δφ = ((point2.lat - point1.lat) * Math.PI) / 180;
-  const Δλ = ((point2.lng - point1.lng) * Math.PI) / 180;
-
-  const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
 // Function to smooth elevation values using distance-based window smoothing
 function smoothElevations(coords, distanceWindow = 100) {
   if (coords.length === 0) {
@@ -2330,7 +2316,7 @@ function distanceWindowSmoothing(
     // Remove points that are too far behind
     while (
       start + 1 < i &&
-      getDistance(points[start], points[i]) > distanceWindow
+      D.getDistance(points[start], points[i]) > distanceWindow
     ) {
       if (remove) {
         accumulated -= remove(start);
@@ -2343,7 +2329,7 @@ function distanceWindowSmoothing(
     // Add points that are within distance ahead
     while (
       end < points.length &&
-      getDistance(points[i], points[end]) <= distanceWindow
+      D.getDistance(points[i], points[end]) <= distanceWindow
     ) {
       accumulated += accumulate(end);
       end++;
@@ -2366,7 +2352,7 @@ function preCalculateSegmentMetrics() {
     // Calculate distance
     let distance = 0;
     for (let i = 0; i < coords.length - 1; i++) {
-      distance += getDistance(coords[i], coords[i + 1]);
+      distance += D.getDistance(coords[i], coords[i + 1]);
     }
 
     // Apply elevation smoothing before calculating gains/losses
@@ -2418,66 +2404,6 @@ function preCalculateSegmentMetrics() {
       smoothedCoords: smoothedCoords, // Store smoothed coordinates for elevation profile
     };
   });
-}
-
-// Helper function to calculate distance from point to line segment
-function distanceToLineSegment(point, lineStart, lineEnd) {
-  const A = point.lng - lineStart.lng;
-  const B = point.lat - lineStart.lat;
-  const C = lineEnd.lng - lineStart.lng;
-  const D = lineEnd.lat - lineStart.lat;
-
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-  let param = -1;
-  if (lenSq !== 0) {
-    param = dot / lenSq;
-  }
-
-  let xx, yy;
-  if (param < 0) {
-    xx = lineStart.lng;
-    yy = lineStart.lat;
-  } else if (param > 1) {
-    xx = lineEnd.lng;
-    yy = lineEnd.lat;
-  } else {
-    xx = lineStart.lng + param * C;
-    yy = lineStart.lat + param * D;
-  }
-
-  return getDistance(point, { lat: yy, lng: xx });
-}
-
-// Helper function to calculate distance from point to line segment in pixels
-function distanceToLineSegmentPixels(point, lineStart, lineEnd) {
-  const A = point.x - lineStart.x;
-  const B = point.y - lineStart.y;
-  const C = lineEnd.x - lineStart.x;
-  const D = lineEnd.y - lineStart.y;
-
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-  let param = -1;
-  if (lenSq !== 0) {
-    param = dot / lenSq;
-  }
-
-  let xx, yy;
-  if (param < 0) {
-    xx = lineStart.x;
-    yy = lineStart.y;
-  } else if (param > 1) {
-    xx = lineEnd.x;
-    yy = lineEnd.y;
-  } else {
-    xx = lineStart.x + param * C;
-    yy = lineStart.y + param * D;
-  }
-
-  const dx = point.x - xx;
-  const dy = point.y - yy;
-  return Math.sqrt(dx * dx + dy * dy);
 }
 
 // Helper function to find closest point on line segment
@@ -2552,7 +2478,7 @@ function checkRouteContinuity() {
     const currentEnd = orderedCoords[currentSegmentEndIndex];
     const nextStart = orderedCoords[currentSegmentEndIndex + 1];
 
-    const distance = getDistance(currentEnd, nextStart);
+    const distance = D.getDistance(currentEnd, nextStart);
 
     // If distance is greater than tolerance, route is broken
     if (distance > tolerance) {
@@ -2901,10 +2827,10 @@ function getOrderedCoordinates() {
 
           // Calculate all possible connection distances
           const distances = [
-            getDistance(firstEnd, nextStart), // first end to next start
-            getDistance(firstEnd, nextEnd), // first end to next end
-            getDistance(firstStart, nextStart), // first start to next start
-            getDistance(firstStart, nextEnd), // first start to next end
+            D.getDistance(firstEnd, nextStart), // first end to next start
+            D.getDistance(firstEnd, nextEnd), // first end to next end
+            D.getDistance(firstStart, nextStart), // first start to next start
+            D.getDistance(firstStart, nextEnd), // first start to next end
           ];
 
           const minDistance = Math.min(...distances);
@@ -2923,8 +2849,8 @@ function getOrderedCoordinates() {
       const segmentStart = coords[0];
       const segmentEnd = coords[coords.length - 1];
 
-      const distanceToStart = getDistance(lastPoint, segmentStart);
-      const distanceToEnd = getDistance(lastPoint, segmentEnd);
+      const distanceToStart = D.getDistance(lastPoint, segmentStart);
+      const distanceToEnd = D.getDistance(lastPoint, segmentEnd);
 
       // If the end is closer, reverse the coordinates
       if (distanceToEnd < distanceToStart) {
@@ -2933,7 +2859,7 @@ function getOrderedCoordinates() {
 
       // Add coordinates with better duplication handling
       const firstPoint = coords[0];
-      const connectionDistance = getDistance(lastPoint, firstPoint);
+      const connectionDistance = D.getDistance(lastPoint, firstPoint);
 
       // If segments are well connected (within 50 meters), skip first point to avoid duplication
       // If segments are far apart (gap > 50 meters), include all points to show the gap
@@ -2960,7 +2886,7 @@ function generateElevationProfile() {
 
   const totalDistance = orderedCoords.reduce((total, coord, index) => {
     if (index === 0) return 0;
-    return total + getDistance(orderedCoords[index - 1], coord);
+    return total + D.getDistance(orderedCoords[index - 1], coord);
   }, 0);
 
   if (totalDistance === 0) {
@@ -2994,7 +2920,7 @@ function generateElevationProfile() {
         ? 0
         : smoothedRouteCoords.slice(0, index + 1).reduce((total, c, idx) => {
             if (idx === 0) return 0;
-            return total + getDistance(smoothedRouteCoords[idx - 1], c);
+            return total + D.getDistance(smoothedRouteCoords[idx - 1], c);
           }, 0);
     return { ...coord, distance };
   });
@@ -3174,10 +3100,10 @@ function updateRouteListAndDescription() {
 
             if (nextMetrics) {
               const distances = [
-                getDistance(prevEnd, currentStart),
-                getDistance(prevEnd, currentEnd),
-                getDistance(prevStart, currentStart),
-                getDistance(prevStart, currentEnd),
+                D.getDistance(prevEnd, currentStart),
+                D.getDistance(prevEnd, currentEnd),
+                D.getDistance(prevStart, currentStart),
+                D.getDistance(prevStart, currentEnd),
               ];
 
               const minIndex = distances.indexOf(Math.min(...distances));
@@ -3194,8 +3120,8 @@ function updateRouteListAndDescription() {
           prevLastPoint = prevEnd; // This would need to be tracked better, but simplified for now
         }
 
-        const distanceToStart = getDistance(prevLastPoint, currentStart);
-        const distanceToEnd = getDistance(prevLastPoint, currentEnd);
+        const distanceToStart = D.getDistance(prevLastPoint, currentStart);
+        const distanceToEnd = D.getDistance(prevLastPoint, currentEnd);
 
         isReversed = distanceToEnd < distanceToStart;
       }
@@ -3211,10 +3137,10 @@ function updateRouteListAndDescription() {
         const nextEnd = nextMetrics.endPoint;
 
         const distances = [
-          getDistance(firstEnd, nextStart),
-          getDistance(firstEnd, nextEnd),
-          getDistance(firstStart, nextStart),
-          getDistance(firstStart, nextEnd),
+          D.getDistance(firstEnd, nextStart),
+          D.getDistance(firstEnd, nextEnd),
+          D.getDistance(firstStart, nextStart),
+          D.getDistance(firstStart, nextEnd),
         ];
 
         const minIndex = distances.indexOf(Math.min(...distances));
