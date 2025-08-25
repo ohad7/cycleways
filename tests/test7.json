@@ -1,8 +1,8 @@
 {
   "name": "User Test Case - 2025-08-09 16-38-25",
   "description": "Simple Test that fails for some reason, adding just two segments",
-  "geoJsonFile": "bike_roads_v12.geojson",
-  "segmentsFile": "segments.json",
+  "geoJsonFile": "bike_roads_test.geojson",
+  "segmentsFile": "segments-test.json",
   "operations": [
     {
       "type": "addPoint",

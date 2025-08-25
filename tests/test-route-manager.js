@@ -6,7 +6,7 @@
 // Import RouteManager for Node.js environment
 let RouteManager;
 if (typeof module !== "undefined" && module.exports) {
-  RouteManager = require("./route-manager.js");
+  RouteManager = require("../route-manager.js");
 }
 
 // Mock data for testing
@@ -374,39 +374,39 @@ async function loadTestData(testCase) {
 
 // Convenience function for test1.json
 async function testUserTestCase1() {
-  await runTestFromJson("tests/test1.json");
+  await runTestFromJson("./test1.json");
 }
 
 async function testUserTestCase2() {
-  await runTestFromJson("tests/test2.json");
+  await runTestFromJson("./test2.json");
 }
 
 async function testUserTestCase3() {
-  await runTestFromJson("tests/test3.json");
+  await runTestFromJson("./test3.json");
 }
 
 async function testUserTestCase4() {
-  await runTestFromJson("tests/test4.json");
+  await runTestFromJson("./test4.json");
 }
 
 async function testUserTestCase5() {
-  await runTestFromJson("tests/test5.json");
+  await runTestFromJson("./test5.json");
 }
 
 async function testUserTestCase6() {
-  await runTestFromJson("tests/test6.json");
+  await runTestFromJson("./test6.json");
 }
 
 async function testUserTestCase7() {
-  await runTestFromJson("tests/test7.json");
+  await runTestFromJson("./test7.json");
 }
 
 async function testUserTestCase8() {
-  await runTestFromJson("tests/test8.json");
+  await runTestFromJson("./test8.json");
 }
 
 async function testUserTestCase9() {
-  await runTestFromJson("tests/test9.json");
+  await runTestFromJson("./test9.json");
 }
 
 // Enhanced test runner with summary
