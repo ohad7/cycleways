@@ -66,7 +66,7 @@ export function smoothElevations(coords, distanceWindow = 100) {
  * @param {Function} remove - Optional function to remove values
  * @returns {Array} Smoothed values
  */
-export function distanceWindowSmoothing(
+function distanceWindowSmoothing(
   points,
   distanceWindow,   
   accumulate,
