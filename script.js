@@ -1,18 +1,9 @@
-import * as D from './utils/distance.js';
+import { getDistance, distanceToLineSegmentPixels } from './utils/distance.js';
 import { smoothElevations } from './utils/elevations.js';
 import { encodeRoute, decodeRoute } from './utils/route-encoding.js';
 import { executeDownloadGPX, generateGPX } from './utils/gpx-generator.js';
-import { 
-  trackEvent, 
-  trackRoutePointEvent, 
-  trackUndoRedoEvent, 
-  trackSearchEvent, 
-  trackSocialShare, 
-  trackSegmentFocus, 
-  trackWarningClick, 
-  trackRouteOperation,
-  trackPageLoad,
-  trackTutorial
+import { trackRoutePointEvent, trackUndoRedoEvent, trackSearchEvent, trackSocialShare, 
+          trackSegmentFocus, trackWarningClick, trackRouteOperation,trackPageLoad,trackTutorial
 } from './utils/analytics.js';
 
 let map;
@@ -996,7 +987,7 @@ function initMap() {
                 coords[i + 1].lat,
               ]);
 
-              const distance = D.distanceToLineSegmentPixels(
+              const distance = distanceToLineSegmentPixels(
                 mousePixel,
                 startPixel,
                 endPixel,
@@ -1277,7 +1268,7 @@ function initMap() {
               coords[i + 1].lat,
             ]);
 
-            const distance = D.distanceToLineSegmentPixels(
+            const distance = distanceToLineSegmentPixels(
               clickPixel,
               startPixel,
               endPixel,
@@ -1883,7 +1874,7 @@ async function parseGeoJSON(geoJsonData) {
                 segmentEnd,
               );
 
-              const distance = D.getDistance(
+              const distance = getDistance(
                 { lat: hoverPoint.lat, lng: hoverPoint.lng },
                 closestPoint,
               );
@@ -1914,7 +1905,7 @@ async function parseGeoJSON(geoJsonData) {
                     j < prevPolyline.coordinates.length - 1;
                     j++
                   ) {
-                    distanceFromStart += D.getDistance(
+                    distanceFromStart += getDistance(
                       prevPolyline.coordinates[j],
                       prevPolyline.coordinates[j + 1],
                     );
@@ -1924,7 +1915,7 @@ async function parseGeoJSON(geoJsonData) {
 
               // Add distance within current segment up to hover point
               for (let i = 0; i < closestSegmentIndex; i++) {
-                distanceFromStart += D.getDistance(
+                distanceFromStart += getDistance(
                   coordObjects[i],
                   coordObjects[i + 1],
                 );
@@ -1933,8 +1924,8 @@ async function parseGeoJSON(geoJsonData) {
               // Add partial distance to closest point on segment
               const segmentStart = coordObjects[closestSegmentIndex];
               const segmentEnd = coordObjects[closestSegmentIndex + 1];
-              const segmentLength = D.getDistance(segmentStart, segmentEnd);
-              const distanceToClosest = D.getDistance(
+              const segmentLength = getDistance(segmentStart, segmentEnd);
+              const distanceToClosest = getDistance(
                 segmentStart,
                 closestPointOnSegment,
               );
@@ -2037,7 +2028,7 @@ function preCalculateSegmentMetrics() {
     // Calculate distance
     let distance = 0;
     for (let i = 0; i < coords.length - 1; i++) {
-      distance += D.getDistance(coords[i], coords[i + 1]);
+      distance += getDistance(coords[i], coords[i + 1]);
     }
 
     // Apply elevation smoothing before calculating gains/losses
@@ -2163,7 +2154,7 @@ function checkRouteContinuity() {
     const currentEnd = orderedCoords[currentSegmentEndIndex];
     const nextStart = orderedCoords[currentSegmentEndIndex + 1];
 
-    const distance = D.getDistance(currentEnd, nextStart);
+    const distance = getDistance(currentEnd, nextStart);
 
     // If distance is greater than tolerance, route is broken
     if (distance > tolerance) {
@@ -2509,10 +2500,10 @@ function getOrderedCoordinates() {
 
           // Calculate all possible connection distances
           const distances = [
-            D.getDistance(firstEnd, nextStart), // first end to next start
-            D.getDistance(firstEnd, nextEnd), // first end to next end
-            D.getDistance(firstStart, nextStart), // first start to next start
-            D.getDistance(firstStart, nextEnd), // first start to next end
+            getDistance(firstEnd, nextStart), // first end to next start
+            getDistance(firstEnd, nextEnd), // first end to next end
+            getDistance(firstStart, nextStart), // first start to next start
+            getDistance(firstStart, nextEnd), // first start to next end
           ];
 
           const minDistance = Math.min(...distances);
@@ -2531,8 +2522,8 @@ function getOrderedCoordinates() {
       const segmentStart = coords[0];
       const segmentEnd = coords[coords.length - 1];
 
-      const distanceToStart = D.getDistance(lastPoint, segmentStart);
-      const distanceToEnd = D.getDistance(lastPoint, segmentEnd);
+      const distanceToStart = getDistance(lastPoint, segmentStart);
+      const distanceToEnd = getDistance(lastPoint, segmentEnd);
 
       // If the end is closer, reverse the coordinates
       if (distanceToEnd < distanceToStart) {
@@ -2541,7 +2532,7 @@ function getOrderedCoordinates() {
 
       // Add coordinates with better duplication handling
       const firstPoint = coords[0];
-      const connectionDistance = D.getDistance(lastPoint, firstPoint);
+      const connectionDistance = getDistance(lastPoint, firstPoint);
 
       // If segments are well connected (within 50 meters), skip first point to avoid duplication
       // If segments are far apart (gap > 50 meters), include all points to show the gap
@@ -2569,7 +2560,7 @@ function generateElevationProfile() {
 
   const totalDistance = orderedCoords.reduce((total, coord, index) => {
     if (index === 0) return 0;
-    return total + D.getDistance(orderedCoords[index - 1], coord);
+    return total + getDistance(orderedCoords[index - 1], coord);
   }, 0);
 
   if (totalDistance === 0) {
@@ -2603,7 +2594,7 @@ function generateElevationProfile() {
         ? 0
         : smoothedRouteCoords.slice(0, index + 1).reduce((total, c, idx) => {
             if (idx === 0) return 0;
-            return total + D.getDistance(smoothedRouteCoords[idx - 1], c);
+            return total + getDistance(smoothedRouteCoords[idx - 1], c);
           }, 0);
     return { ...coord, distance };
   });
@@ -2783,10 +2774,10 @@ function updateRouteListAndDescription() {
 
             if (nextMetrics) {
               const distances = [
-                D.getDistance(prevEnd, currentStart),
-                D.getDistance(prevEnd, currentEnd),
-                D.getDistance(prevStart, currentStart),
-                D.getDistance(prevStart, currentEnd),
+                getDistance(prevEnd, currentStart),
+                getDistance(prevEnd, currentEnd),
+                getDistance(prevStart, currentStart),
+                getDistance(prevStart, currentEnd),
               ];
 
               const minIndex = distances.indexOf(Math.min(...distances));
@@ -2803,8 +2794,8 @@ function updateRouteListAndDescription() {
           prevLastPoint = prevEnd; // This would need to be tracked better, but simplified for now
         }
 
-        const distanceToStart = D.getDistance(prevLastPoint, currentStart);
-        const distanceToEnd = D.getDistance(prevLastPoint, currentEnd);
+        const distanceToStart = getDistance(prevLastPoint, currentStart);
+        const distanceToEnd = getDistance(prevLastPoint, currentEnd);
 
         isReversed = distanceToEnd < distanceToStart;
       }
@@ -2820,10 +2811,10 @@ function updateRouteListAndDescription() {
         const nextEnd = nextMetrics.endPoint;
 
         const distances = [
-          D.getDistance(firstEnd, nextStart),
-          D.getDistance(firstEnd, nextEnd),
-          D.getDistance(firstStart, nextStart),
-          D.getDistance(firstStart, nextEnd),
+          getDistance(firstEnd, nextStart),
+          getDistance(firstEnd, nextEnd),
+          getDistance(firstStart, nextStart),
+          getDistance(firstStart, nextEnd),
         ];
 
         const minIndex = distances.indexOf(Math.min(...distances));
