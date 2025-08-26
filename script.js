@@ -74,7 +74,7 @@ function addRoutePoint(lngLat) {
   });
 
   // Track analytics event for route point addition
-  trackRoutePointEvent("route_point_added", [...routePoints, point], selectedSegments, "click");
+  trackRoutePointEvent([...routePoints, point], selectedSegments, "click");
 
   // Add to local routePoints first
   routePoints.push(point);
@@ -371,8 +371,8 @@ function removeRoutePoint(index) {
       : null,
   });
 
-  // Track analytics event for route point removal
-  trackRoutePointEvent("route_point_removed", routePoints.slice(0, -1), selectedSegments, "right_click");
+  // Track analytics event for route point removal  
+  trackRoutePointEvent(routePoints.slice(0, -1), selectedSegments, "right_click");
 
   try {
     // Use RouteManager to remove point and get updated segments
@@ -537,7 +537,7 @@ function clearRouteFromUrl() {
 function undo() {
   if (undoStack.length > 0) {
     // Track analytics event for undo
-    trackUndoRedoEvent("route_undo", undoStack, redoStack, routePoints, selectedSegments);
+    trackUndoRedoEvent("undo", undoStack, redoStack, routePoints, selectedSegments);
 
     // Save current state to redo stack
     redoStack.push({
@@ -593,7 +593,7 @@ function undo() {
 function redo() {
   if (redoStack.length > 0) {
     // Track analytics event for redo
-    trackUndoRedoEvent("route_redo", undoStack, redoStack, routePoints, selectedSegments);
+    trackUndoRedoEvent("redo", undoStack, redoStack, routePoints, selectedSegments);
 
     // Save current state to undo stack
     undoStack.push({
@@ -3105,7 +3105,7 @@ function searchLocation() {
   }
 
   // Track analytics event for search
-  trackSearchEvent("location_search", query, routePoints, selectedSegments);
+  trackSearchEvent(query, routePoints, selectedSegments);
 
   searchError.style.display = "none";
 
@@ -3221,7 +3221,7 @@ function searchLocation() {
         setTimeout(highlightSearchedLocation, 1200);
 
         // Track successful search
-        trackSearchEvent("location_search_success", query, routePoints, selectedSegments, {
+        trackSearchEvent(query, routePoints, selectedSegments, true, {
           lat: lat,
           lng: lon,
           within_bounds: bounds && isPointWithinBounds(lat, lon, bounds)
