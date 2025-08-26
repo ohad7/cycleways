@@ -1,3 +1,11 @@
+import { getDistance, distanceToLineSegmentPixels } from './utils/distance.js';
+import { smoothElevations } from './utils/elevations.js';
+import { encodeRoute, decodeRoute } from './utils/route-encoding.js';
+import { executeDownloadGPX, generateGPX } from './utils/gpx-generator.js';
+import { trackRoutePointEvent, trackUndoRedoEvent, trackSearchEvent, trackSocialShare, 
+          trackSegmentFocus, trackWarningClick, trackRouteOperation,trackPageLoad,trackTutorial
+} from './utils/analytics.js';
+
 let map;
 let selectedSegments = [];
 let routePolylines = [];
@@ -38,12 +46,7 @@ function saveState() {
   clearRouteFromUrl(); // Clear route parameter when making changes
 }
 
-// Google Analytics event tracking helper
-function trackEvent(eventName, parameters = {}) {
-  if (typeof gtag !== "undefined") {
-    gtag("event", eventName, parameters);
-  }
-}
+
 
 // Add a new route point
 function addRoutePoint(lngLat) {
@@ -62,11 +65,7 @@ function addRoutePoint(lngLat) {
   });
 
   // Track analytics event for route point addition
-  trackEvent("route_point_added", {
-    point_count: routePoints.length + 1,
-    segments_count: selectedSegments.length,
-    method: "click",
-  });
+  trackRoutePointEvent([...routePoints, point], selectedSegments, "click");
 
   // Add to local routePoints first
   routePoints.push(point);
@@ -363,12 +362,8 @@ function removeRoutePoint(index) {
       : null,
   });
 
-  // Track analytics event for route point removal
-  trackEvent("route_point_removed", {
-    point_count: routePoints.length - 1,
-    segments_count: selectedSegments.length,
-    method: "right_click",
-  });
+  // Track analytics event for route point removal  
+  trackRoutePointEvent(routePoints.slice(0, -1), selectedSegments, "right_click");
 
   try {
     // Use RouteManager to remove point and get updated segments
@@ -533,11 +528,7 @@ function clearRouteFromUrl() {
 function undo() {
   if (undoStack.length > 0) {
     // Track analytics event for undo
-    trackEvent("route_undo", {
-      undo_stack_size: undoStack.length,
-      current_segments: selectedSegments.length,
-      current_points: routePoints.length,
-    });
+    trackUndoRedoEvent("undo", undoStack, redoStack, routePoints, selectedSegments);
 
     // Save current state to redo stack
     redoStack.push({
@@ -593,11 +584,7 @@ function undo() {
 function redo() {
   if (redoStack.length > 0) {
     // Track analytics event for redo
-    trackEvent("route_redo", {
-      redo_stack_size: redoStack.length,
-      current_segments: selectedSegments.length,
-      current_points: routePoints.length,
-    });
+    trackUndoRedoEvent("redo", undoStack, redoStack, routePoints, selectedSegments);
 
     // Save current state to undo stack
     undoStack.push({
@@ -818,9 +805,9 @@ function resetRoute() {
   });
 
   // Track analytics event for route reset
-  trackEvent("route_reset", {
+  trackRouteOperation("reset", routePoints, selectedSegments, {
     cleared_points: routePoints.length,
-    cleared_segments: selectedSegments.length,
+    cleared_segments: selectedSegments.length
   });
 
   // Save current state for potential undo
@@ -1413,217 +1400,18 @@ function initMap() {
   }
 }
 
-// Base58 alphabet (Bitcoin-style)
-const BASE58_ALPHABET =
-  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-// Base58 encoding function
-function base58Encode(bytes) {
-  let result = "";
-  let bigInt = 0n;
-
-  // Convert bytes to a big integer
-  for (let i = 0; i < bytes.length; i++) {
-    bigInt = bigInt * 256n + BigInt(bytes[i]);
-  }
-
-  // Convert to base58
-  while (bigInt > 0n) {
-    const remainder = bigInt % 58n;
-    result = BASE58_ALPHABET[Number(remainder)] + result;
-    bigInt = bigInt / 58n;
-  }
-
-  // Handle leading zeros
-  for (let i = 0; i < bytes.length && bytes[i] === 0; i++) {
-    result = "1" + result;
-  }
-
-  return result;
-}
-
-// Base58 decoding function
-function base58Decode(str) {
-  let bigInt = 0n;
-
-  // Convert base58 to big integer
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-    const value = BASE58_ALPHABET.indexOf(char);
-    if (value === -1) {
-      throw new Error("Invalid base58 character");
-    }
-    bigInt = bigInt * 58n + BigInt(value);
-  }
-
-  // Convert to bytes
-  const bytes = [];
-  while (bigInt > 0n) {
-    bytes.unshift(Number(bigInt % 256n));
-    bigInt = bigInt / 256n;
-  }
-
-  // Handle leading '1's (zeros)
-  for (let i = 0; i < str.length && str[i] === "1"; i++) {
-    bytes.unshift(0);
-  }
-
-  return new Uint8Array(bytes);
-}
-
-// Route sharing functions
-function encodeRoute(segmentNames) {
-  if (!segmentNames || segmentNames.length === 0) return "";
-
-  // Convert segment names to IDs using segments data
-  const segmentIds = segmentNames
-    .map((name) => {
-      const segmentInfo = segmentsData[name];
-      return segmentInfo ? segmentInfo.id : 0;
-    })
-    .filter((id) => id > 0);
-
-  if (segmentIds.length === 0) return "";
-
-  // Create binary data with version byte + segment IDs
-  // Need to ensure proper alignment for Uint16Array (2-byte aligned)
-  const totalBytes = 2 + segmentIds.length * 2; // 2 bytes for version padding + segment data
-  const binaryData = new ArrayBuffer(totalBytes);
-  const uint8Array = new Uint8Array(binaryData);
-
-  // Write version as first byte, pad second byte to maintain alignment
-  uint8Array[0] = ROUTE_VERSION;
-  uint8Array[1] = 0; // Padding byte for alignment
-
-  // Write segment IDs as 16-bit values starting from byte offset 2
-  const view = new Uint16Array(binaryData, 2);
-  segmentIds.forEach((id, index) => {
-    view[index] = id;
-  });
-
-  // Convert to base58
-  return base58Encode(uint8Array);
-}
-
-function decodeRoute(routeString) {
-  if (!routeString) return [];
-
-  try {
-    let uint8Array;
-
-    // Try to determine if this is base58 or base64 encoding
-    const isBase58 =
-      /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/.test(
-        routeString,
-      );
-
-    if (isBase58) {
-      // Decode from base58 (version 2)
-      uint8Array = base58Decode(routeString);
-    } else {
-      // Decode from base64 (legacy version 1)
-      const binaryString = atob(routeString);
-      const binaryData = new ArrayBuffer(binaryString.length);
-      uint8Array = new Uint8Array(binaryData);
-
-      for (let i = 0; i < binaryString.length; i++) {
-        uint8Array[i] = binaryString.charCodeAt(i);
-      }
-    }
-
-    // Check for empty data
-    if (uint8Array.byteLength === 0) {
-      console.warn("Empty route data");
-      return [];
-    }
-
-    // Read version from first byte
-    const version = uint8Array[0];
-
-    if (version !== 1 && version !== ROUTE_VERSION) {
-      console.warn(
-        `Unsupported route version: ${version}. Expected version 1 or ${ROUTE_VERSION}.`,
-      );
-      return [];
-    }
-
-    // Parse segment data (skip version and padding bytes)
-    const segmentDataOffset = 2;
-    const segmentDataLength = uint8Array.byteLength - segmentDataOffset;
-
-    if (segmentDataLength % 2 !== 0) {
-      console.warn("Invalid route data: segment data length is not even");
-      return [];
-    }
-
-    const view = new Uint16Array(uint8Array.buffer, segmentDataOffset);
-    const segmentIds = Array.from(view);
-
-    // Convert IDs back to segment names, handling splits
-    const segmentNames = [];
-
-    for (let i = 0; i < segmentIds.length; i++) {
-      const segmentId = segmentIds[i];
-      let foundSegment = null;
-
-      // Find segment by ID
-      for (const segmentName in segmentsData) {
-        const segmentInfo = segmentsData[segmentName];
-        if (segmentInfo && segmentInfo.id === segmentId) {
-          foundSegment = { name: segmentName, info: segmentInfo };
-          break;
-        }
-      }
-
-      if (foundSegment) {
-        // Check if this segment has split property
-        if (foundSegment.info.split && Array.isArray(foundSegment.info.split)) {
-          // Replace with split segments
-          const splitSegmentIds = foundSegment.info.split;
-
-          // Find the actual segment names for the split IDs
-          const splitSegmentNames = [];
-          for (const splitId of splitSegmentIds) {
-            for (const segmentName in segmentsData) {
-              const segmentInfo = segmentsData[segmentName];
-              if (segmentInfo && segmentInfo.id === splitId) {
-                splitSegmentNames.push(segmentName);
-                break;
-              }
-            }
-          }
-
-          // Wait for routePolylines to be available before processing connectivity
-          if (splitSegmentNames.length > 0) {
-            // For now, just add them in order - connectivity will be handled later by getOrderedCoordinates
-            segmentNames.push(...splitSegmentNames);
-          }
-        } else {
-          // Regular segment, add it
-          segmentNames.push(foundSegment.name);
-        }
-      }
-    }
-
-    return segmentNames.filter((name) => name); // Remove empty slots
-  } catch (error) {
-    console.error("Error decoding route:", error);
-    return [];
-  }
-}
 
 function shareRoute() {
-  const routeId = encodeRoute(selectedSegments);
+  const routeId = encodeRoute(getSegmentIds(selectedSegments));
   if (!routeId) {
     alert("אין מסלול לשיתוף. בחרו קטעים כדי ליצור מסלול.");
     return;
   }
 
   // Track analytics event for route sharing
-  trackEvent("route_share", {
-    route_segments: selectedSegments.length,
-    route_points: routePoints.length,
-    route_id: routeId.substring(0, 10), // First 10 chars for privacy
+  trackRouteOperation("share", routePoints, selectedSegments, {
+    route_id: routeId.substring(0, 10) // First 10 chars for privacy
   });
 
   const url = new URL(window.location);
@@ -1791,13 +1579,7 @@ function showShareModal(shareUrl) {
 }
 
 function shareToTwitter(url) {
-  // Track analytics event for Twitter sharing
-  trackEvent("social_share", {
-    platform: "twitter",
-    route_segments: selectedSegments.length,
-    route_points: routePoints.length,
-  });
-
+  trackSocialShare("twitter", routePoints, selectedSegments);
   const text =
     "בדקו את מסלול הרכיבה e�יצרתי במפת שבילי אופניים - גליל עליון וגולן!";
   window.open(
@@ -1807,24 +1589,12 @@ function shareToTwitter(url) {
 }
 
 function shareToFacebook(url) {
-  // Track analytics event for Facebook sharing
-  trackEvent("social_share", {
-    platform: "facebook",
-    route_segments: selectedSegments.length,
-    route_points: routePoints.length,
-  });
-
+  trackSocialShare("facebook", routePoints, selectedSegments);
   window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, "_blank");
 }
 
 function shareToWhatsApp(url) {
-  // Track analytics event for WhatsApp sharing
-  trackEvent("social_share", {
-    platform: "whatsapp",
-    route_segments: selectedSegments.length,
-    route_points: routePoints.length,
-  });
-
+  trackSocialShare("whatsapp", routePoints, selectedSegments);
   const text =
     "בדקו את מסלול הרכיבה שיצרתי במפת שבילי אופניים - גליל עליון וגולן!";
   window.open(
@@ -1842,12 +1612,11 @@ function loadRouteFromUrl() {
   const routeParam = getRouteParameter();
 
   if (routeParam && segmentsData) {
-    const decodedSegments = decodeRoute(routeParam);
+    const decodedSegments = decodeRoute(routeParam, segmentsData);
     if (decodedSegments.length > 0) {
       // Track analytics event for route loading from URL
-      trackEvent("route_loaded_from_url", {
-        segments_count: decodedSegments.length,
-        route_param_length: routeParam.length,
+      trackRouteOperation("load_from_url", [], decodedSegments, {
+        route_param_length: routeParam.length
       });
 
       selectedSegments = decodedSegments;
@@ -2248,113 +2017,6 @@ async function parseGeoJSON(geoJsonData) {
   }
 }
 
-// Helper function to calculate distance between two points
-function getDistance(point1, point2) {
-  const R = 6371e3; // Earth's radius in meters
-  const φ1 = (point1.lat * Math.PI) / 180;
-  const φ2 = (point2.lat * Math.PI) / 180;
-  const Δφ = ((point2.lat - point1.lat) * Math.PI) / 180;
-  const Δλ = ((point2.lng - point1.lng) * Math.PI) / 180;
-
-  const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
-// Function to smooth elevation values using distance-based window smoothing
-function smoothElevations(coords, distanceWindow = 100) {
-  if (coords.length === 0) {
-    return coords;
-  }
-
-  // Ensure all coordinates have elevation values
-  const coordsWithElevation = coords.map((coord) => {
-    let elevation;
-    if (coord.elevation !== undefined) {
-      elevation = coord.elevation;
-    } else {
-      // Fallback calculation if elevation is not available
-      elevation =
-        200 + Math.sin(coord.lat * 10) * 100 + Math.cos(coord.lng * 8) * 50;
-    }
-    return {
-      lat: coord.lat,
-      lng: coord.lng,
-      elevation: elevation,
-    };
-  });
-
-  // Apply distance-based window smoothing
-  const smoothedElevations = distanceWindowSmoothing(
-    coordsWithElevation,
-    distanceWindow,
-    (index) => coordsWithElevation[index].elevation,
-    (accumulated, start, end) => accumulated / (end - start + 1),
-  );
-
-  // Preserve original first and last elevations
-  if (coordsWithElevation.length > 0) {
-    smoothedElevations[0] = coordsWithElevation[0].elevation;
-    smoothedElevations[coordsWithElevation.length - 1] =
-      coordsWithElevation[coordsWithElevation.length - 1].elevation;
-  }
-
-  // Create smoothed coordinate objects
-  const smoothed = coordsWithElevation.map((coord, index) => ({
-    lat: coord.lat,
-    lng: coord.lng,
-    elevation: smoothedElevations[index],
-  }));
-
-  return smoothed;
-}
-
-// Distance-based window smoothing algorithm
-function distanceWindowSmoothing(
-  points,
-  distanceWindow,
-  accumulate,
-  compute,
-  remove = null,
-) {
-  let result = [];
-
-  let start = 0,
-    end = 0,
-    accumulated = 0;
-
-  for (let i = 0; i < points.length; i++) {
-    // Remove points that are too far behind
-    while (
-      start + 1 < i &&
-      getDistance(points[start], points[i]) > distanceWindow
-    ) {
-      if (remove) {
-        accumulated -= remove(start);
-      } else {
-        accumulated -= accumulate(start);
-      }
-      start++;
-    }
-
-    // Add points that are within distance ahead
-    while (
-      end < points.length &&
-      getDistance(points[i], points[end]) <= distanceWindow
-    ) {
-      accumulated += accumulate(end);
-      end++;
-    }
-
-    result[i] = compute(accumulated, start, end - 1);
-  }
-
-  return result;
-}
-
 // Pre-calculate all segment metrics for fast access
 function preCalculateSegmentMetrics() {
   segmentMetrics = {};
@@ -2418,66 +2080,6 @@ function preCalculateSegmentMetrics() {
       smoothedCoords: smoothedCoords, // Store smoothed coordinates for elevation profile
     };
   });
-}
-
-// Helper function to calculate distance from point to line segment
-function distanceToLineSegment(point, lineStart, lineEnd) {
-  const A = point.lng - lineStart.lng;
-  const B = point.lat - lineStart.lat;
-  const C = lineEnd.lng - lineStart.lng;
-  const D = lineEnd.lat - lineStart.lat;
-
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-  let param = -1;
-  if (lenSq !== 0) {
-    param = dot / lenSq;
-  }
-
-  let xx, yy;
-  if (param < 0) {
-    xx = lineStart.lng;
-    yy = lineStart.lat;
-  } else if (param > 1) {
-    xx = lineEnd.lng;
-    yy = lineEnd.lat;
-  } else {
-    xx = lineStart.lng + param * C;
-    yy = lineStart.lat + param * D;
-  }
-
-  return getDistance(point, { lat: yy, lng: xx });
-}
-
-// Helper function to calculate distance from point to line segment in pixels
-function distanceToLineSegmentPixels(point, lineStart, lineEnd) {
-  const A = point.x - lineStart.x;
-  const B = point.y - lineStart.y;
-  const C = lineEnd.x - lineStart.x;
-  const D = lineEnd.y - lineStart.y;
-
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-  let param = -1;
-  if (lenSq !== 0) {
-    param = dot / lenSq;
-  }
-
-  let xx, yy;
-  if (param < 0) {
-    xx = lineStart.x;
-    yy = lineStart.y;
-  } else if (param > 1) {
-    xx = lineEnd.x;
-    yy = lineEnd.y;
-  } else {
-    xx = lineStart.x + param * C;
-    yy = lineStart.y + param * D;
-  }
-
-  const dx = point.x - xx;
-  const dy = point.y - yy;
-  return Math.sqrt(dx * dx + dy * dy);
 }
 
 // Helper function to find closest point on line segment
@@ -2639,10 +2241,7 @@ function focusOnSegment(segmentName) {
   if (!polyline) return;
 
   // Track analytics event for segment focus
-  trackEvent("segment_focus", {
-    segment_name: segmentName,
-    source: "recommendation_click",
-  });
+  trackSegmentFocus(segmentName, "recommendation_click");
 
   const coords = polyline.coordinates;
   if (coords.length === 0) return;
@@ -2814,7 +2413,7 @@ function loadRouteFromEncoding(routeEncoding) {
   }
 
   try {
-    const decodedSegments = decodeRoute(routeEncoding);
+    const decodedSegments = decodeRoute(routeEncoding, segmentsData);
     if (decodedSegments.length === 0) {
       console.warn("No segments decoded from route encoding");
       return false;
@@ -2949,6 +2548,7 @@ function getOrderedCoordinates() {
 }
 
 // Function to generate elevation profile
+// TODO: Move generate elevation profile to use data in elevations.js
 function generateElevationProfile() {
   const orderedCoords = getOrderedCoordinates();
   if (orderedCoords.length === 0) return "";
@@ -3496,10 +3096,7 @@ function searchLocation() {
   }
 
   // Track analytics event for search
-  trackEvent("location_search", {
-    query_length: query.length,
-    has_current_route: selectedSegments.length > 0,
-  });
+  trackSearchEvent(query, routePoints, selectedSegments);
 
   searchError.style.display = "none";
 
@@ -3615,11 +3212,10 @@ function searchLocation() {
         setTimeout(highlightSearchedLocation, 1200);
 
         // Track successful search
-        trackEvent("location_search_success", {
-          query: query,
+        trackSearchEvent(query, routePoints, selectedSegments, true, {
           lat: lat,
           lng: lon,
-          within_bounds: bounds && isPointWithinBounds(lat, lon, bounds),
+          within_bounds: bounds && isPointWithinBounds(lat, lon, bounds)
         });
 
         searchInput.value = "";
@@ -3935,58 +3531,33 @@ function showDownloadModal() {
   document.addEventListener("keydown", handleEscape);
 }
 
+function getSegmentIds(segmentNames) {
+  return segmentNames
+    .map((name) => {
+      const segmentInfo = segmentsData[name];
+      return segmentInfo ? segmentInfo.id : 0;
+    })
+    .filter((id) => id > 0);      
+}
+
 function downloadGPX() {
   if (!kmlData) return;
 
   // Track analytics event for GPX download
-  trackEvent("gpx_download", {
-    route_segments: selectedSegments.length,
-    route_points: routePoints.length,
-    route_distance_km: parseFloat((getRouteInfo().distance / 1000).toFixed(1)),
+  trackRouteOperation("download", routePoints, selectedSegments, {
+    distance: getRouteInfo().distance
   });
 
   const orderedCoords = getOrderedCoordinates();
-
-  let gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="BikeRoutePlanner" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
-  <trk>
-    <name>מסלול רכיבה מתוכנן</name>
-    <trkseg>`;
-
-  orderedCoords.forEach((coord) => {
-    // Use actual elevation from coordinates if available, otherwise calculate
-    let elevation;
-    if (coord.elevation !== undefined) {
-      elevation = coord.elevation;
-    } else {
-      // Fallback: calculate elevation based on position (simulated)
-      elevation =
-        200 + Math.sin(coord.lat * 10) * 100 + Math.cos(coord.lng * 8) * 50;
-    }
-    gpx += `
-      <trkpt lat="${coord.lat}" lon="${coord.lng}">
-        <ele>${Math.round(elevation)}</ele>
-      </trkpt>`;
-  });
-
-  gpx += `
-    </trkseg>
-  </trk>
-</gpx>`;
+  let gpx = generateGPX(orderedCoords);
 
   // Generate filename using encoded route (first 32 characters)
-  const routeEncoding = encodeRoute(selectedSegments);
+  const routeEncoding = encodeRoute(getSegmentIds(selectedSegments));
   const filename = routeEncoding
     ? `route_${routeEncoding.substring(0, 32)}.gpx`
     : "bike_route.gpx";
 
-  const blob = new Blob([gpx], { type: "application/gpx+xml" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  executeDownloadGPX(gpx, filename);
 }
 
 // Hash navigation functionality
@@ -4013,10 +3584,7 @@ function scrollToSection(sectionId) {
 // Event listeners
 document.addEventListener("DOMContentLoaded", function () {
   // Track page load
-  trackEvent("page_load", {
-    has_route_param: !!getRouteParameter(),
-    user_agent: navigator.userAgent.includes("Mobile") ? "mobile" : "desktop",
-  });
+  trackPageLoad(!!getRouteParameter(), navigator.userAgent);
 
   // Initialize the map when page loads
   initMap();
@@ -4062,10 +3630,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("route-warning")
     .addEventListener("click", function () {
       // Track analytics event for warning interaction
-      trackEvent("warning_clicked", {
-        warning_type: "route_continuity",
-        segments_count: selectedSegments.length,
-      });
+      trackWarningClick("route_continuity", routePoints, selectedSegments);
 
       const continuityResult = checkRouteContinuity();
       if (
@@ -4085,9 +3650,8 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("segment-warning")
     .addEventListener("click", function () {
       // Track analytics event for segment warning interaction
-      trackEvent("warning_clicked", {
-        warning_type: "segment_warning",
-        warning_segments_count: hasSegmentWarnings().count,
+      trackWarningClick("segment_warning", routePoints, selectedSegments, {
+        warning_segments_count: hasSegmentWarnings().count
       });
 
       const warningsResult = hasSegmentWarnings();
@@ -4117,10 +3681,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (helpBtn) {
     helpBtn.addEventListener("click", () => {
       // Track analytics event for tutorial start
-      trackEvent("tutorial_started", {
-        has_current_route: selectedSegments.length > 0,
-        source: "help_button",
-      });
+      trackTutorial("started", selectedSegments.length > 0, "help_button");
 
       if (
         typeof tutorial !== "undefined" &&
@@ -4220,7 +3781,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-const ROUTE_VERSION = 2;
+
 
 // Data markers management
 let dataMarkersSource = null;
