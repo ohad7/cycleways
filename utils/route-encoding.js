@@ -8,7 +8,11 @@ const ROUTE_VERSION = 2;
 const BASE58_ALPHABET =
   "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
-// Base58 encoding function
+/**
+ * Base58 encoding function
+ * @param {Uint8Array} bytes - Bytes to encode
+ * @returns {string} Base58 encoded string
+ */
 function base58Encode(bytes) {
   let result = "";
   let bigInt = 0n;
@@ -33,7 +37,11 @@ function base58Encode(bytes) {
   return result;
 }
 
-// Base58 decoding function
+/**
+ * Base58 decoding function
+ * @param {string} str - Base58 encoded string
+ * @returns {Uint8Array} Decoded bytes
+ */
 function base58Decode(str) {
   let bigInt = 0n;
 
@@ -62,7 +70,11 @@ function base58Decode(str) {
   return new Uint8Array(bytes);
 }
 
-// Route sharing functions
+/**
+ * Encode route segments to a compact string
+ * @param {Array} segmentIds - Array of segment ids
+ * @returns {string} Encoded route string
+ */
 export function encodeRoute(segmentIds) {
   if (segmentIds.length === 0) return "";
 
@@ -86,6 +98,12 @@ export function encodeRoute(segmentIds) {
   return base58Encode(uint8Array);
 }
 
+/**
+ * Decode route string back to segment names
+ * @param {string} routeString - Encoded route string
+ * @param {Object} segmentsData - Segments metadata object
+ * @returns {Array} Array of segment names
+ */
 export function decodeRoute(routeString, segmentsData) {
   if (!routeString) return [];
 

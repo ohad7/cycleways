@@ -1,6 +1,7 @@
 import * as D from './utils/distance.js';
 import { smoothElevations } from './utils/elevations.js';
 import { encodeRoute, decodeRoute } from './utils/route-encoding.js';
+import { executeDownloadGPX, generateGPX } from './utils/gpx-generator.js';
 
 let map;
 let selectedSegments = [];
@@ -3596,33 +3597,7 @@ function downloadGPX() {
   });
 
   const orderedCoords = getOrderedCoordinates();
-
-  let gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="BikeRoutePlanner" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
-  <trk>
-    <name>מסלול רכיבה מתוכנן</name>
-    <trkseg>`;
-
-  orderedCoords.forEach((coord) => {
-    // Use actual elevation from coordinates if available, otherwise calculate
-    let elevation;
-    if (coord.elevation !== undefined) {
-      elevation = coord.elevation;
-    } else {
-      // Fallback: calculate elevation based on position (simulated)
-      elevation =
-        200 + Math.sin(coord.lat * 10) * 100 + Math.cos(coord.lng * 8) * 50;
-    }
-    gpx += `
-      <trkpt lat="${coord.lat}" lon="${coord.lng}">
-        <ele>${Math.round(elevation)}</ele>
-      </trkpt>`;
-  });
-
-  gpx += `
-    </trkseg>
-  </trk>
-</gpx>`;
+  let gpx = generateGPX(orderedCoords);
 
   // Generate filename using encoded route (first 32 characters)
   const routeEncoding = encodeRoute(getSegmentIds(selectedSegments));
@@ -3630,13 +3605,7 @@ function downloadGPX() {
     ? `route_${routeEncoding.substring(0, 32)}.gpx`
     : "bike_route.gpx";
 
-  const blob = new Blob([gpx], { type: "application/gpx+xml" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  executeDownloadGPX(gpx, filename);
 }
 
 // Hash navigation functionality
