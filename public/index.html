@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  
+  <!-- Primary Meta Tags -->
+  <title>מפת שבילי אופניים - גליל עליון וגולן | תכנון מסלולי רכיבה</title>
+  <meta name="title" content="מפת שבילי אופניים - גליל עליון וגולן | תכנון מסלולי רכיבה">
+  <meta name="description" content="מפת שבילי אופניים אינטראקטיבית לגליל העליון וגולן. תכננו מסלולי רכיבה, הורידו קבצי GPX וגלו את השבילים הכי יפים בצפון הארץ. מסלולים מומלצים, אזהרות בטיחות ועדכונים שוטפים.">
+  <meta name="keywords" content="אופניים, רכיבה, שבילים, גליל עליון, גולן, מסלולים, GPX, תכנון מסלול, דרכים חקלאיות, שבילי עפר, צפון ישראל">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="Hebrew">
+  <meta name="author" content="CycleWays">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.cycleways.app/">
+  <meta property="og:title" content="מפת שבילי אופניים - גליל עליון וגולן | תכנון מסלולי רכיבה">
+  <meta property="og:description" content="מפת שבילי אופניים אינטראקטיבית לגליל העליון וגולן. תכננו מסלולי רכיבה, הורידו קבצי GPX וגלו את השבילים הכי יפים בצפון הארץ.">
+  <meta property="og:image" content="%PUBLIC_URL%/attached_assets/background.png">
+  <meta property="og:image:alt" content="מפת שבילי אופניים בגליל העליון וגולן">
+  <meta property="og:locale" content="he_IL">
+  <meta property="og:site_name" content="CycleWays - מפת שבילי אופניים">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://www.cycleways.app/">
+  <meta property="twitter:title" content="מפת שבילי אופניים - גליל עליון וגולן | תכנון מסלולי רכיבה">
+  <meta property="twitter:description" content="מפת שבילי אופניים אינטראקטיבית לגליל העליון וגולן. תכננו מסלולי רכיבה, הורידו קבצי GPX וגלו את השבילים הכי יפים בצפון הארץ.">
+  <meta property="twitter:image" content="%PUBLIC_URL%/attached_assets/background.png">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://www.cycleways.app/">
+  
+  <!-- Favicon and Icons -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2387CEEB'/%3E%3Cpolygon points='4,48 14,26 24,48' fill='%23E0E0E0'/%3E%3Cpolygon points='20,48 30,24 40,48' fill='%23D8D8D8'/%3E%3Cpolygon points='38,48 48,26 58,48' fill='%23D0D0D0'/%3E%3Cpolygon points='0,48 12,22 28,48' fill='%23D3D3D3'/%3E%3Cpolygon points='28,48 46,16 64,48' fill='%23D3D3D3'/%3E%3Cpolygon points='42,24 46,16 50,24 48,22 46,23 44,22' fill='white'/%3E%3Crect y='48' width='64' height='16' fill='%2332CD32'/%3E%3Ccircle cx='44' cy='50' r='6' stroke='black' stroke-width='1.8' fill='none'/%3E%3Ccircle cx='20' cy='50' r='6' stroke='black' stroke-width='1.8' fill='none'/%3E%3Cline x1='44' y1='50' x2='36' y2='40' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='40' x2='20' y2='50' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='40' x2='36' y2='33' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='33' x2='40' y2='33' stroke='black' stroke-width='1.2'/%3E%3 Cline x1='36' y1='33' x2='29' y2='30' stroke='black' stroke-width='1.5'/%3E%3Cline x1='29' y1='30' x2='20' y2='50' stroke='black' stroke-width='1.5'/%3E%3 Cline x1='29' y1='30' x2='29' y2='27' stroke='black' stroke-width='1.5'/%3E%3 Cline x1='27' y1='27' x2='31' y2='27' stroke='black' stroke-width='1.2'/%3E%3Ccircle cx='36' cy='40' r='1.2' fill='black'/%3E%3Cline x1='36.5' y1='39.5' x2='38.5' y2='37.5' stroke='black' stroke-width='1'/%3E%3 Cline x1='35.5' y1='40.5' x2='33.5' y2='42.5' stroke='black' stroke-width='1'/%3E%3Ccircle cx='36' cy='40' r='2.5' stroke='black' stroke-width='1' fill='none'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="%PUBLIC_URL%/attached_assets/background.png">
+  
+  <!-- Mapbox CSS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+  <link href="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.css" rel="stylesheet">
+  
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "מפת שבילי אופניים - גליל עליון וגולן",
+    "url": "https://www.cycleways.app",
+    "description": "מפת שבילי אופניים אינטראקטיבית לגליל העליון וגולן. תכננו מסלולי רכיבה, הורידו קבצי GPX וגלו את השבילים הכי יפים בצפון הארץ.",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Any",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "ILS"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "CycleWays",
+      "url": "https://www.cycleways.app"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": "33.183536",
+      "longitude": "35.617497"
+    },
+    "areaServed": {
+      "@type": "Place",
+      "name": "גליל עליון וגולן, ישראל"
+    },
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Cyclists, Outdoor enthusiasts"
+    },
+    "keywords": ["אופניים", "רכיבה", "שבילים", "גליל עליון", "גולן", "מסלולים", "GPX"],
+    "inLanguage": "he"
+  }
+  </script>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-P1TK7GTD2J"></script>
+  <script>
+    var host = window.location.hostname;
+    if(host != "localhost" && !host.startsWith("10.0."))
+    {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-P1TK7GTD2J');
+    } else {
+       window['ga-disable-UA-G-P1TK7GTD2J'] = true; 
+    }
+  </script>
+  
+  <!-- Ionicons -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>

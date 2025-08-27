@@ -10,7 +10,7 @@ publicDir = "/"
 deploymentTarget = "static"
 
 [workflows]
-runButton = "Serve static"
+runButton = "React Development Server"
 
 [[workflows.workflow]]
 name = "Serve static"
@@ -24,6 +24,15 @@ To see changes you make, you can hit the refresh button in the preview, you do \
 Console logs are available in the Preview devtools or your browser devtools.\" && static-web-server -w ./.config/static-web-server.toml > /dev/null 2>&1
 """
 waitForPort = 80
+
+[[workflows.workflow]]
+name = "React Development Server"
+author = 44993488
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
 
 [[ports]]
 localPort = 80
