@@ -1,0 +1,19 @@
+ 
+ 
+ Execute open elevation: 
+ 
+ cd 
+ cd projects 
+ cd open-elevation 
+ docker run -t -i -v $(pwd)/data2:/code/data -p 80:8080 openelevation/open-elevation
+
+#Execute KML Processor
+  ohad@Ohads-MacBook-Pro-2 KMLProcessor % source ../open-elevation/kml-editor/bin/activate
+  (kml-editor) ohad@Ohads-MacBook-Pro-2 KMLProcessor % cp ../isravelo/segments.json .
+  (kml-editor) ohad@Ohads-MacBook-Pro-2 KMLProcessor % cp /Users/ohad/Downloads/Galil\ Elyon\ Velo\ Cycleway\ Map\ \(6\).kml  input.kml
+  (kml-editor) ohad@Ohads-MacBook-Pro-2 KMLProcessor % python main.py 
+  (kml-editor) ohad@Ohads-MacBook-Pro-2 KMLProcessor % cp input_uniform_distances_with_elev.geojson ../isravelo/bike_roads_v15.geojson
+
+
+
+
