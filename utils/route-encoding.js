@@ -99,10 +99,10 @@ export function encodeRoute(segmentIds) {
 }
 
 /**
- * Decode route string back to segment names
+ * Decode route string back to segment IDs
  * @param {string} routeString - Encoded route string
  * @param {Object} segmentsData - Segments metadata object
- * @returns {Array} Array of segment names
+ * @returns {Array} Array of segment IDs
  */
 export function decodeRoute(routeString, segmentsData) {
   if (!routeString) return [];
@@ -158,55 +158,53 @@ export function decodeRoute(routeString, segmentsData) {
     const view = new Uint16Array(uint8Array.buffer, segmentDataOffset);
     const segmentIds = Array.from(view);
 
-    // Convert IDs back to segment names, handling splits
-    const segmentNames = [];
-
-    for (let i = 0; i < segmentIds.length; i++) {
-      const segmentId = segmentIds[i];
-      let foundSegment = null;
-
-      // Find segment by ID
-      for (const segmentName in segmentsData) {
-        const segmentInfo = segmentsData[segmentName];
-        if (segmentInfo && segmentInfo.id === segmentId) {
-          foundSegment = { name: segmentName, info: segmentInfo };
-          break;
-        }
-      }
-
-      if (foundSegment) {
-        // Check if this segment has split property
-        if (foundSegment.info.split && Array.isArray(foundSegment.info.split)) {
-          // Replace with split segments
-          const splitSegmentIds = foundSegment.info.split;
-
-          // Find the actual segment names for the split IDs
-          const splitSegmentNames = [];
-          for (const splitId of splitSegmentIds) {
-            for (const segmentName in segmentsData) {
-              const segmentInfo = segmentsData[segmentName];
-              if (segmentInfo && segmentInfo.id === splitId) {
-                splitSegmentNames.push(segmentName);
-                break;
-              }
-            }
-          }
-
-          // Wait for routePolylines to be available before processing connectivity
-          if (splitSegmentNames.length > 0) {
-            // For now, just add them in order - connectivity will be handled later by getOrderedCoordinates
-            segmentNames.push(...splitSegmentNames);
-          }
-        } else {
-          // Regular segment, add it
-          segmentNames.push(foundSegment.name);
-        }
-      }
-    }
-
-    return segmentNames.filter((name) => name); // Remove empty slots
+    return segmentIds;
   } catch (error) {
     console.error("Error decoding route:", error);
     return [];
   }
+}
+
+/**
+ * Extract middle points from segment IDs
+ * @param {Array} segmentIds - Array of segment IDs
+ * @param {Object} segmentsData - Segments metadata object
+ * @returns {Array} Array of middle points with lat, lng, and optional elevation
+ */
+export function extractMiddlePoints(segmentIds, segmentsData) {
+  const middlePoints = [];
+
+  for (const segmentId of segmentIds) {
+    let foundSegment = null;
+
+    // Find segment by ID
+    for (const segmentName in segmentsData) {
+      const segmentInfo = segmentsData[segmentName];
+      if (segmentInfo && segmentInfo.id === segmentId) {
+        foundSegment = { name: segmentName, info: segmentInfo };
+        break;
+      }
+    }
+
+    // Skip if segment doesn't exist or is deprecated
+    if (!foundSegment || foundSegment.info.deprecated) {
+      continue;
+    }
+
+    // Skip if segment doesn't have a middle point
+    if (!foundSegment.info.middle || !foundSegment.info.middle.longitude || !foundSegment.info.middle.latitude) {
+      continue;
+    }
+
+    // Add middle point to the array
+    middlePoints.push({
+      lat: foundSegment.info.middle.latitude,
+      lng: foundSegment.info.middle.longitude,
+      elevation: foundSegment.info.middle.elevation || 0.0,
+      segmentName: foundSegment.name,
+      id: Date.now() + Math.random() // Generate a unique ID for the point
+    });
+  }
+
+  return middlePoints;
 }
