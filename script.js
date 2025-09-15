@@ -2296,7 +2296,15 @@ function createIndividualWarnings(warningSegments) {
     
     const textSpan = document.createElement("span");
     textSpan.className = "warning-text";
-    textSpan.textContent = segmentName;
+    
+    // Display warning type names or "אזהרות" for multiple types
+    if (segmentWarningTypes.length === 1) {
+      // Single warning type - show its Hebrew name
+      textSpan.textContent = WARNING_TRANSLATIONS[segmentWarningTypes[0]] || segmentWarningTypes[0];
+    } else {
+      // Multiple warning types - show "אזהרות"
+      textSpan.textContent = "אזהרות";
+    }
     
     warningDiv.appendChild(emojisSpan);
     warningDiv.appendChild(textSpan);
@@ -3905,9 +3913,9 @@ const WARNING_TRANSLATIONS = {
   gate: "שער",
   mud: "בוץ",
   warning: "אזהרה",
-  slope: "מדרון",
-  narrow: "צר",
-  severe: "חמור",
+  slope: "שיפוע",
+  narrow: "שוליים צרים",
+  severe: "סכנה",
 };
 
 // Color scheme for warning types
