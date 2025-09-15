@@ -2242,20 +2242,53 @@ function updateRouteWarning() {
       warningsResult.count > 1 ? ` (${warningsResult.count})` : "";
     segmentWarning.innerHTML = `⚠️ מידע חשוב ${countText}`;
     segmentWarning.style.display = "block";
-
-    // Reset segment warning cycling index when warnings change
-    if (
-      !window.segmentWarningIndex ||
-      warningsResult.warningSegments.length !== window.lastWarningCount
-    ) {
-      window.segmentWarningIndex = 0;
-      window.lastWarningCount = warningsResult.warningSegments.length;
-    }
   } else {
     segmentWarning.style.display = "none";
-    window.segmentWarningIndex = 0;
-    window.lastWarningCount = 0;
+    // Hide individual warnings container when there are no warnings
+    const individualWarningsContainer = document.getElementById("individual-warnings-container");
+    if (individualWarningsContainer) {
+      individualWarningsContainer.style.display = "none";
+    }
   }
+}
+
+// Function to toggle individual warnings display
+function toggleIndividualWarnings(warningSegments) {
+  const individualWarningsContainer = document.getElementById("individual-warnings-container");
+  
+  if (individualWarningsContainer.style.display === "none" || individualWarningsContainer.style.display === "") {
+    // Show individual warnings
+    createIndividualWarnings(warningSegments);
+    individualWarningsContainer.style.display = "block";
+  } else {
+    // Hide individual warnings
+    individualWarningsContainer.style.display = "none";
+    individualWarningsContainer.innerHTML = "";
+  }
+}
+
+// Function to create individual warning divs
+function createIndividualWarnings(warningSegments) {
+  const individualWarningsContainer = document.getElementById("individual-warnings-container");
+  
+  // Clear existing warnings
+  individualWarningsContainer.innerHTML = "";
+  
+  // Create individual warning div for each unique segment
+  const uniqueSegments = [...new Set(warningSegments)]; // Remove duplicates as requested
+  
+  uniqueSegments.forEach((segmentName) => {
+    const warningDiv = document.createElement("div");
+    warningDiv.className = "individual-warning-item";
+    warningDiv.textContent = `⚠️ ${segmentName}`;
+    
+    // Add click handler to focus on the segment
+    warningDiv.addEventListener("click", function() {
+      focusOnSegment(segmentName);
+    });
+    
+    individualWarningsContainer.appendChild(warningDiv);
+  });
 }
 
 // Function to focus on a specific segment
@@ -3706,20 +3739,8 @@ document.addEventListener("DOMContentLoaded", function () {
         warningsResult.hasWarnings &&
         warningsResult.warningSegments.length > 0
       ) {
-        // Initialize index if not set
-        if (window.segmentWarningIndex === undefined) {
-          window.segmentWarningIndex = 0;
-        }
-
-        // Focus on current segment
-        const segmentName =
-          warningsResult.warningSegments[window.segmentWarningIndex];
-        focusOnSegment(segmentName);
-
-        // Move to next segment for next click
-        window.segmentWarningIndex =
-          (window.segmentWarningIndex + 1) %
-          warningsResult.warningSegments.length;
+        // Toggle individual warnings display
+        toggleIndividualWarnings(warningsResult.warningSegments);
       }
     });
 
