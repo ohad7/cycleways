@@ -3973,14 +3973,15 @@ const WARNING_TRANSLATIONS = {
 };
 
 // Color scheme for warning types
+// Palette brought from here: https://mycolor.space/?hex=%23FF9800&sub=1
 const WARNING_COLORS = {
-  payment: "#2196F3", // Blue for payment
-  gate: "#FF5722", // Red-orange for gate/barrier
-  mud: "#795548", // Brown for mud/dirt
-  warning: "#FF9800", // Orange for general warning
-  slope: "#607D8B", // Blue-grey for slope/mountain
-  narrow: "#9C27B0", // Purple for narrow paths
-  severe: "#F44336", // Red for severe warnings
+  payment: "#4a5783",
+  mud: "#9d744d", 
+  warning: "#FF9800", 
+  slope: "#8e5b9a", 
+  narrow: "#d6568b",
+  severe: "#ff675b",
+  gate: "#FF5722"
 };
 
 // Maki icon mapping for marker types
