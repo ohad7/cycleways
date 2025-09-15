@@ -2242,6 +2242,12 @@ function updateRouteWarning() {
       warningsResult.count > 1 ? ` (${warningsResult.count})` : "";
     segmentWarning.innerHTML = `⚠️ מידע חשוב ${countText}`;
     segmentWarning.style.display = "block";
+    
+    // If individual warnings are currently visible, refresh them
+    const individualWarningsContainer = document.getElementById("individual-warnings-container");
+    if (individualWarningsContainer && individualWarningsContainer.style.display === "block") {
+      createIndividualWarnings(warningsResult.warningSegments);
+    }
   } else {
     segmentWarning.style.display = "none";
     // Hide individual warnings container when there are no warnings
