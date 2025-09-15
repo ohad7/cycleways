@@ -666,6 +666,8 @@ html {
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid transparent;
+  max-width: 200px;
+  word-wrap: break-word;
 }
 
 .individual-warning-item:hover {
