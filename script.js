@@ -2274,36 +2274,50 @@ function createIndividualWarnings(warningSegments) {
   // Clear existing warnings
   individualWarningsContainer.innerHTML = "";
   
-  // Collect all warning types from all segments with warnings
-  const warningTypesWithSegments = {};
+  // Dedupe segments to guarantee one div per segment
+  const uniqueSegments = [...new Set(warningSegments)];
   
-  warningSegments.forEach((segmentName) => {
+  // Create one div for each segment with warnings
+  uniqueSegments.forEach((segmentName) => {
     const dataPoints = getSegmentDataPoints(segmentName);
-    dataPoints.forEach((dataPoint) => {
-      if (!warningTypesWithSegments[dataPoint.type]) {
-        warningTypesWithSegments[dataPoint.type] = [];
-      }
-      // Only add if this segment isn't already in the list for this warning type
-      if (!warningTypesWithSegments[dataPoint.type].includes(segmentName)) {
-        warningTypesWithSegments[dataPoint.type].push(segmentName);
-      }
-    });
-  });
-  
-  // Create individual warning div for each unique warning type
-  Object.entries(warningTypesWithSegments).forEach(([warningType, segments]) => {
+    
+    if (dataPoints.length === 0) return; // Skip segments without data points
+    
     const warningDiv = document.createElement("div");
     warningDiv.className = "individual-warning-item";
     
-    const emoji = MARKER_EMOJIS[warningType] || "⚠️";
-    const hebrewText = WARNING_TRANSLATIONS[warningType] || warningType;
-    warningDiv.textContent = `${emoji} ${hebrewText}`;
+    // Collect all warning types for this segment
+    const segmentWarningTypes = [...new Set(dataPoints.map(dp => dp.type))];
     
-    // Add click handler to focus on the first segment with this warning type
+    // Create emoji and text elements safely
+    const emojisSpan = document.createElement("span");
+    emojisSpan.className = "warning-emojis";
+    emojisSpan.textContent = segmentWarningTypes.map(type => MARKER_EMOJIS[type] || "⚠️").join(" ");
+    
+    const textSpan = document.createElement("span");
+    textSpan.className = "warning-text";
+    textSpan.textContent = segmentName;
+    
+    warningDiv.appendChild(emojisSpan);
+    warningDiv.appendChild(textSpan);
+    
+    // Determine background color based on warning types with priority system
+    let backgroundColor;
+    if (segmentWarningTypes.length === 1) {
+      // Single warning type - use its color
+      backgroundColor = WARNING_COLORS[segmentWarningTypes[0]] || "#f44336";
+    } else {
+      // Multiple warning types - use priority system: severe > narrow > gate > slope > mud > payment > warning
+      const priorityOrder = ["severe", "narrow", "gate", "slope", "mud", "payment", "warning"];
+      const highestPriority = priorityOrder.find(type => segmentWarningTypes.includes(type));
+      backgroundColor = WARNING_COLORS[highestPriority] || "#f44336";
+    }
+    
+    warningDiv.style.backgroundColor = backgroundColor;
+    
+    // Add click handler to focus on the segment
     warningDiv.addEventListener("click", function() {
-      if (segments.length > 0) {
-        focusOnSegment(segments[0]);
-      }
+      focusOnSegment(segmentName);
     });
     
     individualWarningsContainer.appendChild(warningDiv);
@@ -3894,6 +3908,17 @@ const WARNING_TRANSLATIONS = {
   slope: "מדרון",
   narrow: "צר",
   severe: "חמור",
+};
+
+// Color scheme for warning types
+const WARNING_COLORS = {
+  payment: "#2196F3", // Blue for payment
+  gate: "#FF5722", // Red-orange for gate/barrier
+  mud: "#795548", // Brown for mud/dirt
+  warning: "#FF9800", // Orange for general warning
+  slope: "#607D8B", // Blue-grey for slope/mountain
+  narrow: "#9C27B0", // Purple for narrow paths
+  severe: "#F44336", // Red for severe warnings
 };
 
 // Maki icon mapping for marker types
