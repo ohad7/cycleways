@@ -2274,17 +2274,36 @@ function createIndividualWarnings(warningSegments) {
   // Clear existing warnings
   individualWarningsContainer.innerHTML = "";
   
-  // Create individual warning div for each unique segment
-  const uniqueSegments = [...new Set(warningSegments)]; // Remove duplicates as requested
+  // Collect all warning types from all segments with warnings
+  const warningTypesWithSegments = {};
   
-  uniqueSegments.forEach((segmentName) => {
+  warningSegments.forEach((segmentName) => {
+    const dataPoints = getSegmentDataPoints(segmentName);
+    dataPoints.forEach((dataPoint) => {
+      if (!warningTypesWithSegments[dataPoint.type]) {
+        warningTypesWithSegments[dataPoint.type] = [];
+      }
+      // Only add if this segment isn't already in the list for this warning type
+      if (!warningTypesWithSegments[dataPoint.type].includes(segmentName)) {
+        warningTypesWithSegments[dataPoint.type].push(segmentName);
+      }
+    });
+  });
+  
+  // Create individual warning div for each unique warning type
+  Object.entries(warningTypesWithSegments).forEach(([warningType, segments]) => {
     const warningDiv = document.createElement("div");
     warningDiv.className = "individual-warning-item";
-    warningDiv.textContent = `⚠️ ${segmentName}`;
     
-    // Add click handler to focus on the segment
+    const emoji = MARKER_EMOJIS[warningType] || "⚠️";
+    const hebrewText = WARNING_TRANSLATIONS[warningType] || warningType;
+    warningDiv.textContent = `${emoji} ${hebrewText}`;
+    
+    // Add click handler to focus on the first segment with this warning type
     warningDiv.addEventListener("click", function() {
-      focusOnSegment(segmentName);
+      if (segments.length > 0) {
+        focusOnSegment(segments[0]);
+      }
     });
     
     individualWarningsContainer.appendChild(warningDiv);
@@ -3864,6 +3883,17 @@ const MARKER_EMOJIS = {
   slope: "⛰️",
   narrow: "⛍",
   severe: "‼️",
+};
+
+// Hebrew translations for warning types
+const WARNING_TRANSLATIONS = {
+  payment: "תשלום",
+  gate: "שער",
+  mud: "בוץ",
+  warning: "אזהרה",
+  slope: "מדרון",
+  narrow: "צר",
+  severe: "חמור",
 };
 
 // Maki icon mapping for marker types
