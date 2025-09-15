@@ -1,6 +1,6 @@
 import { getDistance, distanceToLineSegmentPixels } from './utils/distance.js';
 import { smoothElevations } from './utils/elevations.js';
-import { encodeRoute, decodeRoute } from './utils/route-encoding.js';
+import { encodeRoute, decodeRoute, extractMiddlePoints } from './utils/route-encoding.js';
 import { executeDownloadGPX, generateGPX } from './utils/gpx-generator.js';
 import { trackRoutePointEvent, trackUndoRedoEvent, trackSearchEvent, trackSocialShare, 
           trackSegmentFocus, trackWarningClick, trackRouteOperation,trackPageLoad,trackTutorial
@@ -1612,26 +1612,49 @@ function loadRouteFromUrl() {
   const routeParam = getRouteParameter();
 
   if (routeParam && segmentsData) {
-    const decodedSegments = decodeRoute(routeParam, segmentsData);
-    if (decodedSegments.length > 0) {
-      // Track analytics event for route loading from URL
-      trackRouteOperation("load_from_url", [], decodedSegments, {
-        route_param_length: routeParam.length
-      });
+    const segmentIds = decodeRoute(routeParam, segmentsData);
+    if (segmentIds.length > 0) {
+      // Extract middle points from segments
+      const middlePoints = extractMiddlePoints(segmentIds, segmentsData);
+      
+      if (middlePoints.length > 0) {
+        // Track analytics event for route loading from URL
+        trackRouteOperation("load_from_url", [], middlePoints.map(p => p.segmentName), {
+          route_param_length: routeParam.length,
+          points_count: middlePoints.length
+        });
 
-      selectedSegments = decodedSegments;
-      // Wait a bit for map to be fully loaded before updating styles
-      setTimeout(() => {
-        updateSegmentStyles();
-        updateRouteListAndDescription();
-        focusMapOnRoute();
-        hideRouteLoadingIndicator();
-      }, 500);
+        // Clear existing route and add middle points as route points
+        routePoints = middlePoints;
+        selectedSegments = [];
+        
+        // Use RouteManager to recalculate route with all points at once
+        if (routeManager) {
+          try {
+            const updatedSegments = routeManager.recalculateRoute(middlePoints);
+            selectedSegments = updatedSegments;
+          } catch (error) {
+            console.error("Error recalculating route:", error);
+          }
+        }
+        
+        // Create markers for all points
+        middlePoints.forEach((point, index) => {
+          createPointMarker(point, index);
+        });
 
-      return true;
-    } else {
-      hideRouteLoadingIndicator();
+        // Wait a bit for map to be fully loaded before updating styles
+        setTimeout(() => {
+          updateSegmentStyles();
+          updateRouteListAndDescription();
+          focusMapOnRoute();
+          hideRouteLoadingIndicator();
+        }, 500);
+
+        return true;
+      }
     }
+    hideRouteLoadingIndicator();
   }
   return false;
 }
@@ -2413,19 +2436,28 @@ function loadRouteFromEncoding(routeEncoding) {
   }
 
   try {
-    const decodedSegments = decodeRoute(routeEncoding, segmentsData);
-    if (decodedSegments.length === 0) {
-      console.warn("No segments decoded from route encoding");
+    const segmentIds = decodeRoute(routeEncoding, segmentsData);
+    if (segmentIds.length === 0) {
+      console.warn("No segment IDs decoded from route encoding");
       return false;
     }
 
-    // Save current state for undo if there are currently selected segments
-    if (selectedSegments.length > 0) {
+    // Extract middle points from segments
+    const middlePoints = extractMiddlePoints(segmentIds, segmentsData);
+    
+    if (middlePoints.length === 0) {
+      console.warn("No middle points found for segments");
+      return false;
+    }
+
+    // Save current state for undo if there are currently selected segments or points
+    if (selectedSegments.length > 0 || routePoints.length > 0) {
       saveState();
     }
 
-    // Clear existing selections
+    // Clear existing selections and route points
     selectedSegments = [];
+    routePoints = [];
 
     // Reset all segment styles to original
     routePolylines.forEach((polylineData) => {
@@ -2444,8 +2476,23 @@ function loadRouteFromEncoding(routeEncoding) {
       }
     });
 
-    // Add decoded segments to selection
-    selectedSegments = [...decodedSegments];
+    // Add middle points as route points
+    routePoints = middlePoints;
+    
+    // Use RouteManager to recalculate route with all points at once
+    if (routeManager) {
+      try {
+        const updatedSegments = routeManager.recalculateRoute(middlePoints);
+        selectedSegments = updatedSegments;
+      } catch (error) {
+        console.error("Error recalculating route:", error);
+      }
+    }
+    
+    // Create markers for all points
+    middlePoints.forEach((point, index) => {
+      createPointMarker(point, index);
+    });
 
     // Update visual styles and UI
     updateSegmentStyles();
