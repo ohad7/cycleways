@@ -2259,12 +2259,12 @@ function updateRouteWarning() {
 }
 
 // Function to toggle individual warnings display
-function toggleIndividualWarnings(warningSegments) {
+async function toggleIndividualWarnings(warningSegments) {
   const individualWarningsContainer = document.getElementById("individual-warnings-container");
   
   if (individualWarningsContainer.style.display === "none" || individualWarningsContainer.style.display === "") {
     // Show individual warnings
-    createIndividualWarnings(warningSegments);
+    await createIndividualWarnings(warningSegments);
     individualWarningsContainer.style.display = "block";
   } else {
     // Hide individual warnings
@@ -2274,7 +2274,7 @@ function toggleIndividualWarnings(warningSegments) {
 }
 
 // Function to create individual warning divs
-function createIndividualWarnings(warningSegments) {
+async function createIndividualWarnings(warningSegments) {
   const individualWarningsContainer = document.getElementById("individual-warnings-container");
   
   // Clear existing warnings
@@ -2284,10 +2284,10 @@ function createIndividualWarnings(warningSegments) {
   const uniqueSegments = [...new Set(warningSegments)];
   
   // Create one div for each segment with warnings
-  uniqueSegments.forEach((segmentName) => {
+  for (const segmentName of uniqueSegments) {
     const dataPoints = getSegmentDataPoints(segmentName);
     
-    if (dataPoints.length === 0) return; // Skip segments without data points
+    if (dataPoints.length === 0) continue; // Skip segments without data points
     
     const warningDiv = document.createElement("div");
     warningDiv.className = "individual-warning-item";
@@ -2295,11 +2295,7 @@ function createIndividualWarnings(warningSegments) {
     // Collect all warning types for this segment
     const segmentWarningTypes = [...new Set(dataPoints.map(dp => dp.type))];
     
-    // Create emoji and text elements safely
-    const emojisSpan = document.createElement("span");
-    emojisSpan.className = "warning-emojis";
-    emojisSpan.textContent = segmentWarningTypes.map(type => MARKER_EMOJIS[type] || "⚠️").join(" ");
-    
+    // Create text element (will be centered)
     const textSpan = document.createElement("span");
     textSpan.className = "warning-text";
     
@@ -2312,8 +2308,37 @@ function createIndividualWarnings(warningSegments) {
       textSpan.textContent = "אזהרות";
     }
     
-    warningDiv.appendChild(emojisSpan);
+    // Create SVG icon container (will be positioned on the right)
+    const iconContainer = document.createElement("span");
+    iconContainer.className = "warning-icons";
+    
+    // Load and add SVG icons for each warning type
+    for (const type of segmentWarningTypes) {
+      const svgPath = WARNING_SVG_ICONS[type];
+      if (svgPath) {
+        const svgContent = await loadSVGIcon(svgPath);
+        if (svgContent) {
+          const iconWrapper = document.createElement("span");
+          iconWrapper.className = "warning-icon";
+          iconWrapper.innerHTML = svgContent;
+          iconContainer.appendChild(iconWrapper);
+        }
+      }
+    }
+    
+    // If no SVG icons could be loaded, fallback to default caution icon
+    if (iconContainer.children.length === 0) {
+      const fallbackSvg = await loadSVGIcon("icons/caution.svg");
+      if (fallbackSvg) {
+        const iconWrapper = document.createElement("span");
+        iconWrapper.className = "warning-icon";
+        iconWrapper.innerHTML = fallbackSvg;
+        iconContainer.appendChild(iconWrapper);
+      }
+    }
+    
     warningDiv.appendChild(textSpan);
+    warningDiv.appendChild(iconContainer);
     
     // Determine background color based on warning types with priority system
     let backgroundColor;
@@ -2335,7 +2360,7 @@ function createIndividualWarnings(warningSegments) {
     });
     
     individualWarningsContainer.appendChild(warningDiv);
-  });
+  }
 }
 
 // Function to focus on a specific segment
@@ -3912,6 +3937,29 @@ const MARKER_EMOJIS = {
   narrow: "⛍",
   severe: "‼️",
 };
+
+// SVG icon mapping for warning types (same as used on map)
+const WARNING_SVG_ICONS = {
+  payment: "icons/bank.svg",
+  gate: "icons/barrier.svg",
+  mud: "icons/wetland.svg",
+  warning: "icons/caution.svg",
+  slope: "icons/mountain.svg",
+  narrow: "icons/car.svg",
+  severe: "icons/roadblock.svg",
+};
+
+// Function to load SVG content for warnings
+async function loadSVGIcon(svgPath) {
+  try {
+    const response = await fetch(svgPath);
+    const svgText = await response.text();
+    return svgText;
+  } catch (error) {
+    console.warn(`Failed to load SVG icon ${svgPath}:`, error);
+    return null;
+  }
+}
 
 // Hebrew translations for warning types
 const WARNING_TRANSLATIONS = {
