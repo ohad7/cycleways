@@ -24,7 +24,7 @@ body {
   font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
   padding: 0;
-  background-image: url('./attached_assets/background_grass.png');
+  background-image: url('/attached_assets/background_grass.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -87,7 +87,7 @@ body::before {
   }
 
   background: #F8F8F8;
-  background-image: url('./attached_assets/background.png');
+  background-image: url('/attached_assets/background.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -202,7 +202,7 @@ body::before {
     left: 0;
     right: 0;
     background: #F8F8F8;
-    background-image: url('./attached_assets/background.png');
+    background-image: url('/attached_assets/background.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

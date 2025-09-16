@@ -2,9 +2,13 @@ import { getDistance, distanceToLineSegmentPixels } from './utils/distance.js';
 import { smoothElevations } from './utils/elevations.js';
 import { encodeRoute, decodeRoute, extractMiddlePoints } from './utils/route-encoding.js';
 import { executeDownloadGPX, generateGPX } from './utils/gpx-generator.js';
-import { trackRoutePointEvent, trackUndoRedoEvent, trackSearchEvent, trackSocialShare, 
+import { trackRoutePointEvent, trackUndoRedoEvent, trackSearchEvent, trackSocialShare,
           trackSegmentFocus, trackWarningClick, trackRouteOperation,trackPageLoad,trackTutorial
 } from './utils/analytics.js';
+import RouteManager from '../route-manager.js';
+import SpatialIndex from '../spatial-index.js';
+
+let isInitialized = false;
 
 let map;
 let selectedSegments = [];
@@ -1690,7 +1694,7 @@ function hideRouteLoadingIndicator() {
 
 async function loadSegmentsData() {
   try {
-    const response = await fetch("./segments.json");
+    const response = await fetch("/segments.json");
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -1706,7 +1710,7 @@ async function loadKMLFile() {
   try {
     await loadSegmentsData();
     showRouteLoadingIndicator();
-    const response = await fetch("./bike_roads_v15.geojson");
+    const response = await fetch("/bike_roads_v15.geojson");
     const geoJsonData = await response.json();
     await parseGeoJSON(geoJsonData);
 
@@ -2328,7 +2332,7 @@ async function createIndividualWarnings(warningSegments) {
     
     // If no SVG icons could be loaded, fallback to default caution icon
     if (iconContainer.children.length === 0) {
-      const fallbackSvg = await loadSVGIcon("icons/caution.svg");
+      const fallbackSvg = await loadSVGIcon("/icons/caution.svg");
       if (fallbackSvg) {
         const iconWrapper = document.createElement("span");
         iconWrapper.className = "warning-icon";
@@ -3477,7 +3481,7 @@ function showExamplePoint() {
   };
 
   // Wait for SVG to load before showing anything
-  fetch("icons/arrow.svg")
+  fetch("/icons/arrow.svg")
     .then((response) => response.text())
     .then((svgContent) => {
       arrow.innerHTML = svgContent;
@@ -3734,7 +3738,12 @@ function scrollToSection(sectionId) {
 }
 
 // Event listeners
-document.addEventListener("DOMContentLoaded", function () {
+function initializeApp() {
+  if (isInitialized) {
+    return;
+  }
+  isInitialized = true;
+
   // Track page load
   trackPageLoad(!!getRouteParameter(), navigator.userAgent);
 
@@ -3748,39 +3757,55 @@ document.addEventListener("DOMContentLoaded", function () {
   window.addEventListener("hashchange", handleHashNavigation);
 
   // Download GPX functionality
-  document.getElementById("download-gpx").addEventListener("click", () => {
-    showDownloadModal();
-  });
+  const downloadBtn = document.getElementById("download-gpx");
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", () => {
+      showDownloadModal();
+    });
+  }
 
   // Search functionality
-  document
-    .getElementById("search-btn")
-    .addEventListener("click", searchLocation);
-  document
-    .getElementById("location-search")
-    .addEventListener("keypress", function (e) {
+  const searchBtn = document.getElementById("search-btn");
+  if (searchBtn) {
+    searchBtn.addEventListener("click", searchLocation);
+  }
+
+  const locationSearchInput = document.getElementById("location-search");
+  if (locationSearchInput) {
+    locationSearchInput.addEventListener("keypress", (e) => {
       if (e.key === "Enter") {
         searchLocation();
       }
     });
+  }
 
   // Undo/redo buttons
-  document.getElementById("undo-btn").addEventListener("click", undo);
-  document.getElementById("redo-btn").addEventListener("click", redo);
+  const undoBtn = document.getElementById("undo-btn");
+  if (undoBtn) {
+    undoBtn.addEventListener("click", undo);
+  }
+
+  const redoBtn = document.getElementById("redo-btn");
+  if (redoBtn) {
+    redoBtn.addEventListener("click", redo);
+  }
 
   // Reset button
-  document.getElementById("reset-btn").addEventListener("click", () => {
-    if (selectedSegments.length > 0) {
-      showResetModal();
-    } else {
-      resetRoute();
-    }
-  });
+  const resetBtn = document.getElementById("reset-btn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      if (selectedSegments.length > 0) {
+        showResetModal();
+      } else {
+        resetRoute();
+      }
+    });
+  }
 
   // Warning box click handlers
-  document
-    .getElementById("route-warning")
-    .addEventListener("click", function () {
+  const routeWarning = document.getElementById("route-warning");
+  if (routeWarning) {
+    routeWarning.addEventListener("click", () => {
       // Track analytics event for warning interaction
       trackWarningClick("route_continuity", routePoints, selectedSegments);
 
@@ -3797,10 +3822,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
     });
+  }
 
-  document
-    .getElementById("segment-warning")
-    .addEventListener("click", function () {
+  const segmentWarning = document.getElementById("segment-warning");
+  if (segmentWarning) {
+    segmentWarning.addEventListener("click", () => {
       // Track analytics event for segment warning interaction
       trackWarningClick("segment_warning", routePoints, selectedSegments, {
         warning_segments_count: hasSegmentWarnings().count
@@ -3815,6 +3841,7 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleIndividualWarnings(warningsResult.warningSegments);
       }
     });
+  }
 
   // Help tutorial button
   const helpBtn = document.getElementById("help-tutorial-btn");
@@ -3907,7 +3934,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Keyboard shortcuts for undo/redo and export
-  document.addEventListener("keydown", function (e) {
+  document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
       e.preventDefault();
       undo();
@@ -3919,7 +3946,7 @@ document.addEventListener("DOMContentLoaded", function () {
       showExportModal();
     }
   });
-});
+}
 
 
 
@@ -3940,13 +3967,13 @@ const MARKER_EMOJIS = {
 
 // SVG icon mapping for warning types (same as used on map)
 const WARNING_SVG_ICONS = {
-  payment: "icons/bank.svg",
-  gate: "icons/barrier.svg",
-  mud: "icons/wetland.svg",
-  warning: "icons/caution.svg",
-  slope: "icons/mountain.svg",
-  narrow: "icons/car.svg",
-  severe: "icons/roadblock.svg",
+  payment: "/icons/bank.svg",
+  gate: "/icons/barrier.svg",
+  mud: "/icons/wetland.svg",
+  warning: "/icons/caution.svg",
+  slope: "/icons/mountain.svg",
+  narrow: "/icons/car.svg",
+  severe: "/icons/roadblock.svg",
 };
 
 // Function to load SVG content for warnings
@@ -3998,13 +4025,13 @@ const MARKER_ICONS = {
 // Load custom SVG icons as map images
 async function loadCustomIcons() {
   const iconMappings = {
-    "bank-11": "icons/bank.svg",
-    "barrier-11": "icons/barrier.svg",
-    "wetland-11": "icons/wetland.svg",
-    "caution-11": "icons/caution.svg",
-    "mountain-11": "icons/mountain.svg",
-    "car-11": "icons/car.svg",
-    "roadblock-11": "icons/roadblock.svg",
+    "bank-11": "/icons/bank.svg",
+    "barrier-11": "/icons/barrier.svg",
+    "wetland-11": "/icons/wetland.svg",
+    "caution-11": "/icons/caution.svg",
+    "mountain-11": "/icons/mountain.svg",
+    "car-11": "/icons/car.svg",
+    "roadblock-11": "/icons/roadblock.svg",
   };
 
   for (const [iconName, svgFile] of Object.entries(iconMappings)) {
@@ -4212,4 +4239,44 @@ function getSegmentDataPoints(segmentName) {
   }));
 }
 
-// RouteManager is imported from route-manager.js
+function exposeGlobals() {
+  if (typeof globalThis === "undefined") {
+    return;
+  }
+
+  Object.defineProperty(globalThis, "selectedSegments", {
+    get: () => selectedSegments,
+    set: (value) => {
+      selectedSegments = value;
+    },
+    configurable: true,
+  });
+
+  Object.defineProperty(globalThis, "routePolylines", {
+    get: () => routePolylines,
+    set: (value) => {
+      routePolylines = value;
+    },
+    configurable: true,
+  });
+
+  Object.defineProperty(globalThis, "map", {
+    get: () => map,
+    set: (value) => {
+      map = value;
+    },
+    configurable: true,
+  });
+
+  globalThis.updateSegmentStyles = updateSegmentStyles;
+  globalThis.updateRouteListAndDescription = updateRouteListAndDescription;
+  globalThis.focusOnSegment = focusOnSegment;
+  globalThis.scrollToSection = scrollToSection;
+  globalThis.returnToStartingPosition = returnToStartingPosition;
+  globalThis.decodeRoute = decodeRoute;
+}
+
+exposeGlobals();
+
+export { initializeApp, focusOnSegment, scrollToSection, returnToStartingPosition };
+
