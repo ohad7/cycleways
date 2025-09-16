@@ -1438,6 +1438,8 @@ class RouteManager {
   }
 }
 
+export default RouteManager;
+
 // Export for use in other files
 if (typeof module !== "undefined" && module.exports) {
   module.exports = RouteManager;

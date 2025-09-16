@@ -138,3 +138,9 @@ class SpatialIndex {
     this.segments.clear();
   }
 }
+
+export default SpatialIndex;
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = SpatialIndex;
+}
