@@ -2618,87 +2618,91 @@ function loadRouteFromEncoding(routeEncoding) {
 
 // Function to order coordinates based on route connectivity
 function getOrderedCoordinates() {
-  if (selectedSegments.length === 0) {
+  const orientedSegments = orientSegmentsWithContinuity();
+  if (orientedSegments.length === 0) {
     return [];
   }
 
   let orderedCoords = [];
 
-  for (let i = 0; i < selectedSegments.length; i++) {
-    const segmentName = selectedSegments[i];
-    const polyline = routePolylines.find((p) => p.segmentName === segmentName);
-
-    if (!polyline) {
-      continue;
-    }
-
-    let coords = [...polyline.coordinates];
-
-    // For the first segment, check if we need to orient it correctly
-    if (i === 0) {
-      // If there's a second segment, orient the first segment to connect better
-      if (selectedSegments.length > 1) {
-        const nextSegmentName = selectedSegments[1];
-        const nextPolyline = routePolylines.find(
-          (p) => p.segmentName === nextSegmentName,
-        );
-
-        if (nextPolyline) {
-          const nextCoords = nextPolyline.coordinates;
-          const firstStart = coords[0];
-          const firstEnd = coords[coords.length - 1];
-          const nextStart = nextCoords[0];
-          const nextEnd = nextCoords[nextCoords.length - 1];
-
-          // Calculate all possible connection distances
-          const distances = [
-            getDistance(firstEnd, nextStart), // first end to next start
-            getDistance(firstEnd, nextEnd), // first end to next end
-            getDistance(firstStart, nextStart), // first start to next start
-            getDistance(firstStart, nextEnd), // first start to next end
-          ];
-
-          const minDistance = Math.min(...distances);
-          const minIndex = distances.indexOf(minDistance);
-
-          // If the best connection is from first start, reverse the first segment
-          if (minIndex === 2 || minIndex === 3) {
-            coords.reverse();
-          }
-        }
-      }
+  orientedSegments.forEach((segment, index) => {
+    const coords = segment.coords;
+    if (index === 0) {
       orderedCoords = [...coords];
-    } else {
-      // For subsequent segments, determine which end connects better
-      const lastPoint = orderedCoords[orderedCoords.length - 1];
-      const segmentStart = coords[0];
-      const segmentEnd = coords[coords.length - 1];
-
-      const distanceToStart = getDistance(lastPoint, segmentStart);
-      const distanceToEnd = getDistance(lastPoint, segmentEnd);
-
-      // If the end is closer, reverse the coordinates
-      if (distanceToEnd < distanceToStart) {
-        coords.reverse();
-      }
-
-      // Add coordinates with better duplication handling
-      const firstPoint = coords[0];
-      const connectionDistance = getDistance(lastPoint, firstPoint);
-
-      // If segments are well connected (within 50 meters), skip first point to avoid duplication
-      // If segments are far apart (gap > 50 meters), include all points to show the gap
-      if (connectionDistance <= 50) {
-        orderedCoords.push(...coords.slice(1));
-      } else {
-        orderedCoords.push(...coords);
-      }
+      return;
     }
-  }
+
+    const lastPoint = orderedCoords[orderedCoords.length - 1];
+    const connectionDistance = getDistance(lastPoint, coords[0]);
+
+    if (connectionDistance <= 50) {
+      orderedCoords.push(...coords.slice(1));
+    } else {
+      orderedCoords.push(...coords);
+    }
+  });
 
   return orderedCoords;
 }
 
+// Order segments while preserving connectivity and orientation for downstream previews/instructions
+function orientSegmentsWithContinuity() {
+  if (selectedSegments.length === 0) {
+    return [];
+  }
+
+  const oriented = [];
+
+  for (let i = 0; i < selectedSegments.length; i++) {
+    const segmentName = selectedSegments[i];
+    const polyline = routePolylines.find((p) => p.segmentName === segmentName);
+    if (!polyline) continue;
+
+    let coords = [...polyline.coordinates];
+
+    if (i === 0 && selectedSegments.length > 1) {
+      const nextSegmentName = selectedSegments[1];
+      const nextPolyline = routePolylines.find(
+        (p) => p.segmentName === nextSegmentName,
+      );
+
+      if (nextPolyline) {
+        const nextCoords = nextPolyline.coordinates;
+        const firstStart = coords[0];
+        const firstEnd = coords[coords.length - 1];
+        const nextStart = nextCoords[0];
+        const nextEnd = nextCoords[nextCoords.length - 1];
+
+        const distances = [
+          getDistance(firstEnd, nextStart),
+          getDistance(firstEnd, nextEnd),
+          getDistance(firstStart, nextStart),
+          getDistance(firstStart, nextEnd),
+        ];
+
+        const minDistance = Math.min(...distances);
+        const minIndex = distances.indexOf(minDistance);
+
+        if (minIndex === 2 || minIndex === 3) {
+          coords.reverse();
+        }
+      }
+    } else if (i > 0) {
+      const previous = oriented[oriented.length - 1];
+      const lastPoint = previous.coords[previous.coords.length - 1];
+      const distanceToStart = getDistance(lastPoint, coords[0]);
+      const distanceToEnd = getDistance(lastPoint, coords[coords.length - 1]);
+
+      if (distanceToEnd < distanceToStart) {
+        coords.reverse();
+      }
+    }
+
+    oriented.push({ segmentName, coords });
+  }
+
+  return oriented;
+}
 // Function to generate elevation profile
 // TODO: Move generate elevation profile to use data in elevations.js
 function generateElevationProfile() {
@@ -3538,6 +3542,13 @@ function returnToStartingPosition() {
 }
 
 function showDownloadModal() {
+  const orderedCoords = getOrderedCoordinates();
+  const orientedSegments = orientSegmentsWithContinuity();
+  const routeStats = buildRouteStats(orientedSegments);
+  const narrativeSteps = buildNarrativeDirections(orientedSegments);
+  const routeWarnings = collectRouteWarnings(orientedSegments);
+  const segmentDistanceIndex = buildSegmentDistanceIndex(orientedSegments);
+
   // Create modal elements
   const modal = document.createElement("div");
   modal.className = "download-modal";
@@ -3548,14 +3559,40 @@ function showDownloadModal() {
         <button class="download-modal-close">&times;</button>
       </div>
       <div class="download-modal-body">
-        <h4>קטעי מסלול נבחרים</h4>
-        <div id="route-segments-list"></div>
+        <div class="download-modal-grid">
+          <div class="download-pane preview-pane">
+            <div class="download-section-title">תצוגה מקדימה</div>
+            <div id="download-preview-map" class="download-map-preview"></div>
+            <div id="download-elevation-preview" class="download-elevation-preview"></div>
+          </div>
+          <div class="download-pane details-pane">
+            <div class="download-stats-row">
+              <div class="stat-chip">📏 ${(routeStats.distanceKm).toFixed(1)} ק"מ</div>
+              <div class="stat-chip">⛰️ +${routeStats.elevationGain} מ' / -${routeStats.elevationLoss} מ'</div>
+              <div class="stat-chip">⏱️ ~${routeStats.estimatedMinutes} דק'</div>
+            </div>
 
-        <h4>מידע חשוב על המסלול</h4>
-        <div id="route-data-summary"></div>
+            ${
+              routeWarnings.length > 0
+                ? `<div class="download-warning-chips">
+                    ${routeWarnings
+                      .map(
+                        (warning) =>
+                          `<button class="warning-chip" data-warning-id="${warning.id}">${warning.icon} ${warning.text}</button>`,
+                      )
+                      .join("")}
+                    <button id="toggle-warning-visibility" class="warning-toggle-btn">הצג אזהרות על המפה</button>
+                  </div>`
+                : ""
+            }
 
-        <h4>תיאור המסלול</h4>
-        <div id="download-route-description"></div>
+            <div class="download-narrative">
+              <div class="download-section-title">הוראות מסלול</div>
+              <div id="download-narrative-list" class="narrative-list"></div>
+            </div>
+
+          </div>
+        </div>
 
         <div class="download-modal-actions">
           <button id="download-gpx-final" class="download-confirm-btn">📥 הורדת GPX</button>
@@ -3567,117 +3604,121 @@ function showDownloadModal() {
 
   document.body.appendChild(modal);
 
-  // Populate route segments list
-  const routeSegmentsList = modal.querySelector("#route-segments-list");
-  if (selectedSegments.length === 0) {
-    routeSegmentsList.innerHTML =
-      '<p style="color: #666; font-style: italic;">אין קטעים נבחרים</p>';
-  } else {
-    let segmentsHtml = '<div class="modal-route-list">';
-    selectedSegments.forEach((segmentName, index) => {
-      segmentsHtml += `
-        <div class="modal-segment-item">
-          <span><strong>${index + 1}.</strong> ${segmentName}</span>
-      `;
-
-      // Add data points for each segment
-      const dataPoints = getSegmentDataPoints(segmentName);
-      if (dataPoints.length > 0) {
-        dataPoints.forEach((dataPoint) => {
-          segmentsHtml += `
-            <div style="color: #ff9800; font-size: 12px; margin-top: 5px; margin-right: 20px;">
-              ${dataPoint.emoji} ${dataPoint.information}
-            </div>
-          `;
-        });
-      }
-
-      // Add legacy warnings as fallback
-      const segmentInfo = segmentsData[segmentName];
-      if (segmentInfo && dataPoints.length === 0) {
-        if (segmentInfo.warning) {
-          segmentsHtml += `
-            <div style="color: #f44336; font-size: 12px; margin-top: 5px; margin-right: 20px;">
-              ⚠️ ${segmentInfo.warning}
-            </div>
-          `;
-        }
-      }
-
-      segmentsHtml += "</div>";
-    });
-    segmentsHtml += "</div>";
-    routeSegmentsList.innerHTML = segmentsHtml;
-  }
-
-  // Populate route data summary
-  const routeDataSummary = modal.querySelector("#route-data-summary");
-  const allDataPoints = [];
-  selectedSegments.forEach((segmentName) => {
-    const dataPoints = getSegmentDataPoints(segmentName);
-    dataPoints.forEach((dataPoint) => {
-      if (
-        !allDataPoints.some(
-          (existing) =>
-            existing.type === dataPoint.type &&
-            existing.information === dataPoint.information,
-        )
-      ) {
-        allDataPoints.push(dataPoint);
-      }
-    });
-  });
-
-  if (allDataPoints.length > 0) {
-    let dataSummaryHtml =
-      '<div style="background: #f5f5f5; padding: 10px; border-radius: 8px; margin-bottom: 15px;">';
-    allDataPoints.forEach((dataPoint) => {
-      dataSummaryHtml += `<div style="margin: 5px 0;">${dataPoint.emoji} ${dataPoint.information}</div>`;
-    });
-    dataSummaryHtml += "</div>";
-    routeDataSummary.innerHTML = dataSummaryHtml;
-  } else {
-    routeDataSummary.innerHTML =
-      '<p style="color: #666; font-style: italic;">אין מידע מיוחד למסלול זה</p>';
-  }
-
-  // Populate route description
-  const downloadRouteDescription = modal.querySelector(
-    "#download-route-description",
-  );
-  downloadRouteDescription.innerHTML =
-    document.getElementById("route-description").innerHTML;
-
   // Add event listeners
   const closeBtn = modal.querySelector(".download-modal-close");
   const downloadBtn = modal.querySelector("#download-gpx-final");
   const shareBtn = modal.querySelector("#share-route-modal");
+  const narrativeList = modal.querySelector("#download-narrative-list");
+  const previewMapContainer = modal.querySelector("#download-preview-map");
+  const elevationContainer = modal.querySelector(
+    "#download-elevation-preview",
+  );
+  const warningToggleBtn = modal.querySelector("#toggle-warning-visibility");
+  const warningButtons = modal.querySelectorAll(".warning-chip");
+
+  renderNarrativeList(narrativeList, narrativeSteps);
+  const previewMapResult = renderDownloadPreviewMap(
+    previewMapContainer,
+    orderedCoords,
+  );
+  const previewCtx = {
+    map: previewMapResult?.map || null,
+    focusMarker: null,
+    warningMarkers: [],
+  };
+  const teardownPreviewMap = previewMapResult?.teardown;
+  renderMiniElevationPreview(
+    elevationContainer,
+    orderedCoords,
+    (coord, meta = {}) => {
+      highlightCoordinateOnPreviewMap(previewCtx, coord, meta);
+      if (typeof meta.distance === "number" && !Number.isNaN(meta.distance)) {
+        scrollNarrativeToDistance(
+          narrativeList,
+          segmentDistanceIndex,
+          meta.distance,
+        );
+      }
+    },
+  );
+
+  const cleanupModal = () => {
+    if (teardownPreviewMap) {
+      teardownPreviewMap();
+    }
+    toggleWarningMarkersOnPreviewMap(previewCtx, [], false);
+    document.body.removeChild(modal);
+    document.removeEventListener("keydown", handleEscape);
+  };
 
   closeBtn.addEventListener("click", () => {
-    document.body.removeChild(modal);
+    cleanupModal();
   });
 
   downloadBtn.addEventListener("click", () => {
     downloadGPX();
-    document.body.removeChild(modal);
+    cleanupModal();
   });
 
   shareBtn.addEventListener("click", () => {
     shareRoute();
-    document.body.removeChild(modal);
+    cleanupModal();
   });
 
   modal.addEventListener("click", (e) => {
     if (e.target === modal) {
-      document.body.removeChild(modal);
+      cleanupModal();
     }
+  });
+
+  if (warningToggleBtn) {
+    let warningsVisible = routeWarnings.length > 0;
+
+    const applyInitialWarnings = () => {
+      if (!routeWarnings.length) return;
+      toggleWarningMarkersOnPreviewMap(previewCtx, routeWarnings, true);
+      warningToggleBtn.textContent = "הסתר אזהרות מהמפה";
+    };
+
+    if (previewCtx.map?.loaded()) {
+      applyInitialWarnings();
+    } else if (previewCtx.map) {
+      previewCtx.map.on("load", applyInitialWarnings);
+    }
+
+    warningToggleBtn.addEventListener("click", () => {
+      warningsVisible = !warningsVisible;
+      warningToggleBtn.textContent = warningsVisible
+        ? "הסתר אזהרות מהמפה"
+        : "הצג אזהרות על המפה";
+      toggleWarningMarkersOnPreviewMap(previewCtx, routeWarnings, warningsVisible);
+    });
+  }
+
+  warningButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const warningId = button.getAttribute("data-warning-id");
+      const warning = routeWarnings.find((w) => w.id === warningId);
+      if (warning && warning.location) {
+        highlightCoordinateOnPreviewMap(previewCtx, warning.location);
+      }
+    });
+  });
+
+  narrativeList?.querySelectorAll(".narrative-item")?.forEach((item) => {
+    item.addEventListener("click", () => {
+      const stepIndex = parseInt(item.getAttribute("data-target-index"), 10);
+      const segment = orientedSegments[stepIndex];
+      if (segment && segment.coords.length > 0) {
+        highlightCoordinateOnPreviewMap(previewCtx, segment.coords[0]);
+      }
+    });
   });
 
   // Add escape key listener
   const handleEscape = (e) => {
     if (e.key === "Escape") {
-      document.body.removeChild(modal);
-      document.removeEventListener("keydown", handleEscape);
+      cleanupModal();
     }
   };
   document.addEventListener("keydown", handleEscape);
@@ -3710,6 +3751,491 @@ function downloadGPX() {
     : "bike_route.gpx";
 
   executeDownloadGPX(gpx, filename);
+}
+
+function renderNarrativeList(container, steps) {
+  if (!container) return;
+
+  if (!steps || steps.length === 0) {
+    container.innerHTML =
+      '<div class="download-placeholder">אין הוראות למסלול זה</div>';
+    return;
+  }
+
+  container.innerHTML = steps
+    .map(
+      (step, index) => `
+        <button class="narrative-item" data-target-index="${index}">
+          <div class="narrative-step">${index + 1}</div>
+          <div class="narrative-body">
+            <div class="narrative-title">${step.title}</div>
+            ${
+              step.detail
+                ? `<div class="narrative-detail">${step.detail}</div>`
+                : ""
+            }
+          </div>
+        </button>
+      `,
+    )
+    .join("");
+}
+
+function renderDownloadPreviewMap(container, coords) {
+  if (!container) return null;
+  if (!coords || coords.length < 2) {
+    container.innerHTML =
+      '<div class="download-placeholder">אין תצוגת מפה זמינה</div>';
+    return null;
+  }
+
+  const bounds = coords.reduce((b, coord) => {
+    return b.extend([coord.lng, coord.lat]);
+  }, new mapboxgl.LngLatBounds([coords[0].lng, coords[0].lat], [coords[0].lng, coords[0].lat]));
+
+  const previewMap = new mapboxgl.Map({
+    container,
+    style: "mapbox://styles/mapbox/outdoors-v12",
+    interactive: false,
+    attributionControl: false,
+    preserveDrawingBuffer: true,
+    center: bounds.getCenter(),
+    zoom: 12,
+  });
+
+  previewMap.on("load", () => {
+    previewMap.addSource("preview-route", {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        geometry: {
+          type: "LineString",
+          coordinates: coords.map((coord) => [coord.lng, coord.lat]),
+        },
+      },
+    });
+
+    previewMap.addLayer({
+      id: "preview-route-line",
+      type: "line",
+      source: "preview-route",
+      paint: {
+        "line-color": COLORS.SEGMENT_SELECTED,
+        "line-width": 4,
+        "line-opacity": 0.9,
+      },
+    });
+
+    previewMap.addSource("preview-route-points", {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: { type: "start" },
+            geometry: { type: "Point", coordinates: [coords[0].lng, coords[0].lat] },
+          },
+          {
+            type: "Feature",
+            properties: { type: "end" },
+            geometry: {
+              type: "Point",
+              coordinates: [coords[coords.length - 1].lng, coords[coords.length - 1].lat],
+            },
+          },
+        ],
+      },
+    });
+
+    previewMap.addLayer({
+      id: "preview-route-points-layer",
+      type: "circle",
+      source: "preview-route-points",
+      paint: {
+        "circle-radius": 6,
+        "circle-color": [
+          "match",
+          ["get", "type"],
+          "start",
+          "#5F9EA0",
+          "end",
+          "#DC3545",
+          "#4682B4",
+        ],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 1.5,
+      },
+    });
+
+    previewMap.fitBounds(bounds, { padding: 20, maxZoom: 15, duration: 0 });
+  });
+
+  return {
+    map: previewMap,
+    teardown: () => previewMap.remove(),
+  };
+}
+
+function renderMiniElevationPreview(container, coords, onPointSelected) {
+  if (!container) return;
+  if (!coords || coords.length < 2) {
+    container.innerHTML =
+      '<div class="download-placeholder">אין נתוני גובה למסלול זה</div>';
+    return;
+  }
+
+  const width = 320;
+  const height = 90;
+
+  const routeWithElevation = coords.map((coord) => {
+    const elevation =
+      coord.elevation !== undefined
+        ? coord.elevation
+        : 200 + Math.sin(coord.lat * 10) * 80 + Math.cos(coord.lng * 8) * 40;
+    return { ...coord, elevation };
+  });
+
+  const smoothed = smoothElevations(routeWithElevation, 80);
+  let minElevation = Math.min(...smoothed.map((c) => c.elevation));
+  let maxElevation = Math.max(...smoothed.map((c) => c.elevation));
+
+  if (minElevation === maxElevation) {
+    minElevation -= 5;
+    maxElevation += 5;
+  }
+
+  const distances = [];
+  smoothed.forEach((coord, index) => {
+    if (index === 0) {
+      distances.push(0);
+    } else {
+      distances.push(
+        distances[index - 1] + getDistance(smoothed[index - 1], coord),
+      );
+    }
+  });
+  const totalDistance = distances[distances.length - 1] || 1;
+
+  const path = smoothed
+    .map((coord, index) => {
+      const x = (distances[index] / totalDistance) * width;
+      const normalizedElevation =
+        (coord.elevation - minElevation) / (maxElevation - minElevation);
+      const y = height - normalizedElevation * (height * 0.8) - height * 0.1;
+      return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+
+  const svgId = `elevation-sparkline-${Date.now()}`;
+  container.innerHTML = `
+    <div class="mini-elevation-header">פרופיל גובה</div>
+    <svg id="${svgId}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="elevation-sparkline">
+      <defs>
+        <linearGradient id="previewElevationGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#5F9EA0" stop-opacity="0.7" />
+          <stop offset="100%" stop-color="#5F9EA0" stop-opacity="0.15" />
+        </linearGradient>
+      </defs>
+      <path d="${path}" fill="none" stroke="#5F9EA0" stroke-width="3" />
+      <path d="${path} L ${width} ${height} L 0 ${height} Z" fill="url(#previewElevationGradient)" opacity="0.6"/>
+    </svg>
+    <div class="mini-elevation-footer">
+      <span>0 ק"מ</span>
+      <span>${(totalDistance / 1000).toFixed(1)} ק"מ</span>
+    </div>
+  `;
+
+  const svg = container.querySelector(`#${svgId}`);
+  if (svg && typeof onPointSelected === "function") {
+    const hoverMarker = document.createElement("div");
+    hoverMarker.className = "sparkline-hover-marker";
+    let markerPlaced = false;
+
+    const handleMove = (event) => {
+      const rect = svg.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const ratio = Math.max(0, Math.min(1, x / rect.width));
+      const targetDistance = ratio * totalDistance;
+      const coord = getCoordinateAtDistance(smoothed, targetDistance);
+      if (coord) {
+        onPointSelected(coord, { silent: true, distance: targetDistance });
+        const y =
+          height -
+          ((coord.elevation - minElevation) / (maxElevation - minElevation)) *
+            (height * 0.8) -
+          height * 0.1;
+        hoverMarker.style.left = `${(ratio * 100).toFixed(2)}%`;
+        hoverMarker.style.top = `${(y / height) * 100}%`;
+        if (!markerPlaced) {
+          markerPlaced = true;
+          svg.parentElement.appendChild(hoverMarker);
+        }
+      }
+    };
+
+    const handleLeave = () => {
+      if (hoverMarker.parentElement) {
+        hoverMarker.parentElement.removeChild(hoverMarker);
+      }
+      markerPlaced = false;
+    };
+
+    svg.addEventListener("mousemove", handleMove);
+    svg.addEventListener("click", handleMove);
+    svg.addEventListener("mouseleave", handleLeave);
+  }
+}
+
+function buildRouteStats(orientedSegments) {
+  let totalDistance = 0;
+  let elevationGain = 0;
+  let elevationLoss = 0;
+
+  orientedSegments.forEach((segment) => {
+    const coords = segment.coords;
+    let segmentDistance = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+      segmentDistance += getDistance(coords[i], coords[i + 1]);
+    }
+    totalDistance += segmentDistance;
+
+    const metrics = segmentMetrics[segment.segmentName];
+    if (metrics) {
+      const isReversed =
+        getDistance(coords[0], metrics.endPoint) <
+        getDistance(coords[0], metrics.startPoint);
+      const elevationMetrics = isReversed ? metrics.reverse : metrics.forward;
+      elevationGain += elevationMetrics.elevationGain || 0;
+      elevationLoss += elevationMetrics.elevationLoss || 0;
+    }
+  });
+
+  const distanceKm = totalDistance / 1000;
+  const estimatedMinutes = Math.max(5, Math.round((distanceKm / 15) * 60));
+
+  return {
+    distanceMeters: totalDistance,
+    distanceKm,
+    elevationGain: Math.round(elevationGain),
+    elevationLoss: Math.round(elevationLoss),
+    estimatedMinutes,
+  };
+}
+
+function buildNarrativeDirections(orientedSegments) {
+  const steps = [];
+  if (!orientedSegments || orientedSegments.length === 0) return steps;
+
+  let previousBearing = null;
+
+  orientedSegments.forEach((segment, index) => {
+    const coords = segment.coords;
+    const segmentName = segment.segmentName;
+    if (!coords || coords.length === 0) return;
+
+    const distance = coords.reduce((acc, coord, i) => {
+      if (i === 0) return 0;
+      return acc + getDistance(coords[i - 1], coord);
+    }, 0);
+
+    const bearing =
+      coords.length > 1 ? getBearing(coords[0], coords[coords.length - 1]) : 0;
+    const turnPhrase =
+      index === 0 ? "התחילו ב-" : `${describeTurn(previousBearing, bearing)} אל`;
+
+    const segmentInfo = segmentsData[segmentName] || {};
+    const dataPoints = getSegmentDataPoints(segmentName);
+    const warnings = [];
+
+    if (segmentInfo.warning) {
+      warnings.push(`⚠️ ${segmentInfo.warning}`);
+    }
+
+    if (dataPoints.length > 0) {
+      dataPoints.forEach((dp) => warnings.push(`${dp.emoji} ${dp.information}`));
+    }
+
+    const detailParts = [
+      `≈${(distance / 1000).toFixed(1)} ק"מ`,
+      warnings[0],
+    ].filter(Boolean);
+
+    steps.push({
+      title: `${turnPhrase} ${segmentName}`,
+      detail: detailParts.join(" • "),
+    });
+
+    previousBearing = bearing;
+  });
+
+  return steps;
+}
+
+function buildSegmentDistanceIndex(orientedSegments) {
+  const index = [];
+  let cumulative = 0;
+
+  orientedSegments.forEach((segment, segmentIndex) => {
+    const coords = segment.coords || [];
+    let segmentDistance = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+      segmentDistance += getDistance(coords[i], coords[i + 1]);
+    }
+
+    index.push({
+      segmentIndex,
+      start: cumulative,
+      end: cumulative + segmentDistance,
+    });
+
+    cumulative += segmentDistance;
+  });
+
+  return index;
+}
+
+function scrollNarrativeToDistance(listEl, segmentIndex, distanceMeters) {
+  if (!listEl || !segmentIndex || segmentIndex.length === 0) return;
+
+  const match = segmentIndex.find(
+    (entry) => distanceMeters >= entry.start && distanceMeters <= entry.end,
+  );
+  if (!match) return;
+
+  const target = listEl.querySelector(
+    `.narrative-item[data-target-index="${match.segmentIndex}"]`,
+  );
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("narrative-active");
+    setTimeout(() => target.classList.remove("narrative-active"), 900);
+  }
+}
+
+function getCoordinateAtDistance(coords, targetDistance) {
+  if (!coords || coords.length === 0) return null;
+
+  let traversed = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const segmentDistance = getDistance(coords[i - 1], coords[i]);
+    if (traversed + segmentDistance >= targetDistance) {
+      const ratio = (targetDistance - traversed) / segmentDistance;
+      const lat = coords[i - 1].lat + (coords[i].lat - coords[i - 1].lat) * ratio;
+      const lng = coords[i - 1].lng + (coords[i].lng - coords[i - 1].lng) * ratio;
+      return { lat, lng };
+    }
+    traversed += segmentDistance;
+  }
+  return coords[coords.length - 1];
+}
+
+function highlightCoordinateOnPreviewMap(previewCtx, coord, options = {}) {
+  if (!previewCtx?.map || !coord) return;
+
+  if (!previewCtx.focusMarker) {
+    const el = document.createElement("div");
+    el.className = "download-preview-marker";
+    previewCtx.focusMarker = new mapboxgl.Marker(el);
+  }
+
+  previewCtx.focusMarker.setLngLat([coord.lng, coord.lat]).addTo(previewCtx.map);
+  const currentZoom = previewCtx.map.getZoom();
+  previewCtx.map.easeTo({
+    center: [coord.lng, coord.lat],
+    zoom: currentZoom,
+    duration: options.silent ? 0 : 400,
+  });
+}
+
+function getBearing(start, end) {
+  const startLat = (start.lat * Math.PI) / 180;
+  const startLng = (start.lng * Math.PI) / 180;
+  const endLat = (end.lat * Math.PI) / 180;
+  const endLng = (end.lng * Math.PI) / 180;
+
+  const y = Math.sin(endLng - startLng) * Math.cos(endLat);
+  const x =
+    Math.cos(startLat) * Math.sin(endLat) -
+    Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLng - startLng);
+
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+function describeTurn(previousBearing, nextBearing) {
+  if (previousBearing === null || previousBearing === undefined) {
+    return "התחילו";
+  }
+
+  const diff =
+    ((nextBearing - previousBearing + 540) % 360) - 180; // Normalize to [-180, 180]
+  const absDiff = Math.abs(diff);
+
+  if (absDiff < 20) return "המשיכו";
+  if (absDiff < 50) return diff > 0 ? "נטו ימינה" : "נטו שמאלה";
+  if (absDiff < 135) return diff > 0 ? "פנו ימינה" : "פנו שמאלה";
+  return diff > 0 ? "פנו חזק ימינה" : "פנו חזק שמאלה";
+}
+
+function collectRouteWarnings(orientedSegments) {
+  const warnings = [];
+
+  orientedSegments.forEach((segment) => {
+    const segmentInfo = segmentsData[segment.segmentName];
+    const dataPoints = getSegmentDataPoints(segment.segmentName);
+
+    if (segmentInfo?.warning) {
+      warnings.push({
+        id: `${segment.segmentName}-warn`,
+        text: segmentInfo.warning,
+        icon: "⚠️",
+        location: segment.coords?.[0],
+      });
+    }
+
+    dataPoints.forEach((dp) => {
+      warnings.push({
+        id: `${segment.segmentName}-${dp.information}`,
+        text: dp.information,
+        icon: dp.emoji,
+        location: dp.location || segment.coords?.[0],
+      });
+    });
+  });
+
+  // Deduplicate by text
+  const uniqueWarnings = [];
+  warnings.forEach((warning) => {
+    if (!uniqueWarnings.some((w) => w.text === warning.text)) {
+      uniqueWarnings.push(warning);
+    }
+  });
+
+  return uniqueWarnings;
+}
+
+function toggleWarningMarkersOnPreviewMap(previewCtx, warnings, show) {
+  if (!previewCtx?.map) return;
+  if (!previewCtx.warningMarkers) {
+    previewCtx.warningMarkers = [];
+  }
+
+  // Clear existing markers
+  previewCtx.warningMarkers.forEach((marker) => marker.remove());
+  previewCtx.warningMarkers = [];
+
+  if (!show) return;
+
+  warnings.forEach((warning) => {
+    if (!warning.location) return;
+    const el = document.createElement("div");
+    el.className = "download-warning-marker";
+    el.textContent = warning.icon || "⚠️";
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat([warning.location.lng, warning.location.lat])
+      .addTo(previewCtx.map);
+    previewCtx.warningMarkers.push(marker);
+  });
 }
 
 // Hash navigation functionality
@@ -4209,6 +4735,10 @@ function getSegmentDataPoints(segmentName) {
     type: dataPoint.type,
     information: dataPoint.information || "",
     emoji: MARKER_EMOJIS[dataPoint.type] || "📍",
+    location:
+      dataPoint.location && Array.isArray(dataPoint.location)
+        ? { lat: dataPoint.location[0], lng: dataPoint.location[1] }
+        : null,
   }));
 }
 

@@ -907,7 +907,7 @@ html {
 }
 
 .download-modal-content {
-  max-width: 600px;
+  max-width: 960px;
 }
 
 .share-modal-header,
@@ -961,6 +961,9 @@ html {
 .download-modal-body,
 .segment-action-modal-body {
   padding: 20px 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .route-summary {
@@ -1073,9 +1076,13 @@ html {
 .download-modal-actions {
   display: flex;
   gap: 15px;
-  margin-top: 25px;
-  padding-top: 20px;
+  margin-top: 0;
+  padding-top: 14px;
   border-top: 1px solid #eee;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  z-index: 2;
 }
 
 .download-final-btn,
@@ -1118,6 +1125,240 @@ html {
   background: #5F9EA0;
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(70, 130, 180, 0.4);
+}
+
+.download-modal-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .download-modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.download-pane {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  height: 100%;
+}
+
+.download-section-title {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.download-map-preview {
+  height: 240px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #eef2f5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.download-elevation-preview {
+  margin-top: 12px;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 10px 12px;
+  position: relative;
+}
+
+.download-placeholder {
+  background: #f5f5f5;
+  border: 1px dashed #d0d7de;
+  color: #666;
+  text-align: center;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.download-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.stat-chip {
+  background: #e9f2f8;
+  color: #1f4f73;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid #d2e5f2;
+  box-shadow: 0 2px 6px rgba(70, 130, 180, 0.12);
+}
+
+.download-warning-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.warning-chip {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #7d5a00;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.warning-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(125, 90, 0, 0.12);
+}
+
+.warning-toggle-btn {
+  border: 1px solid #d2e5f2;
+  background: #e9f2f8;
+  color: #1f4f73;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(70, 130, 180, 0.12);
+}
+
+.narrative-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.narrative-item {
+  display: flex;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  text-align: right;
+  cursor: pointer;
+}
+
+.narrative-item.narrative-active {
+  outline: 2px solid #5F9EA0;
+  box-shadow: 0 6px 16px rgba(70, 130, 180, 0.25);
+}
+
+.narrative-step {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #4682B4;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  box-shadow: 0 4px 8px rgba(70, 130, 180, 0.3);
+  flex-shrink: 0;
+}
+
+.narrative-body {
+  flex: 1;
+}
+
+.narrative-title {
+  margin: 0;
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.narrative-detail {
+  color: #556;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.mini-elevation-header {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.elevation-sparkline {
+  width: 100%;
+  height: 90px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.mini-elevation-footer {
+  display: flex;
+  justify-content: space-between;
+  color: #6c757d;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.download-preview-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4682B4;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.sparkline-hover-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #5F9EA0;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.download-warning-marker {
+  width: 18px;
+  height: 18px;
+  background: #fff3cd;
+  border: 1px solid #e0b200;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.route-description-panel,
+.elevation-and-description {
+  display: none !important;
 }
 
 .share-final-btn:disabled {
