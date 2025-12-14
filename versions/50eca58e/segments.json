@@ -1,0 +1,1757 @@
+{
+  "אגמון החולה": {
+    "id": 1,
+    "deprecated": true
+  },
+  "אגמון החולה מבואה": {
+    "id": 2,
+    "middle": {
+      "longitude": 35.591289,
+      "latitude": 33.110136,
+      "elevation": 0.0
+    }
+  },
+  "בית עלמין שאר ישוב": {
+    "id": 3,
+    "middle": {
+      "longitude": 35.65531,
+      "latitude": 33.232717,
+      "elevation": 0.0
+    }
+  },
+  "בניאס חניון האקליפטוס": {
+    "id": 4,
+    "middle": {
+      "longitude": 35.633807,
+      "latitude": 33.201437,
+      "elevation": 0.0
+    }
+  },
+  "בניאס צפון": {
+    "id": 5,
+    "middle": {
+      "longitude": 35.642743,
+      "latitude": 33.21059,
+      "elevation": 0.0
+    }
+  },
+  "בניאס שביל חום תעלה מזרחי": {
+    "id": 6,
+    "todo": "check winter condition, pick a better name",
+    "middle": {
+      "longitude": 35.636468,
+      "latitude": 33.198751,
+      "elevation": 0.0
+    }
+  },
+  "בניאס שדה נחמיה": {
+    "id": 7,
+    "middle": {
+      "longitude": 35.622888,
+      "latitude": 33.192845,
+      "elevation": 0.0
+    }
+  },
+  "בריכות דגים צומת גומא": {
+    "id": 8,
+    "middle": {
+      "longitude": 35.579718,
+      "latitude": 33.171609,
+      "elevation": 0.0
+    }
+  },
+  "גבעת האם": {
+    "id": 9,
+    "todo": "check winter conditions",
+    "middle": {
+      "longitude": 35.65587,
+      "latitude": 33.208668,
+      "elevation": 0.0
+    }
+  },
+  "גן הצפון": {
+    "id": 10,
+    "middle": {
+      "longitude": 35.615304,
+      "latitude": 33.222154,
+      "elevation": 0.0
+    }
+  },
+  "גשר חולתה": {
+    "id": 12,
+    "middle": {
+      "longitude": 35.622754,
+      "latitude": 33.066221,
+      "elevation": 0.0
+    }
+  },
+  "גשר חיל ההנדסה ירדן": {
+    "id": 13,
+    "middle": {
+      "longitude": 35.627768,
+      "latitude": 33.124176,
+      "elevation": 0.0
+    }
+  },
+  "גשר עינות ירדן": {
+    "id": 14,
+    "middle": {
+      "longitude": 35.615959,
+      "latitude": 33.17508,
+      "elevation": 0.0
+    }
+  },
+  "דרך המנפטה": {
+    "id": 15,
+    "data": [
+      {
+        "type": "payment",
+        "location": [
+          33.11124,
+          35.586584
+        ],
+        "information": "הכניסה מדרום דרך אגמון החולה בלבד ובתשלום, כניסה מצפון פתוחה"
+      }
+    ],
+    "middle": {
+      "longitude": 35.583561,
+      "latitude": 33.128286,
+      "elevation": 0.0
+    }
+  },
+  "דרך הפטרולים גבעת האם": {
+    "id": 16,
+    "middle": {
+      "longitude": 35.662074,
+      "latitude": 33.215174,
+      "elevation": 0.0
+    }
+  },
+  "דרך הפטרולים יער מורדות הגולן": {
+    "id": 17,
+    "middle": {
+      "longitude": 35.666337,
+      "latitude": 33.149026,
+      "elevation": 0.0
+    }
+  },
+  "דרך הפטרולים כפר סאלד": {
+    "id": 18,
+    "middle": {
+      "longitude": 35.663212,
+      "latitude": 33.198904,
+      "elevation": 0.0
+    }
+  },
+  "דרך הפטרולים נבי יהודה": {
+    "id": 19,
+    "middle": {
+      "longitude": 35.660264,
+      "latitude": 33.228406,
+      "elevation": 0.0
+    }
+  },
+  "דרך הפטרולים קיבוץ שמיר": {
+    "id": 20,
+    "data": [
+      {
+        "type": "warning",
+        "location": [
+          33.176292,
+          35.664505
+        ],
+        "information": "עובר בדרך רומית על בסיס אבני בזלת שחוקות, רכיבה קשה במקצת"
+      }
+    ],
+    "middle": {
+      "longitude": 35.664027,
+      "latitude": 33.180054,
+      "elevation": 0.0
+    }
+  },
+  "דרך נוף הרי נפתלי דרום": {
+    "id": 21,
+    "middle": {
+      "longitude": 35.556085,
+      "latitude": 33.165143,
+      "elevation": 0.0
+    }
+  },
+  "דרך נוף הרי נפתלי צפון": {
+    "id": 22,
+    "middle": {
+      "longitude": 35.558874,
+      "latitude": 33.192585,
+      "elevation": 0.0
+    }
+  },
+  "דרך נוף הרי נפתלי קרית שמונה": {
+    "id": 23,
+    "middle": {
+      "longitude": 35.563604,
+      "latitude": 33.219936,
+      "elevation": 0.0
+    }
+  },
+  "דרך עפר חצבאני קיאקים כפר בלום": {
+    "id": 24,
+    "middle": {
+      "longitude": 35.611727,
+      "latitude": 33.194577,
+      "elevation": 0.0
+    }
+  },
+  "האי בנחל הבניאס": {
+    "id": 25,
+    "middle": {
+      "longitude": 35.618542,
+      "latitude": 33.188328,
+      "elevation": 0.0
+    }
+  },
+  "הגשר על הבניאס": {
+    "id": 26,
+    "middle": {
+      "longitude": 35.653082,
+      "latitude": 33.227017,
+      "elevation": 0.0
+    }
+  },
+  "הירדן ההיסטורי": {
+    "id": 27,
+    "data": [
+      {
+        "type": "mud",
+        "location": [
+          33.163004,
+          35.595931
+        ],
+        "information": "קטע בוצי אחרי גשם"
+      }
+    ],
+    "middle": {
+      "longitude": 35.585935,
+      "latitude": 33.14505,
+      "elevation": 0.0
+    }
+  },
+  "הר עלמון": {
+    "id": 28
+  },
+  "חניון האקליפטוס": {
+    "id": 29,
+    "middle": {
+      "longitude": 35.629427,
+      "latitude": 33.192708,
+      "elevation": 0.0
+    }
+  },
+  "טיילת עמי": {
+    "id": 31,
+    "middle": {
+      "longitude": 35.615796,
+      "latitude": 33.179607,
+      "elevation": 0.0
+    }
+  },
+  "ירדן הררי": {
+    "id": 33,
+    "middle": {
+      "longitude": 35.621504,
+      "latitude": 32.966597,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מזרח גונן": {
+    "id": 34,
+    "middle": {
+      "longitude": 35.627935,
+      "latitude": 33.120652,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מזרח גשר בנות יעקב": {
+    "id": 35,
+    "middle": {
+      "longitude": 35.630452,
+      "latitude": 33.025797,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מזרח גשר הפקק": {
+    "id": 36,
+    "middle": {
+      "longitude": 35.627053,
+      "latitude": 33.052649,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מזרח חולתה": {
+    "id": 37,
+    "middle": {
+      "longitude": 35.624581,
+      "latitude": 33.091853,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מזרח שדות כפר בלום": {
+    "id": 38,
+    "data": [
+      {
+        "type": "mud",
+        "location": [
+          33.174453,
+          35.616292
+        ],
+        "information": "קטע בוצי אחרי גשם"
+      }
+    ],
+    "middle": {
+      "longitude": 35.613661,
+      "latitude": 33.161245,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מזרחי שביל צפוני": {
+    "id": 39,
+    "middle": {
+      "longitude": 35.629887,
+      "latitude": 33.137788,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב אגמון החולה": {
+    "id": 40,
+    "middle": {
+      "longitude": 35.62417,
+      "latitude": 33.101172,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב אינדי פארק": {
+    "id": 41,
+    "middle": {
+      "longitude": 35.622313,
+      "latitude": 33.085524,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב גשר הפקק": {
+    "id": 42,
+    "middle": {
+      "longitude": 35.627411,
+      "latitude": 33.046656,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב חולתה": {
+    "id": 43,
+    "middle": {
+      "longitude": 35.623952,
+      "latitude": 33.059551,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב כפר בלום": {
+    "id": 44,
+    "data": [
+      {
+        "type": "gate",
+        "location": [
+          33.169383,
+          35.610442
+        ],
+        "information": "שער יציאה מכפר בלום לעיתים סגור, אפשר לעקוף בהליכה ליד הנחל"
+      }
+    ],
+    "middle": {
+      "longitude": 35.613579,
+      "latitude": 33.17176,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב שדות כפר בלום": {
+    "id": 45,
+    "middle": {
+      "longitude": 35.627381,
+      "latitude": 33.149659,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערבי הרמלין": {
+    "id": 46,
+    "middle": {
+      "longitude": 35.625813,
+      "latitude": 33.113827,
+      "elevation": 0.0
+    }
+  },
+  "כביש 886": {
+    "id": 47,
+    "middle": {
+      "longitude": 35.549171,
+      "latitude": 33.112812,
+      "elevation": 0.0
+    }
+  },
+  "כביש 90 צומת אגמון החולה": {
+    "id": 48,
+    "middle": {
+      "longitude": 35.571604,
+      "latitude": 33.115904,
+      "elevation": 0.0
+    }
+  },
+  "כביש 90 שמורת החולה": {
+    "id": 49,
+    "middle": {
+      "longitude": 35.574548,
+      "latitude": 33.095079,
+      "elevation": 0.0
+    }
+  },
+  "כביש 918 בניאס": {
+    "id": 50,
+    "middle": {
+      "longitude": 35.647019,
+      "latitude": 33.211989,
+      "elevation": 0.0
+    }
+  },
+  "כביש 918 גשר הפקק": {
+    "id": 51,
+    "middle": {
+      "longitude": 35.635821,
+      "latitude": 33.07619,
+      "elevation": 0.0
+    }
+  },
+  "כביש 918 כפר סאלד": {
+    "id": 52,
+    "middle": {
+      "longitude": 35.651288,
+      "latitude": 33.199889,
+      "elevation": 0.0
+    }
+  },
+  "כביש 959 גונן": {
+    "id": 53,
+    "middle": {
+      "longitude": 35.648862,
+      "latitude": 33.11973,
+      "elevation": 0.0
+    }
+  },
+  "כביש 959 קלע אלון": {
+    "id": 54,
+    "data": [
+      {
+        "type": "narrow",
+        "location": [
+          33.125123,
+          35.688132
+        ],
+        "information": "שוליים צרים"
+      },
+      {
+        "type": "narrow",
+        "location": [
+          33.124975,
+          35.679452
+        ],
+        "information": "שוליים צרים"
+      },
+      {
+        "type": "narrow",
+        "location": [
+          33.128895,
+          35.671083
+        ],
+        "information": "שוליים צרים"
+      },
+      {
+        "type": "narrow",
+        "location": [
+          33.136579,
+          35.668136
+        ],
+        "information": "שוליים צרים"
+      }
+    ],
+    "middle": {
+      "longitude": 35.668037,
+      "latitude": 33.135946,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9888 בית הלל": {
+    "id": 55,
+    "data": [
+      {
+        "type": "narrow",
+        "location": [
+          33.216343,
+          35.607994
+        ],
+        "information": "שוליים צרים בחלק מהכביש"
+      }
+    ],
+    "middle": {
+      "longitude": 35.608114,
+      "latitude": 33.216527,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9888 נחל עיון": {
+    "id": 56,
+    "middle": {
+      "longitude": 35.606998,
+      "latitude": 33.222345,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9888 סדנה": {
+    "id": 57,
+    "middle": {
+      "longitude": 35.609447,
+      "latitude": 33.218692,
+      "elevation": 0.0
+    }
+  },
+  "כביש 99 בריכות דגים": {
+    "id": 58,
+    "middle": {
+      "longitude": 35.656805,
+      "latitude": 33.237915,
+      "elevation": 0.0
+    }
+  },
+  "כביש 99 לשניר": {
+    "id": 59,
+    "data": [
+      {
+        "type": "narrow",
+        "location": [
+          33.250799,
+          35.67583
+        ],
+        "information": "שוליים צרים לאורך 400מ בעלייה לשניר"
+      }
+    ],
+    "middle": {
+      "longitude": 35.677251,
+      "latitude": 33.251201,
+      "elevation": 0.0
+    }
+  },
+  "כביש 99 קיבוץ דן": {
+    "id": 60,
+    "middle": {
+      "longitude": 35.650312,
+      "latitude": 33.234384,
+      "elevation": 0.0
+    }
+  },
+  "כביש 99 שאר ישוב": {
+    "id": 61,
+    "middle": {
+      "longitude": 35.645607,
+      "latitude": 33.230937,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9974": {
+    "id": 62,
+    "middle": {
+      "longitude": 35.603237,
+      "latitude": 33.229582,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9977 כפר גלעדי": {
+    "id": 63,
+    "middle": {
+      "longitude": 35.576827,
+      "latitude": 33.237155,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9977 מרגליות": {
+    "id": 64,
+    "middle": {
+      "longitude": 35.559972,
+      "latitude": 33.229357,
+      "elevation": 0.0
+    }
+  },
+  "כביש גישה אגמון החולה": {
+    "id": 65,
+    "data": [
+      {
+        "type": "payment",
+        "location": [
+          33.110496,
+          35.585433
+        ],
+        "information": "כניסה בתשלום מכיוון הכביש"
+      }
+    ],
+    "middle": {
+      "longitude": 35.579326,
+      "latitude": 33.11083,
+      "elevation": 0.0
+    }
+  },
+  "כביש גישה נבי יהודה": {
+    "id": 66,
+    "middle": {
+      "longitude": 35.655635,
+      "latitude": 33.217473,
+      "elevation": 0.0
+    }
+  },
+  "כביש גישה ציר הנפט": {
+    "id": 67,
+    "middle": {
+      "longitude": 35.68937,
+      "latitude": 33.243052,
+      "elevation": 0.0
+    }
+  },
+  "כביש גישה תל דן": {
+    "id": 68,
+    "middle": {
+      "longitude": 35.656421,
+      "latitude": 33.244385,
+      "elevation": 0.0
+    }
+  },
+  "כביש המערכת קרית שמונה": {
+    "id": 69,
+    "middle": {
+      "longitude": 35.566241,
+      "latitude": 33.221201,
+      "elevation": 0.0
+    }
+  },
+  "כביש מערכת בית הלל": {
+    "id": 70,
+    "split": [
+      139,
+      141
+    ]
+  },
+  "מפגש נחל קליל בניאס": {
+    "id": 71,
+    "middle": {
+      "longitude": 35.64239,
+      "latitude": 33.20485,
+      "elevation": 0.0
+    }
+  },
+  "נבי יהודה נקודת הצינור": {
+    "id": 72,
+    "middle": {
+      "longitude": 35.647187,
+      "latitude": 33.216827,
+      "elevation": 0.0
+    }
+  },
+  "נחל דישון": {
+    "id": 73
+  },
+  "נחל טל מטעי דפנה": {
+    "id": 74,
+    "middle": {
+      "longitude": 35.632003,
+      "latitude": 33.228703,
+      "elevation": 0.0
+    }
+  },
+  "נחל מחניים": {
+    "id": 75,
+    "middle": {
+      "longitude": 35.598056,
+      "latitude": 33.016154,
+      "elevation": 0.0
+    }
+  },
+  "נחל מכברם": {
+    "id": 76,
+    "middle": {
+      "longitude": 35.585034,
+      "latitude": 33.039787,
+      "elevation": 0.0
+    }
+  },
+  "נחל עיון בית הלל": {
+    "id": 77,
+    "middle": {
+      "longitude": 35.603388,
+      "latitude": 33.218765,
+      "elevation": 0.0
+    }
+  },
+  "נחל עיון מחנה גיבור": {
+    "id": 78,
+    "middle": {
+      "longitude": 35.596136,
+      "latitude": 33.212797,
+      "elevation": 0.0
+    }
+  },
+  "נחל עיון קאמפינג גרין": {
+    "id": 79,
+    "middle": {
+      "longitude": 35.610351,
+      "latitude": 33.221034,
+      "elevation": 0.0
+    }
+  },
+  "נחל קליל": {
+    "id": 80,
+    "todo": "check winter conditions",
+    "middle": {
+      "longitude": 35.64662,
+      "latitude": 33.206192,
+      "elevation": 0.0
+    }
+  },
+  "סובב דפנה": {
+    "id": 81,
+    "middle": {
+      "longitude": 35.642397,
+      "latitude": 33.235113,
+      "elevation": 0.0
+    }
+  },
+  "סובב שמורת החולה": {
+    "id": 82,
+    "deprecated": true,
+    "todo": "check if relevant"
+  },
+  "עוקף שמורת החולה אינדי פארק": {
+    "id": 83,
+    "middle": {
+      "longitude": 35.604824,
+      "latitude": 33.081867,
+      "elevation": 0.0
+    }
+  },
+  "עין תאו": {
+    "id": 84,
+    "data": [
+      {
+        "type": "warning",
+        "location": [
+          33.145886,
+          35.578115
+        ],
+        "information": "מעבר על גשר צבאי"
+      },
+      {
+        "type": "warning",
+        "location": [
+          33.133896,
+          35.56918
+        ],
+        "information": "הכניסה אסורה למעיין"
+      }
+    ],
+    "middle": {
+      "longitude": 35.569653,
+      "latitude": 33.134469,
+      "elevation": 0.0
+    }
+  },
+  "ציר הנפט": {
+    "id": 85,
+    "middle": {
+      "longitude": 35.691073,
+      "latitude": 33.182682,
+      "elevation": 0.0
+    }
+  },
+  "קרית שמונה פארק גאולוגי": {
+    "id": 86,
+    "middle": {
+      "longitude": 35.564783,
+      "latitude": 33.200145,
+      "elevation": 0.0
+    }
+  },
+  "שאר ישוב היקפי": {
+    "id": 87,
+    "middle": {
+      "longitude": 35.649951,
+      "latitude": 33.232115,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 918 דפנה": {
+    "id": 88,
+    "middle": {
+      "longitude": 35.6366,
+      "latitude": 33.22016,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 9779 בית הלל": {
+    "id": 89,
+    "middle": {
+      "longitude": 35.609187,
+      "latitude": 33.188348,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 9779 עמיר": {
+    "id": 90,
+    "middle": {
+      "longitude": 35.628861,
+      "latitude": 33.178518,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 9779 קרית שמונה": {
+    "id": 91,
+    "middle": {
+      "longitude": 35.589657,
+      "latitude": 33.196685,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 9779 שדה נחמיה": {
+    "id": 92,
+    "middle": {
+      "longitude": 35.620818,
+      "latitude": 33.181782,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 9779 תל אנפה": {
+    "id": 93,
+    "middle": {
+      "longitude": 35.6426,
+      "latitude": 33.173975,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 99 גן הצפון": {
+    "id": 94,
+    "middle": {
+      "longitude": 35.619573,
+      "latitude": 33.224027,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 99 דפנה": {
+    "id": 95,
+    "middle": {
+      "longitude": 35.638246,
+      "latitude": 33.226215,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 99 הגושרים": {
+    "id": 96,
+    "middle": {
+      "longitude": 35.62627,
+      "latitude": 33.224022,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 99 כפר יובל": {
+    "id": 97,
+    "middle": {
+      "longitude": 35.603942,
+      "latitude": 33.225232,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים 99 קיאקי הגושרים": {
+    "id": 98,
+    "middle": {
+      "longitude": 35.610518,
+      "latitude": 33.225302,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים וילג׳ שדה נחמיה": {
+    "id": 99,
+    "middle": {
+      "longitude": 35.618023,
+      "latitude": 33.187576,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים חצבאני בית הלל": {
+    "id": 100,
+    "middle": {
+      "longitude": 35.610858,
+      "latitude": 33.205512,
+      "elevation": 0.0
+    }
+  },
+  "שביל אופניים חצבאני חוף ישראלי": {
+    "id": 101,
+    "middle": {
+      "longitude": 35.610101,
+      "latitude": 33.2147,
+      "elevation": 0.0
+    }
+  },
+  "שביל גישה דג על הדן": {
+    "id": 102,
+    "middle": {
+      "longitude": 35.623501,
+      "latitude": 33.228749,
+      "elevation": 0.0
+    }
+  },
+  "שביל חום ליד חורבת עומרית": {
+    "id": 104,
+    "middle": {
+      "longitude": 35.675563,
+      "latitude": 33.222007,
+      "elevation": 0.0
+    }
+  },
+  "שביל חום תל נעמה": {
+    "id": 105,
+    "data": [
+      {
+        "type": "mud",
+        "location": [
+          33.188697,
+          35.594922
+        ],
+        "information": "קטע בוצי אחרי גשם"
+      }
+    ],
+    "middle": {
+      "longitude": 35.591205,
+      "latitude": 33.183912,
+      "elevation": 0.0
+    }
+  },
+  "שביל ישראל ושביל אדום הרי נפתלי": {
+    "id": 106,
+    "middle": {    
+      "longitude": 35.554144,
+      "latitude": 33.204210,
+      "elevation": 0.0
+    }
+  },
+  "שביל ישראל נחל דן": {
+    "id": 107,
+    "middle": {
+      "longitude": 35.634322,
+      "latitude": 33.245232,
+      "elevation": 0.0
+    }
+  },
+  "שביל עלמה": {
+    "id": 108
+  },
+  "שביל עפר בניאס שדות שאר ישוב": {
+    "id": 109,
+    "middle": {
+      "longitude": 35.653322,
+      "latitude": 33.221902,
+      "elevation": 0.0
+    }
+  },
+  "שביל עפר חצבאני מערב": {
+    "id": 110,
+    "data": [
+      {
+        "type": "warning",
+        "location": [
+          33.221109,
+          35.612262
+        ],
+        "information": "שביל יפהפה אבל לא מתוחזק ומלא צמחייה כרגע, רכיבה לא זורמת"
+      }
+    ],
+    "middle": {
+      "longitude": 35.611355,
+      "latitude": 33.216736,
+      "elevation": 0.0
+    }
+  },
+  "שביל שדות כפר סאלד": {
+    "id": 111,
+    "middle": {
+      "longitude": 35.646902,
+      "latitude": 33.179691,
+      "elevation": 0.0
+    }
+  },
+  "שביל תל קליל": {
+    "id": 112,
+    "middle": {
+      "longitude": 35.648602,
+      "latitude": 33.187747,
+      "elevation": 0.0
+    }
+  },
+  "שביל תעלת פלרי": {
+    "id": 113,
+    "middle": {
+      "longitude": 35.619105,
+      "latitude": 33.228578,
+      "elevation": 0.0
+    }
+  },
+  "שדה נחמיה שער כניסה": {
+    "id": 114,
+    "middle": {
+      "longitude": 35.619511,
+      "latitude": 33.186433,
+      "elevation": 0.0
+    }
+  },
+  "שדות בית הלל מזרח": {
+    "id": 115
+  },
+  "שדות אגמון ושמורת החולה": {
+    "id": 116,
+    "data": [
+      {
+        "type": "payment",
+        "location": [
+          33.110373,
+          35.58665
+        ],
+        "information": "הכניסה מצפון דרך אגמון החולה בלבד ובתשלום, כניסה מדרום פתוחה"
+      }
+    ],
+    "middle": {
+      "longitude": 35.588162,
+      "latitude": 33.101507,
+      "elevation": 0.0
+    }
+  },
+  "שדות בית הלל מערב": {
+    "id": 117,
+    "middle": {
+      "longitude": 35.585389,
+      "latitude": 33.205707,
+      "elevation": 0.0
+    }
+  },
+  "שדות גונן": {
+    "id": 118,
+    "middle": {
+      "longitude": 35.6393,
+      "latitude": 33.11673,
+      "elevation": 0.0
+    }
+  },
+  "שדות דישון": {
+    "id": 119,
+    "data": [
+      {
+        "type": "gate",
+        "location": [
+          33.084515,
+          35.515782
+        ],
+        "information": "שער להולכי רגל בדישון פתוח בדרך כלל."
+      }
+    ],
+    "middle": {
+      "longitude": 35.519523,
+      "latitude": 33.085471,
+      "elevation": 0.0
+    }
+  },
+  "שדות הגושרים": {
+    "id": 120,
+    "middle": {
+      "longitude": 35.618728,
+      "latitude": 33.206089,
+      "elevation": 0.0
+    }
+  },
+  "שדות כפר יובל": {
+    "id": 121,
+    "middle": {
+      "longitude": 35.596392,
+      "latitude": 33.234967,
+      "elevation": 0.0
+    }
+  },
+  "שדות נאות מרדכי מערב": {
+    "id": 122,
+    "middle": {
+      "longitude": 35.575344,
+      "latitude": 33.157672,
+      "elevation": 0.0
+    }
+  },
+  "שדות עמיר דרום": {
+    "id": 123,
+    "middle": {
+      "longitude": 35.633336,
+      "latitude": 33.165829,
+      "elevation": 0.0
+    }
+  },
+  "שדות עמיר ירדן": {
+    "id": 124,
+    "middle": {
+      "longitude": 35.627265,
+      "latitude": 33.158227,
+      "elevation": 0.0
+    }
+  },
+  "שדות עמיר מערב": {
+    "id": 125,
+    "data": [
+      {
+        "type": "gate",
+        "location": [
+          33.178317,
+          35.624796
+        ],
+        "information": "שער לקיבוץ עמיר, פתוח בשעות היום בלבד"
+      }
+    ],
+    "middle": {
+      "longitude": 35.625667,
+      "latitude": 33.173327,
+      "elevation": 0.0
+    }
+  },
+  "שדות קיבוץ שדה נחמיה": {
+    "id": 126,
+    "middle": {
+      "longitude": 35.635117,
+      "latitude": 33.183675,
+      "elevation": 0.0
+    }
+  },
+  "תל חצור שביל שחור": {
+    "id": 127
+  },
+  "יסוד המעלה המייסדים": {
+    "id": 128,
+    "middle": {
+      "longitude": 35.593912,
+      "latitude": 33.051808,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב גדות": {
+    "id": 129,
+    "middle": {
+      "longitude": 35.63055,
+      "latitude": 33.033066,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב גשר בנות יעקב": {
+    "id": 130,
+    "middle": {
+      "longitude": 35.628074,
+      "latitude": 33.017962,
+      "elevation": 0.0
+    }
+  },
+  "ירדן מערב יסוד המעלה": {
+    "id": 131,
+    "middle": {
+      "longitude": 35.621328,
+      "latitude": 33.069115,
+      "elevation": 0.0
+    }
+  },
+  "כביש 90 שדה אליעזר": {
+    "id": 132,
+    "middle": {
+      "longitude": 35.574376,
+      "latitude": 33.058808,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9115 כביש 90": {
+    "id": 133,
+    "middle": {
+      "longitude": 35.5821,
+      "latitude": 33.072525,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9115 עין הדייג": {
+    "id": 134,
+    "middle": {
+      "longitude": 35.596318,
+      "latitude": 33.066405,
+      "elevation": 0.0
+    }
+  },
+  "מטעים יסוד המעלה": {
+    "id": 135,
+    "middle": {
+      "longitude": 35.613256,
+      "latitude": 33.064052,
+      "elevation": 0.0
+    }
+  },
+  "נחל חצור מחניים": {
+    "id": 136,
+    "middle": {
+      "longitude": 35.577068,
+      "latitude": 33.001539,
+      "elevation": 0.0
+    }
+  },
+  "נחל מחניים דרום": {
+    "id": 137,
+    "middle": {
+      "longitude": 35.574759,
+      "latitude": 32.995052,
+      "elevation": 0.0
+    }
+  },
+  "נחל גרשום": {
+    "id": 138
+  },
+  "גדר המערכת בית הלל": {
+    "id": 139,
+    "middle": {
+      "longitude": 35.6005,
+      "latitude": 33.202278,
+      "elevation": 0.0
+    }
+  },
+  "קמפינג דג על הדן": {
+    "id": 140,
+    "middle": {
+      "longitude": 35.61364,
+      "latitude": 33.22355,
+      "elevation": 0.0
+    }
+  },
+  "רחוב הדולב בית הלל": {
+    "id": 141,
+    "middle": {
+      "longitude": 35.604413,
+      "latitude": 33.215302,
+      "elevation": 0.0
+    }
+  },
+  "גבעת שחומית": {
+    "id": 142,
+    "middle": {
+      "longitude": 35.578032,
+      "latitude": 33.200752,
+      "elevation": 0.0
+    }
+  },
+  "פארק הזהב קריית שמונה": {
+    "id": 143,
+    "middle": {
+      "longitude": 35.574351,
+      "latitude": 33.205576,
+      "elevation": 0.0
+    }
+  },
+  "קרית שמונה תעשייה דרומי": {
+    "id": 144,
+    "middle": {
+      "longitude": 35.578172,
+      "latitude": 33.199178,
+      "elevation": 0.0
+    }
+  },
+  "רחוב הוורדים קריית שמונה": {
+    "id": 145,
+    "middle": {
+      "longitude": 35.579957,
+      "latitude": 33.214749,
+      "elevation": 0.0
+    }
+  },
+  "רחוב הנרייטה סאלד": {
+    "id": 146,
+    "middle": {
+      "longitude": 35.573007,
+      "latitude": 33.199557,
+      "elevation": 0.0
+    }
+  },
+  "אגמון החולה גישה מזרח": {
+    "id": 147,
+    "data": [
+      {
+        "type": "warning",
+        "location": [
+          33.102601,
+          35.621814
+        ],
+        "information": "הנהלת האגמון מבקשת להמנע מכניסה לאגמון מכיוון זה ללא תשלום, הדרך נועדה לאפשר גישה לירדן ההסטורי בלבד"
+      }
+    ],
+    "middle": {
+      "longitude": 35.622933,
+      "latitude": 33.10319,
+      "elevation": 0.0
+    }
+  },
+  "אגמון החולה דרום": {
+    "id": 148,
+    "middle": {
+      "longitude": 35.60224,
+      "latitude": 33.097233,
+      "elevation": 0.0
+    }
+  },
+  "אגמון החולה צפון": {
+    "id": 149,
+    "middle": {
+      "longitude": 35.610657,
+      "latitude": 33.109787,
+      "elevation": 0.0
+    }
+  },
+  "בקעת יחמור": {
+    "id": 150,
+    "middle": {
+      "longitude": 35.547299,
+      "latitude": 33.059503,
+      "elevation": 0.0
+    }
+  },
+  "יער נבי ישע תחתון": {
+    "id": 151,
+    "middle": {
+      "longitude": 35.571225,
+      "latitude": 33.094337,
+      "elevation": 0.0
+    }
+  },
+  "כביש 90 שמורת נחל עינן מערב": {
+    "id": 152,
+    "data": [
+      {
+        "type": "gate",
+        "location": [
+          33.079706,
+          35.571761
+        ],
+        "information": "מעבר דרך מחנה צבאי"
+      }
+    ],
+    "middle": {
+      "longitude": 35.574863,
+      "latitude": 33.079426,
+      "elevation": 0.0
+    }
+  },
+  "נחל גרשום, דרך הצינור": {
+    "id": 153,
+    "data": [
+      {
+        "type": "severe",
+        "location": [
+          33.082536,
+          35.567673
+        ],
+        "information": "להרפתקנים בלבד, נוף מהמם, אבל עדיף להמנע"
+      },
+      {
+        "type": "gate",
+        "location": [
+          33.082131,
+          35.563219
+        ],
+        "information": "שער סגור עביר להולכי רגל"
+      },
+      {
+        "type": "slope",
+        "location": [
+          33.082352,
+          35.565911
+        ],
+        "information": "שיפוע תלול ודרדרת אבנים"
+      }
+    ],
+    "middle": {
+      "longitude": 35.557346,
+      "latitude": 33.08256,
+      "elevation": 0.0
+    }
+  },
+  "נחל דישון עליון": {
+    "id": 154,
+    "middle": {
+      "longitude": 35.482392,
+      "latitude": 33.076046,
+      "elevation": 0.0
+    }
+  },
+  "נחל דישון תחתון": {
+    "id": 155,
+    "middle": {
+      "longitude": 35.537214,
+      "latitude": 33.054059,
+      "elevation": 0.0
+    }
+  },
+  "נחל זמר": {
+    "id": 156,
+    "middle": {
+      "longitude": 35.567098,
+      "latitude": 33.109448,
+      "elevation": 0.0
+    }
+  },
+  "שדות בית הלל - מזרח": {
+    "id": 157,
+    "middle": {
+      "longitude": 35.597509,
+      "latitude": 33.200739,
+      "elevation": 0.0
+    }
+  },
+  "ואדי ינשוף": {
+    "id": 158,
+    "middle": {
+      "longitude": 35.574441,
+      "latitude": 33.006288,
+      "elevation": 0.0
+    }
+  },
+  "כביש 90 כפר גלעדי": {
+    "id": 159,
+    "middle": {
+      "longitude": 35.581717,
+      "latitude": 33.239321,
+      "elevation": 0.0
+    }
+  },
+  "כביש גישה שדה נחמיה": {
+    "id": 160,
+    "middle": {
+      "longitude": 35.618988,
+      "latitude": 33.183298,
+      "elevation": 0.0
+    }
+  },
+  "נחל אשף": {
+    "id": 161,
+    "middle": {
+      "longitude": 35.567725,
+      "latitude": 33.008102,
+      "elevation": 0.0
+    }
+  },
+  "נחל אשף כביש 90": {
+    "id": 162,
+    "middle": {
+      "longitude": 35.57137,
+      "latitude": 33.002576,
+      "elevation": 0.0
+    }
+  },
+  "נחל חצור איילת השחר": {
+    "id": 163,
+    "middle": {
+      "longitude": 35.591302,
+      "latitude": 33.035545,
+      "elevation": 0.0
+    }
+  },
+  "שביל תל חי": {
+    "id": 164,
+    "middle": {
+      "longitude": 35.577643,
+      "latitude": 33.228974,
+      "elevation": 0.0
+    }
+  },
+  "דרך מעבר להר הצפייה מטעים מטולה": {
+    "id": 165,
+    "middle": {
+      "longitude": 35.569629,
+      "latitude": 33.271946,
+      "elevation": 0.0
+    }
+  },
+  "דרך נוף הרי נפתלי מצפה לירן": {
+    "id": 166,
+    "middle": {
+      "longitude": 35.56289,
+      "latitude": 33.224713,
+      "elevation": 0.0
+    }
+  },
+  "דרך נוף הרי נפתלי פארק גאולוגי": {
+    "id": 167,
+    "middle": {
+      "longitude": 35.558952,
+      "latitude": 33.204059,
+      "elevation": 0.0
+    }
+  },
+  "דרך נוף מטולה קרוב לגבול": {
+    "id": 168,
+    "data": [
+      {
+        "type": "severe",
+        "location": [
+          33.27333,
+          35.5645
+        ],
+        "information": "רכיבה צמודה לגדר הגבול"
+      }
+    ],
+    "middle": {
+      "longitude": 35.561751,
+      "latitude": 33.266236,
+      "elevation": 0.0
+    }
+  },
+  "דרך נוף מצפה עדי - מטולה דרום": {
+    "id": 169,
+    "data": [
+      {
+        "type": "warning",
+        "location": [
+          33.249935,
+          35.558978
+        ],
+        "information": "איזור נשלט מכפר קילא בלבנון"
+      }
+    ],
+    "middle": {
+      "longitude": 35.559081,
+      "latitude": 33.237289,
+      "elevation": 0.0
+    }
+  },
+  "דרך נוף מצפה עדי מטולה צפון": {
+    "id": 170,
+    "middle": {
+      "longitude": 35.563327,
+      "latitude": 33.261758,
+      "elevation": 0.0
+    }
+  },
+  "הר הצפייה מטולה": {
+    "id": 171,
+    "middle": {
+      "longitude": 35.571266,
+      "latitude": 33.274097,
+      "elevation": 0.0
+    }
+  },
+  "כביש 90 כפר יובל": {
+    "id": 172,
+    "middle": {
+      "longitude": 35.573254,
+      "latitude": 33.248845,
+      "elevation": 0.0
+    }
+  },
+  "כביש 90 תל אבל בית מעכה": {
+    "id": 173,
+    "data": [
+      {
+        "type": "narrow",
+        "location": [
+          33.266663,
+          35.573932
+        ],
+        "information": "שוליים צרים"
+      }
+    ],
+    "middle": {
+      "longitude": 35.575674,
+      "latitude": 33.269939,
+      "elevation": 0.0
+    }
+  },
+  "כביש 99 קריית שמונה": {
+    "id": 174,
+    "middle": {
+      "longitude": 35.588439,
+      "latitude": 33.220904,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9974 כפר יובל": {
+    "id": 175,
+    "middle": {
+      "longitude": 35.590075,
+      "latitude": 33.244108,
+      "elevation": 0.0
+    }
+  },
+  "כבישון עגל": {
+    "id": 176,
+    "middle": {
+      "longitude": 35.582757,
+      "latitude": 33.243494,
+      "elevation": 0.0
+    }
+  },
+  "מטעים מטולה קרוב לגבול": {
+    "id": 177,
+    "data": [
+      {
+        "type": "warning",
+        "location": [
+          33.274086,
+          35.567282
+        ],
+        "information": "רכיבה קרובה לגדר הגבול"
+      }
+    ],
+    "middle": {
+      "longitude": 35.56721,
+      "latitude": 33.274108,
+      "elevation": 0.0
+    }
+  },
+  "מעלה דדו מטולה": {
+    "id": 178,
+    "middle": {
+      "longitude": 35.573526,
+      "latitude": 33.277276,
+      "elevation": 0.0
+    }
+  },
+  "מעלה הצפייה מטולה": {
+    "id": 179,
+    "middle": {
+      "longitude": 35.569076,
+      "latitude": 33.277432,
+      "elevation": 0.0
+    }
+  },
+  "מעלה נחל בדולח": {
+    "id": 180,
+    "middle": {
+      "longitude": 35.555746,
+      "latitude": 33.207476,
+      "elevation": 0.0
+    }
+  },
+  "מצפה דדו מטולה אתר בבניה": {
+    "id": 181,
+    "data": [
+      {
+        "type": "gate",
+        "location": [
+          33.270151,
+          35.570542
+        ],
+        "information": "מעבר מאתגר מעל תל עפר וגדר אבן"
+      }
+    ],
+    "middle": {
+      "longitude": 35.573174,
+      "latitude": 33.270843,
+      "elevation": 0.0
+    }
+  },
+  "עוקף סינגל הרי נפתלי": {
+    "id": 182,
+    "middle": {
+      "longitude": 35.55496,
+      "latitude": 33.193287,
+      "elevation": 0.0
+    }
+  },
+  "רחוב הוורדים דרום קריית שמונה": {
+    "id": 183,
+    "middle": {
+      "longitude": 35.580352,
+      "latitude": 33.206646,
+      "elevation": 0.0
+    }
+  },
+  "רחוב החצב קריית שמונה": {
+    "id": 184,
+    "middle": {
+      "longitude": 35.578776,
+      "latitude": 33.211681,
+      "elevation": 0.0
+    }
+  },
+  "רחוב הנשיא קריית שמונה": {
+    "id": 185,
+    "middle": {
+      "longitude": 35.57604,
+      "latitude": 33.221621,
+      "elevation": 0.0
+    }
+  },
+  "רחוב עין זהב והוורדים צפון": {
+    "id": 186,
+    "middle": {
+      "longitude": 35.579481,
+      "latitude": 33.219153,
+      "elevation": 0.0
+    }
+  },
+  "שביל אדום הרי נפתלי": {
+    "id": 187,
+    "middle": {
+      "longitude": 35.551364,
+      "latitude": 33.210617,
+      "elevation": 0.0
+    }
+  },
+  "תל אבל בית מעכה": {
+    "id": 188,
+    "middle": {
+      "longitude": 35.57892,
+      "latitude": 33.254722,
+      "elevation": 0.0
+    }
+  },
+  "כביש 8966 יער ברעם": {
+    "id": 189,
+    "middle": {
+      "longitude": 35.477653,
+      "latitude": 33.051888,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9118 איילת השחר": {
+    "id": 190,
+    "middle": {
+      "longitude": 35.572632,
+      "latitude": 33.026258,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9118 לצד כביש 90": {
+    "id": 191,
+    "middle": {
+      "longitude": 35.561671,
+      "latitude": 33.008507,
+      "elevation": 0.0
+    }
+  },
+  "כביש 9118 תל חצור": {
+    "id": 192,
+    "middle": {
+      "longitude": 35.570457,
+      "latitude": 33.017185,
+      "elevation": 0.0
+    }
+  },
+  "שטח 100 מערת עלמה": {
+    "id": 193,
+    "middle": {
+      "longitude": 35.525697,
+      "latitude": 33.030774,
+      "elevation": 0.0
+    }
+  }
+}
