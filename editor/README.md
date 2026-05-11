@@ -43,11 +43,15 @@ http://127.0.0.1:8899/editor/
 ```
 
 The editor and site expect a Mapbox token at runtime, but the token is not stored
-in git. For local use, set it in the browser console before opening the editor:
+in git. For local use, copy the example file once:
 
-```js
-localStorage.setItem("cycleways.mapboxToken", "your-mapbox-token")
+```bash
+cp mapbox-token.example.js mapbox-token.js
 ```
+
+Then edit `mapbox-token.js` and replace the placeholder with your restricted
+Mapbox public token. The local file is ignored by git. GitHub Pages creates the
+same file during deployment from the `MAPBOX_TOKEN` Actions secret.
 
 ## Current Editing Scope
 

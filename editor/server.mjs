@@ -10,7 +10,9 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
 const editorRoot = resolve(repoRoot, "editor");
 const iconsRoot = resolve(repoRoot, "icons");
+const utilsRoot = resolve(repoRoot, "utils");
 const sourcePath = resolve(repoRoot, "data/map-source.geojson");
+const tokenPath = resolve(repoRoot, "mapbox-token.js");
 const buildDir = resolve(repoRoot, "build");
 const reportPath = resolve(buildDir, "report.json");
 const buildManifestPath = resolve(buildDir, "map-manifest.json");
@@ -304,7 +306,9 @@ async function serveStatic(request, response, url) {
   const filePath = resolve(repoRoot, `.${pathname}`);
   const allowedEditorFile = isInside(editorRoot, filePath) || filePath === resolve(editorRoot, "index.html");
   const allowedIconFile = isInside(iconsRoot, filePath);
-  if (!allowedEditorFile && !allowedIconFile) {
+  const allowedUtilsFile = isInside(utilsRoot, filePath);
+  const allowedTokenFile = filePath === tokenPath;
+  if (!allowedEditorFile && !allowedIconFile && !allowedUtilsFile && !allowedTokenFile) {
     sendText(response, 404, "Not found");
     return;
   }
