@@ -53,6 +53,14 @@ function sendText(response, status, text) {
   response.end(text);
 }
 
+function sendJavaScript(response, status, text) {
+  response.writeHead(status, {
+    "Content-Type": "text/javascript; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  response.end(text);
+}
+
 function formatLogDetail(detail) {
   if (detail === undefined || detail === null) {
     return "";
@@ -311,6 +319,11 @@ async function serveStatic(request, response, url) {
     return;
   }
 
+  if (allowedTokenFile) {
+    await serveTokenFile(response);
+    return;
+  }
+
   try {
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) {
@@ -325,6 +338,42 @@ async function serveStatic(request, response, url) {
   } catch {
     sendText(response, 404, "Not found");
   }
+}
+
+async function serveTokenFile(response) {
+  try {
+    const fileStat = await stat(tokenPath);
+    if (fileStat.isFile()) {
+      response.writeHead(200, {
+        "Content-Type": "text/javascript; charset=utf-8",
+        "Cache-Control": "no-store",
+      });
+      createReadStream(tokenPath).pipe(response);
+      return;
+    }
+  } catch {
+    // Fall through to an environment/localStorage-friendly stub.
+  }
+
+  const token = process.env.MAPBOX_TOKEN || process.env.CYCLEWAYS_MAPBOX_TOKEN || "";
+  if (token) {
+    sendJavaScript(
+      response,
+      200,
+      `window.CYCLEWAYS_MAPBOX_TOKEN = ${JSON.stringify(token)};\n`,
+    );
+    return;
+  }
+
+  sendJavaScript(
+    response,
+    200,
+    [
+      "window.CYCLEWAYS_MAPBOX_TOKEN = window.CYCLEWAYS_MAPBOX_TOKEN || '';",
+      "console.warn('Mapbox token file not found. Copy mapbox-token.example.js to mapbox-token.js or set localStorage cycleways.mapboxToken.');",
+      "",
+    ].join("\n"),
+  );
 }
 
 async function handleBuild(payload) {
