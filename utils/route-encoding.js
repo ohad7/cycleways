@@ -165,6 +165,41 @@ export function decodeRoute(routeString, segmentsData) {
   }
 }
 
+function routeAnchorToPoint(anchor) {
+  if (Array.isArray(anchor) && anchor.length >= 2) {
+    const lng = Number(anchor[0]);
+    const lat = Number(anchor[1]);
+    const elevation = anchor.length >= 3 ? Number(anchor[2]) : 0.0;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return {
+        lat,
+        lng,
+        elevation: Number.isFinite(elevation) ? elevation : 0.0,
+      };
+    }
+  }
+
+  if (anchor && typeof anchor === "object") {
+    const lat = Number(anchor.latitude ?? anchor.lat);
+    const lng = Number(anchor.longitude ?? anchor.lng);
+    const elevation = Number(anchor.elevation ?? 0.0);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return {
+        lat,
+        lng,
+        elevation: Number.isFinite(elevation) ? elevation : 0.0,
+      };
+    }
+  }
+
+  return null;
+}
+
+function extractRouteAnchorPoints(segmentInfo) {
+  if (!Array.isArray(segmentInfo?.routeAnchors)) return [];
+  return segmentInfo.routeAnchors.map(routeAnchorToPoint).filter(Boolean);
+}
+
 /**
  * Extract middle points from segment IDs
  * @param {Array} segmentIds - Array of segment IDs
@@ -186,8 +221,20 @@ export function extractMiddlePoints(segmentIds, segmentsData) {
       }
     }
 
-    // Skip if segment doesn't exist or is deprecated
-    if (!foundSegment || foundSegment.info.deprecated) {
+    if (!foundSegment) {
+      continue;
+    }
+
+    const routeAnchorPoints = extractRouteAnchorPoints(foundSegment.info);
+    if (routeAnchorPoints.length > 0) {
+      for (const point of routeAnchorPoints) {
+        middlePoints.push({
+          ...point,
+          sourceSegmentName: foundSegment.name,
+          sourceSegmentId: segmentId,
+          id: Date.now() + Math.random(),
+        });
+      }
       continue;
     }
 
@@ -197,13 +244,21 @@ export function extractMiddlePoints(segmentIds, segmentsData) {
     }
 
     // Add middle point to the array
-    middlePoints.push({
+    const isDeprecated =
+      foundSegment.info.deprecated ||
+      ["deprecated", "legacy", "draft"].includes(foundSegment.info.status);
+    const middlePoint = {
       lat: foundSegment.info.middle.latitude,
       lng: foundSegment.info.middle.longitude,
       elevation: foundSegment.info.middle.elevation || 0.0,
-      segmentName: foundSegment.name,
+      sourceSegmentName: foundSegment.name,
+      sourceSegmentId: segmentId,
       id: Date.now() + Math.random() // Generate a unique ID for the point
-    });
+    };
+    if (!isDeprecated) {
+      middlePoint.segmentName = foundSegment.name;
+    }
+    middlePoints.push(middlePoint);
   }
 
   return middlePoints;
