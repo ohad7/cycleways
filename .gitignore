@@ -1,2 +1,6 @@
 .DS_STORE
 local_copy.sh
+__pycache__/
+*.pyc
+processing/cache/elevation_cache.json
+build/

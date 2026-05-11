@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CycleWays Map Editor</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+    <link href="/editor/styles.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="map-area">
+        <div id="map"></div>
+
+        <div class="map-topbar">
+          <div class="map-header">
+            <button id="toggle-segments" class="tool-button" type="button" aria-expanded="false">Segments</button>
+            <div class="map-title">
+              <h1>Map Editor</h1>
+              <p id="source-summary">Loading source...</p>
+            </div>
+            <div id="dirty-indicator" class="dirty-indicator">Saved</div>
+          </div>
+
+          <div class="map-toolbar">
+            <button id="add-segment" class="tool-button confirm" type="button" disabled>Add</button>
+            <button id="mode-select" class="tool-button active" type="button">Select</button>
+            <button id="mode-insert" class="tool-button" type="button">Insert</button>
+            <button id="extend-segment" class="tool-button" type="button" disabled>Extend</button>
+            <button id="delete-vertex" class="tool-button danger" type="button" disabled>Delete</button>
+            <button id="split-segment" class="tool-button" type="button" disabled>Split</button>
+            <button id="fit-selected" class="tool-button" type="button" disabled>Fit</button>
+            <button id="draw-done" class="tool-button confirm" type="button" hidden>Done</button>
+            <button id="draw-cancel" class="tool-button danger" type="button" hidden>Cancel</button>
+          </div>
+
+          <label class="map-style-control" for="map-style" aria-label="Map style">
+            <select id="map-style" class="text-input compact-select">
+              <option value="outdoors">Outdoors</option>
+              <option value="satellite">Satellite</option>
+              <option value="streets">Streets</option>
+              <option value="light">Light</option>
+            </select>
+          </label>
+        </div>
+
+        <aside id="segment-drawer" class="segment-drawer" aria-hidden="true">
+          <section class="panel">
+            <div class="segment-panel-header">
+              <label class="field-label" for="segment-search">Segments</label>
+              <button id="close-segments" class="mini-button" type="button">Close</button>
+            </div>
+            <input id="segment-search" class="text-input" type="search" placeholder="Search by name or ID">
+            <div id="segment-list" class="segment-list"></div>
+          </section>
+        </aside>
+
+        <div id="status-bar" class="status-bar">Ready</div>
+      </main>
+
+      <aside class="details">
+        <section class="panel">
+          <header class="panel-header">
+            <h2>Segment</h2>
+            <span id="selected-count">None selected</span>
+          </header>
+
+          <form id="segment-form" class="segment-form">
+            <label class="field-label" for="segment-id">ID</label>
+            <input id="segment-id" class="text-input" type="number" readonly>
+
+            <label class="field-label" for="segment-name">Name</label>
+            <input id="segment-name" class="text-input" type="text">
+
+            <label class="field-label" for="segment-status">Status</label>
+            <select id="segment-status" class="text-input">
+              <option value="active">active</option>
+              <option value="draft">draft</option>
+              <option value="deprecated">deprecated</option>
+              <option value="legacy">legacy</option>
+            </select>
+
+            <label class="field-label" for="segment-road-type">Road Type</label>
+            <select id="segment-road-type" class="text-input">
+              <option value="paved">paved</option>
+              <option value="dirt">dirt</option>
+              <option value="road">road</option>
+            </select>
+
+            <label class="field-label" for="segment-todo">Todo</label>
+            <textarea id="segment-todo" class="text-input textarea" rows="3"></textarea>
+
+            <label class="field-label" for="segment-notes">Notes</label>
+            <textarea id="segment-notes" class="text-input textarea" rows="4"></textarea>
+          </form>
+        </section>
+
+        <section class="panel">
+          <header class="panel-header">
+            <h2>Data</h2>
+            <button id="add-data" class="mini-button" type="button" disabled>Add</button>
+          </header>
+          <div id="data-list" class="data-list"></div>
+        </section>
+
+        <section class="panel">
+          <header class="panel-header">
+            <h2>Build</h2>
+          </header>
+
+          <label class="checkbox-row">
+            <input id="skip-elevation" type="checkbox" checked>
+            <span>Skip elevation for quick preview</span>
+          </label>
+
+          <div class="action-row">
+            <button id="save-source" class="primary-button" type="button" disabled>Save Source</button>
+            <button id="run-build" class="secondary-button" type="button">Build</button>
+            <button id="promote-build" class="secondary-button" type="button" disabled>Promote</button>
+          </div>
+
+          <div id="editor-alert" class="editor-alert" role="alert" aria-live="assertive" hidden>
+            <strong id="editor-alert-title">Action failed</strong>
+            <p id="editor-alert-message"></p>
+          </div>
+
+          <pre id="build-report" class="build-report">No build report loaded.</pre>
+        </section>
+      </aside>
+    </div>
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+    <script type="module" src="/editor/editor.js"></script>
+  </body>
+</html>

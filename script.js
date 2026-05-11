@@ -5,6 +5,7 @@ import { executeDownloadGPX, generateGPX } from './utils/gpx-generator.js';
 import { trackRoutePointEvent, trackUndoRedoEvent, trackSearchEvent, trackSocialShare, 
           trackSegmentFocus, trackWarningClick, trackRouteOperation,trackPageLoad,trackTutorial
 } from './utils/analytics.js';
+import { requireMapboxToken } from './utils/mapbox-token.js';
 
 let map;
 let selectedSegments = [];
@@ -21,6 +22,12 @@ let draggedPointIndex = -1;
 let routeManager = null; // Instance of RouteManager
 let operationsLog = []; // Log of user operations for export
 let spatialIndex = null; // Spatial index for efficient segment lookup
+let mapManifest = null;
+
+const DEFAULT_MAP_ASSETS = {
+  bikeRoads: "bike_roads_v18.geojson",
+  segments: "segments.json",
+};
 
 const COLORS = {
   WARNING_ORANGE: "#882211",
@@ -676,8 +683,8 @@ function exportOperationsJSON() {
       .replace(/[/:]/g, "-")
       .replace(", ", " ")}`,
     description: `Test case generated from user operations (${operationsLog.length} operations)`,
-    geoJsonFile: "bike_roads_v18.geojson",
-    segmentsFile: "segments.json",
+    geoJsonFile: mapManifest?.bikeRoads || DEFAULT_MAP_ASSETS.bikeRoads,
+    segmentsFile: mapManifest?.segments || DEFAULT_MAP_ASSETS.segments,
     operations: operationsLog.map((op) => ({
       type: op.type,
       data: op.data,
@@ -916,8 +923,7 @@ function updateSegmentStyles() {
 
 function initMap() {
   try {
-    mapboxgl.accessToken =
-      "pk.eyJ1Ijoib3NlcmZhdHkiLCJhIjoiY21kNmdzb3NnMDlqZTJrc2NzNmh3aGk1aCJ9.dvA6QY0N5pQ2IISZHp53kg";
+    mapboxgl.accessToken = requireMapboxToken();
 
     map = new mapboxgl.Map({
       container: "map",
@@ -1689,24 +1695,53 @@ function hideRouteLoadingIndicator() {
 }
 
 async function loadSegmentsData() {
+  await loadMapManifest();
+  const segmentsFile = mapManifest?.segments || DEFAULT_MAP_ASSETS.segments;
   try {
-    const response = await fetch("./segments.json");
+    const response = await fetch(`./${segmentsFile}`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     segmentsData = await response.json();
   } catch (error) {
-    console.warn("Could not load segments.json:", error);
+    console.warn(`Could not load ${segmentsFile}:`, error);
     // Initialize with empty object to prevent errors
     segmentsData = {};
   }
+}
+
+async function loadMapManifest() {
+  if (mapManifest) return mapManifest;
+
+  try {
+    const response = await fetch(`./map-manifest.json?t=${Date.now()}`, {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const manifest = await response.json();
+    if (!manifest.bikeRoads || !manifest.segments) {
+      throw new Error("Manifest is missing map asset paths");
+    }
+    mapManifest = manifest;
+  } catch (error) {
+    console.warn("Could not load map-manifest.json, falling back to stable map files:", error);
+    mapManifest = { ...DEFAULT_MAP_ASSETS };
+  }
+
+  return mapManifest;
 }
 
 async function loadKMLFile() {
   try {
     await loadSegmentsData();
     showRouteLoadingIndicator();
-    const response = await fetch("./bike_roads_v18.geojson");
+    const geoJsonFile = mapManifest?.bikeRoads || DEFAULT_MAP_ASSETS.bikeRoads;
+    const response = await fetch(`./${geoJsonFile}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     const geoJsonData = await response.json();
     await parseGeoJSON(geoJsonData);
 

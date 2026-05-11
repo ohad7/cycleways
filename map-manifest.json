@@ -1,0 +1,27 @@
+{
+  "version": "1194e56e77d9",
+  "generatedAt": "2026-05-11T16:17:26.109358Z",
+  "bikeRoads": "bike_roads.1194e56e77d9.geojson",
+  "segments": "segments.1194e56e77d9.json",
+  "kml": "exports/map.1194e56e77d9.kml",
+  "stable": {
+    "bikeRoads": "bike_roads.geojson",
+    "segments": "segments.json",
+    "kml": "map.kml"
+  },
+  "hashes": {
+    "bikeRoads": "2d139ddc643358f087050e47ae0738f3be69c378e2145eb64bf8291c9beb80df",
+    "segments": "8fecd7f195c8f13ca3cdf799aa2c62b125e46adc2fb434a92579a07f1e5fbd8f",
+    "kml": "cd28ebc1ceb959d1e595d881b50e121ee90797cbbed86a4a917ae46d29b1e22c"
+  },
+  "elevation": {
+    "skipElevation": false,
+    "failures": 0
+  },
+  "validation": {
+    "featureCount": 211,
+    "segmentsCount": 237,
+    "newSegments": 0,
+    "routeCompatibilityWarnings": 0
+  }
+}
