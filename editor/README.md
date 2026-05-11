@@ -53,6 +53,11 @@ Then edit `mapbox-token.js` and replace the placeholder with your restricted
 Mapbox public token. The local file is ignored by git. GitHub Pages creates the
 same file during deployment from the `MAPBOX_TOKEN` Actions secret.
 
+If `mapbox-token.js` is missing locally, the editor server still serves an empty
+stub so the script request does not 404. The map will still need a token from the
+local file, `MAPBOX_TOKEN`/`CYCLEWAYS_MAPBOX_TOKEN` in the server environment, or
+`localStorage["cycleways.mapboxToken"]`.
+
 ## Current Editing Scope
 
 - Select a segment from the map, or open the Segments drawer when search/list selection is needed.

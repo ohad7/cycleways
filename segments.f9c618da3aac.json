@@ -47,12 +47,42 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "סובב דפנה": {
-    "id": 81,
+  "סובב דפנה שער צפוני": {
+    "id": 246,
     "status": "active",
+    "splitFrom": 242,
+    "splitFromName": "סובב דפנה - 1",
     "middle": {
-      "longitude": 35.642397,
-      "latitude": 33.235113,
+      "longitude": 35.635477,
+      "latitude": 33.233555,
+      "elevation": 154.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "סובב דפנה אבוקדו": {
+    "id": 247,
+    "status": "active",
+    "splitFrom": 242,
+    "splitFromName": "סובב דפנה - 1",
+    "middle": {
+      "longitude": 35.639007,
+      "latitude": 33.233647,
+      "elevation": 152.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "סובב דפנה שדות": {
+    "id": 243,
+    "status": "active",
+    "splitFrom": 81,
+    "splitFromName": "סובב דפנה",
+    "middle": {
+      "longitude": 35.645838,
+      "latitude": 33.235893,
       "elevation": 157.0
     },
     "elevation_gain_m": 0.0,
@@ -1469,17 +1499,61 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל ישראל נחל דן": {
-    "id": 107,
+  "שביל ישראל שמורת נחל שניר": {
+    "id": 250,
     "status": "active",
+    "splitFrom": 107,
+    "splitFromName": "שביל ישראל נחל דן",
     "middle": {
-      "longitude": 35.634489,
-      "latitude": 33.245332,
+      "longitude": 35.62748,
+      "latitude": 33.232639,
+      "elevation": 138.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל ישראל ליד מאגר דולב": {
+    "id": 252,
+    "status": "active",
+    "splitFrom": 251,
+    "splitFromName": "שביל ישראל מאגר דולב",
+    "middle": {
+      "longitude": 35.62808,
+      "latitude": 33.240081,
+      "elevation": 166.0
+    },
+    "elevation_gain_m": 6.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 6.0
+  },
+  "שביל ישראל מאגר ללא שם": {
+    "id": 254,
+    "status": "active",
+    "splitFrom": 253,
+    "splitFromName": "שביל ישראל מאגר דולב - 2",
+    "middle": {
+      "longitude": 35.63499,
+      "latitude": 33.245633,
       "elevation": 182.0
     },
-    "elevation_gain_m": 13.2,
+    "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
-    "net_elevation_change_m": 13.2
+    "net_elevation_change_m": 0.0
+  },
+  "שביל ישראל נחל דן ונוחיילה": {
+    "id": 255,
+    "status": "active",
+    "splitFrom": 253,
+    "splitFromName": "שביל ישראל מאגר דולב - 2",
+    "middle": {
+      "longitude": 35.646853,
+      "latitude": 33.249703,
+      "elevation": 190.0
+    },
+    "elevation_gain_m": 7.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 7.2
   },
   "שביל גישה דג על הדן": {
     "id": 102,
@@ -2905,6 +2979,122 @@
     "elevation_loss_m": 4.0,
     "net_elevation_change_m": -4.0
   },
+  "שדות דפנה צפון": {
+    "id": 244,
+    "status": "active",
+    "middle": {
+      "longitude": 35.640899,
+      "latitude": 33.236685,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "גשר על נהר הדן": {
+    "id": 245,
+    "status": "active",
+    "middle": {
+      "longitude": 35.638982,
+      "latitude": 33.237501,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל גישה למחלק": {
+    "id": 248,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "שביל גישה נסתר למחלק",
+        "location": [
+          33.236056,
+          35.636412
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.636439,
+      "latitude": 33.236308,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל צר לאורך נחל דן": {
+    "id": 249,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "שביל דורש תחזוקה, מעבר קוצני וצר",
+        "location": [
+          33.236529,
+          35.630683
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.633679,
+      "latitude": 33.236744,
+      "elevation": 154.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות קיבוץ דן": {
+    "id": 256,
+    "status": "active",
+    "middle": {
+      "longitude": 35.638578,
+      "latitude": 33.241861,
+      "elevation": 162.0
+    },
+    "elevation_gain_m": 3.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 3.0
+  },
+  "סובב דפנה": {
+    "id": 81,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.637647,
+        33.233444
+      ],
+      [
+        35.643241,
+        33.235553
+      ],
+      [
+        35.647041,
+        33.234447
+      ]
+    ]
+  },
+  "סובב דפנה - 1": {
+    "id": 242,
+    "status": "deprecated",
+    "splitFrom": 81,
+    "splitFromName": "סובב דפנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.635409,
+        33.233602
+      ],
+      [
+        35.638922,
+        33.233634
+      ]
+    ]
+  },
   "שאר ישוב היקפי": {
     "id": 87,
     "status": "deprecated",
@@ -3011,6 +3201,87 @@
       [
         35.650953,
         33.192357
+      ]
+    ]
+  },
+  "שביל ישראל נחל דן": {
+    "id": 107,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.627449,
+        33.232712
+      ],
+      [
+        35.628258,
+        33.239527
+      ],
+      [
+        35.63369,
+        33.244902
+      ],
+      [
+        35.64203,
+        33.247332
+      ],
+      [
+        35.65061,
+        33.250598
+      ]
+    ]
+  },
+  "שביל ישראל מאגר דולב": {
+    "id": 251,
+    "status": "deprecated",
+    "splitFrom": 107,
+    "splitFromName": "שביל ישראל נחל דן",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.628662,
+        33.23771
+      ],
+      [
+        35.628256,
+        33.242058
+      ],
+      [
+        35.634491,
+        33.245333
+      ],
+      [
+        35.642509,
+        33.247593
+      ],
+      [
+        35.650801,
+        33.250608
+      ]
+    ]
+  },
+  "שביל ישראל מאגר דולב - 2": {
+    "id": 253,
+    "status": "deprecated",
+    "splitFrom": 251,
+    "splitFromName": "שביל ישראל מאגר דולב",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.632722,
+        33.244482
+      ],
+      [
+        35.636843,
+        33.246121
+      ],
+      [
+        35.64336,
+        33.247978
+      ],
+      [
+        35.651123,
+        33.250612
       ]
     ]
   },
