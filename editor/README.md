@@ -31,6 +31,17 @@ Start it from the repository root:
 EDITOR_PORT=8899 node editor/server.mjs
 ```
 
+For development, prefer the watcher:
+
+```bash
+EDITOR_PORT=8899 node editor/dev-server.mjs
+```
+
+The watcher restarts the editor server automatically when `editor/server.mjs`
+changes. Client files under `editor/` (`.html`, `.css`, `.js`) are already served
+with `Cache-Control: no-store`; in watcher mode the editor page also auto-reloads
+when those files change.
+
 The server prints timestamped API logs. Build requests also stream processor
 progress into the same terminal, including the build command, per-segment
 coordinate counts, elevation lookup/cache/skipped/failure counters, the generated

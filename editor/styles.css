@@ -39,7 +39,9 @@ textarea {
 
 .details {
   min-width: 0;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border-color: var(--line);
   background: var(--bg);
 }
@@ -71,6 +73,39 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--shadow);
+}
+
+.details-scroll {
+  min-height: 0;
+  overflow: auto;
+}
+
+.build-panel {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding: 10px;
+  border-top: 2px solid var(--line);
+  box-shadow: 0 -8px 18px rgba(31, 42, 46, 0.08);
+}
+
+.build-panel .panel-header {
+  margin-bottom: 8px;
+}
+
+.build-panel .checkbox-row {
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.build-panel .action-row {
+  gap: 6px;
+}
+
+.build-panel .primary-button,
+.build-panel .secondary-button {
+  min-height: 28px;
+  padding: 4px 7px;
+  font-size: 12px;
 }
 
 .map-header {
@@ -130,12 +165,21 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.panel-header span {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .field-label {
   display: block;
-  margin: 10px 0 6px;
+  margin: 8px 0 4px;
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -143,8 +187,8 @@ h2 {
 
 .text-input {
   width: 100%;
-  min-height: 36px;
-  padding: 8px 10px;
+  min-height: 32px;
+  padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #fff;
@@ -357,6 +401,101 @@ button:disabled {
   display: grid;
 }
 
+.name-release {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 7px 8px;
+  border: 1px solid #e4d19b;
+  border-radius: 6px;
+  background: #fff8e1;
+  color: #6a5200;
+  font-size: 12px;
+}
+
+.name-release[hidden] {
+  display: none;
+}
+
+.name-release .mini-button {
+  min-height: 26px;
+  padding: 4px 7px;
+}
+
+.quality-section {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f8faf9;
+}
+
+.quality-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.quality-header .field-label {
+  margin: 0;
+}
+
+.quality-summary {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quality-list {
+  display: grid;
+  gap: 6px;
+}
+
+.quality-row {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 8px;
+}
+
+.quality-name,
+.quality-value {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quality-stars {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+}
+
+.quality-star {
+  min-width: 0;
+  min-height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #9aa5a8;
+  line-height: 1;
+}
+
+.quality-star.filled {
+  color: #9b6b00;
+}
+
+.quality-star:hover,
+.quality-star:focus-visible {
+  border-color: var(--accent);
+  background: #eaf5f4;
+}
+
 .empty-state {
   padding: 10px;
   border: 1px dashed var(--line);
@@ -423,9 +562,8 @@ button:disabled {
 }
 
 .build-report {
-  min-height: 180px;
-  max-height: 300px;
-  margin: 12px 0 0;
+  max-height: min(220px, 28vh);
+  margin: 8px 0 0;
   overflow: auto;
   padding: 10px;
   border: 1px solid var(--line);
@@ -434,6 +572,38 @@ button:disabled {
   color: #263238;
   font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: pre-wrap;
+}
+
+.build-output {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f8faf9;
+}
+
+.build-output summary {
+  min-height: 28px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.build-output[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+#build-output-summary {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 980px) {

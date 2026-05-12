@@ -12,7 +12,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -286,7 +292,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -580,7 +592,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -929,7 +947,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1293,7 +1317,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 242,
-        "splitFromName": "סובב דפנה - 1"
+        "splitFromName": "סובב דפנה - 1",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1379,7 +1409,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 242,
-        "splitFromName": "סובב דפנה - 1"
+        "splitFromName": "סובב דפנה - 1",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1520,7 +1556,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 81,
-        "splitFromName": "סובב דפנה"
+        "splitFromName": "סובב דפנה",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1789,7 +1831,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2033,7 +2081,13 @@
               35.595931
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3917,7 +3971,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4086,7 +4146,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4860,7 +4926,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -5054,7 +5126,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -5538,7 +5616,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -5762,7 +5846,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -6721,7 +6811,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -8515,7 +8611,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -10884,7 +10986,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -11618,7 +11726,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -12012,7 +12126,13 @@
               35.67583
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -12126,7 +12246,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -12510,7 +12636,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -12574,7 +12706,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -12678,7 +12816,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -12792,7 +12936,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -12976,7 +13126,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -13177,7 +13333,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 87,
-        "splitFromName": "שאר ישוב היקפי"
+        "splitFromName": "שאר ישוב היקפי",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -13218,7 +13380,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 87,
-        "splitFromName": "שאר ישוב היקפי"
+        "splitFromName": "שאר ישוב היקפי",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -13512,7 +13680,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -13651,7 +13825,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -13901,7 +14081,13 @@
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
         "stroke-width": 5,
-        "todo": "check winter conditions"
+        "todo": "check winter conditions",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -14327,7 +14513,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 20,
-        "splitFromName": "דרך הפטרולים קיבוץ שמיר"
+        "splitFromName": "דרך הפטרולים קיבוץ שמיר",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -14428,7 +14620,13 @@
           }
         ],
         "splitFrom": 20,
-        "splitFromName": "דרך הפטרולים קיבוץ שמיר"
+        "splitFromName": "דרך הפטרולים קיבוץ שמיר",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -14745,14 +14943,71 @@
       "type": "Feature",
       "properties": {
         "id": 104,
-        "name": "שביל חום ליד חורבת עומרית",
+        "name": "שביל חום ליד חורבת עומרית [split archive 104]",
+        "status": "deprecated",
+        "roadType": "dirt",
+        "styleUrl": "#sty-30",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "שביל חום ליד חורבת עומרית",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.666785,
+            33.212143
+          ],
+          [
+            35.671151,
+            33.211148
+          ],
+          [
+            35.673583,
+            33.21386
+          ],
+          [
+            35.675722,
+            33.222588
+          ],
+          [
+            35.678525,
+            33.231224
+          ],
+          [
+            35.684616,
+            33.238329
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 261,
+        "name": "חורבת עומרית",
         "status": "active",
         "roadType": "dirt",
         "styleUrl": "#sty-30",
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 104,
+        "splitFromName": "שביל חום ליד חורבת עומרית"
       },
       "geometry": {
         "type": "LineString",
@@ -15008,13 +15263,45 @@
             306
           ],
           [
-            35.673567,
-            33.209633,
+            35.67346613464821,
+            33.20962720870865,
+            306
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 262,
+        "name": "תל עזזיאת",
+        "status": "active",
+        "roadType": "dirt",
+        "styleUrl": "#sty-30",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 104,
+        "splitFromName": "שביל חום ליד חורבת עומרית"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.67346613464821,
+            33.20962720870865,
             306
           ],
           [
-            35.673782,
-            33.209753,
+            35.67361879935294,
+            33.2096652559793,
             306
           ],
           [
@@ -15851,7 +16138,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -16495,7 +16788,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -17619,7 +17918,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -17847,7 +18152,13 @@
               35.668136
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -19051,7 +19362,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -19650,7 +19967,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -21444,7 +21767,13 @@
         "stroke-width": 5,
         "todo": "check winter conditions",
         "splitFrom": 80,
-        "splitFromName": "נחל קליל"
+        "splitFromName": "נחל קליל",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -21546,7 +21875,13 @@
         "stroke-width": 5,
         "todo": "check winter conditions",
         "splitFrom": 80,
-        "splitFromName": "נחל קליל"
+        "splitFromName": "נחל קליל",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -21700,7 +22035,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -21999,7 +22340,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -22254,7 +22601,13 @@
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
         "stroke-width": 5,
-        "todo": "check winter condition, pick a better name"
+        "todo": "check winter condition, pick a better name",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -22663,7 +23016,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -22937,7 +23296,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -23376,7 +23741,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -23630,7 +24001,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -23764,7 +24141,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -23888,7 +24271,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24067,7 +24456,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24239,7 +24634,7 @@
       "type": "Feature",
       "properties": {
         "id": 52,
-        "name": "כביש 918 כפר סאלד",
+        "name": "כביש 918 כפר סאלד [archive 52]",
         "status": "deprecated",
         "roadType": "road",
         "styleUrl": "#sty-48",
@@ -24261,7 +24656,8 @@
             35.650214,
             33.204297
           ]
-        ]
+        ],
+        "originalName": "כביש 918 כפר סאלד"
       },
       "geometry": null
     },
@@ -24278,7 +24674,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 52,
-        "splitFromName": "כביש 918 כפר סאלד"
+        "splitFromName": "כביש 918 כפר סאלד",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24433,7 +24835,7 @@
       "type": "Feature",
       "properties": {
         "id": 229,
-        "name": "כביש 918 לפני כפר סאלד",
+        "name": "כביש 918 כפר סאלד",
         "status": "active",
         "roadType": "road",
         "styleUrl": "#sty-48",
@@ -24442,7 +24844,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 218,
-        "splitFromName": "כביש 918 צומת כפר סאלד"
+        "splitFromName": "כביש 918 צומת כפר סאלד",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24498,7 +24906,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 218,
-        "splitFromName": "כביש 918 צומת כפר סאלד"
+        "splitFromName": "כביש 918 צומת כפר סאלד",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24692,7 +25106,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24906,7 +25326,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -25290,7 +25716,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -25744,7 +26176,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -26035,7 +26473,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 112,
-        "splitFromName": "שביל תל קליל"
+        "splitFromName": "שביל תל קליל",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -26296,7 +26740,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 112,
-        "splitFromName": "שביל תל קליל"
+        "splitFromName": "שביל תל קליל",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -26410,7 +26860,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -26699,7 +27155,13 @@
               35.624814
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -27173,7 +27635,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -27632,7 +28100,13 @@
               35.61047
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -27841,7 +28315,13 @@
               35.616292
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -28590,7 +29070,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -28639,7 +29125,13 @@
               35.613319
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -29808,7 +30300,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -30572,7 +31070,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -30626,7 +31130,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -31745,7 +32255,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -31919,7 +32435,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -32383,7 +32905,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -32967,7 +33495,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -33096,7 +33630,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -33665,7 +34205,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -34419,7 +34965,13 @@
               35.58665
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -34813,7 +35365,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -35027,7 +35585,13 @@
               35.586584
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -35786,7 +36350,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -36338,7 +36908,13 @@
               35.56918
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -37187,7 +37763,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -37796,7 +38378,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -38285,7 +38873,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -38649,7 +39243,13 @@
               35.594922
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -39188,7 +39788,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -39612,7 +40218,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -39896,7 +40508,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -40145,7 +40763,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -40424,7 +41048,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -40613,7 +41243,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -40837,7 +41473,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -40936,7 +41578,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -41210,7 +41858,13 @@
               35.607994
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -41294,7 +41948,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -41373,7 +42033,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -41412,7 +42078,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -41526,7 +42198,13 @@
               35.612262
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -41910,7 +42588,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -42289,7 +42973,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -42493,7 +43183,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -42797,7 +43493,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -43021,7 +43723,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -43380,7 +44088,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -43514,7 +44228,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -43603,7 +44323,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -43822,7 +44548,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -44171,7 +44903,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 107,
-        "splitFromName": "שביל ישראל נחל דן"
+        "splitFromName": "שביל ישראל נחל דן",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -44397,7 +45135,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 251,
-        "splitFromName": "שביל ישראל מאגר דולב"
+        "splitFromName": "שביל ישראל מאגר דולב",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -44669,7 +45413,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 253,
-        "splitFromName": "שביל ישראל מאגר דולב - 2"
+        "splitFromName": "שביל ישראל מאגר דולב - 2",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -44895,7 +45645,13 @@
         "stroke-opacity": 1,
         "stroke-width": 5,
         "splitFrom": 253,
-        "splitFromName": "שביל ישראל מאגר דולב - 2"
+        "splitFromName": "שביל ישראל מאגר דולב - 2",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -45254,7 +46010,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -45403,7 +46165,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -45727,7 +46495,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -46141,7 +46915,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -47065,7 +47845,13 @@
               35.515782
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -48194,7 +48980,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -49418,7 +50210,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -49597,7 +50395,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -51101,7 +51905,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -51750,7 +52560,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -51853,13 +52669,81 @@
       "properties": {
         "id": 208,
         "name": "ציר הנפט בניאס שמיר",
+        "status": "deprecated",
+        "roadType": "paved",
+        "styleUrl": "#sty-112",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 4,
+          "safety": 3,
+          "comfort": 5,
+          "scenery": 5
+        },
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.689347,
+            33.23753
+          ],
+          [
+            35.691765,
+            33.229335
+          ],
+          [
+            35.695161,
+            33.221738
+          ],
+          [
+            35.695184,
+            33.216699
+          ],
+          [
+            35.695019,
+            33.208661
+          ],
+          [
+            35.693266,
+            33.200645
+          ],
+          [
+            35.692277,
+            33.192425
+          ],
+          [
+            35.691288,
+            33.184205
+          ],
+          [
+            35.690299,
+            33.175984
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 257,
+        "name": "ציר הנפט מצפה גולני",
         "status": "active",
         "roadType": "paved",
         "styleUrl": "#sty-112",
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 4,
+          "safety": 3,
+          "comfort": 5,
+          "scenery": 5
+        },
+        "splitFrom": 208,
+        "splitFromName": "ציר הנפט בניאס שמיר"
       },
       "geometry": {
         "type": "LineString",
@@ -52223,6 +53107,93 @@
             35.692975726625,
             33.22523749030153,
             428
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 258,
+        "name": "ציר הנפט בניאס שמיר - 2 [split archive 258]",
+        "status": "deprecated",
+        "roadType": "paved",
+        "styleUrl": "#sty-112",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 4,
+          "safety": 3,
+          "comfort": 5,
+          "scenery": 5
+        },
+        "splitFrom": 208,
+        "splitFromName": "ציר הנפט בניאס שמיר",
+        "originalName": "ציר הנפט בניאס שמיר - 2",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.694459,
+            33.222067
+          ],
+          [
+            35.695363,
+            33.217922
+          ],
+          [
+            35.6944,
+            33.209491
+          ],
+          [
+            35.693361,
+            33.201431
+          ],
+          [
+            35.692345,
+            33.192986
+          ],
+          [
+            35.691329,
+            33.184541
+          ],
+          [
+            35.690312,
+            33.176097
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 259,
+        "name": "ציר הנפט עין פית",
+        "status": "active",
+        "roadType": "paved",
+        "styleUrl": "#sty-112",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 4,
+          "safety": 3,
+          "comfort": 5,
+          "scenery": 5
+        },
+        "splitFrom": 258,
+        "splitFromName": "ציר הנפט בניאס שמיר - 2"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.692975726625,
+            33.22523749030153,
+            428
           ],
           [
             35.6930529749089,
@@ -52375,8 +53346,40 @@
             504
           ],
           [
-            35.69835097015718,
-            33.221321279579385,
+            35.69839470939169,
+            33.22127568102894,
+            516
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 260,
+        "name": "ציר הנפט זעורה",
+        "status": "active",
+        "roadType": "paved",
+        "styleUrl": "#sty-112",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 4,
+          "safety": 3,
+          "comfort": 5,
+          "scenery": 5
+        },
+        "splitFrom": 258,
+        "splitFromName": "ציר הנפט בניאס שמיר - 2"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.69839470939169,
+            33.22127568102894,
             516
           ],
           [
@@ -53453,7 +54456,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -54657,7 +55666,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -54881,7 +55896,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -54935,7 +55956,13 @@
               35.585433
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -55244,7 +56271,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -55588,7 +56621,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -56402,7 +57441,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -56716,7 +57761,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -57590,7 +58641,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -58069,7 +59126,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -58453,7 +59516,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -58757,7 +59826,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -59121,7 +60196,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -59400,7 +60481,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -59899,7 +60986,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -60033,7 +61126,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -60177,7 +61276,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -60796,7 +61901,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -61255,7 +62366,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -61634,7 +62751,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -61733,7 +62856,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -61937,7 +63066,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -62591,7 +63726,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -63960,7 +65101,13 @@
               35.621814
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -64054,7 +65201,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -64623,7 +65776,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -65562,7 +66721,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -66026,7 +67191,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -66090,7 +67261,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -66484,7 +67661,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -66763,7 +67946,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -67682,7 +68871,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -69476,7 +70671,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -69685,7 +70886,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -69974,7 +71181,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -70178,7 +71391,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -70357,7 +71576,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -70556,7 +71781,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -71585,7 +72816,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -71994,7 +73231,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -72223,7 +73466,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -72837,7 +74086,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -73301,7 +74556,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -73865,7 +75126,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -73979,7 +75246,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -74653,7 +75926,13 @@
               35.558978
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -75647,7 +76926,13 @@
               35.5645
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -76196,7 +77481,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -76395,7 +77686,13 @@
               35.570542
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -76679,7 +77976,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -77148,7 +78451,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -77297,7 +78606,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -77486,7 +78801,13 @@
               35.567282
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -77555,7 +78876,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -77754,7 +79081,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -77898,7 +79231,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -77957,7 +79296,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -78276,7 +79621,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -78825,7 +80176,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -79034,7 +80391,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -79668,7 +81031,13 @@
               35.573932
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -80302,7 +81671,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -80516,7 +81891,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -81390,7 +82771,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -81659,7 +83046,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -83713,7 +85106,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -84082,7 +85481,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -84681,7 +86086,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -86580,7 +87991,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -87294,7 +88711,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -87574,7 +88997,13 @@
               35.565911
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -88113,7 +89542,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -88707,7 +90142,13 @@
               35.571761
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -89146,7 +90587,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -89370,7 +90817,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -89609,7 +91062,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 4,
+          "safety": 3,
+          "comfort": 4,
+          "scenery": 5
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -90263,7 +91722,13 @@
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -90322,7 +91787,13 @@
               35.67418445853631
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -90514,7 +91985,13 @@
               35.68215147657551
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -90938,7 +92415,13 @@
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -91032,7 +92515,13 @@
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
         "stroke-opacity": 1,
-        "stroke-width": 5
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 2,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -92002,7 +93491,13 @@
         "status": "active",
         "roadType": "paved",
         "splitFrom": 219,
-        "splitFromName": "New segment"
+        "splitFromName": "New segment",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -92068,7 +93563,13 @@
         "status": "active",
         "roadType": "paved",
         "splitFrom": 219,
-        "splitFromName": "New segment"
+        "splitFromName": "New segment",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -92197,7 +93698,13 @@
         "id": 222,
         "name": "דרך היקפית דרום כפר סאלד",
         "status": "active",
-        "roadType": "paved"
+        "roadType": "paved",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -92304,7 +93811,13 @@
               35.658069
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -92403,7 +93916,13 @@
               35.660013
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -92922,7 +94441,13 @@
         "id": 227,
         "name": "עלייה מדרך רומית לפטרולים דרום",
         "status": "active",
-        "roadType": "dirt"
+        "roadType": "dirt",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -93101,7 +94626,13 @@
         "id": 228,
         "name": "עלייה מדרך רומית לפטרולים צפון",
         "status": "active",
-        "roadType": "dirt"
+        "roadType": "dirt",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -93310,7 +94841,13 @@
         "id": 233,
         "name": "עין סהר - חורשת האקליפטוס",
         "status": "active",
-        "roadType": "dirt"
+        "roadType": "dirt",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -93399,7 +94936,13 @@
         "id": 236,
         "name": "עין סהר מערב",
         "status": "active",
-        "roadType": "dirt"
+        "roadType": "dirt",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -93573,7 +95116,13 @@
         "id": 237,
         "name": "שביל חקלאי ליד תל קליל",
         "status": "active",
-        "roadType": "dirt"
+        "roadType": "dirt",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -93797,7 +95346,13 @@
         "id": 240,
         "name": "שאר ישוב היקפי דרום מזרח",
         "status": "active",
-        "roadType": "paved"
+        "roadType": "paved",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -94181,7 +95736,13 @@
         "id": 241,
         "name": "שאר ישוב היקפי מערב",
         "status": "active",
-        "roadType": "paved"
+        "roadType": "paved",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -94435,7 +95996,13 @@
         "id": 244,
         "name": "שדות דפנה צפון",
         "status": "active",
-        "roadType": "paved"
+        "roadType": "paved",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -94564,7 +96131,13 @@
         "id": 245,
         "name": "גשר על נהר הדן",
         "status": "active",
-        "roadType": "paved"
+        "roadType": "paved",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -94613,7 +96186,13 @@
               35.636412
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -94797,7 +96376,13 @@
               35.630683
             ]
           }
-        ]
+        ],
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -95086,7 +96671,13 @@
         "id": 256,
         "name": "שדות קיבוץ דן",
         "status": "active",
-        "roadType": "dirt"
+        "roadType": "dirt",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
       },
       "geometry": {
         "type": "LineString",

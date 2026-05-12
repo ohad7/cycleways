@@ -53,6 +53,7 @@ ROAD_TYPE_STYLES = {
     "dirt": {"stroke": "#ae9067", "stroke-opacity": 1.0, "stroke-width": 5.0},
     "road": {"stroke": "#8f2424", "stroke-opacity": 1.0, "stroke-width": 5.0},
 }
+QUALITY_KEYS = ("overall", "safety", "comfort", "scenery")
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -1189,9 +1190,60 @@ def validate_outputs(
     )
 
     invalid_data_markers: list[dict[str, Any]] = []
+    invalid_quality: list[dict[str, Any]] = []
+    active_split_numbered_names: list[dict[str, Any]] = []
     for segment_name, data in segments_data.items():
         if not isinstance(data, dict):
             continue
+
+        status = data.get("status", "active")
+        active = not data.get("deprecated") and status not in {"deprecated", "draft", "legacy"}
+        if active and data.get("splitFrom") is not None and re.search(r"\s-\s\d+$", segment_name):
+            active_split_numbered_names.append(
+                {
+                    "segment": segment_name,
+                    "id": data.get("id"),
+                    "splitFrom": data.get("splitFrom"),
+                    "issue": "active split child still has a numbered split suffix",
+                }
+            )
+
+        quality = data.get("quality")
+        if quality is None:
+            if active:
+                invalid_quality.append(
+                    {
+                        "segment": segment_name,
+                        "issue": "missing quality",
+                    }
+                )
+        elif not isinstance(quality, dict) or isinstance(quality, list):
+            invalid_quality.append(
+                {
+                    "segment": segment_name,
+                    "issue": "quality must be an object",
+                }
+            )
+        else:
+            unknown_keys = sorted(key for key in quality.keys() if key not in QUALITY_KEYS)
+            if unknown_keys:
+                invalid_quality.append(
+                    {
+                        "segment": segment_name,
+                        "issue": "unsupported quality fields",
+                        "fields": unknown_keys,
+                    }
+                )
+            for key in QUALITY_KEYS:
+                value = quality.get(key)
+                if not isinstance(value, int) or value < 1 or value > 5:
+                    invalid_quality.append(
+                        {
+                            "segment": segment_name,
+                            "issue": f"quality.{key} must be an integer from 1 to 5",
+                        }
+                    )
+
         for index, marker in enumerate(data.get("data", []) or []):
             location = marker.get("location") if isinstance(marker, dict) else None
             if (
@@ -1212,6 +1264,8 @@ def validate_outputs(
         "metadataMissingInGeojson": sorted(segment_names - geojson_names),
         "activeMissingMiddle": active_missing_middle,
         "invalidDataMarkers": invalid_data_markers,
+        "invalidQuality": invalid_quality,
+        "activeSplitNumberedNames": active_split_numbered_names,
         "routeCompatibilityWarnings": route_compatibility_warnings(segments_data),
         "topology": endpoint_topology_report(geojson_data, threshold_m),
     }
