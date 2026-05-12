@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
 import { copyFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
-import { createReadStream } from "node:fs";
+import { createReadStream, watch } from "node:fs";
 import { spawn } from "node:child_process";
 import { dirname, extname, isAbsolute, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,9 +23,13 @@ const promotedSegmentsPath = resolve(repoRoot, "segments.json");
 const promotedKmlPath = resolve(repoRoot, "exports/map.kml");
 const promotedManifestPath = resolve(repoRoot, "map-manifest.json");
 const port = Number(process.env.EDITOR_PORT || 8899);
+const devReloadEnabled = process.env.EDITOR_DEV_RELOAD === "1";
 let requestCounter = 0;
 let buildCounter = 0;
 let promoteCounter = 0;
+const devReloadClients = new Set();
+
+const qualityKeys = ["overall", "safety", "comfort", "scenery"];
 
 const mimeTypes = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -56,6 +60,14 @@ function sendText(response, status, text) {
 function sendJavaScript(response, status, text) {
   response.writeHead(status, {
     "Content-Type": "text/javascript; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  response.end(text);
+}
+
+function sendHtml(response, status, text) {
+  response.writeHead(status, {
+    "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": "no-store",
   });
   response.end(text);
@@ -97,6 +109,7 @@ function summarizeSource(source) {
   let active = 0;
   let deprecated = 0;
   let dataMarkers = 0;
+  let qualityRecords = 0;
 
   for (const feature of features) {
     const properties = feature?.properties || {};
@@ -107,6 +120,9 @@ function summarizeSource(source) {
       active += 1;
     }
     dataMarkers += Array.isArray(properties.data) ? properties.data.length : 0;
+    if (properties.quality !== undefined) {
+      qualityRecords += 1;
+    }
   }
 
   return {
@@ -114,6 +130,7 @@ function summarizeSource(source) {
     active,
     deprecated,
     dataMarkers,
+    qualityRecords,
   };
 }
 
@@ -127,6 +144,7 @@ function summarizeReport(report) {
     segmentRecords: validation.segmentsCount,
     newSegments: (validation.newSegments || []).length,
     routeWarnings: (validation.routeCompatibilityWarnings || []).length,
+    activeSplitNumberedNames: (validation.activeSplitNumberedNames || []).length,
     elevation: {
       skip: elevation.skipElevation,
       lookups: elevation.lookups,
@@ -139,6 +157,90 @@ function summarizeReport(report) {
       orphanEndpoints: topology.orphanEndpointCount,
     },
   };
+}
+
+function sendDevReloadEvent(response, event, payload) {
+  response.write(`event: ${event}\n`);
+  response.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+function handleDevReloadEvents(request, response) {
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-store",
+    Connection: "keep-alive",
+  });
+  response.write(": connected\n\n");
+  devReloadClients.add(response);
+  request.on("close", () => {
+    devReloadClients.delete(response);
+  });
+}
+
+function broadcastDevReload(reason) {
+  if (devReloadClients.size === 0) return;
+  log("info", "dev reload broadcast", { reason, clients: devReloadClients.size });
+  for (const client of devReloadClients) {
+    try {
+      sendDevReloadEvent(client, "reload", { reason });
+    } catch {
+      devReloadClients.delete(client);
+    }
+  }
+}
+
+function injectDevReloadClient(html) {
+  const script = `
+<script>
+(() => {
+  let connected = false;
+  let reloadTimer = null;
+  const source = new EventSource("/api/dev/events");
+  source.addEventListener("open", () => {
+    connected = true;
+    if (reloadTimer) {
+      clearTimeout(reloadTimer);
+      reloadTimer = null;
+    }
+  });
+  source.addEventListener("reload", () => {
+    window.location.reload();
+  });
+  source.addEventListener("error", () => {
+    if (!connected || reloadTimer) return;
+    reloadTimer = setTimeout(() => {
+      window.location.reload();
+    }, 900);
+  });
+})();
+</script>`;
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${script}\n  </body>`);
+  }
+  return `${html}\n${script}\n`;
+}
+
+function startDevReloadWatcher() {
+  if (!devReloadEnabled) return;
+
+  let reloadTimer = null;
+  const clientFilePattern = /\.(css|html|js)$/;
+  const ignoredFiles = new Set(["server.mjs", "dev-server.mjs"]);
+  try {
+    const watcher = watch(editorRoot, { persistent: false }, (_eventType, filename) => {
+      if (!filename) return;
+      const fileName = String(filename);
+      if (ignoredFiles.has(fileName) || !clientFilePattern.test(fileName)) return;
+      if (reloadTimer) clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => broadcastDevReload(fileName), 120);
+    });
+    watcher.unref?.();
+    log("info", "dev reload watcher enabled", {
+      editorRoot: repoRelative(editorRoot),
+    });
+  } catch (error) {
+    log("warn", "dev reload watcher could not start", error instanceof Error ? error.message : String(error));
+  }
 }
 
 function createLineLogger(level, prefix, append) {
@@ -228,6 +330,13 @@ function validateSourceGeojson(source) {
       names.add(name);
     }
 
+    const status = feature.properties.status || "active";
+    const activeLine =
+      feature.geometry?.type === "LineString" &&
+      !feature.properties.deprecated &&
+      !["deprecated", "draft", "legacy"].includes(status);
+    validateQuality(feature.properties.quality, name || index, activeLine);
+
     if (feature.properties.data !== undefined) {
       if (!Array.isArray(feature.properties.data)) {
         throw new Error(`Feature ${name || index} has non-array data markers`);
@@ -301,6 +410,32 @@ function validateSourceGeojson(source) {
   }
 }
 
+function validateQuality(quality, featureLabel, required) {
+  if (quality === undefined || quality === null) {
+    if (required) {
+      throw new Error(`Feature ${featureLabel} is missing quality`);
+    }
+    return;
+  }
+
+  if (typeof quality !== "object" || Array.isArray(quality)) {
+    throw new Error(`Feature ${featureLabel} quality must be an object`);
+  }
+
+  for (const key of Object.keys(quality)) {
+    if (!qualityKeys.includes(key)) {
+      throw new Error(`Feature ${featureLabel} quality has unsupported field ${key}`);
+    }
+  }
+
+  for (const key of qualityKeys) {
+    const value = quality[key];
+    if (!Number.isInteger(value) || value < 1 || value > 5) {
+      throw new Error(`Feature ${featureLabel} quality.${key} must be an integer from 1 to 5`);
+    }
+  }
+}
+
 async function serveStatic(request, response, url) {
   let pathname = decodeURIComponent(url.pathname);
   if (pathname === "/" || pathname === "/editor") {
@@ -328,6 +463,11 @@ async function serveStatic(request, response, url) {
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) {
       sendText(response, 404, "Not found");
+      return;
+    }
+    if (devReloadEnabled && filePath === resolve(editorRoot, "index.html")) {
+      const html = await readFile(filePath, "utf-8");
+      sendHtml(response, 200, injectDevReloadClient(html));
       return;
     }
     response.writeHead(200, {
@@ -478,6 +618,9 @@ function validationBlockers(report) {
   }
   if ((validation.activeMissingMiddle || []).length > 0) {
     blockers.push("active segments missing middle points");
+  }
+  if ((validation.activeSplitNumberedNames || []).length > 0) {
+    blockers.push("active split children with numbered names");
   }
 
   return blockers;
@@ -650,6 +793,11 @@ const server = createServer(async (request, response) => {
   const startedAt = Date.now();
 
   try {
+    if (request.method === "GET" && url.pathname === "/api/dev/events" && devReloadEnabled) {
+      handleDevReloadEvents(request, response);
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/source") {
       logApi(requestId, "GET /api/source started");
       const source = JSON.parse(await readFile(sourcePath, "utf-8"));
@@ -661,7 +809,14 @@ const server = createServer(async (request, response) => {
     if (request.method === "POST" && url.pathname === "/api/source") {
       logApi(requestId, "POST /api/source started");
       const source = await readRequestJson(request);
-      validateSourceGeojson(source);
+      try {
+        validateSourceGeojson(source);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/source validation failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
       logApi(requestId, "POST /api/source validated", summarizeSource(source));
       const tmpPath = `${sourcePath}.tmp`;
       await writeFile(tmpPath, `${JSON.stringify(source, null, 2)}\n`, "utf-8");
@@ -736,4 +891,5 @@ const server = createServer(async (request, response) => {
 
 server.listen(port, "127.0.0.1", () => {
   console.log(`Map editor running at http://127.0.0.1:${port}/editor/`);
+  startDevReloadWatcher();
 });

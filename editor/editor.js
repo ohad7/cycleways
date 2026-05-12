@@ -91,8 +91,38 @@ const DATA_ICON_PATHS = {
   "roadblock-11": "/icons/roadblock.svg",
 };
 
+const DEFAULT_FEATURE_FLAGS = {
+  segmentQualityEditor: true,
+  segmentQualityPublicDisplay: false,
+  segmentQualityRouting: false,
+};
+const FEATURE_FLAGS = Object.fromEntries(
+  Object.entries(DEFAULT_FEATURE_FLAGS).map(([key, defaultValue]) => [key, featureFlagValue(key, defaultValue)]),
+);
+const QUALITY_FIELDS = [
+  { key: "overall", label: "Overall" },
+  { key: "safety", label: "Safety" },
+  { key: "comfort", label: "Comfort" },
+  { key: "scenery", label: "Scenery" },
+];
+const DEFAULT_QUALITY = Object.fromEntries(QUALITY_FIELDS.map(({ key }) => [key, 3]));
 const ROUTE_ANCHOR_SPACING_M = 1000;
 const EXTEND_ENDPOINT_THRESHOLD_PX = 44;
+
+function featureFlagValue(key, defaultValue) {
+  const globalValue = window.CYCLEWAYS_FEATURE_FLAGS?.[key];
+  if (typeof globalValue === "boolean") return globalValue;
+
+  try {
+    const storedValue = window.localStorage.getItem(`cycleways.flags.${key}`);
+    if (storedValue === "true") return true;
+    if (storedValue === "false") return false;
+  } catch {
+    // Feature flag persistence is optional.
+  }
+
+  return defaultValue;
+}
 
 const state = {
   source: null,
@@ -123,8 +153,12 @@ const els = {
   selectedCount: document.getElementById("selected-count"),
   segmentId: document.getElementById("segment-id"),
   segmentName: document.getElementById("segment-name"),
+  nameRelease: document.getElementById("name-release"),
+  nameReleaseMessage: document.getElementById("name-release-message"),
+  releaseName: document.getElementById("release-name"),
   segmentStatus: document.getElementById("segment-status"),
   segmentRoadType: document.getElementById("segment-road-type"),
+  segmentQuality: document.getElementById("segment-quality"),
   segmentTodo: document.getElementById("segment-todo"),
   segmentNotes: document.getElementById("segment-notes"),
   addData: document.getElementById("add-data"),
@@ -145,6 +179,7 @@ const els = {
   editorAlert: document.getElementById("editor-alert"),
   editorAlertTitle: document.getElementById("editor-alert-title"),
   editorAlertMessage: document.getElementById("editor-alert-message"),
+  buildOutputSummary: document.getElementById("build-output-summary"),
   buildReport: document.getElementById("build-report"),
   statusBar: document.getElementById("status-bar"),
 };
@@ -266,7 +301,22 @@ function setSegmentDrawer(open) {
 }
 
 function canPromoteReport(report) {
-  return Boolean(report && !report.elevation?.skipElevation && (report.elevation?.failures || 0) === 0);
+  return Boolean(
+    report &&
+      !report.elevation?.skipElevation &&
+      (report.elevation?.failures || 0) === 0 &&
+      (report.validation?.activeSplitNumberedNames || []).length === 0,
+  );
+}
+
+function promoteBlockerMessage(report) {
+  if (!report) return "Run a successful full build before promoting";
+  if (report.elevation?.skipElevation) return "Run a full build before promoting";
+  if ((report.elevation?.failures || 0) > 0) return "Fix elevation failures before promoting";
+  if ((report.validation?.activeSplitNumberedNames || []).length > 0) {
+    return "Rename numbered split children before promoting";
+  }
+  return "Run a successful full build before promoting";
 }
 
 function updatePromoteButton() {
@@ -277,7 +327,7 @@ function updatePromoteButton() {
     ? "Save and run a fresh full build before promoting"
     : canPromoteReport(state.lastBuildReport)
       ? "Copy the latest build into the site files"
-      : "Run a successful full build before promoting";
+      : promoteBlockerMessage(state.lastBuildReport);
 }
 
 function markDirty(isDirty = true) {
@@ -297,6 +347,24 @@ function featureName(feature) {
 
 function featureId(feature) {
   return feature?.properties?.id ?? "";
+}
+
+function normalizedQuality(quality) {
+  const source = quality && typeof quality === "object" && !Array.isArray(quality) ? quality : {};
+  return Object.fromEntries(
+    QUALITY_FIELDS.map(({ key }) => {
+      const value = Number(source[key]);
+      return [key, Number.isInteger(value) && value >= 1 && value <= 5 ? value : DEFAULT_QUALITY[key]];
+    }),
+  );
+}
+
+function qualityForFeature(feature) {
+  return normalizedQuality(feature?.properties?.quality);
+}
+
+function defaultQuality() {
+  return { ...DEFAULT_QUALITY };
 }
 
 function isActiveLineFeature(feature) {
@@ -558,6 +626,107 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function updateSelectedQuality(key, value) {
+  const feature = selectedFeature();
+  if (!feature || !QUALITY_FIELDS.some((field) => field.key === key)) return;
+
+  feature.properties.quality = {
+    ...qualityForFeature(feature),
+    [key]: value,
+  };
+  markDirty();
+  renderAll();
+  setStatus(`Updated ${key} quality to ${value}/5.`);
+}
+
+function renderQualityControls(feature, disabled) {
+  if (!els.segmentQuality) return;
+
+  els.segmentQuality.hidden = !FEATURE_FLAGS.segmentQualityEditor;
+  els.segmentQuality.innerHTML = "";
+  if (!FEATURE_FLAGS.segmentQualityEditor) return;
+
+  const quality = qualityForFeature(feature);
+
+  const header = document.createElement("div");
+  header.className = "quality-header";
+
+  const title = document.createElement("span");
+  title.className = "field-label";
+  title.textContent = "Quality";
+  header.appendChild(title);
+
+  const summary = document.createElement("span");
+  summary.className = "quality-summary";
+  summary.textContent = `${quality.overall}/5`;
+  header.appendChild(summary);
+  els.segmentQuality.appendChild(header);
+
+  const list = document.createElement("div");
+  list.className = "quality-list";
+
+  for (const field of QUALITY_FIELDS) {
+    const row = document.createElement("div");
+    row.className = "quality-row";
+
+    const label = document.createElement("span");
+    label.className = "quality-name";
+    label.textContent = field.label;
+    row.appendChild(label);
+
+    const stars = document.createElement("div");
+    stars.className = "quality-stars";
+    const fieldValue = quality[field.key];
+    for (let value = 1; value <= 5; value++) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `quality-star${value <= fieldValue ? " filled" : ""}`;
+      button.textContent = "★";
+      button.disabled = disabled;
+      button.setAttribute("aria-label", `${field.label} ${value} out of 5`);
+      button.setAttribute("aria-pressed", String(value === fieldValue));
+      button.addEventListener("click", () => updateSelectedQuality(field.key, value));
+      stars.appendChild(button);
+    }
+    row.appendChild(stars);
+
+    const valueLabel = document.createElement("span");
+    valueLabel.className = "quality-value";
+    valueLabel.textContent = `${fieldValue}/5`;
+    row.appendChild(valueLabel);
+
+    list.appendChild(row);
+  }
+
+  els.segmentQuality.appendChild(list);
+}
+
+function renderNameRelease(feature, disabled) {
+  if (!els.nameRelease) return;
+
+  const name = feature?.properties?.name || "";
+  const sourceIndex = selectedSourceIndex();
+  const inactiveConflicts = feature ? inactiveNameConflicts(name, sourceIndex) : [];
+  const activeConflicts = feature ? activeNameConflicts(name, sourceIndex) : [];
+  const show = Boolean(feature && (inactiveConflicts.length > 0 || activeConflicts.length > 0));
+
+  els.nameRelease.hidden = !show;
+  els.releaseName.disabled = disabled || inactiveConflicts.length === 0 || activeConflicts.length > 0;
+
+  if (!show) {
+    els.nameReleaseMessage.textContent = "";
+    return;
+  }
+
+  if (activeConflicts.length > 0) {
+    els.nameReleaseMessage.textContent = "Name is used by another active segment.";
+    return;
+  }
+
+  const recordText = inactiveConflicts.length === 1 ? "archived record" : "archived records";
+  els.nameReleaseMessage.textContent = `Name held by ${inactiveConflicts.length} ${recordText}.`;
+}
+
 function renderForm() {
   const feature = selectedFeature();
   const drawing = isDrawing();
@@ -577,6 +746,8 @@ function renderForm() {
   ]) {
     input.disabled = disabled;
   }
+  renderQualityControls(feature, disabled);
+  renderNameRelease(feature, disabled);
 
   els.deleteVertex.disabled = drawing || !feature || state.selectedVertexIndex < 0;
   els.splitSegment.disabled = !canSplit;
@@ -592,16 +763,18 @@ function renderForm() {
     els.segmentRoadType.value = "paved";
     els.segmentTodo.value = "";
     els.segmentNotes.value = "";
+    renderNameRelease(null, true);
     return;
   }
 
-  els.selectedCount.textContent = `${feature.geometry.coordinates.length} vertices`;
+  els.selectedCount.textContent = `ID ${feature.properties.id ?? "—"} · ${feature.geometry.coordinates.length} vertices`;
   els.segmentId.value = feature.properties.id ?? "";
   els.segmentName.value = feature.properties.name || "";
   els.segmentStatus.value = feature.properties.status || "active";
   els.segmentRoadType.value = feature.properties.roadType || "paved";
   els.segmentTodo.value = feature.properties.todo || "";
   els.segmentNotes.value = feature.properties.notes || "";
+  renderNameRelease(feature, disabled);
 }
 
 function canFinishDraw() {
@@ -728,6 +901,32 @@ function updateSelectedProperties() {
   const newIndex = state.activeFeatures.findIndex((record) => record.sourceIndex === sourceIndex);
   state.selectedIndex = newIndex;
   renderAll();
+}
+
+function releaseSelectedName() {
+  const feature = selectedFeature();
+  const sourceIndex = selectedSourceIndex();
+  if (!feature || sourceIndex < 0) return;
+
+  const name = feature.properties.name || "";
+  const activeConflicts = activeNameConflicts(name, sourceIndex);
+  if (activeConflicts.length > 0) {
+    setStatus("Name is used by another active segment.", "error");
+    return;
+  }
+
+  const conflicts = inactiveNameConflicts(name, sourceIndex);
+  if (conflicts.length === 0) {
+    setStatus("No archived records hold this name.");
+    return;
+  }
+
+  const renamed = conflicts.map((record) => releaseInactiveRecordName(record));
+  markDirty();
+  renderAll();
+  setStatus(
+    `Released ${renamed.length} archived ${renamed.length === 1 ? "record" : "records"} for ${name}.`,
+  );
 }
 
 function setOptionalProperty(properties, key, value) {
@@ -857,9 +1056,10 @@ function nextSegmentId() {
   );
 }
 
-function uniqueSegmentName(preferredName, reservedNames = new Set()) {
+function uniqueSegmentName(preferredName, reservedNames = new Set(), excludedSourceIndexes = new Set()) {
   const names = new Set(
     state.source.features
+      .filter((_feature, sourceIndex) => !excludedSourceIndexes.has(sourceIndex))
       .map((feature) => feature.properties?.name)
       .filter((name) => typeof name === "string" && name.length > 0),
   );
@@ -880,9 +1080,57 @@ function uniqueSegmentName(preferredName, reservedNames = new Set()) {
   return candidate;
 }
 
-function uniqueSplitNames(baseName) {
-  const firstName = uniqueSegmentName(`${baseName} - 1`);
-  const secondName = uniqueSegmentName(`${baseName} - 2`, new Set([firstName]));
+function segmentNameAvailable(name, excludedSourceIndexes = new Set()) {
+  return !state.source.features.some(
+    (feature, sourceIndex) => !excludedSourceIndexes.has(sourceIndex) && feature.properties?.name === name,
+  );
+}
+
+function inactiveFeature(feature) {
+  const status = feature?.properties?.status || "active";
+  return feature?.properties?.deprecated || ["deprecated", "legacy", "draft"].includes(status) || feature?.geometry === null;
+}
+
+function archiveName(baseName, id, reason, excludedSourceIndexes = new Set()) {
+  const suffix = Number.isInteger(id) ? `${reason} ${id}` : `${reason} ${Date.now().toString(36)}`;
+  return uniqueSegmentName(`${baseName} [${suffix}]`, new Set(), excludedSourceIndexes);
+}
+
+function inactiveNameConflicts(name, selectedSourceIndex) {
+  if (!name) return [];
+  return state.source.features
+    .map((feature, sourceIndex) => ({ feature, sourceIndex }))
+    .filter(
+      ({ feature, sourceIndex }) =>
+        sourceIndex !== selectedSourceIndex && feature.properties?.name === name && inactiveFeature(feature),
+    );
+}
+
+function activeNameConflicts(name, selectedSourceIndex) {
+  if (!name) return [];
+  return state.source.features
+    .map((feature, sourceIndex) => ({ feature, sourceIndex }))
+    .filter(
+      ({ feature, sourceIndex }) =>
+        sourceIndex !== selectedSourceIndex && feature.properties?.name === name && !inactiveFeature(feature),
+    );
+}
+
+function releaseInactiveRecordName(record, reason = "archive") {
+  const properties = record.feature.properties || (record.feature.properties = {});
+  const oldName = properties.name || "Unnamed segment";
+  if (!properties.originalName) {
+    properties.originalName = oldName;
+  }
+  properties.name = archiveName(oldName, properties.id, reason, new Set([record.sourceIndex]));
+  return { oldName, newName: properties.name };
+}
+
+function uniqueSplitNames(baseName, parentSourceIndex) {
+  const excluded = new Set([parentSourceIndex]);
+  const firstPreferred = segmentNameAvailable(baseName, excluded) ? baseName : `${baseName} - 1`;
+  const firstName = uniqueSegmentName(firstPreferred, new Set(), excluded);
+  const secondName = uniqueSegmentName(`${baseName} - 2`, new Set([firstName]), excluded);
   return [firstName, secondName];
 }
 
@@ -1022,6 +1270,7 @@ function commitNewDrawnSegment() {
       name: uniqueSegmentName("New segment"),
       status: "active",
       roadType: "paved",
+      quality: defaultQuality(),
     },
     geometry: {
       type: "LineString",
@@ -1462,11 +1711,15 @@ function splitSelectedSegment() {
   const coords = feature.geometry.coordinates;
   const firstCoords = cloneCoords(coords.slice(0, vertexIndex + 1));
   const secondCoords = cloneCoords(coords.slice(vertexIndex));
-  const originalProperties = cloneJson(feature.properties);
+  const originalProperties = {
+    ...cloneJson(feature.properties),
+    quality: qualityForFeature(feature),
+  };
   const originalId = originalProperties.id;
   const originalName = featureName(feature);
   const nextId = nextSegmentId();
-  const [firstName, secondName] = uniqueSplitNames(originalName);
+  const [firstName, secondName] = uniqueSplitNames(originalName, sourceIndex);
+  const archivedParentName = archiveName(originalName, originalId, "split archive", new Set([sourceIndex]));
 
   const firstProperties = {
     ...cloneJson(originalProperties),
@@ -1498,6 +1751,8 @@ function splitSelectedSegment() {
 
   feature.properties = {
     ...originalProperties,
+    name: archivedParentName,
+    originalName: originalProperties.originalName || originalName,
     status: "deprecated",
     deprecated: true,
     routeAnchors: buildSplitRouteAnchors(firstCoords, secondCoords),
@@ -1583,6 +1838,8 @@ function buildSummary(report) {
       duplicateFeatureNames: validation.duplicateFeatureNames || [],
       duplicateIds: validation.duplicateIds || {},
       activeMissingMiddle: validation.activeMissingMiddle?.length ?? 0,
+      invalidQuality: validation.invalidQuality?.length ?? 0,
+      activeSplitNumberedNames: validation.activeSplitNumberedNames || [],
       routeCompatibilityWarnings: validation.routeCompatibilityWarnings?.length ?? 0,
       connectedComponents: validation.topology?.connectedComponents,
       orphanEndpointCount: validation.topology?.orphanEndpointCount,
@@ -1597,6 +1854,20 @@ function buildSummary(report) {
     null,
     2,
   );
+}
+
+function buildOutputSummary(report) {
+  if (!report) return "No build report";
+  const validation = report.validation || {};
+  const elevation = report.elevation || {};
+  const version = report.outputs?.versioned?.version;
+  const qualityIssues = validation.invalidQuality?.length || 0;
+  const splitNameIssues = validation.activeSplitNumberedNames?.length || 0;
+  const routeWarnings = validation.routeCompatibilityWarnings?.length || 0;
+  const elevationFailures = elevation.failures || 0;
+  const issues = qualityIssues + splitNameIssues + routeWarnings + elevationFailures;
+  const prefix = version ? `v${version}` : "Build";
+  return issues > 0 ? `${prefix} · ${issues} issues` : `${prefix} · OK`;
 }
 
 async function runBuild() {
@@ -1617,10 +1888,13 @@ async function runBuild() {
       throw new Error(payload.error || `Build failed: ${response.status}`);
     }
     state.lastBuildReport = payload.report;
+    els.buildOutputSummary.textContent = buildOutputSummary(payload.report);
     els.buildReport.textContent = buildSummary(payload.report);
     updatePromoteButton();
     if ((payload.report?.elevation?.failures || 0) > 0) {
       setStatus("Build finished with elevation failures. Fix the elevation service and rebuild.", "error");
+    } else if ((payload.report?.validation?.activeSplitNumberedNames || []).length > 0) {
+      setStatus("Build finished with numbered split names. Rename them before promoting.", "error");
     } else {
       setStatus(payload.report?.elevation?.skipElevation ? "Build complete. Run a full build before promoting." : "Build complete. Ready to promote.");
     }
@@ -1650,6 +1924,7 @@ async function promoteBuild() {
       throw new Error(payload.error || `Promote failed: ${response.status}`);
     }
     els.buildReport.textContent = `${els.buildReport.textContent}\n\nPromoted:\n${JSON.stringify(payload.promoted, null, 2)}\n\nRemoved old versions:\n${JSON.stringify(payload.removed || [], null, 2)}`;
+    els.buildOutputSummary.textContent = `Promoted ${payload.version}`;
     setStatus("Build promoted to site files.");
   } finally {
     updatePromoteButton();
@@ -1661,6 +1936,7 @@ function wireEvents() {
   els.toggleSegments.addEventListener("click", () => setSegmentDrawer(!state.segmentsOpen));
   els.closeSegments.addEventListener("click", () => setSegmentDrawer(false));
   els.addSegment.addEventListener("click", addSegment);
+  els.releaseName.addEventListener("click", releaseSelectedName);
   els.modeSelect.addEventListener("click", () => setMode("select"));
   els.modeInsert.addEventListener("click", () => setMode("insert"));
   els.extendSegment.addEventListener("click", startExtendDraw);

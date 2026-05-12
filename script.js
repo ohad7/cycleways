@@ -28,7 +28,30 @@ const DEFAULT_MAP_ASSETS = {
   segments: "segments.json",
 };
 
+const DEFAULT_FEATURE_FLAGS = {
+  segmentQualityPublicDisplay: false,
+  segmentQualityRouting: false,
+};
+const FEATURE_FLAGS = Object.fromEntries(
+  Object.entries(DEFAULT_FEATURE_FLAGS).map(([key, defaultValue]) => [key, featureFlagValue(key, defaultValue)]),
+);
+
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
+
+function featureFlagValue(key, defaultValue) {
+  const globalValue = window.CYCLEWAYS_FEATURE_FLAGS?.[key];
+  if (typeof globalValue === "boolean") return globalValue;
+
+  try {
+    const storedValue = window.localStorage.getItem(`cycleways.flags.${key}`);
+    if (storedValue === "true") return true;
+    if (storedValue === "false") return false;
+  } catch {
+    // Feature flag persistence is optional.
+  }
+
+  return defaultValue;
+}
 
 function requireMapboxToken() {
   const globalToken = window.CYCLEWAYS_MAPBOX_TOKEN;
@@ -1911,7 +1934,7 @@ async function parseGeoJSON(geoJsonData) {
 
         // Update segment name display with details
         const segmentDisplay = document.getElementById("segment-name-display");
-        segmentDisplay.innerHTML = `<strong>${name}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
+        segmentDisplay.innerHTML = `<strong>${name}</strong> ${getSegmentQualityBadge(name)} <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
         segmentDisplay.style.display = "block";
 
         // Show data points instead of legacy warnings
@@ -2444,7 +2467,7 @@ function focusOnSegment(segmentName) {
   const segmentElevationLoss = metrics ? metrics.forward.elevationLoss : 0;
 
   const segmentDisplay = document.getElementById("segment-name-display");
-  segmentDisplay.innerHTML = `<strong>${segmentName}</strong> <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
+  segmentDisplay.innerHTML = `<strong>${segmentName}</strong> ${getSegmentQualityBadge(segmentName)} <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
 
   // Show data points instead of legacy warnings
   const dataPoints = getSegmentDataPoints(segmentName);
@@ -3638,7 +3661,7 @@ function showDownloadModal() {
     selectedSegments.forEach((segmentName, index) => {
       segmentsHtml += `
         <div class="modal-segment-item">
-          <span><strong>${index + 1}.</strong> ${segmentName}</span>
+          <span><strong>${index + 1}.</strong> ${segmentName} ${getSegmentQualityBadge(segmentName)}</span>
       `;
 
       // Add data points for each segment
@@ -4271,6 +4294,25 @@ function getSegmentDataPoints(segmentName) {
     information: dataPoint.information || "",
     emoji: MARKER_EMOJIS[dataPoint.type] || "📍",
   }));
+}
+
+function getSegmentQualityOverall(segmentName) {
+  const quality = segmentsData?.[segmentName]?.quality;
+  const overall = quality && typeof quality === "object" ? Number(quality.overall) : NaN;
+  return Number.isInteger(overall) && overall >= 1 && overall <= 5 ? overall : 3;
+}
+
+function getSegmentQualityBadge(segmentName) {
+  if (!FEATURE_FLAGS.segmentQualityPublicDisplay) return "";
+
+  const overall = getSegmentQualityOverall(segmentName);
+  if (overall >= 5) {
+    return '<span class="segment-quality-badge excellent">★★★★★ מומלץ</span>';
+  }
+  if (overall <= 2) {
+    return '<span class="segment-quality-badge caution">דירוג נמוך</span>';
+  }
+  return "";
 }
 
 // RouteManager is imported from route-manager.js
