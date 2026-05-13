@@ -2,6 +2,9 @@
 local_copy.sh
 __pycache__/
 *.pyc
+node_modules/
+.vite/
+dist/
 processing/cache/elevation_cache.json
 build/
 mapbox-token.js

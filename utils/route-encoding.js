@@ -3,6 +3,8 @@
  */
 
 const ROUTE_VERSION = 2;
+export const COMPACT_ROUTE_VERSION = 3;
+export const ROUTE_COORDINATE_PRECISION = 1e6;
 
 // Base58 alphabet (Bitcoin-style)
 const BASE58_ALPHABET =
@@ -70,6 +72,245 @@ function base58Decode(str) {
   return new Uint8Array(bytes);
 }
 
+function decodeRouteBytes(routeString) {
+  const isBase58 =
+    /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/.test(
+      routeString,
+    );
+
+  if (isBase58) {
+    return base58Decode(routeString);
+  }
+
+  const binaryString = atob(routeString);
+  const binaryData = new ArrayBuffer(binaryString.length);
+  const uint8Array = new Uint8Array(binaryData);
+
+  for (let i = 0; i < binaryString.length; i++) {
+    uint8Array[i] = binaryString.charCodeAt(i);
+  }
+
+  return uint8Array;
+}
+
+function writeUnsignedVarint(bytes, value) {
+  let remaining = Number(value);
+  if (!Number.isSafeInteger(remaining) || remaining < 0) {
+    throw new Error(`Invalid varint value: ${value}`);
+  }
+
+  while (remaining >= 0x80) {
+    bytes.push((remaining & 0x7f) | 0x80);
+    remaining = Math.floor(remaining / 128);
+  }
+  bytes.push(remaining);
+}
+
+function readUnsignedVarint(bytes, cursor) {
+  let result = 0;
+  let shift = 0;
+
+  while (cursor.index < bytes.length) {
+    const byte = bytes[cursor.index++];
+    result += (byte & 0x7f) * 2 ** shift;
+
+    if ((byte & 0x80) === 0) {
+      return result;
+    }
+
+    shift += 7;
+    if (shift > 49) {
+      throw new Error("Invalid varint: too many bytes");
+    }
+  }
+
+  throw new Error("Invalid varint: unexpected end of payload");
+}
+
+function zigZagEncode(value) {
+  return value >= 0 ? value * 2 : -value * 2 - 1;
+}
+
+function zigZagDecode(value) {
+  return value % 2 === 0 ? value / 2 : -(value + 1) / 2;
+}
+
+function quantizeCoordinate(value) {
+  const quantized = Math.round(Number(value) * ROUTE_COORDINATE_PRECISION);
+  if (!Number.isSafeInteger(quantized)) {
+    throw new Error(`Invalid coordinate value: ${value}`);
+  }
+  return quantized;
+}
+
+function dequantizeCoordinate(value) {
+  return value / ROUTE_COORDINATE_PRECISION;
+}
+
+function isValidLngLat(lng, lat) {
+  return (
+    Number.isFinite(lng) &&
+    Number.isFinite(lat) &&
+    lng >= -180 &&
+    lng <= 180 &&
+    lat >= -90 &&
+    lat <= 90
+  );
+}
+
+function writeSignedVarint(bytes, value) {
+  writeUnsignedVarint(bytes, zigZagEncode(value));
+}
+
+function readSignedVarint(bytes, cursor) {
+  return zigZagDecode(readUnsignedVarint(bytes, cursor));
+}
+
+function decodeLegacySegmentIds(uint8Array) {
+  if (uint8Array.byteLength === 0) {
+    console.warn("Empty route data");
+    return [];
+  }
+
+  const version = uint8Array[0];
+
+  if (version !== 1 && version !== ROUTE_VERSION) {
+    console.warn(
+      `Unsupported route version: ${version}. Expected version 1 or ${ROUTE_VERSION}.`,
+    );
+    return [];
+  }
+
+  const segmentDataOffset = 2;
+  const segmentDataLength = uint8Array.byteLength - segmentDataOffset;
+
+  if (segmentDataLength % 2 !== 0) {
+    console.warn("Invalid route data: segment data length is not even");
+    return [];
+  }
+
+  const view = new Uint16Array(uint8Array.buffer, segmentDataOffset);
+  return Array.from(view);
+}
+
+export function encodeCompactRoute(routePoints, segmentIds = []) {
+  const anchors = Array.isArray(routePoints)
+    ? routePoints
+        .map((point) => ({
+          lng: Number(point?.lng),
+          lat: Number(point?.lat),
+        }))
+        .filter((point) => isValidLngLat(point.lng, point.lat))
+    : [];
+
+  if (anchors.length === 0) return "";
+
+  const hints = Array.isArray(segmentIds)
+    ? segmentIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isSafeInteger(id) && id >= 0)
+    : [];
+
+  const bytes = [COMPACT_ROUTE_VERSION];
+  writeUnsignedVarint(bytes, anchors.length);
+
+  let previousLng = 0;
+  let previousLat = 0;
+  anchors.forEach((point, index) => {
+    const lng = quantizeCoordinate(point.lng);
+    const lat = quantizeCoordinate(point.lat);
+    writeSignedVarint(bytes, index === 0 ? lng : lng - previousLng);
+    writeSignedVarint(bytes, index === 0 ? lat : lat - previousLat);
+    previousLng = lng;
+    previousLat = lat;
+  });
+
+  writeUnsignedVarint(bytes, hints.length);
+  hints.forEach((id) => writeUnsignedVarint(bytes, id));
+
+  return base58Encode(new Uint8Array(bytes));
+}
+
+function decodeCompactRouteBytes(uint8Array) {
+  const cursor = { index: 1 };
+  const anchorCount = readUnsignedVarint(uint8Array, cursor);
+  const routePoints = [];
+
+  let previousLng = 0;
+  let previousLat = 0;
+  for (let i = 0; i < anchorCount; i++) {
+    const lngDelta = readSignedVarint(uint8Array, cursor);
+    const latDelta = readSignedVarint(uint8Array, cursor);
+    const lng = i === 0 ? lngDelta : previousLng + lngDelta;
+    const lat = i === 0 ? latDelta : previousLat + latDelta;
+
+    previousLng = lng;
+    previousLat = lat;
+    routePoints.push({
+      lng: dequantizeCoordinate(lng),
+      lat: dequantizeCoordinate(lat),
+      id: Date.now() + i + Math.random(),
+    });
+  }
+
+  const hintCount =
+    cursor.index < uint8Array.length ? readUnsignedVarint(uint8Array, cursor) : 0;
+  const segmentIds = [];
+  for (let i = 0; i < hintCount; i++) {
+    segmentIds.push(readUnsignedVarint(uint8Array, cursor));
+  }
+
+  return {
+    version: COMPACT_ROUTE_VERSION,
+    type: "compact_route",
+    routePoints,
+    segmentIds,
+  };
+}
+
+export function decodeRoutePayload(routeString) {
+  if (!routeString) {
+    return {
+      version: null,
+      type: "empty",
+      routePoints: [],
+      segmentIds: [],
+    };
+  }
+
+  try {
+    const uint8Array = decodeRouteBytes(routeString);
+    if (uint8Array.byteLength === 0) {
+      return {
+        version: null,
+        type: "empty",
+        routePoints: [],
+        segmentIds: [],
+      };
+    }
+
+    const version = uint8Array[0];
+    if (version === COMPACT_ROUTE_VERSION) {
+      return decodeCompactRouteBytes(uint8Array);
+    }
+
+    return {
+      version,
+      type: "legacy_segments",
+      routePoints: [],
+      segmentIds: decodeLegacySegmentIds(uint8Array),
+    };
+  } catch (error) {
+    console.error("Error decoding route payload:", error);
+    return {
+      version: null,
+      type: "invalid",
+      routePoints: [],
+      segmentIds: [],
+    };
+  }
+}
+
 /**
  * Encode route segments to a compact string
  * @param {Array} segmentIds - Array of segment ids
@@ -108,57 +349,8 @@ export function decodeRoute(routeString, segmentsData) {
   if (!routeString) return [];
 
   try {
-    let uint8Array;
-
-    // Try to determine if this is base58 or base64 encoding
-    const isBase58 =
-      /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/.test(
-        routeString,
-      );
-
-    if (isBase58) {
-      // Decode from base58 (version 2)
-      uint8Array = base58Decode(routeString);
-    } else {
-      // Decode from base64 (legacy version 1)
-      const binaryString = atob(routeString);
-      const binaryData = new ArrayBuffer(binaryString.length);
-      uint8Array = new Uint8Array(binaryData);
-
-      for (let i = 0; i < binaryString.length; i++) {
-        uint8Array[i] = binaryString.charCodeAt(i);
-      }
-    }
-
-    // Check for empty data
-    if (uint8Array.byteLength === 0) {
-      console.warn("Empty route data");
-      return [];
-    }
-
-    // Read version from first byte
-    const version = uint8Array[0];
-
-    if (version !== 1 && version !== ROUTE_VERSION) {
-      console.warn(
-        `Unsupported route version: ${version}. Expected version 1 or ${ROUTE_VERSION}.`,
-      );
-      return [];
-    }
-
-    // Parse segment data (skip version and padding bytes)
-    const segmentDataOffset = 2;
-    const segmentDataLength = uint8Array.byteLength - segmentDataOffset;
-
-    if (segmentDataLength % 2 !== 0) {
-      console.warn("Invalid route data: segment data length is not even");
-      return [];
-    }
-
-    const view = new Uint16Array(uint8Array.buffer, segmentDataOffset);
-    const segmentIds = Array.from(view);
-
-    return segmentIds;
+    const payload = decodeRoutePayload(routeString);
+    return payload.type === "legacy_segments" ? payload.segmentIds : [];
   } catch (error) {
     console.error("Error decoding route:", error);
     return [];

@@ -1,7 +1,17 @@
 import { getDistance, distanceToLineSegmentPixels } from './utils/distance.js';
 import { smoothElevations } from './utils/elevations.js';
-import { encodeRoute, decodeRoute, extractMiddlePoints } from './utils/route-encoding.js';
+import {
+  decodeRoutePayload,
+  encodeCompactRoute,
+  encodeRoute,
+  extractMiddlePoints,
+} from './utils/route-encoding.js';
 import { executeDownloadGPX, generateGPX } from './utils/gpx-generator.js';
+import {
+  distanceToRouteGeometry,
+  getDataPointLocation,
+  ROUTE_DATA_POINT_TRIGGER_DISTANCE_METERS,
+} from './utils/route-data.js';
 import { trackRoutePointEvent, trackUndoRedoEvent, trackSearchEvent, trackSocialShare, 
           trackSegmentFocus, trackWarningClick, trackRouteOperation,trackPageLoad,trackTutorial
 } from './utils/analytics.js';
@@ -87,9 +97,14 @@ const COLORS = {
   SEGMENT_SIDEBAR_HOVER: "#666633", // Brown when hovering a segment in the sidebar
   ELEVATION_MARKER: "#ff4444", // Red for the elevation marker
   HIGHLIGHT_WHITE: "#ffffff", // White for highlighting all segments
+  ROUTE_LINE: "#006699",
 };
 
 const MIN_ZOOM_LEVEL = 13; // Minimum zoom level when focusing on segments
+const ROUTE_POINT_SNAP_THRESHOLD_METERS = 100;
+const ROUTE_URL_PARAM = "route";
+const SHARE_URL_MAX_LENGTH = 1800;
+let routePointMessageTimeout = null;
 
 // Save state for undo/redo
 function saveState() {
@@ -102,67 +117,10 @@ function saveState() {
   clearRouteFromUrl(); // Clear route parameter when making changes
 }
 
-
-
-// Add a new route point
-function addRoutePoint(lngLat) {
-  saveState();
-
-  const point = {
-    lng: lngLat.lng,
-    lat: lngLat.lat,
-    id: Date.now() + Math.random(),
-  };
-
-  // Log the operation before making changes
-  logOperation("addPoint", {
-    point: { lat: lngLat.lat, lng: lngLat.lng },
-    fromClick: true,
-  });
-
-  // Track analytics event for route point addition
-  trackRoutePointEvent([...routePoints, point], selectedSegments, "click");
-
-  // Add to local routePoints first
-  routePoints.push(point);
-
-  // Use RouteManager to add the point and get updated segments
-  if (routeManager) {
-    try {
-      const updatedSegments = routeManager.addPoint({
-        lat: lngLat.lat,
-        lng: lngLat.lng,
-      });
-      selectedSegments = updatedSegments;
-
-      // Create marker for the new point
-      createPointMarker(point, routePoints.length - 1);
-
-      updateSegmentStyles();
-      updateRouteListAndDescription();
-    } catch (error) {
-      console.error("Error adding route point:", error);
-      // Fallback to old method
-      createPointMarker(point, routePoints.length - 1);
-      recalculateRoute();
-    }
-  } else {
-    // Fallback to old method if RouteManager not available
-    createPointMarker(point, routePoints.length - 1);
-    recalculateRoute();
-  }
-
-  clearRouteFromUrl();
-}
-
-// Create a map-integrated point feature for a route point
-function createPointMarker(point, index) {
-  const pointId = `route-point-${point.id}`;
-
-  // Create GeoJSON point feature
-  const pointFeature = {
+function createRoutePointFeature(point, index) {
+  return {
     type: "Feature",
-    id: pointId,
+    id: `route-point-${point.id}`,
     geometry: {
       type: "Point",
       coordinates: [point.lng, point.lat],
@@ -173,6 +131,322 @@ function createPointMarker(point, index) {
       type: "route-point",
     },
   };
+}
+
+function updateRoutePointsSource() {
+  const source = map?.getSource("route-points");
+  if (!source) return;
+
+  source.setData({
+    type: "FeatureCollection",
+    features: routePoints.map(createRoutePointFeature),
+  });
+}
+
+function renderRoutePoints() {
+  if (routePoints.length > 0 && !map.getSource("route-points")) {
+    createPointMarker(routePoints[0], 0);
+  }
+
+  updateRoutePointsSource();
+  pointMarkers = routePoints.map((point) => ({
+    pointId: `route-point-${point.id}`,
+  }));
+}
+
+function getRouteGeometryCoordinates() {
+  if (!routeManager) return [];
+
+  return routeManager.getRouteInfo().orderedCoordinates;
+}
+
+function getDataPointId(segmentName, index) {
+  return `${segmentName}-${index}`;
+}
+
+function getRouteDataPoints() {
+  const routeCoordinates = getOrderedCoordinates();
+  const routeDataPoints = [];
+  const seenDataPointIds = new Set();
+
+  selectedSegments.forEach((segmentName) => {
+    const segmentInfo = segmentsData?.[segmentName];
+    const dataPoints = getSegmentDataPoints(segmentName);
+
+    dataPoints.forEach((dataPoint) => {
+      if (seenDataPointIds.has(dataPoint.id)) return;
+
+      let routeDistanceMeters = null;
+      if (dataPoint.location) {
+        if (routeCoordinates.length < 2) return;
+
+        routeDistanceMeters = distanceToRouteGeometry(
+          dataPoint.location,
+          routeCoordinates,
+        );
+        if (routeDistanceMeters > ROUTE_DATA_POINT_TRIGGER_DISTANCE_METERS) {
+          return;
+        }
+      }
+
+      seenDataPointIds.add(dataPoint.id);
+      routeDataPoints.push({
+        ...dataPoint,
+        routeDistanceMeters,
+      });
+    });
+
+    if (dataPoints.length === 0 && segmentInfo?.warning) {
+      const legacyWarning = createLegacySegmentWarning(segmentName);
+      if (legacyWarning && !seenDataPointIds.has(legacyWarning.id)) {
+        seenDataPointIds.add(legacyWarning.id);
+        routeDataPoints.push(legacyWarning);
+      }
+    }
+  });
+
+  return routeDataPoints;
+}
+
+function groupDataPointsBySegment(dataPoints) {
+  const grouped = new Map();
+
+  dataPoints.forEach((dataPoint) => {
+    if (!grouped.has(dataPoint.segmentName)) {
+      grouped.set(dataPoint.segmentName, []);
+    }
+    grouped.get(dataPoint.segmentName).push(dataPoint);
+  });
+
+  return grouped;
+}
+
+function ensureRouteGeometryLayer() {
+  if (!map || map.getSource("route-geometry")) return;
+
+  map.addSource("route-geometry", {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [],
+    },
+  });
+
+  map.addLayer(
+    {
+      id: "route-geometry-line",
+      type: "line",
+      source: "route-geometry",
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": COLORS.ROUTE_LINE,
+        "line-width": 5,
+        "line-opacity": 0.9,
+      },
+    },
+    map.getLayer("route-points-circle") ? "route-points-circle" : undefined,
+  );
+}
+
+function updateRouteGeometry() {
+  if (!map) return;
+
+  ensureRouteGeometryLayer();
+  const source = map.getSource("route-geometry");
+  if (!source) return;
+
+  const coordinates = getRouteGeometryCoordinates();
+  const features =
+    coordinates.length >= 2
+      ? [
+          {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: coordinates.map((coord) => [coord.lng, coord.lat]),
+            },
+            properties: {},
+          },
+        ]
+      : [];
+
+  source.setData({
+    type: "FeatureCollection",
+    features,
+  });
+}
+
+function syncRoutePointsFromManager() {
+  if (!routeManager) return;
+
+  const managerPoints = routeManager.getRouteInfo().points;
+  routePoints = managerPoints.map((point) => ({
+    ...point,
+    id: point.id || Date.now() + Math.random(),
+  }));
+  renderRoutePoints();
+}
+
+function showRoutePointMessage(message) {
+  const panel = document.getElementById("route-description-panel");
+  const description = document.getElementById("route-description");
+
+  if (!panel || !description) {
+    alert(message);
+    return;
+  }
+
+  clearTimeout(routePointMessageTimeout);
+  panel.style.display = "block";
+  panel.classList.remove("empty");
+  description.innerHTML = `<span class="route-inline-warning">${message}</span>`;
+  routePointMessageTimeout = setTimeout(() => {
+    updateRouteListAndDescription();
+  }, 3500);
+}
+
+function snapRoutePointToNetwork(point) {
+  if (!routeManager) return null;
+
+  return routeManager.snapToNetwork(
+    {
+      lat: point.lat,
+      lng: point.lng,
+    },
+    ROUTE_POINT_SNAP_THRESHOLD_METERS,
+  );
+}
+
+function showPointOutsideNetworkMessage() {
+  showRoutePointMessage(
+    `הנקודה רחוקה מדי מרשת CycleWays. בחרו נקודה עד ${ROUTE_POINT_SNAP_THRESHOLD_METERS} מטר משביל מסומן.`,
+  );
+}
+
+function recalculateRoutePreviewForDraggedPoint(index, rawPoint) {
+  if (!routeManager) return false;
+
+  const snappedPoint = snapRoutePointToNetwork(rawPoint);
+  if (!snappedPoint) return false;
+
+  const previewPoints = routePoints.map((point, pointIndex) =>
+    pointIndex === index
+      ? {
+          ...point,
+          lat: snappedPoint.lat,
+          lng: snappedPoint.lng,
+          segmentName: snappedPoint.segmentName,
+        }
+      : point,
+  );
+
+  const updatedSegments = routeManager.recalculateRoute(previewPoints);
+  selectedSegments = updatedSegments;
+  updateSegmentStyles();
+  updateRouteListAndDescription();
+  return true;
+}
+
+function finalizeDraggedRoutePoint(index) {
+  if (!routeManager || index < 0 || !routePoints[index]) return false;
+
+  const snappedPoint = snapRoutePointToNetwork(routePoints[index]);
+  if (!snappedPoint) {
+    removeRoutePoint(index, { save: false });
+    showPointOutsideNetworkMessage();
+    return false;
+  }
+
+  routePoints[index] = {
+    ...routePoints[index],
+    lat: snappedPoint.lat,
+    lng: snappedPoint.lng,
+    segmentName: snappedPoint.segmentName,
+  };
+
+  selectedSegments = routeManager.recalculateRoute(routePoints);
+  syncRoutePointsFromManager();
+  updateSegmentStyles();
+  updateRouteListAndDescription();
+  return true;
+}
+
+
+// Add a new route point
+function addRoutePoint(lngLat) {
+  const inputPoint = {
+    lng: lngLat.lng,
+    lat: lngLat.lat,
+  };
+  const snappedPoint = snapRoutePointToNetwork(inputPoint);
+
+  if (routeManager && !snappedPoint) {
+    showPointOutsideNetworkMessage();
+    return false;
+  }
+
+  saveState();
+
+  const point = snappedPoint
+    ? {
+        lng: snappedPoint.lng,
+        lat: snappedPoint.lat,
+        segmentName: snappedPoint.segmentName,
+        id: Date.now() + Math.random(),
+      }
+    : {
+        ...inputPoint,
+        id: Date.now() + Math.random(),
+      };
+
+  // Log the operation before making changes
+  logOperation("addPoint", {
+    point: { lat: point.lat, lng: point.lng },
+    fromClick: true,
+  });
+
+  // Track analytics event for route point addition
+  trackRoutePointEvent([...routePoints, point], selectedSegments, "click");
+
+  // Use RouteManager to add the point and get updated segments
+  if (routeManager) {
+    try {
+      const updatedSegments = routeManager.addPoint({
+        lat: inputPoint.lat,
+        lng: inputPoint.lng,
+      });
+      selectedSegments = updatedSegments;
+      syncRoutePointsFromManager();
+
+      updateSegmentStyles();
+      updateRouteListAndDescription();
+    } catch (error) {
+      console.error("Error adding route point:", error);
+      // Fallback to old method
+      routePoints.push(point);
+      createPointMarker(point, routePoints.length - 1);
+      recalculateRoute();
+    }
+  } else {
+    // Fallback to old method if RouteManager not available
+    routePoints.push(point);
+    createPointMarker(point, routePoints.length - 1);
+    recalculateRoute();
+  }
+
+  clearRouteFromUrl();
+  return true;
+}
+
+// Create a map-integrated point feature for a route point
+function createPointMarker(point, index) {
+  const pointId = `route-point-${point.id}`;
+
+  // Create GeoJSON point feature
+  const pointFeature = createRoutePointFeature(point, index);
 
   // Add or update the source for route points
   if (!map.getSource("route-points")) {
@@ -210,6 +484,7 @@ function createPointMarker(point, index) {
       draggedFeature = { ...e.features[0] }; // Create a copy
       draggedPointIndex = draggedFeature.properties.index;
 
+      saveState();
       map.dragPan.disable();
       document.body.style.userSelect = "none";
     });
@@ -217,40 +492,20 @@ function createPointMarker(point, index) {
     map.on("mousemove", (e) => {
       if (!isDragging || !draggedFeature || draggedPointIndex === -1) return;
 
-      const coords = [e.lngLat.lng, e.lngLat.lat];
-
       // Update route point data
       if (routePoints[draggedPointIndex]) {
         routePoints[draggedPointIndex].lng = e.lngLat.lng;
         routePoints[draggedPointIndex].lat = e.lngLat.lat;
       }
 
-      // Update the source data by recreating all features
-      const features = routePoints.map((point, idx) => ({
-        type: "Feature",
-        id: `route-point-${point.id}`,
-        geometry: {
-          type: "Point",
-          coordinates: [point.lng, point.lat],
-        },
-        properties: {
-          index: idx,
-          pointId: point.id,
-          type: "route-point",
-        },
-      }));
-
-      map.getSource("route-points").setData({
-        type: "FeatureCollection",
-        features: features,
-      });
+      updateRoutePointsSource();
 
       // Update dragging logic to use RouteManager's recalculateRoute method
       try {
-        const updatedSegments = routeManager.recalculateRoute(routePoints);
-        selectedSegments = updatedSegments;
-        updateSegmentStyles();
-        updateRouteListAndDescription();
+        recalculateRoutePreviewForDraggedPoint(draggedPointIndex, {
+          lng: e.lngLat.lng,
+          lat: e.lngLat.lat,
+        });
       } catch (error) {
         console.error("Error updating route during drag:", error);
         // Fallback to old method if RouteManager fails
@@ -266,13 +521,7 @@ function createPointMarker(point, index) {
 
       // Validate that the dragged point is still close enough to a segment
       if (draggedPointIndex !== -1 && routePoints[draggedPointIndex]) {
-        const draggedPoint = routePoints[draggedPointIndex];
-        const snappedPoint = routeManager.findClosestSegment(draggedPoint);
-
-        if (!snappedPoint) {
-          // No segment close enough - remove this point
-          removeRoutePoint(draggedPointIndex);
-        }
+        finalizeDraggedRoutePoint(draggedPointIndex);
       }
 
       draggedPointIndex = -1;
@@ -281,7 +530,6 @@ function createPointMarker(point, index) {
       map.dragPan.enable();
       document.body.style.userSelect = "";
 
-      saveState();
       clearRouteFromUrl();
     });
 
@@ -295,6 +543,7 @@ function createPointMarker(point, index) {
       draggedFeature = { ...e.features[0] }; // Create a copy
       draggedPointIndex = draggedFeature.properties.index;
 
+      saveState();
       map.dragPan.disable();
     });
 
@@ -308,33 +557,15 @@ function createPointMarker(point, index) {
         routePoints[draggedPointIndex].lat = e.lngLat.lat;
       }
 
-      // Update the source data by recreating all features
-      const features = routePoints.map((point, idx) => ({
-        type: "Feature",
-        id: `route-point-${point.id}`,
-        geometry: {
-          type: "Point",
-          coordinates: [point.lng, point.lat],
-        },
-        properties: {
-          index: idx,
-          pointId: point.id,
-          type: "route-point",
-        },
-      }));
-
-      map.getSource("route-points").setData({
-        type: "FeatureCollection",
-        features: features,
-      });
+      updateRoutePointsSource();
 
       // Update touch dragging logic to use RouteManager's recalculateRoute method
       if (routeManager) {
         try {
-          const updatedSegments = routeManager.recalculateRoute(routePoints);
-          selectedSegments = updatedSegments;
-          updateSegmentStyles();
-          updateRouteListAndDescription();
+          recalculateRoutePreviewForDraggedPoint(draggedPointIndex, {
+            lng: e.lngLat.lng,
+            lat: e.lngLat.lat,
+          });
         } catch (error) {
           console.error("Error updating route during drag:", error);
           // Fallback to old method if RouteManager fails
@@ -353,13 +584,7 @@ function createPointMarker(point, index) {
 
       // Validate that the dragged point is still close enough to a segment
       if (draggedPointIndex !== -1 && routePoints[draggedPointIndex]) {
-        const draggedPoint = routePoints[draggedPointIndex];
-        const snappedPoint = routeManager.findClosestSegment(draggedPoint);
-
-        if (!snappedPoint) {
-          // No segment close enough - remove this point
-          removeRoutePoint(draggedPointIndex);
-        }
+        finalizeDraggedRoutePoint(draggedPointIndex);
       }
 
       draggedPointIndex = -1;
@@ -367,7 +592,6 @@ function createPointMarker(point, index) {
 
       map.dragPan.enable();
 
-      saveState();
       clearRouteFromUrl();
     });
 
@@ -405,10 +629,12 @@ function createPointMarker(point, index) {
 }
 
 // Remove a route point
-function removeRoutePoint(index) {
+function removeRoutePoint(index, options = {}) {
   if (index < 0 || index >= routePoints.length) return;
 
-  saveState();
+  if (options.save !== false) {
+    saveState();
+  }
 
   // Log the operation before making changes
   logOperation("removePoint", {
@@ -418,40 +644,23 @@ function removeRoutePoint(index) {
       : null,
   });
 
-  // Track analytics event for route point removal  
-  trackRoutePointEvent(routePoints.slice(0, -1), selectedSegments, "right_click");
+  // Track analytics event for route point removal
+  trackRoutePointEvent(
+    routePoints.filter((_, pointIndex) => pointIndex !== index),
+    selectedSegments,
+    "right_click",
+  );
 
   try {
     // Use RouteManager to remove point and get updated segments
     const updatedSegments = routeManager.removePoint(index);
     selectedSegments = updatedSegments;
 
-    // Remove from local arrays
-    routePoints.splice(index, 1);
-    pointMarkers.splice(index, 1);
+    syncRoutePointsFromManager();
 
     // Update map-integrated points safely
     try {
-      if (map.getSource("route-points")) {
-        const features = routePoints.map((point, idx) => ({
-          type: "Feature",
-          id: `route-point-${point.id}`,
-          geometry: {
-            type: "Point",
-            coordinates: [point.lng, point.lat],
-          },
-          properties: {
-            index: idx,
-            pointId: point.id,
-            type: "route-point",
-          },
-        }));
-
-        map.getSource("route-points").setData({
-          type: "FeatureCollection",
-          features: features,
-        });
-      }
+      updateRoutePointsSource();
     } catch (domError) {
       console.warn("Error updating map points:", domError);
     }
@@ -469,26 +678,7 @@ function removeRoutePoint(index) {
 
     // Update map-integrated points safely
     try {
-      if (map.getSource("route-points")) {
-        const features = routePoints.map((point, idx) => ({
-          type: "Feature",
-          id: `route-point-${point.id}`,
-          geometry: {
-            type: "Point",
-            coordinates: [point.lng, point.lat],
-          },
-          properties: {
-            index: idx,
-            pointId: point.id,
-            type: "route-point",
-          },
-        }));
-
-        map.getSource("route-points").setData({
-          type: "FeatureCollection",
-          features: features,
-        });
-      }
+      updateRoutePointsSource();
     } catch (domError) {
       console.warn("Error updating map points in fallback:", domError);
     }
@@ -511,6 +701,7 @@ function clearRoutePoints() {
 
   pointMarkers = [];
   routePoints = [];
+  updateRouteGeometry();
 }
 
 // Recalculate the route based on current points
@@ -533,11 +724,7 @@ function recalculateRoute() {
 
     // Find path through all route points
     if (routePoints.length === 1) {
-      // Single point - find closest segment
-      const closestSegment = routeManager.findClosestSegment(routePoints[0]);
-      if (closestSegment) {
-        selectedSegments = [closestSegment];
-      }
+      selectedSegments = [];
     } else {
       // Multiple points - find optimal path
       const pathSegments = [];
@@ -575,8 +762,8 @@ function recalculateRoute() {
 
 function clearRouteFromUrl() {
   const url = new URL(window.location);
-  if (url.searchParams.has("route")) {
-    url.searchParams.delete("route");
+  if (url.searchParams.has(ROUTE_URL_PARAM)) {
+    url.searchParams.delete(ROUTE_URL_PARAM);
     window.history.replaceState({}, document.title, url.toString());
   }
 }
@@ -607,6 +794,7 @@ function undo() {
       try {
         const restoredSegments = routeManager.restoreFromPoints(routePoints);
         selectedSegments = restoredSegments;
+        syncRoutePointsFromManager();
 
         // If restoration failed, fallback to the saved segments
         if (
@@ -617,6 +805,7 @@ function undo() {
           selectedSegments = [...previousState.segments];
           // Update RouteManager's internal state to match
           routeManager.updateInternalState(routePoints, selectedSegments);
+          renderRoutePoints();
         }
       } catch (error) {
         console.error("Error during undo restoration:", error);
@@ -661,6 +850,7 @@ function redo() {
     // Use RouteManager's public method to restore state
     if (routeManager) {
       selectedSegments = routeManager.restoreFromPoints(routePoints);
+      syncRoutePointsFromManager();
     } else {
       selectedSegments = [...nextState.segments];
     }
@@ -753,13 +943,7 @@ function exportOperationsJSON() {
 
 // Helper function to get route info for analytics
 function getRouteInfo() {
-  let totalDistance = 0;
-  selectedSegments.forEach((segmentName) => {
-    const metrics = segmentMetrics[segmentName];
-    if (metrics) {
-      totalDistance += metrics.distance;
-    }
-  });
+  const totalDistance = calculateRouteGeometryStats().distance;
 
   return {
     distance: totalDistance,
@@ -930,36 +1114,31 @@ function updateSegmentStyles() {
     const layerId = polylineData.layerId;
     // Check if layer exists before trying to set properties
     if (map.getLayer(layerId)) {
-      if (selectedSegments.includes(polylineData.segmentName)) {
-        map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_SELECTED);
-        map.setPaintProperty(
-          layerId,
-          "line-width",
-          polylineData.originalStyle.weight + 1,
-        );
-      } else {
-        map.setPaintProperty(
-          layerId,
-          "line-color",
-          polylineData.originalStyle.color,
-        );
-        map.setPaintProperty(
-          layerId,
-          "line-width",
-          polylineData.originalStyle.weight,
-        );
-      }
+      map.setPaintProperty(
+        layerId,
+        "line-color",
+        polylineData.originalStyle.color,
+      );
+      map.setPaintProperty(
+        layerId,
+        "line-width",
+        polylineData.originalStyle.weight,
+      );
     }
   });
 
-  // Update data marker opacity based on selected segments
+  updateRouteGeometry();
+
+  // Update data marker opacity based on route-triggered data points
   if (map.getLayer("data-markers-layer")) {
-    // Create expression to set opacity based on whether the segment is selected
+    const activeDataPointIds = getRouteDataPoints()
+      .filter((dataPoint) => dataPoint.location)
+      .map((dataPoint) => dataPoint.id);
     const opacityExpression = [
       "case",
-      ["in", ["get", "segmentName"], ["literal", selectedSegments]],
-      1.0, // opacity for selected segments
-      0.45, // default opacity for non-selected segments
+      ["in", ["get", "dataPointId"], ["literal", activeDataPointIds]],
+      1.0,
+      0.45,
     ];
 
     map.setPaintProperty(
@@ -1080,58 +1259,29 @@ function initMap() {
         // Reset all segments to normal style first
         routePolylines.forEach((polylineData) => {
           const layerId = polylineData.layerId;
-          if (selectedSegments.includes(polylineData.segmentName)) {
-            // Keep selected segments green
-            map.setPaintProperty(
-              layerId,
-              "line-color",
-              COLORS.SEGMENT_SELECTED,
-            );
-            map.setPaintProperty(
-              layerId,
-              "line-width",
-              polylineData.originalStyle.weight + 1,
-            );
-          } else {
-            // Reset non-selected segments to original style
-            map.setPaintProperty(
-              layerId,
-              "line-color",
-              polylineData.originalStyle.color,
-            );
-            map.setPaintProperty(
-              layerId,
-              "line-width",
-              polylineData.originalStyle.weight,
-            );
-          }
+          map.setPaintProperty(
+            layerId,
+            "line-color",
+            polylineData.originalStyle.color,
+          );
+          map.setPaintProperty(
+            layerId,
+            "line-width",
+            polylineData.originalStyle.weight,
+          );
         });
+        updateRouteGeometry();
 
         // Highlight closest segment if found
         if (closestSegment) {
           const layerId = closestSegment.layerId;
 
-          if (!selectedSegments.includes(closestSegment.segmentName)) {
-            // Highlight non-selected segment
-            map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_HOVER);
-            map.setPaintProperty(
-              layerId,
-              "line-width",
-              closestSegment.originalStyle.weight + 2,
-            );
-          } else {
-            // Make selected segment more prominent
-            map.setPaintProperty(
-              layerId,
-              "line-color",
-              COLORS.SEGMENT_HOVER_SELECTED,
-            );
-            map.setPaintProperty(
-              layerId,
-              "line-width",
-              closestSegment.originalStyle.weight + 3,
-            );
-          }
+          map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_HOVER);
+          map.setPaintProperty(
+            layerId,
+            "line-width",
+            closestSegment.originalStyle.weight + 2,
+          );
 
           // Show hover preview dot at the closest point on segment
           if (closestPointOnSegment && !isDraggingPoint) {
@@ -1293,77 +1443,16 @@ function initMap() {
     const DRAG_THRESHOLD = 6;
 
     function addPointFromLngLat(clickPoint) {
-      const clickPixel = map.project(clickPoint);
-      const threshold = 15; // Use same threshold as hover logic
-
-      // Use spatial index for efficient segment lookup
-      let closestSegment = null;
-      let closestPointOnSegment = null;
-
-      if (spatialIndex) {
-        // Convert pixel threshold to approximate degree threshold
-        const degreeThreshold = threshold * 0.00005; // Rough conversion
-        const candidateSegment = spatialIndex.findNearestSegment(
-          clickPoint.lat,
-          clickPoint.lng,
-          degreeThreshold,
-        );
-
-        // Verify the candidate with precise pixel distance if found
-        if (candidateSegment) {
-          const coords = candidateSegment.coordinates;
-          let minPixelDistance = Infinity;
-          let bestSegmentStart = null;
-          let bestSegmentEnd = null;
-
-          for (let i = 0; i < coords.length - 1; i++) {
-            const startPixel = map.project([coords[i].lng, coords[i].lat]);
-            const endPixel = map.project([
-              coords[i + 1].lng,
-              coords[i + 1].lat,
-            ]);
-
-            const distance = distanceToLineSegmentPixels(
-              clickPixel,
-              startPixel,
-              endPixel,
-            );
-
-            if (distance < minPixelDistance) {
-              minPixelDistance = distance;
-              bestSegmentStart = coords[i];
-              bestSegmentEnd = coords[i + 1];
-            }
-          }
-
-          if (
-            minPixelDistance < threshold &&
-            bestSegmentStart &&
-            bestSegmentEnd
-          ) {
-            closestSegment = candidateSegment;
-            closestPointOnSegment = getClosestPointOnLineSegment(
-              { lat: clickPoint.lat, lng: clickPoint.lng },
-              bestSegmentStart,
-              bestSegmentEnd,
-            );
-          }
-        }
+      // Remove hover preview marker since we're adding the actual point.
+      if (window.hoverPreviewMarker) {
+        window.hoverPreviewMarker.remove();
+        window.hoverPreviewMarker = null;
       }
 
-      // Only add point if close enough to a segment and snap it to the segment
-      if (closestSegment && closestPointOnSegment) {
-        // Remove hover preview marker since we're adding the actual point
-        if (window.hoverPreviewMarker) {
-          window.hoverPreviewMarker.remove();
-          window.hoverPreviewMarker = null;
-        }
-
-        addRoutePoint({
-          lng: closestPointOnSegment.lng,
-          lat: closestPointOnSegment.lat,
-        });
-      }
+      addRoutePoint({
+        lng: clickPoint.lng,
+        lat: clickPoint.lat,
+      });
     }
 
     map.on("touchstart", "route-points-circle", (e) => {
@@ -1458,23 +1547,131 @@ function initMap() {
 
 
 function shareRoute() {
-  const routeId = encodeRoute(getSegmentIds(selectedSegments));
-  if (!routeId) {
-    alert("אין מסלול לשיתוף. בחרו קטעים כדי ליצור מסלול.");
+  const segmentIds = getSegmentIds(selectedSegments);
+  const compactRoutePoints = compactRoutePointsForSharing(
+    routePoints,
+    selectedSegments,
+  );
+  const shareParamValue =
+    compactRoutePoints.length > 0
+      ? encodeCompactRoute(compactRoutePoints, segmentIds)
+      : encodeRoute(segmentIds);
+
+  if (!shareParamValue) {
+    alert("אין מסלול לשיתוף. הוסיפו נקודות על המפה כדי ליצור מסלול.");
     return;
   }
 
   // Track analytics event for route sharing
   trackRouteOperation("share", routePoints, selectedSegments, {
-    route_id: routeId.substring(0, 10) // First 10 chars for privacy
+    route_mode:
+      compactRoutePoints.length > 0 ? "compact_route_v3" : "legacy_segments",
+    route_id: shareParamValue.substring(0, 10), // First 10 chars for privacy
+    route_point_count: routePoints.length,
+    compact_route_point_count: compactRoutePoints.length,
+    segment_hint_count: segmentIds.length,
   });
 
   const url = new URL(window.location);
-  url.searchParams.set("route", routeId);
+  url.searchParams.delete(ROUTE_URL_PARAM);
+  url.searchParams.set(ROUTE_URL_PARAM, shareParamValue);
   const shareUrl = url.toString();
+
+  if (shareUrl.length > SHARE_URL_MAX_LENGTH) {
+    alert(
+      "המסלול ארוך מדי לקישור שיתוף אמין. אפשר עדיין להוריד GPX, ושמירת מסלולים ארוכים תתווסף בשלב הבא.",
+    );
+    return;
+  }
 
   // Show share modal
   showShareModal(shareUrl);
+}
+
+function compactRoutePointsForSharing(points, targetSegments) {
+  if (!routeManager || !Array.isArray(points) || points.length <= 2) {
+    return Array.isArray(points) ? points : [];
+  }
+
+  const targetCoordinates = getOrderedCoordinates();
+  let compactPoints = points.map((point) => ({ ...point }));
+  let removedPoint = true;
+
+  while (removedPoint) {
+    removedPoint = false;
+
+    for (let index = 1; index < compactPoints.length - 1; index++) {
+      const candidatePoints = [
+        ...compactPoints.slice(0, index),
+        ...compactPoints.slice(index + 1),
+      ];
+
+      if (
+        routePreviewMatchesTarget(
+          candidatePoints,
+          targetSegments,
+          targetCoordinates,
+        )
+      ) {
+        compactPoints = candidatePoints;
+        removedPoint = true;
+        break;
+      }
+    }
+  }
+
+  return compactPoints;
+}
+
+function routePreviewMatchesTarget(candidatePoints, targetSegments, targetCoordinates) {
+  if (!routeManager || typeof routeManager.previewRouteInfo !== "function") {
+    return false;
+  }
+
+  const preview = routeManager.previewRouteInfo(candidatePoints);
+  if (!arraysEqual(preview.segments, targetSegments)) {
+    return false;
+  }
+
+  if (targetCoordinates.length >= 2 && preview.orderedCoordinates.length >= 2) {
+    const targetDistance = calculateCoordinatesDistance(targetCoordinates);
+    const previewDistance = calculateCoordinatesDistance(preview.orderedCoordinates);
+    const distanceToleranceMeters = 5;
+
+    if (Math.abs(targetDistance - previewDistance) > distanceToleranceMeters) {
+      return false;
+    }
+
+    const targetStart = targetCoordinates[0];
+    const targetEnd = targetCoordinates[targetCoordinates.length - 1];
+    const previewStart = preview.orderedCoordinates[0];
+    const previewEnd = preview.orderedCoordinates[preview.orderedCoordinates.length - 1];
+    const endpointToleranceMeters = 2;
+
+    if (
+      getDistance(targetStart, previewStart) > endpointToleranceMeters ||
+      getDistance(targetEnd, previewEnd) > endpointToleranceMeters
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function arraysEqual(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  if (left.length !== right.length) return false;
+
+  return left.every((value, index) => value === right[index]);
+}
+
+function calculateCoordinatesDistance(coordinates) {
+  let distance = 0;
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    distance += getDistance(coordinates[i], coordinates[i + 1]);
+  }
+  return distance;
 }
 
 function showResetModal() {
@@ -1488,7 +1685,7 @@ function showResetModal() {
       </div>
       <div class="reset-modal-body">
         <p>האם אתה בטוח שברצונך לאפס את המסלול?</p>
-        <p class="reset-warning">פעולה זו תמחק את כל הקטעים שנבחרו (${selectedSegments.length} קטעים)</p>
+        <p class="reset-warning">פעולה זו תמחק את המסלול הנוכחי (${routePoints.length} נקודות, ${selectedSegments.length} קטעי דרך)</p>
         <div class="reset-modal-buttons">
           <button class="reset-confirm-btn">כן, אפס מסלול</button>
           <button class="reset-cancel-btn">ביטול</button>
@@ -1660,64 +1857,96 @@ function shareToWhatsApp(url) {
 
 function getRouteParameter() {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get("route");
+  return urlParams.get(ROUTE_URL_PARAM);
+}
+
+function hasRouteInUrl() {
+  return Boolean(getRouteParameter());
+}
+
+function applyRoutePoints(points, options = {}) {
+  if (!Array.isArray(points) || points.length === 0 || !routeManager) {
+    return false;
+  }
+
+  clearRoutePoints();
+  selectedSegments = [];
+  selectedSegments = routeManager.recalculateRoute(points);
+  syncRoutePointsFromManager();
+
+  const updateRouteUi = () => {
+    updateSegmentStyles();
+    updateRouteListAndDescription();
+    if (options.focus) {
+      focusMapOnRoute();
+    }
+    hideRouteLoadingIndicator();
+  };
+
+  const loaded = routePoints.length > 0;
+  const hasRouteGeometry = getOrderedCoordinates().length >= 2;
+
+  if (options.delayMs && hasRouteGeometry) {
+    setTimeout(updateRouteUi, options.delayMs);
+  } else {
+    updateRouteUi();
+  }
+
+  return loaded;
 }
 
 function loadRouteFromUrl() {
   const routeParam = getRouteParameter();
 
   if (routeParam && segmentsData) {
-    const segmentIds = decodeRoute(routeParam, segmentsData);
-    if (segmentIds.length > 0) {
-      // Extract middle points from segments
-      const middlePoints = extractMiddlePoints(segmentIds, segmentsData);
-      
+    const payload = decodeRoutePayload(routeParam);
+
+    if (payload.type === "compact_route" && payload.routePoints.length > 0) {
+      trackRouteOperation("load_route_from_url", [], [], {
+        route_payload_version: payload.version,
+        route_param_length: routeParam.length,
+        points_count: payload.routePoints.length,
+        segment_hint_count: payload.segmentIds.length,
+      });
+
+      const loaded = applyRoutePoints(payload.routePoints, {
+        focus: true,
+        delayMs: 500,
+      });
+
+      if (!loaded) {
+        showRoutePointMessage(
+          "לא הצלחנו לטעון את המסלול מהקישור. ייתכן שהנקודות רחוקות מדי מרשת CycleWays.",
+        );
+      }
+
+      return loaded;
+    }
+
+    if (payload.type === "legacy_segments" && payload.segmentIds.length > 0) {
+      const middlePoints = extractMiddlePoints(payload.segmentIds, segmentsData);
+
       if (middlePoints.length > 0) {
-        // Track analytics event for route loading from URL
         trackRouteOperation("load_from_url", [], middlePoints.map(p => p.segmentName), {
+          route_payload_version: payload.version,
           route_param_length: routeParam.length,
           points_count: middlePoints.length
         });
 
-        // Clear existing route and add middle points as route points
-        routePoints = middlePoints;
-        selectedSegments = [];
-        
-        // Use RouteManager to recalculate route with all points at once
-        if (routeManager) {
-          try {
-            const updatedSegments = routeManager.recalculateRoute(middlePoints);
-            selectedSegments = updatedSegments;
-          } catch (error) {
-            console.error("Error recalculating route:", error);
-          }
-        }
-        
-        // Create markers for all points
-        middlePoints.forEach((point, index) => {
-          createPointMarker(point, index);
+        return applyRoutePoints(middlePoints, {
+          focus: true,
+          delayMs: 500,
         });
-
-        // Wait a bit for map to be fully loaded before updating styles
-        setTimeout(() => {
-          updateSegmentStyles();
-          updateRouteListAndDescription();
-          focusMapOnRoute();
-          hideRouteLoadingIndicator();
-        }, 500);
-
-        return true;
       }
     }
     hideRouteLoadingIndicator();
   }
+
   return false;
 }
 
 function showRouteLoadingIndicator() {
-  const routeParam = getRouteParameter();
-
-  if (!routeParam || !segmentsData) {
+  if (!hasRouteInUrl() || !segmentsData) {
     return;
   }
 
@@ -1794,11 +2023,10 @@ async function loadKMLFile() {
     const geoJsonData = await response.json();
     await parseGeoJSON(geoJsonData);
 
-    showExamplePoint();
-
     // Try to load route from URL after everything is loaded
     setTimeout(() => {
       loadRouteFromUrl();
+      showExamplePoint();
 
       // Initialize tutorial after everything is loaded
       if (typeof initTutorial === "function") {
@@ -1917,10 +2145,8 @@ async function parseGeoJSON(geoJsonData) {
       // Add hover effects with segment name display
       map.on("mouseenter", layerId, (e) => {
         // Cursor is now managed by global mousemove handler
-        if (!selectedSegments.includes(name)) {
-          map.setPaintProperty(layerId, "line-width", originalWeight + 2);
-          map.setPaintProperty(layerId, "line-opacity", 1);
-        }
+        map.setPaintProperty(layerId, "line-width", originalWeight + 2);
+        map.setPaintProperty(layerId, "line-opacity", 1);
 
         // Get pre-calculated segment metrics
         const metrics = segmentMetrics[name];
@@ -2080,10 +2306,9 @@ async function parseGeoJSON(geoJsonData) {
       });
 
       map.on("mouseleave", layerId, () => {
-        if (!selectedSegments.includes(name)) {
-          map.setPaintProperty(layerId, "line-width", originalWeight);
-          map.setPaintProperty(layerId, "line-opacity", originalOpacity);
-        }
+        map.setPaintProperty(layerId, "line-width", originalWeight);
+        map.setPaintProperty(layerId, "line-opacity", originalOpacity);
+        updateRouteGeometry();
 
         // Hide segment name display
         const segmentDisplay = document.getElementById("segment-name-display");
@@ -2220,14 +2445,25 @@ function getClosestPointOnLineSegment(point, lineStart, lineEnd) {
 
 // Function to check if route is continuous and find first broken segment
 function checkRouteContinuity() {
-  if (selectedSegments.length <= 1) {
-    return { isContinuous: true, brokenSegmentIndex: -1 };
-  }
-
   const tolerance = 100; // 100 meters tolerance
   const orderedCoords = getOrderedCoordinates();
 
   if (orderedCoords.length === 0) {
+    return { isContinuous: true, brokenSegmentIndex: -1 };
+  }
+
+  if (routePoints.length >= 2) {
+    for (let i = 0; i < orderedCoords.length - 1; i++) {
+      const distance = getDistance(orderedCoords[i], orderedCoords[i + 1]);
+      if (distance > tolerance) {
+        return { isContinuous: false, brokenSegmentIndex: -1 };
+      }
+    }
+
+    return { isContinuous: true, brokenSegmentIndex: -1 };
+  }
+
+  if (selectedSegments.length <= 1) {
     return { isContinuous: true, brokenSegmentIndex: -1 };
   }
 
@@ -2280,28 +2516,18 @@ function checkRouteContinuity() {
   return { isContinuous: true, brokenSegmentIndex: -1 };
 }
 
-// Function to check if any selected segments have warnings and find all of them
+// Function to check if the visible route passes through warning/data points
 function hasSegmentWarnings() {
-  const warningSegments = [];
-  for (let i = 0; i < selectedSegments.length; i++) {
-    const segmentName = selectedSegments[i];
-    const dataPoints = getSegmentDataPoints(segmentName);
+  const warningDataPoints = getRouteDataPoints();
+  const warningSegments = [
+    ...new Set(warningDataPoints.map((dataPoint) => dataPoint.segmentName)),
+  ];
 
-    // Check if segment has any data points (warnings, payment, gates, etc.)
-    if (dataPoints.length > 0) {
-      warningSegments.push(segmentName);
-    } else {
-      // Fallback to legacy warning system
-      const segmentInfo = segmentsData[segmentName];
-      if (segmentInfo && segmentInfo.warning) {
-        warningSegments.push(segmentName);
-      }
-    }
-  }
   return {
-    hasWarnings: warningSegments.length > 0,
+    hasWarnings: warningDataPoints.length > 0,
     warningSegments: warningSegments,
-    count: warningSegments.length,
+    warningDataPoints: warningDataPoints,
+    count: warningDataPoints.length,
   };
 }
 
@@ -2330,7 +2556,7 @@ function updateRouteWarning() {
     // If individual warnings are currently visible, refresh them
     const individualWarningsContainer = document.getElementById("individual-warnings-container");
     if (individualWarningsContainer && individualWarningsContainer.style.display === "block") {
-      createIndividualWarnings(warningsResult.warningSegments);
+      createIndividualWarnings(warningsResult.warningDataPoints);
     }
   } else {
     segmentWarning.style.display = "none";
@@ -2343,12 +2569,12 @@ function updateRouteWarning() {
 }
 
 // Function to toggle individual warnings display
-async function toggleIndividualWarnings(warningSegments) {
+async function toggleIndividualWarnings(warningDataPoints) {
   const individualWarningsContainer = document.getElementById("individual-warnings-container");
   
   if (individualWarningsContainer.style.display === "none" || individualWarningsContainer.style.display === "") {
     // Show individual warnings
-    await createIndividualWarnings(warningSegments);
+    await createIndividualWarnings(warningDataPoints);
     individualWarningsContainer.style.display = "block";
   } else {
     // Hide individual warnings
@@ -2358,21 +2584,16 @@ async function toggleIndividualWarnings(warningSegments) {
 }
 
 // Function to create individual warning divs
-async function createIndividualWarnings(warningSegments) {
+async function createIndividualWarnings(warningDataPoints) {
   const individualWarningsContainer = document.getElementById("individual-warnings-container");
   
   // Clear existing warnings
   individualWarningsContainer.innerHTML = "";
   
-  // Dedupe segments to guarantee one div per segment
-  const uniqueSegments = [...new Set(warningSegments)];
+  const dataPointsBySegment = groupDataPointsBySegment(warningDataPoints);
   
   // Create one div for each segment with warnings
-  for (const segmentName of uniqueSegments) {
-    const dataPoints = getSegmentDataPoints(segmentName);
-    
-    if (dataPoints.length === 0) continue; // Skip segments without data points
-    
+  for (const [segmentName, dataPoints] of dataPointsBySegment) {
     const warningDiv = document.createElement("div");
     warningDiv.className = "individual-warning-item";
     
@@ -2534,26 +2755,16 @@ function focusOnSegment(segmentName) {
         map.setPaintProperty(layerId, "line-color", COLORS.HIGHLIGHT_WHITE);
         map.setPaintProperty(layerId, "line-width", originalWidth + 4);
       } else {
-        // Blink off - return to original/selected color
-        if (selectedSegments.includes(segmentName)) {
-          map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_SELECTED);
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polyline.originalStyle.weight + 1,
-          );
-        } else {
-          map.setPaintProperty(
-            layerId,
-            "line-color",
-            polyline.originalStyle.color,
-          );
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polyline.originalStyle.weight,
-          );
-        }
+        map.setPaintProperty(
+          layerId,
+          "line-color",
+          polyline.originalStyle.color,
+        );
+        map.setPaintProperty(
+          layerId,
+          "line-width",
+          polyline.originalStyle.weight,
+        );
       }
 
       blinkCount++;
@@ -2562,26 +2773,17 @@ function focusOnSegment(segmentName) {
       if (blinkCount >= maxBlinks) {
         clearInterval(blinkInterval);
 
-        // Final state - ensure it's in the correct color
-        if (selectedSegments.includes(segmentName)) {
-          map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_SELECTED);
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polyline.originalStyle.weight + 1,
-          );
-        } else {
-          map.setPaintProperty(
-            layerId,
-            "line-color",
-            polyline.originalStyle.color,
-          );
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polyline.originalStyle.weight,
-          );
-        }
+        map.setPaintProperty(
+          layerId,
+          "line-color",
+          polyline.originalStyle.color,
+        );
+        map.setPaintProperty(
+          layerId,
+          "line-width",
+          polyline.originalStyle.weight,
+        );
+        updateRouteGeometry();
       }
     }, 250); // 250ms intervals = 4 blinks in 1 second
   }, 200);
@@ -2589,25 +2791,17 @@ function focusOnSegment(segmentName) {
 
 // Function to focus map on the entire selected route
 function focusMapOnRoute() {
-  if (selectedSegments.length === 0) {
+  const orderedCoords = getOrderedCoordinates();
+  if (orderedCoords.length === 0) {
     return;
   }
 
-  // Calculate bounds for all selected segments
   let bounds = new mapboxgl.LngLatBounds();
-  let hasCoordinates = false;
-
-  selectedSegments.forEach((segmentName) => {
-    const polyline = routePolylines.find((p) => p.segmentName === segmentName);
-    if (polyline && polyline.coordinates.length > 0) {
-      polyline.coordinates.forEach((coord) => {
-        bounds.extend([coord.lng, coord.lat]);
-        hasCoordinates = true;
-      });
-    }
+  orderedCoords.forEach((coord) => {
+    bounds.extend([coord.lng, coord.lat]);
   });
 
-  if (hasCoordinates && !bounds.isEmpty()) {
+  if (!bounds.isEmpty()) {
     // Zoom to fit the route bounds with padding
     map.fitBounds(bounds, {
       padding: 80,
@@ -2625,7 +2819,19 @@ function loadRouteFromEncoding(routeEncoding) {
   }
 
   try {
-    const segmentIds = decodeRoute(routeEncoding, segmentsData);
+    const payload = decodeRoutePayload(routeEncoding);
+    if (payload.type === "compact_route" && payload.routePoints.length > 0) {
+      if (selectedSegments.length > 0 || routePoints.length > 0) {
+        saveState();
+      }
+
+      return applyRoutePoints(payload.routePoints, {
+        focus: true,
+        delayMs: 200,
+      });
+    }
+
+    const segmentIds = payload.segmentIds;
     if (segmentIds.length === 0) {
       console.warn("No segment IDs decoded from route encoding");
       return false;
@@ -2665,27 +2871,10 @@ function loadRouteFromEncoding(routeEncoding) {
       }
     });
 
-    // Add middle points as route points
-    routePoints = middlePoints;
-    
-    // Use RouteManager to recalculate route with all points at once
-    if (routeManager) {
-      try {
-        const updatedSegments = routeManager.recalculateRoute(middlePoints);
-        selectedSegments = updatedSegments;
-      } catch (error) {
-        console.error("Error recalculating route:", error);
-      }
+    if (!applyRoutePoints(middlePoints)) {
+      return false;
     }
-    
-    // Create markers for all points
-    middlePoints.forEach((point, index) => {
-      createPointMarker(point, index);
-    });
 
-    // Update visual styles and UI
-    updateSegmentStyles();
-    updateRouteListAndDescription();
     updateUndoRedoButtons();
 
     // Focus map on the loaded route
@@ -2702,6 +2891,10 @@ function loadRouteFromEncoding(routeEncoding) {
 
 // Function to order coordinates based on route connectivity
 function getOrderedCoordinates() {
+  if (routeManager) {
+    return getRouteGeometryCoordinates();
+  }
+
   if (selectedSegments.length === 0) {
     return [];
   }
@@ -2945,6 +3138,36 @@ function generateElevationProfile() {
   return elevationHtml;
 }
 
+function calculateRouteGeometryStats() {
+  const orderedCoords = getOrderedCoordinates();
+  let distance = 0;
+  let elevationGain = 0;
+  let elevationLoss = 0;
+
+  for (let i = 0; i < orderedCoords.length - 1; i++) {
+    const current = orderedCoords[i];
+    const next = orderedCoords[i + 1];
+    distance += getDistance(current, next);
+
+    const currentElevation = Number(current.elevation);
+    const nextElevation = Number(next.elevation);
+    if (Number.isFinite(currentElevation) && Number.isFinite(nextElevation)) {
+      const diff = nextElevation - currentElevation;
+      if (diff > 0) {
+        elevationGain += diff;
+      } else {
+        elevationLoss += Math.abs(diff);
+      }
+    }
+  }
+
+  return {
+    distance,
+    elevationGain: Math.round(elevationGain),
+    elevationLoss: Math.round(elevationLoss),
+  };
+}
+
 function updateRouteListAndDescription() {
   const routeDescription = document.getElementById("route-description");
   const downloadButton = document.getElementById("download-gpx");
@@ -2952,7 +3175,7 @@ function updateRouteListAndDescription() {
 
   if (selectedSegments.length === 0 && routePoints.length === 0) {
     routeDescription.innerHTML =
-      "לחץ על המפה ליד קטעי דרך כדי לבנות את המסלול שלך.";
+      "לחץ על נקודות במפה ליד שבילי CycleWays כדי לבנות מסלול.";
     downloadButton.disabled = true;
     updateRouteWarning();
     updateUndoRedoButtons(); // Update reset button state
@@ -2962,114 +3185,27 @@ function updateRouteListAndDescription() {
     descriptionPanel.style.display = "block"; // Ensure description panel is visible when segments are selected
   }
 
-  // Calculate total distance using pre-calculated data
-  let totalDistance = 0;
-  let totalElevationGain = 0;
-  let totalElevationLoss = 0;
-
-  selectedSegments.forEach((segmentName) => {
-    const metrics = segmentMetrics[segmentName];
-    if (metrics) {
-      totalDistance += metrics.distance;
-    }
-  });
-
-  // Calculate elevation changes using pre-calculated data and smart directionality
-  totalElevationGain = 0;
-  totalElevationLoss = 0;
-
-  // Determine directionality for each segment and use pre-calculated elevation data
-  for (let segIndex = 0; segIndex < selectedSegments.length; segIndex++) {
-    const segmentName = selectedSegments[segIndex];
-    const metrics = segmentMetrics[segmentName];
-
-    if (!metrics) continue;
-
-    let isReversed = false;
-
-    // Determine if this segment needs to be reversed based on connectivity
-    if (segIndex > 0) {
-      // Get connection info from previous segment
-      const prevSegmentName = selectedSegments[segIndex - 1];
-      const prevMetrics = segmentMetrics[prevSegmentName];
-
-      if (prevMetrics) {
-        // Use pre-calculated endpoints to determine connectivity
-        const prevStart = prevMetrics.startPoint;
-        const prevEnd = prevMetrics.endPoint;
-        const currentStart = metrics.startPoint;
-        const currentEnd = metrics.endPoint;
-
-        // Check which connection makes more sense based on previous segment's orientation
-        let prevLastPoint;
-        if (segIndex === 1) {
-          // For the first connection, determine previous segment's orientation
-          if (selectedSegments.length > 1) {
-            const nextSegmentName = selectedSegments[1];
-            const nextMetrics = segmentMetrics[nextSegmentName];
-
-            if (nextMetrics) {
-              const distances = [
-                getDistance(prevEnd, currentStart),
-                getDistance(prevEnd, currentEnd),
-                getDistance(prevStart, currentStart),
-                getDistance(prevStart, currentEnd),
-              ];
-
-              const minIndex = distances.indexOf(Math.min(...distances));
-              prevLastPoint =
-                minIndex === 2 || minIndex === 3 ? prevStart : prevEnd;
-            } else {
-              prevLastPoint = prevEnd;
-            }
-          } else {
-            prevLastPoint = prevEnd;
-          }
-        } else {
-          // For subsequent segments, assume the previous one ended correctly
-          prevLastPoint = prevEnd; // This would need to be tracked better, but simplified for now
-        }
-
-        const distanceToStart = getDistance(prevLastPoint, currentStart);
-        const distanceToEnd = getDistance(prevLastPoint, currentEnd);
-
-        isReversed = distanceToEnd < distanceToStart;
-      }
-    } else if (selectedSegments.length > 1) {
-      // For first segment, check orientation with second segment
-      const nextSegmentName = selectedSegments[1];
-      const nextMetrics = segmentMetrics[nextSegmentName];
-
-      if (nextMetrics) {
-        const firstStart = metrics.startPoint;
-        const firstEnd = metrics.endPoint;
-        const nextStart = nextMetrics.startPoint;
-        const nextEnd = nextMetrics.endPoint;
-
-        const distances = [
-          getDistance(firstEnd, nextStart),
-          getDistance(firstEnd, nextEnd),
-          getDistance(firstStart, nextStart),
-          getDistance(firstStart, nextEnd),
-        ];
-
-        const minIndex = distances.indexOf(Math.min(...distances));
-        isReversed = minIndex === 2 || minIndex === 3;
-      }
-    }
-
-    // Use pre-calculated elevation data based on direction
-    if (isReversed) {
-      totalElevationGain += metrics.reverse.elevationGain;
-      totalElevationLoss += metrics.reverse.elevationLoss;
-    } else {
-      totalElevationGain += metrics.forward.elevationGain;
-      totalElevationLoss += metrics.forward.elevationLoss;
-    }
+  if (routePoints.length === 1) {
+    routeDescription.innerHTML =
+      "נקודת התחלה נוספה. הוסף נקודה נוספת כדי ליצור מסלול.";
+    downloadButton.disabled = true;
+    updateRouteWarning();
+    updateUndoRedoButtons();
+    return;
   }
 
-  totalElevationGain = Math.round(totalElevationGain);
-  totalElevationLoss = Math.round(totalElevationLoss);
+  const routeStats = calculateRouteGeometryStats();
+  const totalDistance = routeStats.distance;
+  const totalElevationGain = routeStats.elevationGain;
+  const totalElevationLoss = routeStats.elevationLoss;
+  if (getOrderedCoordinates().length < 2) {
+    routeDescription.innerHTML =
+      "לא הצלחנו ליצור מסלול בין הנקודות האלה על רשת CycleWays.";
+    downloadButton.disabled = true;
+    updateRouteWarning();
+    updateUndoRedoButtons();
+    return;
+  }
 
   const totalDistanceKm = (totalDistance / 1000).toFixed(1);
 
@@ -3472,6 +3608,8 @@ function showExamplePoint() {
   // Don't show if user already has segments selected or if tutorial is active
   if (
     selectedSegments.length > 0 ||
+    routePoints.length > 0 ||
+    hasRouteInUrl() ||
     (window.tutorial && window.tutorial.isActive)
   ) {
     return;
@@ -3554,6 +3692,11 @@ function showExamplePoint() {
 
   // Function to show both tooltip and arrow together
   const showTooltipAndArrow = () => {
+    if (selectedSegments.length > 0 || routePoints.length > 0 || hasRouteInUrl()) {
+      removeExample();
+      return;
+    }
+
     exampleElement.style.display = "";
     updateTooltipPosition();
     arrow.style.display = "";
@@ -3624,6 +3767,9 @@ function returnToStartingPosition() {
 function showDownloadModal() {
   // Create modal elements
   const modal = document.createElement("div");
+  const routeDataPoints = getRouteDataPoints();
+  const routeDataPointsBySegment = groupDataPointsBySegment(routeDataPoints);
+
   modal.className = "download-modal";
   modal.innerHTML = `
     <div class="download-modal-content">
@@ -3632,7 +3778,10 @@ function showDownloadModal() {
         <button class="download-modal-close">&times;</button>
       </div>
       <div class="download-modal-body">
-        <h4>קטעי מסלול נבחרים</h4>
+        <h4>נקודות המסלול</h4>
+        <div id="route-points-summary"></div>
+
+        <h4>דרך המסלול</h4>
         <div id="route-segments-list"></div>
 
         <h4>מידע חשוב על המסלול</h4>
@@ -3651,11 +3800,17 @@ function showDownloadModal() {
 
   document.body.appendChild(modal);
 
+  // Populate route points summary
+  const routePointsSummary = modal.querySelector("#route-points-summary");
+  routePointsSummary.innerHTML = `
+    <p style="color: #333; margin: 0 0 12px;">${routePoints.length} נקודות במסלול</p>
+  `;
+
   // Populate route segments list
   const routeSegmentsList = modal.querySelector("#route-segments-list");
   if (selectedSegments.length === 0) {
     routeSegmentsList.innerHTML =
-      '<p style="color: #666; font-style: italic;">אין קטעים נבחרים</p>';
+      '<p style="color: #666; font-style: italic;">עדיין אין דרך במסלול</p>';
   } else {
     let segmentsHtml = '<div class="modal-route-list">';
     selectedSegments.forEach((segmentName, index) => {
@@ -3665,7 +3820,7 @@ function showDownloadModal() {
       `;
 
       // Add data points for each segment
-      const dataPoints = getSegmentDataPoints(segmentName);
+      const dataPoints = routeDataPointsBySegment.get(segmentName) || [];
       if (dataPoints.length > 0) {
         dataPoints.forEach((dataPoint) => {
           segmentsHtml += `
@@ -3674,18 +3829,6 @@ function showDownloadModal() {
             </div>
           `;
         });
-      }
-
-      // Add legacy warnings as fallback
-      const segmentInfo = segmentsData[segmentName];
-      if (segmentInfo && dataPoints.length === 0) {
-        if (segmentInfo.warning) {
-          segmentsHtml += `
-            <div style="color: #f44336; font-size: 12px; margin-top: 5px; margin-right: 20px;">
-              ⚠️ ${segmentInfo.warning}
-            </div>
-          `;
-        }
       }
 
       segmentsHtml += "</div>";
@@ -3697,19 +3840,10 @@ function showDownloadModal() {
   // Populate route data summary
   const routeDataSummary = modal.querySelector("#route-data-summary");
   const allDataPoints = [];
-  selectedSegments.forEach((segmentName) => {
-    const dataPoints = getSegmentDataPoints(segmentName);
-    dataPoints.forEach((dataPoint) => {
-      if (
-        !allDataPoints.some(
-          (existing) =>
-            existing.type === dataPoint.type &&
-            existing.information === dataPoint.information,
-        )
-      ) {
-        allDataPoints.push(dataPoint);
-      }
-    });
+  routeDataPoints.forEach((dataPoint) => {
+    if (!allDataPoints.some((existing) => existing.id === dataPoint.id)) {
+      allDataPoints.push(dataPoint);
+    }
   });
 
   if (allDataPoints.length > 0) {
@@ -3820,7 +3954,7 @@ function scrollToSection(sectionId) {
 // Event listeners
 document.addEventListener("DOMContentLoaded", function () {
   // Track page load
-  trackPageLoad(!!getRouteParameter(), navigator.userAgent);
+  trackPageLoad(hasRouteInUrl(), navigator.userAgent);
 
   // Initialize the map when page loads
   initMap();
@@ -3885,18 +4019,20 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("segment-warning")
     .addEventListener("click", function () {
+      const warningsResult = hasSegmentWarnings();
+
       // Track analytics event for segment warning interaction
       trackWarningClick("segment_warning", routePoints, selectedSegments, {
-        warning_segments_count: hasSegmentWarnings().count
+        warning_data_points_count: warningsResult.count,
+        warning_segments_count: warningsResult.warningSegments.length,
       });
 
-      const warningsResult = hasSegmentWarnings();
       if (
         warningsResult.hasWarnings &&
-        warningsResult.warningSegments.length > 0
+        warningsResult.warningDataPoints.length > 0
       ) {
         // Toggle individual warnings display
-        toggleIndividualWarnings(warningsResult.warningSegments);
+        toggleIndividualWarnings(warningsResult.warningDataPoints);
       }
     });
 
@@ -4137,15 +4273,17 @@ async function initDataMarkers() {
           dataPoint.location.length >= 2
         ) {
           const [lat, lng] = dataPoint.location;
+          const dataPointId = getDataPointId(segmentName, index);
 
           dataFeatures.push({
             type: "Feature",
-            id: `${segmentName}-${index}`,
+            id: dataPointId,
             geometry: {
               type: "Point",
               coordinates: [lng, lat], // Convert [lat, lng] to [lng, lat] for Mapbox
             },
             properties: {
+              dataPointId: dataPointId,
               type: dataPoint.type,
               information: dataPoint.information || "",
               segmentName: segmentName,
@@ -4284,16 +4422,38 @@ function hideDataMarkerTooltip() {
 
 // Get segment data points for display
 function getSegmentDataPoints(segmentName) {
-  const segmentInfo = segmentsData[segmentName];
+  const segmentInfo = segmentsData?.[segmentName];
   if (!segmentInfo || !segmentInfo.data || !Array.isArray(segmentInfo.data)) {
     return [];
   }
 
-  return segmentInfo.data.map((dataPoint) => ({
+  return segmentInfo.data.map((dataPoint, index) => ({
+    id: getDataPointId(segmentName, index),
+    segmentName: segmentName,
+    index: index,
     type: dataPoint.type,
     information: dataPoint.information || "",
     emoji: MARKER_EMOJIS[dataPoint.type] || "📍",
+    location: getDataPointLocation(dataPoint),
+    raw: dataPoint,
   }));
+}
+
+function createLegacySegmentWarning(segmentName) {
+  const segmentInfo = segmentsData?.[segmentName];
+  if (!segmentInfo?.warning) return null;
+
+  return {
+    id: `${segmentName}-legacy-warning`,
+    segmentName: segmentName,
+    index: -1,
+    type: "warning",
+    information: segmentInfo.warning,
+    emoji: MARKER_EMOJIS.warning || "⚠️",
+    location: null,
+    raw: segmentInfo.warning,
+    isLegacySegmentWarning: true,
+  };
 }
 
 function getSegmentQualityOverall(segmentName) {
