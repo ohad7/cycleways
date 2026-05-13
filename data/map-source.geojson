@@ -74079,6 +74079,43 @@
       "type": "Feature",
       "properties": {
         "id": 183,
+        "name": "רחוב הוורדים דרום קריית שמונה [split archive 183]",
+        "status": "deprecated",
+        "roadType": "paved",
+        "styleUrl": "#sty-154",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "רחוב הוורדים דרום קריית שמונה",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.579144,
+            33.200181
+          ],
+          [
+            35.580295,
+            33.205083
+          ],
+          [
+            35.579914,
+            33.211613
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 263,
         "name": "רחוב הוורדים דרום קריית שמונה",
         "status": "active",
         "roadType": "paved",
@@ -74092,7 +74129,9 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "splitFrom": 183,
+        "splitFromName": "רחוב הוורדים דרום קריית שמונה"
       },
       "geometry": {
         "type": "LineString",
@@ -74343,8 +74382,40 @@
             103
           ],
           [
-            35.580356,
-            33.207568,
+            35.58035601205762,
+            33.20758063100446,
+            98
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 264,
+        "name": "רחוב הוורדים מרכזי קריית שמונה",
+        "status": "active",
+        "roadType": "paved",
+        "styleUrl": "#sty-154",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 183,
+        "splitFromName": "רחוב הוורדים דרום קריית שמונה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.58035601205762,
+            33.20758063100446,
             98
           ],
           [

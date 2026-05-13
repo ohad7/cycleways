@@ -63,6 +63,11 @@ Generated outputs:
 - `build/map-manifest.json`
 - content-versioned copies such as `build/bike_roads.<version>.geojson`
 
+`build/bike_roads.geojson` is optimized as a site runtime artifact: it is
+minified, longitude/latitude are rounded to 6 decimal places, and elevation is
+rounded to 0.1m. The canonical source GeoJSON and generated KML stay readable
+and full precision.
+
 The editor's promote action copies generated output to:
 
 - `map-manifest.json`

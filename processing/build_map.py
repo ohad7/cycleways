@@ -54,6 +54,8 @@ ROAD_TYPE_STYLES = {
     "road": {"stroke": "#8f2424", "stroke-opacity": 1.0, "stroke-width": 5.0},
 }
 QUALITY_KEYS = ("overall", "safety", "comfort", "scenery")
+SITE_GEOJSON_COORDINATE_DECIMALS = 6
+SITE_GEOJSON_ELEVATION_DECIMALS = 1
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -66,11 +68,86 @@ def load_json(path: Path, default: Any) -> Any:
             return default
 
 
-def write_json(path: Path, data: Any) -> None:
+def write_json(path: Path, data: Any, *, compact: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
-        json.dump(data, handle, indent=2, ensure_ascii=False)
+        if compact:
+            json.dump(data, handle, ensure_ascii=False, separators=(",", ":"))
+        else:
+            json.dump(data, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
+
+
+def rounded_number(value: Any, decimals: int) -> Any:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    rounded = round(float(value), decimals)
+    return 0.0 if rounded == -0.0 else rounded
+
+
+def compact_site_coordinate(coord: Any) -> Any:
+    if not isinstance(coord, list) or len(coord) < 2:
+        return coord
+
+    compacted = [
+        rounded_number(coord[0], SITE_GEOJSON_COORDINATE_DECIMALS),
+        rounded_number(coord[1], SITE_GEOJSON_COORDINATE_DECIMALS),
+    ]
+    if len(coord) >= 3:
+        compacted.append(rounded_number(coord[2], SITE_GEOJSON_ELEVATION_DECIMALS))
+    if len(coord) > 3:
+        compacted.extend(coord[3:])
+    return compacted
+
+
+def compact_geojson_for_site(geojson_data: dict[str, Any]) -> dict[str, Any]:
+    """Return the site GeoJSON artifact with compact coordinate precision."""
+    compact_features = []
+    for feature in geojson_data.get("features", []):
+        if not isinstance(feature, dict):
+            compact_features.append(feature)
+            continue
+
+        feature_copy = dict(feature)
+        geometry = feature.get("geometry")
+        if isinstance(geometry, dict) and geometry.get("type") == "LineString":
+            geometry_copy = dict(geometry)
+            geometry_copy["coordinates"] = [
+                compact_site_coordinate(coord)
+                for coord in geometry.get("coordinates", [])
+            ]
+            feature_copy["geometry"] = geometry_copy
+        compact_features.append(feature_copy)
+
+    compacted = dict(geojson_data)
+    compacted["features"] = compact_features
+    return compacted
+
+
+def json_size_bytes(data: Any, *, compact: bool = False) -> int:
+    if compact:
+        payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    else:
+        payload = json.dumps(data, indent=2, ensure_ascii=False)
+    return len(payload.encode("utf-8")) + 1
+
+
+def site_geojson_optimization_report(
+    geojson_data: dict[str, Any],
+    site_geojson_data: dict[str, Any],
+) -> dict[str, Any]:
+    pretty_bytes = json_size_bytes(geojson_data)
+    compact_bytes = json_size_bytes(site_geojson_data, compact=True)
+    reduction = 0.0
+    if pretty_bytes:
+        reduction = round((pretty_bytes - compact_bytes) / pretty_bytes * 100, 2)
+    return {
+        "coordinateDecimals": SITE_GEOJSON_COORDINATE_DECIMALS,
+        "elevationDecimals": SITE_GEOJSON_ELEVATION_DECIMALS,
+        "previousPrettyBytes": pretty_bytes,
+        "compactBytes": compact_bytes,
+        "reductionPercent": reduction,
+    }
 
 
 def emit_progress(enabled: bool, message: str) -> None:
@@ -1429,12 +1506,22 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         kml_segment_names,
     )
 
+    site_geojson_data = compact_geojson_for_site(geojson_data)
+    site_geojson_optimization = site_geojson_optimization_report(geojson_data, site_geojson_data)
+    emit_progress(
+        args.verbose,
+        "Site GeoJSON compacted: "
+        f"{site_geojson_optimization['previousPrettyBytes']} -> "
+        f"{site_geojson_optimization['compactBytes']} bytes "
+        f"({site_geojson_optimization['reductionPercent']}% smaller)",
+    )
+
     emit_progress(args.verbose, "Writing GeoJSON, segments JSON, and versioned outputs")
-    write_json(output_geojson, geojson_data)
+    write_json(output_geojson, site_geojson_data, compact=True)
     write_json(output_segments, generated_segments)
 
     validation = validate_outputs(
-        geojson_data,
+        site_geojson_data,
         generated_segments,
         source_segments,
         new_segments,
@@ -1472,6 +1559,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
             name: round(distance, 2) for name, distance in sorted(densities.items())
         },
         "elevation": elevation_stats,
+        "siteGeojsonOptimization": site_geojson_optimization,
         "validation": validation,
     }
     write_json(output_report, report)
@@ -1523,13 +1611,23 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         active_segment_names,
     )
 
+    site_geojson_data = compact_geojson_for_site(geojson_data)
+    site_geojson_optimization = site_geojson_optimization_report(geojson_data, site_geojson_data)
+    emit_progress(
+        args.verbose,
+        "Site GeoJSON compacted: "
+        f"{site_geojson_optimization['previousPrettyBytes']} -> "
+        f"{site_geojson_optimization['compactBytes']} bytes "
+        f"({site_geojson_optimization['reductionPercent']}% smaller)",
+    )
+
     emit_progress(args.verbose, "Writing GeoJSON, segments JSON, KML, and versioned outputs")
-    write_json(output_geojson, geojson_data)
+    write_json(output_geojson, site_geojson_data, compact=True)
     write_json(output_segments, generated_segments)
     write_kml_from_geojson(geojson_data, output_kml)
 
     validation = validate_outputs(
-        geojson_data,
+        site_geojson_data,
         generated_segments,
         source_segments,
         new_segments,
@@ -1565,6 +1663,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
             name: round(distance, 2) for name, distance in sorted(densities.items())
         },
         "elevation": elevation_stats,
+        "siteGeojsonOptimization": site_geojson_optimization,
         "validation": validation,
     }
     write_json(output_report, report)
@@ -1608,6 +1707,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"KML: {outputs['kml']}")
     print(f"Manifest: {outputs['manifest']}")
     print(f"Report: {outputs['report']}")
+    optimization = report.get("siteGeojsonOptimization", {})
+    if optimization:
+        print(
+            "Site GeoJSON: "
+            f"{optimization.get('previousPrettyBytes')} -> "
+            f"{optimization.get('compactBytes')} bytes "
+            f"({optimization.get('reductionPercent')}% smaller)"
+        )
     print(
         "Validation: "
         f"{validation['featureCount']} features, "
