@@ -104,7 +104,134 @@ const MIN_ZOOM_LEVEL = 13; // Minimum zoom level when focusing on segments
 const ROUTE_POINT_SNAP_THRESHOLD_METERS = 100;
 const ROUTE_URL_PARAM = "route";
 const SHARE_URL_MAX_LENGTH = 1800;
+const ROUTE_NETWORK_SOURCE_ID = "cycleways-network";
+const ROUTE_NETWORK_LINE_LAYER_ID = "cycleways-network-line";
+const ROUTE_NETWORK_HOVER_LAYER_ID = "cycleways-network-hover";
+const ROUTE_NETWORK_FOCUS_LAYER_ID = "cycleways-network-focus";
 let routePointMessageTimeout = null;
+
+function getRouteNetworkLayerIds() {
+  return [
+    ROUTE_NETWORK_FOCUS_LAYER_ID,
+    ROUTE_NETWORK_HOVER_LAYER_ID,
+    ROUTE_NETWORK_LINE_LAYER_ID,
+  ];
+}
+
+function clearRouteNetworkLayers() {
+  if (!map) return;
+
+  getRouteNetworkLayerIds().forEach((layerId) => {
+    if (map.getLayer(layerId)) {
+      map.removeLayer(layerId);
+    }
+  });
+
+  if (map.getSource(ROUTE_NETWORK_SOURCE_ID)) {
+    map.removeSource(ROUTE_NETWORK_SOURCE_ID);
+  }
+}
+
+function setRouteNetworkHover(segmentName) {
+  if (!map?.getLayer(ROUTE_NETWORK_HOVER_LAYER_ID)) return;
+
+  map.setFilter(
+    ROUTE_NETWORK_HOVER_LAYER_ID,
+    segmentName ? ["==", ["get", "name"], segmentName] : ["==", ["get", "name"], ""],
+  );
+}
+
+function setRouteNetworkFocus(segmentName, visible = true) {
+  if (!map?.getLayer(ROUTE_NETWORK_FOCUS_LAYER_ID)) return;
+
+  map.setFilter(
+    ROUTE_NETWORK_FOCUS_LAYER_ID,
+    segmentName && visible
+      ? ["==", ["get", "name"], segmentName]
+      : ["==", ["get", "name"], ""],
+  );
+}
+
+function getRouteFeatureColor(feature) {
+  let originalColor =
+    feature.properties.stroke ||
+    feature.properties["stroke-color"] ||
+    "#0288d1";
+
+  if (originalColor === "#0288d1" || originalColor === "rgb(2, 136, 209)") {
+    return "rgb(101, 170, 162)";
+  }
+
+  if (
+    originalColor == "#e6ee9c" ||
+    originalColor === "rgb(230, 238, 156)"
+  ) {
+    return "rgb(138, 147, 158)";
+  }
+
+  return "rgb(174, 144, 103)";
+}
+
+function addRouteNetworkLayers(features) {
+  if (!map || features.length === 0) return;
+
+  clearRouteNetworkLayers();
+
+  map.addSource(ROUTE_NETWORK_SOURCE_ID, {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features,
+    },
+  });
+
+  map.addLayer({
+    id: ROUTE_NETWORK_LINE_LAYER_ID,
+    type: "line",
+    source: ROUTE_NETWORK_SOURCE_ID,
+    layout: {
+      "line-join": "round",
+      "line-cap": "round",
+    },
+    paint: {
+      "line-color": ["get", "routeColor"],
+      "line-width": ["get", "routeWidth"],
+      "line-opacity": ["get", "routeOpacity"],
+    },
+  });
+
+  map.addLayer({
+    id: ROUTE_NETWORK_HOVER_LAYER_ID,
+    type: "line",
+    source: ROUTE_NETWORK_SOURCE_ID,
+    filter: ["==", ["get", "name"], ""],
+    layout: {
+      "line-join": "round",
+      "line-cap": "round",
+    },
+    paint: {
+      "line-color": COLORS.SEGMENT_HOVER,
+      "line-width": 5,
+      "line-opacity": 1,
+    },
+  });
+
+  map.addLayer({
+    id: ROUTE_NETWORK_FOCUS_LAYER_ID,
+    type: "line",
+    source: ROUTE_NETWORK_SOURCE_ID,
+    filter: ["==", ["get", "name"], ""],
+    layout: {
+      "line-join": "round",
+      "line-cap": "round",
+    },
+    paint: {
+      "line-color": COLORS.HIGHLIGHT_WHITE,
+      "line-width": 7,
+      "line-opacity": 1,
+    },
+  });
+}
 
 // Save state for undo/redo
 function saveState() {
@@ -1068,20 +1195,8 @@ function resetRoute() {
   undoStack = [];
   redoStack = [];
 
-  // Reset all segment styles to original
-  routePolylines.forEach((polylineData) => {
-    const layerId = polylineData.layerId;
-    map.setPaintProperty(
-      layerId,
-      "line-color",
-      polylineData.originalStyle.color,
-    );
-    map.setPaintProperty(
-      layerId,
-      "line-width",
-      polylineData.originalStyle.weight,
-    );
-  });
+  setRouteNetworkHover(null);
+  setRouteNetworkFocus(null);
 
   // Remove any existing markers
   if (window.hoverMarker) {
@@ -1110,22 +1225,8 @@ function resetRoute() {
 }
 
 function updateSegmentStyles() {
-  routePolylines.forEach((polylineData) => {
-    const layerId = polylineData.layerId;
-    // Check if layer exists before trying to set properties
-    if (map.getLayer(layerId)) {
-      map.setPaintProperty(
-        layerId,
-        "line-color",
-        polylineData.originalStyle.color,
-      );
-      map.setPaintProperty(
-        layerId,
-        "line-width",
-        polylineData.originalStyle.weight,
-      );
-    }
-  });
+  setRouteNetworkHover(null);
+  setRouteNetworkFocus(null);
 
   updateRouteGeometry();
 
@@ -1256,32 +1357,9 @@ function initMap() {
           lastCursorState = newCursorState;
         }
 
-        // Reset all segments to normal style first
-        routePolylines.forEach((polylineData) => {
-          const layerId = polylineData.layerId;
-          map.setPaintProperty(
-            layerId,
-            "line-color",
-            polylineData.originalStyle.color,
-          );
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            polylineData.originalStyle.weight,
-          );
-        });
-        updateRouteGeometry();
-
         // Highlight closest segment if found
         if (closestSegment) {
-          const layerId = closestSegment.layerId;
-
-          map.setPaintProperty(layerId, "line-color", COLORS.SEGMENT_HOVER);
-          map.setPaintProperty(
-            layerId,
-            "line-width",
-            closestSegment.originalStyle.weight + 2,
-          );
+          setRouteNetworkHover(closestSegment.segmentName);
 
           // Show hover preview dot at the closest point on segment
           if (closestPointOnSegment && !isDraggingPoint) {
@@ -1421,6 +1499,8 @@ function initMap() {
 
           segmentDisplay.style.display = "block";
         } else {
+          setRouteNetworkHover(null);
+
           // No segment close enough - reset cursor and hide display
           const segmentDisplay = document.getElementById(
             "segment-name-display",
@@ -2053,18 +2133,11 @@ async function parseGeoJSON(geoJsonData) {
 
     document.getElementById("error-message").style.display = "none";
 
-    // Clear existing layers and sources
-    routePolylines.forEach((polylineData) => {
-      if (map.getLayer(polylineData.layerId)) {
-        map.removeLayer(polylineData.layerId);
-      }
-      if (map.getSource(polylineData.layerId)) {
-        map.removeSource(polylineData.layerId);
-      }
-    });
+    clearRouteNetworkLayers();
     routePolylines = [];
 
     let bounds = new mapboxgl.LngLatBounds();
+    const routeNetworkFeatures = [];
 
     geoJsonData.features.forEach((feature) => {
       if (feature.geometry.type !== "LineString") return;
@@ -2079,23 +2152,7 @@ async function parseGeoJSON(geoJsonData) {
         elevation: coord[2], // Preserve elevation data if available
       }));
 
-      // Extract style information from properties
-      let originalColor =
-        feature.properties.stroke ||
-        feature.properties["stroke-color"] ||
-        "#0288d1";
-
-      // Convert colors according to specification
-      if (originalColor === "#0288d1" || originalColor === "rgb(2, 136, 209)") {
-        originalColor = "rgb(101, 170, 162)";
-      } else if (
-        originalColor == "#e6ee9c" ||
-        originalColor === "rgb(230, 238, 156)"
-      ) {
-        originalColor = "rgb(138, 147, 158)";
-      } else {
-        originalColor = "rgb(174, 144, 103)";
-      }
+      const originalColor = getRouteFeatureColor(feature);
 
       // temporarily overriding weight and opacity:
       //let originalWeight = feature.properties['stroke-width'] || 3;
@@ -2103,33 +2160,21 @@ async function parseGeoJSON(geoJsonData) {
       let originalWeight = 3;
       let originalOpacity = 1.0;
 
-      const layerId = `route-${name.replace(/\s+/g, "-").replace(/[^\w-]/g, "")}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-      // Add source and layer to map
-      map.addSource(layerId, {
-        type: "geojson",
-        data: feature,
-      });
-
-      map.addLayer({
-        id: layerId,
-        type: "line",
-        source: layerId,
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": originalColor,
-          "line-width": originalWeight,
-          "line-opacity": originalOpacity,
+      routeNetworkFeatures.push({
+        ...feature,
+        properties: {
+          ...feature.properties,
+          name,
+          routeColor: originalColor,
+          routeWidth: originalWeight,
+          routeOpacity: originalOpacity,
         },
       });
 
       // Store polyline data
       const polylineData = {
         segmentName: name,
-        layerId: layerId,
+        layerId: ROUTE_NETWORK_LINE_LAYER_ID,
         coordinates: coordObjects,
         originalStyle: {
           color: originalColor,
@@ -2141,186 +2186,9 @@ async function parseGeoJSON(geoJsonData) {
 
       // Add coordinates to bounds for auto-fitting
       coordinates.forEach((coord) => bounds.extend(coord));
-
-      // Add hover effects with segment name display
-      map.on("mouseenter", layerId, (e) => {
-        // Cursor is now managed by global mousemove handler
-        map.setPaintProperty(layerId, "line-width", originalWeight + 2);
-        map.setPaintProperty(layerId, "line-opacity", 1);
-
-        // Get pre-calculated segment metrics
-        const metrics = segmentMetrics[name];
-        const segmentDistanceKm = metrics ? metrics.distanceKm : "0.0";
-        const segmentElevationGain = metrics
-          ? metrics.forward.elevationGain
-          : 0;
-        const segmentElevationLoss = metrics
-          ? metrics.forward.elevationLoss
-          : 0;
-
-        // Update segment name display with details
-        const segmentDisplay = document.getElementById("segment-name-display");
-        segmentDisplay.innerHTML = `<strong>${name}</strong> ${getSegmentQualityBadge(name)} <br> 📏 ${segmentDistanceKm} ק"מ • ⬆️ ${segmentElevationGain} מ' • ⬇️ ${segmentElevationLoss} מ'`;
-        segmentDisplay.style.display = "block";
-
-        // Show data points instead of legacy warnings
-        const dataPoints = getSegmentDataPoints(name);
-        if (dataPoints.length > 0) {
-          segmentDisplay.innerHTML +=
-            '<div style="margin-top: 5px; font-size: 12px;">';
-          dataPoints.forEach((dataPoint) => {
-            segmentDisplay.innerHTML += `<div style="margin: 2px 0; color: ${COLORS.WARNING_ORANGE};">${dataPoint.emoji} ${dataPoint.information}</div>`;
-          });
-          segmentDisplay.innerHTML += "</div>";
-        }
-
-        // Keep legacy warnings as fallback
-        const segmentInfo = segmentsData[name];
-        if (segmentInfo && dataPoints.length === 0) {
-          if (segmentInfo.warning) {
-            segmentDisplay.innerHTML += `<div style="color: ${COLORS.WARNING_RED}; font-size: 12px; margin-top: 5px;">⚠️ ${segmentInfo.warning}</div>`;
-          }
-        }
-      });
-
-      // Add hover functionality for selected segments to show distance from start
-      map.on("mousemove", layerId, (e) => {
-        if (selectedSegments.includes(name)) {
-          const hoverPoint = e.lngLat;
-          const orderedCoords = getOrderedCoordinates();
-
-          if (orderedCoords.length > 0) {
-            // Find the closest point on this specific segment
-            let minDistanceToSegment = Infinity;
-            let closestPointOnSegment = null;
-            let closestSegmentIndex = 0;
-
-            // Find closest point on the current segment
-            for (let i = 0; i < coordObjects.length - 1; i++) {
-              const segmentStart = coordObjects[i];
-              const segmentEnd = coordObjects[i + 1];
-
-              // Calculate closest point on line segment
-              const closestPoint = getClosestPointOnLineSegment(
-                { lat: hoverPoint.lat, lng: hoverPoint.lng },
-                segmentStart,
-                segmentEnd,
-              );
-
-              const distance = getDistance(
-                { lat: hoverPoint.lat, lng: hoverPoint.lng },
-                closestPoint,
-              );
-
-              if (distance < minDistanceToSegment) {
-                minDistanceToSegment = distance;
-                closestPointOnSegment = closestPoint;
-                closestSegmentIndex = i;
-              }
-            }
-
-            if (closestPointOnSegment && minDistanceToSegment < 100) {
-              // 100 meter threshold
-              // Calculate distance from start of route to this point
-              let distanceFromStart = 0;
-
-              // Add distance from previous segments
-              for (let i = 0; i < selectedSegments.length; i++) {
-                const segName = selectedSegments[i];
-                if (segName === name) break;
-
-                const prevPolyline = routePolylines.find(
-                  (p) => p.segmentName === segName,
-                );
-                if (prevPolyline) {
-                  for (
-                    let j = 0;
-                    j < prevPolyline.coordinates.length - 1;
-                    j++
-                  ) {
-                    distanceFromStart += getDistance(
-                      prevPolyline.coordinates[j],
-                      prevPolyline.coordinates[j + 1],
-                    );
-                  }
-                }
-              }
-
-              // Add distance within current segment up to hover point
-              for (let i = 0; i < closestSegmentIndex; i++) {
-                distanceFromStart += getDistance(
-                  coordObjects[i],
-                  coordObjects[i + 1],
-                );
-              }
-
-              // Add partial distance to closest point on segment
-              const segmentStart = coordObjects[closestSegmentIndex];
-              const segmentEnd = coordObjects[closestSegmentIndex + 1];
-              const segmentLength = getDistance(segmentStart, segmentEnd);
-              const distanceToClosest = getDistance(
-                segmentStart,
-                closestPointOnSegment,
-              );
-              const ratio = distanceToClosest / segmentLength;
-
-              if (!isNaN(ratio) && ratio >= 0 && ratio <= 1) {
-                distanceFromStart += distanceToClosest;
-              }
-
-              const distanceKm = (distanceFromStart / 1000).toFixed(1);
-
-              // Show distance in top right display
-              const segmentDisplay = document.getElementById(
-                "segment-name-display",
-              );
-              segmentDisplay.innerHTML = `📍 מרחק מההתחלה: ${distanceKm} ק"מ`;
-              segmentDisplay.style.display = "block";
-
-              // Add visible circle marker at closest point
-              if (window.hoverMarker) {
-                window.hoverMarker.remove();
-              }
-
-              const el = document.createElement("div");
-              el.className = "hover-circle";
-              el.style.cssText = `
-                width: 12px;
-                height: 12px;
-                background: ${COLORS.ELEVATION_MARKER};
-                border: 3px solid white;
-                border-radius: 50%;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-                cursor: pointer;
-              `;
-
-              window.hoverMarker = new mapboxgl.Marker(el)
-                .setLngLat([
-                  closestPointOnSegment.lng,
-                  closestPointOnSegment.lat,
-                ])
-                .addTo(map);
-            }
-          }
-        }
-      });
-
-      map.on("mouseleave", layerId, () => {
-        map.setPaintProperty(layerId, "line-width", originalWeight);
-        map.setPaintProperty(layerId, "line-opacity", originalOpacity);
-        updateRouteGeometry();
-
-        // Hide segment name display
-        const segmentDisplay = document.getElementById("segment-name-display");
-        segmentDisplay.style.display = "none";
-
-        // Remove hover marker
-        if (window.hoverMarker) {
-          window.hoverMarker.remove();
-          window.hoverMarker = null;
-        }
-      });
     });
+
+    addRouteNetworkLayers(routeNetworkFeatures);
 
     // Pre-calculate all segment metrics for fast access
     preCalculateSegmentMetrics();
@@ -2742,47 +2610,18 @@ function focusOnSegment(segmentName) {
 
   // Highlight the segment after a short delay to allow map to zoom
   setTimeout(() => {
-    const layerId = polyline.layerId;
-    const originalColor = map.getPaintProperty(layerId, "line-color");
-    const originalWidth = map.getPaintProperty(layerId, "line-width");
-
     let blinkCount = 0;
     const maxBlinks = 4; // 2 complete blinks (on-off-on-off)
 
     const blinkInterval = setInterval(() => {
-      if (blinkCount % 2 === 0) {
-        // Blink on - highlight with white
-        map.setPaintProperty(layerId, "line-color", COLORS.HIGHLIGHT_WHITE);
-        map.setPaintProperty(layerId, "line-width", originalWidth + 4);
-      } else {
-        map.setPaintProperty(
-          layerId,
-          "line-color",
-          polyline.originalStyle.color,
-        );
-        map.setPaintProperty(
-          layerId,
-          "line-width",
-          polyline.originalStyle.weight,
-        );
-      }
+      setRouteNetworkFocus(segmentName, blinkCount % 2 === 0);
 
       blinkCount++;
 
       // Stop blinking after maxBlinks and ensure final state is correct
       if (blinkCount >= maxBlinks) {
         clearInterval(blinkInterval);
-
-        map.setPaintProperty(
-          layerId,
-          "line-color",
-          polyline.originalStyle.color,
-        );
-        map.setPaintProperty(
-          layerId,
-          "line-width",
-          polyline.originalStyle.weight,
-        );
+        setRouteNetworkFocus(null);
         updateRouteGeometry();
       }
     }, 250); // 250ms intervals = 4 blinks in 1 second
@@ -2854,22 +2693,8 @@ function loadRouteFromEncoding(routeEncoding) {
     selectedSegments = [];
     routePoints = [];
 
-    // Reset all segment styles to original
-    routePolylines.forEach((polylineData) => {
-      const layerId = polylineData.layerId;
-      if (map.getLayer && map.getLayer(layerId)) {
-        map.setPaintProperty(
-          layerId,
-          "line-color",
-          polylineData.originalStyle.color,
-        );
-        map.setPaintProperty(
-          layerId,
-          "line-width",
-          polylineData.originalStyle.weight,
-        );
-      }
-    });
+    setRouteNetworkHover(null);
+    setRouteNetworkFocus(null);
 
     if (!applyRoutePoints(middlePoints)) {
       return false;
@@ -3327,20 +3152,8 @@ function removeSegment(segmentName) {
     saveState();
     selectedSegments.splice(index, 1);
 
-    // Reset polyline to original style
-    const polyline = routePolylines.find((p) => p.segmentName === segmentName);
-    if (polyline) {
-      map.setPaintProperty(
-        polyline.layerId,
-        "line-color",
-        polyline.originalStyle.color,
-      );
-      map.setPaintProperty(
-        polyline.layerId,
-        "line-width",
-        polyline.originalStyle.weight,
-      );
-    }
+    setRouteNetworkHover(null);
+    setRouteNetworkFocus(null);
 
     updateSegmentStyles();
     updateRouteListAndDescription();
