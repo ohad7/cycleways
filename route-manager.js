@@ -10,6 +10,7 @@ class RouteManager {
     this.selectedSegments = [];
     this.adjacencyMap = new Map(); // segment connectivity graph (segment-level)
     this.endpointGraph = new Map(); // node-level graph: "<segment>|S" or "<segment>|E" -> [{to, weight}]
+    this.snapThresholdMeters = 100;
   }
 
   /**
@@ -68,12 +69,12 @@ class RouteManager {
    * @returns {Array} Updated list of selected segments
    */
   addPoint(point) {
-    if (!point?.lat || !point?.lng) {
+    if (!this._isValidPoint(point)) {
       throw new Error("Invalid point coordinates");
     }
 
     // Snap point to nearest segment
-    const snappedPoint = this._snapToNearestSegment(point);
+    const snappedPoint = this.snapToNetwork(point);
     if (!snappedPoint) {
       return this.selectedSegments;
     }
@@ -151,34 +152,39 @@ class RouteManager {
    * @returns {Array} Updated list of selected segments
    */
   recalculateRoute(points) {
-    // Re-snap points to nearest segments to ensure they're valid
-    this.routePoints = points
-      .map((point) => {
-        if (!point || point.lat === undefined || point.lng === undefined) {
-          return null;
-        }
-
-        // Re-snap the point to the nearest segment
-        const snappedPoint = this._snapToNearestSegment({
-          lat: point.lat,
-          lng: point.lng,
-        });
-
-        if (snappedPoint) {
-          return {
-            ...point,
-            lat: snappedPoint.lat,
-            lng: snappedPoint.lng,
-            segmentName: snappedPoint.segmentName,
-          };
-        }
-
-        return point; // Keep original if snapping fails
-      })
-      .filter((point) => point !== null);
+    this.routePoints = this._snapRoutePoints(points);
 
     this._recalculateRoute();
     return [...this.selectedSegments];
+  }
+
+  /**
+   * Calculate route output for candidate points without mutating current route state.
+   * @param {Array} points - Array of route points
+   * @returns {Object} Preview route info
+   */
+  previewRouteInfo(points) {
+    const routePoints = this._snapRoutePoints(points);
+    const segments =
+      routePoints.length >= 2
+        ? this._findOptimalRouteThroughPoints(routePoints)
+        : [];
+
+    return {
+      points: routePoints,
+      segments,
+      orderedCoordinates: this._getRouteCoordinatesThroughPoints(routePoints),
+    };
+  }
+
+  /**
+   * Snap a point to the CycleWays network.
+   * @param {Object} point - {lat, lng}
+   * @param {number} thresholdMeters - Maximum allowed snap distance
+   * @returns {Object|null} Snapped point with segmentName and distanceMeters
+   */
+  snapToNetwork(point, thresholdMeters = this.snapThresholdMeters) {
+    return this._snapToNearestSegment(point, thresholdMeters);
   }
 
   /**
@@ -187,7 +193,7 @@ class RouteManager {
    * @returns {string|null} Closest segment name
    */
   findClosestSegment(point) {
-    const snapped = this._snapToNearestSegment(point);
+    const snapped = this.snapToNetwork(point);
     return snapped ? snapped.segmentName : null;
   }
 
@@ -243,9 +249,7 @@ class RouteManager {
    */
   restoreFromPoints(points) {
     // Filter and validate points
-    const validPoints = points.filter(
-      (point) => point && point.lat !== undefined && point.lng !== undefined,
-    );
+    const validPoints = points.filter((point) => this._isValidPoint(point));
 
     if (validPoints.length === 0) {
       this.clearRoute();
@@ -260,22 +264,13 @@ class RouteManager {
 
     // Add each point and snap them to segments to ensure they have segmentName
     for (const point of validPoints) {
-      const snappedPoint = this._snapToNearestSegment(point);
+      const snappedPoint = this.snapToNetwork(point);
       if (snappedPoint) {
         this.routePoints.push({
           lat: snappedPoint.lat,
           lng: snappedPoint.lng,
           id: point.id || Date.now() + Math.random(),
           segmentName: snappedPoint.segmentName,
-        });
-      } else {
-        // If snapping fails, keep original point but try to find closest segment
-        const closestSegment = this.findClosestSegment(point);
-        this.routePoints.push({
-          lat: point.lat,
-          lng: point.lng,
-          id: point.id || Date.now() + Math.random(),
-          segmentName: closestSegment,
         });
       }
     }
@@ -284,7 +279,11 @@ class RouteManager {
     this._recalculateRoute();
 
     // If recalculation failed and we have no segments, try to restore the previous segments
-    if (this.selectedSegments.length === 0 && previousSegments.length > 0) {
+    if (
+      this.routePoints.length >= 2 &&
+      this.selectedSegments.length === 0 &&
+      previousSegments.length > 0
+    ) {
       console.warn(
         "Route recalculation failed, attempting to restore previous segments",
       );
@@ -518,11 +517,30 @@ class RouteManager {
     return false;
   }
 
-  _snapToNearestSegment(point) {
+  _isValidPoint(point) {
+    return (
+      point &&
+      point.lat !== null &&
+      point.lat !== undefined &&
+      point.lng !== null &&
+      point.lng !== undefined &&
+      Number.isFinite(Number(point.lat)) &&
+      Number.isFinite(Number(point.lng))
+    );
+  }
+
+  _snapToNearestSegment(point, thresholdMeters = this.snapThresholdMeters) {
+    if (!this._isValidPoint(point)) {
+      return null;
+    }
+
+    const normalizedPoint = {
+      lat: Number(point.lat),
+      lng: Number(point.lng),
+    };
     let closestSegment = null;
     let minDistance = Infinity;
     let closestPoint = null;
-    const threshold = 100; // meters
 
     for (const [segmentName, segment] of this.segments) {
       const coords = segment.coordinates;
@@ -531,13 +549,13 @@ class RouteManager {
         const segmentStart = coords[i];
         const segmentEnd = coords[i + 1];
         const pointOnSegment = this._getClosestPointOnLineSegment(
-          point,
+          normalizedPoint,
           segmentStart,
           segmentEnd,
         );
-        const distance = this._getDistance(point, pointOnSegment);
+        const distance = this._getDistance(normalizedPoint, pointOnSegment);
 
-        if (distance < threshold && distance < minDistance) {
+        if (distance <= thresholdMeters && distance < minDistance) {
           minDistance = distance;
           closestSegment = segmentName;
           closestPoint = pointOnSegment;
@@ -546,7 +564,11 @@ class RouteManager {
     }
 
     return closestPoint
-      ? { ...closestPoint, segmentName: closestSegment }
+      ? {
+          ...closestPoint,
+          segmentName: closestSegment,
+          distanceMeters: minDistance,
+        }
       : null;
   }
 
@@ -562,12 +584,7 @@ class RouteManager {
     }
 
     if (this.routePoints.length === 1) {
-      const point = this.routePoints[0];
-      if (point && point.segmentName) {
-        this.selectedSegments = [point.segmentName];
-      } else {
-        this.selectedSegments = [];
-      }
+      this.selectedSegments = [];
       return;
     }
 
@@ -592,28 +609,22 @@ class RouteManager {
 
     if (validPoints.length === 0) return [];
     if (validPoints.length === 1) {
-      return validPoints[0].segmentName ? [validPoints[0].segmentName] : [];
+      return [];
     }
 
     let allSegments = [];
 
-    // Process each new point by extending the route
-    for (let i = 0; i < validPoints.length; i++) {
-      const point = validPoints[i];
+    for (let i = 0; i < validPoints.length - 1; i++) {
+      const legPlan = this._buildLegPlan(validPoints[i], validPoints[i + 1]);
+      if (!legPlan) continue;
 
-      if (i === 0) {
-        // First point - just add its segment
-        if (point.segmentName) {
-          allSegments.push(point.segmentName);
+      for (const segmentName of legPlan.segments) {
+        if (
+          allSegments.length === 0 ||
+          allSegments[allSegments.length - 1] !== segmentName
+        ) {
+          allSegments.push(segmentName);
         }
-      } else {
-        // Extend route to reach this new point
-        const extensionSegments = this._findRouteExtensionToPoint(
-          point,
-          allSegments,
-        );
-
-        allSegments.push(...extensionSegments);
       }
     }
 
@@ -1063,7 +1074,340 @@ class RouteManager {
   }
 
   _getOrderedCoordinates() {
-    return this._getOrderedCoordinatesForSegments(this.selectedSegments);
+    return this._getRouteCoordinatesThroughPoints();
+  }
+
+  _getRouteCoordinatesThroughPoints(routePoints = this.routePoints) {
+    if (routePoints.length < 2) return [];
+
+    const routeCoords = [];
+
+    for (let i = 0; i < routePoints.length - 1; i++) {
+      const legCoords = this._getLegCoordinates(
+        routePoints[i],
+        routePoints[i + 1],
+      );
+
+      for (const coord of legCoords) {
+        this._appendCoordinate(routeCoords, coord);
+      }
+    }
+
+    return routeCoords;
+  }
+
+  _snapRoutePoints(points) {
+    if (!Array.isArray(points)) return [];
+
+    return points
+      .map((point) => {
+        if (!this._isValidPoint(point)) {
+          return null;
+        }
+
+        const snappedPoint = this.snapToNetwork({
+          lat: point.lat,
+          lng: point.lng,
+        });
+
+        if (snappedPoint) {
+          return {
+            ...point,
+            lat: snappedPoint.lat,
+            lng: snappedPoint.lng,
+            segmentName: snappedPoint.segmentName,
+          };
+        }
+
+        return null;
+      })
+      .filter((point) => point !== null);
+  }
+
+  _buildLegPlan(startPoint, endPoint) {
+    const startSegmentName = this._findSegmentForPoint(startPoint);
+    const endSegmentName = this._findSegmentForPoint(endPoint);
+    if (!startSegmentName || !endSegmentName) return null;
+
+    if (startSegmentName === endSegmentName) {
+      return {
+        segments: [startSegmentName],
+        middleSegments: [],
+        startSegmentName,
+        endSegmentName,
+        sameSegment: true,
+      };
+    }
+
+    let bestPlan = null;
+    const endpointKeys = ["S", "E"];
+
+    for (const startExitKey of endpointKeys) {
+      for (const endEntryKey of endpointKeys) {
+        const startNode = `${startSegmentName}|${startExitKey}`;
+        const endNode = `${endSegmentName}|${endEntryKey}`;
+        const nodePath = this._dijkstraPath(startNode, endNode);
+        if (!nodePath || nodePath.length === 0) continue;
+
+        const graphWeight = this._pathWeight(nodePath);
+        if (!Number.isFinite(graphWeight)) continue;
+
+        const startPartialDistance = this._distanceFromPointToEndpoint(
+          startPoint,
+          startSegmentName,
+          startExitKey,
+        );
+        const endPartialDistance = this._distanceFromEndpointToPoint(
+          endPoint,
+          endSegmentName,
+          endEntryKey,
+        );
+        const totalWeight =
+          startPartialDistance + graphWeight + endPartialDistance;
+
+        const middleSegments = this
+          ._nodesPathToSegments(nodePath)
+          .filter(
+            (segmentName) =>
+              segmentName !== startSegmentName &&
+              segmentName !== endSegmentName,
+          );
+        const segments = this._dedupeConsecutiveSegments([
+          startSegmentName,
+          ...middleSegments,
+          endSegmentName,
+        ]);
+
+        if (!bestPlan || totalWeight < bestPlan.totalWeight) {
+          bestPlan = {
+            segments,
+            middleSegments,
+            startSegmentName,
+            endSegmentName,
+            startExitKey,
+            endEntryKey,
+            totalWeight,
+            sameSegment: false,
+          };
+        }
+      }
+    }
+
+    if (bestPlan) return bestPlan;
+
+    const fallbackSegments = this._findPathBetweenPoints(startPoint, endPoint);
+    if (fallbackSegments.length === 0) return null;
+
+    return {
+      segments: fallbackSegments,
+      middleSegments: fallbackSegments.slice(1, -1),
+      startSegmentName,
+      endSegmentName,
+      startExitKey: this._nearestEndpointKeyToPoint(startSegmentName, startPoint),
+      endEntryKey: this._nearestEndpointKeyToPoint(endSegmentName, endPoint),
+      sameSegment: false,
+    };
+  }
+
+  _getLegCoordinates(startPoint, endPoint) {
+    const plan = this._buildLegPlan(startPoint, endPoint);
+    if (!plan) return [];
+
+    if (plan.sameSegment) {
+      return this._sliceSegmentBetweenPoints(
+        plan.startSegmentName,
+        startPoint,
+        endPoint,
+      );
+    }
+
+    const legCoords = [];
+    const startExitPoint = this._getEndpointCoords(
+      plan.startSegmentName,
+      plan.startExitKey,
+    );
+    const startCoords = this._sliceSegmentBetweenPoints(
+      plan.startSegmentName,
+      startPoint,
+      startExitPoint,
+    );
+    for (const coord of startCoords) {
+      this._appendCoordinate(legCoords, coord);
+    }
+
+    for (const segmentName of plan.middleSegments) {
+      const segment = this.segments.get(segmentName);
+      if (!segment) continue;
+
+      let coords = [...segment.coordinates];
+      if (legCoords.length > 0) {
+        const lastPoint = legCoords[legCoords.length - 1];
+        coords = this._orientSegmentForConnection(
+          coords,
+          null,
+          false,
+          lastPoint,
+        );
+      }
+
+      for (const coord of coords) {
+        this._appendCoordinate(legCoords, coord);
+      }
+    }
+
+    const endEntryPoint = this._getEndpointCoords(
+      plan.endSegmentName,
+      plan.endEntryKey,
+    );
+    const endCoords = this._sliceSegmentBetweenPoints(
+      plan.endSegmentName,
+      endEntryPoint,
+      endPoint,
+    );
+    for (const coord of endCoords) {
+      this._appendCoordinate(legCoords, coord);
+    }
+
+    return legCoords;
+  }
+
+  _sliceSegmentBetweenPoints(segmentName, fromPoint, toPoint) {
+    const segment = this.segments.get(segmentName);
+    if (!segment) return [];
+
+    return this._sliceCoordinatesBetweenPoints(
+      segment.coordinates,
+      fromPoint,
+      toPoint,
+    );
+  }
+
+  _sliceCoordinatesBetweenPoints(coords, fromPoint, toPoint) {
+    if (!Array.isArray(coords) || coords.length < 2) return [];
+
+    const fromProjection = this._projectPointOntoCoordinates(fromPoint, coords);
+    const toProjection = this._projectPointOntoCoordinates(toPoint, coords);
+    if (!fromProjection || !toProjection) return [];
+
+    if (fromProjection.distanceAlong > toProjection.distanceAlong) {
+      return this
+        ._sliceCoordinatesBetweenPoints(coords, toPoint, fromPoint)
+        .reverse();
+    }
+
+    const result = [];
+    this._appendCoordinate(result, fromProjection.point);
+
+    for (
+      let coordIndex = fromProjection.segmentIndex + 1;
+      coordIndex <= toProjection.segmentIndex;
+      coordIndex++
+    ) {
+      this._appendCoordinate(result, coords[coordIndex]);
+    }
+
+    this._appendCoordinate(result, toProjection.point);
+    return result;
+  }
+
+  _projectPointOntoCoordinates(point, coords) {
+    let bestProjection = null;
+    let accumulatedDistance = 0;
+
+    for (let i = 0; i < coords.length - 1; i++) {
+      const segmentStart = coords[i];
+      const segmentEnd = coords[i + 1];
+      const projectedPoint = this._getClosestPointOnLineSegment(
+        point,
+        segmentStart,
+        segmentEnd,
+      );
+      const distanceToPoint = this._getDistance(point, projectedPoint);
+      const distanceOnSegment = this._getDistance(segmentStart, projectedPoint);
+      const distanceAlong = accumulatedDistance + distanceOnSegment;
+
+      if (!bestProjection || distanceToPoint < bestProjection.distanceToPoint) {
+        bestProjection = {
+          point: projectedPoint,
+          segmentIndex: i,
+          distanceAlong,
+          distanceToPoint,
+        };
+      }
+
+      accumulatedDistance += this._getDistance(segmentStart, segmentEnd);
+    }
+
+    return bestProjection;
+  }
+
+  _distanceFromPointToEndpoint(point, segmentName, endpointKey) {
+    const segment = this.segments.get(segmentName);
+    if (!segment) return Infinity;
+
+    const projection = this._projectPointOntoCoordinates(
+      point,
+      segment.coordinates,
+    );
+    if (!projection) return Infinity;
+
+    const segmentLength = this._getSegmentLength(segmentName);
+    return endpointKey === "S"
+      ? projection.distanceAlong
+      : Math.max(0, segmentLength - projection.distanceAlong);
+  }
+
+  _distanceFromEndpointToPoint(point, segmentName, endpointKey) {
+    return this._distanceFromPointToEndpoint(point, segmentName, endpointKey);
+  }
+
+  _getSegmentLength(segmentName) {
+    const metrics = this.segmentMetrics.get(segmentName);
+    if (metrics) return metrics.distance;
+
+    const segment = this.segments.get(segmentName);
+    if (!segment) return 0;
+
+    let distance = 0;
+    for (let i = 0; i < segment.coordinates.length - 1; i++) {
+      distance += this._getDistance(
+        segment.coordinates[i],
+        segment.coordinates[i + 1],
+      );
+    }
+    return distance;
+  }
+
+  _dedupeConsecutiveSegments(segments) {
+    const deduped = [];
+    for (const segmentName of segments) {
+      if (
+        segmentName &&
+        (deduped.length === 0 || deduped[deduped.length - 1] !== segmentName)
+      ) {
+        deduped.push(segmentName);
+      }
+    }
+    return deduped;
+  }
+
+  _appendCoordinate(coords, coord) {
+    if (!coord || coord.lat === undefined || coord.lng === undefined) return;
+
+    const normalizedCoord = {
+      lat: Number(coord.lat),
+      lng: Number(coord.lng),
+    };
+    if (coord.elevation !== undefined) {
+      normalizedCoord.elevation = Number(coord.elevation);
+    }
+
+    const previous = coords[coords.length - 1];
+    if (previous && this._getDistance(previous, normalizedCoord) < 0.01) {
+      return;
+    }
+
+    coords.push(normalizedCoord);
   }
 
   _getOrderedCoordinatesForSegments(segments) {
@@ -1147,6 +1491,15 @@ class RouteManager {
   }
 
   _calculateTotalDistance() {
+    const routeCoords = this._getRouteCoordinatesThroughPoints();
+    if (routeCoords.length >= 2) {
+      let routeDistance = 0;
+      for (let i = 0; i < routeCoords.length - 1; i++) {
+        routeDistance += this._getDistance(routeCoords[i], routeCoords[i + 1]);
+      }
+      return routeDistance;
+    }
+
     let totalDistance = 0;
     for (const segmentName of this.selectedSegments) {
       const metrics = this.segmentMetrics.get(segmentName);
@@ -1158,6 +1511,31 @@ class RouteManager {
   }
 
   _calculateElevationChanges() {
+    const routeCoords = this._getRouteCoordinatesThroughPoints();
+    if (routeCoords.length >= 2) {
+      let routeGain = 0;
+      let routeLoss = 0;
+      for (let i = 0; i < routeCoords.length - 1; i++) {
+        const fromElevation = Number(routeCoords[i].elevation);
+        const toElevation = Number(routeCoords[i + 1].elevation);
+        if (!Number.isFinite(fromElevation) || !Number.isFinite(toElevation)) {
+          continue;
+        }
+
+        const diff = toElevation - fromElevation;
+        if (diff > 0) {
+          routeGain += diff;
+        } else {
+          routeLoss += Math.abs(diff);
+        }
+      }
+
+      return {
+        gain: Math.round(routeGain),
+        loss: Math.round(routeLoss),
+      };
+    }
+
     let totalGain = 0;
     let totalLoss = 0;
 
@@ -1297,7 +1675,18 @@ class RouteManager {
       yy = lineStart.lat + param * D;
     }
 
-    return { lat: yy, lng: xx };
+    const closestPoint = { lat: yy, lng: xx };
+    const clampedParam = Math.max(0, Math.min(1, param));
+    if (
+      lineStart.elevation !== undefined &&
+      lineEnd.elevation !== undefined
+    ) {
+      closestPoint.elevation =
+        lineStart.elevation +
+        (lineEnd.elevation - lineStart.elevation) * clampedParam;
+    }
+
+    return closestPoint;
   }
 
   _smoothElevations(coords, distanceWindow = 100) {

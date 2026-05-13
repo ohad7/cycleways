@@ -1,0 +1,13 @@
+{
+  "name": "cycleways",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && cd tests && node test-route-manager.js"
+  },
+  "devDependencies": {
+    "vite": "^7.3.3"
+  }
+}

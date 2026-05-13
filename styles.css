@@ -1742,6 +1742,15 @@ h3 {
   line-height: 1.4;
 }
 
+.route-inline-warning {
+  display: block;
+  background: #fff3cd;
+  color: #5f3b00;
+  border: 1px solid #f2c36b;
+  border-radius: 6px;
+  padding: 8px;
+}
+
 .file-upload-container {
   background: #F8F8F8;
   border-radius: 12px;

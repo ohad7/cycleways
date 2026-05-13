@@ -20,7 +20,7 @@
   "summary": {
     "totalOperations": 1,
     "operationTypes": ["addPoint"],
-    "finalSegmentIds": [89],
-    "finalSegmentsCount": 1
+    "finalSegmentIds": [],
+    "finalSegmentsCount": 0
   }
 }
