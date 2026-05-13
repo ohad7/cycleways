@@ -21,7 +21,7 @@ let selectedSegments = [];
 let routePolylines = [];
 let undoStack = [];
 let redoStack = [];
-let kmlData = null;
+let mapDataLoaded = false;
 let segmentsData = null;
 let segmentMetrics = {}; // Pre-calculated distance, elevation, and directionality data
 let routePoints = []; // Array of points that define the route
@@ -1991,7 +1991,6 @@ function loadRouteFromUrl() {
 
       const loaded = applyRoutePoints(payload.routePoints, {
         focus: true,
-        delayMs: 500,
       });
 
       if (!loaded) {
@@ -2015,7 +2014,6 @@ function loadRouteFromUrl() {
 
         return applyRoutePoints(middlePoints, {
           focus: true,
-          delayMs: 500,
         });
       }
     }
@@ -2026,7 +2024,7 @@ function loadRouteFromUrl() {
 }
 
 function showRouteLoadingIndicator() {
-  if (!hasRouteInUrl() || !segmentsData) {
+  if (!hasRouteInUrl()) {
     return;
   }
 
@@ -2052,20 +2050,34 @@ function hideRouteLoadingIndicator() {
   }
 }
 
-async function loadSegmentsData() {
-  await loadMapManifest();
-  const segmentsFile = mapManifest?.segments || DEFAULT_MAP_ASSETS.segments;
+async function fetchJsonAsset(filePath) {
+  const response = await fetch(`./${filePath}`);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+async function fetchSegmentsData(segmentsFile) {
   try {
-    const response = await fetch(`./${segmentsFile}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    segmentsData = await response.json();
+    return await fetchJsonAsset(segmentsFile);
   } catch (error) {
     console.warn(`Could not load ${segmentsFile}:`, error);
-    // Initialize with empty object to prevent errors
-    segmentsData = {};
+    return {};
   }
+}
+
+async function loadMapAssets() {
+  await loadMapManifest();
+  const segmentsFile = mapManifest?.segments || DEFAULT_MAP_ASSETS.segments;
+  const geoJsonFile = mapManifest?.bikeRoads || DEFAULT_MAP_ASSETS.bikeRoads;
+  const [loadedSegmentsData, geoJsonData] = await Promise.all([
+    fetchSegmentsData(segmentsFile),
+    fetchJsonAsset(geoJsonFile),
+  ]);
+
+  segmentsData = loadedSegmentsData;
+  return geoJsonData;
 }
 
 async function loadMapManifest() {
@@ -2093,36 +2105,52 @@ async function loadMapManifest() {
 
 async function loadKMLFile() {
   try {
-    await loadSegmentsData();
     showRouteLoadingIndicator();
-    const geoJsonFile = mapManifest?.bikeRoads || DEFAULT_MAP_ASSETS.bikeRoads;
-    const response = await fetch(`./${geoJsonFile}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const geoJsonData = await response.json();
+    const geoJsonData = await loadMapAssets();
     await parseGeoJSON(geoJsonData);
 
-    // Try to load route from URL after everything is loaded
-    setTimeout(() => {
-      loadRouteFromUrl();
-      showExamplePoint();
-
-      // Initialize tutorial after everything is loaded
-      if (typeof initTutorial === "function") {
-        initTutorial();
-      }
-    }, 1000);
+    await runPostMapDataStartup();
   } catch (error) {
+    hideRouteLoadingIndicator();
     document.getElementById("error-message").style.display = "block";
     document.getElementById("error-message").textContent =
       "Error loading GeoJSON file: " + error.message;
   }
 }
 
+function waitForMapIdle() {
+  return new Promise((resolve) => {
+    if (!map || typeof map.once !== "function") {
+      resolve();
+      return;
+    }
+
+    if (typeof map.loaded === "function" && map.loaded()) {
+      requestAnimationFrame(resolve);
+      return;
+    }
+
+    const timeoutId = setTimeout(resolve, 1500);
+    map.once("idle", () => {
+      clearTimeout(timeoutId);
+      resolve();
+    });
+  });
+}
+
+async function runPostMapDataStartup() {
+  await waitForMapIdle();
+  loadRouteFromUrl();
+  showExamplePoint();
+
+  if (typeof initTutorial === "function") {
+    initTutorial();
+  }
+}
+
 async function parseGeoJSON(geoJsonData) {
   try {
-    kmlData = JSON.stringify(geoJsonData);
+    mapDataLoaded = false;
 
     if (!geoJsonData.features || geoJsonData.features.length === 0) {
       document.getElementById("error-message").style.display = "block";
@@ -2205,6 +2233,7 @@ async function parseGeoJSON(geoJsonData) {
 
     // Initialize data markers
     await initDataMarkers();
+    mapDataLoaded = true;
 
     // Keep map at current position instead of auto-fitting to all segments
     // if (!bounds.isEmpty()) {
@@ -3724,7 +3753,7 @@ function getSegmentIds(segmentNames) {
 }
 
 function downloadGPX() {
-  if (!kmlData) return;
+  if (!mapDataLoaded) return;
 
   // Track analytics event for GPX download
   trackRouteOperation("download", routePoints, selectedSegments, {
