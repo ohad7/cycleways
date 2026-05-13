@@ -3258,7 +3258,7 @@
     "net_elevation_change_m": 117.8
   },
   "רחוב הוורדים דרום קריית שמונה": {
-    "id": 183,
+    "id": 263,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -3266,14 +3266,36 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 183,
+    "splitFromName": "רחוב הוורדים דרום קריית שמונה",
     "middle": {
-      "longitude": 35.580352,
-      "latitude": 33.206693,
-      "elevation": 103.0
+      "longitude": 35.579741,
+      "latitude": 33.202699,
+      "elevation": 99.0
     },
-    "elevation_gain_m": 57.8,
-    "elevation_loss_m": 26.4,
-    "net_elevation_change_m": 31.4
+    "elevation_gain_m": 13.0,
+    "elevation_loss_m": 17.6,
+    "net_elevation_change_m": -4.6
+  },
+  "רחוב הוורדים מרכזי קריית שמונה": {
+    "id": 264,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 183,
+    "splitFromName": "רחוב הוורדים דרום קריית שמונה",
+    "middle": {
+      "longitude": 35.579915,
+      "latitude": 33.211624,
+      "elevation": 129.0
+    },
+    "elevation_gain_m": 44.8,
+    "elevation_loss_m": 8.8,
+    "net_elevation_change_m": 36.0
   },
   "עוקף סינגל הרי נפתלי": {
     "id": 182,
@@ -4079,7 +4101,7 @@
     "quality": {
       "overall": 3,
       "safety": 3,
-      "comfort": 3,
+      "comfort": 2,
       "scenery": 3
     },
     "middle": {
@@ -4804,6 +4826,32 @@
       [
         35.690312,
         33.176097
+      ]
+    ]
+  },
+  "רחוב הוורדים דרום קריית שמונה [split archive 183]": {
+    "id": 183,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "רחוב הוורדים דרום קריית שמונה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.579144,
+        33.200181
+      ],
+      [
+        35.580295,
+        33.205083
+      ],
+      [
+        35.579914,
+        33.211613
       ]
     ]
   },
