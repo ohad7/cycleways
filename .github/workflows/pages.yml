@@ -40,6 +40,8 @@ jobs:
             --exclude '.github' \
             --exclude '_site' \
             --exclude 'build' \
+            --exclude 'react.html' \
+            --exclude 'src' \
             --exclude 'processing/cache/elevation_cache.json' \
             --exclude 'mapbox-token.js' \
             ./ _site/

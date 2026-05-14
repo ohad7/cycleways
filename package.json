@@ -5,9 +5,15 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && cd tests && node test-route-manager.js"
+    "test": "node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && node tests/test-react-route-actions.mjs && node tests/test-gpx-parity.mjs && node tests/test-analytics-parity.mjs && cd tests && node test-route-manager.js",
+    "test:smoke": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "vite": "^7.3.3"
+  },
+  "dependencies": {
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   }
 }

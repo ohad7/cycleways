@@ -50,6 +50,14 @@ function mapboxTokenPlugin() {
 export default defineConfig({
   appType: "mpa",
   plugins: [mapboxTokenPlugin()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(repoRoot, "index.html"),
+        react: resolve(repoRoot, "react.html"),
+      },
+    },
+  },
   server: {
     port: 5173,
     strictPort: false,

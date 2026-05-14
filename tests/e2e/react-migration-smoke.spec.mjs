@@ -1,0 +1,281 @@
+import { expect, test } from "@playwright/test";
+import { installMapboxMock } from "./mapbox-mock.mjs";
+
+const COMPACT_ROUTE = "Bjjy1nRHHDArrNAoctqGv4RHL3un";
+const ROUTE_NETWORK_HIT_LAYER_ID = "cycleways-network-hit";
+const ROUTE_NETWORK_FOCUS_LAYER_ID = "cycleways-network-focus";
+const ROUTE_NETWORK_HOVER_LAYER_ID = "cycleways-network-hover";
+const ROUTE_GEOMETRY_LAYER_ID = "react-route-geometry-line";
+const DATA_MARKERS_LAYER_ID = "react-data-markers-layer";
+const ROUTE_POINTS_LAYER_ID = "react-route-points-circle";
+const SEGMENT_CLICK_POINTS = [
+  { lat: 33.128051854432194, lng: 35.583601947688756 },
+  { lat: 33.11076673723811, lng: 35.57875100376203 },
+  { lat: 33.110140144352336, lng: 35.59054934237174 },
+];
+
+test.beforeEach(async ({ page }) => {
+  await installMapboxMock(page);
+});
+
+test("current public app loads with route controls", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("#map")).toBeVisible();
+  await expect(page.locator("#route-description")).toContainText(
+    "לחץ על נקודות במפה",
+  );
+  await expect(page.locator("#download-gpx")).toBeDisabled();
+});
+
+test("React preview restores compact route URL", async ({ page }) => {
+  await page.goto(`/react.html?route=${COMPACT_ROUTE}`);
+
+  await expect(page.locator("#route-description")).toBeVisible();
+  await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "סיכום" })).toBeEnabled();
+  await expect(page.locator(".react-route-point-chip")).toHaveCount(0);
+  expect(await getRoutePointFeatureCount(page)).toBeGreaterThan(0);
+
+  const fitEvents = await page.evaluate(() =>
+    window.__mockMapboxEvents.filter((event) => event.type === "fitBounds"),
+  );
+  expect(fitEvents.length).toBeGreaterThan(0);
+});
+
+test("React preview core flow works on desktop and mobile", async ({ page }, testInfo) => {
+  await page.goto(`/react.html?route=${COMPACT_ROUTE}`);
+
+  await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
+  await page.screenshot({
+    fullPage: true,
+    path: testInfo.outputPath(`react-route-${testInfo.project.name}.png`),
+  });
+
+  await page.getByRole("button", { name: "סיכום" }).click();
+  await expect(page.getByRole("dialog", { name: "הורדת מסלול GPX" })).toBeVisible();
+  await expect(page.locator(".download-modal-content")).toBeVisible();
+  await expect(page.locator(".react-route-point-chip")).toHaveCount(0);
+  await page.getByRole("button", { name: "🔗 שיתוף מסלול" }).click();
+  await expect(page.getByRole("dialog", { name: "שיתוף המסלול" })).toBeVisible();
+  await expect(page.getByLabel("קישור שיתוף")).toHaveValue(/route=/);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+});
+
+test("React preview shows outside-network warning in the route panel", async ({ page }) => {
+  await page.goto(`/react.html?route=${COMPACT_ROUTE}`);
+  await expect(page.locator(".elevation-hover-overlay")).toBeVisible();
+
+  await page.evaluate(() => {
+    window.__mockMapboxRenderedFeatures = [];
+    window.__mockMapboxCurrentMap._emit("click", {
+      lngLat: { lng: 34.9, lat: 32.5 },
+      point: { x: 12, y: 12 },
+    });
+  });
+
+  await expect(page.locator("#route-description .route-inline-warning")).toContainText(
+    "הנקודה רחוקה מדי מרשת CycleWays",
+  );
+  await expect(page.locator("#route-description .elevation-hover-overlay")).toHaveCount(0);
+});
+
+test("React preview supports segment hover, segment clicks, and sharing", async ({ page }) => {
+  await page.goto("/react.html");
+  await page.waitForFunction(
+    (layerId) => window.__mockMapboxCurrentMap?.layers?.has(layerId),
+    ROUTE_NETWORK_HIT_LAYER_ID,
+  );
+  expect(
+    await page.evaluate(() =>
+      window.__mockMapboxEvents.filter((event) => event.type === "fitBounds")
+        .length,
+    ),
+  ).toBe(0);
+  await page.waitForFunction(() =>
+    window.__mockMapboxCurrentMap?.layers?.has("react-data-markers-layer"),
+  );
+  expect(
+    await page.evaluate(() =>
+      window.__mockMapboxCurrentMap?.layers?.get("react-data-markers-layer")
+        ?.type,
+    ),
+  ).toBe("symbol");
+
+  await page.evaluate(
+    () => {
+      const lngLat = { lng: 35.586584, lat: 33.11124 };
+      window.__mockMapboxCurrentMap._emit("mousemove", {
+        lngLat,
+        point: window.__mockMapboxCurrentMap.project(lngLat),
+      });
+    },
+  );
+
+  await expect(page.locator("#segment-name-display")).toBeVisible();
+  await expect(page.locator("#segment-name-display")).toContainText("דרך המנפטה");
+  await expect(page.locator("#segment-name-display")).toContainText("ק\"מ");
+  await expect(page.locator("#segment-name-display")).toContainText("בתשלום");
+
+  await page.evaluate(
+    () => {
+      const lngLat = { lng: 35.618511, lat: 33.182466 };
+      window.__mockMapboxCurrentMap._emit("mousemove", {
+        lngLat,
+        point: window.__mockMapboxCurrentMap.project(lngLat),
+      });
+    },
+  );
+
+  const hoverMarkers = await page.evaluate(() =>
+    window.__mockMapboxEvents.filter(
+      (event) =>
+        event.type === "marker" &&
+        String(event.className || "").includes("hover-preview-marker"),
+    ).length,
+  );
+  expect(hoverMarkers).toBeGreaterThan(0);
+  expect(
+    await page.evaluate(() =>
+      window.__mockMapboxEvents.filter((event) => event.type === "fitBounds")
+        .length,
+    ),
+  ).toBe(0);
+
+  for (const [index, point] of SEGMENT_CLICK_POINTS.entries()) {
+    await page.evaluate(
+      ({ geometryLayerId, index, layerId, point }) => {
+        window.__mockMapboxRenderedFeatures = [
+          {
+            layer: { id: layerId },
+            properties: { name: index === 2 ? "דרך נוף הרי נפתלי" : "דרך המנפטה" },
+          },
+          ...(index === 2
+            ? [
+                {
+                  layer: { id: geometryLayerId },
+                  properties: {},
+                },
+              ]
+            : []),
+        ];
+        const event = {
+          lngLat: point,
+          point: { x: 360, y: 260 },
+        };
+        if (index === 0) {
+          window.__mockMapboxCurrentMap._emitLayer("click", layerId, {
+            ...event,
+            features: [{ properties: { name: "דרך המנפטה" } }],
+          });
+        }
+        window.__mockMapboxCurrentMap._emit("click", event);
+      },
+      {
+        geometryLayerId: ROUTE_GEOMETRY_LAYER_ID,
+        index,
+        layerId: ROUTE_NETWORK_HIT_LAYER_ID,
+        point,
+      },
+    );
+    expect(await getRoutePointFeatureCount(page)).toBe(index + 1);
+  }
+
+  await expect(page.locator("#route-description")).toContainText("3.8 ק\"מ");
+  await expect(page.getByRole("button", { name: "סיכום" })).toBeEnabled();
+  expect(
+    await page.evaluate(
+      ({ layerId }) => window.__mockMapboxCurrentMap?.layers?.get(layerId)?.paint,
+      { layerId: ROUTE_POINTS_LAYER_ID },
+    ),
+  ).toMatchObject({
+    "circle-radius": 4,
+    "circle-color": "#ff4444",
+    "circle-stroke-width": 2,
+    "circle-stroke-color": "#ffffff",
+  });
+  expect(
+    await page.evaluate(
+      ({ layerId }) => window.__mockMapboxCurrentMap?.layers?.get(layerId)?.paint,
+      { layerId: ROUTE_GEOMETRY_LAYER_ID },
+    ),
+  ).toMatchObject({
+    "line-color": "#006699",
+    "line-width": 5,
+    "line-opacity": 0.9,
+  });
+  expect(
+    await page.evaluate(
+      ({ focusLayerId, hoverLayerId }) => ({
+        focus: window.__mockMapboxCurrentMap?.layers?.get(focusLayerId)?.filter,
+        hover: window.__mockMapboxCurrentMap?.layers?.get(hoverLayerId)?.filter,
+      }),
+      {
+        focusLayerId: ROUTE_NETWORK_FOCUS_LAYER_ID,
+        hoverLayerId: ROUTE_NETWORK_HOVER_LAYER_ID,
+      },
+    ),
+  ).toEqual({
+    focus: ["==", ["get", "name"], ""],
+    hover: ["==", ["get", "name"], ""],
+  });
+
+  await page.evaluate(() => {
+    const overlay = document.querySelector(".elevation-hover-overlay");
+    const rect = overlay.getBoundingClientRect();
+    overlay.dispatchEvent(
+      new MouseEvent("mousemove", {
+        bubbles: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      }),
+    );
+  });
+  await expect(page.locator("#segment-name-display")).toContainText("גובה");
+  expect(
+    await page.evaluate(() =>
+      window.__mockMapboxEvents.filter(
+        (event) =>
+          event.type === "marker" &&
+          String(event.className || "").includes("elevation-marker"),
+      ).length,
+    ),
+  ).toBeGreaterThan(0);
+
+  await page.evaluate(
+    ({ dataLayerId, point }) => {
+      window.__mockMapboxRenderedFeatures = [
+        {
+          layer: { id: dataLayerId },
+          properties: { dataPointId: "payment-marker" },
+        },
+      ];
+      window.__mockMapboxCurrentMap._emit("click", {
+        lngLat: point,
+        point: { x: 360, y: 260 },
+      });
+      window.__mockMapboxRenderedFeatures = [];
+    },
+    {
+      dataLayerId: DATA_MARKERS_LAYER_ID,
+      point: { lat: 33.111, lng: 35.586 },
+    },
+  );
+  expect(await getRoutePointFeatureCount(page)).toBe(3);
+
+  await page.getByRole("button", { name: "סיכום" }).click();
+  await page.getByRole("button", { name: "🔗 שיתוף מסלול" }).click();
+  const shareUrl = await page.getByLabel("קישור שיתוף").getAttribute("value");
+  expect(shareUrl).toContain("route=");
+  expect(shareUrl).not.toContain("w=");
+});
+
+async function getRoutePointFeatureCount(page) {
+  return page.evaluate(
+    ({ sourceId }) =>
+      window.__mockMapboxCurrentMap?.sources?.get(sourceId)?.data?.features
+        ?.length || 0,
+    { sourceId: "react-route-points" },
+  );
+}
