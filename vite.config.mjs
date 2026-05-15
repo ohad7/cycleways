@@ -53,7 +53,7 @@ function mapboxTokenPlugin() {
 }
 
 export default defineConfig({
-  appType: "mpa",
+  appType: "spa",
   plugins: [mapboxTokenPlugin()],
   build: {
     rollupOptions: {
