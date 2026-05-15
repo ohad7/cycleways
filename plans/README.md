@@ -9,3 +9,4 @@ Current plans:
 - `segment-scores/` - design and implementation plan for per-segment quality scores.
 - `waypoint-routing/` - design and implementation plan for point-based route creation and external routing fallback.
 - `map-asset-size/` - design and implementation plan for low-risk generated GeoJSON size reduction.
+- `react-migration/` - design and implementation plan for incrementally moving the public app to React.

@@ -1,0 +1,824 @@
+:root {
+  color: #172026;
+  background: #eef3f0;
+  font-family:
+    Arial, "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-image: url("../attached_assets/background_grass.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: #333;
+  direction: rtl;
+  position: relative;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.react-shell {
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.react-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto 24px;
+}
+
+.react-shell__eyebrow {
+  margin: 0 0 6px;
+  color: #3d6f66;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.react-shell h1,
+.react-shell h2,
+.react-shell p {
+  margin: 0;
+}
+
+.react-shell h1 {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1.05;
+}
+
+.react-shell h2 {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.react-shell p {
+  color: #52625d;
+  line-height: 1.5;
+}
+
+.react-shell__link {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 10px 16px;
+  border: 1px solid #9fb5ae;
+  border-radius: 6px;
+  background: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.react-topbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.react-topbar__tools {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  min-width: min(100%, 520px);
+}
+
+.react-search {
+  width: min(100%, 520px);
+}
+
+.react-search__row {
+  display: flex;
+  gap: 8px;
+}
+
+.react-search input {
+  min-width: 0;
+  flex: 1;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid #9fb5ae;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.react-search__error {
+  margin-top: 6px;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.react-button {
+  min-height: 40px;
+  padding: 10px 14px;
+  border: 1px solid #9fb5ae;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.react-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.react-button--primary {
+  border-color: #2f6f66;
+  background: #2f6f66;
+  color: #ffffff;
+}
+
+.react-button--secondary {
+  background: #ffffff;
+  color: #172026;
+}
+
+.react-shell__panel {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px solid #c6d4cf;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.react-map {
+  position: relative;
+  max-width: 960px;
+  height: min(68vh, 640px);
+  min-height: 420px;
+  margin: 20px auto 0;
+  overflow: hidden;
+  border: 1px solid #c6d4cf;
+  border-radius: 8px;
+  background: #dfe9e5;
+}
+
+.react-map__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.react-map__overlay {
+  position: absolute;
+  inset: 16px auto auto 16px;
+  max-width: calc(100% - 32px);
+  padding: 8px 12px;
+  border: 1px solid #c6d4cf;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 92%);
+  color: #172026;
+  font-weight: 700;
+}
+
+.react-map__overlay--error {
+  border-color: #fecaca;
+  color: #7f1d1d;
+}
+
+.react-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 960px;
+  margin: 16px auto 0;
+}
+
+.react-side-panel {
+  max-width: 960px;
+  padding: 18px;
+  border: 1px solid #c6d4cf;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.react-route-panel {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 960px;
+  margin: 16px auto 0;
+  padding: 18px;
+  border: 1px solid #c6d4cf;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.react-route-panel--empty {
+  border-style: dashed;
+}
+
+.react-route-panel__error {
+  margin-top: 8px;
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.react-route-panel__warnings {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  color: #8a4a00;
+  font-weight: 700;
+  list-style: none;
+}
+
+.react-route-panel__point-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #d9e3df;
+}
+
+.react-route-panel__point-actions span {
+  color: #52625d;
+  font-weight: 700;
+}
+
+.react-route-panel__point-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #d9e3df;
+}
+
+.react-route-panel__point-list > span {
+  color: #52625d;
+  font-weight: 700;
+}
+
+.react-route-panel__point-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.react-route-panel__point-chip {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid #9fb5ae;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #172026;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.react-route-panel__point-chip--selected {
+  border-color: #172026;
+  background: #172026;
+  color: #ffffff;
+}
+
+.react-route-panel__stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(72px, 1fr));
+  gap: 8px;
+  min-width: min(100%, 460px);
+  margin: 0;
+}
+
+.react-route-panel__stats div,
+.react-detail-grid div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d9e3df;
+  border-radius: 6px;
+  background: #f8fbfa;
+}
+
+.react-route-panel__stats dt,
+.react-detail-grid dt {
+  color: #52625d;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.react-route-panel__stats dd,
+.react-detail-grid dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.react-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+.react-data-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.react-data-list li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid #f1d7c7;
+  border-radius: 6px;
+  background: #fff9f5;
+  color: #6f2c14;
+}
+
+.react-selected-marker {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #d9e3df;
+}
+
+.react-quality-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin: 8px 0 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.react-quality-badge--excellent {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.react-quality-badge--caution {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.react-modal {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(23 32 38 / 58%);
+}
+
+.react-modal__content {
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid #c6d4cf;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgb(23 32 38 / 28%);
+}
+
+.react-modal__content--narrow {
+  width: min(520px, 100%);
+}
+
+.react-modal__header,
+.react-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px;
+  border-bottom: 1px solid #d9e3df;
+}
+
+.react-modal__actions {
+  justify-content: flex-start;
+  border-top: 1px solid #d9e3df;
+  border-bottom: 0;
+}
+
+.react-modal__close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #c6d4cf;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.react-modal__body {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.react-modal__body h3 {
+  margin: 0 0 8px;
+}
+
+.react-modal__segments {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-inline-start: 24px;
+}
+
+.react-modal__segments li {
+  padding: 8px;
+  border: 1px solid #d9e3df;
+  border-radius: 6px;
+  background: #f8fbfa;
+}
+
+.react-modal__share {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid #c6d4cf;
+  border-radius: 6px;
+  background: #f8fbfa;
+  direction: ltr;
+}
+
+.react-search-marker {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background: #ff4444;
+  box-shadow: 0 2px 8px rgb(255 68 68 / 60%);
+  animation: react-search-pulse 1.4s ease-in-out infinite;
+}
+
+.react-recommendation-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2c5f7a;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.react-tutorial {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 18px 42px 22px 18px;
+  color: #52625d;
+  line-height: 1.5;
+}
+
+.react-shell__state {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.react-shell__state--ready {
+  margin-bottom: 20px;
+}
+
+.react-shell__state--error {
+  color: #7f1d1d;
+}
+
+.react-shell__state--error p {
+  color: #991b1b;
+}
+
+.react-shell__spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #c6d4cf;
+  border-top-color: #3d6f66;
+  border-radius: 50%;
+  animation: react-shell-spin 0.8s linear infinite;
+}
+
+.react-shell__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.react-shell__stat {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #d9e3df;
+  border-radius: 6px;
+  background: #f8fbfa;
+}
+
+.react-shell__stat dt {
+  color: #52625d;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.react-shell__stat dd {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+@keyframes react-shell-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes react-search-pulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+@media (max-width: 640px) {
+  .react-shell {
+    padding: 20px;
+  }
+
+  .react-topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .react-topbar__tools {
+    justify-items: stretch;
+  }
+
+  .react-topbar__actions,
+  .react-search__row {
+    justify-content: stretch;
+  }
+
+  .react-topbar__actions > *,
+  .react-search__row > button {
+    flex: 1 1 auto;
+  }
+
+  .react-shell__link {
+    text-align: center;
+  }
+
+  .react-map {
+    min-height: 360px;
+  }
+
+  .react-route-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .react-route-panel__stats,
+  .react-panel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.react-main-container {
+  min-height: 100vh;
+}
+
+.header .help-tutorial-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.header .mobile-menu-btn {
+  line-height: 1;
+}
+
+.map-container {
+  isolation: isolate;
+}
+
+.map-container > .react-shell__state {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(248, 248, 248, 0.92);
+  text-align: center;
+}
+
+.react-map {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: #dfe9e5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.react-map__overlay {
+  position: absolute;
+  inset: 18px auto auto 18px;
+  z-index: 2;
+  max-width: calc(100% - 36px);
+  padding: 8px 12px;
+  border: 1px solid #c6d4cf;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 92%);
+  color: #172026;
+  font-weight: 700;
+}
+
+.react-map__overlay--error {
+  border-color: #fecaca;
+  color: #7f1d1d;
+}
+
+#search-error.react-search-error {
+  position: absolute;
+  top: 70px;
+  left: 20px;
+  z-index: 1001;
+  display: block;
+  max-width: 260px;
+  margin-top: 5px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: white;
+  color: red;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.route-description-panel.empty {
+  display: none;
+}
+
+.react-route-description-content {
+  display: grid;
+  gap: 7px;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.react-route-description-main {
+  font-weight: 700;
+}
+
+.react-route-points-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.react-route-point-chip,
+.react-route-remove-point {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid #c7d3ce;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.react-route-point-chip--selected {
+  border-color: #2c5f7a;
+  background: #2c5f7a;
+  color: #fff;
+}
+
+.react-route-remove-point {
+  color: #7a1f1f;
+}
+
+.react-route-panel__error,
+.react-route-panel__warnings {
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.react-segment-name-display--active {
+  display: block;
+}
+
+.react-segment-data-list {
+  margin-top: 5px;
+  padding: 5px;
+  background-color: #fff;
+  color: #ff9800;
+  font-size: 12px;
+}
+
+.react-segment-data-list div {
+  margin: 2px 0;
+}
+
+.react-warning-toggle {
+  width: 100%;
+  border: 0;
+  font-family: inherit;
+}
+
+.react-individual-warning-item {
+  width: 100%;
+  border: 1px solid transparent;
+  font-family: inherit;
+}
+
+.react-warning-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  font-size: 13px;
+}
+
+.react-route-description-content .elevation-chart svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.react-route-description-content .elevation-hover-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.react-search-marker {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background: #ff4444;
+  box-shadow: 0 2px 8px rgb(255 68 68 / 60%);
+  animation: react-search-pulse 1.4s ease-in-out infinite;
+}
+
+@media (max-width: 768px) {
+  .react-map {
+    min-height: 0;
+  }
+
+  .route-description-panel {
+    max-height: 170px;
+  }
+
+  .react-route-description-content {
+    font-size: 13px;
+  }
+}

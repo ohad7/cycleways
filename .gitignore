@@ -8,3 +8,5 @@ dist/
 processing/cache/elevation_cache.json
 build/
 mapbox-token.js
+playwright-report/
+test-results/
