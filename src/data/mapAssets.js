@@ -4,7 +4,8 @@ const DEFAULT_MAP_ASSETS = {
 };
 
 async function fetchJsonAsset(filePath, options = {}) {
-  const response = await fetch(`./${filePath}`, options);
+  const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
+  const response = await fetch(`${base}${filePath}`, options);
   if (!response.ok) {
     throw new Error(`${filePath}: HTTP ${response.status} ${response.statusText}`);
   }

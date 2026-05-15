@@ -7,6 +7,11 @@ import {
 } from "../../routing/routeActions.js";
 import { FeaturedRouteContext } from "./FeaturedRouteContext.js";
 import FeaturedRouteHeader from "./Header.jsx";
+import POIList from "./POIList.jsx";
+import Gallery from "./Gallery.jsx";
+import VideoEmbed from "./VideoEmbed.jsx";
+import Warnings from "./Warnings.jsx";
+import FeaturedRouteMapSlot from "./FeaturedRouteMap.jsx";
 
 function FeaturedRoute({ meta, children }) {
   const [assets, setAssets] = useState(null);
@@ -76,12 +81,10 @@ function FeaturedRoute({ meta, children }) {
   );
 }
 
-// Slot placeholders — filled in Phase 4. These exist so authored modules can
-// reference them now without crashing.
-FeaturedRoute.Map = function FeaturedRouteMapSlot() { return null; };
-FeaturedRoute.POIs = function FeaturedRoutePOIsSlot() { return null; };
-FeaturedRoute.Gallery = function FeaturedRouteGallerySlot() { return null; };
-FeaturedRoute.Video = function FeaturedRouteVideoSlot() { return null; };
-FeaturedRoute.Warnings = function FeaturedRouteWarningsSlot() { return null; };
+FeaturedRoute.Map = FeaturedRouteMapSlot;
+FeaturedRoute.POIs = POIList;
+FeaturedRoute.Gallery = Gallery;
+FeaturedRoute.Video = VideoEmbed;
+FeaturedRoute.Warnings = Warnings;
 
 export default FeaturedRoute;

@@ -5,7 +5,7 @@ export const meta = {
   slug: "sovev-beit-hillel",
   name: "סובב בית הלל",
   summary: "מסלול קצר ונעים מסביב לבית הלל",
-  route: "u2RR2EzQKyMNaQSfoLh5fhMieHKFiE8qzNLPTbbR5jf2",
+  route: "AQByAAcABAAFAFgAYABeAAoAeAAZAHIA",
   hero: null,
   difficulty: "easy",
   tags: ["family-friendly", "river"],
@@ -14,7 +14,20 @@ export const meta = {
 export default function SovevBeitHillel() {
   return (
     <FeaturedRoute meta={meta}>
-      <p>תיאור המסלול — מתחלף בתוכן אמיתי בהמשך.</p>
+      <p>תיאור המסלול — לדוגמה.</p>
+      <FeaturedRoute.Map />
+      <FeaturedRoute.Warnings />
+      <FeaturedRoute.POIs
+        extra={[{
+          type: "cafe",
+          id: "demo-cafe-1",
+          name: "בית קפה לדוגמה",
+          information: "להחליף בתוכן אמיתי",
+          location: [33.21, 35.60],
+        }]}
+      />
+      <FeaturedRoute.Gallery photos={[]} />
+      <FeaturedRoute.Video src={undefined} />
     </FeaturedRoute>
   );
 }
