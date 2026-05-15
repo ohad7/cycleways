@@ -10,22 +10,30 @@ export default function FeaturedIndexPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const assets = await loadMapAssets();
-      const manager = await createRouteManager(
-        window.RouteManager,
-        assets.geoJsonData,
-        assets.segmentsData,
-      );
-      const next = {};
-      for (const entry of featuredRoutes) {
-        const snapshot = restoreRouteFromParam(
-          manager,
-          entry.meta.route,
+      try {
+        const assets = await loadMapAssets();
+        const manager = await createRouteManager(
+          window.RouteManager,
+          assets.geoJsonData,
           assets.segmentsData,
         );
-        if (snapshot) next[entry.meta.slug] = (snapshot.distance / 1000).toFixed(1);
+        // restoreRouteFromParam is synchronous; the per-entry loop runs once
+        // off the main thread and is already optimal.
+        const next = {};
+        for (const entry of featuredRoutes) {
+          const snapshot = restoreRouteFromParam(
+            manager,
+            entry.meta.route,
+            assets.segmentsData,
+          );
+          if (snapshot) next[entry.meta.slug] = snapshot.distance / 1000;
+        }
+        if (!cancelled) setDistances(next);
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("Featured index: failed to compute distances", err);
+        }
       }
-      if (!cancelled) setDistances(next);
     })();
     return () => { cancelled = true; };
   }, []);

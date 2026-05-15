@@ -174,7 +174,7 @@ function ContentSections({ onFocusSegment }) {
             </p>
             <div className="featured-index-grid featured-index-grid--inline">
               {featuredRoutes.slice(0, 4).map(({ meta }) => (
-                <FeaturedGalleryCard key={meta.slug} meta={meta} />
+                <FeaturedGalleryCard key={meta.slug} meta={meta} headingLevel="h3" />
               ))}
             </div>
           </div>
