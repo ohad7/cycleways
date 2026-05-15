@@ -28,8 +28,8 @@ test("current public app loads with route controls", async ({ page }) => {
   await expect(page.locator("#download-gpx")).toBeDisabled();
 });
 
-test("React preview restores compact route URL", async ({ page }) => {
-  await page.goto(`/react.html?route=${COMPACT_ROUTE}`);
+test("production root restores compact route URL", async ({ page }) => {
+  await page.goto(`/?route=${COMPACT_ROUTE}`);
 
   await expect(page.locator("#route-description")).toBeVisible();
   await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
@@ -43,8 +43,8 @@ test("React preview restores compact route URL", async ({ page }) => {
   expect(fitEvents.length).toBeGreaterThan(0);
 });
 
-test("React preview core flow works on desktop and mobile", async ({ page }, testInfo) => {
-  await page.goto(`/react.html?route=${COMPACT_ROUTE}`);
+test("production core flow works on desktop and mobile", async ({ page }, testInfo) => {
+  await page.goto(`/?route=${COMPACT_ROUTE}`);
 
   await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
   await page.screenshot({
@@ -63,8 +63,8 @@ test("React preview core flow works on desktop and mobile", async ({ page }, tes
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
-test("React preview shows outside-network warning in the route panel", async ({ page }) => {
-  await page.goto(`/react.html?route=${COMPACT_ROUTE}`);
+test("production shows outside-network warning in the route panel", async ({ page }) => {
+  await page.goto(`/?route=${COMPACT_ROUTE}`);
   await expect(page.locator(".elevation-hover-overlay")).toBeVisible();
 
   await page.evaluate(() => {
@@ -81,8 +81,8 @@ test("React preview shows outside-network warning in the route panel", async ({ 
   await expect(page.locator("#route-description .elevation-hover-overlay")).toHaveCount(0);
 });
 
-test("React preview supports segment hover, segment clicks, and sharing", async ({ page }) => {
-  await page.goto("/react.html");
+test("production supports segment hover, segment clicks, and sharing", async ({ page }) => {
+  await page.goto("/");
   await page.waitForFunction(
     (layerId) => window.__mockMapboxCurrentMap?.layers?.has(layerId),
     ROUTE_NETWORK_HIT_LAYER_ID,

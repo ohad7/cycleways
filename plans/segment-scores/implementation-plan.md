@@ -49,7 +49,7 @@ Acceptance criteria:
 
 ## Phase 4: Public Site Display
 
-- Add a small quality formatter in `script.js`.
+- Add a small quality formatter in the public app UI.
 - Gate public display behind `segmentQualityPublicDisplay`.
 - Show only exceptional badges, not stars for every segment.
 - Default to `3` for legacy segment records without quality.

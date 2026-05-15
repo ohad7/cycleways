@@ -15,7 +15,8 @@ The migration should improve:
 
 ## Current Shape
 
-The public app currently mixes several responsibilities in `script.js`:
+Before the migration, the public app mixed several responsibilities in
+`script.js`:
 
 - Mapbox map initialization and layer management;
 - generated map asset loading;
@@ -32,7 +33,6 @@ The public app currently mixes several responsibilities in `script.js`:
 Some of the current logic is already modular and should be preserved:
 
 - `route-manager.js`;
-- `spatial-index.js`;
 - `utils/distance.js`;
 - `utils/elevations.js`;
 - `utils/gpx-generator.js`;
@@ -70,7 +70,6 @@ Mapbox should own:
 Routing/domain modules should stay mostly plain JavaScript:
 
 - `RouteManager` remains a class, not a React component;
-- spatial indexing remains a utility;
 - route encoding and GPX generation stay framework-independent.
 
 This avoids turning Mapbox layers into hundreds of React elements and keeps the
@@ -104,10 +103,6 @@ src/
     DownloadModal.jsx
     DataSummary.jsx
     Tutorial.jsx
-
-  domain/
-    route-manager.js
-    spatial-index.js
 
   utils/
     distance.js

@@ -1859,15 +1859,6 @@ h3 {
   }
 }
 
-/* Move the route list inside the download modal */
-/* No CSS changes needed, just structural changes in the React component */
-@media (max-width: 480px) {
-  .tutorial-modal {
-    max-width: 280px;
-    min-width: 240px;
-  }
-}
-
 .about-code {
   font-size: 12px;
   line-height: 1.4;

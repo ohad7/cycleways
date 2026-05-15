@@ -78,9 +78,9 @@ const shareUrl = buildShareUrl(
   snapshot,
   segmentsData,
   manager,
-  new URL("https://example.test/react.html"),
+  new URL("https://example.test/"),
 );
-assert.match(shareUrl, /^https:\/\/example\.test\/react\.html\?route=/);
+assert.match(shareUrl, /^https:\/\/example\.test\/\?route=/);
 
 const restoredManager = await createRouteManager(
   RouteManager,

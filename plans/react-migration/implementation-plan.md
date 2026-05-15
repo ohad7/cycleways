@@ -50,12 +50,12 @@ Mapbox behavior minimal.
 - [x] Render loading and error states from React.
 - [x] Keep the current static assets and GitHub Pages build flow working.
 - [x] Keep the existing public app available until parity is reached.
-- [x] Exclude the local React preview entrypoint from the current static Pages
-  deploy until the production entrypoint is switched.
+- [x] Keep the local React entrypoint out of production until the production
+  entrypoint is switched.
 
 ### Acceptance Criteria
 
-- React app starts locally with Vite at `/react.html`.
+- React app starts locally with Vite.
 - It loads `map-manifest.json`, `segments...json`, and `bike_roads...geojson`.
 - Loading and error states render without direct DOM mutation.
 - Existing non-React app is not broken during this phase.
@@ -83,9 +83,9 @@ component.
 - [x] Expose segment hover and focus callbacks from `MapView`.
 - [x] Drive hover and focus layer filters from React state.
 - [x] Add a React segment inspection panel for hovered/focused segments.
-- [x] Render preview route point layers from React state.
+- [x] Render route point layers from React state.
 - [x] Render data marker layers from `segments.json` metadata.
-- [x] Add React preview panels for route point and data marker adapter state.
+- [x] Add React panels for route point and data marker adapter state.
 - [x] Add an explicit `onMapReady` callback.
 
 ### Acceptance Criteria
@@ -100,7 +100,7 @@ component.
 
 ### Notes
 
-- The first Phase 2 slice renders the CycleWays network in the React preview.
+- The first Phase 2 slice rendered the CycleWays network in the React app.
   The second slice wires segment hover/focus inspection. The final slice exposes
   map click, route point drag, and data marker click callbacks. Route
   calculation, snapping, and route geometry remain Phase 3 work.
@@ -143,9 +143,9 @@ React-managed state while keeping `RouteManager` as the routing engine.
 
 ### Notes
 
-- The React preview uses the existing `RouteManager` as the routing engine.
+- The React app uses the existing `RouteManager` as the routing engine.
 - Route point removal is exposed through right-click/context-menu on a route
-  point in the preview adapter.
+  point in the map adapter.
 - Share URL generation keeps the compact route-point payload with segment-id
   hints and applies the same middle-point compaction strategy used by the
   current app.
@@ -184,9 +184,8 @@ Replace direct DOM mutation for route UI with React components.
 
 ### Notes
 
-- Phase 4 keeps the React preview separate from the production `index.html`.
-- The tutorial is a React modal for the preview path. The legacy tutorial stays
-  untouched until the production entrypoint switch.
+- Phase 4 kept the React app separate from the production `index.html`.
+- The tutorial is a React modal.
 - The download modal generates GPX from `routeState.geometry`, using the same
   framework-independent GPX helper as the current app.
 - Segment quality badges remain behind `segmentQualityPublicDisplay`.
@@ -197,7 +196,7 @@ Status: implemented.
 
 ### Scope
 
-Bring the React preview closer to the current public app for day-to-day route
+Bring the React app closer to the current public app for day-to-day route
 editing and map interactions before considering a production switch.
 
 ### Tasks
@@ -276,13 +275,14 @@ Status: implemented.
 
 ### Scope
 
-Make the React preview look and behave like the current public product before
+Make the React app look and behave like the current public product before
 switching production traffic. This phase is intentionally about parity, not the
 production entrypoint.
 
 ### Tasks
 
-- [x] Reuse the original public CSS and tutorial CSS on `react.html`.
+- [x] Reuse the original public CSS while replacing tutorial behavior with the
+  React tutorial modal.
 - [x] Replace the migration-dashboard shell with the original fixed header,
   navigation links, and mobile menu behavior.
 - [x] Restore the original map-first layout:
@@ -300,15 +300,15 @@ production entrypoint.
 
 ### Acceptance Criteria
 
-- React preview has the same first-screen structure as the current public app.
+- React app has the same first-screen structure as the current public app.
 - Route creation, route restore, point selection/removal, download modal, and
   warnings are still React-controlled.
-- The preview no longer exposes migration-only asset summary panels as user UI.
+- The app no longer exposes migration-only asset summary panels as user UI.
 - Build, unit tests, smoke tests, and diff whitespace checks pass.
 
 ## Phase 8: Production Switch
 
-Status: planned.
+Status: implemented.
 
 ### Scope
 
@@ -316,12 +316,17 @@ Make React the public app while keeping rollback risk low.
 
 ### Tasks
 
-- [ ] Switch `index.html` to the React entrypoint.
-- [ ] Keep framework-independent modules in stable paths or update imports.
-- [ ] Keep legacy `script.js` available but inactive for one review/deploy
-  cycle.
-- [ ] Verify GitHub Pages production build and deployment output.
-- [ ] Verify representative old route links on the deployed site.
+- [x] Switch `index.html` to the React entrypoint.
+- [x] Keep framework-independent modules in stable paths or update imports.
+- [x] Keep legacy `script.js` available but inactive until Phase 9 cleanup.
+- [x] Update GitHub Pages to deploy the Vite `dist/` output and inject the
+  Mapbox token into `dist/mapbox-token.js`.
+- [x] Copy runtime-fetched public assets into `dist/` during production builds:
+  map manifest, map data, icons, KML exports, `route-manager.js`, and site
+  metadata files.
+- [x] Verify local production build output.
+- [x] Verify representative old route links against the production entrypoint
+  locally.
 
 ### Acceptance Criteria
 
@@ -332,7 +337,7 @@ Make React the public app while keeping rollback risk low.
 
 ## Phase 9: Legacy Cleanup
 
-Status: planned.
+Status: implemented.
 
 ### Scope
 
@@ -341,10 +346,12 @@ verified.
 
 ### Tasks
 
-- [ ] Remove or archive replaced `script.js` DOM/UI paths.
-- [ ] Remove unused legacy CSS and HTML fragments.
-- [ ] Keep shared utilities in framework-independent modules.
-- [ ] Re-run production build, tests, and browser smoke tests.
+- [x] Remove replaced `script.js` DOM/UI paths.
+- [x] Remove the retired `react.html` migration entrypoint.
+- [x] Remove unused legacy tutorial and spatial-index files.
+- [x] Remove unused legacy CSS fragments.
+- [x] Keep shared utilities in framework-independent modules.
+- [x] Re-run production build, tests, and browser smoke tests.
 
 ### Acceptance Criteria
 
