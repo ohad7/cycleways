@@ -3,7 +3,6 @@ import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 
 export default function FeaturedRouteHeader() {
   const { meta, routeState, status } = useFeaturedRoute();
-  const distanceKm = (routeState.distance / 1000).toFixed(1);
   return (
     <header className="featured-route-header">
       {meta.hero && (
@@ -14,7 +13,7 @@ export default function FeaturedRouteHeader() {
         {meta.summary && <p className="featured-route-summary">{meta.summary}</p>}
         {status === "ready" && (
           <div className="featured-route-stats">
-            <span>📏 {distanceKm} ק"מ</span>
+            <span>📏 {(routeState.distance / 1000).toFixed(1)} ק"מ</span>
             <span>⬆️ {Math.round(routeState.elevationGain)} מ'</span>
             <span>⬇️ {Math.round(routeState.elevationLoss)} מ'</span>
           </div>
