@@ -5,9 +5,9 @@ test("placeholder /featured index renders", async ({ page }) => {
   await expect(page.locator(".featured-index-placeholder")).toBeVisible();
 });
 
-test("placeholder /featured/:slug page renders with slug", async ({ page }) => {
+test("/featured/:slug page renders 404 message for unknown slug", async ({ page }) => {
   await page.goto("/featured/test-route");
-  await expect(page.locator(".featured-route-placeholder")).toContainText("test-route");
+  await expect(page.locator(".featured-route-404")).toContainText("test-route");
 });
 
 test("existing planner at / still loads the map", async ({ page }) => {
