@@ -19,7 +19,11 @@ export default function POIList({ exclude = [], extra = [], mode = "auto" }) {
 
   function handleSelect(poi) {
     setFocusedPoiId(poi.id);
-    if (poi.location && Number.isFinite(poi.location[0])) {
+    if (
+      poi.location &&
+      Number.isFinite(poi.location[0]) &&
+      Number.isFinite(poi.location[1])
+    ) {
       const [lat, lng] = poi.location;
       setFocusedCoord({ lat, lng });
     }
