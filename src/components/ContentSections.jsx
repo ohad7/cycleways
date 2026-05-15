@@ -1,4 +1,7 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { featuredRoutes } from "../featured/index.js";
+import FeaturedGalleryCard from "./featured/GalleryCard.jsx";
 
 function ContentSections({ onFocusSegment }) {
   const focusSegment = (segmentName) => {
@@ -166,22 +169,14 @@ function ContentSections({ onFocusSegment }) {
 
             <h2>מסלולים שלמים מומלצים</h2>
             <p>
-              רשימת מסלולים שלמים מומלצים ברמות שונות, לחצו על הקישור כדי
-              לראות את המסלול במפה
+              אוסף מסלולים שלמים מומלצים. ראו את כולם ב
+              <Link to="/featured">דף המסלולים המומלצים</Link>.
             </p>
-            <ul>
-              <li>
-                <a href="/?route=AQByAAcABAAFAFgAYABeAAoAeAAZAHIA">
-                  שדה נחמיה -&gt; בניאס -&gt; גן הצפון -&gt; שדה נחמיה
-                </a>
-                <ul>
-                  <li>
-                    מסלול קצר ונוח, מומלץ במיוחד לחובבי רכיבה ראשונית, עם
-                    פינות מנוחה רבות
-                  </li>
-                </ul>
-              </li>
-            </ul>
+            <div className="featured-index-grid featured-index-grid--inline">
+              {featuredRoutes.slice(0, 4).map(({ meta }) => (
+                <FeaturedGalleryCard key={meta.slug} meta={meta} />
+              ))}
+            </div>
           </div>
         </section>
 

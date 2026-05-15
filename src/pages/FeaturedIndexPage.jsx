@@ -1,4 +1,50 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { loadMapAssets } from "../data/mapAssets.js";
+import { createRouteManager, restoreRouteFromParam } from "../routing/routeActions.js";
+import { featuredRoutes } from "../featured/index.js";
+import FeaturedGalleryCard from "../components/featured/GalleryCard.jsx";
+
 export default function FeaturedIndexPage() {
-  return <div className="featured-index-placeholder">Featured routes (gallery TBD)</div>;
+  const [distances, setDistances] = useState({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const assets = await loadMapAssets();
+      const manager = await createRouteManager(
+        window.RouteManager,
+        assets.geoJsonData,
+        assets.segmentsData,
+      );
+      const next = {};
+      for (const entry of featuredRoutes) {
+        const snapshot = restoreRouteFromParam(
+          manager,
+          entry.meta.route,
+          assets.segmentsData,
+        );
+        if (snapshot) next[entry.meta.slug] = (snapshot.distance / 1000).toFixed(1);
+      }
+      if (!cancelled) setDistances(next);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <section className="featured-index">
+      <header>
+        <h1>מסלולים מומלצים</h1>
+        <p>אוסף מסלולי רכיבה מומלצים בגליל העליון וגולן.</p>
+      </header>
+      <div className="featured-index-grid">
+        {featuredRoutes.map(({ meta }) => (
+          <FeaturedGalleryCard
+            key={meta.slug}
+            meta={meta}
+            distanceKm={distances[meta.slug]}
+          />
+        ))}
+      </div>
+    </section>
+  );
 }

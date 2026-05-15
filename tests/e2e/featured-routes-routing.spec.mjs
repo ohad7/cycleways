@@ -1,8 +1,13 @@
 import { test, expect } from "@playwright/test";
+import { installMapboxMock } from "./mapbox-mock.mjs";
 
-test("placeholder /featured index renders", async ({ page }) => {
+test.beforeEach(async ({ page }) => {
+  await installMapboxMock(page);
+});
+
+test("/featured index renders", async ({ page }) => {
   await page.goto("/featured");
-  await expect(page.locator(".featured-index-placeholder")).toBeVisible();
+  await expect(page.locator(".featured-index")).toBeVisible();
 });
 
 test("/featured/:slug page renders 404 message for unknown slug", async ({ page }) => {
