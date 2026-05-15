@@ -8,8 +8,8 @@ import React, {
 } from "react";
 import ContentSections from "./components/ContentSections.jsx";
 import DownloadModal from "./components/DownloadModal.jsx";
+import PageShell from "./components/PageShell.jsx";
 import { getRouteMessage } from "./components/RoutePanel.jsx";
-import TopBar from "./components/TopBar.jsx";
 import Tutorial from "./components/Tutorial.jsx";
 import { getFeatureFlags } from "./config/featureFlags.js";
 import { loadMapAssets, summarizeMapAssets } from "./data/mapAssets.js";
@@ -66,7 +66,6 @@ function App() {
     selectedDataMarker: null,
     elevationHover: null,
     tutorialOpen: false,
-    mobileMenuOpen: false,
   });
   const routeManagerRef = useRef(null);
   const dragStartSnapshotRef = useRef(null);
@@ -397,13 +396,6 @@ function App() {
     }));
   }, []);
 
-  const handleMobileMenuToggle = useCallback(() => {
-    setMapUi((current) => ({
-      ...current,
-      mobileMenuOpen: !current.mobileMenuOpen,
-    }));
-  }, []);
-
   const handleDataMarkerClick = useCallback((dataMarker) => {
     setMapUi((current) => ({
       ...current,
@@ -629,13 +621,7 @@ function App() {
 
   return (
     <>
-      <TopBar
-        mobileMenuOpen={mapUi.mobileMenuOpen}
-        onMobileMenuToggle={handleMobileMenuToggle}
-        onOpenTutorial={handleOpenTutorial}
-      />
-
-      <div className="main-container react-main-container">
+      <PageShell onOpenTutorial={handleOpenTutorial}>
         <div
           id="error-message"
           className={state.status === "error" ? "show" : ""}
@@ -780,7 +766,7 @@ function App() {
         </div>
 
         <ContentSections onFocusSegment={handleSegmentFocus} />
-      </div>
+      </PageShell>
 
       {state.status === "ready" && mapUi.downloadModalOpen && (
         <DownloadModal

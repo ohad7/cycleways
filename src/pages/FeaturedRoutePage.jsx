@@ -1,6 +1,8 @@
 import React, { Suspense, lazy, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { findFeaturedRoute } from "../featured/index.js";
+import PageShell from "../components/PageShell.jsx";
+import "../components/featured/featured.css";
 
 export default function FeaturedRoutePage() {
   const { slug } = useParams();
@@ -11,12 +13,17 @@ export default function FeaturedRoutePage() {
     return lazy(() => entry.load());
   }, [entry]);
 
-  if (!entry) {
-    return <div className="featured-route-404">לא נמצא מסלול בשם "{slug}".</div>;
-  }
   return (
-    <Suspense fallback={<div className="featured-route-loading">טוען מסלול…</div>}>
-      <LazyRoute />
-    </Suspense>
+    <PageShell>
+      <div className="page-card">
+        {!entry ? (
+          <div className="featured-route-404">לא נמצא מסלול בשם "{slug}".</div>
+        ) : (
+          <Suspense fallback={<div className="featured-route-loading">טוען מסלול…</div>}>
+            <LazyRoute />
+          </Suspense>
+        )}
+      </div>
+    </PageShell>
   );
 }

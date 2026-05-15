@@ -3,6 +3,8 @@ import { loadMapAssets } from "../data/mapAssets.js";
 import { createRouteManager, restoreRouteFromParam } from "../routing/routeActions.js";
 import { featuredRoutes } from "../featured/index.js";
 import FeaturedGalleryCard from "../components/featured/GalleryCard.jsx";
+import PageShell from "../components/PageShell.jsx";
+import "../components/featured/featured.css";
 
 export default function FeaturedIndexPage() {
   const [distances, setDistances] = useState({});
@@ -39,20 +41,24 @@ export default function FeaturedIndexPage() {
   }, []);
 
   return (
-    <section className="featured-index">
-      <header>
-        <h1>מסלולים מומלצים</h1>
-        <p>אוסף מסלולי רכיבה מומלצים בגליל העליון וגולן.</p>
-      </header>
-      <div className="featured-index-grid">
-        {featuredRoutes.map(({ meta }) => (
-          <FeaturedGalleryCard
-            key={meta.slug}
-            meta={meta}
-            distanceKm={distances[meta.slug]}
-          />
-        ))}
+    <PageShell>
+      <div className="page-card">
+        <section className="featured-index">
+          <header>
+            <h1>מסלולים מומלצים</h1>
+            <p>אוסף מסלולי רכיבה מומלצים בגליל העליון וגולן.</p>
+          </header>
+          <div className="featured-index-grid">
+            {featuredRoutes.map(({ meta }) => (
+              <FeaturedGalleryCard
+                key={meta.slug}
+                meta={meta}
+                distanceKm={distances[meta.slug]}
+              />
+            ))}
+          </div>
+        </section>
       </div>
-    </section>
+    </PageShell>
   );
 }

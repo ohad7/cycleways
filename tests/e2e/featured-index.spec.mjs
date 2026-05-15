@@ -23,3 +23,15 @@ test("home page recommendations link to /featured", async ({ page }) => {
   await page.locator("a", { hasText: "דף המסלולים המומלצים" }).click();
   await expect(page).toHaveURL(/\/featured$/);
 });
+
+test("TopBar appears on /featured page", async ({ page }) => {
+  await page.goto("/featured");
+  await expect(page.locator("header.header")).toBeVisible();
+  await expect(page.locator(".site-title")).toContainText("מפת שבילי אופניים");
+});
+
+test("TopBar site title links back to /", async ({ page }) => {
+  await page.goto("/featured/sovev-beit-hillel");
+  await page.locator(".site-title-link").click();
+  await expect(page).toHaveURL(/\/$/);
+});
