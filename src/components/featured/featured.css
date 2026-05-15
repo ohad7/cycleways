@@ -1,0 +1,57 @@
+.featured-route { display: block; }
+
+.featured-route-header { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.featured-route-header img.featured-route-hero {
+  width: 100%; max-height: 320px; object-fit: cover; border-radius: 8px;
+}
+.featured-route-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+
+.featured-route-body { padding: 16px; }
+
+.featured-route-layout-desktop {
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) minmax(360px, 480px);
+  gap: 24px;
+  align-items: start;
+}
+.featured-route-layout-desktop .featured-route-sticky-map {
+  position: sticky;
+  top: 16px;
+  height: calc(100vh - 32px);
+}
+
+.featured-map-inline { position: relative; height: 280px; margin: 16px 0; }
+.featured-map-fullscreen-btn {
+  position: absolute; top: 8px; inset-inline-end: 8px;
+  background: rgba(255,255,255,0.92); border: 1px solid #ccc; border-radius: 6px;
+  padding: 4px 8px; cursor: pointer;
+}
+.featured-map-inline--hidden { display: none; }
+.featured-map-fullscreen-overlay {
+  position: fixed; inset: 0; background: #fff; z-index: 1000;
+  display: flex; flex-direction: column;
+}
+.featured-map-fullscreen-close {
+  position: absolute; top: 12px; inset-inline-end: 12px; z-index: 1;
+  background: #fff; border: 1px solid #ccc; border-radius: 6px;
+  padding: 6px 10px; cursor: pointer;
+}
+
+.poi-list-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.poi-card { text-align: start; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; }
+.poi-card--focused { border-color: #3aa17e; box-shadow: 0 0 0 2px rgba(58,161,126,0.2); }
+.poi-card-photo { width: 100%; max-height: 180px; object-fit: cover; border-radius: 6px; margin-top: 8px; }
+
+.featured-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+
+@media (max-width: 767px) {
+  .featured-route-layout-desktop { grid-template-columns: 1fr; }
+  .featured-route-layout-desktop .featured-route-sticky-map { display: none; }
+  .featured-gallery-grid {
+    grid-auto-flow: column;
+    grid-auto-columns: 80%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .featured-gallery-item { scroll-snap-align: start; }
+}

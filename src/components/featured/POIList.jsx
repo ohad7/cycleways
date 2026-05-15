@@ -4,7 +4,8 @@ import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import POICard from "./POICard.jsx";
 
 export default function POIList({ exclude = [], extra = [], mode = "auto" }) {
-  const { routeState, focusedPoiId, setFocusedPoiId } = useFeaturedRoute();
+  const { routeState, focusedPoiId, setFocusedPoiId, setFocusedCoord } =
+    useFeaturedRoute();
   const excludeSet = useMemo(() => new Set(exclude), [exclude]);
 
   const items = useMemo(() => {
@@ -15,6 +16,24 @@ export default function POIList({ exclude = [], extra = [], mode = "auto" }) {
           .filter((p) => !isWarningType(p.type));
     return [...auto, ...extra];
   }, [routeState.activeDataPoints, excludeSet, extra, mode]);
+
+  function handleSelect(poi) {
+    setFocusedPoiId(poi.id);
+    if (poi.location && Number.isFinite(poi.location[0])) {
+      const [lat, lng] = poi.location;
+      setFocusedCoord({ lat, lng });
+    }
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(max-width: 767px)").matches
+    ) {
+      document.querySelector(".featured-map-inline")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }
 
   if (items.length === 0) return null;
 
@@ -27,7 +46,7 @@ export default function POIList({ exclude = [], extra = [], mode = "auto" }) {
             key={poi.id || `${poi.type}-${poi.location?.join(",")}`}
             poi={poi}
             focused={focusedPoiId === poi.id}
-            onSelect={(p) => setFocusedPoiId(p.id)}
+            onSelect={(p) => handleSelect(p)}
           />
         ))}
       </div>

@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
+import "./featured.css";
+import { useIsMobile } from "./useIsMobile.js";
 import { loadMapAssets } from "../../data/mapAssets.js";
 import {
   createRouteManager,
   emptyRouteSnapshot,
   restoreRouteFromParam,
 } from "../../routing/routeActions.js";
+import MapView from "../../map/MapView.jsx";
+import { dataMarkerFeaturesFromSegments } from "../../map/mapLayers.js";
 import { FeaturedRouteContext } from "./FeaturedRouteContext.js";
 import FeaturedRouteHeader from "./Header.jsx";
 import POIList from "./POIList.jsx";
@@ -14,11 +18,14 @@ import Warnings from "./Warnings.jsx";
 import FeaturedRouteMapSlot from "./FeaturedRouteMap.jsx";
 
 function FeaturedRoute({ meta, children }) {
+  const isMobile = useIsMobile();
   const [assets, setAssets] = useState(null);
   const [routeState, setRouteState] = useState(emptyRouteSnapshot());
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
   const [focusedPoiId, setFocusedPoiId] = useState(null);
+  const [focusedCoord, setFocusedCoord] = useState(null);
+  const [routeFitRequest, setRouteFitRequest] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -52,6 +59,14 @@ function FeaturedRoute({ meta, children }) {
     return () => controller.abort();
   }, [meta.route, meta.slug]);
 
+  useEffect(() => {
+    if (status !== "ready" || routeState.geometry.length < 2) return;
+    setRouteFitRequest({
+      id: `featured-${meta.slug}-${Date.now()}`,
+      geometry: routeState.geometry,
+    });
+  }, [status, meta.slug, routeState.geometry]);
+
   const contextValue = useMemo(
     () => ({
       meta,
@@ -61,9 +76,14 @@ function FeaturedRoute({ meta, children }) {
       error,
       focusedPoiId,
       setFocusedPoiId,
+      focusedCoord,
+      setFocusedCoord,
+      routeFitRequest,
     }),
-    [meta, assets, routeState, status, error, focusedPoiId],
+    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest],
   );
+
+  const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
 
   return (
     <FeaturedRouteContext.Provider value={contextValue}>
@@ -74,7 +94,23 @@ function FeaturedRoute({ meta, children }) {
           <div className="featured-route-error">שגיאה: {error?.message}</div>
         )}
         {status === "ready" && (
-          <div className="featured-route-body">{children}</div>
+          <div className="featured-route-layout-desktop">
+            <div className="featured-route-body">{children}</div>
+            {!isMobile && (
+              <div className="featured-route-sticky-map">
+                <MapView
+                  geoJsonData={assets.geoJsonData}
+                  dataMarkerFeatures={dataMarkerFeaturesFromSegments(assets.segmentsData)}
+                  activeDataPointIds={routeState.activeDataPoints.map((p) => p.id)}
+                  routeGeometry={routeState.geometry}
+                  routePoints={routeState.points}
+                  routeFitRequest={routeFitRequest}
+                  focusedMarker={focusedMarker}
+                  onDataMarkerClick={(marker) => setFocusedPoiId(marker.id)}
+                />
+              </div>
+            )}
+          </div>
         )}
       </article>
     </FeaturedRouteContext.Provider>
