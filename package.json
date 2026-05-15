@@ -5,7 +5,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build && node scripts/copy-static-assets.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && node tests/test-react-route-actions.mjs && node tests/test-gpx-parity.mjs && node tests/test-analytics-parity.mjs && cd tests && node test-route-manager.js",
+    "test": "node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && node tests/test-react-route-actions.mjs && node tests/test-poi-types.mjs && node tests/test-gpx-parity.mjs && node tests/test-analytics-parity.mjs && cd tests && node test-route-manager.js",
     "test:smoke": "playwright test"
   },
   "devDependencies": {

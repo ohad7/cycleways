@@ -13,6 +13,12 @@ import TopBar from "./components/TopBar.jsx";
 import Tutorial from "./components/Tutorial.jsx";
 import { getFeatureFlags } from "./config/featureFlags.js";
 import { loadMapAssets, summarizeMapAssets } from "./data/mapAssets.js";
+import {
+  POI_COLORS as WARNING_COLORS,
+  POI_EMOJIS as WARNING_EMOJIS,
+  POI_LABELS as WARNING_TRANSLATIONS,
+  POI_WARNING_PRIORITY as WARNING_PRIORITY,
+} from "./data/poiTypes.js";
 import MapView from "./map/MapView.jsx";
 import { dataMarkerFeaturesFromSegments } from "./map/mapLayers.js";
 import {
@@ -931,46 +937,6 @@ function MapLegend({ activeDataPoints, hasBrokenRoute, selectedDataMarker }) {
     </div>
   );
 }
-
-const WARNING_TRANSLATIONS = {
-  payment: "תשלום",
-  gate: "שער",
-  mud: "בוץ",
-  warning: "אזהרה",
-  slope: "שיפוע",
-  narrow: "שוליים צרים",
-  severe: "סכנה",
-};
-
-const WARNING_COLORS = {
-  payment: "#4a5783",
-  mud: "#9d744d",
-  warning: "#FF9800",
-  slope: "#8e5b9a",
-  narrow: "#d6568b",
-  severe: "#ff675b",
-  gate: "#FF5722",
-};
-
-const WARNING_EMOJIS = {
-  payment: "💵",
-  gate: "🚧",
-  mud: "⚠️",
-  warning: "⚠️",
-  slope: "⛰️",
-  narrow: "⛍",
-  severe: "‼️",
-};
-
-const WARNING_PRIORITY = [
-  "severe",
-  "narrow",
-  "gate",
-  "slope",
-  "mud",
-  "payment",
-  "warning",
-];
 
 function groupWarningsBySegment(warnings) {
   const grouped = new Map();
