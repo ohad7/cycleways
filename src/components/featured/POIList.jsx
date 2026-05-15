@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { isWarningType } from "../../data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import POICard from "./POICard.jsx";
+import { MOBILE_BREAKPOINT } from "./useIsMobile.js";
 
 export default function POIList({ exclude = [], extra = [], mode = "auto" }) {
   const { routeState, focusedPoiId, setFocusedPoiId, setFocusedCoord } =
@@ -30,7 +31,7 @@ export default function POIList({ exclude = [], extra = [], mode = "auto" }) {
     if (
       typeof window !== "undefined" &&
       window.matchMedia &&
-      window.matchMedia("(max-width: 767px)").matches
+      window.matchMedia(MOBILE_BREAKPOINT).matches
     ) {
       document.querySelector(".featured-map-inline")?.scrollIntoView({
         behavior: "smooth",

@@ -1,15 +1,8 @@
 import React from "react";
 import FeaturedRoute from "../components/featured/FeaturedRoute.jsx";
+import { meta } from "./sovev-beit-hillel.meta.js";
 
-export const meta = {
-  slug: "sovev-beit-hillel",
-  name: "סובב בית הלל",
-  summary: "מסלול קצר ונעים מסביב לבית הלל",
-  route: "AQByAAcABAAFAFgAYABeAAoAeAAZAHIA",
-  hero: null,
-  difficulty: "easy",
-  tags: ["family-friendly", "river"],
-};
+export { meta };
 
 export default function SovevBeitHillel() {
   return (

@@ -44,6 +44,7 @@
 
 .featured-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
 
+/* Mobile breakpoint — keep in sync with MOBILE_BREAKPOINT in src/components/featured/useIsMobile.js */
 @media (max-width: 767px) {
   .featured-route-layout-desktop { grid-template-columns: 1fr; }
   .featured-route-layout-desktop .featured-route-sticky-map { display: none; }

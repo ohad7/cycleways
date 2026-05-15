@@ -1,12 +1,20 @@
-const metaModules = import.meta.glob("./*.jsx", {
+const metaModules = import.meta.glob("./*.meta.js", {
   eager: true,
   import: "meta",
 });
 const componentLoaders = import.meta.glob("./*.jsx");
 
+function jsxPathFromMeta(metaPath) {
+  return metaPath.replace(/\.meta\.js$/, ".jsx");
+}
+
 export const featuredRoutes = Object.entries(metaModules)
-  .map(([path, meta]) => ({ meta, load: componentLoaders[path] }))
-  .filter((entry) => entry.meta && entry.meta.slug);
+  .map(([metaPath, meta]) => {
+    const jsxPath = jsxPathFromMeta(metaPath);
+    const load = componentLoaders[jsxPath];
+    return { meta, load };
+  })
+  .filter((entry) => entry.meta && entry.meta.slug && entry.load);
 
 export function findFeaturedRoute(slug) {
   return featuredRoutes.find((entry) => entry.meta.slug === slug) || null;
