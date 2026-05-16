@@ -88,16 +88,25 @@ function FeaturedRoute({ meta, children }) {
   return (
     <FeaturedRouteContext.Provider value={contextValue}>
       <article className="featured-route">
-        <FeaturedRouteHeader />
-        {status === "loading" && <div className="featured-route-loading">טוען מסלול…</div>}
+        {status === "loading" && (
+          <div className="page-card">
+            <div className="featured-route-loading">טוען מסלול…</div>
+          </div>
+        )}
         {status === "error" && (
-          <div className="featured-route-error">שגיאה: {error?.message}</div>
+          <div className="page-card">
+            <FeaturedRouteHeader />
+            <div className="featured-route-error">שגיאה: {error?.message}</div>
+          </div>
         )}
         {status === "ready" && (
-          <div className="featured-route-layout-desktop">
-            <div className="featured-route-body">{children}</div>
+          <div className="featured-route-split">
+            <div className="featured-route-content-card">
+              <FeaturedRouteHeader />
+              <div className="featured-route-body">{children}</div>
+            </div>
             {!isMobile && (
-              <div className="featured-route-sticky-map">
+              <aside className="featured-route-sticky-map">
                 <MapView
                   geoJsonData={assets.geoJsonData}
                   dataMarkerFeatures={dataMarkerFeaturesFromSegments(assets.segmentsData)}
@@ -108,7 +117,7 @@ function FeaturedRoute({ meta, children }) {
                   focusedMarker={focusedMarker}
                   onDataMarkerClick={(marker) => setFocusedPoiId(marker.id)}
                 />
-              </div>
+              </aside>
             )}
           </div>
         )}

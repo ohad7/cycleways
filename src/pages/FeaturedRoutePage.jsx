@@ -15,15 +15,21 @@ export default function FeaturedRoutePage() {
 
   return (
     <PageShell>
-      <div className="page-card">
-        {!entry ? (
+      {!entry ? (
+        <div className="page-card">
           <div className="featured-route-404">לא נמצא מסלול בשם "{slug}".</div>
-        ) : (
-          <Suspense fallback={<div className="featured-route-loading">טוען מסלול…</div>}>
-            <LazyRoute />
-          </Suspense>
-        )}
-      </div>
+        </div>
+      ) : (
+        <Suspense
+          fallback={
+            <div className="page-card">
+              <div className="featured-route-loading">טוען מסלול…</div>
+            </div>
+          }
+        >
+          <LazyRoute />
+        </Suspense>
+      )}
     </PageShell>
   );
 }

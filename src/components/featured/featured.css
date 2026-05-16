@@ -16,24 +16,46 @@
 
 .featured-route { display: block; }
 
-.featured-route-header { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.featured-route-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 0 12px 0;
+}
 .featured-route-header img.featured-route-hero {
   width: 100%; max-height: 320px; object-fit: cover; border-radius: 8px;
 }
 .featured-route-stats { display: flex; gap: 16px; flex-wrap: wrap; }
 
-.featured-route-body { padding: 16px; }
+.featured-route-body { padding: 0; }
 
-.featured-route-layout-desktop {
+.featured-route-split {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(360px, 480px);
+  grid-template-columns: minmax(360px, 2fr) minmax(420px, 3fr);
   gap: 24px;
   align-items: start;
+  max-width: 1400px;
+  margin: 0 auto;
 }
-.featured-route-layout-desktop .featured-route-sticky-map {
+
+.featured-route-content-card {
+  background: #F8F8F8;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  min-width: 0;
+}
+
+.featured-route-split .featured-route-sticky-map {
   position: sticky;
   top: 16px;
-  height: calc(100vh - 32px);
+  height: calc(100vh - 90px);
+  background: #F8F8F8;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .featured-map-inline { position: relative; height: 280px; margin: 16px 0; }
@@ -62,8 +84,15 @@
 
 /* Mobile breakpoint — keep in sync with MOBILE_BREAKPOINT in src/components/featured/useIsMobile.js */
 @media (max-width: 767px) {
-  .featured-route-layout-desktop { grid-template-columns: 1fr; }
-  .featured-route-layout-desktop .featured-route-sticky-map { display: none; }
+  .featured-route-split {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .featured-route-split .featured-route-sticky-map { display: none; }
+  .featured-route-content-card {
+    padding: 16px;
+    border-radius: 8px;
+  }
   .featured-gallery-grid {
     grid-auto-flow: column;
     grid-auto-columns: 80%;
