@@ -10,3 +10,4 @@ build/
 mapbox-token.js
 playwright-report/
 test-results/
+.superpowers
