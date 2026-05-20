@@ -2325,6 +2325,46 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-146-mpe87zzf",
+      "properties": {
+        "id": "manual-146-mpe87zzf",
+        "manualEdgeId": "manual-146-mpe87zzf",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-05-20T15:38:25.131Z",
+        "updatedAt": "2026-05-20T15:38:25.131Z",
+        "linkedSegmentId": 146,
+        "linkedSegmentName": "רחוב הנרייטה סאלד"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.569754,
+            33.200673
+          ],
+          [
+            35.56973,
+            33.200737
+          ],
+          [
+            35.569674,
+            33.200776
+          ],
+          [
+            35.569557,
+            33.2008
+          ],
+          [
+            35.569503,
+            33.200842
+          ]
+        ]
+      }
     }
   ]
 }

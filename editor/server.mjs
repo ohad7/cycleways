@@ -1324,8 +1324,19 @@ const server = createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/osm/graph-edges") {
       logApi(requestId, "GET /api/osm/graph-edges started");
       const graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
+      const [graphStat, manualStat] = await Promise.all([
+        stat(osmGraphEdgesPath),
+        stat(manualBaseEdgesPath).catch(() => null),
+      ]);
+      graphEdges.metadata = {
+        ...(graphEdges.metadata || {}),
+        graphEdgesModifiedAt: graphStat.mtime.toISOString(),
+        manualBaseEdgesModifiedAt: manualStat?.mtime?.toISOString() || null,
+        graphStaleBecauseManualBaseEdgesChanged: Boolean(manualStat && manualStat.mtimeMs > graphStat.mtimeMs),
+      };
       logApi(requestId, "GET /api/osm/graph-edges loaded", {
         features: graphEdges.features?.length || 0,
+        stale: graphEdges.metadata.graphStaleBecauseManualBaseEdgesChanged,
       });
       sendJson(response, 200, graphEdges);
       return;

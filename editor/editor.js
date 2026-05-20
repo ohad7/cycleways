@@ -1379,6 +1379,33 @@ function isBaseOverlayMappingLocked(mapping) {
   return mapping?.status === "accepted_auto_match" || mapping?.status === "manual_base_edge_needed";
 }
 
+function isBaseGraphStale() {
+  return Boolean(state.baseOverlay.graphEdges?.metadata?.graphStaleBecauseManualBaseEdgesChanged);
+}
+
+function baseGraphStaleReason() {
+  const metadata = state.baseOverlay.graphEdges?.metadata || {};
+  if (!metadata.graphStaleBecauseManualBaseEdgesChanged) return "";
+  const graphTime = metadata.graphEdgesModifiedAt ? new Date(metadata.graphEdgesModifiedAt).toLocaleString() : "unknown";
+  const manualTime = metadata.manualBaseEdgesModifiedAt
+    ? new Date(metadata.manualBaseEdgesModifiedAt).toLocaleString()
+    : "unknown";
+  return `Manual base edges changed after graph build (${manualTime} > ${graphTime})`;
+}
+
+function markBaseGraphStaleBecauseManualEdgesChanged() {
+  if (!state.baseOverlay.graphEdges) return;
+  state.baseOverlay.graphEdges = {
+    ...state.baseOverlay.graphEdges,
+    metadata: {
+      ...(state.baseOverlay.graphEdges.metadata || {}),
+      manualBaseEdgesModifiedAt: new Date().toISOString(),
+      graphStaleBecauseManualBaseEdgesChanged: true,
+    },
+  };
+  invalidateBaseOverlayDerivedCache();
+}
+
 function graphEdgeIdSet() {
   return new Set(
     (state.baseOverlay.graphEdges?.features || [])
@@ -1521,6 +1548,7 @@ function fullAutoAcceptCandidates() {
     (match) =>
       isActiveSegmentId(match.segmentId) &&
       isFullAutoAcceptCandidate(match) &&
+      !isBaseGraphStale() &&
       missingManualGraphEdgeIdsForSegment(match.segmentId).length === 0,
   );
   cache.fullAutoAcceptCandidatesMatchSummary = state.baseOverlay.matchSummary;
@@ -2184,6 +2212,14 @@ function overlayNetworkStatus(match) {
   const segmentId = Number(match?.segmentId);
   const mapping = overlayMappingForSegment(segmentId);
   const validation = validationForSegment(segmentId);
+  if (isBaseGraphStale()) {
+    return {
+      key: "base_graph_stale",
+      label: "Graph stale",
+      reason: "Manual base edges changed after the base graph was built",
+      resolved: false,
+    };
+  }
   const missingManualGraphEdges = missingManualGraphEdgeIdsForSegment(segmentId);
   if (missingManualGraphEdges.length > 0) {
     return {
@@ -2673,7 +2709,7 @@ function renderBaseOverlayPanel() {
   const reviewedValidation =
     mapping?.status === "accepted_auto_match" ? validation : reviewedEdgeSetValidation(segmentId, reviewedEdgeRefs);
   const missingManualGraphEdges = missingManualGraphEdgeIdsForSegment(segmentId);
-  const baseGraphStaleForSegment = missingManualGraphEdges.length > 0;
+  const baseGraphStaleForSegment = isBaseGraphStale() || missingManualGraphEdges.length > 0;
   const snapPlan = boundarySnapPlan(match, selected);
   els.baseOverlayStatus.textContent =
     baseGraphStaleForSegment
@@ -2695,7 +2731,11 @@ function renderBaseOverlayPanel() {
       : "";
   const graphStaleLine =
     baseGraphStaleForSegment
-      ? `<div><dt>Graph</dt><dd>Run Recalculate Graph + Matches. Missing ${escapeHtml(missingManualGraphEdges.join(", "))}</dd></div>`
+      ? `<div><dt>Graph</dt><dd>${escapeHtml(
+          isBaseGraphStale()
+            ? `Run Recalculate Graph + Matches. ${baseGraphStaleReason()}`
+            : `Run Recalculate Graph + Matches. Missing ${missingManualGraphEdges.join(", ")}`,
+        )}</dd></div>`
       : "";
   const diagnostics = matchPreviewFeaturesForSegment(segmentId).filter(
     (feature) => feature.properties?.kind === "unmatchedSample" || feature.properties?.kind === "distantSample",
@@ -4499,6 +4539,7 @@ async function recalculateOsmGraph() {
     state.baseOverlay.graphEdges = null;
     state.baseOverlay.matchSummary = null;
     state.baseOverlay.matchPreview = null;
+    invalidateBaseOverlayDerivedCache();
     await loadBaseOverlayData();
     const graphEdges = state.baseOverlay.graphEdges?.features?.length || 0;
     const sourceSegments = state.baseOverlay.matchSummary?.sourceSegments || 0;
@@ -4676,7 +4717,7 @@ async function recalculateSelectedOverlayMatch() {
     return;
   }
   const missingManualGraphEdges = missingManualGraphEdgeIdsForSegment(segmentId);
-  if (missingManualGraphEdges.length > 0) {
+  if (isBaseGraphStale() || missingManualGraphEdges.length > 0) {
     await recalculateOsmGraph();
     return;
   }
@@ -4752,6 +4793,7 @@ async function saveManualBaseEdges() {
     throw new Error(payload.error || `Manual base edge save failed: ${response.status}`);
   }
   state.baseOverlay.manualBaseEdges = payload.manualBaseEdges || state.baseOverlay.manualBaseEdges;
+  markBaseGraphStaleBecauseManualEdgesChanged();
 }
 
 async function saveSelectedBaseOverlayMapping(mapping) {

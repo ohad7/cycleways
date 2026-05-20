@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-20T15:14:38.411Z",
+  "updatedAt": "2026-05-20T16:12:08.289Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -889,83 +889,6 @@
         }
       ],
       "updatedAt": "2026-05-20T05:12:30.189Z"
-    },
-    "21": {
-      "segmentId": 21,
-      "segmentName": "דרך נוף הרי נפתלי דרום",
-      "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
-      "confidence": "high",
-      "coverageRatio": 1,
-      "avgDistanceMeters": 0.24,
-      "gapCount": 0,
-      "failureClass": "accepted",
-      "edgeRefs": [
-        {
-          "edgeId": "e164246817_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 164246817
-        },
-        {
-          "edgeId": "e315802196_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 315802196
-        },
-        {
-          "edgeId": "e315802195_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 315802195
-        },
-        {
-          "edgeId": "e315802197_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 3,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 315802197
-        },
-        {
-          "edgeId": "e315802198_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 315802198
-        },
-        {
-          "edgeId": "e91211147_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 91211147
-        },
-        {
-          "edgeId": "e91211149_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 6,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 91211149
-        }
-      ],
-      "updatedAt": "2026-05-19T06:35:11.492Z"
     },
     "22": {
       "segmentId": 22,
@@ -4274,7 +4197,7 @@
       "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.14,
+      "avgDistanceMeters": 0.11,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -4315,7 +4238,7 @@
           "osmWayId": 46704858
         }
       ],
-      "updatedAt": "2026-05-19T22:22:21.084Z"
+      "updatedAt": "2026-05-20T16:10:16.603Z"
     },
     "74": {
       "segmentId": 74,
@@ -4791,42 +4714,24 @@
       "segmentId": 78,
       "segmentName": "נחל עיון מחנה גיבור",
       "status": "accepted_auto_match",
-      "source": "auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.56,
+      "avgDistanceMeters": 0.32,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "manual-manual-osm-366459807-mpcfoajl-a-mpcfojjo",
+          "edgeId": "manual-manual-osm-366459807-mpcfoajl-b-mpcfojjo",
           "source": "manual",
           "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-366459807-mpcfoajl-a-mpcfojjo"
-        },
-        {
-          "edgeId": "manual-manual-osm-366459807-mpcfoajl-b-mpcfojjo",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
           "manualEdgeId": "manual-manual-osm-366459807-mpcfoajl-b-mpcfojjo"
-        },
-        {
-          "edgeId": "e172167693_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 172167693
         }
       ],
-      "updatedAt": "2026-05-19T09:41:15.341Z"
+      "updatedAt": "2026-05-20T15:35:31.372Z"
     },
     "79": {
       "segmentId": 79,
@@ -6331,10 +6236,10 @@
       "segmentId": 109,
       "segmentName": "שביל עפר בניאס שדות שאר ישוב",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.33,
+      "avgDistanceMeters": 0.28,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -6346,18 +6251,9 @@
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 56684400
-        },
-        {
-          "edgeId": "e132065234_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 132065234
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.497Z"
+      "updatedAt": "2026-05-20T16:09:04.848Z"
     },
     "110": {
       "segmentId": 110,
@@ -6611,9 +6507,9 @@
       "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.19,
+      "avgDistanceMeters": 0.09,
       "gapCount": 0,
-      "failureClass": "disconnected_edges",
+      "failureClass": "accepted",
       "edgeRefs": [
         {
           "edgeId": "manual-manual-osm-366459807-mpcfoajl-a-mpcfojjo",
@@ -6623,18 +6519,9 @@
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-manual-osm-366459807-mpcfoajl-a-mpcfojjo"
-        },
-        {
-          "edgeId": "manual-manual-osm-366459807-mpcfoajl-b-mpcfojjo",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-366459807-mpcfoajl-b-mpcfojjo"
         }
       ],
-      "updatedAt": "2026-05-20T15:13:33.623Z"
+      "updatedAt": "2026-05-20T15:31:26.113Z"
     },
     "118": {
       "segmentId": 118,
@@ -8384,10 +8271,10 @@
       "segmentId": 143,
       "segmentName": "פארק הזהב קריית שמונה",
       "status": "accepted_auto_match",
-      "source": "auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 1.04,
+      "avgDistanceMeters": 0.97,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -8677,9 +8564,7 @@
           "sequenceIndex": 31,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-osm-228885122-mpd4ezyp",
-          "replacedEdgeId": "e228885122_1",
-          "replacedOsmWayId": 228885122
+          "manualEdgeId": "manual-osm-228885122-mpd4ezyp"
         },
         {
           "edgeId": "e228885122_2",
@@ -8700,7 +8585,7 @@
           "osmWayId": 511559202
         }
       ],
-      "updatedAt": "2026-05-19T21:06:14.096Z"
+      "updatedAt": "2026-05-20T15:42:05.241Z"
     },
     "144": {
       "segmentId": 144,
@@ -8765,10 +8650,10 @@
       "segmentId": 146,
       "segmentName": "רחוב הנרייטה סאלד",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 1.33,
+      "avgDistanceMeters": 0.68,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -8782,19 +8667,10 @@
           "osmWayId": 1189433249
         },
         {
-          "edgeId": "e1200367028_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1200367028
-        },
-        {
-          "edgeId": "e1189433249_3",
+          "edgeId": "e1189433249_4",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 2,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1189433249
@@ -8803,7 +8679,7 @@
           "edgeId": "e1189433249_5",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 3,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1189433249
@@ -8812,31 +8688,22 @@
           "edgeId": "e1189433249_6",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 4,
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1189433249
         },
         {
-          "edgeId": "e333770269_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 5,
+          "edgeId": "manual-146-mpe87zzf",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 333770269
-        },
-        {
-          "edgeId": "e1200367027_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 6,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1200367027
+          "manualEdgeId": "manual-146-mpe87zzf"
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.496Z"
+      "updatedAt": "2026-05-20T15:40:11.597Z"
     },
     "147": {
       "segmentId": 147,
@@ -9912,9 +9779,9 @@
       "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 1.48,
+      "avgDistanceMeters": 1.47,
       "gapCount": 0,
-      "failureClass": "overmatched_edge",
+      "failureClass": "accepted",
       "edgeRefs": [
         {
           "edgeId": "manual-157-mpcfo6ve",
@@ -9924,18 +9791,9 @@
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-157-mpcfo6ve"
-        },
-        {
-          "edgeId": "manual-manual-osm-366459807-mpcfoajl-b-mpcfojjo",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-366459807-mpcfoajl-b-mpcfojjo"
         }
       ],
-      "updatedAt": "2026-05-20T15:14:38.403Z"
+      "updatedAt": "2026-05-20T15:32:20.445Z"
     },
     "158": {
       "segmentId": 158,
@@ -10471,10 +10329,10 @@
       "segmentId": 165,
       "segmentName": "דרך מעבר להר הצפייה מטעים מטולה",
       "status": "accepted_auto_match",
-      "source": "auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.25,
+      "avgDistanceMeters": 0.23,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -10506,7 +10364,7 @@
           "osmWayId": 164242192
         }
       ],
-      "updatedAt": "2026-05-19T07:38:54.142Z"
+      "updatedAt": "2026-05-20T16:01:45.903Z"
     },
     "166": {
       "segmentId": 166,
@@ -10693,10 +10551,10 @@
       "segmentId": 168,
       "segmentName": "דרך נוף מטולה קרוב לגבול",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.93,
+      "avgDistanceMeters": 0.83,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -10762,18 +10620,9 @@
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 53818786
-        },
-        {
-          "edgeId": "e164242196_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 7,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 164242196
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.496Z"
+      "updatedAt": "2026-05-20T15:56:05.305Z"
     },
     "169": {
       "segmentId": 169,
@@ -10919,40 +10768,27 @@
       "segmentId": 170,
       "segmentName": "דרך נוף מצפה עדי מטולה צפון",
       "status": "accepted_auto_match",
-      "source": "auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.26,
+      "avgDistanceMeters": 0.29,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "manual-manual-osm-815935991-mpcaq6tp-b-mpcaqbqk",
+          "edgeId": "manual-manual-osm-815935991-mpcaq6tp-a-mpcaqbqk",
           "source": "manual",
           "direction": "reverse",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-815935991-mpcaq6tp-b-mpcaqbqk",
-          "replacedEdgeId": "e815935991_1",
-          "replacedOsmWayId": 815935991
-        },
-        {
-          "edgeId": "manual-manual-osm-815935991-mpcaq6tp-a-mpcaqbqk",
-          "source": "manual",
-          "direction": "reverse",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-815935991-mpcaq6tp-a-mpcaqbqk",
-          "replacedEdgeId": "e815935991_1",
-          "replacedOsmWayId": 815935991
+          "manualEdgeId": "manual-manual-osm-815935991-mpcaq6tp-a-mpcaqbqk"
         },
         {
           "edgeId": "e164242195_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 2,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 164242195
@@ -10961,39 +10797,30 @@
           "edgeId": "e164242193_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 3,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 164242193
         }
       ],
-      "updatedAt": "2026-05-19T07:28:00.494Z"
+      "updatedAt": "2026-05-20T15:58:29.002Z"
     },
     "171": {
       "segmentId": 171,
       "segmentName": "הר הצפייה מטולה",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 1.7,
+      "avgDistanceMeters": 1.51,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e164242196_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 164242196
-        },
-        {
           "edgeId": "e41984144_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 1,
+          "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 41984144
@@ -11002,7 +10829,7 @@
           "edgeId": "e41984144_2",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 2,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 41984144
@@ -11011,7 +10838,7 @@
           "edgeId": "e41984144_3",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 3,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 41984144
@@ -11020,28 +10847,19 @@
           "edgeId": "e41984144_4",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 4,
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 41984144
-        },
-        {
-          "edgeId": "e715694890_4",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 715694890
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.496Z"
+      "updatedAt": "2026-05-20T16:03:14.258Z"
     },
     "173": {
       "segmentId": 173,
       "segmentName": "כביש 90 תל אבל בית מעכה",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
       "avgDistanceMeters": 0.15,
@@ -11049,7 +10867,7 @@
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e815935989_1",
+          "edgeId": "e815935989_2",
           "source": "osm",
           "direction": "forward",
           "sequenceIndex": 0,
@@ -11130,7 +10948,7 @@
           "osmWayId": 815935993
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.497Z"
+      "updatedAt": "2026-05-20T16:05:48.738Z"
     },
     "174": {
       "segmentId": 174,
@@ -11493,10 +11311,10 @@
       "segmentId": 177,
       "segmentName": "מטעים מטולה קרוב לגבול",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 1.53,
+      "avgDistanceMeters": 1.3,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -11510,7 +11328,7 @@
           "osmWayId": 164242196
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.497Z"
+      "updatedAt": "2026-05-20T16:02:14.955Z"
     },
     "178": {
       "segmentId": 178,
@@ -11693,27 +11511,18 @@
       "segmentId": 181,
       "segmentName": "מצפה דדו מטולה אתר בבניה",
       "status": "accepted_auto_match",
-      "source": "auto_match",
+      "source": "reviewed_edge_set",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.45,
+      "avgDistanceMeters": 0.34,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e1093165292_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1093165292
-        },
-        {
           "edgeId": "e41984048_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 1,
+          "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 41984048
@@ -11722,7 +11531,7 @@
           "edgeId": "e815935990_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 2,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 815935990
@@ -11731,26 +11540,13 @@
           "edgeId": "manual-manual-osm-815935991-mpcaq6tp-b-mpcaqbqk",
           "source": "manual",
           "direction": "reverse",
-          "sequenceIndex": 3,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-815935991-mpcaq6tp-b-mpcaqbqk",
-          "replacedEdgeId": "e815935991_1",
-          "replacedOsmWayId": 815935991
-        },
-        {
-          "edgeId": "manual-manual-osm-815935991-mpcaq6tp-a-mpcaqbqk",
-          "source": "manual",
-          "direction": "reverse",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-815935991-mpcaq6tp-a-mpcaqbqk",
-          "replacedEdgeId": "e815935991_1",
-          "replacedOsmWayId": 815935991
+          "manualEdgeId": "manual-manual-osm-815935991-mpcaq6tp-b-mpcaqbqk"
         }
       ],
-      "updatedAt": "2026-05-19T07:28:31.898Z"
+      "updatedAt": "2026-05-20T15:59:58.837Z"
     },
     "182": {
       "segmentId": 182,
