@@ -51,6 +51,11 @@ const MAP_STYLES = [
   },
 ];
 
+const BASE_GRAPH_LINE_COLOR = "#2563eb";
+const BASE_GRAPH_FALLBACK_LINE_COLOR = "#607076";
+const BASE_GRAPH_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 10, 1.8, 13, 2.8, 16, 4.2];
+const BASE_GRAPH_LINE_OPACITY = 0.52;
+
 const DATA_TYPES = [
   { value: "payment", label: "payment" },
   { value: "gate", label: "gate" },
@@ -145,6 +150,8 @@ const state = {
   showUnresolvedSegments: false,
   unresolvedSegmentIds: [],
   unresolvedSegmentFilterKey: null,
+  changedSegmentIds: new Set(),
+  processingChangedQueue: false,
   lastMapPointer: null,
   mapSourceDataCache: new Map(),
   lastBuildReport: null,
@@ -202,6 +209,8 @@ const els = {
   deleteVertex: document.getElementById("delete-vertex"),
   splitSegment: document.getElementById("split-segment"),
   toggleUnresolvedSegments: document.getElementById("toggle-unresolved-segments"),
+  processChangedQueue: document.getElementById("process-changed-queue"),
+  clearChangedQueue: document.getElementById("clear-changed-queue"),
   toggleBaseOverlay: document.getElementById("toggle-base-overlay"),
   drawDone: document.getElementById("draw-done"),
   drawCancel: document.getElementById("draw-cancel"),
@@ -542,6 +551,29 @@ function selectedFeatureCollection() {
 function collectUnresolvedSegmentIds() {
   if (!state.baseOverlay.loaded) return new Set();
   return new Set(baseOverlayReviewRows().filter((row) => !row.status.resolved).map((row) => Number(row.match.segmentId)));
+}
+
+function refreshUnresolvedSegmentHighlights() {
+  if (!state.showUnresolvedSegments) return;
+  state.unresolvedSegmentIds = [...collectUnresolvedSegmentIds()].sort((a, b) => a - b);
+  state.unresolvedSegmentFilterKey = null;
+  updateUnresolvedSegmentLayerFilter();
+}
+
+function queueChangedSegment(segmentId) {
+  const id = Number(segmentId);
+  if (!Number.isInteger(id)) return;
+  state.changedSegmentIds.add(id);
+}
+
+function queueChangedFeature(feature) {
+  queueChangedSegment(feature?.properties?.id);
+}
+
+function clearChangedSegmentQueue() {
+  state.changedSegmentIds.clear();
+  renderDrawControls();
+  setStatus("Changed segment queue cleared.");
 }
 
 function manualBaseEdgeFeatures() {
@@ -1013,21 +1045,22 @@ function updateWorkspaceLayerVisibility() {
   const showSegments = state.workspaceMode !== "base";
   const showUnresolvedSegments =
     state.workspaceMode === "segments" && state.showUnresolvedSegments && state.baseOverlay.loaded;
-  const showBaseGraph = state.baseOverlay.loaded && state.baseOverlay.enabled && state.workspaceMode !== "segments";
-  const showBaseEdit = showBaseGraph && state.workspaceMode === "base";
-  const showOverlay = showBaseGraph && state.workspaceMode === "overlay";
+  const showBaseWorkspaceGraph =
+    state.baseOverlay.loaded && state.baseOverlay.enabled && state.workspaceMode !== "segments";
+  const showBaseGraphVisual = showBaseWorkspaceGraph || showUnresolvedSegments;
+  const showBaseGraphHit = showBaseWorkspaceGraph;
+  const showBaseEdit = showBaseWorkspaceGraph && state.workspaceMode === "base";
+  const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
 
   for (const layerId of ["segments-layer", "selected-segment"]) {
     setLayerVisibility(layerId, showSegments);
   }
   setLayerVisibility("unresolved-segments-layer", showUnresolvedSegments);
-  for (const layerId of [
-    "base-graph-edges-layer",
-    "base-graph-edges-hit-layer",
-    "manual-base-edges-layer",
-    "manual-base-edges-hit-layer",
-  ]) {
-    setLayerVisibility(layerId, showBaseGraph);
+  for (const layerId of ["base-graph-edges-layer", "manual-base-edges-layer"]) {
+    setLayerVisibility(layerId, showBaseGraphVisual);
+  }
+  for (const layerId of ["base-graph-edges-hit-layer", "manual-base-edges-hit-layer"]) {
+    setLayerVisibility(layerId, showBaseGraphHit);
   }
   for (const layerId of ["selected-base-graph-edge-layer", "selected-manual-base-edge"]) {
     setLayerVisibility(layerId, showBaseEdit);
@@ -1356,6 +1389,8 @@ function renderDrawControls() {
     els.deleteVertex,
     els.splitSegment,
     els.toggleUnresolvedSegments,
+    els.processChangedQueue,
+    els.clearChangedQueue,
   ];
 
   for (const button of editButtons) {
@@ -1369,6 +1404,8 @@ function renderDrawControls() {
     els.deleteVertex.hidden = overlayMode;
     els.splitSegment.hidden = overlayMode;
     els.toggleUnresolvedSegments.hidden = !segmentsMode;
+    els.processChangedQueue.hidden = !segmentsMode;
+    els.clearChangedQueue.hidden = !segmentsMode;
     els.toggleBaseOverlay.hidden = true;
   }
 
@@ -1384,6 +1421,18 @@ function renderDrawControls() {
     state.showUnresolvedSegments
       ? `Unresolved (${state.unresolvedSegmentIds.length})`
       : "Unresolved";
+  els.processChangedQueue.disabled =
+    drawing ||
+    !segmentsMode ||
+    state.processingChangedQueue ||
+    state.baseOverlay.loading ||
+    state.baseOverlay.recalculating ||
+    state.changedSegmentIds.size === 0;
+  els.processChangedQueue.textContent = state.processingChangedQueue
+    ? "Running..."
+    : `Run Queue (${state.changedSegmentIds.size})`;
+  els.clearChangedQueue.disabled =
+    drawing || !segmentsMode || state.processingChangedQueue || state.changedSegmentIds.size === 0;
   els.modeSelect.disabled = drawing;
   els.modeInsert.disabled =
     drawing ||
@@ -3184,6 +3233,7 @@ function insertVertexAtClick(lngLat, point) {
   coords.splice(best.index + 1, 0, [lngLat.lng, lngLat.lat, elevation]);
   state.selectedVertexIndex = best.index + 1;
   clearSelectedSegmentMatchResult();
+  queueChangedFeature(feature);
   markDirty();
   renderAll();
   setStatus(`Inserted vertex ${state.selectedVertexIndex + 1}.`);
@@ -3247,9 +3297,11 @@ function quickSnapEditSelectedSegment() {
   state.selectedVertexIndex = target.vertexIndex;
   state.selectedDataIndex = -1;
   clearSelectedSegmentMatchResult();
+  queueChangedFeature(feature);
   markDirtyForLiveEdit();
   updateSelectedSegmentEditSources();
   renderForm();
+  renderDrawControls();
   setStatus(`Moved vertex ${target.vertexIndex + 1} to the mouse position.`);
   return true;
 }
@@ -3301,6 +3353,7 @@ function deleteSelectedVertex() {
   coords.splice(state.selectedVertexIndex, 1);
   state.selectedVertexIndex = -1;
   clearSelectedSegmentMatchResult();
+  queueChangedFeature(feature);
   markDirty();
   renderAll();
   setStatus("Vertex deleted.");
@@ -3628,6 +3681,7 @@ function commitNewDrawnSegment() {
   state.selectedVertexIndex = -1;
   state.selectedDataIndex = -1;
   els.segmentSearch.value = "";
+  queueChangedFeature(newFeature);
   return { feature: newFeature, message: `Added ${newFeature.properties.name}.` };
 }
 
@@ -3650,6 +3704,7 @@ function commitExtendDrawnSegment() {
   state.selectedIndex = state.activeFeatures.findIndex((record) => record.sourceIndex === state.draw.sourceIndex);
   state.selectedDataIndex = -1;
   clearSegmentMatchResult(featureId(feature));
+  queueChangedFeature(feature);
   return {
     feature,
     message: `Extended ${featureName(feature)} from the ${state.draw.endpoint}.`,
@@ -4387,6 +4442,8 @@ function splitSelectedSegment() {
   state.selectedVertexIndex = -1;
   state.selectedDataIndex = -1;
   clearSegmentMatchResult(originalId);
+  queueChangedSegment(firstProperties.id);
+  queueChangedSegment(secondProperties.id);
   markDirty();
   renderAll();
   setStatus(`Split ${originalName} into ${firstProperties.name} and ${secondProperties.name}.`);
@@ -4563,12 +4620,96 @@ async function toggleUnresolvedSegments() {
     await loadBaseOverlayData();
   }
 
-  state.unresolvedSegmentIds = [...collectUnresolvedSegmentIds()].sort((a, b) => a - b);
-  state.unresolvedSegmentFilterKey = null;
-  updateUnresolvedSegmentLayerFilter();
+  refreshUnresolvedSegmentHighlights();
   updateWorkspaceLayerVisibility();
   renderDrawControls();
   setStatus(`Highlighting ${state.unresolvedSegmentIds.length} unresolved segments.`);
+}
+
+async function processChangedSegmentQueue() {
+  if (state.processingChangedQueue || state.changedSegmentIds.size === 0) return;
+
+  state.processingChangedQueue = true;
+  renderDrawControls();
+  const queuedIds = [...state.changedSegmentIds].sort((a, b) => a - b);
+  const accepted = [];
+  const unresolved = [];
+  const failed = [];
+
+  try {
+    if (state.dirty) {
+      await saveSource();
+    }
+    if (!state.baseOverlay.loaded) {
+      state.baseOverlay.enabled = true;
+      await loadBaseOverlayData();
+    }
+    if (isBaseGraphStale()) {
+      setStatus("Base graph is stale. Recalculating graph and matches before processing the queue...");
+      await recalculateOsmGraph();
+    }
+
+    for (const segmentId of queuedIds) {
+      const activeRecord = state.activeFeatures.find(
+        ({ feature }) => Number(feature.properties?.id) === Number(segmentId),
+      );
+      if (!activeRecord?.feature) {
+        state.changedSegmentIds.delete(segmentId);
+        continue;
+      }
+
+      const feature = activeRecord.feature;
+      try {
+        clearBaseOverlayMappingForSegment(segmentId);
+        const summary = isBaseGraphStale() ? matchSummaryForSegment(segmentId) : await recalculateSegmentMatch(feature);
+        const edgeRefs = edgeRefsForAutoMatch(segmentId);
+        if (
+          summary &&
+          isFullAutoAcceptCandidate(summary) &&
+          edgeRefs.length > 0 &&
+          !isBaseGraphStale() &&
+          missingManualGraphEdgeIdsForSegment(segmentId).length === 0
+        ) {
+          await persistSelectedOverlayMatch(segmentId);
+          state.baseOverlay.overlay = {
+            ...emptyBaseOverlay(),
+            ...state.baseOverlay.overlay,
+            segments: {
+              ...(state.baseOverlay.overlay?.segments || {}),
+              [String(segmentId)]: autoMatchMapping(
+                { ...summary, segmentName: featureName(feature) },
+                edgeRefs,
+                "changed_queue_auto_match",
+              ),
+            },
+          };
+          state.changedSegmentIds.delete(segmentId);
+          accepted.push(segmentId);
+        } else {
+          unresolved.push(segmentId);
+        }
+      } catch (error) {
+        failed.push({
+          segmentId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    await saveBaseOverlay();
+    refreshUnresolvedSegmentHighlights();
+    renderAll();
+    const details = [
+      `${accepted.length} accepted`,
+      unresolved.length > 0 ? `${unresolved.length} still unresolved` : null,
+      failed.length > 0 ? `${failed.length} failed` : null,
+      `${state.changedSegmentIds.size} left in queue`,
+    ].filter(Boolean);
+    setStatus(`Processed changed segment queue: ${details.join(" · ")}.`, failed.length > 0 ? "error" : "info");
+  } finally {
+    state.processingChangedQueue = false;
+    renderDrawControls();
+  }
 }
 
 async function recalculateOsmGraph() {
@@ -4742,6 +4883,7 @@ async function snapSelectedBoundaryOverlay() {
   state.selectedVertexIndex = -1;
   state.selectedDataIndex = -1;
   clearSelectedSegmentMatchResult();
+  queueChangedFeature(feature);
   markDirty();
   renderAll();
   setStatus(
@@ -4749,6 +4891,24 @@ async function snapSelectedBoundaryOverlay() {
       .map((action) => `${action.side} ${Math.round(action.trimMeters)}m to ${action.edgeId}`)
       .join(", ")}. Recalculate Selected to verify.`,
   );
+}
+
+async function recalculateSegmentMatch(feature) {
+  const segmentId = Number(feature?.properties?.id);
+  if (!feature || !Number.isInteger(segmentId)) {
+    throw new Error("Cannot recalculate a segment without a valid id.");
+  }
+  const response = await fetch("/api/osm/recalculate-segment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ feature }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error || `Selected match recalculation failed: ${response.status}`);
+  }
+  replaceSelectedSegmentMatchResult(segmentId, payload.match.summary, payload.match.preview);
+  return payload.match.summary;
 }
 
 async function recalculateSelectedOverlayMatch() {
@@ -4778,18 +4938,7 @@ async function recalculateSelectedOverlayMatch() {
   renderAll();
   setStatus(`Recalculating base match for ${featureName(feature)}...`);
   try {
-    const response = await fetch("/api/osm/recalculate-segment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ feature }),
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || `Selected match recalculation failed: ${response.status}`);
-    }
-
-    replaceSelectedSegmentMatchResult(segmentId, payload.match.summary, payload.match.preview);
-    const summary = payload.match.summary;
+    const summary = await recalculateSegmentMatch(feature);
     setStatus(
       `Recalculated ${featureName(feature)}: ${formatPercent(summary.coverageRatio)} coverage · ${summary.confidence} · ${summary.gapCount} gaps.`,
     );
@@ -4859,6 +5008,17 @@ async function saveSelectedBaseOverlayMapping(mapping) {
   };
   await saveBaseOverlay();
   renderAll();
+}
+
+function clearBaseOverlayMappingForSegment(segmentId) {
+  const key = String(segmentId);
+  const segments = { ...(state.baseOverlay.overlay?.segments || {}) };
+  delete segments[key];
+  state.baseOverlay.overlay = {
+    ...emptyBaseOverlay(),
+    ...state.baseOverlay.overlay,
+    segments,
+  };
 }
 
 async function acceptSelectedAutoMatch() {
@@ -5153,6 +5313,8 @@ function wireEvents() {
   els.addData.addEventListener("click", addDataMarker);
   els.mapStyle.addEventListener("change", () => switchMapStyle(els.mapStyle.value));
   els.toggleUnresolvedSegments.addEventListener("click", () => toggleUnresolvedSegments().catch(showError));
+  els.processChangedQueue.addEventListener("click", () => processChangedSegmentQueue().catch(showError));
+  els.clearChangedQueue.addEventListener("click", clearChangedSegmentQueue);
   els.saveSource.addEventListener("click", () => saveSource().catch(showError));
   els.runBuild.addEventListener("click", () => runBuild().catch(showError));
   els.promoteBuild.addEventListener("click", () => promoteBuild().catch(showError));
@@ -5377,11 +5539,14 @@ function wireEvents() {
     }
 
     if (!state.draggingVertex) return;
+    const movedFeature = selectedFeature();
     state.draggingVertex = false;
     map.dragPan.enable();
     clearSelectedSegmentMatchResult();
+    queueChangedFeature(movedFeature);
     map.getSource("segments")?.setData(mapFeatureCollection());
     renderForm();
+    renderDrawControls();
     setStatus("Vertex moved.");
   });
 
@@ -5506,9 +5671,14 @@ async function addMapLayers() {
         "line-cap": "round",
       },
       paint: {
-        "line-color": ["coalesce", ["get", "graphColor"], "#607076"],
-        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.8, 13, 2.8, 16, 4.2],
-        "line-opacity": 0.52,
+        "line-color": [
+          "case",
+          ["==", ["get", "source"], "manual"],
+          BASE_GRAPH_LINE_COLOR,
+          ["coalesce", ["get", "graphColor"], BASE_GRAPH_FALLBACK_LINE_COLOR],
+        ],
+        "line-width": BASE_GRAPH_LINE_WIDTH,
+        "line-opacity": BASE_GRAPH_LINE_OPACITY,
       },
     });
   }
@@ -5773,9 +5943,9 @@ async function addMapLayers() {
         "line-cap": "round",
       },
       paint: {
-        "line-color": "#c2410c",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 14, 6, 16, 9],
-        "line-opacity": 0.88,
+        "line-color": BASE_GRAPH_LINE_COLOR,
+        "line-width": BASE_GRAPH_LINE_WIDTH,
+        "line-opacity": BASE_GRAPH_LINE_OPACITY,
       },
     });
   }

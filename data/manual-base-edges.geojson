@@ -2365,6 +2365,482 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-244191207-mpeizfq8-a-mpejb167",
+      "properties": {
+        "id": "manual-manual-osm-244191207-mpeizfq8-a-mpejb167",
+        "manualEdgeId": "manual-manual-osm-244191207-mpeizfq8-a-mpejb167",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e244191207_2",
+        "copiedFromOsmWayId": 244191207,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-05-20T20:39:41.408Z",
+        "updatedAt": "2026-05-20T20:48:42.415Z",
+        "splitFrom": "manual-osm-244191207-mpeizfq8"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.642403,
+            33.182268
+          ],
+          [
+            35.642574,
+            33.18222
+          ],
+          [
+            35.645188,
+            33.181136
+          ],
+          [
+            35.646343,
+            33.180649
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-244191207-mpeizfq8-b-mpejb167",
+      "properties": {
+        "id": "manual-manual-osm-244191207-mpeizfq8-b-mpejb167",
+        "manualEdgeId": "manual-manual-osm-244191207-mpeizfq8-b-mpejb167",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e244191207_2",
+        "copiedFromOsmWayId": 244191207,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-05-20T20:39:41.408Z",
+        "updatedAt": "2026-05-20T20:48:42.415Z",
+        "splitFrom": "manual-osm-244191207-mpeizfq8"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.646343,
+            33.180649
+          ],
+          [
+            35.646413,
+            33.18055
+          ],
+          [
+            35.646016,
+            33.178148
+          ],
+          [
+            35.645829,
+            33.177786
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-93-mpeizupk",
+      "properties": {
+        "id": "manual-93-mpeizupk",
+        "manualEdgeId": "manual-93-mpeizupk",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-05-20T20:40:00.824Z",
+        "updatedAt": "2026-05-20T20:48:48.742Z",
+        "linkedSegmentId": 93,
+        "linkedSegmentName": "שביל אופניים 9779 תל אנפה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.646344,
+            33.180649
+          ],
+          [
+            35.646384,
+            33.180779
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-550409482-mpeme4yp-a-mpememqy",
+      "properties": {
+        "id": "manual-manual-osm-550409482-mpeme4yp-a-mpememqy",
+        "manualEdgeId": "manual-manual-osm-550409482-mpeme4yp-a-mpememqy",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e550409482_1",
+        "copiedFromOsmWayId": 550409482,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-05-20T22:15:06.145Z",
+        "updatedAt": "2026-05-20T22:15:29.194Z",
+        "splitFrom": "manual-osm-550409482-mpeme4yp"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.581792,
+            33.179095
+          ],
+          [
+            35.582045,
+            33.179187
+          ],
+          [
+            35.582148,
+            33.179359
+          ],
+          [
+            35.582261,
+            33.179445
+          ],
+          [
+            35.582421,
+            33.179463
+          ],
+          [
+            35.582762,
+            33.179407
+          ],
+          [
+            35.586022,
+            33.17841
+          ],
+          [
+            35.587202,
+            33.178016
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-550409482-mpeme4yp-b-mpememqy",
+      "properties": {
+        "id": "manual-manual-osm-550409482-mpeme4yp-b-mpememqy",
+        "manualEdgeId": "manual-manual-osm-550409482-mpeme4yp-b-mpememqy",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e550409482_1",
+        "copiedFromOsmWayId": 550409482,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-05-20T22:15:06.145Z",
+        "updatedAt": "2026-05-20T22:15:29.194Z",
+        "splitFrom": "manual-osm-550409482-mpeme4yp"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.587202,
+            33.178016
+          ],
+          [
+            35.587987,
+            33.177469
+          ],
+          [
+            35.588195,
+            33.17743
+          ],
+          [
+            35.588416,
+            33.177413
+          ],
+          [
+            35.588836,
+            33.177413
+          ],
+          [
+            35.589602,
+            33.177235
+          ],
+          [
+            35.589674,
+            33.17722
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-550409483-mpeme8ab-a-mpemf60e",
+      "properties": {
+        "id": "manual-manual-osm-550409483-mpeme8ab-a-mpemf60e",
+        "manualEdgeId": "manual-manual-osm-550409483-mpeme8ab-a-mpemf60e",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e550409483_1",
+        "copiedFromOsmWayId": 550409483,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-05-20T22:15:10.451Z",
+        "updatedAt": "2026-05-20T22:15:54.158Z",
+        "splitFrom": "manual-osm-550409483-mpeme8ab"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.589674,
+            33.17722
+          ],
+          [
+            35.589794,
+            33.1776
+          ],
+          [
+            35.589751,
+            33.177667
+          ],
+          [
+            35.587658,
+            33.17819
+          ],
+          [
+            35.587549,
+            33.178325
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-550409483-mpeme8ab-b-mpemf60e",
+      "properties": {
+        "id": "manual-manual-osm-550409483-mpeme8ab-b-mpemf60e",
+        "manualEdgeId": "manual-manual-osm-550409483-mpeme8ab-b-mpemf60e",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e550409483_1",
+        "copiedFromOsmWayId": 550409483,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-05-20T22:15:10.451Z",
+        "updatedAt": "2026-05-20T22:15:54.158Z",
+        "splitFrom": "manual-osm-550409483-mpeme8ab"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.587549,
+            33.178325
+          ],
+          [
+            35.58754,
+            33.178408
+          ],
+          [
+            35.588468,
+            33.179914
+          ],
+          [
+            35.588894,
+            33.18077
+          ],
+          [
+            35.589178,
+            33.181222
+          ],
+          [
+            35.589391,
+            33.181543
+          ],
+          [
+            35.589694,
+            33.181912
+          ],
+          [
+            35.590239,
+            33.182617
+          ],
+          [
+            35.591262,
+            33.183988
+          ],
+          [
+            35.592681,
+            33.185475
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-105-mpemfljv",
+      "properties": {
+        "id": "manual-105-mpemfljv",
+        "manualEdgeId": "manual-105-mpemfljv",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-05-20T22:16:14.299Z",
+        "updatedAt": "2026-05-20T22:16:14.299Z",
+        "linkedSegmentId": 105,
+        "linkedSegmentName": "שביל חום תל נעמה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.58755,
+            33.178326
+          ],
+          [
+            35.587203,
+            33.178016
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-611794183-mpemy9fo-a-mpemycrz",
+      "properties": {
+        "id": "manual-manual-osm-611794183-mpemy9fo-a-mpemycrz",
+        "manualEdgeId": "manual-manual-osm-611794183-mpemy9fo-a-mpemycrz",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e611794183_1",
+        "copiedFromOsmWayId": 611794183,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-05-20T22:30:45.060Z",
+        "updatedAt": "2026-05-20T22:30:49.391Z",
+        "splitFrom": "manual-osm-611794183-mpemy9fo"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.614587,
+            33.224687
+          ],
+          [
+            35.614463,
+            33.224756
+          ],
+          [
+            35.614181,
+            33.224786
+          ],
+          [
+            35.61398,
+            33.224826
+          ],
+          [
+            35.613645,
+            33.224925
+          ],
+          [
+            35.613533,
+            33.224973
+          ],
+          [
+            35.613404,
+            33.225019
+          ],
+          [
+            35.613363,
+            33.225052
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-611794183-mpemy9fo-b-mpemycrz",
+      "properties": {
+        "id": "manual-manual-osm-611794183-mpemy9fo-b-mpemycrz",
+        "manualEdgeId": "manual-manual-osm-611794183-mpemy9fo-b-mpemycrz",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e611794183_1",
+        "copiedFromOsmWayId": 611794183,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-05-20T22:30:45.060Z",
+        "updatedAt": "2026-05-20T22:30:49.391Z",
+        "splitFrom": "manual-osm-611794183-mpemy9fo"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.613363,
+            33.225052
+          ],
+          [
+            35.613333,
+            33.225118
+          ],
+          [
+            35.613295,
+            33.225685
+          ],
+          [
+            35.613228,
+            33.225696
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-98-mpemyjp0",
+      "properties": {
+        "id": "manual-98-mpemyjp0",
+        "manualEdgeId": "manual-98-mpemyjp0",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-05-20T22:30:58.356Z",
+        "updatedAt": "2026-05-20T22:30:58.356Z",
+        "linkedSegmentId": 98,
+        "linkedSegmentName": "שביל אופניים 99 קיאקי הגושרים"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.613363,
+            33.225052
+          ],
+          [
+            35.613271,
+            33.225077
+          ]
+        ]
+      }
     }
   ]
 }

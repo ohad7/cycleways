@@ -9,7 +9,8 @@
     "osm:intersections": "python3 processing/detect_osm_intersections.py",
     "osm:graph": "python3 processing/build_osm_base_graph.py && python3 processing/match_cycleways_to_osm_graph.py",
     "osm:match": "python3 processing/match_cycleways_to_osm_graph.py",
-    "test": "node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && node tests/test-react-route-actions.mjs && node tests/test-gpx-parity.mjs && node tests/test-analytics-parity.mjs && cd tests && node test-route-manager.js",
+    "test": "npm run test:osm && node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && node tests/test-react-route-actions.mjs && node tests/test-gpx-parity.mjs && node tests/test-analytics-parity.mjs && cd tests && node test-route-manager.js",
+    "test:osm": "python3 -m unittest discover -s tests -p 'test_osm_matcher.py'",
     "test:smoke": "playwright test"
   },
   "devDependencies": {

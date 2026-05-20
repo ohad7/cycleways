@@ -29,6 +29,7 @@ MIN_EDGE_SUPPORT_SAMPLES = 2
 MIN_EDGE_SUPPORT_RATIO = 0.12
 MIN_BOUNDARY_SLIVER_EDGE_LENGTH_M = 60.0
 MAX_BOUNDARY_SLIVER_SUPPORT_RATIO = 0.34
+MIN_TERMINAL_SINGLE_SAMPLE_EDGE_LENGTH_M = 18.0
 LONG_EDGE_THRESHOLD_M = 120.0
 MAX_EDGE_LENGTH_RATIO = 0.35
 MAX_EDGE_SUM_RATIO = 1.18
@@ -676,6 +677,12 @@ def build_edge_support_diagnostics(
         segment_length_ratio = edge_length_m / total_length_m if total_length_m > 0 else 0.0
         is_boundary_edge = edge_id == first_edge_id or edge_id == last_edge_id
         suspicious_reasons = []
+        if (
+            is_boundary_edge
+            and sample_count == 1
+            and edge_length_m >= max(sample_spacing_m, MIN_TERMINAL_SINGLE_SAMPLE_EDGE_LENGTH_M)
+        ):
+            suspicious_reasons.append("terminal_single_sample_edge")
         if (
             is_boundary_edge
             and edge_length_m >= MIN_BOUNDARY_SLIVER_EDGE_LENGTH_M

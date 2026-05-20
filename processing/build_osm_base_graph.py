@@ -483,9 +483,9 @@ def manual_edge_properties(
         "fromNodeId": from_node_id,
         "toNodeId": to_node_id,
         "distanceMeters": round(distance_m, 1),
-        "graphColor": "#c2410c",
-        "graphWidth": 3.2,
-        "graphOpacity": 0.9,
+        "graphColor": "#2563eb",
+        "graphWidth": 1.4,
+        "graphOpacity": 0.72,
     }
 
 

@@ -1,0 +1,197 @@
+import sys
+import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+from processing.build_osm_base_graph import build_graph
+from processing.match_cycleways_to_osm_graph import (
+    build_preview,
+    build_single_segment_preview,
+)
+
+
+BASE_LNG = 35.0
+BASE_LAT = 33.0
+METERS_PER_DEG_LNG = 93_000.0
+METERS_PER_DEG_LAT = 111_320.0
+
+
+def coord(x_m, y_m=0.0):
+    return [BASE_LNG + x_m / METERS_PER_DEG_LNG, BASE_LAT + y_m / METERS_PER_DEG_LAT]
+
+
+def line_feature(feature_id, coordinates, properties=None):
+    merged_properties = {"id": feature_id, **(properties or {})}
+    return {
+        "type": "Feature",
+        "id": feature_id,
+        "geometry": {"type": "LineString", "coordinates": coordinates},
+        "properties": merged_properties,
+    }
+
+
+def graph_edge(edge_id, coordinates, from_node, to_node, distance_m=None, properties=None):
+    edge_properties = {
+        "id": edge_id,
+        "edgeId": edge_id,
+        "fromNodeId": from_node,
+        "toNodeId": to_node,
+        "distanceMeters": distance_m if distance_m is not None else len(coordinates),
+        **(properties or {}),
+    }
+    return line_feature(edge_id, coordinates, edge_properties)
+
+
+def segment(segment_id, coordinates, properties=None):
+    return line_feature(
+        segment_id,
+        coordinates,
+        {"id": segment_id, "name": f"segment {segment_id}", "roadType": "road", **(properties or {})},
+    )
+
+
+def graph_collection(features):
+    return {"type": "FeatureCollection", "features": features}
+
+
+def match_segment(segment_feature, edge_features, *, sample_spacing_m=18.0, max_distance_m=8.0):
+    summary, _preview_features = build_single_segment_preview(
+        segment_feature,
+        graph_collection(edge_features),
+        sample_spacing_m=sample_spacing_m,
+        max_distance_m=max_distance_m,
+        direction_limit_degrees=60.0,
+        direction_penalty_m=10.0,
+        grid_cell_m=90.0,
+    )
+    return summary
+
+
+class OsmMatcherRegressionTests(unittest.TestCase):
+    def test_terminal_single_sample_boundary_edge_requires_review(self):
+        """Regression for ID 204: an endpoint touching an outgoing edge must not auto-accept."""
+
+        cw_segment = segment(204, [coord(0), coord(300)])
+        summary = match_segment(
+            cw_segment,
+            [
+                graph_edge("outgoing-after-end", [coord(300), coord(330)], "n2", "n3", 30.0),
+                graph_edge("main-route", [coord(0), coord(300)], "n1", "n2", 300.0),
+            ],
+        )
+
+        self.assertEqual(summary["coverageRatio"], 1.0)
+        self.assertEqual(summary["edgeSequence"], ["main-route", "outgoing-after-end"])
+        self.assertEqual(summary["failureClass"], "overmatched_edge")
+        self.assertEqual(summary["reviewStatus"], "inspect_edge_sequence")
+        self.assertIn(
+            "terminal_single_sample_edge",
+            summary["overmatchedEdges"][0]["suspiciousReasons"],
+        )
+
+    def test_disconnected_matched_edges_are_not_auto_accepted(self):
+        """Regression for continuity holes: matched edges must form one continuous route."""
+
+        cw_segment = segment(31, [coord(0), coord(100)])
+        summary = match_segment(
+            cw_segment,
+            [
+                graph_edge("first-half", [coord(0), coord(40)], "a", "b", 40.0),
+                graph_edge("second-half", [coord(60), coord(100)], "c", "d", 40.0),
+            ],
+            sample_spacing_m=20.0,
+            max_distance_m=5.0,
+        )
+
+        self.assertEqual(summary["failureClass"], "disconnected_edges")
+        self.assertEqual(summary["reviewStatus"], "inspect_continuity")
+        self.assertEqual(summary["continuityGapCount"], 1)
+        self.assertEqual(summary["continuityGaps"][0]["fromEdgeId"], "first-half")
+        self.assertEqual(summary["continuityGaps"][0]["toEdgeId"], "second-half")
+
+    def test_long_boundary_edge_with_low_sample_support_requires_review(self):
+        """Regression for ID 8-style edge sequences with a long first or last overmatch."""
+
+        cw_segment = segment(8, [coord(0), coord(220)])
+        summary = match_segment(
+            cw_segment,
+            [
+                graph_edge("long-tail", [coord(220), coord(470)], "b", "c", 250.0),
+                graph_edge("route-main", [coord(0), coord(220)], "a", "b", 220.0),
+            ],
+            sample_spacing_m=18.0,
+            max_distance_m=8.0,
+        )
+
+        self.assertEqual(summary["edgeSequence"], ["route-main", "long-tail"])
+        self.assertEqual(summary["failureClass"], "overmatched_edge")
+        self.assertIn(
+            "boundary_sliver_low_support",
+            summary["overmatchedEdges"][0]["suspiciousReasons"],
+        )
+
+    def test_build_preview_ignores_deprecated_cycleways_segments(self):
+        """Regression for duplicate ownership reports involving inactive/deprecated segments."""
+
+        active = segment(147, [coord(0), coord(50)])
+        deprecated = segment(148, [coord(0), coord(50)], {"status": "deprecated"})
+        graph = graph_collection([graph_edge("shared-edge", [coord(0), coord(50)], "a", "b", 50.0)])
+
+        _preview, summary, matches = build_preview(
+            graph_collection([active, deprecated]),
+            graph,
+            sample_spacing_m=18.0,
+            max_distance_m=8.0,
+            direction_limit_degrees=60.0,
+            direction_penalty_m=10.0,
+            grid_cell_m=90.0,
+        )
+
+        self.assertEqual(summary["sourceSegments"], 1)
+        self.assertEqual([item["segmentId"] for item in matches["segments"]], [147])
+
+    def test_manual_copy_replaces_original_osm_edge_in_base_graph(self):
+        """Regression for copied manual base edges still participating beside their parent."""
+
+        raw_osm = graph_collection(
+            [
+                line_feature(
+                    "osm-123",
+                    [coord(0), coord(100)],
+                    {"osmId": 123, "highway": "track"},
+                )
+            ]
+        )
+        manual_edges = graph_collection(
+            [
+                line_feature(
+                    "manual-copy",
+                    [coord(0), coord(100)],
+                    {
+                        "manualEdgeId": "manual-copy",
+                        "source": "manual",
+                        "copiedFromEdgeId": "e123_1",
+                        "copiedFromOsmWayId": 123,
+                    },
+                )
+            ]
+        )
+
+        _graph, _nodes, edge_geojson, _summary = build_graph(
+            raw_osm,
+            graph_collection([]),
+            manual_edges,
+            node_merge_tolerance_m=2.0,
+            split_tolerance_m=8.0,
+            min_edge_length_m=1.0,
+        )
+
+        edge_ids = [feature["properties"]["edgeId"] for feature in edge_geojson["features"]]
+        self.assertNotIn("e123_1", edge_ids)
+        self.assertIn("manual-copy", edge_ids)
+
+
+if __name__ == "__main__":
+    unittest.main()
