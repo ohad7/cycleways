@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-20T22:41:00.358Z",
+  "updatedAt": "2026-05-20T23:01:06.667Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -931,6 +931,74 @@
       ],
       "updatedAt": "2026-05-20T05:12:30.189Z"
     },
+    "21": {
+      "segmentId": 21,
+      "segmentName": "דרך נוף הרי נפתלי דרום",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.22,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e315802196_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 315802196
+        },
+        {
+          "edgeId": "e315802195_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 315802195
+        },
+        {
+          "edgeId": "e315802197_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 315802197
+        },
+        {
+          "edgeId": "e315802198_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 315802198
+        },
+        {
+          "edgeId": "e91211147_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 91211147
+        },
+        {
+          "edgeId": "e91211149_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 91211149
+        }
+      ],
+      "updatedAt": "2026-05-20T22:54:09.201Z"
+    },
     "22": {
       "segmentId": 22,
       "segmentName": "דרך נוף הרי נפתלי צפון",
@@ -1564,6 +1632,38 @@
         }
       ],
       "updatedAt": "2026-05-19T06:35:11.492Z"
+    },
+    "34": {
+      "segmentId": 34,
+      "segmentName": "ירדן מזרח גונן",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.03,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e61302854_5",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 61302854
+        },
+        {
+          "edgeId": "e61302854_4",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 61302854
+        }
+      ],
+      "updatedAt": "2026-05-20T22:52:50.446Z"
     },
     "35": {
       "segmentId": 35,
@@ -2511,15 +2611,15 @@
       "segmentId": 47,
       "segmentName": "כביש 886",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.1,
+      "avgDistanceMeters": 0.09,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e1412773127_3",
+          "edgeId": "e1412773127_2",
           "source": "osm",
           "direction": "reverse",
           "sequenceIndex": 0,
@@ -2528,7 +2628,7 @@
           "osmWayId": 1412773127
         },
         {
-          "edgeId": "e1412773127_2",
+          "edgeId": "e1412773127_1",
           "source": "osm",
           "direction": "reverse",
           "sequenceIndex": 1,
@@ -2537,19 +2637,10 @@
           "osmWayId": 1412773127
         },
         {
-          "edgeId": "e1412773127_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1412773127
-        },
-        {
           "edgeId": "e42271037_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 3,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 42271037
@@ -2558,7 +2649,7 @@
           "edgeId": "e1159002891_6",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 4,
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1159002891
@@ -2567,7 +2658,7 @@
           "edgeId": "e1159002891_5",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 5,
+          "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1159002891
@@ -2576,7 +2667,7 @@
           "edgeId": "e1159002891_4",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 6,
+          "sequenceIndex": 5,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1159002891
@@ -2585,7 +2676,7 @@
           "edgeId": "e1159002891_3",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 7,
+          "sequenceIndex": 6,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1159002891
@@ -2594,7 +2685,7 @@
           "edgeId": "e1159002891_2",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 8,
+          "sequenceIndex": 7,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1159002891
@@ -2603,7 +2694,7 @@
           "edgeId": "e1159002891_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 9,
+          "sequenceIndex": 8,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1159002891
@@ -2612,7 +2703,7 @@
           "edgeId": "e42271042_2",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 10,
+          "sequenceIndex": 9,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 42271042
@@ -2621,7 +2712,7 @@
           "edgeId": "e42271042_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 11,
+          "sequenceIndex": 10,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 42271042
@@ -2630,7 +2721,7 @@
           "edgeId": "e1159002887_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 12,
+          "sequenceIndex": 11,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1159002887
@@ -2639,7 +2730,7 @@
           "edgeId": "e1159002886_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 13,
+          "sequenceIndex": 12,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1159002886
@@ -2648,7 +2739,7 @@
           "edgeId": "e30898639_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 14,
+          "sequenceIndex": 13,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 30898639
@@ -2657,7 +2748,7 @@
           "edgeId": "e579016875_9",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 15,
+          "sequenceIndex": 14,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 579016875
@@ -2666,7 +2757,7 @@
           "edgeId": "e611674010_5",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 16,
+          "sequenceIndex": 15,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674010
@@ -2675,7 +2766,7 @@
           "edgeId": "e611674010_4",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 17,
+          "sequenceIndex": 16,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674010
@@ -2684,7 +2775,7 @@
           "edgeId": "e611674010_3",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 18,
+          "sequenceIndex": 17,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674010
@@ -2693,7 +2784,7 @@
           "edgeId": "e611674010_2",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 19,
+          "sequenceIndex": 18,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674010
@@ -2702,7 +2793,7 @@
           "edgeId": "e611674010_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 20,
+          "sequenceIndex": 19,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674010
@@ -2711,7 +2802,7 @@
           "edgeId": "e611674011_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 21,
+          "sequenceIndex": 20,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674011
@@ -2720,7 +2811,7 @@
           "edgeId": "e611674130_5",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 22,
+          "sequenceIndex": 21,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674130
@@ -2729,7 +2820,7 @@
           "edgeId": "e611674130_4",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 23,
+          "sequenceIndex": 22,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674130
@@ -2738,13 +2829,13 @@
           "edgeId": "e611674130_3",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 24,
+          "sequenceIndex": 23,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 611674130
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.492Z"
+      "updatedAt": "2026-05-20T22:54:11.222Z"
     },
     "48": {
       "segmentId": 48,
@@ -6502,6 +6593,56 @@
       ],
       "updatedAt": "2026-05-20T15:31:26.113Z"
     },
+    "118": {
+      "segmentId": 118,
+      "segmentName": "שדות גונן",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.05,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e165378109_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 165378109
+        },
+        {
+          "edgeId": "e1378614650_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1378614650
+        },
+        {
+          "edgeId": "e1378614651_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1378614651
+        },
+        {
+          "edgeId": "e1378614649_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1378614649
+        }
+      ],
+      "updatedAt": "2026-05-20T22:52:52.424Z"
+    },
     "119": {
       "segmentId": 119,
       "segmentName": "שדות דישון",
@@ -7346,7 +7487,7 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.21,
+      "avgDistanceMeters": 0.19,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -7369,7 +7510,7 @@
           "osmWayId": 79589835
         }
       ],
-      "updatedAt": "2026-05-20T21:28:42.347Z"
+      "updatedAt": "2026-05-20T23:01:02.588Z"
     },
     "130": {
       "segmentId": 130,
@@ -10730,6 +10871,56 @@
       ],
       "updatedAt": "2026-05-20T16:03:14.258Z"
     },
+    "172": {
+      "segmentId": 172,
+      "segmentName": "כביש 90 כפר יובל",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.19,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e815935993_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815935993
+        },
+        {
+          "edgeId": "e815935994_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815935994
+        },
+        {
+          "edgeId": "e581393459_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 581393459
+        },
+        {
+          "edgeId": "e581393459_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 581393459
+        }
+      ],
+      "updatedAt": "2026-05-20T22:56:23.632Z"
+    },
     "173": {
       "segmentId": 173,
       "segmentName": "כביש 90 תל אבל בית מעכה",
@@ -11077,10 +11268,10 @@
       "segmentId": 175,
       "segmentName": "כביש 9974 כפר יובל",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.58,
+      "avgDistanceMeters": 0.28,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -11148,7 +11339,7 @@
           "osmWayId": 698906970
         }
       ],
-      "updatedAt": "2026-05-20T14:52:44.487Z"
+      "updatedAt": "2026-05-20T22:55:59.431Z"
     },
     "176": {
       "segmentId": 176,
@@ -11938,10 +12129,10 @@
       "segmentId": 188,
       "segmentName": "תל אבל בית מעכה",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.28,
+      "avgDistanceMeters": 0.2,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -12007,18 +12198,9 @@
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 41169762
-        },
-        {
-          "edgeId": "e1484907171_3",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 7,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1484907171
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.497Z"
+      "updatedAt": "2026-05-20T22:56:01.449Z"
     },
     "189": {
       "segmentId": 189,
@@ -16654,7 +16836,7 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.15,
+      "avgDistanceMeters": 0.05,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -16686,7 +16868,30 @@
           "osmWayId": 30903583
         }
       ],
-      "updatedAt": "2026-05-20T21:23:50.873Z"
+      "updatedAt": "2026-05-20T23:01:04.647Z"
+    },
+    "293": {
+      "segmentId": 293,
+      "segmentName": "ירדן מזרח גשר הפקק - 2 - 2 - 2",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.05,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e30903583_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 30903583
+        }
+      ],
+      "updatedAt": "2026-05-20T23:01:06.661Z"
     },
     "294": {
       "segmentId": 294,
@@ -16815,6 +17020,61 @@
         }
       ],
       "updatedAt": "2026-05-20T22:19:34.829Z"
+    },
+    "298": {
+      "segmentId": 298,
+      "segmentName": "גבעת שחומית",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.24,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e580483824_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580483824
+        },
+        {
+          "edgeId": "e33057919_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 33057919
+        }
+      ],
+      "updatedAt": "2026-05-20T22:59:19.886Z"
+    },
+    "299": {
+      "segmentId": 299,
+      "segmentName": "גבעת שחומית שביל גישה",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.26,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e580483824_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580483824
+        }
+      ],
+      "updatedAt": "2026-05-20T22:59:21.934Z"
     }
   }
 }
