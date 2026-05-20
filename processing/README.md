@@ -89,3 +89,75 @@ The validation report checks that route anchors are valid and that split parents
 have route anchors or a middle-point fallback.
 
 `processing/cache/elevation_cache.json` is ignored by git and stores elevation lookups between builds.
+
+## OSM Network Exploration
+
+Fetch raw OSM ways for the configured exploration area:
+
+```bash
+npm run osm:fetch
+```
+
+By default this uses `data/osm-target-area.geojson`, an approximate polygon
+covering the Hula Valley, the Golan Heights, Mount Hermon, and the Syrian-border
+side of the target area. If that file is missing, the script falls back to the
+current CycleWays source bounds plus a small buffer.
+
+The command writes debug artifacts under `build/osm/`:
+
+- `osm-raw-ways.geojson`
+- `osm-summary.json`
+- `osm-intersections.geojson`
+- `osm-intersections-summary.json`
+- `osm-base-nodes.geojson`
+- `osm-base-edges.geojson`
+- `osm-base-graph.json`
+- `osm-base-graph-summary.json`
+- `cw-osm-match-preview.geojson`
+- `cw-osm-match-summary.json`
+- `cw-osm-matches.json`
+- `overpass-query.ql`
+- `overpass-response.json`
+
+The base graph builder also reads `data/manual-base-edges.geojson` when present.
+Those editor-drawn edges are appended to the generated graph with
+`source: "manual"` so the matcher and later router can treat them like ordinary
+base graph edges.
+
+Open the app with `?osm=1` to show the raw OSM overlay:
+
+```text
+http://127.0.0.1:5173/?osm=1
+```
+
+This exploration layer preserves OSM ways and tags as downloaded. It includes
+paths, tracks, local streets, and major car roads so the base graph represents
+the available map network. Bicycle suitability should be handled later by
+routing weights and CycleWays overlay metadata, not by omitting car roads from
+the base graph. The raw layer is not split into routing graph edges and is not
+matched to the CycleWays network until later processing steps run.
+
+Refresh only the naive intersection debug layer from an existing
+`osm-raw-ways.geojson`:
+
+```bash
+npm run osm:intersections
+```
+
+Refresh only the first-pass base graph from existing OSM and intersection
+artifacts:
+
+```bash
+npm run osm:graph
+```
+
+Refresh only the exploratory CycleWays-to-OSM graph match preview from existing
+graph artifacts:
+
+```bash
+npm run osm:match
+```
+
+The match preview samples active segments from `data/map-source.geojson`, finds
+nearby generated OSM graph edges, and writes non-destructive debug artifacts.
+It is intended for visual review before changing the canonical map source.

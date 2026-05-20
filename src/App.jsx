@@ -62,6 +62,29 @@ function App() {
     tutorialOpen: false,
     mobileMenuOpen: false,
   });
+  const [osmDebug, setOsmDebug] = useState({
+    enabled: false,
+    status: "disabled",
+    geoJson: null,
+    graphEdgesGeoJson: null,
+    graphNodesGeoJson: null,
+    graphSummary: null,
+    cwMatchGeoJson: null,
+    cwMatchSummary: null,
+    intersectionsGeoJson: null,
+    summary: null,
+    intersectionsSummary: null,
+    error: null,
+  });
+  const [hoveredOsmWay, setHoveredOsmWay] = useState(null);
+  const [hoveredOsmGraphEdge, setHoveredOsmGraphEdge] = useState(null);
+  const [hoveredCwOsmMatch, setHoveredCwOsmMatch] = useState(null);
+  const [osmDebugLayerMode, setOsmDebugLayerMode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("osmLayer") === "graph" ? "graph" : "ways";
+  });
+  const [selectedCwReviewSegmentId, setSelectedCwReviewSegmentId] =
+    useState(null);
   const routeManagerRef = useRef(null);
   const dragStartSnapshotRef = useRef(null);
   const [routeState, dispatchRoute] = useReducer(
@@ -109,6 +132,144 @@ function App() {
     }
 
     load();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const enabled = params.has("osm") || params.has("osmDebug");
+    if (!enabled) return undefined;
+
+    const controller = new AbortController();
+
+    async function loadOsmDebugOverlay() {
+      setOsmDebug({
+        enabled: true,
+        status: "loading",
+        geoJson: null,
+        graphEdgesGeoJson: null,
+        graphNodesGeoJson: null,
+        graphSummary: null,
+        cwMatchGeoJson: null,
+        cwMatchSummary: null,
+        intersectionsGeoJson: null,
+        summary: null,
+        intersectionsSummary: null,
+        error: null,
+      });
+
+      try {
+        const [
+          geoJsonResponse,
+          summaryResponse,
+          intersectionsResponse,
+          intersectionsSummaryResponse,
+          graphEdgesResponse,
+          graphNodesResponse,
+          graphSummaryResponse,
+          cwMatchResponse,
+          cwMatchSummaryResponse,
+        ] = await Promise.all([
+          fetch("/build/osm/osm-raw-ways.geojson", {
+            signal: controller.signal,
+          }),
+          fetch("/build/osm/osm-summary.json", {
+            signal: controller.signal,
+          }),
+          fetch("/build/osm/osm-intersections.geojson", {
+            signal: controller.signal,
+          }),
+          fetch("/build/osm/osm-intersections-summary.json", {
+            signal: controller.signal,
+          }),
+          fetch("/build/osm/osm-base-edges.geojson", {
+            signal: controller.signal,
+          }),
+          fetch("/build/osm/osm-base-nodes.geojson", {
+            signal: controller.signal,
+          }),
+          fetch("/build/osm/osm-base-graph-summary.json", {
+            signal: controller.signal,
+          }),
+          fetch("/build/osm/cw-osm-match-preview.geojson", {
+            signal: controller.signal,
+          }),
+          fetch("/build/osm/cw-osm-match-summary.json", {
+            signal: controller.signal,
+          }),
+        ]);
+
+        if (!geoJsonResponse.ok) {
+          throw new Error(
+            `OSM debug overlay not found: HTTP ${geoJsonResponse.status}`,
+          );
+        }
+
+        const geoJson = await geoJsonResponse.json();
+        const summary = summaryResponse.ok
+          ? await summaryResponse.json()
+          : null;
+        const intersectionsGeoJson = intersectionsResponse.ok
+          ? await intersectionsResponse.json()
+          : null;
+        const intersectionsSummary = intersectionsSummaryResponse.ok
+          ? await intersectionsSummaryResponse.json()
+          : null;
+        const graphEdgesGeoJson = graphEdgesResponse.ok
+          ? await graphEdgesResponse.json()
+          : null;
+        const graphNodesGeoJson = graphNodesResponse.ok
+          ? await graphNodesResponse.json()
+          : null;
+        const graphSummary = graphSummaryResponse.ok
+          ? await graphSummaryResponse.json()
+          : null;
+        const cwMatchGeoJson = cwMatchResponse.ok
+          ? await cwMatchResponse.json()
+          : null;
+        const cwMatchSummary = cwMatchSummaryResponse.ok
+          ? await cwMatchSummaryResponse.json()
+          : null;
+        if (controller.signal.aborted) return;
+
+        setOsmDebug({
+          enabled: true,
+          status: "ready",
+          geoJson,
+          graphEdgesGeoJson,
+          graphNodesGeoJson,
+          graphSummary,
+          cwMatchGeoJson,
+          cwMatchSummary,
+          intersectionsGeoJson,
+          summary,
+          intersectionsSummary,
+          error: null,
+        });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.warn("Failed to load OSM debug overlay:", error);
+        setOsmDebug({
+          enabled: true,
+          status: "error",
+          geoJson: null,
+          graphEdgesGeoJson: null,
+          graphNodesGeoJson: null,
+          graphSummary: null,
+          cwMatchGeoJson: null,
+          cwMatchSummary: null,
+          intersectionsGeoJson: null,
+          summary: null,
+          intersectionsSummary: null,
+          error,
+        });
+      }
+    }
+
+    loadOsmDebugOverlay();
 
     return () => {
       controller.abort();
@@ -169,6 +330,59 @@ function App() {
   const handleSegmentHover = useCallback((segmentName) => {
     dispatchRoute({ type: "route/setHoveredSegment", segmentName });
   }, []);
+
+  const handleOsmDebugHover = useCallback((osmWay) => {
+    setHoveredOsmWay((current) => {
+      if (!osmWay) return current ? null : current;
+      if (current?.osmId === osmWay.osmId) return current;
+      return osmWay;
+    });
+  }, []);
+
+  const handleOsmGraphEdgeHover = useCallback((graphEdge) => {
+    setHoveredOsmGraphEdge((current) => {
+      if (!graphEdge) return current ? null : current;
+      if (current?.edgeId === graphEdge.edgeId) return current;
+      return graphEdge;
+    });
+  }, []);
+
+  const handleCwOsmMatchHover = useCallback((matchFeature) => {
+    setHoveredCwOsmMatch((current) => {
+      if (!matchFeature) return current ? null : current;
+      if (
+        current?.segmentId === matchFeature.segmentId &&
+        current?.edgeId === matchFeature.edgeId &&
+        current?.kind === matchFeature.kind
+      ) {
+        return current;
+      }
+      return matchFeature;
+    });
+  }, []);
+
+  const handleOsmDebugLayerModeChange = useCallback((mode) => {
+    setOsmDebugLayerMode(mode);
+    setHoveredOsmWay(null);
+    setHoveredOsmGraphEdge(null);
+    setHoveredCwOsmMatch(null);
+
+    const url = new URL(window.location.href);
+    if (mode === "graph") {
+      url.searchParams.set("osmLayer", "graph");
+    } else {
+      url.searchParams.delete("osmLayer");
+    }
+    window.history.replaceState(null, "", url.toString());
+  }, []);
+
+  const handleCwReviewSegmentSelect = useCallback(
+    (segmentId) => {
+      handleOsmDebugLayerModeChange("graph");
+      setSelectedCwReviewSegmentId(segmentId);
+    },
+    [handleOsmDebugLayerModeChange],
+  );
 
   const handleSegmentFocus = useCallback((segmentName) => {
     dispatchRoute({ type: "route/setFocusedSegment", segmentName });
@@ -552,7 +766,12 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleRedo, handleUndo]);
 
-  const inspectedSegment = mapUi.elevationHover
+  const inspectedOsmFeature = mapUi.elevationHover
+    ? null
+    : osmDebugLayerMode === "graph"
+      ? hoveredCwOsmMatch || hoveredOsmGraphEdge
+      : hoveredOsmWay;
+  const inspectedSegment = mapUi.elevationHover || osmDebug.enabled
     ? null
     : routeState.focusedSegment || routeState.hoveredSegment || null;
   const dataMarkerFeatures = useMemo(
@@ -595,6 +814,15 @@ function App() {
       routeManagerRef.current,
     );
   }, [inspectedSegment, state.assets, state.status]);
+  const selectedCwReviewFeature = useMemo(() => {
+    if (state.status !== "ready" || selectedCwReviewSegmentId === null) {
+      return null;
+    }
+    return findCyclewaysFeatureById(
+      state.assets.geoJsonData,
+      selectedCwReviewSegmentId,
+    );
+  }, [selectedCwReviewSegmentId, state.assets, state.status]);
   const handleDownloadGpx = useCallback(() => {
     if (routeState.geometry.length < 2) return;
 
@@ -730,6 +958,24 @@ function App() {
                   </div>
                 )}
 
+                {osmDebug.enabled && (
+                  <OsmDebugLayerToggle
+                    mode={osmDebugLayerMode}
+                    status={osmDebug.status}
+                    onChange={handleOsmDebugLayerModeChange}
+                  />
+                )}
+
+                {osmDebug.enabled && (
+                  <OsmMatchReviewPanel
+                    mode={osmDebugLayerMode}
+                    selectedSegmentId={selectedCwReviewSegmentId}
+                    summary={osmDebug.cwMatchSummary}
+                    onOpenGraph={() => handleOsmDebugLayerModeChange("graph")}
+                    onSelectSegment={handleCwReviewSegmentSelect}
+                  />
+                )}
+
                 <MapView
                   activeDataPointIds={activeDataPointIds}
                   dataMarkerFeatures={dataMarkerFeatures}
@@ -746,10 +992,22 @@ function App() {
                   onRoutePointSelect={handleRoutePointSelect}
                   onSegmentFocus={handleSegmentFocus}
                   onSegmentHover={handleSegmentHover}
+                  onOsmDebugHover={handleOsmDebugHover}
+                  onOsmGraphEdgeHover={handleOsmGraphEdgeHover}
+                  onCwOsmMatchHover={handleCwOsmMatchHover}
+                  osmDebugGeoJson={osmDebug.geoJson}
+                  osmGraphEdgesGeoJson={osmDebug.graphEdgesGeoJson}
+                  osmGraphNodesGeoJson={osmDebug.graphNodesGeoJson}
+                  cwOsmMatchGeoJson={osmDebug.cwMatchGeoJson}
+                  osmIntersectionsGeoJson={osmDebug.intersectionsGeoJson}
+                  osmDebugMode={osmDebug.enabled}
+                  osmDebugLayerMode={osmDebugLayerMode}
                   routeFitRequest={mapUi.routeFitRequest}
                   routeGeometry={routeState.geometry}
                   routePoints={routeState.points}
                   searchHighlight={mapUi.searchHighlight}
+                  selectedCwOsmReviewFeature={selectedCwReviewFeature}
+                  selectedCwOsmReviewSegmentId={selectedCwReviewSegmentId}
                   selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
                 />
 
@@ -767,6 +1025,7 @@ function App() {
                   details={inspectedSegmentDetails}
                   elevationHover={mapUi.elevationHover}
                   inspectedSegment={inspectedSegment}
+                  osmFeature={inspectedOsmFeature}
                 />
               </>
             )}
@@ -1247,12 +1506,261 @@ function formatLegacyDistance(distanceMeters) {
   return `${(distanceMeters / 1000).toFixed(1)} ק"מ`;
 }
 
-function SegmentNameDisplay({ details, elevationHover, inspectedSegment }) {
+function formatPercent(value) {
+  return Number.isFinite(value) ? `${Math.round(value * 100)}%` : "";
+}
+
+function formatMeters(value) {
+  return Number.isFinite(value) ? `${value.toFixed(1)} m` : "";
+}
+
+function failureClassLabel(value) {
+  const labels = {
+    accepted: "accepted",
+    partial_gap: "partial gap",
+    osm_missing: "OSM missing",
+    matcher_failed: "matcher failed",
+    source_geometry_mismatch: "source mismatch",
+    ambiguous_parallel: "ambiguous",
+    outside_base_area: "outside area",
+    needs_split: "needs split",
+    manual_review: "manual review",
+  };
+  return labels[value] || value || "review";
+}
+
+function findCyclewaysFeatureById(geoJsonData, segmentId) {
+  const numericSegmentId = Number(segmentId);
+  if (!Number.isFinite(numericSegmentId)) return null;
+
+  return (
+    geoJsonData?.features?.find(
+      (feature) =>
+        feature?.geometry?.type === "LineString" &&
+        Number(feature?.properties?.id) === numericSegmentId,
+    ) || null
+  );
+}
+
+function OsmDebugLayerToggle({ mode, status, onChange }) {
+  const isLoading = status === "loading";
+  const options = [
+    ["ways", "OSM ways"],
+    ["graph", "Graph edges"],
+  ];
+
+  return (
+    <div
+      className="react-osm-layer-toggle"
+      role="group"
+      aria-label="OSM debug layer"
+    >
+      {options.map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          className={
+            value === mode
+              ? "react-osm-layer-toggle__button react-osm-layer-toggle__button--active"
+              : "react-osm-layer-toggle__button"
+          }
+          aria-pressed={value === mode}
+          disabled={isLoading}
+          onClick={() => onChange(value)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function OsmMatchReviewPanel({
+  mode,
+  selectedSegmentId,
+  summary,
+  onOpenGraph,
+  onSelectSegment,
+}) {
+  const [filter, setFilter] = useState("issues");
+  const segments = Array.isArray(summary?.segments) ? summary.segments : [];
+  if (!summary || segments.length === 0) return null;
+
+  const issueSegments = segments.filter(
+    (segment) => segment.failureClass !== "accepted",
+  );
+  const visibleSegments = filter === "all" ? segments : issueSegments;
+  const selectedSegment = segments.find(
+    (segment) => segment.segmentId === selectedSegmentId,
+  );
+
+  return (
+    <section className="react-osm-review-panel" aria-label="CW OSM match review">
+      <div className="react-osm-review-panel__header">
+        <div>
+          <strong>Match review</strong>
+          <span>
+            {formatPercent(Number(summary.coverageRatio))} coverage,{" "}
+            {issueSegments.length} issues
+          </span>
+        </div>
+        {mode !== "graph" && (
+          <button type="button" onClick={onOpenGraph}>
+            Graph
+          </button>
+        )}
+      </div>
+
+      {mode !== "graph" && (
+        <p className="react-osm-review-panel__hint">
+          Switch to graph mode to inspect matched edges and gaps.
+        </p>
+      )}
+
+      <div className="react-osm-review-panel__filters" role="group" aria-label="Review filter">
+        <button
+          type="button"
+          className={filter === "issues" ? "is-active" : ""}
+          onClick={() => setFilter("issues")}
+        >
+          Issues {issueSegments.length}
+        </button>
+        <button
+          type="button"
+          className={filter === "all" ? "is-active" : ""}
+          onClick={() => setFilter("all")}
+        >
+          All {segments.length}
+        </button>
+      </div>
+
+      {selectedSegment && (
+        <div className="react-osm-review-panel__selected">
+          <strong>{selectedSegment.segmentName}</strong>
+          <div>
+            {failureClassLabel(selectedSegment.failureClass)} ·{" "}
+            {formatPercent(Number(selectedSegment.coverageRatio))} · gaps{" "}
+            {selectedSegment.gapCount}
+          </div>
+          <p>{selectedSegment.reviewReason}</p>
+        </div>
+      )}
+
+      <div className="react-osm-review-list">
+        {visibleSegments.map((segment) => (
+          <button
+            key={segment.segmentId}
+            type="button"
+            className={
+              segment.segmentId === selectedSegmentId
+                ? "react-osm-review-item react-osm-review-item--selected"
+                : "react-osm-review-item"
+            }
+            onClick={() => onSelectSegment(segment.segmentId)}
+          >
+            <span className="react-osm-review-item__title">
+              {segment.segmentName || `Segment ${segment.segmentId}`}
+            </span>
+            <span className="react-osm-review-item__meta">
+              <span className={`react-osm-review-chip react-osm-review-chip--${segment.failureClass}`}>
+                {failureClassLabel(segment.failureClass)}
+              </span>
+              <span>{formatPercent(Number(segment.coverageRatio))}</span>
+              <span>{segment.confidence}</span>
+              <span>{segment.gapCount} gaps</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SegmentNameDisplay({
+  details,
+  elevationHover,
+  inspectedSegment,
+  osmFeature,
+}) {
   if (elevationHover) {
     return (
       <div className="segment-name-display react-segment-name-display--active" id="segment-name-display">
         📍 מרחק: {(elevationHover.distance / 1000).toFixed(1)} km • גובה:{" "}
         {Math.round(elevationHover.elevation)} m
+      </div>
+    );
+  }
+
+  if (osmFeature) {
+    const isGraphEdge = osmFeature.debugType === "graphEdge";
+    const isCwMatch =
+      osmFeature.debugType === "cwMatchEdge" || osmFeature.debugType === "cwMatchGap";
+    const title = isCwMatch
+      ? osmFeature.segmentName || "CycleWays match"
+      : isGraphEdge
+      ? osmFeature.edgeId
+        ? `Graph edge ${osmFeature.edgeId}`
+        : "Graph edge"
+      : osmFeature.name ||
+        osmFeature.ref ||
+        (osmFeature.osmId ? `OSM way ${osmFeature.osmId}` : "OSM way");
+    const rows = (isCwMatch
+      ? [
+          ["kind", osmFeature.kind],
+          ["segmentId", osmFeature.segmentId],
+          ["confidence", osmFeature.confidence],
+          ["coverage", formatPercent(Number(osmFeature.coverageRatio))],
+          ["edge", osmFeature.edgeId],
+          ["osmWay", osmFeature.osmWayId],
+          ["direction", osmFeature.direction],
+          ["avgDistance", formatMeters(Number(osmFeature.avgDistanceMeters))],
+          ["gapDistance", formatMeters(Number(osmFeature.distanceMeters))],
+          ["highway", osmFeature.graphHighway],
+          ["class", osmFeature.graphClass],
+          ["status", osmFeature.graphAccessStatus],
+        ]
+      : isGraphEdge
+      ? [
+          ["osmWay", osmFeature.osmWayId],
+          ["slice", osmFeature.sliceIndex],
+          ["from", osmFeature.fromNodeId],
+          ["to", osmFeature.toNodeId],
+          ["highway", osmFeature.highway],
+          ["surface", osmFeature.surface],
+          ["tracktype", osmFeature.tracktype],
+          ["bicycle", osmFeature.bicycle],
+          ["access", osmFeature.access],
+          ["class", osmFeature.osmRouteClass],
+          ["status", osmFeature.accessStatus],
+        ]
+      : [
+          ["highway", osmFeature.highway],
+          ["surface", osmFeature.surface],
+          ["tracktype", osmFeature.tracktype],
+          ["bicycle", osmFeature.bicycle],
+          ["access", osmFeature.access],
+          ["class", osmFeature.osmRouteClass],
+          ["status", osmFeature.accessStatus],
+        ]
+    ).filter(([, value]) => value !== undefined && value !== null && value !== "");
+
+    return (
+      <div className="segment-name-display react-segment-name-display--active react-segment-name-display--osm" id="segment-name-display">
+        <strong>{title}</strong>
+        <br />
+        {osmFeature.distanceMeters && (
+          <>
+            📏 {formatLegacyDistance(Number(osmFeature.distanceMeters))}
+            <br />
+          </>
+        )}
+        <div className="react-segment-data-list react-osm-data-list">
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <span>{label}</span>: {value}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

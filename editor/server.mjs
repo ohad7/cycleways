@@ -13,20 +13,30 @@ const iconsRoot = resolve(repoRoot, "icons");
 const sourcePath = resolve(repoRoot, "data/map-source.geojson");
 const tokenPath = resolve(repoRoot, "mapbox-token.js");
 const buildDir = resolve(repoRoot, "build");
+const dataDir = resolve(repoRoot, "data");
+const osmBuildDir = resolve(buildDir, "osm");
 const reportPath = resolve(buildDir, "report.json");
 const buildManifestPath = resolve(buildDir, "map-manifest.json");
 const buildGeojsonPath = resolve(buildDir, "bike_roads.geojson");
 const buildSegmentsPath = resolve(buildDir, "segments.json");
 const buildKmlPath = resolve(buildDir, "map.kml");
+const osmGraphEdgesPath = resolve(osmBuildDir, "osm-base-edges.geojson");
+const osmMatchSummaryPath = resolve(osmBuildDir, "cw-osm-match-summary.json");
+const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson");
+const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
+const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
+const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const promotedGeojsonPath = resolve(repoRoot, "bike_roads_v18.geojson");
 const promotedSegmentsPath = resolve(repoRoot, "segments.json");
 const promotedKmlPath = resolve(repoRoot, "exports/map.kml");
 const promotedManifestPath = resolve(repoRoot, "map-manifest.json");
 const port = Number(process.env.EDITOR_PORT || 8899);
-const devReloadEnabled = process.env.EDITOR_DEV_RELOAD === "1";
+const devReloadEnabled = process.env.EDITOR_CLIENT_RELOAD === "1";
 let requestCounter = 0;
 let buildCounter = 0;
+let osmGraphCounter = 0;
 let promoteCounter = 0;
+let atomicWriteCounter = 0;
 const devReloadClients = new Set();
 
 const qualityKeys = ["overall", "safety", "comfort", "scenery"];
@@ -193,25 +203,25 @@ function injectDevReloadClient(html) {
   const script = `
 <script>
 (() => {
-  let connected = false;
-  let reloadTimer = null;
-  const source = new EventSource("/api/dev/events");
-  source.addEventListener("open", () => {
-    connected = true;
-    if (reloadTimer) {
-      clearTimeout(reloadTimer);
-      reloadTimer = null;
-    }
-  });
-  source.addEventListener("reload", () => {
-    window.location.reload();
-  });
-  source.addEventListener("error", () => {
-    if (!connected || reloadTimer) return;
-    reloadTimer = setTimeout(() => {
+  let source = null;
+  let reconnectTimer = null;
+
+  function connect() {
+    source = new EventSource("/api/dev/events");
+    source.addEventListener("reload", () => {
       window.location.reload();
-    }, 900);
-  });
+    });
+    source.addEventListener("error", () => {
+      source.close();
+      if (reconnectTimer) return;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, 1000);
+    });
+  }
+
+  connect();
 })();
 </script>`;
   if (html.includes("</body>")) {
@@ -410,6 +420,165 @@ function validateSourceGeojson(source) {
   }
 }
 
+function emptyCwBaseOverlay() {
+  return {
+    schemaVersion: 1,
+    description: "CycleWays segment mappings onto the OSM/manual base graph.",
+    updatedAt: null,
+    segments: {},
+  };
+}
+
+function emptyManualBaseEdges() {
+  return {
+    type: "FeatureCollection",
+    features: [],
+  };
+}
+
+function normalizeCwBaseOverlay(overlay) {
+  if (!overlay || typeof overlay !== "object" || Array.isArray(overlay)) {
+    throw new Error("Overlay must be an object");
+  }
+  const segments = overlay.segments || {};
+  if (!segments || typeof segments !== "object" || Array.isArray(segments)) {
+    throw new Error("Overlay segments must be an object keyed by segment id");
+  }
+
+  for (const [key, mapping] of Object.entries(segments)) {
+    if (!mapping || typeof mapping !== "object" || Array.isArray(mapping)) {
+      throw new Error(`Overlay mapping ${key} must be an object`);
+    }
+    if (!Number.isInteger(mapping.segmentId)) {
+      throw new Error(`Overlay mapping ${key} is missing integer segmentId`);
+    }
+    if (String(mapping.segmentId) !== String(key)) {
+      throw new Error(`Overlay mapping key ${key} does not match segmentId ${mapping.segmentId}`);
+    }
+    if (!["accepted_auto_match", "manual_base_edge_needed", "needs_edit"].includes(mapping.status)) {
+      throw new Error(`Overlay mapping ${key} has unsupported status ${mapping.status}`);
+    }
+    if (mapping.segmentName !== undefined && typeof mapping.segmentName !== "string") {
+      throw new Error(`Overlay mapping ${key} has invalid segmentName`);
+    }
+    if (!Array.isArray(mapping.edgeRefs)) {
+      throw new Error(`Overlay mapping ${key} edgeRefs must be an array`);
+    }
+    for (const [index, edgeRef] of mapping.edgeRefs.entries()) {
+      if (!edgeRef || typeof edgeRef !== "object" || Array.isArray(edgeRef)) {
+        throw new Error(`Overlay mapping ${key} edgeRef ${index} must be an object`);
+      }
+      if (typeof edgeRef.edgeId !== "string" || edgeRef.edgeId.trim() === "") {
+        throw new Error(`Overlay mapping ${key} edgeRef ${index} is missing edgeId`);
+      }
+      for (const fractionKey of ["fromFraction", "toFraction"]) {
+        const value = edgeRef[fractionKey];
+        if (typeof value !== "number" || value < 0 || value > 1) {
+          throw new Error(`Overlay mapping ${key} edgeRef ${index} has invalid ${fractionKey}`);
+        }
+      }
+      if (edgeRef.sequenceIndex !== undefined && !Number.isInteger(edgeRef.sequenceIndex)) {
+        throw new Error(`Overlay mapping ${key} edgeRef ${index} has invalid sequenceIndex`);
+      }
+      if (edgeRef.direction !== undefined && !["forward", "reverse", "unknown"].includes(edgeRef.direction)) {
+        throw new Error(`Overlay mapping ${key} edgeRef ${index} has invalid direction`);
+      }
+    }
+  }
+
+  return {
+    schemaVersion: 1,
+    description:
+      typeof overlay.description === "string"
+        ? overlay.description
+        : "CycleWays segment mappings onto the OSM/manual base graph.",
+    updatedAt: new Date().toISOString(),
+    segments,
+  };
+}
+
+async function readCwBaseOverlay() {
+  try {
+    return JSON.parse(await readFile(cwBaseOverlayPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return emptyCwBaseOverlay();
+    }
+    throw error;
+  }
+}
+
+function normalizeManualBaseEdges(geojson) {
+  if (!geojson || geojson.type !== "FeatureCollection" || !Array.isArray(geojson.features)) {
+    throw new Error("Manual base edges must be a GeoJSON FeatureCollection");
+  }
+
+  const ids = new Set();
+  for (const [index, feature] of geojson.features.entries()) {
+    if (!feature || feature.type !== "Feature") {
+      throw new Error(`Manual base edge ${index} is not a GeoJSON Feature`);
+    }
+    const geometry = feature.geometry || {};
+    if (geometry.type !== "LineString" || !Array.isArray(geometry.coordinates) || geometry.coordinates.length < 2) {
+      throw new Error(`Manual base edge ${index} must be a LineString with at least two coordinates`);
+    }
+    for (const coord of geometry.coordinates) {
+      if (
+        !Array.isArray(coord) ||
+        coord.length < 2 ||
+        typeof coord[0] !== "number" ||
+        typeof coord[1] !== "number" ||
+        coord[0] < -180 ||
+        coord[0] > 180 ||
+        coord[1] < -90 ||
+        coord[1] > 90
+      ) {
+        throw new Error(`Manual base edge ${index} has invalid coordinates`);
+      }
+    }
+
+    const properties = feature.properties || (feature.properties = {});
+    const manualEdgeId = properties.manualEdgeId || properties.id || feature.id;
+    if (typeof manualEdgeId !== "string" || manualEdgeId.trim() === "") {
+      throw new Error(`Manual base edge ${index} is missing manualEdgeId`);
+    }
+    if (ids.has(manualEdgeId)) {
+      throw new Error(`Duplicate manual base edge id ${manualEdgeId}`);
+    }
+    ids.add(manualEdgeId);
+    properties.manualEdgeId = manualEdgeId;
+    properties.id = properties.id || manualEdgeId;
+    properties.source = "manual";
+
+    if (
+      properties.linkedSegmentId !== undefined &&
+      properties.linkedSegmentId !== null &&
+      !Number.isInteger(properties.linkedSegmentId)
+    ) {
+      throw new Error(`Manual base edge ${manualEdgeId} has invalid linkedSegmentId`);
+    }
+    if (properties.linkedSegmentName !== undefined && typeof properties.linkedSegmentName !== "string") {
+      throw new Error(`Manual base edge ${manualEdgeId} has invalid linkedSegmentName`);
+    }
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: geojson.features,
+  };
+}
+
+async function readManualBaseEdges() {
+  try {
+    return JSON.parse(await readFile(manualBaseEdgesPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return emptyManualBaseEdges();
+    }
+    throw error;
+  }
+}
+
 function validateQuality(quality, featureLabel, required) {
   if (quality === undefined || quality === null) {
     if (required) {
@@ -598,6 +767,263 @@ async function handleBuild(payload) {
   });
 }
 
+async function handleOsmGraphRecalculate() {
+  const graphId = ++osmGraphCounter;
+  const startedAt = Date.now();
+  const args = ["run", "osm:graph"];
+
+  log("info", `osm-graph#${graphId} started`, {
+    command: `npm ${args.join(" ")}`,
+  });
+
+  return await new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn("npm", args, {
+      cwd: repoRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+    const stdoutLogger = createLineLogger("info", `osm-graph#${graphId} stdout`, (text) => {
+      stdout += text;
+    });
+    const stderrLogger = createLineLogger("info", `osm-graph#${graphId} stderr`, (text) => {
+      stderr += text;
+    });
+    const heartbeat = setInterval(() => {
+      log("info", `osm-graph#${graphId} still running`, {
+        elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+        stdoutBytes: stdout.length,
+        stderrBytes: stderr.length,
+      });
+    }, 10000);
+    heartbeat.unref();
+
+    child.stdout.on("data", (chunk) => {
+      stdoutLogger.write(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderrLogger.write(chunk);
+    });
+    child.on("error", (error) => {
+      clearInterval(heartbeat);
+      stdoutLogger.flush();
+      stderrLogger.flush();
+      log("error", `osm-graph#${graphId} failed to start`, error.message);
+      rejectPromise(error);
+    });
+    child.on("close", (code) => {
+      clearInterval(heartbeat);
+      stdoutLogger.flush();
+      stderrLogger.flush();
+      const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+      if (code !== 0) {
+        log("error", `osm-graph#${graphId} failed`, {
+          exitCode: code,
+          durationSeconds,
+        });
+        rejectPromise(new Error(stderr || stdout || `OSM graph recalculation failed with exit code ${code}`));
+        return;
+      }
+      log("info", `osm-graph#${graphId} finished`, {
+        durationSeconds,
+      });
+      resolvePromise({ graphId, stdout, stderr, durationSeconds });
+    });
+  });
+}
+
+async function handleOsmSegmentRecalculate(payload) {
+  const graphId = ++osmGraphCounter;
+  const startedAt = Date.now();
+  const feature = payload?.feature;
+  validateSourceGeojson({ type: "FeatureCollection", features: [feature] });
+  const segmentId = feature.properties.id;
+  const tmpPrefix = resolve(osmBuildDir, `.selected-segment-${segmentId}-${Date.now()}-${graphId}`);
+  const segmentPath = `${tmpPrefix}.geojson`;
+  const outPath = `${tmpPrefix}.json`;
+  const args = [
+    "processing/match_cycleways_to_osm_graph.py",
+    "--graph-edges",
+    "build/osm/osm-base-edges.geojson",
+    "--single-segment-geojson",
+    repoRelative(segmentPath),
+    "--single-out-json",
+    repoRelative(outPath),
+  ];
+
+  await mkdir(osmBuildDir, { recursive: true });
+  await writeJsonAtomic(segmentPath, feature);
+
+  log("info", `osm-segment#${graphId} started`, {
+    segmentId,
+    command: `python3 ${args.join(" ")}`,
+  });
+
+  try {
+    const result = await new Promise((resolvePromise, rejectPromise) => {
+      const child = spawn("python3", args, {
+        cwd: repoRoot,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      let stdout = "";
+      let stderr = "";
+      const stdoutLogger = createLineLogger("info", `osm-segment#${graphId} stdout`, (text) => {
+        stdout += text;
+      });
+      const stderrLogger = createLineLogger("info", `osm-segment#${graphId} stderr`, (text) => {
+        stderr += text;
+      });
+      const heartbeat = setInterval(() => {
+        log("info", `osm-segment#${graphId} still running`, {
+          segmentId,
+          elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+          stdoutBytes: stdout.length,
+          stderrBytes: stderr.length,
+        });
+      }, 10000);
+      heartbeat.unref();
+
+      child.stdout.on("data", (chunk) => {
+        stdoutLogger.write(chunk);
+      });
+      child.stderr.on("data", (chunk) => {
+        stderrLogger.write(chunk);
+      });
+      child.on("error", (error) => {
+        clearInterval(heartbeat);
+        stdoutLogger.flush();
+        stderrLogger.flush();
+        log("error", `osm-segment#${graphId} failed to start`, error.message);
+        rejectPromise(error);
+      });
+      child.on("close", (code) => {
+        clearInterval(heartbeat);
+        stdoutLogger.flush();
+        stderrLogger.flush();
+        const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+        if (code !== 0) {
+          log("error", `osm-segment#${graphId} failed`, {
+            segmentId,
+            exitCode: code,
+            durationSeconds,
+          });
+          rejectPromise(new Error(stderr || stdout || `Segment recalculation failed with exit code ${code}`));
+          return;
+        }
+        log("info", `osm-segment#${graphId} finished`, {
+          segmentId,
+          durationSeconds,
+        });
+        resolvePromise({ graphId, segmentId, stdout, stderr, durationSeconds });
+      });
+    });
+    const match = JSON.parse(await readFile(outPath, "utf-8"));
+    return { ...result, match };
+  } finally {
+    await unlink(segmentPath).catch(() => {});
+    await unlink(outPath).catch(() => {});
+  }
+}
+
+function recomputeMatchSummaryTotals(summary) {
+  const segments = Array.isArray(summary.segments) ? summary.segments : [];
+  const confidenceCounts = {};
+  let totalDistanceM = 0;
+  let matchedDistanceM = 0;
+  let gapCount = 0;
+
+  for (const segment of segments) {
+    const confidence = segment.confidence || "none";
+    confidenceCounts[confidence] = (confidenceCounts[confidence] || 0) + 1;
+    const distanceMeters = Number(segment.distanceMeters) || 0;
+    const coverageRatio = Number(segment.coverageRatio) || 0;
+    totalDistanceM += distanceMeters;
+    matchedDistanceM += distanceMeters * coverageRatio;
+    gapCount += Number(segment.gapCount) || 0;
+  }
+
+  return {
+    ...summary,
+    sourceSegments: segments.length,
+    coverageRatio: totalDistanceM ? Number((matchedDistanceM / totalDistanceM).toFixed(4)) : 0,
+    totalKm: Number((totalDistanceM / 1000).toFixed(1)),
+    matchedKm: Number((matchedDistanceM / 1000).toFixed(1)),
+    unmatchedKm: Number(((totalDistanceM - matchedDistanceM) / 1000).toFixed(1)),
+    confidenceCounts,
+    gapCount,
+  };
+}
+
+async function persistOsmSegmentMatch(payload) {
+  const segmentId = Number(payload?.segmentId);
+  const summary = payload?.summary;
+  const preview = payload?.preview || { type: "FeatureCollection", features: [] };
+  if (!Number.isInteger(segmentId)) {
+    throw new Error("segmentId is required");
+  }
+  if (!summary || Number(summary.segmentId) !== segmentId) {
+    throw new Error("summary.segmentId must match segmentId");
+  }
+  if (!preview || preview.type !== "FeatureCollection" || !Array.isArray(preview.features)) {
+    throw new Error("preview must be a GeoJSON FeatureCollection");
+  }
+
+  await mkdir(osmBuildDir, { recursive: true });
+  const existingSummary = JSON.parse(await readFile(osmMatchSummaryPath, "utf-8"));
+  const nextSegments = [
+    ...(existingSummary.segments || []).filter((segment) => Number(segment.segmentId) !== segmentId),
+    summary,
+  ].sort((a, b) => Number(a.segmentId ?? 0) - Number(b.segmentId ?? 0));
+  const nextSummary = recomputeMatchSummaryTotals({
+    ...existingSummary,
+    generatedAt: new Date().toISOString(),
+    segments: nextSegments,
+  });
+
+  let existingPreview = { type: "FeatureCollection", features: [] };
+  try {
+    existingPreview = JSON.parse(await readFile(osmMatchPreviewPath, "utf-8"));
+  } catch {
+    existingPreview = { type: "FeatureCollection", features: [] };
+  }
+  const nextPreview = {
+    type: "FeatureCollection",
+    features: [
+      ...(existingPreview.features || []).filter(
+        (feature) => Number(feature.properties?.segmentId) !== segmentId,
+      ),
+      ...preview.features,
+    ],
+  };
+
+  let existingMatches = { generatedAt: nextSummary.generatedAt, segments: [] };
+  try {
+    existingMatches = JSON.parse(await readFile(osmMatchesPath, "utf-8"));
+  } catch {
+    existingMatches = { generatedAt: nextSummary.generatedAt, segments: [] };
+  }
+  const nextMatches = {
+    ...existingMatches,
+    generatedAt: nextSummary.generatedAt,
+    segments: [
+      ...(existingMatches.segments || []).filter((segment) => Number(segment.segmentId) !== segmentId),
+      summary,
+    ].sort((a, b) => Number(a.segmentId ?? 0) - Number(b.segmentId ?? 0)),
+  };
+
+  await writeJsonAtomic(osmMatchSummaryPath, nextSummary);
+  await writeJsonAtomic(osmMatchPreviewPath, nextPreview);
+  await writeJsonAtomic(osmMatchesPath, nextMatches);
+
+  return {
+    summary: nextSummary,
+    preview: nextPreview,
+    matches: nextMatches,
+  };
+}
+
 function validationBlockers(report) {
   const validation = report?.validation || {};
   const elevation = report?.elevation || {};
@@ -628,9 +1054,31 @@ function validationBlockers(report) {
 
 async function copyFileAtomic(source, target) {
   await mkdir(dirname(target), { recursive: true });
-  const tmpPath = `${target}.tmp`;
-  await copyFile(source, tmpPath);
-  await rename(tmpPath, target);
+  const tmpPath = uniqueAtomicTmpPath(target);
+  try {
+    await copyFile(source, tmpPath);
+    await rename(tmpPath, target);
+  } catch (error) {
+    await unlink(tmpPath).catch(() => {});
+    throw error;
+  }
+}
+
+function uniqueAtomicTmpPath(target) {
+  atomicWriteCounter += 1;
+  return `${target}.${process.pid}.${Date.now()}.${atomicWriteCounter}.tmp`;
+}
+
+async function writeJsonAtomic(target, value) {
+  await mkdir(dirname(target), { recursive: true });
+  const tmpPath = uniqueAtomicTmpPath(target);
+  try {
+    await writeFile(tmpPath, `${JSON.stringify(value, null, 2)}\n`, "utf-8");
+    await rename(tmpPath, target);
+  } catch (error) {
+    await unlink(tmpPath).catch(() => {});
+    throw error;
+  }
 }
 
 async function existingVersionedFiles(directory, pattern) {
@@ -806,6 +1254,165 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/osm/recalculate") {
+      logApi(requestId, "POST /api/osm/recalculate started");
+      const result = await handleOsmGraphRecalculate();
+      let graphSummary = null;
+      let matchSummary = null;
+      try {
+        graphSummary = JSON.parse(await readFile(resolve(osmBuildDir, "osm-base-graph-summary.json"), "utf-8"));
+      } catch {
+        graphSummary = null;
+      }
+      try {
+        matchSummary = JSON.parse(await readFile(osmMatchSummaryPath, "utf-8"));
+      } catch {
+        matchSummary = null;
+      }
+      logApi(requestId, "POST /api/osm/recalculate finished", {
+        durationMs: Date.now() - startedAt,
+        graphId: result.graphId,
+        graphEdges: graphSummary?.edges,
+        sourceSegments: matchSummary?.sourceSegments,
+      });
+      sendJson(response, 200, { ok: true, ...result, graphSummary, matchSummary });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/osm/recalculate-segment") {
+      logApi(requestId, "POST /api/osm/recalculate-segment started");
+      const payload = await readRequestJson(request);
+      let result;
+      try {
+        result = await handleOsmSegmentRecalculate(payload);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/osm/recalculate-segment failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      logApi(requestId, "POST /api/osm/recalculate-segment finished", {
+        durationMs: Date.now() - startedAt,
+        segmentId: result.segmentId,
+        coverageRatio: result.match?.summary?.coverageRatio,
+        confidence: result.match?.summary?.confidence,
+      });
+      sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/osm/persist-segment-match") {
+      logApi(requestId, "POST /api/osm/persist-segment-match started");
+      const payload = await readRequestJson(request);
+      let result;
+      try {
+        result = await persistOsmSegmentMatch(payload);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/osm/persist-segment-match failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      logApi(requestId, "POST /api/osm/persist-segment-match saved", {
+        durationMs: Date.now() - startedAt,
+        segmentId: payload.segmentId,
+      });
+      sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/osm/graph-edges") {
+      logApi(requestId, "GET /api/osm/graph-edges started");
+      const graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
+      logApi(requestId, "GET /api/osm/graph-edges loaded", {
+        features: graphEdges.features?.length || 0,
+      });
+      sendJson(response, 200, graphEdges);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/osm/match-summary") {
+      logApi(requestId, "GET /api/osm/match-summary started");
+      const summary = JSON.parse(await readFile(osmMatchSummaryPath, "utf-8"));
+      logApi(requestId, "GET /api/osm/match-summary loaded", {
+        sourceSegments: summary.sourceSegments,
+        coverageRatio: summary.coverageRatio,
+        gapCount: summary.gapCount,
+      });
+      sendJson(response, 200, summary);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/osm/match-preview") {
+      logApi(requestId, "GET /api/osm/match-preview started");
+      const preview = JSON.parse(await readFile(osmMatchPreviewPath, "utf-8"));
+      logApi(requestId, "GET /api/osm/match-preview loaded", {
+        features: preview.features?.length || 0,
+      });
+      sendJson(response, 200, preview);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/cw-base-overlay") {
+      logApi(requestId, "GET /api/cw-base-overlay started");
+      const overlay = await readCwBaseOverlay();
+      logApi(requestId, "GET /api/cw-base-overlay loaded", {
+        mappings: Object.keys(overlay.segments || {}).length,
+      });
+      sendJson(response, 200, overlay);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/manual-base-edges") {
+      logApi(requestId, "GET /api/manual-base-edges started");
+      const manualBaseEdges = await readManualBaseEdges();
+      logApi(requestId, "GET /api/manual-base-edges loaded", {
+        features: manualBaseEdges.features?.length || 0,
+      });
+      sendJson(response, 200, manualBaseEdges);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay") {
+      logApi(requestId, "POST /api/cw-base-overlay started");
+      let overlay;
+      try {
+        overlay = normalizeCwBaseOverlay(await readRequestJson(request));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/cw-base-overlay validation failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      await writeJsonAtomic(cwBaseOverlayPath, overlay);
+      logApi(requestId, "POST /api/cw-base-overlay saved", {
+        path: repoRelative(cwBaseOverlayPath),
+        mappings: Object.keys(overlay.segments || {}).length,
+      });
+      sendJson(response, 200, { ok: true, path: cwBaseOverlayPath, overlay });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/manual-base-edges") {
+      logApi(requestId, "POST /api/manual-base-edges started");
+      let manualBaseEdges;
+      try {
+        manualBaseEdges = normalizeManualBaseEdges(await readRequestJson(request));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/manual-base-edges validation failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      await writeJsonAtomic(manualBaseEdgesPath, manualBaseEdges);
+      logApi(requestId, "POST /api/manual-base-edges saved", {
+        path: repoRelative(manualBaseEdgesPath),
+        features: manualBaseEdges.features?.length || 0,
+      });
+      sendJson(response, 200, { ok: true, path: manualBaseEdgesPath, manualBaseEdges });
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/source") {
       logApi(requestId, "POST /api/source started");
       const source = await readRequestJson(request);
@@ -818,9 +1425,7 @@ const server = createServer(async (request, response) => {
         return;
       }
       logApi(requestId, "POST /api/source validated", summarizeSource(source));
-      const tmpPath = `${sourcePath}.tmp`;
-      await writeFile(tmpPath, `${JSON.stringify(source, null, 2)}\n`, "utf-8");
-      await rename(tmpPath, sourcePath);
+      await writeJsonAtomic(sourcePath, source);
       logApi(requestId, "POST /api/source saved", {
         path: repoRelative(sourcePath),
         durationMs: Date.now() - startedAt,

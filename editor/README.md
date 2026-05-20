@@ -31,16 +31,16 @@ Start it from the repository root:
 EDITOR_PORT=8899 node editor/server.mjs
 ```
 
-For development, prefer the watcher:
+For development, you can use the dev launcher:
 
 ```bash
 EDITOR_PORT=8899 node editor/dev-server.mjs
 ```
 
-The watcher restarts the editor server automatically when `editor/server.mjs`
-changes. Client files under `editor/` (`.html`, `.css`, `.js`) are already served
-with `Cache-Control: no-store`; in watcher mode the editor page also auto-reloads
-when those files change.
+Automatic restarts and browser reloads are disabled by default. To opt into
+automatic backend restarts when `editor/server.mjs` changes, start with
+`EDITOR_SERVER_RESTART=1`. To opt into browser auto-reload while editing client
+files, start with `EDITOR_CLIENT_RELOAD=1`.
 
 The server prints timestamped API logs. Build requests also stream processor
 progress into the same terminal, including the build command, per-segment
@@ -79,6 +79,20 @@ local file, `MAPBOX_TOKEN`/`CYCLEWAYS_MAPBOX_TOKEN` in the server environment, o
 - Insert a vertex by enabling insert mode and clicking near the selected line.
 - Delete the selected vertex when the segment still has at least two coordinates.
 - Split a segment at a selected internal vertex.
+- Use the Segments workspace for canonical CycleWays source edits.
+- Use the Base Graph workspace to stage manual base edges on top of the read-only
+  OSM graph. Manual edges can be created, selected, reshaped by dragging vertices,
+  edited with Insert/Delete, split at an internal vertex, and folded into the graph
+  with Recalculate Graph + Matches. OSM graph edges can be selected for inspection
+  and copied into editable manual edges.
+- Use the CW Overlay workspace to inspect the selected segment's OSM graph match,
+  accept auto matches, or click base graph edges to choose the saved mapping in
+  `data/cw-base-overlay.json`.
+- Bulk-accept full, high-confidence auto matches while preserving existing
+  manual/edit overlay mappings.
+- Use the Base Overlay review queue to see accepted/unresolved counts and jump
+  directly to segments that are missing from, or only partially matched to, the
+  base network.
 - Add, edit, drag, and remove per-segment data markers.
 - Switch the base map between outdoors, satellite, streets, and light views.
 - Save the canonical source file.
@@ -111,3 +125,12 @@ falls back to `bike_roads_v18.geojson` and `segments.json`.
 KML is an export format for Google Maps/Google Earth review. The editable source of
 truth is `data/map-source.geojson`; generated artifacts should come from the processor,
 not manual edits.
+
+The CW base overlay authoring data is stored separately in
+`data/cw-base-overlay.json`. That file records how current CycleWays segments map
+onto generated base graph edges and is not a replacement for the canonical segment
+geometry.
+
+Manual base edges drawn in the editor are stored in
+`data/manual-base-edges.geojson`. They are part of the base graph input, not the
+CycleWays source geometry.
