@@ -142,6 +142,9 @@ const state = {
   draggingManualBaseVertex: false,
   draggingDataMarker: null,
   suppressNextSegmentClick: false,
+  showUnresolvedSegments: false,
+  unresolvedSegmentIds: [],
+  unresolvedSegmentFilterKey: null,
   lastMapPointer: null,
   mapSourceDataCache: new Map(),
   lastBuildReport: null,
@@ -198,7 +201,7 @@ const els = {
   extendSegment: document.getElementById("extend-segment"),
   deleteVertex: document.getElementById("delete-vertex"),
   splitSegment: document.getElementById("split-segment"),
-  fitSelected: document.getElementById("fit-selected"),
+  toggleUnresolvedSegments: document.getElementById("toggle-unresolved-segments"),
   toggleBaseOverlay: document.getElementById("toggle-base-overlay"),
   drawDone: document.getElementById("draw-done"),
   drawCancel: document.getElementById("draw-cancel"),
@@ -534,6 +537,11 @@ function selectedFeatureCollection() {
       },
     ],
   };
+}
+
+function collectUnresolvedSegmentIds() {
+  if (!state.baseOverlay.loaded) return new Set();
+  return new Set(baseOverlayReviewRows().filter((row) => !row.status.resolved).map((row) => Number(row.match.segmentId)));
 }
 
 function manualBaseEdgeFeatures() {
@@ -976,6 +984,7 @@ function updateMapSources() {
   if (map.getLayer("segments-layer")) {
     map.setFilter("segments-layer", unselectedFilter());
   }
+  updateUnresolvedSegmentLayerFilter();
   if (map.getLayer("selected-manual-base-edge")) {
     map.setFilter("selected-manual-base-edge", selectedManualBaseEdgeFilter());
   }
@@ -1002,6 +1011,8 @@ function setLayerVisibility(layerId, visible) {
 
 function updateWorkspaceLayerVisibility() {
   const showSegments = state.workspaceMode !== "base";
+  const showUnresolvedSegments =
+    state.workspaceMode === "segments" && state.showUnresolvedSegments && state.baseOverlay.loaded;
   const showBaseGraph = state.baseOverlay.loaded && state.baseOverlay.enabled && state.workspaceMode !== "segments";
   const showBaseEdit = showBaseGraph && state.workspaceMode === "base";
   const showOverlay = showBaseGraph && state.workspaceMode === "overlay";
@@ -1009,6 +1020,7 @@ function updateWorkspaceLayerVisibility() {
   for (const layerId of ["segments-layer", "selected-segment"]) {
     setLayerVisibility(layerId, showSegments);
   }
+  setLayerVisibility("unresolved-segments-layer", showUnresolvedSegments);
   for (const layerId of [
     "base-graph-edges-layer",
     "base-graph-edges-hit-layer",
@@ -1031,6 +1043,18 @@ function updateWorkspaceLayerVisibility() {
   ]) {
     setLayerVisibility(layerId, showOverlay);
   }
+}
+
+function updateUnresolvedSegmentLayerFilter() {
+  if (!map.getLayer("unresolved-segments-layer")) return;
+  const unresolvedIds = state.showUnresolvedSegments ? state.unresolvedSegmentIds : [];
+  const filterKey = unresolvedIds.join(",");
+  if (state.unresolvedSegmentFilterKey === filterKey) return;
+  state.unresolvedSegmentFilterKey = filterKey;
+  map.setFilter(
+    "unresolved-segments-layer",
+    unresolvedIds.length > 0 ? ["in", ["get", "id"], ["literal", unresolvedIds]] : ["==", ["get", "id"], "__none__"],
+  );
 }
 
 function updateSelectedSegmentEditSources() {
@@ -1228,7 +1252,6 @@ function renderBaseModeForm() {
   els.deleteVertex.disabled = !canDeleteVertex;
   els.splitSegment.disabled = !canSplit;
   els.extendSegment.disabled = drawing || !feature;
-  els.fitSelected.disabled = drawing || !feature;
   els.addData.disabled = true;
 
   if (!feature) {
@@ -1284,7 +1307,6 @@ function renderForm() {
   els.deleteVertex.disabled = drawing || !feature || !canEditSegmentGeometry || state.selectedVertexIndex < 0;
   els.splitSegment.disabled = !canSplit;
   els.extendSegment.disabled = drawing || !feature || !canEditSegmentGeometry;
-  els.fitSelected.disabled = drawing || !feature;
   els.addData.disabled = drawing || !feature || !canEditSegmentFields;
 
   if (!feature) {
@@ -1333,7 +1355,7 @@ function renderDrawControls() {
     els.extendSegment,
     els.deleteVertex,
     els.splitSegment,
-    els.fitSelected,
+    els.toggleUnresolvedSegments,
   ];
 
   for (const button of editButtons) {
@@ -1346,6 +1368,7 @@ function renderDrawControls() {
     els.extendSegment.hidden = overlayMode;
     els.deleteVertex.hidden = overlayMode;
     els.splitSegment.hidden = overlayMode;
+    els.toggleUnresolvedSegments.hidden = !segmentsMode;
     els.toggleBaseOverlay.hidden = true;
   }
 
@@ -1355,6 +1378,12 @@ function renderDrawControls() {
   els.drawCancel.disabled = !drawing;
   els.mapToolbar.classList.toggle("drawing", drawing);
   els.addSegment.disabled = !state.source || drawing || !segmentsMode;
+  els.toggleUnresolvedSegments.disabled = drawing || !segmentsMode || state.baseOverlay.loading;
+  els.toggleUnresolvedSegments.classList.toggle("active", state.showUnresolvedSegments);
+  els.toggleUnresolvedSegments.textContent =
+    state.showUnresolvedSegments
+      ? `Unresolved (${state.unresolvedSegmentIds.length})`
+      : "Unresolved";
   els.modeSelect.disabled = drawing;
   els.modeInsert.disabled =
     drawing ||
@@ -3724,13 +3753,6 @@ function selectBaseGraphEdge(feature, fit = false) {
   setStatus(`Selected OSM base edge ${graphEdgeId}. Use Copy Selected to make it editable.`);
 }
 
-function fitSelectedManualBaseEdge() {
-  const feature = selectedManualBaseEdge();
-  if (feature?.geometry?.coordinates?.length >= 2) {
-    fitCoordinates(feature.geometry.coordinates);
-  }
-}
-
 function roadTypeForGraphFeature(feature) {
   const properties = feature?.properties || {};
   if (properties.roadType) return properties.roadType;
@@ -4519,6 +4541,36 @@ async function toggleBaseOverlay() {
   renderAll();
 }
 
+async function toggleUnresolvedSegments() {
+  if (state.workspaceMode !== "segments" || state.baseOverlay.loading) return;
+  state.showUnresolvedSegments = !state.showUnresolvedSegments;
+  if (!state.showUnresolvedSegments) {
+    state.unresolvedSegmentIds = [];
+    state.unresolvedSegmentFilterKey = null;
+    updateUnresolvedSegmentLayerFilter();
+    updateWorkspaceLayerVisibility();
+    renderDrawControls();
+    setStatus("Unresolved segment highlights hidden.");
+    return;
+  }
+
+  state.unresolvedSegmentIds = [];
+  state.unresolvedSegmentFilterKey = null;
+  renderDrawControls();
+
+  if (!state.baseOverlay.loaded) {
+    setStatus("Loading overlay review data for unresolved segment highlights...");
+    await loadBaseOverlayData();
+  }
+
+  state.unresolvedSegmentIds = [...collectUnresolvedSegmentIds()].sort((a, b) => a - b);
+  state.unresolvedSegmentFilterKey = null;
+  updateUnresolvedSegmentLayerFilter();
+  updateWorkspaceLayerVisibility();
+  renderDrawControls();
+  setStatus(`Highlighting ${state.unresolvedSegmentIds.length} unresolved segments.`);
+}
+
 async function recalculateOsmGraph() {
   if (state.baseOverlay.loading || state.baseOverlay.recalculating) return;
   state.baseOverlay.recalculating = true;
@@ -5100,14 +5152,7 @@ function wireEvents() {
   els.recalculateOsmGraph.addEventListener("click", () => recalculateOsmGraph().catch(showError));
   els.addData.addEventListener("click", addDataMarker);
   els.mapStyle.addEventListener("change", () => switchMapStyle(els.mapStyle.value));
-  els.fitSelected.addEventListener("click", () => {
-    if (state.workspaceMode === "base") {
-      fitSelectedManualBaseEdge();
-      return;
-    }
-    const feature = selectedFeature();
-    if (feature) fitFeature(feature);
-  });
+  els.toggleUnresolvedSegments.addEventListener("click", () => toggleUnresolvedSegments().catch(showError));
   els.saveSource.addEventListener("click", () => saveSource().catch(showError));
   els.runBuild.addEventListener("click", () => runBuild().catch(showError));
   els.promoteBuild.addEventListener("click", () => promoteBuild().catch(showError));
@@ -5523,6 +5568,25 @@ async function addMapLayers() {
         ],
         "line-width": 3,
         "line-opacity": 0.85,
+      },
+    });
+  }
+
+  if (!map.getLayer("unresolved-segments-layer")) {
+    map.addLayer({
+      id: "unresolved-segments-layer",
+      type: "line",
+      source: "segments",
+      filter: ["==", ["get", "id"], "__none__"],
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+        visibility: "none",
+      },
+      paint: {
+        "line-color": "#dc2626",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 14, 8, 16, 11],
+        "line-opacity": 0.95,
       },
     });
   }
