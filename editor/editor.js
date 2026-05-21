@@ -985,6 +985,64 @@ function selectedOverlayEdgeCollection() {
   };
 }
 
+function cwOverlayNetworkCollection() {
+  if (!state.baseOverlay.loaded) return EMPTY_FEATURE_COLLECTION;
+  const cache = state.baseOverlay.cache || (state.baseOverlay.cache = {});
+  if (
+    cache.cwOverlayNetworkCollection &&
+    cache.cwOverlayNetworkOverlay === state.baseOverlay.overlay &&
+    cache.cwOverlayNetworkGraphEdges === state.baseOverlay.graphEdges &&
+    cache.cwOverlayNetworkManualEdges === state.baseOverlay.manualBaseEdges &&
+    cache.cwOverlayNetworkActiveFeatures === state.activeFeatures
+  ) {
+    return cache.cwOverlayNetworkCollection;
+  }
+
+  const features = [];
+  const activeById = new Map(
+    state.activeFeatures
+      .map(({ feature }) => [Number(feature.properties?.id), feature])
+      .filter(([segmentId]) => Number.isInteger(segmentId)),
+  );
+  for (const mapping of Object.values(state.baseOverlay.overlay?.segments || {})) {
+    const segmentId = Number(mapping?.segmentId);
+    const segment = activeById.get(segmentId);
+    if (mapping?.status !== "accepted_auto_match" || !segment || !Array.isArray(mapping.edgeRefs)) {
+      continue;
+    }
+
+    const segmentName = mapping.segmentName || featureName(segment);
+    for (const [edgeIndex, edgeRef] of normalizeOverlayEdgeRefs(mapping.edgeRefs).entries()) {
+      const edgeId = String(edgeRef?.edgeId || "");
+      const edgeFeature = graphFeatureForEdgeId(edgeId);
+      if (!edgeId || edgeFeature?.geometry?.type !== "LineString") continue;
+      features.push({
+        ...edgeFeature,
+        id: `cw-overlay-${segmentId}-${edgeIndex}-${edgeId}`,
+        properties: {
+          ...(edgeFeature.properties || {}),
+          id: `cw-overlay-${segmentId}-${edgeIndex}-${edgeId}`,
+          edgeId,
+          overlaySegmentId: segmentId,
+          overlaySegmentName: segmentName,
+          overlaySequenceIndex: edgeRef.sequenceIndex ?? edgeIndex,
+          roadType: segment.properties?.roadType || edgeFeature.properties?.roadType || "paved",
+        },
+      });
+    }
+  }
+
+  cache.cwOverlayNetworkCollection = {
+    type: "FeatureCollection",
+    features,
+  };
+  cache.cwOverlayNetworkOverlay = state.baseOverlay.overlay;
+  cache.cwOverlayNetworkGraphEdges = state.baseOverlay.graphEdges;
+  cache.cwOverlayNetworkManualEdges = state.baseOverlay.manualBaseEdges;
+  cache.cwOverlayNetworkActiveFeatures = state.activeFeatures;
+  return cache.cwOverlayNetworkCollection;
+}
+
 function displayedOverlayEdgeRefs() {
   const segmentId = selectedSegmentId();
   const mapping = overlayMappingForSegment(segmentId);
@@ -1012,6 +1070,7 @@ function updateMapSources() {
   setSourceData("selected-base-graph-edge", selectedBaseGraphEdgeCollection());
   setSourceData("selected-match-preview", selectedMatchCollection());
   setSourceData("selected-overlay-edges", selectedOverlayEdgeCollection());
+  setSourceData("cw-overlay-network", cwOverlayNetworkCollection());
   setSourceData("manual-base-edges", manualBaseEdgeCollection());
   if (map.getLayer("segments-layer")) {
     map.setFilter("segments-layer", unselectedFilter());
@@ -1041,8 +1100,16 @@ function setLayerVisibility(layerId, visible) {
   map.setLayoutProperty(layerId, "visibility", visibility);
 }
 
+function cwOverlayNetworkFeaturesAtPoint(point) {
+  if (state.workspaceMode !== "overlay" || !map.getLayer("cw-overlay-network-hit-layer")) {
+    return [];
+  }
+  return map.queryRenderedFeatures(point, { layers: ["cw-overlay-network-hit-layer"] });
+}
+
 function updateWorkspaceLayerVisibility() {
-  const showSegments = state.workspaceMode !== "base";
+  const showSegments = state.workspaceMode === "segments";
+  const showSelectedSegment = state.workspaceMode !== "base";
   const showUnresolvedSegments =
     state.workspaceMode === "segments" && state.showUnresolvedSegments && state.baseOverlay.loaded;
   const showBaseWorkspaceGraph =
@@ -1052,9 +1119,8 @@ function updateWorkspaceLayerVisibility() {
   const showBaseEdit = showBaseWorkspaceGraph && state.workspaceMode === "base";
   const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
 
-  for (const layerId of ["segments-layer", "selected-segment"]) {
-    setLayerVisibility(layerId, showSegments);
-  }
+  setLayerVisibility("segments-layer", showSegments);
+  setLayerVisibility("selected-segment", showSelectedSegment);
   setLayerVisibility("unresolved-segments-layer", showUnresolvedSegments);
   for (const layerId of ["base-graph-edges-layer", "manual-base-edges-layer"]) {
     setLayerVisibility(layerId, showBaseGraphVisual);
@@ -1066,6 +1132,8 @@ function updateWorkspaceLayerVisibility() {
     setLayerVisibility(layerId, showBaseEdit);
   }
   for (const layerId of [
+    "cw-overlay-network-layer",
+    "cw-overlay-network-hit-layer",
     "selected-overlay-edges-layer",
     "selected-overlay-hovered-edge-layer",
     "selected-match-edges-layer",
@@ -1675,11 +1743,27 @@ function boundarySliverEdges(match) {
 function graphFeatureForEdgeId(edgeId) {
   const id = String(edgeId || "");
   if (!id) return null;
-  return (
-    (state.baseOverlay.graphEdges?.features || []).find((feature) => String(graphEdgeFeatureId(feature)) === id) ||
-    manualBaseEdgeFeatures().find((feature) => String(manualBaseEdgeFeatureId(feature)) === id) ||
-    null
-  );
+  const cache = state.baseOverlay.cache || (state.baseOverlay.cache = {});
+  if (
+    !cache.baseFeaturesByEdgeId ||
+    cache.baseFeaturesByEdgeIdGraphEdges !== state.baseOverlay.graphEdges ||
+    cache.baseFeaturesByEdgeIdManualEdges !== state.baseOverlay.manualBaseEdges
+  ) {
+    cache.baseFeaturesByEdgeId = new Map();
+    for (const feature of state.baseOverlay.graphEdges?.features || []) {
+      const featureId = graphEdgeFeatureId(feature);
+      if (featureId) cache.baseFeaturesByEdgeId.set(String(featureId), feature);
+    }
+    for (const feature of manualBaseEdgeFeatures()) {
+      const featureId = manualBaseEdgeFeatureId(feature);
+      if (featureId && !cache.baseFeaturesByEdgeId.has(String(featureId))) {
+        cache.baseFeaturesByEdgeId.set(String(featureId), feature);
+      }
+    }
+    cache.baseFeaturesByEdgeIdGraphEdges = state.baseOverlay.graphEdges;
+    cache.baseFeaturesByEdgeIdManualEdges = state.baseOverlay.manualBaseEdges;
+  }
+  return cache.baseFeaturesByEdgeId.get(id) || null;
 }
 
 function coordDistanceMeters(a, b) {
@@ -5328,8 +5412,21 @@ function wireEvents() {
     input.addEventListener("change", updateSelectedProperties);
   }
 
+  map.on("click", "cw-overlay-network-hit-layer", (event) => {
+    if (state.workspaceMode !== "overlay" || state.mode !== "select") return;
+    const feature = event.features?.[0];
+    const segmentId = Number(feature?.properties?.overlaySegmentId);
+    if (!Number.isInteger(segmentId) || !selectSegmentById(segmentId)) return;
+    state.suppressNextSegmentClick = true;
+    window.setTimeout(() => {
+      state.suppressNextSegmentClick = false;
+    }, 0);
+    setStatus(`Selected mapped CW segment ${feature.properties.overlaySegmentName || segmentId}.`);
+  });
+
   map.on("click", "base-graph-edges-hit-layer", (event) => {
     if (state.mode !== "select" || !["base", "overlay"].includes(state.workspaceMode)) return;
+    if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
     state.suppressNextSegmentClick = true;
     window.setTimeout(() => {
       state.suppressNextSegmentClick = false;
@@ -5343,6 +5440,7 @@ function wireEvents() {
 
   map.on("click", "manual-base-edges-hit-layer", (event) => {
     if (state.mode !== "select") return;
+    if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
     const manualIndex = Number(event.features[0].properties.manualIndex);
     if (state.workspaceMode === "base") {
       selectManualBaseEdgeByIndex(manualIndex);
@@ -5364,6 +5462,16 @@ function wireEvents() {
   });
   map.on("mouseleave", "base-graph-edges-hit-layer", () => {
     if (state.mode === "select" && !state.draggingManualBaseVertex) {
+      map.getCanvas().style.cursor = "";
+    }
+  });
+  map.on("mouseenter", "cw-overlay-network-hit-layer", () => {
+    if (state.workspaceMode === "overlay" && state.mode === "select") {
+      map.getCanvas().style.cursor = "pointer";
+    }
+  });
+  map.on("mouseleave", "cw-overlay-network-hit-layer", () => {
+    if (state.workspaceMode === "overlay" && state.mode === "select") {
       map.getCanvas().style.cursor = "";
     }
   });
@@ -5661,6 +5769,12 @@ async function addMapLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  if (!map.getSource("cw-overlay-network")) {
+    map.addSource("cw-overlay-network", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
   if (!map.getSource("manual-base-edges")) {
     map.addSource("manual-base-edges", {
       type: "geojson",
@@ -5768,6 +5882,50 @@ async function addMapLayers() {
     });
   }
 
+  if (!map.getLayer("cw-overlay-network-layer")) {
+    map.addLayer({
+      id: "cw-overlay-network-layer",
+      type: "line",
+      source: "cw-overlay-network",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+        visibility: "none",
+      },
+      paint: {
+        "line-color": [
+          "match",
+          ["get", "roadType"],
+          "dirt",
+          "#ae9067",
+          "road",
+          "#8f2424",
+          "#0288d1",
+        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.8, 14, 5.4, 16, 7.4],
+        "line-opacity": 0.82,
+      },
+    });
+  }
+
+  if (!map.getLayer("cw-overlay-network-hit-layer")) {
+    map.addLayer({
+      id: "cw-overlay-network-hit-layer",
+      type: "line",
+      source: "cw-overlay-network",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+        visibility: "none",
+      },
+      paint: {
+        "line-color": "#000000",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 14, 14, 20, 16, 26],
+        "line-opacity": 0.01,
+      },
+    });
+  }
+
   if (!map.getLayer("selected-segment")) {
     map.addLayer({
       id: "selected-segment",
@@ -5797,10 +5955,15 @@ async function addMapLayers() {
       paint: {
         "line-color": ["case", ["==", ["get", "overlayHovered"], true], "#f97316", "#14b8a6"],
         "line-width": [
-          "case",
-          ["==", ["get", "overlayHovered"], true],
-          ["interpolate", ["linear"], ["zoom"], 10, 8, 14, 12, 16, 16],
-          ["interpolate", ["linear"], ["zoom"], 10, 5, 14, 8, 16, 11],
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          10,
+          ["case", ["==", ["get", "overlayHovered"], true], 8, 5],
+          14,
+          ["case", ["==", ["get", "overlayHovered"], true], 12, 8],
+          16,
+          ["case", ["==", ["get", "overlayHovered"], true], 16, 11],
         ],
         "line-opacity": ["case", ["==", ["get", "overlayHovered"], true], 1, 0.72],
       },

@@ -107,7 +107,7 @@ tokens:
     type: 0
     segment id: varint
 
-  external route point, future Phase 2:
+  external route point, reserved for a future provider path:
     type: 2
     lng: signed quantized integer
     lat: signed quantized integer
@@ -151,28 +151,26 @@ Phase 1 snap behavior:
 - The app stores and displays the snapped coordinate, so dragged points stay on
   the route network.
 - In Phase 1, "exact point" means the snapped point on the CycleWays line. Raw
-  off-network click connectors belong to Phase 2.
+  off-network click connectors need a later routing phase.
 
-## Phase 2 Decision
+## Phase 2 Direction Update
 
-When a waypoint is outside the CycleWays network threshold, route that leg with
-an external OSM-based routing engine.
+The original Phase 2 fallback idea was to route off-CycleWays legs through an
+external OSM routing provider. The current implementation branch takes a
+different preparation path first:
 
-CycleWays remains preferred:
+- build a static OSM/manual base graph for the target area
+- author CycleWays as reviewed base-edge overlay mappings
+- validate continuity and exclusive base-edge ownership before routing over the
+  new graph
 
-- if waypoint is near a CycleWays segment, snap to CycleWays
-- if not near CycleWays, create an external routed connector
-- when possible, rejoin CycleWays at the nearest useful network point
+The design and implementation record for that work is in
+`plans/osm-base-network-navigation/`.
 
-External legs should be visually distinct because they do not carry CycleWays
-metadata:
+This does not rule out an external provider later, but it is no longer the
+active next step for Phase 2.
 
-- dashed gray line
-- separate route summary row
-- no segment data markers, no quality score, no CycleWays warnings
-- GPX export includes their coordinates
-
-## Routing Engine Candidates
+## External Routing Engine Candidates
 
 Reasonable candidates:
 
@@ -183,10 +181,12 @@ Reasonable candidates:
 - BRouter: strong bicycle routing culture, useful for self-hosting or local
   experiments.
 
-For this project, GraphHopper is probably the easiest reference point because
-gpx.studio uses it and its product model is close to what we want.
+For this project, GraphHopper remains a useful reference point because
+gpx.studio uses it and its product model is close to what we want. It is not the
+active implementation direction while the internal OSM base graph is being
+prepared.
 
-## Mixed Route Model
+## Deferred External Mixed Route Model
 
 Internally, a route should become a list of legs:
 
@@ -210,7 +210,8 @@ Internally, a route should become a list of legs:
 ```
 
 For Phase 1 this structure can be implicit because every leg is `cycleways`.
-Phase 2 should make it explicit.
+Keep this model available if a future provider-backed mixed route path is
+implemented.
 
 ## UX Implications
 

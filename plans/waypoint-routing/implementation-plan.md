@@ -52,8 +52,9 @@ waypoints as the primary route-building primitive.
 
 ### Notes
 
-- Phase 1 rejects off-network points with a message. Phase 2 will replace this
-  rejection with external routing for off-network legs.
+- Phase 1 rejects off-network points with a message. A later routing phase over
+  the OSM/manual base graph should replace that rejection where the graph can
+  serve the point.
 - The branch-local `w=` format was replaced with versioned `route=` payloads
   before promotion.
 - The summary modal still lists the underlying route segments as route details,
@@ -84,7 +85,8 @@ splits better than `segmentId + offset`.
   - quantized coordinate anchors for clipped starts/ends and mid-route user
     points
   - full segment ID hint tokens for full CycleWays segments between anchors
-  - reserved external coordinate anchors for Phase 2
+  - reserved external coordinate anchors for a future provider-backed route
+    path
 - [x] Decode version 3 by restoring route points and using segment IDs as hints where
   they still exist.
 - [x] Add tests for:
@@ -106,9 +108,20 @@ splits better than `segmentId + offset`.
 - A route that includes a segment later split can still be reconstructed from
   coordinate anchors and current routing data.
 
-## Phase 2: External Routing Fallback
+## Phase 2: Internal OSM Base Network Preparation
 
-Status: planned.
+Status: implemented checkpoint on `codex/osm-network-integration`.
+
+The next implemented direction prepares a static OSM/manual base graph and a
+reviewed CycleWays overlay instead of immediately adding an external routing
+provider. See:
+
+- `plans/osm-base-network-navigation/design.md`
+- `plans/osm-base-network-navigation/implementation-plan.md`
+
+## Deferred Alternative: External Routing Fallback
+
+Status: deferred.
 
 ### Scope
 
