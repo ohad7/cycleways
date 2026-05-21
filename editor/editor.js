@@ -2290,14 +2290,6 @@ function overlayNetworkStatus(match) {
   const segmentId = Number(match?.segmentId);
   const mapping = overlayMappingForSegment(segmentId);
   const validation = validationForSegment(segmentId);
-  if (isBaseGraphStale()) {
-    return {
-      key: "base_graph_stale",
-      label: "Graph stale",
-      reason: "Manual base edges changed after the base graph was built",
-      resolved: false,
-    };
-  }
   const missingManualGraphEdges = missingManualGraphEdgeIdsForSegment(segmentId);
   if (missingManualGraphEdges.length > 0) {
     return {
@@ -2590,6 +2582,7 @@ function renderBaseOverlayReviewQueue() {
   }
 
   const validationIssues = [
+    isBaseGraphStale() ? "base graph needs recalculation" : null,
     validation.stale > 0 ? `${validation.stale} stale` : null,
     validation.disconnected > 0 ? `${validation.disconnected} disconnected saved` : null,
     validation.duplicateEdges > 0 ? `${validation.duplicateEdges} duplicate edge${validation.duplicateEdges === 1 ? "" : "s"}` : null,
@@ -5559,6 +5552,20 @@ function wireEvents() {
       if (event.code === "Space" && !event.repeat) {
         event.preventDefault();
         quickSnapEditSelectedSegment();
+        return;
+      }
+      if (
+        event.key.toLowerCase() === "d" &&
+        !event.repeat &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        state.workspaceMode === "segments" &&
+        selectedFeature() &&
+        state.selectedVertexIndex >= 0
+      ) {
+        event.preventDefault();
+        deleteSelectedVertex();
         return;
       }
       if (event.key === "Escape" && state.segmentsOpen) {

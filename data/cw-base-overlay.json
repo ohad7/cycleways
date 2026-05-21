@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-20T23:01:06.667Z",
+  "updatedAt": "2026-05-21T06:41:47.101Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -5712,10 +5712,10 @@
       "segmentId": 95,
       "segmentName": "שביל אופניים 99 דפנה",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.27,
+      "avgDistanceMeters": 0.28,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -5810,61 +5810,25 @@
           "osmWayId": 815936021
         },
         {
-          "edgeId": "e850531547_1",
+          "edgeId": "e626697749_1",
           "source": "osm",
           "direction": "reverse",
           "sequenceIndex": 10,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 850531547
+          "osmWayId": 626697749
         },
         {
-          "edgeId": "e850531548_1",
+          "edgeId": "e363859828_1",
           "source": "osm",
-          "direction": "reverse",
+          "direction": "forward",
           "sequenceIndex": 11,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 850531548
-        },
-        {
-          "edgeId": "e1024609348_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 12,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1024609348
-        },
-        {
-          "edgeId": "e1024609346_7",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 13,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1024609346
-        },
-        {
-          "edgeId": "e1036770657_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 14,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1036770657
-        },
-        {
-          "edgeId": "e73965591_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 15,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 73965591
+          "osmWayId": 363859828
         }
       ],
-      "updatedAt": "2026-05-20T22:41:00.353Z"
+      "updatedAt": "2026-05-21T06:38:25.408Z"
     },
     "96": {
       "segmentId": 96,
@@ -5920,10 +5884,10 @@
       "segmentId": 97,
       "segmentName": "שביל אופניים 99 כפר יובל",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 1.23,
+      "avgDistanceMeters": 0.66,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -5937,7 +5901,7 @@
           "osmWayId": 139983381
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.494Z"
+      "updatedAt": "2026-05-21T06:41:47.096Z"
     },
     "98": {
       "segmentId": 98,
@@ -17075,6 +17039,110 @@
         }
       ],
       "updatedAt": "2026-05-20T22:59:21.934Z"
+    },
+    "300": {
+      "segmentId": 300,
+      "segmentName": "צומת חורשת טל",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.16,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e626697750_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 626697750
+        },
+        {
+          "edgeId": "e1024609349_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024609349
+        },
+        {
+          "edgeId": "e850531543_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 850531543
+        },
+        {
+          "edgeId": "e850531543_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 850531543
+        },
+        {
+          "edgeId": "e1024609346_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024609346
+        },
+        {
+          "edgeId": "e1024609346_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024609346
+        },
+        {
+          "edgeId": "manual-95-mpf3njl3",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-95-mpf3njl3"
+        },
+        {
+          "edgeId": "e1024609346_8",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024609346
+        },
+        {
+          "edgeId": "e1036770657_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 8,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1036770657
+        },
+        {
+          "edgeId": "e73965591_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 9,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 73965591
+        }
+      ],
+      "updatedAt": "2026-05-21T06:38:27.438Z"
     }
   }
 }

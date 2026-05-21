@@ -2841,6 +2841,42 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-95-mpf3njl3",
+      "properties": {
+        "id": "manual-95-mpf3njl3",
+        "manualEdgeId": "manual-95-mpf3njl3",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-05-21T06:18:18.471Z",
+        "updatedAt": "2026-05-21T06:18:18.471Z",
+        "linkedSegmentId": 95,
+        "linkedSegmentName": "שביל אופניים 99 דפנה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.631413,
+            33.224105
+          ],
+          [
+            35.631404,
+            33.224058
+          ],
+          [
+            35.631406,
+            33.224023
+          ],
+          [
+            35.631416,
+            33.223981
+          ]
+        ]
+      }
     }
   ]
 }
