@@ -21,7 +21,12 @@ const directories = ["attached_assets", "exports", "icons"];
 const manifestPath = resolve(repoRoot, "map-manifest.json");
 if (existsSync(manifestPath)) {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  for (const filePath of [manifest.bikeRoads, manifest.segments, manifest.kml]) {
+  for (const filePath of [
+    manifest.bikeRoads,
+    manifest.segments,
+    manifest.kml,
+    manifest.baseRoutingNetwork,
+  ]) {
     if (filePath) {
       files.add(filePath);
     }
@@ -31,6 +36,7 @@ if (existsSync(manifestPath)) {
     manifest.stable?.bikeRoads,
     manifest.stable?.segments,
     manifest.stable?.kml,
+    manifest.stable?.baseRoutingNetwork,
   ]) {
     if (filePath && existsSync(resolve(repoRoot, filePath))) {
       files.add(filePath);

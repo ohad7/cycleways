@@ -48,6 +48,146 @@ Including car roads in the base graph is intentional. A road may be unsafe or
 undesirable for cycling, but it still has to exist in the map if routing needs
 to reason about reachability, fallback paths, or penalties later.
 
+## Public CycleWays Display Geometry
+
+The public map should continue to show the CycleWays network, not the full base
+graph. Once a CycleWays segment has an accepted overlay mapping, however, the
+line that represents that segment should be assembled from the mapped base
+edges instead of continuing to draw the older source geometry.
+
+That keeps three public surfaces aligned:
+
+- the CycleWays line the rider sees
+- the hidden base edge used when a waypoint snaps near that line
+- the base edge sequence preferred by graph routing
+
+The source CycleWays geometry remains valuable. It is still the editable
+authoring shape in Segments mode, a matching input when the overlay needs to be
+recalculated, and a fallback while segments are still unresolved. It is no
+longer the preferred promoted display shape for an accepted overlay segment.
+
+The display shape is derived during Build, not in the browser. Build already
+has the reviewed overlay and current base graph required to validate edge
+references, edge direction, continuity, and exclusive ownership. The browser
+should keep loading a simple CycleWays GeoJSON feature collection whose segment
+properties match the existing public UI.
+
+During migration:
+
+- accepted active overlay mappings produce public feature geometry from ordered
+  base edges
+- unresolved active segments retain their processed source feature geometry so
+  editor review can continue without making public Build impossible
+- accepted display geometry uses base-edge longitude/latitude and drapes
+  processed source elevation onto that path so current segment detail surfaces
+  do not lose elevation immediately
+- source-derived segment metadata and elevation metrics stay source-based until
+  route elevation is deliberately moved onto graph-derived geometry
+- KML export stays source-derived for this slice; the first consumer of derived
+  display geometry is the public `bike_roads` GeoJSON
+
+The long-term data model remains stricter: a promoted CycleWays segment should
+eventually be a metadata record over accepted base edges, and public output
+should not need a geometry fallback once the overlay review process covers all
+active segments.
+
+## Base Graph Elevation Study
+
+Elevation should move onto the base graph before route elevation, public
+elevation profiles, or later climb-aware routing treat the graph as
+authoritative. Existing OSM/manual edge coordinates describe line shape, not a
+sampling guarantee. The current graph therefore needs a measured sampling
+policy before an elevated graph artifact is promoted.
+
+The first elevation step is a lab stage, not a public build migration:
+
+- report graph-wide sample occurrence counts for candidate spacings
+- preview selected edges at those spacings
+- optionally query preview samples from the local elevation service in batches
+  with a dedicated cache
+- simplify distance-along-edge versus elevation profiles with configurable
+  vertical error and retained-gap bounds
+- compare profile retention and gain/loss behavior before choosing the final
+  graph elevation contract
+
+This stage keeps two inputs separate:
+
+- base edge longitude/latitude shape from OSM/manual graph generation
+- elevation samples collected along that shape at a chosen spacing policy
+
+The likely elevated graph artifact will preserve base graph node and edge ids,
+add elevation to the authoritative graph coordinates/profile, and record the
+source graph digest. The lab exists to decide whether existing geometry,
+densified coordinates, or a compact sampled profile should carry that elevation
+data.
+
+The first buildable elevation artifact uses the compact profile option:
+
+- the 2D OSM/manual graph topology and edge coordinates stay unchanged
+- every edge is sampled along that geometry at the current `10m` working policy
+- each complete edge stores an offset/elevation profile as
+  `[offsetMeters, elevationMeters]` pairs after vertical-error simplification
+- gain, loss, and net change metrics are derived from the unsimplified sampled
+  profile, so inspection can compare compact storage with acquisition quality
+- build metadata records the source 2D graph digest and profile policy
+- a separate report exposes coverage, cache/fetch counters, retained profile
+  size, missing edge examples, graph-wide metric distributions, and sustained
+  grade diagnostics over fixed distance windows
+
+This artifact is still a validation input, not the public routing asset. Grade
+penalties and public elevation profile migration remain blocked on a deliberate
+smoothing and routing-grade policy. The first report diagnostics keep adjacent
+sample grade spikes visible, but compare them with fixed `25m`, `50m`, and
+`100m` grade windows so the routing metric can be chosen from real data.
+
+The first full current-graph build covered all `48,352` OSM/manual edges. At
+`10m` acquisition spacing it sampled `1,249,789` edge-coordinate occurrences
+and retained `639,136` compact profile points. The grade diagnostics confirmed
+that adjacent sampled-point grade is not suitable for routing as-is: its p95
+edge maximum is `3.849` grade ratio and the worst edge spike is `446.8085`.
+Fixed distance windows reduce those spikes materially, which is why the next
+policy decision should choose a sustained-grade or smoothed profile basis before
+grade affects path cost.
+
+The next diagnostics compare three routing-policy candidates without choosing a
+path cost yet:
+
+- average absolute edge net grade, which is stable and cheap but can hide a
+  short steep part inside a long edge
+- sampled gain/loss per edge distance, which can express climb work but still
+  needs a noise policy
+- fixed `25m`, `50m`, and `100m` sustained windows stitched across base graph
+  chains only where a degree-2 node makes the continuation unambiguous
+
+Stitching is intentionally conservative. At junctions the useful sustained
+window depends on the eventual routed path, so diagnostics should not invent a
+preferred continuation before the router exists.
+
+On the current graph, conservative degree-2 stitching does not materially
+change the fixed-window distributions. It forms `45,511` chains from `48,352`
+edges, with one edge at the median and two edges at p95. That means a
+precomputed sustained-grade penalty cannot rely on degree-2 stitching to solve
+short graph edges. A path-aware sustained-grade metric should be computed after
+route assembly, while the routing cost starts from directional edge metrics that
+remain meaningful at junctions.
+
+The first runtime elevation cost uses that narrower contract:
+
+- Build reads the elevated base graph and validates its recorded 2D source
+  digest against the current generated base graph
+- the public base-routing asset carries only edge endpoint elevation and net
+  edge elevation change, not the compact graph elevation profile
+- each traversal uses directional net climb, so reversing an edge reverses the
+  uphill cost input
+- partial start/end edge traversals scale the edge net change by traversed edge
+  fraction
+- the cost model adds an uphill-only `8` weighted meters per meter of net climb
+  on top of the existing CycleWays and road-class distance weighting
+
+This deliberately does not reward descent or apply local grade spikes. It is a
+first inspectable routing preference from stable directional edge data while
+route elevation profiles and path-aware sustained grade stay separate.
+
 ## Scope Of This Phase
 
 This branch prepares authoring data and graph artifacts. It does not yet replace

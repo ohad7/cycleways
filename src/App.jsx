@@ -287,6 +287,7 @@ function App() {
           window.RouteManager,
           state.assets.geoJsonData,
           state.assets.segmentsData,
+          state.assets.baseRoutingNetworkData,
         );
         if (disposed) return;
 
@@ -439,13 +440,19 @@ function App() {
         dispatchRoute({
           type: "route/error",
           error: new Error(
-            "הנקודה רחוקה מדי מרשת CycleWays. בחרו נקודה ליד שביל מסומן.",
+            "הנקודה רחוקה מדי מרשת הדרכים. בחרו נקודה ליד דרך או שביל.",
           ),
         });
         return;
       }
 
       commitRouteSnapshot(snapshot);
+      if (snapshot.routeFailure) {
+        dispatchRoute({
+          type: "route/error",
+          error: new Error("לא נמצא חיבור ברשת הדרכים בין הנקודות שנבחרו."),
+        });
+      }
       trackRoutePointEvent(snapshot.points, snapshot.selectedSegments, "click");
     } catch (error) {
       dispatchRoute({ type: "route/error", error });
@@ -1398,7 +1405,17 @@ function buildElevationProfile(geometry) {
     elevation: Number(point.elevation ?? point.ele ?? point.altitude),
   }));
 
-  if (routeWithElevation.length < 2) return null;
+  if (
+    routeWithElevation.length < 2 ||
+    routeWithElevation.some(
+      (point) =>
+        !Number.isFinite(point.lat) ||
+        !Number.isFinite(point.lng) ||
+        !Number.isFinite(point.elevation),
+    )
+  ) {
+    return null;
+  }
 
   const smoothedRouteCoords = smoothElevations(routeWithElevation, 100);
   const totalDistance = smoothedRouteCoords.reduce((total, coord, index) => {

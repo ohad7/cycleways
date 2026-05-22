@@ -5,6 +5,7 @@ It edits the source file directly and then runs the processing pipeline to gener
 
 - `build/bike_roads.geojson`
 - `build/segments.json`
+- `build/base-routing-network.json`
 - `build/map.kml`
 - `build/report.json`
 - `build/map-manifest.json`
@@ -16,9 +17,11 @@ current site:
 - `build/map-manifest.json` -> `map-manifest.json`
 - `build/bike_roads.<version>.geojson` -> `bike_roads.<version>.geojson`
 - `build/segments.<version>.json` -> `segments.<version>.json`
+- `build/base-routing-network.<version>.json` -> `base-routing-network.<version>.json`
 - `build/map.<version>.kml` -> `exports/map.<version>.kml`
 - `build/bike_roads.geojson` -> `bike_roads_v18.geojson`
 - `build/segments.json` -> `segments.json`
+- `build/base-routing-network.json` -> `base-routing-network.json`
 - `build/map.kml` -> `exports/map.kml`
 
 Promote also removes older `bike_roads.<version>.geojson`,
@@ -115,6 +118,21 @@ when the local elevation service is running and the generated artifacts should i
 fresh elevation data. Full builds fail when elevation lookups fail, and Promote
 requires a full build with zero elevation failures, so skipped-elevation builds stay
 preview-only.
+
+Build also produces the promoted public base-routing asset from the current
+elevated OSM/manual graph and accepted CW base overlay. If manual base edges
+have changed, run Recalculate Graph + Matches and then run
+`npm run osm:elevation` before Build. Build blocks stale elevated source
+digests and invalid accepted overlay refs so Promote cannot publish a routing
+bundle that no longer matches the base graph.
+
+Build uses accepted overlay edge refs for promoted public CycleWays display
+geometry too. Accepted segments in `bike_roads` are drawn from their ordered,
+directed base edges so the line riders see matches the hidden routing graph.
+Build drapes processed source elevation onto that base-edge display path for the
+current public segment details. Unresolved segments keep their processed source
+geometry as a migration fallback; Segments mode remains the source geometry
+editor.
 
 The public site loads `map-manifest.json` with `cache: "no-store"` and then loads
 the versioned files listed in that manifest. If the manifest is missing, the site

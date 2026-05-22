@@ -35,19 +35,23 @@ export async function loadMapManifest(options = {}) {
 
 export async function loadMapAssets(options = {}) {
   const manifest = await loadMapManifest(options);
-  const [segmentsData, geoJsonData] = await Promise.all([
+  const [segmentsData, geoJsonData, baseRoutingNetworkData] = await Promise.all([
     fetchJsonAsset(manifest.segments, options),
     fetchJsonAsset(manifest.bikeRoads, options),
+    manifest.baseRoutingNetwork
+      ? fetchJsonAsset(manifest.baseRoutingNetwork, options)
+      : Promise.resolve(null),
   ]);
 
   return {
     manifest,
     segmentsData,
     geoJsonData,
+    baseRoutingNetworkData,
   };
 }
 
-export function summarizeMapAssets({ manifest, segmentsData, geoJsonData }) {
+export function summarizeMapAssets({ manifest, segmentsData, geoJsonData, baseRoutingNetworkData }) {
   const features = geoJsonData?.features || [];
   const coordinateCount = features.reduce((total, feature) => {
     const coordinates = feature?.geometry?.coordinates;
@@ -62,5 +66,7 @@ export function summarizeMapAssets({ manifest, segmentsData, geoJsonData }) {
     featureCount: features.length,
     coordinateCount,
     segmentCount: Object.keys(segmentsData || {}).length,
+    baseRoutingFile: manifest.baseRoutingNetwork || null,
+    baseRoutingEdges: baseRoutingNetworkData?.edges?.length || 0,
   };
 }

@@ -6,6 +6,7 @@ node_modules/
 .vite/
 dist/
 processing/cache/elevation_cache.json
+processing/cache/base_graph_elevation_sampling_cache.json
 build/
 mapbox-token.js
 playwright-report/

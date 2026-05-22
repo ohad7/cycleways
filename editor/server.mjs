@@ -15,11 +15,14 @@ const tokenPath = resolve(repoRoot, "mapbox-token.js");
 const buildDir = resolve(repoRoot, "build");
 const dataDir = resolve(repoRoot, "data");
 const osmBuildDir = resolve(buildDir, "osm");
+const osmBaseGraphPath = resolve(osmBuildDir, "osm-base-graph.json");
+const osmElevatedBaseGraphPath = resolve(osmBuildDir, "osm-base-graph-elevated.json");
 const reportPath = resolve(buildDir, "report.json");
 const buildManifestPath = resolve(buildDir, "map-manifest.json");
 const buildGeojsonPath = resolve(buildDir, "bike_roads.geojson");
 const buildSegmentsPath = resolve(buildDir, "segments.json");
 const buildKmlPath = resolve(buildDir, "map.kml");
+const buildBaseRoutingPath = resolve(buildDir, "base-routing-network.json");
 const osmGraphEdgesPath = resolve(osmBuildDir, "osm-base-edges.geojson");
 const osmMatchSummaryPath = resolve(osmBuildDir, "cw-osm-match-summary.json");
 const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson");
@@ -29,6 +32,7 @@ const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const promotedGeojsonPath = resolve(repoRoot, "bike_roads_v18.geojson");
 const promotedSegmentsPath = resolve(repoRoot, "segments.json");
 const promotedKmlPath = resolve(repoRoot, "exports/map.kml");
+const promotedBaseRoutingPath = resolve(repoRoot, "base-routing-network.json");
 const promotedManifestPath = resolve(repoRoot, "map-manifest.json");
 const port = Number(process.env.EDITOR_PORT || 8899);
 const devReloadEnabled = process.env.EDITOR_CLIENT_RELOAD === "1";
@@ -165,6 +169,12 @@ function summarizeReport(report) {
     topology: {
       components: topology.connectedComponents,
       orphanEndpoints: topology.orphanEndpointCount,
+    },
+    baseRouting: {
+      nodes: validation.baseRouting?.graphNodes,
+      edges: validation.baseRouting?.graphEdges,
+      cyclewaysEdges: validation.baseRouting?.cyclewaysEdges,
+      unresolvedSegments: validation.baseRouting?.unresolvedSegments,
     },
   };
 }
@@ -1097,10 +1107,12 @@ async function cleanupOldVersionedArtifacts(manifest, promoteId, dryRun) {
     resolveManifestPath(repoRoot, manifest.bikeRoads),
     resolveManifestPath(repoRoot, manifest.segments),
     resolveManifestPath(repoRoot, manifest.kml),
+    resolveManifestPath(repoRoot, manifest.baseRoutingNetwork),
   ]);
   const candidates = [
     ...(await existingVersionedFiles(repoRoot, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
     ...(await existingVersionedFiles(repoRoot, /^segments\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(repoRoot, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(resolve(repoRoot, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
   ].filter((path) => !keep.has(path));
 
@@ -1133,6 +1145,20 @@ async function handlePromote(payload = {}) {
     throw new Error("Build is stale. Run Build after saving the source, then promote.");
   }
 
+  for (const routingInput of [
+    osmBaseGraphPath,
+    osmElevatedBaseGraphPath,
+    cwBaseOverlayPath,
+    manualBaseEdgesPath,
+  ]) {
+    const routingInputStat = await stat(routingInput);
+    if (reportStat.mtimeMs + 1000 < routingInputStat.mtimeMs) {
+      throw new Error(
+        `Build is stale. ${repoRelative(routingInput)} changed after Build. Rebuild before promoting.`,
+      );
+    }
+  }
+
   if (report.elevation?.skipElevation && !payload.allowSkippedElevation) {
     throw new Error("Promote requires a full build. Uncheck skip elevation, run Build, then promote.");
   }
@@ -1146,6 +1172,9 @@ async function handlePromote(payload = {}) {
   const blockers = validationBlockers(report);
   if (blockers.length > 0) {
     throw new Error(`Promote blocked by validation: ${blockers.join(", ")}`);
+  }
+  if (!manifest.baseRoutingNetwork) {
+    throw new Error("Promote requires a versioned base routing network in the build manifest.");
   }
 
   log("info", `promote#${promoteId} checks passed`, {
@@ -1175,6 +1204,11 @@ async function handlePromote(payload = {}) {
       target: resolveManifestPath(repoRoot, manifest.kml),
     },
     {
+      label: "versioned base routing network",
+      source: resolveManifestPath(buildDir, manifest.baseRoutingNetwork),
+      target: resolveManifestPath(repoRoot, manifest.baseRoutingNetwork),
+    },
+    {
       label: "site geojson",
       source: buildGeojsonPath,
       target: promotedGeojsonPath,
@@ -1188,6 +1222,11 @@ async function handlePromote(payload = {}) {
       label: "kml export",
       source: buildKmlPath,
       target: promotedKmlPath,
+    },
+    {
+      label: "site base routing network",
+      source: buildBaseRoutingPath,
+      target: promotedBaseRoutingPath,
     },
   ];
 

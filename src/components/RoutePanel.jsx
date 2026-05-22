@@ -82,7 +82,7 @@ function RoutePanel({
           <dd>{routeState.points.length}</dd>
         </div>
         <div>
-          <dt>מקטעים</dt>
+          <dt>מקטעי CW</dt>
           <dd>{routeState.selectedSegments.length}</dd>
         </div>
         <div>
@@ -104,7 +104,7 @@ function RoutePanel({
 
 export function getRouteMessage(routeState) {
   if (routeState.points.length === 0) {
-    return "לחץ על נקודות במפה ליד שבילי CycleWays כדי לבנות מסלול.";
+    return "לחץ על נקודות במפה ליד דרך או שביל כדי לבנות מסלול.";
   }
 
   if (routeState.points.length === 1) {
@@ -112,7 +112,7 @@ export function getRouteMessage(routeState) {
   }
 
   if (routeState.geometry.length < 2) {
-    return "לא הצלחנו ליצור מסלול בין הנקודות האלה על רשת CycleWays.";
+    return "לא הצלחנו ליצור מסלול בין הנקודות האלה על רשת הדרכים.";
   }
 
   return `מרחק: ${formatDistance(routeState.distance)} • ↑ ${Math.round(

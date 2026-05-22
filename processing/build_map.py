@@ -56,6 +56,7 @@ ROAD_TYPE_STYLES = {
 QUALITY_KEYS = ("overall", "safety", "comfort", "scenery")
 SITE_GEOJSON_COORDINATE_DECIMALS = 6
 SITE_GEOJSON_ELEVATION_DECIMALS = 1
+ROUTING_EDGE_CONTINUITY_GAP_M = 12.0
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -1348,23 +1349,615 @@ def validate_outputs(
     }
 
 
+def active_segment_ids(segments_data: dict[str, Any]) -> set[int]:
+    ids: set[int] = set()
+    for data in segments_data.values():
+        if not isinstance(data, dict) or not isinstance(data.get("id"), int):
+            continue
+        status = data.get("status", "active")
+        if data.get("deprecated") or status in {"deprecated", "draft", "legacy"}:
+            continue
+        ids.add(data["id"])
+    return ids
+
+
+def compact_routing_coordinate(coord: Any) -> list[float] | None:
+    if not isinstance(coord, list) or len(coord) < 2:
+        return None
+    if not isinstance(coord[0], (int, float)) or not isinstance(coord[1], (int, float)):
+        return None
+    return [
+        rounded_number(coord[0], SITE_GEOJSON_COORDINATE_DECIMALS),
+        rounded_number(coord[1], SITE_GEOJSON_COORDINATE_DECIMALS),
+    ]
+
+
+def sorted_overlay_edge_refs(mapping: dict[str, Any]) -> list[dict[str, Any]]:
+    edge_refs = [ref for ref in mapping.get("edgeRefs", []) if isinstance(ref, dict)]
+    return sorted(
+        edge_refs,
+        key=lambda ref: (
+            ref.get("sequenceIndex")
+            if isinstance(ref.get("sequenceIndex"), int)
+            else len(edge_refs),
+            str(ref.get("edgeId") or ""),
+        ),
+    )
+
+
+def oriented_routing_edge_nodes(edge: dict[str, Any], direction: str | None) -> tuple[str | None, str | None]:
+    from_node_id = edge.get("fromNodeId")
+    to_node_id = edge.get("toNodeId")
+    if not isinstance(from_node_id, str) or not isinstance(to_node_id, str):
+        return None, None
+    if direction == "reverse":
+        return to_node_id, from_node_id
+    return from_node_id, to_node_id
+
+
+def oriented_routing_edge_endpoints(
+    edge: dict[str, Any],
+    direction: str | None,
+) -> tuple[list[float] | None, list[float] | None]:
+    coordinates = [
+        coord
+        for coord in (
+            compact_routing_coordinate(coord)
+            for coord in edge.get("coordinates", [])
+        )
+        if coord is not None
+    ]
+    if len(coordinates) < 2:
+        return None, None
+    if direction == "reverse":
+        return coordinates[-1], coordinates[0]
+    return coordinates[0], coordinates[-1]
+
+
+def routing_coordinate_distance_m(coord_a: list[float], coord_b: list[float]) -> float:
+    return haversine((coord_a[1], coord_a[0]), (coord_b[1], coord_b[0]))
+
+
+def ensure_current_routing_graph(
+    graph_path: Path,
+    manual_base_edges_path: Path,
+    base_graph_path: Path | None = None,
+) -> None:
+    if not graph_path.exists():
+        raise FileNotFoundError(f"Base routing graph not found: {graph_path}")
+    if manual_base_edges_path.exists():
+        graph_mtime = graph_path.stat().st_mtime
+        manual_mtime = manual_base_edges_path.stat().st_mtime
+        if graph_mtime + 1 < manual_mtime:
+            raise ValueError(
+                "Base routing graph is stale relative to manual base edges. "
+                "Recalculate Graph + Matches before building."
+            )
+    if base_graph_path and graph_path.resolve() != base_graph_path.resolve():
+        if not base_graph_path.exists():
+            raise FileNotFoundError(f"Base routing source graph not found: {base_graph_path}")
+
+
+def validate_elevated_routing_graph_source(
+    graph: dict[str, Any],
+    graph_path: Path,
+    base_graph_path: Path | None,
+) -> bool:
+    if not base_graph_path or graph_path.resolve() == base_graph_path.resolve():
+        return False
+    elevation_metadata = ((graph.get("metadata") or {}).get("elevation") or {})
+    source_digest = elevation_metadata.get("sourceGraphDigest")
+    if not isinstance(source_digest, str):
+        raise ValueError(
+            "Elevated base routing graph is missing its source graph digest. "
+            "Run `npm run osm:elevation` before Build."
+        )
+    if source_digest != file_digest(base_graph_path):
+        raise ValueError(
+            "Elevated base routing graph is stale relative to the current 2D "
+            "base graph. Run `npm run osm:elevation` before Build."
+        )
+    return True
+
+
+def compact_routing_elevation(edge: dict[str, Any]) -> dict[str, Any] | None:
+    elevation = edge.get("elevation")
+    if not isinstance(elevation, dict) or elevation.get("status") != "ready":
+        return None
+    profile = elevation.get("profile")
+    if not isinstance(profile, list) or len(profile) < 2:
+        return None
+    from_elevation = profile[0][1] if isinstance(profile[0], list) and len(profile[0]) >= 2 else None
+    to_elevation = profile[-1][1] if isinstance(profile[-1], list) and len(profile[-1]) >= 2 else None
+    if not isinstance(from_elevation, (int, float)) or not isinstance(to_elevation, (int, float)):
+        return None
+    return {
+        "fromMeters": rounded_number(from_elevation, 1),
+        "toMeters": rounded_number(to_elevation, 1),
+        "netMeters": rounded_number(float(to_elevation) - float(from_elevation), 1),
+    }
+
+
+def build_base_routing_asset(
+    graph_path: Path,
+    overlay_path: Path,
+    manual_base_edges_path: Path,
+    segments_data: dict[str, Any],
+    base_graph_path: Path | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    ensure_current_routing_graph(graph_path, manual_base_edges_path, base_graph_path)
+    if not overlay_path.exists():
+        raise FileNotFoundError(f"CW base overlay not found: {overlay_path}")
+
+    graph = load_json(graph_path, {})
+    elevated_graph_required = validate_elevated_routing_graph_source(
+        graph,
+        graph_path,
+        base_graph_path,
+    )
+    overlay = load_json(overlay_path, {})
+    graph_edges = [
+        edge
+        for edge in graph.get("edges", [])
+        if isinstance(edge, dict)
+        and isinstance(edge.get("id"), str)
+        and isinstance(edge.get("fromNodeId"), str)
+        and isinstance(edge.get("toNodeId"), str)
+    ]
+    graph_nodes = [
+        node
+        for node in graph.get("nodes", [])
+        if isinstance(node, dict) and isinstance(node.get("id"), str)
+    ]
+    if not graph_edges or not graph_nodes:
+        raise ValueError(f"Base routing graph has no routable nodes or edges: {graph_path}")
+
+    edges_by_id = {edge["id"]: edge for edge in graph_edges}
+    active_ids = active_segment_ids(segments_data)
+    accepted_mappings = [
+        mapping
+        for mapping in (overlay.get("segments") or {}).values()
+        if (
+            isinstance(mapping, dict)
+            and mapping.get("status") == "accepted_auto_match"
+            and mapping.get("segmentId") in active_ids
+        )
+    ]
+    accepted_mappings.sort(key=lambda mapping: int(mapping.get("segmentId") or 0))
+
+    blockers: list[dict[str, Any]] = []
+    owners_by_edge_id: dict[str, list[int]] = defaultdict(list)
+    accepted_segment_ids: set[int] = set()
+
+    for mapping in accepted_mappings:
+        segment_id = mapping.get("segmentId")
+        if not isinstance(segment_id, int):
+            blockers.append({"issue": "accepted mapping is missing integer segmentId"})
+            continue
+        accepted_segment_ids.add(segment_id)
+        edge_refs = sorted_overlay_edge_refs(mapping)
+        previous_end_coord = None
+        previous_edge_id = None
+        if not edge_refs:
+            blockers.append(
+                {
+                    "segmentId": segment_id,
+                    "issue": "accepted mapping has no edge refs",
+                }
+            )
+            continue
+
+        for ref_index, edge_ref in enumerate(edge_refs):
+            edge_id = edge_ref.get("edgeId")
+            if not isinstance(edge_id, str) or edge_id not in edges_by_id:
+                blockers.append(
+                    {
+                        "segmentId": segment_id,
+                        "edgeId": edge_id,
+                        "issue": "accepted overlay edge ref does not resolve",
+                    }
+                )
+                previous_end_coord = None
+                previous_edge_id = edge_id
+                continue
+
+            owners_by_edge_id[edge_id].append(segment_id)
+            edge_start_node, edge_end_node = oriented_routing_edge_nodes(
+                edges_by_id[edge_id],
+                edge_ref.get("direction"),
+            )
+            if not edge_start_node or not edge_end_node:
+                blockers.append(
+                    {
+                        "segmentId": segment_id,
+                        "edgeId": edge_id,
+                        "issue": "accepted edge ref has invalid graph topology",
+                    }
+                )
+                continue
+            edge_start_coord, edge_end_coord = oriented_routing_edge_endpoints(
+                edges_by_id[edge_id],
+                edge_ref.get("direction"),
+            )
+            if not edge_start_coord or not edge_end_coord:
+                blockers.append(
+                    {
+                        "segmentId": segment_id,
+                        "edgeId": edge_id,
+                        "issue": "accepted edge ref has invalid coordinates",
+                    }
+                )
+                continue
+            if (
+                ref_index > 0
+                and previous_end_coord
+                and routing_coordinate_distance_m(previous_end_coord, edge_start_coord)
+                > ROUTING_EDGE_CONTINUITY_GAP_M
+            ):
+                blockers.append(
+                    {
+                        "segmentId": segment_id,
+                        "fromEdgeId": previous_edge_id,
+                        "toEdgeId": edge_id,
+                        "issue": "accepted overlay edge sequence is disconnected",
+                    }
+                )
+            previous_end_coord = edge_end_coord
+            previous_edge_id = edge_id
+
+    duplicate_edges = [
+        {"edgeId": edge_id, "segmentIds": sorted(set(segment_ids))}
+        for edge_id, segment_ids in sorted(owners_by_edge_id.items())
+        if len(set(segment_ids)) > 1
+    ]
+    for duplicate in duplicate_edges:
+        blockers.append(
+            {
+                **duplicate,
+                "issue": "base edge is owned by more than one accepted CW segment",
+            }
+        )
+
+    if blockers:
+        examples = "; ".join(
+            json.dumps(blocker, ensure_ascii=False, separators=(",", ":"))
+            for blocker in blockers[:5]
+        )
+        raise ValueError(f"Base routing overlay validation failed: {examples}")
+
+    runtime_nodes = []
+    for node in graph_nodes:
+        coord = compact_routing_coordinate(node.get("coord"))
+        if coord is None:
+            continue
+        runtime_nodes.append({"id": node["id"], "coord": coord})
+
+    runtime_edges = []
+    missing_runtime_elevation_edge_ids = []
+    for edge in graph_edges:
+        coordinates = [
+            coord
+            for coord in (
+                compact_routing_coordinate(coord)
+                for coord in edge.get("coordinates", [])
+            )
+            if coord is not None
+        ]
+        if len(coordinates) < 2:
+            continue
+        tags = edge.get("tags") if isinstance(edge.get("tags"), dict) else {}
+        runtime_edge = {
+            "id": edge["id"],
+            "from": edge["fromNodeId"],
+            "to": edge["toNodeId"],
+            "distanceMeters": rounded_number(edge.get("distanceMeters", 0), 1),
+            "coordinates": coordinates,
+            "source": edge.get("source") or "osm",
+            "routeClass": tags.get("osmRouteClass") or ("manual" if edge.get("source") == "manual" else "other"),
+            "highway": tags.get("highway"),
+            "accessStatus": tags.get("accessStatus"),
+            "roadType": tags.get("roadType"),
+            "cwSegmentIds": sorted(set(owners_by_edge_id.get(edge["id"], []))),
+        }
+        runtime_elevation = compact_routing_elevation(edge)
+        if runtime_elevation:
+            runtime_edge["elevation"] = runtime_elevation
+        elif elevated_graph_required:
+            missing_runtime_elevation_edge_ids.append(edge["id"])
+        runtime_edges.append(runtime_edge)
+
+    if missing_runtime_elevation_edge_ids:
+        raise ValueError(
+            "Elevated base routing graph has edges without ready endpoint "
+            f"elevation: {missing_runtime_elevation_edge_ids[:10]}"
+        )
+
+    if not runtime_nodes or not runtime_edges:
+        raise ValueError("Base routing asset would have no runtime nodes or edges")
+
+    unresolved_segment_ids = sorted(active_ids - accepted_segment_ids)
+    validation = {
+        "graphNodes": len(runtime_nodes),
+        "graphEdges": len(runtime_edges),
+        "acceptedMappings": len(accepted_segment_ids),
+        "cyclewaysEdges": sum(1 for edge in runtime_edges if edge["cwSegmentIds"]),
+        "elevationEdges": sum(1 for edge in runtime_edges if edge.get("elevation")),
+        "unresolvedSegmentIds": unresolved_segment_ids,
+        "unresolvedSegments": len(unresolved_segment_ids),
+        "duplicateAcceptedEdges": len(duplicate_edges),
+        "blockers": [],
+    }
+    asset = {
+        "schemaVersion": 2,
+        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "nodes": runtime_nodes,
+        "edges": runtime_edges,
+        "summary": {
+            "nodes": len(runtime_nodes),
+            "edges": len(runtime_edges),
+            "cyclewaysEdges": validation["cyclewaysEdges"],
+            "elevationEdges": validation["elevationEdges"],
+            "acceptedMappings": validation["acceptedMappings"],
+            "unresolvedSegments": validation["unresolvedSegments"],
+        },
+    }
+    return asset, validation
+
+
+def public_feature_segment_id(
+    feature: dict[str, Any],
+    segments_data: dict[str, Any],
+) -> int | None:
+    properties = feature.get("properties")
+    if not isinstance(properties, dict):
+        return None
+
+    segment_id = properties.get("id")
+    if isinstance(segment_id, int) and not isinstance(segment_id, bool):
+        return segment_id
+
+    segment_name = properties.get("name")
+    segment_data = segments_data.get(segment_name) if isinstance(segment_name, str) else None
+    metadata_id = segment_data.get("id") if isinstance(segment_data, dict) else None
+    if isinstance(metadata_id, int) and not isinstance(metadata_id, bool):
+        return metadata_id
+    return None
+
+
+def oriented_public_edge_coordinates(
+    edge: dict[str, Any],
+    direction: str | None,
+) -> list[list[float]]:
+    coordinates = [
+        coord
+        for coord in (
+            compact_routing_coordinate(coord)
+            for coord in edge.get("coordinates", [])
+        )
+        if coord is not None
+    ]
+    return list(reversed(coordinates)) if direction == "reverse" else coordinates
+
+
+def append_public_edge_coordinates(
+    assembled_coordinates: list[list[float]],
+    edge_coordinates: list[list[float]],
+) -> None:
+    if not edge_coordinates:
+        return
+    start_index = 0
+    if assembled_coordinates and assembled_coordinates[-1] == edge_coordinates[0]:
+        start_index = 1
+    assembled_coordinates.extend(edge_coordinates[start_index:])
+
+
+def source_elevation_samples(source_coordinates: Any) -> list[list[float]]:
+    if not isinstance(source_coordinates, list):
+        return []
+    samples = []
+    for coord in source_coordinates:
+        if (
+            isinstance(coord, list)
+            and len(coord) >= 3
+            and isinstance(coord[0], (int, float))
+            and isinstance(coord[1], (int, float))
+            and isinstance(coord[2], (int, float))
+        ):
+            samples.append([float(coord[0]), float(coord[1]), float(coord[2])])
+    return samples
+
+
+def closest_source_elevation(
+    coordinate: list[float],
+    source_coordinates: list[list[float]],
+) -> float | None:
+    if not source_coordinates:
+        return None
+    if len(source_coordinates) == 1:
+        return source_coordinates[0][2]
+
+    closest_elevation = None
+    closest_distance = math.inf
+    for index in range(1, len(source_coordinates)):
+        start = source_coordinates[index - 1]
+        end = source_coordinates[index]
+        delta_lng = end[0] - start[0]
+        delta_lat = end[1] - start[1]
+        length_squared = delta_lng * delta_lng + delta_lat * delta_lat
+        if length_squared == 0:
+            fraction = 0.0
+        else:
+            fraction = (
+                (coordinate[0] - start[0]) * delta_lng
+                + (coordinate[1] - start[1]) * delta_lat
+            ) / length_squared
+            fraction = max(0.0, min(1.0, fraction))
+
+        projected = [
+            start[0] + delta_lng * fraction,
+            start[1] + delta_lat * fraction,
+        ]
+        distance = routing_coordinate_distance_m(coordinate, projected)
+        if distance < closest_distance:
+            closest_distance = distance
+            closest_elevation = start[2] + (end[2] - start[2]) * fraction
+
+    return closest_elevation
+
+
+def drape_source_elevations_on_public_coordinates(
+    display_coordinates: list[list[float]],
+    source_coordinates: Any,
+) -> list[list[float]]:
+    source_samples = source_elevation_samples(source_coordinates)
+    if not source_samples:
+        return display_coordinates
+
+    draped_coordinates = []
+    for coordinate in display_coordinates:
+        elevation = closest_source_elevation(coordinate, source_samples)
+        if elevation is None:
+            draped_coordinates.append(coordinate)
+            continue
+        draped_coordinates.append(
+            [
+                coordinate[0],
+                coordinate[1],
+                rounded_number(elevation, SITE_GEOJSON_ELEVATION_DECIMALS),
+            ]
+        )
+    return draped_coordinates
+
+
+def build_public_cycleways_display_geojson(
+    source_geojson: dict[str, Any],
+    base_routing_asset: dict[str, Any],
+    overlay_path: Path,
+    segments_data: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Replace accepted public CycleWays feature geometry with overlay edge geometry."""
+    if not overlay_path.exists():
+        raise FileNotFoundError(f"CW base overlay not found: {overlay_path}")
+
+    overlay = load_json(overlay_path, {})
+    active_ids = active_segment_ids(segments_data)
+    accepted_mappings_by_segment_id = {
+        mapping["segmentId"]: mapping
+        for mapping in (overlay.get("segments") or {}).values()
+        if (
+            isinstance(mapping, dict)
+            and isinstance(mapping.get("segmentId"), int)
+            and mapping.get("segmentId") in active_ids
+            and mapping.get("status") == "accepted_auto_match"
+        )
+    }
+    runtime_edges_by_id = {
+        edge["id"]: edge
+        for edge in base_routing_asset.get("edges", [])
+        if isinstance(edge, dict) and isinstance(edge.get("id"), str)
+    }
+
+    output_features: list[dict[str, Any]] = []
+    derived_segment_ids: list[int] = []
+    source_fallback_segment_ids: list[int] = []
+    source_fallback_names: list[str] = []
+    rendered_segment_ids: set[int] = set()
+
+    for feature in source_geojson.get("features", []):
+        if not isinstance(feature, dict):
+            output_features.append(feature)
+            continue
+
+        geometry = feature.get("geometry")
+        if not isinstance(geometry, dict) or geometry.get("type") != "LineString":
+            output_features.append(feature)
+            continue
+
+        feature_copy = dict(feature)
+        segment_id = public_feature_segment_id(feature, segments_data)
+        mapping = accepted_mappings_by_segment_id.get(segment_id)
+        if not mapping:
+            output_features.append(feature_copy)
+            if segment_id in active_ids:
+                source_fallback_segment_ids.append(segment_id)
+                source_fallback_names.append(
+                    str(feature.get("properties", {}).get("name") or segment_id)
+                )
+            continue
+
+        assembled_coordinates: list[list[float]] = []
+        for edge_ref in sorted_overlay_edge_refs(mapping):
+            edge_id = edge_ref.get("edgeId")
+            edge = runtime_edges_by_id.get(edge_id)
+            if edge is None:
+                raise ValueError(
+                    "Public CycleWays display geometry has an accepted edge ref "
+                    f"that does not resolve: segment {segment_id}, edge {edge_id}"
+                )
+            append_public_edge_coordinates(
+                assembled_coordinates,
+                oriented_public_edge_coordinates(edge, edge_ref.get("direction")),
+            )
+
+        if len(assembled_coordinates) < 2:
+            raise ValueError(
+                "Public CycleWays display geometry has an accepted mapping with "
+                f"no renderable edge coordinates: segment {segment_id}"
+            )
+
+        feature_copy["geometry"] = {
+            **geometry,
+            "coordinates": drape_source_elevations_on_public_coordinates(
+                assembled_coordinates,
+                geometry.get("coordinates"),
+            ),
+        }
+        output_features.append(feature_copy)
+        derived_segment_ids.append(segment_id)
+        rendered_segment_ids.add(segment_id)
+
+    unrendered_accepted_segment_ids = sorted(
+        set(accepted_mappings_by_segment_id) - rendered_segment_ids
+    )
+    if unrendered_accepted_segment_ids:
+        raise ValueError(
+            "Public CycleWays display geometry could not find source features for "
+            f"accepted segments: {unrendered_accepted_segment_ids[:10]}"
+        )
+
+    output = dict(source_geojson)
+    output["features"] = output_features
+    validation = {
+        "derivedSegments": len(derived_segment_ids),
+        "derivedSegmentIds": sorted(derived_segment_ids),
+        "sourceFallbackSegments": len(source_fallback_segment_ids),
+        "sourceFallbackSegmentIds": sorted(source_fallback_segment_ids),
+        "sourceFallbackNames": source_fallback_names[:20],
+        "unrenderedAcceptedSegmentIds": [],
+    }
+    return output, validation
+
+
 def write_versioned_outputs(
     out_dir: Path,
     output_geojson: Path,
     output_segments: Path,
     output_kml: Path,
+    output_base_routing: Path,
     elevation_stats: dict[str, Any],
     validation: dict[str, Any],
 ) -> tuple[dict[str, Any], Path]:
-    version = combined_digest([output_geojson, output_segments, output_kml])[:12]
+    version = combined_digest([output_geojson, output_segments, output_kml, output_base_routing])[:12]
     versioned_geojson = out_dir / f"bike_roads.{version}.geojson"
     versioned_segments = out_dir / f"segments.{version}.json"
     versioned_kml = out_dir / f"map.{version}.kml"
+    versioned_base_routing = out_dir / f"base-routing-network.{version}.json"
     manifest_path = out_dir / "map-manifest.json"
 
     shutil.copyfile(output_geojson, versioned_geojson)
     shutil.copyfile(output_segments, versioned_segments)
     shutil.copyfile(output_kml, versioned_kml)
+    shutil.copyfile(output_base_routing, versioned_base_routing)
 
     manifest = {
         "version": version,
@@ -1372,15 +1965,18 @@ def write_versioned_outputs(
         "bikeRoads": versioned_geojson.name,
         "segments": versioned_segments.name,
         "kml": f"exports/{versioned_kml.name}",
+        "baseRoutingNetwork": versioned_base_routing.name,
         "stable": {
             "bikeRoads": output_geojson.name,
             "segments": output_segments.name,
             "kml": output_kml.name,
+            "baseRoutingNetwork": output_base_routing.name,
         },
         "hashes": {
             "bikeRoads": file_digest(output_geojson),
             "segments": file_digest(output_segments),
             "kml": file_digest(output_kml),
+            "baseRoutingNetwork": file_digest(output_base_routing),
         },
         "elevation": {
             "skipElevation": elevation_stats.get("skipElevation"),
@@ -1391,6 +1987,12 @@ def write_versioned_outputs(
             "segmentsCount": validation.get("segmentsCount"),
             "newSegments": len(validation.get("newSegments", [])),
             "routeCompatibilityWarnings": len(validation.get("routeCompatibilityWarnings", [])),
+            "routingEdges": validation.get("baseRouting", {}).get("graphEdges"),
+            "unresolvedRoutingSegments": validation.get("baseRouting", {}).get("unresolvedSegments"),
+            "overlayDisplaySegments": validation.get("cyclewaysDisplayGeometry", {}).get("derivedSegments"),
+            "sourceDisplayFallbackSegments": validation.get("cyclewaysDisplayGeometry", {}).get(
+                "sourceFallbackSegments"
+            ),
         },
     }
     write_json(manifest_path, manifest)
@@ -1400,6 +2002,7 @@ def write_versioned_outputs(
         "geojson": str(versioned_geojson),
         "segments": str(versioned_segments),
         "kml": str(versioned_kml),
+        "baseRoutingNetwork": str(versioned_base_routing),
     }, manifest_path
 
 
@@ -1484,6 +2087,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     output_kml = out_dir / "map.kml"
     output_geojson = out_dir / "bike_roads.geojson"
     output_segments = out_dir / "segments.json"
+    output_base_routing = out_dir / "base-routing-network.json"
     output_report = out_dir / "report.json"
 
     densities = create_uniform_kml(input_kml, uniform_kml, args.max_distance)
@@ -1506,7 +2110,19 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         kml_segment_names,
     )
 
-    site_geojson_data = compact_geojson_for_site(geojson_data)
+    base_routing_asset, base_routing_validation = build_base_routing_asset(
+        args.routing_graph.resolve(),
+        args.cw_base_overlay.resolve(),
+        args.manual_base_edges.resolve(),
+        generated_segments,
+        args.routing_base_graph.resolve(),
+    )
+    site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
+        compact_geojson_for_site(geojson_data),
+        base_routing_asset,
+        args.cw_base_overlay.resolve(),
+        generated_segments,
+    )
     site_geojson_optimization = site_geojson_optimization_report(geojson_data, site_geojson_data)
     emit_progress(
         args.verbose,
@@ -1527,11 +2143,15 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         new_segments,
         args.topology_threshold,
     )
+    validation["baseRouting"] = base_routing_validation
+    validation["cyclewaysDisplayGeometry"] = display_geometry_validation
+    write_json(output_base_routing, base_routing_asset, compact=True)
     versioned_outputs, manifest_path = write_versioned_outputs(
         out_dir,
         output_geojson,
         output_segments,
         output_kml,
+        output_base_routing,
         elevation_stats,
         validation,
     )
@@ -1540,12 +2160,17 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         "inputs": {
             "kml": str(input_kml),
             "segments": str(segments_file),
+            "routingGraph": str(args.routing_graph.resolve()),
+            "routingBaseGraph": str(args.routing_base_graph.resolve()),
+            "cwBaseOverlay": str(args.cw_base_overlay.resolve()),
+            "manualBaseEdges": str(args.manual_base_edges.resolve()),
         },
         "outputs": {
             "uniformKml": str(uniform_kml),
             "kml": str(output_kml),
             "geojson": str(output_geojson),
             "segments": str(output_segments),
+            "baseRoutingNetwork": str(output_base_routing),
             "manifest": str(manifest_path),
             "versioned": versioned_outputs,
             "report": str(output_report),
@@ -1588,6 +2213,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     output_kml = out_dir / "map.kml"
     output_geojson = out_dir / "bike_roads.geojson"
     output_segments = out_dir / "segments.json"
+    output_base_routing = out_dir / "base-routing-network.json"
     output_report = out_dir / "report.json"
 
     geojson_data, metrics_by_name, densities, elevation_stats = geojson_to_processed_geojson(
@@ -1611,7 +2237,19 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         active_segment_names,
     )
 
-    site_geojson_data = compact_geojson_for_site(geojson_data)
+    base_routing_asset, base_routing_validation = build_base_routing_asset(
+        args.routing_graph.resolve(),
+        args.cw_base_overlay.resolve(),
+        args.manual_base_edges.resolve(),
+        generated_segments,
+        args.routing_base_graph.resolve(),
+    )
+    site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
+        compact_geojson_for_site(geojson_data),
+        base_routing_asset,
+        args.cw_base_overlay.resolve(),
+        generated_segments,
+    )
     site_geojson_optimization = site_geojson_optimization_report(geojson_data, site_geojson_data)
     emit_progress(
         args.verbose,
@@ -1633,11 +2271,15 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         new_segments,
         args.topology_threshold,
     )
+    validation["baseRouting"] = base_routing_validation
+    validation["cyclewaysDisplayGeometry"] = display_geometry_validation
+    write_json(output_base_routing, base_routing_asset, compact=True)
     versioned_outputs, manifest_path = write_versioned_outputs(
         out_dir,
         output_geojson,
         output_segments,
         output_kml,
+        output_base_routing,
         elevation_stats,
         validation,
     )
@@ -1645,11 +2287,16 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     report = {
         "inputs": {
             "geojson": str(input_geojson),
+            "routingGraph": str(args.routing_graph.resolve()),
+            "routingBaseGraph": str(args.routing_base_graph.resolve()),
+            "cwBaseOverlay": str(args.cw_base_overlay.resolve()),
+            "manualBaseEdges": str(args.manual_base_edges.resolve()),
         },
         "outputs": {
             "kml": str(output_kml),
             "geojson": str(output_geojson),
             "segments": str(output_segments),
+            "baseRoutingNetwork": str(output_base_routing),
             "manifest": str(manifest_path),
             "versioned": versioned_outputs,
             "report": str(output_report),
@@ -1683,6 +2330,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--segments", type=Path, default=Path("segments.json"))
     parser.add_argument("--out-dir", type=Path, default=Path("build"))
     parser.add_argument("--cache-file", type=Path, default=DEFAULT_CACHE_FILE)
+    parser.add_argument(
+        "--routing-graph",
+        type=Path,
+        default=Path("build/osm/osm-base-graph-elevated.json"),
+        help="Generated elevated OSM/manual base graph JSON for the public routing asset.",
+    )
+    parser.add_argument(
+        "--routing-base-graph",
+        type=Path,
+        default=Path("build/osm/osm-base-graph.json"),
+        help="Current 2D base graph used to validate the elevated routing graph.",
+    )
+    parser.add_argument(
+        "--cw-base-overlay",
+        type=Path,
+        default=Path("data/cw-base-overlay.json"),
+        help="Reviewed CW base overlay JSON for the public routing asset.",
+    )
+    parser.add_argument(
+        "--manual-base-edges",
+        type=Path,
+        default=Path("data/manual-base-edges.geojson"),
+        help="Manual base edges used for base graph freshness checks.",
+    )
     parser.add_argument("--elevation-url", default=DEFAULT_ELEVATION_URL)
     parser.add_argument("--skip-elevation", action="store_true")
     parser.add_argument("--verbose", action="store_true", help="Print build progress to stderr.")
@@ -1705,6 +2376,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"GeoJSON: {outputs['geojson']}")
     print(f"Segments: {outputs['segments']}")
     print(f"KML: {outputs['kml']}")
+    print(f"Base routing network: {outputs['baseRoutingNetwork']}")
     print(f"Manifest: {outputs['manifest']}")
     print(f"Report: {outputs['report']}")
     optimization = report.get("siteGeojsonOptimization", {})

@@ -14,13 +14,14 @@ export async function createRouteManager(
   RouteManagerClass,
   geoJsonData,
   segmentsData,
+  baseRoutingNetworkData = null,
 ) {
   if (typeof RouteManagerClass !== "function") {
     throw new Error("RouteManager is not available");
   }
 
   const manager = new RouteManagerClass();
-  await manager.load(geoJsonData, segmentsData);
+  await manager.load(geoJsonData, segmentsData, baseRoutingNetworkData);
   return manager;
 }
 
@@ -102,6 +103,7 @@ export function snapshotRouteManager(manager, segmentsData) {
     distance: info.distance || 0,
     elevationGain: info.elevationGain || 0,
     elevationLoss: info.elevationLoss || 0,
+    routeFailure: info.failure || null,
     activeDataPoints: getActiveRouteDataPoints(
       info.segments,
       geometry,
@@ -119,6 +121,7 @@ export function emptyRouteSnapshot() {
     elevationGain: 0,
     elevationLoss: 0,
     activeDataPoints: [],
+    routeFailure: null,
   };
 }
 
@@ -133,6 +136,7 @@ export function routeStateSnapshot(routeState) {
     activeDataPoints: routeState.activeDataPoints.map((dataPoint) => ({
       ...dataPoint,
     })),
+    routeFailure: routeState.routeFailure || null,
   };
 }
 

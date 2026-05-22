@@ -59,6 +59,7 @@ Generated outputs:
 - `build/map.kml`
 - `build/bike_roads.geojson`
 - `build/segments.json`
+- `build/base-routing-network.json`
 - `build/report.json`
 - `build/map-manifest.json`
 - content-versioned copies such as `build/bike_roads.<version>.geojson`
@@ -73,15 +74,56 @@ The editor's promote action copies generated output to:
 - `map-manifest.json`
 - `bike_roads.<version>.geojson`
 - `segments.<version>.json`
+- `base-routing-network.<version>.json`
 - `exports/map.<version>.kml`
 - `bike_roads_v18.geojson`
 - `segments.json`
+- `base-routing-network.json`
 - `exports/map.kml`
 
 Promote refuses skipped-elevation builds and stale builds where
 `data/map-source.geojson` was saved after `build/report.json`. It also refuses
 full builds with elevation failures and removes older versioned promoted files
 after copying the current version.
+
+The build also emits the public base routing network from the elevated
+OSM/manual graph and accepted CycleWays base overlay. The runtime routing asset
+is validated during build: accepted overlay refs must resolve to current graph
+edges, active accepted mappings must stay continuous, accepted base edge
+ownership must stay exclusive, and the elevated graph source digest must match
+the current 2D base graph. Recalculate Graph + Matches and run
+`npm run osm:elevation` before Build when the base graph has changed.
+
+The runtime asset does not publish the full elevation profile. It keeps compact
+edge endpoint elevation and net elevation change as directional routing inputs.
+The first climb-aware cost adds an uphill-only cost term from that directional
+edge net change; sampled local grade diagnostics stay build-side until a
+path-aware grade policy exists. Routed public geometry interpolates those edge
+endpoint elevations onto clipped base-edge coordinates so the current elevation
+chart follows the routed graph, but it is not yet a sampled terrain profile.
+
+Inspect a promoted runtime route and its base-edge cost breakdown with:
+
+```bash
+npm run route:inspect -- \
+  --point 33.128052,35.583602 \
+  --point 33.110767,35.578751
+```
+
+The inspector reads `map-manifest.json` by default, snaps each point to the
+promoted hidden graph, and prints the chosen edge traversals with route class,
+CycleWays ownership, distance-weighted cost, uphill cost, and directional
+elevation totals. Pass `--manifest build/map-manifest.json` to inspect a fresh
+Build output before Promote.
+
+The promoted public `bike_roads` GeoJSON also uses that reviewed overlay for
+display geometry. For an active accepted mapping, Build assembles the CycleWays
+feature line from the ordered directed base edges so the visible CycleWays line
+matches the hidden routing graph. Unresolved active segments still fall back to
+their processed source geometry during the migration. Accepted display lines use
+base-edge longitude/latitude and drape processed source elevation onto those
+coordinates for current public segment details. The source-derived KML and
+source-derived segment elevation metrics are unchanged by this display step.
 
 For editor-created splits, deprecated parent records keep compact `routeAnchors`
 as `[lng, lat]` coordinates, and active child records keep `splitFrom` metadata.
@@ -161,3 +203,86 @@ npm run osm:match
 The match preview samples active segments from `data/map-source.geojson`, finds
 nearby generated OSM graph edges, and writes non-destructive debug artifacts.
 It is intended for visual review before changing the canonical map source.
+
+## Base Graph Elevation Sampling Lab
+
+Before the base graph becomes the elevation authority, use the standalone lab
+stage to compare sampling density on the current 2D graph:
+
+```bash
+npm run osm:elevation-lab
+```
+
+By default this reads `build/osm/osm-base-graph.json`, reports graph-wide sample
+occurrence counts for `1m`, `5m`, `10m`, and `25m` spacing, and previews the
+longest graph edges without changing promoted map assets. Outputs are written
+under `build/osm/elevation-sampling/`:
+
+- `sampling-report.json`
+- `sampling-preview.geojson`
+
+Fetch elevations only for the selected preview edges after the local elevation
+service is running:
+
+```bash
+npm run osm:elevation-lab -- \
+  --fetch-elevation \
+  --edge-set-file data/osm-elevation-study-edges.json \
+  --preview-points
+```
+
+The preview lookup path deduplicates sampled coordinates, posts them in batches,
+and stores a separate persistent cache at
+`processing/cache/base_graph_elevation_sampling_cache.json`. Elevation profile
+simplification keeps original edge vertices, uses a configurable vertical error
+tolerance, and keeps retained profile gaps bounded for comparison:
+
+```bash
+npm run osm:elevation-lab -- \
+  --fetch-elevation \
+  --edge-set-file data/osm-elevation-study-edges.json \
+  --sample-spacings 1,5,10,25 \
+  --vertical-tolerance 1 \
+  --max-retained-gap 50
+```
+
+`data/osm-elevation-study-edges.json` records the current representative set
+for policy comparisons: valley OSM/manual edges, Golan edges, Hermon edges, and
+manual hill cases. Add `--edge-id <base-edge-id>` for one-off cases.
+
+## Elevated Base Graph Artifact
+
+Once the sampling lab has been used to check the current terrain mix, build the
+first graph-side elevation artifact:
+
+```bash
+npm run osm:elevation
+```
+
+This processor reads `build/osm/osm-base-graph.json`, samples every OSM/manual
+edge at the current `10m` acquisition spacing, reuses the lab cache, and writes:
+
+- `build/osm/osm-base-graph-elevated.json`
+- `build/osm/osm-base-graph-elevation-report.json`
+
+The elevated graph preserves the 2D graph topology and edge coordinates. Each
+edge gets an `elevation` object with a compact profile encoded as
+`[offsetMeters, elevationMeters]`, the acquisition and retained sample counts,
+and gain/loss/net metrics derived from the full sampled profile. The report
+records coverage, missing edge examples, profile-point reduction, cache/fetch
+counters, metric distributions, and grade policy diagnostics before routing
+consumes this artifact. The diagnostics compare aggregate per-edge candidates,
+raw adjacent-sample grade spikes, sustained grade over fixed `25m`, `50m`, and
+`100m` windows inside one edge, and the same windows stitched across graph
+chains where a degree-2 join has one unambiguous continuation.
+
+Start the local elevation service before the normal build. For a partial
+inspection artifact from the current cache only:
+
+```bash
+npm run osm:elevation -- --cache-only --allow-missing-elevation
+```
+
+`--cache-only` reports edges that do not yet have a complete cached profile.
+Without `--allow-missing-elevation`, the command exits non-zero when any edge is
+missing elevation so the elevated graph cannot silently become a complete input.

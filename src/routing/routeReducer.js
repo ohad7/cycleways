@@ -7,6 +7,7 @@ export const initialRouteState = {
   elevationGain: 0,
   elevationLoss: 0,
   activeDataPoints: [],
+  routeFailure: null,
   hoveredSegment: null,
   focusedSegment: null,
   error: null,
@@ -32,6 +33,7 @@ export function routeReducer(state, action) {
         elevationGain: action.snapshot.elevationGain,
         elevationLoss: action.snapshot.elevationLoss,
         activeDataPoints: action.snapshot.activeDataPoints,
+        routeFailure: action.snapshot.routeFailure || null,
         hoveredSegment: null,
         focusedSegment: null,
         error: null,
@@ -47,6 +49,7 @@ export function routeReducer(state, action) {
         elevationGain: 0,
         elevationLoss: 0,
         activeDataPoints: [],
+        routeFailure: null,
         error: null,
       };
 

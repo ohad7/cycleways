@@ -21,11 +21,14 @@ const geoJsonData = JSON.parse(
 const segmentsData = JSON.parse(
   await readFile(new URL("./segments-test.json", import.meta.url)),
 );
+const productionManifest = JSON.parse(
+  await readFile(new URL("../map-manifest.json", import.meta.url)),
+);
 const productionGeoJsonData = JSON.parse(
-  await readFile(new URL("../bike_roads.cd4bcf12c17f.geojson", import.meta.url)),
+  await readFile(new URL(`../${productionManifest.bikeRoads}`, import.meta.url)),
 );
 const productionSegmentsData = JSON.parse(
-  await readFile(new URL("../segments.cd4bcf12c17f.json", import.meta.url)),
+  await readFile(new URL(`../${productionManifest.segments}`, import.meta.url)),
 );
 
 const manager = await createRouteManager(

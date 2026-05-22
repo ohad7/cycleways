@@ -316,6 +316,77 @@ consume published runtime assets, not editor/debug files under `build/osm/`.
 - [ ] Keep existing route-facing UI stable while deferring richer public
   off-CycleWays explanation.
 
+### Overlay-Derived Public CycleWays Geometry
+
+- [x] Assemble accepted active CycleWays segment geometry from each mapping's
+  ordered, directed base edge refs during Build.
+- [x] Keep the public map rendering the CycleWays GeoJSON output instead of
+  exposing the full base graph as a visible user layer.
+- [x] Preserve existing public CycleWays feature properties while replacing only
+  accepted segment geometry.
+- [x] Drape processed source elevation onto accepted base-edge display
+  coordinates so current segment detail metrics keep an elevation path.
+- [x] Keep processed source geometry as a Build fallback for unresolved active
+  segments during migration.
+- [x] Record accepted-derived and source-fallback display counts in build
+  validation/report output.
+- [x] Keep source-derived KML and source-derived metadata/elevation metrics for
+  this slice; move those only with an explicit graph-elevation design.
+- [x] Add build tests for edge direction, coordinate stitching, source fallback,
+  and report counts for public display geometry derivation.
+
+### Base Graph Elevation Sampling Lab
+
+- [x] Add a standalone processor that reports graph-wide candidate sample
+  counts without changing promoted map artifacts.
+- [x] Sample selected preview base edges at configurable spacings while
+  preserving original edge vertices.
+- [x] Add optional batched preview-edge elevation lookup with a dedicated
+  persistent cache.
+- [x] Simplify sampled elevation profiles with vertical-error tolerance and
+  retained-gap anchors.
+- [x] Emit JSON report and GeoJSON preview artifacts for comparing candidate
+  spacings.
+- [x] Run representative preview edges from flat valley, Golan climb, and
+  Hermon terrain through the lab before choosing the elevated graph contract.
+- [x] Decide whether the elevated graph stores densified 3D coordinates,
+  compact offset/elevation profiles, or both.
+
+### Elevated Base Graph Artifact
+
+- [x] Add a graph-side elevated artifact processor that reads the current
+  generated OSM/manual graph without changing public routing assets.
+- [x] Sample every candidate edge at the current `10m` working spacing and
+  reuse the elevation lab cache/fetch client.
+- [x] Preserve 2D edge geometry and attach compact
+  `[offsetMeters,elevationMeters]` profiles plus edge gain/loss/net metrics.
+- [x] Record the source 2D graph digest and profile policy in elevated graph
+  metadata.
+- [x] Emit a build report with profile coverage, cache/fetch stats, missing
+  edge examples, profile retention size, and metric distributions.
+- [x] Add diagnostics-only adjacent-sample and fixed-window sustained-grade
+  comparisons to the elevated graph report before routing consumes grade.
+- [x] Compare aggregate edge grade candidates with fixed-window grade stitched
+  across unambiguous degree-2 graph chains.
+- [x] Inspect a full elevated build before routing or public elevation views
+  consume the artifact.
+- [ ] Define smoothing and sustained-grade metrics before routing costs depend
+  on local grade.
+
+### Directional Elevation Routing
+
+- [x] Make Build consume the elevated base graph by default and reject source
+  digest drift against the current generated 2D graph.
+- [x] Keep the runtime routing asset compact by publishing endpoint elevation
+  and net edge change instead of graph elevation profiles.
+- [x] Add an uphill-only directional net-climb cost term for full and clipped
+  base-edge traversals.
+- [x] Interpolate runtime edge endpoint elevation onto routed base-edge geometry
+  so the existing route elevation chart can render graph-derived routes.
+- [x] Expose base-route cost decomposition, directional gain/loss totals, and a
+  manifest-backed route inspector for elevation cost tuning.
+- [x] Cover a flatter detour winning over a short climb in runtime route tests.
+
 ### Tests
 
 - [ ] Add build tests for routing asset generation and manifest entries.
@@ -345,6 +416,8 @@ consume published runtime assets, not editor/debug files under `build/osm/`.
 - [ ] Mid-edge route endpoints render clipped geometry from the snapped
   positions.
 - [ ] Accepted-overlay graph integrity failures block routing asset promotion.
+- [x] Accepted CycleWays lines in promoted public GeoJSON use the same directed
+  base edge geometry that the overlay selects for routing preference.
 
 ## Deferred After The Next Slice
 
