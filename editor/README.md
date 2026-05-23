@@ -119,11 +119,12 @@ requires a full build with zero elevation failures, so skipped-elevation builds 
 preview-only.
 
 Build also produces the promoted public base-routing asset from the current
-elevated OSM/manual graph and accepted CW base overlay. If manual base edges
-have changed, run Recalculate Graph + Matches and then run
-`npm run osm:elevation` before Build. Build blocks stale elevated source
-digests and invalid accepted overlay refs so Promote cannot publish a routing
-bundle that no longer matches the base graph.
+elevated OSM/manual graph and accepted CW base overlay. Before running the map
+build, the editor refreshes stale base graph artifacts automatically: manual
+base-edge edits trigger a graph/match recalculation, and stale elevated graph
+artifacts trigger an elevation rebuild. Build still blocks invalid accepted
+overlay refs so Promote cannot publish a routing bundle that no longer matches
+the base graph.
 
 Build also emits experimental routing shard files under
 `build/public-data/base-routing-shards/` for browser-local shard routing comparison.

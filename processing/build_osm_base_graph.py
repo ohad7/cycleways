@@ -9,6 +9,7 @@ atomic graph edges, and appends manually drawn base edges from the editor.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from collections import Counter, defaultdict, deque
@@ -116,6 +117,12 @@ def coord_key(coord: list[float], precision: int = 7) -> tuple[int, int]:
     return round(float(coord[0]) * scale), round(float(coord[1]) * scale)
 
 
+def stable_node_id(coord: list[float]) -> str:
+    lng_key, lat_key = coord_key(coord)
+    digest = hashlib.sha256(f"{lng_key},{lat_key}".encode("ascii")).hexdigest()
+    return f"n{digest[:16]}"
+
+
 def parse_jsonish(value: Any, fallback: Any) -> Any:
     if value is None:
         return fallback
@@ -147,6 +154,7 @@ class NodeIndex:
         self.tolerance_m = tolerance_m
         self.cell_size_m = tolerance_m
         self.nodes: list[dict[str, Any]] = []
+        self.node_ids: set[str] = set()
         self.grid: dict[tuple[int, int], list[int]] = defaultdict(list)
 
     def _cell(self, point_m: tuple[float, float]) -> tuple[int, int]:
@@ -187,7 +195,12 @@ class NodeIndex:
                 node["wayIds"].add(way_id)
             return node["id"]
 
-        node_id = f"n{len(self.nodes) + 1}"
+        node_id = stable_node_id(coord)
+        if node_id in self.node_ids:
+            suffix = 2
+            while f"{node_id}_{suffix}" in self.node_ids:
+                suffix += 1
+            node_id = f"{node_id}_{suffix}"
         node = {
             "id": node_id,
             "coord": [round(float(coord[0]), 7), round(float(coord[1]), 7)],
@@ -199,6 +212,7 @@ class NodeIndex:
             "_y": point_m[1],
         }
         self.nodes.append(node)
+        self.node_ids.add(node_id)
         self.grid[self._cell(point_m)].append(len(self.nodes) - 1)
         return node_id
 

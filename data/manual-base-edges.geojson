@@ -2877,6 +2877,74 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mpixcfal",
+      "properties": {
+        "id": "manual-edge-mpixcfal",
+        "manualEdgeId": "manual-edge-mpixcfal",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-05-23T22:32:46.701Z",
+        "updatedAt": "2026-05-23T22:32:46.701Z"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.687371,
+            33.132373
+          ],
+          [
+            35.689953,
+            33.133149
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mpixcv2e",
+      "properties": {
+        "id": "manual-edge-mpixcv2e",
+        "manualEdgeId": "manual-edge-mpixcv2e",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-05-23T22:33:07.142Z",
+        "updatedAt": "2026-05-23T22:33:07.142Z"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.689957,
+            33.133151
+          ],
+          [
+            35.690196,
+            33.133189
+          ],
+          [
+            35.690392,
+            33.133184
+          ],
+          [
+            35.690762,
+            33.133119
+          ],
+          [
+            35.691018,
+            33.133037
+          ],
+          [
+            35.691112,
+            33.132987
+          ]
+        ]
+      }
     }
   ]
 }

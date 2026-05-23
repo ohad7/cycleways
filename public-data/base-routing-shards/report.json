@@ -10,14 +10,14 @@
   },
   "summary": {
     "shards": 115,
-    "sourceNodes": 37586,
-    "sourceEdges": 48352,
-    "representedEdges": 48352,
-    "edgeReferences": 50550,
+    "sourceNodes": 37587,
+    "sourceEdges": 48354,
+    "representedEdges": 48354,
+    "edgeReferences": 50552,
     "duplicatedSourceEdges": 2024,
-    "compactShardBytes": 25294946,
-    "messagePackShardBytes": 21757171,
-    "compactBinaryShardBytes": 4224620
+    "compactShardBytes": 26908772,
+    "messagePackShardBytes": 23370888,
+    "compactBinaryShardBytes": 4692220
   },
   "largestShards": [
     {

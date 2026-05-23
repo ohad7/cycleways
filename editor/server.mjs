@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 import { copyFile, cp, mkdir, readFile, readdir, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { createReadStream, watch } from "node:fs";
 import { spawn } from "node:child_process";
@@ -17,6 +18,8 @@ const dataDir = resolve(repoRoot, "data");
 const publicDataDir = resolve(repoRoot, "public-data");
 const buildPublicDataDir = resolve(buildDir, "public-data");
 const osmBuildDir = resolve(buildDir, "osm");
+const osmRawWaysPath = resolve(osmBuildDir, "osm-raw-ways.geojson");
+const osmIntersectionsPath = resolve(osmBuildDir, "osm-intersections.geojson");
 const osmBaseGraphPath = resolve(osmBuildDir, "osm-base-graph.json");
 const osmElevatedBaseGraphPath = resolve(osmBuildDir, "osm-base-graph-elevated.json");
 const reportPath = resolve(buildDir, "report.json");
@@ -689,7 +692,162 @@ async function serveTokenFile(response) {
   );
 }
 
+async function statOrNull(pathname) {
+  try {
+    return await stat(pathname);
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function isStaleAgainst(targetStat, inputStat) {
+  return Boolean(inputStat && (!targetStat || targetStat.mtimeMs + 1000 < inputStat.mtimeMs));
+}
+
+async function fileDigest(pathname) {
+  const digest = createHash("sha256");
+  const contents = await readFile(pathname);
+  digest.update(contents);
+  return digest.digest("hex");
+}
+
+async function elevatedGraphMatchesBaseGraph() {
+  const elevatedGraph = JSON.parse(await readFile(osmElevatedBaseGraphPath, "utf-8"));
+  const sourceDigest = elevatedGraph?.metadata?.elevation?.sourceGraphDigest;
+  if (typeof sourceDigest !== "string") {
+    return false;
+  }
+  return sourceDigest === await fileDigest(osmBaseGraphPath);
+}
+
+async function runBuildDependencyStep(buildId, label, command, args) {
+  const startedAt = Date.now();
+  log("info", `build#${buildId} ${label} started`, {
+    command: `${command} ${args.join(" ")}`,
+  });
+
+  return await new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(command, args, {
+      cwd: repoRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+    const stdoutLogger = createLineLogger("info", `build#${buildId} ${label} stdout`, (text) => {
+      stdout += text;
+    });
+    const stderrLogger = createLineLogger("info", `build#${buildId} ${label} stderr`, (text) => {
+      stderr += text;
+    });
+    const heartbeat = setInterval(() => {
+      log("info", `build#${buildId} ${label} still running`, {
+        elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+        stdoutBytes: stdout.length,
+        stderrBytes: stderr.length,
+      });
+    }, 10000);
+    heartbeat.unref();
+
+    child.stdout.on("data", (chunk) => {
+      stdoutLogger.write(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderrLogger.write(chunk);
+    });
+    child.on("error", (error) => {
+      clearInterval(heartbeat);
+      stdoutLogger.flush();
+      stderrLogger.flush();
+      log("error", `build#${buildId} ${label} failed to start`, error.message);
+      rejectPromise(error);
+    });
+    child.on("close", (code) => {
+      clearInterval(heartbeat);
+      stdoutLogger.flush();
+      stderrLogger.flush();
+      const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+      if (code !== 0) {
+        log("error", `build#${buildId} ${label} failed`, {
+          exitCode: code,
+          durationSeconds,
+        });
+        rejectPromise(new Error(stderr || stdout || `${label} failed with exit code ${code}`));
+        return;
+      }
+      log("info", `build#${buildId} ${label} finished`, {
+        durationSeconds,
+      });
+      resolvePromise({ stdout, stderr, durationSeconds });
+    });
+  });
+}
+
+async function ensureCurrentBaseRoutingArtifacts(buildId, payload) {
+  const graphInputs = [
+    ["raw OSM ways", osmRawWaysPath],
+    ["OSM intersections", osmIntersectionsPath],
+    ["manual base edges", manualBaseEdgesPath],
+  ];
+  const inputStats = await Promise.all(
+    graphInputs.map(async ([label, pathname]) => ({
+      label,
+      pathname,
+      stat: await statOrNull(pathname),
+    })),
+  );
+  let graphStat = await statOrNull(osmBaseGraphPath);
+  const staleGraphInputs = inputStats.filter((input) => isStaleAgainst(graphStat, input.stat));
+  if (!graphStat || staleGraphInputs.length > 0) {
+    log("info", `build#${buildId} refreshing base graph before Build`, {
+      reason: !graphStat
+        ? "missing base graph"
+        : `stale relative to ${staleGraphInputs.map((input) => input.label).join(", ")}`,
+    });
+    await runBuildDependencyStep(buildId, "base graph refresh", "npm", ["run", "osm:graph"]);
+    graphStat = await statOrNull(osmBaseGraphPath);
+  }
+  if (!graphStat) {
+    throw new Error("Base graph refresh did not produce build/osm/osm-base-graph.json.");
+  }
+
+  let elevatedStat = await statOrNull(osmElevatedBaseGraphPath);
+  let elevatedDigestMatches = false;
+  if (elevatedStat && !isStaleAgainst(elevatedStat, graphStat)) {
+    elevatedDigestMatches = await elevatedGraphMatchesBaseGraph().catch(() => false);
+  }
+  if (!elevatedStat || isStaleAgainst(elevatedStat, graphStat) || !elevatedDigestMatches) {
+    const elevationArgs = ["processing/build_osm_base_graph_elevation.py"];
+    if (payload.elevationUrl) {
+      elevationArgs.push("--elevation-url", String(payload.elevationUrl));
+    }
+    log("info", `build#${buildId} refreshing elevated base graph before Build`, {
+      reason: !elevatedStat
+        ? "missing elevated base graph"
+        : isStaleAgainst(elevatedStat, graphStat)
+          ? "stale relative to base graph"
+          : "source digest does not match base graph",
+    });
+    try {
+      await runBuildDependencyStep(buildId, "base graph elevation refresh", "python3", elevationArgs);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Base graph elevation refresh failed before Build. Make sure the local elevation service is running, then try Build again.\n\n${message}`,
+      );
+    }
+    elevatedStat = await statOrNull(osmElevatedBaseGraphPath);
+  }
+  if (!elevatedStat) {
+    throw new Error("Base graph elevation refresh did not produce build/osm/osm-base-graph-elevated.json.");
+  }
+}
+
 async function handleBuild(payload) {
+  payload = payload || {};
   const buildId = ++buildCounter;
   const startedAt = Date.now();
   const args = [
@@ -713,6 +871,8 @@ async function handleBuild(payload) {
     mode: payload.skipElevation ? "preview-skip-elevation" : "full-elevation",
     command: `python3 ${args.join(" ")}`,
   });
+
+  await ensureCurrentBaseRoutingArtifacts(buildId, payload);
 
   return await new Promise((resolvePromise, rejectPromise) => {
     const child = spawn("python3", args, {

@@ -1,6 +1,6 @@
 {
-  "version": "f9ef4a16da9f",
-  "generatedAt": "2026-05-23T10:57:33.593582Z",
+  "version": "185f3c6768a0",
+  "generatedAt": "2026-05-23T22:34:33.534702Z",
   "bikeRoads": "bike_roads.geojson",
   "segments": "segments.json",
   "kml": "exports/map.kml",
@@ -9,7 +9,7 @@
     "bikeRoads": "34748a8e5d5f4136728d37e8b3f60ab23acc14b6674ed225fd41d4efdf817b7e",
     "segments": "48f32fd74c4dc7102ab036c4a92a715ff35be79539da72fe5b5616504450b754",
     "kml": "a7a774166dce41b25040fca1943f0257c7e44178806525c9c7817ffada93d901",
-    "baseRoutingShards": "2897151bb79a0e95b237d6fe9dc4068a8755ad555e5ec33eb1922b0bfe716ac6"
+    "baseRoutingShards": "2119e0364fcdd948360a38f1f3b7fcd0b302fdcc617197e5a94cce874969d44a"
   },
   "elevation": {
     "skipElevation": false,
@@ -20,7 +20,7 @@
     "segmentsCount": 296,
     "newSegments": 0,
     "routeCompatibilityWarnings": 1,
-    "routingEdges": 48352,
+    "routingEdges": 48354,
     "unresolvedRoutingSegments": 0,
     "overlayDisplaySegments": 245,
     "sourceDisplayFallbackSegments": 0

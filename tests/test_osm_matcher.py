@@ -192,6 +192,60 @@ class OsmMatcherRegressionTests(unittest.TestCase):
         self.assertNotIn("e123_1", edge_ids)
         self.assertIn("manual-copy", edge_ids)
 
+    def test_manual_copy_does_not_renumber_unrelated_base_graph_nodes(self):
+        """Replacing one base edge must not churn node ids across unrelated shards."""
+
+        raw_osm = graph_collection(
+            [
+                line_feature(
+                    "osm-123",
+                    [coord(0), coord(100)],
+                    {"osmId": 123, "highway": "track"},
+                ),
+                line_feature(
+                    "osm-456",
+                    [coord(200), coord(300)],
+                    {"osmId": 456, "highway": "track"},
+                ),
+            ]
+        )
+        manual_edges = graph_collection(
+            [
+                line_feature(
+                    "manual-copy",
+                    [coord(0), coord(100)],
+                    {
+                        "manualEdgeId": "manual-copy",
+                        "source": "manual",
+                        "copiedFromEdgeId": "e123_1",
+                        "copiedFromOsmWayId": 123,
+                    },
+                )
+            ]
+        )
+
+        graph_before, _nodes_before, _edges_before, _summary_before = build_graph(
+            raw_osm,
+            graph_collection([]),
+            graph_collection([]),
+            node_merge_tolerance_m=2.0,
+            split_tolerance_m=8.0,
+            min_edge_length_m=1.0,
+        )
+        graph_after, _nodes_after, _edges_after, _summary_after = build_graph(
+            raw_osm,
+            graph_collection([]),
+            manual_edges,
+            node_merge_tolerance_m=2.0,
+            split_tolerance_m=8.0,
+            min_edge_length_m=1.0,
+        )
+
+        edge_before = next(edge for edge in graph_before["edges"] if edge["id"] == "e456_1")
+        edge_after = next(edge for edge in graph_after["edges"] if edge["id"] == "e456_1")
+        self.assertEqual(edge_after["fromNodeId"], edge_before["fromNodeId"])
+        self.assertEqual(edge_after["toNodeId"], edge_before["toNodeId"])
+
 
 if __name__ == "__main__":
     unittest.main()

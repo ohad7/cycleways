@@ -196,7 +196,9 @@ The command writes debug artifacts under `build/osm/`:
 The base graph builder also reads `data/manual-base-edges.geojson` when present.
 Those editor-drawn edges are appended to the generated graph with
 `source: "manual"` so the matcher and later router can treat them like ordinary
-base graph edges.
+base graph edges. Generated graph node ids are coordinate-derived rather than
+sequence-derived, so replacing one manual/OSM edge does not renumber unrelated
+nodes and churn unrelated routing shards.
 
 Open the app with `?osm=1` to show the raw OSM overlay:
 
