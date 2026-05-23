@@ -6,12 +6,15 @@ from pathlib import Path
 
 from processing.build_map import (
     build_base_routing_asset,
+    build_base_routing_shards,
     build_public_cycleways_display_geojson,
-    write_versioned_outputs,
+    write_base_routing_shards,
+    write_runtime_manifest,
 )
 
 
 def write_json(path: Path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value), encoding="utf-8")
 
 
@@ -127,6 +130,87 @@ class BaseRoutingAssetTests(unittest.TestCase):
             )
             self.assertEqual(validation["elevationEdges"], 1)
 
+    def test_runtime_shards_duplicate_boundary_edges_and_describe_manifest(self):
+        manifest, shards, report = build_base_routing_shards(
+            {
+                "schemaVersion": 2,
+                "generatedAt": "2026-05-22T00:00:00Z",
+                "nodes": [
+                    {"id": "n1", "coord": [35.049, 33]},
+                    {"id": "n2", "coord": [35.051, 33]},
+                ],
+                "edges": [
+                    {
+                        "id": "edge-across-boundary",
+                        "from": "n1",
+                        "to": "n2",
+                        "distanceMeters": 180,
+                        "coordinates": [[35.049, 33], [35.051, 33]],
+                    }
+                ],
+            },
+            shard_size_degrees=0.05,
+        )
+
+        self.assertEqual(manifest["schemaVersion"], 1)
+        self.assertEqual(manifest["shardSchemaVersion"], 1)
+        self.assertEqual(
+            manifest["scheme"]["edgeBoundaryPolicy"],
+            "duplicate-edge-bbox-intersections",
+        )
+        self.assertEqual(manifest["summary"]["sourceEdges"], 1)
+        self.assertEqual(manifest["summary"]["representedEdges"], 1)
+        self.assertEqual(manifest["summary"]["duplicatedSourceEdges"], 1)
+        self.assertGreater(manifest["summary"]["messagePackShardBytes"], 0)
+        self.assertGreater(manifest["summary"]["compactBinaryShardBytes"], 0)
+        self.assertEqual(manifest["defaultFormat"], "compact")
+        self.assertEqual(len(manifest["shards"]), 2)
+        self.assertEqual(len(shards), 2)
+        self.assertEqual(report["duplicatedSourceEdgeExamples"], ["edge-across-boundary"])
+        for manifest_shard in manifest["shards"]:
+            self.assertEqual(
+                manifest_shard["formats"]["compact"]["path"],
+                manifest_shard["path"],
+            )
+            self.assertEqual(manifest_shard["format"], "compact")
+            self.assertTrue(manifest_shard["path"].endswith(".cwb"))
+            self.assertEqual(len(manifest_shard["formats"]["compact"]["sha256"]), 64)
+            self.assertGreater(manifest_shard["messagePackBytes"], 0)
+            self.assertGreater(manifest_shard["compactBinaryBytes"], 0)
+        for shard in shards.values():
+            self.assertEqual(shard["edges"][0]["id"], "edge-across-boundary")
+            self.assertEqual([node["id"] for node in shard["nodes"]], ["n1", "n2"])
+
+    def test_runtime_shards_write_compact_binary_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_dir = Path(directory) / "base-routing-shards"
+            outputs, summary = write_base_routing_shards(
+                output_dir,
+                {
+                    "schemaVersion": 2,
+                    "generatedAt": "2026-05-22T00:00:00Z",
+                    "nodes": [
+                        {"id": "n1", "coord": [35, 33]},
+                        {"id": "n2", "coord": [35.001, 33]},
+                    ],
+                    "edges": [
+                        {
+                            "id": "edge",
+                            "from": "n1",
+                            "to": "n2",
+                            "distanceMeters": 93,
+                            "coordinates": [[35, 33], [35.001, 33]],
+                        }
+                    ],
+                },
+            )
+            manifest = json.loads(Path(outputs["manifest"]).read_text(encoding="utf-8"))
+            shard = manifest["shards"][0]
+            self.assertEqual(summary["shards"], 1)
+            self.assertTrue((output_dir / shard["formats"]["compact"]["path"]).exists())
+            self.assertFalse((output_dir / "shards" / f"{shard['id']}.json").exists())
+            self.assertFalse((output_dir / "shards" / f"{shard['id']}.msgpack").exists())
+
     def test_public_cycleways_geometry_uses_directed_overlay_edges_and_fallbacks(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -213,24 +297,29 @@ class BaseRoutingAssetTests(unittest.TestCase):
             self.assertEqual(validation["derivedSegmentIds"], [7])
             self.assertEqual(validation["sourceFallbackSegmentIds"], [8])
 
-    def test_versioned_manifest_includes_routing_asset(self):
+    def test_runtime_manifest_uses_public_data_stable_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             out_dir = Path(directory)
-            output_geojson = out_dir / "bike_roads.geojson"
-            output_segments = out_dir / "segments.json"
-            output_kml = out_dir / "map.kml"
-            output_routing = out_dir / "base-routing-network.json"
+            public_data_dir = out_dir / "public-data"
+            output_geojson = public_data_dir / "bike_roads.geojson"
+            output_segments = public_data_dir / "segments.json"
+            output_kml = public_data_dir / "exports" / "map.kml"
+            output_routing_shards = public_data_dir / "base-routing-shards"
+            output_geojson.parent.mkdir(parents=True, exist_ok=True)
             output_geojson.write_text("{}\n", encoding="utf-8")
             output_segments.write_text("{}\n", encoding="utf-8")
+            output_kml.parent.mkdir(parents=True, exist_ok=True)
             output_kml.write_text("<kml />\n", encoding="utf-8")
-            output_routing.write_text('{"nodes":[],"edges":[]}\n', encoding="utf-8")
+            write_json(output_routing_shards / "manifest.json", {"shards": []})
+            (output_routing_shards / "shards").mkdir(parents=True, exist_ok=True)
+            (output_routing_shards / "shards" / "g1_1.cwb").write_bytes(b"CWBS1")
 
-            versioned, manifest_path = write_versioned_outputs(
-                out_dir,
+            runtime, manifest_path = write_runtime_manifest(
+                public_data_dir,
                 output_geojson,
                 output_segments,
                 output_kml,
-                output_routing,
+                output_routing_shards,
                 {"skipElevation": True, "failures": 0},
                 {
                     "featureCount": 0,
@@ -245,9 +334,21 @@ class BaseRoutingAssetTests(unittest.TestCase):
             )
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-            self.assertIn("baseRoutingNetwork", manifest)
-            self.assertEqual(manifest["baseRoutingNetwork"], Path(versioned["baseRoutingNetwork"]).name)
-            self.assertTrue((out_dir / manifest["baseRoutingNetwork"]).exists())
+            self.assertEqual(manifest_path, public_data_dir / "map-manifest.json")
+            self.assertEqual(manifest["bikeRoads"], "bike_roads.geojson")
+            self.assertEqual(manifest["segments"], "segments.json")
+            self.assertEqual(manifest["kml"], "exports/map.kml")
+            self.assertNotIn("baseRoutingNetwork", manifest)
+            self.assertNotIn("baseRoutingNetwork", manifest["hashes"])
+            self.assertIn("baseRoutingShards", manifest)
+            self.assertEqual(manifest["baseRoutingShards"], "base-routing-shards/manifest.json")
+            self.assertTrue((public_data_dir / manifest["baseRoutingShards"]).exists())
+            self.assertTrue(
+                (Path(runtime["baseRoutingShards"]).parent / "shards" / "g1_1.cwb").exists()
+            )
+            self.assertFalse(
+                any(path.name.startswith("base-routing-shards.") for path in public_data_dir.iterdir())
+            )
             self.assertEqual(manifest["validation"]["overlayDisplaySegments"], 2)
             self.assertEqual(manifest["validation"]["sourceDisplayFallbackSegments"], 1)
 

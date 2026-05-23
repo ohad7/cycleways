@@ -26,8 +26,8 @@ Create or refresh the initial source file from current generated artifacts:
 
 ```bash
 python3 processing/migrate_to_source_geojson.py \
-  --geojson bike_roads_v18.geojson \
-  --segments segments.json \
+  --geojson public-data/bike_roads.geojson \
+  --segments public-data/segments.json \
   --output data/map-source.geojson
 ```
 
@@ -38,7 +38,7 @@ Example smoke build without the local elevation service:
 ```bash
 python3 processing/build_map.py \
   --input-kml versions/63efdfce/lines-export-63efdfce.kml \
-  --segments segments.json \
+  --segments public-data/segments.json \
   --out-dir build \
   --skip-elevation
 ```
@@ -48,7 +48,7 @@ Example build with the local Open Elevation service:
 ```bash
 python3 processing/build_map.py \
   --input-kml input.kml \
-  --segments segments.json \
+  --segments public-data/segments.json \
   --out-dir build \
   --elevation-url http://localhost/api/v1/lookup
 ```
@@ -56,39 +56,39 @@ python3 processing/build_map.py \
 Generated outputs:
 
 - `build/intermediate_uniform.kml`
-- `build/map.kml`
-- `build/bike_roads.geojson`
-- `build/segments.json`
-- `build/base-routing-network.json`
+- `build/public-data/exports/map.kml`
+- `build/public-data/bike_roads.geojson`
+- `build/public-data/segments.json`
+- `build/public-data/base-routing-shards/manifest.json`
+- `build/public-data/base-routing-shards/report.json`
+- compact shard files under `build/public-data/base-routing-shards/shards/`
+- `build/public-data/map-manifest.json`
 - `build/report.json`
-- `build/map-manifest.json`
-- content-versioned copies such as `build/bike_roads.<version>.geojson`
 
-`build/bike_roads.geojson` is optimized as a site runtime artifact: it is
+`build/public-data/bike_roads.geojson` is optimized as a site runtime artifact: it is
 minified, longitude/latitude are rounded to 6 decimal places, and elevation is
 rounded to 0.1m. The canonical source GeoJSON and generated KML stay readable
 and full precision.
 
 The editor's promote action copies generated output to:
 
-- `map-manifest.json`
-- `bike_roads.<version>.geojson`
-- `segments.<version>.json`
-- `base-routing-network.<version>.json`
-- `exports/map.<version>.kml`
-- `bike_roads_v18.geojson`
-- `segments.json`
-- `base-routing-network.json`
-- `exports/map.kml`
+- `public-data/map-manifest.json`
+- `public-data/bike_roads.geojson`
+- `public-data/segments.json`
+- `public-data/base-routing-shards/`
+- `public-data/exports/map.kml`
 
 Promote refuses skipped-elevation builds and stale builds where
 `data/map-source.geojson` was saved after `build/report.json`. It also refuses
 full builds with elevation failures and removes older versioned promoted files
-after copying the current version.
+after copying the current version. Runtime assets use stable names under
+`public-data/`; cache busting comes from the map-manifest version and per-shard
+hashes instead of changing file or directory names.
 
-The build also emits the public base routing network from the elevated
-OSM/manual graph and accepted CycleWays base overlay. The runtime routing asset
-is validated during build: accepted overlay refs must resolve to current graph
+The build derives routing shards from the elevated OSM/manual graph and accepted
+CycleWays base overlay. The full base-routing graph is kept in memory during
+build but is not published as a runtime artifact. The runtime routing data is
+validated during build: accepted overlay refs must resolve to current graph
 edges, active accepted mappings must stay continuous, accepted base edge
 ownership must stay exclusive, and the elevated graph source digest must match
 the current 2D base graph. Recalculate Graph + Matches and run
@@ -110,11 +110,11 @@ npm run route:inspect -- \
   --point 33.110767,35.578751
 ```
 
-The inspector reads `map-manifest.json` by default, snaps each point to the
+The inspector reads `public-data/map-manifest.json` by default, snaps each point to the
 promoted hidden graph, and prints the chosen edge traversals with route class,
 CycleWays ownership, distance-weighted cost, uphill cost, and directional
-elevation totals. Pass `--manifest build/map-manifest.json` to inspect a fresh
-Build output before Promote.
+elevation totals. Pass `--manifest build/public-data/map-manifest.json` to
+inspect a fresh Build output before Promote.
 
 The promoted public `bike_roads` GeoJSON also uses that reviewed overlay for
 display geometry. For an active accepted mapping, Build assembles the CycleWays
@@ -124,6 +124,38 @@ their processed source geometry during the migration. Accepted display lines use
 base-edge longitude/latitude and drape processed source elevation onto those
 coordinates for current public segment details. The source-derived KML and
 source-derived segment elevation metrics are unchanged by this display step.
+
+Build emits routing shards from the same in-memory base-routing graph. The shard
+manifest uses a longitude/latitude grid and records compact
+binary `.cwb` shard files under `build/public-data/base-routing-shards/`; edges whose
+geometry bounding box crosses a shard boundary are duplicated so a loaded subset
+can be merged back into the current runtime graph shape. Promote copies the
+stable shard directory, and the public route path uses shard-backed waypoint
+routing.
+
+The `.cwb` format stores a sorted string table, scaled integer coordinates,
+delta-encoded edge geometry, compact edge attributes, CW segment ids, and
+endpoint elevation. The browser decodes each loaded shard back into the current
+runtime graph shape. `?routingShards=1&routingShardFormat=compact` forces this
+format explicitly.
+
+Compare one shard-loaded test leg with the all-shards graph with:
+
+```bash
+npm run route:compare-shards -- \
+  --point 33.11061,35.581078 \
+  --point 33.111379,35.573488 \
+  --strict
+```
+
+The comparison command reads `public-data/map-manifest.json` and
+`public-data/base-routing-shards/manifest.json` by default. Pass
+`--manifest build/public-data/map-manifest.json --shard-manifest
+build/public-data/base-routing-shards/manifest.json` to compare a fresh Build
+output before Promote. It loads only shards in the padded point corridor, snaps
+the points against that subset, routes through the merged subset, and reports
+traversal, distance, and weighted-cost deltas against the graph produced by
+loading all shards.
 
 For editor-created splits, deprecated parent records keep compact `routeAnchors`
 as `[lng, lat]` coordinates, and active child records keep `splitFrom` metadata.

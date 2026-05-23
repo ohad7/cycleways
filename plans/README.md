@@ -9,5 +9,6 @@ Current plans:
 - `segment-scores/` - design and implementation plan for per-segment quality scores.
 - `waypoint-routing/` - design and implementation plan for point-based route creation and the Phase 2 routing direction.
 - `osm-base-network-navigation/` - design and implementation record for the OSM/manual base graph and CycleWays overlay preparation phase for internal routing.
+- `browser-local-sharded-routing/` - design and implementation plan for the browser-local static routing shard experiment intended to scale the hidden base graph beyond the current full-asset prototype.
 - `map-asset-size/` - design and implementation plan for low-risk generated GeoJSON size reduction.
 - `react-migration/` - design and implementation plan for incrementally moving the public app to React.

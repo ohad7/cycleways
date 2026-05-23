@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
-import { copyFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, readdir, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { createReadStream, watch } from "node:fs";
 import { spawn } from "node:child_process";
 import { dirname, extname, isAbsolute, join, resolve, relative } from "node:path";
@@ -14,26 +14,20 @@ const sourcePath = resolve(repoRoot, "data/map-source.geojson");
 const tokenPath = resolve(repoRoot, "mapbox-token.js");
 const buildDir = resolve(repoRoot, "build");
 const dataDir = resolve(repoRoot, "data");
+const publicDataDir = resolve(repoRoot, "public-data");
+const buildPublicDataDir = resolve(buildDir, "public-data");
 const osmBuildDir = resolve(buildDir, "osm");
 const osmBaseGraphPath = resolve(osmBuildDir, "osm-base-graph.json");
 const osmElevatedBaseGraphPath = resolve(osmBuildDir, "osm-base-graph-elevated.json");
 const reportPath = resolve(buildDir, "report.json");
-const buildManifestPath = resolve(buildDir, "map-manifest.json");
-const buildGeojsonPath = resolve(buildDir, "bike_roads.geojson");
-const buildSegmentsPath = resolve(buildDir, "segments.json");
-const buildKmlPath = resolve(buildDir, "map.kml");
-const buildBaseRoutingPath = resolve(buildDir, "base-routing-network.json");
+const buildManifestPath = resolve(buildPublicDataDir, "map-manifest.json");
 const osmGraphEdgesPath = resolve(osmBuildDir, "osm-base-edges.geojson");
 const osmMatchSummaryPath = resolve(osmBuildDir, "cw-osm-match-summary.json");
 const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson");
 const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
-const promotedGeojsonPath = resolve(repoRoot, "bike_roads_v18.geojson");
-const promotedSegmentsPath = resolve(repoRoot, "segments.json");
-const promotedKmlPath = resolve(repoRoot, "exports/map.kml");
-const promotedBaseRoutingPath = resolve(repoRoot, "base-routing-network.json");
-const promotedManifestPath = resolve(repoRoot, "map-manifest.json");
+const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
 const port = Number(process.env.EDITOR_PORT || 8899);
 const devReloadEnabled = process.env.EDITOR_CLIENT_RELOAD === "1";
 let requestCounter = 0;
@@ -153,7 +147,7 @@ function summarizeReport(report) {
   const elevation = report?.elevation || {};
   const topology = validation.topology || {};
   return {
-    version: report?.outputs?.versioned?.version,
+    version: report?.outputs?.runtime?.version,
     features: validation.featureCount,
     segmentRecords: validation.segmentsCount,
     newSegments: (validation.newSegments || []).length,
@@ -1074,6 +1068,20 @@ async function copyFileAtomic(source, target) {
   }
 }
 
+async function copyDirectoryAtomic(source, target) {
+  await mkdir(dirname(target), { recursive: true });
+  const tmpPath = uniqueAtomicTmpPath(target);
+  try {
+    await rm(tmpPath, { recursive: true, force: true });
+    await cp(source, tmpPath, { recursive: true, force: true });
+    await rm(target, { recursive: true, force: true });
+    await rename(tmpPath, target);
+  } catch (error) {
+    await rm(tmpPath, { recursive: true, force: true }).catch(() => {});
+    throw error;
+  }
+}
+
 function uniqueAtomicTmpPath(target) {
   atomicWriteCounter += 1;
   return `${target}.${process.pid}.${Date.now()}.${atomicWriteCounter}.tmp`;
@@ -1102,27 +1110,33 @@ async function existingVersionedFiles(directory, pattern) {
   }
 }
 
-async function cleanupOldVersionedArtifacts(manifest, promoteId, dryRun) {
-  const keep = new Set([
-    resolveManifestPath(repoRoot, manifest.bikeRoads),
-    resolveManifestPath(repoRoot, manifest.segments),
-    resolveManifestPath(repoRoot, manifest.kml),
-    resolveManifestPath(repoRoot, manifest.baseRoutingNetwork),
-  ]);
+async function cleanupOldPublicArtifacts(promoteId, dryRun) {
   const candidates = [
     ...(await existingVersionedFiles(repoRoot, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
     ...(await existingVersionedFiles(repoRoot, /^segments\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(repoRoot, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(repoRoot, /^base-routing-shards\.[0-9a-f]{12}$/)),
+    ...(await existingVersionedFiles(repoRoot, /^base-routing-shards$/)),
+    ...(await existingVersionedFiles(repoRoot, /^bike_roads_v18\.geojson$/)),
+    ...(await existingVersionedFiles(repoRoot, /^segments\.json$/)),
+    ...(await existingVersionedFiles(repoRoot, /^base-routing-network\.json$/)),
+    ...(await existingVersionedFiles(repoRoot, /^map-manifest\.json$/)),
     ...(await existingVersionedFiles(resolve(repoRoot, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
-  ].filter((path) => !keep.has(path));
+    ...(await existingVersionedFiles(resolve(repoRoot, "exports"), /^map\.kml$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^segments\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.json$/)),
+    ...(await existingVersionedFiles(resolve(publicDataDir, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
+  ];
 
   for (const filePath of candidates) {
-    log("info", `promote#${promoteId} removing old versioned artifact`, {
+    log("info", `promote#${promoteId} removing old public artifact`, {
       path: repoRelative(filePath),
       dryRun,
     });
     if (!dryRun) {
-      await unlink(filePath);
+      await rm(filePath, { recursive: true, force: true });
     }
   }
 
@@ -1173,8 +1187,8 @@ async function handlePromote(payload = {}) {
   if (blockers.length > 0) {
     throw new Error(`Promote blocked by validation: ${blockers.join(", ")}`);
   }
-  if (!manifest.baseRoutingNetwork) {
-    throw new Error("Promote requires a versioned base routing network in the build manifest.");
+  if (!manifest.baseRoutingShards) {
+    throw new Error("Promote requires a base routing shard manifest in the build manifest.");
   }
 
   log("info", `promote#${promoteId} checks passed`, {
@@ -1184,49 +1198,30 @@ async function handlePromote(payload = {}) {
 
   const targets = [
     {
-      label: "manifest",
+      label: "public manifest",
       source: buildManifestPath,
       target: promotedManifestPath,
     },
     {
-      label: "versioned geojson",
-      source: resolveManifestPath(buildDir, manifest.bikeRoads),
-      target: resolveManifestPath(repoRoot, manifest.bikeRoads),
+      label: "public geojson",
+      source: resolveManifestPath(buildPublicDataDir, manifest.bikeRoads),
+      target: resolveManifestPath(publicDataDir, manifest.bikeRoads),
     },
     {
-      label: "versioned segments",
-      source: resolveManifestPath(buildDir, manifest.segments),
-      target: resolveManifestPath(repoRoot, manifest.segments),
+      label: "public segments",
+      source: resolveManifestPath(buildPublicDataDir, manifest.segments),
+      target: resolveManifestPath(publicDataDir, manifest.segments),
     },
     {
-      label: "versioned kml",
-      source: resolveManifestPath(buildDir, manifest.kml.replace(/^exports\//, "")),
-      target: resolveManifestPath(repoRoot, manifest.kml),
+      label: "public kml",
+      source: resolveManifestPath(buildPublicDataDir, manifest.kml),
+      target: resolveManifestPath(publicDataDir, manifest.kml),
     },
     {
-      label: "versioned base routing network",
-      source: resolveManifestPath(buildDir, manifest.baseRoutingNetwork),
-      target: resolveManifestPath(repoRoot, manifest.baseRoutingNetwork),
-    },
-    {
-      label: "site geojson",
-      source: buildGeojsonPath,
-      target: promotedGeojsonPath,
-    },
-    {
-      label: "site segments",
-      source: buildSegmentsPath,
-      target: promotedSegmentsPath,
-    },
-    {
-      label: "kml export",
-      source: buildKmlPath,
-      target: promotedKmlPath,
-    },
-    {
-      label: "site base routing network",
-      source: buildBaseRoutingPath,
-      target: promotedBaseRoutingPath,
+      kind: "directory",
+      label: "base routing shards",
+      source: dirname(resolveManifestPath(buildPublicDataDir, manifest.baseRoutingShards)),
+      target: dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)),
     },
   ];
 
@@ -1249,10 +1244,14 @@ async function handlePromote(payload = {}) {
         source: repoRelative(target.source),
         target: repoRelative(target.target),
       });
-      await copyFileAtomic(target.source, target.target);
+      if (target.kind === "directory") {
+        await copyDirectoryAtomic(target.source, target.target);
+      } else {
+        await copyFileAtomic(target.source, target.target);
+      }
     }
   }
-  removed = await cleanupOldVersionedArtifacts(manifest, promoteId, Boolean(payload.dryRun));
+  removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun));
 
   log("info", `promote#${promoteId} finished`, {
     dryRun: Boolean(payload.dryRun),

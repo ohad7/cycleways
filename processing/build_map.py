@@ -2,11 +2,12 @@
 """Build map artifacts from source KML or canonical source GeoJSON.
 
 This keeps the current KML-based processing flow repeatable while moving all
-outputs into deterministic paths:
+public runtime outputs into deterministic paths:
 
-- bike_roads.geojson
-- segments.json
-- map.kml
+- public-data/bike_roads.geojson
+- public-data/segments.json
+- public-data/exports/map.kml
+- public-data/map-manifest.json
 - report.json
 """
 
@@ -18,6 +19,7 @@ import json
 import math
 import re
 import shutil
+import struct
 import sys
 import urllib.error
 import urllib.parse
@@ -57,6 +59,14 @@ QUALITY_KEYS = ("overall", "safety", "comfort", "scenery")
 SITE_GEOJSON_COORDINATE_DECIMALS = 6
 SITE_GEOJSON_ELEVATION_DECIMALS = 1
 ROUTING_EDGE_CONTINUITY_GAP_M = 12.0
+PUBLIC_DATA_DIR = "public-data"
+BASE_ROUTING_SHARD_SCHEMA_VERSION = 1
+BASE_ROUTING_SHARD_MANIFEST_SCHEMA_VERSION = 1
+BASE_ROUTING_SHARD_SIZE_DEGREES = 0.05
+BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION = 1
+BASE_ROUTING_COMPACT_SHARD_MAGIC = b"CWBS1"
+BASE_ROUTING_COMPACT_COORDINATE_SCALE = 1_000_000
+BASE_ROUTING_COMPACT_DISTANCE_SCALE = 10
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -77,6 +87,269 @@ def write_json(path: Path, data: Any, *, compact: bool = False) -> None:
         else:
             json.dump(data, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
+
+
+def messagepack_pack(data: Any) -> bytes:
+    payload = bytearray()
+    pack_messagepack_value(payload, data)
+    return bytes(payload)
+
+
+def write_messagepack(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(messagepack_pack(data))
+
+
+def write_compact_base_routing_shard(path: Path, shard_asset: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(pack_compact_base_routing_shard(shard_asset))
+
+
+def pack_compact_base_routing_shard(shard_asset: dict[str, Any]) -> bytes:
+    nodes = shard_asset.get("nodes") if isinstance(shard_asset.get("nodes"), list) else []
+    edges = shard_asset.get("edges") if isinstance(shard_asset.get("edges"), list) else []
+    strings = compact_shard_string_table(shard_asset, nodes, edges)
+    string_index = {value: index for index, value in enumerate(strings)}
+    node_index = {
+        node["id"]: index
+        for index, node in enumerate(nodes)
+        if isinstance(node, dict) and isinstance(node.get("id"), str)
+    }
+
+    payload = bytearray(BASE_ROUTING_COMPACT_SHARD_MAGIC)
+    write_varuint(payload, BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION)
+    write_varuint(payload, len(strings))
+    for value in strings:
+        encoded = value.encode("utf-8")
+        write_varuint(payload, len(encoded))
+        payload.extend(encoded)
+
+    write_varuint(payload, int(shard_asset.get("schemaVersion") or 0))
+    write_varuint(payload, int(shard_asset.get("sourceRoutingSchemaVersion") or 0))
+    write_varuint(payload, string_index[str(shard_asset.get("id") or "")])
+    for value in shard_asset.get("bounds", [0, 0, 0, 0])[:4]:
+        write_varint(
+            payload,
+            scaled_int(value, BASE_ROUTING_COMPACT_COORDINATE_SCALE),
+        )
+
+    write_varuint(payload, len(nodes))
+    for node in nodes:
+        coord = node.get("coord") if isinstance(node, dict) else None
+        if not isinstance(coord, list) or len(coord) < 2:
+            raise ValueError(f"Compact shard node has invalid coord: {node}")
+        write_varuint(payload, string_index[node["id"]])
+        write_varint(payload, scaled_int(coord[0], BASE_ROUTING_COMPACT_COORDINATE_SCALE))
+        write_varint(payload, scaled_int(coord[1], BASE_ROUTING_COMPACT_COORDINATE_SCALE))
+
+    write_varuint(payload, len(edges))
+    for edge in edges:
+        if edge.get("from") not in node_index or edge.get("to") not in node_index:
+            raise ValueError(f"Compact shard edge references missing node: {edge.get('id')}")
+        coordinates = edge.get("coordinates")
+        if not isinstance(coordinates, list) or len(coordinates) < 2:
+            raise ValueError(f"Compact shard edge has invalid coordinates: {edge.get('id')}")
+
+        write_varuint(payload, string_index[edge["id"]])
+        write_varuint(payload, node_index[edge["from"]])
+        write_varuint(payload, node_index[edge["to"]])
+        write_varint(payload, scaled_int(edge.get("distanceMeters") or 0, BASE_ROUTING_COMPACT_DISTANCE_SCALE))
+
+        write_varuint(payload, len(coordinates))
+        previous_lng = None
+        previous_lat = None
+        for coord in coordinates:
+            if not isinstance(coord, list) or len(coord) < 2:
+                raise ValueError(f"Compact shard edge has invalid coordinate: {edge.get('id')}")
+            lng = scaled_int(coord[0], BASE_ROUTING_COMPACT_COORDINATE_SCALE)
+            lat = scaled_int(coord[1], BASE_ROUTING_COMPACT_COORDINATE_SCALE)
+            if previous_lng is None or previous_lat is None:
+                write_varint(payload, lng)
+                write_varint(payload, lat)
+            else:
+                write_varint(payload, lng - previous_lng)
+                write_varint(payload, lat - previous_lat)
+            previous_lng = lng
+            previous_lat = lat
+
+        write_nullable_string_index(payload, string_index, edge.get("source"))
+        write_nullable_string_index(payload, string_index, edge.get("routeClass"))
+        write_nullable_string_index(payload, string_index, edge.get("highway"))
+        write_nullable_string_index(payload, string_index, edge.get("accessStatus"))
+        write_nullable_string_index(payload, string_index, edge.get("roadType"))
+
+        cw_segment_ids = edge.get("cwSegmentIds") if isinstance(edge.get("cwSegmentIds"), list) else []
+        write_varuint(payload, len(cw_segment_ids))
+        for segment_id in cw_segment_ids:
+            write_varuint(payload, int(segment_id))
+
+        elevation = edge.get("elevation") if isinstance(edge.get("elevation"), dict) else None
+        if elevation and isinstance(elevation.get("fromMeters"), (int, float)) and isinstance(elevation.get("toMeters"), (int, float)):
+            write_varuint(payload, 1)
+            write_varint(payload, scaled_int(elevation.get("fromMeters"), BASE_ROUTING_COMPACT_DISTANCE_SCALE))
+            write_varint(payload, scaled_int(elevation.get("toMeters"), BASE_ROUTING_COMPACT_DISTANCE_SCALE))
+            write_varint(payload, scaled_int(elevation.get("netMeters", elevation.get("toMeters") - elevation.get("fromMeters")), BASE_ROUTING_COMPACT_DISTANCE_SCALE))
+        else:
+            write_varuint(payload, 0)
+
+    return bytes(payload)
+
+
+def compact_shard_string_table(
+    shard_asset: dict[str, Any],
+    nodes: list[Any],
+    edges: list[Any],
+) -> list[str]:
+    strings = {str(shard_asset.get("id") or "")}
+    for node in nodes:
+        if isinstance(node, dict) and isinstance(node.get("id"), str):
+            strings.add(node["id"])
+    for edge in edges:
+        if not isinstance(edge, dict):
+            continue
+        for key in ("id", "from", "to", "source", "routeClass", "highway", "accessStatus", "roadType"):
+            value = edge.get(key)
+            if isinstance(value, str) and value != "":
+                strings.add(value)
+    return sorted(strings)
+
+
+def scaled_int(value: Any, scale: int) -> int:
+    return int(round(float(value) * scale))
+
+
+def write_nullable_string_index(
+    payload: bytearray,
+    string_index: dict[str, int],
+    value: Any,
+) -> None:
+    if not isinstance(value, str) or value == "":
+        write_varuint(payload, 0)
+        return
+    write_varuint(payload, string_index[value] + 1)
+
+
+def write_varuint(payload: bytearray, value: int) -> None:
+    if value < 0:
+        raise ValueError(f"Varuint cannot encode negative value: {value}")
+    while value >= 0x80:
+        payload.append((value & 0x7F) | 0x80)
+        value >>= 7
+    payload.append(value)
+
+
+def write_varint(payload: bytearray, value: int) -> None:
+    write_varuint(payload, value * 2 if value >= 0 else (-value * 2) - 1)
+
+
+def pack_messagepack_value(payload: bytearray, value: Any) -> None:
+    if value is None:
+        payload.append(0xC0)
+        return
+    if value is False:
+        payload.append(0xC2)
+        return
+    if value is True:
+        payload.append(0xC3)
+        return
+    if isinstance(value, int):
+        pack_messagepack_int(payload, value)
+        return
+    if isinstance(value, float):
+        payload.append(0xCB)
+        payload.extend(struct.pack(">d", value))
+        return
+    if isinstance(value, str):
+        pack_messagepack_str(payload, value)
+        return
+    if isinstance(value, (list, tuple)):
+        pack_messagepack_array_header(payload, len(value))
+        for item in value:
+            pack_messagepack_value(payload, item)
+        return
+    if isinstance(value, dict):
+        pack_messagepack_map_header(payload, len(value))
+        for key, item in value.items():
+            pack_messagepack_str(payload, str(key))
+            pack_messagepack_value(payload, item)
+        return
+    raise TypeError(f"Cannot encode {type(value).__name__} as MessagePack")
+
+
+def pack_messagepack_int(payload: bytearray, value: int) -> None:
+    if 0 <= value <= 0x7F:
+        payload.append(value)
+    elif -32 <= value < 0:
+        payload.append(0x100 + value)
+    elif 0 <= value <= 0xFF:
+        payload.extend((0xCC, value))
+    elif 0 <= value <= 0xFFFF:
+        payload.append(0xCD)
+        payload.extend(struct.pack(">H", value))
+    elif 0 <= value <= 0xFFFFFFFF:
+        payload.append(0xCE)
+        payload.extend(struct.pack(">I", value))
+    elif 0 <= value <= 0xFFFFFFFFFFFFFFFF:
+        payload.append(0xCF)
+        payload.extend(struct.pack(">Q", value))
+    elif -0x80 <= value < 0:
+        payload.append(0xD0)
+        payload.extend(struct.pack(">b", value))
+    elif -0x8000 <= value < 0:
+        payload.append(0xD1)
+        payload.extend(struct.pack(">h", value))
+    elif -0x80000000 <= value < 0:
+        payload.append(0xD2)
+        payload.extend(struct.pack(">i", value))
+    elif -0x8000000000000000 <= value < 0:
+        payload.append(0xD3)
+        payload.extend(struct.pack(">q", value))
+    else:
+        raise OverflowError(f"Integer is outside MessagePack int64 range: {value}")
+
+
+def pack_messagepack_str(payload: bytearray, value: str) -> None:
+    encoded = value.encode("utf-8")
+    length = len(encoded)
+    if length <= 31:
+        payload.append(0xA0 | length)
+    elif length <= 0xFF:
+        payload.extend((0xD9, length))
+    elif length <= 0xFFFF:
+        payload.append(0xDA)
+        payload.extend(struct.pack(">H", length))
+    elif length <= 0xFFFFFFFF:
+        payload.append(0xDB)
+        payload.extend(struct.pack(">I", length))
+    else:
+        raise OverflowError("String is too large for MessagePack str32")
+    payload.extend(encoded)
+
+
+def pack_messagepack_array_header(payload: bytearray, length: int) -> None:
+    if length <= 15:
+        payload.append(0x90 | length)
+    elif length <= 0xFFFF:
+        payload.append(0xDC)
+        payload.extend(struct.pack(">H", length))
+    elif length <= 0xFFFFFFFF:
+        payload.append(0xDD)
+        payload.extend(struct.pack(">I", length))
+    else:
+        raise OverflowError("Array is too large for MessagePack array32")
+
+
+def pack_messagepack_map_header(payload: bytearray, length: int) -> None:
+    if length <= 15:
+        payload.append(0x80 | length)
+    elif length <= 0xFFFF:
+        payload.append(0xDE)
+        payload.extend(struct.pack(">H", length))
+    elif length <= 0xFFFFFFFF:
+        payload.append(0xDF)
+        payload.extend(struct.pack(">I", length))
+    else:
+        raise OverflowError("Map is too large for MessagePack map32")
 
 
 def rounded_number(value: Any, decimals: int) -> Any:
@@ -1704,6 +1977,254 @@ def build_base_routing_asset(
     return asset, validation
 
 
+def base_routing_edge_bounds(edge: dict[str, Any]) -> list[float] | None:
+    coordinates = [
+        coordinate
+        for coordinate in edge.get("coordinates", [])
+        if (
+            isinstance(coordinate, list)
+            and len(coordinate) >= 2
+            and isinstance(coordinate[0], (int, float))
+            and isinstance(coordinate[1], (int, float))
+        )
+    ]
+    if len(coordinates) < 2:
+        return None
+    longitudes = [float(coordinate[0]) for coordinate in coordinates]
+    latitudes = [float(coordinate[1]) for coordinate in coordinates]
+    return [
+        min(longitudes),
+        min(latitudes),
+        max(longitudes),
+        max(latitudes),
+    ]
+
+
+def base_routing_shard_cell(value: float, shard_size_degrees: float) -> int:
+    return math.floor(float(value) / shard_size_degrees)
+
+
+def base_routing_shard_id(lng_cell: int, lat_cell: int) -> str:
+    return f"g{lng_cell}_{lat_cell}"
+
+
+def base_routing_shard_bounds(
+    lng_cell: int,
+    lat_cell: int,
+    shard_size_degrees: float,
+) -> list[float]:
+    return [
+        rounded_number(lng_cell * shard_size_degrees, SITE_GEOJSON_COORDINATE_DECIMALS),
+        rounded_number(lat_cell * shard_size_degrees, SITE_GEOJSON_COORDINATE_DECIMALS),
+        rounded_number((lng_cell + 1) * shard_size_degrees, SITE_GEOJSON_COORDINATE_DECIMALS),
+        rounded_number((lat_cell + 1) * shard_size_degrees, SITE_GEOJSON_COORDINATE_DECIMALS),
+    ]
+
+
+def base_routing_shard_cells(
+    bounds: list[float],
+    shard_size_degrees: float,
+) -> list[tuple[int, int]]:
+    min_lng_cell = base_routing_shard_cell(bounds[0], shard_size_degrees)
+    min_lat_cell = base_routing_shard_cell(bounds[1], shard_size_degrees)
+    max_lng_cell = base_routing_shard_cell(bounds[2], shard_size_degrees)
+    max_lat_cell = base_routing_shard_cell(bounds[3], shard_size_degrees)
+    return [
+        (lng_cell, lat_cell)
+        for lng_cell in range(min_lng_cell, max_lng_cell + 1)
+        for lat_cell in range(min_lat_cell, max_lat_cell + 1)
+    ]
+
+
+def build_base_routing_shards(
+    base_routing_asset: dict[str, Any],
+    shard_size_degrees: float = BASE_ROUTING_SHARD_SIZE_DEGREES,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]], dict[str, Any]]:
+    """Partition a runtime base-routing asset into static spatial shards."""
+    if shard_size_degrees <= 0:
+        raise ValueError("Base routing shard size must be positive")
+
+    runtime_nodes = [
+        node
+        for node in base_routing_asset.get("nodes", [])
+        if isinstance(node, dict) and isinstance(node.get("id"), str)
+    ]
+    runtime_edges = [
+        edge
+        for edge in base_routing_asset.get("edges", [])
+        if isinstance(edge, dict) and isinstance(edge.get("id"), str)
+    ]
+    nodes_by_id = {node["id"]: node for node in runtime_nodes}
+    shards: dict[str, dict[str, Any]] = {}
+    source_edge_shards: dict[str, list[str]] = defaultdict(list)
+
+    for edge in runtime_edges:
+        edge_bounds = base_routing_edge_bounds(edge)
+        if edge_bounds is None:
+            continue
+        from_node_id = edge.get("from")
+        to_node_id = edge.get("to")
+        if from_node_id not in nodes_by_id or to_node_id not in nodes_by_id:
+            raise ValueError(
+                "Base routing shard builder cannot resolve edge endpoint nodes: "
+                f"{edge['id']}"
+            )
+
+        for lng_cell, lat_cell in base_routing_shard_cells(edge_bounds, shard_size_degrees):
+            shard_id = base_routing_shard_id(lng_cell, lat_cell)
+            shard = shards.setdefault(
+                shard_id,
+                {
+                    "id": shard_id,
+                    "bounds": base_routing_shard_bounds(
+                        lng_cell,
+                        lat_cell,
+                        shard_size_degrees,
+                    ),
+                    "nodes": {},
+                    "edges": {},
+                },
+            )
+            shard["edges"][edge["id"]] = edge
+            shard["nodes"][from_node_id] = nodes_by_id[from_node_id]
+            shard["nodes"][to_node_id] = nodes_by_id[to_node_id]
+            source_edge_shards[edge["id"]].append(shard_id)
+
+    if not shards:
+        raise ValueError("Base routing shard builder produced no shards")
+
+    shard_assets: dict[str, dict[str, Any]] = {}
+    manifest_shards = []
+    for shard_id, shard in sorted(shards.items()):
+        shard_nodes = [
+            shard["nodes"][node_id]
+            for node_id in sorted(shard["nodes"])
+        ]
+        shard_edges = [
+            shard["edges"][edge_id]
+            for edge_id in sorted(shard["edges"])
+        ]
+        shard_asset = {
+            "schemaVersion": BASE_ROUTING_SHARD_SCHEMA_VERSION,
+            "sourceRoutingSchemaVersion": base_routing_asset.get("schemaVersion"),
+            "id": shard_id,
+            "bounds": shard["bounds"],
+            "nodes": shard_nodes,
+            "edges": shard_edges,
+            "summary": {
+                "nodes": len(shard_nodes),
+                "edges": len(shard_edges),
+            },
+        }
+        compact_bytes = json_size_bytes(shard_asset, compact=True)
+        messagepack_bytes = len(messagepack_pack(shard_asset))
+        compact_binary_payload = pack_compact_base_routing_shard(shard_asset)
+        compact_binary_bytes = len(compact_binary_payload)
+        compact_binary_hash = hashlib.sha256(compact_binary_payload).hexdigest()
+        shard_assets[shard_id] = shard_asset
+        manifest_shards.append(
+            {
+                "id": shard_id,
+                "path": f"shards/{shard_id}.cwb",
+                "format": "compact",
+                "formats": {
+                    "compact": {
+                        "path": f"shards/{shard_id}.cwb",
+                        "bytes": compact_binary_bytes,
+                        "sha256": compact_binary_hash,
+                    }
+                },
+                "bounds": shard["bounds"],
+                "nodes": len(shard_nodes),
+                "edges": len(shard_edges),
+                "compactBytes": compact_bytes,
+                "messagePackBytes": messagepack_bytes,
+                "compactBinaryBytes": compact_binary_bytes,
+            }
+        )
+
+    source_edge_count = len(runtime_edges)
+    represented_edge_count = len(source_edge_shards)
+    duplicated_edge_ids = sorted(
+        edge_id
+        for edge_id, shard_ids in source_edge_shards.items()
+        if len(set(shard_ids)) > 1
+    )
+    edge_references = sum(len(set(shard_ids)) for shard_ids in source_edge_shards.values())
+    summary = {
+        "shards": len(manifest_shards),
+        "sourceNodes": len(runtime_nodes),
+        "sourceEdges": source_edge_count,
+        "representedEdges": represented_edge_count,
+        "edgeReferences": edge_references,
+        "duplicatedSourceEdges": len(duplicated_edge_ids),
+        "compactShardBytes": sum(shard["compactBytes"] for shard in manifest_shards),
+        "messagePackShardBytes": sum(
+            shard["messagePackBytes"] for shard in manifest_shards
+        ),
+        "compactBinaryShardBytes": sum(
+            shard["compactBinaryBytes"] for shard in manifest_shards
+        ),
+    }
+    manifest = {
+        "schemaVersion": BASE_ROUTING_SHARD_MANIFEST_SCHEMA_VERSION,
+        "shardSchemaVersion": BASE_ROUTING_SHARD_SCHEMA_VERSION,
+        "generatedAt": base_routing_asset.get("generatedAt"),
+        "sourceRoutingSchemaVersion": base_routing_asset.get("schemaVersion"),
+        "defaultFormat": "compact",
+        "scheme": {
+            "type": "lng-lat-grid",
+            "shardSizeDegrees": shard_size_degrees,
+            "edgeBoundaryPolicy": "duplicate-edge-bbox-intersections",
+        },
+        "summary": summary,
+        "shards": manifest_shards,
+    }
+    report = {
+        "manifest": {
+            "schemaVersion": manifest["schemaVersion"],
+            "shardSchemaVersion": manifest["shardSchemaVersion"],
+            "scheme": manifest["scheme"],
+        },
+        "summary": summary,
+        "largestShards": sorted(
+            (
+                {
+                    "id": shard["id"],
+                    "nodes": shard["nodes"],
+                    "edges": shard["edges"],
+                }
+                for shard in manifest_shards
+            ),
+            key=lambda shard: (-shard["edges"], -shard["nodes"], shard["id"]),
+        )[:20],
+        "duplicatedSourceEdgeExamples": duplicated_edge_ids[:20],
+    }
+    return manifest, shard_assets, report
+
+
+def write_base_routing_shards(
+    output_dir: Path,
+    base_routing_asset: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    manifest, shard_assets, report = build_base_routing_shards(base_routing_asset)
+    manifest_path = output_dir / "manifest.json"
+    report_path = output_dir / "report.json"
+    shards_dir = output_dir / "shards"
+    if shards_dir.exists():
+        shutil.rmtree(shards_dir)
+    write_json(manifest_path, manifest)
+    write_json(report_path, report)
+    for shard_id, shard_asset in shard_assets.items():
+        write_compact_base_routing_shard(shards_dir / f"{shard_id}.cwb", shard_asset)
+
+    return {
+        "manifest": str(manifest_path),
+        "report": str(report_path),
+        "shardsDirectory": str(shards_dir),
+    }, report["summary"]
+
+
 def public_feature_segment_id(
     feature: dict[str, Any],
     segments_data: dict[str, Any],
@@ -1938,45 +2459,41 @@ def build_public_cycleways_display_geojson(
     return output, validation
 
 
-def write_versioned_outputs(
-    out_dir: Path,
+def write_runtime_manifest(
+    public_data_dir: Path,
     output_geojson: Path,
     output_segments: Path,
     output_kml: Path,
-    output_base_routing: Path,
+    output_base_routing_shards: Path,
     elevation_stats: dict[str, Any],
     validation: dict[str, Any],
 ) -> tuple[dict[str, Any], Path]:
-    version = combined_digest([output_geojson, output_segments, output_kml, output_base_routing])[:12]
-    versioned_geojson = out_dir / f"bike_roads.{version}.geojson"
-    versioned_segments = out_dir / f"segments.{version}.json"
-    versioned_kml = out_dir / f"map.{version}.kml"
-    versioned_base_routing = out_dir / f"base-routing-network.{version}.json"
-    manifest_path = out_dir / "map-manifest.json"
+    base_routing_shard_manifest = output_base_routing_shards / "manifest.json"
+    version = combined_digest(
+        [
+            output_geojson,
+            output_segments,
+            output_kml,
+            base_routing_shard_manifest,
+        ]
+    )[:12]
+    manifest_path = public_data_dir / "map-manifest.json"
 
-    shutil.copyfile(output_geojson, versioned_geojson)
-    shutil.copyfile(output_segments, versioned_segments)
-    shutil.copyfile(output_kml, versioned_kml)
-    shutil.copyfile(output_base_routing, versioned_base_routing)
+    def public_relative(path: Path) -> str:
+        return path.relative_to(public_data_dir).as_posix()
 
     manifest = {
         "version": version,
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "bikeRoads": versioned_geojson.name,
-        "segments": versioned_segments.name,
-        "kml": f"exports/{versioned_kml.name}",
-        "baseRoutingNetwork": versioned_base_routing.name,
-        "stable": {
-            "bikeRoads": output_geojson.name,
-            "segments": output_segments.name,
-            "kml": output_kml.name,
-            "baseRoutingNetwork": output_base_routing.name,
-        },
+        "bikeRoads": public_relative(output_geojson),
+        "segments": public_relative(output_segments),
+        "kml": public_relative(output_kml),
+        "baseRoutingShards": public_relative(base_routing_shard_manifest),
         "hashes": {
             "bikeRoads": file_digest(output_geojson),
             "segments": file_digest(output_segments),
             "kml": file_digest(output_kml),
-            "baseRoutingNetwork": file_digest(output_base_routing),
+            "baseRoutingShards": file_digest(base_routing_shard_manifest),
         },
         "elevation": {
             "skipElevation": elevation_stats.get("skipElevation"),
@@ -1999,10 +2516,10 @@ def write_versioned_outputs(
     return {
         "version": version,
         "manifest": str(manifest_path),
-        "geojson": str(versioned_geojson),
-        "segments": str(versioned_segments),
-        "kml": str(versioned_kml),
-        "baseRoutingNetwork": str(versioned_base_routing),
+        "geojson": str(output_geojson),
+        "segments": str(output_segments),
+        "kml": str(output_kml),
+        "baseRoutingShards": str(base_routing_shard_manifest),
     }, manifest_path
 
 
@@ -2069,6 +2586,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     input_kml = args.input_kml.resolve()
     segments_file = args.segments.resolve()
     out_dir = args.out_dir.resolve()
+    public_data_dir = out_dir / PUBLIC_DATA_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     emit_progress(args.verbose, f"Build input KML: {input_kml}")
     emit_progress(args.verbose, f"Build input segments: {segments_file}")
@@ -2084,10 +2602,9 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError(f"Segments JSON must be an object: {segments_file}")
 
     uniform_kml = out_dir / "intermediate_uniform.kml"
-    output_kml = out_dir / "map.kml"
-    output_geojson = out_dir / "bike_roads.geojson"
-    output_segments = out_dir / "segments.json"
-    output_base_routing = out_dir / "base-routing-network.json"
+    output_kml = public_data_dir / "exports" / "map.kml"
+    output_geojson = public_data_dir / "bike_roads.geojson"
+    output_segments = public_data_dir / "segments.json"
     output_report = out_dir / "report.json"
 
     densities = create_uniform_kml(input_kml, uniform_kml, args.max_distance)
@@ -2132,7 +2649,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         f"({site_geojson_optimization['reductionPercent']}% smaller)",
     )
 
-    emit_progress(args.verbose, "Writing GeoJSON, segments JSON, and versioned outputs")
+    emit_progress(args.verbose, "Writing public GeoJSON, segments JSON, and runtime manifest")
     write_json(output_geojson, site_geojson_data, compact=True)
     write_json(output_segments, generated_segments)
 
@@ -2145,17 +2662,21 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     )
     validation["baseRouting"] = base_routing_validation
     validation["cyclewaysDisplayGeometry"] = display_geometry_validation
-    write_json(output_base_routing, base_routing_asset, compact=True)
-    versioned_outputs, manifest_path = write_versioned_outputs(
-        out_dir,
+    base_routing_shard_outputs, base_routing_shard_validation = write_base_routing_shards(
+        public_data_dir / "base-routing-shards",
+        base_routing_asset,
+    )
+    validation["baseRoutingShards"] = base_routing_shard_validation
+    runtime_outputs, manifest_path = write_runtime_manifest(
+        public_data_dir,
         output_geojson,
         output_segments,
         output_kml,
-        output_base_routing,
+        public_data_dir / "base-routing-shards",
         elevation_stats,
         validation,
     )
-    emit_progress(args.verbose, f"Build version: {versioned_outputs['version']}")
+    emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {
         "inputs": {
             "kml": str(input_kml),
@@ -2170,9 +2691,9 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
             "kml": str(output_kml),
             "geojson": str(output_geojson),
             "segments": str(output_segments),
-            "baseRoutingNetwork": str(output_base_routing),
+            "baseRoutingShards": base_routing_shard_outputs,
             "manifest": str(manifest_path),
-            "versioned": versioned_outputs,
+            "runtime": runtime_outputs,
             "report": str(output_report),
         },
         "settings": {
@@ -2194,6 +2715,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
 def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     input_geojson = args.input_geojson.resolve()
     out_dir = args.out_dir.resolve()
+    public_data_dir = out_dir / PUBLIC_DATA_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     emit_progress(args.verbose, f"Build input source GeoJSON: {input_geojson}")
     emit_progress(args.verbose, f"Build output directory: {out_dir}")
@@ -2210,10 +2732,9 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     source_segments = source_segments_from_geojson(source_geojson)
-    output_kml = out_dir / "map.kml"
-    output_geojson = out_dir / "bike_roads.geojson"
-    output_segments = out_dir / "segments.json"
-    output_base_routing = out_dir / "base-routing-network.json"
+    output_kml = public_data_dir / "exports" / "map.kml"
+    output_geojson = public_data_dir / "bike_roads.geojson"
+    output_segments = public_data_dir / "segments.json"
     output_report = out_dir / "report.json"
 
     geojson_data, metrics_by_name, densities, elevation_stats = geojson_to_processed_geojson(
@@ -2259,7 +2780,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         f"({site_geojson_optimization['reductionPercent']}% smaller)",
     )
 
-    emit_progress(args.verbose, "Writing GeoJSON, segments JSON, KML, and versioned outputs")
+    emit_progress(args.verbose, "Writing public GeoJSON, segments JSON, KML, and runtime manifest")
     write_json(output_geojson, site_geojson_data, compact=True)
     write_json(output_segments, generated_segments)
     write_kml_from_geojson(geojson_data, output_kml)
@@ -2273,17 +2794,21 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     )
     validation["baseRouting"] = base_routing_validation
     validation["cyclewaysDisplayGeometry"] = display_geometry_validation
-    write_json(output_base_routing, base_routing_asset, compact=True)
-    versioned_outputs, manifest_path = write_versioned_outputs(
-        out_dir,
+    base_routing_shard_outputs, base_routing_shard_validation = write_base_routing_shards(
+        public_data_dir / "base-routing-shards",
+        base_routing_asset,
+    )
+    validation["baseRoutingShards"] = base_routing_shard_validation
+    runtime_outputs, manifest_path = write_runtime_manifest(
+        public_data_dir,
         output_geojson,
         output_segments,
         output_kml,
-        output_base_routing,
+        public_data_dir / "base-routing-shards",
         elevation_stats,
         validation,
     )
-    emit_progress(args.verbose, f"Build version: {versioned_outputs['version']}")
+    emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {
         "inputs": {
             "geojson": str(input_geojson),
@@ -2296,9 +2821,9 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
             "kml": str(output_kml),
             "geojson": str(output_geojson),
             "segments": str(output_segments),
-            "baseRoutingNetwork": str(output_base_routing),
+            "baseRoutingShards": base_routing_shard_outputs,
             "manifest": str(manifest_path),
-            "versioned": versioned_outputs,
+            "runtime": runtime_outputs,
             "report": str(output_report),
         },
         "settings": {
@@ -2327,7 +2852,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build map artifacts from source KML or GeoJSON.")
     parser.add_argument("--input-kml", type=Path, default=Path("input.kml"))
     parser.add_argument("--input-geojson", type=Path)
-    parser.add_argument("--segments", type=Path, default=Path("segments.json"))
+    parser.add_argument("--segments", type=Path, default=Path("public-data/segments.json"))
     parser.add_argument("--out-dir", type=Path, default=Path("build"))
     parser.add_argument("--cache-file", type=Path, default=DEFAULT_CACHE_FILE)
     parser.add_argument(
@@ -2376,7 +2901,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"GeoJSON: {outputs['geojson']}")
     print(f"Segments: {outputs['segments']}")
     print(f"KML: {outputs['kml']}")
-    print(f"Base routing network: {outputs['baseRoutingNetwork']}")
+    print(f"Base routing shard manifest: {outputs['baseRoutingShards']['manifest']}")
     print(f"Manifest: {outputs['manifest']}")
     print(f"Report: {outputs['report']}")
     optimization = report.get("siteGeojsonOptimization", {})

@@ -1,0 +1,146 @@
+{
+  "manifest": {
+    "schemaVersion": 1,
+    "shardSchemaVersion": 1,
+    "scheme": {
+      "type": "lng-lat-grid",
+      "shardSizeDegrees": 0.05,
+      "edgeBoundaryPolicy": "duplicate-edge-bbox-intersections"
+    }
+  },
+  "summary": {
+    "shards": 115,
+    "sourceNodes": 37586,
+    "sourceEdges": 48352,
+    "representedEdges": 48352,
+    "edgeReferences": 50550,
+    "duplicatedSourceEdges": 2024,
+    "compactShardBytes": 25294946,
+    "messagePackShardBytes": 21757171,
+    "compactBinaryShardBytes": 4224620
+  },
+  "largestShards": [
+    {
+      "id": "g711_664",
+      "nodes": 2491,
+      "edges": 3171
+    },
+    {
+      "id": "g710_659",
+      "nodes": 2116,
+      "edges": 2597
+    },
+    {
+      "id": "g712_664",
+      "nodes": 1739,
+      "edges": 2243
+    },
+    {
+      "id": "g709_659",
+      "nodes": 1346,
+      "edges": 1658
+    },
+    {
+      "id": "g713_659",
+      "nodes": 1000,
+      "edges": 1315
+    },
+    {
+      "id": "g715_665",
+      "nodes": 973,
+      "edges": 1160
+    },
+    {
+      "id": "g710_664",
+      "nodes": 988,
+      "edges": 1142
+    },
+    {
+      "id": "g711_659",
+      "nodes": 878,
+      "edges": 1117
+    },
+    {
+      "id": "g711_660",
+      "nodes": 777,
+      "edges": 977
+    },
+    {
+      "id": "g712_666",
+      "nodes": 799,
+      "edges": 967
+    },
+    {
+      "id": "g710_665",
+      "nodes": 805,
+      "edges": 955
+    },
+    {
+      "id": "g710_663",
+      "nodes": 804,
+      "edges": 928
+    },
+    {
+      "id": "g712_663",
+      "nodes": 703,
+      "edges": 926
+    },
+    {
+      "id": "g709_662",
+      "nodes": 740,
+      "edges": 852
+    },
+    {
+      "id": "g713_664",
+      "nodes": 666,
+      "edges": 849
+    },
+    {
+      "id": "g711_665",
+      "nodes": 691,
+      "edges": 827
+    },
+    {
+      "id": "g709_660",
+      "nodes": 681,
+      "edges": 827
+    },
+    {
+      "id": "g711_663",
+      "nodes": 634,
+      "edges": 810
+    },
+    {
+      "id": "g713_667",
+      "nodes": 629,
+      "edges": 781
+    },
+    {
+      "id": "g709_664",
+      "nodes": 700,
+      "edges": 778
+    }
+  ],
+  "duplicatedSourceEdgeExamples": [
+    "e100255439_3",
+    "e1024609370_2",
+    "e1026047298_1",
+    "e1031123040_2",
+    "e1031123040_3",
+    "e1031123042_2",
+    "e1031123053_1",
+    "e1034078867_2",
+    "e1034078867_5",
+    "e1034078875_2",
+    "e1034078875_3",
+    "e1034078902_2",
+    "e1034089968_1",
+    "e1034089969_1",
+    "e1034141908_5",
+    "e1034141916_1",
+    "e1034141917_1",
+    "e1034180666_4",
+    "e1034180669_5",
+    "e1034180671_1"
+  ]
+}

@@ -1,5 +1,5 @@
 import { cp, copyFile, mkdir } from "node:fs/promises";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,39 +10,10 @@ const files = new Set([
   "CNAME",
   "robots.txt",
   "sitemap.xml",
-  "map-manifest.json",
-  "bike_roads_v18.geojson",
-  "segments.json",
   "route-manager.js",
 ]);
 
-const directories = ["attached_assets", "exports", "icons"];
-
-const manifestPath = resolve(repoRoot, "map-manifest.json");
-if (existsSync(manifestPath)) {
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  for (const filePath of [
-    manifest.bikeRoads,
-    manifest.segments,
-    manifest.kml,
-    manifest.baseRoutingNetwork,
-  ]) {
-    if (filePath) {
-      files.add(filePath);
-    }
-  }
-
-  for (const filePath of [
-    manifest.stable?.bikeRoads,
-    manifest.stable?.segments,
-    manifest.stable?.kml,
-    manifest.stable?.baseRoutingNetwork,
-  ]) {
-    if (filePath && existsSync(resolve(repoRoot, filePath))) {
-      files.add(filePath);
-    }
-  }
-}
+const directories = ["attached_assets", "icons", "public-data"];
 
 await mkdir(distDir, { recursive: true });
 

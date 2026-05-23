@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { createRequire } from "node:module";
+import { loadBaseRoutingShardSubset } from "../src/routing/baseRoutingShards.js";
+import { decodeCompactBaseRoutingShard } from "../src/routing/compactBaseRoutingShard.js";
+import { decodeMessagePack } from "../src/routing/messagePack.js";
 
 const require = createRequire(import.meta.url);
 const RouteManager = require("../route-manager.js");
@@ -19,18 +22,32 @@ if (options.points.length < 2) {
 const manifestPath = resolve(process.cwd(), options.manifest);
 const manifestRoot = dirname(manifestPath);
 const manifest = await readJson(manifestPath);
-if (!manifest.baseRoutingNetwork) {
-  throw new Error(`${manifestPath} does not reference a base routing network.`);
+if (!manifest.baseRoutingShards) {
+  throw new Error(`${manifestPath} does not reference routing shards.`);
 }
+const shardManifestPath = resolve(manifestRoot, manifest.baseRoutingShards);
+const shardManifestRoot = dirname(shardManifestPath);
+const shardManifest = await readJson(shardManifestPath);
 
-const [geoJsonData, segmentsData, baseRoutingNetwork] = await Promise.all([
+const [geoJsonData, segmentsData, subset] = await Promise.all([
   readJson(resolve(manifestRoot, manifest.bikeRoads)),
   readJson(resolve(manifestRoot, manifest.segments)),
-  readJson(resolve(manifestRoot, manifest.baseRoutingNetwork)),
+  loadBaseRoutingShardSubset(
+    shardManifest,
+    options.points,
+    (entry) => {
+      const shardSource = selectShardSource(entry);
+      return readShard(
+        resolve(shardManifestRoot, shardSource.path),
+        shardSource.format,
+      );
+    },
+    { paddingShards: options.paddingShards },
+  ),
 ]);
 
 const manager = new RouteManager();
-await manager.load(geoJsonData, segmentsData, baseRoutingNetwork);
+await manager.load(geoJsonData, segmentsData, subset.network);
 
 const snappedPoints = options.points.map((point, index) => {
   const snapped = manager.snapToNetwork(point);
@@ -52,8 +69,11 @@ console.log(
       manifest: {
         path: manifestPath,
         version: manifest.version || "stable",
-        baseRoutingNetwork: manifest.baseRoutingNetwork,
-        baseRoutingSchemaVersion: baseRoutingNetwork.schemaVersion || null,
+        baseRoutingShards: manifest.baseRoutingShards,
+        baseRoutingSchemaVersion: subset.network.schemaVersion || null,
+        loadedShards: subset.entries.map((entry) => entry.id),
+        loadedNodes: subset.network.nodes.length,
+        loadedEdges: subset.network.edges.length,
       },
       points: snappedPoints.map((point, index) => ({
         input: options.points[index],
@@ -79,7 +99,8 @@ console.log(
 function parseArgs(args) {
   const parsed = {
     help: false,
-    manifest: "map-manifest.json",
+    manifest: "public-data/map-manifest.json",
+    paddingShards: 1,
     points: [],
   };
 
@@ -91,6 +112,13 @@ function parseArgs(args) {
     }
     if (arg === "--manifest") {
       parsed.manifest = requireValue(args, ++index, arg);
+      continue;
+    }
+    if (arg === "--padding-shards") {
+      parsed.paddingShards = Number(requireValue(args, ++index, arg));
+      if (!Number.isFinite(parsed.paddingShards) || parsed.paddingShards < 0) {
+        throw new Error("--padding-shards must be a non-negative number.");
+      }
       continue;
     }
     if (arg === "--point") {
@@ -140,14 +168,33 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+async function readShard(path, format) {
+  if (format === "compact" || format === "cwb") {
+    return decodeCompactBaseRoutingShard(await readFile(path));
+  }
+  if (format === "msgpack") {
+    return decodeMessagePack(await readFile(path));
+  }
+  return readJson(path);
+}
+
+function selectShardSource(entry) {
+  const format = entry?.format || "json";
+  if (format === "compact" || format === "cwb") {
+    return { format: "compact", path: entry.path };
+  }
+  return { format, path: entry.path };
+}
+
 function printUsage() {
-  console.log(`Inspect a route through the promoted base-routing asset.
+  console.log(`Inspect a route through the promoted routing shards.
 
 Usage:
   npm run route:inspect -- --point <lat,lng> --point <lat,lng> [--point <lat,lng> ...]
 
 Options:
-  --manifest <path>  Map manifest to inspect. Defaults to map-manifest.json.
+  --manifest <path>  Map manifest to inspect. Defaults to public-data/map-manifest.json.
+  --padding-shards <n>  Point-corridor shard padding. Defaults to 1.
   --point <lat,lng>  Route waypoint. Pass at least two in route order.
 `);
 }

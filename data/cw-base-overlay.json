@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-21T06:41:47.101Z",
+  "updatedAt": "2026-05-23T10:56:58.301Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -1397,7 +1397,7 @@
       "segmentId": 29,
       "segmentName": "חניון האקליפטוס",
       "status": "accepted_auto_match",
-      "source": "bulk_auto_match",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
       "avgDistanceMeters": 0.29,
@@ -1450,16 +1450,16 @@
           "osmWayId": 1190479325
         },
         {
-          "edgeId": "e1190479325_1",
+          "edgeId": "e1423658295_1",
           "source": "osm",
           "direction": "reverse",
           "sequenceIndex": 5,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 1190479325
+          "osmWayId": 1423658295
         }
       ],
-      "updatedAt": "2026-05-19T06:35:11.493Z"
+      "updatedAt": "2026-05-23T10:56:58.294Z"
     },
     "31": {
       "segmentId": 31,

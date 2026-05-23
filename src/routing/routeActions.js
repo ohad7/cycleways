@@ -68,17 +68,20 @@ export function applyRouteSnapshot(manager, snapshot) {
 }
 
 export function restoreRouteFromParam(manager, routeParam, segmentsData) {
+  const points = routePointsFromParam(routeParam, segmentsData);
+  return points ? restoreRoute(manager, points, segmentsData) : null;
+}
+
+export function routePointsFromParam(routeParam, segmentsData) {
   const payload = decodeRoutePayload(routeParam);
 
   if (payload.type === "compact_route" && payload.routePoints.length > 0) {
-    return restoreRoute(manager, payload.routePoints, segmentsData);
+    return payload.routePoints;
   }
 
   if (payload.type === "legacy_segments" && payload.segmentIds.length > 0) {
     const middlePoints = extractMiddlePoints(payload.segmentIds, segmentsData);
-    if (middlePoints.length > 0) {
-      return restoreRoute(manager, middlePoints, segmentsData);
-    }
+    return middlePoints.length > 0 ? middlePoints : null;
   }
 
   if (payload.type === "invalid") {

@@ -962,6 +962,7 @@ export function syncRoutePointLayers(map, routePoints, selectedRoutePointIndex) 
       properties: {
         id: point.id,
         index,
+        pending: Boolean(point.pending),
         selected: index === selectedRoutePointIndex,
       },
     })),
@@ -982,9 +983,30 @@ export function syncRoutePointLayers(map, routePoints, selectedRoutePointIndex) 
     type: "circle",
     source: ROUTE_POINTS_SOURCE_ID,
     paint: {
-      "circle-radius": 4,
-      "circle-color": "#ff4444",
-      "circle-stroke-width": 2,
+      "circle-radius": [
+        "case",
+        ["boolean", ["get", "pending"], false],
+        5,
+        4,
+      ],
+      "circle-color": [
+        "case",
+        ["boolean", ["get", "pending"], false],
+        "#f97316",
+        "#ff4444",
+      ],
+      "circle-opacity": [
+        "case",
+        ["boolean", ["get", "pending"], false],
+        0.78,
+        1,
+      ],
+      "circle-stroke-width": [
+        "case",
+        ["boolean", ["get", "pending"], false],
+        3,
+        2,
+      ],
       "circle-stroke-color": "#ffffff",
     },
   });

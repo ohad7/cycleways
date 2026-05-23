@@ -26,6 +26,8 @@ import {
   routeStateSnapshot,
   restoreRouteFromParam,
 } from "./routing/routeActions.js";
+import { createBaseRoutingShardFetchLoader } from "./routing/baseRoutingShards.js";
+import { createShardedRouteSession } from "./routing/shardedRouteSession.js";
 import {
   initialRouteState,
   routeReducer,
@@ -86,7 +88,12 @@ function App() {
   const [selectedCwReviewSegmentId, setSelectedCwReviewSegmentId] =
     useState(null);
   const routeManagerRef = useRef(null);
+  const shardedRouteSessionRef = useRef(null);
   const dragStartSnapshotRef = useRef(null);
+  const routeStateRef = useRef(initialRouteState);
+  const routeClickQueueRef = useRef([]);
+  const routeClickProcessingRef = useRef(false);
+  const routeClickIdRef = useRef(0);
   const [routeState, dispatchRoute] = useReducer(
     routeReducer,
     initialRouteState,
@@ -95,6 +102,11 @@ function App() {
     past: [],
     future: [],
   });
+  const [routingShardStatus, setRoutingShardStatus] = useState(null);
+
+  useEffect(() => {
+    routeStateRef.current = routeState;
+  }, [routeState]);
 
   useEffect(() => {
     if (!routeState.error) return undefined;
@@ -112,7 +124,10 @@ function App() {
     async function load() {
       setState({ status: "loading", assets: null, summary: null, error: null });
       try {
-        const assets = await loadMapAssets({ signal: controller.signal });
+        const assets = await loadMapAssets({
+          signal: controller.signal,
+          baseRoutingMode: "shards",
+        });
         if (controller.signal.aborted) return;
         setState({
           status: "ready",
@@ -283,14 +298,43 @@ function App() {
 
     async function initializeRouting() {
       try {
-        const manager = await createRouteManager(
-          window.RouteManager,
-          state.assets.geoJsonData,
-          state.assets.segmentsData,
-          state.assets.baseRoutingNetworkData,
-        );
+        const shardedSession = state.assets.baseRoutingShardManifestData
+          ? await createShardedRouteSession(
+              window.RouteManager,
+              state.assets.geoJsonData,
+              state.assets.segmentsData,
+              state.assets.baseRoutingShardManifestData,
+              createBaseRoutingShardFetchLoader(
+                state.assets.baseRoutingShardManifestPath,
+                {},
+                window.location,
+                { format: routingShardFormat() },
+              ),
+              {
+                onStatus: (status) => {
+                  if (!disposed) {
+                    setRoutingShardStatus(status);
+                  }
+                },
+              },
+            )
+          : null;
+        const manager = shardedSession
+          ? shardedSession.manager
+          : await createRouteManager(
+              window.RouteManager,
+              state.assets.geoJsonData,
+              state.assets.segmentsData,
+              state.assets.baseRoutingNetworkData,
+            );
         if (disposed) return;
 
+        shardedRouteSessionRef.current = shardedSession;
+        if (!shardedSession) {
+          setRoutingShardStatus(
+            unavailableRoutingShardStatus(),
+          );
+        }
         routeManagerRef.current = manager;
         dispatchRoute({ type: "route/managerReady" });
 
@@ -298,12 +342,21 @@ function App() {
           "route",
         );
         if (routeParam) {
-          const snapshot = restoreRouteFromParam(
-            manager,
-            routeParam,
-            state.assets.segmentsData,
-          );
+          const snapshot = shardedSession
+            ? await shardedSession.restoreRouteParam(routeParam)
+            : restoreRouteFromParam(
+                manager,
+                routeParam,
+                state.assets.segmentsData,
+              );
+          if (shardedSession) {
+            routeManagerRef.current = shardedSession.manager;
+          }
           if (snapshot) {
+            routeStateRef.current = routeStateFromSnapshot(
+              routeStateRef.current,
+              snapshot,
+            );
             dispatchRoute({ type: "route/update", snapshot });
             setMapUi((current) => ({
               ...current,
@@ -325,6 +378,7 @@ function App() {
     return () => {
       disposed = true;
       routeManagerRef.current = null;
+      shardedRouteSessionRef.current = null;
     };
   }, [state.assets, state.status]);
 
@@ -406,15 +460,28 @@ function App() {
 
   const commitRouteSnapshot = useCallback(
     (snapshot, options = {}) => {
-      const { clearUrl = true, recordHistory = true } = options;
+      const {
+        clearUrl = true,
+        preservePending = false,
+        previousSnapshot = null,
+        recordHistory = true,
+      } = options;
       if (recordHistory) {
         setRouteHistory((current) => ({
-          past: [...current.past, routeStateSnapshot(routeState)],
+          past: [
+            ...current.past,
+            previousSnapshot || routeStateSnapshot(routeStateRef.current),
+          ],
           future: [],
         }));
       }
 
-      dispatchRoute({ type: "route/update", snapshot });
+      routeStateRef.current = routeStateFromSnapshot(
+        routeStateRef.current,
+        snapshot,
+        { preservePending },
+      );
+      dispatchRoute({ type: "route/update", snapshot, preservePending });
       setMapUi((current) => ({
         ...current,
         selectedRoutePointIndex: null,
@@ -424,55 +491,147 @@ function App() {
         clearRouteUrl();
       }
     },
-    [clearRouteUrl, routeState],
+    [clearRouteUrl],
   );
+
+  const processRouteClickQueue = useCallback(async () => {
+    if (routeClickProcessingRef.current) return;
+    if (!routeManagerRef.current || state.status !== "ready") return;
+
+    routeClickProcessingRef.current = true;
+    try {
+      while (routeClickQueueRef.current.length > 0) {
+        const pendingPoint = routeClickQueueRef.current[0];
+        const shardedSession = shardedRouteSessionRef.current;
+        const previousSnapshot = routeStateSnapshot(routeStateRef.current);
+
+        dispatchRoute({
+          type: "route/setRoutingPhase",
+          phase: shardedSession ? "loading-shards" : "routing",
+        });
+
+        try {
+          const snapshot = shardedSession
+            ? await shardedSession.addPoint(pendingPoint)
+            : addPoint(
+                routeManagerRef.current,
+                pendingPoint,
+                state.assets.segmentsData,
+              );
+          if (shardedSession) {
+            routeManagerRef.current = shardedSession.manager;
+          }
+
+          routeStateRef.current = removePendingRoutePoint(
+            routeStateRef.current,
+            pendingPoint.id,
+          );
+          dispatchRoute({
+            type: "route/removePendingPoint",
+            id: pendingPoint.id,
+          });
+
+          if (snapshot.points.length === previousSnapshot.points.length) {
+            dispatchRoute({
+              type: "route/error",
+              error: new Error(
+                "הנקודה רחוקה מדי מרשת הדרכים. בחרו נקודה ליד דרך או שביל.",
+              ),
+            });
+            continue;
+          }
+
+          commitRouteSnapshot(snapshot, {
+            preservePending: true,
+            previousSnapshot,
+          });
+          if (snapshot.routeFailure) {
+            dispatchRoute({
+              type: "route/error",
+              error: new Error("לא נמצא חיבור ברשת הדרכים בין הנקודות שנבחרו."),
+            });
+          }
+          trackRoutePointEvent(snapshot.points, snapshot.selectedSegments, "click");
+        } catch (error) {
+          routeStateRef.current = removePendingRoutePoint(
+            routeStateRef.current,
+            pendingPoint.id,
+          );
+          dispatchRoute({
+            type: "route/removePendingPoint",
+            id: pendingPoint.id,
+          });
+          dispatchRoute({ type: "route/error", error });
+        } finally {
+          routeClickQueueRef.current.shift();
+        }
+      }
+    } finally {
+      routeClickProcessingRef.current = false;
+      if (routeClickQueueRef.current.length === 0) {
+        dispatchRoute({ type: "route/setRoutingPhase", phase: "idle" });
+      }
+    }
+  }, [commitRouteSnapshot, state.assets, state.status]);
 
   const handleMapClick = useCallback((point) => {
     if (!routeManagerRef.current || state.status !== "ready") return;
 
-    try {
-      const snapshot = addPoint(
-        routeManagerRef.current,
-        point,
-        state.assets.segmentsData,
-      );
-      if (snapshot.points.length === routeState.points.length) {
-        dispatchRoute({
-          type: "route/error",
-          error: new Error(
-            "הנקודה רחוקה מדי מרשת הדרכים. בחרו נקודה ליד דרך או שביל.",
-          ),
-        });
-        return;
-      }
+    const pendingPoint = {
+      ...point,
+      id: `pending-route-point-${Date.now()}-${routeClickIdRef.current++}`,
+      pending: true,
+    };
+    routeClickQueueRef.current.push(pendingPoint);
+    const phase = shardedRouteSessionRef.current ? "loading-shards" : "routing";
+    routeStateRef.current = addPendingRoutePoint(
+      routeStateRef.current,
+      pendingPoint,
+      phase,
+    );
+    dispatchRoute({
+      type: "route/addPendingPoint",
+      point: pendingPoint,
+      phase,
+    });
+    processRouteClickQueue();
+  }, [processRouteClickQueue, state.status]);
 
-      commitRouteSnapshot(snapshot);
-      if (snapshot.routeFailure) {
-        dispatchRoute({
-          type: "route/error",
-          error: new Error("לא נמצא חיבור ברשת הדרכים בין הנקודות שנבחרו."),
-        });
-      }
-      trackRoutePointEvent(snapshot.points, snapshot.selectedSegments, "click");
-    } catch (error) {
-      dispatchRoute({ type: "route/error", error });
-    }
-  }, [commitRouteSnapshot, routeState.points.length, state.assets, state.status]);
+  const handleViewportIdle = useCallback((bounds) => {
+    const shardedSession = shardedRouteSessionRef.current;
+    if (!shardedSession || state.status !== "ready") return;
+
+    shardedSession
+      .prefetchBounds(bounds, { maxShards: 48 })
+      .catch((error) => {
+        console.warn("Routing shard prefetch failed:", error);
+      });
+  }, [state.status]);
 
   const handleRoutePointDragStart = useCallback(() => {
     dragStartSnapshotRef.current = routeStateSnapshot(routeState);
   }, [routeState]);
 
-  const handleRoutePointDrag = useCallback((index, point) => {
+  const handleRoutePointDrag = useCallback(async (index, point) => {
     if (!routeManagerRef.current || state.status !== "ready") return;
 
     try {
-      const snapshot = dragPoint(
-        routeManagerRef.current,
-        routeState.points,
-        index,
-        point,
-        state.assets.segmentsData,
+      const shardedSession = shardedRouteSessionRef.current;
+      const snapshot = shardedSession
+        ? await shardedSession.dragPoint(routeState.points, index, point)
+        : dragPoint(
+            routeManagerRef.current,
+            routeState.points,
+            index,
+            point,
+            state.assets.segmentsData,
+          );
+      if (shardedSession) {
+        routeManagerRef.current = shardedSession.manager;
+      }
+      routeStateRef.current = routeStateFromSnapshot(
+        routeStateRef.current,
+        snapshot,
       );
       dispatchRoute({ type: "route/update", snapshot });
       clearRouteUrl();
@@ -510,17 +669,26 @@ function App() {
   }, [commitRouteSnapshot, state.assets, state.status]);
 
   const handleRouteClear = useCallback(() => {
+    routeClickQueueRef.current = [];
     if (!routeManagerRef.current) {
+      routeStateRef.current = {
+        ...routeStateRef.current,
+        ...clearRouteStateFields(),
+      };
       dispatchRoute({ type: "route/clear" });
       return;
     }
 
-    const previousSnapshot = routeStateSnapshot(routeState);
+    const previousSnapshot = routeStateSnapshot(routeStateRef.current);
     const snapshot = clearRoute(routeManagerRef.current);
     setRouteHistory((current) => ({
       past: [...current.past, previousSnapshot],
       future: [],
     }));
+    routeStateRef.current = routeStateFromSnapshot(
+      routeStateRef.current,
+      snapshot,
+    );
     dispatchRoute({ type: "route/update", snapshot });
     setMapUi((current) => ({
       ...current,
@@ -538,6 +706,10 @@ function App() {
       if (!routeManagerRef.current) return;
 
       applyRouteSnapshot(routeManagerRef.current, snapshot);
+      routeStateRef.current = routeStateFromSnapshot(
+        routeStateRef.current,
+        snapshot,
+      );
       dispatchRoute({ type: "route/update", snapshot });
       setMapUi((current) => ({
         ...current,
@@ -807,7 +979,13 @@ function App() {
       routeManagerRef.current,
       window.location,
     );
-  }, [routeState, state.assets, state.status]);
+  }, [
+    routeState.geometry,
+    routeState.points,
+    routeState.selectedSegments,
+    state.assets,
+    state.status,
+  ]);
   const featureFlags = useMemo(() => getFeatureFlags(), []);
   const canDownload = routeState.geometry.length >= 2;
   const canUndo = routeHistory.past.length > 0;
@@ -855,6 +1033,10 @@ function App() {
 
   const hasBrokenRoute =
     routeState.points.length >= 2 && routeState.geometry.length < 2;
+  const displayedRoutePoints = useMemo(
+    () => [...routeState.points, ...routeState.pendingPoints],
+    [routeState.pendingPoints, routeState.points],
+  );
 
   return (
     <>
@@ -983,6 +1165,10 @@ function App() {
                   />
                 )}
 
+                {routingShardStatus && (
+                  <RoutingShardStatus status={routingShardStatus} />
+                )}
+
                 <MapView
                   activeDataPointIds={activeDataPointIds}
                   dataMarkerFeatures={dataMarkerFeatures}
@@ -999,6 +1185,7 @@ function App() {
                   onRoutePointSelect={handleRoutePointSelect}
                   onSegmentFocus={handleSegmentFocus}
                   onSegmentHover={handleSegmentHover}
+                  onViewportIdle={handleViewportIdle}
                   onOsmDebugHover={handleOsmDebugHover}
                   onOsmGraphEdgeHover={handleOsmGraphEdgeHover}
                   onCwOsmMatchHover={handleCwOsmMatchHover}
@@ -1011,7 +1198,7 @@ function App() {
                   osmDebugLayerMode={osmDebugLayerMode}
                   routeFitRequest={mapUi.routeFitRequest}
                   routeGeometry={routeState.geometry}
-                  routePoints={routeState.points}
+                  routePoints={displayedRoutePoints}
                   searchHighlight={mapUi.searchHighlight}
                   selectedCwOsmReviewFeature={selectedCwReviewFeature}
                   selectedCwOsmReviewSegmentId={selectedCwReviewSegmentId}
@@ -1058,6 +1245,66 @@ function App() {
   );
 }
 
+function routeStateFromSnapshot(current, snapshot, options = {}) {
+  const preservePending = Boolean(options.preservePending);
+  return {
+    ...current,
+    status: "ready",
+    points: snapshot.points,
+    selectedSegments: snapshot.selectedSegments,
+    geometry: snapshot.geometry,
+    distance: snapshot.distance,
+    elevationGain: snapshot.elevationGain,
+    elevationLoss: snapshot.elevationLoss,
+    activeDataPoints: snapshot.activeDataPoints,
+    routeFailure: snapshot.routeFailure || null,
+    pendingPoints: preservePending ? current.pendingPoints : [],
+    routingPhase:
+      preservePending && current.pendingPoints.length > 0
+        ? current.routingPhase
+        : "idle",
+    hoveredSegment: null,
+    focusedSegment: null,
+    error: null,
+  };
+}
+
+function clearRouteStateFields() {
+  return {
+    points: [],
+    selectedSegments: [],
+    geometry: [],
+    distance: 0,
+    elevationGain: 0,
+    elevationLoss: 0,
+    activeDataPoints: [],
+    routeFailure: null,
+    pendingPoints: [],
+    routingPhase: "idle",
+    error: null,
+  };
+}
+
+function addPendingRoutePoint(current, point, phase = "loading-shards") {
+  return {
+    ...current,
+    pendingPoints: [...current.pendingPoints, point],
+    routingPhase: phase,
+    error: null,
+  };
+}
+
+function removePendingRoutePoint(current, pointId) {
+  const pendingPoints = current.pendingPoints.filter(
+    (point) => point.id !== pointId,
+  );
+  return {
+    ...current,
+    pendingPoints,
+    routingPhase: pendingPoints.length > 0 ? current.routingPhase : "idle",
+  };
+}
+
 function LoadingState() {
   return (
     <div className="react-shell__state react-map-loading" aria-live="polite">
@@ -1079,6 +1326,70 @@ function ErrorState({ error }) {
       </div>
     </div>
   );
+}
+
+function RoutingShardStatus({ status }) {
+  const phase =
+    status.phase === "unavailable"
+      ? "unavailable"
+      : status.phase === "loading" || status.phase === "prefetching"
+      ? status.phase
+      : status.loadedShards.length > 0
+        ? "loaded"
+        : "idle";
+  const batch = status.batchShardIds.length
+    ? `batch ${status.batchShardIds.length}`
+    : "waiting";
+
+  return (
+    <output
+      className={`react-routing-shard-status react-routing-shard-status--${phase}`}
+      data-testid="routing-shard-status"
+      aria-live="polite"
+    >
+      <strong>Routing shards</strong>
+      {phase === "unavailable" ? (
+        <span>unavailable · manifest has no shard assets</span>
+      ) : (
+        <>
+          <span>
+            {phase} · {status.loadedShards.length} loaded · {batch}
+          </span>
+          <span>
+            {status.loadedEdges.toLocaleString()} edges ·{" "}
+            {formatShardBytes(status.loadedCompactBytes)}
+          </span>
+        </>
+      )}
+    </output>
+  );
+}
+
+function routingShardFormat() {
+  const params = new URLSearchParams(window.location.search);
+  const format = params.get("routingShardFormat");
+  if (format === "msgpack" || format === "compact" || format === "cwb") {
+    return format;
+  }
+  return "default";
+}
+
+function unavailableRoutingShardStatus() {
+  console.warn(
+    "[routing-shards] unavailable: public-data/map-manifest.json has no baseRoutingShards asset",
+  );
+  return {
+    phase: "unavailable",
+    batchShardIds: [],
+    loadedShards: [],
+    loadedCompactBytes: 0,
+    loadedEdges: 0,
+  };
+}
+
+function formatShardBytes(bytes) {
+  if (!Number.isFinite(Number(bytes)) || Number(bytes) <= 0) return "0 KB";
+  return `${(Number(bytes) / 1024).toFixed(0)} KB`;
 }
 
 function getGeoJsonCoordinateBounds(geoJsonData) {
@@ -1286,7 +1597,11 @@ function RouteDescription({
   return (
     <div
       className={`route-description-panel${
-        routeState.points.length === 0 && !error ? " empty" : ""
+        routeState.points.length === 0 &&
+        routeState.pendingPoints.length === 0 &&
+        !error
+          ? " empty"
+          : ""
       }`}
       id="route-description-panel"
     >
@@ -1319,6 +1634,18 @@ function RouteDescription({
 }
 
 function RouteDescriptionText({ routeState }) {
+  if (routeState.pendingPoints.length > 0) {
+    const pendingCount = routeState.pendingPoints.length;
+    return (
+      <span className="react-route-loading">
+        <span className="react-route-loading__spinner" aria-hidden="true" />
+        {pendingCount === 1
+          ? "בודק את נקודת המסלול על רשת הדרכים..."
+          : `בודק ${pendingCount} נקודות מסלול על רשת הדרכים...`}
+      </span>
+    );
+  }
+
   if (routeState.geometry.length < 2) {
     return getRouteMessage(routeState);
   }

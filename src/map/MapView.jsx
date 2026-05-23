@@ -53,6 +53,7 @@ function MapView({
   onRoutePointSelect,
   onSegmentFocus,
   onSegmentHover,
+  onViewportIdle,
   osmDebugGeoJson = null,
   osmGraphEdgesGeoJson = null,
   osmGraphNodesGeoJson = null,
@@ -98,6 +99,7 @@ function MapView({
       onRoutePointSelect,
       onSegmentFocus,
       onSegmentHover,
+      onViewportIdle,
       onOsmDebugHover,
       onOsmGraphEdgeHover,
       onCwOsmMatchHover,
@@ -112,6 +114,7 @@ function MapView({
     onRoutePointSelect,
     onSegmentFocus,
     onSegmentHover,
+    onViewportIdle,
     onOsmDebugHover,
     onOsmGraphEdgeHover,
     onCwOsmMatchHover,
@@ -608,6 +611,37 @@ function MapView({
     const map = mapRef.current;
     if (!map || status !== "ready") return undefined;
 
+    let timeoutId = null;
+    const emitViewportIdle = () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(() => {
+        const bounds = map.getBounds();
+        callbacksRef.current.onViewportIdle?.({
+          west: bounds.getWest(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          north: bounds.getNorth(),
+        });
+      }, 350);
+    };
+
+    emitViewportIdle();
+    map.on("moveend", emitViewportIdle);
+
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+      map.off("moveend", emitViewportIdle);
+    };
+  }, [status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready") return undefined;
+
     const hasBlockingClickFeature = (event) => {
       const layers = [
         ROUTE_POINTS_LAYER_ID,
@@ -655,6 +689,7 @@ function MapView({
 
     const handleRoutePointClick = (event) => {
       const feature = event.features?.[0];
+      if (feature?.properties?.pending) return;
       const index = Number(feature?.properties?.index);
       if (!Number.isInteger(index)) return;
 
@@ -691,6 +726,7 @@ function MapView({
 
     const getPointIndex = (event) => {
       const feature = event.features?.[0];
+      if (feature?.properties?.pending) return null;
       const index = Number(feature?.properties?.index);
       return Number.isInteger(index) ? index : null;
     };

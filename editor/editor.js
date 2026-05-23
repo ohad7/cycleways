@@ -5294,7 +5294,7 @@ function buildOutputSummary(report) {
   if (!report) return "No build report";
   const validation = report.validation || {};
   const elevation = report.elevation || {};
-  const version = report.outputs?.versioned?.version;
+  const version = report.outputs?.runtime?.version;
   const qualityIssues = validation.invalidQuality?.length || 0;
   const splitNameIssues = validation.activeSplitNumberedNames?.length || 0;
   const routeWarnings = validation.routeCompatibilityWarnings?.length || 0;

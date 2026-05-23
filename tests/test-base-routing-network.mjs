@@ -97,6 +97,37 @@ const baseRoutingNetwork = {
 const manager = new RouteManager();
 await manager.load(geoJsonData, segmentsData, baseRoutingNetwork);
 
+const incrementalManager = new RouteManager();
+await incrementalManager.load(geoJsonData, segmentsData);
+assert.deepEqual(
+  incrementalManager.mergeBaseRoutingNetwork({
+    schemaVersion: baseRoutingNetwork.schemaVersion,
+    nodes: baseRoutingNetwork.nodes.slice(0, 2),
+    edges: baseRoutingNetwork.edges.slice(0, 1),
+  }),
+  { nodes: 2, edges: 1 },
+);
+assert.deepEqual(
+  incrementalManager.mergeBaseRoutingNetwork({
+    schemaVersion: baseRoutingNetwork.schemaVersion,
+    nodes: baseRoutingNetwork.nodes.slice(0, 3),
+    edges: baseRoutingNetwork.edges.slice(0, 2),
+  }),
+  { nodes: 1, edges: 1 },
+);
+incrementalManager.recalculateRoute([
+  { lat: 33.00001, lng: 35.00001 },
+  { lat: 33.00001, lng: 35.00199 },
+]);
+assert.equal(incrementalManager.getRouteInfo().failure, null);
+assert.deepEqual(incrementalManager.getRouteInfo().segments, ["CW preferred"]);
+assert.deepEqual(
+  incrementalManager
+    .getBaseRouteDiagnostics()
+    .traversals.map((traversal) => traversal.edgeId),
+  ["cw", "connector"],
+);
+
 const farPoint = manager.snapToNetwork({ lat: 34, lng: 36 });
 assert.equal(farPoint, null, "far clicks must stay off the hidden base graph");
 

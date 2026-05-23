@@ -12,6 +12,7 @@ class RouteManager {
     this.endpointGraph = new Map(); // node-level graph: "<segment>|S" or "<segment>|E" -> [{to, weight}]
     this.snapThresholdMeters = 100;
     this.baseRoutingNetwork = null;
+    this.baseRoutingNodeIds = new Set();
     this.baseRoutingEdges = new Map();
     this.baseRoutingAdjacency = new Map();
     this.baseRoutingSpatialGrid = new Map();
@@ -79,6 +80,16 @@ class RouteManager {
     this._buildEndpointGraph(); // new endpoint-level weighted graph
     this._loadBaseRoutingNetwork(baseRoutingNetwork);
 
+  }
+
+  /**
+   * Add unseen base graph nodes and edges to the active routing network.
+   * This keeps shard growth incremental without rebuilding existing indexes.
+   * @param {Object} network - Base routing network subset
+   * @returns {Object} Number of newly indexed nodes and edges
+   */
+  mergeBaseRoutingNetwork(network) {
+    return this._mergeBaseRoutingNetwork(network);
   }
 
   /**
@@ -675,23 +686,73 @@ class RouteManager {
 
   _loadBaseRoutingNetwork(network) {
     this.baseRoutingNetwork = null;
+    this.baseRoutingNodeIds.clear();
     this.baseRoutingEdges.clear();
     this.baseRoutingAdjacency.clear();
     this.baseRoutingSpatialGrid.clear();
     this.baseRoutingSpatialSegments = [];
+    this.baseRoutingMetersPerDegreeLng = this.baseRoutingMetersPerDegreeLat;
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
 
+    this._mergeBaseRoutingNetwork(network);
+  }
+
+  _mergeBaseRoutingNetwork(network) {
     if (
       !network ||
       !Array.isArray(network.nodes) ||
       !Array.isArray(network.edges) ||
       network.edges.length === 0
     ) {
-      return;
+      return { nodes: 0, edges: 0 };
     }
 
-    const latitudes = network.nodes
+    const targetNetwork = this.baseRoutingNetwork || {
+      schemaVersion: network.schemaVersion ?? null,
+      nodes: [],
+      edges: [],
+    };
+    if (!this.baseRoutingNetwork) {
+      this._setBaseRoutingProjection(network.nodes);
+    }
+
+    let addedNodes = 0;
+    for (const node of network.nodes) {
+      if (typeof node?.id !== "string" || this.baseRoutingNodeIds.has(node.id)) {
+        continue;
+      }
+      this.baseRoutingNodeIds.add(node.id);
+      targetNetwork.nodes.push(node);
+      addedNodes++;
+    }
+
+    let addedEdges = 0;
+    for (const edgeData of network.edges) {
+      if (typeof edgeData?.id !== "string" || this.baseRoutingEdges.has(edgeData.id)) {
+        continue;
+      }
+      const edge = this._normalizeBaseRoutingEdge(edgeData);
+      if (!edge) continue;
+      this.baseRoutingEdges.set(edge.id, edge);
+      this._addBaseRoutingAdjacency(edge.from, edge.to, edge, "forward");
+      this._addBaseRoutingAdjacency(edge.to, edge.from, edge, "reverse");
+      this._indexBaseRoutingEdge(edge);
+      targetNetwork.edges.push(edgeData);
+      addedEdges++;
+    }
+
+    if (this.baseRoutingEdges.size > 0) {
+      this.baseRoutingNetwork = targetNetwork;
+      this.baseRouteInfo = null;
+      this.lastRouteFailure = null;
+    }
+
+    return { nodes: addedNodes, edges: addedEdges };
+  }
+
+  _setBaseRoutingProjection(nodes) {
+    const latitudes = nodes
       .map((node) => Number(node?.coord?.[1]))
       .filter((latitude) => Number.isFinite(latitude));
     const averageLatitude =
@@ -702,19 +763,6 @@ class RouteManager {
     this.baseRoutingMetersPerDegreeLng =
       this.baseRoutingMetersPerDegreeLat *
       Math.cos((averageLatitude * Math.PI) / 180);
-
-    for (const edgeData of network.edges) {
-      const edge = this._normalizeBaseRoutingEdge(edgeData);
-      if (!edge) continue;
-      this.baseRoutingEdges.set(edge.id, edge);
-      this._addBaseRoutingAdjacency(edge.from, edge.to, edge, "forward");
-      this._addBaseRoutingAdjacency(edge.to, edge.from, edge, "reverse");
-      this._indexBaseRoutingEdge(edge);
-    }
-
-    if (this.baseRoutingEdges.size > 0) {
-      this.baseRoutingNetwork = network;
-    }
   }
 
   _normalizeBaseRoutingEdge(edgeData) {

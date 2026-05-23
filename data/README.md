@@ -12,9 +12,10 @@ python3 processing/build_map.py \
 
 Generated artifacts include:
 
-- `build/bike_roads.geojson`
-- `build/segments.json`
-- `build/map.kml`
+- `build/public-data/bike_roads.geojson`
+- `build/public-data/segments.json`
+- `build/public-data/exports/map.kml`
+- `build/public-data/map-manifest.json`
 - `build/report.json`
 
 KML is an output for Google Maps/Google Earth viewing, not the canonical editing source.

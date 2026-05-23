@@ -1,0 +1,241 @@
+import assert from "node:assert/strict";
+import {
+  baseRoutingShardEntriesForPoints,
+  mergeBaseRoutingShards,
+} from "../src/routing/baseRoutingShards.js";
+import { createShardedRouteSession } from "../src/routing/shardedRouteSession.js";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const RouteManager = require("../route-manager.js");
+
+const geoJsonData = {
+  type: "FeatureCollection",
+  features: [
+    {
+      type: "Feature",
+      properties: { id: 10, name: "CW west" },
+      geometry: {
+        type: "LineString",
+        coordinates: [[35, 33], [35.001, 33]],
+      },
+    },
+  ],
+};
+const segmentsData = {
+  "CW west": { id: 10, status: "active" },
+};
+const nodes = [
+  { id: "west", coord: [35, 33] },
+  { id: "border", coord: [35.001, 33] },
+  { id: "east", coord: [35.002, 33] },
+];
+const edges = [
+  {
+    id: "cw-west",
+    from: "west",
+    to: "border",
+    distanceMeters: 93,
+    coordinates: [[35, 33], [35.001, 33]],
+    routeClass: "path_track",
+    cwSegmentIds: [10],
+  },
+  {
+    id: "east-connector",
+    from: "border",
+    to: "east",
+    distanceMeters: 93,
+    coordinates: [[35.001, 33], [35.002, 33]],
+    routeClass: "local_road",
+    cwSegmentIds: [],
+  },
+];
+const fullNetwork = {
+  schemaVersion: 2,
+  nodes,
+  edges,
+};
+const manifest = {
+  scheme: { shardSizeDegrees: 0.001 },
+  shards: [
+    {
+      id: "west-shard",
+      bounds: [35, 33, 35.001, 33.001],
+    },
+    {
+      id: "east-shard",
+      bounds: [35.001, 33, 35.002, 33.001],
+    },
+  ],
+};
+const shardAssets = {
+  "west-shard": {
+    id: "west-shard",
+    sourceRoutingSchemaVersion: 2,
+    nodes: nodes.slice(0, 2),
+    edges: edges.slice(0, 1),
+  },
+  "east-shard": {
+    id: "east-shard",
+    sourceRoutingSchemaVersion: 2,
+    nodes: nodes.slice(1),
+    edges: edges.slice(1),
+  },
+};
+const points = [
+  { lat: 33.00001, lng: 35.0001 },
+  { lat: 33.00001, lng: 35.0019 },
+];
+
+const entries = baseRoutingShardEntriesForPoints(manifest, points, {
+  paddingDegrees: 0,
+});
+assert.deepEqual(
+  entries.map((entry) => entry.id),
+  ["east-shard", "west-shard"],
+);
+
+const shardNetwork = mergeBaseRoutingShards(
+  entries.map((entry) => shardAssets[entry.id]),
+);
+assert.equal(shardNetwork.nodes.length, 3);
+assert.equal(shardNetwork.edges.length, 2);
+assert.deepEqual(shardNetwork.summary.loadedShards, ["east-shard", "west-shard"]);
+
+const fullTraversalIds = await routeTraversalIds(fullNetwork);
+const shardTraversalIds = await routeTraversalIds(shardNetwork);
+assert.deepEqual(shardTraversalIds, fullTraversalIds);
+assert.deepEqual(shardTraversalIds, ["cw-west", "east-connector"]);
+
+const loadedShardIds = [];
+const shardStatuses = [];
+let shardedManagerLoads = 0;
+class IncrementalShardRouteManager extends RouteManager {
+  async load(...args) {
+    shardedManagerLoads++;
+    return super.load(...args);
+  }
+}
+const shardedSession = await createShardedRouteSession(
+  IncrementalShardRouteManager,
+  geoJsonData,
+  segmentsData,
+  manifest,
+  async (entry) => {
+    loadedShardIds.push(entry.id);
+    return shardAssets[entry.id];
+  },
+  {
+    paddingShards: 0,
+    onStatus: (status) => shardStatuses.push(status),
+  },
+);
+let shardedSnapshot = await shardedSession.addPoint(points[0]);
+assert.equal(shardedSnapshot.points.length, 1);
+assert.deepEqual(loadedShardIds, ["west-shard"]);
+shardedSnapshot = await shardedSession.addPoint(points[1]);
+assert.equal(shardedSnapshot.points.length, 2);
+assert.deepEqual(shardedSnapshot.selectedSegments, ["CW west"]);
+assert.deepEqual(loadedShardIds, ["west-shard", "east-shard"]);
+assert.equal(shardedManagerLoads, 1);
+assert.deepEqual(shardedSession.diagnostics(), {
+  loadedShards: ["east-shard", "west-shard"],
+  loadedCompactBytes: 0,
+  loadedNodes: 3,
+  loadedEdges: 2,
+});
+assert.deepEqual(
+  shardStatuses
+    .filter((status) => status.phase !== "ready")
+    .map((status) => [status.phase, status.batchShardIds]),
+  [
+    ["loading", ["west-shard"]],
+    ["loaded", ["west-shard"]],
+    ["loading", ["east-shard"]],
+    ["loaded", ["east-shard"]],
+  ],
+);
+
+const prefetchLoadedShardIds = [];
+const prefetchSession = await createShardedRouteSession(
+  IncrementalShardRouteManager,
+  geoJsonData,
+  segmentsData,
+  manifest,
+  async (entry) => {
+    prefetchLoadedShardIds.push(entry.id);
+    return shardAssets[entry.id];
+  },
+  {
+    paddingShards: 0,
+    prefetchPaddingShards: 0,
+  },
+);
+assert.equal(
+  await prefetchSession.prefetchBounds({
+    west: 35,
+    south: 33,
+    east: 35.0005,
+    north: 33.0005,
+  }),
+  true,
+);
+assert.deepEqual(prefetchLoadedShardIds, ["west-shard"]);
+shardedSnapshot = await prefetchSession.addPoint(points[0]);
+assert.equal(shardedSnapshot.points.length, 1);
+assert.deepEqual(
+  prefetchLoadedShardIds,
+  ["west-shard"],
+  "clicking inside a prefetched shard must not refetch it",
+);
+
+let releaseConcurrentLoad;
+const concurrentLoadCalls = [];
+const concurrentSession = await createShardedRouteSession(
+  IncrementalShardRouteManager,
+  geoJsonData,
+  segmentsData,
+  manifest,
+  async (entry) => {
+    concurrentLoadCalls.push(entry.id);
+    if (entry.id === "west-shard") {
+      await new Promise((resolve) => {
+        releaseConcurrentLoad = resolve;
+      });
+    }
+    return shardAssets[entry.id];
+  },
+  {
+    paddingShards: 0,
+    prefetchPaddingShards: 0,
+  },
+);
+const concurrentPrefetch = concurrentSession.prefetchBounds({
+  west: 35,
+  south: 33,
+  east: 35.0005,
+  north: 33.0005,
+});
+const concurrentAddPoint = concurrentSession.addPoint(points[0]);
+await Promise.resolve();
+releaseConcurrentLoad();
+await Promise.all([concurrentPrefetch, concurrentAddPoint]);
+assert.deepEqual(
+  concurrentLoadCalls,
+  ["west-shard"],
+  "concurrent prefetch and route clicks must share in-flight shard loads",
+);
+
+async function routeTraversalIds(network) {
+  const manager = new RouteManager();
+  await manager.load(geoJsonData, segmentsData, network);
+  const snappedPoints = points.map((point) => manager.snapToNetwork(point));
+  assert.ok(snappedPoints.every(Boolean));
+  manager.recalculateRoute(snappedPoints);
+  assert.equal(manager.getRouteInfo().failure, null);
+  return manager
+    .getBaseRouteDiagnostics()
+    .traversals.map((traversal) => traversal.edgeId);
+}
+
+console.log("Base routing shard tests passed");

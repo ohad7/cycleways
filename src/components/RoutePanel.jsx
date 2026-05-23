@@ -103,6 +103,12 @@ function RoutePanel({
 }
 
 export function getRouteMessage(routeState) {
+  if (routeState.pendingPoints?.length > 0) {
+    return routeState.pendingPoints.length === 1
+      ? "בודק את נקודת המסלול על רשת הדרכים..."
+      : `בודק ${routeState.pendingPoints.length} נקודות מסלול על רשת הדרכים...`;
+  }
+
   if (routeState.points.length === 0) {
     return "לחץ על נקודות במפה ליד דרך או שביל כדי לבנות מסלול.";
   }
