@@ -1891,6 +1891,14 @@ const server = createServer(async (request, response) => {
           try {
             const raw = await readFile(draftPath, "utf-8");
             sendJson(response, 200, JSON.parse(raw));
+            return;
+          } catch {}
+          // Fall back to the promoted file so the editor can resume after a
+          // promote (which removes the draft by design).
+          const promotedPath = resolve(videoKeyframesPublicDir, `${slug}.json`);
+          try {
+            const raw = await readFile(promotedPath, "utf-8");
+            sendJson(response, 200, JSON.parse(raw));
           } catch {
             sendJson(response, 404, { ok: false });
           }

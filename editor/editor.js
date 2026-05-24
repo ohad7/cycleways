@@ -6639,6 +6639,8 @@ async function vsLoadExistingDraft(slug) {
   videoSyncState.selectedIndex = -1;
   vsRenderKeyframesList();
   vsRenderKeyframesLayer();
+  // The GET draft endpoint falls back to the promoted file on the server side
+  // so the editor can resume editing after a promote (which removes the draft).
   const r = await fetch(`/api/video-keyframes/${slug}/draft`);
   if (!r.ok) {
     vsEls.ytUrl.value = "";
