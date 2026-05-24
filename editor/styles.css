@@ -964,3 +964,48 @@ button:disabled {
 .vs-keyframes li.selected { background: #fffbe6; }
 .vs-keyframes li .vs-kf-time { font-family: monospace; min-width: 5em; }
 .vs-keyframes li .vs-kf-coord { color: #666; flex: 1; }
+
+#route-catalog-panel .rc-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+.rc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem 0;
+  max-height: 14rem;
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.rc-list li {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  font-size: 0.9em;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.rc-list li:last-child { border-bottom: 0; }
+.rc-list li.selected { background: #fffbe6; }
+.rc-list li.invalid { color: #b00020; }
+.rc-list .rc-tags { color: #666; font-size: 0.85em; }
+.rc-detail {
+  border-top: 1px solid #ddd;
+  padding-top: 0.5rem;
+}
+.rc-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
+.rc-row > label { min-width: 6em; }
+.rc-row > input, .rc-row > textarea { flex: 1; }
+.rc-computed {
+  background: #f8f8f8;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  font-size: 0.85em;
+  color: #444;
+  white-space: pre-line;
+}

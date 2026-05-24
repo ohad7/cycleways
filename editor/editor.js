@@ -185,9 +185,11 @@ const els = {
   workspaceBase: document.getElementById("workspace-base"),
   workspaceOverlay: document.getElementById("workspace-overlay"),
   workspaceVideoSync: document.getElementById("workspace-video-sync"),
+  workspaceRouteCatalog: document.getElementById("workspace-route-catalog"),
   baseGraphPanel: document.getElementById("base-graph-panel"),
   cwOverlayPanel: document.getElementById("cw-overlay-panel"),
   videoSyncPanel: document.getElementById("video-sync-panel"),
+  routeCatalogPanel: document.getElementById("route-catalog-panel"),
   segmentDrawer: document.getElementById("segment-drawer"),
   toggleSegments: document.getElementById("toggle-segments"),
   closeSegments: document.getElementById("close-segments"),
@@ -2792,9 +2794,11 @@ function renderWorkspaceChrome() {
   els.workspaceBase.classList.toggle("active", state.workspaceMode === "base");
   els.workspaceOverlay.classList.toggle("active", state.workspaceMode === "overlay");
   els.workspaceVideoSync.classList.toggle("active", state.workspaceMode === "video-sync");
+  els.workspaceRouteCatalog.classList.toggle("active", state.workspaceMode === "route-catalog");
   els.baseGraphPanel.hidden = state.workspaceMode !== "base";
   els.cwOverlayPanel.hidden = state.workspaceMode !== "overlay";
   els.videoSyncPanel.hidden = state.workspaceMode !== "video-sync";
+  els.routeCatalogPanel.hidden = state.workspaceMode !== "route-catalog";
   els.toggleBaseOverlay.classList.toggle("active", state.baseOverlay.enabled);
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
 }
@@ -3187,7 +3191,7 @@ function setMode(mode) {
 }
 
 async function setWorkspaceMode(mode) {
-  if (!["segments", "base", "overlay", "video-sync"].includes(mode)) return;
+  if (!["segments", "base", "overlay", "video-sync", "route-catalog"].includes(mode)) return;
   if (state.workspaceMode === mode) {
     if ((mode === "base" || mode === "overlay") && !state.baseOverlay.loaded) {
       state.baseOverlay.enabled = true;
@@ -3231,6 +3235,12 @@ async function setWorkspaceMode(mode) {
     setStatus("Video Sync mode: pick a route, paste a YouTube URL, click on the map to add keyframes.");
     if (typeof activateVideoSyncMode === "function") {
       try { await activateVideoSyncMode(); } catch (err) { showError(err); }
+    }
+  } else if (mode === "route-catalog") {
+    state.baseOverlay.enabled = false;
+    setStatus("Route Catalog mode: manage findable + featured routes.");
+    if (typeof activateRouteCatalogMode === "function") {
+      try { await activateRouteCatalogMode(); } catch (err) { showError(err); }
     }
   } else {
     state.baseOverlay.enabled = false;
@@ -5510,6 +5520,7 @@ function wireEvents() {
   els.workspaceBase.addEventListener("click", () => setWorkspaceMode("base").catch(showError));
   els.workspaceOverlay.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
   els.workspaceVideoSync.addEventListener("click", () => setWorkspaceMode("video-sync").catch(showError));
+  els.workspaceRouteCatalog.addEventListener("click", () => setWorkspaceMode("route-catalog").catch(showError));
   els.segmentSearch.addEventListener("input", renderList);
   els.toggleSegments.addEventListener("click", () => setSegmentDrawer(!state.segmentsOpen));
   els.closeSegments.addEventListener("click", () => setSegmentDrawer(false));
@@ -6723,6 +6734,231 @@ vsEls.promote.addEventListener("click", async () => {
 map.on("style.load", () => {
   restoreEditorLayersAfterStyleChange().catch(showError);
 });
+
+// ============================================================
+// Route Catalog mode
+// ============================================================
+
+const routeCatalogState = {
+  loaded: null,
+  draft: null,
+  selectedSlug: null,
+  places: [],
+};
+
+const rcEls = {
+  status: document.getElementById("rc-status"),
+  list: document.getElementById("rc-list"),
+  detail: document.getElementById("rc-detail"),
+  newBtn: document.getElementById("rc-new"),
+  saveBtn: document.getElementById("rc-save-draft"),
+  recomputeBtn: document.getElementById("rc-recompute"),
+  promoteBtn: document.getElementById("rc-promote"),
+};
+
+function rcSetStatus(msg) {
+  if (rcEls.status) rcEls.status.textContent = msg || "";
+}
+
+function rcSelectedEntry() {
+  if (!routeCatalogState.draft) return null;
+  return (
+    routeCatalogState.draft.entries.find((e) => e.slug === routeCatalogState.selectedSlug) ||
+    null
+  );
+}
+
+function rcRenderList() {
+  const draft = routeCatalogState.draft;
+  rcEls.list.innerHTML = "";
+  if (!draft || draft.entries.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "(no entries — click + New entry)";
+    li.style.opacity = "0.6";
+    rcEls.list.appendChild(li);
+    return;
+  }
+  for (const entry of draft.entries) {
+    const li = document.createElement("li");
+    if (entry.slug === routeCatalogState.selectedSlug) li.classList.add("selected");
+    const main = document.createElement("span");
+    main.textContent = `${entry.name || entry.slug}${entry.featured ? " ⭐" : ""}`;
+    const tags = document.createElement("span");
+    tags.className = "rc-tags";
+    const dist = entry.distanceKm != null ? `${entry.distanceKm} km` : "?";
+    const diff = entry.difficulty || "?";
+    const style = entry.style || "?";
+    tags.textContent = `${dist} · ${diff} · ${style}`;
+    li.append(main, tags);
+    li.addEventListener("click", () => {
+      routeCatalogState.selectedSlug = entry.slug;
+      rcRenderList();
+      rcRenderDetail();
+    });
+    rcEls.list.appendChild(li);
+  }
+}
+
+function rcRenderDetail() {
+  const entry = rcSelectedEntry();
+  if (!entry) {
+    rcEls.detail.hidden = true;
+    return;
+  }
+  rcEls.detail.hidden = false;
+  rcEls.detail.innerHTML = "";
+  const fields = [
+    { key: "slug", label: "Slug" },
+    { key: "name", label: "Name" },
+    { key: "summary", label: "Summary" },
+    { key: "route", label: "Route token" },
+    { key: "notes", label: "Notes", textarea: true },
+  ];
+  for (const f of fields) {
+    const row = document.createElement("div");
+    row.className = "rc-row";
+    const label = document.createElement("label");
+    label.textContent = `${f.label}:`;
+    const input = document.createElement(f.textarea ? "textarea" : "input");
+    input.value = entry[f.key] ?? "";
+    if (!f.textarea) input.type = "text";
+    input.addEventListener("input", (e) => {
+      entry[f.key] = e.target.value;
+    });
+    row.append(label, input);
+    rcEls.detail.appendChild(row);
+  }
+  const featuredRow = document.createElement("div");
+  featuredRow.className = "rc-row";
+  const fLabel = document.createElement("label");
+  fLabel.textContent = "Featured:";
+  const fInput = document.createElement("input");
+  fInput.type = "checkbox";
+  fInput.checked = !!entry.featured;
+  fInput.addEventListener("change", (e) => {
+    entry.featured = e.target.checked;
+  });
+  featuredRow.append(fLabel, fInput);
+  rcEls.detail.appendChild(featuredRow);
+
+  const computed = document.createElement("div");
+  computed.className = "rc-computed";
+  const lines = [
+    `Distance: ${entry.distanceKm ?? "?"} km · Elevation gain: ${entry.elevationGainM ?? "?"} m`,
+    `Region: ${entry.regionId ?? "?"} · Difficulty: ${entry.difficulty ?? "?"} · Style: ${entry.style ?? "?"}`,
+    `Passes near: ${(entry.passesNear || []).join(", ") || "(none)"}`,
+  ];
+  computed.textContent = lines.join("\n");
+  rcEls.detail.appendChild(computed);
+
+  const actionRow = document.createElement("div");
+  actionRow.className = "rc-row";
+  const delBtn = document.createElement("button");
+  delBtn.type = "button";
+  delBtn.className = "secondary-button danger";
+  delBtn.textContent = "Delete";
+  delBtn.addEventListener("click", () => {
+    if (!confirm(`Delete ${entry.slug}?`)) return;
+    routeCatalogState.draft.entries = routeCatalogState.draft.entries.filter(
+      (e) => e.slug !== entry.slug,
+    );
+    routeCatalogState.selectedSlug = null;
+    rcRenderList();
+    rcRenderDetail();
+  });
+  actionRow.appendChild(delBtn);
+  rcEls.detail.appendChild(actionRow);
+}
+
+async function rcLoad() {
+  rcSetStatus("Loading…");
+  const r = await fetch("/api/route-catalog/draft");
+  if (!r.ok) {
+    rcSetStatus("Load failed");
+    return;
+  }
+  routeCatalogState.loaded = await r.json();
+  routeCatalogState.draft = JSON.parse(JSON.stringify(routeCatalogState.loaded));
+  const pr = await fetch("/api/route-catalog/places");
+  routeCatalogState.places = pr.ok ? ((await pr.json())?.places || []) : [];
+  rcSetStatus(`${routeCatalogState.draft.entries.length} entries loaded.`);
+  rcRenderList();
+  rcRenderDetail();
+}
+
+async function rcSaveDraft() {
+  rcSetStatus("Saving…");
+  const r = await fetch("/api/route-catalog/draft", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(routeCatalogState.draft),
+  });
+  const result = await r.json().catch(() => ({}));
+  rcSetStatus(r.ok ? "Draft saved." : `Save failed: ${result.error || r.statusText}`);
+}
+
+async function rcRecompute() {
+  rcSetStatus("Computing…");
+  const r = await fetch("/api/route-catalog/recompute", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(routeCatalogState.draft),
+  });
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    rcSetStatus(`Recompute failed: ${result.error || r.statusText}`);
+    return;
+  }
+  routeCatalogState.draft = result;
+  rcSetStatus("Metadata refreshed.");
+  rcRenderList();
+  rcRenderDetail();
+}
+
+async function rcPromote() {
+  await rcSaveDraft();
+  rcSetStatus("Promoting…");
+  const r = await fetch("/api/route-catalog/promote", { method: "POST" });
+  const result = await r.json().catch(() => ({}));
+  rcSetStatus(
+    r.ok
+      ? `Promoted (${result.entryCount} entries).`
+      : `Promote failed: ${result.error || r.statusText}`,
+  );
+  if (r.ok) await rcLoad();
+}
+
+function rcNewEntry() {
+  const slug = prompt("New entry slug (lowercase, kebab-case):");
+  if (!slug || !/^[a-z][a-z0-9-]*$/.test(slug)) {
+    alert("Invalid slug.");
+    return;
+  }
+  if (routeCatalogState.draft.entries.some((e) => e.slug === slug)) {
+    alert("Slug already exists.");
+    return;
+  }
+  routeCatalogState.draft.entries.push({
+    slug,
+    name: slug,
+    summary: "",
+    route: "",
+    notes: "",
+    featured: false,
+  });
+  routeCatalogState.selectedSlug = slug;
+  rcRenderList();
+  rcRenderDetail();
+}
+
+rcEls.newBtn.addEventListener("click", rcNewEntry);
+rcEls.saveBtn.addEventListener("click", () => rcSaveDraft().catch(showError));
+rcEls.recomputeBtn.addEventListener("click", () => rcRecompute().catch(showError));
+rcEls.promoteBtn.addEventListener("click", () => rcPromote().catch(showError));
+
+async function activateRouteCatalogMode() {
+  if (!routeCatalogState.draft) await rcLoad();
+}
 
 map.on("load", async () => {
   try {

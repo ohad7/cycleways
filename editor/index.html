@@ -27,6 +27,7 @@
             <button id="workspace-base" class="tool-button" type="button">Base Graph</button>
             <button id="workspace-overlay" class="tool-button" type="button">CW Overlay</button>
             <button id="workspace-video-sync" class="tool-button" type="button">Video Sync</button>
+            <button id="workspace-route-catalog" class="tool-button" type="button">Route Catalog</button>
           </div>
 
           <div class="map-toolbar">
@@ -187,6 +188,21 @@
               <button id="vs-save-draft" class="secondary-button" type="button">Save Draft</button>
               <button id="vs-promote" class="primary-button" type="button">Promote</button>
             </div>
+          </section>
+
+          <section id="route-catalog-panel" class="panel workspace-panel" hidden>
+            <header class="panel-header">
+              <h2>Route Catalog</h2>
+              <span id="rc-status"></span>
+            </header>
+            <div class="rc-toolbar">
+              <button id="rc-new" class="secondary-button" type="button">+ New entry</button>
+              <button id="rc-save-draft" class="secondary-button" type="button">Save Draft</button>
+              <button id="rc-recompute" class="secondary-button" type="button">Recompute</button>
+              <button id="rc-promote" class="primary-button" type="button">Promote</button>
+            </div>
+            <ul id="rc-list" class="rc-list"></ul>
+            <div id="rc-detail" class="rc-detail" hidden></div>
           </section>
 
           <section class="panel">
