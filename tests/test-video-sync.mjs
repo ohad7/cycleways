@@ -42,33 +42,48 @@ assert.throws(
   /sorted by t/i,
 );
 
-// First t must be 0
+// First t must be >= 0 (negative rejected)
 assert.throws(
   () =>
     createVideoSync({
       keyframes: [
-        { t: 1, lat: 33.0, lng: 35.0 },
+        { t: -1, lat: 33.0, lng: 35.0 },
         { t: 10, lat: 33.0, lng: 35.01 },
       ],
       videoDuration: 10,
       routeGeometry: simpleRoute,
     }),
-  /first keyframe.*t === 0/i,
+  /first keyframe.*t >= 0/i,
 );
 
-// Last t must equal videoDuration
+// Last t must be <= videoDuration (past-end rejected)
 assert.throws(
   () =>
     createVideoSync({
       keyframes: [
         { t: 0, lat: 33.0, lng: 35.0 },
-        { t: 9, lat: 33.0, lng: 35.01 },
+        { t: 11, lat: 33.0, lng: 35.01 },
       ],
       videoDuration: 10,
       routeGeometry: simpleRoute,
     }),
   /last keyframe.*videoDuration/i,
 );
+
+// Sparse coverage (first > 0, last < duration) is now ACCEPTED;
+// runtime clamps the marker to first/last positions outside the range.
+const sparseSync = createVideoSync({
+  keyframes: [
+    { t: 2, lat: 33.0, lng: 35.0 },
+    { t: 8, lat: 33.0, lng: 35.01 },
+  ],
+  videoDuration: 10,
+  routeGeometry: simpleRoute,
+});
+const before = sparseSync.timeToPosition(0);
+assert.ok(Math.abs(before.lng - 35.0) < 1e-9, "t=0 clamps to first keyframe position");
+const after = sparseSync.timeToPosition(10);
+assert.ok(Math.abs(after.lng - 35.01) < 1e-9, "t=duration clamps to last keyframe position");
 
 // Route too short (< 2 points) — must throw
 assert.throws(

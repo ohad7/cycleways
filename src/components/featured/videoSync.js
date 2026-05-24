@@ -10,11 +10,11 @@ function assertValid({ keyframes, videoDuration, routeGeometry }) {
       throw new Error("videoSync keyframes must be sorted by t (strictly increasing)");
     }
   }
-  if (keyframes[0].t !== 0) {
-    throw new Error("videoSync first keyframe must have t === 0");
+  if (keyframes[0].t < 0) {
+    throw new Error("videoSync first keyframe must have t >= 0");
   }
-  if (keyframes[keyframes.length - 1].t !== videoDuration) {
-    throw new Error("videoSync last keyframe must have t === videoDuration");
+  if (keyframes[keyframes.length - 1].t > videoDuration) {
+    throw new Error("videoSync last keyframe t must be <= videoDuration");
   }
   if (!Array.isArray(routeGeometry) || routeGeometry.length < 2) {
     throw new Error("videoSync route geometry must have at least 2 points");
@@ -133,7 +133,8 @@ export function createVideoSync(input) {
     const a = byFraction[lo];
     const b = byFraction[hi];
     const span = b.fraction - a.fraction;
-    const localT = span > 0 ? (clamped - a.fraction) / span : 0;
+    let localT = span > 0 ? (clamped - a.fraction) / span : 0;
+    localT = Math.max(0, Math.min(1, localT));
     return a.t + (b.t - a.t) * localT;
   }
 
@@ -149,7 +150,10 @@ export function createVideoSync(input) {
     const a = byTime[lo];
     const b = byTime[hi];
     const span = b.t - a.t;
-    const localT = span > 0 ? (clamped - a.t) / span : 0;
+    let localT = span > 0 ? (clamped - a.t) / span : 0;
+    // Clamp so extrapolation can't happen when the requested time is outside
+    // the keyframe range (e.g., video plays before first keyframe or after last).
+    localT = Math.max(0, Math.min(1, localT));
     const fraction = a.fraction + (b.fraction - a.fraction) * localT;
     return pointAtFraction(routeGeometry, cumulative, fraction);
   }
