@@ -147,4 +147,28 @@ assert.ok(
   `expected lat near corner (33.0), got ${lMid.lat}`,
 );
 
+// positionToTime should be the inverse of timeToPosition (round-trip)
+const roundtripSync = createVideoSync({
+  keyframes: [
+    { t: 0, lat: 33.0, lng: 35.0 },
+    { t: 4, lat: 33.0, lng: 35.001 },
+    { t: 10, lat: 33.0, lng: 35.002 },
+  ],
+  videoDuration: 10,
+  routeGeometry: straightRoute,
+});
+
+for (const t of [0, 1.5, 4, 7, 10]) {
+  const pos = roundtripSync.timeToPosition(t);
+  const tBack = roundtripSync.positionToTime(pos.fraction);
+  assert.ok(
+    Math.abs(tBack - t) < 0.01,
+    `round-trip at t=${t} got ${tBack}`,
+  );
+}
+
+// Clamping
+assert.equal(roundtripSync.positionToTime(-0.5), 0);
+assert.equal(roundtripSync.positionToTime(1.5), 10);
+
 console.log("videoSync validation tests passed");

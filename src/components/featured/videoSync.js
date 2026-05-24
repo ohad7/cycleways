@@ -116,6 +116,27 @@ export function createVideoSync(input) {
     return { t: k.t, fraction: snap.fraction };
   });
 
+  // For positionToTime we need byTime sorted by fraction. Defensive copy + sort.
+  const byFraction = byTime
+    .map(({ t, fraction }) => ({ t, fraction }))
+    .sort((a, b) => a.fraction - b.fraction);
+
+  function positionToTime(fraction) {
+    const clamped = Math.max(0, Math.min(1, fraction));
+    let lo = 0;
+    let hi = byFraction.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (byFraction[mid].fraction <= clamped) lo = mid;
+      else hi = mid;
+    }
+    const a = byFraction[lo];
+    const b = byFraction[hi];
+    const span = b.fraction - a.fraction;
+    const localT = span > 0 ? (clamped - a.fraction) / span : 0;
+    return a.t + (b.t - a.t) * localT;
+  }
+
   function timeToPosition(t) {
     const clamped = Math.max(0, Math.min(videoDuration, t));
     let lo = 0;
@@ -135,5 +156,6 @@ export function createVideoSync(input) {
 
   return {
     timeToPosition,
+    positionToTime,
   };
 }
