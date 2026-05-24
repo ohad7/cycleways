@@ -1,7 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { featuredRoutes } from "../featured/index.js";
-import FeaturedGalleryCard from "./featured/GalleryCard.jsx";
 
 function ContentSections({ onFocusSegment }) {
   const focusSegment = (segmentName) => {
@@ -166,17 +163,6 @@ function ContentSections({ onFocusSegment }) {
                 </ul>
               </li>
             </ul>
-
-            <h2>מסלולים שלמים מומלצים</h2>
-            <p>
-              אוסף מסלולים שלמים מומלצים. ראו את כולם ב
-              <Link to="/featured">דף המסלולים המומלצים</Link>.
-            </p>
-            <div className="featured-index-grid featured-index-grid--inline">
-              {featuredRoutes.slice(0, 4).map(({ meta }) => (
-                <FeaturedGalleryCard key={meta.slug} meta={meta} headingLevel="h3" />
-              ))}
-            </div>
           </div>
         </section>
 
