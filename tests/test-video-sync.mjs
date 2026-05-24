@@ -171,4 +171,34 @@ for (const t of [0, 1.5, 4, 7, 10]) {
 assert.equal(roundtripSync.positionToTime(-0.5), 0);
 assert.equal(roundtripSync.positionToTime(1.5), 10);
 
+// snapClickToRoute
+const clickSync = createVideoSync({
+  keyframes: [
+    { t: 0, lat: 33.0, lng: 35.0 },
+    { t: 10, lat: 33.0, lng: 35.002 },
+  ],
+  videoDuration: 10,
+  routeGeometry: [
+    { lat: 33.0, lng: 35.0 },
+    { lat: 33.0, lng: 35.002 },
+  ],
+});
+
+// Click essentially on the route midpoint
+const onRoute = clickSync.snapClickToRoute({ lat: 33.0, lng: 35.001 });
+assert.ok(onRoute, "expected snap to succeed for on-route click");
+assert.ok(onRoute.distanceMeters < 5, "snap distance should be near zero");
+assert.ok(Math.abs(onRoute.fraction - 0.5) < 1e-3);
+
+// Click far away — default 80m threshold should reject
+const farAway = clickSync.snapClickToRoute({ lat: 34.0, lng: 36.0 });
+assert.equal(farAway, null, "expected null for click far from route");
+
+// Custom larger threshold accepts a moderately-distant click
+const loose = clickSync.snapClickToRoute(
+  { lat: 33.0005, lng: 35.001 }, // ~55m north of the route at midpoint
+  200,
+);
+assert.ok(loose, "expected loose threshold to accept the click");
+
 console.log("videoSync validation tests passed");

@@ -154,8 +154,15 @@ export function createVideoSync(input) {
     return pointAtFraction(routeGeometry, cumulative, fraction);
   }
 
+  function snapClickToRoute(latLng, maxMeters = 80) {
+    const snap = nearestPointOnPolyline(latLng, routeGeometry, cumulative);
+    if (snap.distanceMeters > maxMeters) return null;
+    return { fraction: snap.fraction, distanceMeters: snap.distanceMeters };
+  }
+
   return {
     timeToPosition,
     positionToTime,
+    snapClickToRoute,
   };
 }
