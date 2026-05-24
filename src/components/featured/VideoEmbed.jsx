@@ -1,51 +1,60 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 
-function toEmbed(url) {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("youtube.com")) {
-      const id = u.searchParams.get("v");
-      return id ? `https://www.youtube.com/embed/${id}` : url;
-    }
-    if (u.hostname === "youtu.be") {
-      return `https://www.youtube.com/embed${u.pathname}`;
-    }
-    if (u.hostname.includes("vimeo.com")) {
-      return `https://player.vimeo.com/video${u.pathname}`;
-    }
-  } catch {}
-  return url;
+let indexPromise = null;
+
+function loadVideoIndex() {
+  if (!indexPromise) {
+    const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
+    indexPromise = fetch(`${base}public-data/route-videos/index.json`)
+      .then((r) => (r.ok ? r.json() : { routes: {} }))
+      .catch(() => ({ routes: {} }));
+  }
+  return indexPromise;
 }
 
-export default function VideoEmbed({ src }) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
+async function loadKeyframes(filename) {
+  const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
+  const response = await fetch(`${base}public-data/route-videos/${filename}`);
+  if (!response.ok) throw new Error(`keyframes ${filename}: HTTP ${response.status}`);
+  return response.json();
+}
+
+export default function VideoEmbed() {
+  const { meta } = useFeaturedRoute();
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState("loading");
 
   useEffect(() => {
-    if (!ref.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.isIntersecting && setVisible(true)),
-      { rootMargin: "200px" },
-    );
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
+    let cancelled = false;
+    (async () => {
+      try {
+        const index = await loadVideoIndex();
+        const filename = index?.routes?.[meta.slug];
+        if (!filename) {
+          if (!cancelled) setStatus("absent");
+          return;
+        }
+        const payload = await loadKeyframes(filename);
+        if (cancelled) return;
+        setData(payload);
+        setStatus("ready");
+      } catch (err) {
+        console.warn("VideoEmbed failed to load", err);
+        if (!cancelled) setStatus("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [meta.slug]);
 
-  if (!src) return null;
-
+  if (status !== "ready" || !data) return null;
   return (
-    <section ref={ref} className="featured-video">
+    <section className="featured-video">
       <h2>סרטון</h2>
       <div className="featured-video-frame">
-        {visible && (
-          <iframe
-            src={toEmbed(src)}
-            title="סרטון המסלול"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            loading="lazy"
-          />
-        )}
+        <div data-testid="video-placeholder">{data.youtubeId}</div>
       </div>
     </section>
   );

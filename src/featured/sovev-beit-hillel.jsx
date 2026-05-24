@@ -45,7 +45,7 @@ export default function SovevBeitHillel() {
       <FeaturedRoute.POIs />
 
       <FeaturedRoute.Gallery photos={[]} />
-      <FeaturedRoute.Video src={undefined} />
+      <FeaturedRoute.Video />
     </FeaturedRoute>
   );
 }
