@@ -12,6 +12,7 @@ export default function FeaturedRouteMapSlot() {
     setFocusedPoiId,
     focusedCoord,
     routeFitRequest,
+    videoCursor,
   } = useFeaturedRoute();
   const [fullscreen, setFullscreen] = useState(false);
   const triggerRef = useRef(null);
@@ -67,6 +68,7 @@ export default function FeaturedRouteMapSlot() {
           routeFitRequest={routeFitRequest}
           focusedMarker={focusedMarker}
           onDataMarkerClick={(marker) => setFocusedPoiId(marker.id)}
+          videoCursor={videoCursor}
         />
         <button
           ref={triggerRef}

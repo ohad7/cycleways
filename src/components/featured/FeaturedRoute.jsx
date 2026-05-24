@@ -123,6 +123,7 @@ function FeaturedRoute({ meta, children }) {
                   routeFitRequest={routeFitRequest}
                   focusedMarker={focusedMarker}
                   onDataMarkerClick={(marker) => setFocusedPoiId(marker.id)}
+                  videoCursor={videoCursor}
                 />
               </aside>
             )}

@@ -1145,6 +1145,40 @@ export function syncDataMarkerLayers(
   });
 }
 
+const VIDEO_CURSOR_SOURCE_ID = "video-cursor-source";
+const VIDEO_CURSOR_LAYER_ID = "video-cursor-layer";
+
+export function syncVideoCursorLayer(map, cursor) {
+  if (!map || !map.isStyleLoaded()) return;
+  const features =
+    cursor && Number.isFinite(cursor.lat) && Number.isFinite(cursor.lng)
+      ? [
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [cursor.lng, cursor.lat] },
+            properties: {},
+          },
+        ]
+      : [];
+  const data = { type: "FeatureCollection", features };
+  if (!map.getSource(VIDEO_CURSOR_SOURCE_ID)) {
+    map.addSource(VIDEO_CURSOR_SOURCE_ID, { type: "geojson", data });
+    map.addLayer({
+      id: VIDEO_CURSOR_LAYER_ID,
+      type: "circle",
+      source: VIDEO_CURSOR_SOURCE_ID,
+      paint: {
+        "circle-radius": 9,
+        "circle-color": "#ff3d3d",
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 3,
+      },
+    });
+  } else {
+    map.getSource(VIDEO_CURSOR_SOURCE_ID).setData(data);
+  }
+}
+
 export function getGeoJsonBounds(mapboxgl, geoJsonData) {
   const bounds = new mapboxgl.LngLatBounds();
 

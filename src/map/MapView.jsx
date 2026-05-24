@@ -29,6 +29,7 @@ import {
   syncOsmIntersectionLayers,
   syncRouteGeometryLayer,
   syncRoutePointLayers,
+  syncVideoCursorLayer,
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
 import { distanceToLineSegmentPixels } from "../../utils/distance.js";
@@ -72,6 +73,7 @@ function MapView({
   selectedCwOsmReviewFeature = null,
   selectedCwOsmReviewSegmentId = null,
   selectedRoutePointIndex = null,
+  videoCursor = null,
 }) {
   const containerRef = useRef(null);
   const draggingPointRef = useRef(null);
@@ -585,6 +587,12 @@ function MapView({
     if (!map || status !== "ready") return;
     syncRouteGeometryLayer(map, routeGeometry);
   }, [routeGeometry, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    syncVideoCursorLayer(map, videoCursor);
+  }, [videoCursor, status]);
 
   useEffect(() => {
     const map = mapRef.current;
