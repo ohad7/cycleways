@@ -113,87 +113,143 @@
   padding: 0.5rem 1.25rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
+
+/* Turns — group of consecutive messages from one side */
+.ww-turn {
+  display: flex;
+  gap: 0.5rem;
+  animation: ww-fadeIn 240ms ease-out both;
+}
+.ww-turn--bot { align-self: flex-start; max-width: 88%; }
+.ww-turn--user { align-self: flex-end; max-width: 80%; }
+.ww-turn__avatar {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--wz-olive-soft);
+  border: 1px solid var(--wz-sand);
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+  margin-top: 2px;
+}
+.ww-turn__bubbles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+@keyframes ww-fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Bubbles */
 .ww-bubble {
-  padding: 0.7rem 1rem;
-  border-radius: 16px;
-  max-width: 82%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
   line-height: 1.5;
+  font-size: 0.95rem;
 }
 .ww-bubble--bot {
   background: #ffffff;
   border: 1px solid var(--wz-sand-soft);
+  color: var(--wz-ink);
+  border-top-right-radius: 4px; /* "tail" toward the avatar (RTL: top-right) */
+}
+
+/* Quick replies — anchored to the latest bot turn */
+.ww-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   align-self: flex-start;
+  max-width: 88%;
+  padding-inline-start: 40px; /* indent past the avatar column */
+  animation: ww-fadeIn 240ms ease-out 100ms both;
+}
+.ww-replies--search {
+  flex-direction: column;
+  width: 100%;
+  max-width: 88%;
+}
+.ww-chip {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.ww-chip--reply {
+  background: #ffffff;
+  border: 1px solid var(--wz-sand);
+  color: var(--wz-olive-dark);
+}
+.ww-chip--reply:hover {
+  background: var(--wz-olive-soft);
+  border-color: var(--wz-olive);
+}
+.ww-chip--reply:active { transform: translateY(1px); }
+.ww-chip--secondary {
+  border-style: dashed;
+}
+.ww-chip--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--wz-ink-soft);
+  text-decoration: underline dashed var(--wz-sand);
+  text-underline-offset: 4px;
+}
+.ww-chip--ghost:hover {
+  background: var(--wz-cream-deep);
+  border-color: transparent;
   color: var(--wz-ink);
 }
-.ww-bubble--user {
+.ww-chip--user-reply {
   background: var(--wz-olive);
   color: #ffffff;
+  border: 1px solid var(--wz-olive);
+  cursor: default;
   align-self: flex-end;
 }
 
-/* Option buttons */
-.ww-options {
+/* Inline search row inside a replies group */
+.ww-search-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.25rem 0 0.25rem;
-}
-.ww-option-btn {
-  background: #ffffff;
-  border: 1px solid var(--wz-sand);
-  color: var(--wz-ink);
-  padding: 0.55rem 1rem;
-  border-radius: 10px;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.95rem;
-  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
-}
-.ww-option-btn:hover {
-  background: var(--wz-olive-soft);
-  border-color: var(--wz-olive);
-  color: var(--wz-olive-dark);
-}
-.ww-option-btn:active { transform: translateY(1px); }
-
-/* Place picker */
-.ww-place-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  margin-top: 0.35rem;
-}
-.ww-place-search {
-  padding: 0.6rem 0.9rem;
-  border: 1px solid var(--wz-sand);
-  border-radius: 10px;
-  font: inherit;
+  gap: 0.4rem;
+  align-items: center;
   width: 100%;
-  box-sizing: border-box;
+}
+.ww-search-input {
+  flex: 1;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--wz-sand);
+  border-radius: 18px;
+  font: inherit;
   background: #ffffff;
   color: var(--wz-ink);
 }
-.ww-place-search:focus {
+.ww-search-input:focus {
   outline: none;
   border-color: var(--wz-olive);
   box-shadow: 0 0 0 3px var(--wz-olive-soft);
 }
-.ww-place-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-.ww-place-link {
+.ww-search-close {
   background: transparent;
   border: 0;
-  color: var(--wz-olive-dark);
   cursor: pointer;
-  font: inherit;
-  text-decoration: underline;
+  color: var(--wz-ink-soft);
+  font-size: 1rem;
+  padding: 0.2rem 0.5rem;
 }
+.ww-search-close:hover { color: var(--wz-ink); }
 .ww-place-empty {
   color: var(--wz-ink-soft);
   font-size: 0.9rem;
