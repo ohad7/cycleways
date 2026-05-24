@@ -84,4 +84,67 @@ assert.throws(
   /route.*at least 2/i,
 );
 
+// timeToPosition along a straight east-west route
+const straightRoute = [
+  { lat: 33.0, lng: 35.0 },
+  { lat: 33.0, lng: 35.001 },
+  { lat: 33.0, lng: 35.002 },
+];
+
+const straightSync = createVideoSync({
+  keyframes: [
+    { t: 0, lat: 33.0, lng: 35.0 },
+    { t: 10, lat: 33.0, lng: 35.002 },
+  ],
+  videoDuration: 10,
+  routeGeometry: straightRoute,
+});
+
+const start = straightSync.timeToPosition(0);
+assert.ok(Math.abs(start.lat - 33.0) < 1e-9);
+assert.ok(Math.abs(start.lng - 35.0) < 1e-9);
+assert.ok(Math.abs(start.fraction - 0) < 1e-6);
+
+const mid = straightSync.timeToPosition(5);
+assert.ok(Math.abs(mid.lat - 33.0) < 1e-9);
+assert.ok(Math.abs(mid.lng - 35.001) < 1e-6);
+assert.ok(Math.abs(mid.fraction - 0.5) < 1e-3);
+
+const end = straightSync.timeToPosition(10);
+assert.ok(Math.abs(end.lat - 33.0) < 1e-9);
+assert.ok(Math.abs(end.lng - 35.002) < 1e-9);
+assert.ok(Math.abs(end.fraction - 1) < 1e-6);
+
+// Clamping: t outside [0, duration]
+const clampLow = straightSync.timeToPosition(-1);
+assert.equal(clampLow.fraction, 0);
+const clampHigh = straightSync.timeToPosition(99);
+assert.equal(clampHigh.fraction, 1);
+
+// Sparse keyframes on an L-shape: marker stays on the path, not in lat/lng space
+const lRoute = [
+  { lat: 33.0, lng: 35.0 },
+  { lat: 33.0, lng: 35.01 },   // 1 km east
+  { lat: 33.01, lng: 35.01 },  // 1 km north
+];
+const lSync = createVideoSync({
+  keyframes: [
+    { t: 0, lat: 33.0, lng: 35.0 },
+    { t: 10, lat: 33.01, lng: 35.01 },
+  ],
+  videoDuration: 10,
+  routeGeometry: lRoute,
+});
+// At t=5 (halfway through video, halfway along route by length),
+// the marker should be at the corner of the L, not at the lat/lng midpoint.
+const lMid = lSync.timeToPosition(5);
+assert.ok(
+  Math.abs(lMid.lng - 35.01) < 1e-3,
+  `expected lng near corner (35.01), got ${lMid.lng}`,
+);
+assert.ok(
+  Math.abs(lMid.lat - 33.0) < 1e-3,
+  `expected lat near corner (33.0), got ${lMid.lat}`,
+);
+
 console.log("videoSync validation tests passed");
