@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-24T14:54:00.855Z",
+  "updatedAt": "2026-05-24T15:06:13.484Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -17214,7 +17214,7 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.86,
+      "avgDistanceMeters": 0.87,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -17228,7 +17228,7 @@
           "manualEdgeId": "manual-301-mpjw912h"
         }
       ],
-      "updatedAt": "2026-05-24T14:53:50.364Z"
+      "updatedAt": "2026-05-24T15:06:13.478Z"
     },
     "302": {
       "segmentId": 302,

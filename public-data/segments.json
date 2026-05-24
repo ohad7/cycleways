@@ -2034,7 +2034,7 @@
     "net_elevation_change_m": 0.0
   },
   "כביש 9888 סדנה": {
-    "id": 57,
+    "id": 304,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -2042,9 +2042,31 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 57,
+    "splitFromName": "כביש 9888 סדנה",
     "middle": {
-      "longitude": 35.609446,
-      "latitude": 33.218752,
+      "longitude": 35.609197,
+      "latitude": 33.218146,
+      "elevation": 93.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 9888 קמפינג": {
+    "id": 305,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 57,
+    "splitFromName": "כביש 9888 סדנה",
+    "middle": {
+      "longitude": 35.609333,
+      "latitude": 33.219162,
       "elevation": 92.0
     },
     "elevation_gain_m": 0.0,
@@ -2932,7 +2954,7 @@
     "net_elevation_change_m": 0.0
   },
   "רחוב הדולב בית הלל": {
-    "id": 141,
+    "id": 302,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -2940,10 +2962,32 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 141,
+    "splitFromName": "רחוב הדולב בית הלל",
     "middle": {
-      "longitude": 35.604508,
-      "latitude": 33.215302,
+      "longitude": 35.604825,
+      "latitude": 33.215301,
       "elevation": 93.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "רחוב הדולב בית הלל מערב": {
+    "id": 303,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 141,
+    "splitFromName": "רחוב הדולב בית הלל",
+    "middle": {
+      "longitude": 35.602121,
+      "latitude": 33.214841,
+      "elevation": 92.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -4885,6 +4929,24 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
+  "גדר מערכת בית הלל צפון": {
+    "id": 301,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.604513,
+      "latitude": 33.218818,
+      "elevation": 94.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
   "סובב דפנה": {
     "id": 81,
     "status": "deprecated",
@@ -5221,29 +5283,51 @@
       ]
     ]
   },
+  "כביש 9888 סדנה [split archive 57]": {
+    "id": 57,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "כביש 9888 סדנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.609212,
+        33.218167
+      ],
+      [
+        35.609364,
+        33.219089
+      ]
+    ]
+  },
   "מפגש נחל קליל בניאס": {
     "id": 71,
     "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
     "routeAnchors": [
       [
         35.642755,
         33.204892
       ],
       [
-        35.642491,
-        33.2048665
-      ],
-      [
         35.642579,
         33.204875
+      ],
+      [
+        35.642755,
+        33.204892
       ]
-    ],
-    "quality": {
-      "overall": 3,
-      "safety": 3,
-      "comfort": 3,
-      "scenery": 3
-    }
+    ]
   },
   "שביל ישראל נחל דן": {
     "id": 107,
@@ -5494,6 +5578,28 @@
       [
         35.690312,
         33.176097
+      ]
+    ]
+  },
+  "רחוב הדולב בית הלל [split archive 141]": {
+    "id": 141,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "רחוב הדולב בית הלל",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.604721,
+        33.215301
+      ],
+      [
+        35.602073,
+        33.214799
       ]
     ]
   },

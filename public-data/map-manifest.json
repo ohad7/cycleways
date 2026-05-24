@@ -1,30 +1,30 @@
 {
-  "version": "ddf3c5960c42",
-  "generatedAt": "2026-05-24T14:46:24.100273Z",
+  "version": "851a46dd41ee",
+  "generatedAt": "2026-05-24T15:06:27.862698Z",
   "bikeRoads": "bike_roads.geojson",
   "segments": "segments.json",
   "kml": "exports/map.kml",
   "baseRoutingShards": "base-routing-shards/manifest.json",
   "hashes": {
-    "bikeRoads": "9fc49f958b5482daf914cfdab88fc8fafee3e3fbd8b09786cd63a12961091a27",
-    "segments": "4e7ad6e6b0934e73d6d80f3d9252f0a6121ca57dd369d68be4ce728a4301e23c",
-    "kml": "373cac56bace306bc8c79116083cee749765550aeb7e0dec92cf5ed1501a31a2",
-    "baseRoutingShards": "9630307190e28c6193391f405161d94423024e7e5790385fc62b0f9c602bd95b"
+    "bikeRoads": "697ab43054ae2ceec4b2b5b56ac23474a08e4baae914d69404750244f37dbd07",
+    "segments": "5c70621358575d3717823cc020b5f8afe6946d57fb6cdc585e6b87d40e677d73",
+    "kml": "8e39de4d3ae10a0b1b9bd190e60577d43215728b622d68e580a8a05e31c2d23a",
+    "baseRoutingShards": "829c450f43f5483f23be5c97a06435e1791d4e2d72c811c2a13e5c458c088a33"
   },
   "elevation": {
     "skipElevation": false,
     "failures": 0
   },
   "validation": {
-    "featureCount": 245,
-    "segmentsCount": 296,
+    "featureCount": 248,
+    "segmentsCount": 301,
     "newSegments": 0,
     "routeCompatibilityWarnings": 0,
-    "routingEdges": 48354,
+    "routingEdges": 48356,
     "unresolvedRoutingSegments": 0,
     "baseRoutingWarnings": 0,
     "baseRoutingBlockers": 0,
-    "overlayDisplaySegments": 245,
+    "overlayDisplaySegments": 248,
     "sourceDisplayFallbackSegments": 0
   }
 }
