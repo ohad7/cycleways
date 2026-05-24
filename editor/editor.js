@@ -5629,6 +5629,10 @@ function wireEvents() {
   });
 
   map.on("click", (event) => {
+    if (state.workspaceMode === "video-sync") {
+      handleVideoSyncMapClick(event);
+      return;
+    }
     if (state.mode === "draw") {
       handleDrawClick(event);
       return;
@@ -6372,6 +6376,347 @@ async function addMapLayers() {
     });
   }
 }
+
+// ============================================================
+// Video Sync mode
+// ============================================================
+
+const VS_ROUTE_SOURCE_ID = "vs-route-source";
+const VS_ROUTE_LAYER_ID = "vs-route-layer";
+const VS_KF_SOURCE_ID = "vs-kf-source";
+const VS_KF_LAYER_ID = "vs-kf-layer";
+const VS_SNAP_THRESHOLD_M = 80;
+
+const videoSyncState = {
+  slug: null,
+  routePolyline: null,   // [{lat, lng}, ...]
+  keyframes: [],         // [{t, lat, lon}, ...] (lon to match JSON convention)
+  youtubeId: null,
+  player: null,
+  videoDuration: 0,
+  selectedIndex: -1,
+};
+
+const vsEls = {
+  slug: document.getElementById("vs-slug"),
+  ytUrl: document.getElementById("vs-yt-url"),
+  player: document.getElementById("vs-player"),
+  keyframesList: document.getElementById("vs-keyframes"),
+  saveDraft: document.getElementById("vs-save-draft"),
+  promote: document.getElementById("vs-promote"),
+  status: document.getElementById("vs-status"),
+};
+
+function vsSetStatus(msg) {
+  if (vsEls.status) vsEls.status.textContent = msg || "";
+}
+
+function vsFormatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds - m * 60;
+  return `${m}:${s.toFixed(2).padStart(5, "0")}`;
+}
+
+function vsExtractYouTubeId(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "youtu.be") return u.pathname.slice(1) || null;
+    if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
+  } catch {}
+  return null;
+}
+
+// Snap a {lat, lng} point to the nearest point on the polyline.
+// Returns { lat, lng, distanceMeters } or null if route empty.
+function vsSnapToPolyline(point, polyline) {
+  if (!polyline || polyline.length < 2) return null;
+  const EARTH_R = 6371000;
+  const DEG = Math.PI / 180;
+  function hav(a, b) {
+    const dLat = (b.lat - a.lat) * DEG;
+    const dLng = (b.lng - a.lng) * DEG;
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(a.lat * DEG) * Math.cos(b.lat * DEG) * Math.sin(dLng / 2) ** 2;
+    return 2 * EARTH_R * Math.asin(Math.sqrt(h));
+  }
+  let best = { lat: 0, lng: 0, dist: Infinity };
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const a = polyline[i];
+    const b = polyline[i + 1];
+    const cosLat = Math.cos(((a.lat + b.lat) / 2) * DEG);
+    const ax = a.lng * cosLat, ay = a.lat;
+    const bx = b.lng * cosLat, by = b.lat;
+    const px = point.lng * cosLat, py = point.lat;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const projLat = a.lat + (b.lat - a.lat) * t;
+    const projLng = a.lng + (b.lng - a.lng) * t;
+    const d = hav(point, { lat: projLat, lng: projLng });
+    if (d < best.dist) best = { lat: projLat, lng: projLng, dist: d };
+  }
+  return { lat: best.lat, lng: best.lng, distanceMeters: best.dist };
+}
+
+function vsLoadYouTubeIframeApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+  return new Promise((resolve) => {
+    window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+    const s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(s);
+  });
+}
+
+async function vsLoadVideo(youtubeId) {
+  if (videoSyncState.youtubeId === youtubeId && videoSyncState.player) return;
+  videoSyncState.youtubeId = youtubeId;
+  const YT = await vsLoadYouTubeIframeApi();
+  vsEls.player.innerHTML = "";
+  if (videoSyncState.player) {
+    try { videoSyncState.player.destroy(); } catch {}
+  }
+  videoSyncState.player = new YT.Player(vsEls.player, {
+    videoId: youtubeId,
+    playerVars: { enablejsapi: 1, rel: 0 },
+    events: {
+      onReady: () => {
+        const dur = videoSyncState.player.getDuration?.();
+        if (typeof dur === "number" && dur > 0) videoSyncState.videoDuration = dur;
+      },
+    },
+  });
+}
+
+function vsRenderRouteLayer() {
+  if (!map) return;
+  const coords = (videoSyncState.routePolyline || []).map((p) => [p.lng, p.lat]);
+  const data = {
+    type: "FeatureCollection",
+    features: coords.length >= 2
+      ? [{ type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: {} }]
+      : [],
+  };
+  if (!map.getSource(VS_ROUTE_SOURCE_ID)) {
+    map.addSource(VS_ROUTE_SOURCE_ID, { type: "geojson", data });
+    map.addLayer({
+      id: VS_ROUTE_LAYER_ID,
+      type: "line",
+      source: VS_ROUTE_SOURCE_ID,
+      paint: { "line-color": "#1976d2", "line-width": 4, "line-opacity": 0.7 },
+    });
+  } else {
+    map.getSource(VS_ROUTE_SOURCE_ID).setData(data);
+  }
+}
+
+function vsRenderKeyframesLayer() {
+  if (!map) return;
+  const features = videoSyncState.keyframes.map((kf, i) => ({
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [kf.lon, kf.lat] },
+    properties: { idx: i, selected: i === videoSyncState.selectedIndex },
+  }));
+  const data = { type: "FeatureCollection", features };
+  if (!map.getSource(VS_KF_SOURCE_ID)) {
+    map.addSource(VS_KF_SOURCE_ID, { type: "geojson", data });
+    map.addLayer({
+      id: VS_KF_LAYER_ID,
+      type: "circle",
+      source: VS_KF_SOURCE_ID,
+      paint: {
+        "circle-radius": ["case", ["boolean", ["get", "selected"], false], 9, 6],
+        "circle-color": ["case", ["boolean", ["get", "selected"], false], "#ff6d00", "#ff3d3d"],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 2,
+      },
+    });
+  } else {
+    map.getSource(VS_KF_SOURCE_ID).setData(data);
+  }
+}
+
+function vsClearMapLayers() {
+  if (!map) return;
+  for (const id of [VS_KF_LAYER_ID, VS_ROUTE_LAYER_ID]) {
+    if (map.getLayer(id)) map.removeLayer(id);
+  }
+  for (const id of [VS_KF_SOURCE_ID, VS_ROUTE_SOURCE_ID]) {
+    if (map.getSource(id)) map.removeSource(id);
+  }
+}
+
+function vsRenderKeyframesList() {
+  vsEls.keyframesList.innerHTML = "";
+  videoSyncState.keyframes.forEach((kf, i) => {
+    const li = document.createElement("li");
+    if (i === videoSyncState.selectedIndex) li.classList.add("selected");
+    const time = document.createElement("span");
+    time.className = "vs-kf-time";
+    time.textContent = vsFormatTime(kf.t);
+    const coord = document.createElement("span");
+    coord.className = "vs-kf-coord";
+    coord.textContent = `${kf.lat.toFixed(5)}, ${kf.lon.toFixed(5)}`;
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "mini-button";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => {
+      videoSyncState.keyframes.splice(i, 1);
+      if (videoSyncState.selectedIndex === i) videoSyncState.selectedIndex = -1;
+      vsRenderKeyframesList();
+      vsRenderKeyframesLayer();
+    });
+    li.addEventListener("click", () => {
+      videoSyncState.selectedIndex = i;
+      if (videoSyncState.player?.seekTo) videoSyncState.player.seekTo(kf.t, true);
+      vsRenderKeyframesList();
+      vsRenderKeyframesLayer();
+    });
+    li.append(time, coord, del);
+    vsEls.keyframesList.appendChild(li);
+  });
+}
+
+function handleVideoSyncMapClick(event) {
+  if (!videoSyncState.routePolyline) {
+    vsSetStatus("Pick a route first.");
+    return;
+  }
+  if (!videoSyncState.player || typeof videoSyncState.player.getCurrentTime !== "function") {
+    vsSetStatus("Load a YouTube URL first.");
+    return;
+  }
+  const snap = vsSnapToPolyline(
+    { lat: event.lngLat.lat, lng: event.lngLat.lng },
+    videoSyncState.routePolyline,
+  );
+  if (!snap || snap.distanceMeters > VS_SNAP_THRESHOLD_M) {
+    vsSetStatus(`Click too far from route (${snap?.distanceMeters?.toFixed(0)}m).`);
+    return;
+  }
+  const t = videoSyncState.player.getCurrentTime();
+  // Replace any existing keyframe at same t (within 50ms), else insert sorted.
+  const filtered = videoSyncState.keyframes.filter((kf) => Math.abs(kf.t - t) > 0.05);
+  filtered.push({ t, lat: snap.lat, lon: snap.lng });
+  filtered.sort((a, b) => a.t - b.t);
+  videoSyncState.keyframes = filtered;
+  videoSyncState.selectedIndex = filtered.findIndex((kf) => kf.t === t);
+  vsRenderKeyframesList();
+  vsRenderKeyframesLayer();
+  vsSetStatus(`Added keyframe at ${vsFormatTime(t)}.`);
+}
+
+async function vsLoadRouteForSlug(slug) {
+  vsSetStatus(`Loading route ${slug}…`);
+  const r = await fetch(`/api/video-keyframes/${slug}/route-polyline`);
+  if (!r.ok) {
+    const err = await r.text();
+    vsSetStatus(`Route load failed: ${err}`);
+    videoSyncState.routePolyline = null;
+    vsRenderRouteLayer();
+    return;
+  }
+  const polyline = await r.json();
+  videoSyncState.routePolyline = polyline;
+  vsRenderRouteLayer();
+  // Fit map to route bounds
+  if (polyline.length >= 2 && map) {
+    const lons = polyline.map((p) => p.lng);
+    const lats = polyline.map((p) => p.lat);
+    map.fitBounds(
+      [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+      { padding: 60, duration: 600 },
+    );
+  }
+  vsSetStatus("Route loaded.");
+}
+
+async function vsLoadExistingDraft(slug) {
+  videoSyncState.keyframes = [];
+  videoSyncState.selectedIndex = -1;
+  vsRenderKeyframesList();
+  vsRenderKeyframesLayer();
+  const r = await fetch(`/api/video-keyframes/${slug}/draft`);
+  if (!r.ok) {
+    vsEls.ytUrl.value = "";
+    return;
+  }
+  const draft = await r.json();
+  videoSyncState.keyframes = (draft.keyframes || []).slice().sort((a, b) => a.t - b.t);
+  vsRenderKeyframesList();
+  vsRenderKeyframesLayer();
+  if (draft.youtubeId) {
+    vsEls.ytUrl.value = `https://youtube.com/watch?v=${draft.youtubeId}`;
+    vsLoadVideo(draft.youtubeId).catch((err) => vsSetStatus(`YT load failed: ${err.message}`));
+  }
+  if (typeof draft.videoDuration === "number") {
+    videoSyncState.videoDuration = draft.videoDuration;
+  }
+  vsSetStatus(`Loaded draft with ${videoSyncState.keyframes.length} keyframes.`);
+}
+
+async function vsOnSlugChange() {
+  const slug = vsEls.slug.value;
+  videoSyncState.slug = slug;
+  if (!slug) return;
+  await vsLoadRouteForSlug(slug);
+  await vsLoadExistingDraft(slug);
+}
+
+async function activateVideoSyncMode() {
+  // Populate slug dropdown once.
+  if (!vsEls.slug.options.length) {
+    const r = await fetch("/api/featured-slugs");
+    const slugs = r.ok ? await r.json() : [];
+    for (const slug of slugs) {
+      const opt = document.createElement("option");
+      opt.value = slug;
+      opt.textContent = slug;
+      vsEls.slug.appendChild(opt);
+    }
+    if (slugs.length > 0) vsEls.slug.value = slugs[0];
+  }
+  await vsOnSlugChange();
+}
+
+// Wire static event handlers once at startup.
+vsEls.slug.addEventListener("change", () => vsOnSlugChange().catch(showError));
+vsEls.ytUrl.addEventListener("change", (e) => {
+  const id = vsExtractYouTubeId(e.target.value);
+  if (id) vsLoadVideo(id).catch((err) => vsSetStatus(`YT load failed: ${err.message}`));
+});
+vsEls.saveDraft.addEventListener("click", async () => {
+  const slug = videoSyncState.slug;
+  const youtubeId = videoSyncState.youtubeId;
+  const videoDuration = videoSyncState.player?.getDuration?.() || videoSyncState.videoDuration;
+  if (!slug || !youtubeId || !videoDuration) {
+    vsSetStatus("Need a slug, YouTube URL, and loaded video to save.");
+    return;
+  }
+  const payload = {
+    version: 1,
+    youtubeId,
+    videoDuration,
+    keyframes: videoSyncState.keyframes,
+  };
+  const r = await fetch(`/api/video-keyframes/${slug}/draft`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const result = await r.json().catch(() => ({}));
+  vsSetStatus(r.ok ? "Draft saved." : `Save failed: ${result?.error || r.statusText}`);
+});
+vsEls.promote.addEventListener("click", async () => {
+  const slug = videoSyncState.slug;
+  if (!slug) return;
+  const r = await fetch(`/api/video-keyframes/${slug}/promote`, { method: "POST" });
+  const result = await r.json().catch(() => ({}));
+  vsSetStatus(r.ok ? "Promoted." : `Promote failed: ${result?.error || r.statusText}`);
+});
 
 map.on("style.load", () => {
   restoreEditorLayersAfterStyleChange().catch(showError);
