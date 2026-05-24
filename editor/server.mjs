@@ -6,6 +6,7 @@ import { createReadStream, watch } from "node:fs";
 import { spawn } from "node:child_process";
 import { dirname, extname, isAbsolute, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createVideoSync } from "../src/components/featured/videoSync.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -31,6 +32,8 @@ const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
+const videoKeyframesDraftDir = resolve(editorRoot, ".drafts/route-videos");
+const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
 const port = Number(process.env.EDITOR_PORT || 8899);
 const devReloadEnabled = process.env.EDITOR_CLIENT_RELOAD === "1";
 let requestCounter = 0;
@@ -300,6 +303,44 @@ function resolveManifestPath(root, manifestPath) {
     throw new Error(`Manifest path escapes repository root: ${manifestPath}`);
   }
   return resolved;
+}
+
+export function validateKeyframesDraft(draft, routePolyline, maxMeters = 80) {
+  if (!draft || typeof draft !== "object") {
+    throw new Error("draft must be an object");
+  }
+  const { youtubeId, videoDuration, keyframes } = draft;
+  if (typeof youtubeId !== "string" || !youtubeId) {
+    throw new Error("draft.youtubeId required");
+  }
+  if (typeof videoDuration !== "number" || videoDuration <= 0) {
+    throw new Error("draft.videoDuration must be a positive number");
+  }
+  if (!Array.isArray(keyframes) || keyframes.length < 2) {
+    throw new Error("draft.keyframes must have at least 2 entries");
+  }
+  // createVideoSync enforces schema + sort + boundary t-values + route validity.
+  let sync;
+  try {
+    sync = createVideoSync({
+      keyframes,
+      videoDuration,
+      routeGeometry: routePolyline,
+    });
+  } catch (err) {
+    throw new Error(`videoSync rejected draft: ${err.message}`);
+  }
+  for (const kf of keyframes) {
+    const snap = sync.snapClickToRoute(
+      { lat: kf.lat, lng: kf.lng ?? kf.lon },
+      maxMeters,
+    );
+    if (!snap) {
+      throw new Error(
+        `keyframe at t=${kf.t} is too far from route (>${maxMeters}m)`,
+      );
+    }
+  }
 }
 
 async function readRequestJson(request, limitBytes = 25 * 1024 * 1024) {
@@ -1732,6 +1773,22 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname.startsWith("/api/video-keyframes/")) {
+      const parts = url.pathname.split("/").filter(Boolean);
+      // /api/video-keyframes/<slug>/draft
+      if (parts.length === 4 && parts[3] === "draft") {
+        const slug = parts[2];
+        if (request.method === "PUT") {
+          const payload = await readRequestJson(request);
+          await mkdir(videoKeyframesDraftDir, { recursive: true });
+          const draftPath = resolve(videoKeyframesDraftDir, `${slug}.json`);
+          await writeFile(draftPath, JSON.stringify(payload, null, 2));
+          sendJson(response, 200, { ok: true, path: repoRelative(draftPath) });
+          return;
+        }
+      }
+    }
+
     if (request.method === "GET") {
       await serveStatic(request, response, url);
       return;
@@ -1750,7 +1807,10 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Map editor running at http://127.0.0.1:${port}/editor/`);
-  startDevReloadWatcher();
-});
+// Only listen when run directly (not when imported by tests).
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  server.listen(port, "127.0.0.1", () => {
+    console.log(`Map editor running at http://127.0.0.1:${port}/editor/`);
+    startDevReloadWatcher();
+  });
+}

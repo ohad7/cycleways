@@ -12,3 +12,5 @@ mapbox-token.js
 playwright-report/
 test-results/
 .superpowers/
+editor/.drafts/*
+!editor/.drafts/.gitkeep
