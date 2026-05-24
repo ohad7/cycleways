@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./featured.css";
 import { useIsMobile } from "./useIsMobile.js";
 import { loadMapAssets } from "../../data/mapAssets.js";
@@ -70,6 +70,16 @@ function FeaturedRoute({ meta, children }) {
     });
   }, [status, meta.slug, routeState.geometry]);
 
+  const handleRouteClick = useCallback((latLng) => {
+    const sync = videoSyncRef.current;
+    const seek = playerSeekRef.current;
+    if (!sync || !seek) return;
+    const snap = sync.snapClickToRoute(latLng);
+    if (!snap) return;
+    const t = sync.positionToTime(snap.fraction);
+    seek(t);
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       meta,
@@ -86,8 +96,9 @@ function FeaturedRoute({ meta, children }) {
       setVideoCursor,
       videoSyncRef,
       playerSeekRef,
+      handleRouteClick,
     }),
-    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, videoCursor],
+    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, videoCursor, handleRouteClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
@@ -124,6 +135,7 @@ function FeaturedRoute({ meta, children }) {
                   focusedMarker={focusedMarker}
                   onDataMarkerClick={(marker) => setFocusedPoiId(marker.id)}
                   videoCursor={videoCursor}
+                  onRouteClick={handleRouteClick}
                 />
               </aside>
             )}

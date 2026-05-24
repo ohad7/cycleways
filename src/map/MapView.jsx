@@ -48,6 +48,7 @@ function MapView({
   onDataMarkerClick,
   onMapClick,
   onMapReady,
+  onRouteClick = null,
   onRoutePointDrag,
   onRoutePointDragEnd,
   onRoutePointDragStart,
@@ -593,6 +594,48 @@ function MapView({
     if (!map || status !== "ready") return;
     syncVideoCursorLayer(map, videoCursor);
   }, [videoCursor, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !videoCursor) return;
+    const bounds = map.getBounds();
+    const w = bounds.getEast() - bounds.getWest();
+    const h = bounds.getNorth() - bounds.getSouth();
+    const margin = 0.15;
+    const inset = {
+      west: bounds.getWest() + w * margin,
+      east: bounds.getEast() - w * margin,
+      south: bounds.getSouth() + h * margin,
+      north: bounds.getNorth() - h * margin,
+    };
+    if (
+      videoCursor.lng < inset.west ||
+      videoCursor.lng > inset.east ||
+      videoCursor.lat < inset.south ||
+      videoCursor.lat > inset.north
+    ) {
+      map.easeTo({
+        center: [videoCursor.lng, videoCursor.lat],
+        duration: 600,
+      });
+    }
+  }, [videoCursor, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !onRouteClick) return undefined;
+    const handler = (e) => {
+      if (map.getLayer?.(DATA_MARKERS_LAYER_ID)) {
+        const hits = map.queryRenderedFeatures(e.point, {
+          layers: [DATA_MARKERS_LAYER_ID],
+        });
+        if (hits && hits.length > 0) return;
+      }
+      onRouteClick({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+    };
+    map.on("click", handler);
+    return () => map.off("click", handler);
+  }, [status, onRouteClick]);
 
   useEffect(() => {
     const map = mapRef.current;
