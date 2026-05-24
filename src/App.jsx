@@ -11,6 +11,7 @@ import DownloadModal from "./components/DownloadModal.jsx";
 import PageShell from "./components/PageShell.jsx";
 import { getRouteMessage } from "./components/RoutePanel.jsx";
 import Tutorial from "./components/Tutorial.jsx";
+import WelcomeWizard, { WELCOME_WIZARD_SKIP_FLAG } from "./components/WelcomeWizard.jsx";
 import { getFeatureFlags } from "./config/featureFlags.js";
 import { loadMapAssets, summarizeMapAssets } from "./data/mapAssets.js";
 import {
@@ -89,6 +90,16 @@ function App() {
   const [osmDebugLayerMode, setOsmDebugLayerMode] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("osmLayer") === "graph" ? "graph" : "ways";
+  });
+  const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const hasRoute = new URLSearchParams(window.location.search).has("route");
+    if (hasRoute) return false;
+    try {
+      return localStorage.getItem(WELCOME_WIZARD_SKIP_FLAG) !== "1";
+    } catch {
+      return true;
+    }
   });
   const [selectedCwReviewSegmentId, setSelectedCwReviewSegmentId] =
     useState(null);
@@ -1038,7 +1049,11 @@ function App() {
 
   return (
     <>
-      <PageShell onOpenTutorial={handleOpenTutorial}>
+      <WelcomeWizard
+        visible={welcomeWizardOpen}
+        onDismiss={() => setWelcomeWizardOpen(false)}
+      />
+      <PageShell onOpenTutorial={handleOpenTutorial} onOpenWizard={() => setWelcomeWizardOpen(true)}>
         <div
           id="error-message"
           className={state.status === "error" ? "show" : ""}
