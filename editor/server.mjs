@@ -430,6 +430,31 @@ async function readRequestJson(request, limitBytes = 25 * 1024 * 1024) {
   return raw ? JSON.parse(raw) : {};
 }
 
+function backfillDeprecatedRouteAnchors(source) {
+  if (!source || !Array.isArray(source.features)) return;
+  for (const feature of source.features) {
+    const props = feature?.properties;
+    if (!props || typeof props !== "object") continue;
+    const isDeprecated =
+      props.deprecated === true || props.status === "deprecated";
+    if (!isDeprecated) continue;
+    if (Array.isArray(props.routeAnchors) && props.routeAnchors.length > 0) continue;
+    if (props.middle && typeof props.middle === "object") continue;
+    const coords = feature?.geometry?.coordinates;
+    if (!Array.isArray(coords) || coords.length === 0) continue;
+    // Sample up to 3 points along the LineString: first, middle, last.
+    const n = coords.length;
+    const picks = n === 1 ? [0] : n === 2 ? [0, 1] : [0, Math.floor(n / 2), n - 1];
+    const anchors = picks
+      .map((i) => coords[i])
+      .filter((c) => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]))
+      .map((c) => [c[0], c[1]]);
+    if (anchors.length > 0) {
+      props.routeAnchors = anchors;
+    }
+  }
+}
+
 function validateSourceGeojson(source) {
   if (!source || source.type !== "FeatureCollection" || !Array.isArray(source.features)) {
     throw new Error("Source must be a GeoJSON FeatureCollection");
@@ -1607,6 +1632,7 @@ const server = createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/source") {
       logApi(requestId, "GET /api/source started");
       const source = JSON.parse(await readFile(sourcePath, "utf-8"));
+      backfillDeprecatedRouteAnchors(source);
       logApi(requestId, "GET /api/source loaded", summarizeSource(source));
       sendJson(response, 200, source);
       return;
@@ -1785,6 +1811,7 @@ const server = createServer(async (request, response) => {
     if (request.method === "POST" && url.pathname === "/api/source") {
       logApi(requestId, "POST /api/source started");
       const source = await readRequestJson(request);
+      backfillDeprecatedRouteAnchors(source);
       try {
         validateSourceGeojson(source);
       } catch (error) {
