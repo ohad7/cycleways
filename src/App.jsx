@@ -1157,10 +1157,6 @@ function App() {
                   />
                 )}
 
-                {routingShardStatus && (
-                  <RoutingShardStatus status={routingShardStatus} />
-                )}
-
                 <MapView
                   activeDataPointIds={activeDataPointIds}
                   dataMarkerFeatures={dataMarkerFeatures}
@@ -1320,43 +1316,6 @@ function ErrorState({ error }) {
   );
 }
 
-function RoutingShardStatus({ status }) {
-  const phase =
-    status.phase === "unavailable"
-      ? "unavailable"
-      : status.phase === "loading" || status.phase === "prefetching"
-      ? status.phase
-      : status.loadedShards.length > 0
-        ? "loaded"
-        : "idle";
-  const batch = status.batchShardIds.length
-    ? `batch ${status.batchShardIds.length}`
-    : "waiting";
-
-  return (
-    <output
-      className={`react-routing-shard-status react-routing-shard-status--${phase}`}
-      data-testid="routing-shard-status"
-      aria-live="polite"
-    >
-      <strong>Routing shards</strong>
-      {phase === "unavailable" ? (
-        <span>unavailable · manifest has no shard assets</span>
-      ) : (
-        <>
-          <span>
-            {phase} · {status.loadedShards.length} loaded · {batch}
-          </span>
-          <span>
-            {status.loadedEdges.toLocaleString()} edges ·{" "}
-            {formatShardBytes(status.loadedCompactBytes)}
-          </span>
-        </>
-      )}
-    </output>
-  );
-}
-
 function routingShardFormat() {
   const params = new URLSearchParams(window.location.search);
   const format = params.get("routingShardFormat");
@@ -1377,11 +1336,6 @@ function unavailableRoutingShardStatus() {
     loadedCompactBytes: 0,
     loadedEdges: 0,
   };
-}
-
-function formatShardBytes(bytes) {
-  if (!Number.isFinite(Number(bytes)) || Number(bytes) <= 0) return "0 KB";
-  return `${(Number(bytes) / 1024).toFixed(0)} KB`;
 }
 
 function getGeoJsonCoordinateBounds(geoJsonData) {
