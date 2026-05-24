@@ -15,6 +15,12 @@ const files = new Set([
 
 const directories = ["attached_assets", "icons", "public-data"];
 
+const dataFiles = ["data/places.json", "data/region-zones.json"];
+
+for (const filePath of dataFiles) {
+  files.add(filePath);
+}
+
 await mkdir(distDir, { recursive: true });
 
 for (const filePath of files) {
