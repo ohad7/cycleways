@@ -56,21 +56,30 @@ export default function WelcomeWizard({ visible, onDismiss }) {
   };
 
   return (
-    <div className="ww-overlay" role="dialog" aria-modal="true">
-      <header className="ww-overlay__header">
-        <h1>מצא מסלול</h1>
-        <button type="button" className="ww-overlay__dismiss" onClick={dismiss}>
-          דלג למפה ✕
-        </button>
-      </header>
-      <WelcomeWizardChat
-        state={state}
-        dispatch={dispatch}
-        catalog={catalog}
-        places={places}
-        zones={zones}
-        onSelectRoute={selectRoute}
-      />
+    <div className="ww-overlay" role="dialog" aria-modal="true" onClick={(e) => {
+      if (e.target === e.currentTarget) dismiss();
+    }}>
+      <div className="ww-overlay__panel" onClick={(e) => e.stopPropagation()}>
+        <header className="ww-overlay__header">
+          <h1>מצא מסלול</h1>
+          <button
+            type="button"
+            className="ww-overlay__dismiss"
+            onClick={dismiss}
+            aria-label="סגור וחזור למפה"
+          >
+            דלג למפה ✕
+          </button>
+        </header>
+        <WelcomeWizardChat
+          state={state}
+          dispatch={dispatch}
+          catalog={catalog}
+          places={places}
+          zones={zones}
+          onSelectRoute={selectRoute}
+        />
+      </div>
     </div>
   );
 }
