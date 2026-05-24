@@ -1,1 +1,6 @@
-{ "version": 1, "routes": {} }
+{
+  "version": 1,
+  "routes": {
+    "sovev-beit-hillel": "sovev-beit-hillel.json"
+  }
+}
