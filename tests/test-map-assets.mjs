@@ -19,7 +19,7 @@ const assetsByPath = new Map([
 const requestedPaths = [];
 const originalFetch = global.fetch;
 global.fetch = async (url) => {
-  const pathWithQuery = String(url).replace(/^\.\//, "");
+  const pathWithQuery = String(url).replace(/^(\.\/|\/)/, "");
   const path = pathWithQuery.replace(/\?.*$/, "");
   requestedPaths.push(pathWithQuery);
   const value = assetsByPath.get(path);

@@ -42481,6 +42481,39 @@
       "type": "Feature",
       "properties": {
         "id": 57,
+        "name": "כביש 9888 סדנה [split archive 57]",
+        "status": "deprecated",
+        "roadType": "road",
+        "styleUrl": "#sty-88",
+        "stroke": "#8f2424",
+        "sourceStroke": "#8f2424",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "כביש 9888 סדנה",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.609212,
+            33.218167
+          ],
+          [
+            35.609364,
+            33.219089
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 304,
         "name": "כביש 9888 סדנה",
         "status": "active",
         "roadType": "road",
@@ -42494,7 +42527,9 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "splitFrom": 57,
+        "splitFromName": "כביש 9888 סדנה"
       },
       "geometry": {
         "type": "LineString",
@@ -42525,8 +42560,40 @@
             92
           ],
           [
-            35.609431,
-            33.218553,
+            35.60943117337044,
+            33.21855769409656,
+            92
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 305,
+        "name": "כביש 9888 קמפינג",
+        "status": "active",
+        "roadType": "road",
+        "styleUrl": "#sty-88",
+        "stroke": "#8f2424",
+        "sourceStroke": "#8f2424",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 57,
+        "splitFromName": "כביש 9888 סדנה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.60943117337044,
+            33.21855769409656,
             92
           ],
           [
@@ -61878,6 +61945,39 @@
       "type": "Feature",
       "properties": {
         "id": 141,
+        "name": "רחוב הדולב בית הלל [split archive 141]",
+        "status": "deprecated",
+        "roadType": "paved",
+        "styleUrl": "#sty-128",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "רחוב הדולב בית הלל",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.604721,
+            33.215301
+          ],
+          [
+            35.602073,
+            33.214799
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 302,
         "name": "רחוב הדולב בית הלל",
         "status": "active",
         "roadType": "paved",
@@ -61891,7 +61991,9 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "splitFrom": 141,
+        "splitFromName": "רחוב הדולב בית הלל"
       },
       "geometry": {
         "type": "LineString",
@@ -62002,8 +62104,40 @@
             93
           ],
           [
-            35.602290999999994,
-            33.2149665,
+            35.602300041219934,
+            33.214977256575835,
+            92
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 303,
+        "name": "רחוב הדולב בית הלל מערב",
+        "status": "active",
+        "roadType": "paved",
+        "styleUrl": "#sty-128",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 141,
+        "splitFromName": "רחוב הדולב בית הלל"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.602300041219934,
+            33.214977256575835,
             92
           ],
           [
@@ -98555,6 +98689,131 @@
           [
             35.630974,
             33.224149,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 301,
+        "name": "גדר מערכת בית הלל צפון",
+        "status": "active",
+        "roadType": "paved",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.602279,
+            33.214993,
+            0
+          ],
+          [
+            35.601996,
+            33.21524,
+            0
+          ],
+          [
+            35.602004,
+            33.215305,
+            0
+          ],
+          [
+            35.602032,
+            33.215415,
+            0
+          ],
+          [
+            35.602573,
+            33.21678,
+            0
+          ],
+          [
+            35.603181,
+            33.218093,
+            0
+          ],
+          [
+            35.60332,
+            33.218268,
+            0
+          ],
+          [
+            35.603702,
+            33.218576,
+            0
+          ],
+          [
+            35.604103,
+            33.218724,
+            0
+          ],
+          [
+            35.60482,
+            33.218888,
+            0
+          ],
+          [
+            35.605202,
+            33.218872,
+            0
+          ],
+          [
+            35.607205,
+            33.218511,
+            0
+          ],
+          [
+            35.607611,
+            33.218531,
+            0
+          ],
+          [
+            35.607992,
+            33.21862,
+            0
+          ],
+          [
+            35.608477,
+            33.218807,
+            0
+          ],
+          [
+            35.608928,
+            33.219103,
+            0
+          ],
+          [
+            35.609133,
+            33.219131,
+            0
+          ],
+          [
+            35.609226,
+            33.219061,
+            0
+          ],
+          [
+            35.60932,
+            33.218807,
+            0
+          ],
+          [
+            35.60934492676017,
+            33.21858668894524,
+            0
+          ],
+          [
+            35.60941954495681,
+            33.21856187916984,
             0
           ]
         ]

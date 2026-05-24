@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-24T06:11:00.100Z",
+  "updatedAt": "2026-05-24T14:54:00.855Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -17206,6 +17206,121 @@
         }
       ],
       "updatedAt": "2026-05-21T06:38:27.438Z"
+    },
+    "301": {
+      "segmentId": 301,
+      "segmentName": "גדר מערכת בית הלל צפון",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.86,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-301-mpjw912h",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-301-mpjw912h"
+        }
+      ],
+      "updatedAt": "2026-05-24T14:53:50.364Z"
+    },
+    "302": {
+      "segmentId": 302,
+      "segmentName": "רחוב הדולב בית הלל",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.14,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-manual-osm-53815529-mpjw96hq-a-mpjw9de6",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-53815529-mpjw96hq-a-mpjw9de6"
+        }
+      ],
+      "updatedAt": "2026-05-24T14:53:52.456Z"
+    },
+    "303": {
+      "segmentId": 303,
+      "segmentName": "רחוב הדולב בית הלל מערב",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.34,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-manual-osm-53815529-mpjw96hq-b-mpjw9de6",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-53815529-mpjw96hq-b-mpjw9de6"
+        }
+      ],
+      "updatedAt": "2026-05-24T14:53:54.504Z"
+    },
+    "304": {
+      "segmentId": 304,
+      "segmentName": "כביש 9888 סדנה",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.24,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e523294959_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 523294959
+        }
+      ],
+      "updatedAt": "2026-05-24T14:53:58.796Z"
+    },
+    "305": {
+      "segmentId": 305,
+      "segmentName": "כביש 9888 קמפינג",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.29,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e523294959_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 523294959
+        }
+      ],
+      "updatedAt": "2026-05-24T14:54:00.850Z"
     }
   }
 }
