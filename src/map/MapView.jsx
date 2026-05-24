@@ -39,6 +39,7 @@ const MAP_ZOOM = 11.5;
 function MapView({
   activeDataPointIds = [],
   dataMarkerFeatures = [],
+  focusedMarker,
   focusedSegment,
   geoJsonData,
   elevationHover,
@@ -815,6 +816,19 @@ function MapView({
       padding: 72,
     });
   }, [routeFitRequest, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !focusedMarker?.coord) return;
+    const { lng, lat } = focusedMarker.coord;
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+    const currentZoom = typeof map.getZoom === "function" ? map.getZoom() : 14;
+    map.flyTo({
+      center: [lng, lat],
+      zoom: Math.max(currentZoom, 14),
+      speed: 1.2,
+    });
+  }, [focusedMarker, status]);
 
   useEffect(() => {
     const map = mapRef.current;

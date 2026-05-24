@@ -21,10 +21,13 @@ function resolveAssetPath(filePath, basePath = null) {
 
 async function fetchJsonAsset(filePath, options = {}, basePath = null) {
   const assetPath = resolveAssetPath(filePath, basePath);
-  const requestPath =
-    assetPath.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(assetPath)
-      ? assetPath
-      : `./${assetPath}`;
+  let requestPath;
+  if (assetPath.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(assetPath)) {
+    requestPath = assetPath;
+  } else {
+    const siteBase = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
+    requestPath = `${siteBase}${assetPath}`;
+  }
   const response = await fetch(requestPath, options);
   if (!response.ok) {
     throw new Error(`${assetPath}: HTTP ${response.status} ${response.statusText}`);

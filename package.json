@@ -13,7 +13,7 @@
     "osm:elevation": "python3 processing/build_osm_base_graph_elevation.py",
     "route:inspect": "node scripts/inspect-base-route.mjs",
     "route:compare-shards": "node scripts/compare-base-route-shards.mjs",
-    "test": "npm run test:osm && node tests/test-map-assets.mjs && node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-base-routing-network.mjs && node tests/test-base-routing-shards.mjs && node tests/test-compact-base-routing-shard.mjs && node tests/test-messagepack.mjs && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && node tests/test-route-reducer.mjs && node tests/test-react-route-actions.mjs && node tests/test-gpx-parity.mjs && node tests/test-analytics-parity.mjs && cd tests && node test-route-manager.js",
+    "test": "npm run test:osm && node tests/test-map-assets.mjs && node tests/test-route-manager-snap.js && node tests/test-route-manager-geometry.js && node tests/test-base-routing-network.mjs && node tests/test-base-routing-shards.mjs && node tests/test-compact-base-routing-shard.mjs && node tests/test-messagepack.mjs && node tests/test-route-encoding.mjs && node tests/test-route-data.mjs && node tests/test-route-reducer.mjs && node tests/test-react-route-actions.mjs && node tests/test-poi-types.mjs && node tests/test-gpx-parity.mjs && node tests/test-analytics-parity.mjs && cd tests && node test-route-manager.js",
     "test:osm": "python3 -m unittest discover -s tests -p 'test_osm*.py'",
     "test:smoke": "playwright test"
   },
@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^6.30.3"
   }
 }

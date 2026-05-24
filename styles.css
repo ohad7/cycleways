@@ -163,6 +163,11 @@ body::before {
   }
 }
 
+.site-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
 .site-title {
   font-size: 24px;
   font-weight: bold;

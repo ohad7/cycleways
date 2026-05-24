@@ -12,3 +12,4 @@ Current plans:
 - `browser-local-sharded-routing/` - design and implementation plan for the browser-local static routing shard experiment intended to scale the hidden base graph beyond the current full-asset prototype.
 - `map-asset-size/` - design and implementation plan for low-risk generated GeoJSON size reduction.
 - `react-migration/` - design and implementation plan for incrementally moving the public app to React.
+- `featured-routes/` - design and implementation plan for curated featured-route landing pages with maps, POIs, photos, and video.

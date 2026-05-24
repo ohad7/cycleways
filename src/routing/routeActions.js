@@ -176,8 +176,11 @@ function getActiveRouteDataPoints(segmentNames, geometry, segmentsData) {
     const dataPoints = Array.isArray(segmentInfo?.data) ? segmentInfo.data : [];
 
     dataPoints.forEach((dataPoint, index) => {
-      const id = `${segmentName}-${index}`;
-      if (seen.has(id)) return;
+      const stableId =
+        typeof dataPoint.id === "string" && dataPoint.id.length > 0
+          ? dataPoint.id
+          : `${segmentName}-${index}`;
+      if (seen.has(stableId)) return;
 
       const location = getDataPointLocation(dataPoint);
       let routeDistanceMeters = null;
@@ -191,10 +194,10 @@ function getActiveRouteDataPoints(segmentNames, geometry, segmentsData) {
         }
       }
 
-      seen.add(id);
+      seen.add(stableId);
       active.push({
         ...dataPoint,
-        id,
+        id: stableId,
         segmentName,
         routeDistanceMeters,
       });

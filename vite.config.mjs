@@ -135,7 +135,7 @@ function gzipStaticJsonPlugin() {
 }
 
 export default defineConfig({
-  appType: "mpa",
+  appType: "spa",
   plugins: [mapboxTokenPlugin(), gzipStaticJsonPlugin()],
   build: {
     rollupOptions: {

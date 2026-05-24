@@ -1,14 +1,28 @@
 import React from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 function TopBar({
   onOpenTutorial,
   mobileMenuOpen,
   onMobileMenuToggle,
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleTutorialClick = () => {
+    if (location.pathname === "/" && onOpenTutorial) {
+      onOpenTutorial();
+    } else {
+      navigate("/");
+    }
+  };
+
   return (
     <header className="header">
       <div className="logo-section">
-        <h1 className="site-title">מפת שבילי אופניים - גליל עליון וגולן</h1>
+        <Link to="/" className="site-title-link">
+          <h1 className="site-title">מפת שבילי אופניים - גליל עליון וגולן</h1>
+        </Link>
       </div>
       <button
         className="mobile-menu-btn"
@@ -22,19 +36,19 @@ function TopBar({
         className={`nav-links${mobileMenuOpen ? " active" : ""}`}
         id="nav-links"
       >
-        <a className="nav-link" href="#trails">
+        <Link className="nav-link" to="/#trails">
           שבילים
-        </a>
-        <a className="nav-link" href="#reccomendations">
+        </Link>
+        <Link className="nav-link" to="/#reccomendations">
           המלצות
-        </a>
-        <a className="nav-link" href="#contact">
+        </Link>
+        <Link className="nav-link" to="/#contact">
           צרו קשר
-        </a>
+        </Link>
         <button
           className="nav-link help-tutorial-btn"
           type="button"
-          onClick={onOpenTutorial}
+          onClick={handleTutorialClick}
         >
           מדריך
         </button>
