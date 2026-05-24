@@ -1,6 +1,63 @@
-import React from "react";
+import React, { useState } from "react";
 import RouteCard from "./RouteCard.jsx";
 import { catalogFilter } from "./catalogFilter.js";
+
+const PLACE_QUICK_PICK_COUNT = 4;
+
+function PlacePicker({ places, onPick }) {
+  const [query, setQuery] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const q = query.trim();
+  const matches = q.length > 0
+    ? places.filter((p) => p.name.includes(q) || p.id.includes(q.toLowerCase()))
+    : showAll
+      ? places
+      : places.slice(0, PLACE_QUICK_PICK_COUNT);
+  return (
+    <div className="ww-place-picker">
+      <input
+        type="search"
+        className="ww-place-search"
+        placeholder="חפש מקום…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <div className="ww-options">
+        {matches.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className="ww-option-btn"
+            onClick={() => onPick(p.id)}
+          >
+            {p.name}
+          </button>
+        ))}
+        {matches.length === 0 && (
+          <span className="ww-place-empty">לא נמצא מקום מתאים</span>
+        )}
+      </div>
+      <div className="ww-place-actions">
+        {q.length === 0 && !showAll && places.length > PLACE_QUICK_PICK_COUNT && (
+          <button
+            type="button"
+            className="ww-place-link"
+            onClick={() => setShowAll(true)}
+          >
+            ראו את כולם ({places.length})
+          </button>
+        )}
+        <button
+          type="button"
+          className="ww-option-btn"
+          onClick={() => onPick("any")}
+        >
+          לא משנה
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const QUESTIONS = [
   { key: "place",      prompt: "מאיפה תרצו להתחיל?", optionsFromPlaces: true },
@@ -86,7 +143,14 @@ export default function WelcomeWizardChat({
           ),
         )}
 
-        {activeQuestion && (
+        {activeQuestion && activeQuestion.key === "place" && (
+          <PlacePicker
+            places={places}
+            onPick={(value) => dispatch({ type: "ANSWER", key: "place", value })}
+          />
+        )}
+
+        {activeQuestion && activeQuestion.key !== "place" && (
           <div className="ww-options">
             {renderOptions(activeQuestion, places, zones).map((opt) => (
               <button

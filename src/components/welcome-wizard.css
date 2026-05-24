@@ -90,6 +90,43 @@
   font: inherit;
 }
 .ww-option-btn:hover { background: #e3f2fd; }
+.ww-place-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.ww-place-search {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ww-place-search:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+.ww-place-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.ww-place-link {
+  background: transparent;
+  border: 0;
+  color: #1976d2;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+.ww-place-empty {
+  color: #888;
+  font-size: 0.9rem;
+}
 .ww-results-title { margin-top: 1rem; }
 .ww-results-actions { margin-top: 1rem; }
 .rc-result-card {
