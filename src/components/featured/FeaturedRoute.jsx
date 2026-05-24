@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./featured.css";
 import { useIsMobile } from "./useIsMobile.js";
 import { loadMapAssets } from "../../data/mapAssets.js";
@@ -26,6 +26,9 @@ function FeaturedRoute({ meta, children }) {
   const [focusedPoiId, setFocusedPoiId] = useState(null);
   const [focusedCoord, setFocusedCoord] = useState(null);
   const [routeFitRequest, setRouteFitRequest] = useState(null);
+  const [videoCursor, setVideoCursor] = useState(null);
+  const videoSyncRef = useRef(null);
+  const playerSeekRef = useRef(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -79,8 +82,12 @@ function FeaturedRoute({ meta, children }) {
       focusedCoord,
       setFocusedCoord,
       routeFitRequest,
+      videoCursor,
+      setVideoCursor,
+      videoSyncRef,
+      playerSeekRef,
     }),
-    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest],
+    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, videoCursor],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
