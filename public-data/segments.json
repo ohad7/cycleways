@@ -3269,9 +3269,9 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.576693,
-      "latitude": 33.237137,
-      "elevation": 286.0
+      "longitude": 35.576648,
+      "latitude": 33.237135,
+      "elevation": 289.0
     },
     "elevation_gain_m": 2.6,
     "elevation_loss_m": 74.55,
@@ -3479,8 +3479,8 @@
     "splitFrom": 166,
     "splitFromName": "דרך נוף הרי נפתלי מצפה לירן",
     "middle": {
-      "longitude": 35.572033,
-      "latitude": 33.238899,
+      "longitude": 35.572155,
+      "latitude": 33.239021,
       "elevation": 347.0
     },
     "elevation_gain_m": 0.0,

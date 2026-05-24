@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-23T10:56:58.301Z",
+  "updatedAt": "2026-05-24T06:11:00.100Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -1465,24 +1465,87 @@
       "segmentId": 31,
       "segmentName": "טיילת עמי",
       "status": "accepted_auto_match",
-      "source": "manual_pick",
-      "confidence": "manual",
-      "coverageRatio": 0,
-      "avgDistanceMeters": null,
+      "source": "reviewed_edge_set",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.11,
       "gapCount": 0,
-      "failureClass": "manual_pick",
+      "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e232039674_2",
+          "edgeId": "e232039671_1",
           "source": "osm",
           "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
+          "osmWayId": 232039671
+        },
+        {
+          "edgeId": "e552764726_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 552764726
+        },
+        {
+          "edgeId": "e232039674_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
           "osmWayId": 232039674
+        },
+        {
+          "edgeId": "e232039674_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 232039674
+        },
+        {
+          "edgeId": "e232039672_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 232039672
+        },
+        {
+          "edgeId": "e232039672_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 232039672
+        },
+        {
+          "edgeId": "e232039672_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 232039672
+        },
+        {
+          "edgeId": "e232039673_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 232039673
         }
       ],
-      "updatedAt": "2026-05-19T12:58:50.560Z"
+      "updatedAt": "2026-05-24T06:09:37.052Z"
     },
     "33": {
       "segmentId": 33,
@@ -3585,10 +3648,10 @@
       "segmentId": 63,
       "segmentName": "כביש 9977 כפר גלעדי",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 4.32,
+      "avgDistanceMeters": 4.22,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -3665,7 +3728,7 @@
           "osmWayId": 690868796
         }
       ],
-      "updatedAt": "2026-05-20T13:55:50.797Z"
+      "updatedAt": "2026-05-24T06:10:56.016Z"
     },
     "64": {
       "segmentId": 64,
@@ -15984,7 +16047,7 @@
       "segmentId": 274,
       "segmentName": "דרך נוף הרי נפתלי מצפה לירן",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
       "avgDistanceMeters": 0.37,
@@ -16109,18 +16172,18 @@
           "osmWayId": 491555738
         }
       ],
-      "updatedAt": "2026-05-20T13:30:03.797Z"
+      "updatedAt": "2026-05-24T06:10:58.049Z"
     },
     "275": {
       "segmentId": 275,
       "segmentName": "דרך נוף הרי נפתלי כניסה",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.24,
+      "avgDistanceMeters": 0.13,
       "gapCount": 0,
-      "failureClass": "overmatched_edge",
+      "failureClass": "accepted",
       "edgeRefs": [
         {
           "edgeId": "e366037246_1",
@@ -16132,7 +16195,7 @@
           "osmWayId": 366037246
         }
       ],
-      "updatedAt": "2026-05-20T13:30:35.065Z"
+      "updatedAt": "2026-05-24T06:11:00.094Z"
     },
     "276": {
       "segmentId": 276,

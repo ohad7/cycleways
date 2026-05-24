@@ -10,6 +10,7 @@ from processing.build_map import (
     build_public_cycleways_display_geojson,
     write_base_routing_shards,
     write_runtime_manifest,
+    write_site_geojson,
 )
 
 
@@ -19,6 +20,34 @@ def write_json(path: Path, value):
 
 
 class BaseRoutingAssetTests(unittest.TestCase):
+    def test_site_geojson_writer_keeps_coordinate_diffs_local(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "bike_roads.geojson"
+            write_site_geojson(
+                output_path,
+                {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "properties": {"id": 1, "name": "segment"},
+                            "geometry": {
+                                "type": "LineString",
+                                "coordinates": [
+                                    [35.1, 33.1, 10],
+                                    [35.2, 33.2, 11],
+                                ],
+                            },
+                        }
+                    ],
+                },
+            )
+
+            content = output_path.read_text(encoding="utf-8")
+            parsed = json.loads(content)
+            self.assertEqual(parsed["features"][0]["properties"]["id"], 1)
+            self.assertIn("\n      [35.1,33.1,10],\n      [35.2,33.2,11]\n", content)
+
     def test_runtime_asset_uses_accepted_overlay_membership(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -129,6 +158,102 @@ class BaseRoutingAssetTests(unittest.TestCase):
                 {"fromMeters": 100, "toMeters": 112.4, "netMeters": 12.4},
             )
             self.assertEqual(validation["elevationEdges"], 1)
+
+    def test_runtime_asset_blocks_unaccepted_active_segments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            graph_path = root / "osm-base-graph.json"
+            overlay_path = root / "cw-base-overlay.json"
+            manual_edges_path = root / "manual-base-edges.geojson"
+            write_json(
+                graph_path,
+                {
+                    "nodes": [
+                        {"id": "n1", "coord": [35, 33]},
+                        {"id": "n2", "coord": [35.001, 33]},
+                    ],
+                    "edges": [
+                        {
+                            "id": "edge-1",
+                            "fromNodeId": "n1",
+                            "toNodeId": "n2",
+                            "distanceMeters": 93,
+                            "coordinates": [[35, 33], [35.001, 33]],
+                        }
+                    ],
+                },
+            )
+            write_json(overlay_path, {"segments": {}})
+            write_json(manual_edges_path, {"type": "FeatureCollection", "features": []})
+
+            with self.assertRaisesRegex(ValueError, "no accepted base overlay mapping"):
+                build_base_routing_asset(
+                    graph_path,
+                    overlay_path,
+                    manual_edges_path,
+                    {"segment 7": {"id": 7, "status": "active"}},
+                )
+
+    def test_runtime_asset_blocks_severe_accepted_length_mismatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            graph_path = root / "osm-base-graph.json"
+            overlay_path = root / "cw-base-overlay.json"
+            manual_edges_path = root / "manual-base-edges.geojson"
+            write_json(
+                graph_path,
+                {
+                    "nodes": [
+                        {"id": "n1", "coord": [35, 33]},
+                        {"id": "n2", "coord": [35.001, 33]},
+                    ],
+                    "edges": [
+                        {
+                            "id": "edge-1",
+                            "fromNodeId": "n1",
+                            "toNodeId": "n2",
+                            "distanceMeters": 93,
+                            "coordinates": [[35, 33], [35.001, 33]],
+                        }
+                    ],
+                },
+            )
+            write_json(
+                overlay_path,
+                {
+                    "segments": {
+                        "7": {
+                            "segmentId": 7,
+                            "segmentName": "short accepted mapping",
+                            "status": "accepted_auto_match",
+                            "edgeRefs": [{"edgeId": "edge-1", "direction": "forward", "sequenceIndex": 0}],
+                        }
+                    }
+                },
+            )
+            write_json(manual_edges_path, {"type": "FeatureCollection", "features": []})
+            source_geojson = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"id": 7, "name": "long source segment", "status": "active"},
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[35, 33], [35.01, 33]],
+                        },
+                    }
+                ],
+            }
+
+            with self.assertRaisesRegex(ValueError, "accepted mapping length differs"):
+                build_base_routing_asset(
+                    graph_path,
+                    overlay_path,
+                    manual_edges_path,
+                    {"segment 7": {"id": 7, "status": "active"}},
+                    source_geojson=source_geojson,
+                )
 
     def test_runtime_shards_duplicate_boundary_edges_and_describe_manifest(self):
         manifest, shards, report = build_base_routing_shards(

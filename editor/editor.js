@@ -116,6 +116,10 @@ const EXTEND_ENDPOINT_THRESHOLD_PX = 44;
 const SPACE_SNAP_EDIT_THRESHOLD_PX = 34;
 const MAX_BOUNDARY_SNAP_DISTANCE_M = 180;
 const MAX_EDGE_CONNECTION_GAP_M = 12;
+const ACCEPTED_LENGTH_WARNING_MIN_RATIO = 0.9;
+const ACCEPTED_LENGTH_WARNING_MAX_RATIO = 1.35;
+const ACCEPTED_LENGTH_BLOCK_MIN_RATIO = 0.8;
+const ACCEPTED_LENGTH_BLOCK_MAX_RATIO = 2.0;
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
 
 function featureFlagValue(key, defaultValue) {
@@ -381,25 +385,18 @@ function setSegmentDrawer(open) {
 }
 
 function canPromoteReport(report) {
-  return Boolean(
-    report &&
-      !report.elevation?.skipElevation &&
-      (report.elevation?.failures || 0) === 0 &&
-      (report.validation?.activeSplitNumberedNames || []).length === 0,
-  );
+  return Boolean(report && reportIssueDetails(report).length === 0);
 }
 
 function promoteBlockerMessage(report) {
   if (!report) return "Run a successful full build before promoting";
-  if (report.elevation?.skipElevation) return "Run a full build before promoting";
-  if ((report.elevation?.failures || 0) > 0) return "Fix elevation failures before promoting";
-  if ((report.validation?.activeSplitNumberedNames || []).length > 0) {
-    return "Rename numbered split children before promoting";
-  }
-  return "Run a successful full build before promoting";
+  const issues = reportIssueDetails(report);
+  if (issues.length === 0) return "Copy the latest build into the site files";
+  return `Fix ${issues.length} build issue${issues.length === 1 ? "" : "s"} before promoting`;
 }
 
 function updatePromoteButton() {
+  const promoteIssues = reportIssueDetails(state.lastBuildReport);
   els.promoteBuild.disabled = isDrawing() || state.dirty || !canPromoteReport(state.lastBuildReport);
   els.promoteBuild.title = isDrawing()
     ? "Finish or cancel drawing before promoting"
@@ -407,7 +404,9 @@ function updatePromoteButton() {
     ? "Save and run a fresh full build before promoting"
     : canPromoteReport(state.lastBuildReport)
       ? "Copy the latest build into the site files"
-      : promoteBlockerMessage(state.lastBuildReport);
+      : promoteIssues.length > 0
+        ? promoteIssues.join("\n")
+        : promoteBlockerMessage(state.lastBuildReport);
 }
 
 function markDirty(isDirty = true) {
@@ -553,9 +552,13 @@ function collectUnresolvedSegmentIds() {
   return new Set(baseOverlayReviewRows().filter((row) => !row.status.resolved).map((row) => Number(row.match.segmentId)));
 }
 
+function collectIssueSegmentIds() {
+  return collectUnresolvedSegmentIds();
+}
+
 function refreshUnresolvedSegmentHighlights() {
   if (!state.showUnresolvedSegments) return;
-  state.unresolvedSegmentIds = [...collectUnresolvedSegmentIds()].sort((a, b) => a - b);
+  state.unresolvedSegmentIds = [...collectIssueSegmentIds()].sort((a, b) => a - b);
   state.unresolvedSegmentFilterKey = null;
   updateUnresolvedSegmentLayerFilter();
 }
@@ -1487,8 +1490,8 @@ function renderDrawControls() {
   els.toggleUnresolvedSegments.classList.toggle("active", state.showUnresolvedSegments);
   els.toggleUnresolvedSegments.textContent =
     state.showUnresolvedSegments
-      ? `Unresolved (${state.unresolvedSegmentIds.length})`
-      : "Unresolved";
+      ? `Issues (${state.unresolvedSegmentIds.length})`
+      : "Issues";
   els.processChangedQueue.disabled =
     drawing ||
     !segmentsMode ||
@@ -1981,6 +1984,7 @@ function emptyOverlayValidationReport() {
     accepted: 0,
     stale: 0,
     disconnected: 0,
+    lengthMismatch: 0,
     duplicateEdges: 0,
     duplicateSegments: 0,
     autoDisconnected: 0,
@@ -1994,11 +1998,47 @@ function overlayValidationForSegment(report, segmentId) {
     report.bySegment.set(key, {
       staleIssues: [],
       continuityGaps: [],
+      lengthIssue: null,
       duplicateEdges: [],
       autoContinuityGaps: [],
     });
   }
   return report.bySegment.get(key);
+}
+
+function sourceFeatureForSegmentId(segmentId) {
+  const id = Number(segmentId);
+  if (!Number.isInteger(id)) return null;
+  return state.activeFeatures.find(({ feature }) => Number(feature.properties?.id) === id)?.feature || null;
+}
+
+function acceptedMappingLengthIssue(mapping) {
+  if (!mapping?.edgeRefs?.length) return null;
+  const sourceFeature = sourceFeatureForSegmentId(mapping.segmentId);
+  const sourceCoords = sourceFeature?.geometry?.coordinates || [];
+  if (sourceCoords.length < 2) return null;
+
+  const acceptedLengthMeters = mapping.edgeRefs.reduce((total, edgeRef) => {
+    const coords = orientedEdgeRefCoords(edgeRef);
+    return total + (coords.length >= 2 ? routeLengthMeters(coords) : 0);
+  }, 0);
+  const sourceLengthMeters = routeLengthMeters(sourceCoords);
+  if (acceptedLengthMeters <= 0 || sourceLengthMeters <= 0) return null;
+
+  const ratio = acceptedLengthMeters / sourceLengthMeters;
+  const issue = {
+    acceptedLengthMeters,
+    sourceLengthMeters,
+    ratio,
+    reason: `${Math.round(acceptedLengthMeters)}m accepted vs ${Math.round(sourceLengthMeters)}m source`,
+  };
+  if (ratio < ACCEPTED_LENGTH_BLOCK_MIN_RATIO || ratio > ACCEPTED_LENGTH_BLOCK_MAX_RATIO) {
+    return { ...issue, severity: "blocker" };
+  }
+  if (ratio < ACCEPTED_LENGTH_WARNING_MIN_RATIO || ratio > ACCEPTED_LENGTH_WARNING_MAX_RATIO) {
+    return { ...issue, severity: "warning" };
+  }
+  return null;
 }
 
 function baseOverlayValidationReport() {
@@ -2009,7 +2049,8 @@ function baseOverlayValidationReport() {
     cache.validationReportOverlay === state.baseOverlay.overlay &&
     cache.validationReportGraphEdges === state.baseOverlay.graphEdges &&
     cache.validationReportManualEdges === state.baseOverlay.manualBaseEdges &&
-    cache.validationReportMatchSummary === state.baseOverlay.matchSummary
+    cache.validationReportMatchSummary === state.baseOverlay.matchSummary &&
+    cache.validationReportActiveFeatures === state.activeFeatures
   ) {
     return cache.validationReport;
   }
@@ -2035,6 +2076,11 @@ function baseOverlayValidationReport() {
     segmentValidation.continuityGaps = edgeRefContinuityGaps(mapping.edgeRefs);
     if (segmentValidation.continuityGaps.length > 0) {
       report.disconnected += 1;
+    }
+
+    segmentValidation.lengthIssue = acceptedMappingLengthIssue(mapping);
+    if (segmentValidation.lengthIssue) {
+      report.lengthMismatch += 1;
     }
 
     for (const ref of mapping.edgeRefs) {
@@ -2081,6 +2127,7 @@ function baseOverlayValidationReport() {
   cache.validationReportGraphEdges = state.baseOverlay.graphEdges;
   cache.validationReportManualEdges = state.baseOverlay.manualBaseEdges;
   cache.validationReportMatchSummary = state.baseOverlay.matchSummary;
+  cache.validationReportActiveFeatures = state.activeFeatures;
   return report;
 }
 
@@ -2088,6 +2135,7 @@ function validationForSegment(segmentId) {
   return baseOverlayValidationReport().bySegment.get(String(segmentId)) || {
     staleIssues: [],
     continuityGaps: [],
+    lengthIssue: null,
     duplicateEdges: [],
     autoContinuityGaps: [],
   };
@@ -2417,6 +2465,14 @@ function overlayNetworkStatus(match) {
         resolved: false,
       };
     }
+    if (validation.lengthIssue) {
+      return {
+        key: validation.lengthIssue.severity === "blocker" ? "length_mismatch" : "length_warning",
+        label: validation.lengthIssue.severity === "blocker" ? "Length mismatch" : "Length warning",
+        reason: `${validation.lengthIssue.reason} (${formatPercent(validation.lengthIssue.ratio)})`,
+        resolved: false,
+      };
+    }
     if (mapping.source !== "reviewed_edge_set" && isOvermatchedMatch(match)) {
       return {
         key: "overmatched_edge",
@@ -2541,13 +2597,15 @@ function baseOverlayReviewRows() {
         partial_gap: 3,
         disconnected_edges: 4,
         duplicate_edge: 5,
-        overmatched_edge: 6,
-        stale_mapping: 7,
-        manual_review: 8,
-        needs_edit: 9,
-        full_auto_pending: 10,
-        not_saved: 11,
-        accepted: 12,
+        length_mismatch: 6,
+        length_warning: 7,
+        overmatched_edge: 8,
+        stale_mapping: 9,
+        manual_review: 10,
+        needs_edit: 11,
+        full_auto_pending: 12,
+        not_saved: 13,
+        accepted: 14,
       };
       const orderA = statusOrder[a.status.key] ?? 50;
       const orderB = statusOrder[b.status.key] ?? 50;
@@ -2566,11 +2624,13 @@ function baseOverlayReviewCounts(rows = baseOverlayReviewRows()) {
   const counts = {
     total: rows.length,
     accepted: 0,
+    issues: 0,
     unresolved: 0,
     missingBaseEdge: 0,
     partialGap: 0,
     disconnected: 0,
     duplicateEdge: 0,
+    lengthMismatch: 0,
     overmatchedEdge: 0,
     manualReview: 0,
     autoPending: 0,
@@ -2581,6 +2641,7 @@ function baseOverlayReviewCounts(rows = baseOverlayReviewRows()) {
       counts.accepted += 1;
       continue;
     }
+    counts.issues += 1;
     counts.unresolved += 1;
     if (
       row.status.key === "missing_base_edge" ||
@@ -2594,6 +2655,8 @@ function baseOverlayReviewCounts(rows = baseOverlayReviewRows()) {
       counts.disconnected += 1;
     } else if (row.status.key === "duplicate_edge") {
       counts.duplicateEdge += 1;
+    } else if (row.status.key === "length_mismatch" || row.status.key === "length_warning") {
+      counts.lengthMismatch += 1;
     } else if (row.status.key === "overmatched_edge") {
       counts.overmatchedEdge += 1;
     } else if (row.status.key === "manual_review" || row.status.key === "needs_edit" || row.status.key === "stale_mapping") {
@@ -2644,7 +2707,7 @@ function renderBaseOverlayReviewQueue() {
   if (!state.baseOverlay.loaded) {
     els.baseOverlayReviewStats.innerHTML = "";
     els.baseOverlayValidation.innerHTML = "";
-    els.baseOverlayReviewList.innerHTML = `<div class="empty-state">Load Base Graph to see which segments are outside the base overlay.</div>`;
+    els.baseOverlayReviewList.innerHTML = `<div class="empty-state">Load Base Graph to see CycleWays overlay issues.</div>`;
     return;
   }
 
@@ -2653,11 +2716,12 @@ function renderBaseOverlayReviewQueue() {
   const validation = baseOverlayValidationReport();
   const stats = [
     ["Accepted", counts.accepted],
-    ["Unresolved", counts.unresolved],
+    ["Issues", counts.issues],
     ["Missing", counts.missingBaseEdge],
     ["Gaps", counts.partialGap],
     ["Continuity", counts.disconnected],
     ["Duplicate", counts.duplicateEdge],
+    ["Length", counts.lengthMismatch],
     ["Overmatch", counts.overmatchedEdge],
     ["Review", counts.manualReview],
   ];
@@ -2669,6 +2733,7 @@ function renderBaseOverlayReviewQueue() {
     isBaseGraphStale() ? "base graph needs recalculation" : null,
     validation.stale > 0 ? `${validation.stale} stale` : null,
     validation.disconnected > 0 ? `${validation.disconnected} disconnected saved` : null,
+    validation.lengthMismatch > 0 ? `${validation.lengthMismatch} length mismatch${validation.lengthMismatch === 1 ? "" : "es"}` : null,
     validation.duplicateEdges > 0 ? `${validation.duplicateEdges} duplicate edge${validation.duplicateEdges === 1 ? "" : "s"}` : null,
     validation.autoDisconnected > 0 ? `${validation.autoDisconnected} calculated continuity issue${
       validation.autoDisconnected === 1 ? "" : "s"
@@ -2677,28 +2742,28 @@ function renderBaseOverlayReviewQueue() {
   els.baseOverlayValidation.innerHTML =
     validationIssues.length > 0
       ? `<strong>Validation</strong><span>${escapeHtml(validationIssues.join(" · "))}</span>`
-      : `<strong>Validation</strong><span>No saved overlay ownership or continuity issues.</span>`;
+      : `<strong>Validation</strong><span>No saved overlay validation issues.</span>`;
 
   for (const [label, value] of stats) {
     const item = document.createElement("div");
-    item.className = `base-overlay-stat${label === "Unresolved" && value > 0 ? " unresolved" : ""}`;
+    item.className = `base-overlay-stat${label === "Issues" && value > 0 ? " unresolved" : ""}`;
     item.innerHTML = `<strong>${value}</strong><span>${escapeHtml(label)}</span>`;
     els.baseOverlayReviewStats.appendChild(item);
   }
 
-  const unresolvedRows = rows.filter((row) => !row.status.resolved);
-  if (unresolvedRows.length === 0) {
-    els.baseOverlayReviewList.innerHTML = `<div class="empty-state">All active CW segments are accepted into the base overlay.</div>`;
+  const issueRows = rows.filter((row) => !row.status.resolved);
+  if (issueRows.length === 0) {
+    els.baseOverlayReviewList.innerHTML = `<div class="empty-state">All active CW segments have accepted base overlay mappings.</div>`;
     return;
   }
 
   const header = document.createElement("div");
   header.className = "base-overlay-review-heading";
-  header.textContent = "Unresolved segments";
+  header.textContent = "Issue segments";
   els.baseOverlayReviewList.appendChild(header);
 
   const selectedId = selectedSegmentId();
-  for (const row of unresolvedRows) {
+  for (const row of issueRows) {
     const match = row.match;
     const button = document.createElement("button");
     button.type = "button";
@@ -4684,7 +4749,7 @@ async function toggleUnresolvedSegments() {
     updateUnresolvedSegmentLayerFilter();
     updateWorkspaceLayerVisibility();
     renderDrawControls();
-    setStatus("Unresolved segment highlights hidden.");
+    setStatus("Issue segment highlights hidden.");
     return;
   }
 
@@ -4693,14 +4758,14 @@ async function toggleUnresolvedSegments() {
   renderDrawControls();
 
   if (!state.baseOverlay.loaded) {
-    setStatus("Loading overlay review data for unresolved segment highlights...");
+    setStatus("Loading overlay review data for issue segment highlights...");
     await loadBaseOverlayData();
   }
 
   refreshUnresolvedSegmentHighlights();
   updateWorkspaceLayerVisibility();
   renderDrawControls();
-  setStatus(`Highlighting ${state.unresolvedSegmentIds.length} unresolved segments.`);
+  setStatus(`Highlighting ${state.unresolvedSegmentIds.length} issue segments.`);
 }
 
 async function processChangedSegmentQueue() {
@@ -5251,7 +5316,7 @@ async function saveSource() {
     }
     markDirty(false);
     clearAlert();
-    setStatus("Source saved.");
+    setStatus(payload.changed === false ? "Source already up to date." : "Source saved.");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     showAlert("Save failed. Changes are still unsaved.", message);
@@ -5260,12 +5325,71 @@ async function saveSource() {
   }
 }
 
+function reportIssueDetails(report) {
+  if (!report) return [];
+  const validation = report.validation || {};
+  const elevation = report.elevation || {};
+  const issues = [];
+
+  if (elevation.skipElevation) {
+    issues.push("Elevation was skipped");
+  }
+  if ((elevation.failures || 0) > 0) {
+    issues.push(`${elevation.failures} elevation lookup failure${elevation.failures === 1 ? "" : "s"}`);
+  }
+  for (const name of validation.duplicateFeatureNames || []) {
+    issues.push(`Duplicate feature name: ${name}`);
+  }
+  for (const id of Object.keys(validation.duplicateIds || {})) {
+    issues.push(`Duplicate segment ID: ${id}`);
+  }
+  if ((validation.invalidDataMarkers || []).length > 0) {
+    issues.push(
+      `${validation.invalidDataMarkers.length} invalid data marker${
+        validation.invalidDataMarkers.length === 1 ? "" : "s"
+      }`,
+    );
+  }
+  if ((validation.invalidQuality || []).length > 0) {
+    issues.push(
+      `${validation.invalidQuality.length} invalid quality record${validation.invalidQuality.length === 1 ? "" : "s"}`,
+    );
+  }
+  for (const item of validation.activeMissingMiddle || []) {
+    issues.push(`Active segment missing middle: ${item.name || item.segment || item.id || JSON.stringify(item)}`);
+  }
+  for (const item of validation.activeSplitNumberedNames || []) {
+    issues.push(`Numbered split child: ${item.name || item.segment || item.id || JSON.stringify(item)}`);
+  }
+  for (const warning of validation.routeCompatibilityWarnings || []) {
+    const segment = warning.segment || warning.id || "unknown segment";
+    issues.push(`Route compatibility: ${segment} - ${warning.issue || "warning"}`);
+  }
+  for (const blocker of validation.baseRouting?.blockers || []) {
+    const segment = blocker.segmentName || blocker.segmentId || "unknown segment";
+    issues.push(`Base routing blocker: ${segment} - ${blocker.issue || "validation blocker"}`);
+  }
+  for (const warning of validation.baseRouting?.warnings || []) {
+    const segment = warning.segmentName || warning.segmentId || "unknown segment";
+    issues.push(`Base routing warning: ${segment} - ${warning.issue || "validation warning"}`);
+  }
+  const displayFallbacks = validation.cyclewaysDisplayGeometry?.sourceFallbackSegments || 0;
+  if (displayFallbacks > 0) {
+    issues.push(
+      `${displayFallbacks} public CycleWays segment${displayFallbacks === 1 ? "" : "s"} still use source geometry fallback`,
+    );
+  }
+  return issues;
+}
+
 function buildSummary(report) {
   if (!report) return "Build completed, but no report was returned.";
   const validation = report.validation || {};
   const elevation = report.elevation || {};
+  const issues = reportIssueDetails(report);
   return JSON.stringify(
     {
+      issues,
       featureCount: validation.featureCount,
       segmentsCount: validation.segmentsCount,
       newSegments: validation.newSegments?.length ?? 0,
@@ -5275,6 +5399,9 @@ function buildSummary(report) {
       invalidQuality: validation.invalidQuality?.length ?? 0,
       activeSplitNumberedNames: validation.activeSplitNumberedNames || [],
       routeCompatibilityWarnings: validation.routeCompatibilityWarnings?.length ?? 0,
+      routeCompatibilityWarningDetails: validation.routeCompatibilityWarnings || [],
+      baseRoutingWarnings: validation.baseRouting?.warnings || [],
+      baseRoutingBlockers: validation.baseRouting?.blockers || [],
       connectedComponents: validation.topology?.connectedComponents,
       orphanEndpointCount: validation.topology?.orphanEndpointCount,
       elevation: {
@@ -5299,7 +5426,7 @@ function buildOutputSummary(report) {
   const splitNameIssues = validation.activeSplitNumberedNames?.length || 0;
   const routeWarnings = validation.routeCompatibilityWarnings?.length || 0;
   const elevationFailures = elevation.failures || 0;
-  const issues = qualityIssues + splitNameIssues + routeWarnings + elevationFailures;
+  const issues = reportIssueDetails(report).length || qualityIssues + splitNameIssues + routeWarnings + elevationFailures;
   const prefix = version ? `v${version}` : "Build";
   return issues > 0 ? `${prefix} · ${issues} issues` : `${prefix} · OK`;
 }
@@ -5322,13 +5449,16 @@ async function runBuild() {
       throw new Error(payload.error || `Build failed: ${response.status}`);
     }
     state.lastBuildReport = payload.report;
+    const issues = reportIssueDetails(payload.report);
     els.buildOutputSummary.textContent = buildOutputSummary(payload.report);
+    els.buildOutputSummary.title = issues.join("\n");
     els.buildReport.textContent = buildSummary(payload.report);
     updatePromoteButton();
-    if ((payload.report?.elevation?.failures || 0) > 0) {
-      setStatus("Build finished with elevation failures. Fix the elevation service and rebuild.", "error");
-    } else if ((payload.report?.validation?.activeSplitNumberedNames || []).length > 0) {
-      setStatus("Build finished with numbered split names. Rename them before promoting.", "error");
+    if (issues.length > 0) {
+      setStatus(
+        `Build finished with ${issues.length} issue${issues.length === 1 ? "" : "s"}. Fix before promoting.`,
+        "error",
+      );
     } else {
       setStatus(payload.report?.elevation?.skipElevation ? "Build complete. Run a full build before promoting." : "Build complete. Ready to promote.");
     }

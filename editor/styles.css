@@ -697,11 +697,13 @@ button:disabled {
 }
 
 .base-overlay-review-item.status-disconnected_edges,
-.base-overlay-review-item.status-duplicate_edge {
+.base-overlay-review-item.status-duplicate_edge,
+.base-overlay-review-item.status-length_mismatch {
   border-left-color: #7c2d12;
 }
 
-.base-overlay-review-item.status-overmatched_edge {
+.base-overlay-review-item.status-overmatched_edge,
+.base-overlay-review-item.status-length_warning {
   border-left-color: #c75f00;
 }
 

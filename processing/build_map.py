@@ -59,6 +59,10 @@ QUALITY_KEYS = ("overall", "safety", "comfort", "scenery")
 SITE_GEOJSON_COORDINATE_DECIMALS = 6
 SITE_GEOJSON_ELEVATION_DECIMALS = 1
 ROUTING_EDGE_CONTINUITY_GAP_M = 12.0
+ACCEPTED_MAPPING_LENGTH_WARNING_MIN_RATIO = 0.9
+ACCEPTED_MAPPING_LENGTH_WARNING_MAX_RATIO = 1.35
+ACCEPTED_MAPPING_LENGTH_BLOCK_MIN_RATIO = 0.8
+ACCEPTED_MAPPING_LENGTH_BLOCK_MAX_RATIO = 2.0
 PUBLIC_DATA_DIR = "public-data"
 BASE_ROUTING_SHARD_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_MANIFEST_SCHEMA_VERSION = 1
@@ -87,6 +91,82 @@ def write_json(path: Path, data: Any, *, compact: bool = False) -> None:
         else:
             json.dump(data, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
+
+
+def json_compact(data: Any) -> str:
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
+
+def diffable_site_geojson_feature(feature: Any) -> str:
+    if not isinstance(feature, dict):
+        return f"  {json_compact(feature)}"
+
+    geometry = feature.get("geometry")
+    coordinates = geometry.get("coordinates") if isinstance(geometry, dict) else None
+    if (
+        not isinstance(geometry, dict)
+        or geometry.get("type") != "LineString"
+        or not isinstance(coordinates, list)
+    ):
+        return f"  {json_compact(feature)}"
+
+    parts: list[str] = []
+    geometry_written = False
+    for key, value in feature.items():
+        if key != "geometry":
+            parts.append(f"{json_compact(key)}:{json_compact(value)}")
+            continue
+
+        geometry_parts = [
+            f"{json_compact(geometry_key)}:{json_compact(geometry_value)}"
+            for geometry_key, geometry_value in geometry.items()
+            if geometry_key != "coordinates"
+        ]
+        geometry_prefix = ",".join(geometry_parts)
+        if geometry_prefix:
+            geometry_prefix += ","
+        coordinate_lines = ",\n".join(f"      {json_compact(coord)}" for coord in coordinates)
+        parts.append(
+            f'"geometry":{{{geometry_prefix}"coordinates":[\n'
+            f"{coordinate_lines}\n"
+            "  ]}"
+        )
+        geometry_written = True
+
+    if not geometry_written:
+        coordinate_lines = ",\n".join(f"      {json_compact(coord)}" for coord in coordinates)
+        parts.append(
+            '"geometry":{"type":"LineString","coordinates":[\n'
+            f"{coordinate_lines}\n"
+            "  ]"
+        )
+
+    return f"  {{{','.join(parts)}}}"
+
+
+def write_site_geojson(path: Path, data: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    features = data.get("features") if isinstance(data, dict) else None
+    if not isinstance(features, list):
+        write_json(path, data)
+        return
+
+    top_level_items = [
+        f"{json_compact(key)}:{json_compact(value)}"
+        for key, value in data.items()
+        if key != "features"
+    ]
+    top_level_prefix = ",".join(top_level_items)
+    if top_level_prefix:
+        top_level_prefix += ',"features":['
+    else:
+        top_level_prefix = '"features":['
+
+    feature_lines = ",\n".join(diffable_site_geojson_feature(feature) for feature in features)
+    with path.open("w", encoding="utf-8") as handle:
+        handle.write(f"{{{top_level_prefix}\n")
+        handle.write(feature_lines)
+        handle.write("\n]}\n")
 
 
 def messagepack_pack(data: Any) -> bytes:
@@ -406,20 +486,42 @@ def json_size_bytes(data: Any, *, compact: bool = False) -> int:
     return len(payload.encode("utf-8")) + 1
 
 
+def site_geojson_size_bytes(data: dict[str, Any]) -> int:
+    features = data.get("features") if isinstance(data, dict) else None
+    if not isinstance(features, list):
+        return json_size_bytes(data)
+
+    top_level_items = [
+        f"{json_compact(key)}:{json_compact(value)}"
+        for key, value in data.items()
+        if key != "features"
+    ]
+    top_level_prefix = ",".join(top_level_items)
+    if top_level_prefix:
+        top_level_prefix += ',"features":['
+    else:
+        top_level_prefix = '"features":['
+    feature_lines = ",\n".join(diffable_site_geojson_feature(feature) for feature in features)
+    payload = f"{{{top_level_prefix}\n{feature_lines}\n]}}\n"
+    return len(payload.encode("utf-8"))
+
+
 def site_geojson_optimization_report(
     geojson_data: dict[str, Any],
     site_geojson_data: dict[str, Any],
 ) -> dict[str, Any]:
     pretty_bytes = json_size_bytes(geojson_data)
     compact_bytes = json_size_bytes(site_geojson_data, compact=True)
+    diffable_bytes = site_geojson_size_bytes(site_geojson_data)
     reduction = 0.0
     if pretty_bytes:
-        reduction = round((pretty_bytes - compact_bytes) / pretty_bytes * 100, 2)
+        reduction = round((pretty_bytes - diffable_bytes) / pretty_bytes * 100, 2)
     return {
         "coordinateDecimals": SITE_GEOJSON_COORDINATE_DECIMALS,
         "elevationDecimals": SITE_GEOJSON_ELEVATION_DECIMALS,
         "previousPrettyBytes": pretty_bytes,
         "compactBytes": compact_bytes,
+        "diffableBytes": diffable_bytes,
         "reductionPercent": reduction,
     }
 
@@ -1634,6 +1736,54 @@ def active_segment_ids(segments_data: dict[str, Any]) -> set[int]:
     return ids
 
 
+def route_length_meters(coordinates: list[Any]) -> float:
+    total = 0.0
+    for index in range(len(coordinates) - 1):
+        start = coordinates[index]
+        end = coordinates[index + 1]
+        if (
+            not isinstance(start, list)
+            or len(start) < 2
+            or not isinstance(end, list)
+            or len(end) < 2
+            or not isinstance(start[0], (int, float))
+            or not isinstance(start[1], (int, float))
+            or not isinstance(end[0], (int, float))
+            or not isinstance(end[1], (int, float))
+        ):
+            continue
+        total += haversine((float(start[1]), float(start[0])), (float(end[1]), float(end[0])))
+    return total
+
+
+def source_segment_lengths(source_geojson: dict[str, Any] | None) -> dict[int, dict[str, Any]]:
+    if not isinstance(source_geojson, dict):
+        return {}
+
+    lengths: dict[int, dict[str, Any]] = {}
+    for feature in source_geojson.get("features", []):
+        if not isinstance(feature, dict) or not is_active_source_feature(feature):
+            continue
+        properties = feature.get("properties") if isinstance(feature.get("properties"), dict) else {}
+        segment_id = properties.get("id")
+        geometry = feature.get("geometry") if isinstance(feature.get("geometry"), dict) else {}
+        coordinates = geometry.get("coordinates")
+        if not isinstance(segment_id, int) or not isinstance(coordinates, list):
+            continue
+        lengths[segment_id] = {
+            "name": properties.get("name") or f"Segment {segment_id}",
+            "lengthMeters": route_length_meters(coordinates),
+        }
+    return lengths
+
+
+def routing_edge_distance_m(edge: dict[str, Any]) -> float:
+    distance = edge.get("distanceMeters")
+    if isinstance(distance, (int, float)) and distance >= 0:
+        return float(distance)
+    return route_length_meters(edge.get("coordinates", []))
+
+
 def compact_routing_coordinate(coord: Any) -> list[float] | None:
     if not isinstance(coord, list) or len(coord) < 2:
         return None
@@ -1757,6 +1907,7 @@ def build_base_routing_asset(
     manual_base_edges_path: Path,
     segments_data: dict[str, Any],
     base_graph_path: Path | None = None,
+    source_geojson: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     ensure_current_routing_graph(graph_path, manual_base_edges_path, base_graph_path)
     if not overlay_path.exists():
@@ -1799,8 +1950,10 @@ def build_base_routing_asset(
     accepted_mappings.sort(key=lambda mapping: int(mapping.get("segmentId") or 0))
 
     blockers: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
     owners_by_edge_id: dict[str, list[int]] = defaultdict(list)
     accepted_segment_ids: set[int] = set()
+    source_lengths = source_segment_lengths(source_geojson)
 
     for mapping in accepted_mappings:
         segment_id = mapping.get("segmentId")
@@ -1811,6 +1964,8 @@ def build_base_routing_asset(
         edge_refs = sorted_overlay_edge_refs(mapping)
         previous_end_coord = None
         previous_edge_id = None
+        accepted_length_m = 0.0
+        has_edge_ref_blocker = False
         if not edge_refs:
             blockers.append(
                 {
@@ -1830,11 +1985,13 @@ def build_base_routing_asset(
                         "issue": "accepted overlay edge ref does not resolve",
                     }
                 )
+                has_edge_ref_blocker = True
                 previous_end_coord = None
                 previous_edge_id = edge_id
                 continue
 
             owners_by_edge_id[edge_id].append(segment_id)
+            accepted_length_m += routing_edge_distance_m(edges_by_id[edge_id])
             edge_start_node, edge_end_node = oriented_routing_edge_nodes(
                 edges_by_id[edge_id],
                 edge_ref.get("direction"),
@@ -1847,6 +2004,7 @@ def build_base_routing_asset(
                         "issue": "accepted edge ref has invalid graph topology",
                     }
                 )
+                has_edge_ref_blocker = True
                 continue
             edge_start_coord, edge_end_coord = oriented_routing_edge_endpoints(
                 edges_by_id[edge_id],
@@ -1860,6 +2018,7 @@ def build_base_routing_asset(
                         "issue": "accepted edge ref has invalid coordinates",
                     }
                 )
+                has_edge_ref_blocker = True
                 continue
             if (
                 ref_index > 0
@@ -1875,8 +2034,46 @@ def build_base_routing_asset(
                         "issue": "accepted overlay edge sequence is disconnected",
                     }
                 )
+                has_edge_ref_blocker = True
             previous_end_coord = edge_end_coord
             previous_edge_id = edge_id
+
+        source_length = source_lengths.get(segment_id)
+        source_length_m = source_length.get("lengthMeters") if source_length else None
+        if (
+            not has_edge_ref_blocker
+            and isinstance(source_length_m, (int, float))
+            and source_length_m > 0
+            and accepted_length_m > 0
+        ):
+            length_ratio = accepted_length_m / float(source_length_m)
+            length_issue = {
+                "segmentId": segment_id,
+                "segmentName": source_length.get("name") if source_length else mapping.get("segmentName"),
+                "acceptedLengthMeters": round(accepted_length_m, 1),
+                "sourceLengthMeters": round(float(source_length_m), 1),
+                "lengthRatio": round(length_ratio, 3),
+            }
+            if (
+                length_ratio < ACCEPTED_MAPPING_LENGTH_BLOCK_MIN_RATIO
+                or length_ratio > ACCEPTED_MAPPING_LENGTH_BLOCK_MAX_RATIO
+            ):
+                blockers.append(
+                    {
+                        **length_issue,
+                        "issue": "accepted mapping length differs from source segment",
+                    }
+                )
+            elif (
+                length_ratio < ACCEPTED_MAPPING_LENGTH_WARNING_MIN_RATIO
+                or length_ratio > ACCEPTED_MAPPING_LENGTH_WARNING_MAX_RATIO
+            ):
+                warnings.append(
+                    {
+                        **length_issue,
+                        "issue": "accepted mapping length is suspicious",
+                    }
+                )
 
     duplicate_edges = [
         {"edgeId": edge_id, "segmentIds": sorted(set(segment_ids))}
@@ -1891,12 +2088,26 @@ def build_base_routing_asset(
             }
         )
 
+    unresolved_segment_ids = sorted(active_ids - accepted_segment_ids)
+    for segment_id in unresolved_segment_ids:
+        source_length = source_lengths.get(segment_id)
+        blockers.append(
+            {
+                "segmentId": segment_id,
+                "segmentName": source_length.get("name") if source_length else None,
+                "issue": "active segment has no accepted base overlay mapping",
+            }
+        )
+
     if blockers:
         examples = "; ".join(
             json.dumps(blocker, ensure_ascii=False, separators=(",", ":"))
             for blocker in blockers[:5]
         )
-        raise ValueError(f"Base routing overlay validation failed: {examples}")
+        raise ValueError(
+            f"Base routing overlay validation failed with {len(blockers)} blocker"
+            f"{'' if len(blockers) == 1 else 's'}: {examples}"
+        )
 
     runtime_nodes = []
     for node in graph_nodes:
@@ -1948,7 +2159,6 @@ def build_base_routing_asset(
     if not runtime_nodes or not runtime_edges:
         raise ValueError("Base routing asset would have no runtime nodes or edges")
 
-    unresolved_segment_ids = sorted(active_ids - accepted_segment_ids)
     validation = {
         "graphNodes": len(runtime_nodes),
         "graphEdges": len(runtime_edges),
@@ -1958,6 +2168,7 @@ def build_base_routing_asset(
         "unresolvedSegmentIds": unresolved_segment_ids,
         "unresolvedSegments": len(unresolved_segment_ids),
         "duplicateAcceptedEdges": len(duplicate_edges),
+        "warnings": warnings,
         "blockers": [],
     }
     asset = {
@@ -2506,6 +2717,8 @@ def write_runtime_manifest(
             "routeCompatibilityWarnings": len(validation.get("routeCompatibilityWarnings", [])),
             "routingEdges": validation.get("baseRouting", {}).get("graphEdges"),
             "unresolvedRoutingSegments": validation.get("baseRouting", {}).get("unresolvedSegments"),
+            "baseRoutingWarnings": len(validation.get("baseRouting", {}).get("warnings", [])),
+            "baseRoutingBlockers": len(validation.get("baseRouting", {}).get("blockers", [])),
             "overlayDisplaySegments": validation.get("cyclewaysDisplayGeometry", {}).get("derivedSegments"),
             "sourceDisplayFallbackSegments": validation.get("cyclewaysDisplayGeometry", {}).get(
                 "sourceFallbackSegments"
@@ -2633,6 +2846,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         args.manual_base_edges.resolve(),
         generated_segments,
         args.routing_base_graph.resolve(),
+        geojson_data,
     )
     site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
         compact_geojson_for_site(geojson_data),
@@ -2645,12 +2859,13 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         args.verbose,
         "Site GeoJSON compacted: "
         f"{site_geojson_optimization['previousPrettyBytes']} -> "
-        f"{site_geojson_optimization['compactBytes']} bytes "
-        f"({site_geojson_optimization['reductionPercent']}% smaller)",
+        f"{site_geojson_optimization['diffableBytes']} bytes "
+        f"({site_geojson_optimization['reductionPercent']}% smaller, "
+        f"{site_geojson_optimization['compactBytes']} compact bytes)",
     )
 
     emit_progress(args.verbose, "Writing public GeoJSON, segments JSON, and runtime manifest")
-    write_json(output_geojson, site_geojson_data, compact=True)
+    write_site_geojson(output_geojson, site_geojson_data)
     write_json(output_segments, generated_segments)
 
     validation = validate_outputs(
@@ -2764,6 +2979,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         args.manual_base_edges.resolve(),
         generated_segments,
         args.routing_base_graph.resolve(),
+        geojson_data,
     )
     site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
         compact_geojson_for_site(geojson_data),
@@ -2776,12 +2992,13 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         args.verbose,
         "Site GeoJSON compacted: "
         f"{site_geojson_optimization['previousPrettyBytes']} -> "
-        f"{site_geojson_optimization['compactBytes']} bytes "
-        f"({site_geojson_optimization['reductionPercent']}% smaller)",
+        f"{site_geojson_optimization['diffableBytes']} bytes "
+        f"({site_geojson_optimization['reductionPercent']}% smaller, "
+        f"{site_geojson_optimization['compactBytes']} compact bytes)",
     )
 
     emit_progress(args.verbose, "Writing public GeoJSON, segments JSON, KML, and runtime manifest")
-    write_json(output_geojson, site_geojson_data, compact=True)
+    write_site_geojson(output_geojson, site_geojson_data)
     write_json(output_segments, generated_segments)
     write_kml_from_geojson(geojson_data, output_kml)
 

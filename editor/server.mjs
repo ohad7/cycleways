@@ -172,6 +172,8 @@ function summarizeReport(report) {
       edges: validation.baseRouting?.graphEdges,
       cyclewaysEdges: validation.baseRouting?.cyclewaysEdges,
       unresolvedSegments: validation.baseRouting?.unresolvedSegments,
+      warnings: (validation.baseRouting?.warnings || []).length,
+      blockers: (validation.baseRouting?.blockers || []).length,
     },
   };
 }
@@ -1206,11 +1208,31 @@ function validationBlockers(report) {
   if ((validation.invalidDataMarkers || []).length > 0) {
     blockers.push("invalid data markers");
   }
+  if ((validation.invalidQuality || []).length > 0) {
+    blockers.push("invalid quality records");
+  }
   if ((validation.activeMissingMiddle || []).length > 0) {
     blockers.push("active segments missing middle points");
   }
   if ((validation.activeSplitNumberedNames || []).length > 0) {
     blockers.push("active split children with numbered names");
+  }
+  if ((validation.routeCompatibilityWarnings || []).length > 0) {
+    blockers.push(`${validation.routeCompatibilityWarnings.length} route compatibility warnings`);
+  }
+  const baseRouting = validation.baseRouting || {};
+  if ((baseRouting.blockers || []).length > 0) {
+    blockers.push(`${baseRouting.blockers.length} base routing blockers`);
+  }
+  if ((baseRouting.warnings || []).length > 0) {
+    blockers.push(`${baseRouting.warnings.length} base routing warnings`);
+  }
+  if ((baseRouting.unresolvedSegments || 0) > 0) {
+    blockers.push(`${baseRouting.unresolvedSegments} unresolved base routing segments`);
+  }
+  const displayFallbacks = validation.cyclewaysDisplayGeometry?.sourceFallbackSegments || 0;
+  if (displayFallbacks > 0) {
+    blockers.push(`${displayFallbacks} public CycleWays display geometry fallbacks`);
   }
 
   return blockers;
@@ -1253,6 +1275,30 @@ async function writeJsonAtomic(target, value) {
   try {
     await writeFile(tmpPath, `${JSON.stringify(value, null, 2)}\n`, "utf-8");
     await rename(tmpPath, target);
+  } catch (error) {
+    await unlink(tmpPath).catch(() => {});
+    throw error;
+  }
+}
+
+async function writeJsonAtomicIfChanged(target, value) {
+  const nextContent = `${JSON.stringify(value, null, 2)}\n`;
+  let currentContent = null;
+  try {
+    currentContent = await readFile(target, "utf-8");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  if (currentContent === nextContent) {
+    return false;
+  }
+
+  await mkdir(dirname(target), { recursive: true });
+  const tmpPath = uniqueAtomicTmpPath(target);
+  try {
+    await writeFile(tmpPath, nextContent, "utf-8");
+    await rename(tmpPath, target);
+    return true;
   } catch (error) {
     await unlink(tmpPath).catch(() => {});
     throw error;
@@ -1634,12 +1680,13 @@ const server = createServer(async (request, response) => {
         return;
       }
       logApi(requestId, "POST /api/source validated", summarizeSource(source));
-      await writeJsonAtomic(sourcePath, source);
+      const changed = await writeJsonAtomicIfChanged(sourcePath, source);
       logApi(requestId, "POST /api/source saved", {
         path: repoRelative(sourcePath),
+        changed,
         durationMs: Date.now() - startedAt,
       });
-      sendJson(response, 200, { ok: true, path: sourcePath });
+      sendJson(response, 200, { ok: true, path: sourcePath, changed });
       return;
     }
 
