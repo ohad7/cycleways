@@ -184,8 +184,10 @@ const els = {
   workspaceSegments: document.getElementById("workspace-segments"),
   workspaceBase: document.getElementById("workspace-base"),
   workspaceOverlay: document.getElementById("workspace-overlay"),
+  workspaceVideoSync: document.getElementById("workspace-video-sync"),
   baseGraphPanel: document.getElementById("base-graph-panel"),
   cwOverlayPanel: document.getElementById("cw-overlay-panel"),
+  videoSyncPanel: document.getElementById("video-sync-panel"),
   segmentDrawer: document.getElementById("segment-drawer"),
   toggleSegments: document.getElementById("toggle-segments"),
   closeSegments: document.getElementById("close-segments"),
@@ -2789,8 +2791,10 @@ function renderWorkspaceChrome() {
   els.workspaceSegments.classList.toggle("active", state.workspaceMode === "segments");
   els.workspaceBase.classList.toggle("active", state.workspaceMode === "base");
   els.workspaceOverlay.classList.toggle("active", state.workspaceMode === "overlay");
+  els.workspaceVideoSync.classList.toggle("active", state.workspaceMode === "video-sync");
   els.baseGraphPanel.hidden = state.workspaceMode !== "base";
   els.cwOverlayPanel.hidden = state.workspaceMode !== "overlay";
+  els.videoSyncPanel.hidden = state.workspaceMode !== "video-sync";
   els.toggleBaseOverlay.classList.toggle("active", state.baseOverlay.enabled);
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
 }
@@ -3183,7 +3187,7 @@ function setMode(mode) {
 }
 
 async function setWorkspaceMode(mode) {
-  if (!["segments", "base", "overlay"].includes(mode)) return;
+  if (!["segments", "base", "overlay", "video-sync"].includes(mode)) return;
   if (state.workspaceMode === mode) {
     if ((mode === "base" || mode === "overlay") && !state.baseOverlay.loaded) {
       state.baseOverlay.enabled = true;
@@ -3222,6 +3226,12 @@ async function setWorkspaceMode(mode) {
       await loadBaseOverlayData();
     }
     setStatus(mode === "base" ? "Base Graph mode: edit manual base edges." : "CW Overlay mode: select a segment, then choose graph edges.");
+  } else if (mode === "video-sync") {
+    state.baseOverlay.enabled = false;
+    setStatus("Video Sync mode: pick a route, paste a YouTube URL, click on the map to add keyframes.");
+    if (typeof activateVideoSyncMode === "function") {
+      try { await activateVideoSyncMode(); } catch (err) { showError(err); }
+    }
   } else {
     state.baseOverlay.enabled = false;
     setStatus("Segment mode: edit the CycleWays source network.");
@@ -5499,6 +5509,7 @@ function wireEvents() {
   els.workspaceSegments.addEventListener("click", () => setWorkspaceMode("segments").catch(showError));
   els.workspaceBase.addEventListener("click", () => setWorkspaceMode("base").catch(showError));
   els.workspaceOverlay.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
+  els.workspaceVideoSync.addEventListener("click", () => setWorkspaceMode("video-sync").catch(showError));
   els.segmentSearch.addEventListener("input", renderList);
   els.toggleSegments.addEventListener("click", () => setSegmentDrawer(!state.segmentsOpen));
   els.closeSegments.addEventListener("click", () => setSegmentDrawer(false));

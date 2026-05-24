@@ -26,6 +26,7 @@
             <button id="workspace-segments" class="tool-button active" type="button">Segments</button>
             <button id="workspace-base" class="tool-button" type="button">Base Graph</button>
             <button id="workspace-overlay" class="tool-button" type="button">CW Overlay</button>
+            <button id="workspace-video-sync" class="tool-button" type="button">Video Sync</button>
           </div>
 
           <div class="map-toolbar">
@@ -165,6 +166,27 @@
             <div id="base-overlay-review-list" class="base-overlay-review-list"></div>
 
             <div id="base-overlay-edges" class="base-overlay-edges"></div>
+          </section>
+
+          <section id="video-sync-panel" class="panel workspace-panel" hidden>
+            <header class="panel-header">
+              <h2>Video Sync</h2>
+              <span id="vs-status"></span>
+            </header>
+            <div class="vs-row">
+              <label for="vs-slug">Route:</label>
+              <select id="vs-slug"></select>
+            </div>
+            <div class="vs-row">
+              <label for="vs-yt-url">YouTube URL:</label>
+              <input id="vs-yt-url" type="text" placeholder="https://youtube.com/watch?v=..." />
+            </div>
+            <div id="vs-player" class="vs-player"></div>
+            <ul id="vs-keyframes" class="vs-keyframes"></ul>
+            <div class="action-row">
+              <button id="vs-save-draft" class="secondary-button" type="button">Save Draft</button>
+              <button id="vs-promote" class="primary-button" type="button">Promote</button>
+            </div>
           </section>
 
           <section class="panel">
