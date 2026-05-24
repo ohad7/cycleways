@@ -1,12 +1,9 @@
 import React from "react";
 import FeaturedRoute from "../components/featured/FeaturedRoute.jsx";
-import { meta } from "./sovev-beit-hillel.meta.js";
-
-export { meta };
 
 export default function SovevBeitHillel() {
   return (
-    <FeaturedRoute meta={meta}>
+    <FeaturedRoute slug="sovev-beit-hillel">
       <p>
         הסובב סביב בית הלל הוא טעימה מהיופי הצנוע של הגליל העליון — שילוב של
         דרכים חקלאיות נוחות, נופים פתוחים אל החרמון, וקרבה לפניני המים של עמק

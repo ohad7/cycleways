@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "slug": "shdeh-nehemia-baniyas",
+      "name": "שדה נחמיה → בניאס → גן הצפון → שדה נחמיה",
+      "summary": "מסלול קצר ונוח, מומלץ במיוחד לחובבי רכיבה ראשונית, עם פינות מנוחה רבות.",
+      "route": "AQByAAcABAAFAFgAYABeAAoAeAAZAHIA",
+      "notes": "",
+      "featured": true,
+      "distanceKm": 13.6,
+      "elevationGainM": 120,
+      "elevationLossM": 120,
+      "regionId": "hula-valley",
+      "passesNear": [
+        "beit-hillel",
+        "hagoshrim"
+      ],
+      "difficulty": "easy",
+      "style": "family",
+      "roadMix": {
+        "paved": 1,
+        "dirt": 0,
+        "road": 0
+      },
+      "qualityScore": 3
+    },
+    {
+      "slug": "sovev-beit-hillel",
+      "name": "סובב בית הלל",
+      "summary": "מסלול קצר ונעים מסביב לבית הלל",
+      "route": "DvsVvkJ2SiQeaAkhgGPtCZde8S8Q8xGxbG4BSY7c32agaEz219fTkrW2ZA",
+      "notes": "",
+      "featured": true,
+      "distanceKm": 6.5,
+      "elevationGainM": 39,
+      "elevationLossM": 40,
+      "regionId": "hula-valley",
+      "passesNear": [
+        "beit-hillel",
+        "shdeh-nehemia"
+      ],
+      "difficulty": "easy",
+      "style": "family",
+      "roadMix": {
+        "paved": 1,
+        "dirt": 0,
+        "road": 0
+      },
+      "qualityScore": 3
+    }
+  ]
+}

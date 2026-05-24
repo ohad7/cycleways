@@ -1,13 +1,10 @@
 import React from "react";
 import FeaturedRoute from "../components/featured/FeaturedRoute.jsx";
-import { meta } from "./shdeh-nehemia-baniyas.meta.js";
-
-export { meta };
 
 export default function ShdehNehemiaBaniyas() {
   return (
-    <FeaturedRoute meta={meta}>
-      <p>{meta.summary}</p>
+    <FeaturedRoute slug="shdeh-nehemia-baniyas">
+      <p>מסלול קצר ונוח, מומלץ במיוחד לחובבי רכיבה ראשונית, עם פינות מנוחה רבות.</p>
       <FeaturedRoute.Map />
       <FeaturedRoute.Warnings />
       <FeaturedRoute.POIs />

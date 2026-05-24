@@ -333,11 +333,22 @@ async function loadFeaturedAssetsFromDisk() {
 }
 
 export async function loadRoutePolylineForSlug(slug) {
-  const metaModulePath = resolve(repoRoot, `src/featured/${slug}.meta.js`);
-  const metaModule = await import(pathToFileURL(metaModulePath).href);
-  const meta = metaModule.meta;
-  if (!meta || typeof meta.route !== "string") {
-    throw new Error(`featured route "${slug}" has no meta.route`);
+  // First try the draft catalog (for in-progress edits), then the promoted one,
+  // and fall back to the .meta.js seed for legacy compatibility.
+  let routeToken = null;
+  const draft = await readJsonOrNull(routeCatalogDraftPath);
+  const promoted = await readJsonOrNull(routeCatalogPublicPath);
+  const lookup = (cat) => cat?.entries?.find((e) => e.slug === slug)?.route;
+  routeToken = lookup(draft) || lookup(promoted) || null;
+  if (!routeToken) {
+    try {
+      const metaModulePath = resolve(repoRoot, `src/featured/${slug}.meta.js`);
+      const metaModule = await import(pathToFileURL(metaModulePath).href);
+      routeToken = metaModule.meta?.route || null;
+    } catch {}
+  }
+  if (typeof routeToken !== "string" || routeToken.length === 0) {
+    throw new Error(`featured route "${slug}" not found in catalog or meta`);
   }
   const RouteManagerClass = nodeRequire(resolve(repoRoot, "route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
@@ -347,7 +358,7 @@ export async function loadRoutePolylineForSlug(slug) {
     segmentsData,
     null,
   );
-  const snapshot = restoreRouteFromParam(manager, meta.route, segmentsData);
+  const snapshot = restoreRouteFromParam(manager, routeToken, segmentsData);
   if (!snapshot) throw new Error(`route "${slug}" failed to decode`);
   return snapshot.geometry;
 }
@@ -2281,12 +2292,25 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "GET" && url.pathname === "/api/featured-slugs") {
-      const dir = resolve(repoRoot, "src/featured");
-      const entries = await readdir(dir);
-      const slugs = entries
-        .filter((f) => f.endsWith(".meta.js"))
-        .map((f) => f.replace(/\.meta\.js$/, ""));
-      sendJson(response, 200, slugs);
+      // Source of truth is the catalog (draft first, then promoted). Fall back
+      // to legacy .meta.js enumeration if neither exists.
+      const draft = await readJsonOrNull(routeCatalogDraftPath);
+      const promoted = await readJsonOrNull(routeCatalogPublicPath);
+      const source = draft || promoted;
+      if (source && Array.isArray(source.entries)) {
+        sendJson(response, 200, source.entries.map((e) => e.slug));
+        return;
+      }
+      try {
+        const dir = resolve(repoRoot, "src/featured");
+        const entries = await readdir(dir);
+        const slugs = entries
+          .filter((f) => f.endsWith(".meta.js"))
+          .map((f) => f.replace(/\.meta\.js$/, ""));
+        sendJson(response, 200, slugs);
+      } catch {
+        sendJson(response, 200, []);
+      }
       return;
     }
 

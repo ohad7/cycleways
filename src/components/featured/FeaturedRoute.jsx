@@ -16,9 +16,11 @@ import Gallery from "./Gallery.jsx";
 import VideoEmbed from "./VideoEmbed.jsx";
 import Warnings from "./Warnings.jsx";
 import FeaturedRouteMapSlot from "./FeaturedRouteMap.jsx";
+import { findFeaturedMeta } from "../../featured/index.js";
 
-function FeaturedRoute({ meta, children }) {
+function FeaturedRoute({ slug, children }) {
   const isMobile = useIsMobile();
+  const [meta, setMeta] = useState(null);
   const [assets, setAssets] = useState(null);
   const [routeState, setRouteState] = useState(emptyRouteSnapshot());
   const [status, setStatus] = useState("loading");
@@ -31,6 +33,24 @@ function FeaturedRoute({ meta, children }) {
   const playerSeekRef = useRef(null);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const found = await findFeaturedMeta(slug);
+      if (cancelled) return;
+      if (!found) {
+        setError(new Error(`featured route "${slug}" not found in catalog`));
+        setStatus("error");
+        return;
+      }
+      setMeta(found);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  useEffect(() => {
+    if (!meta) return;
     const controller = new AbortController();
     (async () => {
       try {
@@ -60,15 +80,15 @@ function FeaturedRoute({ meta, children }) {
       }
     })();
     return () => controller.abort();
-  }, [meta.route, meta.slug]);
+  }, [meta]);
 
   useEffect(() => {
-    if (status !== "ready" || routeState.geometry.length < 2) return;
+    if (!meta || status !== "ready" || routeState.geometry.length < 2) return;
     setRouteFitRequest({
       id: `featured-${meta.slug}-${Date.now()}`,
       geometry: routeState.geometry,
     });
-  }, [status, meta.slug, routeState.geometry]);
+  }, [status, meta, routeState.geometry]);
 
   const handleRouteClick = useCallback((latLng) => {
     const sync = videoSyncRef.current;

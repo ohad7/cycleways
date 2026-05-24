@@ -1,21 +1,20 @@
-const metaModules = import.meta.glob("./*.meta.js", {
-  eager: true,
-  import: "meta",
-});
-const componentLoaders = import.meta.glob("./*.jsx");
+import { loadCatalog } from "../data/catalog.js";
 
-function jsxPathFromMeta(metaPath) {
-  return metaPath.replace(/\.meta\.js$/, ".jsx");
+const moduleLoaders = {
+  "sovev-beit-hillel":     () => import("./sovev-beit-hillel.jsx"),
+  "shdeh-nehemia-baniyas": () => import("./shdeh-nehemia-baniyas.jsx"),
+};
+
+export function getFeaturedModuleLoader(slug) {
+  return moduleLoaders[slug] || null;
 }
 
-export const featuredRoutes = Object.entries(metaModules)
-  .map(([metaPath, meta]) => {
-    const jsxPath = jsxPathFromMeta(metaPath);
-    const load = componentLoaders[jsxPath];
-    return { meta, load };
-  })
-  .filter((entry) => entry.meta && entry.meta.slug && entry.load);
+export async function loadFeaturedMetaList() {
+  const catalog = await loadCatalog();
+  return (catalog?.entries || []).filter((e) => e.featured);
+}
 
-export function findFeaturedRoute(slug) {
-  return featuredRoutes.find((entry) => entry.meta.slug === slug) || null;
+export async function findFeaturedMeta(slug) {
+  const catalog = await loadCatalog();
+  return (catalog?.entries || []).find((e) => e.featured && e.slug === slug) || null;
 }
