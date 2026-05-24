@@ -68,4 +68,34 @@ assert.throws(
   /too far from route/i,
 );
 
+// promoteKeyframesDraft writes the canonical files and removes the draft
+import { promoteKeyframesDraft } from "../editor/server.mjs";
+
+const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "rv-promote-"));
+const draftsDir = path.join(tmpRoot, "drafts");
+const publicDir = path.join(tmpRoot, "public");
+await fs.mkdir(draftsDir, { recursive: true });
+await fs.mkdir(publicDir, { recursive: true });
+
+await fs.writeFile(
+  path.join(draftsDir, "test-slug.json"),
+  JSON.stringify(validDraft),
+);
+
+const result = await promoteKeyframesDraft({
+  slug: "test-slug",
+  draftsDir,
+  publicDir,
+  routePolyline,
+});
+
+assert.ok(result.ok);
+await fs.stat(path.join(publicDir, "test-slug.json")); // throws if missing
+const index = JSON.parse(
+  await fs.readFile(path.join(publicDir, "index.json"), "utf8"),
+);
+assert.equal(index.routes["test-slug"], "test-slug.json");
+// Draft removed
+await assert.rejects(fs.stat(path.join(draftsDir, "test-slug.json")));
+
 console.log("video keyframes promote tests passed");

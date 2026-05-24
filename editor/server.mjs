@@ -7,6 +7,12 @@ import { spawn } from "node:child_process";
 import { dirname, extname, isAbsolute, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+import {
+  createRouteManager,
+  restoreRouteFromParam,
+} from "../src/routing/routeActions.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -303,6 +309,73 @@ function resolveManifestPath(root, manifestPath) {
     throw new Error(`Manifest path escapes repository root: ${manifestPath}`);
   }
   return resolved;
+}
+
+const nodeRequire = createRequire(import.meta.url);
+
+let cachedFeaturedAssets = null;
+async function loadFeaturedAssetsFromDisk() {
+  if (cachedFeaturedAssets) return cachedFeaturedAssets;
+  const manifestRaw = await readFile(promotedManifestPath, "utf-8");
+  const manifest = JSON.parse(manifestRaw);
+  const geoJsonData = JSON.parse(
+    await readFile(resolve(publicDataDir, manifest.bikeRoads), "utf-8"),
+  );
+  const segmentsData = JSON.parse(
+    await readFile(resolve(publicDataDir, manifest.segments), "utf-8"),
+  );
+  cachedFeaturedAssets = { geoJsonData, segmentsData };
+  return cachedFeaturedAssets;
+}
+
+export async function loadRoutePolylineForSlug(slug) {
+  const metaModulePath = resolve(repoRoot, `src/featured/${slug}.meta.js`);
+  const metaModule = await import(pathToFileURL(metaModulePath).href);
+  const meta = metaModule.meta;
+  if (!meta || typeof meta.route !== "string") {
+    throw new Error(`featured route "${slug}" has no meta.route`);
+  }
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "route-manager.js"));
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const manager = await createRouteManager(
+    RouteManagerClass,
+    geoJsonData,
+    segmentsData,
+    null,
+  );
+  const snapshot = restoreRouteFromParam(manager, meta.route, segmentsData);
+  if (!snapshot) throw new Error(`route "${slug}" failed to decode`);
+  return snapshot.geometry;
+}
+
+export async function promoteKeyframesDraft({ slug, draftsDir, publicDir, routePolyline }) {
+  const draftPath = resolve(draftsDir, `${slug}.json`);
+  const raw = await readFile(draftPath, "utf-8");
+  const draft = JSON.parse(raw);
+
+  validateKeyframesDraft(draft, routePolyline);
+
+  await mkdir(publicDir, { recursive: true });
+  const targetPath = resolve(publicDir, `${slug}.json`);
+  const tmpTarget = `${targetPath}.tmp`;
+  await writeFile(tmpTarget, JSON.stringify(draft, null, 2));
+  await rename(tmpTarget, targetPath);
+
+  const indexPath = resolve(publicDir, "index.json");
+  let index;
+  try {
+    index = JSON.parse(await readFile(indexPath, "utf-8"));
+  } catch {
+    index = { version: 1, routes: {} };
+  }
+  index.routes = index.routes || {};
+  index.routes[slug] = `${slug}.json`;
+  const tmpIndex = `${indexPath}.tmp`;
+  await writeFile(tmpIndex, JSON.stringify(index, null, 2));
+  await rename(tmpIndex, indexPath);
+
+  await unlink(draftPath);
+  return { ok: true, targetPath, indexPath };
 }
 
 export function validateKeyframesDraft(draft, routePolyline, maxMeters = 80) {
@@ -1775,7 +1848,7 @@ const server = createServer(async (request, response) => {
 
     if (url.pathname.startsWith("/api/video-keyframes/")) {
       const parts = url.pathname.split("/").filter(Boolean);
-      // /api/video-keyframes/<slug>/draft
+      // /api/video-keyframes/<slug>/draft  (PUT save / GET fetch)
       if (parts.length === 4 && parts[3] === "draft") {
         const slug = parts[2];
         if (request.method === "PUT") {
@@ -1786,7 +1859,59 @@ const server = createServer(async (request, response) => {
           sendJson(response, 200, { ok: true, path: repoRelative(draftPath) });
           return;
         }
+        if (request.method === "GET") {
+          const draftPath = resolve(videoKeyframesDraftDir, `${slug}.json`);
+          try {
+            const raw = await readFile(draftPath, "utf-8");
+            sendJson(response, 200, JSON.parse(raw));
+          } catch {
+            sendJson(response, 404, { ok: false });
+          }
+          return;
+        }
       }
+      // /api/video-keyframes/<slug>/promote  (POST)
+      if (parts.length === 4 && parts[3] === "promote" && request.method === "POST") {
+        const slug = parts[2];
+        try {
+          const routePolyline = await loadRoutePolylineForSlug(slug);
+          const result = await promoteKeyframesDraft({
+            slug,
+            draftsDir: videoKeyframesDraftDir,
+            publicDir: videoKeyframesPublicDir,
+            routePolyline,
+          });
+          sendJson(response, 200, result);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          sendJson(response, 400, { ok: false, error: message });
+        }
+        return;
+      }
+      // /api/video-keyframes/<slug>/route-polyline  (GET)
+      if (parts.length === 4 && parts[3] === "route-polyline" && request.method === "GET") {
+        const slug = parts[2];
+        try {
+          const polyline = await loadRoutePolylineForSlug(slug);
+          sendJson(response, 200, polyline);
+        } catch (err) {
+          sendJson(response, 400, {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/featured-slugs") {
+      const dir = resolve(repoRoot, "src/featured");
+      const entries = await readdir(dir);
+      const slugs = entries
+        .filter((f) => f.endsWith(".meta.js"))
+        .map((f) => f.replace(/\.meta\.js$/, ""));
+      sendJson(response, 200, slugs);
+      return;
     }
 
     if (request.method === "GET") {
