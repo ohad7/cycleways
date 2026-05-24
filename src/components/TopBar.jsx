@@ -5,6 +5,7 @@ function TopBar({
   onOpenTutorial,
   mobileMenuOpen,
   onMobileMenuToggle,
+  onOpenWizard,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,6 +46,15 @@ function TopBar({
         <Link className="nav-link" to="/#contact">
           צרו קשר
         </Link>
+        {onOpenWizard && (
+          <button
+            className="nav-link topbar-find-button"
+            type="button"
+            onClick={onOpenWizard}
+          >
+            מצא מסלול
+          </button>
+        )}
         <button
           className="nav-link help-tutorial-btn"
           type="button"
