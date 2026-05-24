@@ -40,6 +40,10 @@ const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
 const videoKeyframesDraftDir = resolve(editorRoot, ".drafts/route-videos");
 const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
+const routeCatalogDraftPath = resolve(editorRoot, ".drafts/route-catalog.json");
+const routeCatalogPublicPath = resolve(publicDataDir, "route-catalog.json");
+const placesPath = resolve(repoRoot, "data/places.json");
+const regionZonesPath = resolve(repoRoot, "data/region-zones.json");
 const port = Number(process.env.EDITOR_PORT || 8899);
 const devReloadEnabled = process.env.EDITOR_CLIENT_RELOAD === "1";
 let requestCounter = 0;
@@ -468,6 +472,68 @@ function styleOf({ difficulty, roadMix, qualityScore, distanceKm }) {
   if (difficulty === "hard" || distanceKm > 30) return "sporty";
   if (dirtFrac >= 0.5) return "adventurous";
   return "scenic";
+}
+
+async function readJsonOrNull(filePath) {
+  try {
+    return JSON.parse(await readFile(filePath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+const ROUTE_CATALOG_SLUG_RE = /^[a-z][a-z0-9-]*$/;
+
+export function validateCatalogDraft(catalog) {
+  if (!catalog || !Array.isArray(catalog.entries)) {
+    throw new Error("catalog.entries must be an array");
+  }
+  const seen = new Set();
+  for (const entry of catalog.entries) {
+    if (!entry || typeof entry !== "object") throw new Error("entry must be an object");
+    if (!ROUTE_CATALOG_SLUG_RE.test(String(entry.slug))) {
+      throw new Error(`invalid slug: ${entry.slug}`);
+    }
+    if (seen.has(entry.slug)) throw new Error(`duplicate slug: ${entry.slug}`);
+    seen.add(entry.slug);
+    if (!entry.name || !entry.summary) {
+      throw new Error(`entry ${entry.slug} missing name or summary`);
+    }
+    if (typeof entry.route !== "string" || entry.route.length === 0) {
+      throw new Error(`entry ${entry.slug} missing route token`);
+    }
+  }
+}
+
+async function seedCatalogFromFeaturedMeta() {
+  const featuredDir = resolve(repoRoot, "src/featured");
+  const entries = [];
+  let files = [];
+  try {
+    files = await readdir(featuredDir);
+  } catch {
+    return { version: 1, entries };
+  }
+  for (const file of files) {
+    if (!file.endsWith(".meta.js")) continue;
+    const slug = file.replace(/\.meta\.js$/, "");
+    try {
+      const mod = await import(pathToFileURL(resolve(featuredDir, file)).href);
+      const meta = mod.meta;
+      if (!meta || !meta.route) continue;
+      entries.push({
+        slug: meta.slug || slug,
+        name: meta.name || slug,
+        summary: meta.summary || "",
+        route: meta.route,
+        notes: "",
+        featured: true,
+      });
+    } catch (err) {
+      log("warn", `seed: failed to import ${file}`, err.message);
+    }
+  }
+  return { version: 1, entries };
 }
 
 export function classifyRoute(input, refs) {
@@ -2065,6 +2131,47 @@ const server = createServer(async (request, response) => {
             error: err instanceof Error ? err.message : String(err),
           });
         }
+        return;
+      }
+    }
+
+    if (url.pathname.startsWith("/api/route-catalog/")) {
+      const parts = url.pathname.split("/").filter(Boolean);
+      // /api/route-catalog/draft  (GET load with fallbacks, PUT save)
+      if (parts.length === 3 && parts[2] === "draft") {
+        if (request.method === "GET") {
+          const draft = await readJsonOrNull(routeCatalogDraftPath);
+          if (draft) {
+            sendJson(response, 200, draft);
+            return;
+          }
+          const promoted = await readJsonOrNull(routeCatalogPublicPath);
+          if (promoted) {
+            sendJson(response, 200, promoted);
+            return;
+          }
+          const seed = await seedCatalogFromFeaturedMeta();
+          sendJson(response, 200, seed);
+          return;
+        }
+        if (request.method === "PUT") {
+          const body = await readRequestJson(request);
+          try {
+            validateCatalogDraft(body);
+          } catch (err) {
+            sendJson(response, 400, { ok: false, error: err.message });
+            return;
+          }
+          await mkdir(dirname(routeCatalogDraftPath), { recursive: true });
+          await writeFile(routeCatalogDraftPath, JSON.stringify(body, null, 2));
+          sendJson(response, 200, { ok: true });
+          return;
+        }
+      }
+      // /api/route-catalog/places  (GET)
+      if (parts.length === 3 && parts[2] === "places" && request.method === "GET") {
+        const places = await readJsonOrNull(placesPath);
+        sendJson(response, 200, places || { version: 1, places: [] });
         return;
       }
     }
