@@ -85,6 +85,24 @@ const QUESTIONS = [
 
 const STEP_KEYS = QUESTIONS.map((q) => q.key);
 
+function WizardProgress({ step }) {
+  const total = QUESTIONS.length;
+  const answered = Math.min(step, total);
+  return (
+    <div className="ww-progress">
+      <span>{answered} / {total}</span>
+      <span className="ww-progress__dots">
+        {Array.from({ length: total }, (_, i) => (
+          <span
+            key={i}
+            className={`ww-progress__dot${i < answered ? " filled" : ""}`}
+          />
+        ))}
+      </span>
+    </div>
+  );
+}
+
 function renderOptions(question, places, zones) {
   if (question.optionsFromPlaces) {
     const opts = (places || []).map((p) => ({ value: p.id, label: p.name }));
@@ -134,6 +152,7 @@ export default function WelcomeWizardChat({
 
   return (
     <div className="ww-chat">
+      <WizardProgress step={step} />
       <div className="ww-chat__scroll">
         {conversation.map((msg) =>
           msg.kind === "bot" ? (
