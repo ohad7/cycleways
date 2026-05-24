@@ -378,6 +378,136 @@ export async function promoteKeyframesDraft({ slug, draftsDir, publicDir, routeP
   return { ok: true, targetPath, indexPath };
 }
 
+const PASSES_NEAR_METERS = 500;
+
+function haversineMetersClassify(a, b) {
+  const R = 6371000;
+  const DEG = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * DEG;
+  const dLng = (b.lng - a.lng) * DEG;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * DEG) * Math.cos(b.lat * DEG) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function nearestDistanceToPolyline(point, polyline) {
+  let best = Infinity;
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const a = polyline[i];
+    const b = polyline[i + 1];
+    const DEG = Math.PI / 180;
+    const cosLat = Math.cos(((a.lat + b.lat) / 2) * DEG);
+    const ax = a.lng * cosLat, ay = a.lat;
+    const bx = b.lng * cosLat, by = b.lat;
+    const px = point.lng * cosLat, py = point.lat;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const projLat = a.lat + (b.lat - a.lat) * t;
+    const projLng = a.lng + (b.lng - a.lng) * t;
+    const d = haversineMetersClassify(point, { lat: projLat, lng: projLng });
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+function pointInPolygon(point, polygon) {
+  const x = point.lng, y = point.lat;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+    const intersect =
+      yi > y !== yj > y &&
+      x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-12) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function centroidOf(polyline) {
+  let sumLat = 0, sumLng = 0;
+  for (const p of polyline) {
+    sumLat += p.lat;
+    sumLng += p.lng;
+  }
+  return { lat: sumLat / polyline.length, lng: sumLng / polyline.length };
+}
+
+function distanceKmOf(polyline) {
+  let total = 0;
+  for (let i = 1; i < polyline.length; i++) {
+    total += haversineMetersClassify(polyline[i - 1], polyline[i]);
+  }
+  return total / 1000;
+}
+
+function elevationDeltas(polyline) {
+  let gain = 0, loss = 0;
+  for (let i = 1; i < polyline.length; i++) {
+    const dz = (polyline[i].elevation ?? 0) - (polyline[i - 1].elevation ?? 0);
+    if (dz > 0) gain += dz;
+    else loss -= dz;
+  }
+  return { elevationGainM: Math.round(gain), elevationLossM: Math.round(loss) };
+}
+
+function difficultyOf(distanceKm, elevationGainM) {
+  if (elevationGainM > 500 || distanceKm > 40) return "hard";
+  if (elevationGainM >= 150 || distanceKm >= 25) return "moderate";
+  return "easy";
+}
+
+function styleOf({ difficulty, roadMix, qualityScore, distanceKm }) {
+  const roadFrac = roadMix?.road ?? 0;
+  const dirtFrac = roadMix?.dirt ?? 0;
+  if (difficulty === "easy" && roadFrac < 0.1 && qualityScore >= 3) return "family";
+  if (qualityScore >= 4) return "scenic";
+  if (difficulty === "hard" || distanceKm > 30) return "sporty";
+  if (dirtFrac >= 0.5) return "adventurous";
+  return "scenic";
+}
+
+export function classifyRoute(input, refs) {
+  const { geometry, roadTypeFractions, qualityScore } = input;
+  if (!Array.isArray(geometry) || geometry.length < 2) {
+    throw new Error("classifyRoute: geometry must have at least 2 points");
+  }
+  const distanceKm = distanceKmOf(geometry);
+  const { elevationGainM, elevationLossM } = elevationDeltas(geometry);
+  const difficulty = difficultyOf(distanceKm, elevationGainM);
+  const roadMix = {
+    paved: roadTypeFractions?.paved ?? 0,
+    dirt: roadTypeFractions?.dirt ?? 0,
+    road: roadTypeFractions?.road ?? 0,
+  };
+  const style = styleOf({
+    difficulty,
+    roadMix,
+    qualityScore: qualityScore ?? 0,
+    distanceKm,
+  });
+  const centroid = centroidOf(geometry);
+  const regionId =
+    refs.zones.find((z) => pointInPolygon(centroid, z.polygon))?.id ?? "unknown";
+  const passesNear = refs.places
+    .filter((p) => nearestDistanceToPolyline(p, geometry) <= PASSES_NEAR_METERS)
+    .map((p) => p.id);
+  return {
+    distanceKm: Math.round(distanceKm * 10) / 10,
+    elevationGainM,
+    elevationLossM,
+    regionId,
+    passesNear,
+    difficulty,
+    style,
+    roadMix,
+    qualityScore: qualityScore ?? 0,
+  };
+}
+
 export function validateKeyframesDraft(draft, routePolyline, maxMeters = 80) {
   if (!draft || typeof draft !== "object") {
     throw new Error("draft must be an object");
