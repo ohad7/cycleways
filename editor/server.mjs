@@ -536,6 +536,71 @@ async function seedCatalogFromFeaturedMeta() {
   return { version: 1, entries };
 }
 
+export function recomputeCatalogMetadata(draft, refs) {
+  const { places, zones, decodeRoute } = refs;
+  validateCatalogDraft(draft);
+  const entries = draft.entries.map((entry) => {
+    const decoded = decodeRoute(entry.route);
+    if (!decoded) {
+      throw new Error(`entry ${entry.slug}: route token failed to decode`);
+    }
+    const computed = classifyRoute(decoded, { places, zones });
+    return { ...entry, ...computed };
+  });
+  return { version: 1, entries };
+}
+
+async function buildLiveDecodeRoute() {
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "route-manager.js"));
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const manager = await createRouteManager(RouteManagerClass, geoJsonData, segmentsData, null);
+  return function decodeRoute(token) {
+    try {
+      const snapshot = restoreRouteFromParam(manager, token, segmentsData);
+      if (!snapshot || !Array.isArray(snapshot.geometry) || snapshot.geometry.length < 2) {
+        return null;
+      }
+      const counts = { paved: 0, dirt: 0, road: 0 };
+      let qualitySum = 0;
+      let qualityN = 0;
+      for (const segName of snapshot.selectedSegments || []) {
+        const segData = segmentsData[segName];
+        const rt = segData?.roadType || "paved";
+        if (counts[rt] !== undefined) counts[rt] += 1;
+        else counts.paved += 1;
+        const q = segData?.quality?.overall;
+        if (Number.isFinite(q)) {
+          qualitySum += q;
+          qualityN += 1;
+        }
+      }
+      const total = counts.paved + counts.dirt + counts.road;
+      const roadTypeFractions = total > 0
+        ? { paved: counts.paved / total, dirt: counts.dirt / total, road: counts.road / total }
+        : { paved: 1, dirt: 0, road: 0 };
+      const qualityScore = qualityN > 0 ? qualitySum / qualityN : 0;
+      return {
+        geometry: snapshot.geometry,
+        roadTypeFractions,
+        qualityScore,
+      };
+    } catch {
+      return null;
+    }
+  };
+}
+
+export async function promoteCatalogDraft({ draftPath, publicPath, places, zones, decodeRoute }) {
+  const draft = JSON.parse(await readFile(draftPath, "utf-8"));
+  const enriched = recomputeCatalogMetadata(draft, { places, zones, decodeRoute });
+  await mkdir(dirname(publicPath), { recursive: true });
+  const tmp = `${publicPath}.tmp`;
+  await writeFile(tmp, JSON.stringify(enriched, null, 2));
+  await rename(tmp, publicPath);
+  await unlink(draftPath);
+  return { ok: true, publicPath, entryCount: enriched.entries.length };
+}
+
 export function classifyRoute(input, refs) {
   const { geometry, roadTypeFractions, qualityScore } = input;
   if (!Array.isArray(geometry) || geometry.length < 2) {
@@ -2172,6 +2237,45 @@ const server = createServer(async (request, response) => {
       if (parts.length === 3 && parts[2] === "places" && request.method === "GET") {
         const places = await readJsonOrNull(placesPath);
         sendJson(response, 200, places || { version: 1, places: [] });
+        return;
+      }
+      // /api/route-catalog/recompute  (POST)
+      if (parts.length === 3 && parts[2] === "recompute" && request.method === "POST") {
+        const body = await readRequestJson(request);
+        try {
+          validateCatalogDraft(body);
+        } catch (err) {
+          sendJson(response, 400, { ok: false, error: err.message });
+          return;
+        }
+        const places = (await readJsonOrNull(placesPath))?.places || [];
+        const zones = (await readJsonOrNull(regionZonesPath))?.zones || [];
+        const decodeRoute = await buildLiveDecodeRoute();
+        try {
+          const enriched = recomputeCatalogMetadata(body, { places, zones, decodeRoute });
+          sendJson(response, 200, enriched);
+        } catch (err) {
+          sendJson(response, 400, { ok: false, error: err.message });
+        }
+        return;
+      }
+      // /api/route-catalog/promote  (POST)
+      if (parts.length === 3 && parts[2] === "promote" && request.method === "POST") {
+        const places = (await readJsonOrNull(placesPath))?.places || [];
+        const zones = (await readJsonOrNull(regionZonesPath))?.zones || [];
+        const decodeRoute = await buildLiveDecodeRoute();
+        try {
+          const result = await promoteCatalogDraft({
+            draftPath: routeCatalogDraftPath,
+            publicPath: routeCatalogPublicPath,
+            places,
+            zones,
+            decodeRoute,
+          });
+          sendJson(response, 200, result);
+        } catch (err) {
+          sendJson(response, 400, { ok: false, error: err.message });
+        }
         return;
       }
     }
