@@ -35,7 +35,6 @@ function emptyFilters() {
     difficulty: new Set(),
     style: new Set(),
     distance: new Set(),
-    region: new Set(),
   };
 }
 
@@ -145,8 +144,7 @@ export default function WelcomeDiscover({ catalog, places, zones, onSelectRoute 
     (filters.place ? 1 : 0) +
     filters.difficulty.size +
     filters.style.size +
-    filters.distance.size +
-    filters.region.size;
+    filters.distance.size;
 
   return (
     <div className="wd">
@@ -195,12 +193,6 @@ export default function WelcomeDiscover({ catalog, places, zones, onSelectRoute 
               options={ALL_FILTERS.style}
               active={filters.style}
               onToggle={(v) => toggleAxis("style", v)}
-            />
-            <FilterGroup
-              label="אזור"
-              options={(zones || []).map((z) => ({ value: z.id, label: z.name }))}
-              active={filters.region}
-              onToggle={(v) => toggleAxis("region", v)}
             />
           </div>
         )}
