@@ -8,38 +8,44 @@ const catalog = [
   { slug: "d", distanceKm: 8,  elevationGainM: 30,  regionId: "hula-valley", passesNear: ["beit-hillel"], difficulty: "easy",     style: "scenic",      qualityScore: 3.5 },
 ];
 
-// All "any" returns full catalog sorted by qualityScore.
-const all = catalogFilter(catalog, { place: "any", region: "any", distance: "any", difficulty: "any", style: "any" });
-assert.equal(all.length, 4);
-assert.equal(all[0].slug, "a");
+// No filters → all entries sorted by qualityScore desc.
+const all = catalogFilter(catalog, {});
+assert.deepEqual(all.map((r) => r.slug), ["a", "b", "c", "d"]);
 
-// Hard filter on place
-const onlyBeitHillel = catalogFilter(catalog, { place: "beit-hillel", region: "any", distance: "any", difficulty: "any", style: "any" });
-assert.deepEqual(onlyBeitHillel.map(r => r.slug), ["a", "d"]);
+// place filter is single-valued.
+const beitHillel = catalogFilter(catalog, { place: "beit-hillel" });
+assert.deepEqual(beitHillel.map((r) => r.slug), ["a", "d"]);
 
-// Hard filter on region (place=any)
-const golan = catalogFilter(catalog, { place: "any", region: "north-golan", distance: "any", difficulty: "any", style: "any" });
-assert.deepEqual(golan.map(r => r.slug), ["c"]);
+// Single difficulty in the set
+const easyOnly = catalogFilter(catalog, { difficulty: new Set(["easy"]) });
+assert.deepEqual(easyOnly.map((r) => r.slug), ["a", "d"]);
 
-// Soft scoring: distance="medium" prefers b (15 km, exact match) over a (5 km, adjacent)
-const medium = catalogFilter(catalog, { place: "any", region: "any", distance: "medium", difficulty: "any", style: "any" });
-assert.equal(medium[0].slug, "b");
+// Multi-value difficulty: union within axis
+const easyOrModerate = catalogFilter(catalog, {
+  difficulty: new Set(["easy", "moderate"]),
+});
+assert.deepEqual(easyOrModerate.map((r) => r.slug), ["a", "b", "d"]);
 
-// Soft scoring: style="family" prefers a (exact) over b (no match)
-const family = catalogFilter(catalog, { place: "any", region: "any", distance: "any", difficulty: "any", style: "family" });
-assert.equal(family[0].slug, "a");
+// Combined axes: AND across, OR within
+const easyScenic = catalogFilter(catalog, {
+  difficulty: new Set(["easy"]),
+  style: new Set(["scenic"]),
+});
+assert.deepEqual(easyScenic.map((r) => r.slug), ["d"]);
 
-// No match returns empty
-const empty = catalogFilter(catalog, { place: "nonexistent", region: "any", distance: "any", difficulty: "any", style: "any" });
-assert.deepEqual(empty, []);
+// Distance bucket filter
+const shortRides = catalogFilter(catalog, { distance: new Set(["short"]) });
+assert.deepEqual(shortRides.map((r) => r.slug), ["a", "d"]);
 
-// Returns at most 5
-const fiveCat = Array.from({ length: 10 }, (_, i) => ({
-  slug: `r${i}`, distanceKm: 10, elevationGainM: 100, regionId: "x", passesNear: [],
-  difficulty: "easy", style: "scenic", qualityScore: 5 - i * 0.1,
-}));
-const five = catalogFilter(fiveCat, { place: "any", region: "any", distance: "any", difficulty: "any", style: "any" });
-assert.equal(five.length, 5);
-assert.equal(five[0].slug, "r0");
+// Region filter
+const golan = catalogFilter(catalog, { region: new Set(["north-golan"]) });
+assert.deepEqual(golan.map((r) => r.slug), ["c"]);
+
+// Empty filter sets behave the same as missing
+assert.equal(catalogFilter(catalog, { difficulty: new Set() }).length, 4);
+
+// Place filter with no matches
+const none = catalogFilter(catalog, { place: "nonexistent" });
+assert.deepEqual(none, []);
 
 console.log("catalogFilter tests passed");

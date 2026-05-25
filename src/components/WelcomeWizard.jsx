@@ -1,15 +1,13 @@
-import React, { useEffect, useReducer, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./welcome-wizard.css";
-import { initialWizardState, wizardReducer } from "./wizardReducer.js";
 import { loadCatalog } from "../data/catalog.js";
-import WelcomeWizardChat from "./WelcomeWizardChat.jsx";
+import WelcomeDiscover from "./WelcomeDiscover.jsx";
 
 const SKIP_FLAG_KEY = "cycleways:skipWelcome";
 
 export default function WelcomeWizard({ visible, onDismiss }) {
   const navigate = useNavigate();
-  const [state, dispatch] = useReducer(wizardReducer, undefined, initialWizardState);
   const [catalog, setCatalog] = useState(null);
   const [places, setPlaces] = useState([]);
   const [zones, setZones] = useState([]);
@@ -71,9 +69,7 @@ export default function WelcomeWizard({ visible, onDismiss }) {
             דלג למפה ✕
           </button>
         </header>
-        <WelcomeWizardChat
-          state={state}
-          dispatch={dispatch}
+        <WelcomeDiscover
           catalog={catalog}
           places={places}
           zones={zones}
