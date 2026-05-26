@@ -2,6 +2,7 @@ import {
   stitchCoordsFromEdgeRefs,
   validateEdgePickMapping,
   conflictingSegmentForEdge,
+  orientAppendedEdgeRef,
 } from "./lib/edge-pick.mjs";
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
@@ -2405,6 +2406,17 @@ function conflictingSegmentForEdgeFromOverlay(edgeId, excludeSegmentId) {
   );
 }
 
+function baseEdgeGeometryLookup() {
+  const lookup = new Map();
+  for (const feature of state.baseOverlay.graphEdges?.features || []) {
+    lookup.set(String(graphEdgeFeatureId(feature)), feature.geometry);
+  }
+  for (const feature of manualBaseEdgeFeatures()) {
+    lookup.set(String(manualBaseEdgeFeatureId(feature)), feature.geometry);
+  }
+  return lookup;
+}
+
 function renderComposeStatus() {
   const composing = isComposingNewSegmentEdges();
   if (!composing) {
@@ -2448,14 +2460,7 @@ async function saveEdgePickedMapping(segmentId, feature, edgeRefs) {
   }
   const validation = validateEdgePickMapping({ segmentId, edgeRefs, acceptedMappings, continuityGaps });
 
-  const edgeLookup = new Map();
-  for (const f of state.baseOverlay.graphEdges?.features || []) {
-    edgeLookup.set(String(graphEdgeFeatureId(f)), f.geometry);
-  }
-  for (const f of manualBaseEdgeFeatures()) {
-    edgeLookup.set(String(manualBaseEdgeFeatureId(f)), f.geometry);
-  }
-  const coords = stitchCoordsFromEdgeRefs(edgeRefs, edgeLookup);
+  const coords = stitchCoordsFromEdgeRefs(edgeRefs, baseEdgeGeometryLookup());
   if (coords.length >= 2) {
     feature.geometry.coordinates = coords;
   }
@@ -2503,13 +2508,7 @@ async function splitEdgePickedAtClickedEdge(feature) {
   const firstHalf = refs.slice(0, boundaryIndex).map((r, i) => ({ ...r, sequenceIndex: i }));
   const secondHalf = refs.slice(boundaryIndex).map((r, i) => ({ ...r, sequenceIndex: i }));
 
-  const edgeLookup = new Map();
-  for (const f of state.baseOverlay.graphEdges?.features || []) {
-    edgeLookup.set(String(graphEdgeFeatureId(f)), f.geometry);
-  }
-  for (const f of manualBaseEdgeFeatures()) {
-    edgeLookup.set(String(manualBaseEdgeFeatureId(f)), f.geometry);
-  }
+  const edgeLookup = baseEdgeGeometryLookup();
   const firstCoords = stitchCoordsFromEdgeRefs(firstHalf, edgeLookup);
   const secondCoords = stitchCoordsFromEdgeRefs(secondHalf, edgeLookup);
   if (firstCoords.length < 2 || secondCoords.length < 2) {
@@ -2585,9 +2584,12 @@ async function toggleEdgeInEdgePickedSegment(feature) {
   const existingIdx = currentRefs.findIndex(
     (r) => String(r.edgeId) === String(ref.edgeId),
   );
-  let nextRefs = existingIdx >= 0
-    ? currentRefs.filter((_, i) => i !== existingIdx)
-    : [...currentRefs, ref];
+  let nextRefs;
+  if (existingIdx >= 0) {
+    nextRefs = currentRefs.filter((_, i) => i !== existingIdx);
+  } else {
+    nextRefs = orientAppendedEdgeRef(currentRefs, ref, baseEdgeGeometryLookup());
+  }
   nextRefs = normalizeOverlayEdgeRefs(nextRefs);
   await saveEdgePickedMapping(segmentId, selected, nextRefs);
 }
@@ -2605,7 +2607,11 @@ function toggleEdgeInCompose(feature) {
       .map((existing, i) => ({ ...existing, sequenceIndex: i }));
     setStatus(`Removed base edge ${ref.edgeId} from draft.`);
   } else {
-    state.draw.edgeRefs = [...state.draw.edgeRefs, ref];
+    state.draw.edgeRefs = orientAppendedEdgeRef(
+      state.draw.edgeRefs,
+      ref,
+      baseEdgeGeometryLookup(),
+    );
     setStatus(`Added base edge ${ref.edgeId} to draft (${state.draw.edgeRefs.length} edges).`);
   }
   updateMapSources();
@@ -4169,14 +4175,7 @@ async function commitNewSegmentEdgesDrawn() {
     continuityGaps,
   });
 
-  const edgeLookup = new Map();
-  for (const feature of state.baseOverlay.graphEdges?.features || []) {
-    edgeLookup.set(String(graphEdgeFeatureId(feature)), feature.geometry);
-  }
-  for (const feature of manualBaseEdgeFeatures()) {
-    edgeLookup.set(String(manualBaseEdgeFeatureId(feature)), feature.geometry);
-  }
-  const coordinates = stitchCoordsFromEdgeRefs(edgeRefs, edgeLookup);
+  const coordinates = stitchCoordsFromEdgeRefs(edgeRefs, baseEdgeGeometryLookup());
   if (coordinates.length < 2) {
     throw new Error("Could not build segment geometry from the picked edges.");
   }

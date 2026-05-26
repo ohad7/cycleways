@@ -3,6 +3,7 @@ import {
   stitchCoordsFromEdgeRefs,
   validateEdgePickMapping,
   conflictingSegmentForEdge,
+  orientAppendedEdgeRef,
 } from "../editor/lib/edge-pick.mjs";
 
 // stitchCoordsFromEdgeRefs ---------------------------------------------------
@@ -167,3 +168,85 @@ console.log("validateEdgePickMapping ok");
 }
 
 console.log("conflictingSegmentForEdge ok");
+
+// orientAppendedEdgeRef ------------------------------------------------------
+
+// Empty chain → new edge forward, sequenceIndex 0.
+{
+  const edges = new Map([["e1", { coordinates: [[0, 0], [1, 0]] }]]);
+  const result = orientAppendedEdgeRef([], { edgeId: "e1" }, edges);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].direction, "forward");
+  assert.equal(result[0].sequenceIndex, 0);
+}
+
+// 1-edge chain: the user's exact reported bug.
+// A.coords = (5,5) → (6,5). B.coords = (5,5) → (4,5).
+// Picking A then B (both forward) leaves a gap between A.end=(6,5) and B.start=(5,5).
+// But A.start=B.start, so flipping A to reverse makes A.end=(5,5) which matches B.start.
+// orientAppendedEdgeRef should detect this and flip A.
+{
+  const edges = new Map([
+    ["A", { coordinates: [[5, 5], [6, 5]] }],
+    ["B", { coordinates: [[5, 5], [4, 5]] }],
+  ]);
+  const result = orientAppendedEdgeRef(
+    [{ edgeId: "A", direction: "forward", sequenceIndex: 0 }],
+    { edgeId: "B" },
+    edges,
+  );
+  assert.equal(result.length, 2);
+  assert.equal(result[0].direction, "reverse", "first edge should be flipped");
+  assert.equal(result[1].direction, "forward", "second edge stays forward");
+  assert.equal(result[1].sequenceIndex, 1);
+}
+
+// 1-edge chain: A.end == B.start already → no flip needed.
+{
+  const edges = new Map([
+    ["A", { coordinates: [[0, 0], [1, 0]] }],
+    ["B", { coordinates: [[1, 0], [2, 0]] }],
+  ]);
+  const result = orientAppendedEdgeRef(
+    [{ edgeId: "A", direction: "forward", sequenceIndex: 0 }],
+    { edgeId: "B" },
+    edges,
+  );
+  assert.equal(result[0].direction, "forward");
+  assert.equal(result[1].direction, "forward");
+}
+
+// 2+ edge chain: existing orientations locked; only new edge is oriented.
+{
+  const edges = new Map([
+    ["A", { coordinates: [[0, 0], [1, 0]] }],
+    ["B", { coordinates: [[1, 0], [2, 0]] }],
+    ["C", { coordinates: [[3, 0], [2, 0]] }],
+  ]);
+  const result = orientAppendedEdgeRef(
+    [
+      { edgeId: "A", direction: "forward", sequenceIndex: 0 },
+      { edgeId: "B", direction: "forward", sequenceIndex: 1 },
+    ],
+    { edgeId: "C" },
+    edges,
+  );
+  assert.equal(result.length, 3);
+  assert.equal(result[0].direction, "forward");
+  assert.equal(result[1].direction, "forward");
+  assert.equal(result[2].direction, "reverse", "C should be reversed to attach to B.end");
+}
+
+// Missing geometry → fall back to forward, don't crash.
+{
+  const edges = new Map();
+  const result = orientAppendedEdgeRef(
+    [{ edgeId: "A", direction: "forward", sequenceIndex: 0 }],
+    { edgeId: "missing" },
+    edges,
+  );
+  assert.equal(result.length, 2);
+  assert.equal(result[1].direction, "forward");
+}
+
+console.log("orientAppendedEdgeRef ok");
