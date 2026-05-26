@@ -309,6 +309,17 @@ h2 {
 .compose-edge-status .compose-ok { color: #166534; }
 .compose-edge-status .compose-bad { color: #b91c1c; font-weight: 600; }
 
+.edge-pick-edit-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px 0;
+}
+.edge-pick-edit-controls .mini-button.active {
+  background: #14b8a6;
+  color: white;
+}
+
 .workspace-tabs {
   display: flex;
   flex-wrap: wrap;

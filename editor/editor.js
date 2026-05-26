@@ -231,6 +231,9 @@ const els = {
   drawUndoLast: document.getElementById("draw-undo-last"),
   drawFreehand: document.getElementById("draw-freehand"),
   composeEdgeStatus: document.getElementById("compose-edge-status"),
+  edgePickEditControls: document.getElementById("edge-pick-edit-controls"),
+  editSegmentEdges: document.getElementById("edit-segment-edges"),
+  splitSegmentEdge: document.getElementById("split-segment-edge"),
   mapStyle: document.getElementById("map-style"),
   saveSource: document.getElementById("save-source"),
   runBuild: document.getElementById("run-build"),
@@ -1521,15 +1524,17 @@ function renderDrawControls() {
   }
 
   if (!drawing) {
+    const edgePicked = isEdgePickedSelected();
     els.addSegment.hidden = !segmentsMode;
-    els.modeInsert.hidden = overlayMode;
-    els.extendSegment.hidden = overlayMode;
-    els.deleteVertex.hidden = overlayMode;
-    els.splitSegment.hidden = overlayMode;
+    els.modeInsert.hidden = overlayMode || edgePicked;
+    els.extendSegment.hidden = overlayMode || edgePicked;
+    els.deleteVertex.hidden = overlayMode || edgePicked;
+    els.splitSegment.hidden = overlayMode || edgePicked;
     els.toggleUnresolvedSegments.hidden = !segmentsMode;
     els.processChangedQueue.hidden = !segmentsMode;
     els.clearChangedQueue.hidden = !segmentsMode;
     els.toggleBaseOverlay.hidden = true;
+    els.edgePickEditControls.hidden = !edgePicked;
   }
 
   els.drawDone.hidden = !drawing;
@@ -1579,6 +1584,13 @@ function renderDrawControls() {
 function overlayMappingForSegment(segmentId) {
   if (segmentId === null) return null;
   return state.baseOverlay.overlay?.segments?.[String(segmentId)] || null;
+}
+
+function isEdgePickedSelected() {
+  const segmentId = selectedSegmentId();
+  if (segmentId === null) return false;
+  const mapping = overlayMappingForSegment(segmentId);
+  return mapping?.source === "edge_pick";
 }
 
 function isBaseOverlayMappingLocked(mapping) {
@@ -6007,6 +6019,7 @@ function wireEvents() {
 
   map.on("click", "vertices-layer", (event) => {
     if (state.mode !== "select") return;
+    if (isEdgePickedSelected()) return;
     if (state.workspaceMode === "base") {
       state.baseOverlay.selectedManualVertexIndex = Number(event.features[0].properties.index);
     } else {
