@@ -167,6 +167,8 @@ const state = {
   lastBuildReport: null,
   mapStyle: getInitialMapStyle(),
   draw: emptyDrawState(),
+  editingEdgePickEdges: false,
+  splittingEdgePickAt: null,
   baseOverlay: {
     enabled: false,
     loading: false,
@@ -1161,14 +1163,15 @@ function cwOverlayNetworkFeaturesAtPoint(point) {
 
 function updateWorkspaceLayerVisibility() {
   const composing = isComposingNewSegmentEdges();
+  const editingEdges = (state.editingEdgePickEdges || state.splittingEdgePickAt !== null) && isEdgePickedSelected();
   const showSegments = state.workspaceMode === "segments";
   const showSelectedSegment = state.workspaceMode !== "base";
   const showUnresolvedSegments =
     state.workspaceMode === "segments" && state.showUnresolvedSegments && state.baseOverlay.loaded;
   const showBaseWorkspaceGraph =
     state.baseOverlay.loaded && state.baseOverlay.enabled && state.workspaceMode !== "segments";
-  const showBaseGraphVisual = showBaseWorkspaceGraph || showUnresolvedSegments || composing;
-  const showBaseGraphHit = showBaseWorkspaceGraph || composing;
+  const showBaseGraphVisual = showBaseWorkspaceGraph || showUnresolvedSegments || composing || editingEdges;
+  const showBaseGraphHit = showBaseWorkspaceGraph || composing || editingEdges;
   const showBaseEdit = showBaseWorkspaceGraph && state.workspaceMode === "base";
   const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
 
@@ -1535,6 +1538,8 @@ function renderDrawControls() {
     els.clearChangedQueue.hidden = !segmentsMode;
     els.toggleBaseOverlay.hidden = true;
     els.edgePickEditControls.hidden = !edgePicked;
+    els.editSegmentEdges.classList.toggle("active", state.editingEdgePickEdges && edgePicked);
+    els.splitSegmentEdge.classList.toggle("active", state.splittingEdgePickAt !== null && edgePicked);
   }
 
   els.drawDone.hidden = !drawing;
@@ -2429,6 +2434,75 @@ function renderComposeStatus() {
     : `<div class="compose-bad">Edge ${conflicts[0].edgeId || ""} already owned by ${conflicts[0].segmentName || `segment ${conflicts[0].segmentId}`}</div>`;
   els.composeEdgeStatus.hidden = false;
   els.composeEdgeStatus.innerHTML = continuityLine + conflictLine;
+}
+
+async function saveEdgePickedMapping(segmentId, feature, edgeRefs) {
+  const continuityGaps = edgeRefContinuityGaps(edgeRefs);
+  const acceptedMappings = new Map();
+  for (const mapping of Object.values(state.baseOverlay.overlay?.segments || {})) {
+    if (!mapping || (mapping.status !== "accepted_edge_set" && mapping.status !== "accepted_auto_match")) continue;
+    if (Number(mapping.segmentId) === Number(segmentId)) continue;
+    for (const ref of mapping.edgeRefs || []) {
+      acceptedMappings.set(String(ref.edgeId), { segmentId: mapping.segmentId, segmentName: mapping.segmentName });
+    }
+  }
+  const validation = validateEdgePickMapping({ segmentId, edgeRefs, acceptedMappings, continuityGaps });
+
+  const edgeLookup = new Map();
+  for (const f of state.baseOverlay.graphEdges?.features || []) {
+    edgeLookup.set(String(graphEdgeFeatureId(f)), f.geometry);
+  }
+  for (const f of manualBaseEdgeFeatures()) {
+    edgeLookup.set(String(manualBaseEdgeFeatureId(f)), f.geometry);
+  }
+  const coords = stitchCoordsFromEdgeRefs(edgeRefs, edgeLookup);
+  if (coords.length >= 2) {
+    feature.geometry.coordinates = coords;
+  }
+
+  const existing = state.baseOverlay.overlay?.segments?.[String(segmentId)] || {};
+  const mapping = {
+    ...existing,
+    segmentId,
+    segmentName: featureName(feature),
+    source: "edge_pick",
+    status: validation.ok ? "accepted_edge_set" : "needs_edit",
+    edgeRefs,
+    confidence: "manual",
+    coverageRatio: 1,
+    avgDistanceMeters: null,
+    gapCount: continuityGaps.length,
+    failureClass: validation.ok ? null : validation.failureClass,
+    failureMessage: validation.ok ? null : validation.message,
+    updatedAt: new Date().toISOString(),
+  };
+  await saveSelectedBaseOverlayMapping(mapping);
+  queueChangedFeature(feature);
+  markDirty();
+  renderAll();
+  setStatus(
+    validation.ok
+      ? `Updated ${featureName(feature)} (${edgeRefs.length} edges).`
+      : `Updated ${featureName(feature)} but mapping needs edit: ${validation.message}`,
+  );
+}
+
+async function toggleEdgeInEdgePickedSegment(feature) {
+  const segmentId = selectedSegmentId();
+  const selected = selectedFeature();
+  if (segmentId === null || !selected) return;
+  const existing = state.baseOverlay.overlay?.segments?.[String(segmentId)] || {};
+  const currentRefs = normalizeOverlayEdgeRefs(existing.edgeRefs || []);
+  const ref = edgeRefFromBaseFeature(feature, currentRefs.length);
+  if (!ref) return;
+  const existingIdx = currentRefs.findIndex(
+    (r) => String(r.edgeId) === String(ref.edgeId),
+  );
+  let nextRefs = existingIdx >= 0
+    ? currentRefs.filter((_, i) => i !== existingIdx)
+    : [...currentRefs, ref];
+  nextRefs = normalizeOverlayEdgeRefs(nextRefs);
+  await saveEdgePickedMapping(segmentId, selected, nextRefs);
 }
 
 function toggleEdgeInCompose(feature) {
@@ -5814,6 +5888,16 @@ function wireEvents() {
   els.drawCancel.addEventListener("click", cancelDraw);
   els.drawUndoLast.addEventListener("click", () => removeLastDrawStep());
   els.drawFreehand.addEventListener("click", () => switchComposeToFreehand());
+  els.editSegmentEdges.addEventListener("click", () => {
+    state.editingEdgePickEdges = !state.editingEdgePickEdges;
+    if (state.editingEdgePickEdges) {
+      state.splittingEdgePickAt = null;
+      setStatus("Click base edges to add or remove them from this segment.");
+    } else {
+      setStatus("Exited edge-edit mode.");
+    }
+    renderAll();
+  });
   els.newManualBaseEdge.addEventListener("click", startManualBaseEdgeDraw);
   els.cloneBaseGraphEdge.addEventListener("click", () => cloneSelectedBaseGraphEdgeAsManual().catch(showError));
   els.deleteManualBaseEdge.addEventListener("click", () => deleteSelectedManualBaseEdge().catch(showError));
@@ -5858,7 +5942,13 @@ function wireEvents() {
 
   map.on("click", "base-graph-edges-hit-layer", (event) => {
     if (state.mode !== "select" && !isComposingNewSegmentEdges()) return;
-    if (state.mode === "select" && !["base", "overlay"].includes(state.workspaceMode)) return;
+    if (
+      state.mode === "select" &&
+      !["base", "overlay"].includes(state.workspaceMode) &&
+      !((state.editingEdgePickEdges || state.splittingEdgePickAt !== null) && isEdgePickedSelected())
+    ) {
+      return;
+    }
     if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
     state.suppressNextSegmentClick = true;
     window.setTimeout(() => {
@@ -5866,6 +5956,14 @@ function wireEvents() {
     }, 0);
     if (isComposingNewSegmentEdges()) {
       toggleEdgeInCompose(event.features[0]);
+      return;
+    }
+    if (state.splittingEdgePickAt !== null && isEdgePickedSelected()) {
+      splitEdgePickedAtClickedEdge(event.features[0]).catch(showError);
+      return;
+    }
+    if (state.editingEdgePickEdges && isEdgePickedSelected()) {
+      toggleEdgeInEdgePickedSegment(event.features[0]).catch(showError);
       return;
     }
     if (state.workspaceMode === "base") {
@@ -5884,6 +5982,22 @@ function wireEvents() {
         state.suppressNextSegmentClick = false;
       }, 0);
       toggleEdgeInCompose(event.features[0]);
+      return;
+    }
+    if (state.splittingEdgePickAt !== null && isEdgePickedSelected()) {
+      state.suppressNextSegmentClick = true;
+      window.setTimeout(() => {
+        state.suppressNextSegmentClick = false;
+      }, 0);
+      splitEdgePickedAtClickedEdge(event.features[0]).catch(showError);
+      return;
+    }
+    if (state.editingEdgePickEdges && isEdgePickedSelected()) {
+      state.suppressNextSegmentClick = true;
+      window.setTimeout(() => {
+        state.suppressNextSegmentClick = false;
+      }, 0);
+      toggleEdgeInEdgePickedSegment(event.features[0]).catch(showError);
       return;
     }
     const manualIndex = Number(event.features[0].properties.manualIndex);
