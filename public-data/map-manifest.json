@@ -1,6 +1,6 @@
 {
-  "version": "b988c96fd49f",
-  "generatedAt": "2026-05-26T05:25:39.958732Z",
+  "version": "cbaf278b2b52",
+  "generatedAt": "2026-05-26T10:01:49.101676Z",
   "bikeRoads": "bike_roads.geojson",
   "segments": "segments.json",
   "kml": "exports/map.kml",
@@ -9,7 +9,7 @@
     "bikeRoads": "702df16bc76bae5a9a21e66adcc7896a5ea6c1513186041ce865741857154be2",
     "segments": "d136fbd46719f73f9112907a2ccfce6df39ce4261abe69c69699b6dc5af4317c",
     "kml": "bc273bf40f8abd2c26924a1ac855439c59e70842fb00f25fbe7b04ae05e2803f",
-    "baseRoutingShards": "c68a3cb67f67a396d30f8f583a7f22b0c3cc77d7addeae5c976572f82263ae55"
+    "baseRoutingShards": "55290fc3d806c6e5a81eedea785457b7f7101d9281058087c25816889de63efc"
   },
   "elevation": {
     "skipElevation": false,

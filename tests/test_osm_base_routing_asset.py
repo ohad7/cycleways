@@ -102,8 +102,63 @@ class BaseRoutingAssetTests(unittest.TestCase):
 
             self.assertEqual(asset["edges"][0]["cwSegmentIds"], [7])
             self.assertEqual(asset["edges"][0]["routeClass"], "path_track")
+            self.assertEqual(asset["edges"][0]["shareId"], 1)
             self.assertEqual(validation["graphEdges"], 1)
             self.assertEqual(validation["unresolvedSegments"], 0)
+
+    def test_runtime_asset_updates_stable_share_id_registry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            graph_path = root / "osm-base-graph.json"
+            overlay_path = root / "cw-base-overlay.json"
+            manual_edges_path = root / "manual-base-edges.geojson"
+            registry_path = root / "base-edge-share-ids.json"
+            write_json(
+                graph_path,
+                {
+                    "nodes": [
+                        {"id": "n1", "coord": [35, 33]},
+                        {"id": "n2", "coord": [35.001, 33]},
+                        {"id": "n3", "coord": [35.002, 33]},
+                    ],
+                    "edges": [
+                        {
+                            "id": "edge-existing",
+                            "fromNodeId": "n1",
+                            "toNodeId": "n2",
+                            "distanceMeters": 93,
+                            "coordinates": [[35, 33], [35.001, 33]],
+                        },
+                        {
+                            "id": "edge-new",
+                            "fromNodeId": "n2",
+                            "toNodeId": "n3",
+                            "distanceMeters": 93,
+                            "coordinates": [[35.001, 33], [35.002, 33]],
+                        },
+                    ],
+                },
+            )
+            write_json(registry_path, {"schemaVersion": 1, "nextShareId": 8, "edges": {"edge-existing": 7, "retired": 3}})
+            write_json(overlay_path, {"segments": {}})
+            write_json(manual_edges_path, {"type": "FeatureCollection", "features": []})
+
+            asset, validation = build_base_routing_asset(
+                graph_path,
+                overlay_path,
+                manual_edges_path,
+                {},
+                base_edge_share_ids_path=registry_path,
+            )
+
+            share_ids = {edge["id"]: edge["shareId"] for edge in asset["edges"]}
+            self.assertEqual(share_ids["edge-existing"], 7)
+            self.assertEqual(share_ids["edge-new"], 8)
+            registry = json.loads(registry_path.read_text(encoding="utf-8"))
+            self.assertEqual(registry["edges"]["retired"], 3)
+            self.assertEqual(registry["nextShareId"], 9)
+            self.assertEqual(validation["shareIds"]["newIds"], 1)
+            self.assertEqual(validation["shareIds"]["retiredIds"], 1)
 
     def test_runtime_asset_compacts_fresh_elevated_endpoint_metrics(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -279,6 +334,7 @@ class BaseRoutingAssetTests(unittest.TestCase):
 
         self.assertEqual(manifest["schemaVersion"], 1)
         self.assertEqual(manifest["shardSchemaVersion"], 1)
+        self.assertEqual(manifest["routeShare"]["edgeShareIds"], "embedded-in-shards")
         self.assertEqual(
             manifest["scheme"]["edgeBoundaryPolicy"],
             "duplicate-edge-bbox-intersections",

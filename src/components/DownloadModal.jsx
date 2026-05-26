@@ -9,7 +9,9 @@ function DownloadModal({
   onDownload,
   routeState,
   segmentsData,
+  shareStatus = "ok",
   shareUrl,
+  shareUrlLength = 0,
 }) {
   const [shareOpen, setShareOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("idle");
@@ -28,8 +30,10 @@ function DownloadModal({
       <ShareModal
         copyStatus={copyStatus}
         onClose={onClose}
-        onCopy={() => copyShareUrl(shareUrl, setCopyStatus)}
+        onCopy={() => copyShareUrl(shareUrl, shareStatus, setCopyStatus)}
+        shareStatus={shareStatus}
         shareUrl={shareUrl}
+        shareUrlLength={shareUrlLength}
       />
     );
   }
@@ -182,8 +186,16 @@ function RouteSegmentsList({
   );
 }
 
-function ShareModal({ copyStatus, onClose, onCopy, shareUrl }) {
+function ShareModal({
+  copyStatus,
+  onClose,
+  onCopy,
+  shareStatus,
+  shareUrl,
+  shareUrlLength,
+}) {
   const encodedShareUrl = encodeURIComponent(shareUrl);
+  const tooLong = shareStatus === "too_long";
 
   return (
     <div
@@ -218,6 +230,7 @@ function ShareModal({ copyStatus, onClose, onCopy, shareUrl }) {
             />
             <button
               className="copy-url-btn"
+              disabled={tooLong}
               type="button"
               onClick={onCopy}
               style={
@@ -226,12 +239,27 @@ function ShareModal({ copyStatus, onClose, onCopy, shareUrl }) {
                   : undefined
               }
             >
-              {copyStatus === "copied" ? "הועתק!" : "העתק קישור"}
+              {tooLong
+                ? "קישור ארוך מדי"
+                : copyStatus === "copied"
+                  ? "הועתק!"
+                  : "העתק קישור"}
             </button>
           </div>
+          {shareStatus === "long" && (
+            <p className="share-url-warning">
+              הקישור ארוך ({shareUrlLength} תווים) ועלול לא לעבוד בכל אפליקציה.
+            </p>
+          )}
+          {tooLong && (
+            <p className="share-url-warning share-url-warning--error">
+              המסלול ארוך מדי לשיתוף כקישור ({shareUrlLength} תווים). אפשר להוריד GPX במקום.
+            </p>
+          )}
           <div className="share-buttons">
             <button
               className="share-btn-social twitter"
+              disabled={tooLong}
               type="button"
               onClick={() =>
                 window.open(
@@ -244,6 +272,7 @@ function ShareModal({ copyStatus, onClose, onCopy, shareUrl }) {
             </button>
             <button
               className="share-btn-social facebook"
+              disabled={tooLong}
               type="button"
               onClick={() =>
                 window.open(
@@ -256,6 +285,7 @@ function ShareModal({ copyStatus, onClose, onCopy, shareUrl }) {
             </button>
             <button
               className="share-btn-social whatsapp"
+              disabled={tooLong}
               type="button"
               onClick={() =>
                 window.open(`https://wa.me/?text=${encodedShareUrl}`, "_blank")
@@ -281,7 +311,11 @@ function groupDataPointsBySegment(dataPoints) {
   return grouped;
 }
 
-async function copyShareUrl(shareUrl, setCopyStatus) {
+async function copyShareUrl(shareUrl, shareStatus, setCopyStatus) {
+  if (shareStatus === "too_long") {
+    setCopyStatus("idle");
+    return;
+  }
   try {
     await navigator.clipboard?.writeText?.(shareUrl);
     setCopyStatus("copied");

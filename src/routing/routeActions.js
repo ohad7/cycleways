@@ -1,6 +1,7 @@
 import { getDistance } from "../../utils/distance.js";
 import {
   decodeRoutePayload,
+  encodeBaseRoute,
   encodeCompactRoute,
   extractMiddlePoints,
 } from "../../utils/route-encoding.js";
@@ -68,13 +69,28 @@ export function applyRouteSnapshot(manager, snapshot) {
 }
 
 export function restoreRouteFromParam(manager, routeParam, segmentsData) {
-  const points = routePointsFromParam(routeParam, segmentsData);
+  const payload = decodeRoutePayload(routeParam);
+  if (
+    payload.type === "base_route_v4" &&
+    typeof manager?.restoreBaseRouteFromPayload === "function" &&
+    manager.restoreBaseRouteFromPayload(payload)
+  ) {
+    return snapshotRouteManager(manager, segmentsData);
+  }
+
+  const points = routePointsFromPayload(payload, segmentsData);
   return points ? restoreRoute(manager, points, segmentsData) : null;
 }
 
 export function routePointsFromParam(routeParam, segmentsData) {
   const payload = decodeRoutePayload(routeParam);
+  return routePointsFromPayload(payload, segmentsData);
+}
 
+function routePointsFromPayload(payload, segmentsData) {
+  if (payload.type === "base_route_v4" && payload.routePoints.length > 0) {
+    return payload.routePoints;
+  }
   if (payload.type === "compact_route" && payload.routePoints.length > 0) {
     return payload.routePoints;
   }
@@ -128,6 +144,9 @@ export function emptyRouteSnapshot() {
   };
 }
 
+export const ROUTE_SHARE_WARN_URL_LENGTH = 1800;
+export const ROUTE_SHARE_MAX_URL_LENGTH = 3500;
+
 export function routeStateSnapshot(routeState) {
   return {
     points: routeState.points.map((point) => ({ ...point })),
@@ -144,19 +163,31 @@ export function routeStateSnapshot(routeState) {
 }
 
 export function buildShareUrl(routeState, segmentsData, manager, location) {
+  return buildShareInfo(routeState, segmentsData, manager, location).url;
+}
+
+export function buildShareInfo(routeState, segmentsData, manager, location) {
+  const baseSharePayload = baseRouteSharePayload(routeState, manager);
+  const encodedBaseRoute = baseSharePayload ? encodeBaseRoute(baseSharePayload) : "";
+  if (encodedBaseRoute) {
+    return shareInfoFromEncodedRoute(encodedBaseRoute, "base_route_v4", location);
+  }
+
+  const baseDiagnostics =
+    typeof manager?.getBaseRouteDiagnostics === "function"
+      ? manager.getBaseRouteDiagnostics()
+      : null;
   const points = compactRoutePointsForSharing(
     routeState.points,
     routeState.selectedSegments,
     routeState.geometry,
-    manager,
+    baseDiagnostics?.traversals?.length > 0 ? null : manager,
   );
   const segmentIds = getSegmentIds(routeState.selectedSegments, segmentsData);
   const encodedRoute = encodeCompactRoute(points, segmentIds);
-  if (!encodedRoute) return "";
+  if (!encodedRoute) return emptyShareInfo();
 
-  const url = new URL(location.href);
-  url.searchParams.set("route", encodedRoute);
-  return url.toString();
+  return shareInfoFromEncodedRoute(encodedRoute, "compact_route", location);
 }
 
 export function getSegmentIds(segmentNames, segmentsData) {
@@ -205,6 +236,120 @@ function getActiveRouteDataPoints(segmentNames, geometry, segmentsData) {
   });
 
   return active;
+}
+
+function emptyShareInfo() {
+  return {
+    url: "",
+    format: null,
+    length: 0,
+    status: "unavailable",
+  };
+}
+
+function shareInfoFromEncodedRoute(encodedRoute, format, location) {
+  const url = new URL(location.href);
+  url.searchParams.set("route", encodedRoute);
+  const shareUrl = url.toString();
+  return {
+    url: shareUrl,
+    format,
+    length: shareUrl.length,
+    status:
+      shareUrl.length > ROUTE_SHARE_MAX_URL_LENGTH
+        ? "too_long"
+        : shareUrl.length > ROUTE_SHARE_WARN_URL_LENGTH
+          ? "long"
+          : "ok",
+  };
+}
+
+function baseRouteSharePayload(routeState, manager) {
+  if (
+    !routeState ||
+    !Array.isArray(routeState.points) ||
+    routeState.points.length < 2 ||
+    typeof manager?.getBaseRouteDiagnostics !== "function"
+  ) {
+    return null;
+  }
+
+  const diagnostics = manager.getBaseRouteDiagnostics();
+  const legs = Array.isArray(diagnostics?.legs) ? diagnostics.legs : [];
+  if (diagnostics?.failure || legs.length !== routeState.points.length - 1) {
+    return null;
+  }
+
+  const shareLegs = [];
+  const shardIds = new Set();
+  for (const [legIndex, leg] of legs.entries()) {
+    const traversals = Array.isArray(leg?.traversals) ? leg.traversals : [];
+    if (traversals.length === 0) return null;
+    const edgeShareIds = [];
+    const directions = [];
+    for (const traversal of traversals) {
+      const edgeShareId = Number(traversal.edgeShareId);
+      if (!Number.isSafeInteger(edgeShareId) || edgeShareId <= 0) {
+        return null;
+      }
+      const traversalShardIds = Array.isArray(traversal.shardIds)
+        ? traversal.shardIds
+        : [];
+      if (traversalShardIds.length === 0) {
+        return null;
+      }
+      traversalShardIds.forEach((shardId) => shardIds.add(String(shardId)));
+      edgeShareIds.push(edgeShareId);
+      directions.push(traversal.direction === "reverse" ? "reverse" : "forward");
+    }
+    shareLegs.push({
+      fromPoint: legIndex,
+      toPoint: legIndex + 1,
+      edgeShareIds,
+      directions,
+    });
+  }
+
+  const points = routeState.points.map((point, index) => {
+    const edgeShareId = routePointEdgeShareId(point, shareLegs, index);
+    const edgeFraction = routePointEdgeFraction(point, legs, index);
+    if (!Number.isSafeInteger(edgeShareId) || edgeShareId <= 0) {
+      return null;
+    }
+    return {
+      lng: point.lng,
+      lat: point.lat,
+      edgeShareId,
+      edgeFraction,
+    };
+  });
+  if (points.some((point) => point === null)) return null;
+
+  return {
+    version: 4,
+    graphVersion: diagnostics.graphVersion || "",
+    points,
+    shards: [...shardIds].sort(),
+    legs: shareLegs,
+  };
+}
+
+function routePointEdgeShareId(point, shareLegs, index) {
+  const direct = Number(point?.baseEdgeShareId ?? point?.edgeShareId);
+  if (Number.isSafeInteger(direct) && direct > 0) return direct;
+  if (index === 0) return shareLegs[0]?.edgeShareIds?.[0] || null;
+  const previousLeg = shareLegs[index - 1];
+  return previousLeg?.edgeShareIds?.[previousLeg.edgeShareIds.length - 1] || null;
+}
+
+function routePointEdgeFraction(point, diagnosticLegs, index) {
+  const direct = Number(point?.baseEdgeFraction ?? point?.edgeFraction);
+  if (Number.isFinite(direct)) return Math.max(0, Math.min(1, direct));
+  if (index === 0) {
+    return diagnosticLegs[0]?.traversals?.[0]?.fromFraction ?? 0;
+  }
+  const previousLeg = diagnosticLegs[index - 1];
+  return previousLeg?.traversals?.[previousLeg.traversals.length - 1]?.toFraction ?? 0;
 }
 
 function compactRoutePointsForSharing(points, targetSegments, targetGeometry, manager) {

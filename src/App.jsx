@@ -25,7 +25,7 @@ import { dataMarkerFeaturesFromSegments } from "./map/mapLayers.js";
 import {
   addPoint,
   applyRouteSnapshot,
-  buildShareUrl,
+  buildShareInfo,
   clearRoute,
   createRouteManager,
   dragPoint,
@@ -973,16 +973,16 @@ function App() {
     () => routeState.activeDataPoints.map((dataPoint) => dataPoint.id),
     [routeState.activeDataPoints],
   );
-  const shareUrl = useMemo(() => {
+  const shareInfo = useMemo(() => {
     if (
       state.status !== "ready" ||
       routeState.points.length === 0 ||
       !routeManagerRef.current
     ) {
-      return "";
+      return { url: "", status: "unavailable", length: 0, format: null };
     }
 
-    return buildShareUrl(
+    return buildShareInfo(
       routeState,
       state.assets.segmentsData,
       routeManagerRef.current,
@@ -995,6 +995,7 @@ function App() {
     state.assets,
     state.status,
   ]);
+  const shareUrl = shareInfo.url;
   const featureFlags = useMemo(() => getFeatureFlags(), []);
   const canDownload = routeState.geometry.length >= 2;
   const canUndo = routeHistory.past.length > 0;
@@ -1239,6 +1240,8 @@ function App() {
           routeState={routeState}
           segmentsData={state.assets.segmentsData}
           shareUrl={shareUrl}
+          shareStatus={shareInfo.status}
+          shareUrlLength={shareInfo.length}
           onClose={handleCloseDownload}
           onDownload={handleDownloadGpx}
         />

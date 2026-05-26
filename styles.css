@@ -1316,6 +1316,23 @@ html {
   background: #5F9EA0;
 }
 
+.copy-url-btn:disabled,
+.share-btn-social:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.share-url-warning {
+  margin: -8px 0 16px;
+  color: #7a5a00;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.share-url-warning--error {
+  color: #9f1d1d;
+}
+
 .share-buttons {
   display: flex;
   gap: 10px;

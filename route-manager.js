@@ -14,6 +14,7 @@ class RouteManager {
     this.baseRoutingNetwork = null;
     this.baseRoutingNodeIds = new Set();
     this.baseRoutingEdges = new Map();
+    this.baseRoutingEdgesByShareId = new Map();
     this.baseRoutingAdjacency = new Map();
     this.baseRoutingSpatialGrid = new Map();
     this.baseRoutingSpatialSegments = [];
@@ -21,6 +22,7 @@ class RouteManager {
     this.baseRoutingMetersPerDegreeLng = 111320;
     this.baseRoutingMetersPerDegreeLat = 111320;
     this.baseRoutingUphillCostMetersPerMeter = 8;
+    this.baseRoutingGraphVersion = "";
     this.segmentNamesById = new Map();
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
@@ -312,26 +314,54 @@ class RouteManager {
       uphillMeters: routeInfo.uphillMeters,
       downhillMeters: routeInfo.downhillMeters,
       uphillCostMetersPerMeter: this.baseRoutingUphillCostMetersPerMeter,
+      graphVersion: this.baseRoutingGraphVersion,
       segments: [...routeInfo.segments],
-      traversals: routeInfo.traversals.map((traversal) => ({
-        edgeId: traversal.edge.id,
-        direction: traversal.direction,
-        source: traversal.edge.source,
-        routeClass: traversal.edge.routeClass,
-        highway: traversal.edge.highway,
-        roadType: traversal.edge.roadType,
-        cyclewaysSegmentIds: [...traversal.edge.cwSegmentIds],
-        cyclewaysSegmentNames: traversal.edge.cwSegmentIds
-          .map((segmentId) => this.segmentNamesById.get(Number(segmentId)))
-          .filter(Boolean),
-        distanceMeters: traversal.distanceMeters,
-        costMultiplier: traversal.costMultiplier,
-        distanceCost: traversal.distanceCost,
-        uphillMeters: traversal.uphillMeters,
-        downhillMeters: traversal.downhillMeters,
-        uphillCost: traversal.uphillCost,
-        cost: traversal.cost,
+      traversals: routeInfo.traversals.map((traversal) =>
+        this._baseTraversalDiagnostics(traversal),
+      ),
+      legs: (routeInfo.legs || []).map((leg, index) => ({
+        index,
+        distance: leg.distance,
+        cost: leg.cost,
+        traversals: leg.traversals.map((traversal) =>
+          this._baseTraversalDiagnostics(traversal),
+        ),
       })),
+    };
+  }
+
+  _baseTraversalDiagnostics(traversal) {
+    return {
+      edgeId: traversal.edge.id,
+      edgeShareId: traversal.edge.shareId,
+      shardIds: [...(traversal.edge.shardIds || [])],
+      direction: traversal.direction,
+      source: traversal.edge.source,
+      routeClass: traversal.edge.routeClass,
+      highway: traversal.edge.highway,
+      roadType: traversal.edge.roadType,
+      cyclewaysSegmentIds: [...traversal.edge.cwSegmentIds],
+      cyclewaysSegmentNames: traversal.edge.cwSegmentIds
+        .map((segmentId) => this.segmentNamesById.get(Number(segmentId)))
+        .filter(Boolean),
+      distanceMeters: traversal.distanceMeters,
+      costMultiplier: traversal.costMultiplier,
+      distanceCost: traversal.distanceCost,
+      uphillMeters: traversal.uphillMeters,
+      downhillMeters: traversal.downhillMeters,
+      uphillCost: traversal.uphillCost,
+      cost: traversal.cost,
+      fromDistance: traversal.fromDistance,
+      toDistance: traversal.toDistance,
+      fromFraction:
+        traversal.edge.lengthMeters > 0
+          ? traversal.fromDistance / traversal.edge.lengthMeters
+          : 0,
+      toFraction:
+        traversal.edge.lengthMeters > 0
+          ? traversal.toDistance / traversal.edge.lengthMeters
+          : 0,
+      edgeLengthMeters: traversal.edge.lengthMeters,
     };
   }
 
@@ -399,6 +429,48 @@ class RouteManager {
     }
 
     return [...this.selectedSegments];
+  }
+
+  restoreBaseRouteFromPayload(payload) {
+    if (!this.baseRoutingNetwork || !payload || payload.type !== "base_route_v4") {
+      return false;
+    }
+
+    const anchors = Array.isArray(payload.routePoints)
+      ? payload.routePoints
+      : [];
+    const legs = Array.isArray(payload.legs) ? payload.legs : [];
+    if (anchors.length === 0 || legs.length !== Math.max(0, anchors.length - 1)) {
+      return false;
+    }
+
+    const routePoints = anchors.map((anchor, index) =>
+      this._baseRoutePointFromShareAnchor(anchor, index),
+    );
+    if (routePoints.some((point) => point === null)) {
+      return false;
+    }
+
+    const route = this._emptyBaseRoute();
+    for (let index = 0; index < legs.length; index++) {
+      const leg = this._baseLegFromSharePayload(
+        legs[index],
+        routePoints[index],
+        routePoints[index + 1],
+      );
+      if (!leg) {
+        return false;
+      }
+      route.legs.push(leg);
+      this._appendBaseLegToRoute(route, leg);
+    }
+
+    route.segments = this._cyclewaysSegmentsForBaseTraversals(route.traversals);
+    this.routePoints = routePoints;
+    this.baseRouteInfo = route;
+    this.selectedSegments = [...route.segments];
+    this.lastRouteFailure = null;
+    return true;
   }
 
   /**
@@ -688,10 +760,12 @@ class RouteManager {
     this.baseRoutingNetwork = null;
     this.baseRoutingNodeIds.clear();
     this.baseRoutingEdges.clear();
+    this.baseRoutingEdgesByShareId.clear();
     this.baseRoutingAdjacency.clear();
     this.baseRoutingSpatialGrid.clear();
     this.baseRoutingSpatialSegments = [];
     this.baseRoutingMetersPerDegreeLng = this.baseRoutingMetersPerDegreeLat;
+    this.baseRoutingGraphVersion = "";
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
 
@@ -710,9 +784,16 @@ class RouteManager {
 
     const targetNetwork = this.baseRoutingNetwork || {
       schemaVersion: network.schemaVersion ?? null,
+      graphVersion: network.graphVersion || network.generatedAt || "",
       nodes: [],
       edges: [],
     };
+    if (
+      targetNetwork.graphVersion === "" &&
+      (network.graphVersion || network.generatedAt)
+    ) {
+      targetNetwork.graphVersion = network.graphVersion || network.generatedAt;
+    }
     if (!this.baseRoutingNetwork) {
       this._setBaseRoutingProjection(network.nodes);
     }
@@ -735,6 +816,9 @@ class RouteManager {
       const edge = this._normalizeBaseRoutingEdge(edgeData);
       if (!edge) continue;
       this.baseRoutingEdges.set(edge.id, edge);
+      if (Number.isSafeInteger(edge.shareId) && edge.shareId > 0) {
+        this.baseRoutingEdgesByShareId.set(edge.shareId, edge);
+      }
       this._addBaseRoutingAdjacency(edge.from, edge.to, edge, "forward");
       this._addBaseRoutingAdjacency(edge.to, edge.from, edge, "reverse");
       this._indexBaseRoutingEdge(edge);
@@ -744,6 +828,7 @@ class RouteManager {
 
     if (this.baseRoutingEdges.size > 0) {
       this.baseRoutingNetwork = targetNetwork;
+      this.baseRoutingGraphVersion = targetNetwork.graphVersion || "";
       this.baseRouteInfo = null;
       this.lastRouteFailure = null;
     }
@@ -807,6 +892,10 @@ class RouteManager {
           ? distanceMeters
           : measuredLength,
       measuredLength,
+      shareId:
+        Number.isSafeInteger(Number(edgeData.shareId)) && Number(edgeData.shareId) > 0
+          ? Number(edgeData.shareId)
+          : null,
       source: edgeData.source || "osm",
       routeClass: edgeData.routeClass || "other",
       highway: edgeData.highway || null,
@@ -816,6 +905,9 @@ class RouteManager {
         ? edgeData.cwSegmentIds
             .map((segmentId) => Number(segmentId))
             .filter((segmentId) => Number.isFinite(segmentId))
+        : [],
+      shardIds: Array.isArray(edgeData.shardIds)
+        ? [...new Set(edgeData.shardIds.map(String).filter(Boolean))].sort()
         : [],
       elevation: this._normalizeBaseRoutingElevation(edgeData.elevation),
     };
@@ -1033,6 +1125,7 @@ class RouteManager {
         lng: snapped.lng,
         distanceMeters,
         baseEdgeId: edge.id,
+        baseEdgeShareId: edge.shareId,
         baseEdgeDistanceMeters: edgeDistanceMeters,
         baseEdgeFraction:
           edge.lengthMeters > 0 ? edgeDistanceMeters / edge.lengthMeters : 0,
@@ -1094,6 +1187,7 @@ class RouteManager {
       segments: [],
       orderedCoordinates: [],
       traversals: [],
+      legs: [],
       distance: 0,
       cost: 0,
       distanceCost: 0,
@@ -1117,24 +1211,29 @@ class RouteManager {
       if (!leg) {
         return this._emptyBaseRoute("No connected base graph route was found for the selected points.");
       }
-      for (const traversal of leg.traversals) {
-        route.traversals.push(traversal);
-      }
-      for (const coordinate of leg.orderedCoordinates) {
-        this._appendCoordinate(route.orderedCoordinates, coordinate);
-      }
-      route.distance += leg.distance;
-      route.cost += leg.cost;
-      route.distanceCost += leg.distanceCost;
-      route.uphillCost += leg.uphillCost;
-      route.cyclewaysDistance += leg.cyclewaysDistance;
-      route.nonCyclewaysDistance += leg.nonCyclewaysDistance;
-      route.uphillMeters += leg.uphillMeters;
-      route.downhillMeters += leg.downhillMeters;
+      route.legs.push(leg);
+      this._appendBaseLegToRoute(route, leg);
     }
 
     route.segments = this._cyclewaysSegmentsForBaseTraversals(route.traversals);
     return route;
+  }
+
+  _appendBaseLegToRoute(route, leg) {
+    for (const traversal of leg.traversals) {
+      route.traversals.push(traversal);
+    }
+    for (const coordinate of leg.orderedCoordinates) {
+      this._appendCoordinate(route.orderedCoordinates, coordinate);
+    }
+    route.distance += leg.distance;
+    route.cost += leg.cost;
+    route.distanceCost += leg.distanceCost;
+    route.uphillCost += leg.uphillCost;
+    route.cyclewaysDistance += leg.cyclewaysDistance;
+    route.nonCyclewaysDistance += leg.nonCyclewaysDistance;
+    route.uphillMeters += leg.uphillMeters;
+    route.downhillMeters += leg.downhillMeters;
   }
 
   _cyclewaysSegmentsForBaseTraversals(traversals) {
@@ -1187,6 +1286,125 @@ class RouteManager {
       }
     }
     return best;
+  }
+
+  _baseRoutePointFromShareAnchor(anchor, index) {
+    const shareId = Number(anchor?.baseEdgeShareId ?? anchor?.edgeShareId);
+    if (!Number.isSafeInteger(shareId) || shareId <= 0) {
+      return null;
+    }
+    const edge = this.baseRoutingEdgesByShareId.get(shareId);
+    if (!edge) {
+      return null;
+    }
+    const fraction = Math.max(
+      0,
+      Math.min(1, Number(anchor?.baseEdgeFraction ?? anchor?.edgeFraction) || 0),
+    );
+    const distanceAlong = edge.lengthMeters * fraction;
+    const measuredDistance =
+      edge.lengthMeters > 0
+        ? (distanceAlong / edge.lengthMeters) * edge.measuredLength
+        : 0;
+    const point = this._basePointAtMeasuredDistance(edge, measuredDistance);
+    return {
+      ...point,
+      id: anchor?.id || `route-point-${Date.now()}-${index}`,
+      baseEdgeId: edge.id,
+      baseEdgeShareId: edge.shareId,
+      baseEdgeDistanceMeters: distanceAlong,
+      baseEdgeFraction: fraction,
+      segmentName: this._primaryCyclewaysSegmentName(edge),
+    };
+  }
+
+  _baseLegFromSharePayload(legPayload, startPoint, endPoint) {
+    const edgeShareIds = Array.isArray(legPayload?.edgeShareIds)
+      ? legPayload.edgeShareIds
+      : Array.isArray(legPayload?.edges)
+        ? legPayload.edges
+        : [];
+    const directions = Array.isArray(legPayload?.directions)
+      ? legPayload.directions
+      : [];
+    if (edgeShareIds.length === 0) return null;
+
+    const directedEdges = edgeShareIds.map((edgeShareId, index) => {
+      const shareId = Number(edgeShareId);
+      const edge =
+        Number.isSafeInteger(shareId) && shareId > 0
+          ? this.baseRoutingEdgesByShareId.get(shareId)
+          : null;
+      const direction =
+        directions[index] === "reverse" || directions[index] === 1
+          ? "reverse"
+          : "forward";
+      return edge ? { edge, direction } : null;
+    });
+    if (directedEdges.some((entry) => entry === null)) return null;
+
+    if (
+      directedEdges[0].edge.shareId !== startPoint.baseEdgeShareId ||
+      directedEdges[directedEdges.length - 1].edge.shareId !==
+        endPoint.baseEdgeShareId
+    ) {
+      return null;
+    }
+
+    for (let index = 0; index < directedEdges.length - 1; index++) {
+      const currentEnd = this._baseDirectedEndNode(
+        directedEdges[index].edge,
+        directedEdges[index].direction,
+      );
+      const nextStart = this._baseDirectedStartNode(
+        directedEdges[index + 1].edge,
+        directedEdges[index + 1].direction,
+      );
+      if (!currentEnd || currentEnd !== nextStart) {
+        return null;
+      }
+    }
+
+    const traversals = directedEdges.map(({ edge, direction }, index) => {
+      const first = index === 0;
+      const last = index === directedEdges.length - 1;
+      if (first && last) {
+        return this._baseTraversal(
+          edge,
+          this._baseSnapDistanceOnEdge(startPoint, edge),
+          this._baseSnapDistanceOnEdge(endPoint, edge),
+        );
+      }
+      if (first) {
+        return this._baseTraversal(
+          edge,
+          this._baseSnapDistanceOnEdge(startPoint, edge),
+          direction === "reverse" ? 0 : edge.lengthMeters,
+        );
+      }
+      if (last) {
+        return this._baseTraversal(
+          edge,
+          direction === "reverse" ? edge.lengthMeters : 0,
+          this._baseSnapDistanceOnEdge(endPoint, edge),
+        );
+      }
+      return this._baseTraversal(
+        edge,
+        direction === "reverse" ? edge.lengthMeters : 0,
+        direction === "reverse" ? 0 : edge.lengthMeters,
+      );
+    });
+
+    return this._baseLegFromTraversals(traversals);
+  }
+
+  _baseDirectedStartNode(edge, direction) {
+    return direction === "reverse" ? edge.to : edge.from;
+  }
+
+  _baseDirectedEndNode(edge, direction) {
+    return direction === "reverse" ? edge.from : edge.to;
   }
 
   _baseSnapDistanceOnEdge(point, edge) {

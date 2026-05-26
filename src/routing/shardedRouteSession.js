@@ -3,6 +3,7 @@ import {
   baseRoutingShardEntriesForPoints,
   mergeBaseRoutingShards,
 } from "./baseRoutingShards.js";
+import { decodeRoutePayload } from "../../utils/route-encoding.js";
 import {
   addPoint,
   createRouteManager,
@@ -182,6 +183,19 @@ class ShardedRouteSession {
     return newlyLoadedShards;
   }
 
+  async loadShardIds(shardIds, phase = "loading") {
+    const entriesById = new Map(
+      (this.shardManifest?.shards || []).map((entry) => [String(entry.id), entry]),
+    );
+    const entries = [...new Set((shardIds || []).map(String))]
+      .map((shardId) => entriesById.get(shardId))
+      .filter(Boolean);
+    if (entries.length === 0) {
+      return [];
+    }
+    return this.loadEntries(entries, phase);
+  }
+
   async loadEntry(entry) {
     if (!this.loadingShards.has(entry.id)) {
       const loadPromise = Promise.resolve()
@@ -204,6 +218,7 @@ class ShardedRouteSession {
 
   async extendManager(shards) {
     const network = mergeBaseRoutingShards(shards);
+    network.graphVersion = this.shardManifest?.generatedAt || "";
     if (network.edges.length === 0) {
       return;
     }
@@ -216,6 +231,7 @@ class ShardedRouteSession {
 
   async rebuildManager(points) {
     const network = this.mergedNetwork();
+    network.graphVersion = this.shardManifest?.generatedAt || "";
     this.manager = await createRouteManager(
       this.RouteManagerClass,
       this.geoJsonData,
@@ -252,8 +268,30 @@ class ShardedRouteSession {
   }
 
   async restoreRouteParam(routeParam) {
+    const payload = decodeRoutePayload(routeParam);
+    if (payload.type === "base_route_v4") {
+      return this.restoreBaseRoutePayload(payload);
+    }
     const points = routePointsFromParam(routeParam, this.segmentsData);
     return points ? this.restorePoints(points) : null;
+  }
+
+  async restoreBaseRoutePayload(payload) {
+    await this.loadShardIds(
+      (payload.shards || []).map((shard) => shard.id).filter(Boolean),
+      "loading",
+    );
+    if (
+      typeof this.manager?.restoreBaseRouteFromPayload === "function" &&
+      this.manager.restoreBaseRouteFromPayload(payload)
+    ) {
+      return snapshotRouteManager(this.manager, this.segmentsData);
+    }
+
+    console.warn(
+      "[routing-shards] V4 exact route replay failed; recalculating from waypoint anchors",
+    );
+    return payload.routePoints?.length ? this.restorePoints(payload.routePoints) : null;
   }
 }
 

@@ -3,7 +3,9 @@ import {
   baseRoutingShardEntriesForPoints,
   mergeBaseRoutingShards,
 } from "../src/routing/baseRoutingShards.js";
+import { buildShareInfo } from "../src/routing/routeActions.js";
 import { createShardedRouteSession } from "../src/routing/shardedRouteSession.js";
+import { decodeRoutePayload } from "../utils/route-encoding.js";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -33,6 +35,7 @@ const nodes = [
 const edges = [
   {
     id: "cw-west",
+    shareId: 101,
     from: "west",
     to: "border",
     distanceMeters: 93,
@@ -42,6 +45,7 @@ const edges = [
   },
   {
     id: "east-connector",
+    shareId: 102,
     from: "border",
     to: "east",
     distanceMeters: 93,
@@ -59,24 +63,24 @@ const manifest = {
   scheme: { shardSizeDegrees: 0.001 },
   shards: [
     {
-      id: "west-shard",
+      id: "g700_660",
       bounds: [35, 33, 35.001, 33.001],
     },
     {
-      id: "east-shard",
+      id: "g701_660",
       bounds: [35.001, 33, 35.002, 33.001],
     },
   ],
 };
 const shardAssets = {
-  "west-shard": {
-    id: "west-shard",
+  "g700_660": {
+    id: "g700_660",
     sourceRoutingSchemaVersion: 2,
     nodes: nodes.slice(0, 2),
     edges: edges.slice(0, 1),
   },
-  "east-shard": {
-    id: "east-shard",
+  "g701_660": {
+    id: "g701_660",
     sourceRoutingSchemaVersion: 2,
     nodes: nodes.slice(1),
     edges: edges.slice(1),
@@ -92,7 +96,7 @@ const entries = baseRoutingShardEntriesForPoints(manifest, points, {
 });
 assert.deepEqual(
   entries.map((entry) => entry.id),
-  ["east-shard", "west-shard"],
+  ["g700_660", "g701_660"],
 );
 
 const shardNetwork = mergeBaseRoutingShards(
@@ -100,7 +104,14 @@ const shardNetwork = mergeBaseRoutingShards(
 );
 assert.equal(shardNetwork.nodes.length, 3);
 assert.equal(shardNetwork.edges.length, 2);
-assert.deepEqual(shardNetwork.summary.loadedShards, ["east-shard", "west-shard"]);
+assert.deepEqual(shardNetwork.summary.loadedShards, ["g700_660", "g701_660"]);
+assert.deepEqual(
+  shardNetwork.edges.map((edge) => [edge.id, edge.shareId, edge.shardIds]),
+  [
+    ["cw-west", 101, ["g700_660"]],
+    ["east-connector", 102, ["g701_660"]],
+  ],
+);
 
 const fullTraversalIds = await routeTraversalIds(fullNetwork);
 const shardTraversalIds = await routeTraversalIds(shardNetwork);
@@ -132,14 +143,49 @@ const shardedSession = await createShardedRouteSession(
 );
 let shardedSnapshot = await shardedSession.addPoint(points[0]);
 assert.equal(shardedSnapshot.points.length, 1);
-assert.deepEqual(loadedShardIds, ["west-shard"]);
+assert.deepEqual(loadedShardIds, ["g700_660"]);
 shardedSnapshot = await shardedSession.addPoint(points[1]);
 assert.equal(shardedSnapshot.points.length, 2);
 assert.deepEqual(shardedSnapshot.selectedSegments, ["CW west"]);
-assert.deepEqual(loadedShardIds, ["west-shard", "east-shard"]);
+assert.deepEqual(loadedShardIds, ["g700_660", "g701_660"]);
+const routeShareInfo = buildShareInfo(
+  shardedSnapshot,
+  segmentsData,
+  shardedSession.manager,
+  new URL("https://example.test/"),
+);
+assert.equal(routeShareInfo.format, "base_route_v4");
+assert.equal(routeShareInfo.status, "ok");
+const routeSharePayload = decodeRoutePayload(
+  new URL(routeShareInfo.url).searchParams.get("route"),
+);
+assert.equal(routeSharePayload.type, "base_route_v4");
+assert.deepEqual(routeSharePayload.shards.map((shard) => shard.id), [
+  "g700_660",
+  "g701_660",
+]);
+assert.deepEqual(routeSharePayload.legs[0].edgeShareIds, [101, 102]);
 assert.equal(shardedManagerLoads, 1);
+const replaySession = await createShardedRouteSession(
+  IncrementalShardRouteManager,
+  geoJsonData,
+  segmentsData,
+  manifest,
+  async (entry) => shardAssets[entry.id],
+  { paddingShards: 0 },
+);
+const replaySnapshot = await replaySession.restoreRouteParam(
+  new URL(routeShareInfo.url).searchParams.get("route"),
+);
+assert.equal(replaySnapshot.routeFailure, null);
+assert.deepEqual(
+  replaySession.manager
+    .getBaseRouteDiagnostics()
+    .traversals.map((traversal) => traversal.edgeId),
+  ["cw-west", "east-connector"],
+);
 assert.deepEqual(shardedSession.diagnostics(), {
-  loadedShards: ["east-shard", "west-shard"],
+  loadedShards: ["g700_660", "g701_660"],
   loadedCompactBytes: 0,
   loadedNodes: 3,
   loadedEdges: 2,
@@ -149,10 +195,10 @@ assert.deepEqual(
     .filter((status) => status.phase !== "ready")
     .map((status) => [status.phase, status.batchShardIds]),
   [
-    ["loading", ["west-shard"]],
-    ["loaded", ["west-shard"]],
-    ["loading", ["east-shard"]],
-    ["loaded", ["east-shard"]],
+    ["loading", ["g700_660"]],
+    ["loaded", ["g700_660"]],
+    ["loading", ["g701_660"]],
+    ["loaded", ["g701_660"]],
   ],
 );
 
@@ -180,12 +226,12 @@ assert.equal(
   }),
   true,
 );
-assert.deepEqual(prefetchLoadedShardIds, ["west-shard"]);
+assert.deepEqual(prefetchLoadedShardIds, ["g700_660"]);
 shardedSnapshot = await prefetchSession.addPoint(points[0]);
 assert.equal(shardedSnapshot.points.length, 1);
 assert.deepEqual(
   prefetchLoadedShardIds,
-  ["west-shard"],
+  ["g700_660"],
   "clicking inside a prefetched shard must not refetch it",
 );
 
@@ -198,7 +244,7 @@ const concurrentSession = await createShardedRouteSession(
   manifest,
   async (entry) => {
     concurrentLoadCalls.push(entry.id);
-    if (entry.id === "west-shard") {
+    if (entry.id === "g700_660") {
       await new Promise((resolve) => {
         releaseConcurrentLoad = resolve;
       });
@@ -222,7 +268,7 @@ releaseConcurrentLoad();
 await Promise.all([concurrentPrefetch, concurrentAddPoint]);
 assert.deepEqual(
   concurrentLoadCalls,
-  ["west-shard"],
+  ["g700_660"],
   "concurrent prefetch and route clicks must share in-flight shard loads",
 );
 

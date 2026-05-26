@@ -45,6 +45,7 @@ const baseRoutingNetwork = {
   edges: [
     {
       id: "cw",
+      shareId: 1,
       from: "a",
       to: "b",
       distanceMeters: 93,
@@ -57,6 +58,7 @@ const baseRoutingNetwork = {
     },
     {
       id: "connector",
+      shareId: 2,
       from: "b",
       to: "c",
       distanceMeters: 93,
@@ -69,6 +71,7 @@ const baseRoutingNetwork = {
     },
     {
       id: "road-detour-a",
+      shareId: 3,
       from: "a",
       to: "d",
       distanceMeters: 56,
@@ -81,6 +84,7 @@ const baseRoutingNetwork = {
     },
     {
       id: "road-detour-b",
+      shareId: 4,
       from: "d",
       to: "b",
       distanceMeters: 56,
@@ -137,6 +141,7 @@ const sameEdgeEndSnap = manager.snapToNetwork({
   lng: 35.00075,
 });
 assert.equal(startSnap.baseEdgeId, "cw");
+assert.equal(startSnap.baseEdgeShareId, 1);
 assert.equal(sameEdgeEndSnap.baseEdgeId, "cw");
 manager.recalculateRoute([startSnap, sameEdgeEndSnap]);
 let routeInfo = manager.getRouteInfo();
@@ -145,6 +150,34 @@ assert.ok(routeInfo.distance > 40 && routeInfo.distance < 60);
 assert.ok(routeInfo.orderedCoordinates.length >= 2);
 assert.ok(routeInfo.orderedCoordinates[0].lng > 35);
 assert.ok(routeInfo.orderedCoordinates.at(-1).lng < 35.001);
+
+const sameEdgePayload = {
+  type: "base_route_v4",
+  routePoints: [
+    {
+      lng: startSnap.lng,
+      lat: startSnap.lat,
+      baseEdgeShareId: startSnap.baseEdgeShareId,
+      baseEdgeFraction: startSnap.baseEdgeFraction,
+    },
+    {
+      lng: sameEdgeEndSnap.lng,
+      lat: sameEdgeEndSnap.lat,
+      baseEdgeShareId: sameEdgeEndSnap.baseEdgeShareId,
+      baseEdgeFraction: sameEdgeEndSnap.baseEdgeFraction,
+    },
+  ],
+  legs: [
+    {
+      edgeShareIds: [1],
+      directions: ["forward"],
+    },
+  ],
+};
+const replayManager = new RouteManager();
+await replayManager.load(geoJsonData, segmentsData, baseRoutingNetwork);
+assert.equal(replayManager.restoreBaseRouteFromPayload(sameEdgePayload), true);
+assertNear(replayManager.getRouteInfo().distance, routeInfo.distance);
 
 const elevatedClipManager = new RouteManager();
 await elevatedClipManager.load(geoJsonData, segmentsData, {
@@ -156,6 +189,7 @@ await elevatedClipManager.load(geoJsonData, segmentsData, {
   edges: [
     {
       id: "elevated-cw",
+      shareId: 11,
       from: "clip-start",
       to: "clip-end",
       distanceMeters: 93,
@@ -214,6 +248,7 @@ await climbAwareManager.load(geoJsonData, segmentsData, {
   edges: [
     {
       id: "short-climb",
+      shareId: 21,
       from: "start",
       to: "end",
       distanceMeters: 93,
@@ -224,6 +259,7 @@ await climbAwareManager.load(geoJsonData, segmentsData, {
     },
     {
       id: "flat-detour-a",
+      shareId: 22,
       from: "start",
       to: "flat",
       distanceMeters: 70,
@@ -234,6 +270,7 @@ await climbAwareManager.load(geoJsonData, segmentsData, {
     },
     {
       id: "flat-detour-b",
+      shareId: 23,
       from: "flat",
       to: "end",
       distanceMeters: 70,

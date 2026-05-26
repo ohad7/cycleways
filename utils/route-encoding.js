@@ -4,7 +4,9 @@
 
 const ROUTE_VERSION = 2;
 export const COMPACT_ROUTE_VERSION = 3;
+export const BASE_ROUTE_VERSION = 4;
 export const ROUTE_COORDINATE_PRECISION = 1e6;
+export const ROUTE_EDGE_FRACTION_PRECISION = 65535;
 
 // Base58 alphabet (Bitcoin-style)
 const BASE58_ALPHABET =
@@ -106,6 +108,24 @@ function writeUnsignedVarint(bytes, value) {
   bytes.push(remaining);
 }
 
+function writeString(bytes, value) {
+  const text = typeof value === "string" ? value : "";
+  const encoded = new TextEncoder().encode(text);
+  writeUnsignedVarint(bytes, encoded.length);
+  bytes.push(...encoded);
+}
+
+function readString(bytes, cursor) {
+  const length = readUnsignedVarint(bytes, cursor);
+  if (length === 0) return "";
+  if (cursor.index + length > bytes.length) {
+    throw new Error("Invalid string: unexpected end of payload");
+  }
+  const value = new TextDecoder().decode(bytes.subarray(cursor.index, cursor.index + length));
+  cursor.index += length;
+  return value;
+}
+
 function readUnsignedVarint(bytes, cursor) {
   let result = 0;
   let shift = 0;
@@ -145,6 +165,16 @@ function quantizeCoordinate(value) {
 
 function dequantizeCoordinate(value) {
   return value / ROUTE_COORDINATE_PRECISION;
+}
+
+function quantizeFraction(value) {
+  const fraction = Math.max(0, Math.min(1, Number(value)));
+  if (!Number.isFinite(fraction)) return 0;
+  return Math.round(fraction * ROUTE_EDGE_FRACTION_PRECISION);
+}
+
+function dequantizeFraction(value) {
+  return Math.max(0, Math.min(1, Number(value) / ROUTE_EDGE_FRACTION_PRECISION));
 }
 
 function isValidLngLat(lng, lat) {
@@ -231,6 +261,169 @@ export function encodeCompactRoute(routePoints, segmentIds = []) {
   return base58Encode(new Uint8Array(bytes));
 }
 
+export function encodeBaseRoute(routePayload) {
+  const points = normalizeBaseRoutePoints(routePayload?.points);
+  const shards = normalizeRouteShardCells(routePayload?.shards);
+  const legs = normalizeRouteLegs(routePayload?.legs);
+  if (points.length === 0) return "";
+  if (points.length > 1 && legs.length !== points.length - 1) return "";
+  if (legs.length > 0 && shards.length === 0) return "";
+
+  const bytes = [BASE_ROUTE_VERSION];
+  writeString(bytes, routePayload?.graphVersion || "");
+
+  writeUnsignedVarint(bytes, points.length);
+  let previousLng = 0;
+  let previousLat = 0;
+  points.forEach((point, index) => {
+    const lng = quantizeCoordinate(point.lng);
+    const lat = quantizeCoordinate(point.lat);
+    writeSignedVarint(bytes, index === 0 ? lng : lng - previousLng);
+    writeSignedVarint(bytes, index === 0 ? lat : lat - previousLat);
+    previousLng = lng;
+    previousLat = lat;
+    writeUnsignedVarint(bytes, point.edgeShareId);
+    writeUnsignedVarint(bytes, quantizeFraction(point.edgeFraction));
+  });
+
+  writeUnsignedVarint(bytes, shards.length);
+  let previousX = 0;
+  let previousY = 0;
+  shards.forEach((shard, index) => {
+    writeSignedVarint(bytes, index === 0 ? shard.x : shard.x - previousX);
+    writeSignedVarint(bytes, index === 0 ? shard.y : shard.y - previousY);
+    previousX = shard.x;
+    previousY = shard.y;
+  });
+
+  writeUnsignedVarint(bytes, legs.length);
+  legs.forEach((leg, legIndex) => {
+    writeUnsignedVarint(bytes, leg.fromPoint ?? legIndex);
+    writeUnsignedVarint(bytes, leg.toPoint ?? legIndex + 1);
+    writeUnsignedVarint(bytes, leg.edgeShareIds.length);
+    leg.edgeShareIds.forEach((edgeShareId) => writeUnsignedVarint(bytes, edgeShareId));
+    writeDirectionBits(bytes, leg.directions);
+  });
+
+  return base58Encode(new Uint8Array(bytes));
+}
+
+function normalizeBaseRoutePoints(points) {
+  return Array.isArray(points)
+    ? points
+        .map((point) => {
+          const lng = Number(point?.lng);
+          const lat = Number(point?.lat);
+          const edgeShareId = Number(point?.edgeShareId ?? point?.baseEdgeShareId);
+          const edgeFraction = Number(point?.edgeFraction ?? point?.baseEdgeFraction);
+          return {
+            lng,
+            lat,
+            edgeShareId:
+              Number.isSafeInteger(edgeShareId) && edgeShareId > 0
+                ? edgeShareId
+                : 0,
+            edgeFraction: Number.isFinite(edgeFraction) ? edgeFraction : 0,
+          };
+        })
+        .filter((point) => isValidLngLat(point.lng, point.lat))
+    : [];
+}
+
+function normalizeRouteShardCells(shards) {
+  const cells = [];
+  for (const shard of Array.isArray(shards) ? shards : []) {
+    const cell =
+      typeof shard === "string"
+        ? parseRouteShardId(shard)
+        : {
+            x: Number(shard?.x),
+            y: Number(shard?.y),
+          };
+    if (
+      Number.isSafeInteger(cell.x) &&
+      Number.isSafeInteger(cell.y)
+    ) {
+      cells.push(cell);
+    }
+  }
+  const unique = new Map(cells.map((cell) => [`${cell.x}:${cell.y}`, cell]));
+  return [...unique.values()].sort((first, second) =>
+    first.x === second.x ? first.y - second.y : first.x - second.x,
+  );
+}
+
+function parseRouteShardId(shardId) {
+  const match = /^g(-?\d+)_(-?\d+)$/.exec(String(shardId || ""));
+  return match
+    ? { x: Number(match[1]), y: Number(match[2]) }
+    : { x: NaN, y: NaN };
+}
+
+function routeShardId(x, y) {
+  return `g${x}_${y}`;
+}
+
+function normalizeRouteLegs(legs) {
+  return Array.isArray(legs)
+    ? legs.map((leg, index) => {
+        const edgeShareIds = (Array.isArray(leg?.edgeShareIds)
+          ? leg.edgeShareIds
+          : Array.isArray(leg?.edges)
+            ? leg.edges
+            : [])
+          .map((edgeShareId) => Number(edgeShareId))
+          .filter((edgeShareId) => Number.isSafeInteger(edgeShareId) && edgeShareId > 0);
+        const directions = (Array.isArray(leg?.directions) ? leg.directions : [])
+          .slice(0, edgeShareIds.length)
+          .map((direction) =>
+            direction === "reverse" || direction === 1 ? "reverse" : "forward",
+          );
+        while (directions.length < edgeShareIds.length) {
+          directions.push("forward");
+        }
+        return {
+          fromPoint:
+            Number.isSafeInteger(Number(leg?.fromPoint)) && Number(leg.fromPoint) >= 0
+              ? Number(leg.fromPoint)
+              : index,
+          toPoint:
+            Number.isSafeInteger(Number(leg?.toPoint)) && Number(leg.toPoint) >= 0
+              ? Number(leg.toPoint)
+              : index + 1,
+          edgeShareIds,
+          directions,
+        };
+      })
+    : [];
+}
+
+function writeDirectionBits(bytes, directions) {
+  for (let index = 0; index < directions.length; index += 8) {
+    let byte = 0;
+    for (let bit = 0; bit < 8 && index + bit < directions.length; bit++) {
+      if (directions[index + bit] === "reverse") {
+        byte |= 1 << bit;
+      }
+    }
+    bytes.push(byte);
+  }
+}
+
+function readDirectionBits(bytes, cursor, count) {
+  const directions = [];
+  for (let index = 0; index < count; index += 8) {
+    if (cursor.index >= bytes.length) {
+      throw new Error("Invalid direction bits: unexpected end of payload");
+    }
+    const byte = bytes[cursor.index++];
+    for (let bit = 0; bit < 8 && directions.length < count; bit++) {
+      directions.push((byte & (1 << bit)) !== 0 ? "reverse" : "forward");
+    }
+  }
+  return directions;
+}
+
 function decodeCompactRouteBytes(uint8Array) {
   const cursor = { index: 1 };
   const anchorCount = readUnsignedVarint(uint8Array, cursor);
@@ -268,6 +461,82 @@ function decodeCompactRouteBytes(uint8Array) {
   };
 }
 
+function decodeBaseRouteBytes(uint8Array) {
+  const cursor = { index: 1 };
+  const graphVersion = readString(uint8Array, cursor);
+  const pointCount = readUnsignedVarint(uint8Array, cursor);
+  const routePoints = [];
+
+  let previousLng = 0;
+  let previousLat = 0;
+  for (let index = 0; index < pointCount; index++) {
+    const lngDelta = readSignedVarint(uint8Array, cursor);
+    const latDelta = readSignedVarint(uint8Array, cursor);
+    const lng = index === 0 ? lngDelta : previousLng + lngDelta;
+    const lat = index === 0 ? latDelta : previousLat + latDelta;
+    previousLng = lng;
+    previousLat = lat;
+
+    const edgeShareId = readUnsignedVarint(uint8Array, cursor);
+    const edgeFraction = dequantizeFraction(readUnsignedVarint(uint8Array, cursor));
+    routePoints.push({
+      lng: dequantizeCoordinate(lng),
+      lat: dequantizeCoordinate(lat),
+      id: Date.now() + index + Math.random(),
+      baseEdgeShareId: edgeShareId > 0 ? edgeShareId : null,
+      baseEdgeFraction: edgeFraction,
+    });
+  }
+
+  const shardCount = readUnsignedVarint(uint8Array, cursor);
+  const shards = [];
+  let previousX = 0;
+  let previousY = 0;
+  for (let index = 0; index < shardCount; index++) {
+    const xDelta = readSignedVarint(uint8Array, cursor);
+    const yDelta = readSignedVarint(uint8Array, cursor);
+    const x = index === 0 ? xDelta : previousX + xDelta;
+    const y = index === 0 ? yDelta : previousY + yDelta;
+    previousX = x;
+    previousY = y;
+    shards.push({ id: routeShardId(x, y), x, y });
+  }
+
+  const legCount = readUnsignedVarint(uint8Array, cursor);
+  const legs = [];
+  for (let index = 0; index < legCount; index++) {
+    const fromPoint = readUnsignedVarint(uint8Array, cursor);
+    const toPoint = readUnsignedVarint(uint8Array, cursor);
+    const edgeCount = readUnsignedVarint(uint8Array, cursor);
+    const edgeShareIds = [];
+    for (let edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
+      edgeShareIds.push(readUnsignedVarint(uint8Array, cursor));
+    }
+    const directions = readDirectionBits(uint8Array, cursor, edgeCount);
+    legs.push({
+      fromPoint,
+      toPoint,
+      edgeShareIds,
+      edges: edgeShareIds,
+      directions,
+    });
+  }
+
+  if (cursor.index !== uint8Array.length) {
+    throw new Error("Invalid V4 route payload: trailing bytes");
+  }
+
+  return {
+    version: BASE_ROUTE_VERSION,
+    type: "base_route_v4",
+    graphVersion,
+    routePoints,
+    shards,
+    legs,
+    segmentIds: [],
+  };
+}
+
 export function decodeRoutePayload(routeString) {
   if (!routeString) {
     return {
@@ -290,6 +559,9 @@ export function decodeRoutePayload(routeString) {
     }
 
     const version = uint8Array[0];
+    if (version === BASE_ROUTE_VERSION) {
+      return decodeBaseRouteBytes(uint8Array);
+    }
     if (version === COMPACT_ROUTE_VERSION) {
       return decodeCompactRouteBytes(uint8Array);
     }

@@ -67,10 +67,11 @@ PUBLIC_DATA_DIR = "public-data"
 BASE_ROUTING_SHARD_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_MANIFEST_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_SIZE_DEGREES = 0.05
-BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION = 1
+BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION = 2
 BASE_ROUTING_COMPACT_SHARD_MAGIC = b"CWBS1"
 BASE_ROUTING_COMPACT_COORDINATE_SCALE = 1_000_000
 BASE_ROUTING_COMPACT_DISTANCE_SCALE = 10
+BASE_ROUTING_SHARE_ID_SCHEMA_VERSION = 1
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -90,6 +91,13 @@ def write_json(path: Path, data: Any, *, compact: bool = False) -> None:
             json.dump(data, handle, ensure_ascii=False, separators=(",", ":"))
         else:
             json.dump(data, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+
+
+def write_sorted_json(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2, ensure_ascii=False, sort_keys=True)
         handle.write("\n")
 
 
@@ -231,6 +239,7 @@ def pack_compact_base_routing_shard(shard_asset: dict[str, Any]) -> bytes:
             raise ValueError(f"Compact shard edge has invalid coordinates: {edge.get('id')}")
 
         write_varuint(payload, string_index[edge["id"]])
+        write_varuint(payload, int(edge.get("shareId") or 0))
         write_varuint(payload, node_index[edge["from"]])
         write_varuint(payload, node_index[edge["to"]])
         write_varint(payload, scaled_int(edge.get("distanceMeters") or 0, BASE_ROUTING_COMPACT_DISTANCE_SCALE))
@@ -1901,6 +1910,77 @@ def compact_routing_elevation(edge: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def normalize_base_edge_share_id_registry(raw: Any) -> dict[str, Any]:
+    raw_edges = raw.get("edges") if isinstance(raw, dict) else {}
+    edges: dict[str, int] = {}
+    if isinstance(raw_edges, dict):
+        for edge_id, share_id in raw_edges.items():
+            if not isinstance(edge_id, str) or edge_id == "":
+                continue
+            if isinstance(share_id, bool):
+                continue
+            if isinstance(share_id, int) and share_id > 0:
+                edges[edge_id] = share_id
+
+    next_share_id = raw.get("nextShareId") if isinstance(raw, dict) else None
+    if not isinstance(next_share_id, int) or next_share_id <= 0:
+        next_share_id = (max(edges.values()) + 1) if edges else 1
+
+    return {
+        "schemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
+        "nextShareId": max(next_share_id, (max(edges.values()) + 1) if edges else 1),
+        "edges": dict(sorted(edges.items())),
+    }
+
+
+def assign_base_edge_share_ids(
+    edge_ids: list[str],
+    registry_path: Path | None = None,
+) -> tuple[dict[str, int], dict[str, Any]]:
+    unique_edge_ids = sorted(set(edge_id for edge_id in edge_ids if isinstance(edge_id, str) and edge_id))
+    if registry_path is None:
+        share_ids = {edge_id: index + 1 for index, edge_id in enumerate(unique_edge_ids)}
+        return share_ids, {
+            "schemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
+            "runtimeEdges": len(unique_edge_ids),
+            "totalIds": len(share_ids),
+            "newIds": len(share_ids),
+            "retiredIds": 0,
+            "registry": None,
+        }
+
+    registry = normalize_base_edge_share_id_registry(load_json(registry_path, {}))
+    existing_edges = dict(registry["edges"])
+    next_share_id = int(registry["nextShareId"])
+    new_ids = 0
+
+    for edge_id in unique_edge_ids:
+        if edge_id in existing_edges:
+            continue
+        existing_edges[edge_id] = next_share_id
+        next_share_id += 1
+        new_ids += 1
+
+    updated_registry = {
+        "schemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
+        "nextShareId": next_share_id,
+        "edges": dict(sorted(existing_edges.items())),
+    }
+    write_sorted_json(registry_path, updated_registry)
+
+    runtime_edge_set = set(unique_edge_ids)
+    share_ids = {edge_id: existing_edges[edge_id] for edge_id in unique_edge_ids}
+    retired_ids = sum(1 for edge_id in existing_edges if edge_id not in runtime_edge_set)
+    return share_ids, {
+        "schemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
+        "runtimeEdges": len(unique_edge_ids),
+        "totalIds": len(existing_edges),
+        "newIds": new_ids,
+        "retiredIds": retired_ids,
+        "registry": str(registry_path),
+    }
+
+
 def build_base_routing_asset(
     graph_path: Path,
     overlay_path: Path,
@@ -1908,6 +1988,7 @@ def build_base_routing_asset(
     segments_data: dict[str, Any],
     base_graph_path: Path | None = None,
     source_geojson: dict[str, Any] | None = None,
+    base_edge_share_ids_path: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     ensure_current_routing_graph(graph_path, manual_base_edges_path, base_graph_path)
     if not overlay_path.exists():
@@ -2150,6 +2231,13 @@ def build_base_routing_asset(
             missing_runtime_elevation_edge_ids.append(edge["id"])
         runtime_edges.append(runtime_edge)
 
+    share_ids_by_edge_id, share_id_validation = assign_base_edge_share_ids(
+        [edge["id"] for edge in runtime_edges],
+        base_edge_share_ids_path,
+    )
+    for runtime_edge in runtime_edges:
+        runtime_edge["shareId"] = share_ids_by_edge_id[runtime_edge["id"]]
+
     if missing_runtime_elevation_edge_ids:
         raise ValueError(
             "Elevated base routing graph has edges without ready endpoint "
@@ -2165,6 +2253,7 @@ def build_base_routing_asset(
         "acceptedMappings": len(accepted_segment_ids),
         "cyclewaysEdges": sum(1 for edge in runtime_edges if edge["cwSegmentIds"]),
         "elevationEdges": sum(1 for edge in runtime_edges if edge.get("elevation")),
+        "shareIds": share_id_validation,
         "unresolvedSegmentIds": unresolved_segment_ids,
         "unresolvedSegments": len(unresolved_segment_ids),
         "duplicateAcceptedEdges": len(duplicate_edges),
@@ -2383,6 +2472,10 @@ def build_base_routing_shards(
         "generatedAt": base_routing_asset.get("generatedAt"),
         "sourceRoutingSchemaVersion": base_routing_asset.get("schemaVersion"),
         "defaultFormat": "compact",
+        "routeShare": {
+            "edgeShareIdSchemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
+            "edgeShareIds": "embedded-in-shards",
+        },
         "scheme": {
             "type": "lng-lat-grid",
             "shardSizeDegrees": shard_size_degrees,
@@ -2395,6 +2488,7 @@ def build_base_routing_shards(
         "manifest": {
             "schemaVersion": manifest["schemaVersion"],
             "shardSchemaVersion": manifest["shardSchemaVersion"],
+            "routeShare": manifest["routeShare"],
             "scheme": manifest["scheme"],
         },
         "summary": summary,
@@ -2847,6 +2941,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         generated_segments,
         args.routing_base_graph.resolve(),
         geojson_data,
+        args.base_edge_share_ids.resolve(),
     )
     site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
         compact_geojson_for_site(geojson_data),
@@ -2900,6 +2995,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
             "routingBaseGraph": str(args.routing_base_graph.resolve()),
             "cwBaseOverlay": str(args.cw_base_overlay.resolve()),
             "manualBaseEdges": str(args.manual_base_edges.resolve()),
+            "baseEdgeShareIds": str(args.base_edge_share_ids.resolve()),
         },
         "outputs": {
             "uniformKml": str(uniform_kml),
@@ -2980,6 +3076,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         generated_segments,
         args.routing_base_graph.resolve(),
         geojson_data,
+        args.base_edge_share_ids.resolve(),
     )
     site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
         compact_geojson_for_site(geojson_data),
@@ -3033,6 +3130,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
             "routingBaseGraph": str(args.routing_base_graph.resolve()),
             "cwBaseOverlay": str(args.cw_base_overlay.resolve()),
             "manualBaseEdges": str(args.manual_base_edges.resolve()),
+            "baseEdgeShareIds": str(args.base_edge_share_ids.resolve()),
         },
         "outputs": {
             "kml": str(output_kml),
@@ -3095,6 +3193,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=Path("data/manual-base-edges.geojson"),
         help="Manual base edges used for base graph freshness checks.",
+    )
+    parser.add_argument(
+        "--base-edge-share-ids",
+        type=Path,
+        default=Path("data/base-edge-share-ids.json"),
+        help="Authoring-only stable base edge share-id registry.",
     )
     parser.add_argument("--elevation-url", default=DEFAULT_ELEVATION_URL)
     parser.add_argument("--skip-elevation", action="store_true")

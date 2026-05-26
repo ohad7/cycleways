@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  BASE_ROUTE_VERSION,
   COMPACT_ROUTE_VERSION,
   decodeRoute,
   decodeRoutePayload,
+  encodeBaseRoute,
   encodeCompactRoute,
   encodeRoute,
   ROUTE_COORDINATE_PRECISION,
@@ -52,5 +54,41 @@ assert.deepEqual(decodeRoutePayload(legacyEncoded), {
 });
 
 assert.equal(encodeCompactRoute([{ lng: 200, lat: 33 }], segmentIds), "");
+
+const baseRouteEncoded = encodeBaseRoute({
+  graphVersion: "test-graph",
+  points: [
+    { lng: 35.6, lat: 33.1, edgeShareId: 120, edgeFraction: 0.25 },
+    { lng: 35.7, lat: 33.2, edgeShareId: 125, edgeFraction: 0.75 },
+  ],
+  shards: ["g710_661", "g710_662", { x: 711, y: 662 }],
+  legs: [
+    {
+      fromPoint: 0,
+      toPoint: 1,
+      edgeShareIds: [120, 121, 125],
+      directions: ["forward", "reverse", "forward"],
+    },
+  ],
+});
+const baseRoutePayload = decodeRoutePayload(baseRouteEncoded);
+assert.equal(baseRoutePayload.version, BASE_ROUTE_VERSION);
+assert.equal(baseRoutePayload.type, "base_route_v4");
+assert.equal(baseRoutePayload.graphVersion, "test-graph");
+assert.deepEqual(
+  baseRoutePayload.shards,
+  [
+    { id: "g710_661", x: 710, y: 661 },
+    { id: "g710_662", x: 710, y: 662 },
+    { id: "g711_662", x: 711, y: 662 },
+  ],
+);
+assert.deepEqual(baseRoutePayload.legs[0].edgeShareIds, [120, 121, 125]);
+assert.deepEqual(baseRoutePayload.legs[0].directions, [
+  "forward",
+  "reverse",
+  "forward",
+]);
+assert.ok(Math.abs(baseRoutePayload.routePoints[0].baseEdgeFraction - 0.25) < 0.0001);
 
 console.log("Route encoding tests passed");

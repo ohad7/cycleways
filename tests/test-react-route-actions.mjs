@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 import {
   addPoint,
+  buildShareInfo,
   buildShareUrl,
   clearRoute,
   createRouteManager,
@@ -84,6 +85,15 @@ const shareUrl = buildShareUrl(
   new URL("https://example.test/"),
 );
 assert.match(shareUrl, /^https:\/\/example\.test\/\?route=/);
+const shareInfo = buildShareInfo(
+  snapshot,
+  segmentsData,
+  manager,
+  new URL("https://example.test/"),
+);
+assert.equal(shareInfo.status, "ok");
+assert.equal(shareInfo.format, "compact_route");
+assert.equal(shareInfo.url, shareUrl);
 
 const restoredManager = await createRouteManager(
   RouteManager,

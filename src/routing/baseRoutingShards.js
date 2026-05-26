@@ -116,8 +116,26 @@ export function mergeBaseRoutingShards(shards) {
       }
     }
     for (const edge of shard.edges) {
-      if (edge && typeof edge.id === "string" && !edgesById.has(edge.id)) {
-        edgesById.set(edge.id, edge);
+      if (!edge || typeof edge.id !== "string") {
+        continue;
+      }
+      const shardIdsForEdge =
+        typeof shard.id === "string" ? [shard.id] : [];
+      if (!edgesById.has(edge.id)) {
+        edgesById.set(edge.id, {
+          ...edge,
+          shardIds: [
+            ...new Set([...(edge.shardIds || []), ...shardIdsForEdge]),
+          ],
+        });
+      } else {
+        const existing = edgesById.get(edge.id);
+        edgesById.set(edge.id, {
+          ...existing,
+          shardIds: [
+            ...new Set([...(existing.shardIds || []), ...shardIdsForEdge]),
+          ].sort(),
+        });
       }
     }
   }

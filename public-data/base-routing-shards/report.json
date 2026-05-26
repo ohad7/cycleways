@@ -2,6 +2,10 @@
   "manifest": {
     "schemaVersion": 1,
     "shardSchemaVersion": 1,
+    "routeShare": {
+      "edgeShareIdSchemaVersion": 1,
+      "edgeShareIds": "embedded-in-shards"
+    },
     "scheme": {
       "type": "lng-lat-grid",
       "shardSizeDegrees": 0.05,
@@ -15,9 +19,9 @@
     "representedEdges": 48356,
     "edgeReferences": 50554,
     "duplicatedSourceEdges": 2024,
-    "compactShardBytes": 26910430,
-    "messagePackShardBytes": 23372378,
-    "compactBinaryShardBytes": 4692657
+    "compactShardBytes": 27707791,
+    "messagePackShardBytes": 23928084,
+    "compactBinaryShardBytes": 4827117
   },
   "largestShards": [
     {

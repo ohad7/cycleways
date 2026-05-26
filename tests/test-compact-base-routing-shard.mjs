@@ -3,6 +3,7 @@ import { createBaseRoutingShardFetchLoader } from "../src/routing/baseRoutingSha
 import { decodeCompactBaseRoutingShard } from "../src/routing/compactBaseRoutingShard.js";
 
 const shardPayload = encodeCompactShard({
+  formatVersion: 2,
   schemaVersion: 1,
   sourceRoutingSchemaVersion: 2,
   id: "g1_1",
@@ -14,6 +15,7 @@ const shardPayload = encodeCompactShard({
   edges: [
     {
       id: "edge-1",
+      shareId: 42,
       from: "n1",
       to: "n2",
       distanceMeters: 123.4,
@@ -41,6 +43,7 @@ assert.deepEqual(decodeCompactBaseRoutingShard(shardPayload), {
   edges: [
     {
       id: "edge-1",
+      shareId: 42,
       from: "n1",
       to: "n2",
       distanceMeters: 123.4,
@@ -123,7 +126,7 @@ function encodeCompactShard(shard) {
   const nodeIndex = new Map(shard.nodes.map((node, index) => [node.id, index]));
   const bytes = [];
   writeAscii(bytes, "CWBS1");
-  writeVarUint(bytes, 1);
+  writeVarUint(bytes, shard.formatVersion || 1);
   writeVarUint(bytes, strings.length);
   for (const value of strings) {
     const encoded = new TextEncoder().encode(value);
@@ -143,6 +146,9 @@ function encodeCompactShard(shard) {
   writeVarUint(bytes, shard.edges.length);
   for (const edge of shard.edges) {
     writeVarUint(bytes, stringIndex.get(edge.id));
+    if ((shard.formatVersion || 1) >= 2) {
+      writeVarUint(bytes, edge.shareId || 0);
+    }
     writeVarUint(bytes, nodeIndex.get(edge.from));
     writeVarUint(bytes, nodeIndex.get(edge.to));
     writeVarInt(bytes, Math.round(edge.distanceMeters * 10));

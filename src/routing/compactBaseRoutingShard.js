@@ -1,6 +1,6 @@
 const textDecoder = new TextDecoder();
 const MAGIC = "CWBS1";
-const SUPPORTED_VERSION = 1;
+const SUPPORTED_VERSIONS = new Set([1, 2]);
 const COORDINATE_SCALE = 1_000_000;
 const DISTANCE_SCALE = 10;
 
@@ -21,9 +21,9 @@ class CompactBaseRoutingShardDecoder {
 
   decode() {
     this.readMagic();
-    const version = this.readVarUint();
-    if (version !== SUPPORTED_VERSION) {
-      throw new Error(`Unsupported compact base routing shard version: ${version}`);
+    this.version = this.readVarUint();
+    if (!SUPPORTED_VERSIONS.has(this.version)) {
+      throw new Error(`Unsupported compact base routing shard version: ${this.version}`);
     }
 
     const strings = this.readStringTable();
@@ -94,6 +94,7 @@ class CompactBaseRoutingShardDecoder {
     const edges = [];
     for (let index = 0; index < count; index++) {
       const id = strings[this.readVarUint()];
+      const shareId = this.version >= 2 ? this.readVarUint() : 0;
       const fromNodeIndex = this.readVarUint();
       const toNodeIndex = this.readVarUint();
       const distanceMeters = this.readScaledSigned(DISTANCE_SCALE, 1);
@@ -111,6 +112,9 @@ class CompactBaseRoutingShardDecoder {
         roadType: this.readNullableString(strings),
         cwSegmentIds: this.readSegmentIds(),
       };
+      if (this.version >= 2) {
+        edge.shareId = shareId > 0 ? shareId : null;
+      }
       const elevation = this.readElevation();
       if (elevation) {
         edge.elevation = elevation;
