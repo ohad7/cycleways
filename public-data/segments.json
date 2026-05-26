@@ -4947,6 +4947,330 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
+  "דרך פטרולים סורית חיבור נעמוש": {
+    "id": 306,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.672889,
+      "latitude": 33.20736,
+      "elevation": 315.0
+    },
+    "elevation_gain_m": 27.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 27.0
+  },
+  "שביל עין אל דיסא": {
+    "id": 307,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.682367,
+      "latitude": 33.215836,
+      "elevation": 333.0
+    },
+    "elevation_gain_m": 17.95,
+    "elevation_loss_m": 14.6,
+    "net_elevation_change_m": 3.35
+  },
+  "תל פאחר": {
+    "id": 308,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.689048,
+      "latitude": 33.225426,
+      "elevation": 378.0
+    },
+    "elevation_gain_m": 58.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 58.2
+  },
+  "עין פית": {
+    "id": 309,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.705269,
+      "latitude": 33.224765,
+      "elevation": 537.0
+    },
+    "elevation_gain_m": 56.0,
+    "elevation_loss_m": 11.4,
+    "net_elevation_change_m": 44.6
+  },
+  "מעיינות הבניאס": {
+    "id": 310,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.695137,
+      "latitude": 33.244557,
+      "elevation": 364.0
+    },
+    "elevation_gain_m": 21.4,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 21.4
+  },
+  "כביש 99 מעיינות הבניאס": {
+    "id": 311,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "type": "narrow",
+        "information": "שוליים צרים",
+        "location": [
+          33.24379,
+          35.690295
+        ]
+      },
+      {
+        "type": "narrow",
+        "information": "דרך מסוכנת",
+        "location": [
+          33.24336,
+          35.695991
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.693136,
+      "latitude": 33.242868,
+      "elevation": 375.0
+    },
+    "elevation_gain_m": 28.8,
+    "elevation_loss_m": 2.8,
+    "net_elevation_change_m": 26.0
+  },
+  "כביש 99 קטע": {
+    "id": 312,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.698327,
+      "latitude": 33.241344,
+      "elevation": 402.0
+    },
+    "elevation_gain_m": 9.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 9.2
+  },
+  "מטעים עין קניא": {
+    "id": 313,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.704245,
+      "latitude": 33.236862,
+      "elevation": 461.0
+    },
+    "elevation_gain_m": 124.4,
+    "elevation_loss_m": 16.8,
+    "net_elevation_change_m": 107.6
+  },
+  "מטעים עין קניא כביש 99": {
+    "id": 314,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.709526,
+      "latitude": 33.232344,
+      "elevation": 570.0
+    },
+    "elevation_gain_m": 2.2,
+    "elevation_loss_m": 2.4,
+    "net_elevation_change_m": -0.2
+  },
+  "מטעים עין קניא חיבור": {
+    "id": 315,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.711405,
+      "latitude": 33.234367,
+      "elevation": 556.0
+    },
+    "elevation_gain_m": 7.8,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 7.8
+  },
+  "עין קניא מטעים דרומיים": {
+    "id": 316,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.714521,
+      "latitude": 33.230676,
+      "elevation": 627.0
+    },
+    "elevation_gain_m": 94.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 94.0
+  },
+  "כביש 99 קטע 7": {
+    "id": 317,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.719419,
+      "latitude": 33.229563,
+      "elevation": 685.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל סער שביל מסומן": {
+    "id": 318,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.718067,
+      "latitude": 33.233238,
+      "elevation": 641.0
+    },
+    "elevation_gain_m": 137.2,
+    "elevation_loss_m": 54.8,
+    "net_elevation_change_m": 82.4
+  },
+  "נחל סער עין קניא": {
+    "id": 319,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.726389,
+      "latitude": 33.22888,
+      "elevation": 644.0
+    },
+    "elevation_gain_m": 23.0,
+    "elevation_loss_m": 14.0,
+    "net_elevation_change_m": 9.0
+  },
+  "נחל סער כביש 9895": {
+    "id": 320,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.724701,
+      "latitude": 33.228705,
+      "elevation": 649.0
+    },
+    "elevation_gain_m": 53.2,
+    "elevation_loss_m": 12.6,
+    "net_elevation_change_m": 40.6
+  },
+  "כביש 9895 מערב": {
+    "id": 321,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.722552,
+      "latitude": 33.227882,
+      "elevation": 713.0
+    },
+    "elevation_gain_m": 29.6,
+    "elevation_loss_m": 38.2,
+    "net_elevation_change_m": -8.6
+  },
+  "כביש 9895 מזרח": {
+    "id": 322,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.729447,
+      "latitude": 33.228206,
+      "elevation": 681.0
+    },
+    "elevation_gain_m": 4.4,
+    "elevation_loss_m": 21.78,
+    "net_elevation_change_m": -17.38
+  },
   "סובב דפנה": {
     "id": 81,
     "status": "deprecated",

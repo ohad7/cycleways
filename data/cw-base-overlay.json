@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-24T15:06:13.484Z",
+  "updatedAt": "2026-05-26T05:24:45.776Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -15590,7 +15590,7 @@
           "osmWayId": 431079364
         }
       ],
-      "updatedAt": "2026-05-20T18:41:36.907Z"
+      "updatedAt": "2026-05-26T04:42:55.416Z"
     },
     "263": {
       "segmentId": 263,
@@ -17321,6 +17321,748 @@
         }
       ],
       "updatedAt": "2026-05-24T14:54:00.850Z"
+    },
+    "306": {
+      "segmentId": 306,
+      "segmentName": "דרך פטרולים סורית חיבור נעמוש",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e61489720_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 61489720
+        },
+        {
+          "edgeId": "e87235623_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 87235623
+        }
+      ],
+      "updatedAt": "2026-05-26T04:42:57.416Z"
+    },
+    "307": {
+      "segmentId": 307,
+      "segmentName": "שביל עין אל דיסא",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e291745706_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 291745706
+        },
+        {
+          "edgeId": "e291745706_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 291745706
+        },
+        {
+          "edgeId": "e58478396_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478396
+        }
+      ],
+      "updatedAt": "2026-05-26T04:42:59.407Z"
+    },
+    "308": {
+      "segmentId": 308,
+      "segmentName": "תל פאחר",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e58478402_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478402
+        },
+        {
+          "edgeId": "e57009212_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 57009212
+        }
+      ],
+      "updatedAt": "2026-05-26T04:43:01.458Z"
+    },
+    "309": {
+      "segmentId": 309,
+      "segmentName": "עין פית",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e58478403_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478403
+        },
+        {
+          "edgeId": "e58478403_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478403
+        },
+        {
+          "edgeId": "e58478438_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478438
+        },
+        {
+          "edgeId": "e58478438_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478438
+        },
+        {
+          "edgeId": "e58478438_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478438
+        },
+        {
+          "edgeId": "e58478438_4",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478438
+        }
+      ],
+      "updatedAt": "2026-05-26T05:09:11.451Z"
+    },
+    "310": {
+      "segmentId": 310,
+      "segmentName": "מעיינות הבניאס",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e1200391944_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200391944
+        },
+        {
+          "edgeId": "e1200391944_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200391944
+        },
+        {
+          "edgeId": "e1200391944_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200391944
+        },
+        {
+          "edgeId": "e53819540_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 53819540
+        },
+        {
+          "edgeId": "e53819540_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 53819540
+        },
+        {
+          "edgeId": "e1200391943_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200391943
+        }
+      ],
+      "updatedAt": "2026-05-26T05:09:13.528Z"
+    },
+    "311": {
+      "segmentId": 311,
+      "segmentName": "כביש 99 מעיינות הבניאס",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.01,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e1024904290_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024904290
+        },
+        {
+          "edgeId": "e1200391939_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200391939
+        },
+        {
+          "edgeId": "e1200391941_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200391941
+        },
+        {
+          "edgeId": "e1200391940_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200391940
+        },
+        {
+          "edgeId": "e656426867_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 656426867
+        }
+      ],
+      "updatedAt": "2026-05-26T05:09:15.571Z"
+    },
+    "312": {
+      "segmentId": 312,
+      "segmentName": "כביש 99 קטע",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e656426867_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 656426867
+        }
+      ],
+      "updatedAt": "2026-05-26T05:09:17.626Z"
+    },
+    "313": {
+      "segmentId": 313,
+      "segmentName": "מטעים עין קניא",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e815936027_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815936027
+        },
+        {
+          "edgeId": "e815936027_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815936027
+        },
+        {
+          "edgeId": "e815936027_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815936027
+        },
+        {
+          "edgeId": "e815936028_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815936028
+        },
+        {
+          "edgeId": "e72552052_4",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 72552052
+        },
+        {
+          "edgeId": "e72552052_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 72552052
+        },
+        {
+          "edgeId": "e72552052_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 72552052
+        },
+        {
+          "edgeId": "e72552052_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 72552052
+        },
+        {
+          "edgeId": "e32476053_4",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 8,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 32476053
+        },
+        {
+          "edgeId": "e78763735_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 9,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 78763735
+        }
+      ],
+      "updatedAt": "2026-05-26T05:09:19.738Z"
+    },
+    "314": {
+      "segmentId": 314,
+      "segmentName": "מטעים עין קניא כביש 99",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e32476053_6",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 32476053
+        },
+        {
+          "edgeId": "e58478450_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 58478450
+        }
+      ],
+      "updatedAt": "2026-05-26T05:22:17.765Z"
+    },
+    "315": {
+      "segmentId": 315,
+      "segmentName": "מטעים עין קניא חיבור",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e78763735_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 78763735
+        }
+      ],
+      "updatedAt": "2026-05-26T05:22:19.845Z"
+    },
+    "316": {
+      "segmentId": 316,
+      "segmentName": "עין קניא מטעים דרומיים",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e78763735_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 78763735
+        }
+      ],
+      "updatedAt": "2026-05-26T05:22:21.919Z"
+    },
+    "317": {
+      "segmentId": 317,
+      "segmentName": "כביש 99 קטע 7",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e656426869_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 656426869
+        }
+      ],
+      "updatedAt": "2026-05-26T05:22:23.936Z"
+    },
+    "318": {
+      "segmentId": 318,
+      "segmentName": "נחל סער שביל מסומן",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e78763737_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 78763737
+        }
+      ],
+      "updatedAt": "2026-05-26T05:22:25.998Z"
+    },
+    "319": {
+      "segmentId": 319,
+      "segmentName": "נחל סער עין קניא",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.85,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e940718180_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 940718180
+        },
+        {
+          "edgeId": "e940718179_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 940718179
+        },
+        {
+          "edgeId": "e940718179_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 940718179
+        },
+        {
+          "edgeId": "e668076636_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 668076636
+        },
+        {
+          "edgeId": "e668076637_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 668076637
+        }
+      ],
+      "updatedAt": "2026-05-26T05:24:45.770Z"
+    },
+    "320": {
+      "segmentId": 320,
+      "segmentName": "נחל סער כביש 9895",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e78763737_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 78763737
+        },
+        {
+          "edgeId": "e78763737_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 78763737
+        }
+      ],
+      "updatedAt": "2026-05-26T05:22:30.030Z"
+    },
+    "321": {
+      "segmentId": 321,
+      "segmentName": "כביש 9895 מערב",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e53819731_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 53819731
+        }
+      ],
+      "updatedAt": "2026-05-26T05:22:32.144Z"
+    },
+    "322": {
+      "segmentId": 322,
+      "segmentName": "כביש 9895 מזרח",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e53819731_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 53819731
+        },
+        {
+          "edgeId": "e53819731_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 53819731
+        },
+        {
+          "edgeId": "e448570163_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 448570163
+        },
+        {
+          "edgeId": "e448570162_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 448570162
+        },
+        {
+          "edgeId": "e668076635_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 668076635
+        },
+        {
+          "edgeId": "e668076633_6",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 668076633
+        },
+        {
+          "edgeId": "e668076633_5",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 668076633
+        }
+      ],
+      "updatedAt": "2026-05-26T05:22:34.234Z"
     }
   }
 }
