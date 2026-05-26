@@ -302,6 +302,8 @@ function emptyDrawState() {
     hoverEndpoint: null,
     coords: [],
     hoverCoord: null,
+    edgeRefs: [],
+    hoverEdgeId: null,
   };
 }
 
@@ -1441,6 +1443,9 @@ function renderForm() {
 
 function canFinishDraw() {
   if (!isDrawing()) return false;
+  if (state.draw.type === "newSegmentEdges") {
+    return Array.isArray(state.draw.edgeRefs) && state.draw.edgeRefs.length >= 1;
+  }
   if (state.draw.type === "new" || state.draw.type === "manualBaseEdge") {
     return state.draw.coords.length >= 2;
   }
@@ -3804,7 +3809,40 @@ function startManualBaseEdgeDraw() {
 }
 
 function addSegment() {
-  startNewSegmentDraw();
+  startNewSegmentEdgesDraw();
+}
+
+function startNewSegmentEdgesDraw() {
+  if (!state.source) return;
+  if (state.workspaceMode !== "segments") {
+    setStatus("Switch to Segments mode to add a segment.", "error");
+    return;
+  }
+  if (isBaseGraphStale()) {
+    setStatus("Run Recalculate Graph + Matches before adding a segment.", "error");
+    return;
+  }
+  if (!state.baseOverlay.loaded) {
+    state.baseOverlay.enabled = true;
+    loadBaseOverlayData().then(() => {
+      if (!isBaseGraphStale()) startNewSegmentEdgesDraw();
+    }).catch(showError);
+    return;
+  }
+
+  state.selectedIndex = -1;
+  state.selectedVertexIndex = -1;
+  state.selectedDataIndex = -1;
+  state.draw = {
+    ...emptyDrawState(),
+    active: true,
+    type: "newSegmentEdges",
+    edgeRefs: [],
+  };
+  setMode("draw");
+  renderAll();
+  setStatus("Click base edges to compose the new segment. Press Done when ready.");
+  map.doubleClickZoom.disable();
 }
 
 function closestExtendEndpoint(point) {
@@ -3818,6 +3856,11 @@ function closestExtendEndpoint(point) {
   const endpoint = startDistance <= endDistance ? "start" : "end";
   const distance = Math.min(startDistance, endDistance);
   return distance <= EXTEND_ENDPOINT_THRESHOLD_PX ? { endpoint, distance } : null;
+}
+
+async function commitNewSegmentEdgesDrawn() {
+  // Stub: replaced by Task 6.
+  throw new Error("commitNewSegmentEdgesDrawn not implemented yet.");
 }
 
 function commitNewDrawnSegment() {
@@ -4113,13 +4156,15 @@ async function finishDraw() {
 
   const drawType = state.draw.type;
   const result =
-    drawType === "new"
-      ? commitNewDrawnSegment()
-      : drawType === "manualBaseEdge"
-        ? await commitManualBaseEdgeDrawn()
-        : drawType === "manualBaseEdgeExtend"
-          ? await commitManualBaseEdgeExtendDrawn()
-          : commitExtendDrawnSegment();
+    drawType === "newSegmentEdges"
+      ? await commitNewSegmentEdgesDrawn()
+      : drawType === "new"
+        ? commitNewDrawnSegment()
+        : drawType === "manualBaseEdge"
+          ? await commitManualBaseEdgeDrawn()
+          : drawType === "manualBaseEdgeExtend"
+            ? await commitManualBaseEdgeExtendDrawn()
+            : commitExtendDrawnSegment();
   clearDrawState();
   state.mode = "select";
   els.modeSelect.classList.add("active");
@@ -4132,7 +4177,9 @@ async function finishDraw() {
   setStatus(
     drawType === "manualBaseEdge" || drawType === "manualBaseEdgeExtend"
       ? `${result.message} Rebuild the OSM graph when ready.`
-      : `${result.message} Save the source when ready.`,
+      : drawType === "newSegmentEdges"
+        ? `${result.message} Save the source when ready.`
+        : `${result.message} Save the source when ready.`,
   );
 }
 
