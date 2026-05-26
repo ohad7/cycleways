@@ -71,9 +71,12 @@ shard production are unchanged.
 While composing, all state lives on `state.draw`:
 
 - `state.draw.type === "newSegmentEdges"`
-- `state.draw.edgeRefs: EdgeRef[]` — in click order; normalized for render
-  and validation via the existing `normalizeOverlayEdgeRefs`
-  (editor.js:1059), which produces a directed, connectivity-sorted chain
+- `state.draw.edgeRefs: EdgeRef[]` — in click order. Each click assigns the
+  next `sequenceIndex` (matching how today's CW Overlay edge-pick works).
+  `normalizeOverlayEdgeRefs` (editor.js:1059) only sorts by `sequenceIndex`,
+  not topology, so click order **is** physical order. Clicking edges out of
+  physical order produces a continuity-failure mapping that the user fixes
+  by removing and re-adding (same constraint as today's overlay edge-pick).
 - `state.draw.freehand: false` — flag flipped by the escape-hatch button to
   swap into today's `"new"` (point-drawing) draw type for the remainder of
   this composition
@@ -247,12 +250,14 @@ both paths so commit-time and edit-time results match exactly.
 
 1. **Non-empty.** `edgeRefs.length >= 1`. Empty is blocked at the UI level
    (Done disabled); this should never reach the persistence path.
-2. **Continuity.** After `normalizeOverlayEdgeRefs`, walk the chain: each
-   edge's end node must equal the next edge's start node (respecting
-   `direction`). Failure: `failureClass: "edge_pick_gap"`; message lists
-   the `(i, i+1)` pair and unmatched node ids; side panel links to the gap
-   location on the map. Single-edge chains pass trivially. Reuses
-   `edgeRefContinuityGaps` (editor.js:1962).
+2. **Continuity.** Reuses `edgeRefContinuityGaps` (editor.js:1962): after
+   `normalizeOverlayEdgeRefs`, walks consecutive pairs and measures the
+   distance between the previous edge's oriented end coord and the next
+   edge's oriented start coord. A gap above `MAX_EDGE_CONNECTION_GAP_M`
+   (12 m, editor.js:118) is a failure. Failure:
+   `failureClass: "edge_pick_gap"`; message lists the `(i, i+1)` pair with
+   their distance; side panel links to the gap location on the map.
+   Single-edge chains pass trivially.
 3. **Exclusivity.** For each `edgeRef`, no *other* accepted overlay
    mapping in `state.baseOverlay.overlay.segments` already references that
    edge. Failure: `failureClass: "edge_pick_conflict"`; message names the
@@ -329,11 +334,30 @@ immediately. Build remains the source of truth at promote time.
 - Stale base graph at commit → Done shows the existing "Run Recalculate
   Graph + Matches" prompt and does not write the segment.
 
-### Playwright e2e
+### Manual smoke checklist (in lieu of editor e2e)
 
-One happy-path scenario: boot editor against a test fixture, Add Segment,
-click two visible base edges, Done, assert the new segment appears in the
-segments list and renders on the map.
+The project has no Playwright tests targeting `editor/server.mjs` today, and
+adding one is non-trivial infrastructure (dedicated test data dir,
+mapbox mock for the editor, fixture base graph). Manual smoke instead, run
+locally after implementation:
+
+- Boot the editor, switch to Segments mode, click Add Segment.
+- Verify base graph edges become clickable; click two contiguous edges →
+  draft chain renders with order numbers; side panel shows `✓ continuous`.
+- Click Done → segment appears in the list, selected on the map, status
+  line confirms accept; overlay file on disk shows the new mapping with
+  `source: "edge_pick"` and `status: "accepted_edge_set"`.
+- Repeat with non-contiguous edges; verify `needs_edit` mapping with
+  `failureClass: "edge_pick_gap"` and a navigable link to the gap.
+- Repeat with an edge already owned by another accepted segment; verify
+  `edge_pick_conflict` and a navigable link to that segment.
+- Add Segment → Draw freehand instead → confirm → point-drawing toolbar →
+  Done → segment created without overlay mapping.
+- Add Segment → Esc → no source mutation, no overlay write.
+- Select an edge-picked segment → Add/remove edges → toggle one edge off →
+  mapping updates and re-validates.
+- Select an edge-picked segment → Split at edge boundary → two child
+  segments exist; parent deprecated.
 
 ## Out of Scope
 
@@ -345,6 +369,8 @@ Called out so reviewers see it:
 - No preserving in-progress draft across a "go fix base graph" round-trip.
 - No re-implementation of Build's full validation in the editor; commit-
   time validation is a guardrail, Build remains authoritative at promote.
+- No editor-targeted Playwright infrastructure in v1; manual smoke covers
+  DOM-level flows.
 
 ## Affected Files (informational)
 
