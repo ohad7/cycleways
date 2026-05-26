@@ -327,6 +327,10 @@ function isDrawing() {
   return state.mode === "draw" && state.draw.active;
 }
 
+function isComposingNewSegmentEdges() {
+  return isDrawing() && state.draw.type === "newSegmentEdges";
+}
+
 async function loadDataMarkerIcons() {
   for (const [iconName, iconPath] of Object.entries(DATA_ICON_PATHS)) {
     if (map.hasImage(iconName)) continue;
@@ -1117,14 +1121,15 @@ function cwOverlayNetworkFeaturesAtPoint(point) {
 }
 
 function updateWorkspaceLayerVisibility() {
+  const composing = isComposingNewSegmentEdges();
   const showSegments = state.workspaceMode === "segments";
   const showSelectedSegment = state.workspaceMode !== "base";
   const showUnresolvedSegments =
     state.workspaceMode === "segments" && state.showUnresolvedSegments && state.baseOverlay.loaded;
   const showBaseWorkspaceGraph =
     state.baseOverlay.loaded && state.baseOverlay.enabled && state.workspaceMode !== "segments";
-  const showBaseGraphVisual = showBaseWorkspaceGraph || showUnresolvedSegments;
-  const showBaseGraphHit = showBaseWorkspaceGraph;
+  const showBaseGraphVisual = showBaseWorkspaceGraph || showUnresolvedSegments || composing;
+  const showBaseGraphHit = showBaseWorkspaceGraph || composing;
   const showBaseEdit = showBaseWorkspaceGraph && state.workspaceMode === "base";
   const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
 
@@ -2330,6 +2335,31 @@ function overlayMappingEdgeRefIssues(mapping) {
     }
   }
   return issues;
+}
+
+function renderComposeStatus() {
+  // Stub: replaced by Task 5.
+}
+
+function toggleEdgeInCompose(feature) {
+  if (!isComposingNewSegmentEdges()) return;
+  const ref = edgeRefFromBaseFeature(feature, state.draw.edgeRefs.length);
+  if (!ref) return;
+  const currentIdx = state.draw.edgeRefs.findIndex(
+    (existing) => String(existing.edgeId) === String(ref.edgeId),
+  );
+  if (currentIdx >= 0) {
+    state.draw.edgeRefs = state.draw.edgeRefs
+      .filter((_, i) => i !== currentIdx)
+      .map((existing, i) => ({ ...existing, sequenceIndex: i }));
+    setStatus(`Removed base edge ${ref.edgeId} from draft.`);
+  } else {
+    state.draw.edgeRefs = [...state.draw.edgeRefs, ref];
+    setStatus(`Added base edge ${ref.edgeId} to draft (${state.draw.edgeRefs.length} edges).`);
+  }
+  updateMapSources();
+  renderDrawControls();
+  renderComposeStatus();
 }
 
 async function toggleSelectedOverlayBaseEdge(feature) {
@@ -5624,12 +5654,17 @@ function wireEvents() {
   });
 
   map.on("click", "base-graph-edges-hit-layer", (event) => {
-    if (state.mode !== "select" || !["base", "overlay"].includes(state.workspaceMode)) return;
+    if (state.mode !== "select" && !isComposingNewSegmentEdges()) return;
+    if (state.mode === "select" && !["base", "overlay"].includes(state.workspaceMode)) return;
     if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
     state.suppressNextSegmentClick = true;
     window.setTimeout(() => {
       state.suppressNextSegmentClick = false;
     }, 0);
+    if (isComposingNewSegmentEdges()) {
+      toggleEdgeInCompose(event.features[0]);
+      return;
+    }
     if (state.workspaceMode === "base") {
       selectBaseGraphEdge(event.features[0]);
     } else {
@@ -5638,8 +5673,16 @@ function wireEvents() {
   });
 
   map.on("click", "manual-base-edges-hit-layer", (event) => {
-    if (state.mode !== "select") return;
+    if (state.mode !== "select" && !isComposingNewSegmentEdges()) return;
     if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
+    if (isComposingNewSegmentEdges()) {
+      state.suppressNextSegmentClick = true;
+      window.setTimeout(() => {
+        state.suppressNextSegmentClick = false;
+      }, 0);
+      toggleEdgeInCompose(event.features[0]);
+      return;
+    }
     const manualIndex = Number(event.features[0].properties.manualIndex);
     if (state.workspaceMode === "base") {
       selectManualBaseEdgeByIndex(manualIndex);
