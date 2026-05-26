@@ -2487,6 +2487,93 @@ async function saveEdgePickedMapping(segmentId, feature, edgeRefs) {
   );
 }
 
+async function splitEdgePickedAtClickedEdge(feature) {
+  const segmentId = selectedSegmentId();
+  const selected = selectedFeature();
+  if (segmentId === null || !selected) return;
+  const mapping = state.baseOverlay.overlay?.segments?.[String(segmentId)] || {};
+  const refs = normalizeOverlayEdgeRefs(mapping.edgeRefs || []);
+  const ref = edgeRefFromBaseFeature(feature, 0);
+  if (!ref) return;
+  const boundaryIndex = refs.findIndex((r) => String(r.edgeId) === String(ref.edgeId));
+  if (boundaryIndex <= 0 || boundaryIndex >= refs.length) {
+    setStatus("Pick an internal edge to split here (not the first or last).", "error");
+    return;
+  }
+  const firstHalf = refs.slice(0, boundaryIndex).map((r, i) => ({ ...r, sequenceIndex: i }));
+  const secondHalf = refs.slice(boundaryIndex).map((r, i) => ({ ...r, sequenceIndex: i }));
+
+  const edgeLookup = new Map();
+  for (const f of state.baseOverlay.graphEdges?.features || []) {
+    edgeLookup.set(String(graphEdgeFeatureId(f)), f.geometry);
+  }
+  for (const f of manualBaseEdgeFeatures()) {
+    edgeLookup.set(String(manualBaseEdgeFeatureId(f)), f.geometry);
+  }
+  const firstCoords = stitchCoordsFromEdgeRefs(firstHalf, edgeLookup);
+  const secondCoords = stitchCoordsFromEdgeRefs(secondHalf, edgeLookup);
+  if (firstCoords.length < 2 || secondCoords.length < 2) {
+    setStatus("Split would leave an empty half. Cancelled.", "error");
+    return;
+  }
+
+  const childAId = nextSegmentId();
+  const childAName = uniqueSegmentName(`${featureName(selected)} A`);
+  const childA = {
+    type: "Feature",
+    properties: {
+      id: childAId,
+      name: childAName,
+      status: "active",
+      roadType: selected.properties.roadType || "paved",
+      quality: selected.properties.quality || defaultQuality(),
+    },
+    geometry: { type: "LineString", coordinates: firstCoords },
+  };
+  state.source.features.push(childA);
+
+  const childBId = nextSegmentId();
+  const childBName = uniqueSegmentName(`${featureName(selected)} B`);
+  const childB = {
+    type: "Feature",
+    properties: {
+      id: childBId,
+      name: childBName,
+      status: "active",
+      roadType: selected.properties.roadType || "paved",
+      quality: selected.properties.quality || defaultQuality(),
+    },
+    geometry: { type: "LineString", coordinates: secondCoords },
+  };
+  state.source.features.push(childB);
+
+  selected.properties = {
+    ...selected.properties,
+    status: "deprecated",
+    deprecated: true,
+    routeAnchors: selected.geometry.coordinates.map((c) => [c[0], c[1]]),
+  };
+  selected.geometry = null;
+
+  const overlaySegments = { ...(state.baseOverlay.overlay?.segments || {}) };
+  delete overlaySegments[String(segmentId)];
+  state.baseOverlay.overlay = {
+    ...emptyBaseOverlay(),
+    ...state.baseOverlay.overlay,
+    segments: overlaySegments,
+  };
+  await saveBaseOverlay();
+  await saveEdgePickedMapping(childAId, childA, firstHalf);
+  await saveEdgePickedMapping(childBId, childB, secondHalf);
+
+  state.splittingEdgePickAt = null;
+  refreshActiveFeatures();
+  state.selectedIndex = state.activeFeatures.findIndex((r) => r.sourceIndex === state.source.features.length - 1);
+  markDirty();
+  renderAll();
+  setStatus(`Split ${featureName(selected)} into ${childAName} and ${childBName}.`);
+}
+
 async function toggleEdgeInEdgePickedSegment(feature) {
   const segmentId = selectedSegmentId();
   const selected = selectedFeature();
@@ -5895,6 +5982,17 @@ function wireEvents() {
       setStatus("Click base edges to add or remove them from this segment.");
     } else {
       setStatus("Exited edge-edit mode.");
+    }
+    renderAll();
+  });
+  els.splitSegmentEdge.addEventListener("click", () => {
+    if (!isEdgePickedSelected()) return;
+    state.splittingEdgePickAt = state.splittingEdgePickAt === null ? 0 : null;
+    if (state.splittingEdgePickAt !== null) {
+      state.editingEdgePickEdges = false;
+      setStatus("Click an internal edge on the segment to split it there.");
+    } else {
+      setStatus("Cancelled split.");
     }
     renderAll();
   });
