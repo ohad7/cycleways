@@ -86,6 +86,12 @@ const shardAssets = {
     edges: edges.slice(1),
   },
 };
+const cwBaseIndex = {
+  schemaVersion: 1,
+  segments: {
+    10: [[101, 0]],
+  },
+};
 const points = [
   { lat: 33.00001, lng: 35.0001 },
   { lat: 33.00001, lng: 35.0019 },
@@ -138,6 +144,7 @@ const shardedSession = await createShardedRouteSession(
   },
   {
     paddingShards: 0,
+    cwBaseIndex,
     onStatus: (status) => shardStatuses.push(status),
   },
 );
@@ -153,18 +160,20 @@ const routeShareInfo = buildShareInfo(
   segmentsData,
   shardedSession.manager,
   new URL("https://example.test/"),
+  cwBaseIndex,
 );
-assert.equal(routeShareInfo.format, "base_route_v4");
+assert.equal(routeShareInfo.format, "hybrid_route_v6");
 assert.equal(routeShareInfo.status, "ok");
 const routeSharePayload = decodeRoutePayload(
   new URL(routeShareInfo.url).searchParams.get("route"),
 );
-assert.equal(routeSharePayload.type, "base_route_v4");
+assert.equal(routeSharePayload.type, "hybrid_route_v6");
 assert.deepEqual(routeSharePayload.shards.map((shard) => shard.id), [
   "g700_660",
   "g701_660",
 ]);
-assert.deepEqual(routeSharePayload.legs[0].edgeShareIds, [101, 102]);
+assert.equal(routeSharePayload.routePoints[0].lng, undefined);
+assert.deepEqual(routeSharePayload.spans[0].edgeShareIds, [101, 102]);
 assert.equal(shardedManagerLoads, 1);
 const replaySession = await createShardedRouteSession(
   IncrementalShardRouteManager,
@@ -172,7 +181,7 @@ const replaySession = await createShardedRouteSession(
   segmentsData,
   manifest,
   async (entry) => shardAssets[entry.id],
-  { paddingShards: 0 },
+  { paddingShards: 0, cwBaseIndex },
 );
 const replaySnapshot = await replaySession.restoreRouteParam(
   new URL(routeShareInfo.url).searchParams.get("route"),

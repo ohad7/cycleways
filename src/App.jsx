@@ -327,6 +327,7 @@ function App() {
                 { format: routingShardFormat() },
               ),
               {
+                cwBaseIndex: state.assets.cwBaseIndexData,
                 onStatus: (status) => {
                   if (!disposed) {
                     setRoutingShardStatus(status);
@@ -364,6 +365,7 @@ function App() {
                 manager,
                 routeParam,
                 state.assets.segmentsData,
+                state.assets.cwBaseIndexData,
               );
           if (shardedSession) {
             routeManagerRef.current = shardedSession.manager;
@@ -987,6 +989,7 @@ function App() {
       state.assets.segmentsData,
       routeManagerRef.current,
       window.location,
+      state.assets.cwBaseIndexData,
     );
   }, [
     routeState.geometry,

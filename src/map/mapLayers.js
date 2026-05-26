@@ -268,6 +268,7 @@ function setRouteNetworkFilter(map, layerId, segmentName) {
 }
 
 export function getRouteFeatureColor(feature) {
+  const roadType = feature.properties?.roadType;
   const originalColor =
     feature.properties?.stroke ||
     feature.properties?.["stroke-color"] ||
@@ -278,6 +279,9 @@ export function getRouteFeatureColor(feature) {
   }
 
   if (
+    roadType === "road" ||
+    originalColor === "#8f2424" ||
+    originalColor === "rgb(143, 36, 36)" ||
     originalColor === "#e6ee9c" ||
     originalColor === "rgb(230, 238, 156)"
   ) {

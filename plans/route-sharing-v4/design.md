@@ -1,10 +1,12 @@
-# Route Sharing V4 Design
+# Route Sharing V4/V5 Design
 
 ## Status
 
 Implemented in this branch. The first delivery includes stable edge share IDs,
 compact V4 route encoding, shard-hinted exact replay, fallback recalculation,
-and share URL length status.
+and share URL length status. A follow-up V5 hybrid format now prefers compact
+CycleWays segment spans and uses exact base-edge spans only where the route is
+outside a known CycleWays segment.
 
 ## Goal
 
@@ -59,6 +61,14 @@ When opening a V4 route:
 6. If the route URL is too long to share reliably, the share UI should warn or
    block copying instead of producing a fragile link.
 
+When opening a V5 route:
+
+1. The app loads the route-listed shards.
+2. The app expands CycleWays spans from the public `cw-base-index.json` mapping.
+3. Non-CycleWays spans are already stored as exact base-edge sequences.
+4. The expanded route is replayed through the same V4 exact-replay path.
+5. If expansion or replay fails, the app falls back to waypoint recalculation.
+
 ## Share Payload Model
 
 V4 should store route-specific data only. It should not require the browser to
@@ -95,6 +105,34 @@ The logical payload is:
 
 The URL should not contain this JSON. The implementation should encode the
 payload as compact binary and then URL-safe text.
+
+## V5 Hybrid Payload Model
+
+V5 keeps the same point anchors and shard hints as V4, but replaces many
+per-leg edge lists with compact spans:
+
+```js
+{
+  version: 5,
+  graphVersion: "...",
+  points: [{ lng, lat, edgeShareId, edgeFraction }],
+  shards: [{ x: 710, y: 661 }],
+  spans: [
+    { type: "cw", segmentId: 27, reversed: false },
+    { type: "base", edges: [1234, 1235], directions: [0, 1] }
+  ]
+}
+```
+
+The `cw` span means "use the accepted CycleWays-to-base mapping for this
+segment between the two adjacent point anchors." The `base` span is the V4-style
+exact edge sequence used for roads, connectors, and any leg that cannot be
+proven to be a contiguous CycleWays segment span.
+
+The public app loads `public-data/cw-base-index.json`, a compact generated
+index from CycleWays segment id to ordered base-edge share ids and directions.
+This index is deliberately small: it contains no geometry and no editor review
+metadata.
 
 ## Edge Share IDs
 

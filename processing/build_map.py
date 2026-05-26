@@ -6,6 +6,7 @@ public runtime outputs into deterministic paths:
 
 - public-data/bike_roads.geojson
 - public-data/segments.json
+- public-data/cw-base-index.json
 - public-data/exports/map.kml
 - public-data/map-manifest.json
 - report.json
@@ -2764,10 +2765,80 @@ def build_public_cycleways_display_geojson(
     return output, validation
 
 
+def build_public_cw_base_index(
+    base_routing_asset: dict[str, Any],
+    overlay_path: Path,
+    segments_data: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if not overlay_path.exists():
+        raise FileNotFoundError(f"CW base overlay not found: {overlay_path}")
+
+    overlay = load_json(overlay_path, {})
+    active_ids = active_segment_ids(segments_data)
+    runtime_edges_by_id = {
+        edge["id"]: edge
+        for edge in base_routing_asset.get("edges", [])
+        if isinstance(edge, dict) and isinstance(edge.get("id"), str)
+    }
+    segments: dict[str, Any] = {}
+    missing_share_ids: list[dict[str, Any]] = []
+
+    accepted_mappings = [
+        mapping
+        for mapping in (overlay.get("segments") or {}).values()
+        if (
+            isinstance(mapping, dict)
+            and isinstance(mapping.get("segmentId"), int)
+            and mapping.get("segmentId") in active_ids
+            and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
+        )
+    ]
+    accepted_mappings.sort(key=lambda mapping: int(mapping.get("segmentId") or 0))
+
+    for mapping in accepted_mappings:
+        segment_id = int(mapping["segmentId"])
+        edge_refs = []
+        for edge_ref in sorted_overlay_edge_refs(mapping):
+            edge_id = edge_ref.get("edgeId")
+            runtime_edge = runtime_edges_by_id.get(edge_id)
+            share_id = runtime_edge.get("shareId") if runtime_edge else None
+            if not isinstance(share_id, int) or share_id <= 0:
+                missing_share_ids.append(
+                    {"segmentId": segment_id, "edgeId": edge_id}
+                )
+                continue
+            direction_bit = 1 if edge_ref.get("direction") == "reverse" else 0
+            edge_refs.append([share_id, direction_bit])
+        if edge_refs:
+            segments[str(segment_id)] = edge_refs
+
+    if missing_share_ids:
+        examples = "; ".join(
+            json.dumps(item, ensure_ascii=False, separators=(",", ":"))
+            for item in missing_share_ids[:5]
+        )
+        raise ValueError(
+            "Public CW base index has edge refs without share IDs: "
+            f"{examples}"
+        )
+
+    index = {
+        "schemaVersion": 1,
+        "edgeShareIdSchemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
+        "segments": segments,
+    }
+    validation = {
+        "segments": len(segments),
+        "edgeRefs": sum(len(edge_refs) for edge_refs in segments.values()),
+    }
+    return index, validation
+
+
 def write_runtime_manifest(
     public_data_dir: Path,
     output_geojson: Path,
     output_segments: Path,
+    output_cw_base_index: Path,
     output_kml: Path,
     output_base_routing_shards: Path,
     elevation_stats: dict[str, Any],
@@ -2778,6 +2849,7 @@ def write_runtime_manifest(
         [
             output_geojson,
             output_segments,
+            output_cw_base_index,
             output_kml,
             base_routing_shard_manifest,
         ]
@@ -2792,11 +2864,13 @@ def write_runtime_manifest(
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "bikeRoads": public_relative(output_geojson),
         "segments": public_relative(output_segments),
+        "cwBaseIndex": public_relative(output_cw_base_index),
         "kml": public_relative(output_kml),
         "baseRoutingShards": public_relative(base_routing_shard_manifest),
         "hashes": {
             "bikeRoads": file_digest(output_geojson),
             "segments": file_digest(output_segments),
+            "cwBaseIndex": file_digest(output_cw_base_index),
             "kml": file_digest(output_kml),
             "baseRoutingShards": file_digest(base_routing_shard_manifest),
         },
@@ -2817,6 +2891,7 @@ def write_runtime_manifest(
             "sourceDisplayFallbackSegments": validation.get("cyclewaysDisplayGeometry", {}).get(
                 "sourceFallbackSegments"
             ),
+            "cwBaseIndexSegments": validation.get("cwBaseIndex", {}).get("segments"),
         },
     }
     write_json(manifest_path, manifest)
@@ -2825,6 +2900,7 @@ def write_runtime_manifest(
         "manifest": str(manifest_path),
         "geojson": str(output_geojson),
         "segments": str(output_segments),
+        "cwBaseIndex": str(output_cw_base_index),
         "kml": str(output_kml),
         "baseRoutingShards": str(base_routing_shard_manifest),
     }, manifest_path
@@ -2912,6 +2988,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     output_kml = public_data_dir / "exports" / "map.kml"
     output_geojson = public_data_dir / "bike_roads.geojson"
     output_segments = public_data_dir / "segments.json"
+    output_cw_base_index = public_data_dir / "cw-base-index.json"
     output_report = out_dir / "report.json"
 
     densities = create_uniform_kml(input_kml, uniform_kml, args.max_distance)
@@ -2962,6 +3039,12 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     emit_progress(args.verbose, "Writing public GeoJSON, segments JSON, and runtime manifest")
     write_site_geojson(output_geojson, site_geojson_data)
     write_json(output_segments, generated_segments)
+    cw_base_index, cw_base_index_validation = build_public_cw_base_index(
+        base_routing_asset,
+        args.cw_base_overlay.resolve(),
+        generated_segments,
+    )
+    write_json(output_cw_base_index, cw_base_index, compact=True)
 
     validation = validate_outputs(
         site_geojson_data,
@@ -2972,6 +3055,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     )
     validation["baseRouting"] = base_routing_validation
     validation["cyclewaysDisplayGeometry"] = display_geometry_validation
+    validation["cwBaseIndex"] = cw_base_index_validation
     base_routing_shard_outputs, base_routing_shard_validation = write_base_routing_shards(
         public_data_dir / "base-routing-shards",
         base_routing_asset,
@@ -2981,6 +3065,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         public_data_dir,
         output_geojson,
         output_segments,
+        output_cw_base_index,
         output_kml,
         public_data_dir / "base-routing-shards",
         elevation_stats,
@@ -3002,6 +3087,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
             "kml": str(output_kml),
             "geojson": str(output_geojson),
             "segments": str(output_segments),
+            "cwBaseIndex": str(output_cw_base_index),
             "baseRoutingShards": base_routing_shard_outputs,
             "manifest": str(manifest_path),
             "runtime": runtime_outputs,
@@ -3046,6 +3132,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     output_kml = public_data_dir / "exports" / "map.kml"
     output_geojson = public_data_dir / "bike_roads.geojson"
     output_segments = public_data_dir / "segments.json"
+    output_cw_base_index = public_data_dir / "cw-base-index.json"
     output_report = out_dir / "report.json"
 
     geojson_data, metrics_by_name, densities, elevation_stats = geojson_to_processed_geojson(
@@ -3097,6 +3184,12 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     emit_progress(args.verbose, "Writing public GeoJSON, segments JSON, KML, and runtime manifest")
     write_site_geojson(output_geojson, site_geojson_data)
     write_json(output_segments, generated_segments)
+    cw_base_index, cw_base_index_validation = build_public_cw_base_index(
+        base_routing_asset,
+        args.cw_base_overlay.resolve(),
+        generated_segments,
+    )
+    write_json(output_cw_base_index, cw_base_index, compact=True)
     write_kml_from_geojson(geojson_data, output_kml)
 
     validation = validate_outputs(
@@ -3108,6 +3201,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     )
     validation["baseRouting"] = base_routing_validation
     validation["cyclewaysDisplayGeometry"] = display_geometry_validation
+    validation["cwBaseIndex"] = cw_base_index_validation
     base_routing_shard_outputs, base_routing_shard_validation = write_base_routing_shards(
         public_data_dir / "base-routing-shards",
         base_routing_asset,
@@ -3117,6 +3211,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         public_data_dir,
         output_geojson,
         output_segments,
+        output_cw_base_index,
         output_kml,
         public_data_dir / "base-routing-shards",
         elevation_stats,
@@ -3136,6 +3231,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
             "kml": str(output_kml),
             "geojson": str(output_geojson),
             "segments": str(output_segments),
+            "cwBaseIndex": str(output_cw_base_index),
             "baseRoutingShards": base_routing_shard_outputs,
             "manifest": str(manifest_path),
             "runtime": runtime_outputs,

@@ -1,15 +1,17 @@
 {
-  "version": "cbaf278b2b52",
-  "generatedAt": "2026-05-26T10:01:49.101676Z",
+  "version": "9dca574d7902",
+  "generatedAt": "2026-05-26T16:43:23.544913Z",
   "bikeRoads": "bike_roads.geojson",
   "segments": "segments.json",
+  "cwBaseIndex": "cw-base-index.json",
   "kml": "exports/map.kml",
   "baseRoutingShards": "base-routing-shards/manifest.json",
   "hashes": {
     "bikeRoads": "702df16bc76bae5a9a21e66adcc7896a5ea6c1513186041ce865741857154be2",
     "segments": "d136fbd46719f73f9112907a2ccfce6df39ce4261abe69c69699b6dc5af4317c",
+    "cwBaseIndex": "de98fad29147c3a210006d57c4a11726b4730fdebb43d60dbe75188d598c1549",
     "kml": "bc273bf40f8abd2c26924a1ac855439c59e70842fb00f25fbe7b04ae05e2803f",
-    "baseRoutingShards": "55290fc3d806c6e5a81eedea785457b7f7101d9281058087c25816889de63efc"
+    "baseRoutingShards": "a2571b524ee79167a3f7724c49bc53adf97e22de407eb8a08a4794f4c777b192"
   },
   "elevation": {
     "skipElevation": false,
@@ -25,6 +27,7 @@
     "baseRoutingWarnings": 0,
     "baseRoutingBlockers": 0,
     "overlayDisplaySegments": 265,
-    "sourceDisplayFallbackSegments": 0
+    "sourceDisplayFallbackSegments": 0,
+    "cwBaseIndexSegments": 265
   }
 }

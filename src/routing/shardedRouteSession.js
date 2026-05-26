@@ -8,6 +8,7 @@ import {
   addPoint,
   createRouteManager,
   dragPoint,
+  expandHybridRoutePayload,
   restoreRoute,
   routePointsFromParam,
   snapshotRouteManager,
@@ -62,6 +63,7 @@ class ShardedRouteSession {
     this.loadedShards = new Map();
     this.loadedEntries = new Map();
     this.loadingShards = new Map();
+    this.cwBaseIndex = options.cwBaseIndex || null;
     this.manager = null;
   }
 
@@ -269,6 +271,9 @@ class ShardedRouteSession {
 
   async restoreRouteParam(routeParam) {
     const payload = decodeRoutePayload(routeParam);
+    if (payload.type === "hybrid_route_v5" || payload.type === "hybrid_route_v6") {
+      return this.restoreHybridRoutePayload(payload);
+    }
     if (payload.type === "base_route_v4") {
       return this.restoreBaseRoutePayload(payload);
     }
@@ -290,6 +295,26 @@ class ShardedRouteSession {
 
     console.warn(
       "[routing-shards] V4 exact route replay failed; recalculating from waypoint anchors",
+    );
+    return payload.routePoints?.length ? this.restorePoints(payload.routePoints) : null;
+  }
+
+  async restoreHybridRoutePayload(payload) {
+    await this.loadShardIds(
+      (payload.shards || []).map((shard) => shard.id).filter(Boolean),
+      "loading",
+    );
+    const expandedPayload = expandHybridRoutePayload(payload, this.cwBaseIndex);
+    if (
+      expandedPayload &&
+      typeof this.manager?.restoreBaseRouteFromPayload === "function" &&
+      this.manager.restoreBaseRouteFromPayload(expandedPayload)
+    ) {
+      return snapshotRouteManager(this.manager, this.segmentsData);
+    }
+
+    console.warn(
+      "[routing-shards] hybrid route replay failed; recalculating from waypoint anchors",
     );
     return payload.routePoints?.length ? this.restorePoints(payload.routePoints) : null;
   }

@@ -11,7 +11,7 @@ the browser uses hidden routing shards.
 
 ## Implementation Status
 
-Implemented in this branch as the first end-to-end V4 route sharing slice:
+Implemented in this branch as the first end-to-end V4/V5 route sharing slice:
 
 - Build assigns stable integer `shareId` values to runtime base edges from the
   authoring-only registry path `data/base-edge-share-ids.json`.
@@ -23,6 +23,30 @@ Implemented in this branch as the first end-to-end V4 route sharing slice:
   back to waypoint recalculation if exact replay fails.
 - The share modal reports long links and blocks copying links above the maximum
   URL length threshold.
+- Build emits `public-data/cw-base-index.json`, a compact public mapping from
+  CycleWays segment ids to ordered base edge share ids.
+- V5 hybrid route tokens prefer CycleWays segment spans and keep exact
+  base-edge spans only for non-CycleWays or mixed legs.
+- V5 restore expands hybrid spans into the V4 exact replay path, so the route
+  manager has one replay implementation.
+
+## V5 Hybrid Compression Slice
+
+- [x] Add `cw-base-index.json` to the generated public data set and runtime
+  manifest.
+- [x] Load the index with the normal map assets.
+- [x] Add a V5 binary route codec with point anchors, shard hints, and
+  sequential spans.
+- [x] Encode a leg as a CycleWays span only when its traversals exactly match a
+  contiguous span in the public index.
+- [x] Fall back to exact base-edge span encoding for mixed or arbitrary base
+  graph legs.
+- [x] Expand V5 into the V4 replay payload before route-manager restore.
+- [x] Keep V4, V3, and legacy decoding paths compatible.
+
+Current V5 intentionally preserves the user's current point anchors. A later
+slice can remove redundant shaping points inside a longer CycleWays span once
+the UI distinguishes true stops from shaping points.
 
 ## Guardrails
 

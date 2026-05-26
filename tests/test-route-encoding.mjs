@@ -6,7 +6,11 @@ import {
   decodeRoutePayload,
   encodeBaseRoute,
   encodeCompactRoute,
+  encodeHybridRoute,
+  encodeHybridRouteV6,
   encodeRoute,
+  HYBRID_ROUTE_VERSION,
+  HYBRID_ROUTE_V6_VERSION,
   ROUTE_COORDINATE_PRECISION,
 } from "../utils/route-encoding.js";
 
@@ -90,5 +94,81 @@ assert.deepEqual(baseRoutePayload.legs[0].directions, [
   "forward",
 ]);
 assert.ok(Math.abs(baseRoutePayload.routePoints[0].baseEdgeFraction - 0.25) < 0.0001);
+
+const hybridRouteEncoded = encodeHybridRoute({
+  graphVersion: "test-graph",
+  points: [
+    { lng: 35.6, lat: 33.1, edgeShareId: 120, edgeFraction: 0.25 },
+    { lng: 35.65, lat: 33.15, edgeShareId: 122, edgeFraction: 0.5 },
+    { lng: 35.7, lat: 33.2, edgeShareId: 125, edgeFraction: 0.75 },
+  ],
+  shards: ["g710_661", "g710_662"],
+  spans: [
+    { type: "cw", segmentId: 27, reversed: false },
+    {
+      type: "base",
+      edgeShareIds: [122, 124, 125],
+      directions: ["forward", "reverse", "forward"],
+    },
+  ],
+});
+const hybridRoutePayload = decodeRoutePayload(hybridRouteEncoded);
+assert.equal(hybridRoutePayload.version, HYBRID_ROUTE_VERSION);
+assert.equal(hybridRoutePayload.type, "hybrid_route_v5");
+assert.deepEqual(hybridRoutePayload.segmentIds, [27]);
+assert.deepEqual(hybridRoutePayload.spans, [
+  { type: "cw", segmentId: 27, reversed: false, fromPoint: 0, toPoint: 1 },
+  {
+    type: "base",
+    fromPoint: 1,
+    toPoint: 2,
+    edgeShareIds: [122, 124, 125],
+    edges: [122, 124, 125],
+    directions: ["forward", "reverse", "forward"],
+  },
+]);
+
+const hybridRouteV6Encoded = encodeHybridRouteV6({
+  graphVersion: "2026-05-26T16:43:18.801713Z",
+  points: [
+    { lng: 35.6, lat: 33.1, edgeShareId: 120, edgeFraction: 0.25 },
+    { lng: 35.65, lat: 33.15, edgeShareId: 122, edgeFraction: 0.5 },
+    { lng: 35.7, lat: 33.2, edgeShareId: 125, edgeFraction: 0.75 },
+  ],
+  shards: ["g710_661", "g710_662"],
+  spans: [
+    { type: "cw", segmentId: 27, reversed: false },
+    {
+      type: "cwChain",
+      runs: [
+        { segmentId: 12, reversed: false, startIndex: 3, edgeCount: 2 },
+        { segmentId: 14, reversed: true, startIndex: 8, edgeCount: 1 },
+      ],
+    },
+  ],
+});
+const hybridRouteV6Payload = decodeRoutePayload(hybridRouteV6Encoded);
+assert.equal(hybridRouteV6Payload.version, HYBRID_ROUTE_V6_VERSION);
+assert.equal(hybridRouteV6Payload.type, "hybrid_route_v6");
+assert.equal(hybridRouteV6Payload.routePoints[0].lng, undefined);
+assert.equal(hybridRouteV6Payload.routePoints[0].baseEdgeShareId, 120);
+assert.ok(Math.abs(hybridRouteV6Payload.routePoints[1].baseEdgeFraction - 0.5) < 0.0001);
+assert.deepEqual(hybridRouteV6Payload.segmentIds, [27, 12, 14]);
+assert.deepEqual(hybridRouteV6Payload.spans, [
+  { type: "cw", segmentId: 27, reversed: false, fromPoint: 0, toPoint: 1 },
+  {
+    type: "cwChain",
+    fromPoint: 1,
+    toPoint: 2,
+    runs: [
+      { segmentId: 12, reversed: false, startIndex: 3, edgeCount: 2 },
+      { segmentId: 14, reversed: true, startIndex: 8, edgeCount: 1 },
+    ],
+  },
+]);
+assert.ok(
+  hybridRouteV6Encoded.length < hybridRouteEncoded.length,
+  `expected V6 (${hybridRouteV6Encoded.length}) to be shorter than V5 (${hybridRouteEncoded.length})`,
+);
 
 console.log("Route encoding tests passed");

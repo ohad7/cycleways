@@ -3,6 +3,7 @@ const MAP_MANIFEST_PATH = "public-data/map-manifest.json";
 const DEFAULT_MAP_ASSETS = {
   bikeRoads: "bike_roads.geojson",
   segments: "segments.json",
+  cwBaseIndex: null,
   assetBasePath: MAP_MANIFEST_PATH,
 };
 
@@ -83,10 +84,18 @@ export async function loadMapAssets(options = {}) {
   const [
     segmentsData,
     geoJsonData,
+    cwBaseIndexData,
     baseRoutingShardManifestData,
   ] = await Promise.all([
     fetchJsonAsset(manifest.segments, fetchOptions, manifestBasePath),
     fetchJsonAsset(manifest.bikeRoads, fetchOptions, manifestBasePath),
+    manifest.cwBaseIndex
+      ? fetchJsonAsset(
+          assetPathWithVersion(manifest.cwBaseIndex, manifest.version),
+          fetchOptions,
+          manifestBasePath,
+        )
+      : Promise.resolve(null),
     useRoutingShards
       ? fetchJsonAsset(
           assetPathWithVersion(manifest.baseRoutingShards, manifest.version),
@@ -100,6 +109,7 @@ export async function loadMapAssets(options = {}) {
     manifest,
     segmentsData,
     geoJsonData,
+    cwBaseIndexData,
     baseRoutingNetworkData: null,
     baseRoutingShardManifestData,
     baseRoutingShardManifestPath,
@@ -114,6 +124,7 @@ export function summarizeMapAssets({
   baseRoutingNetworkData,
   baseRoutingShardManifestData,
   baseRoutingMode,
+  cwBaseIndexData,
 }) {
   const features = geoJsonData?.features || [];
   const coordinateCount = features.reduce((total, feature) => {
@@ -134,5 +145,7 @@ export function summarizeMapAssets({
     baseRoutingMode: baseRoutingMode || "shards",
     baseRoutingShardManifestFile: manifest.baseRoutingShards || null,
     baseRoutingShards: baseRoutingShardManifestData?.shards?.length || 0,
+    cwBaseIndexFile: manifest.cwBaseIndex || null,
+    cwBaseIndexSegments: Object.keys(cwBaseIndexData?.segments || {}).length,
   };
 }

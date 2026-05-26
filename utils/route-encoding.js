@@ -5,8 +5,13 @@
 const ROUTE_VERSION = 2;
 export const COMPACT_ROUTE_VERSION = 3;
 export const BASE_ROUTE_VERSION = 4;
+export const HYBRID_ROUTE_VERSION = 5;
+export const HYBRID_ROUTE_V6_VERSION = 6;
 export const ROUTE_COORDINATE_PRECISION = 1e6;
 export const ROUTE_EDGE_FRACTION_PRECISION = 65535;
+const HYBRID_SPAN_BASE = 0;
+const HYBRID_SPAN_CYCLEWAYS = 1;
+const HYBRID_SPAN_CYCLEWAYS_CHAIN = 2;
 
 // Base58 alphabet (Bitcoin-style)
 const BASE58_ALPHABET =
@@ -308,7 +313,138 @@ export function encodeBaseRoute(routePayload) {
   return base58Encode(new Uint8Array(bytes));
 }
 
+export function encodeHybridRoute(routePayload) {
+  const points = normalizeBaseRoutePoints(
+    routePayload?.points || routePayload?.routePoints,
+  );
+  const shards = normalizeRouteShardCells(routePayload?.shards);
+  const spans = normalizeHybridRouteSpans(routePayload?.spans);
+  if (points.length < 2) return "";
+  if (spans.length !== points.length - 1) return "";
+  if (spans.length > 0 && shards.length === 0) return "";
+
+  const bytes = [HYBRID_ROUTE_VERSION];
+  writeString(bytes, routePayload?.graphVersion || "");
+
+  writeUnsignedVarint(bytes, points.length);
+  let previousLng = 0;
+  let previousLat = 0;
+  points.forEach((point, index) => {
+    const lng = quantizeCoordinate(point.lng);
+    const lat = quantizeCoordinate(point.lat);
+    writeSignedVarint(bytes, index === 0 ? lng : lng - previousLng);
+    writeSignedVarint(bytes, index === 0 ? lat : lat - previousLat);
+    previousLng = lng;
+    previousLat = lat;
+    writeUnsignedVarint(bytes, point.edgeShareId);
+    writeUnsignedVarint(bytes, quantizeFraction(point.edgeFraction));
+  });
+
+  writeUnsignedVarint(bytes, shards.length);
+  let previousX = 0;
+  let previousY = 0;
+  shards.forEach((shard, index) => {
+    writeSignedVarint(bytes, index === 0 ? shard.x : shard.x - previousX);
+    writeSignedVarint(bytes, index === 0 ? shard.y : shard.y - previousY);
+    previousX = shard.x;
+    previousY = shard.y;
+  });
+
+  writeUnsignedVarint(bytes, spans.length);
+  spans.forEach((span) => {
+    if (span.type === "cw") {
+      writeUnsignedVarint(bytes, HYBRID_SPAN_CYCLEWAYS);
+      writeUnsignedVarint(bytes, span.segmentId);
+      writeUnsignedVarint(bytes, span.reversed ? 1 : 0);
+      return;
+    }
+
+    writeUnsignedVarint(bytes, HYBRID_SPAN_BASE);
+    writeUnsignedVarint(bytes, span.edgeShareIds.length);
+    span.edgeShareIds.forEach((edgeShareId) => writeUnsignedVarint(bytes, edgeShareId));
+    writeDirectionBits(bytes, span.directions);
+  });
+
+  return base58Encode(new Uint8Array(bytes));
+}
+
+export function encodeHybridRouteV6(routePayload) {
+  const points = normalizeBaseRouteAnchors(
+    routePayload?.points || routePayload?.routePoints,
+    { requireCoordinates: false, requireEdgeShareId: true },
+  );
+  const shards = normalizeRouteShardCells(routePayload?.shards);
+  const spans = normalizeHybridRouteSpans(routePayload?.spans);
+  if (points.length < 2) return "";
+  if (spans.length !== points.length - 1) return "";
+  if (spans.length > 0 && shards.length === 0) return "";
+
+  const bytes = [HYBRID_ROUTE_V6_VERSION];
+  writeUnsignedVarint(bytes, graphVersionHash(routePayload));
+
+  writeUnsignedVarint(bytes, points.length);
+  let previousEdgeShareId = 0;
+  points.forEach((point, index) => {
+    if (index === 0) {
+      writeUnsignedVarint(bytes, point.edgeShareId);
+    } else {
+      writeSignedVarint(bytes, point.edgeShareId - previousEdgeShareId);
+    }
+    previousEdgeShareId = point.edgeShareId;
+    writeUnsignedVarint(bytes, quantizeFraction(point.edgeFraction));
+  });
+
+  writeUnsignedVarint(bytes, shards.length);
+  let previousX = 0;
+  let previousY = 0;
+  shards.forEach((shard, index) => {
+    writeSignedVarint(bytes, index === 0 ? shard.x : shard.x - previousX);
+    writeSignedVarint(bytes, index === 0 ? shard.y : shard.y - previousY);
+    previousX = shard.x;
+    previousY = shard.y;
+  });
+
+  writeUnsignedVarint(bytes, spans.length);
+  spans.forEach((span) => {
+    if (span.type === "cw") {
+      writeUnsignedVarint(bytes, HYBRID_SPAN_CYCLEWAYS);
+      writeUnsignedVarint(bytes, span.segmentId);
+      writeUnsignedVarint(bytes, span.reversed ? 1 : 0);
+      return;
+    }
+
+    if (span.type === "cwChain") {
+      writeUnsignedVarint(bytes, HYBRID_SPAN_CYCLEWAYS_CHAIN);
+      writeUnsignedVarint(bytes, span.runs.length);
+      span.runs.forEach((run) => {
+        writeUnsignedVarint(bytes, run.segmentId);
+        writeUnsignedVarint(bytes, run.reversed ? 1 : 0);
+        writeUnsignedVarint(bytes, run.startIndex);
+        writeUnsignedVarint(bytes, run.edgeCount);
+      });
+      return;
+    }
+
+    writeUnsignedVarint(bytes, HYBRID_SPAN_BASE);
+    writeUnsignedVarint(bytes, span.edgeShareIds.length);
+    writeEdgeShareIdDeltas(bytes, span.edgeShareIds);
+    writeDirectionBits(bytes, span.directions);
+  });
+
+  return base58Encode(new Uint8Array(bytes));
+}
+
 function normalizeBaseRoutePoints(points) {
+  return normalizeBaseRouteAnchors(points, {
+    requireCoordinates: true,
+    requireEdgeShareId: false,
+  });
+}
+
+function normalizeBaseRouteAnchors(
+  points,
+  { requireCoordinates = true, requireEdgeShareId = false } = {},
+) {
   return Array.isArray(points)
     ? points
         .map((point) => {
@@ -326,8 +462,33 @@ function normalizeBaseRoutePoints(points) {
             edgeFraction: Number.isFinite(edgeFraction) ? edgeFraction : 0,
           };
         })
-        .filter((point) => isValidLngLat(point.lng, point.lat))
+        .filter((point) => {
+          if (requireCoordinates && !isValidLngLat(point.lng, point.lat)) {
+            return false;
+          }
+          if (requireEdgeShareId && point.edgeShareId <= 0) {
+            return false;
+          }
+          return true;
+        })
     : [];
+}
+
+function graphVersionHash(routePayload) {
+  const direct = Number(routePayload?.graphVersionHash);
+  if (Number.isSafeInteger(direct) && direct >= 0) {
+    return direct;
+  }
+
+  const text = String(routePayload?.graphVersion || "");
+  if (!text) return 0;
+
+  let hash = 2166136261;
+  for (const byte of new TextEncoder().encode(text)) {
+    hash ^= byte;
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash;
 }
 
 function normalizeRouteShardCells(shards) {
@@ -398,6 +559,81 @@ function normalizeRouteLegs(legs) {
     : [];
 }
 
+function normalizeHybridRouteSpans(spans) {
+  return Array.isArray(spans)
+    ? spans
+        .map((span) => {
+          if (span?.type === "cw" || span?.type === "cycleways") {
+            const segmentId = Number(span.segmentId);
+            if (!Number.isSafeInteger(segmentId) || segmentId <= 0) {
+              return null;
+            }
+            return {
+              type: "cw",
+              segmentId,
+              reversed: Boolean(span.reversed),
+            };
+          }
+
+          if (span?.type === "cwChain" || span?.type === "cw_chain") {
+            const runs = (Array.isArray(span.runs) ? span.runs : [])
+              .map((run) => ({
+                segmentId: Number(run?.segmentId),
+                reversed: Boolean(run?.reversed),
+                startIndex: Number(run?.startIndex),
+                edgeCount: Number(run?.edgeCount),
+              }))
+              .filter(
+                (run) =>
+                  Number.isSafeInteger(run.segmentId) &&
+                  run.segmentId > 0 &&
+                  Number.isSafeInteger(run.startIndex) &&
+                  run.startIndex >= 0 &&
+                  Number.isSafeInteger(run.edgeCount) &&
+                  run.edgeCount > 0,
+              );
+            return runs.length > 0
+              ? {
+                  type: "cwChain",
+                  runs,
+                }
+              : null;
+          }
+
+          const edgeShareIds = (Array.isArray(span?.edgeShareIds)
+            ? span.edgeShareIds
+            : Array.isArray(span?.edges)
+              ? span.edges
+              : [])
+            .map((edgeShareId) => Number(edgeShareId))
+            .filter(
+              (edgeShareId) =>
+                Number.isSafeInteger(edgeShareId) && edgeShareId > 0,
+            );
+          const directions = (Array.isArray(span?.directions)
+            ? span.directions
+            : [])
+            .slice(0, edgeShareIds.length)
+            .map((direction) =>
+              direction === "reverse" || direction === 1
+                ? "reverse"
+                : "forward",
+            );
+          while (directions.length < edgeShareIds.length) {
+            directions.push("forward");
+          }
+          return edgeShareIds.length > 0
+            ? {
+                type: "base",
+                edgeShareIds,
+                directions,
+              }
+            : null;
+        })
+        .filter(Boolean)
+    : [];
+}
+
 function writeDirectionBits(bytes, directions) {
   for (let index = 0; index < directions.length; index += 8) {
     let byte = 0;
@@ -422,6 +658,32 @@ function readDirectionBits(bytes, cursor, count) {
     }
   }
   return directions;
+}
+
+function writeEdgeShareIdDeltas(bytes, edgeShareIds) {
+  let previousEdgeShareId = 0;
+  edgeShareIds.forEach((edgeShareId, index) => {
+    if (index === 0) {
+      writeUnsignedVarint(bytes, edgeShareId);
+    } else {
+      writeSignedVarint(bytes, edgeShareId - previousEdgeShareId);
+    }
+    previousEdgeShareId = edgeShareId;
+  });
+}
+
+function readEdgeShareIdDeltas(bytes, cursor, count) {
+  const edgeShareIds = [];
+  let previousEdgeShareId = 0;
+  for (let edgeIndex = 0; edgeIndex < count; edgeIndex++) {
+    const edgeShareId =
+      edgeIndex === 0
+        ? readUnsignedVarint(bytes, cursor)
+        : previousEdgeShareId + readSignedVarint(bytes, cursor);
+    previousEdgeShareId = edgeShareId;
+    edgeShareIds.push(edgeShareId);
+  }
+  return edgeShareIds;
 }
 
 function decodeCompactRouteBytes(uint8Array) {
@@ -537,6 +799,218 @@ function decodeBaseRouteBytes(uint8Array) {
   };
 }
 
+function decodeHybridRouteBytes(uint8Array) {
+  const cursor = { index: 1 };
+  const graphVersion = readString(uint8Array, cursor);
+  const pointCount = readUnsignedVarint(uint8Array, cursor);
+  const routePoints = [];
+
+  let previousLng = 0;
+  let previousLat = 0;
+  for (let index = 0; index < pointCount; index++) {
+    const lngDelta = readSignedVarint(uint8Array, cursor);
+    const latDelta = readSignedVarint(uint8Array, cursor);
+    const lng = index === 0 ? lngDelta : previousLng + lngDelta;
+    const lat = index === 0 ? latDelta : previousLat + latDelta;
+    previousLng = lng;
+    previousLat = lat;
+
+    const edgeShareId = readUnsignedVarint(uint8Array, cursor);
+    const edgeFraction = dequantizeFraction(readUnsignedVarint(uint8Array, cursor));
+    routePoints.push({
+      lng: dequantizeCoordinate(lng),
+      lat: dequantizeCoordinate(lat),
+      id: Date.now() + index + Math.random(),
+      baseEdgeShareId: edgeShareId > 0 ? edgeShareId : null,
+      baseEdgeFraction: edgeFraction,
+    });
+  }
+
+  const shardCount = readUnsignedVarint(uint8Array, cursor);
+  const shards = [];
+  let previousX = 0;
+  let previousY = 0;
+  for (let index = 0; index < shardCount; index++) {
+    const xDelta = readSignedVarint(uint8Array, cursor);
+    const yDelta = readSignedVarint(uint8Array, cursor);
+    const x = index === 0 ? xDelta : previousX + xDelta;
+    const y = index === 0 ? yDelta : previousY + yDelta;
+    previousX = x;
+    previousY = y;
+    shards.push({ id: routeShardId(x, y), x, y });
+  }
+
+  const spanCount = readUnsignedVarint(uint8Array, cursor);
+  const spans = [];
+  for (let index = 0; index < spanCount; index++) {
+    const kind = readUnsignedVarint(uint8Array, cursor);
+    if (kind === HYBRID_SPAN_CYCLEWAYS) {
+      const segmentId = readUnsignedVarint(uint8Array, cursor);
+      const reversed = readUnsignedVarint(uint8Array, cursor) === 1;
+      spans.push({
+        type: "cw",
+        segmentId,
+        reversed,
+        fromPoint: index,
+        toPoint: index + 1,
+      });
+      continue;
+    }
+
+    if (kind !== HYBRID_SPAN_BASE) {
+      throw new Error(`Invalid V5 route span kind: ${kind}`);
+    }
+    const edgeCount = readUnsignedVarint(uint8Array, cursor);
+    const edgeShareIds = [];
+    for (let edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
+      edgeShareIds.push(readUnsignedVarint(uint8Array, cursor));
+    }
+    const directions = readDirectionBits(uint8Array, cursor, edgeCount);
+    spans.push({
+      type: "base",
+      fromPoint: index,
+      toPoint: index + 1,
+      edgeShareIds,
+      edges: edgeShareIds,
+      directions,
+    });
+  }
+
+  if (cursor.index !== uint8Array.length) {
+    throw new Error("Invalid V5 route payload: trailing bytes");
+  }
+
+  return {
+    version: HYBRID_ROUTE_VERSION,
+    type: "hybrid_route_v5",
+    graphVersion,
+    routePoints,
+    shards,
+    spans,
+    segmentIds: [
+      ...new Set(
+        spans
+          .filter((span) => span.type === "cw")
+          .map((span) => span.segmentId),
+      ),
+    ],
+  };
+}
+
+function decodeHybridRouteV6Bytes(uint8Array) {
+  const cursor = { index: 1 };
+  const graphVersionHash = readUnsignedVarint(uint8Array, cursor);
+  const pointCount = readUnsignedVarint(uint8Array, cursor);
+  const routePoints = [];
+
+  let previousEdgeShareId = 0;
+  for (let index = 0; index < pointCount; index++) {
+    const edgeShareId =
+      index === 0
+        ? readUnsignedVarint(uint8Array, cursor)
+        : previousEdgeShareId + readSignedVarint(uint8Array, cursor);
+    previousEdgeShareId = edgeShareId;
+    const edgeFraction = dequantizeFraction(readUnsignedVarint(uint8Array, cursor));
+    routePoints.push({
+      id: Date.now() + index + Math.random(),
+      baseEdgeShareId: edgeShareId > 0 ? edgeShareId : null,
+      baseEdgeFraction: edgeFraction,
+    });
+  }
+
+  const shardCount = readUnsignedVarint(uint8Array, cursor);
+  const shards = [];
+  let previousX = 0;
+  let previousY = 0;
+  for (let index = 0; index < shardCount; index++) {
+    const xDelta = readSignedVarint(uint8Array, cursor);
+    const yDelta = readSignedVarint(uint8Array, cursor);
+    const x = index === 0 ? xDelta : previousX + xDelta;
+    const y = index === 0 ? yDelta : previousY + yDelta;
+    previousX = x;
+    previousY = y;
+    shards.push({ id: routeShardId(x, y), x, y });
+  }
+
+  const spanCount = readUnsignedVarint(uint8Array, cursor);
+  const spans = [];
+  for (let index = 0; index < spanCount; index++) {
+    const kind = readUnsignedVarint(uint8Array, cursor);
+    if (kind === HYBRID_SPAN_CYCLEWAYS) {
+      const segmentId = readUnsignedVarint(uint8Array, cursor);
+      const reversed = readUnsignedVarint(uint8Array, cursor) === 1;
+      spans.push({
+        type: "cw",
+        segmentId,
+        reversed,
+        fromPoint: index,
+        toPoint: index + 1,
+      });
+      continue;
+    }
+
+    if (kind === HYBRID_SPAN_CYCLEWAYS_CHAIN) {
+      const runCount = readUnsignedVarint(uint8Array, cursor);
+      const runs = [];
+      for (let runIndex = 0; runIndex < runCount; runIndex++) {
+        runs.push({
+          segmentId: readUnsignedVarint(uint8Array, cursor),
+          reversed: readUnsignedVarint(uint8Array, cursor) === 1,
+          startIndex: readUnsignedVarint(uint8Array, cursor),
+          edgeCount: readUnsignedVarint(uint8Array, cursor),
+        });
+      }
+      spans.push({
+        type: "cwChain",
+        fromPoint: index,
+        toPoint: index + 1,
+        runs,
+      });
+      continue;
+    }
+
+    if (kind !== HYBRID_SPAN_BASE) {
+      throw new Error(`Invalid V6 route span kind: ${kind}`);
+    }
+    const edgeCount = readUnsignedVarint(uint8Array, cursor);
+    const edgeShareIds = readEdgeShareIdDeltas(uint8Array, cursor, edgeCount);
+    const directions = readDirectionBits(uint8Array, cursor, edgeCount);
+    spans.push({
+      type: "base",
+      fromPoint: index,
+      toPoint: index + 1,
+      edgeShareIds,
+      edges: edgeShareIds,
+      directions,
+    });
+  }
+
+  if (cursor.index !== uint8Array.length) {
+    throw new Error("Invalid V6 route payload: trailing bytes");
+  }
+
+  return {
+    version: HYBRID_ROUTE_V6_VERSION,
+    type: "hybrid_route_v6",
+    graphVersion: graphVersionHash > 0 ? `h${graphVersionHash.toString(16)}` : "",
+    graphVersionHash,
+    routePoints,
+    shards,
+    spans,
+    segmentIds: [
+      ...new Set(
+        spans.flatMap((span) => {
+          if (span.type === "cw") return [span.segmentId];
+          if (span.type === "cwChain") {
+            return span.runs.map((run) => run.segmentId);
+          }
+          return [];
+        }),
+      ),
+    ],
+  };
+}
+
 export function decodeRoutePayload(routeString) {
   if (!routeString) {
     return {
@@ -559,6 +1033,12 @@ export function decodeRoutePayload(routeString) {
     }
 
     const version = uint8Array[0];
+    if (version === HYBRID_ROUTE_V6_VERSION) {
+      return decodeHybridRouteV6Bytes(uint8Array);
+    }
+    if (version === HYBRID_ROUTE_VERSION) {
+      return decodeHybridRouteBytes(uint8Array);
+    }
     if (version === BASE_ROUTE_VERSION) {
       return decodeBaseRouteBytes(uint8Array);
     }

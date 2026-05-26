@@ -3,6 +3,8 @@ import {
   decodeRoutePayload,
   encodeBaseRoute,
   encodeCompactRoute,
+  encodeHybridRoute,
+  encodeHybridRouteV6,
   extractMiddlePoints,
 } from "../../utils/route-encoding.js";
 import {
@@ -68,8 +70,23 @@ export function applyRouteSnapshot(manager, snapshot) {
   return snapshot;
 }
 
-export function restoreRouteFromParam(manager, routeParam, segmentsData) {
+export function restoreRouteFromParam(
+  manager,
+  routeParam,
+  segmentsData,
+  cwBaseIndex = null,
+) {
   const payload = decodeRoutePayload(routeParam);
+  if (
+    isHybridRoutePayload(payload) &&
+    typeof manager?.restoreBaseRouteFromPayload === "function"
+  ) {
+    const expandedPayload = expandHybridRoutePayload(payload, cwBaseIndex);
+    if (expandedPayload && manager.restoreBaseRouteFromPayload(expandedPayload)) {
+      return snapshotRouteManager(manager, segmentsData);
+    }
+  }
+
   if (
     payload.type === "base_route_v4" &&
     typeof manager?.restoreBaseRouteFromPayload === "function" &&
@@ -88,6 +105,13 @@ export function routePointsFromParam(routeParam, segmentsData) {
 }
 
 function routePointsFromPayload(payload, segmentsData) {
+  if (
+    isHybridRoutePayload(payload) &&
+    payload.routePoints.length > 0 &&
+    payload.routePoints.every(hasLngLat)
+  ) {
+    return payload.routePoints;
+  }
   if (payload.type === "base_route_v4" && payload.routePoints.length > 0) {
     return payload.routePoints;
   }
@@ -162,11 +186,62 @@ export function routeStateSnapshot(routeState) {
   };
 }
 
-export function buildShareUrl(routeState, segmentsData, manager, location) {
-  return buildShareInfo(routeState, segmentsData, manager, location).url;
+export function buildShareUrl(
+  routeState,
+  segmentsData,
+  manager,
+  location,
+  cwBaseIndex = null,
+) {
+  return buildShareInfo(
+    routeState,
+    segmentsData,
+    manager,
+    location,
+    cwBaseIndex,
+  ).url;
 }
 
-export function buildShareInfo(routeState, segmentsData, manager, location) {
+export function buildShareInfo(
+  routeState,
+  segmentsData,
+  manager,
+  location,
+  cwBaseIndex = null,
+) {
+  const hybridV6SharePayload = hybridRouteSharePayload(
+    routeState,
+    manager,
+    cwBaseIndex,
+    { compactCyclewaysChains: true },
+  );
+  const encodedHybridV6Route = hybridV6SharePayload
+    ? encodeHybridRouteV6(hybridV6SharePayload)
+    : "";
+  if (encodedHybridV6Route) {
+    return shareInfoFromEncodedRoute(
+      encodedHybridV6Route,
+      "hybrid_route_v6",
+      location,
+    );
+  }
+
+  const hybridSharePayload = hybridRouteSharePayload(
+    routeState,
+    manager,
+    cwBaseIndex,
+  );
+  const encodedHybridRoute = hybridSharePayload
+    ? encodeHybridRoute(hybridSharePayload)
+    : "";
+  if (encodedHybridRoute) {
+    return shareInfoFromEncodedRoute(
+      encodedHybridRoute,
+      "hybrid_route_v5",
+      location,
+    );
+  }
+
   const baseSharePayload = baseRouteSharePayload(routeState, manager);
   const encodedBaseRoute = baseSharePayload ? encodeBaseRoute(baseSharePayload) : "";
   if (encodedBaseRoute) {
@@ -247,6 +322,14 @@ function emptyShareInfo() {
   };
 }
 
+function isHybridRoutePayload(payload) {
+  return payload?.type === "hybrid_route_v5" || payload?.type === "hybrid_route_v6";
+}
+
+function hasLngLat(point) {
+  return Number.isFinite(Number(point?.lng)) && Number.isFinite(Number(point?.lat));
+}
+
 function shareInfoFromEncodedRoute(encodedRoute, format, location) {
   const url = new URL(location.href);
   url.searchParams.set("route", encodedRoute);
@@ -261,6 +344,162 @@ function shareInfoFromEncodedRoute(encodedRoute, format, location) {
         : shareUrl.length > ROUTE_SHARE_WARN_URL_LENGTH
           ? "long"
           : "ok",
+  };
+}
+
+export function expandHybridRoutePayload(payload, cwBaseIndex) {
+  if (!isHybridRoutePayload(payload)) return null;
+  const points = Array.isArray(payload.routePoints) ? payload.routePoints : [];
+  const spans = Array.isArray(payload.spans) ? payload.spans : [];
+  if (points.length < 2 || spans.length !== points.length - 1) return null;
+
+  const normalizedIndex = normalizeCwBaseIndex(cwBaseIndex);
+  const legs = [];
+  for (const [index, span] of spans.entries()) {
+    if (span.type === "cw") {
+      const leg = expandCyclewaysSpan(
+        span,
+        points[index],
+        points[index + 1],
+        normalizedIndex,
+      );
+      if (!leg) return null;
+      legs.push({
+        fromPoint: index,
+        toPoint: index + 1,
+        ...leg,
+      });
+      continue;
+    }
+
+    if (span.type === "cwChain") {
+      const leg = expandCyclewaysChainSpan(span, normalizedIndex);
+      if (!leg) return null;
+      legs.push({
+        fromPoint: index,
+        toPoint: index + 1,
+        ...leg,
+      });
+      continue;
+    }
+
+    const edgeShareIds = (Array.isArray(span.edgeShareIds)
+      ? span.edgeShareIds
+      : Array.isArray(span.edges)
+        ? span.edges
+        : [])
+      .map((edgeShareId) => Number(edgeShareId))
+      .filter((edgeShareId) => Number.isSafeInteger(edgeShareId) && edgeShareId > 0);
+    if (edgeShareIds.length === 0) return null;
+    const directions = normalizeDirections(span.directions, edgeShareIds.length);
+    legs.push({
+      fromPoint: index,
+      toPoint: index + 1,
+      edgeShareIds,
+      directions,
+    });
+  }
+
+  return {
+    type: "base_route_v4",
+    graphVersion: payload.graphVersion || "",
+    routePoints: points,
+    shards: Array.isArray(payload.shards) ? payload.shards : [],
+    legs,
+    segmentIds: [],
+  };
+}
+
+function hybridRouteSharePayload(
+  routeState,
+  manager,
+  cwBaseIndex,
+  options = {},
+) {
+  if (
+    !routeState ||
+    !Array.isArray(routeState.points) ||
+    routeState.points.length < 2 ||
+    typeof manager?.getBaseRouteDiagnostics !== "function"
+  ) {
+    return null;
+  }
+
+  const normalizedIndex = normalizeCwBaseIndex(cwBaseIndex);
+  if (normalizedIndex.size === 0) return null;
+
+  const diagnostics = manager.getBaseRouteDiagnostics();
+  const legs = Array.isArray(diagnostics?.legs) ? diagnostics.legs : [];
+  if (diagnostics?.failure || legs.length !== routeState.points.length - 1) {
+    return null;
+  }
+
+  const spanLegs = [];
+  const shardIds = new Set();
+  const baseLegs = legs.map((leg, index) => {
+    const traversals = Array.isArray(leg?.traversals) ? leg.traversals : [];
+    return {
+      edgeShareIds: traversals.map((traversal) => traversal.edgeShareId),
+      directions: traversals.map((traversal) =>
+        traversal.direction === "reverse" ? "reverse" : "forward",
+      ),
+      fromPoint: index,
+      toPoint: index + 1,
+    };
+  });
+  for (const [legIndex, leg] of legs.entries()) {
+    const traversals = Array.isArray(leg?.traversals) ? leg.traversals : [];
+    if (traversals.length === 0) return null;
+    for (const traversal of traversals) {
+      const traversalShardIds = Array.isArray(traversal.shardIds)
+        ? traversal.shardIds
+        : [];
+      if (traversalShardIds.length === 0) return null;
+      traversalShardIds.forEach((shardId) => shardIds.add(String(shardId)));
+    }
+
+    const cyclewaysSpan = cyclewaysSpanForTraversals(
+      traversals,
+      normalizedIndex,
+    );
+    if (cyclewaysSpan) {
+      spanLegs.push({
+        startPoint: legIndex,
+        endPoint: legIndex + 1,
+        span: cyclewaysSpan,
+      });
+      continue;
+    }
+
+    const baseSpan = baseSpanForTraversals(traversals);
+    if (!baseSpan) return null;
+    const compactCyclewaysChainSpan = options.compactCyclewaysChains
+      ? cyclewaysChainSpanForTraversals(
+          traversals,
+          normalizedIndex,
+          baseSpan,
+        )
+      : null;
+    spanLegs.push({
+      startPoint: legIndex,
+      endPoint: legIndex + 1,
+      span: compactCyclewaysChainSpan || baseSpan,
+    });
+  }
+
+  const mergedSpanLegs = mergeConsecutiveCyclewaysSpanLegs(spanLegs);
+  const pointIndexes = [0, ...mergedSpanLegs.map((spanLeg) => spanLeg.endPoint)];
+  const points = pointIndexes.map((pointIndex) =>
+    sharePointForOriginalIndex(routeState.points, baseLegs, legs, pointIndex),
+  );
+  if (points.some((point) => point === null)) return null;
+
+  return {
+    version: 5,
+    graphVersion: diagnostics.graphVersion || "",
+    points,
+    shards: [...shardIds].sort(),
+    spans: mergedSpanLegs.map((spanLeg) => spanLeg.span),
   };
 }
 
@@ -332,6 +571,402 @@ function baseRouteSharePayload(routeState, manager) {
     shards: [...shardIds].sort(),
     legs: shareLegs,
   };
+}
+
+function baseSpanForTraversals(traversals) {
+  const edgeShareIds = [];
+  const directions = [];
+  for (const traversal of traversals) {
+    const edgeShareId = Number(traversal.edgeShareId);
+    if (!Number.isSafeInteger(edgeShareId) || edgeShareId <= 0) {
+      return null;
+    }
+    edgeShareIds.push(edgeShareId);
+    directions.push(traversal.direction === "reverse" ? "reverse" : "forward");
+  }
+  return {
+    type: "base",
+    edgeShareIds,
+    directions,
+  };
+}
+
+function cyclewaysSpanForTraversals(traversals, cwBaseIndex) {
+  const segmentIds = new Set();
+  for (const traversal of traversals) {
+    const ids = Array.isArray(traversal.cyclewaysSegmentIds)
+      ? traversal.cyclewaysSegmentIds
+      : [];
+    ids.map(Number)
+      .filter((segmentId) => Number.isSafeInteger(segmentId) && segmentId > 0)
+      .forEach((segmentId) => segmentIds.add(segmentId));
+  }
+  if (segmentIds.size !== 1) return null;
+
+  const [segmentId] = [...segmentIds];
+  const refs = cwBaseIndex.get(segmentId);
+  if (!refs || refs.length === 0) return null;
+
+  const indexes = traversals.map((traversal) =>
+    refs.byShareId.get(Number(traversal.edgeShareId)),
+  );
+  if (indexes.some((index) => !Number.isSafeInteger(index))) return null;
+
+  const firstIndex = indexes[0];
+  const lastIndex = indexes[indexes.length - 1];
+  let reversed = firstIndex > lastIndex;
+  if (firstIndex === lastIndex) {
+    const firstRef = refs.edgeRefs[firstIndex];
+    reversed =
+      normalizeDirection(traversals[0].direction) !==
+      normalizeDirection(firstRef.direction);
+  }
+
+  const expectedIndexes = reversed
+    ? descendingRange(firstIndex, lastIndex)
+    : ascendingRange(firstIndex, lastIndex);
+  if (!arraysEqual(indexes, expectedIndexes)) return null;
+
+  for (const [index, traversal] of traversals.entries()) {
+    const ref = refs.edgeRefs[indexes[index]];
+    const expectedDirection = reversed
+      ? oppositeDirection(ref.direction)
+      : normalizeDirection(ref.direction);
+    if (normalizeDirection(traversal.direction) !== expectedDirection) {
+      return null;
+    }
+  }
+
+  return {
+    type: "cw",
+    segmentId,
+    reversed,
+  };
+}
+
+function cyclewaysChainSpanForTraversals(traversals, cwBaseIndex, baseSpan) {
+  if (!baseSpan || !Array.isArray(traversals) || traversals.length === 0) {
+    return null;
+  }
+
+  const chosenRefs = [];
+  let previousChoice = null;
+  for (const traversal of traversals) {
+    const candidates = cyclewaysRefCandidatesForTraversal(
+      traversal,
+      cwBaseIndex,
+    );
+    if (candidates.length === 0) return null;
+
+    const continuingCandidate = previousChoice
+      ? candidates.find(
+          (candidate) =>
+            candidate.segmentId === previousChoice.segmentId &&
+            candidate.reversed === previousChoice.reversed &&
+            candidate.index ===
+              previousChoice.index + (previousChoice.reversed ? -1 : 1),
+        )
+      : null;
+    const selected = continuingCandidate || candidates[0];
+    chosenRefs.push(selected);
+    previousChoice = selected;
+  }
+
+  const runs = [];
+  for (const choice of chosenRefs) {
+    const previousRun = runs[runs.length - 1];
+    if (
+      previousRun &&
+      previousRun.segmentId === choice.segmentId &&
+      previousRun.reversed === choice.reversed &&
+      choice.index ===
+        previousRun.startIndex +
+          (previousRun.reversed ? -previousRun.edgeCount : previousRun.edgeCount)
+    ) {
+      previousRun.edgeCount += 1;
+      continue;
+    }
+    runs.push({
+      segmentId: choice.segmentId,
+      reversed: choice.reversed,
+      startIndex: choice.index,
+      edgeCount: 1,
+    });
+  }
+
+  const span = { type: "cwChain", runs };
+  const expandedSpan = expandCyclewaysChainSpan(span, cwBaseIndex);
+  if (
+    !expandedSpan ||
+    !arraysEqual(expandedSpan.edgeShareIds, baseSpan.edgeShareIds) ||
+    !arraysEqual(expandedSpan.directions, baseSpan.directions)
+  ) {
+    return null;
+  }
+
+  return estimateV6CyclewaysChainSpanBytes(span) <
+    estimateV6BaseSpanBytes(baseSpan)
+    ? span
+    : null;
+}
+
+function cyclewaysRefCandidatesForTraversal(traversal, cwBaseIndex) {
+  const edgeShareId = Number(traversal?.edgeShareId);
+  const traversalDirection = normalizeDirection(traversal?.direction);
+  if (!Number.isSafeInteger(edgeShareId) || edgeShareId <= 0) {
+    return [];
+  }
+
+  return (Array.isArray(traversal?.cyclewaysSegmentIds)
+    ? traversal.cyclewaysSegmentIds
+    : []
+  )
+    .map(Number)
+    .filter((segmentId) => Number.isSafeInteger(segmentId) && segmentId > 0)
+    .flatMap((segmentId) => {
+      const refs = cwBaseIndex.get(segmentId);
+      const index = refs?.byShareId?.get(edgeShareId);
+      if (!refs || !Number.isSafeInteger(index)) return [];
+      const refDirection = normalizeDirection(refs.edgeRefs[index]?.direction);
+      const candidates = [];
+      if (traversalDirection === refDirection) {
+        candidates.push({ segmentId, index, reversed: false });
+      }
+      if (traversalDirection === oppositeDirection(refDirection)) {
+        candidates.push({ segmentId, index, reversed: true });
+      }
+      return candidates;
+    });
+}
+
+function mergeConsecutiveCyclewaysSpanLegs(spanLegs) {
+  const merged = [];
+  for (const spanLeg of spanLegs) {
+    const previous = merged[merged.length - 1];
+    if (
+      previous?.span?.type === "cw" &&
+      spanLeg.span?.type === "cw" &&
+      previous.span.segmentId === spanLeg.span.segmentId &&
+      previous.span.reversed === spanLeg.span.reversed &&
+      previous.endPoint === spanLeg.startPoint
+    ) {
+      previous.endPoint = spanLeg.endPoint;
+      continue;
+    }
+    merged.push({
+      startPoint: spanLeg.startPoint,
+      endPoint: spanLeg.endPoint,
+      span: { ...spanLeg.span },
+    });
+  }
+  return merged;
+}
+
+function sharePointForOriginalIndex(points, baseLegs, diagnosticLegs, index) {
+  const point = points[index];
+  if (!point) return null;
+  const edgeShareId = routePointEdgeShareId(point, baseLegs, index);
+  const edgeFraction = routePointEdgeFraction(point, diagnosticLegs, index);
+  if (!Number.isSafeInteger(edgeShareId) || edgeShareId <= 0) {
+    return null;
+  }
+  return {
+    lng: point.lng,
+    lat: point.lat,
+    edgeShareId,
+    edgeFraction,
+  };
+}
+
+function expandCyclewaysSpan(span, startPoint, endPoint, cwBaseIndex) {
+  const segmentId = Number(span.segmentId);
+  const refs = cwBaseIndex.get(segmentId);
+  if (!refs || refs.length === 0) return null;
+  const startEdgeShareId = Number(
+    startPoint?.baseEdgeShareId ?? startPoint?.edgeShareId,
+  );
+  const endEdgeShareId = Number(
+    endPoint?.baseEdgeShareId ?? endPoint?.edgeShareId,
+  );
+  const startIndex = refs.byShareId.get(startEdgeShareId);
+  const endIndex = refs.byShareId.get(endEdgeShareId);
+  if (!Number.isSafeInteger(startIndex) || !Number.isSafeInteger(endIndex)) {
+    return null;
+  }
+
+  const indexes = span.reversed
+    ? descendingRange(startIndex, endIndex)
+    : ascendingRange(startIndex, endIndex);
+  if (indexes.length === 0) return null;
+
+  return {
+    edgeShareIds: indexes.map((index) => refs.edgeRefs[index].shareId),
+    directions: indexes.map((index) => {
+      const direction = refs.edgeRefs[index].direction;
+      return span.reversed ? oppositeDirection(direction) : normalizeDirection(direction);
+    }),
+  };
+}
+
+function expandCyclewaysChainSpan(span, cwBaseIndex) {
+  const edgeShareIds = [];
+  const directions = [];
+  for (const run of Array.isArray(span?.runs) ? span.runs : []) {
+    const segmentId = Number(run.segmentId);
+    const refs = cwBaseIndex.get(segmentId);
+    const startIndex = Number(run.startIndex);
+    const edgeCount = Number(run.edgeCount);
+    if (
+      !refs ||
+      !Number.isSafeInteger(startIndex) ||
+      !Number.isSafeInteger(edgeCount) ||
+      edgeCount <= 0
+    ) {
+      return null;
+    }
+
+    for (let offset = 0; offset < edgeCount; offset++) {
+      const index = run.reversed ? startIndex - offset : startIndex + offset;
+      const ref = refs.edgeRefs[index];
+      if (!ref) return null;
+      edgeShareIds.push(ref.shareId);
+      directions.push(
+        run.reversed
+          ? oppositeDirection(ref.direction)
+          : normalizeDirection(ref.direction),
+      );
+    }
+  }
+
+  return edgeShareIds.length > 0 ? { edgeShareIds, directions } : null;
+}
+
+function normalizeCwBaseIndex(cwBaseIndex) {
+  const normalized = new Map();
+  const rawSegments = cwBaseIndex?.segments;
+  if (!rawSegments || typeof rawSegments !== "object") return normalized;
+
+  for (const [segmentKey, segment] of Object.entries(rawSegments)) {
+    const segmentId = Number(segment?.segmentId ?? segmentKey);
+    const rawEdgeRefs = Array.isArray(segment)
+      ? segment
+      : Array.isArray(segment?.edgeRefs)
+      ? segment.edgeRefs
+      : [];
+    const edgeRefs = rawEdgeRefs
+      .map((edgeRef, index) => {
+        if (Array.isArray(edgeRef)) {
+          return {
+            shareId: Number(edgeRef[0]),
+            direction: Number(edgeRef[1]) === 1 ? "reverse" : "forward",
+            sequenceIndex: index,
+          };
+        }
+        return {
+          shareId: Number(edgeRef?.shareId ?? edgeRef?.edgeShareId),
+          direction: normalizeDirection(edgeRef?.direction),
+          sequenceIndex: Number(edgeRef?.sequenceIndex),
+        };
+      })
+      .filter((edgeRef) => Number.isSafeInteger(edgeRef.shareId) && edgeRef.shareId > 0)
+      .sort((first, second) => {
+        const firstIndex = Number.isFinite(first.sequenceIndex)
+          ? first.sequenceIndex
+          : 0;
+        const secondIndex = Number.isFinite(second.sequenceIndex)
+          ? second.sequenceIndex
+          : 0;
+        return firstIndex - secondIndex;
+      });
+    if (!Number.isSafeInteger(segmentId) || segmentId <= 0 || edgeRefs.length === 0) {
+      continue;
+    }
+    normalized.set(segmentId, {
+      edgeRefs,
+      byShareId: new Map(
+        edgeRefs.map((edgeRef, index) => [edgeRef.shareId, index]),
+      ),
+      length: edgeRefs.length,
+    });
+  }
+  return normalized;
+}
+
+function normalizeDirections(directions, count) {
+  const normalized = (Array.isArray(directions) ? directions : [])
+    .slice(0, count)
+    .map(normalizeDirection);
+  while (normalized.length < count) {
+    normalized.push("forward");
+  }
+  return normalized;
+}
+
+function normalizeDirection(direction) {
+  return direction === "reverse" || direction === 1 ? "reverse" : "forward";
+}
+
+function oppositeDirection(direction) {
+  return normalizeDirection(direction) === "reverse" ? "forward" : "reverse";
+}
+
+function estimateV6BaseSpanBytes(span) {
+  const edgeShareIds = Array.isArray(span?.edgeShareIds)
+    ? span.edgeShareIds
+    : [];
+  if (edgeShareIds.length === 0) return Infinity;
+
+  let bytes = 1 + varUintByteLength(edgeShareIds.length);
+  let previousEdgeShareId = 0;
+  edgeShareIds.forEach((edgeShareId, index) => {
+    bytes +=
+      index === 0
+        ? varUintByteLength(edgeShareId)
+        : signedVarintByteLength(edgeShareId - previousEdgeShareId);
+    previousEdgeShareId = edgeShareId;
+  });
+  bytes += Math.ceil(edgeShareIds.length / 8);
+  return bytes;
+}
+
+function estimateV6CyclewaysChainSpanBytes(span) {
+  const runs = Array.isArray(span?.runs) ? span.runs : [];
+  if (runs.length === 0) return Infinity;
+  return runs.reduce(
+    (bytes, run) =>
+      bytes +
+      varUintByteLength(run.segmentId) +
+      1 +
+      varUintByteLength(run.startIndex) +
+      varUintByteLength(run.edgeCount),
+    1 + varUintByteLength(runs.length),
+  );
+}
+
+function varUintByteLength(value) {
+  let remaining = Number(value);
+  if (!Number.isSafeInteger(remaining) || remaining < 0) return Infinity;
+  let bytes = 1;
+  while (remaining >= 0x80) {
+    remaining = Math.floor(remaining / 128);
+    bytes += 1;
+  }
+  return bytes;
+}
+
+function signedVarintByteLength(value) {
+  const encoded = value >= 0 ? value * 2 : -value * 2 - 1;
+  return varUintByteLength(encoded);
+}
+
+function ascendingRange(start, end) {
+  if (start > end) return [];
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
+function descendingRange(start, end) {
+  if (start < end) return [];
+  return Array.from({ length: start - end + 1 }, (_, index) => start - index);
 }
 
 function routePointEdgeShareId(point, shareLegs, index) {

@@ -1761,6 +1761,42 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun) {
   return candidates;
 }
 
+export function buildPromoteTargets(manifest) {
+  return [
+    {
+      label: "public manifest",
+      source: buildManifestPath,
+      target: promotedManifestPath,
+    },
+    {
+      label: "public geojson",
+      source: resolveManifestPath(buildPublicDataDir, manifest.bikeRoads),
+      target: resolveManifestPath(publicDataDir, manifest.bikeRoads),
+    },
+    {
+      label: "public segments",
+      source: resolveManifestPath(buildPublicDataDir, manifest.segments),
+      target: resolveManifestPath(publicDataDir, manifest.segments),
+    },
+    {
+      label: "public CW base index",
+      source: resolveManifestPath(buildPublicDataDir, manifest.cwBaseIndex),
+      target: resolveManifestPath(publicDataDir, manifest.cwBaseIndex),
+    },
+    {
+      label: "public kml",
+      source: resolveManifestPath(buildPublicDataDir, manifest.kml),
+      target: resolveManifestPath(publicDataDir, manifest.kml),
+    },
+    {
+      kind: "directory",
+      label: "base routing shards",
+      source: dirname(resolveManifestPath(buildPublicDataDir, manifest.baseRoutingShards)),
+      target: dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)),
+    },
+  ];
+}
+
 async function handlePromote(payload = {}) {
   const promoteId = ++promoteCounter;
   log("info", `promote#${promoteId} started`, {
@@ -1808,40 +1844,16 @@ async function handlePromote(payload = {}) {
   if (!manifest.baseRoutingShards) {
     throw new Error("Promote requires a base routing shard manifest in the build manifest.");
   }
+  if (!manifest.cwBaseIndex) {
+    throw new Error("Promote requires a CW base index in the build manifest.");
+  }
 
   log("info", `promote#${promoteId} checks passed`, {
     version: manifest.version,
     warnings: (report.validation?.routeCompatibilityWarnings || []).length,
   });
 
-  const targets = [
-    {
-      label: "public manifest",
-      source: buildManifestPath,
-      target: promotedManifestPath,
-    },
-    {
-      label: "public geojson",
-      source: resolveManifestPath(buildPublicDataDir, manifest.bikeRoads),
-      target: resolveManifestPath(publicDataDir, manifest.bikeRoads),
-    },
-    {
-      label: "public segments",
-      source: resolveManifestPath(buildPublicDataDir, manifest.segments),
-      target: resolveManifestPath(publicDataDir, manifest.segments),
-    },
-    {
-      label: "public kml",
-      source: resolveManifestPath(buildPublicDataDir, manifest.kml),
-      target: resolveManifestPath(publicDataDir, manifest.kml),
-    },
-    {
-      kind: "directory",
-      label: "base routing shards",
-      source: dirname(resolveManifestPath(buildPublicDataDir, manifest.baseRoutingShards)),
-      target: dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)),
-    },
-  ];
+  const targets = buildPromoteTargets(manifest);
 
   for (const target of targets) {
     await stat(target.source);

@@ -7,6 +7,7 @@ from pathlib import Path
 from processing.build_map import (
     build_base_routing_asset,
     build_base_routing_shards,
+    build_public_cw_base_index,
     build_public_cycleways_display_geojson,
     write_base_routing_shards,
     write_runtime_manifest,
@@ -105,6 +106,15 @@ class BaseRoutingAssetTests(unittest.TestCase):
             self.assertEqual(asset["edges"][0]["shareId"], 1)
             self.assertEqual(validation["graphEdges"], 1)
             self.assertEqual(validation["unresolvedSegments"], 0)
+
+            public_index, index_validation = build_public_cw_base_index(
+                asset,
+                overlay_path,
+                {"segment 7": {"id": 7, "status": "active"}},
+            )
+            self.assertEqual(public_index["segments"]["7"], [[1, 0]])
+            self.assertEqual(index_validation["segments"], 1)
+            self.assertEqual(index_validation["edgeRefs"], 1)
 
     def test_runtime_asset_updates_stable_share_id_registry(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -484,11 +494,13 @@ class BaseRoutingAssetTests(unittest.TestCase):
             public_data_dir = out_dir / "public-data"
             output_geojson = public_data_dir / "bike_roads.geojson"
             output_segments = public_data_dir / "segments.json"
+            output_cw_base_index = public_data_dir / "cw-base-index.json"
             output_kml = public_data_dir / "exports" / "map.kml"
             output_routing_shards = public_data_dir / "base-routing-shards"
             output_geojson.parent.mkdir(parents=True, exist_ok=True)
             output_geojson.write_text("{}\n", encoding="utf-8")
             output_segments.write_text("{}\n", encoding="utf-8")
+            output_cw_base_index.write_text("{}\n", encoding="utf-8")
             output_kml.parent.mkdir(parents=True, exist_ok=True)
             output_kml.write_text("<kml />\n", encoding="utf-8")
             write_json(output_routing_shards / "manifest.json", {"shards": []})
@@ -499,6 +511,7 @@ class BaseRoutingAssetTests(unittest.TestCase):
                 public_data_dir,
                 output_geojson,
                 output_segments,
+                output_cw_base_index,
                 output_kml,
                 output_routing_shards,
                 {"skipElevation": True, "failures": 0},
@@ -518,9 +531,11 @@ class BaseRoutingAssetTests(unittest.TestCase):
             self.assertEqual(manifest_path, public_data_dir / "map-manifest.json")
             self.assertEqual(manifest["bikeRoads"], "bike_roads.geojson")
             self.assertEqual(manifest["segments"], "segments.json")
+            self.assertEqual(manifest["cwBaseIndex"], "cw-base-index.json")
             self.assertEqual(manifest["kml"], "exports/map.kml")
             self.assertNotIn("baseRoutingNetwork", manifest)
             self.assertNotIn("baseRoutingNetwork", manifest["hashes"])
+            self.assertIn("cwBaseIndex", manifest["hashes"])
             self.assertIn("baseRoutingShards", manifest)
             self.assertEqual(manifest["baseRoutingShards"], "base-routing-shards/manifest.json")
             self.assertTrue((public_data_dir / manifest["baseRoutingShards"]).exists())
