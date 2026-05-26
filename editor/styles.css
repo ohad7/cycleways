@@ -291,6 +291,12 @@ h2 {
   min-width: 0;
 }
 
+.map-toolbar.drawing .toolbar-group-create,
+.map-toolbar.drawing .toolbar-group-edit,
+.map-toolbar.drawing .toolbar-group-view {
+  opacity: 0.5;
+}
+
 .workspace-tabs {
   display: flex;
   flex-wrap: wrap;

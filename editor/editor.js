@@ -957,6 +957,32 @@ function manualBaseEdgeCollection() {
   return cache.manualBaseEdgeCollection;
 }
 
+function composeEdgePickCollection() {
+  if (!isComposingNewSegmentEdges()) {
+    return { type: "FeatureCollection", features: [] };
+  }
+  const graphLookup = new Map();
+  for (const feature of state.baseOverlay.graphEdges?.features || []) {
+    graphLookup.set(String(graphEdgeFeatureId(feature)), feature);
+  }
+  for (const feature of manualBaseEdgeFeatures()) {
+    graphLookup.set(String(manualBaseEdgeFeatureId(feature)), feature);
+  }
+  const features = [];
+  state.draw.edgeRefs.forEach((ref, index) => {
+    const source = graphLookup.get(String(ref.edgeId));
+    const coords = source?.geometry?.coordinates;
+    if (!coords?.length) return;
+    const oriented = ref.direction === "reverse" ? [...coords].reverse() : coords;
+    features.push({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: oriented },
+      properties: { edgeId: String(ref.edgeId), sequenceNumber: index + 1 },
+    });
+  });
+  return { type: "FeatureCollection", features };
+}
+
 function selectedOverlayEdgeCollection() {
   if (!state.baseOverlay.enabled || state.workspaceMode !== "overlay") return EMPTY_FEATURE_COLLECTION;
   const edgeIds = new Set(displayedOverlayEdgeRefs().map((ref) => String(ref.edgeId)));
@@ -1085,6 +1111,7 @@ function updateMapSources() {
   setSourceData("selected-overlay-edges", selectedOverlayEdgeCollection());
   setSourceData("cw-overlay-network", cwOverlayNetworkCollection());
   setSourceData("manual-base-edges", manualBaseEdgeCollection());
+  setSourceData("compose-edge-pick", composeEdgePickCollection());
   if (map.getLayer("segments-layer")) {
     map.setFilter("segments-layer", unselectedFilter());
   }
@@ -1158,6 +1185,8 @@ function updateWorkspaceLayerVisibility() {
   ]) {
     setLayerVisibility(layerId, showOverlay);
   }
+  setLayerVisibility("compose-edge-pick-layer", composing);
+  setLayerVisibility("compose-edge-pick-labels", composing);
 }
 
 function updateUnresolvedSegmentLayerFilter() {
@@ -5703,8 +5732,37 @@ function wireEvents() {
     }
   });
   map.on("mouseleave", "base-graph-edges-hit-layer", () => {
+    if (isComposingNewSegmentEdges()) {
+      state.draw.hoverEdgeId = null;
+      map.getCanvas().style.cursor = "crosshair";
+      return;
+    }
     if (state.mode === "select" && !state.draggingManualBaseVertex) {
       map.getCanvas().style.cursor = "";
+    }
+  });
+  map.on("mousemove", "base-graph-edges-hit-layer", (event) => {
+    if (!isComposingNewSegmentEdges()) return;
+    const f = event.features?.[0];
+    if (!f) return;
+    const edgeId = String(graphEdgeFeatureId(f));
+    const already = state.draw.edgeRefs.some((r) => String(r.edgeId) === edgeId);
+    map.getCanvas().style.cursor = already ? "not-allowed" : "copy";
+    state.draw.hoverEdgeId = edgeId;
+  });
+  map.on("mousemove", "manual-base-edges-hit-layer", (event) => {
+    if (!isComposingNewSegmentEdges()) return;
+    const f = event.features?.[0];
+    if (!f) return;
+    const edgeId = String(manualBaseEdgeFeatureId(f));
+    const already = state.draw.edgeRefs.some((r) => String(r.edgeId) === edgeId);
+    map.getCanvas().style.cursor = already ? "not-allowed" : "copy";
+    state.draw.hoverEdgeId = edgeId;
+  });
+  map.on("mouseleave", "manual-base-edges-hit-layer", () => {
+    if (isComposingNewSegmentEdges()) {
+      state.draw.hoverEdgeId = null;
+      map.getCanvas().style.cursor = "crosshair";
     }
   });
   map.on("mouseenter", "cw-overlay-network-hit-layer", () => {
@@ -6027,6 +6085,12 @@ async function addMapLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  if (!map.getSource("compose-edge-pick")) {
+    map.addSource("compose-edge-pick", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
 
   if (!map.getLayer("base-graph-edges-layer")) {
     map.addLayer({
@@ -6212,6 +6276,39 @@ async function addMapLayers() {
           ["case", ["==", ["get", "overlayHovered"], true], 16, 11],
         ],
         "line-opacity": ["case", ["==", ["get", "overlayHovered"], true], 1, 0.72],
+      },
+    });
+  }
+
+  if (!map.getLayer("compose-edge-pick-layer")) {
+    map.addLayer({
+      id: "compose-edge-pick-layer",
+      type: "line",
+      source: "compose-edge-pick",
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": "#ea580c",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 14, 9, 16, 13],
+        "line-opacity": 0.9,
+      },
+    });
+  }
+  if (!map.getLayer("compose-edge-pick-labels")) {
+    map.addLayer({
+      id: "compose-edge-pick-labels",
+      type: "symbol",
+      source: "compose-edge-pick",
+      layout: {
+        "symbol-placement": "line-center",
+        "text-field": ["to-string", ["get", "sequenceNumber"]],
+        "text-size": 14,
+        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+        visibility: "none",
+      },
+      paint: {
+        "text-color": "#ffffff",
+        "text-halo-color": "#ea580c",
+        "text-halo-width": 2,
       },
     });
   }
