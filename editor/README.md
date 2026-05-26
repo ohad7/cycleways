@@ -74,13 +74,14 @@ local file, `MAPBOX_TOKEN`/`CYCLEWAYS_MAPBOX_TOKEN` in the server environment, o
 ## Current Editing Scope
 
 - Select a segment from the map, or open the Segments drawer when search/list selection is needed.
-- Draw a new segment by clicking points on the map, then committing with Done.
-- Extend a selected segment by clicking near its closest endpoint and drawing outward.
+- Add a new segment by clicking base graph edges in order, then pressing Done. The new segment's source `LineString` is stitched from the picked edges, and its CW base overlay mapping is auto-accepted when the chosen edges are continuous and unowned. If validation fails, the segment is still created with a `needs_edit` mapping (`failureClass` and message surfaced in the Segment side panel), and the user fixes it with the Add/remove edges control on the segment.
+- The compose toolbar exposes an escape-hatch "Draw freehand" button that reverts to the legacy point-drawing flow, for areas with no base coverage. When possible, add the missing path as a manual base edge in Base Graph mode (then run Recalculate Graph + Matches) before resuming Add Segment.
+- Extend a selected legacy (point-drawn) segment by clicking near its closest endpoint and drawing outward. Edge-picked segments do not expose Extend — they expose **Add/remove edges** and **Split at edge boundary** in the segment side panel instead.
 - Edit name, status, road type, todo, and notes.
-- Drag selected segment vertices.
-- Insert a vertex by enabling insert mode and clicking near the selected line.
-- Delete the selected vertex when the segment still has at least two coordinates.
-- Split a segment at a selected internal vertex.
+- Drag selected segment vertices on legacy point-drawn segments. Edge-picked segments hide vertex tools so the source geometry never drifts from the overlay mapping.
+- Insert a vertex on legacy segments by enabling insert mode and clicking near the selected line.
+- Delete the selected vertex on legacy segments when the segment still has at least two coordinates.
+- Split a legacy segment at a selected internal vertex. Edge-picked segments split at an edge boundary (Split at edge boundary in the side panel).
 - Use the Segments workspace for canonical CycleWays source edits.
 - Use the Base Graph workspace to stage manual base edges on top of the read-only
   OSM graph. Manual edges can be created, selected, reshaped by dragging vertices,
