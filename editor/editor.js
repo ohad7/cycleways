@@ -1,3 +1,9 @@
+import {
+  stitchCoordsFromEdgeRefs,
+  validateEdgePickMapping,
+  conflictingSegmentForEdge,
+} from "./lib/edge-pick.mjs";
+
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 
 function requireMapboxToken() {
@@ -222,6 +228,9 @@ const els = {
   toggleBaseOverlay: document.getElementById("toggle-base-overlay"),
   drawDone: document.getElementById("draw-done"),
   drawCancel: document.getElementById("draw-cancel"),
+  drawUndoLast: document.getElementById("draw-undo-last"),
+  drawFreehand: document.getElementById("draw-freehand"),
+  composeEdgeStatus: document.getElementById("compose-edge-status"),
   mapStyle: document.getElementById("map-style"),
   saveSource: document.getElementById("save-source"),
   runBuild: document.getElementById("run-build"),
@@ -1527,6 +1536,11 @@ function renderDrawControls() {
   els.drawCancel.hidden = !drawing;
   els.drawDone.disabled = !canFinishDraw();
   els.drawCancel.disabled = !drawing;
+  const composing = drawing && state.draw.type === "newSegmentEdges";
+  els.drawUndoLast.hidden = !composing;
+  els.drawUndoLast.disabled = !composing || state.draw.edgeRefs.length === 0;
+  els.drawFreehand.hidden = !composing;
+  els.drawFreehand.disabled = !composing;
   els.mapToolbar.classList.toggle("drawing", drawing);
   els.addSegment.disabled = !state.source || drawing || !segmentsMode;
   els.toggleUnresolvedSegments.disabled = drawing || !segmentsMode || state.baseOverlay.loading;
@@ -2366,8 +2380,43 @@ function overlayMappingEdgeRefIssues(mapping) {
   return issues;
 }
 
+function conflictingSegmentForEdgeFromOverlay(edgeId, excludeSegmentId) {
+  return conflictingSegmentForEdge(
+    edgeId,
+    excludeSegmentId,
+    state.baseOverlay.overlay?.segments || {},
+  );
+}
+
 function renderComposeStatus() {
-  // Stub: replaced by Task 5.
+  const composing = isComposingNewSegmentEdges();
+  if (!composing) {
+    els.composeEdgeStatus.hidden = true;
+    els.composeEdgeStatus.innerHTML = "";
+    return;
+  }
+  const edgeCount = state.draw.edgeRefs.length;
+  if (edgeCount === 0) {
+    els.composeEdgeStatus.hidden = false;
+    els.composeEdgeStatus.textContent = "Click base edges to compose the new segment.";
+    return;
+  }
+  const normalized = normalizeOverlayEdgeRefs(state.draw.edgeRefs);
+  const gaps = edgeRefContinuityGaps(normalized);
+  const conflicts = state.draw.edgeRefs
+    .map((ref) => {
+      const owner = conflictingSegmentForEdgeFromOverlay(ref.edgeId, -1);
+      return owner ? { ...owner, edgeId: ref.edgeId } : null;
+    })
+    .filter(Boolean);
+  const continuityLine = gaps.length === 0
+    ? `<div class="compose-ok">✓ continuous (${edgeCount} edges)</div>`
+    : `<div class="compose-bad">Gap between edge ${gaps[0].sequenceIndex + 1} and ${gaps[0].sequenceIndex + 2} (${Math.round(gaps[0].distanceMeters)}m)</div>`;
+  const conflictLine = conflicts.length === 0
+    ? `<div class="compose-ok">✓ exclusive</div>`
+    : `<div class="compose-bad">Edge ${conflicts[0].edgeId || ""} already owned by ${conflicts[0].segmentName || `segment ${conflicts[0].segmentId}`}</div>`;
+  els.composeEdgeStatus.hidden = false;
+  els.composeEdgeStatus.innerHTML = continuityLine + conflictLine;
 }
 
 function toggleEdgeInCompose(feature) {
@@ -3201,6 +3250,7 @@ function renderAll() {
   renderDataList();
   renderBaseGraphPanel();
   renderBaseOverlayPanel();
+  renderComposeStatus();
   updateMapSources();
 }
 
@@ -4252,12 +4302,42 @@ function cancelDraw() {
   setStatus("Drawing cancelled.");
 }
 
-function removeLastDrawPoint() {
-  if (!isDrawing() || state.draw.coords.length === 0) return;
+function removeLastDrawStep() {
+  if (!isDrawing()) return;
+  if (state.draw.type === "newSegmentEdges") {
+    if (state.draw.edgeRefs.length === 0) return;
+    const removed = state.draw.edgeRefs[state.draw.edgeRefs.length - 1];
+    state.draw.edgeRefs = state.draw.edgeRefs
+      .slice(0, -1)
+      .map((ref, i) => ({ ...ref, sequenceIndex: i }));
+    updateMapSources();
+    renderDrawControls();
+    renderComposeStatus();
+    setStatus(`Removed last edge ${removed.edgeId} from draft.`);
+    return;
+  }
+  if (state.draw.coords.length === 0) return;
   state.draw.coords.pop();
   updateMapSources();
   renderDrawControls();
   setStatus("Removed last drawn point.");
+}
+
+function switchComposeToFreehand() {
+  if (state.draw.type !== "newSegmentEdges") return;
+  const hadEdges = state.draw.edgeRefs.length > 0;
+  if (hadEdges && !window.confirm("Switch to freehand drawing? Picked edges will be discarded.")) {
+    return;
+  }
+  state.draw = {
+    ...emptyDrawState(),
+    active: true,
+    type: "new",
+  };
+  updateMapSources();
+  renderDrawControls();
+  renderComposeStatus();
+  setStatus("Switched to freehand drawing. Click points to draw the segment.");
 }
 
 function handleDrawClick(event) {
@@ -5640,6 +5720,8 @@ function wireEvents() {
   els.toggleBaseOverlay.addEventListener("click", () => toggleBaseOverlay().catch(showError));
   els.drawDone.addEventListener("click", () => finishDraw().catch(showError));
   els.drawCancel.addEventListener("click", cancelDraw);
+  els.drawUndoLast.addEventListener("click", () => removeLastDrawStep());
+  els.drawFreehand.addEventListener("click", () => switchComposeToFreehand());
   els.newManualBaseEdge.addEventListener("click", startManualBaseEdgeDraw);
   els.cloneBaseGraphEdge.addEventListener("click", () => cloneSelectedBaseGraphEdgeAsManual().catch(showError));
   els.deleteManualBaseEdge.addEventListener("click", () => deleteSelectedManualBaseEdge().catch(showError));
@@ -5992,7 +6074,7 @@ function wireEvents() {
       cancelDraw();
     } else if (event.key === "Backspace" || event.key === "Delete") {
       event.preventDefault();
-      removeLastDrawPoint();
+      removeLastDrawStep();
     } else if (event.key === "Enter") {
       event.preventDefault();
       finishDraw().catch(showError);

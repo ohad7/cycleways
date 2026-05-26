@@ -297,6 +297,18 @@ h2 {
   opacity: 0.5;
 }
 
+.compose-edge-status {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border: 1px solid #d4a373;
+  border-radius: 6px;
+  background: #fff7ed;
+  font-size: 13px;
+  color: #2d2a26;
+}
+.compose-edge-status .compose-ok { color: #166534; }
+.compose-edge-status .compose-bad { color: #b91c1c; font-weight: 600; }
+
 .workspace-tabs {
   display: flex;
   flex-wrap: wrap;

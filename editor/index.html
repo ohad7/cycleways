@@ -51,6 +51,8 @@
             </div>
             <div class="toolbar-group toolbar-group-draw">
               <button id="draw-done" class="tool-button confirm" type="button" hidden>Done</button>
+              <button id="draw-undo-last" class="tool-button" type="button" hidden>Undo last</button>
+              <button id="draw-freehand" class="tool-button" type="button" hidden>Draw freehand</button>
               <button id="draw-cancel" class="tool-button danger" type="button" hidden>Cancel</button>
             </div>
           </div>
@@ -86,6 +88,8 @@
               <h2>Segment</h2>
               <span id="selected-count">None selected</span>
             </header>
+
+            <div id="compose-edge-status" class="compose-edge-status" hidden></div>
 
             <form id="segment-form" class="segment-form">
               <input id="segment-id" type="hidden">
