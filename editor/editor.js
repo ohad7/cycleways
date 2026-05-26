@@ -3968,8 +3968,88 @@ function closestExtendEndpoint(point) {
 }
 
 async function commitNewSegmentEdgesDrawn() {
-  // Stub: replaced by Task 6.
-  throw new Error("commitNewSegmentEdgesDrawn not implemented yet.");
+  if (isBaseGraphStale()) {
+    throw new Error("Run Recalculate Graph + Matches before saving the segment.");
+  }
+  const edgeRefs = normalizeOverlayEdgeRefs(state.draw.edgeRefs);
+  if (edgeRefs.length === 0) {
+    throw new Error("Pick at least one base edge before saving.");
+  }
+
+  const segmentId = nextSegmentId();
+  const continuityGaps = edgeRefContinuityGaps(edgeRefs);
+
+  const acceptedMappings = new Map();
+  for (const mapping of Object.values(state.baseOverlay.overlay?.segments || {})) {
+    if (!mapping || (mapping.status !== "accepted_edge_set" && mapping.status !== "accepted_auto_match")) {
+      continue;
+    }
+    for (const ref of mapping.edgeRefs || []) {
+      acceptedMappings.set(String(ref.edgeId), { segmentId: mapping.segmentId, segmentName: mapping.segmentName });
+    }
+  }
+
+  const validation = validateEdgePickMapping({
+    segmentId,
+    edgeRefs,
+    acceptedMappings,
+    continuityGaps,
+  });
+
+  const edgeLookup = new Map();
+  for (const feature of state.baseOverlay.graphEdges?.features || []) {
+    edgeLookup.set(String(graphEdgeFeatureId(feature)), feature.geometry);
+  }
+  for (const feature of manualBaseEdgeFeatures()) {
+    edgeLookup.set(String(manualBaseEdgeFeatureId(feature)), feature.geometry);
+  }
+  const coordinates = stitchCoordsFromEdgeRefs(edgeRefs, edgeLookup);
+  if (coordinates.length < 2) {
+    throw new Error("Could not build segment geometry from the picked edges.");
+  }
+
+  const name = uniqueSegmentName("New segment");
+  const newFeature = {
+    type: "Feature",
+    properties: {
+      id: segmentId,
+      name,
+      status: "active",
+      roadType: "paved",
+      quality: defaultQuality(),
+    },
+    geometry: {
+      type: "LineString",
+      coordinates,
+    },
+  };
+
+  state.source.features.push(newFeature);
+  const sourceIndex = state.source.features.length - 1;
+  refreshActiveFeatures();
+  state.selectedIndex = state.activeFeatures.findIndex((record) => record.sourceIndex === sourceIndex);
+
+  const mapping = {
+    segmentId,
+    segmentName: name,
+    source: "edge_pick",
+    status: validation.ok ? "accepted_edge_set" : "needs_edit",
+    edgeRefs,
+    confidence: "manual",
+    coverageRatio: 1,
+    avgDistanceMeters: null,
+    gapCount: continuityGaps.length,
+    failureClass: validation.ok ? null : validation.failureClass,
+    failureMessage: validation.ok ? null : validation.message,
+    updatedAt: new Date().toISOString(),
+  };
+  await saveSelectedBaseOverlayMapping(mapping);
+  queueChangedFeature(newFeature);
+
+  const detail = validation.ok
+    ? `Accepted ${name} with ${edgeRefs.length} base edges.`
+    : `Created ${name} but mapping needs edit: ${validation.message}`;
+  return { feature: newFeature, message: detail };
 }
 
 function commitNewDrawnSegment() {
