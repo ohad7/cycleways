@@ -876,7 +876,7 @@ function normalizeCwBaseOverlay(overlay) {
     if (String(mapping.segmentId) !== String(key)) {
       throw new Error(`Overlay mapping key ${key} does not match segmentId ${mapping.segmentId}`);
     }
-    if (!["accepted_auto_match", "manual_base_edge_needed", "needs_edit"].includes(mapping.status)) {
+    if (!["accepted_auto_match", "accepted_edge_set", "manual_base_edge_needed", "needs_edit"].includes(mapping.status)) {
       throw new Error(`Overlay mapping ${key} has unsupported status ${mapping.status}`);
     }
     if (mapping.segmentName !== undefined && typeof mapping.segmentName !== "string") {

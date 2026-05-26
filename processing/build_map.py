@@ -1943,7 +1943,7 @@ def build_base_routing_asset(
         for mapping in (overlay.get("segments") or {}).values()
         if (
             isinstance(mapping, dict)
-            and mapping.get("status") == "accepted_auto_match"
+            and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
             and mapping.get("segmentId") in active_ids
         )
     ]
@@ -2580,7 +2580,7 @@ def build_public_cycleways_display_geojson(
             isinstance(mapping, dict)
             and isinstance(mapping.get("segmentId"), int)
             and mapping.get("segmentId") in active_ids
-            and mapping.get("status") == "accepted_auto_match"
+            and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
         )
     }
     runtime_edges_by_id = {
