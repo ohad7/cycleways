@@ -4,6 +4,7 @@ import {
   addRouteNetworkLayers,
   clearOsmDebugLayers,
   clearOsmRawLayers,
+  clearRouteDirectionLitPointLayer,
   clearRouteNetworkLayers,
   CW_OSM_MATCH_HIT_LAYER_ID,
   CW_OSM_MATCH_HOVER_LAYER_ID,
@@ -27,6 +28,7 @@ import {
   syncCwOsmReviewLayers,
   syncOsmGraphLayers,
   syncOsmIntersectionLayers,
+  syncRouteDirectionLitPointLayer,
   syncRouteGeometryLayer,
   syncRoutePointLayers,
   syncVideoCursorLayer,
@@ -39,6 +41,7 @@ const MAP_ZOOM = 11.5;
 
 function MapView({
   activeDataPointIds = [],
+  animator = null,
   dataMarkerFeatures = [],
   focusedMarker,
   focusedSegment,
@@ -588,6 +591,75 @@ function MapView({
     if (!map || status !== "ready") return;
     syncRouteGeometryLayer(map, routeGeometry);
   }, [routeGeometry, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !animator) return undefined;
+
+    const mapboxgl = window.mapboxgl;
+    if (!mapboxgl) return undefined;
+
+    const host = document.createElement("div");
+    host.className = "route-direction-chevron";
+    host.style.cssText = `
+      width: 24px;
+      height: 16px;
+      pointer-events: none;
+      display: none;
+    `;
+    const rotor = document.createElement("div");
+    rotor.style.cssText = `
+      width: 100%;
+      height: 100%;
+      transform-origin: 50% 50%;
+      mix-blend-mode: screen;
+    `;
+    rotor.innerHTML = `
+      <svg viewBox="-12 -8 24 16" width="24" height="16" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="0,-5 9,0 0,5" fill="#ffffff" fill-opacity="0.95"/>
+        <polygon points="-9,-4 0,0 -9,4" fill="#ffffff" fill-opacity="0.55"/>
+        <polygon points="-18,-3 -9,0 -18,3" fill="#ffffff" fill-opacity="0.25"/>
+      </svg>
+    `;
+    host.appendChild(rotor);
+
+    const marker = new mapboxgl.Marker({ element: host, anchor: "center" })
+      .setLngLat([0, 0])
+      .addTo(map);
+
+    const unsubscribe = animator.subscribe("chevron", (payload) => {
+      if (!payload) {
+        host.style.display = "none";
+        return;
+      }
+      marker.setLngLat([payload.lng, payload.lat]);
+      host.style.display = "block";
+      rotor.style.transform = `rotate(${payload.bearing}deg)`;
+    });
+
+    return () => {
+      unsubscribe();
+      marker.remove();
+    };
+  }, [animator, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !animator) return undefined;
+
+    const unsubscribe = animator.subscribe("litPoint", (payload) => {
+      if (!map.getSource) return;
+      const adapted = payload
+        ? { ...payload, displayIndex: payload.index + 1 }
+        : null;
+      syncRouteDirectionLitPointLayer(map, adapted);
+    });
+
+    return () => {
+      unsubscribe();
+      clearRouteDirectionLitPointLayer(map);
+    };
+  }, [animator, status]);
 
   useEffect(() => {
     const map = mapRef.current;
