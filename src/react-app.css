@@ -1071,6 +1071,17 @@ input {
   line-height: 1;
 }
 
+.react-grade-chip {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  border-radius: 999px;
+  border: 1px solid;
+  font-weight: 600;
+}
+
 .react-search-marker {
   width: 20px;
   height: 20px;

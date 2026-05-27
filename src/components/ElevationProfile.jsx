@@ -40,6 +40,8 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
       coord: closestPoint.coord,
       distance: closestPoint.distance,
       elevation: closestPoint.elevation,
+      grade: closestPoint.grade,
+      gradeClass: closestPoint.gradeClass,
     });
   };
 

@@ -9,6 +9,7 @@ import React, {
 import ContentSections from "./components/ContentSections.jsx";
 import DownloadModal from "./components/DownloadModal.jsx";
 import ElevationProfile, { formatLegacyDistance } from "./components/ElevationProfile.jsx";
+import { GRADE_COLORS, GRADE_LABELS_HE } from "./utils/grade.js";
 import PageShell from "./components/PageShell.jsx";
 import { getRouteMessage } from "./components/RoutePanel.jsx";
 import Tutorial from "./components/Tutorial.jsx";
@@ -1830,10 +1831,25 @@ function SegmentNameDisplay({
   osmFeature,
 }) {
   if (elevationHover) {
+    const gradeClass = elevationHover.gradeClass;
+    const grade = elevationHover.grade;
+    const showChip = gradeClass && Number.isFinite(grade);
     return (
       <div className="segment-name-display react-segment-name-display--active" id="segment-name-display">
         📍 מרחק: {(elevationHover.distance / 1000).toFixed(1)} km • גובה:{" "}
         {Math.round(elevationHover.elevation)} m
+        {showChip && (
+          <span
+            className="react-grade-chip"
+            style={{
+              background: `${GRADE_COLORS[gradeClass]}2e`,
+              color: GRADE_COLORS[gradeClass],
+              borderColor: `${GRADE_COLORS[gradeClass]}66`,
+            }}
+          >
+            {GRADE_LABELS_HE[gradeClass]} · {grade.toFixed(1)}%
+          </span>
+        )}
       </div>
     );
   }
