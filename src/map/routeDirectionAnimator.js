@@ -1,5 +1,11 @@
 const CHANNELS = new Set(["chevron", "litPoint", "elevation"]);
 
+export function computeCycleDuration(totalDistanceMeters) {
+  const distanceKm = (totalDistanceMeters || 0) / 1000;
+  const raw = distanceKm * 0.25 + 2.0;
+  return Math.min(7.0, Math.max(3.0, raw));
+}
+
 export function createRouteDirectionAnimator(options = {}) {
   const clock = options.clock ?? defaultClock();
   const prefersReducedMotion =

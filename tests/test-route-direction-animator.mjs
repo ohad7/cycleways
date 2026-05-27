@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { createRouteDirectionAnimator } from "../src/map/routeDirectionAnimator.js";
+import {
+  createRouteDirectionAnimator,
+  computeCycleDuration,
+} from "../src/map/routeDirectionAnimator.js";
 
 // ── Fake clock harness ────────────────────────────────────────────────────
 function createFakeClock() {
@@ -64,3 +67,14 @@ function createFakeClock() {
 }
 
 console.log("test-route-direction-animator: API surface OK");
+
+// computeCycleDuration: clamp(distance_km * 0.25 + 2.0, 3.0, 7.0)
+assert.equal(computeCycleDuration(0), 3.0, "zero distance floors at 3s");
+assert.equal(computeCycleDuration(500), 3.0, "0.5 km floors at 3s");
+assert.equal(computeCycleDuration(4000), 3.0, "4 km still floors at 3s");
+assert.equal(computeCycleDuration(10000), 4.5, "10 km computes to 4.5s");
+assert.equal(computeCycleDuration(16000), 6.0, "16 km computes to 6.0s");
+assert.equal(computeCycleDuration(20000), 7.0, "20 km hits ceiling at 7s");
+assert.equal(computeCycleDuration(50000), 7.0, "50 km caps at 7s");
+
+console.log("test-route-direction-animator: cycle duration OK");
