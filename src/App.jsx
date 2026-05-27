@@ -1513,6 +1513,7 @@ function getWarningBackgroundColor(warnings) {
 }
 
 function RouteDescription({
+  animator,
   error,
   hasBrokenRoute,
   onElevationHover,
@@ -1548,6 +1549,7 @@ function RouteDescription({
             )}
             {routeState.geometry.length >= 2 && (
               <ElevationProfile
+                animator={animator}
                 distance={routeState.distance}
                 geometry={routeState.geometry}
                 onElevationHover={onElevationHover}
@@ -1586,8 +1588,27 @@ function RouteDescriptionText({ routeState }) {
   );
 }
 
-function ElevationProfile({ distance, geometry, onElevationHover }) {
+function ElevationProfile({ animator, distance, geometry, onElevationHover }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
+  const markerLineRef = useRef(null);
+
+  useEffect(() => {
+    if (!animator) return undefined;
+    const unsubscribe = animator.subscribe("elevation", (payload) => {
+      const line = markerLineRef.current;
+      if (!line) return;
+      if (!payload) {
+        line.setAttribute("opacity", "0");
+        return;
+      }
+      const x = Math.max(0, Math.min(100, payload.t * 100));
+      line.setAttribute("x1", x);
+      line.setAttribute("x2", x);
+      line.setAttribute("opacity", "1");
+    });
+    return unsubscribe;
+  }, [animator]);
+
   if (!profile) return null;
 
   const handleInteraction = (event) => {
@@ -1633,6 +1654,18 @@ function ElevationProfile({ distance, geometry, onElevationHover }) {
             fill="url(#reactElevationGradient)"
             stroke="#748873"
             strokeWidth="0.5"
+          />
+          <line
+            ref={markerLineRef}
+            x1="0"
+            x2="0"
+            y1="0"
+            y2="100"
+            stroke="#ffd54a"
+            strokeWidth="0.6"
+            strokeLinecap="round"
+            opacity="0"
+            style={{ pointerEvents: "none" }}
           />
         </svg>
         <div
