@@ -1043,6 +1043,34 @@ input {
   cursor: pointer;
 }
 
+.react-elevation-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #666;
+  direction: rtl;
+}
+
+.react-elevation-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.react-elevation-legend__swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.react-elevation-legend__label {
+  line-height: 1;
+}
+
 .react-search-marker {
   width: 20px;
   height: 20px;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { smoothElevations } from "../../utils/elevations.js";
 import { getDistance } from "../../utils/distance.js";
-import { GRADE_COLORS, pointSmoothedGrades, classifyGrade } from "../utils/grade.js";
+import { GRADE_CLASSES, GRADE_COLORS, GRADE_LABELS_HE, pointSmoothedGrades, classifyGrade } from "../utils/grade.js";
 import { clusterByGrade } from "../utils/slopeClustering.js";
 
 export default function ElevationProfile({ animator, distance, geometry, onElevationHover }) {
@@ -94,6 +94,19 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
           onTouchMove={handleInteraction}
           onTouchEnd={clearHover}
         />
+      </div>
+      <div className="react-elevation-legend" aria-label="מקרא שיפועים">
+        {GRADE_CLASSES.map((cls) => (
+          <span key={cls} className="react-elevation-legend__item">
+            <span
+              className="react-elevation-legend__swatch"
+              style={{ background: GRADE_COLORS[cls] }}
+            />
+            <span className="react-elevation-legend__label">
+              {GRADE_LABELS_HE[cls]}
+            </span>
+          </span>
+        ))}
       </div>
       <div className="elevation-labels">
         <span className="distance-label">{formatLegacyDistance(distance)}</span>
