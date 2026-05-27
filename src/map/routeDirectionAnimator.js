@@ -1,4 +1,18 @@
+import { getDistance } from "../../utils/distance.js";
+
 const CHANNELS = new Set(["chevron", "litPoint", "elevation"]);
+
+export function precomputeArcLength(geometry) {
+  const n = geometry.length;
+  const cumDist = new Float64Array(n);
+  let acc = 0;
+  for (let i = 1; i < n; i++) {
+    const segment = getDistance(geometry[i - 1], geometry[i]);
+    acc += Number.isFinite(segment) && segment > 0 ? segment : 0;
+    cumDist[i] = acc;
+  }
+  return { cumDist, totalDistMeters: acc };
+}
 
 export function computeCycleDuration(totalDistanceMeters) {
   const distanceKm = (totalDistanceMeters || 0) / 1000;
