@@ -85,7 +85,6 @@ function MapView({
   const searchMarkerRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const hoverPreviewMarkerRef = useRef(null);
-  const elevationMarkerRef = useRef(null);
   const lastRouteClickRef = useRef(null);
   const callbacksRef = useRef({});
   const dataMarkerFeaturesRef = useRef([]);
@@ -187,7 +186,6 @@ function MapView({
       if (mapRef.current) {
         clearSearchHighlight(mapRef.current, searchMarkerRef);
         clearHoverPreviewMarker(hoverPreviewMarkerRef);
-        clearElevationMarker(elevationMarkerRef);
         if (searchTimeoutRef.current) {
           clearTimeout(searchTimeoutRef.current);
         }
@@ -592,6 +590,11 @@ function MapView({
     syncRouteGeometryLayer(map, routeGeometry);
   }, [routeGeometry, status]);
 
+  const chevronMarkerRef = useRef(null);
+  const chevronHostRef = useRef(null);
+  const chevronRotorRef = useRef(null);
+  const animatorVisibleRef = useRef(true);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready" || !animator) return undefined;
@@ -602,7 +605,7 @@ function MapView({
     const host = document.createElement("div");
     host.className = "route-direction-chevron";
     host.style.cssText = `
-      width: 32px;
+      width: 60px;
       height: 14px;
       pointer-events: none;
       display: none;
@@ -614,20 +617,28 @@ function MapView({
       transform-origin: 50% 50%;
       mix-blend-mode: screen;
     `;
+    // Polygons are shifted left by 15 SVG units so the front-triangle tip sits
+    // at SVG (0,0) — which, combined with anchor: "center" and a centered
+    // rotation origin, lands the tip exactly on the marker's lng/lat point.
+    // This stops the main triangle from overshooting the route at sharp curves.
     rotor.innerHTML = `
-      <svg viewBox="-16 -7 32 14" width="32" height="14" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="-12,-3 -3,0 -12,3" fill="#ffffff" fill-opacity="0.25"/>
-        <polygon points="-3,-4 6,0 -3,4" fill="#ffffff" fill-opacity="0.55"/>
-        <polygon points="6,-5 15,0 6,5" fill="#ffffff" fill-opacity="0.95"/>
+      <svg viewBox="-45 -7 60 14" width="60" height="14" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="-15,-2 -10,0 -15,2" fill="#ffffff" fill-opacity="0.25"/>
+        <polygon points="-10,-2.5 -5,0 -10,2.5" fill="#ffffff" fill-opacity="0.55"/>
+        <polygon points="-5,-3 0,0 -5,3" fill="#ffffff" fill-opacity="0.9"/>
       </svg>
     `;
     host.appendChild(rotor);
+    chevronHostRef.current = host;
+    chevronRotorRef.current = rotor;
 
     const marker = new mapboxgl.Marker({ element: host, anchor: "center" })
       .setLngLat([0, 0])
       .addTo(map);
+    chevronMarkerRef.current = marker;
 
     const unsubscribe = animator.subscribe("chevron", (payload) => {
+      if (!animatorVisibleRef.current) return;
       if (!payload) {
         host.style.display = "none";
         return;
@@ -642,14 +653,45 @@ function MapView({
     return () => {
       unsubscribe();
       marker.remove();
+      chevronMarkerRef.current = null;
+      chevronHostRef.current = null;
+      chevronRotorRef.current = null;
     };
   }, [animator, status]);
+
+  useEffect(() => {
+    const marker = chevronMarkerRef.current;
+    const host = chevronHostRef.current;
+    const rotor = chevronRotorRef.current;
+    if (!marker || !host || !rotor) return;
+
+    if (elevationHover?.coord) {
+      // Disable animator-driven visuals for this route — only reset on route change.
+      const wasVisible = animatorVisibleRef.current;
+      animatorVisibleRef.current = false;
+      if (wasVisible && mapRef.current) {
+        clearRouteDirectionLitPointLayer(mapRef.current);
+      }
+      marker.setLngLat([elevationHover.coord.lng, elevationHover.coord.lat]);
+      host.style.display = "block";
+      if (Number.isFinite(elevationHover.bearing)) {
+        rotor.style.transform = `rotate(${elevationHover.bearing - 90}deg)`;
+      }
+    } else {
+      host.style.display = "none";
+    }
+  }, [elevationHover]);
+
+  useEffect(() => {
+    animatorVisibleRef.current = true;
+  }, [routeGeometry]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready" || !animator) return undefined;
 
     const unsubscribe = animator.subscribe("litPoint", (payload) => {
+      if (!animatorVisibleRef.current) return;
       if (!map.getSource) return;
       const adapted = payload
         ? { ...payload, displayIndex: payload.index + 1 }
@@ -834,17 +876,6 @@ function MapView({
       map.off("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
     };
   }, [status]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || status !== "ready") return;
-
-    if (elevationHover?.coord) {
-      syncElevationMarker(map, elevationMarkerRef, elevationHover.coord);
-    } else {
-      clearElevationMarker(elevationMarkerRef);
-    }
-  }, [elevationHover, status]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1383,38 +1414,6 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-function syncElevationMarker(map, markerRef, coord) {
-  const mapboxgl = window.mapboxgl;
-  if (!mapboxgl || !coord) return;
-
-  const coordinates = [coord.lng, coord.lat];
-  if (markerRef.current) {
-    markerRef.current.setLngLat(coordinates);
-    return;
-  }
-
-  const markerElement = document.createElement("div");
-  markerElement.className = "elevation-marker";
-  markerElement.style.cssText = `
-    width: 16px;
-    height: 16px;
-    background: #ff4444;
-    border: 3px solid white;
-    border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(255, 0, 0, 0.6);
-    cursor: pointer;
-  `;
-
-  markerRef.current = new mapboxgl.Marker(markerElement)
-    .setLngLat(coordinates)
-    .addTo(map);
-}
-
-function clearElevationMarker(markerRef) {
-  markerRef.current?.remove();
-  markerRef.current = null;
 }
 
 function buildNetworkSegments(features) {

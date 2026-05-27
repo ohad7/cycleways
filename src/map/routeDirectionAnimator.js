@@ -280,7 +280,7 @@ function buildLitPayload(state, k) {
   return { index: k, lng: coord.lng, lat: coord.lat };
 }
 
-function computeBearing(from, to) {
+export function computeBearing(from, to) {
   const φ1 = (from.lat * Math.PI) / 180;
   const φ2 = (to.lat * Math.PI) / 180;
   const Δλ = ((to.lng - from.lng) * Math.PI) / 180;

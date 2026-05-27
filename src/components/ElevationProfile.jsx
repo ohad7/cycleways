@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { smoothElevations } from "../../utils/elevations.js";
 import { getDistance } from "../../utils/distance.js";
 import { GRADE_CLASSES, GRADE_COLORS, GRADE_LABELS_HE, pointSmoothedGrades, classifyGrade } from "../utils/grade.js";
 import { clusterByGrade } from "../utils/slopeClustering.js";
+import { computeBearing } from "../map/routeDirectionAnimator.js";
 
 export default function ElevationProfile({ animator, distance, geometry, onElevationHover }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
   const markerLineRef = useRef(null);
+  const animatorMarkerEnabledRef = useRef(true);
+  const [hoverInfo, setHoverInfo] = useState(null);
 
   useEffect(() => {
     if (!animator) return undefined;
     const unsubscribe = animator.subscribe("elevation", (payload) => {
+      if (!animatorMarkerEnabledRef.current) return;
       const line = markerLineRef.current;
       if (!line) return;
       if (!payload) {
@@ -25,6 +29,10 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
     return unsubscribe;
   }, [animator]);
 
+  useEffect(() => {
+    animatorMarkerEnabledRef.current = true;
+  }, [geometry]);
+
   if (!profile) return null;
 
   const handleInteraction = (event) => {
@@ -36,16 +44,25 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
     const closestPoint = findClosestElevationPoint(profile.elevationData, xPercent);
     if (!closestPoint) return;
 
-    onElevationHover?.({
+    const payload = {
       coord: closestPoint.coord,
+      bearing: closestPoint.bearing,
       distance: closestPoint.distance,
       elevation: closestPoint.elevation,
       grade: closestPoint.grade,
       gradeClass: closestPoint.gradeClass,
-    });
+    };
+    if (animatorMarkerEnabledRef.current) {
+      animatorMarkerEnabledRef.current = false;
+      const line = markerLineRef.current;
+      if (line) line.setAttribute("opacity", "0");
+    }
+    setHoverInfo(payload);
+    onElevationHover?.(payload);
   };
 
   const clearHover = () => {
+    setHoverInfo(null);
     onElevationHover?.(null);
   };
 
@@ -53,6 +70,26 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
     <div className="elevation-profile">
       <h4>גרף גובה (Elevation Profile)</h4>
       <div className="elevation-chart" id="elevation-chart">
+        {hoverInfo && (
+          <div className="react-elevation-hover-info">
+            <span>
+              📍 מרחק: {(hoverInfo.distance / 1000).toFixed(1)} km • גובה:{" "}
+              {Math.round(hoverInfo.elevation)} m
+            </span>
+            {hoverInfo.gradeClass && Number.isFinite(hoverInfo.grade) && (
+              <span
+                className="react-grade-chip"
+                style={{
+                  background: `${GRADE_COLORS[hoverInfo.gradeClass]}2e`,
+                  color: GRADE_COLORS[hoverInfo.gradeClass],
+                  borderColor: `${GRADE_COLORS[hoverInfo.gradeClass]}66`,
+                }}
+              >
+                {GRADE_LABELS_HE[hoverInfo.gradeClass]} · {hoverInfo.grade.toFixed(1)}%
+              </span>
+            )}
+          </div>
+        )}
         <svg
           aria-hidden="true"
           focusable="false"
@@ -97,21 +134,21 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
           onTouchEnd={clearHover}
         />
       </div>
-      <div className="react-elevation-legend" aria-label="מקרא שיפועים">
-        {GRADE_CLASSES.map((cls) => (
-          <span key={cls} className="react-elevation-legend__item">
-            <span
-              className="react-elevation-legend__swatch"
-              style={{ background: GRADE_COLORS[cls] }}
-            />
-            <span className="react-elevation-legend__label">
-              {GRADE_LABELS_HE[cls]}
-            </span>
-          </span>
-        ))}
-      </div>
-      <div className="elevation-labels">
+      <div className="react-elevation-footer">
         <span className="distance-label">{formatLegacyDistance(distance)}</span>
+        <div className="react-elevation-legend" aria-label="מקרא שיפועים">
+          {GRADE_CLASSES.map((cls) => (
+            <span key={cls} className="react-elevation-legend__item">
+              <span
+                className="react-elevation-legend__swatch"
+                style={{ background: GRADE_COLORS[cls] }}
+              />
+              <span className="react-elevation-legend__label">
+                {GRADE_LABELS_HE[cls]}
+              </span>
+            </span>
+          ))}
+        </div>
         <span className="distance-label">0 ק"מ</span>
       </div>
     </div>
@@ -161,7 +198,7 @@ function buildElevationProfile(geometry) {
   const smoothedGrades = pointSmoothedGrades(cumDistances, elevations, 200);
   const clusters = clusterByGrade(cumDistances, elevations, { minDistanceM: 100 });
 
-  const MIN_VERTICAL_RANGE_M = 100;
+  const MIN_VERTICAL_RANGE_M = 60;
   const observedMin = Math.min(...coordsWithElevation.map((point) => point.elevation));
   const observedMax = Math.max(...coordsWithElevation.map((point) => point.elevation));
   const observedRange = observedMax - observedMin;
@@ -190,6 +227,7 @@ function buildElevationProfile(geometry) {
 
     let elevation;
     let coord;
+    let bearing = null;
     if (beforePoint && afterPoint) {
       const ratio =
         (distanceAtX - beforePoint.distance) /
@@ -201,6 +239,7 @@ function buildElevationProfile(geometry) {
         lat: beforePoint.lat + (afterPoint.lat - beforePoint.lat) * ratio,
         lng: beforePoint.lng + (afterPoint.lng - beforePoint.lng) * ratio,
       };
+      bearing = computeBearing(beforePoint, afterPoint);
     } else if (beforePoint) {
       elevation = beforePoint.elevation;
       coord = beforePoint;
@@ -215,6 +254,7 @@ function buildElevationProfile(geometry) {
       elevation,
       distance: distanceAtX,
       coord,
+      bearing,
       heightPercent,
       distancePercent,
     });
