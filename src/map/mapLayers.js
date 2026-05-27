@@ -7,6 +7,11 @@ export const ROUTE_GEOMETRY_SOURCE_ID = "react-route-geometry";
 export const ROUTE_GEOMETRY_LAYER_ID = "react-route-geometry-line";
 export const ROUTE_POINTS_SOURCE_ID = "react-route-points";
 export const ROUTE_POINTS_LAYER_ID = "react-route-points-circle";
+export const ROUTE_DIRECTION_LIT_POINT_SOURCE_ID = "route-direction-lit-point";
+export const ROUTE_DIRECTION_LIT_POINT_CIRCLE_LAYER_ID =
+  "route-direction-lit-point-circle";
+export const ROUTE_DIRECTION_LIT_POINT_TEXT_LAYER_ID =
+  "route-direction-lit-point-text";
 export const DATA_MARKERS_SOURCE_ID = "react-data-markers";
 export const DATA_MARKERS_LAYER_ID = "react-data-markers-layer";
 export const OSM_DEBUG_SOURCE_ID = "osm-debug-network";
@@ -1063,6 +1068,78 @@ export function syncRouteGeometryLayer(map, routeGeometry) {
       "line-opacity": 0.9,
     },
   });
+}
+
+export function syncRouteDirectionLitPointLayer(map, payload) {
+  const data = {
+    type: "FeatureCollection",
+    features:
+      payload && Number.isFinite(payload.lng) && Number.isFinite(payload.lat)
+        ? [
+            {
+              type: "Feature",
+              geometry: {
+                type: "Point",
+                coordinates: [payload.lng, payload.lat],
+              },
+              properties: {
+                index: payload.displayIndex,
+              },
+            },
+          ]
+        : [],
+  };
+
+  if (map.getSource(ROUTE_DIRECTION_LIT_POINT_SOURCE_ID)) {
+    map.getSource(ROUTE_DIRECTION_LIT_POINT_SOURCE_ID).setData(data);
+    return;
+  }
+
+  map.addSource(ROUTE_DIRECTION_LIT_POINT_SOURCE_ID, {
+    type: "geojson",
+    data,
+  });
+
+  map.addLayer({
+    id: ROUTE_DIRECTION_LIT_POINT_CIRCLE_LAYER_ID,
+    type: "circle",
+    source: ROUTE_DIRECTION_LIT_POINT_SOURCE_ID,
+    paint: {
+      "circle-radius": 7,
+      "circle-color": "#ff4444",
+      "circle-stroke-color": "#ffd54a",
+      "circle-stroke-width": 3,
+      "circle-blur": 0.4,
+    },
+  });
+
+  map.addLayer({
+    id: ROUTE_DIRECTION_LIT_POINT_TEXT_LAYER_ID,
+    type: "symbol",
+    source: ROUTE_DIRECTION_LIT_POINT_SOURCE_ID,
+    layout: {
+      "text-field": ["coalesce", ["get", "index"], ""],
+      "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+      "text-size": 10,
+      "text-allow-overlap": true,
+      "text-ignore-placement": true,
+    },
+    paint: {
+      "text-color": "#ffffff",
+    },
+  });
+}
+
+export function clearRouteDirectionLitPointLayer(map) {
+  if (map.getLayer(ROUTE_DIRECTION_LIT_POINT_TEXT_LAYER_ID)) {
+    map.removeLayer(ROUTE_DIRECTION_LIT_POINT_TEXT_LAYER_ID);
+  }
+  if (map.getLayer(ROUTE_DIRECTION_LIT_POINT_CIRCLE_LAYER_ID)) {
+    map.removeLayer(ROUTE_DIRECTION_LIT_POINT_CIRCLE_LAYER_ID);
+  }
+  if (map.getSource(ROUTE_DIRECTION_LIT_POINT_SOURCE_ID)) {
+    map.removeSource(ROUTE_DIRECTION_LIT_POINT_SOURCE_ID);
+  }
 }
 
 export function dataMarkerFeaturesFromSegments(segmentsData) {
