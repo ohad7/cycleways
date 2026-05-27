@@ -267,3 +267,94 @@ console.log("test-route-direction-animator: lit-point OK");
 }
 
 console.log("test-route-direction-animator: elevation OK");
+
+// cancel() is idempotent and emits hidden payloads on each channel that needs them.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: false });
+
+  const chevronEvents = [];
+  const elevEvents = [];
+  const litEvents = [];
+  animator.subscribe("chevron", (p) => chevronEvents.push(p));
+  animator.subscribe("elevation", (p) => elevEvents.push(p));
+  animator.subscribe("litPoint", (p) => litEvents.push(p));
+
+  animator.trigger(eastwardGeometry(10), [0, 10]);
+  clock.advance(16);
+  assert.ok(chevronEvents.at(-1), "cycle1 fired a non-null chevron");
+
+  animator.cancel();
+  assert.equal(chevronEvents.at(-1), null, "cancel emitted hidden chevron");
+  assert.equal(elevEvents.at(-1), null, "cancel emitted hidden elevation");
+  assert.equal(clock.pendingFrameCount(), 0, "cancel cleared RAF");
+
+  const beforeLen = chevronEvents.length;
+  animator.cancel();
+  assert.equal(chevronEvents.length, beforeLen, "second cancel is silent");
+}
+
+// Mid-burst trigger restarts cleanly at cycle1 with new geometry.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: false });
+  const events = [];
+  animator.subscribe("chevron", (p) => events.push(p));
+
+  animator.trigger(eastwardGeometry(10), [0, 10]);
+  clock.advance(2000);
+
+  const second = eastwardGeometry(10).map((p) => ({ lat: -1, lng: p.lng }));
+  animator.trigger(second, [0, 10]);
+
+  clock.advance(16);
+  const latest = events.at(-1);
+  assert.ok(latest && latest.lat < -0.5, "restart picked up new geometry");
+}
+
+// trigger with too-short input is a no-op.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: false });
+  const events = [];
+  animator.subscribe("chevron", (p) => events.push(p));
+
+  animator.trigger([], []);
+  animator.trigger([{ lat: 0, lng: 0 }], [0]);
+  animator.trigger(eastwardGeometry(10), [0]); // only 1 point
+  assert.equal(events.length, 0, "no events for invalid inputs");
+  assert.equal(clock.pendingFrameCount(), 0, "no frames scheduled");
+}
+
+// Tab-background fast-forward: advancing past the entire burst transitions cleanly to done.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: false });
+  const events = [];
+  animator.subscribe("chevron", (p) => events.push(p));
+
+  animator.trigger(eastwardGeometry(10), [0, 10]);
+  clock.advance(60000);
+
+  assert.equal(events.at(-1), null, "final event is hidden");
+  assert.equal(clock.pendingFrameCount(), 0, "no more frames scheduled");
+}
+
+// dispose: cancels + drops subscribers.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: false });
+  let calls = 0;
+  animator.subscribe("chevron", () => { calls++; });
+  animator.trigger(eastwardGeometry(10), [0, 10]);
+  clock.advance(16);
+  assert.ok(calls > 0, "subscriber received frames before dispose");
+  const beforeDispose = calls;
+
+  animator.dispose();
+  animator.trigger(eastwardGeometry(10), [0, 10]);
+  clock.advance(16);
+  assert.equal(calls, beforeDispose, "dispose drops subscribers");
+}
+
+console.log("test-route-direction-animator: cancel/restart/edge OK");
