@@ -137,9 +137,14 @@ function buildElevationProfile(geometry) {
     return { ...coord, distance: pointDistance };
   });
 
-  const minElevation = Math.min(...coordsWithElevation.map((point) => point.elevation));
-  const maxElevation = Math.max(...coordsWithElevation.map((point) => point.elevation));
-  const range = maxElevation - minElevation || 100;
+  const MIN_VERTICAL_RANGE_M = 100;
+  const observedMin = Math.min(...coordsWithElevation.map((point) => point.elevation));
+  const observedMax = Math.max(...coordsWithElevation.map((point) => point.elevation));
+  const observedRange = observedMax - observedMin;
+  const renderedRange = Math.max(observedRange, MIN_VERTICAL_RANGE_M);
+  const center = (observedMin + observedMax) / 2;
+  const minElevation = center - renderedRange / 2;
+  const range = renderedRange;
   const profileWidth = 300;
   const elevationData = [];
 
@@ -180,10 +185,7 @@ function buildElevationProfile(geometry) {
       coord = coordsWithElevation[0];
     }
 
-    const heightPercent = Math.max(
-      5,
-      ((elevation - minElevation) / range) * 80 + 10,
-    );
+    const heightPercent = ((elevation - minElevation) / range) * 80 + 10;
     const distancePercent = (x / profileWidth) * 100;
     elevationData.push({
       elevation,
