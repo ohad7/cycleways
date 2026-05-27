@@ -358,3 +358,36 @@ console.log("test-route-direction-animator: elevation OK");
 }
 
 console.log("test-route-direction-animator: cancel/restart/edge OK");
+
+// prefers-reduced-motion: chevron + elevation never fire; lit-point steps through indices.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: true });
+
+  const chevronEvents = [];
+  const elevEvents = [];
+  const litEvents = [];
+  animator.subscribe("chevron", (p) => chevronEvents.push(p));
+  animator.subscribe("elevation", (p) => elevEvents.push(p));
+  animator.subscribe("litPoint", (p) => litEvents.push(p));
+
+  animator.trigger(eastwardGeometry(20), [0, 10, 20]);
+
+  // Reduced mode: 500 ms lit per point + 200 ms gap × 3 points = 2100 ms.
+  for (let i = 0; i < 200; i++) clock.advance(16);
+
+  assert.equal(chevronEvents.length, 0, "no chevron in reduced motion");
+  assert.equal(elevEvents.length, 0, "no elevation in reduced motion");
+
+  const indices = litEvents
+    .map((e) => (e ? e.index : null))
+    .filter((v, i, arr) => arr[i - 1] !== v);
+  assert.deepEqual(
+    indices,
+    [0, null, 1, null, 2, null],
+    `sequential lit fires (got ${JSON.stringify(indices)})`,
+  );
+  assert.equal(clock.pendingFrameCount(), 0, "no frames pending after reduced burst");
+}
+
+console.log("test-route-direction-animator: reduced motion OK");

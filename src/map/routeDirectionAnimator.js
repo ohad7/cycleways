@@ -58,6 +58,11 @@ export function createRouteDirectionAnimator(options = {}) {
 
     cancelInternal({ silent: true });
 
+    if (prefersReducedMotion) {
+      triggerReducedMotion(geometry, routePointIndices);
+      return;
+    }
+
     const arc = precomputeArcLength(geometry);
     if (!(arc.totalDistMeters > 0)) return;
 
@@ -81,6 +86,57 @@ export function createRouteDirectionAnimator(options = {}) {
 
   function scheduleNextFrame() {
     frameId = clock.requestFrame(onFrame);
+  }
+
+  function triggerReducedMotion(geometry, routePointIndices) {
+    const LIT_MS = 500;
+    const GAP_MS = 200;
+    const cycle = LIT_MS + GAP_MS;
+    const totalPoints = routePointIndices.length;
+    const totalMs = totalPoints * cycle;
+
+    state = {
+      phase: "reduced",
+      reducedStart: clock.now(),
+      geometry,
+      routePointIndices,
+      lastLitIndex: null,
+    };
+
+    function reducedFrame(now) {
+      frameId = null;
+      if (!state || state.phase !== "reduced") return;
+
+      const elapsed = now - state.reducedStart;
+
+      if (elapsed >= totalMs) {
+        if (state.lastLitIndex !== null) {
+          state.lastLitIndex = null;
+          emit("litPoint", null);
+        }
+        state = null;
+        return;
+      }
+
+      const i = Math.floor(elapsed / cycle);
+      const inLit = elapsed - i * cycle < LIT_MS;
+      const targetIndex = inLit ? i : null;
+
+      if (targetIndex !== state.lastLitIndex) {
+        state.lastLitIndex = targetIndex;
+        if (targetIndex === null) {
+          emit("litPoint", null);
+        } else {
+          const geomIndex = routePointIndices[targetIndex];
+          const coord = geometry[geomIndex];
+          emit("litPoint", { index: targetIndex, lng: coord.lng, lat: coord.lat });
+        }
+      }
+
+      frameId = clock.requestFrame(reducedFrame);
+    }
+
+    frameId = clock.requestFrame(reducedFrame);
   }
 
   function onFrame(now) {
