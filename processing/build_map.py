@@ -2045,6 +2045,7 @@ def build_base_routing_asset(
         accepted_segment_ids.add(segment_id)
         edge_refs = sorted_overlay_edge_refs(mapping)
         previous_end_coord = None
+        previous_end_node = None
         previous_edge_id = None
         accepted_length_m = 0.0
         has_edge_ref_blocker = False
@@ -2069,6 +2070,7 @@ def build_base_routing_asset(
                 )
                 has_edge_ref_blocker = True
                 previous_end_coord = None
+                previous_end_node = None
                 previous_edge_id = edge_id
                 continue
 
@@ -2087,6 +2089,9 @@ def build_base_routing_asset(
                     }
                 )
                 has_edge_ref_blocker = True
+                previous_end_coord = None
+                previous_end_node = None
+                previous_edge_id = edge_id
                 continue
             edge_start_coord, edge_end_coord = oriented_routing_edge_endpoints(
                 edges_by_id[edge_id],
@@ -2101,23 +2106,40 @@ def build_base_routing_asset(
                     }
                 )
                 has_edge_ref_blocker = True
+                previous_end_coord = None
+                previous_end_node = None
+                previous_edge_id = edge_id
                 continue
-            if (
+            topology_mismatch = (
+                ref_index > 0
+                and previous_end_node
+                and edge_start_node
+                and previous_end_node != edge_start_node
+            )
+            spatial_gap = (
                 ref_index > 0
                 and previous_end_coord
                 and routing_coordinate_distance_m(previous_end_coord, edge_start_coord)
                 > ROUTING_EDGE_CONTINUITY_GAP_M
-            ):
+            )
+            if topology_mismatch or spatial_gap:
                 blockers.append(
                     {
                         "segmentId": segment_id,
                         "fromEdgeId": previous_edge_id,
                         "toEdgeId": edge_id,
-                        "issue": "accepted overlay edge sequence is disconnected",
+                        "fromNodeId": previous_end_node if topology_mismatch else None,
+                        "toNodeId": edge_start_node if topology_mismatch else None,
+                        "issue": (
+                            "accepted overlay edge topology is disconnected"
+                            if topology_mismatch
+                            else "accepted overlay edge sequence is disconnected"
+                        ),
                     }
                 )
                 has_edge_ref_blocker = True
             previous_end_coord = edge_end_coord
+            previous_end_node = edge_end_node
             previous_edge_id = edge_id
 
         source_length = source_lengths.get(segment_id)

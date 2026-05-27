@@ -320,6 +320,79 @@ class BaseRoutingAssetTests(unittest.TestCase):
                     source_geojson=source_geojson,
                 )
 
+    def test_runtime_asset_blocks_coordinate_touching_topology_gap(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            graph_path = root / "osm-base-graph.json"
+            overlay_path = root / "cw-base-overlay.json"
+            manual_edges_path = root / "manual-base-edges.geojson"
+            write_json(
+                graph_path,
+                {
+                    "nodes": [
+                        {"id": "n1", "coord": [35, 33]},
+                        {"id": "n2", "coord": [35.001, 33]},
+                        {"id": "n3", "coord": [35.001, 33]},
+                        {"id": "n4", "coord": [35.002, 33]},
+                    ],
+                    "edges": [
+                        {
+                            "id": "edge-1",
+                            "fromNodeId": "n1",
+                            "toNodeId": "n2",
+                            "distanceMeters": 93,
+                            "coordinates": [[35, 33], [35.001, 33]],
+                        },
+                        {
+                            "id": "edge-2",
+                            "fromNodeId": "n3",
+                            "toNodeId": "n4",
+                            "distanceMeters": 93,
+                            "coordinates": [[35.001, 33], [35.002, 33]],
+                        },
+                    ],
+                },
+            )
+            write_json(
+                overlay_path,
+                {
+                    "segments": {
+                        "7": {
+                            "segmentId": 7,
+                            "segmentName": "coordinate touching topology gap",
+                            "status": "accepted_auto_match",
+                            "edgeRefs": [
+                                {"edgeId": "edge-1", "direction": "forward", "sequenceIndex": 0},
+                                {"edgeId": "edge-2", "direction": "forward", "sequenceIndex": 1},
+                            ],
+                        }
+                    }
+                },
+            )
+            write_json(manual_edges_path, {"type": "FeatureCollection", "features": []})
+            source_geojson = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"id": 7, "name": "source segment", "status": "active"},
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[35, 33], [35.001, 33], [35.002, 33]],
+                        },
+                    }
+                ],
+            }
+
+            with self.assertRaisesRegex(ValueError, "edge topology is disconnected"):
+                build_base_routing_asset(
+                    graph_path,
+                    overlay_path,
+                    manual_edges_path,
+                    {"segment 7": {"id": 7, "status": "active"}},
+                    source_geojson=source_geojson,
+                )
+
     def test_runtime_shards_duplicate_boundary_edges_and_describe_manifest(self):
         manifest, shards, report = build_base_routing_shards(
             {

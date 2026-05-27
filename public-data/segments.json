@@ -1203,8 +1203,8 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל שדות כפר סאלד נחל רחום": {
-    "id": 215,
+  "שביל שדות כפר סאלד": {
+    "id": 323,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -1212,10 +1212,32 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 215,
+    "splitFromName": "שביל שדות כפר סאלד נחל רחום",
     "middle": {
-      "longitude": 35.648264,
-      "latitude": 33.184664,
+      "longitude": 35.649094,
+      "latitude": 33.187234,
       "elevation": 79.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל שדות כפר סאלד נחל רחום": {
+    "id": 324,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 215,
+    "splitFromName": "שביל שדות כפר סאלד נחל רחום",
+    "middle": {
+      "longitude": 35.646517,
+      "latitude": 33.178047,
+      "elevation": 78.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -1409,8 +1431,8 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.615859,
-      "latitude": 33.17509,
+      "longitude": 35.615852,
+      "latitude": 33.175039,
       "elevation": 74.0
     },
     "elevation_gain_m": 0.0,
@@ -3299,9 +3321,9 @@
       "latitude": 33.228901,
       "elevation": 204.0
     },
-    "elevation_gain_m": 2.25,
+    "elevation_gain_m": 0.0,
     "elevation_loss_m": 51.4,
-    "net_elevation_change_m": -49.15
+    "net_elevation_change_m": -51.4
   },
   "כביש 9977 כפר גלעדי": {
     "id": 63,
@@ -4549,13 +4571,13 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.658136,
-      "latitude": 33.189952,
-      "elevation": 125.0
+      "longitude": 35.658098,
+      "latitude": 33.190181,
+      "elevation": 127.0
     },
-    "elevation_gain_m": 2.0,
+    "elevation_gain_m": 4.0,
     "elevation_loss_m": 0.0,
-    "net_elevation_change_m": 2.0
+    "net_elevation_change_m": 4.0
   },
   "דרך רומית מעלה כפר סאלד": {
     "id": 224,
@@ -5271,6 +5293,24 @@
     "elevation_loss_m": 21.78,
     "net_elevation_change_m": -17.38
   },
+  "מעבר מתחת כביש 918": {
+    "id": 325,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.646695,
+      "latitude": 33.180757,
+      "elevation": 77.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.0,
+    "net_elevation_change_m": -2.0
+  },
   "סובב דפנה": {
     "id": 81,
     "status": "deprecated",
@@ -5533,6 +5573,32 @@
       [
         35.650658,
         33.202647
+      ]
+    ]
+  },
+  "שביל שדות כפר סאלד נחל רחום [split archive 215]": {
+    "id": 215,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל שדות כפר סאלד נחל רחום",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.650756,
+        33.190437
+      ],
+      [
+        35.647804,
+        33.184051
+      ],
+      [
+        35.646504,
+        33.178008
       ]
     ]
   },
@@ -6439,7 +6505,7 @@
     "id": 108,
     "status": "legacy"
   },
-  "שביל שדות כפר סאלד": {
+  "שביל שדות כפר סאלד [archive 111]": {
     "id": 111,
     "status": "deprecated",
     "deprecated": true,
@@ -6460,7 +6526,8 @@
         35.641828,
         33.170193
       ]
-    ]
+    ],
+    "originalName": "שביל שדות כפר סאלד"
   },
   "שדות בית הלל מזרח": {
     "id": 115,

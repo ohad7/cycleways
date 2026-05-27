@@ -16,14 +16,14 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T05:08:33.348Z",
-        "updatedAt": "2026-05-19T05:09:25.547Z"
+        "updatedAt": "2026-05-26T19:46:21.458Z"
       },
       "geometry": {
         "type": "LineString",
         "coordinates": [
           [
-            35.594669,
-            33.240417
+            35.594674,
+            33.240423
           ],
           [
             35.594924,
@@ -1026,7 +1026,7 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:11.642Z",
-        "updatedAt": "2026-05-19T07:56:17.365Z",
+        "updatedAt": "2026-05-26T19:56:20.686Z",
         "splitFrom": "manual-osm-526566324-mpcc9q0q"
       },
       "geometry": {
@@ -1169,7 +1169,7 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-19T07:57:00.694Z",
-        "updatedAt": "2026-05-19T07:57:08.993Z",
+        "updatedAt": "2026-05-26T19:56:17.416Z",
         "linkedSegmentId": 243,
         "linkedSegmentName": "סובב דפנה שדות"
       },
@@ -1218,7 +1218,7 @@
           ],
           [
             35.647074,
-            33.233795
+            33.233789
           ]
         ]
       }
@@ -1238,7 +1238,7 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:59:43.139Z",
-        "updatedAt": "2026-05-19T07:59:51.304Z",
+        "updatedAt": "2026-05-27T01:21:59.183Z",
         "splitFrom": "manual-osm-660704151-mpcce97n"
       },
       "geometry": {
@@ -1261,8 +1261,8 @@
             33.191046
           ],
           [
-            35.657185,
-            33.191031
+            35.657184,
+            33.191029
           ]
         ]
       }
@@ -1282,7 +1282,7 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:59:43.139Z",
-        "updatedAt": "2026-05-19T07:59:51.304Z",
+        "updatedAt": "2026-05-27T01:21:37.127Z",
         "splitFrom": "manual-osm-660704151-mpcce97n"
       },
       "geometry": {
@@ -1290,7 +1290,7 @@
         "coordinates": [
           [
             35.657185,
-            33.191031
+            33.191029
           ],
           [
             35.657908,
@@ -1309,7 +1309,7 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-05-19T08:00:18.753Z",
-        "updatedAt": "2026-05-19T08:00:18.753Z",
+        "updatedAt": "2026-05-27T01:21:54.609Z",
         "linkedSegmentId": 221,
         "linkedSegmentName": "דרך כפר סאלד מרכז"
       },
@@ -1317,8 +1317,8 @@
         "type": "LineString",
         "coordinates": [
           [
-            35.657194,
-            33.191023
+            35.657185,
+            33.191029
           ],
           [
             35.657232,
@@ -2114,14 +2114,14 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T05:24:13.277Z",
-        "updatedAt": "2026-05-20T05:24:33.276Z"
+        "updatedAt": "2026-05-26T19:22:44.860Z"
       },
       "geometry": {
         "type": "LineString",
         "coordinates": [
           [
-            35.614724,
-            33.22438
+            35.614722,
+            33.224385
           ],
           [
             35.61472,
@@ -2252,7 +2252,7 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-05-20T13:52:08.543Z",
-        "updatedAt": "2026-05-20T13:52:08.543Z",
+        "updatedAt": "2026-05-26T19:52:08.195Z",
         "linkedSegmentId": 164,
         "linkedSegmentName": "שביל תל חי"
       },
@@ -2260,8 +2260,8 @@
         "type": "LineString",
         "coordinates": [
           [
-            35.580103,
-            33.23508
+            35.580104,
+            33.235075
           ],
           [
             35.579934,
@@ -3198,6 +3198,62 @@
           [
             35.601841,
             33.214589
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-174-mpn1uyqr",
+      "properties": {
+        "id": "manual-174-mpn1uyqr",
+        "manualEdgeId": "manual-174-mpn1uyqr",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "createdAt": "2026-05-26T19:50:14.883Z",
+        "updatedAt": "2026-05-26T19:50:14.883Z",
+        "linkedSegmentId": 174,
+        "linkedSegmentName": "כביש 99 קריית שמונה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576498,
+            33.22235
+          ],
+          [
+            35.576392,
+            33.222383
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-65-mpn2b7sa",
+      "properties": {
+        "id": "manual-65-mpn2b7sa",
+        "manualEdgeId": "manual-65-mpn2b7sa",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-05-26T20:02:53.098Z",
+        "updatedAt": "2026-05-26T20:02:53.098Z",
+        "linkedSegmentId": 65,
+        "linkedSegmentName": "כביש גישה אגמון החולה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.581274,
+            33.110514
+          ],
+          [
+            35.58132,
+            33.110584
           ]
         ]
       }

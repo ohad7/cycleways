@@ -30,6 +30,7 @@ MIN_EDGE_SUPPORT_RATIO = 0.12
 MIN_BOUNDARY_SLIVER_EDGE_LENGTH_M = 60.0
 MAX_BOUNDARY_SLIVER_SUPPORT_RATIO = 0.34
 MIN_TERMINAL_SINGLE_SAMPLE_EDGE_LENGTH_M = 18.0
+MAX_TERMINAL_SINGLE_SAMPLE_SUPPORT_RATIO = 0.75
 LONG_EDGE_THRESHOLD_M = 120.0
 MAX_EDGE_LENGTH_RATIO = 0.35
 MAX_EDGE_SUM_RATIO = 1.18
@@ -681,6 +682,7 @@ def build_edge_support_diagnostics(
             is_boundary_edge
             and sample_count == 1
             and edge_length_m >= max(sample_spacing_m, MIN_TERMINAL_SINGLE_SAMPLE_EDGE_LENGTH_M)
+            and support_ratio <= MAX_TERMINAL_SINGLE_SAMPLE_SUPPORT_RATIO
         ):
             suspicious_reasons.append("terminal_single_sample_edge")
         if (
@@ -735,6 +737,25 @@ def oriented_edge_coordinates(
     return coordinates
 
 
+def oriented_edge_nodes(
+    edge_id: str,
+    edge_stats: dict[str, dict[str, Any]],
+    edge_features: list[dict[str, Any]],
+) -> tuple[str | None, str | None]:
+    stats = edge_stats.get(edge_id)
+    if not stats:
+        return None, None
+    source_edge = edge_features[stats["featureIndex"]]
+    properties = source_edge.get("properties") or {}
+    from_node_id = properties.get("fromNodeId")
+    to_node_id = properties.get("toNodeId")
+    if not from_node_id or not to_node_id:
+        return None, None
+    if stats["directions"].most_common(1)[0][0] == "reverse":
+        return str(to_node_id), str(from_node_id)
+    return str(from_node_id), str(to_node_id)
+
+
 def edge_continuity_diagnostics(
     edge_sequence: list[str],
     edge_stats: dict[str, dict[str, Any]],
@@ -751,11 +772,26 @@ def edge_continuity_diagnostics(
         to_coords = oriented_edge_coordinates(to_edge_id, edge_stats, edge_features)
         if not from_coords or not to_coords:
             continue
+        _from_start_node, from_end_node = oriented_edge_nodes(
+            from_edge_id,
+            edge_stats,
+            edge_features,
+        )
+        to_start_node, _to_end_node = oriented_edge_nodes(
+            to_edge_id,
+            edge_stats,
+            edge_features,
+        )
 
         from_coord = from_coords[-1]
         to_coord = to_coords[0]
         distance_m = haversine_m(from_coord, to_coord)
-        if distance_m <= MAX_EDGE_CONNECTION_GAP_M:
+        topology_mismatch = bool(
+            from_end_node
+            and to_start_node
+            and from_end_node != to_start_node
+        )
+        if not topology_mismatch and distance_m <= MAX_EDGE_CONNECTION_GAP_M:
             continue
 
         gap = {
@@ -763,7 +799,15 @@ def edge_continuity_diagnostics(
             "toEdgeId": to_edge_id,
             "sequenceIndex": sequence_index,
             "distanceMeters": round(distance_m, 1),
+            "issue": (
+                "edge topology nodes do not connect"
+                if topology_mismatch
+                else "edge endpoints are spatially disconnected"
+            ),
         }
+        if topology_mismatch:
+            gap["fromNodeId"] = from_end_node
+            gap["toNodeId"] = to_start_node
         gaps.append(gap)
         features.append(
             {

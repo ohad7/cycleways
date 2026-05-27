@@ -2030,6 +2030,16 @@ function orientedEdgeRefCoords(edgeRef) {
   return edgeRef?.direction === "reverse" ? normalized.reverse() : normalized;
 }
 
+function orientedEdgeRefNodes(edgeRef) {
+  const feature = graphFeatureForEdgeId(edgeRef?.edgeId);
+  const fromNodeId = feature?.properties?.fromNodeId;
+  const toNodeId = feature?.properties?.toNodeId;
+  if (!fromNodeId || !toNodeId) return null;
+  return edgeRef?.direction === "reverse"
+    ? { start: String(toNodeId), end: String(fromNodeId) }
+    : { start: String(fromNodeId), end: String(toNodeId) };
+}
+
 function edgeRefContinuityGaps(edgeRefs) {
   const sortedRefs = [...(edgeRefs || [])].sort(
     (a, b) => Number(a.sequenceIndex ?? 0) - Number(b.sequenceIndex ?? 0),
@@ -2042,12 +2052,24 @@ function edgeRefContinuityGaps(edgeRefs) {
     const toCoords = orientedEdgeRefCoords(toRef);
     if (fromCoords.length === 0 || toCoords.length === 0) continue;
     const distanceMeters = coordDistanceMeters(fromCoords[fromCoords.length - 1], toCoords[0]);
-    if (distanceMeters > MAX_EDGE_CONNECTION_GAP_M) {
+    const fromNodes = orientedEdgeRefNodes(fromRef);
+    const toNodes = orientedEdgeRefNodes(toRef);
+    const topologyMismatch = Boolean(
+      fromNodes?.end &&
+      toNodes?.start &&
+      fromNodes.end !== toNodes.start,
+    );
+    if (topologyMismatch || distanceMeters > MAX_EDGE_CONNECTION_GAP_M) {
       gaps.push({
         fromEdgeId: String(fromRef.edgeId || ""),
         toEdgeId: String(toRef.edgeId || ""),
         sequenceIndex: index,
         distanceMeters,
+        issue: topologyMismatch
+          ? "edge topology nodes do not connect"
+          : "edge endpoints are spatially disconnected",
+        fromNodeId: topologyMismatch ? fromNodes.end : undefined,
+        toNodeId: topologyMismatch ? toNodes.start : undefined,
       });
     }
   }
