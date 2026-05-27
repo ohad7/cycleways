@@ -168,8 +168,19 @@ export function createRouteDirectionAnimator(options = {}) {
     scheduleNextFrame();
   }
 
+  function emitFinalCycleFrame() {
+    emit("chevron", computeChevronPayload(state, 1));
+    emit("elevation", { t: 1 });
+    const litFinal = detectLitIndex(state, 1);
+    if (litFinal !== state.lastLitIndex) {
+      state.lastLitIndex = litFinal;
+      emit("litPoint", buildLitPayload(state, litFinal));
+    }
+  }
+
   function advancePhase() {
     if (state.phase === "cycle1") {
+      emitFinalCycleFrame();
       emit("chevron", null);
       emit("elevation", null);
       emitLitNullIfNeeded();
@@ -180,6 +191,7 @@ export function createRouteDirectionAnimator(options = {}) {
       state.phaseStartTime += GAP_DURATION_MS;
       state.lastLitIndex = null;
     } else if (state.phase === "cycle2") {
+      emitFinalCycleFrame();
       emit("chevron", null);
       emit("elevation", null);
       emitLitNullIfNeeded();
@@ -247,10 +259,14 @@ function findSegmentIndex(cumDist, target) {
 }
 
 function detectLitIndex(state, t) {
-  const windowT = 500 / state.cycleDurationMs;
+  // Asymmetric window: a tiny pre-arrival nudge so the last point lights at t≈1.0,
+  // then a longer post-arrival tail so each point glows briefly after the chevron passes.
+  const preT = 50 / state.cycleDurationMs;
+  const postT = 400 / state.cycleDurationMs;
   let lit = null;
   for (let k = 0; k < state.routePointTs.length; k++) {
-    if (Math.abs(t - state.routePointTs[k]) <= windowT) {
+    const dt = t - state.routePointTs[k];
+    if (dt >= -preT && dt <= postT) {
       lit = k;
     }
   }

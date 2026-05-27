@@ -602,8 +602,8 @@ function MapView({
     const host = document.createElement("div");
     host.className = "route-direction-chevron";
     host.style.cssText = `
-      width: 24px;
-      height: 16px;
+      width: 32px;
+      height: 14px;
       pointer-events: none;
       display: none;
     `;
@@ -615,10 +615,10 @@ function MapView({
       mix-blend-mode: screen;
     `;
     rotor.innerHTML = `
-      <svg viewBox="-12 -8 24 16" width="24" height="16" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="0,-5 9,0 0,5" fill="#ffffff" fill-opacity="0.95"/>
-        <polygon points="-9,-4 0,0 -9,4" fill="#ffffff" fill-opacity="0.55"/>
-        <polygon points="-18,-3 -9,0 -18,3" fill="#ffffff" fill-opacity="0.25"/>
+      <svg viewBox="-16 -7 32 14" width="32" height="14" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="-12,-3 -3,0 -12,3" fill="#ffffff" fill-opacity="0.25"/>
+        <polygon points="-3,-4 6,0 -3,4" fill="#ffffff" fill-opacity="0.55"/>
+        <polygon points="6,-5 15,0 6,5" fill="#ffffff" fill-opacity="0.95"/>
       </svg>
     `;
     host.appendChild(rotor);
@@ -634,7 +634,9 @@ function MapView({
       }
       marker.setLngLat([payload.lng, payload.lat]);
       host.style.display = "block";
-      rotor.style.transform = `rotate(${payload.bearing}deg)`;
+      // Mapbox bearing is 0=N, 90=E (clockwise from north). The SVG points
+      // east at 0deg CSS rotation, so subtract 90 to map bearing → CSS rotate.
+      rotor.style.transform = `rotate(${payload.bearing - 90}deg)`;
     });
 
     return () => {
