@@ -238,3 +238,32 @@ console.log("test-route-direction-animator: state machine + chevron OK");
 }
 
 console.log("test-route-direction-animator: lit-point OK");
+
+// Elevation: t goes 0→1 monotonically during each cycle; null during gap and done.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: false });
+
+  const elevEvents = [];
+  animator.subscribe("elevation", (payload) => elevEvents.push(payload));
+
+  const geometry = eastwardGeometry(10);
+  animator.trigger(geometry, [0, 10]);
+
+  // Run through cycle1.
+  for (let i = 0; i < 200; i++) clock.advance(16);
+
+  const cycle1Ts = elevEvents.filter((e) => e && typeof e.t === "number").map((e) => e.t);
+  assert.ok(cycle1Ts.length >= 5, "multiple elevation t values fired");
+  assert.equal(cycle1Ts[0] < 0.05, true, "t starts near 0");
+  const nullCount1 = elevEvents.filter((e) => e === null).length;
+  assert.ok(nullCount1 >= 1, "null fires when entering gap");
+
+  // Run through gap and cycle2.
+  for (let i = 0; i < 300; i++) clock.advance(16);
+
+  const finalNullCount = elevEvents.filter((e) => e === null).length;
+  assert.ok(finalNullCount >= 2, "null fires again when entering done");
+}
+
+console.log("test-route-direction-animator: elevation OK");

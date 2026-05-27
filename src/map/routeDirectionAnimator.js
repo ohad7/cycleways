@@ -106,6 +106,7 @@ export function createRouteDirectionAnimator(options = {}) {
         state.lastLitIndex = litIndex;
         emit("litPoint", buildLitPayload(state, litIndex));
       }
+      emit("elevation", { t });
     }
 
     scheduleNextFrame();
@@ -114,6 +115,7 @@ export function createRouteDirectionAnimator(options = {}) {
   function advancePhase() {
     if (state.phase === "cycle1") {
       emit("chevron", null);
+      emit("elevation", null);
       emitLitNullIfNeeded();
       state.phase = "gap";
       state.phaseStartTime += state.cycleDurationMs;
@@ -123,6 +125,7 @@ export function createRouteDirectionAnimator(options = {}) {
       state.lastLitIndex = null;
     } else if (state.phase === "cycle2") {
       emit("chevron", null);
+      emit("elevation", null);
       emitLitNullIfNeeded();
       state = null;
     }
@@ -142,6 +145,7 @@ export function createRouteDirectionAnimator(options = {}) {
     }
     if (state && !silent) {
       emit("chevron", null);
+      emit("elevation", null);
       if (state.lastLitIndex !== null) emit("litPoint", null);
     }
     state = null;
