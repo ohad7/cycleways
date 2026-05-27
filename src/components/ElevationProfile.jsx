@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { smoothElevations } from "../../utils/elevations.js";
 import { getDistance } from "../../utils/distance.js";
+import { GRADE_COLORS, pointSmoothedGrades, classifyGrade } from "../utils/grade.js";
+import { clusterByGrade } from "../utils/slopeClustering.js";
 
 export default function ElevationProfile({ animator, distance, geometry, onElevationHover }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
@@ -55,19 +57,21 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
           preserveAspectRatio="none"
           viewBox="0 0 100 100"
         >
-          <defs>
-            <linearGradient id="reactElevationGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor="#748873" stopOpacity="1" />
-              <stop offset="33%" stopColor="#D1A980" stopOpacity="1" />
-              <stop offset="66%" stopColor="#E5E0D8" stopOpacity="1" />
-              <stop offset="100%" stopColor="#F8F8F8" stopOpacity="1" />
-            </linearGradient>
-          </defs>
+          {profile.clusterPaths.map((cluster, index) => (
+            <path
+              key={`${cluster.gradeClass}-${index}`}
+              d={cluster.d}
+              fill={cluster.color}
+              fillOpacity="0.45"
+              stroke="none"
+            />
+          ))}
           <path
-            d={profile.pathData}
-            fill="url(#reactElevationGradient)"
-            stroke="#748873"
-            strokeWidth="0.5"
+            d={profile.outlinePath}
+            fill="none"
+            stroke="#3d3d3d"
+            strokeOpacity="0.5"
+            strokeWidth="0.4"
           />
           <line
             ref={markerLineRef}
@@ -137,6 +141,11 @@ function buildElevationProfile(geometry) {
     return { ...coord, distance: pointDistance };
   });
 
+  const cumDistances = coordsWithElevation.map((p) => p.distance);
+  const elevations = coordsWithElevation.map((p) => p.elevation);
+  const smoothedGrades = pointSmoothedGrades(cumDistances, elevations, 200);
+  const clusters = clusterByGrade(cumDistances, elevations, { minDistanceM: 100 });
+
   const MIN_VERTICAL_RANGE_M = 100;
   const observedMin = Math.min(...coordsWithElevation.map((point) => point.elevation));
   const observedMax = Math.max(...coordsWithElevation.map((point) => point.elevation));
@@ -196,16 +205,58 @@ function buildElevationProfile(geometry) {
     });
   }
 
-  let pathData = "";
+  // Annotate each rendered data point with grade info from the closest
+  // original geometry index (linear scan over original distances is O(n*m)
+  // but n=301 and m is typically <2000; acceptable for now).
+  let lastIdx = 0;
+  for (const point of elevationData) {
+    while (
+      lastIdx < cumDistances.length - 1 &&
+      cumDistances[lastIdx + 1] < point.distance
+    ) {
+      lastIdx++;
+    }
+    point.grade = smoothedGrades[lastIdx];
+    point.gradeClass = classifyGrade(point.grade);
+  }
+
+  // Build one area-under-curve path per cluster. The path uses the
+  // resampled elevationData points that fall within each cluster's
+  // distance range, plus the cluster boundary x values for clean edges.
+  const totalDistanceForClusters = cumDistances[cumDistances.length - 1];
+  const clusterPaths = clusters.map((cluster) => {
+    const startD = cumDistances[cluster.startIdx];
+    const endD = cumDistances[cluster.endIdx];
+    const startX = (startD / totalDistanceForClusters) * 100;
+    const endX = (endD / totalDistanceForClusters) * 100;
+    const slice = elevationData.filter(
+      (p) => p.distancePercent >= startX && p.distancePercent <= endX,
+    );
+    if (slice.length < 2) return null;
+    let d = `M ${slice[0].distancePercent} 100`;
+    for (const p of slice) {
+      d += ` L ${p.distancePercent} ${100 - p.heightPercent}`;
+    }
+    d += ` L ${slice[slice.length - 1].distancePercent} 100 Z`;
+    return {
+      d,
+      color: GRADE_COLORS[cluster.gradeClass],
+      gradeClass: cluster.gradeClass,
+    };
+  }).filter(Boolean);
+
+  // Outline of the full elevation curve over the top of the cluster fills.
+  let outlinePath = "";
   elevationData.forEach((point, index) => {
     const x = point.distancePercent;
     const y = 100 - point.heightPercent;
-    pathData += `${index === 0 ? "M" : " L"} ${x} ${y}`;
+    outlinePath += `${index === 0 ? "M" : " L"} ${x} ${y}`;
   });
 
   return {
     elevationData,
-    pathData: `${pathData} L 100 100 L 0 100 Z`,
+    clusterPaths,
+    outlinePath,
   };
 }
 
