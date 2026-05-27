@@ -22,6 +22,7 @@ import {
 } from "./data/poiTypes.js";
 import MapView from "./map/MapView.jsx";
 import { dataMarkerFeaturesFromSegments } from "./map/mapLayers.js";
+import { createRouteDirectionAnimator } from "./map/routeDirectionAnimator.js";
 import {
   addPoint,
   applyRouteSnapshot,
@@ -110,6 +111,19 @@ function App() {
   const routeClickQueueRef = useRef([]);
   const routeClickProcessingRef = useRef(false);
   const routeClickIdRef = useRef(0);
+  const directionAnimatorRef = useRef(null);
+  if (directionAnimatorRef.current === null) {
+    directionAnimatorRef.current = createRouteDirectionAnimator();
+  }
+  const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      directionAnimatorRef.current?.dispose();
+      directionAnimatorRef.current = null;
+    };
+  }, []);
   const [routeState, dispatchRoute] = useReducer(
     routeReducer,
     initialRouteState,
@@ -468,6 +482,28 @@ function App() {
     }));
   }, []);
 
+  useEffect(() => {
+    const animator = directionAnimatorRef.current;
+    if (!animator) return;
+    if (isDragging) return;
+
+    const geometry = routeState.geometry;
+    const points = routeState.points || [];
+
+    if (!Array.isArray(geometry) || geometry.length < 2 || points.length < 2) {
+      animator.cancel();
+      return;
+    }
+
+    const indices = snapRoutePointsToGeometryIndices(points, geometry);
+    if (indices.length < 2) {
+      animator.cancel();
+      return;
+    }
+
+    animator.trigger(geometry, indices);
+  }, [routeState.geometry, routeState.points, isDragging]);
+
   const clearRouteUrl = useCallback(() => {
     const url = new URL(window.location.href);
     if (!url.searchParams.has("route")) return;
@@ -628,6 +664,8 @@ function App() {
 
   const handleRoutePointDragStart = useCallback(() => {
     dragStartSnapshotRef.current = routeStateSnapshot(routeState);
+    isDraggingRef.current = true;
+    setIsDragging(true);
   }, [routeState]);
 
   const handleRoutePointDrag = useCallback(async (index, point) => {
@@ -668,6 +706,8 @@ function App() {
       future: [],
     }));
     trackRoutePointEvent(routeState.points, routeState.selectedSegments, "drag");
+    isDraggingRef.current = false;
+    setIsDragging(false);
   }, [routeState.points, routeState.selectedSegments]);
 
   const handleRoutePointRemove = useCallback((index) => {
@@ -1178,6 +1218,7 @@ function App() {
 
                 <MapView
                   activeDataPointIds={activeDataPointIds}
+                  animator={directionAnimatorRef.current}
                   dataMarkerFeatures={dataMarkerFeatures}
                   elevationHover={mapUi.elevationHover}
                   focusedSegment={routeState.focusedSegment}
@@ -1213,6 +1254,7 @@ function App() {
                 />
 
                 <RouteDescription
+                  animator={directionAnimatorRef.current}
                   error={routeState.error}
                   hasBrokenRoute={hasBrokenRoute}
                   routeState={routeState}
@@ -1808,6 +1850,29 @@ function findClosestElevationPoint(elevationData, xPercent) {
 function formatLegacyDistance(distanceMeters) {
   if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return "0 ק\"מ";
   return `${(distanceMeters / 1000).toFixed(1)} ק"מ`;
+}
+
+function snapRoutePointsToGeometryIndices(routePoints, geometry) {
+  if (!Array.isArray(routePoints) || !Array.isArray(geometry)) return [];
+  const indices = [];
+  for (const point of routePoints) {
+    if (point?.pending) continue;
+    if (!Number.isFinite(point?.lat) || !Number.isFinite(point?.lng)) continue;
+    let bestIndex = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < geometry.length; i++) {
+      const g = geometry[i];
+      const dLat = g.lat - point.lat;
+      const dLng = g.lng - point.lng;
+      const d = dLat * dLat + dLng * dLng;
+      if (d < bestDist) {
+        bestDist = d;
+        bestIndex = i;
+      }
+    }
+    indices.push(bestIndex);
+  }
+  return indices;
 }
 
 function formatPercent(value) {
