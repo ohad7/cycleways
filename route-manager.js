@@ -431,6 +431,22 @@ class RouteManager {
     return [...this.selectedSegments];
   }
 
+  /**
+   * Resolve a list of share-anchor route points (objects carrying
+   * `baseEdgeShareId` + `baseEdgeFraction` but no lat/lng) into points with
+   * lat/lng using the currently loaded base routing network. Returns null if
+   * the network is not loaded or any anchor cannot be resolved.
+   */
+  resolveShareAnchorPoints(anchors) {
+    if (!this.baseRoutingNetwork || !Array.isArray(anchors) || anchors.length === 0) {
+      return null;
+    }
+    const points = anchors.map((anchor, index) =>
+      this._baseRoutePointFromShareAnchor(anchor, index),
+    );
+    return points.every((point) => point !== null) ? points : null;
+  }
+
   restoreBaseRouteFromPayload(payload) {
     if (!this.baseRoutingNetwork || !payload || payload.type !== "base_route_v4") {
       return false;

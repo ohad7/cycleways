@@ -296,7 +296,7 @@ class ShardedRouteSession {
     console.warn(
       "[routing-shards] V4 exact route replay failed; recalculating from waypoint anchors",
     );
-    return payload.routePoints?.length ? this.restorePoints(payload.routePoints) : null;
+    return this.recoverShareAnchorPoints(payload.routePoints);
   }
 
   async restoreHybridRoutePayload(payload) {
@@ -316,7 +316,21 @@ class ShardedRouteSession {
     console.warn(
       "[routing-shards] hybrid route replay failed; recalculating from waypoint anchors",
     );
-    return payload.routePoints?.length ? this.restorePoints(payload.routePoints) : null;
+    return this.recoverShareAnchorPoints(payload.routePoints);
+  }
+
+  async recoverShareAnchorPoints(anchors) {
+    if (!Array.isArray(anchors) || anchors.length === 0) return null;
+    const resolved =
+      typeof this.manager?.resolveShareAnchorPoints === "function"
+        ? this.manager.resolveShareAnchorPoints(anchors)
+        : null;
+    if (!resolved) {
+      // Anchors carry only baseEdgeShareId+baseEdgeFraction (no lat/lng), so
+      // without a current-graph resolution they cannot be re-routed.
+      return null;
+    }
+    return this.restorePoints(resolved);
   }
 }
 
