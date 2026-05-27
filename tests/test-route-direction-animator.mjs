@@ -133,3 +133,70 @@ console.log("test-route-direction-animator: cycle duration OK");
 }
 
 console.log("test-route-direction-animator: arc length OK");
+
+// Helper: a simple linear-east geometry (~111 m per 0.001° lng).
+function eastwardGeometry(steps) {
+  const arr = [];
+  for (let i = 0; i <= steps; i++) {
+    arr.push({ lat: 0, lng: i * 0.001 });
+  }
+  return arr;
+}
+
+// State machine: cycle1 → gap → cycle2 → done with chevron callback firing in cycles only.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: false });
+
+  const chevronEvents = [];
+  animator.subscribe("chevron", (payload) => chevronEvents.push(payload));
+
+  const geometry = eastwardGeometry(10); // ~1110 m → cycleDuration floors at 3s
+  animator.trigger(geometry, [0, 10]);
+
+  // After the trigger frame should be scheduled.
+  assert.equal(clock.pendingFrameCount(), 1, "trigger schedules a frame");
+
+  // Advance one frame: should produce a chevron payload at t≈0.
+  clock.advance(16);
+  const first = chevronEvents.at(-1);
+  assert.ok(
+    first && Number.isFinite(first.lng) && Number.isFinite(first.lat),
+    "first chevron payload has lng/lat",
+  );
+  assert.ok(Number.isFinite(first.bearing), "first chevron payload has bearing");
+
+  // Advance ~1.5s into cycle1, halfway through.
+  clock.advance(1500);
+  const mid = chevronEvents.at(-1);
+  assert.ok(
+    mid.lng > 0.004 && mid.lng < 0.006,
+    `mid-cycle near midpoint (got ${mid.lng})`,
+  );
+
+  // Advance to end of cycle1 (total 3.1s elapsed). The next frame should mark entry
+  // into `gap` and fire a hidden chevron payload (null).
+  clock.advance(1600); // 16+1500+1600 = 3116 ms → past 3000 ms
+  const endCycle1 = chevronEvents.at(-1);
+  assert.equal(endCycle1, null, "hidden payload at start of gap");
+
+  // Advance through the 1.2s gap.
+  clock.advance(1300);
+  // First frame of cycle2 should produce a non-null payload near the start again.
+  // After advance, the first cycle2 frame lands at t≈0.07 → lng≈0.0007 along a 0–0.01 lng range.
+  const cycle2Start = chevronEvents.at(-1);
+  assert.ok(
+    cycle2Start && cycle2Start.lng < 0.001,
+    "cycle2 starts near route start",
+  );
+
+  // Advance to end of cycle2 + a beat.
+  clock.advance(3200);
+  const finalEvent = chevronEvents.at(-1);
+  assert.equal(finalEvent, null, "hidden payload at done");
+
+  // After done, no more frames should be scheduled.
+  assert.equal(clock.pendingFrameCount(), 0, "no frames pending after done");
+}
+
+console.log("test-route-direction-animator: state machine + chevron OK");
