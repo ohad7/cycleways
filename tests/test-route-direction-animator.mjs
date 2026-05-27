@@ -200,3 +200,41 @@ function eastwardGeometry(steps) {
 }
 
 console.log("test-route-direction-animator: state machine + chevron OK");
+
+// Lit-point: callback fires once per index change; null on phase transitions out of cycles.
+{
+  const clock = createFakeClock();
+  const animator = createRouteDirectionAnimator({ clock, prefersReducedMotion: false });
+
+  const litEvents = [];
+  animator.subscribe("litPoint", (payload) => litEvents.push(payload));
+
+  // 20-step eastward geometry; route points at start, midpoint, end.
+  const geometry = eastwardGeometry(20);
+  animator.trigger(geometry, [0, 10, 20]);
+
+  // Run cycle1 to completion in 220 frames of ~16 ms each (3520 ms total).
+  for (let i = 0; i < 220; i++) clock.advance(16);
+
+  // Window for "lit" is ±500 ms around the chevron's pass. For a 3 s cycle with route
+  // points at t = 0, 0.5, 1.0, the windows are non-overlapping, so between them the
+  // animator emits a `null` lit payload. Expected dedup'd sequence over cycle1:
+  // {0} → null → {1} → null → {2} → null (last null comes from advancePhase into gap).
+  const indices = litEvents
+    .map((e) => (e ? e.index : null))
+    .filter((v, i, arr) => arr[i - 1] !== v);
+
+  assert.deepEqual(
+    indices,
+    [0, null, 1, null, 2, null],
+    `cycle1 lit-point sequence (got ${JSON.stringify(indices)})`,
+  );
+
+  const nonNull = litEvents.find((e) => e && e.index === 1);
+  assert.ok(
+    nonNull && Number.isFinite(nonNull.lng) && Number.isFinite(nonNull.lat),
+    "lit payload includes lng/lat",
+  );
+}
+
+console.log("test-route-direction-animator: lit-point OK");

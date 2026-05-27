@@ -62,6 +62,10 @@ export function createRouteDirectionAnimator(options = {}) {
     if (!(arc.totalDistMeters > 0)) return;
 
     const cycleDurationSec = computeCycleDuration(arc.totalDistMeters);
+    const routePointTs = routePointIndices.map((idx) => {
+      const safe = Math.max(0, Math.min(idx, arc.cumDist.length - 1));
+      return arc.cumDist[safe] / arc.totalDistMeters;
+    });
     state = {
       phase: "cycle1",
       phaseStartTime: clock.now(),
@@ -69,6 +73,8 @@ export function createRouteDirectionAnimator(options = {}) {
       arc,
       cycleDurationMs: cycleDurationSec * 1000,
       routePointIndices,
+      routePointTs,
+      lastLitIndex: null,
     };
     scheduleNextFrame();
   }
@@ -95,6 +101,11 @@ export function createRouteDirectionAnimator(options = {}) {
     if (state.phase === "cycle1" || state.phase === "cycle2") {
       const t = Math.min((now - state.phaseStartTime) / state.cycleDurationMs, 1);
       emit("chevron", computeChevronPayload(state, t));
+      const litIndex = detectLitIndex(state, t);
+      if (litIndex !== state.lastLitIndex) {
+        state.lastLitIndex = litIndex;
+        emit("litPoint", buildLitPayload(state, litIndex));
+      }
     }
 
     scheduleNextFrame();
@@ -103,14 +114,24 @@ export function createRouteDirectionAnimator(options = {}) {
   function advancePhase() {
     if (state.phase === "cycle1") {
       emit("chevron", null);
+      emitLitNullIfNeeded();
       state.phase = "gap";
       state.phaseStartTime += state.cycleDurationMs;
     } else if (state.phase === "gap") {
       state.phase = "cycle2";
       state.phaseStartTime += GAP_DURATION_MS;
+      state.lastLitIndex = null;
     } else if (state.phase === "cycle2") {
       emit("chevron", null);
+      emitLitNullIfNeeded();
       state = null;
+    }
+  }
+
+  function emitLitNullIfNeeded() {
+    if (state && state.lastLitIndex !== null) {
+      state.lastLitIndex = null;
+      emit("litPoint", null);
     }
   }
 
@@ -121,6 +142,7 @@ export function createRouteDirectionAnimator(options = {}) {
     }
     if (state && !silent) {
       emit("chevron", null);
+      if (state.lastLitIndex !== null) emit("litPoint", null);
     }
     state = null;
   }
@@ -162,6 +184,24 @@ function findSegmentIndex(cumDist, target) {
     else hi = mid - 1;
   }
   return Math.min(lo, cumDist.length - 2);
+}
+
+function detectLitIndex(state, t) {
+  const windowT = 500 / state.cycleDurationMs;
+  let lit = null;
+  for (let k = 0; k < state.routePointTs.length; k++) {
+    if (Math.abs(t - state.routePointTs[k]) <= windowT) {
+      lit = k;
+    }
+  }
+  return lit;
+}
+
+function buildLitPayload(state, k) {
+  if (k === null) return null;
+  const geomIndex = state.routePointIndices[k];
+  const coord = state.geometry[geomIndex];
+  return { index: k, lng: coord.lng, lat: coord.lat };
 }
 
 function computeBearing(from, to) {
