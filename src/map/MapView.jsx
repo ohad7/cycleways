@@ -3,6 +3,7 @@ import {
   addOsmDebugLayers,
   addRouteNetworkLayers,
   clearOsmDebugLayers,
+  clearRouteDirectionPulseLayer,
   clearOsmRawLayers,
   clearRouteDirectionLitPointLayer,
   clearRouteNetworkLayers,
@@ -29,6 +30,7 @@ import {
   syncOsmGraphLayers,
   syncOsmIntersectionLayers,
   syncRouteDirectionLitPointLayer,
+  syncRouteDirectionPulseLayer,
   syncRouteGeometryLayer,
   syncRoutePointLayers,
   syncVideoCursorLayer,
@@ -89,6 +91,7 @@ function MapView({
   const callbacksRef = useRef({});
   const dataMarkerFeaturesRef = useRef([]);
   const osmDebugActiveRef = useRef(false);
+  const routeGeometryRef = useRef(routeGeometry);
   const routePointsRef = useRef([]);
   const networkSegmentsRef = useRef([]);
   const [status, setStatus] = useState("initializing");
@@ -125,6 +128,10 @@ function MapView({
     onOsmGraphEdgeHover,
     onCwOsmMatchHover,
   ]);
+
+  useEffect(() => {
+    routeGeometryRef.current = routeGeometry;
+  }, [routeGeometry]);
 
   useEffect(() => {
     routePointsRef.current = routePoints;
@@ -597,7 +604,7 @@ function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready" || !animator) return undefined;
+    if (!map || status !== "ready") return undefined;
 
     const mapboxgl = window.mapboxgl;
     if (!mapboxgl) return undefined;
@@ -605,8 +612,8 @@ function MapView({
     const host = document.createElement("div");
     host.className = "route-direction-chevron";
     host.style.cssText = `
-      width: 60px;
-      height: 14px;
+      width: 38px;
+      height: 22px;
       pointer-events: none;
       display: none;
     `;
@@ -617,15 +624,10 @@ function MapView({
       transform-origin: 50% 50%;
       mix-blend-mode: screen;
     `;
-    // Polygons are shifted left by 15 SVG units so the front-triangle tip sits
-    // at SVG (0,0) — which, combined with anchor: "center" and a centered
-    // rotation origin, lands the tip exactly on the marker's lng/lat point.
-    // This stops the main triangle from overshooting the route at sharp curves.
     rotor.innerHTML = `
-      <svg viewBox="-45 -7 60 14" width="60" height="14" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="-15,-2 -10,0 -15,2" fill="#ffffff" fill-opacity="0.25"/>
-        <polygon points="-10,-2.5 -5,0 -10,2.5" fill="#ffffff" fill-opacity="0.55"/>
-        <polygon points="-5,-3 0,0 -5,3" fill="#ffffff" fill-opacity="0.9"/>
+      <svg viewBox="-19 -11 38 22" width="38" height="22" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 12 0 L -2 -8 L -2 8 Z" fill="#ffffff" stroke="#0b1720" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M 1 0 L -10 -6 L -10 6 Z" fill="#d9f3f8" stroke="#0b1720" stroke-width="1.6" stroke-linejoin="round" opacity="0.92"/>
       </svg>
     `;
     host.appendChild(rotor);
@@ -637,25 +639,30 @@ function MapView({
       .addTo(map);
     chevronMarkerRef.current = marker;
 
-    const unsubscribe = animator.subscribe("chevron", (payload) => {
-      if (!animatorVisibleRef.current) return;
-      if (!payload) {
-        host.style.display = "none";
-        return;
-      }
-      marker.setLngLat([payload.lng, payload.lat]);
-      host.style.display = "block";
-      // Mapbox bearing is 0=N, 90=E (clockwise from north). The SVG points
-      // east at 0deg CSS rotation, so subtract 90 to map bearing → CSS rotate.
-      rotor.style.transform = `rotate(${payload.bearing - 90}deg)`;
-    });
-
     return () => {
-      unsubscribe();
       marker.remove();
       chevronMarkerRef.current = null;
       chevronHostRef.current = null;
       chevronRotorRef.current = null;
+    };
+  }, [status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !animator) return undefined;
+
+    const unsubscribe = animator.subscribe("chevron", (payload) => {
+      if (!payload) {
+        syncRouteDirectionPulseLayer(map, null, null);
+        return;
+      }
+      if (!animatorVisibleRef.current) return;
+      syncRouteDirectionPulseLayer(map, routeGeometryRef.current, payload.t);
+    });
+
+    return () => {
+      unsubscribe();
+      clearRouteDirectionPulseLayer(map);
     };
   }, [animator, status]);
 
@@ -670,6 +677,7 @@ function MapView({
       const wasVisible = animatorVisibleRef.current;
       animatorVisibleRef.current = false;
       if (wasVisible && mapRef.current) {
+        clearRouteDirectionPulseLayer(mapRef.current);
         clearRouteDirectionLitPointLayer(mapRef.current);
       }
       marker.setLngLat([elevationHover.coord.lng, elevationHover.coord.lat]);

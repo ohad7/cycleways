@@ -165,6 +165,7 @@ function eastwardGeometry(steps) {
     "first chevron payload has lng/lat",
   );
   assert.ok(Number.isFinite(first.bearing), "first chevron payload has bearing");
+  assert.ok(Number.isFinite(first.t), "first chevron payload has progress");
 
   // Advance ~1.5s into cycle1, halfway through.
   clock.advance(1500);

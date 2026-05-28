@@ -118,8 +118,9 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
             x2="0"
             y1="0"
             y2="100"
-            stroke="#ffd54a"
-            strokeWidth="0.6"
+            stroke="#74b8c8"
+            strokeOpacity="0.72"
+            strokeWidth="0.45"
             strokeLinecap="round"
             opacity="0"
             style={{ pointerEvents: "none" }}

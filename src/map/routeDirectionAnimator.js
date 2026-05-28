@@ -243,6 +243,7 @@ function computeChevronPayload(state, t) {
     lng: a.lng + (b.lng - a.lng) * localFrac,
     lat: a.lat + (b.lat - a.lat) * localFrac,
     bearing: computeBearing(a, b),
+    t,
   };
 }
 

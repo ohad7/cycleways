@@ -1,3 +1,5 @@
+import { getDistance } from "../../utils/distance.js";
+
 export const ROUTE_NETWORK_SOURCE_ID = "cycleways-network";
 export const ROUTE_NETWORK_LINE_LAYER_ID = "cycleways-network-line";
 export const ROUTE_NETWORK_HIT_LAYER_ID = "cycleways-network-hit";
@@ -7,6 +9,10 @@ export const ROUTE_GEOMETRY_SOURCE_ID = "react-route-geometry";
 export const ROUTE_GEOMETRY_LAYER_ID = "react-route-geometry-line";
 export const ROUTE_POINTS_SOURCE_ID = "react-route-points";
 export const ROUTE_POINTS_LAYER_ID = "react-route-points-circle";
+export const ROUTE_DIRECTION_PULSE_SOURCE_ID = "route-direction-pulse";
+export const ROUTE_DIRECTION_PULSE_CASING_LAYER_ID =
+  "route-direction-pulse-casing";
+export const ROUTE_DIRECTION_PULSE_CORE_LAYER_ID = "route-direction-pulse-core";
 export const ROUTE_DIRECTION_LIT_POINT_SOURCE_ID = "route-direction-lit-point";
 export const ROUTE_DIRECTION_LIT_POINT_CIRCLE_LAYER_ID =
   "route-direction-lit-point-circle";
@@ -1070,6 +1076,205 @@ export function syncRouteGeometryLayer(map, routeGeometry) {
   });
 }
 
+export function syncRouteDirectionPulseLayer(map, routeGeometry, progress) {
+  const data = buildRouteDirectionPulseFeatureCollection(routeGeometry, progress);
+
+  if (map.getSource(ROUTE_DIRECTION_PULSE_SOURCE_ID)) {
+    map.getSource(ROUTE_DIRECTION_PULSE_SOURCE_ID).setData(data);
+    return;
+  }
+
+  if (data.features.length === 0) return;
+
+  map.addSource(ROUTE_DIRECTION_PULSE_SOURCE_ID, {
+    type: "geojson",
+    data,
+    lineMetrics: true,
+  });
+
+  const beforePointLayer = map.getLayer(ROUTE_POINTS_LAYER_ID)
+    ? ROUTE_POINTS_LAYER_ID
+    : undefined;
+
+  map.addLayer(
+    {
+      id: ROUTE_DIRECTION_PULSE_CASING_LAYER_ID,
+      type: "line",
+      source: ROUTE_DIRECTION_PULSE_SOURCE_ID,
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": "#f2fbfd",
+        "line-width": 7.5,
+        "line-opacity": 0.24,
+        "line-blur": 0.35,
+      },
+    },
+    beforePointLayer,
+  );
+
+  map.addLayer(
+    {
+      id: ROUTE_DIRECTION_PULSE_CORE_LAYER_ID,
+      type: "line",
+      source: ROUTE_DIRECTION_PULSE_SOURCE_ID,
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-gradient": [
+          "interpolate",
+          ["linear"],
+          ["line-progress"],
+          0,
+          "rgba(116, 184, 200, 0.08)",
+          0.35,
+          "rgba(116, 184, 200, 0.34)",
+          0.78,
+          "rgba(116, 184, 200, 0.76)",
+          1,
+          "rgba(242, 251, 253, 0.96)",
+        ],
+        "line-width": 5,
+        "line-opacity": 0.82,
+      },
+    },
+    beforePointLayer,
+  );
+}
+
+export function clearRouteDirectionPulseLayer(map) {
+  if (map.getLayer(ROUTE_DIRECTION_PULSE_CORE_LAYER_ID)) {
+    map.removeLayer(ROUTE_DIRECTION_PULSE_CORE_LAYER_ID);
+  }
+  if (map.getLayer(ROUTE_DIRECTION_PULSE_CASING_LAYER_ID)) {
+    map.removeLayer(ROUTE_DIRECTION_PULSE_CASING_LAYER_ID);
+  }
+  if (map.getSource(ROUTE_DIRECTION_PULSE_SOURCE_ID)) {
+    map.removeSource(ROUTE_DIRECTION_PULSE_SOURCE_ID);
+  }
+}
+
+export function buildRouteDirectionPulseFeatureCollection(routeGeometry, progress) {
+  const empty = { type: "FeatureCollection", features: [] };
+  if (!Number.isFinite(progress)) return empty;
+
+  const points = normalizeRouteGeometry(routeGeometry);
+  if (points.length < 2) return empty;
+
+  const arc = precomputeRoutePulseArc(points);
+  if (!(arc.totalDistMeters > 0)) return empty;
+
+  const pulseMeters = Math.min(
+    Math.max(arc.totalDistMeters * 0.045, 80),
+    420,
+  );
+  const headDist = Math.min(
+    arc.totalDistMeters,
+    Math.max(0, progress) * arc.totalDistMeters,
+  );
+  const visibleHeadDist = Math.min(
+    arc.totalDistMeters,
+    Math.max(headDist, Math.min(pulseMeters * 0.35, arc.totalDistMeters)),
+  );
+  const tailDist = Math.max(0, visibleHeadDist - pulseMeters);
+  const coordinates = sliceRoutePulseCoordinates(
+    points,
+    arc.cumDist,
+    tailDist,
+    visibleHeadDist,
+  );
+
+  return coordinates.length >= 2
+    ? {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates,
+            },
+            properties: {},
+          },
+        ],
+      }
+    : empty;
+}
+
+function normalizeRouteGeometry(routeGeometry) {
+  return Array.isArray(routeGeometry)
+    ? routeGeometry
+        .map((point) => ({
+          lng: Number(point?.lng),
+          lat: Number(point?.lat),
+        }))
+        .filter(
+          (point) => Number.isFinite(point.lng) && Number.isFinite(point.lat),
+        )
+    : [];
+}
+
+function precomputeRoutePulseArc(points) {
+  const cumDist = new Float64Array(points.length);
+  let totalDistMeters = 0;
+
+  for (let i = 1; i < points.length; i++) {
+    const distance = getDistance(points[i - 1], points[i]);
+    totalDistMeters += Number.isFinite(distance) && distance > 0 ? distance : 0;
+    cumDist[i] = totalDistMeters;
+  }
+
+  return { cumDist, totalDistMeters };
+}
+
+function sliceRoutePulseCoordinates(points, cumDist, startDist, endDist) {
+  const coordinates = [routePulsePointAtDistance(points, cumDist, startDist)];
+
+  for (let i = 1; i < points.length - 1; i++) {
+    if (cumDist[i] > startDist && cumDist[i] < endDist) {
+      coordinates.push([points[i].lng, points[i].lat]);
+    }
+  }
+
+  coordinates.push(routePulsePointAtDistance(points, cumDist, endDist));
+  return coordinates.filter((coordinate, index, arr) => {
+    if (index === 0) return true;
+    const previous = arr[index - 1];
+    return coordinate[0] !== previous[0] || coordinate[1] !== previous[1];
+  });
+}
+
+function routePulsePointAtDistance(points, cumDist, distanceMeters) {
+  const target = Math.max(
+    0,
+    Math.min(distanceMeters, cumDist[cumDist.length - 1]),
+  );
+  let segmentIndex = 0;
+
+  while (
+    segmentIndex < cumDist.length - 2 &&
+    cumDist[segmentIndex + 1] < target
+  ) {
+    segmentIndex++;
+  }
+
+  const a = points[segmentIndex];
+  const b = points[segmentIndex + 1];
+  const segmentStart = cumDist[segmentIndex];
+  const segmentLength = cumDist[segmentIndex + 1] - segmentStart;
+  const fraction =
+    segmentLength > 0 ? (target - segmentStart) / segmentLength : 0;
+
+  return [
+    a.lng + (b.lng - a.lng) * fraction,
+    a.lat + (b.lat - a.lat) * fraction,
+  ];
+}
+
 export function syncRouteDirectionLitPointLayer(map, payload) {
   const data = {
     type: "FeatureCollection",
@@ -1105,11 +1310,11 @@ export function syncRouteDirectionLitPointLayer(map, payload) {
     type: "circle",
     source: ROUTE_DIRECTION_LIT_POINT_SOURCE_ID,
     paint: {
-      "circle-radius": 7,
+      "circle-radius": 6,
       "circle-color": "#ff4444",
-      "circle-stroke-color": "#ffd54a",
-      "circle-stroke-width": 3,
-      "circle-blur": 0.4,
+      "circle-stroke-color": "#d9f3f8",
+      "circle-stroke-width": 2.25,
+      "circle-blur": 0.18,
     },
   });
 
