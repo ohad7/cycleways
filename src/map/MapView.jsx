@@ -37,6 +37,7 @@ import {
   syncVideoCursorLayer,
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
+import { getMapboxGl } from "./mapboxProvider.js";
 import { distanceToLineSegmentPixels } from "../../utils/distance.js";
 
 const MAP_CENTER = [35.617497, 33.183536];
@@ -158,8 +159,15 @@ function MapView({
   }, [osmDebugMode]);
 
   useEffect(() => {
-    const mapboxgl = window.mapboxgl;
-    if (!containerRef.current || !mapboxgl) {
+    let mapboxgl;
+    try {
+      mapboxgl = getMapboxGl();
+    } catch (providerError) {
+      setStatus("error");
+      setError(providerError);
+      return undefined;
+    }
+    if (!containerRef.current) {
       setStatus("error");
       setError(new Error("Mapbox GL is not loaded"));
       return undefined;
@@ -334,7 +342,8 @@ function MapView({
       event.preventDefault?.();
       event.originalEvent?.stopPropagation?.();
       popup?.remove();
-      popup = new window.mapboxgl.Popup({ maxWidth: "360px" })
+      const { Popup } = getMapboxGl();
+      popup = new Popup({ maxWidth: "360px" })
         .setLngLat(event.lngLat)
         .setHTML(osmPopupHtml(feature.properties || {}))
         .addTo(map);
@@ -404,7 +413,8 @@ function MapView({
       event.preventDefault?.();
       event.originalEvent?.stopPropagation?.();
       popup?.remove();
-      popup = new window.mapboxgl.Popup({ maxWidth: "380px" })
+      const { Popup } = getMapboxGl();
+      popup = new Popup({ maxWidth: "380px" })
         .setLngLat(event.lngLat)
         .setHTML(osmGraphEdgePopupHtml(feature.properties || {}))
         .addTo(map);
@@ -476,7 +486,8 @@ function MapView({
       event.preventDefault?.();
       event.originalEvent?.stopPropagation?.();
       popup?.remove();
-      popup = new window.mapboxgl.Popup({ maxWidth: "380px" })
+      const { Popup } = getMapboxGl();
+      popup = new Popup({ maxWidth: "380px" })
         .setLngLat(event.lngLat)
         .setHTML(cwOsmMatchPopupHtml(feature.properties || {}))
         .addTo(map);
@@ -577,7 +588,8 @@ function MapView({
       event.preventDefault?.();
       event.originalEvent?.stopPropagation?.();
       popup?.remove();
-      popup = new window.mapboxgl.Popup({ maxWidth: "340px" })
+      const { Popup } = getMapboxGl();
+      popup = new Popup({ maxWidth: "340px" })
         .setLngLat(event.lngLat)
         .setHTML(osmIntersectionPopupHtml(feature.properties || {}))
         .addTo(map);
@@ -1036,7 +1048,7 @@ function MapView({
       clearTimeout(searchTimeoutRef.current);
     }
 
-    const mapboxgl = window.mapboxgl;
+    const mapboxgl = getMapboxGl();
     const markerElement = document.createElement("div");
     markerElement.className = "react-search-marker";
     markerElement.title = searchHighlight.label || "";
@@ -1084,7 +1096,7 @@ function MapView({
 }
 
 function fitMapToCoordinates(map, coordinates, options = {}) {
-  const mapboxgl = window.mapboxgl;
+  const mapboxgl = getMapboxGl();
   const bounds = new mapboxgl.LngLatBounds();
 
   coordinates.forEach((point) => {
@@ -1262,8 +1274,13 @@ function clearSearchHighlight(map, markerRef) {
 }
 
 function syncHoverPreviewMarker(map, markerRef, lngLat) {
-  const mapboxgl = window.mapboxgl;
-  if (!mapboxgl || !lngLat) return;
+  if (!lngLat) return;
+  let mapboxgl;
+  try {
+    mapboxgl = getMapboxGl();
+  } catch {
+    return;
+  }
 
   const coordinates = [lngLat.lng, lngLat.lat];
   if (markerRef.current) {
