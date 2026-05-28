@@ -48,6 +48,7 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
       coord: closestPoint.coord,
       bearing: closestPoint.bearing,
       distance: closestPoint.distance,
+      t: closestPoint.progress,
       elevation: closestPoint.elevation,
       grade: closestPoint.grade,
       gradeClass: closestPoint.gradeClass,
@@ -254,6 +255,7 @@ function buildElevationProfile(geometry) {
     elevationData.push({
       elevation,
       distance: distanceAtX,
+      progress: distanceAtX / totalDistance,
       coord,
       bearing,
       heightPercent,

@@ -7,8 +7,16 @@ export const ROUTE_NETWORK_HOVER_LAYER_ID = "cycleways-network-hover";
 export const ROUTE_NETWORK_FOCUS_LAYER_ID = "cycleways-network-focus";
 export const ROUTE_GEOMETRY_SOURCE_ID = "react-route-geometry";
 export const ROUTE_GEOMETRY_LAYER_ID = "react-route-geometry-line";
+export const ROUTE_GEOMETRY_HIT_LAYER_ID = "react-route-geometry-hit";
 export const ROUTE_POINTS_SOURCE_ID = "react-route-points";
 export const ROUTE_POINTS_LAYER_ID = "react-route-points-circle";
+export const ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID = "route-point-drag-preview";
+export const ROUTE_POINT_DRAG_PREVIEW_LINE_CASING_LAYER_ID =
+  "route-point-drag-preview-line-casing";
+export const ROUTE_POINT_DRAG_PREVIEW_LINE_LAYER_ID =
+  "route-point-drag-preview-line";
+export const ROUTE_POINT_DRAG_PREVIEW_HALO_LAYER_ID =
+  "route-point-drag-preview-halo";
 export const ROUTE_DIRECTION_PULSE_SOURCE_ID = "route-direction-pulse";
 export const ROUTE_DIRECTION_PULSE_CASING_LAYER_ID =
   "route-direction-pulse-casing";
@@ -199,6 +207,9 @@ export function clearRoutePointLayers(map) {
 
 export function clearRouteGeometryLayers(map) {
   if (!map) return;
+  if (map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
+    map.removeLayer(ROUTE_GEOMETRY_HIT_LAYER_ID);
+  }
   if (map.getLayer(ROUTE_GEOMETRY_LAYER_ID)) {
     map.removeLayer(ROUTE_GEOMETRY_LAYER_ID);
   }
@@ -965,22 +976,28 @@ export async function loadDataMarkerIcons(map) {
 }
 
 export function syncRoutePointLayers(map, routePoints, selectedRoutePointIndex) {
+  const lastRoutePointIndex = routePoints.length - 1;
   const data = {
     type: "FeatureCollection",
-    features: routePoints.map((point, index) => ({
-      type: "Feature",
-      id: point.id,
-      geometry: {
-        type: "Point",
-        coordinates: [point.lng, point.lat],
-      },
-      properties: {
+    features: routePoints.map((point, index) => {
+      const endpoint =
+        index === 0 ? "start" : index === lastRoutePointIndex ? "end" : "middle";
+      return {
+        type: "Feature",
         id: point.id,
-        index,
-        pending: Boolean(point.pending),
-        selected: index === selectedRoutePointIndex,
-      },
-    })),
+        geometry: {
+          type: "Point",
+          coordinates: [point.lng, point.lat],
+        },
+        properties: {
+          id: point.id,
+          index,
+          endpoint,
+          pending: Boolean(point.pending),
+          selected: index === selectedRoutePointIndex,
+        },
+      };
+    }),
   };
 
   if (map.getSource(ROUTE_POINTS_SOURCE_ID)) {
@@ -1001,57 +1018,61 @@ export function syncRoutePointLayers(map, routePoints, selectedRoutePointIndex) 
       "circle-radius": [
         "case",
         ["boolean", ["get", "pending"], false],
-        5,
-        4,
+        4.2,
+        ["!=", ["get", "endpoint"], "middle"],
+        4.1,
+        ["boolean", ["get", "selected"], false],
+        3.8,
+        3.2,
       ],
       "circle-color": [
         "case",
         ["boolean", ["get", "pending"], false],
-        "#f97316",
-        "#ff4444",
+        "rgba(255, 255, 255, 0.16)",
+        ["==", ["get", "endpoint"], "start"],
+        "#18a957",
+        ["==", ["get", "endpoint"], "end"],
+        "#c84c45",
+        ["boolean", ["get", "selected"], false],
+        "rgba(255, 255, 255, 0.12)",
+        "rgba(255, 255, 255, 0.04)",
       ],
       "circle-opacity": [
         "case",
         ["boolean", ["get", "pending"], false],
-        0.78,
+        0.9,
         1,
       ],
       "circle-stroke-width": [
         "case",
         ["boolean", ["get", "pending"], false],
-        3,
-        2,
+        1.2,
+        ["boolean", ["get", "selected"], false],
+        1.1,
+        ["!=", ["get", "endpoint"], "middle"],
+        1,
+        0.85,
       ],
-      "circle-stroke-color": "#ffffff",
+      "circle-stroke-color": [
+        "case",
+        ["==", ["get", "endpoint"], "start"],
+        "#ffffff",
+        ["==", ["get", "endpoint"], "end"],
+        "#ffffff",
+        ["boolean", ["get", "selected"], false],
+        "#ffffff",
+        "rgba(255, 255, 255, 0.82)",
+      ],
     },
   });
 }
 
-export function syncRouteGeometryLayer(map, routeGeometry) {
-  const coordinates = Array.isArray(routeGeometry)
-    ? routeGeometry
-        .map((point) => [Number(point.lng), Number(point.lat)])
-        .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
-    : [];
-  const data = {
-    type: "FeatureCollection",
-    features:
-      coordinates.length >= 2
-        ? [
-            {
-              type: "Feature",
-              geometry: {
-                type: "LineString",
-                coordinates,
-              },
-              properties: {},
-            },
-          ]
-        : [],
-  };
+export function syncRouteGeometryLayer(map, routeGeometry, dragPreview = null) {
+  const data = buildRouteGeometryFeatureCollection(routeGeometry, dragPreview);
 
   if (map.getSource(ROUTE_GEOMETRY_SOURCE_ID)) {
     map.getSource(ROUTE_GEOMETRY_SOURCE_ID).setData(data);
+    addRouteGeometryHitLayer(map);
     return;
   }
 
@@ -1071,9 +1092,303 @@ export function syncRouteGeometryLayer(map, routeGeometry) {
     paint: {
       "line-color": "#006699",
       "line-width": 5,
-      "line-opacity": 0.9,
+      "line-opacity": [
+        "case",
+        ["boolean", ["get", "affected"], false],
+        0.3,
+        0.9,
+      ],
     },
   });
+
+  addRouteGeometryHitLayer(map);
+}
+
+export function buildRouteGeometryFeatureCollection(routeGeometry, dragPreview = null) {
+  const coordinates = Array.isArray(routeGeometry)
+    ? routeGeometry
+        .map((point) => [Number(point.lng), Number(point.lat)])
+        .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
+    : [];
+
+  if (coordinates.length < 2) {
+    return { type: "FeatureCollection", features: [] };
+  }
+
+  const affectedRange = routeGeometryAffectedRange(routeGeometry, dragPreview);
+  if (!affectedRange) {
+    return {
+      type: "FeatureCollection",
+      features: [routeGeometryFeature(coordinates, false)],
+    };
+  }
+
+  const { start, end } = affectedRange;
+  const features = [];
+  addRouteGeometrySliceFeature(features, coordinates, 0, start, false);
+  addRouteGeometrySliceFeature(features, coordinates, start, end, true);
+  addRouteGeometrySliceFeature(
+    features,
+    coordinates,
+    end,
+    coordinates.length - 1,
+    false,
+  );
+
+  return { type: "FeatureCollection", features };
+}
+
+function routeGeometryAffectedRange(routeGeometry, dragPreview) {
+  if (!dragPreview || !Array.isArray(dragPreview.points)) return null;
+  const points = dragPreview.points.map(normalizePoint);
+  if (points.length < 2) return null;
+
+  const pointIndices = points.map((point) =>
+    nearestRouteGeometryIndex(point, routeGeometry),
+  );
+
+  let start = null;
+  let end = null;
+  if (dragPreview.mode === "insert") {
+    const insertIndex = clampInteger(dragPreview.insertIndex, 0, points.length);
+    start = pointIndices[insertIndex - 1] ?? null;
+    end = pointIndices[insertIndex] ?? null;
+  } else {
+    const index = clampInteger(dragPreview.index, 0, points.length - 1);
+    start = pointIndices[index - 1] ?? pointIndices[index] ?? null;
+    end = pointIndices[index + 1] ?? pointIndices[index] ?? null;
+  }
+
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start === end) {
+    return null;
+  }
+
+  return {
+    start: Math.min(start, end),
+    end: Math.max(start, end),
+  };
+}
+
+function nearestRouteGeometryIndex(point, routeGeometry) {
+  const normalizedPoint = normalizePoint(point);
+  if (!normalizedPoint || !Array.isArray(routeGeometry)) return null;
+
+  let bestIndex = null;
+  let bestDistance = Infinity;
+  routeGeometry.forEach((candidate, index) => {
+    const normalizedCandidate = normalizePoint(candidate);
+    if (!normalizedCandidate) return;
+    const dLat = normalizedCandidate.lat - normalizedPoint.lat;
+    const dLng = normalizedCandidate.lng - normalizedPoint.lng;
+    const distance = dLat * dLat + dLng * dLng;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
+}
+
+function addRouteGeometrySliceFeature(features, coordinates, start, end, affected) {
+  if (end - start < 1) return;
+  features.push(routeGeometryFeature(coordinates.slice(start, end + 1), affected));
+}
+
+function routeGeometryFeature(coordinates, affected) {
+  return {
+    type: "Feature",
+    geometry: {
+      type: "LineString",
+      coordinates,
+    },
+    properties: { affected },
+  };
+}
+
+function addRouteGeometryHitLayer(map) {
+  if (map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) return;
+  if (!map.getSource(ROUTE_GEOMETRY_SOURCE_ID)) return;
+
+  map.addLayer({
+    id: ROUTE_GEOMETRY_HIT_LAYER_ID,
+    type: "line",
+    source: ROUTE_GEOMETRY_SOURCE_ID,
+    layout: {
+      "line-join": "round",
+      "line-cap": "round",
+    },
+    paint: {
+      "line-color": "#000000",
+      "line-width": 18,
+      "line-opacity": 0.01,
+    },
+  });
+}
+
+export function syncRoutePointDragPreviewLayer(map, preview) {
+  const data = buildRoutePointDragPreviewFeatureCollection(preview);
+
+  if (map.getSource(ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID)) {
+    map.getSource(ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID).setData(data);
+    return;
+  }
+
+  if (data.features.length === 0) return;
+
+  map.addSource(ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID, {
+    type: "geojson",
+    data,
+  });
+
+  const beforePointLayer = map.getLayer(ROUTE_POINTS_LAYER_ID)
+    ? ROUTE_POINTS_LAYER_ID
+    : undefined;
+
+  map.addLayer(
+    {
+      id: ROUTE_POINT_DRAG_PREVIEW_LINE_CASING_LAYER_ID,
+      type: "line",
+      source: ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID,
+      filter: ["==", ["geometry-type"], "LineString"],
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": "#0f6070",
+        "line-width": 4.8,
+        "line-opacity": 0.32,
+        "line-dasharray": [1.25, 0.85],
+      },
+    },
+    beforePointLayer,
+  );
+
+  map.addLayer(
+    {
+      id: ROUTE_POINT_DRAG_PREVIEW_LINE_LAYER_ID,
+      type: "line",
+      source: ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID,
+      filter: ["==", ["geometry-type"], "LineString"],
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": "#f4feff",
+        "line-width": 2.6,
+        "line-opacity": 0.96,
+        "line-dasharray": [1.25, 0.85],
+      },
+    },
+    beforePointLayer,
+  );
+
+  map.addLayer(
+    {
+      id: ROUTE_POINT_DRAG_PREVIEW_HALO_LAYER_ID,
+      type: "circle",
+      source: ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID,
+      filter: ["==", ["geometry-type"], "Point"],
+      paint: {
+        "circle-radius": 9,
+        "circle-color": "rgba(217, 243, 248, 0.14)",
+        "circle-stroke-color": "#d9f3f8",
+        "circle-stroke-width": 1.5,
+        "circle-stroke-opacity": 0.86,
+      },
+    },
+    beforePointLayer,
+  );
+}
+
+export function clearRoutePointDragPreviewLayer(map) {
+  if (map.getLayer(ROUTE_POINT_DRAG_PREVIEW_HALO_LAYER_ID)) {
+    map.removeLayer(ROUTE_POINT_DRAG_PREVIEW_HALO_LAYER_ID);
+  }
+  if (map.getLayer(ROUTE_POINT_DRAG_PREVIEW_LINE_LAYER_ID)) {
+    map.removeLayer(ROUTE_POINT_DRAG_PREVIEW_LINE_LAYER_ID);
+  }
+  if (map.getLayer(ROUTE_POINT_DRAG_PREVIEW_LINE_CASING_LAYER_ID)) {
+    map.removeLayer(ROUTE_POINT_DRAG_PREVIEW_LINE_CASING_LAYER_ID);
+  }
+  if (map.getSource(ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID)) {
+    map.removeSource(ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID);
+  }
+}
+
+export function buildRoutePointDragPreviewFeatureCollection(preview) {
+  const empty = { type: "FeatureCollection", features: [] };
+  const cursor = normalizePoint(preview);
+  if (!cursor || !Array.isArray(preview?.points)) return empty;
+
+  const points = preview.points.map(normalizePoint);
+  const neighbors = dragPreviewNeighbors(points, preview);
+  const lineFeatures = [];
+
+  if (neighbors.previous) {
+    lineFeatures.push(dragPreviewLineFeature(neighbors.previous, cursor));
+  }
+  if (neighbors.next) {
+    lineFeatures.push(dragPreviewLineFeature(cursor, neighbors.next));
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      ...lineFeatures,
+      {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [cursor.lng, cursor.lat],
+        },
+        properties: { kind: "cursor" },
+      },
+    ],
+  };
+}
+
+function dragPreviewNeighbors(points, preview) {
+  if (preview.mode === "insert") {
+    const insertIndex = clampInteger(preview.insertIndex, 0, points.length);
+    return {
+      previous: points[insertIndex - 1] || null,
+      next: points[insertIndex] || null,
+    };
+  }
+
+  const index = clampInteger(preview.index, 0, points.length - 1);
+  return {
+    previous: points[index - 1] || null,
+    next: points[index + 1] || null,
+  };
+}
+
+function dragPreviewLineFeature(from, to) {
+  return {
+    type: "Feature",
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [from.lng, from.lat],
+        [to.lng, to.lat],
+      ],
+    },
+    properties: { kind: "guide" },
+  };
+}
+
+function normalizePoint(point) {
+  const lng = Number(point?.lng);
+  const lat = Number(point?.lat);
+  return Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : null;
+}
+
+function clampInteger(value, min, max) {
+  if (!Number.isInteger(value)) return min;
+  return Math.max(min, Math.min(max, value));
 }
 
 export function syncRouteDirectionPulseLayer(map, routeGeometry, progress) {

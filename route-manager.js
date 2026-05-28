@@ -396,22 +396,9 @@ class RouteManager {
       return [];
     }
 
-    // Store the current segments before clearing
     const previousSegments = [...this.selectedSegments];
-
-    // Clear current state
     this.clearRoute();
-
-    // Add each point and snap them to segments to ensure they have segmentName
-    for (const point of validPoints) {
-      const snappedPoint = this.snapToNetwork(point);
-      if (snappedPoint) {
-        this.routePoints.push({
-          ...snappedPoint,
-          id: point.id || Date.now() + Math.random(),
-        });
-      }
-    }
+    this.routePoints = this._snapRoutePoints(validPoints);
 
     // Recalculate route based on the restored points
     this._recalculateRoute();
@@ -2239,22 +2226,38 @@ class RouteManager {
           return null;
         }
 
+        const {
+          baseEdgeDistanceMeters,
+          baseEdgeId,
+          distanceMeters,
+          segmentName,
+          unsnapped,
+          ...routePoint
+        } = point;
+        const lat = Number(point.lat);
+        const lng = Number(point.lng);
         const snappedPoint = this.snapToNetwork({
-          lat: point.lat,
-          lng: point.lng,
+          lat,
+          lng,
         });
 
         if (snappedPoint) {
           return {
-            ...point,
+            ...routePoint,
             ...snappedPoint,
             lat: snappedPoint.lat,
             lng: snappedPoint.lng,
             segmentName: snappedPoint.segmentName,
+            unsnapped: false,
           };
         }
 
-        return null;
+        return {
+          ...routePoint,
+          lat,
+          lng,
+          unsnapped: true,
+        };
       })
       .filter((point) => point !== null);
   }

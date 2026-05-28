@@ -9,6 +9,7 @@ import {
   createRouteManager,
   dragPoint,
   expandHybridRoutePayload,
+  recalculatePoints,
   restoreRoute,
   routePointsFromParam,
   snapshotRouteManager,
@@ -259,6 +260,11 @@ class ShardedRouteSession {
     );
     await this.ensureCoverage(nextPoints);
     return dragPoint(this.manager, points, index, point, this.segmentsData);
+  }
+
+  async recalculatePoints(points) {
+    await this.ensureCoverage(points);
+    return recalculatePoints(this.manager, points, this.segmentsData);
   }
 
   async restorePoints(points) {

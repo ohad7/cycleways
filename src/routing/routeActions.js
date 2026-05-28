@@ -47,6 +47,11 @@ export function dragPoint(manager, points, index, point, segmentsData) {
   return snapshotRouteManager(manager, segmentsData);
 }
 
+export function recalculatePoints(manager, points, segmentsData) {
+  manager.recalculateRoute(points);
+  return snapshotRouteManager(manager, segmentsData);
+}
+
 export function removePoint(manager, index, segmentsData) {
   manager.removePoint(index);
   return snapshotRouteManager(manager, segmentsData);

@@ -5,7 +5,6 @@ import {
   clearOsmDebugLayers,
   clearRouteDirectionPulseLayer,
   clearOsmRawLayers,
-  clearRouteDirectionLitPointLayer,
   clearRouteNetworkLayers,
   CW_OSM_MATCH_HIT_LAYER_ID,
   CW_OSM_MATCH_HOVER_LAYER_ID,
@@ -16,6 +15,7 @@ import {
   OSM_GRAPH_EDGES_HIT_LAYER_ID,
   OSM_INTERSECTIONS_HIT_LAYER_ID,
   prepareRouteNetworkFeatures,
+  ROUTE_GEOMETRY_HIT_LAYER_ID,
   ROUTE_NETWORK_HIT_LAYER_ID,
   ROUTE_POINTS_LAYER_ID,
   setCwOsmMatchFocus,
@@ -29,7 +29,8 @@ import {
   syncCwOsmReviewLayers,
   syncOsmGraphLayers,
   syncOsmIntersectionLayers,
-  syncRouteDirectionLitPointLayer,
+  clearRoutePointDragPreviewLayer,
+  syncRoutePointDragPreviewLayer,
   syncRouteDirectionPulseLayer,
   syncRouteGeometryLayer,
   syncRoutePointLayers,
@@ -59,6 +60,9 @@ function MapView({
   onRoutePointDragStart,
   onRoutePointRemove,
   onRoutePointSelect,
+  onRouteLineDrag,
+  onRouteLineDragEnd,
+  onRouteLineDragStart,
   onSegmentFocus,
   onSegmentHover,
   onViewportIdle,
@@ -74,6 +78,7 @@ function MapView({
   onCwOsmMatchHover,
   routeFitRequest,
   routeGeometry = [],
+  routePointDragPreview = null,
   routePoints = [],
   searchHighlight,
   selectedCwOsmReviewFeature = null,
@@ -83,6 +88,7 @@ function MapView({
 }) {
   const containerRef = useRef(null);
   const draggingPointRef = useRef(null);
+  const routeLineDragRef = useRef(null);
   const mapRef = useRef(null);
   const searchMarkerRef = useRef(null);
   const searchTimeoutRef = useRef(null);
@@ -106,6 +112,9 @@ function MapView({
       onRoutePointDragStart,
       onRoutePointRemove,
       onRoutePointSelect,
+      onRouteLineDrag,
+      onRouteLineDragEnd,
+      onRouteLineDragStart,
       onSegmentFocus,
       onSegmentHover,
       onViewportIdle,
@@ -121,6 +130,9 @@ function MapView({
     onRoutePointDragStart,
     onRoutePointRemove,
     onRoutePointSelect,
+    onRouteLineDrag,
+    onRouteLineDragEnd,
+    onRouteLineDragStart,
     onSegmentFocus,
     onSegmentHover,
     onViewportIdle,
@@ -594,58 +606,24 @@ function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready") return;
-    syncRouteGeometryLayer(map, routeGeometry);
-  }, [routeGeometry, status]);
+    syncRouteGeometryLayer(map, routeGeometry, routePointDragPreview);
+  }, [routeGeometry, routePointDragPreview, status]);
 
-  const chevronMarkerRef = useRef(null);
-  const chevronHostRef = useRef(null);
-  const chevronRotorRef = useRef(null);
-  const animatorVisibleRef = useRef(true);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    syncRoutePointDragPreviewLayer(map, routePointDragPreview);
+  }, [routePointDragPreview, status]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready") return undefined;
-
-    const mapboxgl = window.mapboxgl;
-    if (!mapboxgl) return undefined;
-
-    const host = document.createElement("div");
-    host.className = "route-direction-chevron";
-    host.style.cssText = `
-      width: 38px;
-      height: 22px;
-      pointer-events: none;
-      display: none;
-    `;
-    const rotor = document.createElement("div");
-    rotor.style.cssText = `
-      width: 100%;
-      height: 100%;
-      transform-origin: 50% 50%;
-      mix-blend-mode: screen;
-    `;
-    rotor.innerHTML = `
-      <svg viewBox="-19 -11 38 22" width="38" height="22" xmlns="http://www.w3.org/2000/svg">
-        <path d="M 12 0 L -2 -8 L -2 8 Z" fill="#ffffff" stroke="#0b1720" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M 1 0 L -10 -6 L -10 6 Z" fill="#d9f3f8" stroke="#0b1720" stroke-width="1.6" stroke-linejoin="round" opacity="0.92"/>
-      </svg>
-    `;
-    host.appendChild(rotor);
-    chevronHostRef.current = host;
-    chevronRotorRef.current = rotor;
-
-    const marker = new mapboxgl.Marker({ element: host, anchor: "center" })
-      .setLngLat([0, 0])
-      .addTo(map);
-    chevronMarkerRef.current = marker;
-
     return () => {
-      marker.remove();
-      chevronMarkerRef.current = null;
-      chevronHostRef.current = null;
-      chevronRotorRef.current = null;
+      clearRoutePointDragPreviewLayer(map);
     };
   }, [status]);
+
+  const animatorVisibleRef = useRef(true);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -667,51 +645,21 @@ function MapView({
   }, [animator, status]);
 
   useEffect(() => {
-    const marker = chevronMarkerRef.current;
-    const host = chevronHostRef.current;
-    const rotor = chevronRotorRef.current;
-    if (!marker || !host || !rotor) return;
+    const map = mapRef.current;
+    if (!map || status !== "ready") return;
 
-    if (elevationHover?.coord) {
+    if (Number.isFinite(elevationHover?.t)) {
       // Disable animator-driven visuals for this route — only reset on route change.
-      const wasVisible = animatorVisibleRef.current;
       animatorVisibleRef.current = false;
-      if (wasVisible && mapRef.current) {
-        clearRouteDirectionPulseLayer(mapRef.current);
-        clearRouteDirectionLitPointLayer(mapRef.current);
-      }
-      marker.setLngLat([elevationHover.coord.lng, elevationHover.coord.lat]);
-      host.style.display = "block";
-      if (Number.isFinite(elevationHover.bearing)) {
-        rotor.style.transform = `rotate(${elevationHover.bearing - 90}deg)`;
-      }
+      syncRouteDirectionPulseLayer(map, routeGeometryRef.current, elevationHover.t);
     } else {
-      host.style.display = "none";
+      clearRouteDirectionPulseLayer(map);
     }
-  }, [elevationHover]);
+  }, [elevationHover, status]);
 
   useEffect(() => {
     animatorVisibleRef.current = true;
   }, [routeGeometry]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || status !== "ready" || !animator) return undefined;
-
-    const unsubscribe = animator.subscribe("litPoint", (payload) => {
-      if (!animatorVisibleRef.current) return;
-      if (!map.getSource) return;
-      const adapted = payload
-        ? { ...payload, displayIndex: payload.index + 1 }
-        : null;
-      syncRouteDirectionLitPointLayer(map, adapted);
-    });
-
-    return () => {
-      unsubscribe();
-      clearRouteDirectionLitPointLayer(map);
-    };
-  }, [animator, status]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -821,6 +769,7 @@ function MapView({
     const hasBlockingClickFeature = (event) => {
       const layers = [
         ROUTE_POINTS_LAYER_ID,
+        ROUTE_GEOMETRY_HIT_LAYER_ID,
         DATA_MARKERS_LAYER_ID,
         OSM_DEBUG_HIT_LAYER_ID,
       ].filter((layerId) => map.getLayer(layerId));
@@ -907,6 +856,34 @@ function MapView({
       callbacksRef.current.onRoutePointDragStart?.(draggingPointRef.current);
     };
 
+    const startRouteLineDrag = (event) => {
+      if (draggingPointRef.current !== null || routeLineDragRef.current) return;
+      const routePoints = routePointsRef.current;
+      if (!Array.isArray(routePoints) || routePoints.length < 2) return;
+      const pointHits = map.queryRenderedFeatures?.(event.point, {
+        layers: [ROUTE_POINTS_LAYER_ID],
+      });
+      if (pointHits?.length > 0) return;
+
+      const insertIndex = routeLineInsertIndexFromEvent(
+        map,
+        event,
+        routeGeometryRef.current,
+        routePoints,
+      );
+      if (!Number.isInteger(insertIndex)) return;
+
+      event.preventDefault?.();
+      event.originalEvent?.stopPropagation?.();
+      routeLineDragRef.current = {
+        active: false,
+        insertIndex,
+        startPoint: event.point,
+      };
+      map.dragPan.disable();
+      map.getCanvas().style.cursor = "grab";
+    };
+
     const removePoint = (event) => {
       const pointIndex = getPointIndex(event);
       if (!Number.isInteger(pointIndex)) return;
@@ -918,9 +895,29 @@ function MapView({
 
     const moveDrag = (event) => {
       const pointIndex = draggingPointRef.current;
-      if (!Number.isInteger(pointIndex)) return;
+      if (Number.isInteger(pointIndex)) {
+        callbacksRef.current.onRoutePointDrag?.(pointIndex, {
+          lng: event.lngLat.lng,
+          lat: event.lngLat.lat,
+        });
+        return;
+      }
 
-      callbacksRef.current.onRoutePointDrag?.(pointIndex, {
+      const routeLineDrag = routeLineDragRef.current;
+      if (!routeLineDrag) return;
+
+      if (!routeLineDrag.active) {
+        const movedPixels = screenPointDistance(event.point, routeLineDrag.startPoint);
+        if (movedPixels < 6) return;
+        routeLineDrag.active = true;
+        map.getCanvas().style.cursor = "grabbing";
+        callbacksRef.current.onRouteLineDragStart?.(routeLineDrag.insertIndex, {
+          lng: event.lngLat.lng,
+          lat: event.lngLat.lat,
+        });
+      }
+
+      callbacksRef.current.onRouteLineDrag?.(routeLineDrag.insertIndex, {
         lng: event.lngLat.lng,
         lat: event.lngLat.lat,
       });
@@ -928,12 +925,24 @@ function MapView({
 
     const endDrag = () => {
       const pointIndex = draggingPointRef.current;
-      if (!Number.isInteger(pointIndex)) return;
+      const routeLineDrag = routeLineDragRef.current;
 
-      draggingPointRef.current = null;
-      map.dragPan.enable();
-      map.getCanvas().style.cursor = "";
-      callbacksRef.current.onRoutePointDragEnd?.(pointIndex);
+      if (Number.isInteger(pointIndex)) {
+        draggingPointRef.current = null;
+        map.dragPan.enable();
+        map.getCanvas().style.cursor = "";
+        callbacksRef.current.onRoutePointDragEnd?.(pointIndex);
+        return;
+      }
+
+      if (routeLineDrag) {
+        routeLineDragRef.current = null;
+        map.dragPan.enable();
+        map.getCanvas().style.cursor = "";
+        if (routeLineDrag.active) {
+          callbacksRef.current.onRouteLineDragEnd?.(routeLineDrag.insertIndex);
+        }
+      }
     };
 
     const enterPoint = () => {
@@ -946,8 +955,26 @@ function MapView({
       }
     };
 
+    const enterRouteLine = () => {
+      if (!Number.isInteger(draggingPointRef.current) && !routeLineDragRef.current) {
+        map.getCanvas().style.cursor = "grab";
+      }
+    };
+
+    const leaveRouteLine = () => {
+      if (!Number.isInteger(draggingPointRef.current) && !routeLineDragRef.current) {
+        map.getCanvas().style.cursor = "";
+      }
+    };
+
     map.on("mousedown", ROUTE_POINTS_LAYER_ID, startDrag);
     map.on("touchstart", ROUTE_POINTS_LAYER_ID, startDrag);
+    if (map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
+      map.on("mousedown", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
+      map.on("touchstart", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
+      map.on("mouseenter", ROUTE_GEOMETRY_HIT_LAYER_ID, enterRouteLine);
+      map.on("mouseleave", ROUTE_GEOMETRY_HIT_LAYER_ID, leaveRouteLine);
+    }
     map.on("contextmenu", ROUTE_POINTS_LAYER_ID, removePoint);
     map.on("mousemove", moveDrag);
     map.on("touchmove", moveDrag);
@@ -959,6 +986,12 @@ function MapView({
     return () => {
       map.off("mousedown", ROUTE_POINTS_LAYER_ID, startDrag);
       map.off("touchstart", ROUTE_POINTS_LAYER_ID, startDrag);
+      if (map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
+        map.off("mousedown", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
+        map.off("touchstart", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
+        map.off("mouseenter", ROUTE_GEOMETRY_HIT_LAYER_ID, enterRouteLine);
+        map.off("mouseleave", ROUTE_GEOMETRY_HIT_LAYER_ID, leaveRouteLine);
+      }
       map.off("contextmenu", ROUTE_POINTS_LAYER_ID, removePoint);
       map.off("mousemove", moveDrag);
       map.off("touchmove", moveDrag);
@@ -967,7 +1000,7 @@ function MapView({
       map.off("mouseenter", ROUTE_POINTS_LAYER_ID, enterPoint);
       map.off("mouseleave", ROUTE_POINTS_LAYER_ID, leavePoint);
     };
-  }, [status]);
+  }, [routeGeometry, status]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1069,6 +1102,107 @@ function fitMapToCoordinates(map, coordinates, options = {}) {
       padding: options.padding || 48,
     });
   }
+}
+
+function routeLineInsertIndexFromEvent(map, event, routeGeometry, routePoints) {
+  const segmentIndex = nearestRouteGeometrySegmentIndex(
+    map,
+    event.point,
+    routeGeometry,
+  );
+  if (!Number.isInteger(segmentIndex)) return null;
+
+  const pointIndices = snapRoutePointsToGeometryIndices(routePoints, routeGeometry);
+  if (pointIndices.length < 2) return null;
+
+  for (let index = 0; index < pointIndices.length - 1; index++) {
+    const start = pointIndices[index];
+    const end = pointIndices[index + 1];
+    if (segmentIndex >= start && segmentIndex < end) {
+      return index + 1;
+    }
+  }
+
+  let bestIndex = 1;
+  let bestDistance = Infinity;
+  for (let index = 0; index < pointIndices.length - 1; index++) {
+    const start = pointIndices[index];
+    const end = pointIndices[index + 1];
+    const distance =
+      segmentIndex < start
+        ? start - segmentIndex
+        : segmentIndex >= end
+          ? segmentIndex - end + 1
+          : 0;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index + 1;
+    }
+  }
+  return bestIndex;
+}
+
+function nearestRouteGeometrySegmentIndex(map, screenPoint, routeGeometry) {
+  if (
+    !map ||
+    !screenPoint ||
+    !Array.isArray(routeGeometry) ||
+    routeGeometry.length < 2
+  ) {
+    return null;
+  }
+
+  let bestIndex = null;
+  let bestDistance = Infinity;
+  for (let index = 0; index < routeGeometry.length - 1; index++) {
+    const start = projectRoutePoint(map, routeGeometry[index]);
+    const end = projectRoutePoint(map, routeGeometry[index + 1]);
+    if (!start || !end) continue;
+    const distance = distanceToLineSegmentPixels(screenPoint, start, end);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  }
+  return bestIndex;
+}
+
+function projectRoutePoint(map, point) {
+  const lng = Number(point?.lng);
+  const lat = Number(point?.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+  const projected = map.project([lng, lat]);
+  return { x: projected.x, y: projected.y };
+}
+
+function snapRoutePointsToGeometryIndices(routePoints, geometry) {
+  if (!Array.isArray(routePoints) || !Array.isArray(geometry)) return [];
+  const indices = [];
+  for (const point of routePoints) {
+    if (point?.pending) continue;
+    if (!Number.isFinite(point?.lat) || !Number.isFinite(point?.lng)) continue;
+    let bestIndex = 0;
+    let bestDist = Infinity;
+    for (let index = 0; index < geometry.length; index++) {
+      const candidate = geometry[index];
+      const dLat = candidate.lat - point.lat;
+      const dLng = candidate.lng - point.lng;
+      const distance = dLat * dLat + dLng * dLng;
+      if (distance < bestDist) {
+        bestDist = distance;
+        bestIndex = index;
+      }
+    }
+    indices.push(bestIndex);
+  }
+  return indices;
+}
+
+function screenPointDistance(a, b) {
+  if (!a || !b) return 0;
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
 function syncSearchHighlightCircle(map, searchHighlight) {

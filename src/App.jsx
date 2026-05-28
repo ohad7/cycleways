@@ -30,7 +30,7 @@ import {
   buildShareInfo,
   clearRoute,
   createRouteManager,
-  dragPoint,
+  recalculatePoints,
   removePoint,
   routeStateSnapshot,
   restoreRouteFromParam,
@@ -117,6 +117,23 @@ function App() {
   }
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [routePointDragPreview, setRoutePointDragPreview] = useState(null);
+  const routePointDragPreviewRef = useRef(null);
+
+  const setRoutePointDragPreviewState = useCallback((nextOrUpdater) => {
+    setRoutePointDragPreview((current) => {
+      const next =
+        typeof nextOrUpdater === "function"
+          ? nextOrUpdater(current)
+          : nextOrUpdater;
+      routePointDragPreviewRef.current = next;
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    routePointDragPreviewRef.current = routePointDragPreview;
+  }, [routePointDragPreview]);
 
   useEffect(() => {
     return () => {
@@ -662,53 +679,113 @@ function App() {
       });
   }, [state.status]);
 
-  const handleRoutePointDragStart = useCallback(() => {
-    dragStartSnapshotRef.current = routeStateSnapshot(routeState);
+  const handleRoutePointDragStart = useCallback((index) => {
+    const startSnapshot = routeStateSnapshot(routeState);
+    const point = startSnapshot.points[index];
+    if (!point) return;
+
+    dragStartSnapshotRef.current = startSnapshot;
     isDraggingRef.current = true;
     setIsDragging(true);
-  }, [routeState]);
+    setRoutePointDragPreviewState({
+      mode: "move",
+      index,
+      points: startSnapshot.points,
+      lng: point.lng,
+      lat: point.lat,
+    });
+  }, [routeState, setRoutePointDragPreviewState]);
 
-  const handleRoutePointDrag = useCallback(async (index, point) => {
+  const handleRouteLineDragStart = useCallback((insertIndex, point) => {
+    const startSnapshot = routeStateSnapshot(routeState);
+    dragStartSnapshotRef.current = startSnapshot;
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    setRoutePointDragPreviewState({
+      mode: "insert",
+      insertIndex,
+      points: startSnapshot.points,
+      lng: point.lng,
+      lat: point.lat,
+    });
+  }, [routeState, setRoutePointDragPreviewState]);
+
+  const updateRouteDragPreview = useCallback((point) => {
+    if (state.status !== "ready") return;
+    setRoutePointDragPreviewState((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        lng: point.lng,
+        lat: point.lat,
+      };
+    });
+  }, [setRoutePointDragPreviewState, state.status]);
+
+  const handleRoutePointDrag = useCallback((index, point) => {
+    updateRouteDragPreview(point);
+  }, [updateRouteDragPreview]);
+
+  const handleRouteLineDrag = useCallback((insertIndex, point) => {
+    updateRouteDragPreview(point);
+  }, [updateRouteDragPreview]);
+
+  const handleRoutePointDragEnd = useCallback(async () => {
+    const preview = routePointDragPreviewRef.current;
+    if (!dragStartSnapshotRef.current || !preview) {
+      dragStartSnapshotRef.current = null;
+      setRoutePointDragPreviewState(null);
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      return;
+    }
+
+    const startSnapshot = dragStartSnapshotRef.current;
+    dragStartSnapshotRef.current = null;
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    setRoutePointDragPreviewState(null);
+
     if (!routeManagerRef.current || state.status !== "ready") return;
+
+    const nextPoints = routePointsFromDragPreview(preview);
+    if (!nextPoints) return;
 
     try {
       const shardedSession = shardedRouteSessionRef.current;
       const snapshot = shardedSession
-        ? await shardedSession.dragPoint(routeState.points, index, point)
-        : dragPoint(
+        ? await shardedSession.recalculatePoints(nextPoints)
+        : recalculatePoints(
             routeManagerRef.current,
-            routeState.points,
-            index,
-            point,
+            nextPoints,
             state.assets.segmentsData,
           );
       if (shardedSession) {
         routeManagerRef.current = shardedSession.manager;
       }
+      setRouteHistory((current) => ({
+        past: [...current.past, startSnapshot],
+        future: [],
+      }));
       routeStateRef.current = routeStateFromSnapshot(
         routeStateRef.current,
         snapshot,
       );
       dispatchRoute({ type: "route/update", snapshot });
+      const selectedIndex =
+        preview.mode === "insert" ? preview.insertIndex : preview.index;
+      setMapUi((current) => ({
+        ...current,
+        selectedRoutePointIndex: Number.isInteger(selectedIndex)
+          ? selectedIndex
+          : null,
+      }));
       clearRouteUrl();
+      trackRoutePointEvent(snapshot.points, snapshot.selectedSegments, "drag");
     } catch (error) {
       dispatchRoute({ type: "route/error", error });
     }
-  }, [clearRouteUrl, routeState.points, state.assets, state.status]);
-
-  const handleRoutePointDragEnd = useCallback(() => {
-    if (!dragStartSnapshotRef.current) return;
-
-    const startSnapshot = dragStartSnapshotRef.current;
-    dragStartSnapshotRef.current = null;
-    setRouteHistory((current) => ({
-      past: [...current.past, startSnapshot],
-      future: [],
-    }));
-    trackRoutePointEvent(routeState.points, routeState.selectedSegments, "drag");
-    isDraggingRef.current = false;
-    setIsDragging(false);
-  }, [routeState.points, routeState.selectedSegments]);
+  }, [clearRouteUrl, setRoutePointDragPreviewState, state.assets, state.status]);
 
   const handleRoutePointRemove = useCallback((index) => {
     if (!routeManagerRef.current || state.status !== "ready") return;
@@ -1231,6 +1308,9 @@ function App() {
                   onRoutePointDragStart={handleRoutePointDragStart}
                   onRoutePointRemove={handleRoutePointRemove}
                   onRoutePointSelect={handleRoutePointSelect}
+                  onRouteLineDrag={handleRouteLineDrag}
+                  onRouteLineDragEnd={handleRoutePointDragEnd}
+                  onRouteLineDragStart={handleRouteLineDragStart}
                   onSegmentFocus={handleSegmentFocus}
                   onSegmentHover={handleSegmentHover}
                   onViewportIdle={handleViewportIdle}
@@ -1246,6 +1326,7 @@ function App() {
                   osmDebugLayerMode={osmDebugLayerMode}
                   routeFitRequest={mapUi.routeFitRequest}
                   routeGeometry={routeState.geometry}
+                  routePointDragPreview={routePointDragPreview}
                   routePoints={displayedRoutePoints}
                   searchHighlight={mapUi.searchHighlight}
                   selectedCwOsmReviewFeature={selectedCwReviewFeature}
@@ -1650,6 +1731,56 @@ function snapRoutePointsToGeometryIndices(routePoints, geometry) {
     indices.push(bestIndex);
   }
   return indices;
+}
+
+function routePointsFromDragPreview(preview) {
+  const cursor = routePointDragCursor(preview);
+  if (!cursor || !Array.isArray(preview?.points)) return null;
+
+  if (preview.mode === "insert") {
+    const insertIndex = Math.max(
+      0,
+      Math.min(preview.insertIndex, preview.points.length),
+    );
+    return [
+      ...preview.points.slice(0, insertIndex).map((point) => ({ ...point })),
+      {
+        id: `route-point-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        lat: cursor.lat,
+        lng: cursor.lng,
+      },
+      ...preview.points.slice(insertIndex).map((point) => ({ ...point })),
+    ];
+  }
+
+  if (!Number.isInteger(preview.index)) return null;
+  return preview.points.map((point, index) =>
+    index === preview.index
+      ? routePointWithCoordinates(point, cursor)
+      : { ...point },
+  );
+}
+
+function routePointDragCursor(preview) {
+  const lat = Number(preview?.lat);
+  const lng = Number(preview?.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+function routePointWithCoordinates(point, cursor) {
+  const {
+    baseEdgeDistanceMeters,
+    baseEdgeId,
+    distanceMeters,
+    segmentName,
+    unsnapped,
+    ...routePoint
+  } = point || {};
+  return {
+    ...routePoint,
+    lat: cursor.lat,
+    lng: cursor.lng,
+  };
 }
 
 function formatPercent(value) {
