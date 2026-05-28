@@ -200,33 +200,52 @@ top of A.
 
 ### Grounded findings (current state)
 
+Corrected after reading the code (an earlier finding that the elevation profile
+was "hover-only, no touch" was wrong — caused by a truncated grep):
+
+- **Elevation profile** interactions (slope-chip tooltip + elevation hover)
+  **already handle touch**: `ElevationProfile.jsx` reads
+  `event.touches?.[0]?.clientX ?? event.clientX` and wires
+  `onTouchStart/onTouchMove/onTouchEnd` (lines ~38–63, 134–136). No missing touch
+  support here.
 - **Route-point drag editing** already handles touch (`MapView` wires
-  `touchstart/touchmove/touchend` alongside mouse). Verify quality on a real
-  mobile viewport, including the chevron/direction animation recent commits
-  changed.
-- **Elevation profile** interactions (slope-chip tooltip + elevation hover) are
-  **hover-only — no touch handlers.** On mobile web there is no hover, so the new
-  slope tooltip does not work on touch. This is the headline gap.
+  `touchstart/touchmove/touchend` alongside mouse, lines ~970–999).
 - **Network segment hover + ghost-preview point** are mouse-only by design;
-  tap-to-place still works via `click`. Verify it feels right on touch.
+  tap-to-place still works via `click`.
+- **Responsive layout of recent additions is unverified.** The mobile
+  `@media (max-width: 768px)` block (react-app.css:1164) caps the route
+  description panel at 170px tall and shrinks font, but has **no rules** for the
+  new `.react-elevation-legend`, `.react-grade-chip`, or
+  `.react-elevation-hover-info`. These plausibly crowd/overflow within the short
+  mobile panel (incl. RTL), but this must be observed, not assumed.
 - `useIsMobile` exists but is used only in `featured/`; the main planning UI has
   no JS-level mobile awareness, only CSS media queries.
 
+### Approach: verification-led, fix only what is observed
+
+B is **not** "add missing touch support" (that exists). It is a **mobile-web
+verification pass** of the recent features on a real mobile viewport, fixing only
+issues that are actually observed.
+
 ### Tasks
 
-1. **Elevation profile touch support** — add touch/pointer scrubbing so the
-   elevation-hover tooltip + slope-grade chip work on mobile (tap-and-drag along
-   the profile moves the cursor; the map direction-pulse already syncs from
-   `animator`).
-2. **Route-point editing on touch** — verify add/move/remove waypoint touch-drag
-   works well on a real mobile viewport, including the chevron/direction
-   animation.
-3. **Responsive layout audit** — the new slope **legend** and slope-chip
-   **tooltip** on small screens: overflow, RTL, tap-target sizes, elevation panel
-   height.
-4. **Optional, YAGNI-gated** — promote `useIsMobile` into the main app only where
-   an affordance genuinely must differ on touch (e.g. a persistent cursor handle
-   instead of hover).
+1. **Observe on a mobile viewport** — drive the app at a phone-sized viewport
+   (Playwright / device emulation) through: elevation touch-scrub showing the
+   tooltip + slope chip; route-point touch add/move/remove with the
+   chevron/direction animation; the slope legend + grade chip rendering. Record
+   concrete defects (screenshots).
+2. **Fix observed responsive-layout issues only** — most likely candidates: the
+   slope legend / grade chip / hover-info overflowing or crowding inside the
+   170px mobile route-description panel, and RTL alignment. Add targeted rules to
+   the existing `@media (max-width: 768px)` block. Scope strictly to observed
+   defects.
+3. **Fix observed touch-interaction issues only** — only if step 1 surfaces real
+   problems (e.g. tap targets too small, scrub jitter). No speculative changes.
+4. **Optional, YAGNI-gated** — promote `useIsMobile` into the main app only if a
+   fix genuinely requires JS-level touch awareness rather than CSS.
+
+If step 1 surfaces no real defects, B closes as "verified, no changes needed" —
+that is a valid outcome.
 
 ## Testing & verification
 

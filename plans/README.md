@@ -15,3 +15,5 @@ Current plans:
 - `react-migration/` - design and implementation plan for incrementally moving the public app to React.
 - `featured-routes/` - design and implementation plan for curated featured-route landing pages with maps, POIs, photos, and video.
 - `route-point-editing/` - design and implementation plan for clearer route point drag/edit feedback, route-line insert-and-drag, and preserving points outside the routing network.
+- `elevation-graph-redesign/` - design and implementation plan for the elevation profile redesign (slope-grade coloring, legend, and hover tooltip).
+- `map-surface-abstraction/` - design and implementation plan for the web-only map-surface abstraction (platform-agnostic MapSurface contract) ahead of a future React Native app, plus a sequenced mobile-web touch/responsive pass.
