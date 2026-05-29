@@ -56,7 +56,7 @@ import {
   trackSearchEvent,
   trackTutorial,
   trackUndoRedoEvent,
-} from "../../utils/analytics.js";
+} from "../platform/analytics.js";
 import { getDistance } from "../../utils/distance.js";
 
 export function useCyclewaysApp() {

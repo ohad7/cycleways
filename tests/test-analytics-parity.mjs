@@ -17,7 +17,7 @@ const {
   trackSearchEvent,
   trackTutorial,
   trackUndoRedoEvent,
-} = await import("../utils/analytics.js");
+} = await import("../src/platform/analytics.js");
 
 trackRoutePointEvent([{ id: 1 }], ["segment"], "click");
 trackUndoRedoEvent("undo", [1], [], [{ id: 1 }], ["segment"]);
