@@ -17,3 +17,4 @@ Current plans:
 - `route-point-editing/` - design and implementation plan for clearer route point drag/edit feedback, route-line insert-and-drag, and preserving points outside the routing network.
 - `elevation-graph-redesign/` - design and implementation plan for the elevation profile redesign (slope-grade coloring, legend, and hover tooltip).
 - `map-surface-abstraction/` - design and implementation plan for the web-only map-surface abstraction (platform-agnostic MapSurface contract) ahead of a future React Native app, plus a sequenced mobile-web touch/responsive pass.
+- `engine-importable-module/` - design and implementation plan for loading the routing engine (route-manager.js) as an importable module instead of a window global, toward React Native code sharing.
