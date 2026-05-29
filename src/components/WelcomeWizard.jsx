@@ -76,5 +76,3 @@ export default function WelcomeWizard({ visible, onDismiss }) {
     </div>
   );
 }
-
-export const WELCOME_WIZARD_SKIP_FLAG = SKIP_FLAG_KEY;

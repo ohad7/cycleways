@@ -1,4 +1,6 @@
-// Analytics tracking utility module
+// Web implementation of the analytics platform service (Google Analytics / gtag).
+// A future React Native app provides a sibling `analytics.native.js`. The
+// `window` / `gtag` globals used below are web-only.
 export function trackEvent(eventName, parameters = {}) {
   var host = window.location.hostname;
   if (

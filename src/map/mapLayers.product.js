@@ -2,6 +2,9 @@
 // preview, direction pulse, data markers, and the featured-route video cursor.
 // These are the layers a future React Native MapSurface will re-implement.
 import { getDistance } from "../../utils/distance.js";
+// dataMarkerFeaturesFromSegments now lives in the platform-agnostic data layer;
+// re-exported here for back-compat (FeaturedRouteMap still imports it via the
+// mapLayers barrel).
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
 export { dataMarkerFeaturesFromSegments };
 
