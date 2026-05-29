@@ -49,7 +49,8 @@ import {
   initialRouteState,
   routeReducer,
 } from "../routing/routeReducer.js";
-import { executeDownloadGPX, generateGPX } from "../utils/gpx-generator.js";
+import { generateGPX } from "../utils/gpx-generator.js";
+import { executeDownloadGPX } from "../platform/download.js";
 import {
   trackRouteOperation,
   trackRoutePointEvent,

@@ -39,18 +39,3 @@ export function generateGPX(orderedCoords, options = {}) {
 
   return gpx;
 }
-
-/**
- * Download GPX file to user's device
- * @param {string} gpxContent - GPX file content
- * @param {string} filename - Filename for download
- */
-export function executeDownloadGPX(gpxContent, filename = "bike_route.gpx") {
-  const blob = new Blob([gpxContent], { type: "application/gpx+xml" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
