@@ -2,6 +2,8 @@
 // preview, direction pulse, data markers, and the featured-route video cursor.
 // These are the layers a future React Native MapSurface will re-implement.
 import { getDistance } from "../../utils/distance.js";
+import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
+export { dataMarkerFeaturesFromSegments };
 
 import {
   ROUTE_NETWORK_SOURCE_ID,
@@ -45,26 +47,6 @@ import {
   DATA_MARKERS_STYLE,
   VIDEO_CURSOR_STYLE,
 } from "./mapStyles.js";
-
-const DATA_MARKER_EMOJIS = {
-  payment: "💳",
-  gate: "🚧",
-  mud: "🌧️",
-  warning: "⚠️",
-  slope: "⛰️",
-  narrow: "🚗",
-  severe: "‼️",
-};
-
-const DATA_MARKER_ICONS = {
-  payment: "bank-11",
-  gate: "barrier-11",
-  mud: "wetland-11",
-  warning: "caution-11",
-  slope: "mountain-11",
-  narrow: "car-11",
-  severe: "roadblock-11",
-};
 
 const DATA_MARKER_ICON_FILES = {
   "bank-11": "icons/bank.svg",
@@ -779,42 +761,6 @@ export function clearRouteDirectionLitPointLayer(map) {
   if (map.getSource(ROUTE_DIRECTION_LIT_POINT_SOURCE_ID)) {
     map.removeSource(ROUTE_DIRECTION_LIT_POINT_SOURCE_ID);
   }
-}
-
-export function dataMarkerFeaturesFromSegments(segmentsData) {
-  const features = [];
-
-  Object.entries(segmentsData || {}).forEach(([segmentName, segmentInfo]) => {
-    if (!Array.isArray(segmentInfo?.data)) return;
-
-    segmentInfo.data.forEach((dataPoint, index) => {
-      const location = dataPoint?.location;
-      if (!Array.isArray(location) || location.length < 2) return;
-
-      const [lat, lng] = location;
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-      const dataPointId = `${segmentName}-${index}`;
-      features.push({
-        type: "Feature",
-        id: dataPointId,
-        geometry: {
-          type: "Point",
-          coordinates: [lng, lat],
-        },
-        properties: {
-          dataPointId,
-          type: dataPoint.type || "warning",
-          information: dataPoint.information || "",
-          segmentName,
-          emoji: DATA_MARKER_EMOJIS[dataPoint.type] || "📍",
-          icon: DATA_MARKER_ICONS[dataPoint.type] || "marker-11",
-        },
-      });
-    });
-  });
-
-  return features;
 }
 
 export function syncDataMarkerLayers(

@@ -30,7 +30,7 @@ import {
   getShardLoaderLocation,
 } from "../platform/location.js";
 import { getStoredItem } from "../platform/storage.js";
-import { dataMarkerFeaturesFromSegments } from "../map/mapLayers.js";
+import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
 import { createRouteDirectionAnimator } from "../map/routeDirectionAnimator.js";
 import {
   addPoint,

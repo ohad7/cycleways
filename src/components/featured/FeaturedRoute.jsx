@@ -9,7 +9,7 @@ import {
   restoreRouteFromParam,
 } from "../../routing/routeActions.js";
 import MapView from "../../map/MapView.jsx";
-import { dataMarkerFeaturesFromSegments } from "../../map/mapLayers.js";
+import { dataMarkerFeaturesFromSegments } from "../../data/dataMarkers.js";
 import { FeaturedRouteContext } from "./FeaturedRouteContext.js";
 import FeaturedRouteHeader from "./Header.jsx";
 import POIList from "./POIList.jsx";
