@@ -20,3 +20,4 @@ Current plans:
 - `engine-importable-module/` - design and implementation plan for loading the routing engine (route-manager.js) as an importable module instead of a window global, toward React Native code sharing.
 - `app-platform-services/` - design and implementation plan for routing App.jsx browser location/storage access through a swappable platform-services layer, toward React Native code sharing.
 - `app-controller-hook/` - design and implementation plan for extracting App.jsx orchestration into a platform-agnostic useCyclewaysApp hook (thin web view), toward React Native code sharing.
+- `monorepo-core-package/` - design and implementation plan for the npm-workspaces monorepo + @cycleways/core shared package (web stays at root), the foundation of the React Native transition.
