@@ -1,7 +1,7 @@
 {
   "name": "cycleways",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build && node scripts/copy-static-assets.mjs",
