@@ -19,3 +19,4 @@ Current plans:
 - `map-surface-abstraction/` - design and implementation plan for the web-only map-surface abstraction (platform-agnostic MapSurface contract) ahead of a future React Native app, plus a sequenced mobile-web touch/responsive pass.
 - `engine-importable-module/` - design and implementation plan for loading the routing engine (route-manager.js) as an importable module instead of a window global, toward React Native code sharing.
 - `app-platform-services/` - design and implementation plan for routing App.jsx browser location/storage access through a swappable platform-services layer, toward React Native code sharing.
+- `app-controller-hook/` - design and implementation plan for extracting App.jsx orchestration into a platform-agnostic useCyclewaysApp hook (thin web view), toward React Native code sharing.
