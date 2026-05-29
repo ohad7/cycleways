@@ -5,7 +5,7 @@ import { loadCatalog } from "../data/catalog.js";
 import { setStoredItem } from "../platform/storage.js";
 import WelcomeDiscover from "./WelcomeDiscover.jsx";
 
-const SKIP_FLAG_KEY = "cycleways:skipWelcome";
+import { WELCOME_WIZARD_SKIP_FLAG as SKIP_FLAG_KEY } from "../data/welcomeFlags.js";
 
 export default function WelcomeWizard({ visible, onDismiss }) {
   const navigate = useNavigate();

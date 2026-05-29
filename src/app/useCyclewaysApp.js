@@ -17,7 +17,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { WELCOME_WIZARD_SKIP_FLAG } from "../components/WelcomeWizard.jsx";
+import { WELCOME_WIZARD_SKIP_FLAG } from "../data/welcomeFlags.js";
 import { getFeatureFlags } from "../config/featureFlags.js";
 import { loadMapAssets, summarizeMapAssets } from "../data/mapAssets.js";
 import { POI_EMOJIS as WARNING_EMOJIS } from "../data/poiTypes.js";
