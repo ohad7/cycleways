@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./featured.css";
 import { useIsMobile } from "./useIsMobile.js";
+import RouteManager from "../../../route-manager.js";
 import { loadMapAssets } from "../../data/mapAssets.js";
 import {
   createRouteManager,
@@ -57,7 +58,7 @@ function FeaturedRoute({ slug, children }) {
         const loaded = await loadMapAssets({ signal: controller.signal });
         if (controller.signal.aborted) return;
         const manager = await createRouteManager(
-          window.RouteManager,
+          RouteManager,
           loaded.geoJsonData,
           loaded.segmentsData,
         );

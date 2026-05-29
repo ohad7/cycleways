@@ -8,6 +8,35 @@ const repoRoot = dirname(fileURLToPath(import.meta.url));
 const localTokenPath = resolve(repoRoot, "mapbox-token.js");
 const gzipStaticExtensions = new Set([".cwb", ".geojson", ".json", ".msgpack"]);
 const gzipStaticMinBytes = 1024;
+const routeManagerPath = resolve(repoRoot, "route-manager.js");
+
+// route-manager.js is authored as CommonJS (`module.exports = RouteManager`)
+// because the same file is shared verbatim with the Node test suite, the editor
+// server, and CLI scripts via require(). For the browser/React Native bundle we
+// expose its class as an ESM default export so
+// `import RouteManager from "../route-manager.js"` resolves in both dev
+// (esbuild) and build (Rollup). The on-disk source stays CommonJS.
+function routeManagerEsmPlugin() {
+  return {
+    name: "route-manager-esm",
+    enforce: "pre",
+    transform(code, id) {
+      if (resolve(id.split("?")[0]) !== routeManagerPath) return null;
+      if (!/module\.exports\s*=\s*RouteManager;/.test(code)) {
+        throw new Error(
+          "route-manager-esm: `module.exports = RouteManager;` marker not found",
+        );
+      }
+      return {
+        code: code.replace(
+          /module\.exports\s*=\s*RouteManager;/,
+          "export default RouteManager;",
+        ),
+        map: null,
+      };
+    },
+  };
+}
 
 function mapboxTokenPlugin() {
   function serveMapboxToken(request, response, next) {
@@ -136,7 +165,7 @@ function gzipStaticJsonPlugin() {
 
 export default defineConfig({
   appType: "spa",
-  plugins: [mapboxTokenPlugin(), gzipStaticJsonPlugin()],
+  plugins: [routeManagerEsmPlugin(), mapboxTokenPlugin(), gzipStaticJsonPlugin()],
   build: {
     rollupOptions: {
       input: {

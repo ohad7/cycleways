@@ -2971,11 +2971,9 @@ class RouteManager {
   }
 }
 
-// Export for use in other files
-if (typeof window !== "undefined") {
-  window.RouteManager = RouteManager;
-}
-
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = RouteManager;
-}
+// CommonJS module: Node consumers (test suite, editor server, CLI scripts) load
+// this via require(). The web/RN bundlers import it as a default export — Vite
+// rewrites this line to `export default RouteManager` via routeManagerEsmPlugin;
+// Metro consumes CommonJS natively. No browser global (it is no longer loaded
+// via a <script> tag).
+module.exports = RouteManager;

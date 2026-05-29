@@ -21,6 +21,7 @@ import {
   POI_LABELS as WARNING_TRANSLATIONS,
   POI_WARNING_PRIORITY as WARNING_PRIORITY,
 } from "./data/poiTypes.js";
+import RouteManager from "../route-manager.js";
 import MapView from "./map/MapView.jsx";
 import { dataMarkerFeaturesFromSegments } from "./map/mapLayers.js";
 import { createRouteDirectionAnimator } from "./map/routeDirectionAnimator.js";
@@ -347,7 +348,7 @@ function App() {
       try {
         const shardedSession = state.assets.baseRoutingShardManifestData
           ? await createShardedRouteSession(
-              window.RouteManager,
+              RouteManager,
               state.assets.geoJsonData,
               state.assets.segmentsData,
               state.assets.baseRoutingShardManifestData,
@@ -370,7 +371,7 @@ function App() {
         const manager = shardedSession
           ? shardedSession.manager
           : await createRouteManager(
-              window.RouteManager,
+              RouteManager,
               state.assets.geoJsonData,
               state.assets.segmentsData,
               state.assets.baseRoutingNetworkData,

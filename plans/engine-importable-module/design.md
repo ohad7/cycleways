@@ -29,29 +29,35 @@ Today the engine is delivered as a classic browser script:
 RN's bundler (Metro) cannot consume a `window`-global `<script>`. So the engine
 is currently un-importable off the web, blocking every later "share the JS" step.
 
-## Decision: keep it CommonJS, import it
+## Decision: keep it CommonJS; expose ESM to the web via a Vite plugin
 
-Convert `route-manager.js` into a **clean CommonJS module** — `module.exports =
+Keep `route-manager.js` as a **clean CommonJS module** — `module.exports =
 RouteManager` only, dropping the `window` assignment — and `import` it at the
-three call sites. Remove the `<script>` tag from `index.html`.
+three web call sites. Remove the `<script>` tag from `index.html` (and the
+mirrored one in `public/404.html`). A small Vite plugin (`routeManagerEsmPlugin`,
+`enforce: "pre"`) rewrites the trailing `module.exports = RouteManager;` to
+`export default RouteManager;` **for the web bundle only**; the on-disk source
+stays CommonJS.
 
-Rationale (chosen over a full ESM conversion):
+Rationale:
 
-- **Minimal churn, zero test changes.** All ~10 Node test files load the engine
-  via `require("../route-manager.js")` (the `.mjs` ones through
-  `createRequire`). A clean CommonJS module keeps every one of them working
-  unchanged. A full ESM (`export default`) conversion would break `require` and
-  force migrating those ~10 files.
-- **Universally consumable.** Vite imports source CommonJS via its
-  esbuild (dev) / Rollup-commonjs (build) interop; RN/Metro consumes CommonJS
-  natively. `import RouteManager from "../route-manager.js"` yields the class on
-  both.
+- **The engine has many CommonJS consumers beyond the web.** Besides the ~10
+  Node test files (`require` / `createRequire`), `editor/server.mjs` (2×) and the
+  `scripts/*.mjs` CLI tools load it at runtime via `require`. A full ESM
+  conversion (`export default` + `.mjs` rename) would break **all** of those.
+  Keeping the source CommonJS leaves every Node consumer working unchanged.
+- **Source CommonJS does not import cleanly in Vite.** A plain
+  `import RouteManager from "../route-manager.js"` fails in dev (esbuild serves
+  the source file with no `default` export) — and `build.commonjsOptions.include`
+  only fixes the Rollup build, not dev. The `enforce: "pre"` transform plugin is
+  what makes the import resolve in **both** dev and build. RN/Metro consumes the
+  CommonJS source natively and needs no plugin.
 - **Web-logic-neutral.** Same class, same behavior; only delivery changes (Vite
   bundles/hashes the engine instead of an unhashed global `<script>`). The
-  `window.RouteManager` global and the script tag disappear.
+  `window.RouteManager` global and the script tags disappear.
 
-A future full-ESM cleanup (and matching test migration) remains possible but is
-out of scope here.
+A future full-ESM cleanup (migrating the editor server, scripts, and tests off
+`require`) remains possible but is out of scope here.
 
 ## Changes
 
