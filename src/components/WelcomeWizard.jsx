@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./welcome-wizard.css";
 import { loadCatalog } from "../data/catalog.js";
+import { setStoredItem } from "../platform/storage.js";
 import WelcomeDiscover from "./WelcomeDiscover.jsx";
 
 const SKIP_FLAG_KEY = "cycleways:skipWelcome";
@@ -39,16 +40,12 @@ export default function WelcomeWizard({ visible, onDismiss }) {
   if (!visible) return null;
 
   const dismiss = () => {
-    try {
-      localStorage.setItem(SKIP_FLAG_KEY, "1");
-    } catch {}
+    setStoredItem(SKIP_FLAG_KEY, "1");
     onDismiss?.();
   };
 
   const selectRoute = (entry) => {
-    try {
-      localStorage.setItem(SKIP_FLAG_KEY, "1");
-    } catch {}
+    setStoredItem(SKIP_FLAG_KEY, "1");
     onDismiss?.();
     navigate(`/?route=${encodeURIComponent(entry.route)}`);
   };

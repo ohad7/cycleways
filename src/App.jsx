@@ -22,6 +22,14 @@ import {
   POI_WARNING_PRIORITY as WARNING_PRIORITY,
 } from "./data/poiTypes.js";
 import RouteManager from "../route-manager.js";
+import {
+  getQueryParam,
+  hasQueryParam,
+  setUrlParam,
+  removeUrlParam,
+  getShardLoaderLocation,
+} from "./platform/location.js";
+import { getStoredItem } from "./platform/storage.js";
 import MapView from "./map/MapView.jsx";
 import { dataMarkerFeaturesFromSegments } from "./map/mapLayers.js";
 import { createRouteDirectionAnimator } from "./map/routeDirectionAnimator.js";
@@ -89,16 +97,14 @@ function App() {
   const [hoveredOsmWay, setHoveredOsmWay] = useState(null);
   const [hoveredOsmGraphEdge, setHoveredOsmGraphEdge] = useState(null);
   const [hoveredCwOsmMatch, setHoveredCwOsmMatch] = useState(null);
-  const [osmDebugLayerMode, setOsmDebugLayerMode] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("osmLayer") === "graph" ? "graph" : "ways";
-  });
+  const [osmDebugLayerMode, setOsmDebugLayerMode] = useState(() =>
+    getQueryParam("osmLayer") === "graph" ? "graph" : "ways",
+  );
   const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(() => {
     if (typeof window === "undefined") return false;
-    const hasRoute = new URLSearchParams(window.location.search).has("route");
-    if (hasRoute) return false;
+    if (hasQueryParam("route")) return false;
     try {
-      return localStorage.getItem(WELCOME_WIZARD_SKIP_FLAG) !== "1";
+      return getStoredItem(WELCOME_WIZARD_SKIP_FLAG) !== "1";
     } catch {
       return true;
     }
@@ -202,8 +208,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const enabled = params.has("osm") || params.has("osmDebug");
+    const enabled = hasQueryParam("osm") || hasQueryParam("osmDebug");
     if (!enabled) return undefined;
 
     const controller = new AbortController();
@@ -355,7 +360,7 @@ function App() {
               createBaseRoutingShardFetchLoader(
                 state.assets.baseRoutingShardManifestPath,
                 {},
-                window.location,
+                getShardLoaderLocation(),
                 { format: routingShardFormat() },
               ),
               {
@@ -387,9 +392,7 @@ function App() {
         routeManagerRef.current = manager;
         dispatchRoute({ type: "route/managerReady" });
 
-        const routeParam = new URLSearchParams(window.location.search).get(
-          "route",
-        );
+        const routeParam = getQueryParam("route");
         if (routeParam) {
           const snapshot = shardedSession
             ? await shardedSession.restoreRouteParam(routeParam)
@@ -472,13 +475,7 @@ function App() {
     setHoveredOsmGraphEdge(null);
     setHoveredCwOsmMatch(null);
 
-    const url = new URL(window.location.href);
-    if (mode === "graph") {
-      url.searchParams.set("osmLayer", "graph");
-    } else {
-      url.searchParams.delete("osmLayer");
-    }
-    window.history.replaceState(null, "", url.toString());
+    setUrlParam("osmLayer", mode === "graph" ? "graph" : null);
   }, []);
 
   const handleCwReviewSegmentSelect = useCallback(
@@ -523,11 +520,8 @@ function App() {
   }, [routeState.geometry, routeState.points, isDragging]);
 
   const clearRouteUrl = useCallback(() => {
-    const url = new URL(window.location.href);
-    if (!url.searchParams.has("route")) return;
-
-    url.searchParams.delete("route");
-    window.history.replaceState(null, "", url.toString());
+    if (!hasQueryParam("route")) return;
+    removeUrlParam("route");
   }, []);
 
   const commitRouteSnapshot = useCallback(
@@ -1106,7 +1100,7 @@ function App() {
       routeState,
       state.assets.segmentsData,
       routeManagerRef.current,
-      window.location,
+      getShardLoaderLocation(),
       state.assets.cwBaseIndexData,
     );
   }, [
@@ -1461,8 +1455,7 @@ function ErrorState({ error }) {
 }
 
 function routingShardFormat() {
-  const params = new URLSearchParams(window.location.search);
-  const format = params.get("routingShardFormat");
+  const format = getQueryParam("routingShardFormat");
   if (format === "msgpack" || format === "compact" || format === "cwb") {
     return format;
   }
