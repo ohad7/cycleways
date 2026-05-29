@@ -12,7 +12,7 @@ import { pathToFileURL } from "node:url";
 import {
   createRouteManager,
   restoreRouteFromParam,
-} from "../src/routing/routeActions.js";
+} from "@cycleways/core/routing/routeActions.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -351,7 +351,7 @@ export async function loadRoutePolylineForSlug(slug) {
   if (typeof routeToken !== "string" || routeToken.length === 0) {
     throw new Error(`featured route "${slug}" not found in catalog or meta`);
   }
-  const RouteManagerClass = nodeRequire(resolve(repoRoot, "route-manager.js"));
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
   const manager = await createRouteManager(
     RouteManagerClass,
@@ -563,7 +563,7 @@ export function recomputeCatalogMetadata(draft, refs) {
 }
 
 async function buildLiveDecodeRoute() {
-  const RouteManagerClass = nodeRequire(resolve(repoRoot, "route-manager.js"));
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
   const manager = await createRouteManager(RouteManagerClass, geoJsonData, segmentsData, null);
   return function decodeRoute(token) {

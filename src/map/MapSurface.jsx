@@ -27,7 +27,7 @@ import {
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
 import { getMapboxGl } from "./mapboxProvider.js";
-import { distanceToLineSegmentPixels } from "../../utils/distance.js";
+import { distanceToLineSegmentPixels } from "@cycleways/core/utils/distance.js";
 import {
   buildNetworkSegments,
   findClosestRouteSegment,

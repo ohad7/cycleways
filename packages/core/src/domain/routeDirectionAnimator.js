@@ -1,4 +1,4 @@
-import { getDistance } from "../../utils/distance.js";
+import { getDistance } from "../utils/distance.js";
 
 const CHANNELS = new Set(["chevron", "litPoint", "elevation"]);
 const GAP_DURATION_MS = 1200;

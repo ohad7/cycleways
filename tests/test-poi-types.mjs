@@ -4,10 +4,10 @@ import { readFile } from "node:fs/promises";
 import {
   createRouteManager,
   addPoint,
-} from "../src/routing/routeActions.js";
+} from "@cycleways/core/routing/routeActions.js";
 
 const require = createRequire(import.meta.url);
-const RouteManager = require("../route-manager.js");
+const RouteManager = require("../packages/core/route-manager.js");
 
 const geoJsonData = JSON.parse(
   await readFile(new URL("./bike_roads_test.geojson", import.meta.url)),

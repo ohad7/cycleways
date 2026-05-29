@@ -8,8 +8,6 @@ const repoRoot = dirname(fileURLToPath(import.meta.url));
 const localTokenPath = resolve(repoRoot, "mapbox-token.js");
 const gzipStaticExtensions = new Set([".cwb", ".geojson", ".json", ".msgpack"]);
 const gzipStaticMinBytes = 1024;
-const routeManagerPath = resolve(repoRoot, "route-manager.js");
-
 // route-manager.js is authored as CommonJS (`module.exports = RouteManager`)
 // because the same file is shared verbatim with the Node test suite, the editor
 // server, and CLI scripts via require(). For the browser/React Native bundle we
@@ -21,7 +19,7 @@ function routeManagerEsmPlugin() {
     name: "route-manager-esm",
     enforce: "pre",
     transform(code, id) {
-      if (resolve(id.split("?")[0]) !== routeManagerPath) return null;
+      if (!id.split("?")[0].endsWith("/route-manager.js")) return null;
       if (!/module\.exports\s*=\s*RouteManager;/.test(code)) {
         throw new Error(
           "route-manager-esm: `module.exports = RouteManager;` marker not found",

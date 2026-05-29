@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { loadMapAssets, summarizeMapAssets } from "../src/data/mapAssets.js";
+import { loadMapAssets, summarizeMapAssets } from "@cycleways/core/data/mapAssets.js";
 
 const manifest = {
   version: "shard-test",

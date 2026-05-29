@@ -1,4 +1,4 @@
-import { getDistance } from "../../utils/distance.js";
+import { getDistance } from "../utils/distance.js";
 import {
   decodeRoutePayload,
   encodeBaseRoute,
@@ -6,12 +6,12 @@ import {
   encodeHybridRoute,
   encodeHybridRouteV6,
   extractMiddlePoints,
-} from "../../utils/route-encoding.js";
+} from "../utils/route-encoding.js";
 import {
   distanceToRouteGeometry,
   getDataPointLocation,
   ROUTE_DATA_POINT_TRIGGER_DISTANCE_METERS,
-} from "../../utils/route-data.js";
+} from "../utils/route-data.js";
 
 export async function createRouteManager(
   RouteManagerClass,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { createBaseRoutingShardFetchLoader } from "../src/routing/baseRoutingShards.js";
-import { decodeCompactBaseRoutingShard } from "../src/routing/compactBaseRoutingShard.js";
+import { createBaseRoutingShardFetchLoader } from "@cycleways/core/routing/baseRoutingShards.js";
+import { decodeCompactBaseRoutingShard } from "@cycleways/core/routing/compactBaseRoutingShard.js";
 
 const shardPayload = encodeCompactShard({
   formatVersion: 2,

@@ -17,7 +17,7 @@ const {
   trackSearchEvent,
   trackTutorial,
   trackUndoRedoEvent,
-} = await import("../src/platform/analytics.js");
+} = await import("@cycleways/core/platform/analytics.js");
 
 trackRoutePointEvent([{ id: 1 }], ["segment"], "click");
 trackUndoRedoEvent("undo", [1], [], [{ id: 1 }], ["segment"]);

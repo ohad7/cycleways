@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { isWarningType, POI_EMOJIS, POI_LABELS } from "../../data/poiTypes.js";
+import { isWarningType, POI_EMOJIS, POI_LABELS } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 
 export default function Warnings({ extra = [], hide = [] }) {

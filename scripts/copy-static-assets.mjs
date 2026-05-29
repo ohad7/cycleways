@@ -10,7 +10,6 @@ const files = new Set([
   "CNAME",
   "robots.txt",
   "sitemap.xml",
-  "route-manager.js",
 ]);
 
 const directories = ["attached_assets", "icons", "public-data"];

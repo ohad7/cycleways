@@ -12,7 +12,7 @@ import {
   HYBRID_ROUTE_VERSION,
   HYBRID_ROUTE_V6_VERSION,
   ROUTE_COORDINATE_PRECISION,
-} from "../utils/route-encoding.js";
+} from "@cycleways/core/utils/route-encoding.js";
 
 const routePoints = [
   { lng: 35.6066554, lat: 33.1896874 },

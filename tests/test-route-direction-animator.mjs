@@ -3,7 +3,7 @@ import {
   createRouteDirectionAnimator,
   computeCycleDuration,
   precomputeArcLength,
-} from "../src/map/routeDirectionAnimator.js";
+} from "@cycleways/core/domain/routeDirectionAnimator.js";
 
 // ── Fake clock harness ────────────────────────────────────────────────────
 function createFakeClock() {

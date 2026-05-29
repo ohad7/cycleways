@@ -3,7 +3,7 @@
 // segment names) so the rest of the app never sees pixels. createClickStamp /
 // isDuplicateRouteClick accept an injectable clock (now = Date.now) for
 // deterministic testing.
-import { distanceToLineSegmentPixels } from "../../utils/distance.js";
+import { distanceToLineSegmentPixels } from "@cycleways/core/utils/distance.js";
 import { DATA_MARKERS_LAYER_ID } from "./mapLayers.js";
 
 export function buildNetworkSegments(features) {

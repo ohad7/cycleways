@@ -11,9 +11,9 @@ import {
   POI_EMOJIS as WARNING_EMOJIS,
   POI_LABELS as WARNING_TRANSLATIONS,
   POI_WARNING_PRIORITY as WARNING_PRIORITY,
-} from "./data/poiTypes.js";
+} from "@cycleways/core/data/poiTypes.js";
 import MapView from "./map/MapView.jsx";
-import { useCyclewaysApp } from "./app/useCyclewaysApp.js";
+import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import "./react-app.css";
 
 function App() {

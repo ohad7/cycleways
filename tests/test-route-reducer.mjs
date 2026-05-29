@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { initialRouteState, routeReducer } from "../src/routing/routeReducer.js";
+import { initialRouteState, routeReducer } from "@cycleways/core/routing/routeReducer.js";
 
 const idleHoverState = {
   ...initialRouteState,

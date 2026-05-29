@@ -1,4 +1,4 @@
-import { loadCatalog } from "../data/catalog.js";
+import { loadCatalog } from "@cycleways/core/data/catalog.js";
 
 const moduleLoaders = {
   "sovev-beit-hillel":     () => import("./sovev-beit-hillel.jsx"),

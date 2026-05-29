@@ -1,12 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { createRequire } from "node:module";
-import { loadBaseRoutingShardSubset } from "../src/routing/baseRoutingShards.js";
-import { decodeCompactBaseRoutingShard } from "../src/routing/compactBaseRoutingShard.js";
-import { decodeMessagePack } from "../src/routing/messagePack.js";
+import { loadBaseRoutingShardSubset } from "../packages/core/src/routing/baseRoutingShards.js";
+import { decodeCompactBaseRoutingShard } from "../packages/core/src/routing/compactBaseRoutingShard.js";
+import { decodeMessagePack } from "../packages/core/src/routing/messagePack.js";
 
 const require = createRequire(import.meta.url);
-const RouteManager = require("../route-manager.js");
+const RouteManager = require("../packages/core/route-manager.js");
 
 const options = parseArgs(process.argv.slice(2));
 if (options.help) {

@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { isWarningType } from "../../data/poiTypes.js";
+import { isWarningType } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import POICard from "./POICard.jsx";
 import { MOBILE_BREAKPOINT } from "./useIsMobile.js";

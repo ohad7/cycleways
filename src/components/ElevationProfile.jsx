@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { smoothElevations } from "../../utils/elevations.js";
-import { getDistance } from "../../utils/distance.js";
+import { smoothElevations } from "@cycleways/core/utils/elevations.js";
+import { getDistance } from "@cycleways/core/utils/distance.js";
 import { GRADE_CLASSES, GRADE_COLORS, GRADE_LABELS_HE, pointSmoothedGrades, classifyGrade } from "../utils/grade.js";
 import { clusterByGrade } from "../utils/slopeClustering.js";
-import { computeBearing } from "../map/routeDirectionAnimator.js";
+import { computeBearing } from "@cycleways/core/domain/routeDirectionAnimator.js";
 
 export default function ElevationProfile({ animator, distance, geometry, onElevationHover }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);

@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const RouteManager = require("../route-manager.js");
+const RouteManager = require("../packages/core/route-manager.js");
 const { mockGeoJsonData, mockSegmentsData } = require("./test-route-manager.js");
 
 async function run() {

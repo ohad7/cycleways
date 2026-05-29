@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { createBaseRoutingShardFetchLoader } from "../src/routing/baseRoutingShards.js";
-import { decodeMessagePack } from "../src/routing/messagePack.js";
+import { createBaseRoutingShardFetchLoader } from "@cycleways/core/routing/baseRoutingShards.js";
+import { decodeMessagePack } from "@cycleways/core/routing/messagePack.js";
 
 const payload = new Uint8Array([
   0x84,

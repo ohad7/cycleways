@@ -3,7 +3,7 @@ import {
   baseRoutingShardEntriesForPoints,
   mergeBaseRoutingShards,
 } from "./baseRoutingShards.js";
-import { decodeRoutePayload } from "../../utils/route-encoding.js";
+import { decodeRoutePayload } from "../utils/route-encoding.js";
 import {
   addPoint,
   createRouteManager,

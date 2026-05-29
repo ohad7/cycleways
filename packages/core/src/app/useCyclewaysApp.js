@@ -31,7 +31,7 @@ import {
 } from "../platform/location.js";
 import { getStoredItem } from "../platform/storage.js";
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
-import { createRouteDirectionAnimator } from "../map/routeDirectionAnimator.js";
+import { createRouteDirectionAnimator } from "../domain/routeDirectionAnimator.js";
 import {
   addPoint,
   applyRouteSnapshot,
@@ -49,7 +49,7 @@ import {
   initialRouteState,
   routeReducer,
 } from "../routing/routeReducer.js";
-import { executeDownloadGPX, generateGPX } from "../../utils/gpx-generator.js";
+import { executeDownloadGPX, generateGPX } from "../utils/gpx-generator.js";
 import {
   trackRouteOperation,
   trackRoutePointEvent,
@@ -57,7 +57,7 @@ import {
   trackTutorial,
   trackUndoRedoEvent,
 } from "../platform/analytics.js";
-import { getDistance } from "../../utils/distance.js";
+import { getDistance } from "../utils/distance.js";
 
 export function useCyclewaysApp() {
   const [state, setState] = useState({

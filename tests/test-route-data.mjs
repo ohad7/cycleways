@@ -4,7 +4,7 @@ import {
   getDataPointLocation,
   isDataPointOnRoute,
   ROUTE_DATA_POINT_TRIGGER_DISTANCE_METERS,
-} from "../utils/route-data.js";
+} from "@cycleways/core/utils/route-data.js";
 
 const routeCoordinates = [
   { lat: 33, lng: 35 },

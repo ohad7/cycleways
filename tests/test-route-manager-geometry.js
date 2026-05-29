@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const RouteManager = require("../route-manager.js");
+const RouteManager = require("../packages/core/route-manager.js");
 const { mockGeoJsonData, mockSegmentsData } = require("./test-route-manager.js");
 
 function approxEqual(actual, expected, tolerance = 1e-6) {

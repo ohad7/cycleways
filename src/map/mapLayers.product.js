@@ -1,11 +1,11 @@
 // End-user map layers: route network, route geometry, route points + drag
 // preview, direction pulse, data markers, and the featured-route video cursor.
 // These are the layers a future React Native MapSurface will re-implement.
-import { getDistance } from "../../utils/distance.js";
+import { getDistance } from "@cycleways/core/utils/distance.js";
 // dataMarkerFeaturesFromSegments now lives in the platform-agnostic data layer;
 // re-exported here for back-compat (FeaturedRouteMap still imports it via the
 // mapLayers barrel).
-import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
+import { dataMarkerFeaturesFromSegments } from "@cycleways/core/data/dataMarkers.js";
 export { dataMarkerFeaturesFromSegments };
 
 import {

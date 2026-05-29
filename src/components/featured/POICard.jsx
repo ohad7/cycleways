@@ -1,5 +1,5 @@
 import React from "react";
-import { POI_EMOJIS, POI_LABELS } from "../../data/poiTypes.js";
+import { POI_EMOJIS, POI_LABELS } from "@cycleways/core/data/poiTypes.js";
 
 export default function POICard({ poi, focused, onSelect }) {
   return (

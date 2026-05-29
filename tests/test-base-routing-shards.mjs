@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import {
   baseRoutingShardEntriesForPoints,
   mergeBaseRoutingShards,
-} from "../src/routing/baseRoutingShards.js";
-import { buildShareInfo } from "../src/routing/routeActions.js";
-import { createShardedRouteSession } from "../src/routing/shardedRouteSession.js";
-import { decodeRoutePayload } from "../utils/route-encoding.js";
+} from "@cycleways/core/routing/baseRoutingShards.js";
+import { buildShareInfo } from "@cycleways/core/routing/routeActions.js";
+import { createShardedRouteSession } from "@cycleways/core/routing/shardedRouteSession.js";
+import { decodeRoutePayload } from "@cycleways/core/utils/route-encoding.js";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const RouteManager = require("../route-manager.js");
+const RouteManager = require("../packages/core/route-manager.js");
 
 const geoJsonData = {
   type: "FeatureCollection",

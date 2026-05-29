@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./welcome-wizard.css";
-import { loadCatalog } from "../data/catalog.js";
-import { setStoredItem } from "../platform/storage.js";
+import { loadCatalog } from "@cycleways/core/data/catalog.js";
+import { setStoredItem } from "@cycleways/core/platform/storage.js";
 import WelcomeDiscover from "./WelcomeDiscover.jsx";
 
-import { WELCOME_WIZARD_SKIP_FLAG as SKIP_FLAG_KEY } from "../data/welcomeFlags.js";
+import { WELCOME_WIZARD_SKIP_FLAG as SKIP_FLAG_KEY } from "@cycleways/core/data/welcomeFlags.js";
 
 export default function WelcomeWizard({ visible, onDismiss }) {
   const navigate = useNavigate();

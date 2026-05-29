@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./featured.css";
 import { useIsMobile } from "./useIsMobile.js";
-import RouteManager from "../../../route-manager.js";
-import { loadMapAssets } from "../../data/mapAssets.js";
+import RouteManager from "@cycleways/core/route-manager.js";
+import { loadMapAssets } from "@cycleways/core/data/mapAssets.js";
 import {
   createRouteManager,
   emptyRouteSnapshot,
   restoreRouteFromParam,
-} from "../../routing/routeActions.js";
+} from "@cycleways/core/routing/routeActions.js";
 import MapView from "../../map/MapView.jsx";
-import { dataMarkerFeaturesFromSegments } from "../../data/dataMarkers.js";
+import { dataMarkerFeaturesFromSegments } from "@cycleways/core/data/dataMarkers.js";
 import { FeaturedRouteContext } from "./FeaturedRouteContext.js";
 import FeaturedRouteHeader from "./Header.jsx";
 import POIList from "./POIList.jsx";
