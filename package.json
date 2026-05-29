@@ -1,6 +1,7 @@
 {
   "name": "cycleways",
   "private": true,
+  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build && node scripts/copy-static-assets.mjs",
@@ -22,6 +23,7 @@
     "vite": "^7.3.3"
   },
   "dependencies": {
+    "@cycleways/core": "*",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^6.30.3"

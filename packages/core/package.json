@@ -1,0 +1,11 @@
+{
+  "name": "@cycleways/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./*": "./src/*",
+    "./route-manager.js": "./route-manager.js"
+  }
+}
