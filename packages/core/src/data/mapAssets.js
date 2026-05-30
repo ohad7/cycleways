@@ -1,3 +1,5 @@
+import { getJsonAsset, resolveAssetPath } from "../platform/assets.js";
+
 const MAP_MANIFEST_PATH = "public-data/map-manifest.json";
 
 const DEFAULT_MAP_ASSETS = {
@@ -6,35 +8,6 @@ const DEFAULT_MAP_ASSETS = {
   cwBaseIndex: null,
   assetBasePath: MAP_MANIFEST_PATH,
 };
-
-function resolveAssetPath(filePath, basePath = null) {
-  const path = String(filePath);
-  if (!basePath || path.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(path)) {
-    return path;
-  }
-  const base = String(basePath).split("?")[0];
-  const lastSlash = base.lastIndexOf("/");
-  if (lastSlash < 0) {
-    return path;
-  }
-  return `${base.slice(0, lastSlash + 1)}${path}`;
-}
-
-async function fetchJsonAsset(filePath, options = {}, basePath = null) {
-  const assetPath = resolveAssetPath(filePath, basePath);
-  let requestPath;
-  if (assetPath.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(assetPath)) {
-    requestPath = assetPath;
-  } else {
-    const siteBase = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
-    requestPath = `${siteBase}${assetPath}`;
-  }
-  const response = await fetch(requestPath, options);
-  if (!response.ok) {
-    throw new Error(`${assetPath}: HTTP ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
 
 function assetPathWithVersion(filePath, version) {
   if (!version) {
@@ -48,7 +21,7 @@ function assetPathWithVersion(filePath, version) {
 
 export async function loadMapManifest(options = {}) {
   try {
-    const manifest = await fetchJsonAsset(`${MAP_MANIFEST_PATH}?t=${Date.now()}`, {
+    const manifest = await getJsonAsset(`${MAP_MANIFEST_PATH}?t=${Date.now()}`, {
       cache: "no-store",
       ...options,
     });
@@ -87,20 +60,18 @@ export async function loadMapAssets(options = {}) {
     cwBaseIndexData,
     baseRoutingShardManifestData,
   ] = await Promise.all([
-    fetchJsonAsset(manifest.segments, fetchOptions, manifestBasePath),
-    fetchJsonAsset(manifest.bikeRoads, fetchOptions, manifestBasePath),
+    getJsonAsset(manifest.segments, { basePath: manifestBasePath, ...fetchOptions }),
+    getJsonAsset(manifest.bikeRoads, { basePath: manifestBasePath, ...fetchOptions }),
     manifest.cwBaseIndex
-      ? fetchJsonAsset(
-          assetPathWithVersion(manifest.cwBaseIndex, manifest.version),
-          fetchOptions,
-          manifestBasePath,
-        )
+      ? getJsonAsset(assetPathWithVersion(manifest.cwBaseIndex, manifest.version), {
+          basePath: manifestBasePath,
+          ...fetchOptions,
+        })
       : Promise.resolve(null),
     useRoutingShards
-      ? fetchJsonAsset(
+      ? getJsonAsset(
           assetPathWithVersion(manifest.baseRoutingShards, manifest.version),
-          fetchOptions,
-          manifestBasePath,
+          { basePath: manifestBasePath, ...fetchOptions },
         )
       : Promise.resolve(null),
   ]);

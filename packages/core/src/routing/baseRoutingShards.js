@@ -1,5 +1,6 @@
 import { decodeCompactBaseRoutingShard } from "./compactBaseRoutingShard.js";
 import { decodeMessagePack } from "./messagePack.js";
+import { getBinaryAsset } from "../platform/assets.js";
 
 function validNumber(value) {
   return value !== null && value !== "" && Number.isFinite(Number(value));
@@ -180,7 +181,7 @@ export async function loadBaseRoutingShardSubset(
 export function createBaseRoutingShardFetchLoader(
   manifestPath,
   fetchOptions = {},
-  location = window.location,
+  location,
   options = {},
 ) {
   const manifestUrl = new URL(manifestPath, location.href);
@@ -191,23 +192,18 @@ export function createBaseRoutingShardFetchLoader(
       throw new Error("Routing shard entry is missing a path");
     }
 
-    const shardUrl = new URL(format.path, manifestUrl);
-    if (format.sha256) {
-      shardUrl.searchParams.set("h", format.sha256);
-    }
-    const response = await fetch(shardUrl, fetchOptions);
-    if (!response.ok) {
-      throw new Error(
-        `${format.path}: HTTP ${response.status} ${response.statusText}`,
-      );
-    }
+    const buffer = await getBinaryAsset(format.path, {
+      baseHref: manifestUrl.href,
+      sha256: format.sha256,
+      ...fetchOptions,
+    });
     if (format.name === "msgpack") {
-      return decodeMessagePack(await response.arrayBuffer());
+      return decodeMessagePack(buffer);
     }
     if (format.name === "compact") {
-      return decodeCompactBaseRoutingShard(await response.arrayBuffer());
+      return decodeCompactBaseRoutingShard(buffer);
     }
-    return response.json();
+    return JSON.parse(new TextDecoder().decode(buffer));
   };
 }
 
