@@ -23,3 +23,4 @@ Current plans:
 - `monorepo-core-package/` - design and implementation plan for the npm-workspaces monorepo + @cycleways/core shared package (web stays at root), the foundation of the React Native transition.
 - `rn-mobile-scaffold/` - design for Phase 2.1 of the RN slice: Expo app (apps/mobile) + Metro resolving @cycleways/core.
 - `rn-map-surface/` - design + plan for Phase 2.2 of the RN slice: native @rnmapbox/maps MapScreen rendering the cycleway network with shared core appearance logic.
+- `rn-asset-transport/` - design + plan for Phase 2.3a: injectable asset transport in @cycleways/core (web impl; RN/offline loader follows).
