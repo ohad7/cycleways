@@ -7,6 +7,13 @@ import { getDistance } from "@cycleways/core/utils/distance.js";
 // mapLayers barrel).
 import { dataMarkerFeaturesFromSegments } from "@cycleways/core/data/dataMarkers.js";
 export { dataMarkerFeaturesFromSegments };
+// Network appearance logic now lives in the platform-agnostic core (shared with
+// the RN map); re-exported here for back-compat via the mapLayers barrel.
+import {
+  getRouteFeatureColor,
+  prepareRouteNetworkFeatures,
+} from "@cycleways/core/domain/routeNetwork.js";
+export { getRouteFeatureColor, prepareRouteNetworkFeatures };
 
 import {
   ROUTE_NETWORK_SOURCE_ID,
@@ -49,7 +56,7 @@ import {
   ROUTE_DIRECTION_LIT_POINT_TEXT_STYLE,
   DATA_MARKERS_STYLE,
   VIDEO_CURSOR_STYLE,
-} from "./mapStyles.js";
+} from "@cycleways/core/map/mapStyles.js";
 
 const DATA_MARKER_ICON_FILES = {
   "bank-11": "icons/bank.svg",
@@ -132,45 +139,6 @@ function setRouteNetworkFilter(map, layerId, segmentName) {
     layerId,
     segmentName ? ["==", ["get", "name"], segmentName] : ["==", ["get", "name"], ""],
   );
-}
-
-export function getRouteFeatureColor(feature) {
-  const roadType = feature.properties?.roadType;
-  const originalColor =
-    feature.properties?.stroke ||
-    feature.properties?.["stroke-color"] ||
-    "#0288d1";
-
-  if (originalColor === "#0288d1" || originalColor === "rgb(2, 136, 209)") {
-    return "rgb(101, 170, 162)";
-  }
-
-  if (
-    roadType === "road" ||
-    originalColor === "#8f2424" ||
-    originalColor === "rgb(143, 36, 36)" ||
-    originalColor === "#e6ee9c" ||
-    originalColor === "rgb(230, 238, 156)"
-  ) {
-    return "rgb(138, 147, 158)";
-  }
-
-  return "rgb(174, 144, 103)";
-}
-
-export function prepareRouteNetworkFeatures(geoJsonData) {
-  return (geoJsonData?.features || [])
-    .filter((feature) => feature?.geometry?.type === "LineString")
-    .map((feature) => ({
-      ...feature,
-      properties: {
-        ...feature.properties,
-        name: feature.properties?.name || "Unnamed Route",
-        routeColor: getRouteFeatureColor(feature),
-        routeWidth: 3,
-        routeOpacity: 1,
-      },
-    }));
 }
 
 export function addRouteNetworkLayers(map, features) {

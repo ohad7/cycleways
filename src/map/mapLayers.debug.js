@@ -42,7 +42,7 @@ import {
   CW_OSM_MATCH_HIT_STYLE,
   CW_OSM_REVIEW_HALO_STYLE,
   CW_OSM_REVIEW_LINE_STYLE,
-} from "./mapStyles.js";
+} from "@cycleways/core/map/mapStyles.js";
 
 export function clearOsmDebugLayers(map) {
   if (!map) return;

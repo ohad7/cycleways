@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import * as styles from "../src/map/mapStyles.js";
+import * as styles from "@cycleways/core/map/mapStyles.js";
 import { ROUTE_NETWORK_LINE_LAYER_ID } from "../src/map/mapLayers.js";
 
 // IDs live in mapStyles and are re-exported by mapLayers (back-compat).
