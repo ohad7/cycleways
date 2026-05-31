@@ -396,6 +396,9 @@ current parity pass:
   (`/tmp/wd-route-built.png`, `/tmp/wd-after-drag2.png`, `/tmp/wd-undo.png`);
   `npm test` green; iOS export clean. Trivial dead code still present in
   `MapScreen.jsx`: `routePointIndexFromPressEvent` is orphaned (safe to delete).
+  Follow-up fix (`efbf557`): a point drag is claimed only at touch-start —
+  `onMoveShouldSetPanResponder` no longer re-hit-tests on move, so panning the
+  map is never hijacked into a drag when the finger passes near a point.
 - **Then:** route-following/navigation mode on top of the current-location puck,
   offline Mapbox tile-pack polish, release hardening, and optional splitting of
   `useCyclewaysApp` into focused hooks.
