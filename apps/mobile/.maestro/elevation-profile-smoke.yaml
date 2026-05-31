@@ -1,0 +1,29 @@
+# Phase 2.9: native elevation profile chart smoke.
+# Builds a route via two map taps (default GALILEE_CENTER / zoom 11.5 camera,
+# iPhone 15), expands the sheet, asserts the chart + legend, and scrubs it.
+appId: app.cycleways.mobile
+---
+- launchApp
+- assertVisible: "חיפוש מיקום"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    point: "74%,50%"
+- waitForAnimationToEnd:
+    timeout: 4000
+- tapOn:
+    point: "49%,68%"
+- waitForAnimationToEnd:
+    timeout: 4000
+- tapOn: "הצג גרף גובה"
+- assertVisible: "גרף גובה"
+- assertVisible: "יציב"
+- takeScreenshot: /tmp/maestro-elevation-chart
+# Scrub the chart; the tooltip appears and a marker tracks the route on the map.
+# The marker persists at the last point after the finger lifts. A tap on the
+# chart band sets the scrub point deterministically.
+- tapOn:
+    point: "55%,93%"
+- assertVisible:
+    text: "📍 מרחק.*"
+- takeScreenshot: /tmp/maestro-elevation-scrub

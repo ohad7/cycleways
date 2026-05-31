@@ -655,7 +655,13 @@ function RoutePlannerChrome({
       </View>
 
       <View pointerEvents="box-none" style={styles.bottomSheetWrap}>
-        <View style={[styles.routeSheet, hasPoints ? null : styles.routeSheetEmpty]}>
+        <View
+          style={[
+            styles.routeSheet,
+            hasPoints ? null : styles.routeSheetEmpty,
+            sheetExpanded ? styles.routeSheetExpanded : null,
+          ]}
+        >
           <View style={styles.routeSheetHeader}>
             <Text style={styles.routeSheetTitle}>מסלול</Text>
             <View style={styles.routeSheetHeaderActions}>
@@ -1272,6 +1278,9 @@ const styles = StyleSheet.create({
   routeSheetEmpty: {
     maxHeight: 132,
     paddingVertical: 12,
+  },
+  routeSheetExpanded: {
+    maxHeight: 560,
   },
   routeSheetHeader: {
     flexDirection: "row-reverse",

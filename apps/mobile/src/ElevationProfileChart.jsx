@@ -29,17 +29,14 @@ export default function ElevationProfileChart({ geometry, onScrub }) {
       setHover(point);
       onScrub?.(point);
     }
-    function clear() {
-      setHover(null);
-      onScrub?.(null);
-    }
+    // On touch, keep the last scrubbed marker visible after the finger lifts
+    // (so the user can actually look at where it sits on the map). It is
+    // cleared when the route changes (MapScreen effect) or the chart unmounts.
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: update,
       onPanResponderMove: update,
-      onPanResponderRelease: clear,
-      onPanResponderTerminate: clear,
     });
   }, [profile, onScrub]);
 
