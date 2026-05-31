@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { clusterByGrade } from "../src/utils/slopeClustering.js";
-import { classifyGrade } from "../src/utils/grade.js";
+import { clusterByGrade } from "@cycleways/core/utils/slopeClustering.js";
+import { classifyGrade } from "@cycleways/core/utils/grade.js";
 
 // Build a cum/ele pair: one entry per 50m, with a per-segment elevation delta
 // supplied by the caller (length n-1).

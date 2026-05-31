@@ -6,7 +6,7 @@ import {
   classifyGrade,
   segmentGrades,
   pointSmoothedGrades,
-} from "../src/utils/grade.js";
+} from "@cycleways/core/utils/grade.js";
 
 // ── GRADE_CLASSES ────────────────────────────────────────────────────────
 assert.deepEqual(GRADE_CLASSES, ["downhill", "easy", "steady", "hard", "brutal"]);
