@@ -377,6 +377,21 @@ current parity pass:
   `נקודות מסלול`/`סיכום` visible, `/tmp/maestro-route-restore.png`).
   **Caveat:** the `cycleways://` scheme needs a native rebuild to register; the
   dev-client scheme `app.cycleways.mobile://` works now and the smoke uses it.
+- **Phase 2.11 waypoint drag — CODE-COMPLETE, interactive drag UNVERIFIED**
+  (`plans/rn-mobile-waypoint-drag/`): route points now render as draggable
+  RNMapbox `PointAnnotation`s wired to the shared
+  `handleRoutePointDragStart/Drag/End` (commit `a67aafa`, `MapScreen.jsx` only;
+  no web/shared changes). Tap-to-select preserved; undo works via the
+  controller snapshot. Bundle exports clean and the app loads with the new
+  waypoint dots (`/tmp/wd-route-built.png`). **Open gap:** the drag gesture is
+  NOT yet confirmed — a Maestro `swipe` on a waypoint pans the map instead,
+  because RNMapbox iOS draggable annotations need a **long-press to pick up the
+  pin** that Maestro's synthetic swipe doesn't send. Needs a **manual finger
+  long-press-drag** on the simulator to confirm the route reshapes + `ביטול`
+  restores; if the pin won't drag at all, fall back to a custom `PanResponder`
+  drag (design Approach B). Trivial dead code left behind: `ROUTE_POINT_STYLE`,
+  `buildRoutePointFeatureCollection`, `routePointIndexFromPressEvent` in
+  `MapScreen.jsx` are now orphaned and safe to delete.
 - **Then:** route-following/navigation mode on top of the current-location puck,
   offline Mapbox tile-pack polish, release hardening, and optional splitting of
   `useCyclewaysApp` into focused hooks.
