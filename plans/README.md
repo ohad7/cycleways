@@ -31,3 +31,5 @@ Current plans:
 - `rn-mobile-location/` - design + plan for Phase 2.7: native current-location puck and locate/follow camera control.
 - `rn-mobile-web-parity/` - design + plan for Phase 2.8: realign the iPhone route-planning UI with the mobile web planner before adding navigation-mode complexity.
 - `rn-mobile-elevation-profile/` - design + plan for Phase 2.9: native elevation profile chart (shared core builder + grade utils, react-native-svg rendering, touch-scrub tooltip, synced map marker, expandable bottom sheet).
+- `rn-mobile-route-restore/` - design + plan for Phase 2.10: native route restore / `?route=` deep-link parity via a location.native URL cache + Linking.
+- `rn-mobile-waypoint-drag/` - design + plan for Phase 2.11: native draggable route waypoints (RNMapbox PointAnnotation wired to the shared drag handlers).
