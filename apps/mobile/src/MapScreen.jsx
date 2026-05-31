@@ -264,12 +264,10 @@ export default function MapScreen() {
             evt.nativeEvent.locationX,
             evt.nativeEvent.locationY,
           ) !== null,
-        onMoveShouldSetPanResponder: (evt) =>
-          dragRef.current.index !== null ||
-          hitTestRoutePoint(
-            evt.nativeEvent.locationX,
-            evt.nativeEvent.locationY,
-          ) !== null,
+        // Only claim the gesture as a point drag if the touch STARTED on a
+        // point (set in onPanResponderGrant). Never hijack an in-progress map
+        // pan just because the finger later passes near a point.
+        onMoveShouldSetPanResponder: () => dragRef.current.index !== null,
         onPanResponderGrant: (evt) => {
           const { locationX, locationY } = evt.nativeEvent;
           const index = hitTestRoutePoint(locationX, locationY);
