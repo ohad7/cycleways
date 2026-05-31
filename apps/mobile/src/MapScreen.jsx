@@ -22,6 +22,7 @@ import Mapbox, {
   UserTrackingMode,
 } from "@rnmapbox/maps";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
+import { buildRoutePointDragPreviewFeatureCollection } from "@cycleways/core/map/routeDragPreview.js";
 import ElevationProfileChart from "./ElevationProfileChart.jsx";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
@@ -102,6 +103,28 @@ const SEARCH_HIGHLIGHT_CORE_STYLE = {
   circleStrokeWidth: 2,
 };
 
+const DRAG_PREVIEW_CASING_STYLE = {
+  lineColor: "#ffffff",
+  lineWidth: 6,
+  lineOpacity: 0.95,
+  lineCap: "round",
+  lineJoin: "round",
+};
+const DRAG_PREVIEW_LINE_STYLE = {
+  lineColor: "#2b7bb9",
+  lineWidth: 2.5,
+  lineOpacity: 0.95,
+  lineDasharray: [2, 1.5],
+  lineCap: "round",
+  lineJoin: "round",
+};
+const DRAG_PREVIEW_HALO_STYLE = {
+  circleRadius: 8,
+  circleColor: "#2b7bb9",
+  circleStrokeColor: "#ffffff",
+  circleStrokeWidth: 3,
+  circleOpacity: 0.95,
+};
 const ELEVATION_SCRUB_STYLE = {
   circleRadius: 7,
   circleColor: "#74b8c8",
@@ -146,6 +169,7 @@ export default function MapScreen() {
     handleRoutePointDragStart,
     handleRoutePointDrag,
     handleRoutePointDragEnd,
+    routePointDragPreview,
     handleViewportIdle,
   } = useCyclewaysApp();
 
@@ -165,6 +189,11 @@ export default function MapScreen() {
   const searchHighlight = useMemo(
     () => buildSearchHighlightFeatureCollection(mapUi.searchHighlight),
     [mapUi.searchHighlight],
+  );
+
+  const dragPreview = useMemo(
+    () => buildRoutePointDragPreviewFeatureCollection(routePointDragPreview),
+    [routePointDragPreview],
   );
 
   const [scrubPoint, setScrubPoint] = useState(null);
@@ -389,6 +418,23 @@ export default function MapScreen() {
         </ShapeSource>
         <ShapeSource id="elevation-scrub" shape={scrubMarker}>
           <CircleLayer id="elevation-scrub-core" style={ELEVATION_SCRUB_STYLE} />
+        </ShapeSource>
+        <ShapeSource id="route-drag-preview" shape={dragPreview}>
+          <LineLayer
+            id="route-drag-preview-casing"
+            filter={["==", ["geometry-type"], "LineString"]}
+            style={DRAG_PREVIEW_CASING_STYLE}
+          />
+          <LineLayer
+            id="route-drag-preview-line"
+            filter={["==", ["geometry-type"], "LineString"]}
+            style={DRAG_PREVIEW_LINE_STYLE}
+          />
+          <CircleLayer
+            id="route-drag-preview-halo"
+            filter={["==", ["geometry-type"], "Point"]}
+            style={DRAG_PREVIEW_HALO_STYLE}
+          />
         </ShapeSource>
         {displayedRoutePoints.map((point, index) => {
           const lng = Number(point?.lng);
