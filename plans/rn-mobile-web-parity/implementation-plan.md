@@ -48,9 +48,9 @@
 - [x] `npm test`
 - [x] `npm run build`
 - [x] iOS export from `apps/mobile`
-- [ ] iPhone simulator smoke:
+- [x] iPhone simulator smoke:
   search a place, add two points, see route ready, undo, redo, reset, select a
-  waypoint, remove it, locate current position.
+  waypoint, remove it, locate current position. (See Slice 10.)
 - [x] Native iPhone screenshot/render check.
 - [x] Visual comparison against the mobile web planner screenshot.
 - [x] Update `plans/HANDOFF.md` with verified behavior and any remaining parity
@@ -241,6 +241,79 @@
   opened the app on the iOS 17.5 iPhone 15 simulator; screenshot
   `/tmp/isravelo-parity-warning-toggle.png` confirms the native planner still
   renders cleanly after the warning-control change.
+
+## Slice 10 Plan: End-to-End Interactive Simulator Smoke
+
+- Close the long-standing verification gap: prior parity slices could not run an
+  interactive simulator smoke because no UI-automation tool could drive Simulator
+  clicks.
+- Install Maestro and drive the native planner by `accessibilityLabel` selectors
+  (the `Pressable` controls collapse their inner glyph `<Text>` into the parent
+  a11y node, so visible-glyph selectors fail — target the accessibility labels).
+- Add reusable flows under `apps/mobile/.maestro/` and exercise the full HANDOFF
+  §6 sequence end-to-end on the booted iOS 17.5 iPhone 15 simulator.
+
+## Slice 10 Verification
+
+- Installed Maestro 2.6.0 (`~/.maestro/bin/maestro`); resolves the prior blocker
+  where Computer Use could not click the Simulator (no `idb`/`cliclick`).
+- Added `apps/mobile/.maestro/connectivity-check.yaml`,
+  `apps/mobile/.maestro/parity-smoke.yaml`, and
+  `apps/mobile/.maestro/gpx-share-check.yaml`.
+- `maestro --device 961E0C3E-338F-4311-BD0B-72C2BF47C03B test
+  .maestro/parity-smoke.yaml` passed every step end-to-end against the live
+  dev-client build over Metro. Visually confirmed via screenshots:
+  - `/tmp/maestro-route-ready.png`: search `Kfar Blum` → add, search `HaGoshrim`
+    → add, route ready at **7.6 ק"מ, 2 points, 9 CW segments, ↑54מ ↓23מ**.
+  - undo (`ביטול`) + redo (`חזרה`) completed.
+  - `/tmp/maestro-waypoint-selected.png`: tapping waypoint chip
+    `נקודת מסלול 2` selects it (`נקודה 2 נבחרה`) and reveals `הסר נקודה`.
+  - `/tmp/maestro-summary.png`: `סיכום` modal shows route point count, the 9
+    named route-way segments, `מידע חשוב` (`אין מידע מיוחד` for this no-warning
+    route), `תיאור המסלול` (7.6 ק"מ ↑54 ↓23), and GPX/share buttons.
+  - reset (`איפוס מסלול`) returns the bottom sheet to the empty state.
+  - `/tmp/maestro-locate.png`: locate (`מיקום נוכחי`) activates native follow
+    mode (blue user-location puck, Stop control).
+- `gpx-share-check.yaml` passed and `/tmp/maestro-gpx-share2.png` confirms the
+  GPX action writes a real GPX file and opens the iOS share sheet
+  (`route_…​.gpx`, 18 KB, with Copy / Save to Files). No Metro errors.
+- **Remaining gap (closed in Slice 11):** the expand-route-warnings step was not
+  exercised here because the Kfar Blum→HaGoshrim route reports no warnings
+  (`אין מידע מיוחד`). Closed by Slice 11 below.
+
+## Slice 11 Plan: Expand-Route-Warnings Smoke
+
+- Close the last parity-smoke gap: drive the native expand-route-warnings
+  interaction on a route that actually crosses active-data warnings.
+- Geocoded search points land off-network for many places (e.g. `Neot Mordechai`
+  → broken route), so this smoke builds the route deterministically via two map
+  taps onto known network vertices of the warning segments, using the fixed
+  launch camera (`GALILEE_CENTER`, zoom 11.5) on the iPhone 15.
+- Derivation: the warning corridor along the Jordan near Kfar Blum carries
+  `gate`/`mud` data points (`segments.json` data + `network.json` geometry). Two
+  taps on the `ירדן מערב כפר בלום` (gate) → `הירדן ההיסטורי` (mud) corridor
+  produce a 2-warning route.
+
+## Slice 11 Verification
+
+- Added `apps/mobile/.maestro/warning-expand-smoke.yaml`.
+- `maestro --device 961E0C3E-… test .maestro/warning-expand-smoke.yaml` passed
+  end-to-end: two map taps (`74%,50%` then `49%,68%`) build a **5.4 ק"מ /
+  2-point / 2 CW-segment** route reported as `יש 2 נקודות מידע חשובות במסלול`.
+- `/tmp/maestro-warning-route.png`: legend shows the expandable
+  `⚠️ מידע חשוב (2)` chip; bottom sheet shows the 2-warning route.
+- The flow taps the chip and asserts the grouped warning rows appear; both
+  `שער` (gate) and `בוץ` (mud) group labels assert visible.
+- `/tmp/maestro-warning-expanded.png`: the chip expands into two grouped rows —
+  `🚧 שער` (gate, `#FF5722`) and `⚠️ בוץ` (mud, `#9d744d`) — matching the shared
+  `routePlannerPresentation`/`poiTypes` label/icon/color metadata.
+- The route summary (verified during discovery) lists the same two warnings under
+  `מידע חשוב`: the gate text `שער יציאה מכפר בלום…` and the mud text
+  `קטע בוצי אחרי גשם`.
+- **Camera-settle note:** `launchApp` returns before the RNMapbox camera settles
+  to `GALILEE_CENTER`; map taps must wait for it (the flow asserts the chrome and
+  uses `waitForAnimationToEnd`) or they land off-map. Run only one Maestro
+  instance at a time — concurrent runners crash the shared XCTest driver.
 
 ## Implementation Notes
 

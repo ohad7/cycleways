@@ -222,9 +222,34 @@ The platform-agnostic shared layer is complete:
   `tests/test-poi-types.mjs` and was verified with `npm test`, `npm run build`,
   `git diff --check`, `npx expo export --platform ios --output-dir
   /tmp/isravelo-mobile-export-web-parity-warning-toggle`, and simulator
-  screenshot `/tmp/isravelo-parity-warning-toggle.png`. Interactive
-  simulator smoke is still pending for this parity pass because the Computer Use
-  bridge could not access the Simulator window for click actions.
+  screenshot `/tmp/isravelo-parity-warning-toggle.png`.
+- **Phase 2.8 interactive simulator smoke DONE + VERIFIED** (Slice 10,
+  `plans/rn-mobile-web-parity/`): the previously-blocked interactive smoke now
+  runs. **Maestro 2.6.0** drives the Simulator by `accessibilityLabel` (no more
+  Computer Use click blocker). Reusable flows live in `apps/mobile/.maestro/`
+  (`connectivity-check.yaml`, `parity-smoke.yaml`, `gpx-share-check.yaml`).
+  `maestro --device 961E0C3E-… test .maestro/parity-smoke.yaml` passed end-to-end
+  against the live dev-client over Metro: search `Kfar Blum`→add, search
+  `HaGoshrim`→add, **route ready 7.6 ק"מ / 2 points / 9 CW segments / ↑54 ↓23**,
+  undo, redo, select waypoint (`נקודה 2 נבחרה` + `הסר נקודה`), open `סיכום`
+  (points + 9 named segments + `מידע חשוב` + description + GPX/share), reset,
+  locate (native follow puck). `gpx-share-check.yaml` confirmed GPX export opens
+  the iOS share sheet with a real `route_….gpx` (18 KB). Screenshots:
+  `/tmp/maestro-route-ready.png`, `/tmp/maestro-waypoint-selected.png`,
+  `/tmp/maestro-summary.png`, `/tmp/maestro-locate.png`,
+  `/tmp/maestro-gpx-share2.png`.
+- **Phase 2.8 expand-route-warnings smoke DONE + VERIFIED** (Slice 11,
+  `plans/rn-mobile-web-parity/`): the last parity-smoke gap is closed.
+  `apps/mobile/.maestro/warning-expand-smoke.yaml` builds a deterministic
+  2-warning route via two map taps onto known warning-segment vertices (geocoded
+  search points land off-network, so search can't force a warning route), then
+  taps the legend `⚠️ מידע חשוב (2)` chip and asserts it expands into grouped
+  rows `🚧 שער` (gate) + `⚠️ בוץ` (mud). Route = 5.4 ק"מ / 2 points / 2 CW
+  segments, `יש 2 נקודות מידע חשובות במסלול`. Screenshots
+  `/tmp/maestro-warning-route.png`, `/tmp/maestro-warning-expanded.png`. The taps
+  assume the fixed launch camera (`GALILEE_CENTER`, zoom 11.5, iPhone 15) and
+  must wait for the camera to settle after `launchApp`; run only one Maestro
+  instance at a time (concurrent runners crash the XCTest driver).
 
 ## 4A. Mobile-web parity implementation details
 
@@ -316,13 +341,12 @@ current parity pass:
 
 ## 6. What's NEXT
 
-- **Phase 2.8 NEXT (`plans/rn-mobile-web-parity/`):** keep working toward
-  mobile-web route-planner parity. Do not pivot to route-following/navigation
-  mode yet. The next highest-value step is an end-to-end iPhone simulator smoke:
-  search a place, add two points, see route ready, undo, redo, reset, select and
-  remove a waypoint, open summary, share/download GPX, expand route warnings if
-  a warning route is available, and locate current position. If click automation
-  remains blocked, document that explicitly and use manual simulator checks.
+- **Phase 2.8 is now SMOKE-COMPLETE:** the end-to-end interactive simulator smoke
+  (Slice 10) and the expand-route-warnings smoke (Slice 11) are both DONE and
+  verified (see §4). The full mobile-web parity acceptance surface is exercised
+  on the simulator. Reusable Maestro flows live in `apps/mobile/.maestro/` (drive
+  controls by `accessibilityLabel`, not the visible glyph; run one Maestro
+  instance at a time). Do not pivot to route-following/navigation mode yet.
 - **Likely remaining parity polish:** tighten any spacing/interaction mismatch
   found during that smoke; consider native route restore/deep-link support if the
   web `?route=` flow is required on iPhone; keep elevation as compact stats

@@ -1,0 +1,36 @@
+# Phase 2.8 parity smoke: expand-route-warnings interaction (HANDOFF §6 gap).
+# Builds a deterministic warning route by tapping two points on the
+# "ירדן מערב כפר בלום" (gate) -> "הירדן ההיסטורי" (mud) corridor, then expands
+# the legend warning chip and asserts the grouped warning rows.
+#
+# Tap coordinates assume the default launch camera (GALILEE_CENTER, zoom 11.5)
+# on an iPhone 15 (393x852). They snap onto known network vertices of the
+# warning segments. See plans/rn-mobile-web-parity for the derivation.
+appId: app.cycleways.mobile
+---
+- launchApp
+- assertVisible: "חיפוש מיקום"
+- waitForAnimationToEnd:
+    timeout: 6000
+
+# --- Build the warning route (two on-network taps along the warning corridor) ---
+- tapOn:
+    point: "74%,50%"
+- waitForAnimationToEnd:
+    timeout: 4000
+- tapOn:
+    point: "49%,68%"
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: /tmp/maestro-warning-route
+
+# --- The legend warning chip should report the active data points ---
+- assertVisible:
+    text: "⚠️ מידע חשוב.*"
+
+# --- Expand the warning chip and assert grouped warning rows ---
+- tapOn:
+    text: "⚠️ מידע חשוב.*"
+- assertVisible: "שער"   # gate group label
+- assertVisible: "בוץ"   # mud group label
+- takeScreenshot: /tmp/maestro-warning-expanded

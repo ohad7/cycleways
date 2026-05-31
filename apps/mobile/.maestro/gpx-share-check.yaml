@@ -1,0 +1,16 @@
+# Supplementary: verify GPX export opens the iOS share sheet (HANDOFF §6).
+appId: app.cycleways.mobile
+---
+- tapOn: "חיפוש מיקום"
+- inputText: "Kfar Blum"
+- tapOn: "חיפוש"
+- tapOn: "הוסף"
+- tapOn: "חיפוש מיקום"
+- eraseText
+- inputText: "HaGoshrim"
+- tapOn: "חיפוש"
+- tapOn: "הוסף"
+- tapOn: "סיכום ושיתוף המסלול"
+- assertVisible: "GPX"
+- tapOn: "GPX"
+- takeScreenshot: /tmp/maestro-gpx-share

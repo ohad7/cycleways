@@ -15,3 +15,6 @@ test-results/
 editor/.drafts/*
 !editor/.drafts/.gitkeep
 .expo/
+
+# Claude Code harness state (local only)
+.claude/
