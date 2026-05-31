@@ -250,6 +250,25 @@ The platform-agnostic shared layer is complete:
   assume the fixed launch camera (`GALILEE_CENTER`, zoom 11.5, iPhone 15) and
   must wait for the camera to settle after `launchApp`; run only one Maestro
   instance at a time (concurrent runners crash the XCTest driver).
+- **Phase 2.9 DONE + VERIFIED** (`plans/rn-mobile-elevation-profile/`):
+  native elevation profile parity is complete. Shared grade utilities moved to
+  `@cycleways/core/utils`, shared elevation profile building lives in
+  `@cycleways/core/ui/elevationProfile.js`, web consumes the shared builder, and
+  native renders `apps/mobile/src/ElevationProfileChart.jsx` via
+  `react-native-svg@15.15.4`. `MapScreen` now has an expandable `▴/▾ גובה`
+  bottom-sheet control, capped expanded height, touch-scrub tooltip, and synced
+  cyan `elevation-scrub` map marker. The marker intentionally persists after
+  finger release and clears when the route changes so the user can inspect the
+  map position. `apps/mobile/.maestro/elevation-profile-smoke.yaml` now builds a
+  deterministic route through search (`Kfar Blum` → `HaGoshrim`) instead of
+  camera-dependent map taps, expands the chart, swipes it, asserts `📍 מרחק.*`,
+  and captures `/tmp/maestro-elevation-chart.png` plus
+  `/tmp/maestro-elevation-scrub.png`. Verification: `npm test`, `npm run build`,
+  `npm run test:smoke` = **40 pass / 12 fail / 2 skipped** baseline,
+  `npx expo export --platform ios --output-dir
+  /tmp/isravelo-mobile-export-elevation`, and `git diff --check` all passed.
+  Note: `npm install` was needed locally to materialize the already-locked
+  `react-native-svg` dependency into `node_modules`.
 
 ## 4A. Mobile-web parity implementation details
 
@@ -300,10 +319,10 @@ current parity pass:
   presentation helper and expand into grouped warning rows with shared labels,
   colors, icons, and priority rules. Web uses the same helper for its existing
   warning toggle.
-- **Elevation scope**: first-pass parity is compact stats only: distance,
-  climbing, and descending appear in the bottom sheet and route summary. A native
-  elevation profile chart is intentionally deferred until planner chrome and
-  interaction parity are stable.
+- **Elevation profile**: native now has a shared-core, grade-colored elevation
+  profile chart in the expandable bottom route sheet. It shows the same grade
+  legend vocabulary as web, supports touch-scrub tooltip text, and syncs a cyan
+  marker onto the native map.
 - **Tests/verification for the latest parity state**: `npm test`, `npm run
   build`, `git diff --check`, and the iOS export
   `/tmp/isravelo-mobile-export-web-parity-warning-toggle` pass. The app also
@@ -315,10 +334,10 @@ current parity pass:
   `/tmp/isravelo-parity-symbol-controls.png`,
   `/tmp/isravelo-parity-legend.png`, and
   `/tmp/isravelo-parity-rail-sheet-density.png`.
-- **Known verification gap**: full interactive simulator smoke for the parity
-  pass is still pending because the available Computer Use bridge could not
-  reliably access Simulator clicks. Earlier pre-parity native simulator smokes
-  did verify search/add route points, remove/undo/redo/fit, and location follow.
+- **Interactive verification**: the parity and elevation surfaces now have
+  reusable Maestro simulator flows under `apps/mobile/.maestro/`. Maestro must
+  be run one instance at a time and targeted by accessibility labels where
+  possible.
 
 ## 5. RN build gotchas (all hit + resolved — important!)
 
@@ -341,72 +360,22 @@ current parity pass:
 
 ## 6. What's NEXT
 
-### Phase 2.9 — native elevation profile chart (IN PROGRESS, ~90% done)
-
-Spec/plan: `plans/rn-mobile-elevation-profile/{design.md,implementation-plan.md}`
-(subagent-driven). Approach: shared core builder + grade utils, `react-native-svg`
-render, touch-scrub → synced map marker, expandable bottom sheet.
-
-**Committed & verified (Tasks 1–4 + most of 5):**
-- `4a9eee5` move `grade.js`/`slopeClustering.js` → `@cycleways/core/utils/`.
-- `e74c5c0` extract `buildElevationProfile`+`findClosestElevationPoint` →
-  `@cycleways/core/ui/elevationProfile.js`; web consumes it; new
-  `tests/test-elevation-profile.mjs` in the chain. **`npm test` green, build OK.**
-- `a6f3126` add `react-native-svg@15.15.4`; dev client rebuilt (native module).
-- `f12a423` `apps/mobile/src/ElevationProfileChart.jsx` + MapScreen expandable
-  sheet (`▴/▾ גובה` toggle, a11y `הצג/הסתר גרף גובה`).
-- `c5f9e66` scrub→map marker (`scrubPoint` state + `elevation-scrub` CircleLayer
-  in MapScreen).
-- **Verified on sim:** chart + grade legend render correctly
-  (`/tmp/maestro-elevation-chart.png`). Maestro flow
-  `apps/mobile/.maestro/elevation-profile-smoke.yaml` passes through the chart
-  assertions.
-
-**UNCOMMITTED working-tree changes (made during review, NOT yet committed):**
-- `apps/mobile/src/MapScreen.jsx` — added `routeSheetExpanded {maxHeight:560}`
-  style + applied it; fixes the expanded sheet overflowing below screen.
-- `apps/mobile/src/ElevationProfileChart.jsx` — marker now **persists** after
-  finger-lift (removed `clear` on PanResponder release; cleared on route change
-  via MapScreen effect). This is a deliberate refinement of the spec's
-  "clear on release" — better touch UX + screenshot-verifiable. **Flag for user.**
-- `apps/mobile/.maestro/elevation-profile-smoke.yaml` — new flow (untracked).
-
-**REMAINING to finish the slice:**
-1. Tune the scrub step in `elevation-profile-smoke.yaml`: the chart sits ~89–96%
-   screen height; `tapOn point "55%,93%"` then `assertVisible "📍 מרחק.*"` was
-   still failing — adjust the tap y until the tooltip + cyan map marker appear,
-   screenshot `/tmp/maestro-elevation-scrub.png`. (Run ONE Maestro at a time;
-   `pkill -9 -f maestro.cli.AppKt` to recover the XCTest driver.)
-2. Commit the three uncommitted items (stage specific files, NOT `git add -A`):
-   the layout fix + marker-persist refinement as
-   `fix(mobile): keep elevation scrub marker on release; cap expanded sheet height`,
-   and the smoke flow under `test(mobile): elevation profile iOS smoke`.
-3. Run the full web guard (`npm test`, `npm run build`, `npm run test:smoke`
-   baseline 40/12) — the web extraction is zero-behavior-change but smoke hasn't
-   been re-run since.
-4. Add a Phase 2.9 DONE entry to §4 here and mark the plan's verification.
-5. (Skill flow) optional final code-review pass, then
-   `superpowers:finishing-a-development-branch`.
-
-**Env:** Metro running (dev-client, `/tmp/metro2.log`); sim iPhone 15/iOS 17.5
-`961E0C3E-338F-4311-BD0B-72C2BF47C03B`; app installed; Maestro `~/.maestro/bin`.
-Drive controls by `accessibilityLabel`; map taps assume default camera
-(`GALILEE_CENTER`, zoom 11.5) and need `waitForAnimationToEnd` after `launchApp`.
-
-
-- **Phase 2.8 is now SMOKE-COMPLETE:** the end-to-end interactive simulator smoke
-  (Slice 10) and the expand-route-warnings smoke (Slice 11) are both DONE and
-  verified (see §4). The full mobile-web parity acceptance surface is exercised
-  on the simulator. Reusable Maestro flows live in `apps/mobile/.maestro/` (drive
-  controls by `accessibilityLabel`, not the visible glyph; run one Maestro
-  instance at a time). Do not pivot to route-following/navigation mode yet.
-- **Likely remaining parity polish:** tighten any spacing/interaction mismatch
-  found during that smoke; consider native route restore/deep-link support if the
-  web `?route=` flow is required on iPhone; keep elevation as compact stats
-  unless the product explicitly prioritizes a native elevation profile chart.
-- **After parity:** route-following/navigation mode on top of the current-location
-  puck, offline Mapbox tile-pack polish, release hardening, and optional
-  splitting of `useCyclewaysApp` into focused hooks.
+- **Current app state:** Phase 2.8 mobile-web route-planner parity is
+  smoke-complete, and Phase 2.9 native elevation profile is verified. The iPhone
+  app now has the core route-planning, summary/share/GPX, warnings, location,
+  and elevation profile surfaces exercised by Maestro.
+- **Likely next product slice:** native route restore/deep-link support if the
+  web `?route=` flow must open directly in the iPhone app. The native location
+  platform currently does not restore query params, so this should be planned as
+  its own small parity slice.
+- **Then:** route-following/navigation mode on top of the current-location puck,
+  offline Mapbox tile-pack polish, release hardening, and optional splitting of
+  `useCyclewaysApp` into focused hooks.
+- **Process note:** reusable Maestro flows live in `apps/mobile/.maestro/`.
+  Maestro is at `/Users/ohad/.maestro/bin/maestro`; this shell needed
+  `JAVA_HOME=/Users/ohad/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.9+10/Contents/Home`
+  because `maestro` was not on `PATH` and `/usr/bin/java` had no configured JRE.
+  Run one Maestro instance at a time.
 
 ## 7. Useful commands / map
 

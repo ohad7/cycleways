@@ -572,7 +572,11 @@ Confirm `RoutePlannerChrome`'s signature destructures `onScrub` (added in Task 4
 
 - [ ] **Step 5: Verify on the simulator**
 
-Rebuild/run. Build a route, expand `▴ גובה`, drag across the chart: a tooltip shows distance/elevation/grade and a cyan marker moves along the route on the map; releasing hides the marker. Screenshot `/tmp/isravelo-elevation-scrub.png`.
+Rebuild/run. Build a route, expand `▴ גובה`, drag across the chart: a tooltip
+shows distance/elevation/grade and a cyan marker moves along the route on the
+map. The marker now persists after finger release so the user can inspect the
+map position; it clears when the route is cleared or changed. Screenshot
+`/tmp/isravelo-elevation-scrub.png`.
 
 - [ ] **Step 6: Commit**
 
@@ -591,26 +595,36 @@ git commit -m "feat(mobile): sync elevation scrub to a native map marker"
 
 - [ ] **Step 1: Write the Maestro smoke flow**
 
-Create `apps/mobile/.maestro/elevation-profile-smoke.yaml`:
+Create `apps/mobile/.maestro/elevation-profile-smoke.yaml`.
+
+The committed flow builds the route through search/add instead of fixed map
+coordinates. The original coordinate route was camera-fragile once the simulator
+state changed; the search route still exercises the chart, tooltip, and synced
+marker while remaining independent of current camera position.
 
 ```yaml
 # Phase 2.9: native elevation profile chart smoke.
-# Builds a route via two map taps (default GALILEE_CENTER / zoom 11.5 camera,
-# iPhone 15), expands the sheet, asserts the chart + legend, and scrubs it.
+# Builds a route via the shared search/add path, expands the sheet, asserts the
+# chart + legend, and scrubs it.
 appId: app.cycleways.mobile
 ---
 - launchApp
 - assertVisible: "חיפוש מיקום"
 - waitForAnimationToEnd:
     timeout: 6000
-- tapOn:
-    point: "74%,50%"
-- waitForAnimationToEnd:
-    timeout: 4000
-- tapOn:
-    point: "49%,68%"
-- waitForAnimationToEnd:
-    timeout: 4000
+
+- tapOn: "חיפוש מיקום"
+- inputText: "Kfar Blum"
+- tapOn: "חיפוש"
+- assertVisible: "הוסף"
+- tapOn: "הוסף"
+- tapOn: "חיפוש מיקום"
+- eraseText
+- inputText: "HaGoshrim"
+- tapOn: "חיפוש"
+- assertVisible: "הוסף"
+- tapOn: "הוסף"
+
 - tapOn: "הצג גרף גובה"
 - assertVisible: "גרף גובה"
 - assertVisible: "יציב"      # a grade legend label (GRADE_LABELS_HE.steady)
@@ -654,3 +668,27 @@ git commit -m "test(mobile): elevation profile iOS smoke + Phase 2.9 docs"
 - **Scrub math:** native uses `locationX` relative to the chart `View` width (captured via `onLayout`), mirroring the web `getBoundingClientRect` ratio.
 - **One Maestro instance at a time** — concurrent runners crash the shared XCTest driver.
 - `useCyclewaysApp` and all routing/elevation computation are untouched throughout.
+
+## Phase 2.9 Verification
+
+- Native elevation chart renders in the expanded bottom route sheet with shared
+  grade colors and Hebrew labels.
+- Scrubbing the chart shows the distance/elevation/grade tooltip and a synced
+  cyan map marker; the marker persists after release and clears when the route
+  changes.
+- `apps/mobile/.maestro/elevation-profile-smoke.yaml` now builds a deterministic
+  route via search (`Kfar Blum` -> `HaGoshrim`), expands `גרף גובה`, swipes the
+  chart, asserts `📍 מרחק.*`, and writes screenshots:
+  `/tmp/maestro-elevation-chart.png` and `/tmp/maestro-elevation-scrub.png`.
+- Maestro command used in this environment:
+  `JAVA_HOME=/Users/ohad/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.9+10/Contents/Home PATH=/Users/ohad/.gradle/jdks/eclipse_adoptium-21-aarch64-os_x.2/jdk-21.0.9+10/Contents/Home/bin:$PATH /Users/ohad/.maestro/bin/maestro --device 961E0C3E-338F-4311-BD0B-72C2BF47C03B test .maestro/elevation-profile-smoke.yaml`
+  passed.
+- `npm test` passed, including `tests/test-elevation-profile.mjs`.
+- `npm run build` passed.
+- `npm run test:smoke` completed at the documented stale baseline:
+  **40 passed / 12 failed / 2 skipped**.
+- `npx expo export --platform ios --output-dir
+  /tmp/isravelo-mobile-export-elevation` passed after running `npm install` to
+  materialize the already-locked `react-native-svg@15.15.4` dependency in local
+  `node_modules`.
+- `git diff --check` passed.
