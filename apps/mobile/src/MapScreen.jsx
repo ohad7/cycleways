@@ -101,6 +101,14 @@ const SEARCH_HIGHLIGHT_CORE_STYLE = {
   circleStrokeWidth: 2,
 };
 
+const ELEVATION_SCRUB_STYLE = {
+  circleRadius: 7,
+  circleColor: "#74b8c8",
+  circleStrokeColor: "#ffffff",
+  circleStrokeWidth: 2,
+  circlePitchAlignment: "map",
+};
+
 const GALILEE_CENTER = [35.5876, 33.17];
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
 
@@ -163,6 +171,25 @@ export default function MapScreen() {
     () => buildSearchHighlightFeatureCollection(mapUi.searchHighlight),
     [mapUi.searchHighlight],
   );
+
+  const [scrubPoint, setScrubPoint] = useState(null);
+
+  const scrubMarker = useMemo(() => {
+    const coord = scrubPoint?.coord;
+    if (!coord || !Number.isFinite(coord.lng) || !Number.isFinite(coord.lat)) {
+      return EMPTY_FEATURE_COLLECTION;
+    }
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: { type: "Point", coordinates: [coord.lng, coord.lat] },
+        },
+      ],
+    };
+  }, [scrubPoint]);
   const routePresentation = useMemo(
     () =>
       getRoutePlannerPresentation(
@@ -301,6 +328,12 @@ export default function MapScreen() {
     });
   }, [mapUi.searchHighlight, stopFollowingLocation]);
 
+  useEffect(() => {
+    if (!routeState.points || routeState.points.length === 0) {
+      setScrubPoint(null);
+    }
+  }, [routeState.points]);
+
   if (!MAPBOX_TOKEN) {
     return (
       <View style={styles.center}>
@@ -369,6 +402,9 @@ export default function MapScreen() {
             style={SEARCH_HIGHLIGHT_CORE_STYLE}
           />
         </ShapeSource>
+        <ShapeSource id="elevation-scrub" shape={scrubMarker}>
+          <CircleLayer id="elevation-scrub-core" style={ELEVATION_SCRUB_STYLE} />
+        </ShapeSource>
         <ShapeSource
           id="route-points"
           shape={routePoints}
@@ -404,6 +440,7 @@ export default function MapScreen() {
         routePoints={displayedRoutePoints}
         selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
         onClear={handleRouteClear}
+        onScrub={setScrubPoint}
       />
       <RouteSummaryModal
         activeDataPoints={routeState.activeDataPoints}
