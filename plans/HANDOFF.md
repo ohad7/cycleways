@@ -364,10 +364,19 @@ current parity pass:
   smoke-complete, and Phase 2.9 native elevation profile is verified. The iPhone
   app now has the core route-planning, summary/share/GPX, warnings, location,
   and elevation profile surfaces exercised by Maestro.
-- **Likely next product slice:** native route restore/deep-link support if the
-  web `?route=` flow must open directly in the iPhone app. The native location
-  platform currently does not restore query params, so this should be planned as
-  its own small parity slice.
+- **Phase 2.10 route restore / deep-link DONE + VERIFIED**
+  (`plans/rn-mobile-route-restore/`): `packages/core/src/platform/location.native.js`
+  is now a URL-cache adapter (`set/get/resetNativeLocationHref`, query-param
+  read/mutate, `getShardLoaderLocation`), covered by `tests/test-native-location.mjs`
+  (in the `npm test` chain). `apps/mobile/App.js` reads `Linking.getInitialURL()`
+  + warm `url` events into that cache and remounts `MapScreen`; the shared
+  `useCyclewaysApp` already restores from `getQueryParam("route")`, so no
+  controller change was needed. `app.json` gains `scheme: "cycleways"`.
+  **Verified:** `npm test` green; `apps/mobile/.maestro/route-restore-smoke.yaml`
+  passes (`openLink app.cycleways.mobile:///?route=Bjjy1...` → route restored,
+  `נקודות מסלול`/`סיכום` visible, `/tmp/maestro-route-restore.png`).
+  **Caveat:** the `cycleways://` scheme needs a native rebuild to register; the
+  dev-client scheme `app.cycleways.mobile://` works now and the smoke uses it.
 - **Then:** route-following/navigation mode on top of the current-location puck,
   offline Mapbox tile-pack polish, release hardening, and optional splitting of
   `useCyclewaysApp` into focused hooks.

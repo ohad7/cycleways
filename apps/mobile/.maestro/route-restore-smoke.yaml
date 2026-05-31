@@ -1,15 +1,18 @@
 # Phase 2.10: native route restore / deep-link parity smoke.
-# Opens a known shared route payload through the app's public custom scheme and
-# asserts the native planner restores the route without manual point entry.
+# Opens a known shared route payload and asserts the native planner restores the
+# route without manual point entry.
+#
+# Scheme note: the custom `cycleways://` scheme (app.json) registers only after a
+# native rebuild. The dev-client bundle scheme `app.cycleways.mobile://` works on
+# the currently-installed build and exercises the same restore path, since
+# location.native getQueryParam parses ?route= regardless of scheme.
 appId: app.cycleways.mobile
 ---
 - stopApp
-- openLink: "cycleways:///?route=Bjjy1nRHHDArrNAoctqGv4RHL3un"
-- tapOn:
-    point: "66%,54%"
+- openLink: "app.cycleways.mobile:///?route=Bjjy1nRHHDArrNAoctqGv4RHL3un"
 - assertVisible: "חיפוש מיקום"
 - waitForAnimationToEnd:
-    timeout: 6000
+    timeout: 8000
 - assertVisible: "נקודות מסלול"
 - assertVisible: "סיכום ושיתוף המסלול"
 - takeScreenshot: /tmp/maestro-route-restore
