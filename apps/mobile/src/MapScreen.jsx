@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Keyboard,
   Modal,
   PanResponder,
@@ -17,12 +19,25 @@ import Mapbox, {
   LineLayer,
   MapView,
   ShapeSource,
+  SymbolLayer,
   UserLocation,
   UserLocationRenderMode,
   UserTrackingMode,
 } from "@rnmapbox/maps";
+import Svg, { Path } from "react-native-svg";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
+import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
+import {
+  DATA_MARKERS_STYLE,
+  ROUTE_DIRECTION_PULSE_CASING_STYLE,
+  ROUTE_DIRECTION_PULSE_CORE_STYLE,
+} from "@cycleways/core/map/mapStyles.js";
+import { MAP_INITIAL_CAMERA } from "@cycleways/core/map/mapViewport.js";
+import { buildRouteDirectionPulseFeatureCollection } from "@cycleways/core/map/routeDirectionPulse.js";
 import { buildRoutePointDragPreviewFeatureCollection } from "@cycleways/core/map/routeDragPreview.js";
+import DataMarkerImages, {
+  NATIVE_DATA_MARKER_ICON_NAMESPACE,
+} from "./DataMarkerImages.jsx";
 import ElevationProfileChart from "./ElevationProfileChart.jsx";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
@@ -51,6 +66,23 @@ const ROUTE_LINE_STYLE = {
   lineOpacity: 0.9,
   lineJoin: "round",
   lineCap: "round",
+};
+
+const ROUTE_DIRECTION_PULSE_CASING_LINE_STYLE = {
+  lineColor: ROUTE_DIRECTION_PULSE_CASING_STYLE.paint["line-color"],
+  lineWidth: ROUTE_DIRECTION_PULSE_CASING_STYLE.paint["line-width"],
+  lineOpacity: ROUTE_DIRECTION_PULSE_CASING_STYLE.paint["line-opacity"],
+  lineBlur: ROUTE_DIRECTION_PULSE_CASING_STYLE.paint["line-blur"],
+  lineJoin: ROUTE_DIRECTION_PULSE_CASING_STYLE.layout["line-join"],
+  lineCap: ROUTE_DIRECTION_PULSE_CASING_STYLE.layout["line-cap"],
+};
+
+const ROUTE_DIRECTION_PULSE_CORE_LINE_STYLE = {
+  lineGradient: ROUTE_DIRECTION_PULSE_CORE_STYLE.paint["line-gradient"],
+  lineWidth: ROUTE_DIRECTION_PULSE_CORE_STYLE.paint["line-width"],
+  lineOpacity: ROUTE_DIRECTION_PULSE_CORE_STYLE.paint["line-opacity"],
+  lineJoin: ROUTE_DIRECTION_PULSE_CORE_STYLE.layout["line-join"],
+  lineCap: ROUTE_DIRECTION_PULSE_CORE_STYLE.layout["line-cap"],
 };
 
 const ROUTE_POINT_STYLE = {
@@ -133,7 +165,20 @@ const ELEVATION_SCRUB_STYLE = {
   circlePitchAlignment: "map",
 };
 
-const GALILEE_CENTER = [35.5876, 33.17];
+const DATA_MARKER_SYMBOL_STYLE = {
+  iconImage: DATA_MARKERS_STYLE.layout["icon-image"],
+  iconSize: DATA_MARKERS_STYLE.layout["icon-size"],
+  iconAllowOverlap: DATA_MARKERS_STYLE.layout["icon-allow-overlap"],
+  iconIgnorePlacement: DATA_MARKERS_STYLE.layout["icon-ignore-placement"],
+  iconOpacity: DATA_MARKERS_STYLE.paint["icon-opacity"],
+};
+
+const INITIAL_CAMERA_SETTINGS = {
+  ...MAP_INITIAL_CAMERA,
+  animationDuration: 0,
+  animationMode: "none",
+};
+
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
 
 export default function MapScreen() {
@@ -153,6 +198,9 @@ export default function MapScreen() {
     canUndo,
     canRedo,
     canDownload,
+    directionAnimatorRef,
+    activeDataPointIds,
+    dataMarkerFeatures,
     shareInfo,
     shareUrl,
     handleMapClick,
@@ -170,6 +218,7 @@ export default function MapScreen() {
     handleRoutePointDrag,
     handleRoutePointDragEnd,
     routePointDragPreview,
+    handleDataMarkerClick,
     handleViewportIdle,
   } = useCyclewaysApp();
 
@@ -194,6 +243,14 @@ export default function MapScreen() {
   const dragPreview = useMemo(
     () => buildRoutePointDragPreviewFeatureCollection(routePointDragPreview),
     [routePointDragPreview],
+  );
+
+  const dataMarkers = useMemo(
+    () =>
+      dataMarkerFeatureCollection(dataMarkerFeatures, activeDataPointIds, {
+        iconNamespace: NATIVE_DATA_MARKER_ICON_NAMESPACE,
+      }),
+    [activeDataPointIds, dataMarkerFeatures],
   );
 
   const routePoints = useMemo(
@@ -366,8 +423,12 @@ export default function MapScreen() {
     [mapUi.selectedRoutePointIndex, routeState],
   );
   const warningPresentation = useMemo(
-    () => getRouteWarningPresentation(routeState.activeDataPoints),
-    [routeState.activeDataPoints],
+    () =>
+      getRouteWarningPresentation(
+        routeState.activeDataPoints,
+        mapUi.selectedDataMarker,
+      ),
+    [mapUi.selectedDataMarker, routeState.activeDataPoints],
   );
 
   const handleMapPress = useCallback(
@@ -379,6 +440,15 @@ export default function MapScreen() {
       handleMapClick(point);
     },
     [handleMapClick, state.status],
+  );
+
+  const handleDataMarkerPress = useCallback(
+    (event) => {
+      const marker = dataMarkerFromPressEvent(event);
+      if (!marker) return;
+      handleDataMarkerClick(marker);
+    },
+    [handleDataMarkerClick],
   );
 
   const stopFollowingLocation = useCallback(() => {
@@ -532,8 +602,9 @@ export default function MapScreen() {
       >
         <Camera
           ref={cameraRef}
-          centerCoordinate={GALILEE_CENTER}
-          zoomLevel={11.5}
+          defaultSettings={INITIAL_CAMERA_SETTINGS}
+          animationDuration={0}
+          animationMode="none"
           followUserLocation={locationState.following}
           followUserMode={UserTrackingMode.FollowWithHeading}
           followZoomLevel={14.5}
@@ -552,6 +623,11 @@ export default function MapScreen() {
         <ShapeSource id="route-geometry" shape={routeGeometry}>
           <LineLayer id="route-line" style={ROUTE_LINE_STYLE} />
         </ShapeSource>
+        <RouteDirectionPulseLayer
+          animator={directionAnimatorRef.current}
+          routeGeometry={routeState.geometry}
+        />
+        <DataMarkerImages />
         <ShapeSource id="search-highlight" shape={searchHighlight}>
           <CircleLayer
             id="search-highlight-halo"
@@ -560,6 +636,17 @@ export default function MapScreen() {
           <CircleLayer
             id="search-highlight-core"
             style={SEARCH_HIGHLIGHT_CORE_STYLE}
+          />
+        </ShapeSource>
+        <ShapeSource
+          id="data-markers"
+          shape={dataMarkers}
+          hitbox={{ width: 44, height: 44 }}
+          onPress={handleDataMarkerPress}
+        >
+          <SymbolLayer
+            id="data-markers-symbol"
+            style={DATA_MARKER_SYMBOL_STYLE}
           />
         </ShapeSource>
         <ShapeSource id="elevation-scrub" shape={scrubMarker}>
@@ -591,18 +678,16 @@ export default function MapScreen() {
         warningPresentation={warningPresentation}
       />
       <RoutePlannerChrome
-        canFitRoute={routeState.geometry.length >= 2 || routeState.points.length > 0}
+        animator={directionAnimatorRef.current}
         canDownload={canDownload}
         canRedo={canRedo}
         canUndo={canUndo}
-        onFitRoute={fitRoute}
         onOpenSummary={handleOpenDownload}
         onRedo={handleRedo}
         onRemovePoint={handleRoutePointRemove}
         onSearchChange={handleSearchQueryChange}
         onSearchResultAdd={addSearchResultToRoute}
         onSearchSubmit={submitSearch}
-        onLocatePress={handleLocatePress}
         onSelectPoint={handleRoutePointSelect}
         onUndo={handleUndo}
         locationState={locationState}
@@ -633,7 +718,35 @@ export default function MapScreen() {
 
 function MapLegendOverlay({ hasBrokenRoute, warningPresentation }) {
   const [warningsOpen, setWarningsOpen] = useState(false);
+  const warningPulseOpacity = useRef(new Animated.Value(1)).current;
   const hasWarnings = warningPresentation.count > 0;
+
+  useEffect(() => {
+    if (!hasBrokenRoute && !hasWarnings) return undefined;
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(warningPulseOpacity, {
+          toValue: 0.7,
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(warningPulseOpacity, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    animation.start();
+
+    return () => {
+      animation.stop();
+      warningPulseOpacity.setValue(1);
+    };
+  }, [hasBrokenRoute, hasWarnings, warningPulseOpacity]);
 
   return (
     <View pointerEvents="box-none" style={styles.legendContainer}>
@@ -644,26 +757,39 @@ function MapLegendOverlay({ hasBrokenRoute, warningPresentation }) {
         <LegendItem color="rgb(138, 147, 158)" label="כביש" />
       </View>
       {hasBrokenRoute ? (
-        <View style={[styles.issueChip, styles.issueChipRoute]}>
+        <Animated.View
+          style={[
+            styles.issueChip,
+            styles.issueChipRoute,
+            { opacity: warningPulseOpacity },
+          ]}
+        >
           <Text style={styles.issueChipText}>⚠️ מסלול שבור</Text>
-        </View>
+        </Animated.View>
       ) : null}
       {hasWarnings ? (
         <>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={warningPresentation.toggleLabel}
-            onPress={() => setWarningsOpen((current) => !current)}
-            style={({ pressed }) => [
+          <Animated.View
+            style={[
               styles.issueChip,
               styles.issueChipData,
-              pressed ? styles.issueChipPressed : null,
+              { opacity: warningPulseOpacity },
             ]}
           >
-            <Text style={styles.issueChipText}>
-              {warningPresentation.toggleLabel}
-            </Text>
-          </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={warningPresentation.toggleLabel}
+              onPress={() => setWarningsOpen((current) => !current)}
+              style={({ pressed }) => [
+                styles.issueChipPressable,
+                pressed ? styles.issueChipPressed : null,
+              ]}
+            >
+              <Text style={styles.issueChipText}>
+                {warningPresentation.toggleLabel}
+              </Text>
+            </Pressable>
+          </Animated.View>
           {warningsOpen ? (
             <View style={styles.warningDetails}>
               {warningPresentation.groups.map((warningGroup) => (
@@ -699,14 +825,46 @@ function LegendItem({ color, label }) {
   );
 }
 
+function RouteDirectionPulseLayer({ animator, routeGeometry }) {
+  const [routePulse, setRoutePulse] = useState(EMPTY_FEATURE_COLLECTION);
+
+  useEffect(() => {
+    if (!animator) return undefined;
+
+    const unsubscribe = animator.subscribe("chevron", (payload) => {
+      setRoutePulse(
+        payload
+          ? buildRouteDirectionPulseFeatureCollection(routeGeometry, payload.t)
+          : EMPTY_FEATURE_COLLECTION,
+      );
+    });
+
+    return () => {
+      unsubscribe();
+      setRoutePulse(EMPTY_FEATURE_COLLECTION);
+    };
+  }, [animator, routeGeometry]);
+
+  return (
+    <ShapeSource id="route-direction-pulse" lineMetrics shape={routePulse}>
+      <LineLayer
+        id="route-direction-pulse-casing"
+        style={ROUTE_DIRECTION_PULSE_CASING_LINE_STYLE}
+      />
+      <LineLayer
+        id="route-direction-pulse-core"
+        style={ROUTE_DIRECTION_PULSE_CORE_LINE_STYLE}
+      />
+    </ShapeSource>
+  );
+}
+
 function RoutePlannerChrome({
-  canFitRoute,
+  animator,
   canDownload,
   canRedo,
   canUndo,
   onClear,
-  onFitRoute,
-  onLocatePress,
   onOpenSummary,
   onRedo,
   onRemovePoint,
@@ -737,6 +895,16 @@ function RoutePlannerChrome({
     <>
       <View pointerEvents="box-none" style={styles.topChrome}>
         <View style={styles.searchPanel}>
+          <ChromeButton
+            compact
+            disabled={searchBusy}
+            icon={searchBusy ? null : "search"}
+            label={searchBusy ? "..." : ""}
+            onPress={onSearchSubmit}
+            primary
+            accessibilityLabel="חיפוש"
+            buttonStyle={styles.searchButton}
+          />
           <TextInput
             accessibilityLabel="חיפוש מיקום"
             autoCapitalize="none"
@@ -749,15 +917,6 @@ function RoutePlannerChrome({
             style={styles.searchInput}
             textAlign="right"
             value={mapUi.searchQuery}
-          />
-          <ChromeButton
-            compact
-            disabled={searchBusy}
-            label={searchBusy ? "..." : "⌕"}
-            onPress={onSearchSubmit}
-            primary
-            symbol={!searchBusy}
-            accessibilityLabel="חיפוש"
           />
           {hasSearchResult ? (
             <ChromeButton compact label="הוסף" onPress={onSearchResultAdd} />
@@ -772,28 +931,28 @@ function RoutePlannerChrome({
               compact
               rail
               disabled={!canUndo}
-              label="↶"
+              icon="undo"
+              label=""
               onPress={onUndo}
               accessibilityLabel="ביטול"
-              symbol
             />
             <ChromeButton
               compact
               rail
               disabled={!canRedo}
-              label="↷"
+              icon="redo"
+              label=""
               onPress={onRedo}
               accessibilityLabel="חזרה"
-              symbol
             />
             <ChromeButton
               compact
               rail
               disabled={!hasPoints}
-              label="×"
+              icon="trash"
+              label=""
               onPress={onClear}
               accessibilityLabel="איפוס מסלול"
-              symbol
             />
             <ChromeButton
               compact
@@ -802,25 +961,6 @@ function RoutePlannerChrome({
               label="סיכום"
               onPress={onOpenSummary}
               accessibilityLabel="סיכום ושיתוף המסלול"
-            />
-          </View>
-          <View style={[styles.controlGroup, styles.nativeControlGroup]}>
-            <ChromeButton
-              compact
-              rail
-              disabled={!canFitRoute}
-              label="□"
-              onPress={onFitRoute}
-              accessibilityLabel="התאם מפה למסלול"
-              symbol
-            />
-            <ChromeButton
-              compact
-              rail
-              label={locationState.following ? "■" : "◎"}
-              onPress={onLocatePress}
-              accessibilityLabel="מיקום נוכחי"
-              symbol
             />
           </View>
         </View>
@@ -912,7 +1052,12 @@ function RoutePlannerChrome({
             </View>
           ) : null}
           {hasPoints && sheetExpanded ? (
-            <ElevationProfileChart geometry={routeState.geometry} onScrub={onScrub} />
+            <ElevationProfileChart
+              animator={animator}
+              distance={routeState.distance}
+              geometry={routeState.geometry}
+              onScrub={onScrub}
+            />
           ) : null}
         </View>
       </View>
@@ -1037,8 +1182,10 @@ function SummarySection({ children, title }) {
 
 function ChromeButton({
   accessibilityLabel,
+  buttonStyle,
   compact = false,
   disabled = false,
+  icon,
   label,
   onPress,
   primary = false,
@@ -1056,22 +1203,34 @@ function ChromeButton({
         compact ? styles.chromeButtonCompact : null,
         rail ? styles.chromeButtonRail : null,
         primary ? styles.chromeButtonPrimary : null,
+        buttonStyle,
         pressed && !disabled ? styles.chromeButtonPressed : null,
         disabled ? styles.chromeButtonDisabled : null,
       ]}
     >
-      <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        style={[
-          styles.chromeButtonText,
-          primary ? styles.chromeButtonTextPrimary : null,
-          symbol ? styles.chromeButtonTextSymbol : null,
-          disabled ? styles.chromeButtonTextDisabled : null,
-        ]}
-      >
-        {label}
-      </Text>
+      {icon ? (
+        <ChromeIcon
+          name={icon}
+          color={
+            disabled ? "#777777" : primary ? "#ffffff" : "#333333"
+          }
+          size={rail ? 19 : 16}
+        />
+      ) : null}
+      {label ? (
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={[
+            styles.chromeButtonText,
+            primary ? styles.chromeButtonTextPrimary : null,
+            symbol ? styles.chromeButtonTextSymbol : null,
+            disabled ? styles.chromeButtonTextDisabled : null,
+          ]}
+        >
+          {label}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -1098,6 +1257,79 @@ function PointChip({ label, onPress, selected }) {
       </Text>
     </Pressable>
   );
+}
+
+function ChromeIcon({ color, name, size }) {
+  const common = { fill: "none", stroke: color, strokeWidth: 32 };
+
+  if (name === "search") {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 512 512">
+        <Path
+          d="M221.09 64a157.09 157.09 0 10157.09 157.09A157.1 157.1 0 00221.09 64z"
+          {...common}
+          strokeMiterlimit={10}
+        />
+        <Path
+          d="M338.29 338.29L448 448"
+          {...common}
+          strokeLinecap="round"
+          strokeMiterlimit={10}
+        />
+      </Svg>
+    );
+  }
+
+  if (name === "undo") {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 512 512">
+        <Path
+          d="M240 424v-96c116.4 0 159.39 33.76 208 96 0-119.23-39.57-240-208-240V88L64 256z"
+          {...common}
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+
+  if (name === "redo") {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 512 512">
+        <Path
+          d="M448 256L272 88v96C103.57 184 64 304.77 64 424c48.61-62.24 91.6-96 208-96v96z"
+          {...common}
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+
+  if (name === "trash") {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 512 512">
+        <Path
+          d="M112 112l20 320c.95 18.49 14.4 32 32 32h184c17.67 0 30.87-13.51 32-32l20-320"
+          {...common}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M80 112h352"
+          {...common}
+          strokeLinecap="round"
+          strokeMiterlimit={10}
+        />
+        <Path
+          d="M192 112V72h0a23.93 23.93 0 0124-24h80a23.93 23.93 0 0124 24h0v40M256 176v224M184 176l8 224M328 176l-8 224"
+          {...common}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+
+  return null;
 }
 
 function locationStatusText(locationState) {
@@ -1228,6 +1460,26 @@ function routePointIndexFromPressEvent(event) {
   return Number.isInteger(index) ? index : null;
 }
 
+function dataMarkerFromPressEvent(event) {
+  const feature = event?.features?.[0] || event?.nativeEvent?.features?.[0];
+  const properties = feature?.properties;
+  const coordinates = feature?.geometry?.coordinates;
+  if (!properties || !Array.isArray(coordinates) || coordinates.length < 2) {
+    return null;
+  }
+  const lng = Number(coordinates[0]);
+  const lat = Number(coordinates[1]);
+  return {
+    id: properties.dataPointId,
+    type: properties.type,
+    information: properties.information,
+    segmentName: properties.segmentName,
+    emoji: properties.emoji,
+    lng: Number.isFinite(lng) ? lng : null,
+    lat: Number.isFinite(lat) ? lat : null,
+  };
+}
+
 function boundsFromMapState(mapState) {
   const ne = mapState?.properties?.bounds?.ne;
   const sw = mapState?.properties?.bounds?.sw;
@@ -1277,40 +1529,57 @@ const styles = StyleSheet.create({
   hint: { fontSize: 15, textAlign: "center", color: "#333" },
   topChrome: {
     position: "absolute",
-    top: 12,
-    left: 12,
-    right: 12,
-    gap: 8,
+    top: 15,
+    left: 15,
+    right: 15,
+    gap: 4,
   },
   searchPanel: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "stretch",
-    gap: 6,
+    alignSelf: "flex-end",
+    width: 200,
   },
   searchInput: {
     flex: 1,
-    minHeight: 40,
-    borderRadius: 4,
+    minWidth: 0,
+    minHeight: 36,
+    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
     paddingHorizontal: 12,
     color: "#172026",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     borderColor: "#e0e0e0",
     borderWidth: 2,
+    borderRightWidth: 0,
     fontSize: 14,
     writingDirection: "rtl",
+  },
+  searchButton: {
+    minWidth: 40,
+    width: 40,
+    minHeight: 36,
+    height: 36,
+    paddingHorizontal: 0,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+    borderColor: "#4682B4",
+    borderWidth: 2,
+    borderLeftWidth: 0,
   },
   controlBar: {
     alignSelf: "flex-end",
     flexDirection: "column",
     alignItems: "flex-end",
-    gap: 10,
+    gap: 4,
   },
   controlGroup: {
     alignItems: "flex-end",
-    gap: 6,
-  },
-  nativeControlGroup: {
-    paddingTop: 2,
+    gap: 4,
   },
   searchError: {
     alignSelf: "flex-end",
@@ -1327,12 +1596,13 @@ const styles = StyleSheet.create({
   },
   legendContainer: {
     position: "absolute",
-    top: 66,
-    left: 12,
+    top: 15,
+    left: 15,
+    width: 104,
     alignItems: "flex-start",
-    gap: 5,
   },
   legendBox: {
+    width: "100%",
     minWidth: 104,
     padding: 6,
     borderRadius: 4,
@@ -1370,38 +1640,54 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   issueChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    width: "100%",
+    minHeight: 32,
+    marginTop: 8,
+    marginBottom: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 4,
     overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 5,
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
   },
   issueChipPressed: {
     opacity: 0.82,
+  },
+  issueChipPressable: {
+    width: "100%",
+    minHeight: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   issueChipText: {
     color: "#ffffff",
     fontSize: 12,
     fontWeight: "800",
-    textAlign: "right",
+    textAlign: "center",
     writingDirection: "rtl",
   },
   issueChipRoute: {
     backgroundColor: "#ff9800",
+    shadowColor: "#ff9800",
   },
   issueChipData: {
-    backgroundColor: "#2196f3",
+    backgroundColor: "#c35353",
+    shadowColor: "#f44336",
   },
   warningDetails: {
+    width: "100%",
+    marginTop: 3,
     gap: 4,
-    maxWidth: 150,
   },
   warningDetailItem: {
-    minHeight: 30,
-    paddingHorizontal: 8,
+    width: "100%",
+    minHeight: 32,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
     overflow: "hidden",
@@ -1409,22 +1695,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    shadowColor: "#000",
+    shadowColor: "#f44336",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 5,
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
   },
   warningDetailLabel: {
     flexShrink: 1,
+    flexGrow: 1,
     color: "#ffffff",
     fontSize: 11,
     fontWeight: "800",
-    textAlign: "right",
+    textAlign: "center",
     writingDirection: "rtl",
   },
   warningDetailIcons: {
     color: "#ffffff",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "800",
   },
   bottomSheetWrap: {
@@ -1718,10 +2005,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
   },
   chromeButtonRail: {
-    width: 56,
-    minWidth: 56,
-    height: 46,
-    minHeight: 46,
+    width: 50,
+    minWidth: 50,
+    height: 36,
+    minHeight: 36,
     paddingHorizontal: 2,
   },
   chromeButtonPrimary: {

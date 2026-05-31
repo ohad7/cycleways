@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { GRADE_CLASSES, GRADE_COLORS, GRADE_LABELS_HE } from "@cycleways/core/utils/grade.js";
-import { buildElevationProfile, findClosestElevationPoint } from "@cycleways/core/ui/elevationProfile.js";
+import {
+  buildElevationHoverPayload,
+  buildElevationProfile,
+  findClosestElevationPoint,
+  formatLegacyDistance,
+} from "@cycleways/core/ui/elevationProfile.js";
 
 export default function ElevationProfile({ animator, distance, geometry, onElevationHover }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
@@ -41,15 +46,7 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
     const closestPoint = findClosestElevationPoint(profile.elevationData, xPercent);
     if (!closestPoint) return;
 
-    const payload = {
-      coord: closestPoint.coord,
-      bearing: closestPoint.bearing,
-      distance: closestPoint.distance,
-      t: closestPoint.progress,
-      elevation: closestPoint.elevation,
-      grade: closestPoint.grade,
-      gradeClass: closestPoint.gradeClass,
-    };
+    const payload = buildElevationHoverPayload(closestPoint);
     if (animatorMarkerEnabledRef.current) {
       animatorMarkerEnabledRef.current = false;
       const line = markerLineRef.current;
@@ -153,8 +150,4 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
     </div>
   );
 }
-
-export function formatLegacyDistance(distanceMeters) {
-  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return "0 ק\"מ";
-  return `${(distanceMeters / 1000).toFixed(1)} ק"מ`;
-}
+export { formatLegacyDistance };

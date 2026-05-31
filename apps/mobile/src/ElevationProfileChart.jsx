@@ -1,9 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, StyleSheet, Text, View } from "react-native";
 import Svg, { Line, Path } from "react-native-svg";
 import {
+  buildElevationHoverPayload,
   buildElevationProfile,
   findClosestElevationPoint,
+  formatLegacyDistance,
 } from "@cycleways/core/ui/elevationProfile.js";
 import {
   GRADE_CLASSES,
@@ -11,10 +13,39 @@ import {
   GRADE_LABELS_HE,
 } from "@cycleways/core/utils/grade.js";
 
-export default function ElevationProfileChart({ geometry, onScrub }) {
+export default function ElevationProfileChart({
+  animator,
+  distance,
+  geometry,
+  onScrub,
+}) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
-  const [hover, setHover] = useState(null);
+  const animatorMarkerEnabledRef = useRef(true);
   const widthRef = useRef(0);
+  const [hoverInfo, setHoverInfo] = useState(null);
+  const [animatorMarkerX, setAnimatorMarkerX] = useState(null);
+
+  useEffect(() => {
+    if (!animator) return undefined;
+
+    const unsubscribe = animator.subscribe("elevation", (payload) => {
+      if (!animatorMarkerEnabledRef.current) return;
+      if (!payload) {
+        setAnimatorMarkerX(null);
+        return;
+      }
+      setAnimatorMarkerX(Math.max(0, Math.min(100, payload.t * 100)));
+    });
+
+    return unsubscribe;
+  }, [animator]);
+
+  useEffect(() => {
+    animatorMarkerEnabledRef.current = true;
+    setHoverInfo(null);
+    setAnimatorMarkerX(null);
+    onScrub?.(null);
+  }, [geometry, onScrub]);
 
   const panResponder = useMemo(() => {
     function update(evt) {
@@ -25,45 +56,42 @@ export default function ElevationProfileChart({ geometry, onScrub }) {
         Math.min(100, (evt.nativeEvent.locationX / width) * 100),
       );
       const point = findClosestElevationPoint(profile.elevationData, xPercent);
-      if (!point) return;
-      setHover(point);
-      onScrub?.(point);
+      const payload = buildElevationHoverPayload(point);
+      if (!payload) return;
+
+      if (animatorMarkerEnabledRef.current) {
+        animatorMarkerEnabledRef.current = false;
+        setAnimatorMarkerX(null);
+      }
+      setHoverInfo(payload);
+      onScrub?.(payload);
     }
-    // On touch, keep the last scrubbed marker visible after the finger lifts
-    // (so the user can actually look at where it sits on the map). It is
-    // cleared when the route changes (MapScreen effect) or the chart unmounts.
+
+    function clear() {
+      setHoverInfo(null);
+      onScrub?.(null);
+    }
+
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: update,
       onPanResponderMove: update,
+      onPanResponderRelease: clear,
+      onPanResponderTerminate: clear,
     });
   }, [profile, onScrub]);
 
   if (!profile) return null;
 
+  const markerX = hoverInfo ? hoverInfo.t * 100 : animatorMarkerX;
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>גרף גובה</Text>
-      {hover ? (
-        <View style={styles.tooltip}>
-          <Text style={styles.tooltipText}>
-            📍 מרחק: {(hover.distance / 1000).toFixed(1)} ק"מ • גובה:{" "}
-            {Math.round(hover.elevation)} מ׳
-          </Text>
-          {hover.gradeClass && Number.isFinite(hover.grade) ? (
-            <Text
-              style={[styles.gradeChip, { color: GRADE_COLORS[hover.gradeClass] }]}
-            >
-              {GRADE_LABELS_HE[hover.gradeClass]} · {hover.grade.toFixed(1)}%
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
       <View
         style={styles.chart}
-        onLayout={(e) => {
-          widthRef.current = e.nativeEvent.layout.width;
+        onLayout={(event) => {
+          widthRef.current = event.nativeEvent.layout.width;
         }}
         {...panResponder.panHandlers}
       >
@@ -88,64 +116,151 @@ export default function ElevationProfileChart({ geometry, onScrub }) {
             strokeOpacity={0.5}
             strokeWidth={0.4}
           />
-          {hover ? (
+          {Number.isFinite(markerX) ? (
             <Line
-              x1={hover.distancePercent}
-              x2={hover.distancePercent}
+              x1={markerX}
+              x2={markerX}
               y1={0}
               y2={100}
               stroke="#74b8c8"
               strokeOpacity={0.72}
               strokeWidth={0.45}
+              strokeLinecap="round"
             />
           ) : null}
         </Svg>
-      </View>
-      <View style={styles.legend}>
-        {GRADE_CLASSES.map((cls) => (
-          <View key={cls} style={styles.legendItem}>
-            <View
-              style={[styles.legendSwatch, { backgroundColor: GRADE_COLORS[cls] }]}
-            />
-            <Text style={styles.legendLabel}>{GRADE_LABELS_HE[cls]}</Text>
+        {hoverInfo ? (
+          <View pointerEvents="none" style={styles.hoverInfo}>
+            <Text numberOfLines={1} style={styles.hoverInfoText}>
+              📍 מרחק: {(hoverInfo.distance / 1000).toFixed(1)} km • גובה:{" "}
+              {Math.round(hoverInfo.elevation)} m
+            </Text>
+            {hoverInfo.gradeClass && Number.isFinite(hoverInfo.grade) ? (
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.gradeChip,
+                  {
+                    backgroundColor: `${GRADE_COLORS[hoverInfo.gradeClass]}2e`,
+                    borderColor: `${GRADE_COLORS[hoverInfo.gradeClass]}66`,
+                    color: GRADE_COLORS[hoverInfo.gradeClass],
+                  },
+                ]}
+              >
+                {GRADE_LABELS_HE[hoverInfo.gradeClass]} ·{" "}
+                {hoverInfo.grade.toFixed(1)}%
+              </Text>
+            ) : null}
           </View>
-        ))}
+        ) : null}
+      </View>
+      <View style={styles.footer}>
+        <Text style={styles.distanceLabel}>{formatLegacyDistance(distance)}</Text>
+        <View style={styles.legend}>
+          {GRADE_CLASSES.map((cls) => (
+            <View key={cls} style={styles.legendItem}>
+              <View
+                style={[
+                  styles.legendSwatch,
+                  { backgroundColor: GRADE_COLORS[cls] },
+                ]}
+              />
+              <Text style={styles.legendLabel}>{GRADE_LABELS_HE[cls]}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.distanceLabel}>0 ק"מ</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { marginTop: 10 },
-  title: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#1f2a33",
-    textAlign: "right",
-    marginBottom: 6,
+  container: {
+    marginTop: 4,
+    padding: 4,
+    backgroundColor: "#f7f6f2",
+    borderColor: "#d8d4cc",
+    borderRadius: 4,
+    borderWidth: 1,
   },
-  tooltip: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  tooltipText: { fontSize: 12, color: "#1f2a33" },
-  gradeChip: { fontSize: 12, fontWeight: "600" },
   chart: {
-    height: 120,
+    position: "relative",
+    height: 100,
     width: "100%",
-    backgroundColor: "#f4f6f8",
-    borderRadius: 8,
+    marginBottom: 2,
+    backgroundColor: "#ffffff",
+    borderRadius: 3,
     overflow: "hidden",
   },
+  hoverInfo: {
+    position: "absolute",
+    top: 4,
+    left: 8,
+    right: 8,
+    minHeight: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  hoverInfoText: {
+    flexShrink: 1,
+    color: "#1f2933",
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  gradeChip: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 15,
+    overflow: "hidden",
+  },
+  footer: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 4,
+  },
+  distanceLabel: {
+    flexShrink: 0,
+    color: "#666666",
+    fontSize: 11,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
   legend: {
+    flex: 1,
     flexDirection: "row-reverse",
     flexWrap: "wrap",
+    justifyContent: "center",
     gap: 10,
-    marginTop: 6,
+    rowGap: 4,
   },
-  legendItem: { flexDirection: "row-reverse", alignItems: "center", gap: 4 },
-  legendSwatch: { width: 12, height: 12, borderRadius: 3 },
-  legendLabel: { fontSize: 11, color: "#42525d" },
+  legendItem: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendSwatch: {
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+  },
+  legendLabel: {
+    color: "#666666",
+    fontSize: 11,
+    lineHeight: 12,
+  },
 });

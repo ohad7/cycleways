@@ -21,6 +21,13 @@ const DATA_MARKER_ICONS = {
   severe: "roadblock-11",
 };
 
+export function namespacedDataMarkerIconName(iconName, namespace) {
+  if (!namespace || typeof iconName !== "string" || iconName.length === 0) {
+    return iconName;
+  }
+  return `${namespace}-${iconName}`;
+}
+
 export function dataMarkerFeaturesFromSegments(segmentsData) {
   const features = [];
 
@@ -55,4 +62,31 @@ export function dataMarkerFeaturesFromSegments(segmentsData) {
   });
 
   return features;
+}
+
+export function dataMarkerFeatureCollection(
+  dataMarkerFeatures,
+  activeDataPointIds = [],
+  options = {},
+) {
+  const activeIds = new Set(activeDataPointIds);
+  const features = Array.isArray(dataMarkerFeatures)
+    ? dataMarkerFeatures
+    : [];
+  const iconNamespace = options?.iconNamespace;
+
+  return {
+    type: "FeatureCollection",
+    features: features.map((feature) => ({
+      ...feature,
+      properties: {
+        ...feature.properties,
+        icon: namespacedDataMarkerIconName(
+          feature.properties?.icon,
+          iconNamespace,
+        ),
+        active: activeIds.has(feature.properties?.dataPointId),
+      },
+    })),
+  };
 }

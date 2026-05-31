@@ -176,3 +176,21 @@ export function findClosestElevationPoint(elevationData, xPercent) {
     return closest;
   }, null);
 }
+
+export function buildElevationHoverPayload(point) {
+  if (!point) return null;
+  return {
+    coord: point.coord,
+    bearing: point.bearing,
+    distance: point.distance,
+    t: point.progress,
+    elevation: point.elevation,
+    grade: point.grade,
+    gradeClass: point.gradeClass,
+  };
+}
+
+export function formatLegacyDistance(distanceMeters) {
+  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return "0 ק\"מ";
+  return `${(distanceMeters / 1000).toFixed(1)} ק"מ`;
+}

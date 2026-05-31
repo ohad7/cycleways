@@ -35,9 +35,10 @@ import {
   createClickStamp,
   isDuplicateRouteClick,
 } from "./mapInteractions.js";
-
-const MAP_CENTER = [35.617497, 33.183536];
-const MAP_ZOOM = 11.5;
+import {
+  MAP_INITIAL_CENTER,
+  MAP_INITIAL_ZOOM,
+} from "@cycleways/core/map/mapViewport.js";
 
 function MapSurface({
   activeDataPointIds = [],
@@ -159,8 +160,8 @@ function MapSurface({
       const map = new mapboxgl.Map({
         container: containerRef.current,
         style: "mapbox://styles/mapbox/outdoors-v12",
-        center: MAP_CENTER,
-        zoom: MAP_ZOOM,
+        center: MAP_INITIAL_CENTER,
+        zoom: MAP_INITIAL_ZOOM,
       });
       mapRef.current = map;
 

@@ -1,12 +1,17 @@
 // End-user map layers: route network, route geometry, route points + drag
 // preview, direction pulse, data markers, and the featured-route video cursor.
 // These are the layers a future React Native MapSurface will re-implement.
-import { getDistance } from "@cycleways/core/utils/distance.js";
 // dataMarkerFeaturesFromSegments now lives in the platform-agnostic data layer;
 // re-exported here for back-compat (FeaturedRouteMap still imports it via the
 // mapLayers barrel).
-import { dataMarkerFeaturesFromSegments } from "@cycleways/core/data/dataMarkers.js";
-export { dataMarkerFeaturesFromSegments };
+import {
+  dataMarkerFeatureCollection,
+  dataMarkerFeaturesFromSegments,
+} from "@cycleways/core/data/dataMarkers.js";
+export {
+  dataMarkerFeatureCollection,
+  dataMarkerFeaturesFromSegments,
+};
 // Network appearance logic now lives in the platform-agnostic core (shared with
 // the RN map); re-exported here for back-compat via the mapLayers barrel.
 import {
@@ -14,6 +19,8 @@ import {
   prepareRouteNetworkFeatures,
 } from "@cycleways/core/domain/routeNetwork.js";
 export { getRouteFeatureColor, prepareRouteNetworkFeatures };
+import { buildRouteDirectionPulseFeatureCollection } from "@cycleways/core/map/routeDirectionPulse.js";
+export { buildRouteDirectionPulseFeatureCollection };
 
 import {
   ROUTE_NETWORK_SOURCE_ID,
@@ -560,123 +567,6 @@ export function clearRouteDirectionPulseLayer(map) {
   }
 }
 
-export function buildRouteDirectionPulseFeatureCollection(routeGeometry, progress) {
-  const empty = { type: "FeatureCollection", features: [] };
-  if (!Number.isFinite(progress)) return empty;
-
-  const points = normalizeRouteGeometry(routeGeometry);
-  if (points.length < 2) return empty;
-
-  const arc = precomputeRoutePulseArc(points);
-  if (!(arc.totalDistMeters > 0)) return empty;
-
-  const pulseMeters = Math.min(
-    Math.max(arc.totalDistMeters * 0.045, 80),
-    420,
-  );
-  const headDist = Math.min(
-    arc.totalDistMeters,
-    Math.max(0, progress) * arc.totalDistMeters,
-  );
-  const visibleHeadDist = Math.min(
-    arc.totalDistMeters,
-    Math.max(headDist, Math.min(pulseMeters * 0.35, arc.totalDistMeters)),
-  );
-  const tailDist = Math.max(0, visibleHeadDist - pulseMeters);
-  const coordinates = sliceRoutePulseCoordinates(
-    points,
-    arc.cumDist,
-    tailDist,
-    visibleHeadDist,
-  );
-
-  return coordinates.length >= 2
-    ? {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates,
-            },
-            properties: {},
-          },
-        ],
-      }
-    : empty;
-}
-
-function normalizeRouteGeometry(routeGeometry) {
-  return Array.isArray(routeGeometry)
-    ? routeGeometry
-        .map((point) => ({
-          lng: Number(point?.lng),
-          lat: Number(point?.lat),
-        }))
-        .filter(
-          (point) => Number.isFinite(point.lng) && Number.isFinite(point.lat),
-        )
-    : [];
-}
-
-function precomputeRoutePulseArc(points) {
-  const cumDist = new Float64Array(points.length);
-  let totalDistMeters = 0;
-
-  for (let i = 1; i < points.length; i++) {
-    const distance = getDistance(points[i - 1], points[i]);
-    totalDistMeters += Number.isFinite(distance) && distance > 0 ? distance : 0;
-    cumDist[i] = totalDistMeters;
-  }
-
-  return { cumDist, totalDistMeters };
-}
-
-function sliceRoutePulseCoordinates(points, cumDist, startDist, endDist) {
-  const coordinates = [routePulsePointAtDistance(points, cumDist, startDist)];
-
-  for (let i = 1; i < points.length - 1; i++) {
-    if (cumDist[i] > startDist && cumDist[i] < endDist) {
-      coordinates.push([points[i].lng, points[i].lat]);
-    }
-  }
-
-  coordinates.push(routePulsePointAtDistance(points, cumDist, endDist));
-  return coordinates.filter((coordinate, index, arr) => {
-    if (index === 0) return true;
-    const previous = arr[index - 1];
-    return coordinate[0] !== previous[0] || coordinate[1] !== previous[1];
-  });
-}
-
-function routePulsePointAtDistance(points, cumDist, distanceMeters) {
-  const target = Math.max(
-    0,
-    Math.min(distanceMeters, cumDist[cumDist.length - 1]),
-  );
-  let segmentIndex = 0;
-
-  while (
-    segmentIndex < cumDist.length - 2 &&
-    cumDist[segmentIndex + 1] < target
-  ) {
-    segmentIndex++;
-  }
-
-  const a = points[segmentIndex];
-  const b = points[segmentIndex + 1];
-  const segmentStart = cumDist[segmentIndex];
-  const segmentLength = cumDist[segmentIndex + 1] - segmentStart;
-  const fraction =
-    segmentLength > 0 ? (target - segmentStart) / segmentLength : 0;
-
-  return [
-    a.lng + (b.lng - a.lng) * fraction,
-    a.lat + (b.lat - a.lat) * fraction,
-  ];
-}
-
 export function syncRouteDirectionLitPointLayer(map, payload) {
   const data = {
     type: "FeatureCollection",
@@ -739,17 +629,10 @@ export function syncDataMarkerLayers(
   dataMarkerFeatures,
   activeDataPointIds = [],
 ) {
-  const activeIds = new Set(activeDataPointIds);
-  const data = {
-    type: "FeatureCollection",
-    features: dataMarkerFeatures.map((feature) => ({
-      ...feature,
-      properties: {
-        ...feature.properties,
-        active: activeIds.has(feature.properties?.dataPointId),
-      },
-    })),
-  };
+  const data = dataMarkerFeatureCollection(
+    dataMarkerFeatures,
+    activeDataPointIds,
+  );
 
   if (map.getSource(DATA_MARKERS_SOURCE_ID)) {
     map.getSource(DATA_MARKERS_SOURCE_ID).setData(data);
