@@ -211,3 +211,26 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
   `buildRoutePointFeatureCollection`, `routePointIndexFromPressEvent` in
   `MapScreen.jsx` are now orphaned (the old CircleLayer route-point path was
   removed) — safe to delete.
+
+---
+
+## Final approach + verification (2026-05-31) — DONE
+
+The `PointAnnotation` drag (Task 1) required an iOS long-press to pick up the pin
+(Maestro couldn't drive it; poor UX). Pivoted to an immediate **PanResponder**
+drag and added the **web-style live preview**:
+
+- Route points render via `CircleLayer` again. A `PanResponder` over the map
+  hit-tests a touch against cached point screen positions
+  (`getPointInView`, refreshed on map-idle + route change); a touch on a point
+  drags it (`getCoordinateFromView` → `handleRoutePointDrag*`), a tap selects;
+  `scrollEnabled` is disabled during the gesture. Commit `741bd03`.
+- Shared pure preview builder `packages/core/src/map/routeDragPreview.js`; native
+  renders white casing + accent line to neighbors + halo from
+  `routePointDragPreview` (commit `8b1e40e`). Web keeps its own identical copy.
+- **Verified (plain Maestro swipe, no long-press):** drag 7.6km/9seg →
+  8.2km/14seg; `ביטול` undo → 7.6km/9seg. `npm test` green; iOS export clean.
+  Screenshots `/tmp/wd-route-built.png`, `/tmp/wd-after-drag2.png`,
+  `/tmp/wd-undo.png`.
+- Remaining trivial dead code: `routePointIndexFromPressEvent` in `MapScreen.jsx`
+  (orphaned, safe to delete).

@@ -377,21 +377,25 @@ current parity pass:
   `נקודות מסלול`/`סיכום` visible, `/tmp/maestro-route-restore.png`).
   **Caveat:** the `cycleways://` scheme needs a native rebuild to register; the
   dev-client scheme `app.cycleways.mobile://` works now and the smoke uses it.
-- **Phase 2.11 waypoint drag — CODE-COMPLETE, interactive drag UNVERIFIED**
-  (`plans/rn-mobile-waypoint-drag/`): route points now render as draggable
-  RNMapbox `PointAnnotation`s wired to the shared
-  `handleRoutePointDragStart/Drag/End` (commit `a67aafa`, `MapScreen.jsx` only;
-  no web/shared changes). Tap-to-select preserved; undo works via the
-  controller snapshot. Bundle exports clean and the app loads with the new
-  waypoint dots (`/tmp/wd-route-built.png`). **Open gap:** the drag gesture is
-  NOT yet confirmed — a Maestro `swipe` on a waypoint pans the map instead,
-  because RNMapbox iOS draggable annotations need a **long-press to pick up the
-  pin** that Maestro's synthetic swipe doesn't send. Needs a **manual finger
-  long-press-drag** on the simulator to confirm the route reshapes + `ביטול`
-  restores; if the pin won't drag at all, fall back to a custom `PanResponder`
-  drag (design Approach B). Trivial dead code left behind: `ROUTE_POINT_STYLE`,
-  `buildRoutePointFeatureCollection`, `routePointIndexFromPressEvent` in
-  `MapScreen.jsx` are now orphaned and safe to delete.
+- **Phase 2.11 waypoint drag — DONE + VERIFIED**
+  (`plans/rn-mobile-waypoint-drag/`): drag a route waypoint on the iPhone map to
+  reshape the route, with the web-style preview. Final design = immediate
+  `PanResponder` drag (the initial `PointAnnotation` approach needed an iOS
+  long-press Maestro couldn't drive). `MapScreen.jsx` runs a PanResponder over
+  the map: a touch on a committed route point (hit-tested against cached point
+  screen positions, refreshed on map-idle/route-change) drags it — converting
+  screen→coord via `mapViewRef.getCoordinateFromView` and feeding the shared
+  `handleRoutePointDragStart/Drag/End`; a tap selects; map scroll is disabled
+  during the gesture. The **web-style drag preview** (white casing + accent line
+  to the neighbors + halo) renders live from the controller's
+  `routePointDragPreview` via the shared pure builder
+  `packages/core/src/map/routeDragPreview.js` (commits `8b1e40e`, `741bd03`).
+  No `useCyclewaysApp`/web changes (web keeps its own copy of the preview
+  builder — identical logic). **Verified on iOS sim via plain Maestro swipe:**
+  drag a waypoint 7.6km/9seg → 8.2km/14seg, `ביטול` undo restores 7.6km/9seg
+  (`/tmp/wd-route-built.png`, `/tmp/wd-after-drag2.png`, `/tmp/wd-undo.png`);
+  `npm test` green; iOS export clean. Trivial dead code still present in
+  `MapScreen.jsx`: `routePointIndexFromPressEvent` is orphaned (safe to delete).
 - **Then:** route-following/navigation mode on top of the current-location puck,
   offline Mapbox tile-pack polish, release hardening, and optional splitting of
   `useCyclewaysApp` into focused hooks.
