@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
   Modal,
+  PanResponder,
   Pressable,
   ScrollView,
   Share,
@@ -15,7 +16,6 @@ import Mapbox, {
   CircleLayer,
   LineLayer,
   MapView,
-  PointAnnotation,
   ShapeSource,
   UserLocation,
   UserLocationRenderMode,
@@ -196,6 +196,151 @@ export default function MapScreen() {
     [routePointDragPreview],
   );
 
+  const routePoints = useMemo(
+    () =>
+      buildRoutePointFeatureCollection(
+        displayedRoutePoints,
+        mapUi.selectedRoutePointIndex,
+      ),
+    [displayedRoutePoints, mapUi.selectedRoutePointIndex],
+  );
+
+  // --- Waypoint drag (immediate, no long-press) ---------------------------
+  // RNMapbox draggable PointAnnotations need an iOS long-press; instead we run
+  // a PanResponder over the map: a touch that lands on a committed route point
+  // is dragged (converted screen->coord via the MapView), feeding the shared
+  // handleRoutePointDrag* handlers; a touch that just taps selects the point.
+  const mapViewRef = useRef(null);
+  const pointScreenPositionsRef = useRef([]);
+  const dragRef = useRef({ index: null, active: false, startX: 0, startY: 0 });
+  const [pointGestureActive, setPointGestureActive] = useState(false);
+
+  const refreshPointScreenPositions = useCallback(async () => {
+    const map = mapViewRef.current;
+    if (!map) {
+      pointScreenPositionsRef.current = [];
+      return;
+    }
+    const positions = [];
+    for (let index = 0; index < displayedRoutePoints.length; index++) {
+      const point = displayedRoutePoints[index];
+      if (point?.pending) continue;
+      const lng = Number(point?.lng);
+      const lat = Number(point?.lat);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+      try {
+        const screen = await map.getPointInView([lng, lat]);
+        if (Array.isArray(screen) && screen.length >= 2) {
+          positions.push({ index, x: screen[0], y: screen[1] });
+        }
+      } catch {
+        // ignore points the map can't project right now
+      }
+    }
+    pointScreenPositionsRef.current = positions;
+  }, [displayedRoutePoints]);
+
+  useEffect(() => {
+    refreshPointScreenPositions();
+  }, [refreshPointScreenPositions]);
+
+  const hitTestRoutePoint = useCallback((x, y) => {
+    const HIT_RADIUS = 28;
+    let best = null;
+    for (const pos of pointScreenPositionsRef.current) {
+      const distance = Math.hypot(pos.x - x, pos.y - y);
+      if (distance <= HIT_RADIUS && (!best || distance < best.distance)) {
+        best = { index: pos.index, distance };
+      }
+    }
+    return best ? best.index : null;
+  }, []);
+
+  const routePointPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: (evt) =>
+          hitTestRoutePoint(
+            evt.nativeEvent.locationX,
+            evt.nativeEvent.locationY,
+          ) !== null,
+        onMoveShouldSetPanResponder: (evt) =>
+          dragRef.current.index !== null ||
+          hitTestRoutePoint(
+            evt.nativeEvent.locationX,
+            evt.nativeEvent.locationY,
+          ) !== null,
+        onPanResponderGrant: (evt) => {
+          const { locationX, locationY } = evt.nativeEvent;
+          const index = hitTestRoutePoint(locationX, locationY);
+          dragRef.current = {
+            index,
+            active: false,
+            startX: locationX,
+            startY: locationY,
+          };
+          if (index !== null) {
+            routePointPressGuardRef.current = Date.now();
+            setPointGestureActive(true);
+          }
+        },
+        onPanResponderMove: (evt) => {
+          const drag = dragRef.current;
+          if (drag.index === null) return;
+          const { locationX, locationY } = evt.nativeEvent;
+          if (!drag.active) {
+            if (Math.hypot(locationX - drag.startX, locationY - drag.startY) < 6) {
+              return;
+            }
+            drag.active = true;
+            handleRoutePointDragStart(drag.index);
+          }
+          const map = mapViewRef.current;
+          if (!map) return;
+          map
+            .getCoordinateFromView([locationX, locationY])
+            .then((coord) => {
+              if (
+                dragRef.current.active &&
+                dragRef.current.index === drag.index &&
+                Array.isArray(coord) &&
+                coord.length >= 2
+              ) {
+                handleRoutePointDrag(drag.index, {
+                  lng: coord[0],
+                  lat: coord[1],
+                });
+              }
+            })
+            .catch(() => {});
+        },
+        onPanResponderRelease: () => {
+          const drag = dragRef.current;
+          if (drag.index !== null) {
+            if (drag.active) {
+              handleRoutePointDragEnd();
+            } else {
+              handleRoutePointSelect(drag.index);
+            }
+          }
+          dragRef.current = { index: null, active: false, startX: 0, startY: 0 };
+          setPointGestureActive(false);
+        },
+        onPanResponderTerminate: () => {
+          if (dragRef.current.active) handleRoutePointDragEnd();
+          dragRef.current = { index: null, active: false, startX: 0, startY: 0 };
+          setPointGestureActive(false);
+        },
+      }),
+    [
+      hitTestRoutePoint,
+      handleRoutePointDragStart,
+      handleRoutePointDrag,
+      handleRoutePointDragEnd,
+      handleRoutePointSelect,
+    ],
+  );
+
   const [scrubPoint, setScrubPoint] = useState(null);
 
   const scrubMarker = useMemo(() => {
@@ -308,11 +453,12 @@ export default function MapScreen() {
 
   const handleMapIdle = useCallback(
     (mapState) => {
+      refreshPointScreenPositions();
       const bounds = boundsFromMapState(mapState);
       if (!bounds) return;
       handleViewportIdle(bounds);
     },
-    [handleViewportIdle],
+    [handleViewportIdle, refreshPointScreenPositions],
   );
 
   const fitRoute = useCallback(() => {
@@ -377,10 +523,12 @@ export default function MapScreen() {
   }
 
   return (
-    <View style={styles.fill}>
+    <View style={styles.fill} {...routePointPanResponder.panHandlers}>
       <MapView
+        ref={mapViewRef}
         style={styles.fill}
         styleURL={Mapbox.StyleURL.Outdoors}
+        scrollEnabled={!pointGestureActive}
         onPress={handleMapPress}
         onMapIdle={handleMapIdle}
       >
@@ -436,52 +584,9 @@ export default function MapScreen() {
             style={DRAG_PREVIEW_HALO_STYLE}
           />
         </ShapeSource>
-        {displayedRoutePoints.map((point, index) => {
-          const lng = Number(point?.lng);
-          const lat = Number(point?.lat);
-          if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-          const lastIndex = displayedRoutePoints.length - 1;
-          const endpoint =
-            index === 0 ? "start" : index === lastIndex ? "end" : "middle";
-          const selected = index === mapUi.selectedRoutePointIndex;
-          const pending = Boolean(point.pending);
-          return (
-            <PointAnnotation
-              // key includes style-affecting state (not coordinate) so the
-              // annotation remounts on selection/role change — RNMapbox iOS
-              // does not reliably re-render PointAnnotation children otherwise.
-              key={`route-point-${index}-${endpoint}-${selected}-${pending}`}
-              id={`route-point-${index}`}
-              coordinate={[lng, lat]}
-              draggable={!pending}
-              onSelected={() => {
-                // Suppress the map-press add-point that may follow a point tap.
-                routePointPressGuardRef.current = Date.now();
-                handleRoutePointSelect(index);
-              }}
-              onDragStart={() => {
-                routePointPressGuardRef.current = Date.now();
-                handleRoutePointDragStart(index);
-              }}
-              onDrag={(e) => {
-                const coord = coordFromAnnotationEvent(e);
-                if (coord) handleRoutePointDrag(index, coord);
-              }}
-              onDragEnd={() => {
-                handleRoutePointDragEnd();
-              }}
-            >
-              <View
-                style={[
-                  styles.routePointDot,
-                  styles[`routePointDot_${endpoint}`],
-                  selected ? styles.routePointDotSelected : null,
-                  pending ? styles.routePointDotPending : null,
-                ]}
-              />
-            </PointAnnotation>
-          );
-        })}
+        <ShapeSource id="route-points" shape={routePoints}>
+          <CircleLayer id="route-points-circle" style={ROUTE_POINT_STYLE} />
+        </ShapeSource>
       </MapView>
       <MapLegendOverlay
         hasBrokenRoute={routePresentation.hasBrokenRoute}
@@ -1027,20 +1132,6 @@ function buildRouteGeometryFeatureCollection(routeGeometry) {
   };
 }
 
-// RNMapbox PointAnnotation drag events carry the new coordinate on the feature
-// geometry (shape differs slightly by version), so read defensively.
-function coordFromAnnotationEvent(event) {
-  const coords =
-    event?.geometry?.coordinates ||
-    event?.payload?.geometry?.coordinates ||
-    event?.nativeEvent?.payload?.geometry?.coordinates ||
-    null;
-  if (!Array.isArray(coords) || coords.length < 2) return null;
-  const [lng, lat] = coords;
-  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-  return { lng, lat };
-}
-
 function buildRoutePointFeatureCollection(points, selectedRoutePointIndex) {
   if (!Array.isArray(points) || points.length === 0) {
     return EMPTY_FEATURE_COLLECTION;
@@ -1365,24 +1456,6 @@ const styles = StyleSheet.create({
   routeSheetExpanded: {
     maxHeight: 560,
   },
-  routePointDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#ffffff",
-    backgroundColor: "#2b7bb9",
-  },
-  routePointDot_start: { backgroundColor: "#18a957" },
-  routePointDot_end: { backgroundColor: "#c84c45" },
-  routePointDot_middle: { backgroundColor: "#2b7bb9" },
-  routePointDotSelected: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderColor: "#0f2f4f",
-  },
-  routePointDotPending: { opacity: 0.45 },
   routeSheetHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
