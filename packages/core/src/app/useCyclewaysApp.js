@@ -164,11 +164,11 @@ export function useCyclewaysApp() {
   useEffect(() => {
     if (!routeState.error) return undefined;
 
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       dispatchRoute({ type: "route/clearError" });
     }, 3500);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => clearTimeout(timeoutId);
   }, [routeState.error]);
 
   useEffect(() => {
@@ -1035,6 +1035,13 @@ export function useCyclewaysApp() {
   }, [mapUi.selectedRoutePointIndex, routeState.points.length]);
 
   useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.addEventListener !== "function"
+    ) {
+      return undefined;
+    }
+
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         setMapUi((current) => ({

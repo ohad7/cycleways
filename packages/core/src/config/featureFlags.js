@@ -1,3 +1,5 @@
+import { getStoredItem } from "../platform/storage.js";
+
 const DEFAULT_FEATURE_FLAGS = {
   segmentQualityPublicDisplay: false,
   segmentQualityRouting: false,
@@ -5,11 +7,14 @@ const DEFAULT_FEATURE_FLAGS = {
 
 export function featureFlagValue(key) {
   const defaultValue = DEFAULT_FEATURE_FLAGS[key] ?? false;
-  const globalValue = window.CYCLEWAYS_FEATURE_FLAGS?.[key];
+  const globalValue =
+    typeof window !== "undefined"
+      ? window.CYCLEWAYS_FEATURE_FLAGS?.[key]
+      : undefined;
   if (typeof globalValue === "boolean") return globalValue;
 
   try {
-    const storedValue = window.localStorage.getItem(`cycleways.flags.${key}`);
+    const storedValue = getStoredItem(`cycleways.flags.${key}`);
     if (storedValue === "true") return true;
     if (storedValue === "false") return false;
   } catch {

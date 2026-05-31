@@ -5,6 +5,7 @@ import {
   createRouteManager,
   addPoint,
 } from "@cycleways/core/routing/routeActions.js";
+import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 const require = createRequire(import.meta.url);
 const RouteManager = require("../packages/core/route-manager.js");
@@ -103,5 +104,28 @@ for (const dp of fallbackSnapshot.activeDataPoints) {
     assert.equal(dp.id, `${fallbackSegmentName}-0`);
   }
 }
+
+const warningPresentation = getRouteWarningPresentation([
+  { segmentName: "מקטע בדיקה", type: "mud" },
+  { segmentName: "מקטע בדיקה", type: "gate" },
+  { segmentName: "עצירה", type: "cafe" },
+]);
+assert.equal(warningPresentation.count, 3);
+assert.equal(warningPresentation.toggleLabel, "⚠️ מידע חשוב (3)");
+assert.equal(warningPresentation.groups.length, 2);
+assert.equal(warningPresentation.groups[0].label, "אזהרות");
+assert.equal(warningPresentation.groups[0].backgroundColor, "#FF5722");
+assert.deepEqual(warningPresentation.groups[0].icons, ["⚠️", "🚧"]);
+assert.equal(warningPresentation.groups[1].label, "בית קפה");
+assert.equal(warningPresentation.groups[1].backgroundColor, "#b07a3f");
+assert.deepEqual(warningPresentation.groups[1].icons, ["☕"]);
+
+const selectedMarkerPresentation = getRouteWarningPresentation([], {
+  segmentName: "נקודה",
+  type: "slope",
+});
+assert.equal(selectedMarkerPresentation.count, 1);
+assert.equal(selectedMarkerPresentation.toggleLabel, "⚠️ מידע חשוב");
+assert.equal(selectedMarkerPresentation.groups[0].label, "שיפוע");
 
 console.log("POI types tests passed");

@@ -6,12 +6,8 @@ import PageShell from "./components/PageShell.jsx";
 import { getRouteMessage } from "./components/RoutePanel.jsx";
 import Tutorial from "./components/Tutorial.jsx";
 import WelcomeWizard from "./components/WelcomeWizard.jsx";
-import {
-  POI_COLORS as WARNING_COLORS,
-  POI_EMOJIS as WARNING_EMOJIS,
-  POI_LABELS as WARNING_TRANSLATIONS,
-  POI_WARNING_PRIORITY as WARNING_PRIORITY,
-} from "@cycleways/core/data/poiTypes.js";
+import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
+import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import "./react-app.css";
@@ -304,17 +300,11 @@ function ErrorState({ error }) {
 
 function MapLegend({ activeDataPoints, hasBrokenRoute, selectedDataMarker }) {
   const [warningsOpen, setWarningsOpen] = useState(false);
-  const warnings =
-    activeDataPoints.length > 0
-      ? activeDataPoints
-      : selectedDataMarker
-        ? [selectedDataMarker]
-        : [];
-  const warningsBySegment = useMemo(
-    () => groupWarningsBySegment(warnings),
-    [warnings],
+  const warningPresentation = useMemo(
+    () => getRouteWarningPresentation(activeDataPoints, selectedDataMarker),
+    [activeDataPoints, selectedDataMarker],
   );
-  const warningCountText = warnings.length > 1 ? ` (${warnings.length})` : "";
+  const warnings = warningPresentation.warnings;
 
   return (
     <div className="legend-container">
@@ -346,29 +336,32 @@ function MapLegend({ activeDataPoints, hasBrokenRoute, selectedDataMarker }) {
             type="button"
             onClick={() => setWarningsOpen((current) => !current)}
           >
-            ⚠️ מידע חשוב {warningCountText}
+            {warningPresentation.toggleLabel}
           </button>
           <div
             className="individual-warnings-container"
             id="individual-warnings-container"
             style={{ display: warningsOpen ? "block" : "none" }}
           >
-            {[...warningsBySegment.entries()].map(([segmentName, segmentWarnings]) => (
+            {warningPresentation.groups.map((warningGroup) => (
               <button
                 className="individual-warning-item react-individual-warning-item"
-                key={segmentName}
+                key={warningGroup.segmentName}
                 type="button"
                 style={{
-                  backgroundColor: getWarningBackgroundColor(segmentWarnings),
+                  backgroundColor: warningGroup.backgroundColor,
                 }}
               >
                 <span className="warning-text">
-                  {getWarningLabel(segmentWarnings)}
+                  {warningGroup.label}
                 </span>
                 <span className="warning-icons" aria-hidden="true">
-                  {getWarningTypes(segmentWarnings).map((type) => (
-                    <span className="warning-icon react-warning-icon" key={type}>
-                      {WARNING_EMOJIS[type] || "⚠️"}
+                  {warningGroup.icons.map((icon, index) => (
+                    <span
+                      className="warning-icon react-warning-icon"
+                      key={`${warningGroup.segmentName}-${warningGroup.types[index] || index}`}
+                    >
+                      {icon}
                     </span>
                   ))}
                 </span>
@@ -379,42 +372,6 @@ function MapLegend({ activeDataPoints, hasBrokenRoute, selectedDataMarker }) {
       )}
     </div>
   );
-}
-
-function groupWarningsBySegment(warnings) {
-  const grouped = new Map();
-  warnings.forEach((warning) => {
-    const segmentName = warning.segmentName || "מידע חשוב";
-    if (!grouped.has(segmentName)) {
-      grouped.set(segmentName, []);
-    }
-    grouped.get(segmentName).push(warning);
-  });
-  return grouped;
-}
-
-function getWarningTypes(warnings) {
-  return [...new Set(warnings.map((warning) => warning.type || "warning"))];
-}
-
-function getWarningLabel(warnings) {
-  const warningTypes = getWarningTypes(warnings);
-  if (warningTypes.length === 1) {
-    return WARNING_TRANSLATIONS[warningTypes[0]] || warningTypes[0];
-  }
-  return "אזהרות";
-}
-
-function getWarningBackgroundColor(warnings) {
-  const warningTypes = getWarningTypes(warnings);
-  if (warningTypes.length === 1) {
-    return WARNING_COLORS[warningTypes[0]] || "#f44336";
-  }
-
-  const highestPriority = WARNING_PRIORITY.find((type) =>
-    warningTypes.includes(type),
-  );
-  return WARNING_COLORS[highestPriority] || "#f44336";
 }
 
 function RouteDescription({

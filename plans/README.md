@@ -24,3 +24,9 @@ Current plans:
 - `rn-mobile-scaffold/` - design for Phase 2.1 of the RN slice: Expo app (apps/mobile) + Metro resolving @cycleways/core.
 - `rn-map-surface/` - design + plan for Phase 2.2 of the RN slice: native @rnmapbox/maps MapScreen rendering the cycleway network with shared core appearance logic.
 - `rn-asset-transport/` - design + plan for Phase 2.3a: injectable asset transport in @cycleways/core (web impl; RN/offline loader follows).
+- `rn-offline-assets/` - design + plan for Phase 2.3b: bundled mobile `public-data`, static Metro require maps, and native platform adapters.
+- `rn-controller-ui/` - design + plan for Phase 2.4: Expo iPhone UI rendered from the shared `useCyclewaysApp` controller with native route taps.
+- `rn-mobile-planning-controls/` - design + plan for Phase 2.5: native waypoint selection/removal, undo/redo, and route-fit controls.
+- `rn-mobile-search/` - design + plan for Phase 2.6: native location search, result marker, camera jump, and add-result-to-route.
+- `rn-mobile-location/` - design + plan for Phase 2.7: native current-location puck and locate/follow camera control.
+- `rn-mobile-web-parity/` - design + plan for Phase 2.8: realign the iPhone route-planning UI with the mobile web planner before adding navigation-mode complexity.

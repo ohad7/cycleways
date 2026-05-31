@@ -1,9 +1,13 @@
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView, StyleSheet } from "react-native";
+import { LogBox, SafeAreaView, StyleSheet } from "react-native";
 import MapScreen from "./src/MapScreen.jsx";
 
-// Phase 2.2: render the cycleway network on a native @rnmapbox map, colored by
-// the shared @cycleways/core appearance logic.
+LogBox.ignoreLogs([
+  "SafeAreaView has been deprecated",
+  "Invalid size is used for setting the map view",
+]);
+
+// Phase 2.4: render the native iPhone map from the shared app controller.
 export default function App() {
   return (
     <SafeAreaView style={styles.fill}>
