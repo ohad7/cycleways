@@ -30,3 +30,4 @@ Current plans:
 - `rn-mobile-search/` - design + plan for Phase 2.6: native location search, result marker, camera jump, and add-result-to-route.
 - `rn-mobile-location/` - design + plan for Phase 2.7: native current-location puck and locate/follow camera control.
 - `rn-mobile-web-parity/` - design + plan for Phase 2.8: realign the iPhone route-planning UI with the mobile web planner before adding navigation-mode complexity.
+- `rn-mobile-elevation-profile/` - design + plan for Phase 2.9: native elevation profile chart (shared core builder + grade utils, react-native-svg rendering, touch-scrub tooltip, synced map marker, expandable bottom sheet).
