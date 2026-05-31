@@ -21,6 +21,7 @@ import Mapbox, {
   UserTrackingMode,
 } from "@rnmapbox/maps";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
+import ElevationProfileChart from "./ElevationProfileChart.jsx";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
   ROUTE_SEARCH_PLACEHOLDER,
@@ -505,6 +506,7 @@ function RoutePlannerChrome({
   onSearchSubmit,
   onSelectPoint,
   onUndo,
+  onScrub,
   locationState,
   mapUi,
   presentation,
@@ -512,6 +514,7 @@ function RoutePlannerChrome({
   routePoints,
   selectedRoutePointIndex,
 }) {
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const hasPoints = routePoints.length > 0;
   const searchBusy = mapUi.searchStatus === "searching";
   const hasSearchResult = Boolean(pointFromSearchHighlight(mapUi.searchHighlight));
@@ -618,16 +621,28 @@ function RoutePlannerChrome({
         <View style={[styles.routeSheet, hasPoints ? null : styles.routeSheetEmpty]}>
           <View style={styles.routeSheetHeader}>
             <Text style={styles.routeSheetTitle}>מסלול</Text>
-            {presentation.canDownload ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="סיכום ושיתוף המסלול"
-                onPress={onOpenSummary}
-                style={styles.routeSheetBadge}
-              >
-                <Text style={styles.routeSheetBadgeText}>סיכום</Text>
-              </Pressable>
-            ) : null}
+            <View style={styles.routeSheetHeaderActions}>
+              {hasPoints ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={sheetExpanded ? "הסתר גרף גובה" : "הצג גרף גובה"}
+                  onPress={() => setSheetExpanded((v) => !v)}
+                  style={styles.routeSheetBadge}
+                >
+                  <Text style={styles.routeSheetBadgeText}>{sheetExpanded ? "▾ גובה" : "▴ גובה"}</Text>
+                </Pressable>
+              ) : null}
+              {presentation.canDownload ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="סיכום ושיתוף המסלול"
+                  onPress={onOpenSummary}
+                  style={styles.routeSheetBadge}
+                >
+                  <Text style={styles.routeSheetBadgeText}>סיכום</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
           <Text style={routeState.error ? styles.errorText : styles.routeMessage}>
             {routeMessage}
@@ -680,6 +695,9 @@ function RoutePlannerChrome({
                 </View>
               ))}
             </View>
+          ) : null}
+          {hasPoints && sheetExpanded ? (
+            <ElevationProfileChart geometry={routeState.geometry} onScrub={onScrub} />
           ) : null}
         </View>
       </View>
@@ -1224,6 +1242,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
+  routeSheetHeaderActions: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   routeSheetTitle: {
     color: "#172026",
     fontSize: 16,
