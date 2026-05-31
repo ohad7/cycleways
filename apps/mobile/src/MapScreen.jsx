@@ -15,6 +15,7 @@ import Mapbox, {
   CircleLayer,
   LineLayer,
   MapView,
+  PointAnnotation,
   ShapeSource,
   UserLocation,
   UserLocationRenderMode,
@@ -142,6 +143,9 @@ export default function MapScreen() {
     handleDownloadGpx,
     handleRoutePointRemove,
     handleRoutePointSelect,
+    handleRoutePointDragStart,
+    handleRoutePointDrag,
+    handleRoutePointDragEnd,
     handleViewportIdle,
   } = useCyclewaysApp();
 
@@ -156,15 +160,6 @@ export default function MapScreen() {
   const routeGeometry = useMemo(
     () => buildRouteGeometryFeatureCollection(routeState.geometry),
     [routeState.geometry],
-  );
-
-  const routePoints = useMemo(
-    () =>
-      buildRoutePointFeatureCollection(
-        displayedRoutePoints,
-        mapUi.selectedRoutePointIndex,
-      ),
-    [displayedRoutePoints, mapUi.selectedRoutePointIndex],
   );
 
   const searchHighlight = useMemo(
@@ -212,16 +207,6 @@ export default function MapScreen() {
       handleMapClick(point);
     },
     [handleMapClick, state.status],
-  );
-
-  const handleRoutePointPress = useCallback(
-    (event) => {
-      routePointPressGuardRef.current = Date.now();
-      const index = routePointIndexFromPressEvent(event);
-      if (!Number.isInteger(index)) return;
-      handleRoutePointSelect(index);
-    },
-    [handleRoutePointSelect],
   );
 
   const stopFollowingLocation = useCallback(() => {
@@ -405,14 +390,52 @@ export default function MapScreen() {
         <ShapeSource id="elevation-scrub" shape={scrubMarker}>
           <CircleLayer id="elevation-scrub-core" style={ELEVATION_SCRUB_STYLE} />
         </ShapeSource>
-        <ShapeSource
-          id="route-points"
-          shape={routePoints}
-          hitbox={{ width: 50, height: 50 }}
-          onPress={handleRoutePointPress}
-        >
-          <CircleLayer id="route-points-circle" style={ROUTE_POINT_STYLE} />
-        </ShapeSource>
+        {displayedRoutePoints.map((point, index) => {
+          const lng = Number(point?.lng);
+          const lat = Number(point?.lat);
+          if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+          const lastIndex = displayedRoutePoints.length - 1;
+          const endpoint =
+            index === 0 ? "start" : index === lastIndex ? "end" : "middle";
+          const selected = index === mapUi.selectedRoutePointIndex;
+          const pending = Boolean(point.pending);
+          return (
+            <PointAnnotation
+              // key includes style-affecting state (not coordinate) so the
+              // annotation remounts on selection/role change — RNMapbox iOS
+              // does not reliably re-render PointAnnotation children otherwise.
+              key={`route-point-${index}-${endpoint}-${selected}-${pending}`}
+              id={`route-point-${index}`}
+              coordinate={[lng, lat]}
+              draggable={!pending}
+              onSelected={() => {
+                // Suppress the map-press add-point that may follow a point tap.
+                routePointPressGuardRef.current = Date.now();
+                handleRoutePointSelect(index);
+              }}
+              onDragStart={() => {
+                routePointPressGuardRef.current = Date.now();
+                handleRoutePointDragStart(index);
+              }}
+              onDrag={(e) => {
+                const coord = coordFromAnnotationEvent(e);
+                if (coord) handleRoutePointDrag(index, coord);
+              }}
+              onDragEnd={() => {
+                handleRoutePointDragEnd();
+              }}
+            >
+              <View
+                style={[
+                  styles.routePointDot,
+                  styles[`routePointDot_${endpoint}`],
+                  selected ? styles.routePointDotSelected : null,
+                  pending ? styles.routePointDotPending : null,
+                ]}
+              />
+            </PointAnnotation>
+          );
+        })}
       </MapView>
       <MapLegendOverlay
         hasBrokenRoute={routePresentation.hasBrokenRoute}
@@ -958,6 +981,20 @@ function buildRouteGeometryFeatureCollection(routeGeometry) {
   };
 }
 
+// RNMapbox PointAnnotation drag events carry the new coordinate on the feature
+// geometry (shape differs slightly by version), so read defensively.
+function coordFromAnnotationEvent(event) {
+  const coords =
+    event?.geometry?.coordinates ||
+    event?.payload?.geometry?.coordinates ||
+    event?.nativeEvent?.payload?.geometry?.coordinates ||
+    null;
+  if (!Array.isArray(coords) || coords.length < 2) return null;
+  const [lng, lat] = coords;
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+  return { lng, lat };
+}
+
 function buildRoutePointFeatureCollection(points, selectedRoutePointIndex) {
   if (!Array.isArray(points) || points.length === 0) {
     return EMPTY_FEATURE_COLLECTION;
@@ -1282,6 +1319,24 @@ const styles = StyleSheet.create({
   routeSheetExpanded: {
     maxHeight: 560,
   },
+  routePointDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    backgroundColor: "#2b7bb9",
+  },
+  routePointDot_start: { backgroundColor: "#18a957" },
+  routePointDot_end: { backgroundColor: "#c84c45" },
+  routePointDot_middle: { backgroundColor: "#2b7bb9" },
+  routePointDotSelected: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderColor: "#0f2f4f",
+  },
+  routePointDotPending: { opacity: 0.45 },
   routeSheetHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
