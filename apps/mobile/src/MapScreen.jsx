@@ -212,7 +212,6 @@ export default function MapScreen() {
     handleOpenDownload,
     handleCloseDownload,
     handleDownloadGpx,
-    handleRoutePointRemove,
     handleRoutePointSelect,
     handleRoutePointDragStart,
     handleRoutePointDrag,
@@ -684,18 +683,15 @@ export default function MapScreen() {
         canUndo={canUndo}
         onOpenSummary={handleOpenDownload}
         onRedo={handleRedo}
-        onRemovePoint={handleRoutePointRemove}
         onSearchChange={handleSearchQueryChange}
         onSearchResultAdd={addSearchResultToRoute}
         onSearchSubmit={submitSearch}
-        onSelectPoint={handleRoutePointSelect}
         onUndo={handleUndo}
         locationState={locationState}
         mapUi={mapUi}
         presentation={routePresentation}
         routeState={routeState}
         routePoints={displayedRoutePoints}
-        selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
         onClear={handleRouteClear}
         onScrub={setScrubPoint}
       />
@@ -867,11 +863,9 @@ function RoutePlannerChrome({
   onClear,
   onOpenSummary,
   onRedo,
-  onRemovePoint,
   onSearchChange,
   onSearchResultAdd,
   onSearchSubmit,
-  onSelectPoint,
   onUndo,
   onScrub,
   locationState,
@@ -879,13 +873,11 @@ function RoutePlannerChrome({
   presentation,
   routeState,
   routePoints,
-  selectedRoutePointIndex,
 }) {
-  const [sheetExpanded, setSheetExpanded] = useState(false);
   const hasPoints = routePoints.length > 0;
+  const hasElevationProfile = routeState.geometry.length >= 2;
   const searchBusy = mapUi.searchStatus === "searching";
   const hasSearchResult = Boolean(pointFromSearchHighlight(mapUi.searchHighlight));
-  const selectedPoint = presentation.selectedRoutePoint;
   const locationText = locationStatusText(locationState);
   const routeMessage = routeState.error
     ? routeState.error.message || "לא הצלחנו לעדכן את המסלול"
@@ -971,22 +963,11 @@ function RoutePlannerChrome({
           style={[
             styles.routeSheet,
             hasPoints ? null : styles.routeSheetEmpty,
-            sheetExpanded ? styles.routeSheetExpanded : null,
           ]}
         >
           <View style={styles.routeSheetHeader}>
             <Text style={styles.routeSheetTitle}>מסלול</Text>
             <View style={styles.routeSheetHeaderActions}>
-              {hasPoints ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={sheetExpanded ? "הסתר גרף גובה" : "הצג גרף גובה"}
-                  onPress={() => setSheetExpanded((v) => !v)}
-                  style={styles.routeSheetBadge}
-                >
-                  <Text style={styles.routeSheetBadgeText}>{sheetExpanded ? "▾ גובה" : "▴ גובה"}</Text>
-                </Pressable>
-              ) : null}
               {presentation.canDownload ? (
                 <Pressable
                   accessibilityRole="button"
@@ -1014,44 +995,7 @@ function RoutePlannerChrome({
           {locationText ? (
             <Text style={styles.locationText}>{locationText}</Text>
           ) : null}
-          {hasPoints ? (
-            <View style={styles.pointSection}>
-              <Text style={styles.pointSectionLabel}>נקודות מסלול</Text>
-              <View style={styles.pointList}>
-                {routeState.points.map((point, index) => (
-                  <PointChip
-                    key={point.id || `${point.lat}-${point.lng}-${index}`}
-                    label={String(index + 1)}
-                    selected={index === selectedRoutePointIndex}
-                    onPress={() => onSelectPoint(index)}
-                  />
-                ))}
-              </View>
-            </View>
-          ) : null}
-          {selectedPoint ? (
-            <View style={styles.selectedPointRow}>
-              <Text style={styles.selectedPointText}>
-                נקודה {selectedRoutePointIndex + 1} נבחרה
-              </Text>
-              <ChromeButton
-                compact
-                label="הסר נקודה"
-                onPress={() => onRemovePoint(selectedRoutePointIndex)}
-              />
-            </View>
-          ) : null}
-          {hasPoints ? (
-            <View style={styles.statsGrid}>
-              {presentation.stats.map(([label, value]) => (
-                <View key={label} style={styles.statItem}>
-                  <Text style={styles.statLabel}>{label}</Text>
-                  <Text style={styles.statValue}>{value}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-          {hasPoints && sheetExpanded ? (
+          {hasElevationProfile ? (
             <ElevationProfileChart
               animator={animator}
               distance={routeState.distance}
@@ -1231,30 +1175,6 @@ function ChromeButton({
           {label}
         </Text>
       ) : null}
-    </Pressable>
-  );
-}
-
-function PointChip({ label, onPress, selected }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`נקודת מסלול ${label}`}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.pointChip,
-        selected ? styles.pointChipSelected : null,
-        pressed ? styles.pointChipPressed : null,
-      ]}
-    >
-      <Text
-        style={[
-          styles.pointChipText,
-          selected ? styles.pointChipTextSelected : null,
-        ]}
-      >
-        {label}
-      </Text>
     </Pressable>
   );
 }
@@ -1738,9 +1658,6 @@ const styles = StyleSheet.create({
     maxHeight: 132,
     paddingVertical: 12,
   },
-  routeSheetExpanded: {
-    maxHeight: 560,
-  },
   routeSheetHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -1798,87 +1715,6 @@ const styles = StyleSheet.create({
     color: "#991b1b",
     fontSize: 12,
     fontWeight: "700",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  pointSection: {
-    gap: 8,
-  },
-  pointSectionLabel: {
-    color: "#52616f",
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  pointList: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  pointChip: {
-    minWidth: 30,
-    minHeight: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 4,
-    borderColor: "#c7d3ce",
-    borderWidth: 1,
-    backgroundColor: "#ffffff",
-  },
-  pointChipSelected: {
-    borderColor: "#0f172a",
-    backgroundColor: "#0f172a",
-  },
-  pointChipPressed: {
-    backgroundColor: "#e0e0e0",
-  },
-  pointChipText: {
-    color: "#333333",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  pointChipTextSelected: {
-    color: "#ffffff",
-  },
-  selectedPointRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  selectedPointText: {
-    flex: 1,
-    color: "#333333",
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  statsGrid: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  statItem: {
-    minWidth: "18%",
-    flexGrow: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 4,
-    backgroundColor: "#f3f6f4",
-  },
-  statLabel: {
-    color: "#52616f",
-    fontSize: 10,
-    fontWeight: "700",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  statValue: {
-    color: "#172026",
-    fontSize: 12,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
