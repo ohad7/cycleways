@@ -52,8 +52,28 @@ close (×). Hazard types use their `POI_COLORS` accent; POIs share the same card
 
 New `DataMarkerCard.jsx` rendered as a fixed bottom-center card (bottom sheet)
 when `selectedDataMarker` is set, with the same content + add-to-route + close.
+**Mobile-only:** the card is hidden on desktop (`@media (min-width: 769px)`,
+matching the app's 768px mobile breakpoint); desktop still zooms on warning
+click but does not show the card.
 Remove the selected-marker block from `DataSummary.jsx` (lines ~20–32) so it is
 not duplicated; `DataSummary` keeps showing route `activeDataPoints`.
+
+## Warning-click focus (restored, all platforms)
+
+Clicking a row in the expanded "מידע חשוב" warnings list used to zoom the map to
+that landmark; the React migration dropped it. Restored via a shared
+`handleDataPointFocus(dataPoint)` that:
+
+- sets `selectedDataMarker` (so the detail card opens) flagged **`onRoute: true`**
+  — the card hides "add to route" because the point is already on the route;
+- sets `mapUi.dataMarkerFocus = { lng, lat, token }` (token bumps each click so
+  re-clicking the same warning re-centres).
+
+Both platforms watch `dataMarkerFocus`: mobile via a `cameraRef.setCamera`
+effect, web by deriving a memoised `focusedMarker` passed to `MapView` →
+`MapSurface` (existing `flyTo`). A warning group maps to its first data point's
+location. Behaviour is consistent on both: **zoom + open the card** (card without
+the add-to-route button).
 
 ## Out of scope (YAGNI)
 

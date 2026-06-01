@@ -52,6 +52,7 @@ function App() {
     handleOsmDebugLayerModeChange,
     handleCwReviewSegmentSelect,
     handleDataMarkerClick,
+    handleDataPointFocus,
     handleSelectedDataMarkerClear,
     handleAddDataMarkerToRoute,
     handleMapClick,
@@ -70,6 +71,22 @@ function App() {
     handleCwOsmMatchHover,
     handleElevationHover,
   } = useCyclewaysApp();
+
+  // Fly to a focused data point (warning click). Memoised on the focus request
+  // so MapSurface only flies when the token changes, not on every render.
+  const focusedMarker = useMemo(
+    () =>
+      mapUi.dataMarkerFocus
+        ? {
+            coord: {
+              lng: mapUi.dataMarkerFocus.lng,
+              lat: mapUi.dataMarkerFocus.lat,
+            },
+          }
+        : null,
+    [mapUi.dataMarkerFocus],
+  );
+
   return (
     <>
       <WelcomeWizard
@@ -168,6 +185,7 @@ function App() {
                 <MapLegend
                   activeDataPoints={routeState.activeDataPoints}
                   hasBrokenRoute={hasBrokenRoute}
+                  onWarningFocus={handleDataPointFocus}
                 />
 
                 <DataMarkerCard
@@ -204,6 +222,7 @@ function App() {
                   activeDataPointIds={activeDataPointIds}
                   animator={directionAnimatorRef.current}
                   dataMarkerFeatures={dataMarkerFeatures}
+                  focusedMarker={focusedMarker}
                   elevationHover={mapUi.elevationHover}
                   focusedSegment={routeState.focusedSegment}
                   geoJsonData={state.assets.geoJsonData}
@@ -306,7 +325,7 @@ function ErrorState({ error }) {
   );
 }
 
-function MapLegend({ activeDataPoints, hasBrokenRoute }) {
+function MapLegend({ activeDataPoints, hasBrokenRoute, onWarningFocus }) {
   const [warningsOpen, setWarningsOpen] = useState(false);
   const warningPresentation = useMemo(
     () => getRouteWarningPresentation(activeDataPoints),
@@ -356,6 +375,7 @@ function MapLegend({ activeDataPoints, hasBrokenRoute }) {
                 className="individual-warning-item react-individual-warning-item"
                 key={warningGroup.segmentName}
                 type="button"
+                onClick={() => onWarningFocus?.(warningGroup.warnings?.[0])}
                 style={{
                   backgroundColor: warningGroup.backgroundColor,
                 }}

@@ -42,10 +42,13 @@ import DataMarkerImages, {
 import ElevationProfileChart from "./ElevationProfileChart.jsx";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
-  ROUTE_SEARCH_PLACEHOLDER,
   getRoutePlannerPresentation,
   getRouteWarningPresentation,
 } from "@cycleways/core/ui/routePlannerPresentation.js";
+
+// Short placeholder for the narrow native search box (the shared web one,
+// "ישוב/עיר, לדוגמא: דפנה", is too long to fit on the phone).
+const SEARCH_PLACEHOLDER = "חיפוש יישוב/עיר";
 
 // Publishable token, inlined by Expo at build from EXPO_PUBLIC_MAPBOX_TOKEN.
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "";
@@ -233,6 +236,7 @@ export default function MapScreen() {
     handleRoutePointDragEnd,
     routePointDragPreview,
     handleDataMarkerClick,
+    handleDataPointFocus,
     handleSelectedDataMarkerClear,
     handleAddDataMarkerToRoute,
     handleViewportIdle,
@@ -565,12 +569,6 @@ export default function MapScreen() {
     handleSearchSubmit({ preventDefault() {} });
   }, [handleSearchSubmit]);
 
-  const addSearchResultToRoute = useCallback(() => {
-    const point = pointFromSearchHighlight(mapUi.searchHighlight);
-    if (!point) return;
-    handleMapClick(point);
-  }, [handleMapClick, mapUi.searchHighlight]);
-
   const shareRoute = useCallback(() => {
     if (!shareUrl) return;
     void Share.share({
@@ -618,6 +616,23 @@ export default function MapScreen() {
       animationMode: "easeTo",
     });
   }, [mapUi.searchHighlight, stopFollowingLocation]);
+
+  // Clicking a route warning focuses the camera on the landmark (token changes
+  // each request so re-tapping the same warning re-centres).
+  useEffect(() => {
+    const focus = mapUi.dataMarkerFocus;
+    const lng = Number(focus?.lng);
+    const lat = Number(focus?.lat);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+    stopFollowingLocation();
+    cameraRef.current?.setCamera?.({
+      type: "CameraStop",
+      centerCoordinate: [lng, lat],
+      zoomLevel: 14.5,
+      animationDuration: 600,
+      animationMode: "easeTo",
+    });
+  }, [mapUi.dataMarkerFocus, stopFollowingLocation]);
 
   useEffect(() => {
     if (!routeState.points || routeState.points.length === 0) {
@@ -739,6 +754,7 @@ export default function MapScreen() {
       <MapLegendOverlay
         hasBrokenRoute={routePresentation.hasBrokenRoute}
         warningPresentation={warningPresentation}
+        onWarningFocus={handleDataPointFocus}
       />
       <RoutePlannerChrome
         animator={directionAnimatorRef.current}
@@ -748,7 +764,6 @@ export default function MapScreen() {
         onOpenSummary={handleOpenDownload}
         onRedo={handleRedo}
         onSearchChange={handleSearchQueryChange}
-        onSearchResultAdd={addSearchResultToRoute}
         onSearchSubmit={submitSearch}
         onUndo={handleUndo}
         locationState={locationState}
@@ -781,7 +796,7 @@ export default function MapScreen() {
   );
 }
 
-function MapLegendOverlay({ hasBrokenRoute, warningPresentation }) {
+function MapLegendOverlay({ hasBrokenRoute, warningPresentation, onWarningFocus }) {
   const [warningsOpen, setWarningsOpen] = useState(false);
   const warningPulseOpacity = useRef(new Animated.Value(1)).current;
   const hasWarnings = warningPresentation.count > 0;
@@ -858,11 +873,15 @@ function MapLegendOverlay({ hasBrokenRoute, warningPresentation }) {
           {warningsOpen ? (
             <View style={styles.warningDetails}>
               {warningPresentation.groups.map((warningGroup) => (
-                <View
+                <Pressable
                   key={warningGroup.segmentName}
-                  style={[
+                  accessibilityRole="button"
+                  accessibilityLabel={`${warningGroup.label} — מיקוד במפה`}
+                  onPress={() => onWarningFocus?.(warningGroup.warnings?.[0])}
+                  style={({ pressed }) => [
                     styles.warningDetailItem,
                     { backgroundColor: warningGroup.backgroundColor },
+                    pressed ? styles.issueChipPressed : null,
                   ]}
                 >
                   <Text style={styles.warningDetailLabel}>
@@ -871,7 +890,7 @@ function MapLegendOverlay({ hasBrokenRoute, warningPresentation }) {
                   <Text style={styles.warningDetailIcons}>
                     {warningGroup.icons.join(" ")}
                   </Text>
-                </View>
+                </Pressable>
               ))}
             </View>
           ) : null}
@@ -933,7 +952,6 @@ function RoutePlannerChrome({
   onOpenSummary,
   onRedo,
   onSearchChange,
-  onSearchResultAdd,
   onSearchSubmit,
   onUndo,
   onScrub,
@@ -945,8 +963,8 @@ function RoutePlannerChrome({
 }) {
   const hasPoints = routePoints.length > 0;
   const hasElevationProfile = routeState.geometry.length >= 2;
+  const [sheetCollapsed, setSheetCollapsed] = useState(false);
   const searchBusy = mapUi.searchStatus === "searching";
-  const hasSearchResult = Boolean(pointFromSearchHighlight(mapUi.searchHighlight));
   const locationText = locationStatusText(locationState);
   const routeMessage = routeState.error
     ? routeState.error.message || "לא הצלחנו לעדכן את המסלול"
@@ -972,16 +990,13 @@ function RoutePlannerChrome({
             autoCorrect={false}
             onChangeText={onSearchChange}
             onSubmitEditing={onSearchSubmit}
-            placeholder={ROUTE_SEARCH_PLACEHOLDER}
+            placeholder={SEARCH_PLACEHOLDER}
             placeholderTextColor="#52616f"
             returnKeyType="search"
             style={styles.searchInput}
             textAlign="right"
             value={mapUi.searchQuery}
           />
-          {hasSearchResult ? (
-            <ChromeButton compact label="הוסף" onPress={onSearchResultAdd} />
-          ) : null}
         </View>
         {mapUi.searchError ? (
           <Text style={styles.searchError}>{mapUi.searchError}</Text>
@@ -1047,12 +1062,27 @@ function RoutePlannerChrome({
                   <Text style={styles.routeSheetBadgeText}>סיכום</Text>
                 </Pressable>
               ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  sheetCollapsed ? "הרחבת פאנל המסלול" : "מזעור פאנל המסלול"
+                }
+                onPress={() => setSheetCollapsed((current) => !current)}
+                style={styles.routeSheetCollapse}
+              >
+                <Text style={styles.routeSheetCollapseText}>
+                  {sheetCollapsed ? "⌃" : "⌄"}
+                </Text>
+              </Pressable>
             </View>
           </View>
-          <Text style={routeState.error ? styles.errorText : styles.routeMessage}>
+          <Text
+            numberOfLines={sheetCollapsed ? 1 : undefined}
+            style={routeState.error ? styles.errorText : styles.routeMessage}
+          >
             {routeMessage}
           </Text>
-          {presentation.warnings.length > 0 ? (
+          {!sheetCollapsed && presentation.warnings.length > 0 ? (
             <View style={styles.warningList}>
               {presentation.warnings.map((warning) => (
                 <Text key={warning} style={styles.warningText}>
@@ -1061,10 +1091,10 @@ function RoutePlannerChrome({
               ))}
             </View>
           ) : null}
-          {locationText ? (
+          {!sheetCollapsed && locationText ? (
             <Text style={styles.locationText}>{locationText}</Text>
           ) : null}
-          {hasElevationProfile ? (
+          {!sheetCollapsed && hasElevationProfile ? (
             <ElevationProfileChart
               animator={animator}
               distance={routeState.distance}
@@ -1112,7 +1142,7 @@ function DataMarkerCard({ marker, onAddToRoute, onClose }) {
         {marker.information ? (
           <Text style={styles.markerCardInfo}>{marker.information}</Text>
         ) : null}
-        {hasCoords ? (
+        {hasCoords && !marker.onRoute ? (
           <View style={styles.markerCardActions}>
             <ChromeButton
               label="הוסף למסלול"
@@ -1568,15 +1598,21 @@ const styles = StyleSheet.create({
   topChrome: {
     position: "absolute",
     top: 15,
-    left: 15,
+    // Start to the right of the legend (left:15 + width:104 + gap) so the
+    // search box and controls never overlap it, on any screen width.
+    left: 127,
     right: 15,
     gap: 4,
   },
   searchPanel: {
     flexDirection: "row-reverse",
     alignItems: "stretch",
+    // Fill the chrome band (right of the legend) instead of a fixed width, so
+    // it shrinks on narrow phones rather than overrunning the legend, while
+    // staying right-aligned and capped on wide screens.
     alignSelf: "flex-end",
-    width: 200,
+    width: "100%",
+    maxWidth: 320,
   },
   searchInput: {
     flex: 1,
@@ -1877,6 +1913,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  routeSheetCollapse: {
+    width: 30,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: "#f3f6f4",
+  },
+  routeSheetCollapseText: {
+    color: "#333333",
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: "800",
+  },
   routeMessage: {
     color: "#333333",
     fontSize: 13,
@@ -2032,8 +2082,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
   },
   chromeButtonRail: {
-    width: 50,
-    minWidth: 50,
+    width: 40,
+    minWidth: 40,
     height: 36,
     minHeight: 36,
     paddingHorizontal: 2,

@@ -31,6 +31,8 @@ import {
 } from "../platform/location.js";
 import { getStoredItem } from "../platform/storage.js";
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
+import { POI_EMOJIS } from "../data/poiTypes.js";
+import { getDataPointLocation } from "../utils/route-data.js";
 import { createRouteDirectionAnimator } from "../domain/routeDirectionAnimator.js";
 import {
   addPoint,
@@ -76,6 +78,7 @@ export function useCyclewaysApp() {
     searchStatus: "idle",
     selectedRoutePointIndex: null,
     selectedDataMarker: null,
+    dataMarkerFocus: null,
     elevationHover: null,
     tutorialOpen: false,
   });
@@ -927,6 +930,33 @@ export function useCyclewaysApp() {
     }));
   }, []);
 
+  // Clicking a route warning focuses the map on the landmark and opens its
+  // detail card. The marker is flagged `onRoute` so the card hides "add to
+  // route" (the point is already on the route). dataMarkerFocus is a camera
+  // request both platforms watch (token bumps so identical coords re-trigger).
+  const handleDataPointFocus = useCallback((dataPoint) => {
+    const location = getDataPointLocation(dataPoint);
+    if (!location) return;
+    setMapUi((current) => ({
+      ...current,
+      selectedDataMarker: {
+        id: dataPoint?.id,
+        type: dataPoint?.type,
+        emoji: dataPoint?.emoji || POI_EMOJIS[dataPoint?.type] || "📍",
+        information: dataPoint?.information || "",
+        segmentName: dataPoint?.segmentName || "",
+        lng: location.lng,
+        lat: location.lat,
+        onRoute: true,
+      },
+      dataMarkerFocus: {
+        lng: location.lng,
+        lat: location.lat,
+        token: (current.dataMarkerFocus?.token || 0) + 1,
+      },
+    }));
+  }, []);
+
   const handleSelectedDataMarkerClear = useCallback(() => {
     setMapUi((current) =>
       current.selectedDataMarker
@@ -1234,6 +1264,7 @@ export function useCyclewaysApp() {
     handleOsmDebugLayerModeChange,
     handleCwReviewSegmentSelect,
     handleDataMarkerClick,
+    handleDataPointFocus,
     handleSelectedDataMarkerClear,
     handleAddDataMarkerToRoute,
     handleMapClick,

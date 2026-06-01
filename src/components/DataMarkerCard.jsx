@@ -38,7 +38,7 @@ function DataMarkerCard({ marker, onAddToRoute, onClose }) {
       {marker.information && (
         <p className="data-marker-card__info">{marker.information}</p>
       )}
-      {hasCoords && (
+      {hasCoords && !marker.onRoute && (
         <div className="data-marker-card__actions">
           <button
             type="button"

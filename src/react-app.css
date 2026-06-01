@@ -67,6 +67,12 @@
   font-weight: 700;
   cursor: pointer;
 }
+/* The detail card is a mobile-only surface; desktop shows the info elsewhere. */
+@media (min-width: 769px) {
+  .data-marker-card {
+    display: none;
+  }
+}
 
 :root {
   color: #172026;

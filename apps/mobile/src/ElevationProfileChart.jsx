@@ -155,7 +155,12 @@ export default function ElevationProfileChart({
         ) : null}
       </View>
       <View style={styles.footer}>
-        <Text style={styles.distanceLabel}>{formatLegacyDistance(distance)}</Text>
+        <View style={styles.distanceRow}>
+          <Text style={styles.distanceLabel}>
+            {formatLegacyDistance(distance)}
+          </Text>
+          <Text style={styles.distanceLabel}>0 ק"מ</Text>
+        </View>
         <View style={styles.legend}>
           {GRADE_CLASSES.map((cls) => (
             <View key={cls} style={styles.legendItem}>
@@ -169,7 +174,6 @@ export default function ElevationProfileChart({
             </View>
           ))}
         </View>
-        <Text style={styles.distanceLabel}>0 ק"מ</Text>
       </View>
     </View>
   );
@@ -227,11 +231,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   footer: {
+    flexDirection: "column",
+    gap: 4,
+    marginTop: 4,
+  },
+  distanceRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
-    marginTop: 4,
   },
   distanceLabel: {
     flexShrink: 0,
@@ -241,7 +248,6 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   legend: {
-    flex: 1,
     flexDirection: "row-reverse",
     flexWrap: "wrap",
     justifyContent: "center",
