@@ -2,6 +2,14 @@
  * RouteManager - Handles route planning logic including loading geojson data,
  * managing route points, and calculating optimal routes through segments.
  */
+
+// When snapping a route point to the base graph, prefer a CycleWays-matched edge
+// over a non-CW edge as long as the CW edge is within this many metres of the
+// geometrically closest edge. Keeps endpoints on the CycleWays network where a
+// CW path runs near a road, without snapping to a clearly-distant cycleway.
+// See plans/cw-edge-snap-preference/design.md.
+const CW_SNAP_PREFERENCE_MARGIN_METERS = 20;
+
 class RouteManager {
   constructor() {
     this.segments = new Map(); // segmentName -> segment data
@@ -1101,6 +1109,7 @@ class RouteManager {
       lng: Number(point.lng),
     };
     let best = null;
+    let bestCw = null;
 
     for (const candidate of this._baseRoutingCandidates(normalizedPoint)) {
       const edge = this.baseRoutingEdges.get(candidate.edgeId);
@@ -1112,31 +1121,58 @@ class RouteManager {
       );
       const distanceMeters = this._getDistance(normalizedPoint, snapped);
       if (distanceMeters > thresholdMeters) continue;
-      if (best && distanceMeters >= best.distanceMeters) continue;
 
-      const measuredAlongMeters =
-        edge.cumulativeLengths[candidate.coordIndex] +
-        this._getDistance(candidate.start, snapped);
-      const measuredFraction =
-        edge.measuredLength > 0 ? measuredAlongMeters / edge.measuredLength : 0;
-      const edgeDistanceMeters = Math.max(
-        0,
-        Math.min(edge.lengthMeters, measuredFraction * edge.lengthMeters),
-      );
-      best = {
-        lat: snapped.lat,
-        lng: snapped.lng,
+      const isCyclewaysEdge = edge.cwSegmentIds.length > 0;
+      const improvesOverall = !best || distanceMeters < best.distanceMeters;
+      const improvesCw =
+        isCyclewaysEdge && (!bestCw || distanceMeters < bestCw.distanceMeters);
+      if (!improvesOverall && !improvesCw) continue;
+
+      const record = this._buildBaseRoutingSnap(
+        edge,
+        candidate,
+        snapped,
         distanceMeters,
-        baseEdgeId: edge.id,
-        baseEdgeShareId: edge.shareId,
-        baseEdgeDistanceMeters: edgeDistanceMeters,
-        baseEdgeFraction:
-          edge.lengthMeters > 0 ? edgeDistanceMeters / edge.lengthMeters : 0,
-        segmentName: this._primaryCyclewaysSegmentName(edge),
-      };
+      );
+      if (improvesOverall) best = record;
+      if (improvesCw) bestCw = record;
     }
 
+    if (!best) return null;
+    // Prefer the closest CycleWays edge when it is within the preference margin
+    // of the closest edge overall, so endpoints favour the CW network where a CW
+    // path runs near a road.
+    if (
+      bestCw &&
+      bestCw.distanceMeters <=
+        best.distanceMeters + CW_SNAP_PREFERENCE_MARGIN_METERS
+    ) {
+      return bestCw;
+    }
     return best;
+  }
+
+  _buildBaseRoutingSnap(edge, candidate, snapped, distanceMeters) {
+    const measuredAlongMeters =
+      edge.cumulativeLengths[candidate.coordIndex] +
+      this._getDistance(candidate.start, snapped);
+    const measuredFraction =
+      edge.measuredLength > 0 ? measuredAlongMeters / edge.measuredLength : 0;
+    const edgeDistanceMeters = Math.max(
+      0,
+      Math.min(edge.lengthMeters, measuredFraction * edge.lengthMeters),
+    );
+    return {
+      lat: snapped.lat,
+      lng: snapped.lng,
+      distanceMeters,
+      baseEdgeId: edge.id,
+      baseEdgeShareId: edge.shareId,
+      baseEdgeDistanceMeters: edgeDistanceMeters,
+      baseEdgeFraction:
+        edge.lengthMeters > 0 ? edgeDistanceMeters / edge.lengthMeters : 0,
+      segmentName: this._primaryCyclewaysSegmentName(edge),
+    };
   }
 
   _primaryCyclewaysSegmentName(edge) {

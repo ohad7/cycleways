@@ -27,6 +27,7 @@ import Mapbox, {
 import Svg, { Path } from "react-native-svg";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
+import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
 import {
   DATA_MARKERS_STYLE,
   ROUTE_DIRECTION_PULSE_CASING_STYLE,
@@ -181,6 +182,20 @@ const INITIAL_CAMERA_SETTINGS = {
 
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
 
+// --- Touch intent tuning (see plans/mobile-map-gesture-intent/design.md) -----
+// A touch within POINT_HIT_RADIUS px of a committed route point is a candidate
+// to interact with it; anything farther pans the map or adds a point. Moving a
+// point requires a deliberate long-press: hold for LONG_PRESS_MS without drifting
+// more than LONG_PRESS_MAX_DRIFT px to "pick it up", then drag. A quick tap (no
+// hold) selects; a drift before the hold fires cancels the grab. These are
+// deliberately touch-sized and centralised here for easy on-device tuning.
+const POINT_HIT_RADIUS = 18;
+const LONG_PRESS_MS = 300;
+const LONG_PRESS_MAX_DRIFT = 12;
+// After touching a point, ignore the MapView onPress for this long so a tap that
+// landed on a point does not also add a new one.
+const ADD_GUARD_MS = 350;
+
 export default function MapScreen() {
   const cameraRef = useRef(null);
   const routePointPressGuardRef = useRef(0);
@@ -218,6 +233,8 @@ export default function MapScreen() {
     handleRoutePointDragEnd,
     routePointDragPreview,
     handleDataMarkerClick,
+    handleSelectedDataMarkerClear,
+    handleAddDataMarkerToRoute,
     handleViewportIdle,
   } = useCyclewaysApp();
 
@@ -262,14 +279,23 @@ export default function MapScreen() {
   );
 
   // --- Waypoint drag (immediate, no long-press) ---------------------------
-  // RNMapbox draggable PointAnnotations need an iOS long-press; instead we run
-  // a PanResponder over the map: a touch that lands on a committed route point
-  // is dragged (converted screen->coord via the MapView), feeding the shared
-  // handleRoutePointDrag* handlers; a touch that just taps selects the point.
+  // We run a PanResponder over the map: a touch that lands on a committed route
+  // point and is HELD (long-press) "picks it up" and feeds the shared
+  // handleRoutePointDrag* handlers as the finger moves; a quick tap selects the
+  // point; anything else (no hold, or off-point) falls through to the map for
+  // pan/zoom/add. Screen<->coord conversion goes through the MapView ref.
   const mapViewRef = useRef(null);
   const pointScreenPositionsRef = useRef([]);
-  const dragRef = useRef({ index: null, active: false, startX: 0, startY: 0 });
+  const dragRef = useRef({ index: null, armed: false, startX: 0, startY: 0 });
+  const longPressTimerRef = useRef(null);
   const [pointGestureActive, setPointGestureActive] = useState(false);
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
 
   const refreshPointScreenPositions = useCallback(async () => {
     const map = mapViewRef.current;
@@ -301,11 +327,10 @@ export default function MapScreen() {
   }, [refreshPointScreenPositions]);
 
   const hitTestRoutePoint = useCallback((x, y) => {
-    const HIT_RADIUS = 28;
     let best = null;
     for (const pos of pointScreenPositionsRef.current) {
       const distance = Math.hypot(pos.x - x, pos.y - y);
-      if (distance <= HIT_RADIUS && (!best || distance < best.distance)) {
+      if (distance <= POINT_HIT_RADIUS && (!best || distance < best.distance)) {
         best = { index: pos.index, distance };
       }
     }
@@ -315,47 +340,82 @@ export default function MapScreen() {
   const routePointPanResponder = useMemo(
     () =>
       PanResponder.create({
+        // Single-finger touches that land on a committed point are point
+        // candidates. Multi-finger touches (pinch zoom/rotate) are never
+        // claimed so they pass straight through to Mapbox.
         onStartShouldSetPanResponder: (evt) =>
+          evt.nativeEvent.touches.length <= 1 &&
           hitTestRoutePoint(
             evt.nativeEvent.locationX,
             evt.nativeEvent.locationY,
           ) !== null,
-        // Only claim the gesture as a point drag if the touch STARTED on a
-        // point (set in onPanResponderGrant). Never hijack an in-progress map
-        // pan just because the finger later passes near a point.
-        onMoveShouldSetPanResponder: () => dragRef.current.index !== null,
+        // Only stay with the point gesture once it has been "picked up" by a
+        // long-press. Never hijack an in-progress map pan.
+        onMoveShouldSetPanResponder: (evt) =>
+          evt.nativeEvent.touches.length <= 1 && dragRef.current.armed,
+        // Let the map reclaim the gesture (e.g. a pinch begins) until the point
+        // has actually been picked up.
+        onPanResponderTerminationRequest: () => !dragRef.current.armed,
         onPanResponderGrant: (evt) => {
           const { locationX, locationY } = evt.nativeEvent;
-          const index = hitTestRoutePoint(locationX, locationY);
+          const index =
+            evt.nativeEvent.touches.length <= 1
+              ? hitTestRoutePoint(locationX, locationY)
+              : null;
           dragRef.current = {
             index,
-            active: false,
+            armed: false,
             startX: locationX,
             startY: locationY,
           };
+          clearLongPressTimer();
           if (index !== null) {
             routePointPressGuardRef.current = Date.now();
             setPointGestureActive(true);
+            // Hold in place to pick the point up; movement/lift before this
+            // fires cancels it (handled in move/release).
+            longPressTimerRef.current = setTimeout(() => {
+              longPressTimerRef.current = null;
+              if (dragRef.current.index === index && !dragRef.current.armed) {
+                dragRef.current.armed = true;
+                routePointPressGuardRef.current = Date.now();
+                handleRoutePointDragStart(index);
+              }
+            }, LONG_PRESS_MS);
           }
         },
         onPanResponderMove: (evt) => {
           const drag = dragRef.current;
           if (drag.index === null) return;
-          const { locationX, locationY } = evt.nativeEvent;
-          if (!drag.active) {
-            if (Math.hypot(locationX - drag.startX, locationY - drag.startY) < 6) {
-              return;
-            }
-            drag.active = true;
-            handleRoutePointDragStart(drag.index);
+          // A second finger arrived before pick-up: abort so Mapbox can pinch.
+          if (!drag.armed && evt.nativeEvent.touches.length > 1) {
+            clearLongPressTimer();
+            dragRef.current = { index: null, armed: false, startX: 0, startY: 0 };
+            setPointGestureActive(false);
+            return;
           }
+          const { locationX, locationY } = evt.nativeEvent;
+          if (!drag.armed) {
+            // Drifting before the long-press fires cancels the grab; the point
+            // is no longer a candidate, so the release won't select or move it.
+            if (
+              Math.hypot(locationX - drag.startX, locationY - drag.startY) >=
+              LONG_PRESS_MAX_DRIFT
+            ) {
+              clearLongPressTimer();
+              dragRef.current = { index: null, armed: false, startX: 0, startY: 0 };
+              setPointGestureActive(false);
+            }
+            return;
+          }
+          // Picked up: the point follows the finger.
           const map = mapViewRef.current;
           if (!map) return;
           map
             .getCoordinateFromView([locationX, locationY])
             .then((coord) => {
               if (
-                dragRef.current.active &&
+                dragRef.current.armed &&
                 dragRef.current.index === drag.index &&
                 Array.isArray(coord) &&
                 coord.length >= 2
@@ -370,23 +430,27 @@ export default function MapScreen() {
         },
         onPanResponderRelease: () => {
           const drag = dragRef.current;
+          clearLongPressTimer();
           if (drag.index !== null) {
-            if (drag.active) {
+            if (drag.armed) {
               handleRoutePointDragEnd();
             } else {
+              // Quick tap (released before the long-press) selects the point.
               handleRoutePointSelect(drag.index);
             }
           }
-          dragRef.current = { index: null, active: false, startX: 0, startY: 0 };
+          dragRef.current = { index: null, armed: false, startX: 0, startY: 0 };
           setPointGestureActive(false);
         },
         onPanResponderTerminate: () => {
-          if (dragRef.current.active) handleRoutePointDragEnd();
-          dragRef.current = { index: null, active: false, startX: 0, startY: 0 };
+          clearLongPressTimer();
+          if (dragRef.current.armed) handleRoutePointDragEnd();
+          dragRef.current = { index: null, armed: false, startX: 0, startY: 0 };
           setPointGestureActive(false);
         },
       }),
     [
+      clearLongPressTimer,
       hitTestRoutePoint,
       handleRoutePointDragStart,
       handleRoutePointDrag,
@@ -433,7 +497,7 @@ export default function MapScreen() {
   const handleMapPress = useCallback(
     (feature) => {
       if (state.status !== "ready") return;
-      if (Date.now() - routePointPressGuardRef.current < 350) return;
+      if (Date.now() - routePointPressGuardRef.current < ADD_GUARD_MS) return;
       const point = pointFromFeature(feature);
       if (!point) return;
       handleMapClick(point);
@@ -694,6 +758,11 @@ export default function MapScreen() {
         routePoints={displayedRoutePoints}
         onClear={handleRouteClear}
         onScrub={setScrubPoint}
+      />
+      <DataMarkerCard
+        marker={mapUi.selectedDataMarker}
+        onAddToRoute={handleAddDataMarkerToRoute}
+        onClose={handleSelectedDataMarkerClear}
       />
       <RouteSummaryModal
         activeDataPoints={routeState.activeDataPoints}
@@ -1006,6 +1075,55 @@ function RoutePlannerChrome({
         </View>
       </View>
     </>
+  );
+}
+
+// Bottom-sheet detail card shown when a data marker (hazard or POI) is tapped.
+// Sits above the route sheet; offers adding the marker to the route or closing.
+function DataMarkerCard({ marker, onAddToRoute, onClose }) {
+  if (!marker) return null;
+  const label = POI_LABELS[marker.type] || marker.type || "מידע";
+  const accent = POI_COLORS[marker.type] || "#4682B4";
+  const hasCoords =
+    Number.isFinite(Number(marker.lng)) && Number.isFinite(Number(marker.lat));
+
+  return (
+    <View pointerEvents="box-none" style={styles.markerCardWrap}>
+      <View style={[styles.markerCard, { borderColor: accent }]}>
+        <View style={styles.markerCardHeader}>
+          <View style={styles.markerCardTitleRow}>
+            <Text style={styles.markerCardEmoji}>{marker.emoji || "📍"}</Text>
+            <Text style={[styles.markerCardTitle, { color: accent }]}>
+              {label}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="סגירה"
+            onPress={onClose}
+            style={styles.markerCardClose}
+          >
+            <Text style={styles.markerCardCloseText}>×</Text>
+          </Pressable>
+        </View>
+        {marker.segmentName ? (
+          <Text style={styles.markerCardSegment}>{marker.segmentName}</Text>
+        ) : null}
+        {marker.information ? (
+          <Text style={styles.markerCardInfo}>{marker.information}</Text>
+        ) : null}
+        {hasCoords ? (
+          <View style={styles.markerCardActions}>
+            <ChromeButton
+              label="הוסף למסלול"
+              onPress={() => onAddToRoute(marker)}
+              primary
+              accessibilityLabel="הוסף את הנקודה למסלול"
+            />
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
@@ -1639,6 +1757,79 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     bottom: 14,
+  },
+  markerCardWrap: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 14,
+  },
+  markerCard: {
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.97)",
+    borderWidth: 1.5,
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+  },
+  markerCardHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  markerCardTitleRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 1,
+  },
+  markerCardEmoji: {
+    fontSize: 20,
+  },
+  markerCardTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+    flexShrink: 1,
+  },
+  markerCardClose: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: "#f3f6f4",
+  },
+  markerCardCloseText: {
+    color: "#333333",
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: "700",
+  },
+  markerCardSegment: {
+    color: "#52616f",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  markerCardInfo: {
+    color: "#333333",
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  markerCardActions: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginTop: 2,
   },
   routeSheet: {
     maxHeight: 238,

@@ -1,3 +1,73 @@
+/* Data-marker detail card (bottom sheet). See plans/data-marker-detail-card/. */
+.data-marker-card {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 1200;
+  width: min(420px, calc(100% - 24px));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #4682b4;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  direction: rtl;
+  text-align: right;
+}
+.data-marker-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.data-marker-card__title {
+  font-size: 16px;
+  font-weight: 800;
+}
+.data-marker-card__close {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 4px;
+  background: #f3f6f4;
+  color: #333;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.data-marker-card__segment {
+  margin: 0;
+  color: #52616f;
+  font-size: 12px;
+  font-weight: 700;
+}
+.data-marker-card__info {
+  margin: 0;
+  color: #333;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.data-marker-card__actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 2px;
+}
+.data-marker-card__add {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #4682b4;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 :root {
   color: #172026;
   background: #eef3f0;

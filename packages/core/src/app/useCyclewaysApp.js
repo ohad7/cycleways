@@ -642,6 +642,13 @@ export function useCyclewaysApp() {
   const handleMapClick = useCallback((point) => {
     if (!routeManagerRef.current || state.status !== "ready") return;
 
+    // Adding a route point dismisses any open data-marker detail card.
+    setMapUi((current) =>
+      current.selectedDataMarker
+        ? { ...current, selectedDataMarker: null }
+        : current,
+    );
+
     const pendingPoint = {
       ...point,
       id: `pending-route-point-${Date.now()}-${routeClickIdRef.current++}`,
@@ -919,6 +926,26 @@ export function useCyclewaysApp() {
       selectedDataMarker: dataMarker,
     }));
   }, []);
+
+  const handleSelectedDataMarkerClear = useCallback(() => {
+    setMapUi((current) =>
+      current.selectedDataMarker
+        ? { ...current, selectedDataMarker: null }
+        : current,
+    );
+  }, []);
+
+  // Append the marker's coordinate to the route, just like tapping the map there
+  // (handleMapClick snaps the point and clears the selected marker).
+  const handleAddDataMarkerToRoute = useCallback(
+    (dataMarker) => {
+      const lng = Number(dataMarker?.lng);
+      const lat = Number(dataMarker?.lat);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+      handleMapClick({ lng, lat });
+    },
+    [handleMapClick],
+  );
 
   const handleRoutePointSelect = useCallback((index) => {
     setMapUi((current) => ({
@@ -1207,6 +1234,8 @@ export function useCyclewaysApp() {
     handleOsmDebugLayerModeChange,
     handleCwReviewSegmentSelect,
     handleDataMarkerClick,
+    handleSelectedDataMarkerClear,
+    handleAddDataMarkerToRoute,
     handleMapClick,
     handleRoutePointDrag,
     handleRoutePointDragEnd,

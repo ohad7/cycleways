@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import ContentSections from "./components/ContentSections.jsx";
+import DataMarkerCard from "./components/DataMarkerCard.jsx";
 import DownloadModal from "./components/DownloadModal.jsx";
 import ElevationProfile, { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import PageShell from "./components/PageShell.jsx";
@@ -51,6 +52,8 @@ function App() {
     handleOsmDebugLayerModeChange,
     handleCwReviewSegmentSelect,
     handleDataMarkerClick,
+    handleSelectedDataMarkerClear,
+    handleAddDataMarkerToRoute,
     handleMapClick,
     handleRoutePointDrag,
     handleRoutePointDragEnd,
@@ -165,7 +168,12 @@ function App() {
                 <MapLegend
                   activeDataPoints={routeState.activeDataPoints}
                   hasBrokenRoute={hasBrokenRoute}
-                  selectedDataMarker={mapUi.selectedDataMarker}
+                />
+
+                <DataMarkerCard
+                  marker={mapUi.selectedDataMarker}
+                  onAddToRoute={handleAddDataMarkerToRoute}
+                  onClose={handleSelectedDataMarkerClear}
                 />
 
                 {mapUi.searchError && (
@@ -298,11 +306,11 @@ function ErrorState({ error }) {
   );
 }
 
-function MapLegend({ activeDataPoints, hasBrokenRoute, selectedDataMarker }) {
+function MapLegend({ activeDataPoints, hasBrokenRoute }) {
   const [warningsOpen, setWarningsOpen] = useState(false);
   const warningPresentation = useMemo(
-    () => getRouteWarningPresentation(activeDataPoints, selectedDataMarker),
-    [activeDataPoints, selectedDataMarker],
+    () => getRouteWarningPresentation(activeDataPoints),
+    [activeDataPoints],
   );
   const warnings = warningPresentation.warnings;
 

@@ -33,3 +33,6 @@ Current plans:
 - `rn-mobile-elevation-profile/` - design + plan for Phase 2.9: native elevation profile chart (shared core builder + grade utils, react-native-svg rendering, touch-scrub tooltip, synced map marker, expandable bottom sheet).
 - `rn-mobile-route-restore/` - design + plan for Phase 2.10: native route restore / `?route=` deep-link parity via a location.native URL cache + Linking.
 - `rn-mobile-waypoint-drag/` - design + plan for Phase 2.11: native draggable route waypoints (RNMapbox PointAnnotation wired to the shared drag handlers).
+- `mobile-map-gesture-intent/` - design for tightening the iPhone map gesture intent model (add / move / pan / zoom) to stop touches near a point being misread as point-moves.
+- `cw-edge-snap-preference/` - design for biasing route-point snapping toward CycleWays-matched edges (shared core) so points near a CW path don't snap to a parallel road.
+- `data-marker-detail-card/` - design for a bottom-sheet detail card when tapping a landmark/hazard marker (shared core action + add-to-route), on the iPhone app and mobile web.
