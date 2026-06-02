@@ -90,3 +90,50 @@ assert.throws(
 );
 
 console.log("editor POI validation tests passed");
+
+// images[] is accepted when shaped correctly
+validateSourceGeojson(
+  sourceWithMarker({
+    type: "cafe",
+    id: "segment-cafe-multi",
+    name: "Segment cafe",
+    images: [
+      { photo: "/attached_assets/background.png", thumbnail: "/attached_assets/background.png" },
+      { photo: "/attached_assets/background_grass.png" },
+    ],
+    location: [33.105, 35.605],
+  }),
+);
+
+// images entries must have a string photo
+assert.throws(
+  () =>
+    validateSourceGeojson(
+      sourceWithMarker({
+        type: "cafe",
+        id: "bad-images",
+        name: "Bad",
+        images: [{ thumbnail: "/attached_assets/background.png" }],
+        location: [33.105, 35.605],
+      }),
+    ),
+  /image/i,
+);
+
+// a gallery POI with empty images[] and no legacy photo is rejected (no image)
+assert.throws(
+  () =>
+    validateSourceGeojson(
+      sourceWithMarker({
+        type: "viewpoint",
+        id: "empty-images",
+        name: "Empty",
+        gallery: true,
+        images: [],
+        location: [33.105, 35.605],
+      }),
+    ),
+  /no image/,
+);
+
+console.log("editor POI images[] validation tests passed");

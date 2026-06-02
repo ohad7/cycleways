@@ -124,6 +124,18 @@ try {
   const missing = await findMissingSourceImages(source, repoDir);
   assert.equal(missing.length, 1);
   assert.match(missing[0], /missing\.webp/);
+
+  // images[] entries are walked too.
+  source.features[0].properties.data.push({
+    type: "cafe",
+    id: "with-images",
+    images: [
+      { photo: "public-data/poi-images/present.webp", thumbnail: "public-data/poi-images/present.webp" },
+      { photo: "public-data/poi-images/also-missing.webp" },
+    ],
+  });
+  const missingWithImages = await findMissingSourceImages(source, repoDir);
+  assert.ok(missingWithImages.includes("public-data/poi-images/also-missing.webp"));
 } finally {
   await rm(repoDir, { recursive: true, force: true });
 }

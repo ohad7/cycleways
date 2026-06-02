@@ -72,7 +72,16 @@ function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function markerImages(marker) {
+  if (Array.isArray(marker?.images)) return marker.images;
+  if (hasText(marker?.photo)) return [{ photo: marker.photo, thumbnail: marker.thumbnail }];
+  return [];
+}
+
 function hasGalleryImage(marker) {
+  if (Array.isArray(marker?.images)) {
+    return marker.images.some((entry) => entry && hasText(entry.photo));
+  }
   return hasText(marker.photo) || hasText(marker.thumbnail);
 }
 
@@ -151,8 +160,14 @@ function collectSourceImagePaths(source) {
     for (const marker of data) {
       for (const field of ["photo", "thumbnail"]) {
         const value = marker?.[field];
-        if (typeof value === "string" && value.trim() !== "") {
-          paths.push(value);
+        if (typeof value === "string" && value.trim() !== "") paths.push(value);
+      }
+      if (Array.isArray(marker?.images)) {
+        for (const entry of marker.images) {
+          for (const field of ["photo", "thumbnail"]) {
+            const value = entry?.[field];
+            if (typeof value === "string" && value.trim() !== "") paths.push(value);
+          }
         }
       }
     }
@@ -912,6 +927,22 @@ export function validateSourceGeojson(source) {
         }
         if (marker.gallery !== undefined && typeof marker.gallery !== "boolean") {
           throw new Error(`Feature ${name || index} data marker ${markerIndex} has invalid gallery flag`);
+        }
+        if (marker.images !== undefined) {
+          if (!Array.isArray(marker.images)) {
+            throw new Error(`Feature ${name || index} data marker ${markerIndex} has non-array images`);
+          }
+          for (const [imageIndex, entry] of marker.images.entries()) {
+            if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+              throw new Error(`Feature ${name || index} data marker ${markerIndex} image ${imageIndex} is invalid`);
+            }
+            if (!hasText(entry.photo)) {
+              throw new Error(`Feature ${name || index} data marker ${markerIndex} image ${imageIndex} is missing a photo`);
+            }
+            if (entry.thumbnail !== undefined && typeof entry.thumbnail !== "string") {
+              throw new Error(`Feature ${name || index} data marker ${markerIndex} image ${imageIndex} has invalid thumbnail`);
+            }
+          }
         }
         if (marker.gallery === true && !hasGalleryImage(marker)) {
           throw new Error(`Feature ${name || index} data marker ${markerIndex} is in the gallery but has no image`);
