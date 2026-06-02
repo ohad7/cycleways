@@ -40,3 +40,4 @@ Current plans:
 - `poi-editor-refinements/` - design and implementation plan for multiple images per POI, a managed (read-only) editor image list, a decluttered segment panel with pinned ID/Name and collapsed quality, and emoji map markers per POI type.
 - `featured-gallery-video-sync/` - design and implementation plan for the Sovev Beit Hillel route-story layout: dominant video, right-side route text + compact map, transient POI video preview, and below-fold POI story list.
 - `featured-mobile-layout/` - design and implementation plan for the featured route page's mobile-web editorial polish (and how the screen is shared with the future native iPhone app); also removes the fullscreen map button.
+- `featured-route-endpoints/` - design for optional per-route start/end points (image + name + description, location derived from route geometry) shown in the on-video preview (fraction 0/1) and as the first/last story cards.

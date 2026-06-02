@@ -14,6 +14,9 @@ import {
   createRouteManager,
   restoreRouteFromParam,
 } from "@cycleways/core/routing/routeActions.js";
+import { mergeBaseRoutingShards } from "@cycleways/core/routing/baseRoutingShards.js";
+import { decodeCompactBaseRoutingShard } from "@cycleways/core/routing/compactBaseRoutingShard.js";
+import { decodeMessagePack } from "@cycleways/core/routing/messagePack.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -470,6 +473,47 @@ async function loadFeaturedAssetsFromDisk() {
   return cachedFeaturedAssets;
 }
 
+// Base-graph routes (hybrid_route_v6 / base_route_v4 tokens) need the base
+// routing network + cw-base index to decode, just like the web app. Merge all
+// shards once and cache, so catalog recompute/promote and keyframe polyline
+// decoding handle base-graph routes (not only segment-based ones).
+let cachedBaseRoutingDecode = null;
+async function getBaseRoutingDecodeAssets() {
+  if (cachedBaseRoutingDecode) return cachedBaseRoutingDecode;
+  let baseRoutingNetwork = null;
+  let cwBaseIndex = null;
+  try {
+    const shardsDir = resolve(publicDataDir, "base-routing-shards");
+    const shardManifest = JSON.parse(
+      await readFile(resolve(shardsDir, "manifest.json"), "utf-8"),
+    );
+    const shards = await Promise.all(
+      (shardManifest.shards || []).map(async (entry) => {
+        const buf = await readFile(resolve(shardsDir, entry.path));
+        if (entry.format === "msgpack") return decodeMessagePack(buf);
+        if (entry.format === "compact") return decodeCompactBaseRoutingShard(buf);
+        return JSON.parse(new TextDecoder().decode(buf));
+      }),
+    );
+    const network = mergeBaseRoutingShards(shards);
+    network.graphVersion = shardManifest.generatedAt || "";
+    if (Array.isArray(network.edges) && network.edges.length > 0) {
+      baseRoutingNetwork = network;
+    }
+  } catch (err) {
+    log("warn", `base routing shards unavailable for route decode: ${err.message}`);
+  }
+  try {
+    cwBaseIndex = JSON.parse(
+      await readFile(resolve(publicDataDir, "cw-base-index.json"), "utf-8"),
+    );
+  } catch (err) {
+    log("warn", `cw-base-index unavailable for route decode: ${err.message}`);
+  }
+  cachedBaseRoutingDecode = { baseRoutingNetwork, cwBaseIndex };
+  return cachedBaseRoutingDecode;
+}
+
 export async function loadRoutePolylineForSlug(slug) {
   // First try the draft catalog (for in-progress edits), then the promoted one,
   // and fall back to the .meta.js seed for legacy compatibility.
@@ -490,13 +534,14 @@ export async function loadRoutePolylineForSlug(slug) {
   }
   const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets();
   const manager = await createRouteManager(
     RouteManagerClass,
     geoJsonData,
     segmentsData,
-    null,
+    baseRoutingNetwork,
   );
-  const snapshot = restoreRouteFromParam(manager, routeToken, segmentsData);
+  const snapshot = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
   if (!snapshot) throw new Error(`route "${slug}" failed to decode`);
   return snapshot.geometry;
 }
@@ -641,6 +686,27 @@ async function readJsonOrNull(filePath) {
 
 const ROUTE_CATALOG_SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
+function validateRouteEndpoint(point, label) {
+  if (point === undefined || point === null) return;
+  if (typeof point !== "object") throw new Error(`${label} must be an object`);
+  if (!point.name || typeof point.name !== "string") {
+    throw new Error(`${label} is missing a name`);
+  }
+  if (point.description !== undefined && typeof point.description !== "string") {
+    throw new Error(`${label} description must be a string`);
+  }
+  const images = Array.isArray(point.images) ? point.images : [];
+  if (images.length === 0) throw new Error(`${label} must have at least one image`);
+  for (const [i, img] of images.entries()) {
+    if (!img || typeof img !== "object" || typeof img.photo !== "string" || !img.photo) {
+      throw new Error(`${label} image ${i} is missing a photo`);
+    }
+    if (img.thumbnail !== undefined && typeof img.thumbnail !== "string") {
+      throw new Error(`${label} image ${i} has an invalid thumbnail`);
+    }
+  }
+}
+
 export function validateCatalogDraft(catalog) {
   if (!catalog || !Array.isArray(catalog.entries)) {
     throw new Error("catalog.entries must be an array");
@@ -659,6 +725,8 @@ export function validateCatalogDraft(catalog) {
     if (typeof entry.route !== "string" || entry.route.length === 0) {
       throw new Error(`entry ${entry.slug} missing route token`);
     }
+    validateRouteEndpoint(entry.start, `entry ${entry.slug} start point`);
+    validateRouteEndpoint(entry.end, `entry ${entry.slug} end point`);
   }
 }
 
@@ -707,13 +775,19 @@ export function recomputeCatalogMetadata(draft, refs) {
   return { version: 1, entries };
 }
 
-async function buildLiveDecodeRoute() {
+export async function buildLiveDecodeRoute() {
   const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
-  const manager = await createRouteManager(RouteManagerClass, geoJsonData, segmentsData, null);
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets();
+  const manager = await createRouteManager(
+    RouteManagerClass,
+    geoJsonData,
+    segmentsData,
+    baseRoutingNetwork,
+  );
   return function decodeRoute(token) {
     try {
-      const snapshot = restoreRouteFromParam(manager, token, segmentsData);
+      const snapshot = restoreRouteFromParam(manager, token, segmentsData, cwBaseIndex);
       if (!snapshot || !Array.isArray(snapshot.geometry) || snapshot.geometry.length < 2) {
         return null;
       }

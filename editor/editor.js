@@ -7711,6 +7711,13 @@ function rcRenderDetail() {
   featuredRow.append(fLabel, fInput);
   rcEls.detail.appendChild(featuredRow);
 
+  for (const ep of [
+    { key: "start", label: "Start point 🚩 (first stop in the list)" },
+    { key: "end", label: "End point 🏁 (optional — omit for cyclic routes)" },
+  ]) {
+    rcEls.detail.appendChild(rcEndpointSection(entry, ep.key, ep.label));
+  }
+
   const computed = document.createElement("div");
   computed.className = "rc-computed";
   const lines = [
@@ -7738,6 +7745,110 @@ function rcRenderDetail() {
   });
   actionRow.appendChild(delBtn);
   rcEls.detail.appendChild(actionRow);
+}
+
+// Editor sub-form for a route start/end point: name, description, and a single
+// uploaded image (reusing the POI image pipeline). Location is derived from the
+// route geometry at render time, so it is not edited here.
+function rcEndpointSection(entry, key, label) {
+  const section = document.createElement("div");
+  section.className = "rc-endpoint";
+
+  const heading = document.createElement("div");
+  heading.className = "rc-endpoint-heading";
+  heading.textContent = label;
+  section.appendChild(heading);
+
+  const point = entry[key] && typeof entry[key] === "object" ? entry[key] : null;
+  const ensure = () =>
+    (entry[key] = entry[key] && typeof entry[key] === "object"
+      ? entry[key]
+      : { name: "", description: "", images: [] });
+
+  const nameRow = document.createElement("div");
+  nameRow.className = "rc-row";
+  const nameLabel = document.createElement("label");
+  nameLabel.textContent = "Name:";
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.value = point?.name ?? "";
+  nameInput.addEventListener("input", (e) => {
+    ensure().name = e.target.value;
+  });
+  nameRow.append(nameLabel, nameInput);
+  section.appendChild(nameRow);
+
+  const descRow = document.createElement("div");
+  descRow.className = "rc-row";
+  const descLabel = document.createElement("label");
+  descLabel.textContent = "Description:";
+  const descInput = document.createElement("textarea");
+  descInput.value = point?.description ?? "";
+  descInput.addEventListener("input", (e) => {
+    ensure().description = e.target.value;
+  });
+  descRow.append(descLabel, descInput);
+  section.appendChild(descRow);
+
+  const images = Array.isArray(point?.images) ? point.images : [];
+  if (images.length > 0) {
+    const strip = document.createElement("div");
+    strip.className = "rc-endpoint-images";
+    images.forEach((image, i) => {
+      const fig = document.createElement("div");
+      const img = document.createElement("img");
+      img.src = dataImageSrc(image.thumbnail || image.photo);
+      img.alt = "";
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "secondary-button danger";
+      rm.textContent = "Remove";
+      rm.addEventListener("click", () => {
+        const ep = entry[key];
+        if (!ep) return;
+        ep.images = (ep.images || []).filter((_, j) => j !== i);
+        if (ep.images.length === 0 && !ep.name && !ep.description) delete entry[key];
+        rcRenderDetail();
+      });
+      fig.append(img, rm);
+      strip.appendChild(fig);
+    });
+    section.appendChild(strip);
+  }
+
+  const upRow = document.createElement("div");
+  upRow.className = "rc-row";
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  const status = document.createElement("span");
+  status.className = "data-image-status";
+  fileInput.addEventListener("change", async () => {
+    const file = (fileInput.files || [])[0];
+    if (!file) return;
+    status.textContent = "Uploading…";
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const res = await fetch("/api/poi-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: `${entry.slug}-${key}`, data: dataUrl }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || `upload failed (${res.status})`);
+      const ep = ensure();
+      ep.images = [...(ep.images || []), { photo: body.photo, thumbnail: body.thumbnail }];
+      rcRenderDetail();
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : String(error);
+    } finally {
+      fileInput.value = "";
+    }
+  });
+  upRow.append(fileInput, status);
+  section.appendChild(upRow);
+
+  return section;
 }
 
 async function rcLoad() {

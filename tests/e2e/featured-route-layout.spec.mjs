@@ -36,9 +36,11 @@ test.describe("desktop layout", () => {
     expect(Math.abs((mapBox.y + mapBox.height) - (videoBox.y + videoBox.height))).toBeLessThanOrEqual(2);
     expect(storyBox.y).toBeGreaterThan(videoBox.y + videoBox.height);
 
-    await expect(page.locator(".sbh-video-poi-preview")).toHaveCount(0);
+    // The preview starts collapsed (a small clickable thumbnail of the nearest stop).
+    await expect(page.locator(".sbh-video-poi-preview")).toHaveClass(/sbh-video-poi-preview--mini/);
     await page.locator(".sbh-poi-story").first().click();
     await expect(page.locator(".sbh-video-poi-preview")).toBeVisible();
+    await expect(page.locator(".sbh-video-poi-preview")).not.toHaveClass(/sbh-video-poi-preview--mini/);
     await expect(page.locator(".sbh-video-poi-preview")).toContainText("חוף קולומביה");
   });
 });

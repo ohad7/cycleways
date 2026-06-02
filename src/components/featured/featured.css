@@ -520,10 +520,10 @@
   top: 16px;
   left: 16px;
   z-index: 2;
-  display: grid;
-  grid-template-columns: 117px minmax(0, 1fr);
+  display: flex;
+  align-items: center;
   gap: 13px;
-  width: min(416px, calc(100% - 32px));
+  max-width: calc(100% - 32px);
   padding: 12px;
   border: 1px solid rgba(36, 49, 58, 0.16);
   border-radius: 8px;
@@ -531,21 +531,50 @@
   box-shadow: 0 12px 28px rgba(16, 24, 32, 0.22);
   color: #24313a;
   direction: rtl;
+  overflow: hidden;
   pointer-events: auto;
   cursor: pointer;
   font: inherit;
   text-align: start;
+  transition: padding 0.24s ease, gap 0.24s ease, border-radius 0.24s ease;
 }
 
 .sbh-video-poi-preview img {
+  flex: 0 0 auto;
   width: 117px;
   height: 88px;
   border-radius: 6px;
   object-fit: cover;
+  transition: width 0.24s ease, height 0.24s ease, border-radius 0.24s ease;
 }
 
 .sbh-video-poi-preview div {
   min-width: 0;
+  max-width: 320px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-width 0.24s ease, opacity 0.2s ease;
+}
+
+/* Collapsed: morphs into a small image-only circle that stays clickable. The
+   text wrapper collapses in both axes so the container stays square (a true
+   circle) rather than ballooning into a tall oval. */
+.sbh-video-poi-preview--mini {
+  gap: 0;
+  padding: 6px;
+  border-radius: 999px;
+}
+
+.sbh-video-poi-preview--mini img {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+}
+
+.sbh-video-poi-preview--mini div {
+  max-width: 0;
+  height: 0;
+  opacity: 0;
 }
 
 .sbh-video-poi-preview span {
@@ -922,6 +951,15 @@
   content: "";
 }
 
+/* Start/end points read as forest-green to set them apart from numbered stops. */
+.sbh-poi-story--endpoint .sbh-poi-story-kicker {
+  color: var(--sbh-forest);
+}
+
+.sbh-poi-story--endpoint .sbh-poi-story-kicker::after {
+  background: var(--sbh-forest-soft);
+}
+
 .sbh-poi-story-type {
   display: block;
   margin-top: 6px;
@@ -1114,18 +1152,21 @@
   .sbh-video-poi-preview {
     top: 8px;
     left: 8px;
-    grid-template-columns: 40px minmax(0, 1fr);
-    align-items: center;
     gap: 8px;
-    width: auto;
     max-width: calc(100% - 16px);
     padding: 5px 11px 5px 5px;
     border-radius: 999px;
   }
   .sbh-video-poi-preview img { width: 40px; height: 40px; border-radius: 999px; }
+  .sbh-video-poi-preview div { max-width: 200px; }
   .sbh-video-poi-preview span { display: none; }
   .sbh-video-poi-preview strong { margin-top: 0; font-size: 0.9rem; line-height: 1.15; }
   .sbh-video-poi-preview p { display: none; }
+
+  /* Collapsed: image-only circle. */
+  .sbh-video-poi-preview--mini { padding: 4px; gap: 0; }
+  .sbh-video-poi-preview--mini img { width: 36px; height: 36px; }
+  .sbh-video-poi-preview--mini div { max-width: 0; }
 
   /* Short route blurb — full-width band, no side chrome. */
   .sbh-route-panel {

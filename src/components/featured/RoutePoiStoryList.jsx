@@ -1,7 +1,12 @@
 import React, { useMemo } from "react";
 import { poiLabel } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
-import { imageSrc, routePoiStories } from "./routePoiStoryData.js";
+import {
+  endpointLabel,
+  imageSrc,
+  routeEndpointStories,
+  routePoiStories,
+} from "./routePoiStoryData.js";
 
 function formatDistance(meters) {
   if (!Number.isFinite(meters) || meters <= 0) return "";
@@ -11,6 +16,7 @@ function formatDistance(meters) {
 
 export default function RoutePoiStoryList({ className = "" }) {
   const {
+    meta,
     routeState,
     focusedPoiId,
     setFocusedPoiId,
@@ -18,12 +24,33 @@ export default function RoutePoiStoryList({ className = "" }) {
     seekVideoToFraction,
     playerPauseRef,
   } = useFeaturedRoute();
-  const stories = useMemo(
-    () => routePoiStories(routeState.activeDataPoints),
-    [routeState.activeDataPoints],
-  );
+  const stories = useMemo(() => {
+    const base = routePoiStories(routeState.activeDataPoints);
+    const ends = routeEndpointStories(meta, routeState);
+    const start = ends.find((e) => e.kind === "start");
+    const end = ends.find((e) => e.kind === "end");
+    return [
+      ...(start ? [start] : []),
+      ...base,
+      ...(end ? [end] : []),
+    ];
+  }, [meta, routeState]);
 
   if (stories.length === 0) return null;
+
+  // Number only the on-route stops; the start/end endpoints get their own label.
+  let stopNumber = 0;
+  const items = stories.map((story) => {
+    let kicker;
+    if (story.kind) {
+      kicker = endpointLabel(story.kind);
+    } else {
+      stopNumber += 1;
+      const distance = formatDistance(story.routeProgressMeters);
+      kicker = `תחנה ${stopNumber}${distance ? ` · ${distance}` : ""}`;
+    }
+    return { story, kicker };
+  });
 
   function handleSelect(story) {
     setFocusedPoiId(story.poiId);
@@ -53,24 +80,24 @@ export default function RoutePoiStoryList({ className = "" }) {
       </div>
 
       <div className="sbh-poi-story-list">
-        {stories.map((story, index) => {
-          const distance = formatDistance(story.routeProgressMeters);
-          const stopLabel = `תחנה ${index + 1}${distance ? ` · ${distance}` : ""}`;
-          return (
+        {items.map(({ story, kicker }) => (
           <button
             key={story.poiId}
             type="button"
             data-poi-id={story.poiId}
             className={[
               "sbh-poi-story",
+              story.kind ? "sbh-poi-story--endpoint" : "",
               focusedPoiId === story.poiId ? "sbh-poi-story--focused" : "",
             ].filter(Boolean).join(" ")}
             onClick={() => handleSelect(story)}
           >
             <div className="sbh-poi-story-copy">
-              <span className="sbh-poi-story-kicker">{stopLabel}</span>
+              <span className="sbh-poi-story-kicker">{kicker}</span>
               <h3>{story.name || poiLabel(story.type)}</h3>
-              <span className="sbh-poi-story-type">{poiLabel(story.type)}</span>
+              {!story.kind && (
+                <span className="sbh-poi-story-type">{poiLabel(story.type)}</span>
+              )}
               {story.description && (
                 <p className="sbh-poi-story-description">{story.description}</p>
               )}
@@ -91,8 +118,7 @@ export default function RoutePoiStoryList({ className = "" }) {
               ))}
             </div>
           </button>
-          );
-        })}
+        ))}
       </div>
     </section>
   );

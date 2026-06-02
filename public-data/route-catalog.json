@@ -2,15 +2,15 @@
   "version": 1,
   "entries": [
     {
-      "slug": "shdeh-nehemia-baniyas",
-      "name": "שדה נחמיה → בניאס → גן הצפון → שדה נחמיה",
+      "slug": "banias-gan-hatsafon",
+      "name": "מסלול מעגלי בניאס וגן הצפון",
       "summary": "מסלול קצר ונוח, מומלץ במיוחד לחובבי רכיבה ראשונית, עם פינות מנוחה רבות.",
-      "route": "AQByAAcABAAFAFgAYABeAAoAeAAZAHIA",
+      "route": "VjDH1VcUfWNfBnydX8kpJAuNYXinx5y9R9sGULYewn28HS2xCYK55eeWnG12LtfhB2KJyxHE7V9Kwe6VAbubnaLzJD9ntj5v1jiCbC9Gh2khxXDy7rTvAGUodsVuqSmUCNHwUN1rowfNkFxsAeJxKxSNvgz9h4xCmLFBbN9T6vEpsft4omxwkDYi3jUFHqsb3B8Q69iCh2ziNVuUo1uaLks8sDBYdafk5iEVqqURx5n9Wsonh3kjX5Hk7HKoNfMmHigkuxwgbVKGrZQf15CZH1WuWLnZeE3UyourE27VmCuRfR76fewcrpny6V7TRkFSoWj2qHqQdptCLRPmuFrdX3ELb2xksktFCWkHLWr7WXs4zzCv",
       "notes": "",
       "featured": true,
-      "distanceKm": 13.9,
-      "elevationGainM": 126,
-      "elevationLossM": 126,
+      "distanceKm": 14.7,
+      "elevationGainM": 71,
+      "elevationLossM": 71,
       "regionId": "hula-valley",
       "passesNear": [
         "beit-hillel",
@@ -33,8 +33,8 @@
       "notes": "",
       "featured": true,
       "distanceKm": 6.5,
-      "elevationGainM": 39,
-      "elevationLossM": 40,
+      "elevationGainM": 12,
+      "elevationLossM": 12,
       "regionId": "hula-valley",
       "passesNear": [
         "beit-hillel",
@@ -47,7 +47,17 @@
         "dirt": 0,
         "road": 0
       },
-      "qualityScore": 3
+      "qualityScore": 3,
+      "start": {
+        "name": "חניון כניסה בית הלל",
+        "description": "המסלול מתחיל בחניון שליד  הכניסה הצפונית לבית הלל שעל כביש 9888 קצת אחרי השער הצהוב של המושב",
+        "images": [
+          {
+            "photo": "public-data/poi-images/sovev-beit-hillel-start-88a84776.webp",
+            "thumbnail": "public-data/poi-images/sovev-beit-hillel-start-88a84776-thumb.webp"
+          }
+        ]
+      }
     }
   ]
 }
