@@ -22,4 +22,22 @@ const sampleSpec = styles[styleKeys[0]];
 assert.ok(sampleSpec && typeof sampleSpec === "object", "style spec is an object");
 assert.doesNotThrow(() => JSON.parse(JSON.stringify(sampleSpec)), "style spec is pure data");
 
+// Regression: data markers must NOT use a Mapbox `text-field` to render emoji.
+// Mapbox GL JS only supports glyph code points <= 65535; most POI emoji are in
+// the astral plane (> U+FFFF) and throw "glyphs > 65535 not supported", which
+// aborts the symbol layer and blanks the whole map. Emoji are rendered via
+// icon-image (rasterized images) instead.
+assert.ok(
+  styles.DATA_MARKERS_STYLE && styles.DATA_MARKERS_STYLE.layout,
+  "DATA_MARKERS_STYLE has a layout",
+);
+assert.ok(
+  !("text-field" in styles.DATA_MARKERS_STYLE.layout),
+  "DATA_MARKERS_STYLE.layout must not use text-field (astral emoji glyphs crash Mapbox)",
+);
+assert.ok(
+  "icon-image" in styles.DATA_MARKERS_STYLE.layout,
+  "DATA_MARKERS_STYLE.layout renders markers via icon-image",
+);
+
 console.log("test-map-styles OK");

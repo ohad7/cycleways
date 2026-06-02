@@ -631,21 +631,14 @@ export const DATA_MARKERS_CIRCLE_STYLE = {
 
 export const DATA_MARKERS_STYLE = {
   layout: {
+    // POI types use a rasterized emoji image (registerPoiEmojiImages); warnings
+    // use their loaded SVG icon. Emoji are NOT rendered via `text-field` —
+    // astral-plane glyphs (> U+FFFF) throw "glyphs > 65535 not supported" and
+    // blank the whole map.
     "icon-image": ["get", "icon"],
     "icon-size": 1,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
-    "text-field": [
-      "match",
-      ["get", "type"],
-      ["payment", "gate", "mud", "warning", "slope", "narrow", "severe"],
-      "",
-      ["coalesce", ["get", "emoji"], ""],
-    ],
-    "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-    "text-size": ["interpolate", ["linear"], ["zoom"], 10, 11, 16, 16],
-    "text-allow-overlap": true,
-    "text-ignore-placement": true,
   },
   paint: {
     "icon-opacity": [

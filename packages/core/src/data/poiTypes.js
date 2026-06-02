@@ -129,6 +129,16 @@ export function poiIcon(type) {
   return POI_ICONS[type] || "marker-11";
 }
 
+// The Mapbox `icon-image` name a marker feature should use. Warning types keep
+// their loaded SVG icon; every other POI type uses a per-type rasterized emoji
+// image (registered via registerPoiEmojiImages). Emoji are NOT rendered through
+// Mapbox `text-field` because astral-plane glyphs (> U+FFFF) are unsupported.
+export const POI_EMOJI_ICON_PREFIX = "poi-emoji-";
+
+export function poiMarkerIconName(type) {
+  return isWarningType(type) ? poiIcon(type) : `${POI_EMOJI_ICON_PREFIX}${type}`;
+}
+
 export function isGalleryEligiblePoi(point) {
   if (!point || isWarningType(point.type)) return false;
   if (point.gallery === false) return false;

@@ -51,7 +51,9 @@ assert.equal(features[2].properties.thumbnail, "/attached_assets/background.png"
 assert.equal(features[2].properties.gallery, true);
 assert.equal(features[2].properties.label, "בית קפה");
 assert.equal(features[2].properties.color, "#b07a3f");
-assert.equal(features[2].properties.icon, "marker-11");
+// Non-warning POI types render emoji via a per-type icon-image, not the
+// generic marker-11 / text-field (astral emoji glyphs crash Mapbox).
+assert.equal(features[2].properties.icon, "poi-emoji-cafe");
 
 const collection = dataMarkerFeatureCollection(features, ["Segment A-1"]);
 assert.equal(collection.type, "FeatureCollection");

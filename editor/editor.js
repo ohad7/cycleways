@@ -8,8 +8,9 @@ import {
   POI_TYPE_OPTIONS,
   poiColor,
   poiEmoji,
-  poiIcon,
+  poiMarkerIconName,
 } from "../packages/core/src/data/poiTypes.js";
+import { registerPoiEmojiImages } from "../packages/core/src/map/emojiMarkerImage.js";
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 
@@ -72,9 +73,6 @@ const BASE_GRAPH_LINE_OPACITY = 0.52;
 const DATA_TYPES = POI_TYPE_OPTIONS;
 const DATA_TYPE_COLORS = Object.fromEntries(
   DATA_TYPES.map(({ value }) => [value, poiColor(value)]),
-);
-const DATA_TYPE_ICONS = Object.fromEntries(
-  DATA_TYPES.map(({ value }) => [value, poiIcon(value)]),
 );
 
 const DATA_ICON_PATHS = {
@@ -357,6 +355,10 @@ async function loadDataMarkerIcons() {
       console.warn(error);
     }
   }
+
+  // POI types render emoji via a rasterized icon-image (not text-field, which
+  // can't render astral-plane emoji glyphs).
+  registerPoiEmojiImages(map);
 }
 
 function setStatus(message, type = "info") {
@@ -701,7 +703,7 @@ function dataMarkerCollection() {
           index,
           type,
           id: marker.id || "",
-          icon: DATA_TYPE_ICONS[type] || poiIcon(type) || "caution-11",
+          icon: marker.icon || poiMarkerIconName(type),
           emoji: marker.emoji || poiEmoji(type) || "",
           name: marker.name || "",
           information: marker.information || "",
@@ -7221,21 +7223,12 @@ async function addMapLayers() {
       type: "symbol",
       source: "data-markers",
       layout: {
+        // POI types render a rasterized emoji image; warnings render their SVG.
+        // Emoji are not rendered via text-field — astral glyphs crash Mapbox.
         "icon-image": ["get", "icon"],
         "icon-size": ["case", ["get", "selected"], 1.12, 0.95],
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
-        "text-field": [
-          "match",
-          ["get", "type"],
-          ["payment", "gate", "mud", "warning", "slope", "narrow", "severe"],
-          "",
-          ["coalesce", ["get", "emoji"], ""],
-        ],
-        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-        "text-size": ["case", ["get", "selected"], 16, 13],
-        "text-allow-overlap": true,
-        "text-ignore-placement": true,
       },
       paint: {
         "icon-opacity": ["case", ["get", "selected"], 1, 0.72],

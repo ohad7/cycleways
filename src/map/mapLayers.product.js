@@ -66,6 +66,7 @@ import {
   DATA_MARKERS_CIRCLE_STYLE,
   VIDEO_CURSOR_STYLE,
 } from "@cycleways/core/map/mapStyles.js";
+import { registerPoiEmojiImages } from "@cycleways/core/map/emojiMarkerImage.js";
 
 const DATA_MARKER_ICON_FILES = {
   "bank-11": "/icons/bank.svg",
@@ -700,6 +701,10 @@ export async function loadDataMarkerIcons(map) {
       }
     }),
   );
+
+  // Register per-type emoji marker images (POI types render emoji via
+  // icon-image, not text-field — astral glyphs crash Mapbox).
+  registerPoiEmojiImages(map);
 }
 
 export function syncVideoCursorLayer(map, cursor) {

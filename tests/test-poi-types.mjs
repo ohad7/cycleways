@@ -5,7 +5,7 @@ import {
   createRouteManager,
   addPoint,
 } from "@cycleways/core/routing/routeActions.js";
-import { isGalleryEligiblePoi, normalizePoiImages, primaryPoiImage, galleryImageSlides } from "@cycleways/core/data/poiTypes.js";
+import { isGalleryEligiblePoi, normalizePoiImages, primaryPoiImage, galleryImageSlides, poiMarkerIconName, poiIcon } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 const require = createRequire(import.meta.url);
@@ -227,5 +227,14 @@ assert.equal(slides[1].photo, "mid-1.webp");
 assert.equal(slides[1].poiId, "mid");
 
 console.log("galleryImageSlides tests passed");
+
+// poiMarkerIconName: warnings keep their SVG icon name; POI types get a
+// per-type emoji image name (rendered via icon-image, never text-field).
+assert.equal(poiMarkerIconName("warning"), poiIcon("warning"));
+assert.equal(poiMarkerIconName("gate"), poiIcon("gate"));
+assert.equal(poiMarkerIconName("cafe"), "poi-emoji-cafe");
+assert.equal(poiMarkerIconName("river"), "poi-emoji-river");
+assert.notEqual(poiMarkerIconName("river"), poiMarkerIconName("tree"));
+console.log("poiMarkerIconName tests passed");
 
 console.log("POI types tests passed");
