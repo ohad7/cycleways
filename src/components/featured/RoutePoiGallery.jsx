@@ -1,25 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  isGalleryEligiblePoi,
+  galleryImageSlides,
   poiLabel,
 } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 
-function imageSrc(point) {
-  const src = point.thumbnail || point.photo || "";
+function imageSrc(item) {
+  const src = item.thumbnail || item.photo || "";
   if (/^(https?:)?\/\//.test(src) || src.startsWith("/")) return src;
   return `/${src}`;
-}
-
-function byRouteProgress(a, b) {
-  const aProgress = Number.isFinite(a.routeProgressMeters)
-    ? a.routeProgressMeters
-    : Number.POSITIVE_INFINITY;
-  const bProgress = Number.isFinite(b.routeProgressMeters)
-    ? b.routeProgressMeters
-    : Number.POSITIVE_INFINITY;
-  if (aProgress !== bProgress) return aProgress - bProgress;
-  return String(a.id || "").localeCompare(String(b.id || ""));
 }
 
 export default function RoutePoiGallery({ className = "" }) {
@@ -30,11 +19,7 @@ export default function RoutePoiGallery({ className = "" }) {
     setFocusedCoord,
   } = useFeaturedRoute();
   const items = useMemo(
-    () =>
-      routeState.activeDataPoints
-        .filter(isGalleryEligiblePoi)
-        .slice()
-        .sort(byRouteProgress),
+    () => galleryImageSlides(routeState.activeDataPoints),
     [routeState.activeDataPoints],
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -49,7 +34,7 @@ export default function RoutePoiGallery({ className = "" }) {
 
   useEffect(() => {
     if (!focusedPoiId) return;
-    const index = items.findIndex((item) => item.id === focusedPoiId);
+    const index = items.findIndex((item) => item.poiId === focusedPoiId);
     if (index >= 0) setSelectedIndex(index);
   }, [focusedPoiId, items]);
 
@@ -61,7 +46,7 @@ export default function RoutePoiGallery({ className = "" }) {
     const next = items[index];
     if (!next) return;
     setSelectedIndex(index);
-    setFocusedPoiId(next.id);
+    setFocusedPoiId(next.poiId);
     if (Array.isArray(next.location) && next.location.length >= 2) {
       const [lat, lng] = next.location;
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
@@ -110,7 +95,7 @@ export default function RoutePoiGallery({ className = "" }) {
       <div className="sbh-carousel-dots" aria-label="בחירת תמונה">
         {items.map((item, index) => (
           <button
-            key={item.id}
+            key={`${item.poiId}-${item.imageIndex}`}
             type="button"
             className={index === selectedIndex ? "active" : ""}
             onClick={() => selectIndex(index)}
