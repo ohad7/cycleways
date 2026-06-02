@@ -60,6 +60,7 @@ export default function RoutePoiStoryList({ className = "" }) {
           <button
             key={story.poiId}
             type="button"
+            data-poi-id={story.poiId}
             className={[
               "sbh-poi-story",
               focusedPoiId === story.poiId ? "sbh-poi-story--focused" : "",

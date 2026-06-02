@@ -45,25 +45,10 @@ test.describe("desktop layout", () => {
 
 test.describe("mobile layout", () => {
   test.use({ viewport: { width: 390, height: 844 } });
-  test("inline map visible on mobile, sticky map hidden", async ({ page }) => {
+  test("inline map visible on mobile, sticky map hidden, no fullscreen button", async ({ page }) => {
     await page.goto("/featured/sovev-beit-hillel");
     await expect(page.locator(".featured-map-inline")).toBeVisible();
     await expect(page.locator(".featured-route-sticky-map")).toHaveCount(0);
-  });
-
-  test("fullscreen map opens and closes", async ({ page }) => {
-    await page.goto("/featured/sovev-beit-hillel");
-    await page.locator(".featured-map-fullscreen-btn").click();
-    await expect(page.locator(".featured-map-fullscreen-overlay")).toBeVisible();
-    await page.locator(".featured-map-fullscreen-close").click();
-    await expect(page.locator(".featured-map-fullscreen-overlay")).toHaveCount(0);
-  });
-
-  test("Escape key closes fullscreen map", async ({ page }) => {
-    await page.goto("/featured/sovev-beit-hillel");
-    await page.locator(".featured-map-fullscreen-btn").click();
-    await expect(page.locator(".featured-map-fullscreen-overlay")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.locator(".featured-map-fullscreen-overlay")).toHaveCount(0);
+    await expect(page.locator(".featured-map-fullscreen-btn")).toHaveCount(0);
   });
 });

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-06-02T15:42:30.247Z",
+  "updatedAt": "2026-06-02T18:36:34.455Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -5773,7 +5773,7 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.41,
+      "avgDistanceMeters": 0.45,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -5796,34 +5796,25 @@
           "osmWayId": 626919658
         },
         {
-          "edgeId": "e73965576_1",
+          "edgeId": "e319325858_1",
           "source": "osm",
-          "direction": "reverse",
+          "direction": "forward",
           "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 73965576
+          "osmWayId": 319325858
         },
         {
-          "edgeId": "e642855322_1",
+          "edgeId": "e626711149_1",
           "source": "osm",
           "direction": "reverse",
           "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 642855322
-        },
-        {
-          "edgeId": "e79108837_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 79108837
+          "osmWayId": 626711149
         }
       ],
-      "updatedAt": "2026-05-20T19:06:38.453Z"
+      "updatedAt": "2026-06-02T18:36:28.127Z"
     },
     "95": {
       "segmentId": 95,
@@ -5954,21 +5945,21 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.99,
+      "avgDistanceMeters": 0.92,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e1419324454_1",
+          "edgeId": "e603468732_1",
           "source": "osm",
-          "direction": "reverse",
+          "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 1419324454
+          "osmWayId": 603468732
         },
         {
-          "edgeId": "e815936018_1",
+          "edgeId": "e815936018_2",
           "source": "osm",
           "direction": "reverse",
           "sequenceIndex": 1,
@@ -5977,10 +5968,19 @@
           "osmWayId": 815936018
         },
         {
-          "edgeId": "e610268995_2",
+          "edgeId": "e815936018_1",
           "source": "osm",
           "direction": "reverse",
           "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815936018
+        },
+        {
+          "edgeId": "e610268995_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 610268995
@@ -5989,13 +5989,13 @@
           "edgeId": "e610268995_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 3,
+          "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 610268995
         }
       ],
-      "updatedAt": "2026-05-20T22:37:29.868Z"
+      "updatedAt": "2026-06-02T18:36:30.237Z"
     },
     "97": {
       "segmentId": 97,
@@ -6226,7 +6226,7 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.62,
+      "avgDistanceMeters": 0.55,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -6258,7 +6258,7 @@
           "osmWayId": 79113873
         }
       ],
-      "updatedAt": "2026-05-20T22:28:59.301Z"
+      "updatedAt": "2026-06-02T18:36:32.308Z"
     },
     "101": {
       "segmentId": 101,
@@ -6308,30 +6308,21 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.17,
+      "avgDistanceMeters": 0.2,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e79108837_2",
+          "edgeId": "e79108837_3",
           "source": "osm",
           "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 79108837
-        },
-        {
-          "edgeId": "e79108837_3",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 79108837
         }
       ],
-      "updatedAt": "2026-05-20T19:06:42.490Z"
+      "updatedAt": "2026-06-02T18:36:34.449Z"
     },
     "105": {
       "segmentId": 105,

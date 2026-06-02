@@ -1947,9 +1947,9 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.626033,
-      "latitude": 33.224142,
-      "elevation": 118.0
+      "longitude": 35.625713,
+      "latitude": 33.224289,
+      "elevation": 119.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -2041,13 +2041,13 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.620091,
-      "latitude": 33.224176,
+      "longitude": 35.620547,
+      "latitude": 33.224286,
       "elevation": 109.0
     },
-    "elevation_gain_m": 4.0,
+    "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
-    "net_elevation_change_m": 4.0
+    "net_elevation_change_m": 0.0
   },
   "כביש 9888 בית הלל": {
     "id": 55,
@@ -2507,9 +2507,9 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.623501,
-      "latitude": 33.228749,
-      "elevation": 121.0
+      "longitude": 35.623795,
+      "latitude": 33.229185,
+      "elevation": 123.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,

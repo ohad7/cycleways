@@ -39,7 +39,6 @@ export default function SovevBeitHillel() {
             <FeaturedRoute.Map
               variant="desktop"
               className="sbh-side-map"
-              allowFullscreen
               autoResetAfterInteraction
               routeFitPadding={22}
             />

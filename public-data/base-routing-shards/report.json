@@ -19,9 +19,9 @@
     "representedEdges": 48358,
     "edgeReferences": 50556,
     "duplicatedSourceEdges": 2024,
-    "compactShardBytes": 27708426,
-    "messagePackShardBytes": 23928652,
-    "compactBinaryShardBytes": 4827150
+    "compactShardBytes": 27708423,
+    "messagePackShardBytes": 23928651,
+    "compactBinaryShardBytes": 4827149
   },
   "largestShards": [
     {
