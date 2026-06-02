@@ -18,6 +18,9 @@ import VideoEmbed from "./VideoEmbed.jsx";
 import Warnings from "./Warnings.jsx";
 import FeaturedRouteMapSlot from "./FeaturedRouteMap.jsx";
 import RoutePoiGallery from "./RoutePoiGallery.jsx";
+import RoutePoiStoryList from "./RoutePoiStoryList.jsx";
+import RoutePoiVideoPreview from "./RoutePoiVideoPreview.jsx";
+import RouteProgressDistance from "./RouteProgressDistance.jsx";
 import { findFeaturedMeta } from "../../featured/index.js";
 
 function FeaturedRoute({ slug, children, layout = "article", desktopMap = "sticky" }) {
@@ -87,13 +90,18 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     return () => controller.abort();
   }, [meta]);
 
-  useEffect(() => {
-    if (!meta || status !== "ready" || routeState.geometry.length < 2) return;
+  const requestRouteFit = useCallback((reason = "featured-route-fit") => {
+    if (!meta || routeState.geometry.length < 2) return;
     setRouteFitRequest({
-      id: `featured-${meta.slug}-${Date.now()}`,
+      id: `${reason}-${meta.slug}-${Date.now()}`,
       geometry: routeState.geometry,
     });
-  }, [status, meta, routeState.geometry]);
+  }, [meta, routeState.geometry]);
+
+  useEffect(() => {
+    if (!meta || status !== "ready" || routeState.geometry.length < 2) return;
+    requestRouteFit("featured");
+  }, [status, meta, routeState.geometry, requestRouteFit]);
 
   useEffect(() => {
     if (!videoPlaying) {
@@ -104,11 +112,44 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     wasVideoPlayingRef.current = true;
     if (!focusedCoord || !meta || routeState.geometry.length < 2) return;
     setFocusedCoord(null);
-    setRouteFitRequest({
-      id: `featured-video-resume-${meta.slug}-${Date.now()}`,
-      geometry: routeState.geometry,
-    });
-  }, [videoPlaying, focusedCoord, meta, routeState.geometry]);
+    requestRouteFit("featured-video-resume");
+  }, [videoPlaying, focusedCoord, meta, routeState.geometry, requestRouteFit]);
+
+  const setVideoCursorFromFraction = useCallback((fraction, fallbackCoord = null) => {
+    if (!Number.isFinite(fraction)) return;
+
+    const sync = videoSyncRef.current;
+    let t = null;
+    let pos = null;
+    if (sync) {
+      t = sync.positionToTime(fraction);
+      if (Number.isFinite(t)) {
+        pos = sync.timeToPosition(t);
+      }
+    }
+
+    const lat = Number.isFinite(pos?.lat) ? pos.lat : fallbackCoord?.lat;
+    const lng = Number.isFinite(pos?.lng) ? pos.lng : fallbackCoord?.lng;
+    const cursor = {
+      fraction: Number.isFinite(pos?.fraction) ? pos.fraction : fraction,
+    };
+    if (Number.isFinite(t)) cursor.t = t;
+    if (Number.isFinite(lat)) cursor.lat = lat;
+    if (Number.isFinite(lng)) cursor.lng = lng;
+
+    setVideoCursor(cursor);
+  }, []);
+
+  const seekVideoToFraction = useCallback((fraction, fallbackCoord = null) => {
+    if (!Number.isFinite(fraction)) return;
+
+    const sync = videoSyncRef.current;
+    const seek = playerSeekRef.current;
+    if (sync && seek) {
+      seek(sync.positionToTime(fraction));
+    }
+    setVideoCursorFromFraction(fraction, fallbackCoord);
+  }, [setVideoCursorFromFraction]);
 
   const handleRouteClick = useCallback((latLng) => {
     const sync = videoSyncRef.current;
@@ -118,23 +159,32 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     if (!snap) return;
     const t = sync.positionToTime(snap.fraction);
     seek(t);
-  }, []);
+    setVideoCursorFromFraction(snap.fraction);
+  }, [setVideoCursorFromFraction]);
 
   const handleDataMarkerClick = useCallback((marker) => {
     setFocusedPoiId(marker.id);
+    const matchingPoint = routeState.activeDataPoints.find((p) => p.id === marker.id);
+    let fallbackCoord = null;
     if (Number.isFinite(marker.lat) && Number.isFinite(marker.lng)) {
-      setFocusedCoord({ lat: marker.lat, lng: marker.lng });
+      fallbackCoord = { lat: marker.lat, lng: marker.lng };
+      setFocusedCoord(fallbackCoord);
     }
     const sync = videoSyncRef.current;
     const seek = playerSeekRef.current;
+    let fraction = Number.isFinite(matchingPoint?.routeFraction)
+      ? matchingPoint.routeFraction
+      : null;
     if (sync && seek && Number.isFinite(marker.lat) && Number.isFinite(marker.lng)) {
       const snap = sync.snapClickToRoute({ lat: marker.lat, lng: marker.lng });
       if (snap && Number.isFinite(snap.fraction)) {
-        seek(sync.positionToTime(snap.fraction));
+        fraction = snap.fraction;
+        seek(sync.positionToTime(fraction));
       }
     }
+    setVideoCursorFromFraction(fraction, fallbackCoord);
     playerPauseRef.current?.();
-  }, []);
+  }, [routeState.activeDataPoints, setVideoCursorFromFraction]);
 
   const contextValue = useMemo(
     () => ({
@@ -148,16 +198,19 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       focusedCoord,
       setFocusedCoord,
       routeFitRequest,
+      requestRouteFit,
       videoCursor,
       setVideoCursor,
+      setVideoCursorFromFraction,
       setVideoPlaying,
+      seekVideoToFraction,
       videoSyncRef,
       playerSeekRef,
       playerPauseRef,
       handleRouteClick,
       handleDataMarkerClick,
     }),
-    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, videoCursor, handleRouteClick, handleDataMarkerClick],
+    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
@@ -215,6 +268,9 @@ FeaturedRoute.Map = FeaturedRouteMapSlot;
 FeaturedRoute.POIs = POIList;
 FeaturedRoute.Gallery = Gallery;
 FeaturedRoute.POIGallery = RoutePoiGallery;
+FeaturedRoute.POIStories = RoutePoiStoryList;
+FeaturedRoute.POIVideoPreview = RoutePoiVideoPreview;
+FeaturedRoute.ProgressDistance = RouteProgressDistance;
 FeaturedRoute.Video = VideoEmbed;
 FeaturedRoute.Warnings = Warnings;
 

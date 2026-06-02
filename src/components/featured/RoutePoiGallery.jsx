@@ -19,8 +19,7 @@ export default function RoutePoiGallery({ className = "" }) {
     setFocusedPoiId,
     setFocusedCoord,
     videoCursor,
-    videoSyncRef,
-    playerSeekRef,
+    seekVideoToFraction,
     playerPauseRef,
   } = useFeaturedRoute();
   const items = useMemo(
@@ -68,12 +67,12 @@ export default function RoutePoiGallery({ className = "" }) {
       const [lat, lng] = next.location;
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
         setFocusedCoord({ lat, lng });
+        seekVideoToFraction(next.routeFraction, { lat, lng });
+      } else {
+        seekVideoToFraction(next.routeFraction);
       }
-    }
-    const sync = videoSyncRef.current;
-    const seek = playerSeekRef.current;
-    if (sync && seek && Number.isFinite(next.routeFraction)) {
-      seek(sync.positionToTime(next.routeFraction));
+    } else {
+      seekVideoToFraction(next.routeFraction);
     }
     playerPauseRef.current?.();
   }

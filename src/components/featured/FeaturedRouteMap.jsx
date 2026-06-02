@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MapView from "../../map/MapView.jsx";
 import { dataMarkerFeaturesFromSegments } from "../../map/mapLayers.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
@@ -8,6 +8,8 @@ export default function FeaturedRouteMapSlot({
   variant = "mobile",
   className = "",
   allowFullscreen = true,
+  autoResetAfterInteraction = false,
+  autoResetDelayMs = 8000,
   routeFitPadding,
 }) {
   const isMobile = useIsMobile();
@@ -15,6 +17,7 @@ export default function FeaturedRouteMapSlot({
     assets,
     routeState,
     focusedCoord,
+    requestRouteFit,
     routeFitRequest,
     videoCursor,
     handleRouteClick,
@@ -23,7 +26,15 @@ export default function FeaturedRouteMapSlot({
   const [fullscreen, setFullscreen] = useState(false);
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
+  const resetTimerRef = useRef(null);
   const wasOpenRef = useRef(false);
+
+  const clearResetTimer = useCallback(() => {
+    if (resetTimerRef.current) {
+      window.clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+  }, []);
 
   // Lock body scroll while the fullscreen overlay is mounted.
   useEffect(() => {
@@ -56,6 +67,26 @@ export default function FeaturedRouteMapSlot({
     }
   }, [fullscreen]);
 
+  useEffect(() => clearResetTimer, [clearResetTimer]);
+
+  useEffect(() => {
+    clearResetTimer();
+  }, [focusedCoord, routeFitRequest]);
+
+  const handleUserViewportChange = useCallback(() => {
+    if (!autoResetAfterInteraction) return;
+    clearResetTimer();
+    resetTimerRef.current = window.setTimeout(() => {
+      resetTimerRef.current = null;
+      requestRouteFit?.("featured-map-auto-reset");
+    }, autoResetDelayMs);
+  }, [
+    autoResetAfterInteraction,
+    autoResetDelayMs,
+    clearResetTimer,
+    requestRouteFit,
+  ]);
+
   if (!assets) return null;
   if (variant === "mobile" && !isMobile) return null;
   if (variant === "desktop" && isMobile) return null;
@@ -83,6 +114,7 @@ export default function FeaturedRouteMapSlot({
           routeFitPadding={routeFitPadding}
           focusedMarker={focusedMarker}
           onDataMarkerClick={handleDataMarkerClick}
+          onUserViewportChange={handleUserViewportChange}
           videoCursor={videoCursor}
           onRouteClick={handleRouteClick}
         />
@@ -117,6 +149,7 @@ export default function FeaturedRouteMapSlot({
             routeFitPadding={routeFitPadding}
             focusedMarker={focusedMarker}
             onDataMarkerClick={handleDataMarkerClick}
+            onUserViewportChange={handleUserViewportChange}
           />
         </div>
       )}

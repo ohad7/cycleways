@@ -5,7 +5,7 @@ import POICard from "./POICard.jsx";
 import { MOBILE_BREAKPOINT } from "./useIsMobile.js";
 
 export default function POIList({ exclude = [], extra = [], mode = "auto" }) {
-  const { routeState, focusedPoiId, setFocusedPoiId, setFocusedCoord } =
+  const { routeState, focusedPoiId, setFocusedPoiId, setFocusedCoord, seekVideoToFraction, playerPauseRef } =
     useFeaturedRoute();
   const excludeSet = useMemo(() => new Set(exclude), [exclude]);
 
@@ -27,7 +27,11 @@ export default function POIList({ exclude = [], extra = [], mode = "auto" }) {
     ) {
       const [lat, lng] = poi.location;
       setFocusedCoord({ lat, lng });
+      seekVideoToFraction(poi.routeFraction, { lat, lng });
+    } else {
+      seekVideoToFraction(poi.routeFraction);
     }
+    playerPauseRef.current?.();
     if (
       typeof window !== "undefined" &&
       window.matchMedia &&

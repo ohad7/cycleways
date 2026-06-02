@@ -503,7 +503,15 @@ export async function loadRoutePolylineForSlug(slug) {
 
 export async function promoteKeyframesDraft({ slug, draftsDir, publicDir, routePolyline }) {
   const draftPath = resolve(draftsDir, `${slug}.json`);
-  const raw = await readFile(draftPath, "utf-8");
+  let raw;
+  try {
+    raw = await readFile(draftPath, "utf-8");
+  } catch (err) {
+    if (err?.code === "ENOENT") {
+      throw new Error(`No video-sync draft exists for "${slug}". Save draft before promoting.`);
+    }
+    throw err;
+  }
   const draft = JSON.parse(raw);
 
   validateKeyframesDraft(draft, routePolyline);

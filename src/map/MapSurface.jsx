@@ -63,6 +63,7 @@ function MapSurface({
   onRouteLineDragStart,
   onSegmentFocus,
   onSegmentHover,
+  onUserViewportChange,
   onViewportIdle,
   osmDebugMode = false,
   routeFitRequest,
@@ -105,6 +106,7 @@ function MapSurface({
       onRouteLineDragStart,
       onSegmentFocus,
       onSegmentHover,
+      onUserViewportChange,
       onViewportIdle,
     };
   }, [
@@ -120,6 +122,7 @@ function MapSurface({
     onRouteLineDragStart,
     onSegmentFocus,
     onSegmentHover,
+    onUserViewportChange,
     onViewportIdle,
   ]);
 
@@ -314,6 +317,29 @@ function MapSurface({
       clearRoutePointDragPreviewLayer(map);
     };
   }, [status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !onUserViewportChange) return undefined;
+
+    const emitUserViewportChange = (event) => {
+      if (!event?.originalEvent) return;
+      callbacksRef.current.onUserViewportChange?.();
+    };
+    const eventNames = [
+      "wheel",
+      "zoomend",
+      "dragend",
+      "rotateend",
+      "pitchend",
+      "boxzoomend",
+    ];
+    eventNames.forEach((eventName) => map.on(eventName, emitUserViewportChange));
+
+    return () => {
+      eventNames.forEach((eventName) => map.off(eventName, emitUserViewportChange));
+    };
+  }, [onUserViewportChange, status]);
 
   const animatorVisibleRef = useRef(true);
 

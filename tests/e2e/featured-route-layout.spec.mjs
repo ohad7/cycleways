@@ -10,33 +10,36 @@ test.describe("desktop layout", () => {
   test("video-first side map visible on desktop", async ({ page }) => {
     await page.goto("/featured/sovev-beit-hillel");
     await expect(page.locator(".sbh-video .featured-video-frame")).toBeVisible();
+    await expect(page.locator(".sbh-video-shell")).toBeVisible();
+    await expect(page.locator(".sbh-video-controls")).toBeVisible();
+    await expect(page.locator(".sbh-video-scrubber")).toBeVisible();
+    await expect(page.locator(".sbh-route-panel")).toBeVisible();
     await expect(page.locator(".sbh-side-map")).toBeVisible();
-    await expect(page.locator(".sbh-moments")).toBeVisible();
-    await expect(page.locator(".sbh-moments .sbh-side-heading")).toHaveCount(0);
+    await expect(page.locator(".sbh-side-heading")).toContainText("מרחק מההתחלה");
+    await expect(page.locator(".sbh-side-heading")).toContainText(/0 מ׳|\d+(\.\d)? ק״מ/);
+    await expect(page.locator(".sbh-side-heading")).not.toContainText("מפה חיה");
+    await expect(page.locator(".sbh-moments")).toHaveCount(0);
+    await expect(page.locator(".sbh-carousel-arrow")).toHaveCount(0);
     await expect(page.locator(".sbh-carousel-dots")).toHaveCount(0);
-    await expect(page.locator(".sbh-carousel-counter")).toContainText(/1 \/ \d+/);
-    await expect(page.locator(".sbh-moment-image-button")).toBeVisible();
-    await expect(page.locator(".sbh-carousel-arrow--left")).toBeVisible();
-    await expect(page.locator(".sbh-carousel-arrow--left")).toHaveText("<");
-    await expect(page.locator(".sbh-carousel-arrow--right")).toBeVisible();
-    await expect(page.locator(".sbh-carousel-arrow--right")).toHaveText(">");
-    await expect(page.locator(".sbh-moment-card")).toContainText("חוף קולומביה");
+    await expect(page.locator(".sbh-carousel-counter")).toHaveCount(0);
+    await expect(page.locator(".sbh-poi-stories")).toBeVisible();
+    await expect(page.locator(".sbh-poi-story").first()).toContainText("חוף קולומביה");
     await expect(page.locator(".featured-route-sticky-map")).toHaveCount(0);
 
     const videoBox = await page.locator(".sbh-video .featured-video-frame").boundingBox();
+    const panelBox = await page.locator(".sbh-route-panel").boundingBox();
+    const mapBox = await page.locator(".sbh-side-map").boundingBox();
+    const storyBox = await page.locator(".sbh-poi-story").first().boundingBox();
     expect(videoBox.y + videoBox.height).toBeLessThanOrEqual(900);
+    expect(panelBox.x).toBeGreaterThan(videoBox.x);
+    expect(mapBox.y).toBeGreaterThan(panelBox.y);
+    expect(Math.abs((mapBox.y + mapBox.height) - (videoBox.y + videoBox.height))).toBeLessThanOrEqual(2);
+    expect(storyBox.y).toBeGreaterThan(videoBox.y + videoBox.height);
 
-    const imageBox = await page.locator(".sbh-moment-figure").boundingBox();
-    const leftArrowBox = await page.locator(".sbh-carousel-arrow--left").boundingBox();
-    const rightArrowBox = await page.locator(".sbh-carousel-arrow--right").boundingBox();
-    expect(leftArrowBox.x).toBeGreaterThanOrEqual(imageBox.x);
-    expect(leftArrowBox.x + leftArrowBox.width).toBeLessThan(imageBox.x + imageBox.width / 2);
-    expect(rightArrowBox.x).toBeGreaterThan(imageBox.x + imageBox.width / 2);
-    expect(rightArrowBox.x + rightArrowBox.width).toBeLessThanOrEqual(imageBox.x + imageBox.width);
-    expect(leftArrowBox.y).toBeGreaterThanOrEqual(imageBox.y);
-    expect(rightArrowBox.y + rightArrowBox.height).toBeLessThanOrEqual(imageBox.y + imageBox.height);
-    expect(leftArrowBox.width).toBeLessThan(leftArrowBox.height);
-    expect(rightArrowBox.width).toBeLessThan(rightArrowBox.height);
+    await expect(page.locator(".sbh-video-poi-preview")).toHaveCount(0);
+    await page.locator(".sbh-poi-story").first().click();
+    await expect(page.locator(".sbh-video-poi-preview")).toBeVisible();
+    await expect(page.locator(".sbh-video-poi-preview")).toContainText("חוף קולומביה");
   });
 });
 

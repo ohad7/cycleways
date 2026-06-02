@@ -7253,6 +7253,11 @@ function vsSetStatus(msg) {
   if (vsEls.status) vsEls.status.textContent = msg || "";
 }
 
+function vsSetBusy(busy) {
+  if (vsEls.saveDraft) vsEls.saveDraft.disabled = busy;
+  if (vsEls.promote) vsEls.promote.disabled = busy;
+}
+
 function vsFormatTime(seconds) {
   const m = Math.floor(seconds / 60);
   const s = seconds - m * 60;
@@ -7526,6 +7531,40 @@ async function activateVideoSyncMode() {
   await vsOnSlugChange();
 }
 
+function vsBuildDraftPayload() {
+  const slug = videoSyncState.slug;
+  const youtubeId = videoSyncState.youtubeId || vsExtractYouTubeId(vsEls.ytUrl.value);
+  const videoDuration = videoSyncState.player?.getDuration?.() || videoSyncState.videoDuration;
+  if (!slug || !youtubeId || !videoDuration) {
+    throw new Error("Need a slug, YouTube URL, and loaded video to save.");
+  }
+  return {
+    slug,
+    payload: {
+      version: 1,
+      youtubeId,
+      videoDuration,
+      keyframes: videoSyncState.keyframes.slice().sort((a, b) => a.t - b.t),
+    },
+  };
+}
+
+async function vsSaveDraft({ updateStatus = true } = {}) {
+  const { slug, payload } = vsBuildDraftPayload();
+  if (updateStatus) vsSetStatus("Saving draft…");
+  const r = await fetch(`/api/video-keyframes/${slug}/draft`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const result = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw new Error(result?.error || r.statusText);
+  }
+  if (updateStatus) vsSetStatus(`Draft saved (${payload.keyframes.length} keyframes).`);
+  return { slug, payload, result };
+}
+
 // Wire static event handlers once at startup.
 vsEls.slug.addEventListener("change", () => vsOnSlugChange().catch(showError));
 vsEls.ytUrl.addEventListener("change", (e) => {
@@ -7533,33 +7572,33 @@ vsEls.ytUrl.addEventListener("change", (e) => {
   if (id) vsLoadVideo(id).catch((err) => vsSetStatus(`YT load failed: ${err.message}`));
 });
 vsEls.saveDraft.addEventListener("click", async () => {
-  const slug = videoSyncState.slug;
-  const youtubeId = videoSyncState.youtubeId;
-  const videoDuration = videoSyncState.player?.getDuration?.() || videoSyncState.videoDuration;
-  if (!slug || !youtubeId || !videoDuration) {
-    vsSetStatus("Need a slug, YouTube URL, and loaded video to save.");
-    return;
+  try {
+    vsSetBusy(true);
+    await vsSaveDraft();
+  } catch (err) {
+    vsSetStatus(`Save failed: ${err.message}`);
+  } finally {
+    vsSetBusy(false);
   }
-  const payload = {
-    version: 1,
-    youtubeId,
-    videoDuration,
-    keyframes: videoSyncState.keyframes,
-  };
-  const r = await fetch(`/api/video-keyframes/${slug}/draft`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const result = await r.json().catch(() => ({}));
-  vsSetStatus(r.ok ? "Draft saved." : `Save failed: ${result?.error || r.statusText}`);
 });
 vsEls.promote.addEventListener("click", async () => {
-  const slug = videoSyncState.slug;
-  if (!slug) return;
-  const r = await fetch(`/api/video-keyframes/${slug}/promote`, { method: "POST" });
-  const result = await r.json().catch(() => ({}));
-  vsSetStatus(r.ok ? "Promoted." : `Promote failed: ${result?.error || r.statusText}`);
+  try {
+    vsSetBusy(true);
+    const { slug, payload } = await vsSaveDraft({ updateStatus: false });
+    vsSetStatus(`Draft saved. Promoting ${payload.keyframes.length} keyframes…`);
+    const r = await fetch(`/api/video-keyframes/${slug}/promote`, { method: "POST" });
+    const result = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      vsSetStatus(`Promote failed: ${result?.error || r.statusText}`);
+      return;
+    }
+    await vsLoadExistingDraft(slug);
+    vsSetStatus(`Promoted ${payload.keyframes.length} keyframes.`);
+  } catch (err) {
+    vsSetStatus(`Promote failed: ${err.message}`);
+  } finally {
+    vsSetBusy(false);
+  }
 });
 
 map.on("style.load", () => {

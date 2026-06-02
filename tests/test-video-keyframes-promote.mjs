@@ -98,4 +98,14 @@ assert.equal(index.routes["test-slug"], "test-slug.json");
 // Draft removed
 await assert.rejects(fs.stat(path.join(draftsDir, "test-slug.json")));
 
+await assert.rejects(
+  promoteKeyframesDraft({
+    slug: "missing-draft",
+    draftsDir,
+    publicDir,
+    routePolyline,
+  }),
+  /Save draft before promoting/i,
+);
+
 console.log("video keyframes promote tests passed");

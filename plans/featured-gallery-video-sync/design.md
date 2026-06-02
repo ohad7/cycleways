@@ -1,124 +1,117 @@
-# Featured Gallery ↔ Video ↔ Map Sync Design
+# Featured Route Story Layout Design
 
 Date: 2026-06-02
 
 ## Goal
 
-Make the featured-route gallery, the route video, and the side map move together,
-and tighten the gallery layout so the image and its description are both visible.
+Make the Sovev Beit Hillel featured-route page feel like a route story instead
+of a utility panel. The first desktop viewport should center the ride video,
+keep the live map close by, and reserve the photo gallery for richer route
+story content below the fold.
 
-Builds on [segment-poi-gallery](../segment-poi-gallery/design.md) and
-[poi-editor-refinements](../poi-editor-refinements/design.md).
+This replaces the hero-side carousel from the previous gallery/video sync pass.
+The sync plumbing remains useful, but the gallery is no longer the primary
+desktop companion to the video.
 
-## Behavior
+## Desktop Layout
 
-The shared coordinate is **route fraction** (0–1 along the route geometry).
+The desktop first viewport uses a Hebrew-oriented layout:
 
-### Video → gallery (auto-walk)
-
-While the video plays, `VideoEmbed` already emits `videoCursor = { t, lat, lng,
-fraction }` ~4×/sec. On each update, the gallery selects the slide whose POI
-`routeFraction` is nearest the cursor's `fraction`.
-
-- This updates the displayed image and sets `focusedPoiId` (the gallery's
-  current POI).
-- It does **not** recenter the map and does **not** seek/pause the video. The
-  moving video cursor already shows position on the map ("highlight only").
-- Auto-walk only happens while playing, because the cursor ticker only runs
-  while playing — so once the video is paused, the gallery stops following.
-
-Nearest match: minimize `|slide.routeFraction − cursor.fraction|`. Slides for the
-same POI share a `routeFraction`; the first (image index 0) wins ties, matching
-the existing route-progress sort order.
-
-### Gallery → video + map (manual scrub)
-
-When the user clicks an arrow or a slide:
-
-1. Select that slide (update the image).
-2. Recenter the map on the POI (`focusedCoord` → existing `flyTo`).
-3. Seek the video to the POI: `videoSync.positionToTime(slide.routeFraction)`
-   then `playerSeek(t)`.
-4. **Pause** the video.
-
-Pausing stops the cursor ticker, so auto-walk halts and manual control wins until
-the user presses play again.
-
-### Map marker click (completes the triangle)
-
-Clicking a POI marker on the map is also a manual selection: it selects the
-matching gallery slide, recenters (already does), seeks the video to that POI,
-and pauses — same as a manual gallery scrub. (`handleDataMarkerClick` in
-`FeaturedRoute` gains the seek+pause; it derives the fraction via
-`videoSync.snapClickToRoute({lat,lng})`.)
-
-### Loop prevention
-
-- Video-driven selection sets only `focusedPoiId` (no seek, no pause, no
-  `focusedCoord`) → cannot re-trigger video control.
-- User-driven selection seeks + pauses → ticker stops → no competing auto-walk.
-
-## Data
-
-`galleryImageSlides` (in `packages/core/src/data/poiTypes.js`) must include
-`routeFraction` on each slide (it currently emits `routeProgressMeters` only).
-The value already exists on each active data point
-(`projectPointToRouteGeometry` sets `routeFraction`). Slides whose
-`routeFraction` is not finite are skipped by the auto-walk matcher.
-
-## Layout
-
-`RoutePoiGallery` + `featured.css`:
-
-- **Remove** the "לעצור ולראות / גלריית הדרך" heading row (and the old top
-  control row).
-- **Move `‹ ›`** to buttons overlaying the left/right edges of the image,
-  vertically centered (absolute-positioned over the image figure). In RTL,
-  `‹` advances toward the start and `›` toward the end consistently with the
-  current behavior; arrows are positioned by physical left/right edge.
-- **Replace the dots** with a compact `current / total` counter (e.g. `3 / 14`).
-- The card body (type · name, short info, long description) stays below the
-  image so image + description are both visible in the rail.
-
-```
-┌──────────────────────────┐
-│ ‹      [ image ]       › │
-├──────────────────────────┤
-│ חוף · חוף קולומביה        │
-│ short info                │
-│ longer description        │
-└──────────────────────────┘
-            3 / 14
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Header: route name, summary, stats                           │
+└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────┬───────────────────────────┐
+│                                  │ Route text panel          │
+│ Video                            │ high-level description    │
+│ POI preview overlay, top-left    │ practical notes           │
+│                                  │                           │
+│                                  ├───────────────────────────┤
+│                                  │ Compact live map          │
+└──────────────────────────────────┴───────────────────────────┘
 ```
 
-## Plumbing
+- The right rail connects visually to the header, forming a Hebrew `ר` shape:
+  the header is the top stroke, and the right text panel is the vertical stroke.
+- The video remains the dominant object and should end at or before the fold on
+  common desktop viewports.
+- The map moves to the lower part of the right rail, replacing the old carousel
+  position. It is compact, route-fit, and still supports fullscreen.
+- The top of the right rail is a route-content panel, replacing the old map
+  position. It carries the high-level description and practical riding notes.
+- On mobile, the existing single-column behavior remains acceptable for now.
+  The current task focuses on desktop.
 
-- `VideoEmbed`: expose a pause function via a new context ref
-  `playerPauseRef.current = () => player.pauseVideo()` (set in `onReady`,
-  cleared on teardown), mirroring `playerSeekRef`.
-- `FeaturedRoute`: add `playerPauseRef` to the context value; update
-  `handleDataMarkerClick` to seek + pause.
-- `RoutePoiGallery`: consume `videoCursor`, `videoSyncRef`, `playerSeekRef`,
-  `playerPauseRef`; add the auto-walk effect and split selection into
-  `selectFromVideo` (id only) vs `selectByUser` (recenter + seek + pause).
+## Video POI Preview
 
-## Testing
+When the video cursor passes near a photographed POI, the video shows a compact
+preview overlay in the top-left corner:
 
-Unit (Node):
-- `galleryImageSlides` includes `routeFraction` (extend `tests/test-poi-types.mjs`).
-- A pure nearest-slide matcher `nearestSlideIndexByFraction(slides, fraction)`
-  (new small helper, exported from `poiTypes.js` or a gallery util) with tests:
-  exact match, between two POIs (nearest wins), before first, after last, empty,
-  slides missing `routeFraction` skipped.
+- image thumbnail
+- POI type and name
+- short information line
 
-Component/E2E:
-- Featured E2E: arrows are positioned over the image and a `N / M` counter
-  renders (heading gone). Full sync (play→advance, scrub→pause+seek) is verified
-  manually in the browser since it depends on the YouTube player.
+The preview is intentionally small and transient. It should give visual context
+without asking the user to look away from the video. The overlay follows the
+same route-fraction sync data already used by the map cursor.
+
+Selection rule:
+
+- Use gallery-eligible POIs only: non-warning POIs with at least one image.
+- Find the nearest image slide by route fraction.
+- Show the preview only when the cursor is close enough to the POI, using the
+  smaller of route-fraction and route-distance checks so the preview does not
+  remain visible for the entire ride.
+- When the video is paused, `VideoEmbed` clears the cursor, so the preview hides.
+
+## Below-Fold POI Story List
+
+The rich image gallery moves below the hero as a vertical story list:
+
+- POIs are ordered by progress along the featured route.
+- Each POI appears once, even if it has multiple images.
+- Each card shows the POI type, name, short information, long description, and
+  all available images for that POI.
+- Clicking a POI story card focuses the map on that POI and seeks/pauses the
+  video at the same route fraction, matching the existing manual-gallery
+  behavior.
+
+This keeps reusable POIs as the source of truth. The featured route displays only
+the POIs that are both on the route and have images.
+
+## Data Model
+
+Use the segment-level POI data already introduced by:
+
+- `plans/segment-poi-gallery/`
+- `plans/poi-editor-refinements/`
+
+For this pass, the page uses existing POI-level fields:
+
+- `type`
+- `name`
+- `information`
+- `description`
+- `location`
+- `routeProgressMeters`
+- `routeFraction`
+- `images[]` or legacy `photo` / `thumbnail`
+
+Future editor work can add per-image descriptions, captions, and exact
+image-specific locations. The story list should not block on that.
+
+## Interaction
+
+- Video playback drives the map cursor and the transient POI preview.
+- Clicking a POI marker or a POI story card focuses the map on that POI, seeks
+  the video to its route fraction, and pauses the video.
+- If the user resumes playback after manually focusing a POI, the map fits back
+  to the full route.
 
 ## Non-Goals
 
-- Changing video keyframes or the route geometry.
-- Smooth-scrolling/animated gallery transitions beyond selecting the slide.
-- Per-POI in-card multi-image strip (galleries stay flattened, one slide per
-  image).
+- Pixel-perfect visual polish beyond making the new structure coherent.
+- Editing the POI/image editor in this pass.
+- Removing the old `RoutePoiGallery` component from the codebase if it remains
+  useful for tests or future route templates.
+- Changing route-video keyframes or route geometry.

@@ -1,6 +1,6 @@
 {
-  "version": "7ba725c06f3c",
-  "generatedAt": "2026-06-02T06:19:16.849011Z",
+  "version": "8a2484a0e968",
+  "generatedAt": "2026-06-02T09:52:10.484522Z",
   "bikeRoads": "bike_roads.geojson",
   "segments": "segments.json",
   "cwBaseIndex": "cw-base-index.json",
@@ -8,10 +8,10 @@
   "baseRoutingShards": "base-routing-shards/manifest.json",
   "hashes": {
     "bikeRoads": "6125e70155526101ec895412beb33b28128413419df97654fd73e0f1a74b8b00",
-    "segments": "ea756c7230e19812af00a4159047c566bfbc5a6a9080368a2114b226c4243639",
+    "segments": "65d4bbc9de4b6ec6f45279cb621a27ec0b1446b7ffc1bd7da85d74b8276f2ad5",
     "cwBaseIndex": "8d39a44b45bdc608d7d70367b58a5f0c715c154fe4079d490cb2da5063a4b220",
-    "kml": "ceb10c9a0fb31f3bf00f200fd36310fc7302e1ca393e0fad2022c1c8ca97db0e",
-    "baseRoutingShards": "65b25f02d1c445294c11395d48f0614460e10bc880fea26fd4616ac9419b3326"
+    "kml": "037af75f33a86db525312bcc4c7006cb3d05ab1dfbbfd36bde2a95f4d2082c79",
+    "baseRoutingShards": "d053fc8d16ace45a5fcd1d5f89abc24f40c9e2f37d3441089677c7bd9426d8a1"
   },
   "elevation": {
     "skipElevation": false,

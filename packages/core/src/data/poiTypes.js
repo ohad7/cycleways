@@ -15,7 +15,7 @@ export const POI_LABELS = {
   bike_shop: "חנות אופניים",
   flora: "פרחים",
   nature: "טבע",
-  tree: "עץ מיוחד",
+  tree: "חי וצומח",
   river: "נחל",
   beach: "חוף",
   rest_stop: "פינת מנוחה",

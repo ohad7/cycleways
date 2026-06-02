@@ -11,9 +11,14 @@ import {
   nearestSlideIndexByFraction,
   normalizePoiImages,
   poiIcon,
+  poiLabel,
   poiMarkerIconName,
   primaryPoiImage,
 } from "@cycleways/core/data/poiTypes.js";
+import {
+  previewSlideForCursor,
+  routePoiStories,
+} from "../src/components/featured/routePoiStoryData.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 const require = createRequire(import.meta.url);
@@ -239,6 +244,38 @@ assert.equal(slides[1].routeFraction, 0.5);
 
 console.log("galleryImageSlides tests passed");
 
+const stories = routePoiStories(points);
+assert.deepEqual(
+  stories.map((s) => `${s.poiId}:${s.images.length}`),
+  ["start:1", "mid:2"],
+);
+assert.equal(stories[0].name, "Start view");
+assert.equal(stories[1].description, "desc");
+
+assert.equal(previewSlideForCursor(slides, 0.1, 5000)?.poiId, "start");
+assert.equal(previewSlideForCursor(slides, 0.115, 5000)?.poiId, "start");
+assert.equal(previewSlideForCursor(slides, 0.117, 5000), null);
+assert.equal(previewSlideForCursor(slides, 0.13, 5000), null);
+assert.equal(previewSlideForCursor(slides, 0.5, 5000)?.poiId, "mid");
+assert.equal(previewSlideForCursor(slides, Number.NaN, 5000), null);
+assert.equal(
+  previewSlideForCursor(
+    [{ poiId: "columbia", routeFraction: 0.02066414397271214 }],
+    0.000008336691339981146,
+    6478.759364330184,
+  ),
+  null,
+);
+assert.equal(
+  previewSlideForCursor(
+    [{ poiId: "columbia", routeFraction: 0.02066414397271214 }],
+    0.018941416351259715,
+    6478.759364330184,
+  )?.poiId,
+  "columbia",
+);
+console.log("routePoiStories and previewSlideForCursor tests passed");
+
 assert.equal(nearestSlideIndexByFraction(slides, 0.1), 0);
 assert.equal(nearestSlideIndexByFraction(slides, 0.49), 1);
 assert.equal(nearestSlideIndexByFraction(slides, 0.51), 1);
@@ -266,6 +303,7 @@ assert.equal(poiMarkerIconName("gate"), poiIcon("gate"));
 assert.equal(poiMarkerIconName("cafe"), "poi-emoji-cafe");
 assert.equal(poiMarkerIconName("river"), "poi-emoji-river");
 assert.notEqual(poiMarkerIconName("river"), poiMarkerIconName("tree"));
+assert.equal(poiLabel("tree"), "חי וצומח");
 console.log("poiMarkerIconName tests passed");
 
 console.log("POI types tests passed");
