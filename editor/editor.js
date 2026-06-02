@@ -7,6 +7,7 @@ import {
 import {
   POI_TYPE_OPTIONS,
   poiColor,
+  poiEmoji,
   poiIcon,
 } from "../packages/core/src/data/poiTypes.js";
 
@@ -701,6 +702,7 @@ function dataMarkerCollection() {
           type,
           id: marker.id || "",
           icon: DATA_TYPE_ICONS[type] || poiIcon(type) || "caution-11",
+          emoji: marker.emoji || poiEmoji(type) || "",
           name: marker.name || "",
           information: marker.information || "",
           description: marker.description || "",
@@ -7172,6 +7174,17 @@ async function addMapLayers() {
         "icon-size": ["case", ["get", "selected"], 1.12, 0.95],
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
+        "text-field": [
+          "match",
+          ["get", "type"],
+          ["payment", "gate", "mud", "warning", "slope", "narrow", "severe"],
+          "",
+          ["coalesce", ["get", "emoji"], ""],
+        ],
+        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+        "text-size": ["case", ["get", "selected"], 16, 13],
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
       },
       paint: {
         "icon-opacity": ["case", ["get", "selected"], 1, 0.72],
