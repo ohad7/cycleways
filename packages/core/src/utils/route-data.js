@@ -42,6 +42,70 @@ export function distanceToRouteGeometry(point, routeCoordinates) {
   return minDistance;
 }
 
+export function projectPointToRouteGeometry(point, routeCoordinates) {
+  if (!point || !Array.isArray(routeCoordinates) || routeCoordinates.length === 0) {
+    return null;
+  }
+
+  if (routeCoordinates.length === 1) {
+    return {
+      routeProgressMeters: 0,
+      routeFraction: 0,
+      routeDistanceMeters: getDistance(point, routeCoordinates[0]),
+      routeLengthMeters: 0,
+    };
+  }
+
+  const segmentLengths = [];
+  let routeLengthMeters = 0;
+  for (let index = 0; index < routeCoordinates.length - 1; index++) {
+    const length = getDistance(routeCoordinates[index], routeCoordinates[index + 1]);
+    segmentLengths.push(length);
+    routeLengthMeters += length;
+  }
+
+  let best = null;
+  let progressBeforeSegment = 0;
+
+  for (let index = 0; index < routeCoordinates.length - 1; index++) {
+    const start = routeCoordinates[index];
+    const end = routeCoordinates[index + 1];
+    const dx = end.lng - start.lng;
+    const dy = end.lat - start.lat;
+    const lenSq = dx * dx + dy * dy;
+    const rawT =
+      lenSq === 0
+        ? 0
+        : ((point.lng - start.lng) * dx + (point.lat - start.lat) * dy) / lenSq;
+    const t = Math.max(0, Math.min(1, rawT));
+    const projected = {
+      lat: start.lat + t * dy,
+      lng: start.lng + t * dx,
+    };
+    const routeDistanceMeters = getDistance(point, projected);
+    const routeProgressMeters = progressBeforeSegment + segmentLengths[index] * t;
+
+    if (!best || routeDistanceMeters < best.routeDistanceMeters) {
+      best = {
+        projected,
+        routeProgressMeters,
+        routeDistanceMeters,
+      };
+    }
+
+    progressBeforeSegment += segmentLengths[index];
+  }
+
+  if (!best) return null;
+
+  return {
+    ...best,
+    routeFraction:
+      routeLengthMeters > 0 ? best.routeProgressMeters / routeLengthMeters : 0,
+    routeLengthMeters,
+  };
+}
+
 export function isDataPointOnRoute(
   dataPoint,
   routeCoordinates,

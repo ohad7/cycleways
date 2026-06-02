@@ -3,46 +3,59 @@ import FeaturedRoute from "../components/featured/FeaturedRoute.jsx";
 
 export default function SovevBeitHillel() {
   return (
-    <FeaturedRoute slug="sovev-beit-hillel">
-      <p>
-        הסובב סביב בית הלל הוא טעימה מהיופי הצנוע של הגליל העליון — שילוב של
-        דרכים חקלאיות נוחות, נופים פתוחים אל החרמון, וקרבה לפניני המים של עמק
-        החולה. המסלול הקצר והמהנה מתאים לרכיבה משפחתית, ובימי חורף ואביב כשהשדות
-        ירוקים והחרמון מושלג הוא יפה במיוחד.
-      </p>
+    <FeaturedRoute
+      slug="sovev-beit-hillel"
+      layout="video-first"
+      desktopMap="manual"
+    >
+      <section className="sbh-playback" aria-label="סרטון ומפת המסלול">
+        <div className="sbh-video-stage">
+          <FeaturedRoute.Video title="" className="sbh-video" />
+          <FeaturedRoute.Map className="sbh-mobile-map" />
+        </div>
 
-      <h2>קצת על בית הלל</h2>
-      <p>
-        בית הלל הוא מושב שהוקם בשנת 1940 בצפון עמק החולה, ושמו ניתן לו על שם
-        ד״ר הלל יפה. המושב מוקף שדות גידול עונתיים, מטעי פירות ובריכות דגים,
-        ומשם מתפצלות הדרכים שמרכיבות את הסובב הקצר הזה. בשנים האחרונות בית הלל
-        הפך גם ליעד קולינרי קטן עם מספר משקים בוטיקיים ובתי קפה במושב.
-      </p>
+        <aside className="sbh-side-rail" aria-label="מפה ונקודות בדרך">
+          <div className="sbh-side-map-wrap">
+            <div className="sbh-side-heading">
+              <span>מיקום במסלול</span>
+              <strong>מפה חיה</strong>
+            </div>
+            <FeaturedRoute.Map
+              variant="desktop"
+              className="sbh-side-map"
+              allowFullscreen
+              routeFitPadding={28}
+            />
+          </div>
 
-      <FeaturedRoute.Map />
+          <FeaturedRoute.POIGallery />
+        </aside>
+      </section>
 
-      <h2>מה לראות בדרך</h2>
-      <p>
-        לאורך המסלול תעברו בין שדות חיטה ותירס, מטעי תפוחים, ובמקומות מסוימים גם
-        בריכות דגים שמושכות אליהן עופות מים מעניינים במיוחד בעונת המעבר. אל
-        תפספסו את התצפיות לכיוון החרמון מהקצוות המזרחיים של המסלול — בימי אביב
-        בהירים גם רכסי ההר השכנים מצפון נראים היטב.
-      </p>
-
-      <h2>טיפים פרקטיים</h2>
-      <ul>
-        <li>המסלול שטוח ברובו — מתאים לאופני הילוכים רגילים או אופני שטח קלים.</li>
-        <li>לוקח כשעה עד שעה וחצי בנחת; אפשר לעצור בדרך לפיקניק או לקפה.</li>
-        <li>בקיץ הצהריים חם — מומלץ לצאת בבוקר מוקדם או לקראת השקיעה.</li>
-        <li>בחורף ייתכנו קטעים בוציים אחרי גשם — בדקו את האזהרות למטה.</li>
-      </ul>
-
-      <FeaturedRoute.Warnings />
-
-      <FeaturedRoute.POIs />
-
-      <FeaturedRoute.Gallery photos={[]} />
-      <FeaturedRoute.Video />
+      <section className="sbh-route-notes">
+        <div>
+          <h2>על המסלול</h2>
+          <p>
+            הסובב סביב בית הלל הוא טעימה מהיופי הצנוע של הגליל העליון: דרכים
+            חקלאיות נוחות, מבטים פתוחים אל החרמון וקרבה לנחלים של עמק החולה.
+            המסלול קצר, נוח, ומתאים לרכיבה משפחתית רגועה.
+          </p>
+        </div>
+        <dl>
+          <div>
+            <dt>אופי רכיבה</dt>
+            <dd>לולאה קצרה, שטוחה ברובה, ללא קטעים טכניים.</dd>
+          </div>
+          <div>
+            <dt>מתי להגיע</dt>
+            <dd>חורף ואביב יפים במיוחד; בקיץ עדיף בוקר מוקדם או שקיעה.</dd>
+          </div>
+          <div>
+            <dt>עצירות</dt>
+            <dd>צל ליד הנחל, שדות פתוחים, ואפשרות לקפה או אוכל בבית הלל.</dd>
+          </div>
+        </dl>
+      </section>
     </FeaturedRoute>
   );
 }

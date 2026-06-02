@@ -4,12 +4,18 @@ import { dataMarkerFeaturesFromSegments } from "../../map/mapLayers.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import { useIsMobile } from "./useIsMobile.js";
 
-export default function FeaturedRouteMapSlot() {
+export default function FeaturedRouteMapSlot({
+  variant = "mobile",
+  className = "",
+  allowFullscreen = true,
+  routeFitPadding,
+}) {
   const isMobile = useIsMobile();
   const {
     assets,
     routeState,
     setFocusedPoiId,
+    setFocusedCoord,
     focusedCoord,
     routeFitRequest,
     videoCursor,
@@ -51,15 +57,29 @@ export default function FeaturedRouteMapSlot() {
     }
   }, [fullscreen]);
 
-  if (!isMobile || !assets) return null;
+  if (!assets) return null;
+  if (variant === "mobile" && !isMobile) return null;
+  if (variant === "desktop" && isMobile) return null;
 
   const dataMarkerFeatures = dataMarkerFeaturesFromSegments(assets.segmentsData);
   const activeDataPointIds = routeState.activeDataPoints.map((p) => p.id);
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
+  const handleDataMarkerClick = (marker) => {
+    setFocusedPoiId(marker.id);
+    if (Number.isFinite(marker.lat) && Number.isFinite(marker.lng)) {
+      setFocusedCoord({ lat: marker.lat, lng: marker.lng });
+    }
+  };
 
   return (
     <>
-      <div className={`featured-map-inline${fullscreen ? " featured-map-inline--hidden" : ""}`}>
+      <div
+        className={[
+          "featured-map-inline",
+          className,
+          fullscreen ? " featured-map-inline--hidden" : "",
+        ].join(" ").trim()}
+      >
         <MapView
           geoJsonData={assets.geoJsonData}
           dataMarkerFeatures={dataMarkerFeatures}
@@ -67,19 +87,22 @@ export default function FeaturedRouteMapSlot() {
           routeGeometry={routeState.geometry}
           routePoints={routeState.points}
           routeFitRequest={routeFitRequest}
+          routeFitPadding={routeFitPadding}
           focusedMarker={focusedMarker}
-          onDataMarkerClick={(marker) => setFocusedPoiId(marker.id)}
+          onDataMarkerClick={handleDataMarkerClick}
           videoCursor={videoCursor}
           onRouteClick={handleRouteClick}
         />
-        <button
-          ref={triggerRef}
-          type="button"
-          className="featured-map-fullscreen-btn"
-          onClick={() => setFullscreen(true)}
-        >
-          מפה מלאה
-        </button>
+        {allowFullscreen && (
+          <button
+            ref={triggerRef}
+            type="button"
+            className="featured-map-fullscreen-btn"
+            onClick={() => setFullscreen(true)}
+          >
+            מפה מלאה
+          </button>
+        )}
       </div>
       {fullscreen && (
         <div className="featured-map-fullscreen-overlay" role="dialog" aria-modal="true">
@@ -98,8 +121,9 @@ export default function FeaturedRouteMapSlot() {
             routeGeometry={routeState.geometry}
             routePoints={routeState.points}
             routeFitRequest={routeFitRequest}
+            routeFitPadding={routeFitPadding}
             focusedMarker={focusedMarker}
-            onDataMarkerClick={(marker) => setFocusedPoiId(marker.id)}
+            onDataMarkerClick={handleDataMarkerClick}
           />
         </div>
       )}

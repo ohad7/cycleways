@@ -19,6 +19,17 @@ const segmentsData = {
         location: [33.2, 35.7],
       },
       {
+        type: "cafe",
+        id: "coffee-stop",
+        name: "Coffee stop",
+        information: "Coffee information",
+        description: "Longer coffee stop description",
+        photo: "/attached_assets/background.png",
+        thumbnail: "/attached_assets/background.png",
+        gallery: true,
+        location: [33.3, 35.8],
+      },
+      {
         type: "ignored",
         location: ["bad", 35.8],
       },
@@ -27,11 +38,20 @@ const segmentsData = {
 };
 
 const features = dataMarkerFeaturesFromSegments(segmentsData);
-assert.equal(features.length, 2);
+assert.equal(features.length, 3);
 assert.deepEqual(features[0].geometry.coordinates, [35.6, 33.1]);
 assert.equal(features[0].properties.dataPointId, "Segment A-0");
 assert.equal(features[0].properties.icon, "barrier-11");
 assert.equal(features[1].properties.icon, "wetland-11");
+assert.equal(features[2].id, "coffee-stop");
+assert.equal(features[2].properties.dataPointId, "coffee-stop");
+assert.equal(features[2].properties.name, "Coffee stop");
+assert.equal(features[2].properties.photo, "/attached_assets/background.png");
+assert.equal(features[2].properties.thumbnail, "/attached_assets/background.png");
+assert.equal(features[2].properties.gallery, true);
+assert.equal(features[2].properties.label, "בית קפה");
+assert.equal(features[2].properties.color, "#b07a3f");
+assert.equal(features[2].properties.icon, "marker-11");
 
 const collection = dataMarkerFeatureCollection(features, ["Segment A-1"]);
 assert.equal(collection.type, "FeatureCollection");

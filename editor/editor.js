@@ -4,6 +4,11 @@ import {
   conflictingSegmentForEdge,
   orientAppendedEdgeRef,
 } from "./lib/edge-pick.mjs";
+import {
+  POI_TYPE_OPTIONS,
+  poiColor,
+  poiIcon,
+} from "../packages/core/src/data/poiTypes.js";
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 
@@ -63,35 +68,13 @@ const BASE_GRAPH_FALLBACK_LINE_COLOR = "#607076";
 const BASE_GRAPH_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 10, 1.8, 13, 2.8, 16, 4.2];
 const BASE_GRAPH_LINE_OPACITY = 0.52;
 
-const DATA_TYPES = [
-  { value: "payment", label: "payment" },
-  { value: "gate", label: "gate" },
-  { value: "mud", label: "mud" },
-  { value: "warning", label: "warning" },
-  { value: "slope", label: "slope" },
-  { value: "narrow", label: "narrow" },
-  { value: "severe", label: "severe" },
-];
-
-const DATA_TYPE_COLORS = {
-  payment: "#4a5783",
-  gate: "#ff5722",
-  mud: "#9d744d",
-  warning: "#ff9800",
-  slope: "#8e5b9a",
-  narrow: "#d6568b",
-  severe: "#ff675b",
-};
-
-const DATA_TYPE_ICONS = {
-  payment: "bank-11",
-  gate: "barrier-11",
-  mud: "wetland-11",
-  warning: "caution-11",
-  slope: "mountain-11",
-  narrow: "car-11",
-  severe: "roadblock-11",
-};
+const DATA_TYPES = POI_TYPE_OPTIONS;
+const DATA_TYPE_COLORS = Object.fromEntries(
+  DATA_TYPES.map(({ value }) => [value, poiColor(value)]),
+);
+const DATA_TYPE_ICONS = Object.fromEntries(
+  DATA_TYPES.map(({ value }) => [value, poiIcon(value)]),
+);
 
 const DATA_ICON_PATHS = {
   "bank-11": "/icons/bank.svg",
@@ -716,8 +699,14 @@ function dataMarkerCollection() {
           sourceIndex,
           index,
           type,
-          icon: DATA_TYPE_ICONS[type] || "caution-11",
+          id: marker.id || "",
+          icon: DATA_TYPE_ICONS[type] || poiIcon(type) || "caution-11",
+          name: marker.name || "",
           information: marker.information || "",
+          description: marker.description || "",
+          photo: marker.photo || "",
+          thumbnail: marker.thumbnail || "",
+          gallery: marker.gallery,
           segmentName: featureName(feature),
           selected: sourceIndex === selectedSource && index === state.selectedDataIndex,
         },
@@ -4741,6 +4730,131 @@ function formatCoordValue(value) {
   return Number.isFinite(value) ? String(Number(value.toFixed(6))) : "";
 }
 
+function cleanOptionalText(value) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function appendDataTextField(item, { label, value = "", rows = 0, onCommit }) {
+  const fieldLabel = document.createElement("label");
+  fieldLabel.className = "field-label";
+  fieldLabel.textContent = label;
+  item.appendChild(fieldLabel);
+
+  const input =
+    rows > 0 ? document.createElement("textarea") : document.createElement("input");
+  input.className = rows > 0 ? "text-input textarea" : "text-input";
+  if (rows > 0) {
+    input.rows = rows;
+  } else {
+    input.type = "text";
+  }
+  input.value = value || "";
+  input.addEventListener("change", () => onCommit(cleanOptionalText(input.value)));
+  item.appendChild(input);
+  return input;
+}
+
+function appendDataCheckboxField(item, { label, checked, onCommit }) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "data-checkbox-row";
+
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = Boolean(checked);
+  input.addEventListener("change", () => onCommit(input.checked));
+  wrapper.appendChild(input);
+
+  const text = document.createElement("span");
+  text.textContent = label;
+  wrapper.appendChild(text);
+  item.appendChild(wrapper);
+  return input;
+}
+
+function dataImageSrc(src) {
+  if (!src) return "";
+  if (/^(https?:)?\/\//.test(src) || src.startsWith("/")) return src;
+  return `/${src}`;
+}
+
+function appendDataPhotoPreview(item, marker) {
+  const src = marker.thumbnail || marker.photo;
+  if (!src) return;
+
+  const preview = document.createElement("img");
+  preview.className = "data-photo-preview";
+  preview.src = dataImageSrc(src);
+  preview.alt = marker.name || marker.information || "Data marker photo";
+  preview.loading = "lazy";
+  item.appendChild(preview);
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolveData, rejectData) => {
+    const reader = new FileReader();
+    reader.onload = () => resolveData(reader.result);
+    reader.onerror = () => rejectData(reader.error || new Error("file read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Upload a full-resolution photo; the editor server resizes, converts to WebP,
+// and stores derivatives under public-data/poi-images, then we record the
+// canonical photo/thumbnail paths on the marker.
+function appendDataImageUpload(item, index) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "data-image-upload";
+
+  const fieldLabel = document.createElement("span");
+  fieldLabel.className = "field-label";
+  fieldLabel.textContent = "Upload image (resized + WebP on the server)";
+  wrapper.appendChild(fieldLabel);
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.className = "data-image-input";
+
+  const statusEl = document.createElement("span");
+  statusEl.className = "data-image-status";
+
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const marker = selectedData()[index];
+    const id = marker && typeof marker.id === "string" ? marker.id.trim() : "";
+    if (!id) {
+      statusEl.textContent = "Set a stable ID before uploading an image.";
+      input.value = "";
+      return;
+    }
+    statusEl.textContent = "Uploading…";
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const res = await fetch("/api/poi-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, data: dataUrl }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        throw new Error(body.error || `upload failed (${res.status})`);
+      }
+      updateDataMarker(index, { photo: body.photo, thumbnail: body.thumbnail });
+      renderDataList();
+      setStatus(`Image stored: ${body.photo}`);
+    } catch (error) {
+      statusEl.textContent = error instanceof Error ? error.message : String(error);
+      input.value = "";
+    }
+  });
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(statusEl);
+  item.appendChild(wrapper);
+}
+
 function addDataMarker() {
   const feature = selectedFeature();
   if (!feature) return;
@@ -4905,20 +5019,103 @@ function renderDataList() {
     });
     item.appendChild(typeSelect);
 
-    const infoLabel = document.createElement("label");
-    infoLabel.className = "field-label";
-    infoLabel.textContent = "Information";
-    item.appendChild(infoLabel);
-
-    const infoInput = document.createElement("textarea");
-    infoInput.className = "text-input textarea";
-    infoInput.rows = 2;
-    infoInput.value = marker.information || "";
-    infoInput.addEventListener("change", () => {
-      updateDataMarker(index, { information: infoInput.value.trim() });
-      renderDataList();
+    appendDataTextField(item, {
+      label: "Stable ID",
+      value: marker.id,
+      onCommit: (id) => {
+        updateDataMarker(index, { id });
+        renderDataList();
+      },
     });
-    item.appendChild(infoInput);
+
+    appendDataTextField(item, {
+      label: "Name",
+      value: marker.name,
+      onCommit: (name) => {
+        updateDataMarker(index, { name });
+        renderDataList();
+      },
+    });
+
+    appendDataTextField(item, {
+      label: "Short description",
+      value: marker.information,
+      rows: 2,
+      onCommit: (information) => {
+        updateDataMarker(index, { information });
+        renderDataList();
+      },
+    });
+
+    appendDataTextField(item, {
+      label: "Long description",
+      value: marker.description,
+      rows: 3,
+      onCommit: (description) => {
+        updateDataMarker(index, { description });
+        renderDataList();
+      },
+    });
+
+    appendDataTextField(item, {
+      label: "Photo path",
+      value: marker.photo,
+      onCommit: (photo) => {
+        updateDataMarker(index, { photo });
+        renderDataList();
+      },
+    });
+
+    appendDataTextField(item, {
+      label: "Thumbnail path",
+      value: marker.thumbnail,
+      onCommit: (thumbnail) => {
+        updateDataMarker(index, { thumbnail });
+        renderDataList();
+      },
+    });
+
+    appendDataImageUpload(item, index);
+
+    appendDataCheckboxField(item, {
+      label: "Show in route galleries when this segment is on the route",
+      checked:
+        marker.gallery === true ||
+        (marker.gallery !== false && Boolean(marker.photo || marker.thumbnail)),
+      onCommit: (gallery) => {
+        updateDataMarker(index, { gallery });
+        renderDataList();
+      },
+    });
+
+    appendDataTextField(item, {
+      label: "Website",
+      value: marker.website,
+      onCommit: (website) => {
+        updateDataMarker(index, { website });
+        renderDataList();
+      },
+    });
+
+    appendDataTextField(item, {
+      label: "Phone",
+      value: marker.phone,
+      onCommit: (phone) => {
+        updateDataMarker(index, { phone });
+        renderDataList();
+      },
+    });
+
+    appendDataTextField(item, {
+      label: "Hours",
+      value: marker.hours,
+      onCommit: (hours) => {
+        updateDataMarker(index, { hours });
+        renderDataList();
+      },
+    });
+
+    appendDataPhotoPreview(item, marker);
 
     const location = Array.isArray(marker.location) ? marker.location : [NaN, NaN];
     const locationGrid = document.createElement("div");

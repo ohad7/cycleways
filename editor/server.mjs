@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { dirname, extname, isAbsolute, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
+import sharp from "sharp";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import {
@@ -37,11 +38,13 @@ const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson")
 const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
+const poiTypesModulePath = resolve(repoRoot, "packages/core/src/data/poiTypes.js");
 const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
 const videoKeyframesDraftDir = resolve(editorRoot, ".drafts/route-videos");
 const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
 const routeCatalogDraftPath = resolve(editorRoot, ".drafts/route-catalog.json");
 const routeCatalogPublicPath = resolve(publicDataDir, "route-catalog.json");
+const poiImagesDir = resolve(publicDataDir, "poi-images");
 const placesPath = resolve(repoRoot, "data/places.json");
 const regionZonesPath = resolve(repoRoot, "data/region-zones.json");
 const port = Number(process.env.EDITOR_PORT || 8899);
@@ -54,6 +57,124 @@ let atomicWriteCounter = 0;
 const devReloadClients = new Set();
 
 const qualityKeys = ["overall", "safety", "comfort", "scenery"];
+const dataMarkerOptionalStringFields = [
+  "id",
+  "name",
+  "description",
+  "photo",
+  "thumbnail",
+  "website",
+  "phone",
+  "hours",
+];
+
+function hasText(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function hasGalleryImage(marker) {
+  return hasText(marker.photo) || hasText(marker.thumbnail);
+}
+
+const POI_IMAGE_PUBLIC_PATH = "public-data/poi-images";
+const POI_IMAGE_MAX_WIDTH = 1600;
+const POI_IMAGE_THUMB_WIDTH = 480;
+
+// Map an authored, stable POI id onto a filesystem-safe slug. Throws when the
+// id has no usable characters so we never write an empty or traversal filename.
+export function sanitizePoiImageId(id) {
+  const slug = String(id ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!slug) {
+    throw new Error("POI image id must contain at least one letter or digit");
+  }
+  return slug;
+}
+
+// Resize and re-encode an uploaded photo into a serving-sized WebP plus a small
+// thumbnail, both written under public-data/poi-images. Returns the canonical
+// web paths the editor stores on the marker. Phone photos are routinely 5-8MB;
+// this keeps committed assets small enough for the git repo.
+export async function processPoiImage({ id, buffer }, options = {}) {
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+    throw new Error("POI image upload is empty");
+  }
+  const safeId = sanitizePoiImageId(id);
+  const outputDir = options.outputDir || poiImagesDir;
+  const publicPath = options.publicPath || POI_IMAGE_PUBLIC_PATH;
+  await mkdir(outputDir, { recursive: true });
+
+  const photoBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: POI_IMAGE_MAX_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer();
+  const thumbBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: POI_IMAGE_THUMB_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 72 })
+    .toBuffer();
+
+  await writeFile(join(outputDir, `${safeId}.webp`), photoBuffer);
+  await writeFile(join(outputDir, `${safeId}-thumb.webp`), thumbBuffer);
+
+  return {
+    photo: `${publicPath}/${safeId}.webp`,
+    thumbnail: `${publicPath}/${safeId}-thumb.webp`,
+    bytes: { photo: photoBuffer.length, thumbnail: thumbBuffer.length },
+  };
+}
+
+function isRemoteImagePath(value) {
+  return /^(https?:)?\/\//i.test(value) || value.startsWith("data:");
+}
+
+// Resolve a marker image reference to an absolute path on disk, or null for
+// remote/data URLs (which we cannot and should not check locally).
+function localImagePathToAbsolute(value, baseDir) {
+  if (typeof value !== "string" || value.trim() === "" || isRemoteImagePath(value)) {
+    return null;
+  }
+  return resolve(baseDir, value.replace(/^\/+/, ""));
+}
+
+function collectSourceImagePaths(source) {
+  const paths = [];
+  const features = Array.isArray(source?.features) ? source.features : [];
+  for (const feature of features) {
+    const data = feature?.properties?.data;
+    if (!Array.isArray(data)) continue;
+    for (const marker of data) {
+      for (const field of ["photo", "thumbnail"]) {
+        const value = marker?.[field];
+        if (typeof value === "string" && value.trim() !== "") {
+          paths.push(value);
+        }
+      }
+    }
+  }
+  return paths;
+}
+
+// Return the local POI image references in the source that do not resolve to a
+// file on disk. Remote URLs are skipped. Used to block promote on broken refs.
+export async function findMissingSourceImages(source, baseDir = repoRoot) {
+  const missing = [];
+  const seen = new Set();
+  for (const imagePath of collectSourceImagePaths(source)) {
+    if (seen.has(imagePath)) continue;
+    seen.add(imagePath);
+    const absolute = localImagePathToAbsolute(imagePath, baseDir);
+    if (!absolute) continue;
+    const fileStat = await statOrNull(absolute);
+    if (!fileStat || !fileStat.isFile()) {
+      missing.push(imagePath);
+    }
+  }
+  return missing;
+}
 
 const mimeTypes = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -728,7 +849,7 @@ function backfillDeprecatedRouteAnchors(source) {
   }
 }
 
-function validateSourceGeojson(source) {
+export function validateSourceGeojson(source) {
   if (!source || source.type !== "FeatureCollection" || !Array.isArray(source.features)) {
     throw new Error("Source must be a GeoJSON FeatureCollection");
   }
@@ -781,6 +902,25 @@ function validateSourceGeojson(source) {
         }
         if (marker.information !== undefined && typeof marker.information !== "string") {
           throw new Error(`Feature ${name || index} data marker ${markerIndex} has invalid information`);
+        }
+        for (const field of dataMarkerOptionalStringFields) {
+          if (marker[field] !== undefined && typeof marker[field] !== "string") {
+            throw new Error(`Feature ${name || index} data marker ${markerIndex} has invalid ${field}`);
+          }
+        }
+        if (marker.gallery !== undefined && typeof marker.gallery !== "boolean") {
+          throw new Error(`Feature ${name || index} data marker ${markerIndex} has invalid gallery flag`);
+        }
+        if (marker.gallery === true && !hasGalleryImage(marker)) {
+          throw new Error(`Feature ${name || index} data marker ${markerIndex} is in the gallery but has no image`);
+        }
+        if (hasGalleryImage(marker)) {
+          if (!hasText(marker.id)) {
+            throw new Error(`Feature ${name || index} data marker ${markerIndex} with an image is missing a stable id`);
+          }
+          if (!hasText(marker.name) && !hasText(marker.information)) {
+            throw new Error(`Feature ${name || index} data marker ${markerIndex} with an image is missing a name or short description`);
+          }
         }
         const location = marker.location;
         if (
@@ -1039,7 +1179,8 @@ async function serveStatic(request, response, url) {
   const allowedEditorFile = isInside(editorRoot, filePath) || filePath === resolve(editorRoot, "index.html");
   const allowedIconFile = isInside(iconsRoot, filePath);
   const allowedTokenFile = filePath === tokenPath;
-  if (!allowedEditorFile && !allowedIconFile && !allowedTokenFile) {
+  const allowedPoiTypesFile = filePath === poiTypesModulePath;
+  if (!allowedEditorFile && !allowedIconFile && !allowedTokenFile && !allowedPoiTypesFile) {
     sendText(response, 404, "Not found");
     return;
   }
@@ -1841,6 +1982,14 @@ async function handlePromote(payload = {}) {
   if (blockers.length > 0) {
     throw new Error(`Promote blocked by validation: ${blockers.join(", ")}`);
   }
+
+  const sourceForImages = JSON.parse(await readFile(sourcePath, "utf-8"));
+  const missingImages = await findMissingSourceImages(sourceForImages, repoRoot);
+  if (missingImages.length > 0) {
+    throw new Error(
+      `Promote blocked: ${missingImages.length} POI image file(s) are referenced but missing: ${missingImages.join(", ")}`,
+    );
+  }
   if (!manifest.baseRoutingShards) {
     throw new Error("Promote requires a base routing shard manifest in the build manifest.");
   }
@@ -2113,6 +2262,36 @@ const server = createServer(async (request, response) => {
         durationMs: Date.now() - startedAt,
       });
       sendJson(response, 200, { ok: true, path: sourcePath, changed });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/poi-image") {
+      logApi(requestId, "POST /api/poi-image started");
+      // Phone photos can be several MB; allow extra headroom for base64 inflation.
+      const payload = await readRequestJson(request, 40 * 1024 * 1024);
+      const rawData = typeof payload.data === "string" ? payload.data : "";
+      const base64 = rawData.replace(/^data:[^;]+;base64,/, "");
+      if (!base64) {
+        sendJson(response, 400, { ok: false, error: "missing image data" });
+        return;
+      }
+      let result;
+      try {
+        const buffer = Buffer.from(base64, "base64");
+        result = await processPoiImage({ id: payload.id, buffer });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/poi-image failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      logApi(requestId, "POST /api/poi-image stored", {
+        photo: result.photo,
+        thumbnail: result.thumbnail,
+        bytes: result.bytes,
+        durationMs: Date.now() - startedAt,
+      });
+      sendJson(response, 200, { ok: true, ...result });
       return;
     }
 

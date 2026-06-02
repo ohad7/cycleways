@@ -7,10 +7,17 @@ test.beforeEach(async ({ page }) => {
 
 test.describe("desktop layout", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
-  test("sticky map column visible on desktop", async ({ page }) => {
+  test("video-first side map visible on desktop", async ({ page }) => {
     await page.goto("/featured/sovev-beit-hillel");
-    await expect(page.locator(".featured-route-sticky-map")).toBeVisible();
-    await expect(page.locator(".featured-map-inline")).toHaveCount(0);
+    await expect(page.locator(".sbh-video .featured-video-frame")).toBeVisible();
+    await expect(page.locator(".sbh-side-map")).toBeVisible();
+    await expect(page.locator(".sbh-moments")).toBeVisible();
+    await expect(page.locator(".sbh-carousel-dots button")).toHaveCount(4);
+    await expect(page.locator(".sbh-moment-card")).toContainText("עצירה במושב");
+    await expect(page.locator(".featured-route-sticky-map")).toHaveCount(0);
+
+    const videoBox = await page.locator(".sbh-video .featured-video-frame").boundingBox();
+    expect(videoBox.y + videoBox.height).toBeLessThanOrEqual(900);
   });
 });
 

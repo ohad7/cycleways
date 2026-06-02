@@ -10,6 +10,7 @@ import {
 import {
   distanceToRouteGeometry,
   getDataPointLocation,
+  projectPointToRouteGeometry,
   ROUTE_DATA_POINT_TRIGGER_DISTANCE_METERS,
 } from "../utils/route-data.js";
 
@@ -276,7 +277,7 @@ export function getSegmentIds(segmentNames, segmentsData) {
     .filter((id) => Number.isFinite(id) && id > 0);
 }
 
-function getActiveRouteDataPoints(segmentNames, geometry, segmentsData) {
+export function getActiveRouteDataPoints(segmentNames, geometry, segmentsData) {
   if (!Array.isArray(segmentNames) || segmentNames.length === 0) return [];
 
   const active = [];
@@ -295,14 +296,20 @@ function getActiveRouteDataPoints(segmentNames, geometry, segmentsData) {
 
       const location = getDataPointLocation(dataPoint);
       let routeDistanceMeters = null;
+      let routeProgressMeters = null;
+      let routeFraction = null;
       if (location) {
         if (geometry.length < 2) return;
-        routeDistanceMeters = distanceToRouteGeometry(location, geometry);
+        const projection = projectPointToRouteGeometry(location, geometry);
+        routeDistanceMeters =
+          projection?.routeDistanceMeters ?? distanceToRouteGeometry(location, geometry);
         if (
           routeDistanceMeters > ROUTE_DATA_POINT_TRIGGER_DISTANCE_METERS
         ) {
           return;
         }
+        routeProgressMeters = projection?.routeProgressMeters ?? null;
+        routeFraction = projection?.routeFraction ?? null;
       }
 
       seen.add(stableId);
@@ -311,6 +318,8 @@ function getActiveRouteDataPoints(segmentNames, geometry, segmentsData) {
         id: stableId,
         segmentName,
         routeDistanceMeters,
+        routeProgressMeters,
+        routeFraction,
       });
     });
   });

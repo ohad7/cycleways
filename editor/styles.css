@@ -859,6 +859,43 @@ button:disabled {
   margin-top: 4px;
 }
 
+.data-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.data-photo-preview {
+  display: block;
+  width: 100%;
+  height: 96px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  object-fit: cover;
+  background: #f8faf9;
+}
+
+.data-image-upload {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.data-image-input {
+  font-size: 12px;
+}
+
+.data-image-status {
+  color: var(--muted);
+  font-size: 11px;
+  min-height: 14px;
+}
+
 .compact-field {
   display: grid;
   gap: 4px;

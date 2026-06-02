@@ -66,6 +66,7 @@ function MapSurface({
   onViewportIdle,
   osmDebugMode = false,
   routeFitRequest,
+  routeFitPadding = 72,
   routeGeometry = [],
   routePointDragPreview = null,
   routePoints = [],
@@ -489,17 +490,24 @@ function MapSurface({
     const handleDataMarkerClick = (event) => {
       const feature = event.features?.[0];
       if (!feature) return;
+      const coordinates = feature.geometry?.coordinates || [];
+      const lng = Number(coordinates[0]);
+      const lat = Number(coordinates[1]);
 
       event.preventDefault?.();
       event.originalEvent?.stopPropagation?.();
       callbacksRef.current.onDataMarkerClick?.({
         id: feature.properties?.dataPointId,
         type: feature.properties?.type,
+        name: feature.properties?.name,
         information: feature.properties?.information,
+        description: feature.properties?.description,
+        photo: feature.properties?.photo,
+        thumbnail: feature.properties?.thumbnail,
         segmentName: feature.properties?.segmentName,
         emoji: feature.properties?.emoji,
-        lng: event.lngLat.lng,
-        lat: event.lngLat.lat,
+        lng: Number.isFinite(lng) ? lng : event.lngLat.lng,
+        lat: Number.isFinite(lat) ? lat : event.lngLat.lat,
       });
     };
 
@@ -701,9 +709,9 @@ function MapSurface({
 
     fitMapToCoordinates(map, routeFitRequest.geometry, {
       maxZoom: 14,
-      padding: 72,
+      padding: routeFitPadding,
     });
-  }, [routeFitRequest, status]);
+  }, [routeFitPadding, routeFitRequest, status]);
 
   useEffect(() => {
     const map = mapRef.current;

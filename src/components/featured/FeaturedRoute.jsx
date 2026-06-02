@@ -17,9 +17,10 @@ import Gallery from "./Gallery.jsx";
 import VideoEmbed from "./VideoEmbed.jsx";
 import Warnings from "./Warnings.jsx";
 import FeaturedRouteMapSlot from "./FeaturedRouteMap.jsx";
+import RoutePoiGallery from "./RoutePoiGallery.jsx";
 import { findFeaturedMeta } from "../../featured/index.js";
 
-function FeaturedRoute({ slug, children }) {
+function FeaturedRoute({ slug, children, layout = "article", desktopMap = "sticky" }) {
   const isMobile = useIsMobile();
   const [meta, setMeta] = useState(null);
   const [assets, setAssets] = useState(null);
@@ -101,6 +102,13 @@ function FeaturedRoute({ slug, children }) {
     seek(t);
   }, []);
 
+  const handleDataMarkerClick = useCallback((marker) => {
+    setFocusedPoiId(marker.id);
+    if (Number.isFinite(marker.lat) && Number.isFinite(marker.lng)) {
+      setFocusedCoord({ lat: marker.lat, lng: marker.lng });
+    }
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       meta,
@@ -138,13 +146,19 @@ function FeaturedRoute({ slug, children }) {
             <div className="featured-route-error">שגיאה: {error?.message}</div>
           </div>
         )}
-        {status === "ready" && (
+        {status === "ready" && layout === "video-first" && (
+          <div className="featured-route-video-first">
+            <FeaturedRouteHeader />
+            <div className="featured-route-body featured-route-body--video-first">{children}</div>
+          </div>
+        )}
+        {status === "ready" && layout !== "video-first" && (
           <div className="featured-route-split">
             <div className="featured-route-content-card">
               <FeaturedRouteHeader />
               <div className="featured-route-body">{children}</div>
             </div>
-            {!isMobile && (
+            {!isMobile && desktopMap === "sticky" && (
               <aside className="featured-route-sticky-map">
                 <MapView
                   geoJsonData={assets.geoJsonData}
@@ -154,7 +168,7 @@ function FeaturedRoute({ slug, children }) {
                   routePoints={routeState.points}
                   routeFitRequest={routeFitRequest}
                   focusedMarker={focusedMarker}
-                  onDataMarkerClick={(marker) => setFocusedPoiId(marker.id)}
+                  onDataMarkerClick={handleDataMarkerClick}
                   videoCursor={videoCursor}
                   onRouteClick={handleRouteClick}
                 />
@@ -170,6 +184,7 @@ function FeaturedRoute({ slug, children }) {
 FeaturedRoute.Map = FeaturedRouteMapSlot;
 FeaturedRoute.POIs = POIList;
 FeaturedRoute.Gallery = Gallery;
+FeaturedRoute.POIGallery = RoutePoiGallery;
 FeaturedRoute.Video = VideoEmbed;
 FeaturedRoute.Warnings = Warnings;
 

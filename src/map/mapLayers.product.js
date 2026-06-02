@@ -66,13 +66,13 @@ import {
 } from "@cycleways/core/map/mapStyles.js";
 
 const DATA_MARKER_ICON_FILES = {
-  "bank-11": "icons/bank.svg",
-  "barrier-11": "icons/barrier.svg",
-  "wetland-11": "icons/wetland.svg",
-  "caution-11": "icons/caution.svg",
-  "mountain-11": "icons/mountain.svg",
-  "car-11": "icons/car.svg",
-  "roadblock-11": "icons/roadblock.svg",
+  "bank-11": "/icons/bank.svg",
+  "barrier-11": "/icons/barrier.svg",
+  "wetland-11": "/icons/wetland.svg",
+  "caution-11": "/icons/caution.svg",
+  "mountain-11": "/icons/mountain.svg",
+  "car-11": "/icons/car.svg",
+  "roadblock-11": "/icons/roadblock.svg",
 };
 
 export function getRouteNetworkLayerIds() {

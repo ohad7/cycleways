@@ -22,7 +22,7 @@ async function loadKeyframes(filename) {
   return response.json();
 }
 
-export default function VideoEmbed() {
+export default function VideoEmbed({ title = "סרטון", className = "" }) {
   const {
     meta,
     routeState,
@@ -177,8 +177,8 @@ export default function VideoEmbed() {
 
   if (status !== "ready" || !data) return null;
   return (
-    <section className="featured-video">
-      <h2>סרטון</h2>
+    <section className={["featured-video", className].filter(Boolean).join(" ")}>
+      {title && <h2>{title}</h2>}
       <div className="featured-video-frame">
         <div ref={iframeContainerRef} />
       </div>

@@ -36,3 +36,5 @@ Current plans:
 - `mobile-map-gesture-intent/` - design for tightening the iPhone map gesture intent model (add / move / pan / zoom) to stop touches near a point being misread as point-moves.
 - `cw-edge-snap-preference/` - design for biasing route-point snapping toward CycleWays-matched edges (shared core) so points near a CW path don't snap to a parallel road.
 - `data-marker-detail-card/` - design for a bottom-sheet detail card when tapping a landmark/hazard marker (shared core action + add-to-route), on the iPhone app and mobile web.
+- `segment-poi-gallery/` - design and implementation plan for deriving featured-route galleries from reusable segment-level POIs with images, ordered by route progress.
+- `poi-editor-refinements/` - design and implementation plan for multiple images per POI, a managed (read-only) editor image list, a decluttered segment panel with pinned ID/Name and collapsed quality, and emoji map markers per POI type.
