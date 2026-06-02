@@ -1,7 +1,9 @@
 import React from "react";
-import { POI_EMOJIS, POI_LABELS } from "@cycleways/core/data/poiTypes.js";
+import { POI_EMOJIS, POI_LABELS, primaryPoiImage } from "@cycleways/core/data/poiTypes.js";
 
 export default function POICard({ poi, focused, onSelect }) {
+  const primary = primaryPoiImage(poi);
+  const photoSrc = primary?.thumbnail || primary?.photo;
   return (
     <button
       type="button"
@@ -17,7 +19,7 @@ export default function POICard({ poi, focused, onSelect }) {
           <div className="poi-card-type">{POI_LABELS[poi.type] || poi.type}</div>
         </div>
       </div>
-      {poi.photo && <img className="poi-card-photo" src={poi.photo} alt={poi.name || poi.type} />}
+      {photoSrc && <img className="poi-card-photo" src={photoSrc} alt={poi.name || poi.type} />}
       {poi.information && <p className="poi-card-info">{poi.information}</p>}
       {(poi.phone || poi.website || poi.hours) && (
         <ul className="poi-card-meta">

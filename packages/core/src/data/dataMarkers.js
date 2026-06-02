@@ -42,7 +42,7 @@ export function dataMarkerFeaturesFromSegments(segmentsData) {
           information: dataPoint.information || "",
           description: dataPoint.description || "",
           photo: primary?.photo || "",
-          thumbnail: primary?.thumbnail || dataPoint.thumbnail || "",
+          thumbnail: primary?.thumbnail || "",
           gallery: dataPoint.gallery,
           segmentName,
           emoji: dataPoint.emoji || poiEmoji(type),

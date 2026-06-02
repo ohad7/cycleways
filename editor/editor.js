@@ -4784,18 +4784,6 @@ function dataImageSrc(src) {
   return `/${src}`;
 }
 
-function appendDataPhotoPreview(item, marker) {
-  const src = marker.thumbnail || marker.photo;
-  if (!src) return;
-
-  const preview = document.createElement("img");
-  preview.className = "data-photo-preview";
-  preview.src = dataImageSrc(src);
-  preview.alt = marker.name || marker.information || "Data marker photo";
-  preview.loading = "lazy";
-  item.appendChild(preview);
-}
-
 function markerImageList(marker) {
   if (Array.isArray(marker?.images)) {
     return marker.images.filter((e) => e && typeof e === "object" && e.photo);
@@ -5181,8 +5169,6 @@ function renderDataList() {
         renderDataList();
       },
     });
-
-    appendDataPhotoPreview(item, marker);
 
     const location = Array.isArray(marker.location) ? marker.location : [NaN, NaN];
     const locationGrid = document.createElement("div");

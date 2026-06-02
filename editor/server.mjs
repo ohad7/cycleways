@@ -72,12 +72,6 @@ function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function markerImages(marker) {
-  if (Array.isArray(marker?.images)) return marker.images;
-  if (hasText(marker?.photo)) return [{ photo: marker.photo, thumbnail: marker.thumbnail }];
-  return [];
-}
-
 function hasGalleryImage(marker) {
   if (Array.isArray(marker?.images)) {
     return marker.images.some((entry) => entry && hasText(entry.photo));
