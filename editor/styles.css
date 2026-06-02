@@ -896,6 +896,40 @@ button:disabled {
   min-height: 14px;
 }
 
+.data-image-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.data-image-cell {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  width: 96px;
+}
+
+.data-image-thumb {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.data-image-cell.primary .data-image-thumb {
+  border-color: #2e7d32;
+  border-width: 2px;
+}
+
+.data-image-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #2e7d32;
+  text-align: center;
+}
+
 .compact-field {
   display: grid;
   gap: 4px;

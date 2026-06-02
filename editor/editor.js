@@ -4792,6 +4792,82 @@ function appendDataPhotoPreview(item, marker) {
   item.appendChild(preview);
 }
 
+function markerImageList(marker) {
+  if (Array.isArray(marker?.images)) {
+    return marker.images.filter((e) => e && typeof e === "object" && e.photo);
+  }
+  if (marker?.photo) {
+    return [{ photo: marker.photo, thumbnail: marker.thumbnail || marker.photo }];
+  }
+  return [];
+}
+
+function setMarkerImages(index, images) {
+  // Writing images[] supersedes the legacy single-image fields.
+  updateDataMarker(index, { images, photo: undefined, thumbnail: undefined });
+  renderDataList();
+}
+
+// Read-only thumbnail strip of a POI's images with Make-primary / Remove.
+function appendDataImageManager(item, index, marker) {
+  const images = markerImageList(marker);
+  if (images.length === 0) return;
+
+  const fieldLabel = document.createElement("span");
+  fieldLabel.className = "field-label";
+  fieldLabel.textContent = `Images (${images.length})`;
+  item.appendChild(fieldLabel);
+
+  const strip = document.createElement("div");
+  strip.className = "data-image-strip";
+
+  images.forEach((image, imageIndex) => {
+    const cell = document.createElement("div");
+    cell.className = imageIndex === 0 ? "data-image-cell primary" : "data-image-cell";
+
+    const thumb = document.createElement("img");
+    thumb.className = "data-image-thumb";
+    thumb.src = dataImageSrc(image.thumbnail || image.photo);
+    thumb.alt = marker.name || "POI image";
+    thumb.loading = "lazy";
+    cell.appendChild(thumb);
+
+    if (imageIndex === 0) {
+      const badge = document.createElement("span");
+      badge.className = "data-image-badge";
+      badge.textContent = "Primary";
+      cell.appendChild(badge);
+    } else {
+      const makePrimary = document.createElement("button");
+      makePrimary.type = "button";
+      makePrimary.className = "mini-button";
+      makePrimary.textContent = "Make primary";
+      makePrimary.addEventListener("click", () => {
+        const next = images.slice();
+        const [picked] = next.splice(imageIndex, 1);
+        next.unshift(picked);
+        setMarkerImages(index, next);
+      });
+      cell.appendChild(makePrimary);
+    }
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "mini-button danger";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      const next = images.slice();
+      next.splice(imageIndex, 1);
+      setMarkerImages(index, next);
+    });
+    cell.appendChild(remove);
+
+    strip.appendChild(cell);
+  });
+
+  item.appendChild(strip);
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolveData, rejectData) => {
     const reader = new FileReader();
@@ -4816,14 +4892,15 @@ function appendDataImageUpload(item, index) {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "image/*";
+  input.multiple = true;
   input.className = "data-image-input";
 
   const statusEl = document.createElement("span");
   statusEl.className = "data-image-status";
 
   input.addEventListener("change", async () => {
-    const file = input.files && input.files[0];
-    if (!file) return;
+    const files = Array.from(input.files || []);
+    if (files.length === 0) return;
     const marker = selectedData()[index];
     const id = marker && typeof marker.id === "string" ? marker.id.trim() : "";
     if (!id) {
@@ -4831,23 +4908,24 @@ function appendDataImageUpload(item, index) {
       input.value = "";
       return;
     }
-    statusEl.textContent = "Uploading…";
+    statusEl.textContent = `Uploading ${files.length} image(s)…`;
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      const res = await fetch("/api/poi-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, data: dataUrl }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) {
-        throw new Error(body.error || `upload failed (${res.status})`);
+      for (const file of files) {
+        const dataUrl = await readFileAsDataUrl(file);
+        const res = await fetch("/api/poi-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, data: dataUrl }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.ok) throw new Error(body.error || `upload failed (${res.status})`);
+        const current = markerImageList(selectedData()[index]);
+        setMarkerImages(index, [...current, { photo: body.photo, thumbnail: body.thumbnail }]);
       }
-      updateDataMarker(index, { photo: body.photo, thumbnail: body.thumbnail });
-      renderDataList();
-      setStatus(`Image stored: ${body.photo}`);
+      setStatus(`Stored ${files.length} image(s).`);
     } catch (error) {
       statusEl.textContent = error instanceof Error ? error.message : String(error);
+    } finally {
       input.value = "";
     }
   });
@@ -5059,24 +5137,7 @@ function renderDataList() {
       },
     });
 
-    appendDataTextField(item, {
-      label: "Photo path",
-      value: marker.photo,
-      onCommit: (photo) => {
-        updateDataMarker(index, { photo });
-        renderDataList();
-      },
-    });
-
-    appendDataTextField(item, {
-      label: "Thumbnail path",
-      value: marker.thumbnail,
-      onCommit: (thumbnail) => {
-        updateDataMarker(index, { thumbnail });
-        renderDataList();
-      },
-    });
-
+    appendDataImageManager(item, index, marker);
     appendDataImageUpload(item, index);
 
     appendDataCheckboxField(item, {
