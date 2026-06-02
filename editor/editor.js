@@ -4896,11 +4896,12 @@ function appendDataImageUpload(item, index) {
     const files = Array.from(input.files || []);
     if (files.length === 0) return;
     const marker = selectedData()[index];
-    const id = marker && typeof marker.id === "string" ? marker.id.trim() : "";
+    // The stable ID is normally auto-generated when the marker is created;
+    // backfill one here for any legacy marker that lacks it.
+    let id = marker && typeof marker.id === "string" ? marker.id.trim() : "";
     if (!id) {
-      statusEl.textContent = "Set a stable ID before uploading an image.";
-      input.value = "";
-      return;
+      id = generatePoiId();
+      updateDataMarker(index, { id });
     }
     statusEl.textContent = `Uploading ${files.length} image(s)…`;
     try {
@@ -4929,12 +4930,23 @@ function appendDataImageUpload(item, index) {
   item.appendChild(wrapper);
 }
 
+// Auto-generated stable identifier for a POI. Stays constant for the life of
+// the marker so uploaded images and gallery/map references keep pointing at it.
+function generatePoiId() {
+  const rand =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(16).slice(2, 10);
+  return `poi-${rand}`;
+}
+
 function addDataMarker() {
   const feature = selectedFeature();
   if (!feature) return;
 
   const data = ensureDataMarkers(feature);
   data.push({
+    id: generatePoiId(),
     type: "warning",
     information: "",
     location: defaultDataLocation(feature),
@@ -5093,14 +5105,8 @@ function renderDataList() {
     });
     item.appendChild(typeSelect);
 
-    appendDataTextField(item, {
-      label: "Stable ID",
-      value: marker.id,
-      onCommit: (id) => {
-        updateDataMarker(index, { id });
-        renderDataList();
-      },
-    });
+    // Stable ID is auto-generated (see generatePoiId / addDataMarker); not an
+    // editable field.
 
     appendDataTextField(item, {
       label: "Name",
@@ -5145,32 +5151,8 @@ function renderDataList() {
       },
     });
 
-    appendDataTextField(item, {
-      label: "Website",
-      value: marker.website,
-      onCommit: (website) => {
-        updateDataMarker(index, { website });
-        renderDataList();
-      },
-    });
-
-    appendDataTextField(item, {
-      label: "Phone",
-      value: marker.phone,
-      onCommit: (phone) => {
-        updateDataMarker(index, { phone });
-        renderDataList();
-      },
-    });
-
-    appendDataTextField(item, {
-      label: "Hours",
-      value: marker.hours,
-      onCommit: (hours) => {
-        updateDataMarker(index, { hours });
-        renderDataList();
-      },
-    });
+    // Website / Phone / Hours are hidden for now (data contract still supports
+    // them, but they are not exposed for editing).
 
     const location = Array.isArray(marker.location) ? marker.location : [NaN, NaN];
     const locationGrid = document.createElement("div");
