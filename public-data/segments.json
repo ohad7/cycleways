@@ -2168,6 +2168,48 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-1a4c1f16",
+        "type": "beach",
+        "information": "שער מספר 1",
+        "location": [
+          33.21628,
+          35.609092
+        ],
+        "name": "חוף קולומביה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1a4c1f16-b96c2372.webp",
+            "thumbnail": "public-data/poi-images/poi-1a4c1f16-b96c2372-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-1a4c1f16-fae02a20.webp",
+            "thumbnail": "public-data/poi-images/poi-1a4c1f16-fae02a20-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-857aa85d",
+        "type": "beach",
+        "information": "חוף נהדר, מרווח, גישה נוחה למים, מלא עצי תות",
+        "location": [
+          33.214446,
+          35.610449
+        ],
+        "name": "חוף בורגר",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-857aa85d-088f1532.webp",
+            "thumbnail": "public-data/poi-images/poi-857aa85d-088f1532-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-857aa85d-f6c5e9be.webp",
+            "thumbnail": "public-data/poi-images/poi-857aa85d-f6c5e9be-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.61001,
       "latitude": 33.214726,
@@ -2222,6 +2264,52 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-d2081ac2",
+        "type": "beach",
+        "information": "עצי דולב ענקיים, עיקול בנחל, בריכת דגים",
+        "location": [
+          33.205265,
+          35.610959
+        ],
+        "name": "שער 5",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-000a5417.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-000a5417-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-2e6d4024.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-2e6d4024-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-4f4272c3.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-4f4272c3-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-f5fd1f27",
+        "type": "beach",
+        "information": "הליכה של שתי דקות עד המים, אקליפטוס ענק",
+        "location": [
+          33.201237,
+          35.609947
+        ],
+        "name": "חוף האקליפטוס",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-f5fd1f27-34405fc1.webp",
+            "thumbnail": "public-data/poi-images/poi-f5fd1f27-34405fc1-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-f5fd1f27-8267032a.webp",
+            "thumbnail": "public-data/poi-images/poi-f5fd1f27-8267032a-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.610844,
       "latitude": 33.205494,
@@ -3024,6 +3112,64 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-95010070",
+        "type": "cafe",
+        "information": "עצירה טובה לקפה, טובל בירק, כשר",
+        "location": [
+          33.200456,
+          35.601372
+        ],
+        "name": "פרישטיק",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-95010070-e9f669c1.webp",
+            "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-c723c695",
+        "type": "tree",
+        "information": "בסוף הקיץ פריחה של חוטמית זיפנית בשלל צבעים",
+        "location": [
+          33.198283,
+          35.603713
+        ],
+        "name": "חוטמית זיפנית",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-c723c695-dc902444.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-dc902444-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-c723c695-5408f7d0.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-5408f7d0-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-c723c695-03220773.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-03220773-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-75f40178",
+        "type": "tree",
+        "information": "בית הלל מלא במטעי פקאן שלווים ומרשימים",
+        "location": [
+          33.205539,
+          35.599154
+        ],
+        "name": "מעטי פקאן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-75f40178-b465e980.webp",
+            "thumbnail": "public-data/poi-images/poi-75f40178-b465e980-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.6005,
       "latitude": 33.202278,
