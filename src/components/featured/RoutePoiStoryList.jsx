@@ -14,6 +14,16 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)} ק״מ`;
 }
 
+function scrollRoutePlayerIntoView() {
+  const target = document.querySelector(".sbh-video-shell");
+  if (!target) return;
+  const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView({
+    behavior: prefersReducedMotion ? "auto" : "smooth",
+    block: "start",
+  });
+}
+
 export default function RoutePoiStoryList({ className = "" }) {
   const {
     meta,
@@ -66,6 +76,7 @@ export default function RoutePoiStoryList({ className = "" }) {
       seekVideoToFraction(story.routeFraction);
     }
     playerPauseRef.current?.();
+    window.requestAnimationFrame(scrollRoutePlayerIntoView);
   }
 
   return (
@@ -103,19 +114,30 @@ export default function RoutePoiStoryList({ className = "" }) {
               )}
             </div>
 
-            <div
-              className={[
-                "sbh-poi-story-images",
-                story.images.length === 1 ? "sbh-poi-story-images--single" : "",
-              ].filter(Boolean).join(" ")}
-            >
-              {story.images.map((image) => (
-                <img
-                  key={`${story.poiId}-${image.imageIndex}`}
-                  src={imageSrc(image)}
-                  alt={story.name || poiLabel(story.type)}
-                />
-              ))}
+            <div className="sbh-poi-story-media">
+              <div
+                className={[
+                  "sbh-poi-story-images",
+                  story.images.length === 1 ? "sbh-poi-story-images--single" : "",
+                  story.images.length > 1 ? "sbh-poi-story-images--multiple" : "",
+                ].filter(Boolean).join(" ")}
+              >
+                {story.images.map((image) => (
+                  <img
+                    key={`${story.poiId}-${image.imageIndex}`}
+                    src={imageSrc(image)}
+                    alt={story.name || poiLabel(story.type)}
+                  />
+                ))}
+              </div>
+              {story.images.length > 1 && (
+                <span
+                  className="sbh-poi-story-image-count"
+                  aria-label={`יש ${story.images.length} תמונות`}
+                >
+                  {story.images.length} תמונות
+                </span>
+              )}
             </div>
           </button>
         ))}

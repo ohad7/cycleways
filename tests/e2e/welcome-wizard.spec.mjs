@@ -1,8 +1,15 @@
 import { test, expect } from "@playwright/test";
 
+test("route discovery is hidden by default", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "מצא מסלול" })).toHaveCount(0);
+});
+
 test.describe("welcome discover", () => {
   test.beforeEach(async ({ context }) => {
     await context.addInitScript(() => {
+      window.CYCLEWAYS_FEATURE_FLAGS = { routeDiscovery: true };
       try {
         localStorage.removeItem("cycleways:skipWelcome");
       } catch {}

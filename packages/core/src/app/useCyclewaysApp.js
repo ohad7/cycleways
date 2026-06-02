@@ -18,7 +18,10 @@ import {
   useState,
 } from "react";
 import { WELCOME_WIZARD_SKIP_FLAG } from "../data/welcomeFlags.js";
-import { getFeatureFlags } from "../config/featureFlags.js";
+import {
+  featureFlagValue,
+  getFeatureFlags,
+} from "../config/featureFlags.js";
 import { loadMapAssets, summarizeMapAssets } from "../data/mapAssets.js";
 import { POI_EMOJIS as WARNING_EMOJIS } from "../data/poiTypes.js";
 import RouteManager from "../../route-manager.js";
@@ -103,6 +106,7 @@ export function useCyclewaysApp() {
     getQueryParam("osmLayer") === "graph" ? "graph" : "ways",
   );
   const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(() => {
+    if (!featureFlagValue("routeDiscovery")) return false;
     if (typeof window === "undefined") return false;
     if (hasQueryParam("route")) return false;
     try {

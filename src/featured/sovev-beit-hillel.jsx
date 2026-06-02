@@ -14,8 +14,13 @@ export default function SovevBeitHillel() {
           <div className="sbh-video-shell">
             <FeaturedRoute.Video title="" className="sbh-video" />
             <FeaturedRoute.POIVideoPreview />
+            <FeaturedRoute.Map
+              className="sbh-mobile-map"
+              autoResetAfterInteraction
+              autoResetDelayMs={5000}
+              routeFitPadding={12}
+            />
           </div>
-          <FeaturedRoute.Map className="sbh-mobile-map" />
         </div>
 
         <aside className="sbh-side-rail" aria-label="תיאור ומפת המסלול">

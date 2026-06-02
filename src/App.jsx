@@ -90,10 +90,17 @@ function App() {
   return (
     <>
       <WelcomeWizard
-        visible={welcomeWizardOpen}
+        visible={featureFlags.routeDiscovery && welcomeWizardOpen}
         onDismiss={() => setWelcomeWizardOpen(false)}
       />
-      <PageShell onOpenTutorial={handleOpenTutorial} onOpenWizard={() => setWelcomeWizardOpen(true)}>
+      <PageShell
+        onOpenTutorial={handleOpenTutorial}
+        onOpenWizard={
+          featureFlags.routeDiscovery
+            ? () => setWelcomeWizardOpen(true)
+            : undefined
+        }
+      >
         <div
           id="error-message"
           className={state.status === "error" ? "show" : ""}

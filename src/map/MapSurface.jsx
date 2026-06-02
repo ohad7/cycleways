@@ -195,12 +195,17 @@ function MapSurface({
     return () => {
       isDisposed = true;
       if (mapRef.current) {
-        clearSearchHighlight(mapRef.current, searchMarkerRef);
-        clearHoverPreviewMarker(hoverPreviewMarkerRef);
-        if (searchTimeoutRef.current) {
-          clearTimeout(searchTimeoutRef.current);
+        const map = mapRef.current;
+        try {
+          clearSearchHighlight(map, searchMarkerRef);
+          clearHoverPreviewMarker(hoverPreviewMarkerRef);
+          if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+          }
+          map.remove();
+        } catch (removeError) {
+          console.warn("MapSurface cleanup failed", removeError);
         }
-        mapRef.current.remove();
         mapRef.current = null;
       }
     };
