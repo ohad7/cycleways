@@ -46,6 +46,7 @@ const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
 const routeCatalogDraftPath = resolve(editorRoot, ".drafts/route-catalog.json");
 const routeCatalogPublicPath = resolve(publicDataDir, "route-catalog.json");
 const poiImagesDir = resolve(publicDataDir, "poi-images");
+const attachedAssetsDir = resolve(repoRoot, "attached_assets");
 const placesPath = resolve(repoRoot, "data/places.json");
 const regionZonesPath = resolve(repoRoot, "data/region-zones.json");
 const port = Number(process.env.EDITOR_PORT || 8899);
@@ -196,6 +197,9 @@ const mimeTypes = new Map([
   [".json", "application/json; charset=utf-8"],
   [".svg", "image/svg+xml"],
   [".png", "image/png"],
+  [".webp", "image/webp"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
   [".ico", "image/x-icon"],
 ]);
 
@@ -1212,12 +1216,18 @@ async function serveStatic(request, response, url) {
   // data/poiTypes.js, map/emojiMarkerImage.js), so serve the read-only
   // packages/core/src tree.
   const allowedCoreFile = isInside(coreSrcRoot, filePath);
+  // POI image previews: uploads live under public-data/poi-images and seed
+  // placeholders under attached_assets. Serve those read-only so the editor's
+  // image thumbnails resolve.
+  const allowedImageFile =
+    isInside(poiImagesDir, filePath) || isInside(attachedAssetsDir, filePath);
   if (
     !allowedEditorFile &&
     !allowedIconFile &&
     !allowedTokenFile &&
     !allowedPoiTypesFile &&
-    !allowedCoreFile
+    !allowedCoreFile &&
+    !allowedImageFile
   ) {
     sendText(response, 404, "Not found");
     return;
