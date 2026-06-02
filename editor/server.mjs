@@ -102,6 +102,8 @@ export async function processPoiImage({ id, buffer }, options = {}) {
     throw new Error("POI image upload is empty");
   }
   const safeId = sanitizePoiImageId(id);
+  const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 8);
+  const baseName = `${safeId}-${hash}`;
   const outputDir = options.outputDir || poiImagesDir;
   const publicPath = options.publicPath || POI_IMAGE_PUBLIC_PATH;
   await mkdir(outputDir, { recursive: true });
@@ -117,12 +119,12 @@ export async function processPoiImage({ id, buffer }, options = {}) {
     .webp({ quality: 72 })
     .toBuffer();
 
-  await writeFile(join(outputDir, `${safeId}.webp`), photoBuffer);
-  await writeFile(join(outputDir, `${safeId}-thumb.webp`), thumbBuffer);
+  await writeFile(join(outputDir, `${baseName}.webp`), photoBuffer);
+  await writeFile(join(outputDir, `${baseName}-thumb.webp`), thumbBuffer);
 
   return {
-    photo: `${publicPath}/${safeId}.webp`,
-    thumbnail: `${publicPath}/${safeId}-thumb.webp`,
+    photo: `${publicPath}/${baseName}.webp`,
+    thumbnail: `${publicPath}/${baseName}-thumb.webp`,
     bytes: { photo: photoBuffer.length, thumbnail: thumbBuffer.length },
   };
 }

@@ -40,15 +40,24 @@ try {
     { outputDir: workDir, publicPath: "public-data/poi-images" },
   );
 
-  assert.equal(result.photo, "public-data/poi-images/beit-hillel-viewpoint.webp");
-  assert.equal(
-    result.thumbnail,
-    "public-data/poi-images/beit-hillel-viewpoint-thumb.webp",
-  );
+  // Filenames are <sanitized-id>-<8 hex>.webp (+ -thumb) for collision-free multi-upload.
+  const photoRe = /^public-data\/poi-images\/beit-hillel-viewpoint-[0-9a-f]{8}\.webp$/;
+  const thumbRe = /^public-data\/poi-images\/beit-hillel-viewpoint-[0-9a-f]{8}-thumb\.webp$/;
+  assert.match(result.photo, photoRe);
+  assert.match(result.thumbnail, thumbRe);
 
-  const photoBuffer = await readFile(join(workDir, "beit-hillel-viewpoint.webp"));
+  // Same bytes + id are idempotent (same hash, same filename).
+  const again = await processPoiImage(
+    { id: "Beit Hillel Viewpoint", buffer: sourceBuffer },
+    { outputDir: workDir, publicPath: "public-data/poi-images" },
+  );
+  assert.equal(again.photo, result.photo);
+
+  const photoBuffer = await readFile(
+    join(workDir, result.photo.split("/").pop()),
+  );
   const thumbBuffer = await readFile(
-    join(workDir, "beit-hillel-viewpoint-thumb.webp"),
+    join(workDir, result.thumbnail.split("/").pop()),
   );
 
   const photoMeta = await sharp(photoBuffer).metadata();
