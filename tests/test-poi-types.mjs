@@ -5,7 +5,15 @@ import {
   createRouteManager,
   addPoint,
 } from "@cycleways/core/routing/routeActions.js";
-import { isGalleryEligiblePoi, normalizePoiImages, primaryPoiImage, galleryImageSlides, poiMarkerIconName, poiIcon } from "@cycleways/core/data/poiTypes.js";
+import {
+  galleryImageSlides,
+  isGalleryEligiblePoi,
+  nearestSlideIndexByFraction,
+  normalizePoiImages,
+  poiIcon,
+  poiMarkerIconName,
+  primaryPoiImage,
+} from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 const require = createRequire(import.meta.url);
@@ -195,6 +203,7 @@ const points = [
     information: "info",
     description: "desc",
     routeProgressMeters: 500,
+    routeFraction: 0.5,
     images: [
       { photo: "mid-1.webp", thumbnail: "mid-1-t.webp" },
       { photo: "mid-2.webp", thumbnail: "mid-2-t.webp" },
@@ -205,6 +214,7 @@ const points = [
     type: "viewpoint",
     name: "Start view",
     routeProgressMeters: 10,
+    routeFraction: 0.1,
     photo: "start.webp", // legacy single image
   },
   { id: "warn", type: "gate", routeProgressMeters: 5 }, // not gallery eligible
@@ -225,8 +235,29 @@ assert.equal(slides[0].thumbnail, "start.webp");
 assert.equal(slides[0].name, "Start view");
 assert.equal(slides[1].photo, "mid-1.webp");
 assert.equal(slides[1].poiId, "mid");
+assert.equal(slides[1].routeFraction, 0.5);
 
 console.log("galleryImageSlides tests passed");
+
+assert.equal(nearestSlideIndexByFraction(slides, 0.1), 0);
+assert.equal(nearestSlideIndexByFraction(slides, 0.49), 1);
+assert.equal(nearestSlideIndexByFraction(slides, 0.51), 1);
+assert.equal(nearestSlideIndexByFraction(slides, -0.25), 0);
+assert.equal(nearestSlideIndexByFraction(slides, 1.25), 1);
+assert.equal(nearestSlideIndexByFraction([], 0.5), -1);
+assert.equal(nearestSlideIndexByFraction(slides, Number.NaN), -1);
+assert.equal(
+  nearestSlideIndexByFraction(
+    [
+      { poiId: "missing" },
+      { poiId: "far", routeFraction: 0.9 },
+      { poiId: "near", routeFraction: 0.3 },
+    ],
+    0.25,
+  ),
+  2,
+);
+console.log("nearestSlideIndexByFraction tests passed");
 
 // poiMarkerIconName: warnings keep their SVG icon name; POI types get a
 // per-type emoji image name (rendered via icon-image, never text-field).

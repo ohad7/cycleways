@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   galleryImageSlides,
+  nearestSlideIndexByFraction,
   poiLabel,
 } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
@@ -17,6 +18,10 @@ export default function RoutePoiGallery({ className = "" }) {
     focusedPoiId,
     setFocusedPoiId,
     setFocusedCoord,
+    videoCursor,
+    videoSyncRef,
+    playerSeekRef,
+    playerPauseRef,
   } = useFeaturedRoute();
   const items = useMemo(
     () => galleryImageSlides(routeState.activeDataPoints),
@@ -34,15 +39,27 @@ export default function RoutePoiGallery({ className = "" }) {
 
   useEffect(() => {
     if (!focusedPoiId) return;
-    const index = items.findIndex((item) => item.poiId === focusedPoiId);
-    if (index >= 0) setSelectedIndex(index);
+    setSelectedIndex((current) => {
+      if (items[current]?.poiId === focusedPoiId) return current;
+      const index = items.findIndex((item) => item.poiId === focusedPoiId);
+      return index >= 0 ? index : current;
+    });
   }, [focusedPoiId, items]);
+
+  useEffect(() => {
+    const index = nearestSlideIndexByFraction(items, videoCursor?.fraction);
+    const next = items[index];
+    if (!next) return;
+    setSelectedIndex(index);
+    setFocusedPoiId(next.poiId);
+  }, [items, videoCursor?.fraction, setFocusedPoiId]);
 
   if (items.length === 0) return null;
 
-  const selected = items[selectedIndex];
+  const currentIndex = Math.min(selectedIndex, items.length - 1);
+  const selected = items[currentIndex];
 
-  function selectIndex(index) {
+  function selectByUser(index) {
     const next = items[index];
     if (!next) return;
     setSelectedIndex(index);
@@ -53,10 +70,16 @@ export default function RoutePoiGallery({ className = "" }) {
         setFocusedCoord({ lat, lng });
       }
     }
+    const sync = videoSyncRef.current;
+    const seek = playerSeekRef.current;
+    if (sync && seek && Number.isFinite(next.routeFraction)) {
+      seek(sync.positionToTime(next.routeFraction));
+    }
+    playerPauseRef.current?.();
   }
 
   function selectRelative(delta) {
-    selectIndex((selectedIndex + delta + items.length) % items.length);
+    selectByUser((currentIndex + delta + items.length) % items.length);
   }
 
   return (
@@ -64,44 +87,49 @@ export default function RoutePoiGallery({ className = "" }) {
       className={["sbh-moments", className].filter(Boolean).join(" ")}
       aria-label="נקודות עצירה ותמונות"
     >
-      <div className="sbh-carousel-header">
-        <div className="sbh-side-heading">
-          <span>לעצור ולראות</span>
-          <strong>גלריית הדרך</strong>
-        </div>
-        <div className="sbh-carousel-controls" aria-label="מעבר בין תמונות">
-          <button type="button" onClick={() => selectRelative(-1)} aria-label="תמונה קודמת">
-            ‹
-          </button>
-          <span>
-            {selectedIndex + 1}/{items.length}
-          </span>
-          <button type="button" onClick={() => selectRelative(1)} aria-label="תמונה הבאה">
-            ›
-          </button>
-        </div>
-      </div>
-
       <article className="sbh-moment-card">
-        <img src={imageSrc(selected)} alt={selected.name || selected.information || poiLabel(selected.type)} />
+        <figure className="sbh-moment-figure">
+          <button
+            type="button"
+            className="sbh-moment-image-button"
+            onClick={() => selectByUser(currentIndex)}
+            aria-label={selected.name || selected.information || poiLabel(selected.type)}
+          >
+            <img src={imageSrc(selected)} alt="" />
+          </button>
+          {items.length > 1 && (
+            <>
+              <button
+                type="button"
+                className="sbh-carousel-arrow sbh-carousel-arrow--left"
+                onClick={() => selectRelative(-1)}
+                aria-label="תמונה קודמת"
+              >
+                {"<"}
+              </button>
+              <button
+                type="button"
+                className="sbh-carousel-arrow sbh-carousel-arrow--right"
+                onClick={() => selectRelative(1)}
+                aria-label="תמונה הבאה"
+              >
+                {">"}
+              </button>
+            </>
+          )}
+        </figure>
         <div className="sbh-moment-card-body">
-          <span className="sbh-moment-type">{poiLabel(selected.type)}</span>
-          <strong>{selected.name || poiLabel(selected.type)}</strong>
+          <div className="sbh-moment-title-line">
+            <span className="sbh-moment-type">{poiLabel(selected.type)}</span>
+            <strong>{selected.name || poiLabel(selected.type)}</strong>
+          </div>
           {selected.information && <span>{selected.information}</span>}
           {selected.description && <p>{selected.description}</p>}
         </div>
       </article>
 
-      <div className="sbh-carousel-dots" aria-label="בחירת תמונה">
-        {items.map((item, index) => (
-          <button
-            key={`${item.poiId}-${item.imageIndex}`}
-            type="button"
-            className={index === selectedIndex ? "active" : ""}
-            onClick={() => selectIndex(index)}
-            aria-label={item.name || item.information || poiLabel(item.type)}
-          />
-        ))}
+      <div className="sbh-carousel-counter" aria-live="polite">
+        {currentIndex + 1} / {items.length}
       </div>
     </section>
   );

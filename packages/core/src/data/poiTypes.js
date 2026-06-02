@@ -203,6 +203,7 @@ export function galleryImageSlides(points) {
         description: point.description || "",
         location: point.location,
         routeProgressMeters: point.routeProgressMeters,
+        routeFraction: point.routeFraction,
         imageIndex,
         photo: image.photo,
         thumbnail: image.thumbnail,
@@ -210,4 +211,21 @@ export function galleryImageSlides(points) {
     });
   }
   return slides;
+}
+
+export function nearestSlideIndexByFraction(slides, fraction) {
+  if (!Array.isArray(slides) || !Number.isFinite(fraction)) return -1;
+
+  let bestIndex = -1;
+  let bestDelta = Infinity;
+  slides.forEach((slide, index) => {
+    if (!Number.isFinite(slide?.routeFraction)) return;
+    const delta = Math.abs(slide.routeFraction - fraction);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
 }

@@ -281,51 +281,17 @@
 
 .sbh-moments {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   min-height: 0;
-  gap: 10px;
-  padding: 12px;
-}
-
-.sbh-carousel-header,
-.sbh-carousel-controls {
-  display: flex;
-  align-items: center;
-}
-
-.sbh-carousel-header {
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.sbh-carousel-controls {
-  gap: 7px;
-  color: #43505a;
-  direction: ltr;
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.sbh-carousel-controls button {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border: 1px solid rgba(36, 49, 58, 0.16);
-  border-radius: 999px;
-  background: #ffffff;
-  color: #24313a;
-  cursor: pointer;
-  font-size: 1.45rem;
-  line-height: 1;
+  gap: 8px;
+  padding: 10px;
 }
 
 .sbh-moment-card {
   display: grid;
-  grid-template-rows: minmax(130px, 0.9fr) auto;
+  grid-template-rows: minmax(138px, 0.8fr) minmax(0, auto);
   width: 100%;
   min-height: 0;
-  padding: 8px;
   border: 1px solid rgba(36, 49, 58, 0.12);
   border-radius: 8px;
   background: #ffffff;
@@ -334,43 +300,96 @@
   overflow: hidden;
 }
 
+.sbh-moment-figure {
+  position: relative;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  background: #edf2ef;
+}
+
+.sbh-moment-image-button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .sbh-moment-card img {
   display: block;
   width: 100%;
   height: 100%;
   min-height: 0;
-  border-radius: 6px;
   object-fit: cover;
+}
+
+.sbh-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: grid;
+  width: 24px;
+  height: 64px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid rgba(36, 49, 58, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #24313a;
+  cursor: pointer;
+  direction: ltr;
+  font-size: 1.45rem;
+  line-height: 1;
+  unicode-bidi: isolate;
+  box-shadow: 0 5px 16px rgba(16, 24, 32, 0.18);
+}
+
+.sbh-carousel-arrow--left {
+  left: 8px;
+}
+
+.sbh-carousel-arrow--right {
+  right: 8px;
 }
 
 .sbh-moment-card-body {
   min-height: 0;
-  padding: 8px 2px 2px;
+  overflow: auto;
+  padding: 10px;
+}
+
+.sbh-moment-title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+  margin-bottom: 5px;
 }
 
 .sbh-moment-type {
-  display: inline-flex;
-  margin-bottom: 5px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #f3eadf;
+  flex: 0 0 auto;
   color: #7b4e2c;
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
-.sbh-moment-card strong,
-.sbh-moment-card span:not(.sbh-moment-type),
+.sbh-moment-title-line strong,
+.sbh-moment-card-body > span,
 .sbh-moment-card p {
   display: block;
 }
 
-.sbh-moment-card strong {
-  margin-bottom: 4px;
+.sbh-moment-title-line strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 1rem;
 }
 
-.sbh-moment-card span:not(.sbh-moment-type) {
+.sbh-moment-card-body > span {
   color: #53616a;
   font-size: 0.9rem;
   line-height: 1.42;
@@ -383,8 +402,31 @@
   line-height: 1.42;
 }
 
+.sbh-carousel-counter {
+  color: #53616a;
+  direction: ltr;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+@media (hover: hover) {
+  .sbh-carousel-arrow:hover {
+    background: #ffffff;
+  }
+}
+
+.sbh-carousel-arrow:focus-visible {
+  outline: 2px solid #176f63;
+  outline-offset: 2px;
+}
+
+/*
+ * Legacy class retained only so older markup/tests do not pick up stale dot
+ * styling if a cached bundle briefly renders during development.
+ */
 .sbh-carousel-dots {
-  display: flex;
+  display: none;
   justify-content: center;
   gap: 7px;
 }

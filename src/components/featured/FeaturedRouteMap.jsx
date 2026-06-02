@@ -14,12 +14,11 @@ export default function FeaturedRouteMapSlot({
   const {
     assets,
     routeState,
-    setFocusedPoiId,
-    setFocusedCoord,
     focusedCoord,
     routeFitRequest,
     videoCursor,
     handleRouteClick,
+    handleDataMarkerClick,
   } = useFeaturedRoute();
   const [fullscreen, setFullscreen] = useState(false);
   const triggerRef = useRef(null);
@@ -64,12 +63,6 @@ export default function FeaturedRouteMapSlot({
   const dataMarkerFeatures = dataMarkerFeaturesFromSegments(assets.segmentsData);
   const activeDataPointIds = routeState.activeDataPoints.map((p) => p.id);
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
-  const handleDataMarkerClick = (marker) => {
-    setFocusedPoiId(marker.id);
-    if (Number.isFinite(marker.lat) && Number.isFinite(marker.lng)) {
-      setFocusedCoord({ lat: marker.lat, lng: marker.lng });
-    }
-  };
 
   return (
     <>

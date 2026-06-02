@@ -27,8 +27,10 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
     meta,
     routeState,
     setVideoCursor,
+    setVideoPlaying,
     videoSyncRef,
     playerSeekRef,
+    playerPauseRef,
   } = useFeaturedRoute();
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -126,11 +128,20 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
             timeoutId = null;
             playerRef.current = player;
             playerSeekRef.current = (t) => player.seekTo(t, true);
+            playerPauseRef.current = () => {
+              if (typeof player.pauseVideo === "function") player.pauseVideo();
+            };
           },
           onStateChange: (e) => {
             // YT.PlayerState.PLAYING === 1
-            if (e.data === 1) startTicker();
-            else stopTicker();
+            if (e.data === 1) {
+              setVideoPlaying(true);
+              startTicker();
+            } else {
+              setVideoPlaying(false);
+              stopTicker();
+              setVideoCursor(null);
+            }
           },
         },
       });
@@ -171,9 +182,11 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
       }
       playerRef.current = null;
       playerSeekRef.current = null;
+      playerPauseRef.current = null;
+      setVideoPlaying(false);
       setVideoCursor(null);
     };
-  }, [data, playerSeekRef, setVideoCursor, videoSyncRef]);
+  }, [data, playerPauseRef, playerSeekRef, setVideoCursor, setVideoPlaying, videoSyncRef]);
 
   if (status !== "ready" || !data) return null;
   return (

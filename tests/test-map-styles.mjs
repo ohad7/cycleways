@@ -10,10 +10,11 @@ assert.equal(
   "mapLayers re-exports the same ID value as mapStyles",
 );
 
-// All layer/source IDs live in mapStyles — including the video-cursor IDs
-// that were previously private to mapLayers.
+// All layer/source IDs live in mapStyles — including the featured video cursor
+// IDs that are shared by MapSurface and mapLayers.
 assert.equal(typeof styles.VIDEO_CURSOR_SOURCE_ID, "string");
 assert.equal(typeof styles.VIDEO_CURSOR_LAYER_ID, "string");
+assert.equal(typeof styles.VIDEO_CURSOR_STYLE, "object");
 
 // At least one extracted style spec is exported as plain, serializable data.
 const styleKeys = Object.keys(styles).filter((k) => k.endsWith("_STYLE"));

@@ -31,8 +31,11 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
   const [focusedCoord, setFocusedCoord] = useState(null);
   const [routeFitRequest, setRouteFitRequest] = useState(null);
   const [videoCursor, setVideoCursor] = useState(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
   const videoSyncRef = useRef(null);
   const playerSeekRef = useRef(null);
+  const playerPauseRef = useRef(null);
+  const wasVideoPlayingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +95,21 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     });
   }, [status, meta, routeState.geometry]);
 
+  useEffect(() => {
+    if (!videoPlaying) {
+      wasVideoPlayingRef.current = false;
+      return;
+    }
+    if (wasVideoPlayingRef.current) return;
+    wasVideoPlayingRef.current = true;
+    if (!focusedCoord || !meta || routeState.geometry.length < 2) return;
+    setFocusedCoord(null);
+    setRouteFitRequest({
+      id: `featured-video-resume-${meta.slug}-${Date.now()}`,
+      geometry: routeState.geometry,
+    });
+  }, [videoPlaying, focusedCoord, meta, routeState.geometry]);
+
   const handleRouteClick = useCallback((latLng) => {
     const sync = videoSyncRef.current;
     const seek = playerSeekRef.current;
@@ -107,6 +125,15 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     if (Number.isFinite(marker.lat) && Number.isFinite(marker.lng)) {
       setFocusedCoord({ lat: marker.lat, lng: marker.lng });
     }
+    const sync = videoSyncRef.current;
+    const seek = playerSeekRef.current;
+    if (sync && seek && Number.isFinite(marker.lat) && Number.isFinite(marker.lng)) {
+      const snap = sync.snapClickToRoute({ lat: marker.lat, lng: marker.lng });
+      if (snap && Number.isFinite(snap.fraction)) {
+        seek(sync.positionToTime(snap.fraction));
+      }
+    }
+    playerPauseRef.current?.();
   }, []);
 
   const contextValue = useMemo(
@@ -123,11 +150,14 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       routeFitRequest,
       videoCursor,
       setVideoCursor,
+      setVideoPlaying,
       videoSyncRef,
       playerSeekRef,
+      playerPauseRef,
       handleRouteClick,
+      handleDataMarkerClick,
     }),
-    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, videoCursor, handleRouteClick],
+    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, videoCursor, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
