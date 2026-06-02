@@ -5140,13 +5140,13 @@ function renderDataList() {
     appendDataImageManager(item, index, marker);
     appendDataImageUpload(item, index);
 
+    // Image POIs appear in route galleries by default; tick this to hide a
+    // specific one. (Warnings are never shown in galleries regardless.)
     appendDataCheckboxField(item, {
-      label: "Show in route galleries when this segment is on the route",
-      checked:
-        marker.gallery === true ||
-        (marker.gallery !== false && Boolean(marker.photo || marker.thumbnail)),
-      onCommit: (gallery) => {
-        updateDataMarker(index, { gallery });
+      label: "Hide from route galleries",
+      checked: marker.gallery === false,
+      onCommit: (hidden) => {
+        updateDataMarker(index, { gallery: hidden ? false : undefined });
         renderDataList();
       },
     });
