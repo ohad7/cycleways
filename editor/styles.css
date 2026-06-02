@@ -1109,3 +1109,35 @@ button:disabled {
   color: #444;
   white-space: pre-line;
 }
+
+.segment-pinned-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--panel, #fff);
+  border-bottom: 1px solid var(--line);
+}
+
+.segment-pinned-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.segment-id-display {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.segment-quality-details {
+  margin-top: 12px;
+}
+
+.segment-quality-details > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 6px 0;
+}

@@ -1463,6 +1463,8 @@ function renderForm() {
   if (!feature) {
     els.selectedCount.textContent = "None selected";
     els.segmentId.value = "";
+    const idDisplayClear = document.getElementById("segment-id-display");
+    if (idDisplayClear) idDisplayClear.textContent = "";
     els.segmentName.value = "";
     els.segmentStatus.value = "active";
     els.segmentRoadType.value = "paved";
@@ -1474,6 +1476,8 @@ function renderForm() {
 
   els.selectedCount.textContent = `ID ${feature.properties.id ?? "—"} · ${feature.geometry.coordinates.length} vertices`;
   els.segmentId.value = feature.properties.id ?? "";
+  const idDisplay = document.getElementById("segment-id-display");
+  if (idDisplay) idDisplay.textContent = feature.properties.id != null ? `#${feature.properties.id}` : "";
   els.segmentName.value = feature.properties.name || "";
   els.segmentStatus.value = feature.properties.status || "active";
   els.segmentRoadType.value = feature.properties.roadType || "paved";

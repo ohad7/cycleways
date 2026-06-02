@@ -84,8 +84,11 @@
       <aside class="details">
         <div class="details-scroll">
           <section class="panel">
-            <header class="panel-header">
-              <h2>Segment</h2>
+            <header class="panel-header segment-pinned-header">
+              <div class="segment-pinned-title">
+                <h2>Segment</h2>
+                <span id="segment-id-display" class="segment-id-display"></span>
+              </div>
               <span id="selected-count">None selected</span>
             </header>
 
@@ -116,7 +119,10 @@
                 <option value="road">road</option>
               </select>
 
-              <div id="segment-quality" class="quality-section" aria-label="Segment quality"></div>
+              <details class="segment-quality-details">
+                <summary>Quality</summary>
+                <div id="segment-quality" class="quality-section" aria-label="Segment quality"></div>
+              </details>
             </form>
 
             <div class="edge-pick-edit-controls" id="edge-pick-edit-controls" hidden>
