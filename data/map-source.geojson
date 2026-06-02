@@ -43692,8 +43692,9 @@
               33.217453,
               35.609306
             ],
-            "photo": "/attached_assets/background.png",
-            "thumbnail": "/attached_assets/background.png",
+            "images": [
+              { "photo": "/attached_assets/background.png", "thumbnail": "/attached_assets/background.png" }
+            ],
             "gallery": true
           }
         ],
@@ -44488,8 +44489,9 @@
               33.211232,
               35.610495
             ],
-            "photo": "/attached_assets/background.png",
-            "thumbnail": "/attached_assets/background.png",
+            "images": [
+              { "photo": "/attached_assets/background.png", "thumbnail": "/attached_assets/background.png" }
+            ],
             "gallery": true
           }
         ],
@@ -62353,8 +62355,10 @@
               33.20395,
               35.59982
             ],
-            "photo": "/attached_assets/background_grass.png",
-            "thumbnail": "/attached_assets/background_grass.png",
+            "images": [
+              { "photo": "/attached_assets/background_grass.png", "thumbnail": "/attached_assets/background_grass.png" },
+              { "photo": "/attached_assets/background.png", "thumbnail": "/attached_assets/background.png" }
+            ],
             "gallery": true
           }
         ],
@@ -99011,8 +99015,9 @@
               33.218093,
               35.603181
             ],
-            "photo": "/attached_assets/background_grass.png",
-            "thumbnail": "/attached_assets/background_grass.png",
+            "images": [
+              { "photo": "/attached_assets/background_grass.png", "thumbnail": "/attached_assets/background_grass.png" }
+            ],
             "gallery": true
           }
         ],
