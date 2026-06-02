@@ -127,6 +127,11 @@ body::before {
   z-index: 1;
 }
 
+/* Offset in-page anchor targets so the fixed top nav (≈58px) doesn't cover them. */
+.content-section {
+  scroll-margin-top: 72px;
+}
+
 .mobile-menu-btn {
   display: none;
   background: transparent;

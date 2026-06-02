@@ -23,7 +23,7 @@ import RoutePoiVideoPreview from "./RoutePoiVideoPreview.jsx";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
 import { findFeaturedMeta } from "../../featured/index.js";
 
-function FeaturedRoute({ slug, children, layout = "article", desktopMap = "sticky" }) {
+function FeaturedRoute({ slug, children, layout = "article", desktopMap = "sticky", kicker = null }) {
   const isMobile = useIsMobile();
   const [meta, setMeta] = useState(null);
   const [assets, setAssets] = useState(null);
@@ -189,6 +189,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
   const contextValue = useMemo(
     () => ({
       meta,
+      kicker,
       assets,
       routeState,
       status,
@@ -210,7 +211,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       handleRouteClick,
       handleDataMarkerClick,
     }),
-    [meta, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
+    [meta, kicker, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;

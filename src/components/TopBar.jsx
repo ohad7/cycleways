@@ -6,6 +6,7 @@ function TopBar({
   mobileMenuOpen,
   onMobileMenuToggle,
   onOpenWizard,
+  navLinks,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,10 +19,19 @@ function TopBar({
     }
   };
 
+  const handleAnchorClick = (event, href) => {
+    const target = document.querySelector(href);
+    if (!target) return;
+    event.preventDefault();
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.history.replaceState(null, "", href);
+    if (mobileMenuOpen) onMobileMenuToggle?.();
+  };
+
   return (
     <header className="header">
       <div className="logo-section">
-        <Link to="/" className="site-title-link">
+        <Link to="/" reloadDocument className="site-title-link">
           <h1 className="site-title">מפת שבילי אופניים - גליל עליון וגולן</h1>
         </Link>
       </div>
@@ -37,31 +47,69 @@ function TopBar({
         className={`nav-links${mobileMenuOpen ? " active" : ""}`}
         id="nav-links"
       >
-        <Link className="nav-link" to="/#trails">
-          שבילים
-        </Link>
-        <Link className="nav-link" to="/#reccomendations">
-          המלצות
-        </Link>
-        <Link className="nav-link" to="/#contact">
-          צרו קשר
-        </Link>
-        {onOpenWizard && (
-          <button
-            className="nav-link topbar-find-button"
-            type="button"
-            onClick={onOpenWizard}
-          >
-            מצא מסלול
-          </button>
+        {navLinks ? (
+          navLinks.map((item) =>
+            item.href ? (
+              <a
+                key={item.href}
+                className="nav-link"
+                href={item.href}
+                onClick={(e) => handleAnchorClick(e, item.href)}
+              >
+                {item.label}
+              </a>
+            ) : (
+              <Link
+                key={item.to}
+                className="nav-link"
+                to={item.to}
+                reloadDocument
+              >
+                {item.label}
+              </Link>
+            ),
+          )
+        ) : (
+          <>
+            <a
+              className="nav-link"
+              href="/#trails"
+              onClick={(e) => handleAnchorClick(e, "#trails")}
+            >
+              שבילים
+            </a>
+            <a
+              className="nav-link"
+              href="/#reccomendations"
+              onClick={(e) => handleAnchorClick(e, "#reccomendations")}
+            >
+              המלצות
+            </a>
+            <a
+              className="nav-link"
+              href="/#contact"
+              onClick={(e) => handleAnchorClick(e, "#contact")}
+            >
+              צרו קשר
+            </a>
+            {onOpenWizard && (
+              <button
+                className="nav-link topbar-find-button"
+                type="button"
+                onClick={onOpenWizard}
+              >
+                מצא מסלול
+              </button>
+            )}
+            <button
+              className="nav-link help-tutorial-btn"
+              type="button"
+              onClick={handleTutorialClick}
+            >
+              מדריך
+            </button>
+          </>
         )}
-        <button
-          className="nav-link help-tutorial-btn"
-          type="button"
-          onClick={handleTutorialClick}
-        >
-          מדריך
-        </button>
       </nav>
     </header>
   );

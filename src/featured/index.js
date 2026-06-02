@@ -5,8 +5,23 @@ const moduleLoaders = {
   "shdeh-nehemia-baniyas": () => import("./shdeh-nehemia-baniyas.jsx"),
 };
 
+// Per-page top-nav links. Each featured page declares its own in-page jump
+// links (anchor hrefs) plus a route link back to the main map. Pages without
+// an entry fall back to the default site nav in TopBar.
+const moduleNav = {
+  "sovev-beit-hillel": [
+    { label: "על המסלול", href: "#sbh-about" },
+    { label: "נקודות במסלול", href: "#sbh-poi-stories" },
+    { label: "כל השבילים", to: "/" },
+  ],
+};
+
 export function getFeaturedModuleLoader(slug) {
   return moduleLoaders[slug] || null;
+}
+
+export function getFeaturedNav(slug) {
+  return moduleNav[slug] || null;
 }
 
 export async function loadFeaturedMetaList() {

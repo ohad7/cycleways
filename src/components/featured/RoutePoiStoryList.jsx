@@ -3,6 +3,12 @@ import { poiLabel } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import { imageSrc, routePoiStories } from "./routePoiStoryData.js";
 
+function formatDistance(meters) {
+  if (!Number.isFinite(meters) || meters <= 0) return "";
+  if (meters < 1000) return `${Math.round(meters)} מ׳`;
+  return `${(meters / 1000).toFixed(1)} ק״מ`;
+}
+
 export default function RoutePoiStoryList({ className = "" }) {
   const {
     routeState,
@@ -37,6 +43,7 @@ export default function RoutePoiStoryList({ className = "" }) {
 
   return (
     <section
+      id="sbh-poi-stories"
       className={["sbh-poi-stories", className].filter(Boolean).join(" ")}
       aria-label="נקודות עניין ותמונות לאורך המסלול"
     >
@@ -46,7 +53,10 @@ export default function RoutePoiStoryList({ className = "" }) {
       </div>
 
       <div className="sbh-poi-story-list">
-        {stories.map((story) => (
+        {stories.map((story, index) => {
+          const distance = formatDistance(story.routeProgressMeters);
+          const stopLabel = `תחנה ${index + 1}${distance ? ` · ${distance}` : ""}`;
+          return (
           <button
             key={story.poiId}
             type="button"
@@ -57,9 +67,9 @@ export default function RoutePoiStoryList({ className = "" }) {
             onClick={() => handleSelect(story)}
           >
             <div className="sbh-poi-story-copy">
-              <span className="sbh-poi-story-type">{poiLabel(story.type)}</span>
+              <span className="sbh-poi-story-kicker">{stopLabel}</span>
               <h3>{story.name || poiLabel(story.type)}</h3>
-              {story.information && <p className="sbh-poi-story-info">{story.information}</p>}
+              <span className="sbh-poi-story-type">{poiLabel(story.type)}</span>
               {story.description && (
                 <p className="sbh-poi-story-description">{story.description}</p>
               )}
@@ -80,7 +90,8 @@ export default function RoutePoiStoryList({ className = "" }) {
               ))}
             </div>
           </button>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

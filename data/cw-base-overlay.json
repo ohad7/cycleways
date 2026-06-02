@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-05-27T01:22:39.359Z",
+  "updatedAt": "2026-06-02T15:42:30.247Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -463,10 +463,10 @@
       "segmentId": 10,
       "segmentName": "גן הצפון",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.17,
+      "avgDistanceMeters": 0.19,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -615,16 +615,34 @@
           "manualEdgeId": "manual-osm-529023380-mpdma4wt"
         },
         {
-          "edgeId": "e529023379_2",
+          "edgeId": "e958921301_4",
           "source": "osm",
           "direction": "forward",
           "sequenceIndex": 16,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 529023379
+          "osmWayId": 958921301
+        },
+        {
+          "edgeId": "e958921301_5",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 17,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 958921301
+        },
+        {
+          "edgeId": "e958921314_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 18,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 958921314
         }
       ],
-      "updatedAt": "2026-05-26T19:25:43.628Z"
+      "updatedAt": "2026-06-02T15:42:25.971Z"
     },
     "12": {
       "segmentId": 12,
@@ -18231,6 +18249,79 @@
         }
       ],
       "updatedAt": "2026-05-27T01:13:58.189Z"
+    },
+    "326": {
+      "segmentId": 326,
+      "segmentName": "שביל אופניים 99 קיאקי הגושרים",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.59,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e496275732_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 496275732
+        },
+        {
+          "edgeId": "e958921316_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 958921316
+        }
+      ],
+      "updatedAt": "2026-06-02T15:42:28.149Z"
+    },
+    "327": {
+      "segmentId": 327,
+      "segmentName": "שביל אופניים 99 קיאקי הגושרים - 2",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.17,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e958921317_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 958921317
+        },
+        {
+          "edgeId": "manual-98-mpemyjp0",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-98-mpemyjp0"
+        },
+        {
+          "edgeId": "manual-manual-osm-611794183-mpemy9fo-a-mpemycrz",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-611794183-mpemy9fo-a-mpemycrz"
+        }
+      ],
+      "updatedAt": "2026-06-02T15:42:30.242Z"
     }
   }
 }

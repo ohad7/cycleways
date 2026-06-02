@@ -1,33 +1,33 @@
 {
-  "version": "8a2484a0e968",
-  "generatedAt": "2026-06-02T09:52:10.484522Z",
+  "version": "89e1250065bc",
+  "generatedAt": "2026-06-02T17:53:44.935112Z",
   "bikeRoads": "bike_roads.geojson",
   "segments": "segments.json",
   "cwBaseIndex": "cw-base-index.json",
   "kml": "exports/map.kml",
   "baseRoutingShards": "base-routing-shards/manifest.json",
   "hashes": {
-    "bikeRoads": "6125e70155526101ec895412beb33b28128413419df97654fd73e0f1a74b8b00",
-    "segments": "65d4bbc9de4b6ec6f45279cb621a27ec0b1446b7ffc1bd7da85d74b8276f2ad5",
-    "cwBaseIndex": "8d39a44b45bdc608d7d70367b58a5f0c715c154fe4079d490cb2da5063a4b220",
-    "kml": "037af75f33a86db525312bcc4c7006cb3d05ab1dfbbfd36bde2a95f4d2082c79",
-    "baseRoutingShards": "d053fc8d16ace45a5fcd1d5f89abc24f40c9e2f37d3441089677c7bd9426d8a1"
+    "bikeRoads": "f4acf4247c258ad1956a534d00ffde89db667e0e4c03375a4ccab3e32c66187e",
+    "segments": "7be4d636194f91d75952d5a7afa82c03b647a6a6afd759b3a07c70ab3055eb8a",
+    "cwBaseIndex": "bac9938a5aa6f13b0a003f2861f448446849f451cf5e5be40ec3a0df9cbb6ccb",
+    "kml": "ca73e393cb96b0103a9e9ff0c1be304a7973a5e5cd4a4e64329845a84949d49e",
+    "baseRoutingShards": "5ff7629770c40bf6c8f30577a7f92c1ba5be7e7d125b9c95129958a8cfd69fcb"
   },
   "elevation": {
     "skipElevation": false,
     "failures": 0
   },
   "validation": {
-    "featureCount": 267,
-    "segmentsCount": 321,
+    "featureCount": 268,
+    "segmentsCount": 323,
     "newSegments": 0,
     "routeCompatibilityWarnings": 0,
     "routingEdges": 48358,
     "unresolvedRoutingSegments": 0,
     "baseRoutingWarnings": 0,
     "baseRoutingBlockers": 0,
-    "overlayDisplaySegments": 267,
+    "overlayDisplaySegments": 268,
     "sourceDisplayFallbackSegments": 0,
-    "cwBaseIndexSegments": 267
+    "cwBaseIndexSegments": 268
   }
 }

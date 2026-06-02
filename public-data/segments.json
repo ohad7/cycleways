@@ -223,9 +223,9 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.615304,
-      "latitude": 33.222154,
-      "elevation": 96.0
+      "longitude": 35.615782,
+      "latitude": 33.222532,
+      "elevation": 97.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -1973,8 +1973,8 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל אופניים 99 קיאקי הגושרים": {
-    "id": 98,
+  "שביל אופניים 99 מעיין ברוך": {
+    "id": 326,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -1982,10 +1982,32 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 98,
+    "splitFromName": "שביל אופניים 99 קיאקי הגושרים",
     "middle": {
-      "longitude": 35.610319,
-      "latitude": 33.225301,
-      "elevation": 107.0
+      "longitude": 35.609525,
+      "latitude": 33.225288,
+      "elevation": 109.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 קיאקי הגושרים": {
+    "id": 327,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 98,
+    "splitFromName": "שביל אופניים 99 קיאקי הגושרים",
+    "middle": {
+      "longitude": 35.613901,
+      "latitude": 33.224848,
+      "elevation": 101.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -2159,7 +2181,7 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל אופניים חצבאני חוף ישראלי": {
+  "שביל אופניים חצבאני חופים צפוני": {
     "id": 101,
     "status": "active",
     "quality": {
@@ -2172,7 +2194,7 @@
       {
         "id": "poi-1a4c1f16",
         "type": "beach",
-        "information": "שער מספר 1",
+        "information": "חוף רחצה על נחל שניר, עם כניסה דרך שער 1.",
         "location": [
           33.21628,
           35.609092
@@ -2187,7 +2209,8 @@
             "photo": "public-data/poi-images/poi-1a4c1f16-fae02a20.webp",
             "thumbnail": "public-data/poi-images/poi-1a4c1f16-fae02a20-thumb.webp"
           }
-        ]
+        ],
+        "description": "חוף קטן וקצת יותר פראי עם כניסה דרך שער 1. משום מה הוא נקרא חוף קולומביה, נשמח לדעת למה ביום מן הימים"
       },
       {
         "id": "poi-857aa85d",
@@ -2207,7 +2230,8 @@
             "photo": "public-data/poi-images/poi-857aa85d-f6c5e9be.webp",
             "thumbnail": "public-data/poi-images/poi-857aa85d-f6c5e9be-thumb.webp"
           }
-        ]
+        ],
+        "description": "דרך שער 2, חוף רחב ומרווח על נחל שניר, עם גישה נוחה למים שמתאימה גם למשפחות, ועצי תות שמטילים צל  על הגדה (ובעונה — גם פינוק מתוק היישר מהענף). מקום מצוין לפרוס מגבת ולשכשך רגלים."
       }
     ],
     "middle": {
@@ -2268,12 +2292,12 @@
       {
         "id": "poi-d2081ac2",
         "type": "beach",
-        "information": "עצי דולב ענקיים, עיקול בנחל, בריכת דגים",
+        "information": "בכניסה משער 5, חוף קטן תחת עצי דולב בעיקול הנחל",
         "location": [
           33.205265,
           35.610959
         ],
-        "name": "שער 5",
+        "name": "חוף ללא שם בעיקול הנחל",
         "images": [
           {
             "photo": "public-data/poi-images/poi-d2081ac2-000a5417.webp",
@@ -2287,12 +2311,13 @@
             "photo": "public-data/poi-images/poi-d2081ac2-4f4272c3.webp",
             "thumbnail": "public-data/poi-images/poi-d2081ac2-4f4272c3-thumb.webp"
           }
-        ]
+        ],
+        "description": "בשער 5 הנחל מתעקל בחדות, לצד העיקול שוכנת בריכת דגים שקטה, לחוף הזה אין שם אבל יש שם עץ דולב ענקי וירידה חביבה לחצבאני"
       },
       {
         "id": "poi-f5fd1f27",
         "type": "beach",
-        "information": "הליכה של שתי דקות עד המים, אקליפטוס ענק",
+        "information": "חוף מגניב ומרוחק, מרחק שתי דקות הליכה משער 8",
         "location": [
           33.201237,
           35.609947
@@ -2307,7 +2332,8 @@
             "photo": "public-data/poi-images/poi-f5fd1f27-8267032a.webp",
             "thumbnail": "public-data/poi-images/poi-f5fd1f27-8267032a-thumb.webp"
           }
-        ]
+        ],
+        "description": "אקליפטוס ענק מסמן את הנקודה, וממנו שביל קצר של כשתי דקות מוביל אל גדת הנחל. הטרחה הקטנה משתלמת — המים כאן שקטים יותר, הצל נדיב, והתחושה היא של פינה פרטית."
       }
     ],
     "middle": {
@@ -3116,7 +3142,7 @@
       {
         "id": "poi-95010070",
         "type": "cafe",
-        "information": "עצירה טובה לקפה, טובל בירק, כשר",
+        "information": "עצירה טובה לקפה",
         "location": [
           33.200456,
           35.601372
@@ -3127,12 +3153,13 @@
             "photo": "public-data/poi-images/poi-95010070-e9f669c1.webp",
             "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
           }
-        ]
+        ],
+        "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה."
       },
       {
         "id": "poi-c723c695",
         "type": "tree",
-        "information": "בסוף הקיץ פריחה של חוטמית זיפנית בשלל צבעים",
+        "information": "בסוף האביב פריחה של חוטמית זיפנית בשלל צבעים",
         "location": [
           33.198283,
           35.603713
@@ -3151,7 +3178,8 @@
             "photo": "public-data/poi-images/poi-c723c695-03220773.webp",
             "thumbnail": "public-data/poi-images/poi-c723c695-03220773-thumb.webp"
           }
-        ]
+        ],
+        "description": "בשלהי האביב החוטמית הזיפנית מתנשאת בקנים גבוהים ופורחת בגוונים של ורוד, סגול ולבן, נדיר לראות את כל הצבעים פורחים יחד בטבע. בשאר השנה זו פינת בר ירוקה ושקטה."
       },
       {
         "id": "poi-75f40178",
@@ -3167,7 +3195,8 @@
             "photo": "public-data/poi-images/poi-75f40178-b465e980.webp",
             "thumbnail": "public-data/poi-images/poi-75f40178-b465e980-thumb.webp"
           }
-        ]
+        ],
+        "description": "מטעי פקאן רחבי ידיים, שבהם שורות העצים הגבוהים יוצרות מסדרון מוצל ונעים.  האור חודר בין העלים והשקט כמעט מוחלט — פינה ירוקה ורגועה לעצור ולהנות מהיופי והצל. המטעים הם רכוש המושב ופרנסת החקלאים, אנא כבדו את המקום, וכמובן לא לקטוף"
       }
     ],
     "middle": {
@@ -5025,7 +5054,7 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל אופניים 99 צל תמרים": {
+  "שביל אופניים 99 מפגש שלושה נחלים": {
     "id": 281,
     "status": "active",
     "quality": {
@@ -5816,6 +5845,28 @@
       [
         35.606441,
         33.218899
+      ]
+    ]
+  },
+  "שביל אופניים 99 קיאקי הגושרים [split archive 98]": {
+    "id": 98,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל אופניים 99 קיאקי הגושרים",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.609908,
+        33.225301
+      ],
+      [
+        35.614168,
+        33.224786
       ]
     ]
   },

@@ -1,12 +1,13 @@
 import React, { Suspense, lazy, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { getFeaturedModuleLoader } from "../featured/index.js";
+import { getFeaturedModuleLoader, getFeaturedNav } from "../featured/index.js";
 import PageShell from "../components/PageShell.jsx";
 import "../components/featured/featured.css";
 
 export default function FeaturedRoutePage() {
   const { slug } = useParams();
   const loader = getFeaturedModuleLoader(slug);
+  const navLinks = getFeaturedNav(slug);
 
   const LazyRoute = useMemo(() => {
     if (!loader) return null;
@@ -14,7 +15,7 @@ export default function FeaturedRoutePage() {
   }, [loader]);
 
   return (
-    <PageShell>
+    <PageShell navLinks={navLinks}>
       {!loader ? (
         <div className="page-card">
           <div className="featured-route-404">לא נמצא מסלול בשם "{slug}".</div>
