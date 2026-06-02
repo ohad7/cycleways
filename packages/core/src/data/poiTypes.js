@@ -163,3 +163,41 @@ export function primaryPoiImage(marker) {
   const images = normalizePoiImages(marker);
   return images.length > 0 ? images[0] : null;
 }
+
+// Flatten gallery-eligible POIs into one slide per image, ordered by the POI's
+// route progress and then by image index. Stable POI id breaks progress ties.
+export function galleryImageSlides(points) {
+  const eligible = (Array.isArray(points) ? points : [])
+    .filter(isGalleryEligiblePoi)
+    .map((point) => ({ point, images: normalizePoiImages(point) }));
+
+  eligible.sort((a, b) => {
+    const ap = Number.isFinite(a.point.routeProgressMeters)
+      ? a.point.routeProgressMeters
+      : Number.POSITIVE_INFINITY;
+    const bp = Number.isFinite(b.point.routeProgressMeters)
+      ? b.point.routeProgressMeters
+      : Number.POSITIVE_INFINITY;
+    if (ap !== bp) return ap - bp;
+    return String(a.point.id || "").localeCompare(String(b.point.id || ""));
+  });
+
+  const slides = [];
+  for (const { point, images } of eligible) {
+    images.forEach((image, imageIndex) => {
+      slides.push({
+        poiId: point.id,
+        type: point.type,
+        name: point.name || "",
+        information: point.information || "",
+        description: point.description || "",
+        location: point.location,
+        routeProgressMeters: point.routeProgressMeters,
+        imageIndex,
+        photo: image.photo,
+        thumbnail: image.thumbnail,
+      });
+    });
+  }
+  return slides;
+}

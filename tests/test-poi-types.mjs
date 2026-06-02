@@ -5,7 +5,7 @@ import {
   createRouteManager,
   addPoint,
 } from "@cycleways/core/routing/routeActions.js";
-import { isGalleryEligiblePoi, normalizePoiImages, primaryPoiImage } from "@cycleways/core/data/poiTypes.js";
+import { isGalleryEligiblePoi, normalizePoiImages, primaryPoiImage, galleryImageSlides } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 const require = createRequire(import.meta.url);
@@ -186,5 +186,46 @@ assert.deepEqual(primaryPoiImage({ photo: "c.webp" }), {
 assert.equal(primaryPoiImage({ type: "gate" }), null);
 
 console.log("normalizePoiImages tests passed");
+
+const points = [
+  {
+    id: "mid",
+    type: "cafe",
+    name: "Mid cafe",
+    information: "info",
+    description: "desc",
+    routeProgressMeters: 500,
+    images: [
+      { photo: "mid-1.webp", thumbnail: "mid-1-t.webp" },
+      { photo: "mid-2.webp", thumbnail: "mid-2-t.webp" },
+    ],
+  },
+  {
+    id: "start",
+    type: "viewpoint",
+    name: "Start view",
+    routeProgressMeters: 10,
+    photo: "start.webp", // legacy single image
+  },
+  { id: "warn", type: "gate", routeProgressMeters: 5 }, // not gallery eligible
+  { id: "nogal", type: "cafe", gallery: false, routeProgressMeters: 1, photo: "x.webp" },
+];
+
+const slides = galleryImageSlides(points);
+
+// Order: start (10), then mid image 1, then mid image 2. Warnings + gallery:false dropped.
+assert.deepEqual(
+  slides.map((s) => `${s.poiId}#${s.imageIndex}`),
+  ["start#0", "mid#0", "mid#1"],
+);
+
+// Each slide carries presentation fields + its image.
+assert.equal(slides[0].photo, "start.webp");
+assert.equal(slides[0].thumbnail, "start.webp");
+assert.equal(slides[0].name, "Start view");
+assert.equal(slides[1].photo, "mid-1.webp");
+assert.equal(slides[1].poiId, "mid");
+
+console.log("galleryImageSlides tests passed");
 
 console.log("POI types tests passed");
