@@ -43681,23 +43681,6 @@
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
         "stroke-width": 5,
-        "data": [
-          {
-            "id": "beit-hillel-village-stop",
-            "type": "cafe",
-            "name": "עצירה במושב",
-            "information": "נקודת פתיחה וסיום נוחה, קרובה לקפה ולאוכל בבית הלל.",
-            "description": "המסלול קצר, ולכן הוא עובד טוב כרכיבת בוקר שמסתיימת בעצירה במושב. בהמשך אפשר להחליף את התמונה והפרטים במקומות ספציפיים עם שעות, טלפון וקישור.",
-            "location": [
-              33.217453,
-              35.609306
-            ],
-            "images": [
-              { "photo": "/attached_assets/background.png", "thumbnail": "/attached_assets/background.png" }
-            ],
-            "gallery": true
-          }
-        ],
         "quality": {
           "overall": 3,
           "safety": 3,
@@ -43759,8 +43742,8 @@
             89
           ],
           [
-            35.609092727272724,
-            33.21594118181818,
+            35.60909349023311,
+            33.216012850831405,
             89
           ],
           [
@@ -44478,23 +44461,6 @@
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
         "stroke-width": 5,
-        "data": [
-          {
-            "id": "beit-hillel-hasbani-path",
-            "type": "river",
-            "name": "שביל החצבאני",
-            "information": "קטע ירוק ושקט לצד העצים, קרוב לנחל ולצל.",
-            "description": "כאן הרכיבה מרגישה קרירה וירוקה יותר. זה מקום טוב לעצירה קצרה, צילום, והבנה של הקשר בין בית הלל לנחלים שמקיפים אותו.",
-            "location": [
-              33.211232,
-              35.610495
-            ],
-            "images": [
-              { "photo": "/attached_assets/background.png", "thumbnail": "/attached_assets/background.png" }
-            ],
-            "gallery": true
-          }
-        ],
         "quality": {
           "overall": 3,
           "safety": 3,
@@ -62344,24 +62310,6 @@
         "sourceStroke": "#0288d1",
         "stroke-opacity": 1,
         "stroke-width": 5,
-        "data": [
-          {
-            "id": "beit-hillel-west-fields",
-            "type": "viewpoint",
-            "name": "השדות ממערב לבית הלל",
-            "information": "דרך פתוחה ושקטה עם מבט רחב לכיוון החרמון.",
-            "description": "זה החלק שבו המסלול נפתח לרכיבה רגועה בין חלקות חקלאיות. בחורף ובאביב הצבעים כאן חזקים במיוחד והמסלול נשאר קל ונגיש.",
-            "location": [
-              33.20395,
-              35.59982
-            ],
-            "images": [
-              { "photo": "/attached_assets/background_grass.png", "thumbnail": "/attached_assets/background_grass.png" },
-              { "photo": "/attached_assets/background.png", "thumbnail": "/attached_assets/background.png" }
-            ],
-            "gallery": true
-          }
-        ],
         "quality": {
           "overall": 3,
           "safety": 3,
@@ -99004,23 +98952,6 @@
         "name": "גדר מערכת בית הלל צפון",
         "status": "active",
         "roadType": "paved",
-        "data": [
-          {
-            "id": "beit-hillel-north-fence",
-            "type": "nature",
-            "name": "השביל הצפוני",
-            "information": "חזרה צפונה לצד גדר המערכת, עם מבט פתוח לשדות ולמטעים.",
-            "description": "זה קטע קצר ונעים שמחזיר את הרכיבה אל החלק הצפוני של הלולאה. הוא עוזר לסגור את הסיבוב בלי מאמץ ומתאים גם לרוכבים צעירים.",
-            "location": [
-              33.218093,
-              35.603181
-            ],
-            "images": [
-              { "photo": "/attached_assets/background_grass.png", "thumbnail": "/attached_assets/background_grass.png" }
-            ],
-            "gallery": true
-          }
-        ],
         "quality": {
           "overall": 3,
           "safety": 3,
