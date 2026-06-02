@@ -5,6 +5,7 @@ import {
   createRouteManager,
   addPoint,
 } from "@cycleways/core/routing/routeActions.js";
+import { isGalleryEligiblePoi, normalizePoiImages, primaryPoiImage } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 const require = createRequire(import.meta.url);
@@ -27,7 +28,9 @@ baseSegments[segmentName] = {
     {
       type: "cafe",
       id: "cafe-test-1",
+      name: "Test cafe",
       information: "test cafe",
+      photo: "/attached_assets/background.png",
       location: [33.11124, 35.586584],
     },
   ],
@@ -61,6 +64,12 @@ let matched = 0;
 for (const dp of snapshot.activeDataPoints) {
   if (dp.segmentName === segmentName) {
     assert.equal(dp.id, "cafe-test-1");
+    assert.equal(dp.name, "Test cafe");
+    assert.ok(Number.isFinite(dp.routeProgressMeters));
+    assert.ok(dp.routeProgressMeters >= 0);
+    assert.ok(Number.isFinite(dp.routeFraction));
+    assert.ok(dp.routeFraction >= 0 && dp.routeFraction <= 1);
+    assert.equal(isGalleryEligiblePoi(dp), true);
     matched += 1;
   }
 }
@@ -127,5 +136,55 @@ const selectedMarkerPresentation = getRouteWarningPresentation([], {
 assert.equal(selectedMarkerPresentation.count, 1);
 assert.equal(selectedMarkerPresentation.toggleLabel, "⚠️ מידע חשוב");
 assert.equal(selectedMarkerPresentation.groups[0].label, "שיפוע");
+
+assert.equal(
+  isGalleryEligiblePoi({ type: "viewpoint", photo: "/photo.jpg" }),
+  true,
+);
+assert.equal(
+  isGalleryEligiblePoi({ type: "viewpoint", thumbnail: "/thumb.jpg", gallery: false }),
+  false,
+);
+assert.equal(
+  isGalleryEligiblePoi({ type: "warning", photo: "/warning.jpg" }),
+  false,
+);
+
+// images[] passthrough, filtering invalid entries
+assert.deepEqual(
+  normalizePoiImages({
+    images: [
+      { photo: "a.webp", thumbnail: "a-thumb.webp" },
+      { photo: "b.webp" },
+      { thumbnail: "no-photo.webp" }, // dropped: no photo
+      "nope", // dropped: not an object
+    ],
+  }),
+  [
+    { photo: "a.webp", thumbnail: "a-thumb.webp" },
+    { photo: "b.webp", thumbnail: "b.webp" },
+  ],
+);
+
+// legacy photo/thumbnail synthesized into a single entry
+assert.deepEqual(normalizePoiImages({ photo: "c.webp", thumbnail: "c-t.webp" }), [
+  { photo: "c.webp", thumbnail: "c-t.webp" },
+]);
+assert.deepEqual(normalizePoiImages({ photo: "d.webp" }), [
+  { photo: "d.webp", thumbnail: "d.webp" },
+]);
+
+// nothing -> empty
+assert.deepEqual(normalizePoiImages({ type: "warning" }), []);
+assert.deepEqual(normalizePoiImages(null), []);
+
+// primaryPoiImage returns images[0] or null
+assert.deepEqual(primaryPoiImage({ photo: "c.webp" }), {
+  photo: "c.webp",
+  thumbnail: "c.webp",
+});
+assert.equal(primaryPoiImage({ type: "gate" }), null);
+
+console.log("normalizePoiImages tests passed");
 
 console.log("POI types tests passed");
