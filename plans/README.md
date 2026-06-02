@@ -42,3 +42,4 @@ Current plans:
 - `featured-mobile-layout/` - design and implementation plan for the featured route page's mobile-web editorial polish (and how the screen is shared with the future native iPhone app); also removes the fullscreen map button.
 - `featured-mobile-video-crop/` - design and implementation plan for a mobile route-player mockup that crops the existing landscape YouTube video into a 4:5 frame with a mini live map overlay.
 - `featured-route-endpoints/` - design for optional per-route start/end points (image + name + description, location derived from route geometry) shown in the on-video preview (fraction 0/1) and as the first/last story cards.
+- `loading-splash/` - design for an instant inline loading splash (branded logo + real-milestone progress bar) in index.html to remove the slow-network "dead gap" before React mounts.
