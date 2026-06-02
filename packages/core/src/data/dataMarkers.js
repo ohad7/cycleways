@@ -1,6 +1,6 @@
 // Pure data transform: segments → GeoJSON features for data markers.
 // No Mapbox dependency — safe for the platform-agnostic shared set.
-import { poiColor, poiEmoji, poiIcon, poiLabel } from "./poiTypes.js";
+import { poiColor, poiEmoji, poiIcon, poiLabel, primaryPoiImage } from "./poiTypes.js";
 
 export function namespacedDataMarkerIconName(iconName, namespace) {
   if (!namespace || typeof iconName !== "string" || iconName.length === 0) {
@@ -27,6 +27,7 @@ export function dataMarkerFeaturesFromSegments(segmentsData) {
           ? dataPoint.id
           : `${segmentName}-${index}`;
       const type = dataPoint.type || "warning";
+      const primary = primaryPoiImage(dataPoint);
       features.push({
         type: "Feature",
         id: dataPointId,
@@ -40,8 +41,8 @@ export function dataMarkerFeaturesFromSegments(segmentsData) {
           name: dataPoint.name || "",
           information: dataPoint.information || "",
           description: dataPoint.description || "",
-          photo: dataPoint.photo || "",
-          thumbnail: dataPoint.thumbnail || "",
+          photo: primary?.photo || "",
+          thumbnail: primary?.thumbnail || dataPoint.thumbnail || "",
           gallery: dataPoint.gallery,
           segmentName,
           emoji: dataPoint.emoji || poiEmoji(type),

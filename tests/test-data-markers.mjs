@@ -70,4 +70,28 @@ assert.equal(
   "native-marker-bank-11",
 );
 
+{
+  const features = dataMarkerFeaturesFromSegments({
+    "Seg images": {
+      data: [
+        {
+          id: "multi",
+          type: "cafe",
+          name: "Multi cafe",
+          location: [33.1, 35.6],
+          images: [
+            { photo: "a.webp", thumbnail: "a-t.webp" },
+            { photo: "b.webp", thumbnail: "b-t.webp" },
+          ],
+        },
+      ],
+    },
+  });
+  const f = features.find((feat) => feat.properties.dataPointId === "multi");
+  assert.equal(f.properties.photo, "a.webp");
+  assert.equal(f.properties.thumbnail, "a-t.webp");
+  assert.equal(f.properties.emoji, "☕");
+}
+console.log("data-marker images tests passed");
+
 console.log("test-data-markers passed");
