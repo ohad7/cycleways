@@ -8,9 +8,9 @@
       "route": "AQByAAcABAAFAFgAYABeAAoAeAAZAHIA",
       "notes": "",
       "featured": true,
-      "distanceKm": 13.6,
-      "elevationGainM": 120,
-      "elevationLossM": 120,
+      "distanceKm": 13.9,
+      "elevationGainM": 126,
+      "elevationLossM": 126,
       "regionId": "hula-valley",
       "passesNear": [
         "beit-hillel",
@@ -28,7 +28,7 @@
     {
       "slug": "sovev-beit-hillel",
       "name": "סובב בית הלל",
-      "summary": "מסלול קצר ונעים מסביב לבית הלל",
+      "summary": "מסלול קצר ונעים מסביב לבית הלל, בלב הגליל העליון",
       "route": "DvsVvkJ2SiQeaAkhgGPtCZde8S8Q8xGxbG4BSY7c32agaEz219fTkrW2ZA",
       "notes": "",
       "featured": true,
