@@ -42,6 +42,7 @@ export const ROUTE_DIRECTION_LIT_POINT_CIRCLE_LAYER_ID =
 export const ROUTE_DIRECTION_LIT_POINT_TEXT_LAYER_ID =
   "route-direction-lit-point-text";
 export const DATA_MARKERS_LAYER_ID = "react-data-markers-layer";
+export const DATA_MARKERS_CIRCLE_LAYER_ID = "react-data-markers-circle";
 export const OSM_DEBUG_LINE_LAYER_ID = "osm-debug-network-line";
 export const OSM_DEBUG_RESTRICTED_LAYER_ID = "osm-debug-network-restricted";
 export const OSM_DEBUG_HOVER_LAYER_ID = "osm-debug-network-hover";
@@ -618,12 +619,33 @@ export const ROUTE_DIRECTION_LIT_POINT_TEXT_STYLE = {
   },
 };
 
+export const DATA_MARKERS_CIRCLE_STYLE = {
+  paint: {
+    "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 14, 9, 16, 12],
+    "circle-color": ["coalesce", ["get", "color"], "#607076"],
+    "circle-opacity": ["case", ["boolean", ["get", "active"], false], 0.95, 0.6],
+    "circle-stroke-color": "#ffffff",
+    "circle-stroke-width": 1.5,
+  },
+};
+
 export const DATA_MARKERS_STYLE = {
   layout: {
     "icon-image": ["get", "icon"],
     "icon-size": 1,
     "icon-allow-overlap": true,
     "icon-ignore-placement": true,
+    "text-field": [
+      "match",
+      ["get", "type"],
+      ["payment", "gate", "mud", "warning", "slope", "narrow", "severe"],
+      "",
+      ["coalesce", ["get", "emoji"], ""],
+    ],
+    "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+    "text-size": ["interpolate", ["linear"], ["zoom"], 10, 11, 16, 16],
+    "text-allow-overlap": true,
+    "text-ignore-placement": true,
   },
   paint: {
     "icon-opacity": [

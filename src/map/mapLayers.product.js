@@ -45,6 +45,7 @@ import {
   ROUTE_DIRECTION_LIT_POINT_TEXT_LAYER_ID,
   DATA_MARKERS_SOURCE_ID,
   DATA_MARKERS_LAYER_ID,
+  DATA_MARKERS_CIRCLE_LAYER_ID,
   VIDEO_CURSOR_SOURCE_ID,
   VIDEO_CURSOR_LAYER_ID,
   ROUTE_NETWORK_LINE_STYLE,
@@ -62,6 +63,7 @@ import {
   ROUTE_DIRECTION_LIT_POINT_CIRCLE_STYLE,
   ROUTE_DIRECTION_LIT_POINT_TEXT_STYLE,
   DATA_MARKERS_STYLE,
+  DATA_MARKERS_CIRCLE_STYLE,
   VIDEO_CURSOR_STYLE,
 } from "@cycleways/core/map/mapStyles.js";
 
@@ -123,6 +125,9 @@ export function clearRouteGeometryLayers(map) {
 
 export function clearDataMarkerLayers(map) {
   if (!map) return;
+  if (map.getLayer(DATA_MARKERS_CIRCLE_LAYER_ID)) {
+    map.removeLayer(DATA_MARKERS_CIRCLE_LAYER_ID);
+  }
   if (map.getLayer(DATA_MARKERS_LAYER_ID)) {
     map.removeLayer(DATA_MARKERS_LAYER_ID);
   }
@@ -643,6 +648,15 @@ export function syncDataMarkerLayers(
     type: "geojson",
     data,
   });
+
+  if (!map.getLayer(DATA_MARKERS_CIRCLE_LAYER_ID)) {
+    map.addLayer({
+      id: DATA_MARKERS_CIRCLE_LAYER_ID,
+      type: "circle",
+      source: DATA_MARKERS_SOURCE_ID,
+      ...DATA_MARKERS_CIRCLE_STYLE,
+    });
+  }
 
   map.addLayer({
     id: DATA_MARKERS_LAYER_ID,
