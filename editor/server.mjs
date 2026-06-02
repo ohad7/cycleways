@@ -39,6 +39,7 @@ const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const poiTypesModulePath = resolve(repoRoot, "packages/core/src/data/poiTypes.js");
+const coreSrcRoot = resolve(repoRoot, "packages/core/src");
 const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
 const videoKeyframesDraftDir = resolve(editorRoot, ".drafts/route-videos");
 const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
@@ -1207,7 +1208,17 @@ async function serveStatic(request, response, url) {
   const allowedIconFile = isInside(iconsRoot, filePath);
   const allowedTokenFile = filePath === tokenPath;
   const allowedPoiTypesFile = filePath === poiTypesModulePath;
-  if (!allowedEditorFile && !allowedIconFile && !allowedTokenFile && !allowedPoiTypesFile) {
+  // The editor loads shared core ES modules directly from source (e.g.
+  // data/poiTypes.js, map/emojiMarkerImage.js), so serve the read-only
+  // packages/core/src tree.
+  const allowedCoreFile = isInside(coreSrcRoot, filePath);
+  if (
+    !allowedEditorFile &&
+    !allowedIconFile &&
+    !allowedTokenFile &&
+    !allowedPoiTypesFile &&
+    !allowedCoreFile
+  ) {
     sendText(response, 404, "Not found");
     return;
   }
