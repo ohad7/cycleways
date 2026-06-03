@@ -25,10 +25,6 @@ function App() {
     state,
     mapUi,
     routeState,
-    osmDebug,
-    osmDebugLayerMode,
-    selectedCwReviewSegmentId,
-    selectedCwReviewFeature,
     canUndo,
     canRedo,
     canDownload,
@@ -39,7 +35,6 @@ function App() {
     displayedRoutePoints,
     inspectedSegmentDetails,
     inspectedSegment,
-    inspectedOsmFeature,
     shareUrl,
     shareInfo,
     featureFlags,
@@ -54,8 +49,6 @@ function App() {
     handleOpenDownload,
     handleCloseDownload,
     handleDownloadGpx,
-    handleOsmDebugLayerModeChange,
-    handleCwReviewSegmentSelect,
     handleDataMarkerClick,
     handleDataPointFocus,
     handleSelectedDataMarkerClear,
@@ -71,9 +64,6 @@ function App() {
     handleSegmentFocus,
     handleSegmentHover,
     handleViewportIdle,
-    handleOsmDebugHover,
-    handleOsmGraphEdgeHover,
-    handleCwOsmMatchHover,
     handleElevationHover,
   } = useCyclewaysApp();
 
@@ -216,24 +206,6 @@ function App() {
                   </div>
                 )}
 
-                {osmDebug.enabled && (
-                  <OsmDebugLayerToggle
-                    mode={osmDebugLayerMode}
-                    status={osmDebug.status}
-                    onChange={handleOsmDebugLayerModeChange}
-                  />
-                )}
-
-                {osmDebug.enabled && (
-                  <OsmMatchReviewPanel
-                    mode={osmDebugLayerMode}
-                    selectedSegmentId={selectedCwReviewSegmentId}
-                    summary={osmDebug.cwMatchSummary}
-                    onOpenGraph={() => handleOsmDebugLayerModeChange("graph")}
-                    onSelectSegment={handleCwReviewSegmentSelect}
-                  />
-                )}
-
                 <MapView
                   activeDataPointIds={activeDataPointIds}
                   animator={directionAnimatorRef.current}
@@ -256,23 +228,11 @@ function App() {
                   onSegmentFocus={handleSegmentFocus}
                   onSegmentHover={handleSegmentHover}
                   onViewportIdle={handleViewportIdle}
-                  onOsmDebugHover={handleOsmDebugHover}
-                  onOsmGraphEdgeHover={handleOsmGraphEdgeHover}
-                  onCwOsmMatchHover={handleCwOsmMatchHover}
-                  osmDebugGeoJson={osmDebug.geoJson}
-                  osmGraphEdgesGeoJson={osmDebug.graphEdgesGeoJson}
-                  osmGraphNodesGeoJson={osmDebug.graphNodesGeoJson}
-                  cwOsmMatchGeoJson={osmDebug.cwMatchGeoJson}
-                  osmIntersectionsGeoJson={osmDebug.intersectionsGeoJson}
-                  osmDebugMode={osmDebug.enabled}
-                  osmDebugLayerMode={osmDebugLayerMode}
                   routeFitRequest={mapUi.routeFitRequest}
                   routeGeometry={routeState.geometry}
                   routePointDragPreview={routePointDragPreview}
                   routePoints={displayedRoutePoints}
                   searchHighlight={mapUi.searchHighlight}
-                  selectedCwOsmReviewFeature={selectedCwReviewFeature}
-                  selectedCwOsmReviewSegmentId={selectedCwReviewSegmentId}
                   selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
                 />
 
@@ -290,7 +250,6 @@ function App() {
                 <SegmentNameDisplay
                   details={inspectedSegmentDetails}
                   inspectedSegment={inspectedSegment}
-                  osmFeature={inspectedOsmFeature}
                 />
               </>
             )}
@@ -496,242 +455,10 @@ function RouteDescriptionText({ routeState }) {
   );
 }
 
-function formatPercent(value) {
-  return Number.isFinite(value) ? `${Math.round(value * 100)}%` : "";
-}
-
-function formatMeters(value) {
-  return Number.isFinite(value) ? `${value.toFixed(1)} m` : "";
-}
-
-function failureClassLabel(value) {
-  const labels = {
-    accepted: "accepted",
-    partial_gap: "partial gap",
-    osm_missing: "OSM missing",
-    matcher_failed: "matcher failed",
-    source_geometry_mismatch: "source mismatch",
-    ambiguous_parallel: "ambiguous",
-    outside_base_area: "outside area",
-    needs_split: "needs split",
-    manual_review: "manual review",
-  };
-  return labels[value] || value || "review";
-}
-
-function OsmDebugLayerToggle({ mode, status, onChange }) {
-  const isLoading = status === "loading";
-  const options = [
-    ["ways", "OSM ways"],
-    ["graph", "Graph edges"],
-  ];
-
-  return (
-    <div
-      className="react-osm-layer-toggle"
-      role="group"
-      aria-label="OSM debug layer"
-    >
-      {options.map(([value, label]) => (
-        <button
-          key={value}
-          type="button"
-          className={
-            value === mode
-              ? "react-osm-layer-toggle__button react-osm-layer-toggle__button--active"
-              : "react-osm-layer-toggle__button"
-          }
-          aria-pressed={value === mode}
-          disabled={isLoading}
-          onClick={() => onChange(value)}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function OsmMatchReviewPanel({
-  mode,
-  selectedSegmentId,
-  summary,
-  onOpenGraph,
-  onSelectSegment,
-}) {
-  const [filter, setFilter] = useState("issues");
-  const segments = Array.isArray(summary?.segments) ? summary.segments : [];
-  if (!summary || segments.length === 0) return null;
-
-  const issueSegments = segments.filter(
-    (segment) => segment.failureClass !== "accepted",
-  );
-  const visibleSegments = filter === "all" ? segments : issueSegments;
-  const selectedSegment = segments.find(
-    (segment) => segment.segmentId === selectedSegmentId,
-  );
-
-  return (
-    <section className="react-osm-review-panel" aria-label="CW OSM match review">
-      <div className="react-osm-review-panel__header">
-        <div>
-          <strong>Match review</strong>
-          <span>
-            {formatPercent(Number(summary.coverageRatio))} coverage,{" "}
-            {issueSegments.length} issues
-          </span>
-        </div>
-        {mode !== "graph" && (
-          <button type="button" onClick={onOpenGraph}>
-            Graph
-          </button>
-        )}
-      </div>
-
-      {mode !== "graph" && (
-        <p className="react-osm-review-panel__hint">
-          Switch to graph mode to inspect matched edges and gaps.
-        </p>
-      )}
-
-      <div className="react-osm-review-panel__filters" role="group" aria-label="Review filter">
-        <button
-          type="button"
-          className={filter === "issues" ? "is-active" : ""}
-          onClick={() => setFilter("issues")}
-        >
-          Issues {issueSegments.length}
-        </button>
-        <button
-          type="button"
-          className={filter === "all" ? "is-active" : ""}
-          onClick={() => setFilter("all")}
-        >
-          All {segments.length}
-        </button>
-      </div>
-
-      {selectedSegment && (
-        <div className="react-osm-review-panel__selected">
-          <strong>{selectedSegment.segmentName}</strong>
-          <div>
-            {failureClassLabel(selectedSegment.failureClass)} ·{" "}
-            {formatPercent(Number(selectedSegment.coverageRatio))} · gaps{" "}
-            {selectedSegment.gapCount}
-          </div>
-          <p>{selectedSegment.reviewReason}</p>
-        </div>
-      )}
-
-      <div className="react-osm-review-list">
-        {visibleSegments.map((segment) => (
-          <button
-            key={segment.segmentId}
-            type="button"
-            className={
-              segment.segmentId === selectedSegmentId
-                ? "react-osm-review-item react-osm-review-item--selected"
-                : "react-osm-review-item"
-            }
-            onClick={() => onSelectSegment(segment.segmentId)}
-          >
-            <span className="react-osm-review-item__title">
-              {segment.segmentName || `Segment ${segment.segmentId}`}
-            </span>
-            <span className="react-osm-review-item__meta">
-              <span className={`react-osm-review-chip react-osm-review-chip--${segment.failureClass}`}>
-                {failureClassLabel(segment.failureClass)}
-              </span>
-              <span>{formatPercent(Number(segment.coverageRatio))}</span>
-              <span>{segment.confidence}</span>
-              <span>{segment.gapCount} gaps</span>
-            </span>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function SegmentNameDisplay({
   details,
   inspectedSegment,
-  osmFeature,
 }) {
-  if (osmFeature) {
-    const isGraphEdge = osmFeature.debugType === "graphEdge";
-    const isCwMatch =
-      osmFeature.debugType === "cwMatchEdge" || osmFeature.debugType === "cwMatchGap";
-    const title = isCwMatch
-      ? osmFeature.segmentName || "CycleWays match"
-      : isGraphEdge
-      ? osmFeature.edgeId
-        ? `Graph edge ${osmFeature.edgeId}`
-        : "Graph edge"
-      : osmFeature.name ||
-        osmFeature.ref ||
-        (osmFeature.osmId ? `OSM way ${osmFeature.osmId}` : "OSM way");
-    const rows = (isCwMatch
-      ? [
-          ["kind", osmFeature.kind],
-          ["segmentId", osmFeature.segmentId],
-          ["confidence", osmFeature.confidence],
-          ["coverage", formatPercent(Number(osmFeature.coverageRatio))],
-          ["edge", osmFeature.edgeId],
-          ["osmWay", osmFeature.osmWayId],
-          ["direction", osmFeature.direction],
-          ["avgDistance", formatMeters(Number(osmFeature.avgDistanceMeters))],
-          ["gapDistance", formatMeters(Number(osmFeature.distanceMeters))],
-          ["highway", osmFeature.graphHighway],
-          ["class", osmFeature.graphClass],
-          ["status", osmFeature.graphAccessStatus],
-        ]
-      : isGraphEdge
-      ? [
-          ["osmWay", osmFeature.osmWayId],
-          ["slice", osmFeature.sliceIndex],
-          ["from", osmFeature.fromNodeId],
-          ["to", osmFeature.toNodeId],
-          ["highway", osmFeature.highway],
-          ["surface", osmFeature.surface],
-          ["tracktype", osmFeature.tracktype],
-          ["bicycle", osmFeature.bicycle],
-          ["access", osmFeature.access],
-          ["class", osmFeature.osmRouteClass],
-          ["status", osmFeature.accessStatus],
-        ]
-      : [
-          ["highway", osmFeature.highway],
-          ["surface", osmFeature.surface],
-          ["tracktype", osmFeature.tracktype],
-          ["bicycle", osmFeature.bicycle],
-          ["access", osmFeature.access],
-          ["class", osmFeature.osmRouteClass],
-          ["status", osmFeature.accessStatus],
-        ]
-    ).filter(([, value]) => value !== undefined && value !== null && value !== "");
-
-    return (
-      <div className="segment-name-display react-segment-name-display--active react-segment-name-display--osm" id="segment-name-display">
-        <strong>{title}</strong>
-        <br />
-        {osmFeature.distanceMeters && (
-          <>
-            📏 {formatLegacyDistance(Number(osmFeature.distanceMeters))}
-            <br />
-          </>
-        )}
-        <div className="react-segment-data-list react-osm-data-list">
-          {rows.map(([label, value]) => (
-            <div key={label}>
-              <span>{label}</span>: {value}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   if (!inspectedSegment) {
     return (
       <div className="segment-name-display" id="segment-name-display">

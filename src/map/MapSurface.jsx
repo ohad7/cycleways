@@ -10,7 +10,6 @@ import {
   clearRouteNetworkLayers,
   DATA_MARKERS_LAYER_ID,
   loadDataMarkerIcons,
-  OSM_DEBUG_HIT_LAYER_ID,
   prepareRouteNetworkFeatures,
   ROUTE_GEOMETRY_HIT_LAYER_ID,
   ROUTE_NETWORK_HIT_LAYER_ID,
@@ -65,7 +64,6 @@ function MapSurface({
   onSegmentHover,
   onUserViewportChange,
   onViewportIdle,
-  osmDebugMode = false,
   routeFitRequest,
   routeFitPadding = 72,
   routeGeometry = [],
@@ -85,7 +83,6 @@ function MapSurface({
   const lastRouteClickRef = useRef(null);
   const callbacksRef = useRef({});
   const dataMarkerFeaturesRef = useRef([]);
-  const osmDebugActiveRef = useRef(false);
   const routeGeometryRef = useRef(routeGeometry);
   const routePointsRef = useRef([]);
   const networkSegmentsRef = useRef([]);
@@ -137,10 +134,6 @@ function MapSurface({
   useEffect(() => {
     dataMarkerFeaturesRef.current = dataMarkerFeatures;
   }, [dataMarkerFeatures]);
-
-  useEffect(() => {
-    osmDebugActiveRef.current = Boolean(osmDebugMode);
-  }, [osmDebugMode]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -229,13 +222,6 @@ function MapSurface({
     const map = mapRef.current;
     if (!map || status !== "ready" || !geoJsonData) return undefined;
 
-    if (osmDebugMode) {
-      clearRouteNetworkLayers(map);
-      networkSegmentsRef.current = [];
-      callbacksRef.current.onSegmentHover?.(null);
-      return undefined;
-    }
-
     const features = prepareRouteNetworkFeatures(geoJsonData);
     networkSegmentsRef.current = buildNetworkSegments(features);
     addRouteNetworkLayers(map, features);
@@ -273,8 +259,6 @@ function MapSurface({
     };
 
     const handleClick = (event) => {
-      if (osmDebugActiveRef.current) return;
-
       const feature = event.features?.[0];
       const segmentName = feature?.properties?.name || null;
       if (!segmentName) return;
@@ -305,7 +289,7 @@ function MapSurface({
       networkSegmentsRef.current = [];
       clearRouteNetworkLayers(map);
     };
-  }, [geoJsonData, osmDebugMode, status]);
+  }, [geoJsonData, status]);
 
   useEffect(() => {
     if (status !== "ready") return;
@@ -482,7 +466,6 @@ function MapSurface({
         ROUTE_POINTS_LAYER_ID,
         ROUTE_GEOMETRY_HIT_LAYER_ID,
         DATA_MARKERS_LAYER_ID,
-        OSM_DEBUG_HIT_LAYER_ID,
       ].filter((layerId) => map.getLayer(layerId));
       if (layers.length === 0) return false;
       return map.queryRenderedFeatures(event.point, { layers }).length > 0;
@@ -490,7 +473,6 @@ function MapSurface({
 
     const handleMapClick = (event) => {
       if (draggingPointRef.current !== null) return;
-      if (osmDebugActiveRef.current) return;
       if (hasBlockingClickFeature(event)) return;
       if (isDuplicateRouteClick(lastRouteClickRef.current, event)) return;
 

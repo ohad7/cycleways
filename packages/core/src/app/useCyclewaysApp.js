@@ -1,13 +1,13 @@
 // useCyclewaysApp: the platform-agnostic application controller. It owns all of
 // the app's state, effects, refs, and handlers (route session, asset loading,
-// sharing, map UI, direction animator, and web-only OSM debug) and returns a
+// sharing, map UI, and direction animator) and returns a
 // plain { state + handlers } interface. The web entry (src/App.jsx) renders DOM
 // from it; a future React Native app calls the same hook and renders native UI
 // on top of the MapSurface contract + src/platform adapters. It must stay free
 // of DOM/JSX and browser globals (browser access goes through src/platform).
 // NOTE: large by design — this is a faithful one-move extraction; a follow-up
 // may split it into focused hooks (useMapAssets / useRouteSession /
-// useMapUiState / web-only useOsmDebugOverlay). See
+// useMapUiState). See
 // plans/app-controller-hook/design.md.
 import {
   useCallback,
@@ -28,7 +28,6 @@ import RouteManager from "../../route-manager.js";
 import {
   getQueryParam,
   hasQueryParam,
-  setUrlParam,
   removeUrlParam,
   getShardLoaderLocation,
 } from "../platform/location.js";
@@ -85,26 +84,6 @@ export function useCyclewaysApp() {
     elevationHover: null,
     tutorialOpen: false,
   });
-  const [osmDebug, setOsmDebug] = useState({
-    enabled: false,
-    status: "disabled",
-    geoJson: null,
-    graphEdgesGeoJson: null,
-    graphNodesGeoJson: null,
-    graphSummary: null,
-    cwMatchGeoJson: null,
-    cwMatchSummary: null,
-    intersectionsGeoJson: null,
-    summary: null,
-    intersectionsSummary: null,
-    error: null,
-  });
-  const [hoveredOsmWay, setHoveredOsmWay] = useState(null);
-  const [hoveredOsmGraphEdge, setHoveredOsmGraphEdge] = useState(null);
-  const [hoveredCwOsmMatch, setHoveredCwOsmMatch] = useState(null);
-  const [osmDebugLayerMode, setOsmDebugLayerMode] = useState(() =>
-    getQueryParam("osmLayer") === "graph" ? "graph" : "ways",
-  );
   const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(() => {
     if (!featureFlagValue("routeDiscovery")) return false;
     if (typeof window === "undefined") return false;
@@ -115,8 +94,6 @@ export function useCyclewaysApp() {
       return true;
     }
   });
-  const [selectedCwReviewSegmentId, setSelectedCwReviewSegmentId] =
-    useState(null);
   const routeManagerRef = useRef(null);
   const shardedRouteSessionRef = useRef(null);
   const dragStartSnapshotRef = useRef(null);
@@ -207,143 +184,6 @@ export function useCyclewaysApp() {
     }
 
     load();
-
-    return () => {
-      controller.abort();
-    };
-  }, []);
-
-  useEffect(() => {
-    const enabled = hasQueryParam("osm") || hasQueryParam("osmDebug");
-    if (!enabled) return undefined;
-
-    const controller = new AbortController();
-
-    async function loadOsmDebugOverlay() {
-      setOsmDebug({
-        enabled: true,
-        status: "loading",
-        geoJson: null,
-        graphEdgesGeoJson: null,
-        graphNodesGeoJson: null,
-        graphSummary: null,
-        cwMatchGeoJson: null,
-        cwMatchSummary: null,
-        intersectionsGeoJson: null,
-        summary: null,
-        intersectionsSummary: null,
-        error: null,
-      });
-
-      try {
-        const [
-          geoJsonResponse,
-          summaryResponse,
-          intersectionsResponse,
-          intersectionsSummaryResponse,
-          graphEdgesResponse,
-          graphNodesResponse,
-          graphSummaryResponse,
-          cwMatchResponse,
-          cwMatchSummaryResponse,
-        ] = await Promise.all([
-          fetch("/build/osm/osm-raw-ways.geojson", {
-            signal: controller.signal,
-          }),
-          fetch("/build/osm/osm-summary.json", {
-            signal: controller.signal,
-          }),
-          fetch("/build/osm/osm-intersections.geojson", {
-            signal: controller.signal,
-          }),
-          fetch("/build/osm/osm-intersections-summary.json", {
-            signal: controller.signal,
-          }),
-          fetch("/build/osm/osm-base-edges.geojson", {
-            signal: controller.signal,
-          }),
-          fetch("/build/osm/osm-base-nodes.geojson", {
-            signal: controller.signal,
-          }),
-          fetch("/build/osm/osm-base-graph-summary.json", {
-            signal: controller.signal,
-          }),
-          fetch("/build/osm/cw-osm-match-preview.geojson", {
-            signal: controller.signal,
-          }),
-          fetch("/build/osm/cw-osm-match-summary.json", {
-            signal: controller.signal,
-          }),
-        ]);
-
-        if (!geoJsonResponse.ok) {
-          throw new Error(
-            `OSM debug overlay not found: HTTP ${geoJsonResponse.status}`,
-          );
-        }
-
-        const geoJson = await geoJsonResponse.json();
-        const summary = summaryResponse.ok
-          ? await summaryResponse.json()
-          : null;
-        const intersectionsGeoJson = intersectionsResponse.ok
-          ? await intersectionsResponse.json()
-          : null;
-        const intersectionsSummary = intersectionsSummaryResponse.ok
-          ? await intersectionsSummaryResponse.json()
-          : null;
-        const graphEdgesGeoJson = graphEdgesResponse.ok
-          ? await graphEdgesResponse.json()
-          : null;
-        const graphNodesGeoJson = graphNodesResponse.ok
-          ? await graphNodesResponse.json()
-          : null;
-        const graphSummary = graphSummaryResponse.ok
-          ? await graphSummaryResponse.json()
-          : null;
-        const cwMatchGeoJson = cwMatchResponse.ok
-          ? await cwMatchResponse.json()
-          : null;
-        const cwMatchSummary = cwMatchSummaryResponse.ok
-          ? await cwMatchSummaryResponse.json()
-          : null;
-        if (controller.signal.aborted) return;
-
-        setOsmDebug({
-          enabled: true,
-          status: "ready",
-          geoJson,
-          graphEdgesGeoJson,
-          graphNodesGeoJson,
-          graphSummary,
-          cwMatchGeoJson,
-          cwMatchSummary,
-          intersectionsGeoJson,
-          summary,
-          intersectionsSummary,
-          error: null,
-        });
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        console.warn("Failed to load OSM debug overlay:", error);
-        setOsmDebug({
-          enabled: true,
-          status: "error",
-          geoJson: null,
-          graphEdgesGeoJson: null,
-          graphNodesGeoJson: null,
-          graphSummary: null,
-          cwMatchGeoJson: null,
-          cwMatchSummary: null,
-          intersectionsGeoJson: null,
-          summary: null,
-          intersectionsSummary: null,
-          error,
-        });
-      }
-    }
-
-    loadOsmDebugOverlay();
 
     return () => {
       controller.abort();
@@ -444,53 +284,6 @@ export function useCyclewaysApp() {
   const handleSegmentHover = useCallback((segmentName) => {
     dispatchRoute({ type: "route/setHoveredSegment", segmentName });
   }, []);
-
-  const handleOsmDebugHover = useCallback((osmWay) => {
-    setHoveredOsmWay((current) => {
-      if (!osmWay) return current ? null : current;
-      if (current?.osmId === osmWay.osmId) return current;
-      return osmWay;
-    });
-  }, []);
-
-  const handleOsmGraphEdgeHover = useCallback((graphEdge) => {
-    setHoveredOsmGraphEdge((current) => {
-      if (!graphEdge) return current ? null : current;
-      if (current?.edgeId === graphEdge.edgeId) return current;
-      return graphEdge;
-    });
-  }, []);
-
-  const handleCwOsmMatchHover = useCallback((matchFeature) => {
-    setHoveredCwOsmMatch((current) => {
-      if (!matchFeature) return current ? null : current;
-      if (
-        current?.segmentId === matchFeature.segmentId &&
-        current?.edgeId === matchFeature.edgeId &&
-        current?.kind === matchFeature.kind
-      ) {
-        return current;
-      }
-      return matchFeature;
-    });
-  }, []);
-
-  const handleOsmDebugLayerModeChange = useCallback((mode) => {
-    setOsmDebugLayerMode(mode);
-    setHoveredOsmWay(null);
-    setHoveredOsmGraphEdge(null);
-    setHoveredCwOsmMatch(null);
-
-    setUrlParam("osmLayer", mode === "graph" ? "graph" : null);
-  }, []);
-
-  const handleCwReviewSegmentSelect = useCallback(
-    (segmentId) => {
-      handleOsmDebugLayerModeChange("graph");
-      setSelectedCwReviewSegmentId(segmentId);
-    },
-    [handleOsmDebugLayerModeChange],
-  );
 
   const handleSegmentFocus = useCallback((segmentName) => {
     dispatchRoute({ type: "route/setFocusedSegment", segmentName });
@@ -1135,12 +928,7 @@ export function useCyclewaysApp() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleRedo, handleUndo]);
 
-  const inspectedOsmFeature = mapUi.elevationHover
-    ? null
-    : osmDebugLayerMode === "graph"
-      ? hoveredCwOsmMatch || hoveredOsmGraphEdge
-      : hoveredOsmWay;
-  const inspectedSegment = mapUi.elevationHover || osmDebug.enabled
+  const inspectedSegment = mapUi.elevationHover
     ? null
     : routeState.focusedSegment || routeState.hoveredSegment || null;
   const dataMarkerFeatures = useMemo(
@@ -1191,15 +979,6 @@ export function useCyclewaysApp() {
       routeManagerRef.current,
     );
   }, [inspectedSegment, state.assets, state.status]);
-  const selectedCwReviewFeature = useMemo(() => {
-    if (state.status !== "ready" || selectedCwReviewSegmentId === null) {
-      return null;
-    }
-    return findCyclewaysFeatureById(
-      state.assets.geoJsonData,
-      selectedCwReviewSegmentId,
-    );
-  }, [selectedCwReviewSegmentId, state.assets, state.status]);
   const handleDownloadGpx = useCallback(() => {
     if (routeState.geometry.length < 2) return;
 
@@ -1236,10 +1015,6 @@ export function useCyclewaysApp() {
     state,
     mapUi,
     routeState,
-    osmDebug,
-    osmDebugLayerMode,
-    selectedCwReviewSegmentId,
-    selectedCwReviewFeature,
     canUndo,
     canRedo,
     canDownload,
@@ -1250,7 +1025,6 @@ export function useCyclewaysApp() {
     displayedRoutePoints,
     inspectedSegmentDetails,
     inspectedSegment,
-    inspectedOsmFeature,
     shareUrl,
     shareInfo,
     featureFlags,
@@ -1265,8 +1039,6 @@ export function useCyclewaysApp() {
     handleOpenDownload,
     handleCloseDownload,
     handleDownloadGpx,
-    handleOsmDebugLayerModeChange,
-    handleCwReviewSegmentSelect,
     handleDataMarkerClick,
     handleDataPointFocus,
     handleSelectedDataMarkerClear,
@@ -1282,9 +1054,6 @@ export function useCyclewaysApp() {
     handleSegmentFocus,
     handleSegmentHover,
     handleViewportIdle,
-    handleOsmDebugHover,
-    handleOsmGraphEdgeHover,
-    handleCwOsmMatchHover,
     handleElevationHover,
   };
 }
@@ -1479,19 +1248,6 @@ function routePointWithCoordinates(point, cursor) {
     lat: cursor.lat,
     lng: cursor.lng,
   };
-}
-
-function findCyclewaysFeatureById(geoJsonData, segmentId) {
-  const numericSegmentId = Number(segmentId);
-  if (!Number.isFinite(numericSegmentId)) return null;
-
-  return (
-    geoJsonData?.features?.find(
-      (feature) =>
-        feature?.geometry?.type === "LineString" &&
-        Number(feature?.properties?.id) === numericSegmentId,
-    ) || null
-  );
 }
 
 function getSegmentDetails(

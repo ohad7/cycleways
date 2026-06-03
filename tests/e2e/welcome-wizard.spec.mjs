@@ -14,7 +14,10 @@ test.describe("welcome discover", () => {
     await context.addInitScript(() => {
       window.CYCLEWAYS_FEATURE_FLAGS = { routeDiscovery: true };
       try {
-        localStorage.removeItem("cycleways:skipWelcome");
+        if (!sessionStorage.getItem("cycleways:e2eWelcomeReset")) {
+          localStorage.removeItem("cycleways:skipWelcome");
+          sessionStorage.setItem("cycleways:e2eWelcomeReset", "1");
+        }
       } catch {}
     });
   });
@@ -41,7 +44,7 @@ test.describe("welcome discover", () => {
     await page.goto(
       "/?route=DvsVvkJ2SiQeaAkhgGPtCZde8S8Q8xGxbG4BSY7c32agaEz219fTkrW2ZA",
     );
-    await expect(page.getByRole("button", { name: "מצא מסלול" })).toBeVisible();
+    await expect(page.locator("#route-description")).toContainText("6.5 ק\"מ");
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 

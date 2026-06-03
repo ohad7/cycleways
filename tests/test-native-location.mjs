@@ -15,20 +15,20 @@ assert.equal(getNativeLocationHref(), "cycleways:///");
 assert.equal(getQueryParam("route"), null);
 assert.equal(hasQueryParam("route"), false);
 
-setNativeLocationHref("cycleways:///?route=abc123&osmLayer=graph");
+setNativeLocationHref("cycleways:///?route=abc123&source=test");
 assert.equal(getQueryParam("route"), "abc123");
 assert.equal(hasQueryParam("route"), true);
-assert.equal(getQueryParam("osmLayer"), "graph");
+assert.equal(getQueryParam("source"), "test");
 assert.equal(getShardLoaderLocation().href, "cycleways:///");
 
 setUrlParam("route", "next456");
 assert.equal(getQueryParam("route"), "next456");
-assert.equal(getNativeLocationHref(), "cycleways:///?route=next456&osmLayer=graph");
+assert.equal(getNativeLocationHref(), "cycleways:///?route=next456&source=test");
 
 removeUrlParam("route");
 assert.equal(getQueryParam("route"), null);
 assert.equal(hasQueryParam("route"), false);
-assert.equal(getNativeLocationHref(), "cycleways:///?osmLayer=graph");
+assert.equal(getNativeLocationHref(), "cycleways:///?source=test");
 
 setNativeLocationHref("?route=relative");
 assert.equal(getNativeLocationHref(), "cycleways:///?route=relative");
