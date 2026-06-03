@@ -35,6 +35,7 @@ export default function FeaturedRouteMapSlot({
     handleRouteClick,
     handleDataMarkerClick,
     playerPauseRef,
+    mapLayout,
   } = useFeaturedRoute();
   const [expanded, setExpanded] = useState(false);
   const portalElementRef = useRef(null);
@@ -114,8 +115,12 @@ export default function FeaturedRouteMapSlot({
   ), []);
 
   if (status !== "ready" || routeState.geometry.length < 2) return null;
-  if (variant === "mobile" && !isMobile) return null;
-  if (variant === "desktop" && isMobile) return null;
+  // The in-shell "mobile" slot is the PiP map: shown on mobile, and on desktop
+  // when the overlay layout is active. The "desktop" slot is the rail map:
+  // shown only on the desktop default layout.
+  const overlay = mapLayout === "overlay";
+  if (variant === "mobile" && !(isMobile || overlay)) return null;
+  if (variant === "desktop" && (isMobile || overlay)) return null;
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
   const variantLabel = isMobile ? "פתח מפה גדולה" : "הגדל מפה";
