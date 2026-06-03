@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 
 test("splash paints with logo, title, and progress bar", async ({ page }) => {
+  // Block external scripts so milestones don't fire and advance the bar
+  // before we can observe the initial 15% default.
+  await page.route("**/mapbox-gl.js", (route) => route.abort());
+  await page.route("**/src/main.jsx", (route) => route.abort());
   await page.goto("/", { waitUntil: "commit" });
   const splash = page.locator("#splash");
   await expect(splash).toBeVisible();
@@ -52,4 +56,17 @@ test("window.__splash API advances the bar and removes the splash", async ({
   // done() hides then removes the node
   await page.evaluate(() => window.__splash.done());
   await expect(splash).toHaveCount(0);
+});
+
+test("splash is removed once the app is ready", async ({ page }) => {
+  await page.goto("/");
+  // App has rendered its header
+  await expect(
+    page.getByRole("heading", {
+      name: "מפת שבילי אופניים - גליל עליון וגולן",
+      exact: true,
+    }),
+  ).toBeVisible();
+  // Splash has been removed (not just hidden)
+  await expect(page.locator("#splash")).toHaveCount(0);
 });
