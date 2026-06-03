@@ -104,6 +104,14 @@ export async function getBaseRoutingDecodeAssets({ log = defaultLog } = {}) {
   return cachedBaseRoutingDecode;
 }
 
+// Clear the module-scope decode caches. The long-lived editor must call this
+// after a promote so that subsequent decodes read freshly promoted assets
+// (segments/bike-roads/base-routing shards) instead of stale cached copies.
+export function invalidateFeaturedAssetCache() {
+  cachedFeaturedAssets = null;
+  cachedBaseRoutingDecode = null;
+}
+
 async function resolveRouteTokenForSlug(slug, {
   draftCatalogPath = null,
   log = defaultLog,
@@ -147,6 +155,9 @@ export async function loadRouteStateForSlug(slug, {
   );
   const routeState = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
   if (!routeState) throw new Error(`route "${slug}" failed to decode`);
+  // Decode the payload again only to read its `.type`. restoreRouteFromParam
+  // does not surface the format, and decodeRoutePayload is a cheap pure parse
+  // (no routing/manager work), so the second call is intentional and harmless.
   const routeFormat = decodeRoutePayload(routeToken).type;
   return { routeState, routeToken, routeFormat };
 }
@@ -267,7 +278,13 @@ async function writeSnapshotAtomic(slug, snapshot) {
   const target = resolve(featuredRoutesDir, `${slug}.json`);
   const tmp = `${target}.tmp`;
   await writeFile(tmp, `${JSON.stringify(snapshot, null, 2)}\n`);
-  await rename(tmp, target);
+  try {
+    await rename(tmp, target);
+  } catch (err) {
+    // Don't leak the tmp file if rename fails (e.g. cross-device, permissions).
+    await rm(tmp, { force: true });
+    throw err;
+  }
   return target;
 }
 

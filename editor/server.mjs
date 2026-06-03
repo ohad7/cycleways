@@ -18,6 +18,7 @@ import {
   loadFeaturedAssetsFromDisk,
   getBaseRoutingDecodeAssets,
   loadRoutePolylineForSlug,
+  invalidateFeaturedAssetCache,
 } from "../scripts/lib/featuredRouteSnapshotBuilder.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -2085,6 +2086,10 @@ async function handlePromote(payload = {}) {
         await copyFileAtomic(target.source, target.target);
       }
     }
+    // Promoted assets changed on disk; drop the long-lived decode caches so
+    // featured-route decoding (keyframe polyline, catalog, Phase 2 snapshots)
+    // reads the freshly promoted data instead of stale cached copies.
+    invalidateFeaturedAssetCache();
   }
   removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun));
 
