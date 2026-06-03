@@ -1,4 +1,4 @@
-import { cp, copyFile, mkdir } from "node:fs/promises";
+import { cp, copyFile, mkdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,4 +49,36 @@ for (const directoryPath of directories) {
     force: true,
   });
   console.log(`Copied ${directoryPath}/`);
+}
+
+const builtIndex = resolve(distDir, "index.html");
+if (existsSync(builtIndex)) {
+  await copyFile(builtIndex, resolve(distDir, "404.html"));
+  console.log("Copied built index.html to 404.html");
+
+  const spaShellDirectories = new Set(["featured"]);
+  try {
+    const catalog = JSON.parse(
+      await readFile(resolve(repoRoot, "public-data/route-catalog.json"), "utf8"),
+    );
+    for (const entry of catalog.entries || []) {
+      if (!entry?.featured || typeof entry.slug !== "string") continue;
+      if (!/^[a-z0-9-]+$/.test(entry.slug)) {
+        console.warn(`Skipping featured route with unsafe slug: ${entry.slug}`);
+        continue;
+      }
+      spaShellDirectories.add(`featured/${entry.slug}`);
+    }
+  } catch (error) {
+    console.warn(`Skipping featured route shells: ${error.message}`);
+  }
+
+  for (const directoryPath of spaShellDirectories) {
+    const destination = resolve(distDir, directoryPath, "index.html");
+    await mkdir(dirname(destination), { recursive: true });
+    await copyFile(builtIndex, destination);
+    console.log(`Copied SPA shell to ${directoryPath}/index.html`);
+  }
+} else {
+  console.warn("Skipping SPA fallback: dist/index.html is missing");
 }
