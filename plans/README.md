@@ -46,3 +46,4 @@ Current plans:
 - `featured-route-map-snapshots/` - design and implementation plan for generated featured-route read-only map snapshots and a lean public map mode that avoids planner-only assets.
 - `loading-splash/` - design for an instant inline loading splash (branded logo + real-milestone progress bar) in index.html to remove the slow-network "dead gap" before React mounts.
 - `banias-gan-hatsafon-page/` - design and implementation plan for the Banias/Gan HaTzafon featured page, generalizing the sovev video-first scaffold into a reusable `FeaturedVideoRoute` template (and renaming the `sbh-` CSS prefix to `fv-`).
+- `featured-desktop-overlay-layout/` - design for an opt-in (`?layout=overlay`) desktop featured-page layout that moves the map to a PiP on the video (like mobile) and fills the rail with the route description, a stats block, and an interactive synced elevation graph.
