@@ -1,5 +1,5 @@
 import { getJsonAsset } from "../platform/assets.js";
-import { emptyRouteSnapshot } from "../routing/routeActions.js";
+import { emptyRouteSnapshot } from "../routing/routeSnapshot.js";
 
 const FEATURED_ROUTES_BASE_PATH = "public-data/featured-routes";
 const SUPPORTED_SCHEMA_VERSION = 1;

@@ -13,6 +13,12 @@ import {
   projectPointToRouteGeometry,
   ROUTE_DATA_POINT_TRIGGER_DISTANCE_METERS,
 } from "../utils/route-data.js";
+import { emptyRouteSnapshot } from "./routeSnapshot.js";
+
+// Re-exported so existing importers of routeActions keep working. The shape
+// itself lives in routeSnapshot.js (dependency-free) so read-only consumers can
+// import it without pulling in the routing engine.
+export { emptyRouteSnapshot };
 
 export async function createRouteManager(
   RouteManagerClass,
@@ -158,19 +164,6 @@ export function snapshotRouteManager(manager, segmentsData) {
       geometry,
       segmentsData,
     ),
-  };
-}
-
-export function emptyRouteSnapshot() {
-  return {
-    points: [],
-    selectedSegments: [],
-    geometry: [],
-    distance: 0,
-    elevationGain: 0,
-    elevationLoss: 0,
-    activeDataPoints: [],
-    routeFailure: null,
   };
 }
 

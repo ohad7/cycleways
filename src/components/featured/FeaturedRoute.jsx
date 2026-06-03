@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./featured.css";
 import { useIsMobile } from "./useIsMobile.js";
-import { emptyRouteSnapshot } from "@cycleways/core/routing/routeActions.js";
+import { emptyRouteSnapshot } from "@cycleways/core/routing/routeSnapshot.js";
 import {
   loadFeaturedRouteSnapshot,
   snapshotToRouteState,
