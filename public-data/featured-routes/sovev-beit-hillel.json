@@ -1,0 +1,1298 @@
+{
+  "schemaVersion": 1,
+  "slug": "sovev-beit-hillel",
+  "generatedAt": "2026-06-03T20:22:01.560Z",
+  "source": {
+    "routeTokenHash": "sha256:1b4e57e3cc362d4c8869f0ade487f914867a1954b2794ea94764cfacae1e5dfb",
+    "routeFormat": "compact_route",
+    "mapVersion": "614bca21406d",
+    "assetHashes": {
+      "bikeRoads": "9271f86bb84ca425af03c519b10cb0c0d286a23d579513e1e6032bfe2159bf7e",
+      "segments": "06ad171eb05883d8468a9d837532b501c1ddad39e8b08c565273b1468b66d1be",
+      "cwBaseIndex": "23ec80fb6177b47e2df7665b5e24bd8ee438e839dc750c02c8bbb43362c9b2d4",
+      "baseRoutingShards": "b3292839ca238ab5490b920f03e5e200f28a828de716d5fd5bae8b1f19958e3e"
+    }
+  },
+  "route": {
+    "geometry": [
+      {
+        "lat": 33.21745724452543,
+        "lng": 35.609301216990005,
+        "elevation": 90.45954525453358
+      },
+      {
+        "lat": 33.217453,
+        "lng": 35.609306,
+        "elevation": 90.45243162513319
+      },
+      {
+        "lat": 33.217428,
+        "lng": 35.609301,
+        "elevation": 90.42152074474836
+      },
+      {
+        "lat": 33.217095,
+        "lng": 35.609229,
+        "elevation": 90.00884286497347
+      },
+      {
+        "lat": 33.216543,
+        "lng": 35.609062,
+        "elevation": 89.3144615181145
+      },
+      {
+        "lat": 33.216287,
+        "lng": 35.609099,
+        "elevation": 89
+      },
+      {
+        "lat": 33.21623575862389,
+        "lng": 35.60909797625011,
+        "elevation": 89
+      },
+      {
+        "lat": 33.215336,
+        "lng": 35.60908,
+        "elevation": 89
+      },
+      {
+        "lat": 33.214923,
+        "lng": 35.60933,
+        "elevation": 89
+      },
+      {
+        "lat": 33.214647,
+        "lng": 35.610283,
+        "elevation": 89
+      },
+      {
+        "lat": 33.214444,
+        "lng": 35.610452,
+        "elevation": 89
+      },
+      {
+        "lat": 33.214109,
+        "lng": 35.610423,
+        "elevation": 89
+      },
+      {
+        "lat": 33.212587,
+        "lng": 35.610755,
+        "elevation": 89
+      },
+      {
+        "lat": 33.212278,
+        "lng": 35.610762,
+        "elevation": 89
+      },
+      {
+        "lat": 33.211973,
+        "lng": 35.610582,
+        "elevation": 89
+      },
+      {
+        "lat": 33.211662,
+        "lng": 35.61044,
+        "elevation": 89
+      },
+      {
+        "lat": 33.211244,
+        "lng": 35.610494,
+        "elevation": 89
+      },
+      {
+        "lat": 33.210876,
+        "lng": 35.610541,
+        "elevation": 88.88174937827061
+      },
+      {
+        "lat": 33.210781,
+        "lng": 35.610459,
+        "elevation": 88.84430780300916
+      },
+      {
+        "lat": 33.210666,
+        "lng": 35.610477,
+        "elevation": 88.80724993295033
+      },
+      {
+        "lat": 33.210103,
+        "lng": 35.610812,
+        "elevation": 88.60630431057638
+      },
+      {
+        "lat": 33.20986,
+        "lng": 35.611079,
+        "elevation": 88.50083926176936
+      },
+      {
+        "lat": 33.209783,
+        "lng": 35.611101,
+        "elevation": 88.47554348064108
+      },
+      {
+        "lat": 33.209484,
+        "lng": 35.610971,
+        "elevation": 88.37388403389433
+      },
+      {
+        "lat": 33.209195,
+        "lng": 35.611153,
+        "elevation": 88.269510589688
+      },
+      {
+        "lat": 33.209018,
+        "lng": 35.611185,
+        "elevation": 88.21231322798535
+      },
+      {
+        "lat": 33.208824,
+        "lng": 35.611178,
+        "elevation": 88.15029922210411
+      },
+      {
+        "lat": 33.208509,
+        "lng": 35.611159,
+        "elevation": 88.04952414624927
+      },
+      {
+        "lat": 33.20829,
+        "lng": 35.611286,
+        "elevation": 87.97174887152507
+      },
+      {
+        "lat": 33.208038,
+        "lng": 35.611448,
+        "elevation": 87.88032314464016
+      },
+      {
+        "lat": 33.207909,
+        "lng": 35.61145,
+        "elevation": 87.83910233816702
+      },
+      {
+        "lat": 33.20714,
+        "lng": 35.610877,
+        "elevation": 87.54955664452584
+      },
+      {
+        "lat": 33.206656,
+        "lng": 35.610356,
+        "elevation": 87.34143482968948
+      },
+      {
+        "lat": 33.206434,
+        "lng": 35.610067,
+        "elevation": 87.23655112687207
+      },
+      {
+        "lat": 33.206383,
+        "lng": 35.609958,
+        "elevation": 87.20316447772379
+      },
+      {
+        "lat": 33.206316,
+        "lng": 35.609864,
+        "elevation": 87.17015253978416
+      },
+      {
+        "lat": 33.206168,
+        "lng": 35.609853,
+        "elevation": 87.12277308007226
+      },
+      {
+        "lat": 33.205785,
+        "lng": 35.60989,
+        "elevation": 87
+      },
+      {
+        "lat": 33.205683,
+        "lng": 35.609972,
+        "elevation": 86.87376037500154
+      },
+      {
+        "lat": 33.205628,
+        "lng": 35.61018,
+        "elevation": 86.68632408232197
+      },
+      {
+        "lat": 33.205595,
+        "lng": 35.610461,
+        "elevation": 86.44250831179058
+      },
+      {
+        "lat": 33.205512,
+        "lng": 35.610858,
+        "elevation": 86.09089837780368
+      },
+      {
+        "lat": 33.205415,
+        "lng": 35.611016,
+        "elevation": 85.92251203577882
+      },
+      {
+        "lat": 33.20532,
+        "lng": 35.611023,
+        "elevation": 85.82476774697557
+      },
+      {
+        "lat": 33.205265,
+        "lng": 35.610959,
+        "elevation": 85.7459368857863
+      },
+      {
+        "lat": 33.20517,
+        "lng": 35.61072,
+        "elevation": 85.51858004049153
+      },
+      {
+        "lat": 33.205118,
+        "lng": 35.61045,
+        "elevation": 85.28051494528141
+      },
+      {
+        "lat": 33.205001,
+        "lng": 35.610155,
+        "elevation": 85
+      },
+      {
+        "lat": 33.204815,
+        "lng": 35.60988,
+        "elevation": 84.9518428115218
+      },
+      {
+        "lat": 33.204458,
+        "lng": 35.60975,
+        "elevation": 84.89109908541046
+      },
+      {
+        "lat": 33.203948,
+        "lng": 35.609412,
+        "elevation": 84.7961811107628
+      },
+      {
+        "lat": 33.203501,
+        "lng": 35.609316,
+        "elevation": 84.72226062759498
+      },
+      {
+        "lat": 33.203359,
+        "lng": 35.609376,
+        "elevation": 84.69774630441418
+      },
+      {
+        "lat": 33.202995,
+        "lng": 35.609672,
+        "elevation": 84.62608652491379
+      },
+      {
+        "lat": 33.20256,
+        "lng": 35.609556,
+        "elevation": 84.5535434730081
+      },
+      {
+        "lat": 33.201844,
+        "lng": 35.609615,
+        "elevation": 84.43672840495802
+      },
+      {
+        "lat": 33.201732,
+        "lng": 35.609646,
+        "elevation": 84.41801642324239
+      },
+      {
+        "lat": 33.201446,
+        "lng": 35.609888,
+        "elevation": 84.36097973245079
+      },
+      {
+        "lat": 33.201298,
+        "lng": 35.609956,
+        "elevation": 84.33517189560908
+      },
+      {
+        "lat": 33.201174,
+        "lng": 35.609938,
+        "elevation": 84.31484093340478
+      },
+      {
+        "lat": 33.200678,
+        "lng": 35.60933,
+        "elevation": 84.19919435883565
+      },
+      {
+        "lat": 33.20031,
+        "lng": 35.609082,
+        "elevation": 84.13043064612538
+      },
+      {
+        "lat": 33.200058,
+        "lng": 35.609023,
+        "elevation": 84.08863464735529
+      },
+      {
+        "lat": 33.199762,
+        "lng": 35.609162,
+        "elevation": 84.03687083660213
+      },
+      {
+        "lat": 33.199599,
+        "lng": 35.60935,
+        "elevation": 84
+      },
+      {
+        "lat": 33.199384,
+        "lng": 35.60849,
+        "elevation": 83.02157079128826
+      },
+      {
+        "lat": 33.19943652940277,
+        "lng": 35.60789295849538,
+        "elevation": 82.36715001627817
+      },
+      {
+        "lat": 33.199466,
+        "lng": 35.607558,
+        "elevation": 82
+      },
+      {
+        "lat": 33.198752,
+        "lng": 35.607699,
+        "elevation": 82.56483948454705
+      },
+      {
+        "lat": 33.198648,
+        "lng": 35.607715,
+        "elevation": 82.64668209879815
+      },
+      {
+        "lat": 33.198594,
+        "lng": 35.607712,
+        "elevation": 82.6888750078657
+      },
+      {
+        "lat": 33.198549,
+        "lng": 35.607672,
+        "elevation": 82.73264828543624
+      },
+      {
+        "lat": 33.198508,
+        "lng": 35.607555,
+        "elevation": 82.81549246986663
+      },
+      {
+        "lat": 33.198448,
+        "lng": 35.607462,
+        "elevation": 82.89218905289334
+      },
+      {
+        "lat": 33.198384,
+        "lng": 35.607433,
+        "elevation": 82.94561172685948
+      },
+      {
+        "lat": 33.198285,
+        "lng": 35.607432,
+        "elevation": 83.02288470430445
+      },
+      {
+        "lat": 33.19809,
+        "lng": 35.607448,
+        "elevation": 83.17544193278295
+      },
+      {
+        "lat": 33.198023,
+        "lng": 35.607463,
+        "elevation": 83.22864566167684
+      },
+      {
+        "lat": 33.197944,
+        "lng": 35.607465,
+        "elevation": 83.29031956840149
+      },
+      {
+        "lat": 33.197894,
+        "lng": 35.607409,
+        "elevation": 83.34380482991467
+      },
+      {
+        "lat": 33.197878,
+        "lng": 35.607341,
+        "elevation": 83.38993910261186
+      },
+      {
+        "lat": 33.198156,
+        "lng": 35.606468,
+        "elevation": 84
+      },
+      {
+        "lat": 33.198185,
+        "lng": 35.606186,
+        "elevation": 83.89115322247522
+      },
+      {
+        "lat": 33.198205,
+        "lng": 35.605952,
+        "elevation": 83.8010416004795
+      },
+      {
+        "lat": 33.198225,
+        "lng": 35.605669,
+        "elevation": 83.69223858484798
+      },
+      {
+        "lat": 33.198238,
+        "lng": 35.605326,
+        "elevation": 83.56070090452612
+      },
+      {
+        "lat": 33.19833,
+        "lng": 35.602093,
+        "elevation": 82.32142655299391
+      },
+      {
+        "lat": 33.198334,
+        "lng": 35.601415,
+        "elevation": 82.06167926387447
+      },
+      {
+        "lat": 33.198349,
+        "lng": 35.601255,
+        "elevation": 82
+      },
+      {
+        "lat": 33.198354,
+        "lng": 35.601209,
+        "elevation": 82.02173316986595
+      },
+      {
+        "lat": 33.19837,
+        "lng": 35.601159,
+        "elevation": 82.04681390462099
+      },
+      {
+        "lat": 33.198413,
+        "lng": 35.601115,
+        "elevation": 82.07851005793225
+      },
+      {
+        "lat": 33.198452,
+        "lng": 35.601101,
+        "elevation": 82.10131054152508
+      },
+      {
+        "lat": 33.198491,
+        "lng": 35.601107,
+        "elevation": 82.12332734777429
+      },
+      {
+        "lat": 33.198549,
+        "lng": 35.601136,
+        "elevation": 82.15853009551053
+      },
+      {
+        "lat": 33.199528,
+        "lng": 35.601628,
+        "elevation": 82.75318074054555
+      },
+      {
+        "lat": 33.199616,
+        "lng": 35.601654,
+        "elevation": 82.80393653720449
+      },
+      {
+        "lat": 33.199702,
+        "lng": 35.601663,
+        "elevation": 82.85227331817356
+      },
+      {
+        "lat": 33.199772,
+        "lng": 35.601664,
+        "elevation": 82.89147002196925
+      },
+      {
+        "lat": 33.199856,
+        "lng": 35.601652,
+        "elevation": 82.93883754731154
+      },
+      {
+        "lat": 33.199961,
+        "lng": 35.601616,
+        "elevation": 83
+      },
+      {
+        "lat": 33.20045,
+        "lng": 35.601378,
+        "elevation": 83
+      },
+      {
+        "lat": 33.200547,
+        "lng": 35.601253,
+        "elevation": 83
+      },
+      {
+        "lat": 33.200668,
+        "lng": 35.60117,
+        "elevation": 83
+      },
+      {
+        "lat": 33.200768,
+        "lng": 35.601121,
+        "elevation": 83
+      },
+      {
+        "lat": 33.202248,
+        "lng": 35.600511,
+        "elevation": 83
+      },
+      {
+        "lat": 33.202553,
+        "lng": 35.600388,
+        "elevation": 83
+      },
+      {
+        "lat": 33.202732,
+        "lng": 35.600323,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203033,
+        "lng": 35.600318,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203194,
+        "lng": 35.60029,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203478,
+        "lng": 35.600215,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203571,
+        "lng": 35.600173,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203654,
+        "lng": 35.600127,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203716,
+        "lng": 35.600072,
+        "elevation": 83
+      },
+      {
+        "lat": 33.20376,
+        "lng": 35.600009,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203793,
+        "lng": 35.599945,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203827,
+        "lng": 35.599905,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203891,
+        "lng": 35.599855,
+        "elevation": 83
+      },
+      {
+        "lat": 33.203962,
+        "lng": 35.599815,
+        "elevation": 83
+      },
+      {
+        "lat": 33.205324,
+        "lng": 35.599218,
+        "elevation": 83
+      },
+      {
+        "lat": 33.205499,
+        "lng": 35.599162,
+        "elevation": 83
+      },
+      {
+        "lat": 33.205551,
+        "lng": 35.599151,
+        "elevation": 83
+      },
+      {
+        "lat": 33.205629,
+        "lng": 35.59915,
+        "elevation": 83.04509355971439
+      },
+      {
+        "lat": 33.205712,
+        "lng": 35.599157,
+        "elevation": 83.09319428622659
+      },
+      {
+        "lat": 33.206359,
+        "lng": 35.599288,
+        "elevation": 83.47254732052785
+      },
+      {
+        "lat": 33.208958,
+        "lng": 35.599857,
+        "elevation": 85
+      },
+      {
+        "lat": 33.209555,
+        "lng": 35.599979,
+        "elevation": 85.53859166319029
+      },
+      {
+        "lat": 33.209793,
+        "lng": 35.600034,
+        "elevation": 85.75415501648936
+      },
+      {
+        "lat": 33.21002,
+        "lng": 35.600095,
+        "elevation": 85.96105591118356
+      },
+      {
+        "lat": 33.213284,
+        "lng": 35.601305,
+        "elevation": 89
+      },
+      {
+        "lat": 33.213868,
+        "lng": 35.601522,
+        "elevation": 90.32434515108083
+      },
+      {
+        "lat": 33.214391,
+        "lng": 35.601709,
+        "elevation": 91.50648284282674
+      },
+      {
+        "lat": 33.214479,
+        "lng": 35.601752,
+        "elevation": 91.71235461224059
+      },
+      {
+        "lat": 33.214589,
+        "lng": 35.601841,
+        "elevation": 92
+      },
+      {
+        "lat": 33.214657,
+        "lng": 35.601911,
+        "elevation": 92
+      },
+      {
+        "lat": 33.214786,
+        "lng": 35.602052,
+        "elevation": 92
+      },
+      {
+        "lat": 33.214897,
+        "lng": 35.60219,
+        "elevation": 92
+      },
+      {
+        "lat": 33.214986,
+        "lng": 35.602294,
+        "elevation": 92
+      },
+      {
+        "lat": 33.21516,
+        "lng": 35.60205,
+        "elevation": 92
+      },
+      {
+        "lat": 33.215299,
+        "lng": 35.602,
+        "elevation": 92
+      },
+      {
+        "lat": 33.215513,
+        "lng": 35.602071,
+        "elevation": 92
+      },
+      {
+        "lat": 33.215968,
+        "lng": 35.602243,
+        "elevation": 92
+      },
+      {
+        "lat": 33.21644296715361,
+        "lng": 35.60242708490273,
+        "elevation": 92
+      },
+      {
+        "lat": 33.216644,
+        "lng": 35.602505,
+        "elevation": 92
+      },
+      {
+        "lat": 33.217685,
+        "lng": 35.602983,
+        "elevation": 92
+      },
+      {
+        "lat": 33.21809,
+        "lng": 35.603176,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218254,
+        "lng": 35.603313,
+        "elevation": 92
+      },
+      {
+        "lat": 33.21859,
+        "lng": 35.603746,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218706,
+        "lng": 35.603972,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218766,
+        "lng": 35.604259,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218881,
+        "lng": 35.604782,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218888,
+        "lng": 35.605038,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218627,
+        "lng": 35.606499,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218531,
+        "lng": 35.607206,
+        "elevation": 92
+      },
+      {
+        "lat": 33.21855,
+        "lng": 35.607644,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218608,
+        "lng": 35.607934,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218668,
+        "lng": 35.608164,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218757,
+        "lng": 35.60837,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218865,
+        "lng": 35.60856,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218949,
+        "lng": 35.608682,
+        "elevation": 92
+      },
+      {
+        "lat": 33.219076,
+        "lng": 35.608882,
+        "elevation": 92
+      },
+      {
+        "lat": 33.219129,
+        "lng": 35.609009,
+        "elevation": 92
+      },
+      {
+        "lat": 33.219135,
+        "lng": 35.609102,
+        "elevation": 92
+      },
+      {
+        "lat": 33.219096,
+        "lng": 35.609189,
+        "elevation": 92
+      },
+      {
+        "lat": 33.219002,
+        "lng": 35.609261,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218829,
+        "lng": 35.609317,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218752,
+        "lng": 35.609321,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218655,
+        "lng": 35.609327,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218586,
+        "lng": 35.609348,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218558,
+        "lng": 35.609433,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218559,
+        "lng": 35.609433,
+        "elevation": 92
+      },
+      {
+        "lat": 33.218493,
+        "lng": 35.609416,
+        "elevation": 91.92229036315783
+      },
+      {
+        "lat": 33.218412,
+        "lng": 35.609375,
+        "elevation": 91.8210449500792
+      },
+      {
+        "lat": 33.218323,
+        "lng": 35.609323,
+        "elevation": 91.70702349766292
+      },
+      {
+        "lat": 33.218308320308616,
+        "lng": 35.609312550050205,
+        "elevation": 91.68735785286994
+      },
+      {
+        "lat": 33.218146,
+        "lng": 35.609197,
+        "elevation": 91.4699054931062
+      },
+      {
+        "lat": 33.217791,
+        "lng": 35.608956,
+        "elevation": 91
+      },
+      {
+        "lat": 33.217721,
+        "lng": 35.609004,
+        "elevation": 90.90158729935918
+      },
+      {
+        "lat": 33.21749908153497,
+        "lng": 35.609254072300146,
+        "elevation": 90.5296621583703
+      }
+    ],
+    "bounds": {
+      "west": 35.59915,
+      "south": 33.197878,
+      "east": 35.61145,
+      "north": 33.219135
+    },
+    "distance": 6478.208844215283,
+    "elevationGain": 12,
+    "elevationLoss": 11.929883096163277,
+    "selectedSegments": [
+      "שביל אופניים חצבאני חופים צפוני",
+      "שביל אופניים חצבאני בית הלל",
+      "גדר המערכת בית הלל",
+      "רחוב הדולב בית הלל מערב",
+      "גדר מערכת בית הלל צפון",
+      "כביש 9888 סדנה",
+      "שביל אופניים חצבאני חופים צפוני"
+    ]
+  },
+  "pois": {
+    "activeDataPoints": [
+      {
+        "id": "poi-1a4c1f16",
+        "type": "beach",
+        "information": "חוף רחצה על נחל שניר, עם כניסה דרך שער 1.",
+        "location": [
+          33.21628,
+          35.609092
+        ],
+        "name": "חוף קולומביה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1a4c1f16-b96c2372.webp",
+            "thumbnail": "public-data/poi-images/poi-1a4c1f16-b96c2372-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-1a4c1f16-fae02a20.webp",
+            "thumbnail": "public-data/poi-images/poi-1a4c1f16-fae02a20-thumb.webp"
+          }
+        ],
+        "description": "חוף קטן וקצת יותר פראי עם כניסה דרך שער 1. משום מה הוא נקרא חוף קולומביה, נשמח לדעת למה ביום מן הימים",
+        "segmentName": "שביל אופניים חצבאני חופים צפוני",
+        "routeDistanceMeters": 0.6381037076989361,
+        "routeProgressMeters": 133.87801672902518,
+        "routeFraction": 0.0206641440556412
+      },
+      {
+        "id": "poi-857aa85d",
+        "type": "beach",
+        "information": "חוף נהדר, מרווח, גישה נוחה למים, מלא עצי תות",
+        "location": [
+          33.214461,
+          35.610436
+        ],
+        "name": "חוף בורגר",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-857aa85d-088f1532.webp",
+            "thumbnail": "public-data/poi-images/poi-857aa85d-088f1532-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-857aa85d-f6c5e9be.webp",
+            "thumbnail": "public-data/poi-images/poi-857aa85d-f6c5e9be-thumb.webp"
+          }
+        ],
+        "description": "דרך שער 2, חוף רחב ומרווח על נחל שניר, עם גישה נוחה למים שמתאימה גם למשפחות, ועצי תות שמטילים צל  על הגדה (ובעונה — גם פינוק מתוק היישר מהענף). מקום מצוין לפרוס מגבת ולשכשך רגלים.",
+        "segmentName": "שביל אופניים חצבאני חופים צפוני",
+        "routeDistanceMeters": 0.14319314429908492,
+        "routeProgressMeters": 409.2211382523178,
+        "routeFraction": 0.06316350329998596
+      },
+      {
+        "id": "poi-d2081ac2",
+        "type": "beach",
+        "information": "בכניסה משער 5, חוף קטן תחת עצי דולב בעיקול הנחל",
+        "location": [
+          33.205265,
+          35.610959
+        ],
+        "name": "חוף ללא שם בעיקול הנחל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-000a5417.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-000a5417-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-2e6d4024.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-2e6d4024-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-4f4272c3.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-4f4272c3-thumb.webp"
+          }
+        ],
+        "description": "בשער 5 הנחל מתעקל בחדות, לצד העיקול שוכנת בריכת דגים שקטה, לחוף הזה אין שם אבל יש שם עץ דולב ענקי וירידה חביבה לחצבאני",
+        "segmentName": "שביל אופניים חצבאני בית הלל",
+        "routeDistanceMeters": 0,
+        "routeProgressMeters": 1608.8000633502131,
+        "routeFraction": 0.2483191570807456
+      },
+      {
+        "id": "poi-f5fd1f27",
+        "type": "beach",
+        "information": "חוף מגניב ומרוחק, מרחק שתי דקות הליכה משער 8",
+        "location": [
+          33.201237,
+          35.609947
+        ],
+        "name": "חוף האקליפטוס",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-f5fd1f27-34405fc1.webp",
+            "thumbnail": "public-data/poi-images/poi-f5fd1f27-34405fc1-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-f5fd1f27-8267032a.webp",
+            "thumbnail": "public-data/poi-images/poi-f5fd1f27-8267032a-thumb.webp"
+          }
+        ],
+        "description": "אקליפטוס ענק מסמן את הנקודה, וממנו שביל קצר של כשתי דקות מוביל אל גדת הנחל. הטרחה הקטנה משתלמת — המים כאן שקטים יותר, הצל נדיב, והתחושה היא של פינה פרטית.",
+        "segmentName": "שביל אופניים חצבאני בית הלל",
+        "routeDistanceMeters": 0.013425032692755252,
+        "routeProgressMeters": 2150.5946649912653,
+        "routeFraction": 0.33194544592501535
+      },
+      {
+        "id": "poi-95010070",
+        "type": "cafe",
+        "information": "עצירה טובה לקפה",
+        "location": [
+          33.200456,
+          35.601372
+        ],
+        "name": "פרישטיק",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-95010070-e9f669c1.webp",
+            "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
+          }
+        ],
+        "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.",
+        "segmentName": "גדר המערכת בית הלל",
+        "routeDistanceMeters": 0.11121577194417649,
+        "routeProgressMeters": 3572.279125128087,
+        "routeFraction": 0.5513832087759237
+      },
+      {
+        "id": "poi-c723c695",
+        "type": "tree",
+        "information": "בסוף האביב פריחה של חוטמית זיפנית בשלל צבעים",
+        "location": [
+          33.198283,
+          35.603713
+        ],
+        "name": "חוטמית זיפנית",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-c723c695-dc902444.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-dc902444-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-c723c695-5408f7d0.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-5408f7d0-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-c723c695-03220773.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-03220773-thumb.webp"
+          }
+        ],
+        "description": "בשלהי האביב החוטמית הזיפנית מתנשאת בקנים גבוהים ופורחת בגוונים של ורוד, סגול ולבן, נדיר לראות את כל הצבעים פורחים יחד בטבע. בשאר השנה זו פינת בר ירוקה ושקטה.",
+        "segmentName": "גדר המערכת בית הלל",
+        "routeDistanceMeters": 0.10006749353668995,
+        "routeProgressMeters": 3085.240545722904,
+        "routeFraction": 0.47620854148268177
+      },
+      {
+        "id": "poi-75f40178",
+        "type": "tree",
+        "information": "בית הלל מלא במטעי פקאן שלווים ומרשימים",
+        "location": [
+          33.205539,
+          35.599154
+        ],
+        "name": "מטעי פקאן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-75f40178-b465e980.webp",
+            "thumbnail": "public-data/poi-images/poi-75f40178-b465e980-thumb.webp"
+          }
+        ],
+        "description": "מטעי פקאן רחבי ידיים, שבהם שורות העצים הגבוהים יוצרות מסדרון מוצל ונעים.  האור חודר בין העלים והשקט כמעט מוחלט — פינה ירוקה ורגועה לעצור ולהנות מהיופי והצל. המטעים הם רכוש המושב ופרנסת החקלאים, אנא כבדו את המקום, וכמובן לא לקטוף",
+        "segmentName": "גדר המערכת בית הלל",
+        "routeDistanceMeters": 0.04239464310667594,
+        "routeProgressMeters": 4182.350592201109,
+        "routeFraction": 0.6455480686076136
+      }
+    ],
+    "dataMarkerFeatures": [
+      {
+        "type": "Feature",
+        "id": "poi-1a4c1f16",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.609092,
+            33.21628
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-1a4c1f16",
+          "type": "beach",
+          "name": "חוף קולומביה",
+          "information": "חוף רחצה על נחל שניר, עם כניסה דרך שער 1.",
+          "description": "חוף קטן וקצת יותר פראי עם כניסה דרך שער 1. משום מה הוא נקרא חוף קולומביה, נשמח לדעת למה ביום מן הימים",
+          "photo": "public-data/poi-images/poi-1a4c1f16-b96c2372.webp",
+          "thumbnail": "public-data/poi-images/poi-1a4c1f16-b96c2372-thumb.webp",
+          "segmentName": "שביל אופניים חצבאני חופים צפוני",
+          "emoji": "🏖️",
+          "label": "חוף",
+          "color": "#d99f3d",
+          "icon": "poi-emoji-beach"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-857aa85d",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.610436,
+            33.214461
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-857aa85d",
+          "type": "beach",
+          "name": "חוף בורגר",
+          "information": "חוף נהדר, מרווח, גישה נוחה למים, מלא עצי תות",
+          "description": "דרך שער 2, חוף רחב ומרווח על נחל שניר, עם גישה נוחה למים שמתאימה גם למשפחות, ועצי תות שמטילים צל  על הגדה (ובעונה — גם פינוק מתוק היישר מהענף). מקום מצוין לפרוס מגבת ולשכשך רגלים.",
+          "photo": "public-data/poi-images/poi-857aa85d-088f1532.webp",
+          "thumbnail": "public-data/poi-images/poi-857aa85d-088f1532-thumb.webp",
+          "segmentName": "שביל אופניים חצבאני חופים צפוני",
+          "emoji": "🏖️",
+          "label": "חוף",
+          "color": "#d99f3d",
+          "icon": "poi-emoji-beach"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-d2081ac2",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.610959,
+            33.205265
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-d2081ac2",
+          "type": "beach",
+          "name": "חוף ללא שם בעיקול הנחל",
+          "information": "בכניסה משער 5, חוף קטן תחת עצי דולב בעיקול הנחל",
+          "description": "בשער 5 הנחל מתעקל בחדות, לצד העיקול שוכנת בריכת דגים שקטה, לחוף הזה אין שם אבל יש שם עץ דולב ענקי וירידה חביבה לחצבאני",
+          "photo": "public-data/poi-images/poi-d2081ac2-000a5417.webp",
+          "thumbnail": "public-data/poi-images/poi-d2081ac2-000a5417-thumb.webp",
+          "segmentName": "שביל אופניים חצבאני בית הלל",
+          "emoji": "🏖️",
+          "label": "חוף",
+          "color": "#d99f3d",
+          "icon": "poi-emoji-beach"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-f5fd1f27",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.609947,
+            33.201237
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-f5fd1f27",
+          "type": "beach",
+          "name": "חוף האקליפטוס",
+          "information": "חוף מגניב ומרוחק, מרחק שתי דקות הליכה משער 8",
+          "description": "אקליפטוס ענק מסמן את הנקודה, וממנו שביל קצר של כשתי דקות מוביל אל גדת הנחל. הטרחה הקטנה משתלמת — המים כאן שקטים יותר, הצל נדיב, והתחושה היא של פינה פרטית.",
+          "photo": "public-data/poi-images/poi-f5fd1f27-34405fc1.webp",
+          "thumbnail": "public-data/poi-images/poi-f5fd1f27-34405fc1-thumb.webp",
+          "segmentName": "שביל אופניים חצבאני בית הלל",
+          "emoji": "🏖️",
+          "label": "חוף",
+          "color": "#d99f3d",
+          "icon": "poi-emoji-beach"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-95010070",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.601372,
+            33.200456
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-95010070",
+          "type": "cafe",
+          "name": "פרישטיק",
+          "information": "עצירה טובה לקפה",
+          "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.",
+          "photo": "public-data/poi-images/poi-95010070-e9f669c1.webp",
+          "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp",
+          "segmentName": "גדר המערכת בית הלל",
+          "emoji": "☕",
+          "label": "בית קפה",
+          "color": "#b07a3f",
+          "icon": "poi-emoji-cafe"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-c723c695",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.603713,
+            33.198283
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-c723c695",
+          "type": "tree",
+          "name": "חוטמית זיפנית",
+          "information": "בסוף האביב פריחה של חוטמית זיפנית בשלל צבעים",
+          "description": "בשלהי האביב החוטמית הזיפנית מתנשאת בקנים גבוהים ופורחת בגוונים של ורוד, סגול ולבן, נדיר לראות את כל הצבעים פורחים יחד בטבע. בשאר השנה זו פינת בר ירוקה ושקטה.",
+          "photo": "public-data/poi-images/poi-c723c695-dc902444.webp",
+          "thumbnail": "public-data/poi-images/poi-c723c695-dc902444-thumb.webp",
+          "segmentName": "גדר המערכת בית הלל",
+          "emoji": "🌳",
+          "label": "חי וצומח",
+          "color": "#2e7d32",
+          "icon": "poi-emoji-tree"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-75f40178",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.599154,
+            33.205539
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-75f40178",
+          "type": "tree",
+          "name": "מטעי פקאן",
+          "information": "בית הלל מלא במטעי פקאן שלווים ומרשימים",
+          "description": "מטעי פקאן רחבי ידיים, שבהם שורות העצים הגבוהים יוצרות מסדרון מוצל ונעים.  האור חודר בין העלים והשקט כמעט מוחלט — פינה ירוקה ורגועה לעצור ולהנות מהיופי והצל. המטעים הם רכוש המושב ופרנסת החקלאים, אנא כבדו את המקום, וכמובן לא לקטוף",
+          "photo": "public-data/poi-images/poi-75f40178-b465e980.webp",
+          "thumbnail": "public-data/poi-images/poi-75f40178-b465e980-thumb.webp",
+          "segmentName": "גדר המערכת בית הלל",
+          "emoji": "🌳",
+          "label": "חי וצומח",
+          "color": "#2e7d32",
+          "icon": "poi-emoji-tree"
+        }
+      }
+    ],
+    "activeDataPointIds": [
+      "poi-1a4c1f16",
+      "poi-857aa85d",
+      "poi-d2081ac2",
+      "poi-f5fd1f27",
+      "poi-95010070",
+      "poi-c723c695",
+      "poi-75f40178"
+    ]
+  }
+}

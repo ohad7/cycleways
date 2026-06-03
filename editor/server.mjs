@@ -14,9 +14,11 @@ import {
   createRouteManager,
   restoreRouteFromParam,
 } from "@cycleways/core/routing/routeActions.js";
-import { mergeBaseRoutingShards } from "@cycleways/core/routing/baseRoutingShards.js";
-import { decodeCompactBaseRoutingShard } from "@cycleways/core/routing/compactBaseRoutingShard.js";
-import { decodeMessagePack } from "@cycleways/core/routing/messagePack.js";
+import {
+  loadFeaturedAssetsFromDisk,
+  getBaseRoutingDecodeAssets,
+  loadRoutePolylineForSlug,
+} from "../scripts/lib/featuredRouteSnapshotBuilder.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -459,93 +461,12 @@ function resolveManifestPath(root, manifestPath) {
 
 const nodeRequire = createRequire(import.meta.url);
 
-let cachedFeaturedAssets = null;
-async function loadFeaturedAssetsFromDisk() {
-  if (cachedFeaturedAssets) return cachedFeaturedAssets;
-  const manifestRaw = await readFile(promotedManifestPath, "utf-8");
-  const manifest = JSON.parse(manifestRaw);
-  const geoJsonData = JSON.parse(
-    await readFile(resolve(publicDataDir, manifest.bikeRoads), "utf-8"),
-  );
-  const segmentsData = JSON.parse(
-    await readFile(resolve(publicDataDir, manifest.segments), "utf-8"),
-  );
-  cachedFeaturedAssets = { geoJsonData, segmentsData };
-  return cachedFeaturedAssets;
-}
-
-// Base-graph routes (hybrid_route_v6 / base_route_v4 tokens) need the base
-// routing network + cw-base index to decode, just like the web app. Merge all
-// shards once and cache, so catalog recompute/promote and keyframe polyline
-// decoding handle base-graph routes (not only segment-based ones).
-let cachedBaseRoutingDecode = null;
-async function getBaseRoutingDecodeAssets() {
-  if (cachedBaseRoutingDecode) return cachedBaseRoutingDecode;
-  let baseRoutingNetwork = null;
-  let cwBaseIndex = null;
-  try {
-    const shardsDir = resolve(publicDataDir, "base-routing-shards");
-    const shardManifest = JSON.parse(
-      await readFile(resolve(shardsDir, "manifest.json"), "utf-8"),
-    );
-    const shards = await Promise.all(
-      (shardManifest.shards || []).map(async (entry) => {
-        const buf = await readFile(resolve(shardsDir, entry.path));
-        if (entry.format === "msgpack") return decodeMessagePack(buf);
-        if (entry.format === "compact") return decodeCompactBaseRoutingShard(buf);
-        return JSON.parse(new TextDecoder().decode(buf));
-      }),
-    );
-    const network = mergeBaseRoutingShards(shards);
-    network.graphVersion = shardManifest.generatedAt || "";
-    if (Array.isArray(network.edges) && network.edges.length > 0) {
-      baseRoutingNetwork = network;
-    }
-  } catch (err) {
-    log("warn", `base routing shards unavailable for route decode: ${err.message}`);
-  }
-  try {
-    cwBaseIndex = JSON.parse(
-      await readFile(resolve(publicDataDir, "cw-base-index.json"), "utf-8"),
-    );
-  } catch (err) {
-    log("warn", `cw-base-index unavailable for route decode: ${err.message}`);
-  }
-  cachedBaseRoutingDecode = { baseRoutingNetwork, cwBaseIndex };
-  return cachedBaseRoutingDecode;
-}
-
-export async function loadRoutePolylineForSlug(slug) {
-  // First try the draft catalog (for in-progress edits), then the promoted one,
-  // and fall back to the .meta.js seed for legacy compatibility.
-  let routeToken = null;
-  const draft = await readJsonOrNull(routeCatalogDraftPath);
-  const promoted = await readJsonOrNull(routeCatalogPublicPath);
-  const lookup = (cat) => cat?.entries?.find((e) => e.slug === slug)?.route;
-  routeToken = lookup(draft) || lookup(promoted) || null;
-  if (!routeToken) {
-    try {
-      const metaModulePath = resolve(repoRoot, `src/featured/${slug}.meta.js`);
-      const metaModule = await import(pathToFileURL(metaModulePath).href);
-      routeToken = metaModule.meta?.route || null;
-    } catch {}
-  }
-  if (typeof routeToken !== "string" || routeToken.length === 0) {
-    throw new Error(`featured route "${slug}" not found in catalog or meta`);
-  }
-  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
-  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
-  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets();
-  const manager = await createRouteManager(
-    RouteManagerClass,
-    geoJsonData,
-    segmentsData,
-    baseRoutingNetwork,
-  );
-  const snapshot = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
-  if (!snapshot) throw new Error(`route "${slug}" failed to decode`);
-  return snapshot.geometry;
-}
+// loadFeaturedAssetsFromDisk / getBaseRoutingDecodeAssets / loadRouteStateForSlug
+// / loadRoutePolylineForSlug now live in the shared featured-route snapshot
+// builder and are imported above. The editor passes its draft route-catalog as
+// the highest-priority token source so in-progress edits keep decoding.
+const routePolylineForSlug = (slug) =>
+  loadRoutePolylineForSlug(slug, { draftCatalogPath: routeCatalogDraftPath, log });
 
 export async function promoteKeyframesDraft({ slug, draftsDir, publicDir, routePolyline }) {
   const draftPath = resolve(draftsDir, `${slug}.json`);
@@ -779,7 +700,7 @@ export function recomputeCatalogMetadata(draft, refs) {
 export async function buildLiveDecodeRoute() {
   const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
-  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets();
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets({ log });
   const manager = await createRouteManager(
     RouteManagerClass,
     geoJsonData,
@@ -2508,7 +2429,7 @@ const server = createServer(async (request, response) => {
       if (parts.length === 4 && parts[3] === "promote" && request.method === "POST") {
         const slug = parts[2];
         try {
-          const routePolyline = await loadRoutePolylineForSlug(slug);
+          const routePolyline = await routePolylineForSlug(slug);
           const result = await promoteKeyframesDraft({
             slug,
             draftsDir: videoKeyframesDraftDir,
@@ -2526,7 +2447,7 @@ const server = createServer(async (request, response) => {
       if (parts.length === 4 && parts[3] === "route-polyline" && request.method === "GET") {
         const slug = parts[2];
         try {
-          const polyline = await loadRoutePolylineForSlug(slug);
+          const polyline = await routePolylineForSlug(slug);
           sendJson(response, 200, polyline);
         } catch (err) {
           sendJson(response, 400, {
