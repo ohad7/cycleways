@@ -2,9 +2,11 @@ import { test, expect } from "@playwright/test";
 
 test("splash paints with logo, title, and progress bar", async ({ page }) => {
   // Block external scripts so milestones don't fire and advance the bar
-  // before we can observe the initial 15% default.
-  await page.route("**/mapbox-gl.js", (route) => route.abort());
-  await page.route("**/src/main.jsx", (route) => route.abort());
+  // before we can observe the initial 15% default. RegExp matchers are used
+  // (not globs) because Vite serves the entry with a cache-busting query, e.g.
+  // /src/main.jsx?t=1780446804536, which a trailing-anchored glob would miss.
+  await page.route(/mapbox-gl\.js/, (route) => route.abort());
+  await page.route(/\/src\/main\.jsx/, (route) => route.abort());
   await page.goto("/", { waitUntil: "commit" });
   const splash = page.locator("#splash");
   await expect(splash).toBeVisible();
@@ -31,7 +33,8 @@ test("window.__splash API advances the bar and removes the splash", async ({
 }) => {
   // Isolate the controller from the React app: block the entry module so the
   // app cannot auto-dismiss the splash during this controller-level test.
-  await page.route("**/src/main.jsx", (route) => route.abort());
+  // RegExp (not glob) so Vite's cache-busting ?t= query is still matched.
+  await page.route(/\/src\/main\.jsx/, (route) => route.abort());
   await page.goto("/", { waitUntil: "commit" });
   const splash = page.locator("#splash");
   await expect(splash).toBeVisible();
