@@ -19,12 +19,13 @@ export default function FeaturedRouteStats({ className = "" }) {
   const { meta } = useFeaturedRoute();
   if (!meta) return null;
 
+  const surface = surfaceLabel(meta.roadMix);
   const items = [
     Number.isFinite(meta.distanceKm) && { label: "אורך", value: `${meta.distanceKm} ק"מ` },
     Number.isFinite(meta.elevationGainM) && { label: "טיפוס", value: `${meta.elevationGainM} מ׳` },
     Number.isFinite(meta.elevationLossM) && { label: "ירידה", value: `${meta.elevationLossM} מ׳` },
     meta.difficulty && { label: "רמת קושי", value: DIFFICULTY_HE[meta.difficulty] || meta.difficulty },
-    surfaceLabel(meta.roadMix) && { label: "משטח", value: surfaceLabel(meta.roadMix) },
+    surface && { label: "משטח", value: surface },
   ].filter(Boolean);
 
   if (items.length === 0) return null;

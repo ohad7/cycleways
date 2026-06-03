@@ -694,21 +694,21 @@
     box-shadow: 0 10px 30px rgba(16, 24, 32, 0.12);
   }
 
-  .fv-route-stats {
+  .fv-playback--overlay .fv-route-stats {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     margin: 0;
   }
 
-  .fv-route-stats div {
+  .fv-playback--overlay .fv-route-stats div {
     padding: 8px 10px;
     border-inline-start: 3px solid var(--fv-forest);
     border-radius: 0 6px 6px 0;
     background: var(--fv-paper);
   }
 
-  .fv-route-stats dt {
+  .fv-playback--overlay .fv-route-stats dt {
     margin: 0 0 2px;
     color: var(--fv-clay);
     font-size: 0.72rem;
@@ -716,7 +716,7 @@
     letter-spacing: 0.04em;
   }
 
-  .fv-route-stats dd {
+  .fv-playback--overlay .fv-route-stats dd {
     margin: 0;
     color: #24313a;
     font-size: 0.98rem;
