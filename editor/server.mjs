@@ -19,6 +19,7 @@ import {
   getBaseRoutingDecodeAssets,
   loadRoutePolylineForSlug,
   invalidateFeaturedAssetCache,
+  buildFeaturedRouteSnapshots,
 } from "../scripts/lib/featuredRouteSnapshotBuilder.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -2536,7 +2537,30 @@ const server = createServer(async (request, response) => {
             zones,
             decodeRoute,
           });
-          sendJson(response, 200, result);
+          // The promoted catalog determines which routes are featured. Drop the
+          // long-lived decode caches so snapshots regenerate against the freshly
+          // promoted catalog/assets, then rebuild every featured snapshot (with
+          // orphan cleanup handled inside the builder).
+          invalidateFeaturedAssetCache();
+          let snapshots;
+          try {
+            snapshots = await buildFeaturedRouteSnapshots({ log });
+          } catch (snapshotErr) {
+            snapshots = {
+              written: [],
+              removed: [],
+              errors: [
+                {
+                  slug: null,
+                  error:
+                    snapshotErr instanceof Error
+                      ? snapshotErr.message
+                      : String(snapshotErr),
+                },
+              ],
+            };
+          }
+          sendJson(response, 200, { ...result, snapshots });
         } catch (err) {
           sendJson(response, 400, { ok: false, error: err.message });
         }
