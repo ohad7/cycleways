@@ -1028,42 +1028,126 @@ button:disabled {
   }
 }
 
-#video-sync-panel .vs-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.5rem;
+/* Video Sync — dedicated full-screen overlay (video + map side by side). */
+.vs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  /* Single column capped at the viewport so a wide child (map canvas / YouTube
+     iframe) can't blow the grid past 100vw and push the header off-screen. */
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--bg);
 }
-#video-sync-panel .vs-row > label { min-width: 6em; }
-#video-sync-panel .vs-row > input,
-#video-sync-panel .vs-row > select { flex: 1; }
+.vs-overlay[hidden] { display: none; }
+
+.vs-overlay-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.vs-overlay-header { min-width: 0; }
+.vs-overlay-header h2 { margin: 0; font-size: 1rem; white-space: nowrap; }
+.vs-overlay-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.vs-overlay-controls label { white-space: nowrap; }
+.vs-overlay-controls #vs-yt-url { flex: 1; min-width: 12rem; }
+.vs-overlay-status { color: #666; font-size: 0.85em; }
+#vs-close { margin-left: auto; }
+
+.vs-overlay-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  gap: 8px;
+  padding: 8px;
+}
 .vs-player {
+  min-width: 0;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  margin: 0.5rem 0;
+  height: 100%;
   background: #000;
 }
-.vs-keyframes {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 0.5rem 0;
-  max-height: 16rem;
-  overflow: auto;
-  border: 1px solid #ddd;
+/* YT.Player turns #vs-player into an iframe; make it fill the cell either way. */
+.vs-player iframe,
+#vs-player iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+.vs-map-slot {
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  border: 1px solid var(--line);
   border-radius: 4px;
+  overflow: hidden;
 }
-.vs-keyframes li {
+.vs-map-slot #map { width: 100%; height: 100%; }
+
+.vs-overlay-footer {
   display: flex;
-  gap: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  border-bottom: 1px solid #eee;
   align-items: center;
-  font-size: 0.9em;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
 }
-.vs-keyframes li:last-child { border-bottom: 0; }
-.vs-keyframes li.selected { background: #fffbe6; }
-.vs-keyframes li .vs-kf-time { font-family: monospace; min-width: 5em; }
-.vs-keyframes li .vs-kf-coord { color: #666; flex: 1; }
+.vs-transport {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.vs-time-now { font-family: monospace; min-width: 11em; }
+.vs-seek-input { width: 6em; }
+.vs-nudge { display: inline-flex; gap: 0.25rem; }
+
+.vs-kf-strip {
+  list-style: none;
+  display: flex;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  overflow-x: auto;
+}
+.vs-kf-strip li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.85em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.vs-kf-strip li.selected { background: #fffbe6; border-color: #ffb300; }
+.vs-kf-strip li .vs-kf-time { font-family: monospace; }
+.vs-kf-strip li .vs-kf-del {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #b00;
+  font-size: 0.9em;
+  line-height: 1;
+  padding: 0 0.1rem;
+}
 
 #route-catalog-panel .rc-toolbar {
   display: flex;

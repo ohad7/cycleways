@@ -184,27 +184,6 @@
             <div id="base-overlay-edges" class="base-overlay-edges"></div>
           </section>
 
-          <section id="video-sync-panel" class="panel workspace-panel" hidden>
-            <header class="panel-header">
-              <h2>Video Sync</h2>
-              <span id="vs-status"></span>
-            </header>
-            <div class="vs-row">
-              <label for="vs-slug">Route:</label>
-              <select id="vs-slug"></select>
-            </div>
-            <div class="vs-row">
-              <label for="vs-yt-url">YouTube URL:</label>
-              <input id="vs-yt-url" type="text" placeholder="https://youtube.com/watch?v=..." />
-            </div>
-            <div id="vs-player" class="vs-player"></div>
-            <ul id="vs-keyframes" class="vs-keyframes"></ul>
-            <div class="action-row">
-              <button id="vs-save-draft" class="secondary-button" type="button">Save Draft</button>
-              <button id="vs-promote" class="primary-button" type="button">Promote</button>
-            </div>
-          </section>
-
           <section id="route-catalog-panel" class="panel workspace-panel" hidden>
             <header class="panel-header">
               <h2>Route Catalog</h2>
@@ -273,6 +252,43 @@
           </details>
         </section>
       </aside>
+
+      <section id="vs-overlay" class="vs-overlay" hidden aria-label="Video Sync">
+        <header class="vs-overlay-header">
+          <h2 id="vs-overlay-title">Video Sync</h2>
+          <div class="vs-overlay-controls">
+            <label for="vs-slug">Route:</label>
+            <select id="vs-slug"></select>
+            <label for="vs-yt-url">YouTube URL:</label>
+            <input id="vs-yt-url" type="text" placeholder="https://youtube.com/watch?v=..." />
+            <button id="vs-save-draft" class="secondary-button" type="button">Save Draft</button>
+            <button id="vs-promote" class="primary-button" type="button">Promote</button>
+            <span id="vs-status" class="vs-overlay-status"></span>
+          </div>
+          <button id="vs-close" class="secondary-button" type="button" aria-label="Close Video Sync">✕</button>
+        </header>
+        <div class="vs-overlay-main">
+          <div id="vs-player" class="vs-player"></div>
+          <div id="vs-map-slot" class="vs-map-slot"></div>
+        </div>
+        <footer class="vs-overlay-footer">
+          <div class="vs-transport">
+            <span id="vs-time-now" class="vs-time-now">0:00.00 / 0:00.00</span>
+            <button id="vs-playpause" class="mini-button" type="button">▶︎</button>
+            <input id="vs-seek-input" class="vs-seek-input" type="text" placeholder="m:ss" />
+            <button id="vs-seek-go" class="mini-button" type="button">Go</button>
+            <span class="vs-nudge" id="vs-nudge">
+              <button class="mini-button" type="button" data-step="-5">−5</button>
+              <button class="mini-button" type="button" data-step="-1">−1</button>
+              <button class="mini-button" type="button" data-step="-0.1">−0.1</button>
+              <button class="mini-button" type="button" data-step="0.1">+0.1</button>
+              <button class="mini-button" type="button" data-step="1">+1</button>
+              <button class="mini-button" type="button" data-step="5">+5</button>
+            </span>
+          </div>
+          <ul id="vs-keyframes" class="vs-kf-strip"></ul>
+        </footer>
+      </section>
     </div>
 
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>

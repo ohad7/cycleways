@@ -11,6 +11,8 @@ import {
   poiMarkerIconName,
 } from "../packages/core/src/data/poiTypes.js";
 import { registerPoiEmojiImages } from "../packages/core/src/map/emojiMarkerImage.js";
+import { createVideoSync } from "../src/components/featured/videoSync.js";
+import { vsFormatTime, vsParseTime } from "./lib/vs-time.mjs";
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 
@@ -179,7 +181,6 @@ const els = {
   workspaceRouteCatalog: document.getElementById("workspace-route-catalog"),
   baseGraphPanel: document.getElementById("base-graph-panel"),
   cwOverlayPanel: document.getElementById("cw-overlay-panel"),
-  videoSyncPanel: document.getElementById("video-sync-panel"),
   routeCatalogPanel: document.getElementById("route-catalog-panel"),
   segmentDrawer: document.getElementById("segment-drawer"),
   toggleSegments: document.getElementById("toggle-segments"),
@@ -3108,7 +3109,6 @@ function renderWorkspaceChrome() {
   els.workspaceRouteCatalog.classList.toggle("active", state.workspaceMode === "route-catalog");
   els.baseGraphPanel.hidden = state.workspaceMode !== "base";
   els.cwOverlayPanel.hidden = state.workspaceMode !== "overlay";
-  els.videoSyncPanel.hidden = state.workspaceMode !== "video-sync";
   els.routeCatalogPanel.hidden = state.workspaceMode !== "route-catalog";
   els.toggleBaseOverlay.classList.toggle("active", state.baseOverlay.enabled);
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
@@ -3518,7 +3518,11 @@ async function setWorkspaceMode(mode) {
     state.mode = "select";
   }
 
+  const previousMode = state.workspaceMode;
   state.workspaceMode = mode;
+  if (previousMode === "video-sync" && mode !== "video-sync") {
+    vsDeactivate();
+  }
   if (mode === "overlay" && state.mode === "insert") {
     state.mode = "select";
   }
@@ -3545,6 +3549,7 @@ async function setWorkspaceMode(mode) {
   } else if (mode === "video-sync") {
     state.baseOverlay.enabled = false;
     setStatus("Video Sync mode: pick a route, paste a YouTube URL, click on the map to add keyframes.");
+    vsActivateOverlay();
     if (typeof activateVideoSyncMode === "function") {
       try { await activateVideoSyncMode(); } catch (err) { showError(err); }
     }
@@ -6602,6 +6607,10 @@ function wireEvents() {
       return;
     }
 
+    if (state.workspaceMode === "video-sync") {
+      if (handleVideoSyncKey(event)) return;
+    }
+
     if (!isDrawing()) {
       if (event.code === "Space" && !event.repeat) {
         event.preventDefault();
@@ -7227,7 +7236,10 @@ const VS_ROUTE_SOURCE_ID = "vs-route-source";
 const VS_ROUTE_LAYER_ID = "vs-route-layer";
 const VS_KF_SOURCE_ID = "vs-kf-source";
 const VS_KF_LAYER_ID = "vs-kf-layer";
+const VS_GHOST_SOURCE_ID = "vs-ghost-source";
+const VS_GHOST_LAYER_ID = "vs-ghost-layer";
 const VS_SNAP_THRESHOLD_M = 80;
+const VS_TICK_MS = 100;
 
 const videoSyncState = {
   slug: null,
@@ -7237,9 +7249,15 @@ const videoSyncState = {
   player: null,
   videoDuration: 0,
   selectedIndex: -1,
+  sync: null,            // createVideoSync() interpolator, rebuilt on changes
+  ticker: null,          // setInterval id for the live readout + ghost
 };
 
 const vsEls = {
+  overlay: document.getElementById("vs-overlay"),
+  title: document.getElementById("vs-overlay-title"),
+  mapSlot: document.getElementById("vs-map-slot"),
+  close: document.getElementById("vs-close"),
   slug: document.getElementById("vs-slug"),
   ytUrl: document.getElementById("vs-yt-url"),
   player: document.getElementById("vs-player"),
@@ -7247,6 +7265,11 @@ const vsEls = {
   saveDraft: document.getElementById("vs-save-draft"),
   promote: document.getElementById("vs-promote"),
   status: document.getElementById("vs-status"),
+  timeNow: document.getElementById("vs-time-now"),
+  playPause: document.getElementById("vs-playpause"),
+  seekInput: document.getElementById("vs-seek-input"),
+  seekGo: document.getElementById("vs-seek-go"),
+  nudge: document.getElementById("vs-nudge"),
 };
 
 function vsSetStatus(msg) {
@@ -7256,12 +7279,6 @@ function vsSetStatus(msg) {
 function vsSetBusy(busy) {
   if (vsEls.saveDraft) vsEls.saveDraft.disabled = busy;
   if (vsEls.promote) vsEls.promote.disabled = busy;
-}
-
-function vsFormatTime(seconds) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds - m * 60;
-  return `${m}:${s.toFixed(2).padStart(5, "0")}`;
 }
 
 function vsExtractYouTubeId(url) {
@@ -7327,11 +7344,16 @@ async function vsLoadVideo(youtubeId) {
   }
   videoSyncState.player = new YT.Player(vsEls.player, {
     videoId: youtubeId,
+    width: "100%",
+    height: "100%",
     playerVars: { enablejsapi: 1, rel: 0 },
     events: {
       onReady: () => {
         const dur = videoSyncState.player.getDuration?.();
-        if (typeof dur === "number" && dur > 0) videoSyncState.videoDuration = dur;
+        if (typeof dur === "number" && dur > 0) {
+          videoSyncState.videoDuration = dur;
+          vsRebuildSync();
+        }
       },
     },
   });
@@ -7387,32 +7409,216 @@ function vsRenderKeyframesLayer() {
 
 function vsClearMapLayers() {
   if (!map) return;
-  for (const id of [VS_KF_LAYER_ID, VS_ROUTE_LAYER_ID]) {
+  for (const id of [VS_GHOST_LAYER_ID, VS_KF_LAYER_ID, VS_ROUTE_LAYER_ID]) {
     if (map.getLayer(id)) map.removeLayer(id);
   }
-  for (const id of [VS_KF_SOURCE_ID, VS_ROUTE_SOURCE_ID]) {
+  for (const id of [VS_GHOST_SOURCE_ID, VS_KF_SOURCE_ID, VS_ROUTE_SOURCE_ID]) {
     if (map.getSource(id)) map.removeSource(id);
   }
 }
 
+// Rebuild the shared interpolator whenever keyframes / route / duration change.
+// Needs >= 2 keyframes and a known duration; otherwise the ghost is hidden.
+function vsRebuildSync() {
+  const { routePolyline, keyframes, videoDuration } = videoSyncState;
+  if (routePolyline && routePolyline.length >= 2 && keyframes.length >= 2 && videoDuration > 0) {
+    try {
+      videoSyncState.sync = createVideoSync({
+        keyframes,
+        videoDuration,
+        routeGeometry: routePolyline,
+      });
+    } catch {
+      videoSyncState.sync = null;
+    }
+  } else {
+    videoSyncState.sync = null;
+  }
+  vsRenderGhost();
+}
+
+// Move the blue "predicted position" ring to where the current keyframes say the
+// rider is at time t. Hidden when there is no usable interpolator.
+function vsRenderGhost(t) {
+  if (!map) return;
+  let features = [];
+  if (videoSyncState.sync) {
+    const time = typeof t === "number"
+      ? t
+      : (videoSyncState.player?.getCurrentTime?.() || 0);
+    const pos = videoSyncState.sync.timeToPosition(time);
+    if (pos) {
+      features = [{
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [pos.lng, pos.lat] },
+        properties: {},
+      }];
+    }
+  }
+  const data = { type: "FeatureCollection", features };
+  if (!map.getSource(VS_GHOST_SOURCE_ID)) {
+    map.addSource(VS_GHOST_SOURCE_ID, { type: "geojson", data });
+    map.addLayer({
+      id: VS_GHOST_LAYER_ID,
+      type: "circle",
+      source: VS_GHOST_SOURCE_ID,
+      paint: {
+        "circle-radius": 8,
+        "circle-color": "rgba(21, 101, 192, 0.25)",
+        "circle-stroke-color": "#1565c0",
+        "circle-stroke-width": 3,
+      },
+    });
+  } else {
+    map.getSource(VS_GHOST_SOURCE_ID).setData(data);
+  }
+}
+
+// --- Overlay show/hide + single-map relocation ----------------------------
+
+// Move the one editor map into the overlay's right pane and show the overlay.
+function vsActivateOverlay() {
+  const mapContainer = document.getElementById("map");
+  if (mapContainer && vsEls.mapSlot && mapContainer.parentNode !== vsEls.mapSlot) {
+    vsEls.mapSlot.appendChild(mapContainer);
+  }
+  if (vsEls.overlay) vsEls.overlay.hidden = false;
+  if (vsEls.title) {
+    vsEls.title.textContent = videoSyncState.slug
+      ? `Video Sync — ${videoSyncState.slug}`
+      : "Video Sync";
+  }
+  // Mapbox must recompute its canvas size after the container moves / shows.
+  // Double rAF so the overlay layout has flushed before Mapbox measures.
+  vsResizeMapSoon();
+  vsStartTicker();
+}
+
+// Move the map back to its home column, hide the overlay, stop the ticker.
+function vsDeactivate() {
+  vsStopTicker();
+  const mapContainer = document.getElementById("map");
+  const home = document.querySelector(".map-area");
+  if (mapContainer && home && mapContainer.parentNode !== home) {
+    home.prepend(mapContainer);
+  }
+  if (vsEls.overlay) vsEls.overlay.hidden = true;
+  vsResizeMapSoon();
+}
+
+// Resize the Mapbox canvas after the next two frames, once layout has flushed.
+function vsResizeMapSoon() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { try { map.resize(); } catch {} });
+  });
+}
+
+// --- Live readout + ghost ticker ------------------------------------------
+
+function vsStartTicker() {
+  vsStopTicker();
+  videoSyncState.ticker = setInterval(vsTick, VS_TICK_MS);
+}
+
+function vsStopTicker() {
+  if (videoSyncState.ticker) {
+    clearInterval(videoSyncState.ticker);
+    videoSyncState.ticker = null;
+  }
+}
+
+function vsTick() {
+  const cur = videoSyncState.player?.getCurrentTime?.();
+  if (typeof cur !== "number") return;
+  vsUpdateReadout(cur);
+  vsRenderGhost(cur);
+  vsUpdatePlayPauseLabel();
+}
+
+function vsUpdateReadout(seconds) {
+  if (!vsEls.timeNow) return;
+  vsEls.timeNow.textContent =
+    `${vsFormatTime(seconds)} / ${vsFormatTime(videoSyncState.videoDuration)}`;
+}
+
+// --- Transport controls ----------------------------------------------------
+
+function vsSeekTo(t) {
+  const player = videoSyncState.player;
+  if (!player?.seekTo) return;
+  const dur = videoSyncState.videoDuration || player.getDuration?.() || 0;
+  const clamped = dur > 0 ? Math.max(0, Math.min(dur, t)) : Math.max(0, t);
+  player.seekTo(clamped, true);
+  vsUpdateReadout(clamped);
+  vsRenderGhost(clamped);
+}
+
+// Pause first so a nudge settles on an exact frame.
+function vsSeekBy(delta) {
+  const player = videoSyncState.player;
+  if (!player?.getCurrentTime) return;
+  player.pauseVideo?.();
+  vsSeekTo((player.getCurrentTime() || 0) + delta);
+}
+
+function vsHandleSeekInput() {
+  const t = vsParseTime(vsEls.seekInput.value);
+  if (t == null) {
+    vsSetStatus("Couldn't parse that time (try m:ss or seconds).");
+    return;
+  }
+  vsSeekTo(t);
+}
+
+function vsTogglePlay() {
+  const player = videoSyncState.player;
+  if (!player?.getPlayerState) return;
+  if (player.getPlayerState() === 1) player.pauseVideo?.();
+  else player.playVideo?.();
+  vsUpdatePlayPauseLabel();
+}
+
+function vsUpdatePlayPauseLabel() {
+  if (!vsEls.playPause) return;
+  const playing = videoSyncState.player?.getPlayerState?.() === 1;
+  vsEls.playPause.textContent = playing ? "⏸" : "▶︎";
+}
+
+// Returns true when the key was handled (video-sync mode only).
+function handleVideoSyncKey(event) {
+  switch (event.key) {
+    case "ArrowRight": vsSeekBy(event.shiftKey ? 5 : 1); break;
+    case "ArrowLeft": vsSeekBy(event.shiftKey ? -5 : -1); break;
+    case ".": vsSeekBy(0.1); break;
+    case ",": vsSeekBy(-0.1); break;
+    case " ":
+    case "Spacebar": vsTogglePlay(); break;
+    default: return false;
+  }
+  event.preventDefault();
+  return true;
+}
+
+// Render keyframes as a horizontal chip strip in the overlay footer.
 function vsRenderKeyframesList() {
   vsEls.keyframesList.innerHTML = "";
   videoSyncState.keyframes.forEach((kf, i) => {
     const li = document.createElement("li");
+    li.title = `${kf.lat.toFixed(5)}, ${kf.lon.toFixed(5)}`;
     if (i === videoSyncState.selectedIndex) li.classList.add("selected");
     const time = document.createElement("span");
     time.className = "vs-kf-time";
     time.textContent = vsFormatTime(kf.t);
-    const coord = document.createElement("span");
-    coord.className = "vs-kf-coord";
-    coord.textContent = `${kf.lat.toFixed(5)}, ${kf.lon.toFixed(5)}`;
     const del = document.createElement("button");
     del.type = "button";
-    del.className = "mini-button";
-    del.textContent = "Delete";
-    del.addEventListener("click", () => {
+    del.className = "vs-kf-del";
+    del.textContent = "✕";
+    del.setAttribute("aria-label", "Delete keyframe");
+    del.addEventListener("click", (event) => {
+      event.stopPropagation();
       videoSyncState.keyframes.splice(i, 1);
       if (videoSyncState.selectedIndex === i) videoSyncState.selectedIndex = -1;
+      vsRebuildSync();
       vsRenderKeyframesList();
       vsRenderKeyframesLayer();
     });
@@ -7422,7 +7628,7 @@ function vsRenderKeyframesList() {
       vsRenderKeyframesList();
       vsRenderKeyframesLayer();
     });
-    li.append(time, coord, del);
+    li.append(time, del);
     vsEls.keyframesList.appendChild(li);
   });
 }
@@ -7451,6 +7657,7 @@ function handleVideoSyncMapClick(event) {
   filtered.sort((a, b) => a.t - b.t);
   videoSyncState.keyframes = filtered;
   videoSyncState.selectedIndex = filtered.findIndex((kf) => kf.t === t);
+  vsRebuildSync();
   vsRenderKeyframesList();
   vsRenderKeyframesLayer();
   vsSetStatus(`Added keyframe at ${vsFormatTime(t)}.`);
@@ -7469,6 +7676,7 @@ async function vsLoadRouteForSlug(slug) {
   const polyline = await r.json();
   videoSyncState.routePolyline = polyline;
   vsRenderRouteLayer();
+  vsRebuildSync();
   // Fit map to route bounds
   if (polyline.length >= 2 && map) {
     const lons = polyline.map((p) => p.lng);
@@ -7504,6 +7712,7 @@ async function vsLoadExistingDraft(slug) {
   if (typeof draft.videoDuration === "number") {
     videoSyncState.videoDuration = draft.videoDuration;
   }
+  vsRebuildSync();
   vsSetStatus(`Loaded draft with ${videoSyncState.keyframes.length} keyframes.`);
 }
 
@@ -7600,9 +7809,32 @@ vsEls.promote.addEventListener("click", async () => {
     vsSetBusy(false);
   }
 });
+vsEls.close.addEventListener("click", () => setWorkspaceMode("segments").catch(showError));
+vsEls.seekGo.addEventListener("click", vsHandleSeekInput);
+vsEls.seekInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    vsHandleSeekInput();
+  }
+});
+vsEls.playPause.addEventListener("click", vsTogglePlay);
+vsEls.nudge.addEventListener("click", (event) => {
+  const btn = event.target instanceof HTMLElement ? event.target.closest("[data-step]") : null;
+  if (!btn) return;
+  const step = Number(btn.dataset.step);
+  if (Number.isFinite(step)) vsSeekBy(step);
+});
 
 map.on("style.load", () => {
   restoreEditorLayersAfterStyleChange().catch(showError);
+  // setStyle() drops custom sources/layers; re-add the video-sync ones and
+  // resize the canvas if the overlay is currently open.
+  if (state.workspaceMode === "video-sync") {
+    vsRenderRouteLayer();
+    vsRenderKeyframesLayer();
+    vsRenderGhost();
+    requestAnimationFrame(() => { try { map.resize(); } catch {} });
+  }
 });
 
 // ============================================================
