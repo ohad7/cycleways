@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-beit-hillel",
-  "generatedAt": "2026-06-03T20:22:01.560Z",
+  "generatedAt": "2026-06-03T22:22:55.194Z",
   "source": {
     "routeTokenHash": "sha256:1b4e57e3cc362d4c8869f0ade487f914867a1954b2794ea94764cfacae1e5dfb",
     "routeFormat": "compact_route",
-    "mapVersion": "614bca21406d",
+    "mapVersion": "097bb3cfefdb",
     "assetHashes": {
-      "bikeRoads": "9271f86bb84ca425af03c519b10cb0c0d286a23d579513e1e6032bfe2159bf7e",
-      "segments": "06ad171eb05883d8468a9d837532b501c1ddad39e8b08c565273b1468b66d1be",
+      "bikeRoads": "e4a43a70547a3c7190907140b98a5203d3fe0a7d6983d52ab5b38e7aa5d5d3f3",
+      "segments": "b1bcf7b0bf906c2ee6a128fff279342a45a88d1bf1fa9f18ff27ca8158b7c655",
       "cwBaseIndex": "23ec80fb6177b47e2df7665b5e24bd8ee438e839dc750c02c8bbb43362c9b2d4",
-      "baseRoutingShards": "b3292839ca238ab5490b920f03e5e200f28a828de716d5fd5bae8b1f19958e3e"
+      "baseRoutingShards": "ef37ba1592d903c20aadeead57df2fc1caa734e13a83736cc8966cb5d9776d8e"
     }
   },
   "route": {

@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "banias-gan-hatsafon",
-  "generatedAt": "2026-06-03T20:22:01.153Z",
+  "generatedAt": "2026-06-03T22:22:54.759Z",
   "source": {
     "routeTokenHash": "sha256:4f5d5c4fe65b9ec350310203dc092136b243ae28391ee50d7fb80f67c1ae547e",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "614bca21406d",
+    "mapVersion": "097bb3cfefdb",
     "assetHashes": {
-      "bikeRoads": "9271f86bb84ca425af03c519b10cb0c0d286a23d579513e1e6032bfe2159bf7e",
-      "segments": "06ad171eb05883d8468a9d837532b501c1ddad39e8b08c565273b1468b66d1be",
+      "bikeRoads": "e4a43a70547a3c7190907140b98a5203d3fe0a7d6983d52ab5b38e7aa5d5d3f3",
+      "segments": "b1bcf7b0bf906c2ee6a128fff279342a45a88d1bf1fa9f18ff27ca8158b7c655",
       "cwBaseIndex": "23ec80fb6177b47e2df7665b5e24bd8ee438e839dc750c02c8bbb43362c9b2d4",
-      "baseRoutingShards": "b3292839ca238ab5490b920f03e5e200f28a828de716d5fd5bae8b1f19958e3e"
+      "baseRoutingShards": "ef37ba1592d903c20aadeead57df2fc1caa734e13a83736cc8966cb5d9776d8e"
     }
   },
   "route": {
@@ -1925,6 +1925,57 @@
   "pois": {
     "activeDataPoints": [
       {
+        "id": "poi-38b469d3",
+        "type": "rest_stop",
+        "information": "השביל כולו מלא פינות מנוחה ליד הבניאס",
+        "location": [
+          33.203704,
+          35.636825
+        ],
+        "name": "חניון הדקל",
+        "description": "השביל כולו מלא פינות מנוחה ליד הבניאס, יש המון פינות מוצלות והמים זורמים כל השנה בטמפרטורות נמוכות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-38b469d3-28c48da0.webp",
+            "thumbnail": "public-data/poi-images/poi-38b469d3-28c48da0-thumb.webp"
+          }
+        ],
+        "segmentName": "בניאס חניון האקליפטוס",
+        "routeDistanceMeters": 0,
+        "routeProgressMeters": 3076.718593260297,
+        "routeFraction": 0.20765997939335373
+      },
+      {
+        "id": "poi-dbc2c016",
+        "type": "warning",
+        "information": "מעבר הכרחי בצד הכביש, שוליים רחבים",
+        "location": [
+          33.216903846623694,
+          35.64192395978628
+        ],
+        "name": "גשר הבניאס",
+        "description": "המעבר מעל הבניאס באיזור הזה עובר בשוליים של כביש. השוליים עצמם די רחבים, רק צריך לרכב בזהירות",
+        "segmentName": "שביל אופניים 918 דפנה",
+        "routeDistanceMeters": 0.16365325894472235,
+        "routeProgressMeters": 5114.442364249037,
+        "routeFraction": 0.34519406431740485
+      },
+      {
+        "id": "poi-e144a450",
+        "type": "nature",
+        "information": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+        "location": [
+          33.224716,
+          35.621684
+        ],
+        "name": "יער מאכל קורן",
+        "description": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+        "segmentName": "שביל אופניים 99 גן הצפון",
+        "routeDistanceMeters": 0.1566511895821586,
+        "routeProgressMeters": 7882.901516479552,
+        "routeFraction": 0.5320483875443885
+      },
+      {
         "id": "poi-77f69a67",
         "type": "cafe",
         "information": "מתחם מסעדות, בתי קפה וחנויות",
@@ -1944,9 +1995,114 @@
         "routeDistanceMeters": 0.008416294007059545,
         "routeProgressMeters": 9015.440867535255,
         "routeFraction": 0.6084879744528467
+      },
+      {
+        "id": "poi-015cc38e",
+        "type": "gate",
+        "information": "שער להולכי רגל, פתוח כל היום כתלות במצב בטחוני",
+        "location": [
+          33.218812,
+          35.614327
+        ],
+        "name": "שער להולכי רגל",
+        "description": "שער להולכי רגל, פתוח כל היום כתלות במצב בטחוני",
+        "segmentName": "שדות הגושרים",
+        "routeDistanceMeters": 0.2668222369711485,
+        "routeProgressMeters": 9641.82105445133,
+        "routeFraction": 0.6507648654861479
+      },
+      {
+        "id": "poi-23d6dbf0",
+        "type": "landmark",
+        "information": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+        "location": [
+          33.2127877,
+          35.6199385
+        ],
+        "name": "מושב נחלים",
+        "description": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+        "segmentName": "שדות הגושרים",
+        "routeDistanceMeters": 6.610204301297048e-10,
+        "routeProgressMeters": 10830.033388140535,
+        "routeFraction": 0.7309620435021466
       }
     ],
     "dataMarkerFeatures": [
+      {
+        "type": "Feature",
+        "id": "poi-38b469d3",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.636825,
+            33.203704
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-38b469d3",
+          "type": "rest_stop",
+          "name": "חניון הדקל",
+          "information": "השביל כולו מלא פינות מנוחה ליד הבניאס",
+          "description": "השביל כולו מלא פינות מנוחה ליד הבניאס, יש המון פינות מוצלות והמים זורמים כל השנה בטמפרטורות נמוכות",
+          "photo": "public-data/poi-images/poi-38b469d3-28c48da0.webp",
+          "thumbnail": "public-data/poi-images/poi-38b469d3-28c48da0-thumb.webp",
+          "segmentName": "בניאס חניון האקליפטוס",
+          "emoji": "🪑",
+          "label": "פינת מנוחה",
+          "color": "#16a085",
+          "icon": "poi-emoji-rest_stop"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-dbc2c016",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.64192395978628,
+            33.216903846623694
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-dbc2c016",
+          "type": "warning",
+          "name": "גשר הבניאס",
+          "information": "מעבר הכרחי בצד הכביש, שוליים רחבים",
+          "description": "המעבר מעל הבניאס באיזור הזה עובר בשוליים של כביש. השוליים עצמם די רחבים, רק צריך לרכב בזהירות",
+          "photo": "",
+          "thumbnail": "",
+          "segmentName": "שביל אופניים 918 דפנה",
+          "emoji": "⚠️",
+          "label": "אזהרה",
+          "color": "#FF9800",
+          "icon": "caution-11"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-e144a450",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.621684,
+            33.224716
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-e144a450",
+          "type": "nature",
+          "name": "יער מאכל קורן",
+          "information": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+          "description": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+          "photo": "",
+          "thumbnail": "",
+          "segmentName": "שביל אופניים 99 גן הצפון",
+          "emoji": "🌿",
+          "label": "טבע",
+          "color": "#27ae60",
+          "icon": "poi-emoji-nature"
+        }
+      },
       {
         "type": "Feature",
         "id": "poi-77f69a67",
@@ -1971,10 +2127,65 @@
           "color": "#b07a3f",
           "icon": "poi-emoji-cafe"
         }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-015cc38e",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.614327,
+            33.218812
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-015cc38e",
+          "type": "gate",
+          "name": "שער להולכי רגל",
+          "information": "שער להולכי רגל, פתוח כל היום כתלות במצב בטחוני",
+          "description": "שער להולכי רגל, פתוח כל היום כתלות במצב בטחוני",
+          "photo": "",
+          "thumbnail": "",
+          "segmentName": "שדות הגושרים",
+          "emoji": "🚧",
+          "label": "שער",
+          "color": "#FF5722",
+          "icon": "barrier-11"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-23d6dbf0",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.6199385,
+            33.2127877
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-23d6dbf0",
+          "type": "landmark",
+          "name": "מושב נחלים",
+          "information": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+          "description": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+          "photo": "",
+          "thumbnail": "",
+          "segmentName": "שדות הגושרים",
+          "emoji": "🏛️",
+          "label": "אתר היסטורי",
+          "color": "#6c5ce7",
+          "icon": "poi-emoji-landmark"
+        }
       }
     ],
     "activeDataPointIds": [
-      "poi-77f69a67"
+      "poi-38b469d3",
+      "poi-dbc2c016",
+      "poi-e144a450",
+      "poi-77f69a67",
+      "poi-015cc38e",
+      "poi-23d6dbf0"
     ]
   }
 }
