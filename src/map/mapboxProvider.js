@@ -21,3 +21,28 @@ export function getMapboxGl() {
   }
   return instance;
 }
+
+// Resolves with the Mapbox GL global once it is available. The CDN <script> is
+// loaded `async` so it no longer blocks the app shell; callers that need to
+// create a map await this instead of assuming the global is already present.
+// Resolves with `undefined` if it never appears (caller treats that as absent).
+export function whenMapboxReady() {
+  if (testOverride !== undefined) {
+    return Promise.resolve(testOverride || undefined);
+  }
+  if (typeof window === "undefined") {
+    return Promise.resolve(undefined);
+  }
+  if (window.mapboxgl) {
+    return Promise.resolve(window.mapboxgl);
+  }
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const id = setInterval(() => {
+      if (window.mapboxgl || Date.now() - start > 20000) {
+        clearInterval(id);
+        resolve(window.mapboxgl);
+      }
+    }, 30);
+  });
+}

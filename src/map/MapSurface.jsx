@@ -26,7 +26,7 @@ import {
   syncVideoCursorLayer,
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
-import { getMapboxGl } from "./mapboxProvider.js";
+import { getMapboxGl, whenMapboxReady } from "./mapboxProvider.js";
 import { distanceToLineSegmentPixels } from "@cycleways/core/utils/distance.js";
 import {
   buildNetworkSegments,
@@ -143,14 +143,6 @@ function MapSurface({
   }, [osmDebugMode]);
 
   useEffect(() => {
-    let mapboxgl;
-    try {
-      mapboxgl = getMapboxGl();
-    } catch (providerError) {
-      setStatus("error");
-      setError(providerError);
-      return undefined;
-    }
     if (!containerRef.current) {
       setStatus("error");
       setError(new Error("Mapbox GL is not loaded"));
@@ -159,38 +151,60 @@ function MapSurface({
 
     let isDisposed = false;
 
-    try {
-      mapboxgl.accessToken = requireMapboxToken();
-      const map = new mapboxgl.Map({
-        container: containerRef.current,
-        style: "mapbox://styles/mapbox/outdoors-v12",
-        center: MAP_INITIAL_CENTER,
-        zoom: MAP_INITIAL_ZOOM,
-      });
-      mapRef.current = map;
+    function createMap(mapboxgl) {
+      if (isDisposed || !containerRef.current) return;
+      try {
+        mapboxgl.accessToken = requireMapboxToken();
+        const map = new mapboxgl.Map({
+          container: containerRef.current,
+          style: "mapbox://styles/mapbox/outdoors-v12",
+          center: MAP_INITIAL_CENTER,
+          zoom: MAP_INITIAL_ZOOM,
+        });
+        mapRef.current = map;
 
-      map.on("load", () => {
-        if (isDisposed) return;
-        try {
-          applyHebrewLabels(map);
-          setStatus("ready");
-          onMapReady?.(map);
-        } catch (loadError) {
+        map.on("load", () => {
+          if (isDisposed) return;
+          try {
+            applyHebrewLabels(map);
+            setStatus("ready");
+            onMapReady?.(map);
+          } catch (loadError) {
+            setStatus("error");
+            setError(loadError);
+          }
+        });
+
+        map.on("error", (event) => {
+          if (isDisposed) return;
+          const mapError = event?.error || new Error("Mapbox map error");
           setStatus("error");
-          setError(loadError);
-        }
-      });
-
-      map.on("error", (event) => {
-        if (isDisposed) return;
-        const mapError = event?.error || new Error("Mapbox map error");
+          setError(mapError);
+        });
+      } catch (initError) {
         setStatus("error");
-        setError(mapError);
-      });
-    } catch (initError) {
-      setStatus("error");
-      setError(initError);
+        setError(initError);
+      }
     }
+
+    // Mapbox GL JS loads asynchronously (its <script> is `async` so it doesn't
+    // block the app shell), so wait for the global before creating the map.
+    whenMapboxReady().then(
+      (mapboxgl) => {
+        if (isDisposed) return;
+        if (!mapboxgl) {
+          setStatus("error");
+          setError(new Error("Mapbox GL is not loaded"));
+          return;
+        }
+        createMap(mapboxgl);
+      },
+      (providerError) => {
+        if (isDisposed) return;
+        setStatus("error");
+        setError(providerError);
+      },
+    );
 
     return () => {
       isDisposed = true;
