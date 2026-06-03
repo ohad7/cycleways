@@ -1,18 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./featured.css";
 import { useIsMobile } from "./useIsMobile.js";
-import RouteManager from "@cycleways/core/route-manager.js";
-import { loadMapAssets } from "@cycleways/core/data/mapAssets.js";
+import { emptyRouteSnapshot } from "@cycleways/core/routing/routeActions.js";
 import {
-  createRouteManager,
-  emptyRouteSnapshot,
-  restoreRouteFromParam,
-} from "@cycleways/core/routing/routeActions.js";
-import { createShardedRouteSession } from "@cycleways/core/routing/shardedRouteSession.js";
-import { createBaseRoutingShardFetchLoader } from "@cycleways/core/routing/baseRoutingShards.js";
-import { getShardLoaderLocation } from "@cycleways/core/platform/location.js";
+  loadFeaturedRouteSnapshot,
+  snapshotToRouteState,
+} from "@cycleways/core/data/featuredRouteSnapshots.js";
 import MapView from "../../map/MapView.jsx";
-import { dataMarkerFeaturesFromSegments } from "@cycleways/core/data/dataMarkers.js";
 import { FeaturedRouteContext } from "./FeaturedRouteContext.js";
 import FeaturedRouteHeader from "./Header.jsx";
 import POIList from "./POIList.jsx";
@@ -29,7 +23,8 @@ import { findFeaturedMeta } from "../../featured/index.js";
 function FeaturedRoute({ slug, children, layout = "article", desktopMap = "sticky", kicker = null }) {
   const isMobile = useIsMobile();
   const [meta, setMeta] = useState(null);
-  const [assets, setAssets] = useState(null);
+  const [dataMarkerFeatures, setDataMarkerFeatures] = useState([]);
+  const [activeDataPointIds, setActiveDataPointIds] = useState([]);
   const [routeState, setRouteState] = useState(emptyRouteSnapshot());
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
@@ -65,54 +60,13 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     const controller = new AbortController();
     (async () => {
       try {
-        const loaded = await loadMapAssets({ signal: controller.signal });
+        const snapshot = await loadFeaturedRouteSnapshot(meta.slug, {
+          signal: controller.signal,
+        });
         if (controller.signal.aborted) return;
-        let manager;
-        let snapshot;
-        if (loaded.baseRoutingShardManifestData) {
-          // Resolve manifest path to absolute so shard URLs are always rooted
-          // at the site root, not relative to the current featured-route page.
-          const manifestPath = loaded.baseRoutingShardManifestPath;
-          const absoluteManifestPath =
-            manifestPath.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(manifestPath)
-              ? manifestPath
-              : `/${manifestPath}`;
-          const shardLoader = createBaseRoutingShardFetchLoader(
-            absoluteManifestPath,
-            {},
-            getShardLoaderLocation(),
-            { format: "default" },
-          );
-          const session = await createShardedRouteSession(
-            RouteManager,
-            loaded.geoJsonData,
-            loaded.segmentsData,
-            loaded.baseRoutingShardManifestData,
-            shardLoader,
-            { cwBaseIndex: loaded.cwBaseIndexData },
-          );
-          if (controller.signal.aborted) return;
-          snapshot = await session.restoreRouteParam(meta.route);
-          manager = session.manager;
-        } else {
-          manager = await createRouteManager(
-            RouteManager,
-            loaded.geoJsonData,
-            loaded.segmentsData,
-          );
-          if (controller.signal.aborted) return;
-          snapshot = restoreRouteFromParam(
-            manager,
-            meta.route,
-            loaded.segmentsData,
-            loaded.cwBaseIndexData,
-          );
-        }
-        if (!snapshot) {
-          throw new Error(`Featured route "${meta.slug}" failed to decode`);
-        }
-        setAssets({ ...loaded, manager });
-        setRouteState(snapshot);
+        setRouteState(snapshotToRouteState(snapshot));
+        setDataMarkerFeatures(snapshot.pois?.dataMarkerFeatures || []);
+        setActiveDataPointIds(snapshot.pois?.activeDataPointIds || []);
         setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -223,7 +177,8 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     () => ({
       meta,
       kicker,
-      assets,
+      dataMarkerFeatures,
+      activeDataPointIds,
       routeState,
       status,
       error,
@@ -244,7 +199,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       handleRouteClick,
       handleDataMarkerClick,
     }),
-    [meta, kicker, assets, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
+    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
@@ -278,9 +233,8 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
             {!isMobile && desktopMap === "sticky" && (
               <aside className="featured-route-sticky-map">
                 <MapView
-                  geoJsonData={assets.geoJsonData}
-                  dataMarkerFeatures={dataMarkerFeaturesFromSegments(assets.segmentsData)}
-                  activeDataPointIds={routeState.activeDataPoints.map((p) => p.id)}
+                  dataMarkerFeatures={dataMarkerFeatures}
+                  activeDataPointIds={activeDataPointIds}
                   routeGeometry={routeState.geometry}
                   routePoints={routeState.points}
                   routeFitRequest={routeFitRequest}
