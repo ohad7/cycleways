@@ -21,3 +21,32 @@ test("splash paints with logo, title, and progress bar", async ({ page }) => {
   );
   expect(width).toBe("0.15");
 });
+
+test("window.__splash API advances the bar and removes the splash", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const splash = page.locator("#splash");
+
+  // API exists
+  const hasApi = await page.evaluate(
+    () =>
+      !!window.__splash &&
+      typeof window.__splash.set === "function" &&
+      typeof window.__splash.done === "function",
+  );
+  expect(hasApi).toBe(true);
+
+  // set() advances the progress variable
+  await page.evaluate(() => window.__splash.set(0.5));
+  const mid = await splash
+    .locator(".splash__bar-fill")
+    .evaluate((el) =>
+      getComputedStyle(el).getPropertyValue("--splash-progress").trim(),
+    );
+  expect(mid).toBe("0.5");
+
+  // done() hides then removes the node
+  await page.evaluate(() => window.__splash.done());
+  await expect(splash).toHaveCount(0);
+});

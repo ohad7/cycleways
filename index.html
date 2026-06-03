@@ -144,6 +144,49 @@
       transition: width 350ms ease;
     }
   </style>
+  <script>
+    (function () {
+      var el = null;
+      function splashEl() {
+        if (!el) el = document.getElementById("splash");
+        return el;
+      }
+      var removed = false;
+      function remove() {
+        var s = splashEl();
+        if (s && s.parentNode) s.parentNode.removeChild(s);
+      }
+      window.__splash = {
+        set: function (pct) {
+          var s = splashEl();
+          if (!s) return;
+          var clamped = Math.max(0, Math.min(1, Number(pct) || 0));
+          s.style.setProperty("--splash-progress", String(clamped));
+        },
+        done: function () {
+          if (removed) return;
+          removed = true;
+          this.set(1);
+          var s = splashEl();
+          if (!s) return;
+          s.classList.add("splash--hidden");
+          var fallback = setTimeout(remove, 600);
+          s.addEventListener(
+            "transitionend",
+            function () {
+              clearTimeout(fallback);
+              remove();
+            },
+            { once: true },
+          );
+        },
+      };
+      // Failure safety: never trap the user behind the splash.
+      setTimeout(function () {
+        window.__splash.done();
+      }, 15000);
+    })();
+  </script>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-P1TK7GTD2J"></script>
