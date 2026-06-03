@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import ContentSections from "./components/ContentSections.jsx";
+import Icon from "./components/Icon.jsx";
 import DataMarkerCard from "./components/DataMarkerCard.jsx";
 import DownloadModal from "./components/DownloadModal.jsx";
 import ElevationProfile, { formatLegacyDistance } from "./components/ElevationProfile.jsx";
@@ -128,7 +129,7 @@ function App() {
                       title="חיפוש מיקום"
                       aria-label="חיפוש"
                     >
-                      <ion-icon name="search-outline" />
+                      <Icon name="search-outline" />
                     </button>
                     <input
                       id="location-search"
@@ -151,7 +152,7 @@ function App() {
                         aria-label="ביטול"
                         onClick={handleUndo}
                       >
-                        <ion-icon name="arrow-undo-outline" />
+                        <Icon name="arrow-undo-outline" />
                       </button>
                       <button
                         id="redo-btn"
@@ -162,7 +163,7 @@ function App() {
                         aria-label="חזרה"
                         onClick={handleRedo}
                       >
-                        <ion-icon name="arrow-redo-outline" />
+                        <Icon name="arrow-redo-outline" />
                       </button>
                       <button
                         id="reset-btn"
@@ -173,7 +174,7 @@ function App() {
                         aria-label="איפוס מסלול"
                         onClick={handleRouteClear}
                       >
-                        <ion-icon name="trash-outline" />
+                        <Icon name="trash-outline" />
                       </button>
                       <button
                         id="download-gpx"

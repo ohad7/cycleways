@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import Icon from "./Icon.jsx";
 
 function TopBar({
   onOpenTutorial,
@@ -41,7 +42,7 @@ function TopBar({
         aria-label="פתיחת תפריט"
         onClick={onMobileMenuToggle}
       >
-        <ion-icon name="menu-outline" />
+        <Icon name="menu-outline" />
       </button>
       <nav
         className={`nav-links${mobileMenuOpen ? " active" : ""}`}
