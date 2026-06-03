@@ -95,7 +95,7 @@
   <!-- Loading splash (inline so it paints before the JS bundle) -->
   <style>
     #splash {
-      --splash-progress: 0.15;
+      --splash-progress: 0.08;
       position: fixed;
       inset: 0;
       z-index: 2147483647;
@@ -105,7 +105,7 @@
       justify-content: center;
       gap: 24px;
       direction: rtl;
-      background: linear-gradient(180deg, #87CEEB 0%, #cde7c4 55%, #32CD32 100%);
+      background: linear-gradient(160deg, #ededed 0%, #d2d2d2 50%, #a8a8a8 100%);
       transition: opacity 300ms ease;
       font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
@@ -125,7 +125,7 @@
       padding: 0 24px;
       font-size: 20px;
       font-weight: 700;
-      color: #1f3d1f;
+      color: #333333;
       text-align: center;
       max-width: 90vw;
     }
@@ -133,15 +133,14 @@
       width: min(280px, 70vw);
       height: 8px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.55);
+      background: rgba(255, 255, 255, 0.65);
       overflow: hidden;
     }
     .splash__bar-fill {
       height: 100%;
       width: calc(var(--splash-progress) * 100%);
       border-radius: 999px;
-      background: #1f3d1f;
-      transition: width 350ms ease;
+      background: #4a4a4a;
     }
   </style>
   <script>
@@ -152,6 +151,26 @@
         return el;
       }
       var removed = false;
+      // Hybrid progress model: `target` is the current phase ceiling (raised by
+      // load milestones via set()); `current` eases toward it every frame, with
+      // a small guaranteed creep so a long wait still feels like forward motion.
+      var current = 0.08; // matches the CSS default so the first paint is seamless
+      var target = 0.15; // initial (HTML-parsed) ceiling
+      var rafId = null;
+      function render() {
+        var s = splashEl();
+        if (s) s.style.setProperty("--splash-progress", current.toFixed(4));
+      }
+      function frame() {
+        // Stop just shy of the ceiling so the next milestone yields visible motion.
+        var cap = target - 0.005;
+        if (current < cap) {
+          var step = Math.max((target - current) * 0.02, 0.0005);
+          current = Math.min(current + step, cap);
+          render();
+        }
+        rafId = requestAnimationFrame(frame);
+      }
       function remove() {
         var s = splashEl();
         if (s && s.parentNode) s.parentNode.removeChild(s);
@@ -159,22 +178,25 @@
       }
       window.__splash = {
         set: function (pct) {
-          var s = splashEl();
-          if (!s) return;
           var clamped = Math.max(0, Math.min(1, Number(pct) || 0));
-          s.style.setProperty("--splash-progress", String(clamped));
+          if (clamped > target) target = clamped; // raise the ceiling; never go back
         },
         done: function () {
           if (removed) return;
           removed = true;
-          this.set(1);
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          current = 1;
+          target = 1;
+          render();
           var s = splashEl();
           if (!s) return;
           s.classList.add("splash--hidden");
           var fallback = setTimeout(remove, 600);
           function onEnd(e) {
-            // Only the opacity fade signals the splash finished fading out;
-            // ignore the progress-bar width transition bubbling up from a child.
+            // Only the opacity fade signals the splash finished fading out.
             if (e && e.propertyName && e.propertyName !== "opacity") return;
             s.removeEventListener("transitionend", onEnd);
             clearTimeout(fallback);
@@ -183,6 +205,8 @@
           s.addEventListener("transitionend", onEnd);
         },
       };
+      // Drive the creep as soon as the splash element exists.
+      rafId = requestAnimationFrame(frame);
       // Failure safety: never trap the user behind the splash.
       setTimeout(function () {
         window.__splash.done();

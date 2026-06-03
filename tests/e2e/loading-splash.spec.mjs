@@ -19,13 +19,15 @@ test("splash paints with logo, title, and progress bar", async ({ page }) => {
   await expect(
     splash.getByText("מפת שבילי אופניים - גליל עליון וגולן"),
   ).toBeVisible();
-  // Progress bar fill exists and the splash is at the default 15%
+  // Progress bar fill exists; with milestones blocked the bar stays within the
+  // initial phase (creeping toward, but below, the first real milestone at 0.5).
   const fill = splash.locator(".splash__bar-fill");
   await expect(fill).toBeVisible();
-  const width = await splash.evaluate(
-    (el) => getComputedStyle(el).getPropertyValue("--splash-progress").trim(),
+  const progress = await splash.evaluate((el) =>
+    parseFloat(getComputedStyle(el).getPropertyValue("--splash-progress")),
   );
-  expect(width).toBe("0.15");
+  expect(progress).toBeGreaterThan(0);
+  expect(progress).toBeLessThan(0.5);
 });
 
 test("window.__splash API advances the bar and removes the splash", async ({
@@ -47,14 +49,19 @@ test("window.__splash API advances the bar and removes the splash", async ({
       typeof window.__splash.done === "function",
   );
 
-  // set() advances the progress variable
+  // set() raises the phase ceiling; the bar then creeps toward it.
   await page.evaluate(() => window.__splash.set(0.5));
-  const mid = await splash
-    .locator(".splash__bar-fill")
-    .evaluate((el) =>
-      getComputedStyle(el).getPropertyValue("--splash-progress").trim(),
-    );
-  expect(mid).toBe("0.5");
+  await expect
+    .poll(
+      () =>
+        splash.evaluate((el) =>
+          parseFloat(
+            getComputedStyle(el).getPropertyValue("--splash-progress"),
+          ),
+        ),
+      { timeout: 4000 },
+    )
+    .toBeGreaterThan(0.45);
 
   // done() hides then removes the node
   await page.evaluate(() => window.__splash.done());
