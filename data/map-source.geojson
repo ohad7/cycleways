@@ -5002,7 +5002,26 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-77f69a67",
+            "type": "cafe",
+            "information": "מתחם מסעדות, בתי קפה וחנויות",
+            "location": [
+              33.223701,
+              35.61561
+            ],
+            "name": "גן הצפון",
+            "description": "מתחם מסעדות, בתי קפה וחנויות",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-77f69a67-f1097ac6.webp",
+                "thumbnail": "public-data/poi-images/poi-77f69a67-f1097ac6-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -5118,8 +5137,8 @@
             98
           ],
           [
-            35.61599366666667,
-            33.2231,
+            35.6160562678825,
+            33.223254173714096,
             98
           ],
           [

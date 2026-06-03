@@ -23,7 +23,17 @@
         "dirt": 0,
         "road": 0
       },
-      "qualityScore": 3
+      "qualityScore": 3,
+      "start": {
+        "name": "שער כניסה שדה נחמיה",
+        "description": "שער הכניסה הצהוב של שדה נחמיה. ליד השער חניית כורכר רחבה, פונים שמאלה מיד לפני הבוטקה לכיוון גשר הולכי רגל ומיד ימינה לכיוון הנחל ומתחילים במסלול",
+        "images": [
+          {
+            "photo": "public-data/poi-images/banias-gan-hatsafon-start-4d7040b6.webp",
+            "thumbnail": "public-data/poi-images/banias-gan-hatsafon-start-4d7040b6-thumb.webp"
+          }
+        ]
+      }
     },
     {
       "slug": "sovev-beit-hillel",
