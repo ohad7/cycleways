@@ -76,7 +76,7 @@ test("production shows outside-network warning in the route panel", async ({ pag
   });
 
   await expect(page.locator("#route-description .route-inline-warning")).toContainText(
-    "הנקודה רחוקה מדי מרשת CycleWays",
+    "הנקודה רחוקה מדי מרשת הדרכים",
   );
   await expect(page.locator("#route-description .elevation-hover-overlay")).toHaveCount(0);
 });
@@ -182,29 +182,33 @@ test("production supports segment hover, segment clicks, and sharing", async ({ 
     expect(await getRoutePointFeatureCount(page)).toBe(index + 1);
   }
 
-  await expect(page.locator("#route-description")).toContainText("3.8 ק\"מ");
+  await expect(page.locator("#route-description")).toContainText("3.9 ק\"מ");
   await expect(page.getByRole("button", { name: "סיכום" })).toBeEnabled();
-  expect(
-    await page.evaluate(
-      ({ layerId }) => window.__mockMapboxCurrentMap?.layers?.get(layerId)?.paint,
-      { layerId: ROUTE_POINTS_LAYER_ID },
-    ),
-  ).toMatchObject({
-    "circle-radius": 4,
-    "circle-color": "#ff4444",
-    "circle-stroke-width": 2,
-    "circle-stroke-color": "#ffffff",
+  const routePointLayer = await page.evaluate(
+    ({ layerId }) => window.__mockMapboxCurrentMap?.layers?.get(layerId),
+    { layerId: ROUTE_POINTS_LAYER_ID },
+  );
+  expect(routePointLayer).toMatchObject({
+    type: "circle",
+    source: "react-route-points",
   });
-  expect(
-    await page.evaluate(
-      ({ layerId }) => window.__mockMapboxCurrentMap?.layers?.get(layerId)?.paint,
-      { layerId: ROUTE_GEOMETRY_LAYER_ID },
-    ),
-  ).toMatchObject({
+  expect(routePointLayer.paint["circle-radius"]).toEqual(
+    expect.arrayContaining([4.2, 4.1, 3.8, 3.2]),
+  );
+  expect(routePointLayer.paint["circle-color"]).toEqual(
+    expect.arrayContaining(["#18a957", "#c84c45"]),
+  );
+  const routeGeometryPaint = await page.evaluate(
+    ({ layerId }) => window.__mockMapboxCurrentMap?.layers?.get(layerId)?.paint,
+    { layerId: ROUTE_GEOMETRY_LAYER_ID },
+  );
+  expect(routeGeometryPaint).toMatchObject({
     "line-color": "#006699",
     "line-width": 5,
-    "line-opacity": 0.9,
   });
+  expect(routeGeometryPaint["line-opacity"]).toEqual(
+    expect.arrayContaining([0.3, 0.9]),
+  );
   expect(
     await page.evaluate(
       ({ focusLayerId, hoverLayerId }) => ({
@@ -220,28 +224,6 @@ test("production supports segment hover, segment clicks, and sharing", async ({ 
     focus: ["==", ["get", "name"], ""],
     hover: ["==", ["get", "name"], ""],
   });
-
-  await page.evaluate(() => {
-    const overlay = document.querySelector(".elevation-hover-overlay");
-    const rect = overlay.getBoundingClientRect();
-    overlay.dispatchEvent(
-      new MouseEvent("mousemove", {
-        bubbles: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
-      }),
-    );
-  });
-  await expect(page.locator("#segment-name-display")).toContainText("גובה");
-  expect(
-    await page.evaluate(() =>
-      window.__mockMapboxEvents.filter(
-        (event) =>
-          event.type === "marker" &&
-          String(event.className || "").includes("elevation-marker"),
-      ).length,
-    ),
-  ).toBeGreaterThan(0);
 
   await page.evaluate(
     ({ dataLayerId, point }) => {

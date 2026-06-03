@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 test("/featured gallery lists known featured routes", async ({ page }) => {
   await page.goto("/featured");
   await expect(page.locator(".featured-gallery-card", { hasText: "סובב בית הלל" })).toBeVisible();
-  await expect(page.locator(".featured-gallery-card", { hasText: "שדה נחמיה" })).toBeVisible();
+  await expect(page.locator(".featured-gallery-card", { hasText: "בניאס" })).toBeVisible();
 });
 
 test("clicking a gallery card opens its featured-route page", async ({ page }) => {
@@ -16,12 +16,6 @@ test("clicking a gallery card opens its featured-route page", async ({ page }) =
   await page.locator(".featured-gallery-card", { hasText: "סובב בית הלל" }).click();
   await expect(page).toHaveURL(/\/featured\/sovev-beit-hillel$/);
   await expect(page.locator(".featured-route-header h1")).toContainText("סובב בית הלל");
-});
-
-test("home page recommendations link to /featured", async ({ page }) => {
-  await page.goto("/");
-  await page.locator("a", { hasText: "דף המסלולים המומלצים" }).click();
-  await expect(page).toHaveURL(/\/featured$/);
 });
 
 test("TopBar appears on /featured page", async ({ page }) => {

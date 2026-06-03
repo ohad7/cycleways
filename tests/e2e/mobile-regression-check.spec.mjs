@@ -28,6 +28,8 @@ test("mobile adapted layout remains usable", async ({ page }, testInfo) => {
   await page.locator(".mobile-menu-btn").click();
   await expect(page.locator("#nav-links")).toBeVisible();
   await expect(page.locator("#nav-links")).toContainText("שבילים");
+  await page.locator(".mobile-menu-btn").click();
+  await expect(page.locator("#nav-links")).not.toHaveClass(/active/);
 
   await page.locator("#download-gpx").click();
   await expect(page.getByRole("dialog", { name: "הורדת מסלול GPX" })).toBeVisible();

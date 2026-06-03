@@ -1,26 +1,9 @@
-import React, {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import MapSurface from "./MapSurface.jsx";
 
-// The OSM debug overlay is a large, dev-only tool (enabled via ?osm /
-// ?osmDebug). Lazy-load it and only mount it when debug mode is active so its
-// code stays out of the end-user bundle entirely.
-const OsmDebugOverlay = lazy(() => import("./OsmDebugOverlay.jsx"));
-
-// Composition root for the map. Renders the end-user MapSurface and, once the
-// map is ready, the web-only OsmDebugOverlay onto the same map instance.
-// `osmDebugMode` is intentionally routed to BOTH children: MapSurface uses it
-// to suppress the product route-network layer + guard clicks, while
-// OsmDebugOverlay uses it to decide whether to activate its debug layers.
+// Composition root for the map. Keeps the map instance available for callers
+// without exposing MapSurface's initialization lifecycle.
 export default function MapView({ onMapReady, ...props }) {
-  const [map, setMap] = useState(null);
-
   // Keep onMapReady current without making handleReady's identity change.
   // MapSurface's map-init effect depends on the onMapReady it receives; if that
   // identity changed on every render (e.g. after setMap below), the effect
@@ -31,52 +14,13 @@ export default function MapView({ onMapReady, ...props }) {
   }, [onMapReady]);
 
   const handleReady = useCallback((readyMap) => {
-    setMap(readyMap);
     onMapReadyRef.current?.(readyMap);
   }, []);
 
-  const {
-    osmDebugGeoJson,
-    osmGraphEdgesGeoJson,
-    osmGraphNodesGeoJson,
-    cwOsmMatchGeoJson,
-    osmIntersectionsGeoJson,
-    osmDebugMode,
-    osmDebugLayerMode,
-    onOsmDebugHover,
-    onOsmGraphEdgeHover,
-    onCwOsmMatchHover,
-    selectedCwOsmReviewFeature,
-    selectedCwOsmReviewSegmentId,
-    ...surfaceProps
-  } = props;
-
   return (
-    <>
-      <MapSurface
-        {...surfaceProps}
-        osmDebugMode={osmDebugMode}
-        onMapReady={handleReady}
-      />
-      {map && osmDebugMode && (
-        <Suspense fallback={null}>
-          <OsmDebugOverlay
-            map={map}
-            osmDebugMode={osmDebugMode}
-            osmDebugLayerMode={osmDebugLayerMode}
-            osmDebugGeoJson={osmDebugGeoJson}
-            osmGraphEdgesGeoJson={osmGraphEdgesGeoJson}
-            osmGraphNodesGeoJson={osmGraphNodesGeoJson}
-            cwOsmMatchGeoJson={cwOsmMatchGeoJson}
-            osmIntersectionsGeoJson={osmIntersectionsGeoJson}
-            selectedCwOsmReviewFeature={selectedCwOsmReviewFeature}
-            selectedCwOsmReviewSegmentId={selectedCwOsmReviewSegmentId}
-            onOsmDebugHover={onOsmDebugHover}
-            onOsmGraphEdgeHover={onOsmGraphEdgeHover}
-            onCwOsmMatchHover={onCwOsmMatchHover}
-          />
-        </Suspense>
-      )}
-    </>
+    <MapSurface
+      {...props}
+      onMapReady={handleReady}
+    />
   );
 }
