@@ -2094,6 +2094,21 @@ async function handlePromote(payload = {}) {
   }
   removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun));
 
+  // Promoting map data changes the geometry/POIs featured snapshots are built
+  // from, so regenerate them here too (the route-catalog promote does the same).
+  // Without this, featured pages would render stale snapshots after a map promote.
+  let snapshots = null;
+  if (!payload.dryRun) {
+    try {
+      snapshots = await buildFeaturedRouteSnapshots({ log });
+    } catch (err) {
+      log("error", `promote#${promoteId} featured snapshot rebuild failed`, {
+        message: err?.message,
+      });
+      snapshots = { written: [], removed: [], errors: [{ slug: null, message: err?.message || String(err) }] };
+    }
+  }
+
   log("info", `promote#${promoteId} finished`, {
     dryRun: Boolean(payload.dryRun),
     version: manifest.version,
@@ -2111,6 +2126,7 @@ async function handlePromote(payload = {}) {
     })),
     removed: removed.map((filePath) => repoRelative(filePath)),
     warnings: report.validation?.routeCompatibilityWarnings || [],
+    snapshots,
   };
 }
 

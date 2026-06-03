@@ -13,3 +13,9 @@ test("empty gallery slot does not render a Photos section", async ({ page }) => 
   await page.goto("/featured/sovev-beit-hillel");
   await expect(page.locator(".featured-gallery")).toHaveCount(0);
 });
+
+test("document title is the featured route name, not the front-page title", async ({ page }) => {
+  await page.goto("/featured/sovev-beit-hillel");
+  await expect(page.locator(".featured-route-header h1")).toBeVisible();
+  await expect(page).toHaveTitle(/^סובב בית הלל \|/);
+});

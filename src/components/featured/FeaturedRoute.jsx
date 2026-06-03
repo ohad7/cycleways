@@ -55,6 +55,18 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     };
   }, [slug]);
 
+  // Set the document title to the route name so each featured page is
+  // distinguishable (and shareable) rather than inheriting the front-page
+  // title. Restore the original on unmount when navigating away.
+  useEffect(() => {
+    if (!meta?.name) return undefined;
+    const previousTitle = document.title;
+    document.title = `${meta.name} | מפת שבילי אופניים - גליל עליון וגולן`;
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [meta?.name]);
+
   useEffect(() => {
     if (!meta) return;
     const controller = new AbortController();
