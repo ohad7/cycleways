@@ -23,6 +23,7 @@
 - Modify `src/components/featured/FeaturedRouteMap.jsx` — layout-aware `shouldRender`.
 - Modify `src/components/featured/FeaturedVideoRoute.jsx` — apply modifier class, branch rail content.
 - Modify `src/components/ElevationProfile.jsx` — additive `cursorFraction` + `onElevationSelect` props.
+- Create `src/components/elevationCursor.js` — pure `elevationCursorX(fraction)` helper (extracted so the node unit test can import it without a JSX loader; re-exported from `ElevationProfile.jsx`).
 - Modify `src/components/featured/featured.css` — `.fv-playback--overlay` rules.
 - Modify `package.json` — add `tests/test-featured-layout.mjs` to the `test` chain.
 
