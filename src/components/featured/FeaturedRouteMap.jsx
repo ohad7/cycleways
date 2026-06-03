@@ -126,6 +126,7 @@ export default function FeaturedRouteMapSlot({
     onRouteSelect = handleRouteClick,
   } = {}) => (
     <MapView
+      mode="readonly-route"
       dataMarkerFeatures={dataMarkerFeatures}
       activeDataPointIds={activeDataPointIds}
       routeGeometry={routeState.geometry}

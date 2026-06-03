@@ -233,6 +233,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
             {!isMobile && desktopMap === "sticky" && (
               <aside className="featured-route-sticky-map">
                 <MapView
+                  mode="readonly-route"
                   dataMarkerFeatures={dataMarkerFeatures}
                   activeDataPointIds={activeDataPointIds}
                   routeGeometry={routeState.geometry}
