@@ -2,6 +2,7 @@ import { cp, copyFile, mkdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildFeaturedRouteSnapshots } from "./lib/featuredRouteSnapshotBuilder.mjs";
 
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
 const distDir = resolve(repoRoot, "dist");
@@ -23,6 +24,22 @@ for (const filePath of dataFiles) {
 }
 
 await mkdir(distDir, { recursive: true });
+
+// Regenerate featured-route snapshots BEFORE copying public-data/ into dist/ so
+// the freshly generated public-data/featured-routes/*.json are included in the
+// build. Snapshots are derived public data; never hand-edit them.
+{
+  const { written, removed, errors } = await buildFeaturedRouteSnapshots({});
+  console.log(
+    `Featured snapshots: ${written.length} written, ${removed.length} removed`,
+  );
+  if (errors.length > 0) {
+    for (const { slug, error } of errors) {
+      console.error(`Featured snapshot failed for ${slug}: ${error}`);
+    }
+    throw new Error("featured-route snapshot generation failed");
+  }
+}
 
 for (const filePath of files) {
   const source = resolve(repoRoot, filePath);

@@ -15,6 +15,38 @@ export function namespacedDataMarkerIconName(iconName, namespace) {
   return `${namespace}-${iconName}`;
 }
 
+// Project a single data point into the GeoJSON feature shape that
+// syncDataMarkerLayers expects. `location` is the resolved [lat, lng] pair and
+// `dataPointId` / `segmentName` are the already-resolved identifiers.
+function dataMarkerFeature(dataPoint, { dataPointId, location, segmentName }) {
+  const [lat, lng] = location;
+  const type = dataPoint.type || "warning";
+  const primary = primaryPoiImage(dataPoint);
+  return {
+    type: "Feature",
+    id: dataPointId,
+    geometry: {
+      type: "Point",
+      coordinates: [lng, lat],
+    },
+    properties: {
+      dataPointId,
+      type,
+      name: dataPoint.name || "",
+      information: dataPoint.information || "",
+      description: dataPoint.description || "",
+      photo: primary?.photo || "",
+      thumbnail: primary?.thumbnail || "",
+      gallery: dataPoint.gallery,
+      segmentName,
+      emoji: dataPoint.emoji || poiEmoji(type),
+      label: poiLabel(type),
+      color: poiColor(type),
+      icon: dataPoint.icon || poiMarkerIconName(type),
+    },
+  };
+}
+
 export function dataMarkerFeaturesFromSegments(segmentsData) {
   const features = [];
 
@@ -32,33 +64,42 @@ export function dataMarkerFeaturesFromSegments(segmentsData) {
         typeof dataPoint.id === "string" && dataPoint.id.length > 0
           ? dataPoint.id
           : `${segmentName}-${index}`;
-      const type = dataPoint.type || "warning";
-      const primary = primaryPoiImage(dataPoint);
-      features.push({
-        type: "Feature",
-        id: dataPointId,
-        geometry: {
-          type: "Point",
-          coordinates: [lng, lat],
-        },
-        properties: {
-          dataPointId,
-          type,
-          name: dataPoint.name || "",
-          information: dataPoint.information || "",
-          description: dataPoint.description || "",
-          photo: primary?.photo || "",
-          thumbnail: primary?.thumbnail || "",
-          gallery: dataPoint.gallery,
-          segmentName,
-          emoji: dataPoint.emoji || poiEmoji(type),
-          label: poiLabel(type),
-          color: poiColor(type),
-          icon: dataPoint.icon || poiMarkerIconName(type),
-        },
-      });
+      features.push(
+        dataMarkerFeature(dataPoint, { dataPointId, location, segmentName }),
+      );
     });
   });
+
+  return features;
+}
+
+// Project active route data points (as returned by getActiveRouteDataPoints)
+// into the same GeoJSON feature shape, restricted to on-route POIs. Used by the
+// featured-route snapshot builder, which deliberately drops off-route markers.
+export function dataMarkerFeaturesFromActiveDataPoints(activeDataPoints) {
+  const features = [];
+
+  (Array.isArray(activeDataPoints) ? activeDataPoints : []).forEach(
+    (dataPoint, index) => {
+      const location = dataPoint?.location;
+      if (!Array.isArray(location) || location.length < 2) return;
+
+      const [lat, lng] = location;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+      const dataPointId =
+        typeof dataPoint.id === "string" && dataPoint.id.length > 0
+          ? dataPoint.id
+          : `${dataPoint.segmentName || "active"}-${index}`;
+      features.push(
+        dataMarkerFeature(dataPoint, {
+          dataPointId,
+          location,
+          segmentName: dataPoint.segmentName,
+        }),
+      );
+    },
+  );
 
   return features;
 }

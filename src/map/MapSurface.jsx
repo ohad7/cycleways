@@ -38,6 +38,7 @@ import {
   MAP_INITIAL_CENTER,
   MAP_INITIAL_ZOOM,
 } from "@cycleways/core/map/mapViewport.js";
+import { capabilitiesForMode, MAP_MODE_PLANNER } from "./mapCapabilities.js";
 
 function MapSurface({
   activeDataPointIds = [],
@@ -48,6 +49,7 @@ function MapSurface({
   geoJsonData,
   elevationHover,
   hoveredSegment,
+  mode = MAP_MODE_PLANNER,
   onDataMarkerClick,
   onMapClick,
   onMapReady,
@@ -73,6 +75,9 @@ function MapSurface({
   selectedRoutePointIndex = null,
   videoCursor = null,
 }) {
+  // Translate the mode into an explicit capability set. In planner mode every
+  // flag is true, so every gated effect below behaves exactly as before.
+  const caps = capabilitiesForMode(mode);
   const containerRef = useRef(null);
   const draggingPointRef = useRef(null);
   const routeLineDragRef = useRef(null);
@@ -220,7 +225,9 @@ function MapSurface({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready" || !geoJsonData) return undefined;
+    if (!map || status !== "ready" || !geoJsonData || !caps.networkLayers) {
+      return undefined;
+    }
 
     const features = prepareRouteNetworkFeatures(geoJsonData);
     networkSegmentsRef.current = buildNetworkSegments(features);
@@ -237,6 +244,7 @@ function MapSurface({
       callbacksRef.current.onSegmentHover?.(segmentName);
 
       if (
+        caps.hoverPreview &&
         closest?.point &&
         !isPointTooCloseToRouteUi(
           map,
@@ -289,7 +297,7 @@ function MapSurface({
       networkSegmentsRef.current = [];
       clearRouteNetworkLayers(map);
     };
-  }, [geoJsonData, status]);
+  }, [geoJsonData, status, caps.networkLayers, caps.hoverPreview]);
 
   useEffect(() => {
     if (status !== "ready") return;
@@ -303,27 +311,34 @@ function MapSurface({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return;
+    if (!map || status !== "ready" || !caps.routeGeometryLayer) return;
     syncRouteGeometryLayer(map, routeGeometry, routePointDragPreview);
-  }, [routeGeometry, routePointDragPreview, status]);
+  }, [routeGeometry, routePointDragPreview, status, caps.routeGeometryLayer]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return;
+    if (!map || status !== "ready" || !caps.routePointDragPreview) return;
     syncRoutePointDragPreviewLayer(map, routePointDragPreview);
-  }, [routePointDragPreview, status]);
+  }, [routePointDragPreview, status, caps.routePointDragPreview]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return undefined;
+    if (!map || status !== "ready" || !caps.routePointDragPreview) return undefined;
     return () => {
       clearRoutePointDragPreviewLayer(map);
     };
-  }, [status]);
+  }, [status, caps.routePointDragPreview]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready" || !onUserViewportChange) return undefined;
+    if (
+      !map ||
+      status !== "ready" ||
+      !onUserViewportChange ||
+      !caps.viewportPrefetch
+    ) {
+      return undefined;
+    }
 
     const emitUserViewportChange = (event) => {
       if (!event?.originalEvent) return;
@@ -342,13 +357,15 @@ function MapSurface({
     return () => {
       eventNames.forEach((eventName) => map.off(eventName, emitUserViewportChange));
     };
-  }, [onUserViewportChange, status]);
+  }, [onUserViewportChange, status, caps.viewportPrefetch]);
 
   const animatorVisibleRef = useRef(true);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready" || !animator) return undefined;
+    if (!map || status !== "ready" || !animator || !caps.directionPulse) {
+      return undefined;
+    }
 
     const unsubscribe = animator.subscribe("chevron", (payload) => {
       if (!payload) {
@@ -363,11 +380,11 @@ function MapSurface({
       unsubscribe();
       clearRouteDirectionPulseLayer(map);
     };
-  }, [animator, status]);
+  }, [animator, status, caps.directionPulse]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return;
+    if (!map || status !== "ready" || !caps.elevationPulse) return;
 
     if (Number.isFinite(elevationHover?.t)) {
       // Disable animator-driven visuals for this route — only reset on route change.
@@ -376,7 +393,7 @@ function MapSurface({
     } else {
       clearRouteDirectionPulseLayer(map);
     }
-  }, [elevationHover, status]);
+  }, [elevationHover, status, caps.elevationPulse]);
 
   useEffect(() => {
     animatorVisibleRef.current = true;
@@ -384,13 +401,15 @@ function MapSurface({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return;
+    if (!map || status !== "ready" || !caps.videoCursorLayer) return;
     syncVideoCursorLayer(map, videoCursor);
-  }, [videoCursor, status]);
+  }, [videoCursor, status, caps.videoCursorLayer]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready" || !onRouteClick) return undefined;
+    if (!map || status !== "ready" || !onRouteClick || !caps.routeClickCallback) {
+      return undefined;
+    }
     const handler = (e) => {
       if (map.getLayer?.(DATA_MARKERS_LAYER_ID)) {
         const hits = map.queryRenderedFeatures(e.point, {
@@ -402,17 +421,17 @@ function MapSurface({
     };
     map.on("click", handler);
     return () => map.off("click", handler);
-  }, [status, onRouteClick]);
+  }, [status, onRouteClick, caps.routeClickCallback]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return;
+    if (!map || status !== "ready" || !caps.routePointLayers) return;
     syncRoutePointLayers(map, routePoints, selectedRoutePointIndex);
-  }, [routePoints, selectedRoutePointIndex, status]);
+  }, [routePoints, selectedRoutePointIndex, status, caps.routePointLayers]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return;
+    if (!map || status !== "ready" || !caps.dataMarkerLayer) return;
     let disposed = false;
     async function syncMarkers() {
       await loadDataMarkerIcons(map);
@@ -424,11 +443,11 @@ function MapSurface({
     return () => {
       disposed = true;
     };
-  }, [activeDataPointIds, dataMarkerFeatures, status]);
+  }, [activeDataPointIds, dataMarkerFeatures, status, caps.dataMarkerLayer]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return undefined;
+    if (!map || status !== "ready" || !caps.viewportPrefetch) return undefined;
 
     let timeoutId = null;
     const emitViewportIdle = () => {
@@ -455,11 +474,20 @@ function MapSurface({
       }
       map.off("moveend", emitViewportIdle);
     };
-  }, [status]);
+  }, [status, caps.viewportPrefetch]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready") return undefined;
+    // The data-marker click is a read-only capability; map-click snapping and
+    // route-point selection are planner-only. Register each handler only when
+    // its capability is on so readonly maps don't wire planner interactions.
+    const wantsMapClick = caps.networkHitTest;
+    const wantsRoutePointSelect = caps.routePointSelect;
+    const wantsDataMarkerClick = caps.dataMarkerClick;
+    if (!wantsMapClick && !wantsRoutePointSelect && !wantsDataMarkerClick) {
+      return undefined;
+    }
 
     const hasBlockingClickFeature = (event) => {
       const layers = [
@@ -523,20 +551,34 @@ function MapSurface({
       callbacksRef.current.onRoutePointSelect?.(index);
     };
 
-    map.on("click", handleMapClick);
-    map.on("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
-    map.on("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
+    if (wantsMapClick) map.on("click", handleMapClick);
+    if (wantsDataMarkerClick) {
+      map.on("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
+    }
+    if (wantsRoutePointSelect) {
+      map.on("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
+    }
 
     return () => {
-      map.off("click", handleMapClick);
-      map.off("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
-      map.off("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
+      if (wantsMapClick) map.off("click", handleMapClick);
+      if (wantsDataMarkerClick) {
+        map.off("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
+      }
+      if (wantsRoutePointSelect) {
+        map.off("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
+      }
     };
-  }, [status]);
+  }, [status, caps.networkHitTest, caps.routePointSelect, caps.dataMarkerClick]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return undefined;
+    if (
+      !map ||
+      status !== "ready" ||
+      (!caps.routePointEditing && !caps.routeLineEditing)
+    ) {
+      return undefined;
+    }
 
     const getPointIndex = (event) => {
       const feature = event.features?.[0];
@@ -667,44 +709,53 @@ function MapSurface({
       }
     };
 
-    map.on("mousedown", ROUTE_POINTS_LAYER_ID, startDrag);
-    map.on("touchstart", ROUTE_POINTS_LAYER_ID, startDrag);
-    if (map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
+    if (caps.routePointEditing) {
+      map.on("mousedown", ROUTE_POINTS_LAYER_ID, startDrag);
+      map.on("touchstart", ROUTE_POINTS_LAYER_ID, startDrag);
+      map.on("contextmenu", ROUTE_POINTS_LAYER_ID, removePoint);
+      map.on("mouseenter", ROUTE_POINTS_LAYER_ID, enterPoint);
+      map.on("mouseleave", ROUTE_POINTS_LAYER_ID, leavePoint);
+    }
+    if (caps.routeLineEditing && map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
       map.on("mousedown", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
       map.on("touchstart", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
       map.on("mouseenter", ROUTE_GEOMETRY_HIT_LAYER_ID, enterRouteLine);
       map.on("mouseleave", ROUTE_GEOMETRY_HIT_LAYER_ID, leaveRouteLine);
     }
-    map.on("contextmenu", ROUTE_POINTS_LAYER_ID, removePoint);
     map.on("mousemove", moveDrag);
     map.on("touchmove", moveDrag);
     map.on("mouseup", endDrag);
     map.on("touchend", endDrag);
-    map.on("mouseenter", ROUTE_POINTS_LAYER_ID, enterPoint);
-    map.on("mouseleave", ROUTE_POINTS_LAYER_ID, leavePoint);
 
     return () => {
-      map.off("mousedown", ROUTE_POINTS_LAYER_ID, startDrag);
-      map.off("touchstart", ROUTE_POINTS_LAYER_ID, startDrag);
-      if (map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
+      if (caps.routePointEditing) {
+        map.off("mousedown", ROUTE_POINTS_LAYER_ID, startDrag);
+        map.off("touchstart", ROUTE_POINTS_LAYER_ID, startDrag);
+        map.off("contextmenu", ROUTE_POINTS_LAYER_ID, removePoint);
+        map.off("mouseenter", ROUTE_POINTS_LAYER_ID, enterPoint);
+        map.off("mouseleave", ROUTE_POINTS_LAYER_ID, leavePoint);
+      }
+      if (caps.routeLineEditing && map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
         map.off("mousedown", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
         map.off("touchstart", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
         map.off("mouseenter", ROUTE_GEOMETRY_HIT_LAYER_ID, enterRouteLine);
         map.off("mouseleave", ROUTE_GEOMETRY_HIT_LAYER_ID, leaveRouteLine);
       }
-      map.off("contextmenu", ROUTE_POINTS_LAYER_ID, removePoint);
       map.off("mousemove", moveDrag);
       map.off("touchmove", moveDrag);
       map.off("mouseup", endDrag);
       map.off("touchend", endDrag);
-      map.off("mouseenter", ROUTE_POINTS_LAYER_ID, enterPoint);
-      map.off("mouseleave", ROUTE_POINTS_LAYER_ID, leavePoint);
     };
-  }, [routeGeometry, status]);
+  }, [routeGeometry, status, caps.routePointEditing, caps.routeLineEditing]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready" || !routeFitRequest?.geometry?.length) {
+    if (
+      !map ||
+      status !== "ready" ||
+      !caps.routeFit ||
+      !routeFitRequest?.geometry?.length
+    ) {
       return;
     }
 
@@ -712,11 +763,11 @@ function MapSurface({
       maxZoom: 14,
       padding: routeFitPadding,
     });
-  }, [routeFitPadding, routeFitRequest, status]);
+  }, [routeFitPadding, routeFitRequest, status, caps.routeFit]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready" || !focusedMarker?.coord) return;
+    if (!map || status !== "ready" || !caps.focusedMarkerCamera || !focusedMarker?.coord) return;
     const { lng, lat } = focusedMarker.coord;
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
     const currentZoom = typeof map.getZoom === "function" ? map.getZoom() : 14;
@@ -725,11 +776,13 @@ function MapSurface({
       zoom: Math.max(currentZoom, 14),
       speed: 1.2,
     });
-  }, [focusedMarker, status]);
+  }, [focusedMarker, status, caps.focusedMarkerCamera]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready" || !searchHighlight) return undefined;
+    if (!map || status !== "ready" || !caps.searchHighlight || !searchHighlight) {
+      return undefined;
+    }
 
     clearSearchHighlight(map, searchMarkerRef);
     if (searchTimeoutRef.current) {
@@ -761,7 +814,7 @@ function MapSurface({
         searchTimeoutRef.current = null;
       }
     };
-  }, [searchHighlight, status]);
+  }, [searchHighlight, status, caps.searchHighlight]);
 
   return (
     <>

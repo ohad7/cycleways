@@ -14,6 +14,32 @@ identical.
 
 > Source of truth for intent: `plans/map-surface-abstraction/design.md`.
 
+## Inputs — mode (which capabilities to install)
+
+| Prop | Type | Meaning |
+|---|---|---|
+| `mode` | `"planner"` \| `"readonly-route"` | which capability set the surface installs. Defaults to `"planner"`. |
+
+`mode` is translated into an explicit set of capability booleans by the pure,
+unit-tested helper `capabilitiesForMode(mode)` in `mapCapabilities.js`. Every
+gated behavior below is keyed on a named capability rather than on `mode`
+directly, so the mapping lives in one auditable place.
+
+- **`planner`** (default): every capability is `true`. This is the zero-diff
+  path — behavior at `/` is unchanged.
+- **`readonly-route`** (public featured pages): ENABLES map init, base style,
+  route geometry layer, route fit, focused-marker camera, data-marker layer +
+  click callback, video cursor layer, and the route click (video-sync) callback.
+  DISABLES the CW network source/layers, network hover/click snapping, the
+  hover-preview marker, route-point layers, route-point dragging, route-line
+  insert/drag, route-point removal/select, and viewport prefetch
+  (`onUserViewportChange` / `onViewportIdle`).
+
+Capabilities are still additionally gated on prop presence where that already
+existed (e.g. network layers require `geoJsonData`; route click requires
+`onRouteClick`). `mode` narrows what is installed; it does not force a behavior
+on when its driving prop is absent.
+
 ## Inputs — data (what to render)
 
 | Prop | Type | Meaning |

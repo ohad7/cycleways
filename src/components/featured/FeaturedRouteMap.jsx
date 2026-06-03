@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import MapView from "../../map/MapView.jsx";
-import { dataMarkerFeaturesFromSegments } from "../../map/mapLayers.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import { useIsMobile } from "./useIsMobile.js";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
@@ -25,7 +24,9 @@ export default function FeaturedRouteMapSlot({
 }) {
   const isMobile = useIsMobile();
   const {
-    assets,
+    status,
+    dataMarkerFeatures,
+    activeDataPointIds,
     routeState,
     focusedCoord,
     requestRouteFit,
@@ -112,12 +113,10 @@ export default function FeaturedRouteMapSlot({
     }
   ), []);
 
-  if (!assets) return null;
+  if (status !== "ready" || routeState.geometry.length < 2) return null;
   if (variant === "mobile" && !isMobile) return null;
   if (variant === "desktop" && isMobile) return null;
 
-  const dataMarkerFeatures = dataMarkerFeaturesFromSegments(assets.segmentsData);
-  const activeDataPointIds = routeState.activeDataPoints.map((p) => p.id);
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
   const variantLabel = isMobile ? "פתח מפה גדולה" : "הגדל מפה";
 
@@ -127,7 +126,7 @@ export default function FeaturedRouteMapSlot({
     onRouteSelect = handleRouteClick,
   } = {}) => (
     <MapView
-      geoJsonData={assets.geoJsonData}
+      mode="readonly-route"
       dataMarkerFeatures={dataMarkerFeatures}
       activeDataPointIds={activeDataPointIds}
       routeGeometry={routeState.geometry}

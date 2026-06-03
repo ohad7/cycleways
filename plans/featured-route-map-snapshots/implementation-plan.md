@@ -1,0 +1,300 @@
+# Featured Route Map Snapshots Implementation Plan
+
+Date: 2026-06-03
+
+> For agentic workers: implement this plan phase-by-phase. Keep public planner
+> behavior unchanged, and treat generated snapshots as derived public data, not
+> hand-authored content.
+
+## Goal
+
+Make featured-route pages render read-only maps from small generated snapshots,
+so pages like `/featured/sovev-beit-hillel` do not load the full CW network,
+segment metadata, CW base index, or OSM/base-routing assets at runtime.
+
+## Phase 0: Baseline And Guardrails
+
+### Tasks
+
+- [ ] Record baseline network requests for `/featured/sovev-beit-hillel`.
+  - Expected current heavy requests include `bike_roads.geojson`,
+    `segments.json`, `cw-base-index.json`, and
+    `base-routing-shards/manifest.json`.
+
+- [ ] Confirm existing tests before changing behavior.
+  - Run: `npm test`
+  - Run relevant featured-route Playwright tests, for example:
+    `npx playwright test tests/e2e/featured-route-slots.spec.mjs`
+
+- [ ] Confirm route formats in the current catalog.
+  - Decode `public-data/route-catalog.json` route tokens.
+  - Expected today: `sovev-beit-hillel` is `compact_route`; at least one other
+    featured route may be `hybrid_route_v6`.
+
+### Acceptance Criteria
+
+- Baseline requests are documented in the implementation notes or PR.
+- Existing tests pass, or pre-existing failures are documented before edits.
+
+## Phase 1: Snapshot Builder
+
+### Scope
+
+Add reusable generation code that creates
+`public-data/featured-routes/<slug>.json` from promoted route catalog and map
+assets. **The Node decode already exists in `editor/server.mjs`** — this phase
+extracts it into a shared module rather than writing new decode logic.
+
+### Tasks
+
+- [ ] Extract the existing Node decode into a shared builder module.
+  - The decode path already lives in `editor/server.mjs`:
+    `getBaseRoutingDecodeAssets()` (shard manifest read + per-format decode +
+    `mergeBaseRoutingShards` + `cw-base-index.json`), `loadFeaturedAssetsFromDisk()`
+    (`bike_roads.geojson` + `segments.json`), and `loadRoutePolylineForSlug()`
+    (token resolution → `createRouteManager` → `restoreRouteFromParam` →
+    full `routeState`).
+  - Move/lift this into a shared module imported by BOTH the CLI script and
+    `editor/server.mjs`. Do not duplicate it. `editor/server.mjs` must keep
+    working through the extracted functions.
+  - CLI entry point: `scripts/build-featured-route-snapshots.mjs`.
+
+- [ ] Produce the full `routeState` per featured slug via the extracted decode.
+  - Confirm the returned snapshot includes `geometry`, `distance`,
+    `elevationGain`, `elevationLoss`, `selectedSegments`, and full
+    `activeDataPoints` objects (not just ids).
+  - This reuses `mergeBaseRoutingShards`, `decodeCompactBaseRoutingShard`,
+    `decodeMessagePack`, `createRouteManager`, `restoreRouteFromParam` exactly as
+    the editor already does.
+
+- [ ] Build snapshot source metadata.
+  - Compute `routeTokenHash` with SHA-256.
+  - Include decoded `routeFormat`.
+  - Include `mapVersion` from `map-manifest.json`.
+  - Include relevant `manifest.hashes`.
+
+- [ ] Build snapshot route data.
+  - `geometry`
+  - `bounds`
+  - `distance`
+  - `elevationGain`
+  - `elevationLoss`
+  - `selectedSegments`
+  - optional diagnostic `points`
+
+- [ ] Build route-specific marker data (off-route POIs dropped — see design
+  "Marker Visibility Decision").
+  - Derive markers from `snapshot.activeDataPoints` only, NOT from the full
+    segment set.
+  - Reuse the projection logic in `@cycleways/core/data/dataMarkers.js` so the
+    feature shape matches what `syncDataMarkerLayers` expects (a pure helper that
+    maps active data points → GeoJSON features).
+  - Store `dataMarkerFeatures` and `activeDataPointIds` in the snapshot.
+
+- [ ] Serialize the full active-data-point objects under `pois.activeDataPoints`.
+  - Required fields per point (consumed by featured components): `id`, `type`,
+    `name`, `description`, `location`, `routeFraction`, and image data
+    (`images` / `photo` / `thumbnail` / `gallery`).
+  - Dropping any of these silently breaks POI stories, galleries, warnings, or
+    marker-click seek.
+
+- [ ] Write snapshots atomically.
+  - Create `public-data/featured-routes/`.
+  - Write `<slug>.json.tmp`, then rename to `<slug>.json`.
+  - Pretty-print JSON for reviewability.
+
+- [ ] Add a `--check` mode.
+  - Minimum check: validate source metadata and schema without rewriting.
+  - Preferred check: regenerate in memory and compare stable route fields.
+
+### Acceptance Criteria
+
+- Running the builder creates one snapshot file for each featured catalog entry.
+- `sovev-beit-hillel.json` contains route geometry, selected segments, active
+  POIs, source metadata, and no full CW network data.
+- `--check` exits non-zero when a featured route snapshot is missing or stale.
+
+## Phase 2: Editor And Build Integration
+
+### Scope
+
+Ensure snapshots are regenerated by normal content promotion workflows, not by
+hand.
+
+### Tasks
+
+- [ ] Integrate snapshot generation into route-catalog promotion.
+  - In `editor/server.mjs`, after `promoteCatalogDraft` writes
+    `public-data/route-catalog.json`, call the shared snapshot builder.
+  - Return snapshot-generation results in the promote API response.
+
+- [ ] Add an npm script for manual/build use.
+  - Example: `"featured:snapshots": "node scripts/build-featured-route-snapshots.mjs"`
+  - Example check script:
+    `"featured:snapshots:check": "node scripts/build-featured-route-snapshots.mjs --check"`
+
+- [ ] Wire snapshot generation into the static build.
+  - `scripts/copy-static-assets.mjs` already reads `public-data/route-catalog.json`
+    and loops `featured` entries to emit SPA shells (run via `npm run build`).
+    Invoke the shared snapshot builder there so a normal build cannot ship stale
+    snapshots. This is the single existing JS workflow — use it rather than only
+    documenting a manual command.
+
+- [ ] Orphan cleanup (decided): the builder deletes snapshots for routes no
+  longer marked `featured`; `--check` reports any orphan as a failure.
+
+### Acceptance Criteria
+
+- Promoting route-catalog changes from the editor updates snapshots.
+- A map/segment/base graph change cannot pass validation with stale snapshots.
+- No manual editing of `public-data/featured-routes/*.json` is required.
+
+## Phase 3: Runtime Snapshot Loader
+
+### Scope
+
+Make featured pages consume snapshots at runtime instead of decoding routes
+through `RouteManager`.
+
+### Tasks
+
+- [ ] Add a snapshot loader + adapter.
+  - Suggested file:
+    `packages/core/src/data/featuredRouteSnapshots.js`
+  - Fetch path:
+    `${BASE_URL}public-data/featured-routes/${slug}.json`
+  - Validate `schemaVersion`, slug, geometry, and source metadata.
+  - Add `snapshotToRouteState(snapshot)` that maps the file's `route` / `pois`
+    grouping back to the flat `emptyRouteSnapshot()` shape, filling
+    `points: []` and `routeFailure: null` so `requestRouteFit` (guards on
+    `geometry.length >= 2`) and other downstream invariants are unaffected.
+
+- [ ] Update `FeaturedRoute.jsx`.
+  - Replace public runtime `loadMapAssets()` + route-manager decode with
+    snapshot loading + `snapshotToRouteState`.
+  - The resulting `routeState` must carry full `activeDataPoints` objects so
+    POIList / Warnings / RoutePoiStoryList / RoutePoiGallery /
+    RoutePoiVideoPreview / RouteProgressDistance / VideoEmbed keep working.
+  - Stop building `assets` from `loadMapAssets`; the context no longer carries
+    `geoJsonData` / `segmentsData`. Provide `dataMarkerFeatures` /
+    `activeDataPointIds` from the snapshot instead.
+  - Keep current featured video-sync, POI list, progress, and route-fit behavior.
+    (videoSync is built from `routeState.geometry` only, so it is unaffected.)
+
+- [ ] Keep the heavy decode path out of production.
+  - Optional: allow a development-only fallback when a snapshot is missing.
+  - Production should show an error for missing/stale snapshots so large asset
+    loads do not silently return.
+
+- [ ] Update `FeaturedRouteMap.jsx`.
+  - Stop deriving data markers from full `segmentsData`.
+  - Read `dataMarkerFeatures` and `activeDataPointIds` from snapshot/context.
+  - Do not pass `geoJsonData` for read-only featured maps.
+
+### Acceptance Criteria
+
+- Featured pages render route geometry and POIs from snapshot data.
+- `/featured/sovev-beit-hillel` does not request `bike_roads.geojson`,
+  `segments.json`, `cw-base-index.json`, or `base-routing-shards/*`.
+- Video cursor and route click-to-seek still work.
+- POI story list and marker click behavior still work.
+
+## Phase 4: Read-Only Map Mode
+
+### Scope
+
+Make the map component explicitly modular so read-only route maps do not install
+planner-only layers or interactions.
+
+### Tasks
+
+- [ ] Add a `mode` prop to `MapView` / `MapSurface`.
+  - Default: `mode="planner"` to preserve the main app.
+  - New: `mode="readonly-route"` for featured route maps.
+  - Internally translate `mode` into explicit capability booleans (e.g.
+    `caps = { networkLayers, networkHitTest, hoverPreview, routePointLayers,
+    routePointEditing, viewportPrefetch, ... }`) and gate behavior on those
+    booleans. `mode="planner"` must produce capabilities identical to today's
+    behavior — a **zero-diff** planner path — and future modes become a new
+    capability mapping rather than scattered `if (mode === ...)` checks.
+  - Add a unit test asserting planner-mode capabilities/layer setup are
+    unchanged from current behavior.
+
+- [ ] Gate network rendering and hit testing.
+  - In `readonly-route`, skip `addRouteNetworkLayers`,
+    `prepareRouteNetworkFeatures`, `buildNetworkSegments`, network hover,
+    network click snapping, and hover preview marker.
+  - Also skip these when `geoJsonData` is absent.
+
+- [ ] Gate route editing.
+  - In `readonly-route`, skip route point layers unless explicitly requested.
+  - Skip route-point drag, route-line insert/drag, route-point removal, and
+    route-point selection handlers.
+
+- [ ] Keep read-only capabilities enabled.
+  - Route geometry layer.
+  - Data marker layers and marker click callback.
+  - Route fit.
+  - Focused marker camera movement.
+  - Video cursor.
+  - Route click callback for video sync.
+
+- [ ] Add focused unit coverage around mode behavior where practical.
+  - Existing `tests/test-map-layers.mjs` may cover layer builders.
+  - Add tests for any pure capability-selection helper if introduced.
+
+### Acceptance Criteria
+
+- Planner mode behaves as before at `/`.
+- Read-only featured maps do not require CW network data.
+- Read-only featured maps do not expose draggable route points or route-line
+  insert affordances.
+
+## Phase 5: Tests And Verification
+
+### Tasks
+
+- [ ] Add snapshot validation tests.
+  - Every featured catalog entry has a snapshot.
+  - Snapshot source metadata matches current catalog route token and
+    `map-manifest.json`.
+  - Geometry and bounds are valid.
+  - Marker ids are internally consistent.
+
+- [ ] Add an E2E network regression test.
+  - Navigate to `/featured/sovev-beit-hillel`.
+  - Record request URLs.
+  - Assert none include:
+    - `bike_roads.geojson`
+    - `segments.json`
+    - `cw-base-index.json`
+    - `base-routing-shards/`
+  - Assert the featured page, route map, POI stories, and header still render.
+
+- [ ] Add or update visual/interaction E2E checks.
+  - Route line appears on desktop and mobile map slots.
+  - Only on-route POI markers render (off-route segment POIs are no longer shown
+    — codifies the Marker Visibility Decision).
+  - Clicking a route marker opens/selects the corresponding POI behavior.
+  - Clicking the route line still seeks/syncs video where video sync is active.
+  - Expanding the map still works.
+
+- [ ] Run verification.
+  - `npm test`
+  - `npx playwright test tests/e2e/featured-route-slots.spec.mjs`
+  - The new featured-route network regression test.
+  - `npm run build`
+
+### Acceptance Criteria
+
+- Tests prove the public featured route no longer loads planner-only assets.
+- Existing planner tests continue to pass.
+- Build output includes `public-data/featured-routes/*.json`.
+
+## Rollout Notes
+
+- Keep snapshots committed with public data so static hosting can serve them.
+- Review generated snapshot diffs like other promoted public-data artifacts.
+- If a route looks wrong after map/OSM changes, regenerate snapshots from the
+  current route catalog and promoted map assets; do not hand-edit snapshot JSON.
+- Prefer failing validation over runtime fallback in production.
