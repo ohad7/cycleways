@@ -83,14 +83,14 @@ export default function RoutePoiGallery({ className = "" }) {
 
   return (
     <section
-      className={["sbh-moments", className].filter(Boolean).join(" ")}
+      className={["fv-moments", className].filter(Boolean).join(" ")}
       aria-label="נקודות עצירה ותמונות"
     >
-      <article className="sbh-moment-card">
-        <figure className="sbh-moment-figure">
+      <article className="fv-moment-card">
+        <figure className="fv-moment-figure">
           <button
             type="button"
-            className="sbh-moment-image-button"
+            className="fv-moment-image-button"
             onClick={() => selectByUser(currentIndex)}
             aria-label={selected.name || selected.information || poiLabel(selected.type)}
           >
@@ -100,7 +100,7 @@ export default function RoutePoiGallery({ className = "" }) {
             <>
               <button
                 type="button"
-                className="sbh-carousel-arrow sbh-carousel-arrow--left"
+                className="fv-carousel-arrow fv-carousel-arrow--left"
                 onClick={() => selectRelative(-1)}
                 aria-label="תמונה קודמת"
               >
@@ -108,7 +108,7 @@ export default function RoutePoiGallery({ className = "" }) {
               </button>
               <button
                 type="button"
-                className="sbh-carousel-arrow sbh-carousel-arrow--right"
+                className="fv-carousel-arrow fv-carousel-arrow--right"
                 onClick={() => selectRelative(1)}
                 aria-label="תמונה הבאה"
               >
@@ -117,9 +117,9 @@ export default function RoutePoiGallery({ className = "" }) {
             </>
           )}
         </figure>
-        <div className="sbh-moment-card-body">
-          <div className="sbh-moment-title-line">
-            <span className="sbh-moment-type">{poiLabel(selected.type)}</span>
+        <div className="fv-moment-card-body">
+          <div className="fv-moment-title-line">
+            <span className="fv-moment-type">{poiLabel(selected.type)}</span>
             <strong>{selected.name || poiLabel(selected.type)}</strong>
           </div>
           {selected.information && <span>{selected.information}</span>}
@@ -127,7 +127,7 @@ export default function RoutePoiGallery({ className = "" }) {
         </div>
       </article>
 
-      <div className="sbh-carousel-counter" aria-live="polite">
+      <div className="fv-carousel-counter" aria-live="polite">
         {currentIndex + 1} / {items.length}
       </div>
     </section>

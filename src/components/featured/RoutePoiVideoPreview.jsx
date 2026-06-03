@@ -44,7 +44,7 @@ export default function RoutePoiVideoPreview({ className = "" }) {
         setFocusedCoord({ lat, lng });
       }
     }
-    const target = Array.from(document.querySelectorAll(".sbh-poi-story")).find(
+    const target = Array.from(document.querySelectorAll(".fv-poi-story")).find(
       (node) => node.dataset.poiId === String(poiId),
     );
     if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -54,8 +54,8 @@ export default function RoutePoiVideoPreview({ className = "" }) {
     <button
       type="button"
       className={[
-        "sbh-video-poi-preview",
-        near ? "" : "sbh-video-poi-preview--mini",
+        "fv-video-poi-preview",
+        near ? "" : "fv-video-poi-preview--mini",
         className,
       ].filter(Boolean).join(" ")}
       onClick={handleClick}

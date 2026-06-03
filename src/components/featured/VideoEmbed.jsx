@@ -433,20 +433,20 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
         <div ref={iframeContainerRef} className="featured-video-iframe-host" />
         <button
           type="button"
-          className="sbh-video-hit-shield"
+          className="fv-video-hit-shield"
           onClick={togglePlayback}
           disabled={!isPlayerReady}
           aria-label={isPlaying ? "השהה סרטון" : "נגן סרטון"}
         />
         <div
           className={[
-            "sbh-video-controls",
-            isScrubbing ? "sbh-video-controls--scrubbing" : "",
+            "fv-video-controls",
+            isScrubbing ? "fv-video-controls--scrubbing" : "",
           ].filter(Boolean).join(" ")}
         >
           <button
             type="button"
-            className="sbh-video-play-toggle"
+            className="fv-video-play-toggle"
             onClick={togglePlayback}
             disabled={!isPlayerReady}
             aria-label={isPlaying ? "השהה סרטון" : "נגן סרטון"}
@@ -454,7 +454,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
             <span aria-hidden="true">{isPlaying ? "❚❚" : "▶"}</span>
           </button>
           <input
-            className="sbh-video-scrubber"
+            className="fv-video-scrubber"
             type="range"
             min="0"
             max={duration || 0}
@@ -467,9 +467,9 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
             onBlur={handleScrubEnd}
             disabled={!isPlayerReady || duration <= 0}
             aria-label="מעבר בזמן הסרטון"
-            style={{ "--sbh-video-progress": `${progressPercent}%` }}
+            style={{ "--fv-video-progress": `${progressPercent}%` }}
           />
-          <span className="sbh-video-time">
+          <span className="fv-video-time">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>

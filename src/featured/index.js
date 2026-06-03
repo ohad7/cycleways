@@ -10,8 +10,8 @@ const moduleLoaders = {
 // an entry fall back to the default site nav in TopBar.
 const moduleNav = {
   "sovev-beit-hillel": [
-    { label: "על המסלול", href: "#sbh-about" },
-    { label: "נקודות במסלול", href: "#sbh-poi-stories" },
+    { label: "על המסלול", href: "#fv-about" },
+    { label: "נקודות במסלול", href: "#fv-poi-stories" },
     { label: "כל השבילים", to: "/" },
   ],
 };

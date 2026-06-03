@@ -9,13 +9,13 @@ export default function SovevBeitHillel() {
       desktopMap="manual"
       kicker="גליל עליון · רכיבה רגועה"
     >
-      <section className="sbh-playback" aria-label="סרטון, תיאור ומפת המסלול">
-        <div className="sbh-video-stage">
-          <div className="sbh-video-shell">
-            <FeaturedRoute.Video title="" className="sbh-video" />
+      <section className="fv-playback" aria-label="סרטון, תיאור ומפת המסלול">
+        <div className="fv-video-stage">
+          <div className="fv-video-shell">
+            <FeaturedRoute.Video title="" className="fv-video" />
             <FeaturedRoute.POIVideoPreview />
             <FeaturedRoute.Map
-              className="sbh-mobile-map"
+              className="fv-mobile-map"
               autoResetAfterInteraction
               autoResetDelayMs={5000}
               routeFitPadding={12}
@@ -23,9 +23,9 @@ export default function SovevBeitHillel() {
           </div>
         </div>
 
-        <aside className="sbh-side-rail" aria-label="תיאור ומפת המסלול">
-          <section className="sbh-route-panel" aria-label="תקציר המסלול">
-            <span className="sbh-route-panel-kicker">רכיבה רגועה בגליל העליון</span>
+        <aside className="fv-side-rail" aria-label="תיאור ומפת המסלול">
+          <section className="fv-route-panel" aria-label="תקציר המסלול">
+            <span className="fv-route-panel-kicker">רכיבה רגועה בגליל העליון</span>
             <h2>מה מחכה בדרך</h2>
             <p>
               רכיבה קצרה ונעימה בגדר ההיקפית ובשביל האופניים של בית בית הלל: 
@@ -36,14 +36,14 @@ export default function SovevBeitHillel() {
             </p>
           </section>
 
-          <div className="sbh-side-map-wrap">
-            <div className="sbh-side-heading">
+          <div className="fv-side-map-wrap">
+            <div className="fv-side-heading">
               <span>מרחק מההתחלה</span>
               <FeaturedRoute.ProgressDistance />
             </div>
             <FeaturedRoute.Map
               variant="desktop"
-              className="sbh-side-map"
+              className="fv-side-map"
               autoResetAfterInteraction
               routeFitPadding={22}
             />
@@ -51,12 +51,12 @@ export default function SovevBeitHillel() {
         </aside>
       </section>
 
-      <section id="sbh-about" className="sbh-route-about" aria-label="על המסלול">
-        <div className="sbh-route-about-heading">
+      <section id="fv-about" className="fv-route-about" aria-label="על המסלול">
+        <div className="fv-route-about-heading">
           <span>על המסלול</span>
           <h2>לולאה רגועה בלב הגליל העליון</h2>
         </div>
-        <div className="sbh-route-about-body">
+        <div className="fv-route-about-body">
           <p>
             סובב בית הלל הוא מסלול קצר ונעים בלב הגליל העליון, מהסוג שמתאים
             כמעט לכולם - משפחות עם ילדים, רוכבים מתחילים, או כל מי שמחפש רכיבה

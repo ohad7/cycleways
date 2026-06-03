@@ -15,7 +15,7 @@ function formatDistance(meters) {
 }
 
 function scrollRoutePlayerIntoView() {
-  const target = document.querySelector(".sbh-video-shell");
+  const target = document.querySelector(".fv-video-shell");
   if (!target) return;
   const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   target.scrollIntoView({
@@ -81,45 +81,45 @@ export default function RoutePoiStoryList({ className = "" }) {
 
   return (
     <section
-      id="sbh-poi-stories"
-      className={["sbh-poi-stories", className].filter(Boolean).join(" ")}
+      id="fv-poi-stories"
+      className={["fv-poi-stories", className].filter(Boolean).join(" ")}
       aria-label="נקודות עניין ותמונות לאורך המסלול"
     >
-      <div className="sbh-poi-stories-heading">
+      <div className="fv-poi-stories-heading">
         <span>לעצור בדרך</span>
         <h2>נקודות עם תמונות מהמסלול</h2>
       </div>
 
-      <div className="sbh-poi-story-list">
+      <div className="fv-poi-story-list">
         {items.map(({ story, kicker }) => (
           <button
             key={story.poiId}
             type="button"
             data-poi-id={story.poiId}
             className={[
-              "sbh-poi-story",
-              story.kind ? "sbh-poi-story--endpoint" : "",
-              focusedPoiId === story.poiId ? "sbh-poi-story--focused" : "",
+              "fv-poi-story",
+              story.kind ? "fv-poi-story--endpoint" : "",
+              focusedPoiId === story.poiId ? "fv-poi-story--focused" : "",
             ].filter(Boolean).join(" ")}
             onClick={() => handleSelect(story)}
           >
-            <div className="sbh-poi-story-copy">
-              <span className="sbh-poi-story-kicker">{kicker}</span>
+            <div className="fv-poi-story-copy">
+              <span className="fv-poi-story-kicker">{kicker}</span>
               <h3>{story.name || poiLabel(story.type)}</h3>
               {!story.kind && (
-                <span className="sbh-poi-story-type">{poiLabel(story.type)}</span>
+                <span className="fv-poi-story-type">{poiLabel(story.type)}</span>
               )}
               {story.description && (
-                <p className="sbh-poi-story-description">{story.description}</p>
+                <p className="fv-poi-story-description">{story.description}</p>
               )}
             </div>
 
-            <div className="sbh-poi-story-media">
+            <div className="fv-poi-story-media">
               <div
                 className={[
-                  "sbh-poi-story-images",
-                  story.images.length === 1 ? "sbh-poi-story-images--single" : "",
-                  story.images.length > 1 ? "sbh-poi-story-images--multiple" : "",
+                  "fv-poi-story-images",
+                  story.images.length === 1 ? "fv-poi-story-images--single" : "",
+                  story.images.length > 1 ? "fv-poi-story-images--multiple" : "",
                 ].filter(Boolean).join(" ")}
               >
                 {story.images.map((image) => (
@@ -132,7 +132,7 @@ export default function RoutePoiStoryList({ className = "" }) {
               </div>
               {story.images.length > 1 && (
                 <span
-                  className="sbh-poi-story-image-count"
+                  className="fv-poi-story-image-count"
                   aria-label={`יש ${story.images.length} תמונות`}
                 >
                   {story.images.length} תמונות

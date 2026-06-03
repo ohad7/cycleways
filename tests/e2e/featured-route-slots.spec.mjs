@@ -3,9 +3,9 @@ import { test, expect } from "@playwright/test";
 test("featured route page renders header and video-first shell", async ({ page }) => {
   await page.goto("/featured/sovev-beit-hillel");
   await expect(page.locator(".featured-route-video-first")).toBeVisible();
-  await expect(page.locator(".sbh-playback")).toBeVisible();
-  await expect(page.locator(".sbh-route-panel")).toBeVisible();
-  await expect(page.locator(".sbh-poi-stories")).toBeVisible();
+  await expect(page.locator(".fv-playback")).toBeVisible();
+  await expect(page.locator(".fv-route-panel")).toBeVisible();
+  await expect(page.locator(".fv-poi-stories")).toBeVisible();
   await expect(page.locator(".featured-route-header h1")).toContainText("סובב בית הלל");
 });
 
