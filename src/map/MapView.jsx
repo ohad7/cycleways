@@ -1,6 +1,17 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import MapSurface from "./MapSurface.jsx";
-import OsmDebugOverlay from "./OsmDebugOverlay.jsx";
+
+// The OSM debug overlay is a large, dev-only tool (enabled via ?osm /
+// ?osmDebug). Lazy-load it and only mount it when debug mode is active so its
+// code stays out of the end-user bundle entirely.
+const OsmDebugOverlay = lazy(() => import("./OsmDebugOverlay.jsx"));
 
 // Composition root for the map. Renders the end-user MapSurface and, once the
 // map is ready, the web-only OsmDebugOverlay onto the same map instance.
@@ -47,22 +58,24 @@ export default function MapView({ onMapReady, ...props }) {
         osmDebugMode={osmDebugMode}
         onMapReady={handleReady}
       />
-      {map && (
-        <OsmDebugOverlay
-          map={map}
-          osmDebugMode={osmDebugMode}
-          osmDebugLayerMode={osmDebugLayerMode}
-          osmDebugGeoJson={osmDebugGeoJson}
-          osmGraphEdgesGeoJson={osmGraphEdgesGeoJson}
-          osmGraphNodesGeoJson={osmGraphNodesGeoJson}
-          cwOsmMatchGeoJson={cwOsmMatchGeoJson}
-          osmIntersectionsGeoJson={osmIntersectionsGeoJson}
-          selectedCwOsmReviewFeature={selectedCwOsmReviewFeature}
-          selectedCwOsmReviewSegmentId={selectedCwOsmReviewSegmentId}
-          onOsmDebugHover={onOsmDebugHover}
-          onOsmGraphEdgeHover={onOsmGraphEdgeHover}
-          onCwOsmMatchHover={onCwOsmMatchHover}
-        />
+      {map && osmDebugMode && (
+        <Suspense fallback={null}>
+          <OsmDebugOverlay
+            map={map}
+            osmDebugMode={osmDebugMode}
+            osmDebugLayerMode={osmDebugLayerMode}
+            osmDebugGeoJson={osmDebugGeoJson}
+            osmGraphEdgesGeoJson={osmGraphEdgesGeoJson}
+            osmGraphNodesGeoJson={osmGraphNodesGeoJson}
+            cwOsmMatchGeoJson={cwOsmMatchGeoJson}
+            osmIntersectionsGeoJson={osmIntersectionsGeoJson}
+            selectedCwOsmReviewFeature={selectedCwOsmReviewFeature}
+            selectedCwOsmReviewSegmentId={selectedCwOsmReviewSegmentId}
+            onOsmDebugHover={onOsmDebugHover}
+            onOsmGraphEdgeHover={onOsmGraphEdgeHover}
+            onCwOsmMatchHover={onCwOsmMatchHover}
+          />
+        </Suspense>
       )}
     </>
   );

@@ -1,18 +1,22 @@
-import React, { useMemo, useState } from "react";
+import React, { lazy, Suspense, useMemo, useState } from "react";
 import ContentSections from "./components/ContentSections.jsx";
 import Icon from "./components/Icon.jsx";
 import DataMarkerCard from "./components/DataMarkerCard.jsx";
-import DownloadModal from "./components/DownloadModal.jsx";
 import ElevationProfile, { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import PageShell from "./components/PageShell.jsx";
 import { getRouteMessage } from "./components/RoutePanel.jsx";
 import Tutorial from "./components/Tutorial.jsx";
-import WelcomeWizard from "./components/WelcomeWizard.jsx";
 import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import "./react-app.css";
+
+// Code-split non-critical UI so it stays out of the initial bundle: the
+// download/share modal only loads when opened, and the route-discovery wizard
+// only loads when its feature flag is on (off by default).
+const DownloadModal = lazy(() => import("./components/DownloadModal.jsx"));
+const WelcomeWizard = lazy(() => import("./components/WelcomeWizard.jsx"));
 
 function App() {
   const {
@@ -90,10 +94,14 @@ function App() {
 
   return (
     <>
-      <WelcomeWizard
-        visible={featureFlags.routeDiscovery && welcomeWizardOpen}
-        onDismiss={() => setWelcomeWizardOpen(false)}
-      />
+      {featureFlags.routeDiscovery && (
+        <Suspense fallback={null}>
+          <WelcomeWizard
+            visible={welcomeWizardOpen}
+            onDismiss={() => setWelcomeWizardOpen(false)}
+          />
+        </Suspense>
+      )}
       <PageShell
         onOpenTutorial={handleOpenTutorial}
         onOpenWizard={
@@ -293,17 +301,19 @@ function App() {
       </PageShell>
 
       {state.status === "ready" && mapUi.downloadModalOpen && (
-        <DownloadModal
-          activeDataPoints={routeState.activeDataPoints}
-          featureFlags={featureFlags}
-          routeState={routeState}
-          segmentsData={state.assets.segmentsData}
-          shareUrl={shareUrl}
-          shareStatus={shareInfo.status}
-          shareUrlLength={shareInfo.length}
-          onClose={handleCloseDownload}
-          onDownload={handleDownloadGpx}
-        />
+        <Suspense fallback={null}>
+          <DownloadModal
+            activeDataPoints={routeState.activeDataPoints}
+            featureFlags={featureFlags}
+            routeState={routeState}
+            segmentsData={state.assets.segmentsData}
+            shareUrl={shareUrl}
+            shareStatus={shareInfo.status}
+            shareUrlLength={shareInfo.length}
+            onClose={handleCloseDownload}
+            onDownload={handleDownloadGpx}
+          />
+        </Suspense>
       )}
       <Tutorial open={mapUi.tutorialOpen} onClose={handleCloseTutorial} />
     </>
