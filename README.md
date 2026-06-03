@@ -35,7 +35,7 @@ environment variable.
    (`<FeaturedRoute.Map />`, `<FeaturedRoute.POIs />`,
    `<FeaturedRoute.Gallery />`, `<FeaturedRoute.Video />`,
    `<FeaturedRoute.Warnings />`).
-2. Place media under `attached_assets/featured/<slug>/`.
+2. Place media under `public/images/featured/<slug>/`.
 3. POIs along the route come from `segments.json`; add new segment-level
    POIs there with a stable `id` and `location`. New POI types are
    defined in `src/data/poiTypes.js`.

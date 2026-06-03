@@ -43,7 +43,7 @@ baseSegments[segmentName] = {
       id: "cafe-test-1",
       name: "Test cafe",
       information: "test cafe",
-      photo: "/attached_assets/background.png",
+      photo: "/images/background.png",
       location: [33.11124, 35.586584],
     },
   ],

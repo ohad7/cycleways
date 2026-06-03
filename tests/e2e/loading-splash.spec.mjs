@@ -10,10 +10,10 @@ test("splash paints with logo, title, and progress bar", async ({ page }) => {
   await page.goto("/", { waitUntil: "commit" });
   const splash = page.locator("#splash");
   await expect(splash).toBeVisible();
-  // Brand logo image is present (reuses the favicon SVG data URI)
+  // Brand logo image is present (inlined optimized PNG data URI)
   await expect(splash.locator("img.splash__logo")).toHaveAttribute(
     "src",
-    /^data:image\/svg\+xml/,
+    /^data:image\/png;base64,/,
   );
   // Hebrew site title is shown
   await expect(

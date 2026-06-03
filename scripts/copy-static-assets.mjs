@@ -12,7 +12,9 @@ const files = new Set([
   "sitemap.xml",
 ]);
 
-const directories = ["attached_assets", "icons", "public-data"];
+// Image assets live under public/ (Vite's publicDir), which Vite copies into
+// the build automatically — so they are not listed here.
+const directories = ["icons", "public-data"];
 
 const dataFiles = ["data/places.json", "data/region-zones.json"];
 

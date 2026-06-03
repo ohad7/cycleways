@@ -24,8 +24,8 @@ const segmentsData = {
         name: "Coffee stop",
         information: "Coffee information",
         description: "Longer coffee stop description",
-        photo: "/attached_assets/background.png",
-        thumbnail: "/attached_assets/background.png",
+        photo: "/images/background.png",
+        thumbnail: "/images/background.png",
         gallery: true,
         location: [33.3, 35.8],
       },
@@ -46,8 +46,8 @@ assert.equal(features[1].properties.icon, "wetland-11");
 assert.equal(features[2].id, "coffee-stop");
 assert.equal(features[2].properties.dataPointId, "coffee-stop");
 assert.equal(features[2].properties.name, "Coffee stop");
-assert.equal(features[2].properties.photo, "/attached_assets/background.png");
-assert.equal(features[2].properties.thumbnail, "/attached_assets/background.png");
+assert.equal(features[2].properties.photo, "/images/background.png");
+assert.equal(features[2].properties.thumbnail, "/images/background.png");
 assert.equal(features[2].properties.gallery, true);
 assert.equal(features[2].properties.label, "בית קפה");
 assert.equal(features[2].properties.color, "#b07a3f");
