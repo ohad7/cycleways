@@ -8,6 +8,9 @@ import {
   emptyRouteSnapshot,
   restoreRouteFromParam,
 } from "@cycleways/core/routing/routeActions.js";
+import { createShardedRouteSession } from "@cycleways/core/routing/shardedRouteSession.js";
+import { createBaseRoutingShardFetchLoader } from "@cycleways/core/routing/baseRoutingShards.js";
+import { getShardLoaderLocation } from "@cycleways/core/platform/location.js";
 import MapView from "../../map/MapView.jsx";
 import { dataMarkerFeaturesFromSegments } from "@cycleways/core/data/dataMarkers.js";
 import { FeaturedRouteContext } from "./FeaturedRouteContext.js";
@@ -64,17 +67,47 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       try {
         const loaded = await loadMapAssets({ signal: controller.signal });
         if (controller.signal.aborted) return;
-        const manager = await createRouteManager(
-          RouteManager,
-          loaded.geoJsonData,
-          loaded.segmentsData,
-        );
-        if (controller.signal.aborted) return;
-        const snapshot = restoreRouteFromParam(
-          manager,
-          meta.route,
-          loaded.segmentsData,
-        );
+        let manager;
+        let snapshot;
+        if (loaded.baseRoutingShardManifestData) {
+          // Resolve manifest path to absolute so shard URLs are always rooted
+          // at the site root, not relative to the current featured-route page.
+          const manifestPath = loaded.baseRoutingShardManifestPath;
+          const absoluteManifestPath =
+            manifestPath.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(manifestPath)
+              ? manifestPath
+              : `/${manifestPath}`;
+          const shardLoader = createBaseRoutingShardFetchLoader(
+            absoluteManifestPath,
+            {},
+            getShardLoaderLocation(),
+            { format: "default" },
+          );
+          const session = await createShardedRouteSession(
+            RouteManager,
+            loaded.geoJsonData,
+            loaded.segmentsData,
+            loaded.baseRoutingShardManifestData,
+            shardLoader,
+            { cwBaseIndex: loaded.cwBaseIndexData },
+          );
+          if (controller.signal.aborted) return;
+          snapshot = await session.restoreRouteParam(meta.route);
+          manager = session.manager;
+        } else {
+          manager = await createRouteManager(
+            RouteManager,
+            loaded.geoJsonData,
+            loaded.segmentsData,
+          );
+          if (controller.signal.aborted) return;
+          snapshot = restoreRouteFromParam(
+            manager,
+            meta.route,
+            loaded.segmentsData,
+            loaded.cwBaseIndexData,
+          );
+        }
         if (!snapshot) {
           throw new Error(`Featured route "${meta.slug}" failed to decode`);
         }
