@@ -29,13 +29,7 @@ await mkdir(distDir, { recursive: true });
 // the freshly generated public-data/featured-routes/*.json are included in the
 // build. Snapshots are derived public data; never hand-edit them.
 {
-  const { written, removed, errors } = await buildFeaturedRouteSnapshots({
-    log: (level, ...args) => {
-      if (level === "error") console.error(...args);
-      else if (level === "warn") console.warn(...args);
-      else console.log(...args);
-    },
-  });
+  const { written, removed, errors } = await buildFeaturedRouteSnapshots({});
   console.log(
     `Featured snapshots: ${written.length} written, ${removed.length} removed`,
   );

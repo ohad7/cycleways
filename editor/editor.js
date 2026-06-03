@@ -8133,12 +8133,20 @@ async function rcPromote() {
   rcSetStatus("Promoting…");
   const r = await fetch("/api/route-catalog/promote", { method: "POST" });
   const result = await r.json().catch(() => ({}));
-  rcSetStatus(
-    r.ok
-      ? `Promoted (${result.entryCount} entries).`
-      : `Promote failed: ${result.error || r.statusText}`,
-  );
-  if (r.ok) await rcLoad();
+  if (!r.ok) {
+    rcSetStatus(`Promote failed: ${result.error || r.statusText}`);
+    return;
+  }
+  const snapErrs = result.snapshots?.errors ?? [];
+  if (snapErrs.length) {
+    const slugs = snapErrs.map((e) => e?.slug ?? "?").join(", ");
+    rcSetStatus(
+      `Promoted (${result.entryCount} entries) — ${snapErrs.length} snapshot(s) FAILED: ${slugs}`,
+    );
+  } else {
+    rcSetStatus(`Promoted (${result.entryCount} entries).`);
+  }
+  await rcLoad();
 }
 
 function rcNewEntry() {
