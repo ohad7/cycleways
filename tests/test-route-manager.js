@@ -6,7 +6,7 @@
 // Import RouteManager for Node.js environment
 let RouteManager;
 if (typeof module !== "undefined" && module.exports) {
-  RouteManager = require("../route-manager.js");
+  RouteManager = require("../packages/core/route-manager.js");
 }
 
 // Mock data for testing

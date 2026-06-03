@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "CycleWays",
+    "slug": "cycleways-mobile",
+    "scheme": "cycleways",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.cycleways.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Show your current location on the map while planning and following rides.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "cycleways",
+              "app.cycleways.mobile"
+            ]
+          }
+        ]
+      }
+    },
+    "android": {
+      "package": "app.cycleways.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox"
+        }
+      ]
+    ]
+  }
+}

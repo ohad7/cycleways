@@ -1,0 +1,2674 @@
+{
+  "schemaVersion": 1,
+  "shardSchemaVersion": 1,
+  "generatedAt": "2026-05-27T01:23:16.053036Z",
+  "sourceRoutingSchemaVersion": 2,
+  "defaultFormat": "compact",
+  "routeShare": {
+    "edgeShareIdSchemaVersion": 1,
+    "edgeShareIds": "embedded-in-shards"
+  },
+  "scheme": {
+    "type": "lng-lat-grid",
+    "shardSizeDegrees": 0.05,
+    "edgeBoundaryPolicy": "duplicate-edge-bbox-intersections"
+  },
+  "summary": {
+    "shards": 115,
+    "sourceNodes": 37583,
+    "sourceEdges": 48358,
+    "representedEdges": 48358,
+    "edgeReferences": 50556,
+    "duplicatedSourceEdges": 2024,
+    "compactShardBytes": 27708263,
+    "messagePackShardBytes": 23928507,
+    "compactBinaryShardBytes": 4827120
+  },
+  "shards": [
+    {
+      "id": "g708_658",
+      "path": "shards/g708_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_658.cwb",
+          "bytes": 3979,
+          "sha256": "962b6b10b9ebb86a7bf70d16e3359b34050710030728f1f0eb81a35e79d3a065"
+        }
+      },
+      "bounds": [
+        35.4,
+        32.9,
+        35.45,
+        32.95
+      ],
+      "nodes": 44,
+      "edges": 33,
+      "compactBytes": 21636,
+      "messagePackBytes": 18665,
+      "compactBinaryBytes": 3979
+    },
+    {
+      "id": "g708_659",
+      "path": "shards/g708_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_659.cwb",
+          "bytes": 7815,
+          "sha256": "f3e6b330b657b3c8e17a3ec97751ab4cd54bbc6c2142c7d74cf126317ba1bd2a"
+        }
+      },
+      "bounds": [
+        35.4,
+        32.95,
+        35.45,
+        33.0
+      ],
+      "nodes": 83,
+      "edges": 85,
+      "compactBytes": 44101,
+      "messagePackBytes": 38052,
+      "compactBinaryBytes": 7815
+    },
+    {
+      "id": "g708_660",
+      "path": "shards/g708_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_660.cwb",
+          "bytes": 9915,
+          "sha256": "81778362d1771b42a1a8e5d6040d9bf2ad97bdbb0ca5d1d36a36b82a4de5a231"
+        }
+      },
+      "bounds": [
+        35.4,
+        33.0,
+        35.45,
+        33.05
+      ],
+      "nodes": 115,
+      "edges": 99,
+      "compactBytes": 53959,
+      "messagePackBytes": 46613,
+      "compactBinaryBytes": 9915
+    },
+    {
+      "id": "g708_661",
+      "path": "shards/g708_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_661.cwb",
+          "bytes": 4979,
+          "sha256": "5e05294b13f13b6aab449f9d28be48b57fbe630426eb4a31d3c0f1c6aeaae544"
+        }
+      },
+      "bounds": [
+        35.4,
+        33.05,
+        35.45,
+        33.1
+      ],
+      "nodes": 51,
+      "edges": 37,
+      "compactBytes": 27129,
+      "messagePackBytes": 23482,
+      "compactBinaryBytes": 4979
+    },
+    {
+      "id": "g708_662",
+      "path": "shards/g708_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_662.cwb",
+          "bytes": 9486,
+          "sha256": "4253e2fe957fe711f695e7a153759e4b3f57634c57cec386b07523d52fb417c6"
+        }
+      },
+      "bounds": [
+        35.4,
+        33.1,
+        35.45,
+        33.15
+      ],
+      "nodes": 107,
+      "edges": 90,
+      "compactBytes": 52584,
+      "messagePackBytes": 45367,
+      "compactBinaryBytes": 9486
+    },
+    {
+      "id": "g708_663",
+      "path": "shards/g708_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_663.cwb",
+          "bytes": 6936,
+          "sha256": "2a3dfbb7722e415a2c1f31f51a216e714f0d24b8e359b98198b0e3dd29ed54ea"
+        }
+      },
+      "bounds": [
+        35.4,
+        33.15,
+        35.45,
+        33.2
+      ],
+      "nodes": 73,
+      "edges": 57,
+      "compactBytes": 39009,
+      "messagePackBytes": 33685,
+      "compactBinaryBytes": 6936
+    },
+    {
+      "id": "g708_664",
+      "path": "shards/g708_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_664.cwb",
+          "bytes": 6382,
+          "sha256": "dff869df543a6abf73ad3a9256b88bb6e7df6e06f6aacca72e08d45b6a009ff7"
+        }
+      },
+      "bounds": [
+        35.4,
+        33.2,
+        35.45,
+        33.25
+      ],
+      "nodes": 68,
+      "edges": 56,
+      "compactBytes": 36205,
+      "messagePackBytes": 31270,
+      "compactBinaryBytes": 6382
+    },
+    {
+      "id": "g708_665",
+      "path": "shards/g708_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_665.cwb",
+          "bytes": 4180,
+          "sha256": "73e2ab3b574725b40cdd28d4ee537b6469df1acbbf539cb5fb03dcbc8a99940e"
+        }
+      },
+      "bounds": [
+        35.4,
+        33.25,
+        35.45,
+        33.3
+      ],
+      "nodes": 41,
+      "edges": 34,
+      "compactBytes": 24600,
+      "messagePackBytes": 21262,
+      "compactBinaryBytes": 4180
+    },
+    {
+      "id": "g708_666",
+      "path": "shards/g708_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g708_666.cwb",
+          "bytes": 368,
+          "sha256": "73ae4d3d7c3abbe04a0680c9e9071f99fe48acfe3c1df53352df591b65b38cc7"
+        }
+      },
+      "bounds": [
+        35.4,
+        33.3,
+        35.45,
+        33.35
+      ],
+      "nodes": 2,
+      "edges": 1,
+      "compactBytes": 2019,
+      "messagePackBytes": 1756,
+      "compactBinaryBytes": 368
+    },
+    {
+      "id": "g709_658",
+      "path": "shards/g709_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_658.cwb",
+          "bytes": 50051,
+          "sha256": "69635d3b2c55302ff3c57eea28fb483cf724d1807f7d9158da5187a864c93c14"
+        }
+      },
+      "bounds": [
+        35.45,
+        32.9,
+        35.5,
+        32.95
+      ],
+      "nodes": 395,
+      "edges": 512,
+      "compactBytes": 283368,
+      "messagePackBytes": 244568,
+      "compactBinaryBytes": 50051
+    },
+    {
+      "id": "g709_659",
+      "path": "shards/g709_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_659.cwb",
+          "bytes": 149310,
+          "sha256": "3fa0cb7e04b6eac15d140ec2ad1bda6ba7b23c5bb2c601c9aca9ca40ba080081"
+        }
+      },
+      "bounds": [
+        35.45,
+        32.95,
+        35.5,
+        33.0
+      ],
+      "nodes": 1346,
+      "edges": 1658,
+      "compactBytes": 850582,
+      "messagePackBytes": 733817,
+      "compactBinaryBytes": 149310
+    },
+    {
+      "id": "g709_660",
+      "path": "shards/g709_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_660.cwb",
+          "bytes": 76499,
+          "sha256": "561acbd827400d3be591c692debf1c3553d6127cb2cdcf0cd369e132ce882ee8"
+        }
+      },
+      "bounds": [
+        35.45,
+        33.0,
+        35.5,
+        33.05
+      ],
+      "nodes": 681,
+      "edges": 827,
+      "compactBytes": 428040,
+      "messagePackBytes": 369740,
+      "compactBinaryBytes": 76499
+    },
+    {
+      "id": "g709_661",
+      "path": "shards/g709_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_661.cwb",
+          "bytes": 62679,
+          "sha256": "4c6552d709b916ad4df91bb50c5a5c571c46ba150a09948ac494178cd2ebed95"
+        }
+      },
+      "bounds": [
+        35.45,
+        33.05,
+        35.5,
+        33.1
+      ],
+      "nodes": 557,
+      "edges": 679,
+      "compactBytes": 351177,
+      "messagePackBytes": 303272,
+      "compactBinaryBytes": 62679
+    },
+    {
+      "id": "g709_662",
+      "path": "shards/g709_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_662.cwb",
+          "bytes": 92598,
+          "sha256": "baeb8eaabe7dd6b6dfca832c05cbf7676108a5d6549733df18cbca24ae8adf6a"
+        }
+      },
+      "bounds": [
+        35.45,
+        33.1,
+        35.5,
+        33.15
+      ],
+      "nodes": 740,
+      "edges": 852,
+      "compactBytes": 548008,
+      "messagePackBytes": 473947,
+      "compactBinaryBytes": 92598
+    },
+    {
+      "id": "g709_663",
+      "path": "shards/g709_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_663.cwb",
+          "bytes": 73690,
+          "sha256": "a3980f6a0b516afdf8afa4fed711b524075564743fbf16f23fc80271184b06d5"
+        }
+      },
+      "bounds": [
+        35.45,
+        33.15,
+        35.5,
+        33.2
+      ],
+      "nodes": 608,
+      "edges": 696,
+      "compactBytes": 426701,
+      "messagePackBytes": 368809,
+      "compactBinaryBytes": 73690
+    },
+    {
+      "id": "g709_664",
+      "path": "shards/g709_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_664.cwb",
+          "bytes": 85021,
+          "sha256": "b2855feb3f44585a8f10b9ca5a9c62f6ee2b66fbc41c2c17790fe1e1c5cd6416"
+        }
+      },
+      "bounds": [
+        35.45,
+        33.2,
+        35.5,
+        33.25
+      ],
+      "nodes": 700,
+      "edges": 778,
+      "compactBytes": 495103,
+      "messagePackBytes": 427969,
+      "compactBinaryBytes": 85021
+    },
+    {
+      "id": "g709_665",
+      "path": "shards/g709_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_665.cwb",
+          "bytes": 53974,
+          "sha256": "4e2ce016a516f1dabf268cc03a4b8c9391769d61b61ad5aba7119a8eabe1960a"
+        }
+      },
+      "bounds": [
+        35.45,
+        33.25,
+        35.5,
+        33.3
+      ],
+      "nodes": 449,
+      "edges": 495,
+      "compactBytes": 313171,
+      "messagePackBytes": 270670,
+      "compactBinaryBytes": 53974
+    },
+    {
+      "id": "g709_666",
+      "path": "shards/g709_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g709_666.cwb",
+          "bytes": 9378,
+          "sha256": "67033430f4106f6021668321a00c33a2621411cee0145df2d37d7154cc7d0bec"
+        }
+      },
+      "bounds": [
+        35.45,
+        33.3,
+        35.5,
+        33.35
+      ],
+      "nodes": 78,
+      "edges": 72,
+      "compactBytes": 54330,
+      "messagePackBytes": 46982,
+      "compactBinaryBytes": 9378
+    },
+    {
+      "id": "g710_658",
+      "path": "shards/g710_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_658.cwb",
+          "bytes": 55014,
+          "sha256": "79588d8898c44949b9cd37290e01b4ad0b9d36f38025f532f055d0150385bced"
+        }
+      },
+      "bounds": [
+        35.5,
+        32.9,
+        35.55,
+        32.95
+      ],
+      "nodes": 509,
+      "edges": 627,
+      "compactBytes": 310999,
+      "messagePackBytes": 268477,
+      "compactBinaryBytes": 55014
+    },
+    {
+      "id": "g710_659",
+      "path": "shards/g710_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_659.cwb",
+          "bytes": 231193,
+          "sha256": "18362b6476310eb10100e257d08a513de6a509e39dd88f0586e2dabcd0451620"
+        }
+      },
+      "bounds": [
+        35.5,
+        32.95,
+        35.55,
+        33.0
+      ],
+      "nodes": 2116,
+      "edges": 2597,
+      "compactBytes": 1307746,
+      "messagePackBytes": 1128621,
+      "compactBinaryBytes": 231193
+    },
+    {
+      "id": "g710_660",
+      "path": "shards/g710_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_660.cwb",
+          "bytes": 38407,
+          "sha256": "a2c0ab3f6bd7494582382b76bf3a3c26acea246628c5654d8f1e8728d20c4828"
+        }
+      },
+      "bounds": [
+        35.5,
+        33.0,
+        35.55,
+        33.05
+      ],
+      "nodes": 293,
+      "edges": 375,
+      "compactBytes": 218976,
+      "messagePackBytes": 189227,
+      "compactBinaryBytes": 38407
+    },
+    {
+      "id": "g710_661",
+      "path": "shards/g710_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_661.cwb",
+          "bytes": 26997,
+          "sha256": "d95d8653db34fe5a9dc89165df54551fbb7751d2338cc62a088f7a254743eeaf"
+        }
+      },
+      "bounds": [
+        35.5,
+        33.05,
+        35.55,
+        33.1
+      ],
+      "nodes": 247,
+      "edges": 275,
+      "compactBytes": 149132,
+      "messagePackBytes": 128597,
+      "compactBinaryBytes": 26997
+    },
+    {
+      "id": "g710_662",
+      "path": "shards/g710_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_662.cwb",
+          "bytes": 50648,
+          "sha256": "e678f4625c7f800c1ac2e367b9666481d6a5111f0331f1a0c7f04f9d7c8cd6ce"
+        }
+      },
+      "bounds": [
+        35.5,
+        33.1,
+        35.55,
+        33.15
+      ],
+      "nodes": 427,
+      "edges": 493,
+      "compactBytes": 291627,
+      "messagePackBytes": 252018,
+      "compactBinaryBytes": 50648
+    },
+    {
+      "id": "g710_663",
+      "path": "shards/g710_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_663.cwb",
+          "bytes": 96233,
+          "sha256": "b6b492e5a78a8d4e6f3585460a2a7ee1dfa04c46ea559c295489f81f006df885"
+        }
+      },
+      "bounds": [
+        35.5,
+        33.15,
+        35.55,
+        33.2
+      ],
+      "nodes": 804,
+      "edges": 928,
+      "compactBytes": 558748,
+      "messagePackBytes": 482860,
+      "compactBinaryBytes": 96233
+    },
+    {
+      "id": "g710_664",
+      "path": "shards/g710_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_664.cwb",
+          "bytes": 114404,
+          "sha256": "b4b801716ed6ddc273f42669e02996c1f83ff5bf28dc3003a3f5699eed70207c"
+        }
+      },
+      "bounds": [
+        35.5,
+        33.2,
+        35.55,
+        33.25
+      ],
+      "nodes": 988,
+      "edges": 1142,
+      "compactBytes": 655880,
+      "messagePackBytes": 566652,
+      "compactBinaryBytes": 114404
+    },
+    {
+      "id": "g710_665",
+      "path": "shards/g710_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_665.cwb",
+          "bytes": 95664,
+          "sha256": "8bd2502e3642fb10b1db36153bd053f7276a85f0b64facdf03bb8d24e965f7bf"
+        }
+      },
+      "bounds": [
+        35.5,
+        33.25,
+        35.55,
+        33.3
+      ],
+      "nodes": 805,
+      "edges": 955,
+      "compactBytes": 563632,
+      "messagePackBytes": 487196,
+      "compactBinaryBytes": 95664
+    },
+    {
+      "id": "g710_666",
+      "path": "shards/g710_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_666.cwb",
+          "bytes": 62661,
+          "sha256": "bceeaba63a647bda147bde0072f3c1c0d809b21dec3b92c4d2895661cbc2abf3"
+        }
+      },
+      "bounds": [
+        35.5,
+        33.3,
+        35.55,
+        33.35
+      ],
+      "nodes": 525,
+      "edges": 591,
+      "compactBytes": 364910,
+      "messagePackBytes": 315345,
+      "compactBinaryBytes": 62661
+    },
+    {
+      "id": "g710_667",
+      "path": "shards/g710_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g710_667.cwb",
+          "bytes": 2495,
+          "sha256": "8173f0d168b499910f7b850bdcab092233551ff85242b2e68feedcd4ac3001e7"
+        }
+      },
+      "bounds": [
+        35.5,
+        33.35,
+        35.55,
+        33.4
+      ],
+      "nodes": 11,
+      "edges": 7,
+      "compactBytes": 15083,
+      "messagePackBytes": 13106,
+      "compactBinaryBytes": 2495
+    },
+    {
+      "id": "g711_658",
+      "path": "shards/g711_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_658.cwb",
+          "bytes": 37597,
+          "sha256": "d56eaf35ca348fd1b94d0db292a882f24e2f688806cda1f2d05a88d9d63c744f"
+        }
+      },
+      "bounds": [
+        35.55,
+        32.9,
+        35.6,
+        32.95
+      ],
+      "nodes": 374,
+      "edges": 425,
+      "compactBytes": 210346,
+      "messagePackBytes": 181816,
+      "compactBinaryBytes": 37597
+    },
+    {
+      "id": "g711_659",
+      "path": "shards/g711_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_659.cwb",
+          "bytes": 92996,
+          "sha256": "9f1587ab2e60cec7921b730c3d3a0cd00ff0ff98496816b39f723114e159726d"
+        }
+      },
+      "bounds": [
+        35.55,
+        32.95,
+        35.6,
+        33.0
+      ],
+      "nodes": 878,
+      "edges": 1117,
+      "compactBytes": 525701,
+      "messagePackBytes": 453768,
+      "compactBinaryBytes": 92996
+    },
+    {
+      "id": "g711_660",
+      "path": "shards/g711_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_660.cwb",
+          "bytes": 84331,
+          "sha256": "2597ac7308735ee2f30da5ab78cdef1a6b89aec7b0fa6db7614b99774137572b"
+        }
+      },
+      "bounds": [
+        35.55,
+        33.0,
+        35.6,
+        33.05
+      ],
+      "nodes": 777,
+      "edges": 977,
+      "compactBytes": 478671,
+      "messagePackBytes": 412963,
+      "compactBinaryBytes": 84331
+    },
+    {
+      "id": "g711_661",
+      "path": "shards/g711_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_661.cwb",
+          "bytes": 34792,
+          "sha256": "7950104dbc0784b86ebcfee8b538d2089116218744d36c66219e6e8552b1d1b5"
+        }
+      },
+      "bounds": [
+        35.55,
+        33.05,
+        35.6,
+        33.1
+      ],
+      "nodes": 302,
+      "edges": 371,
+      "compactBytes": 193255,
+      "messagePackBytes": 166942,
+      "compactBinaryBytes": 34792
+    },
+    {
+      "id": "g711_662",
+      "path": "shards/g711_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_662.cwb",
+          "bytes": 64209,
+          "sha256": "71c667385c229567dbf20c77fbfb1415578de2c0397e79d10f97040fe8344a8d"
+        }
+      },
+      "bounds": [
+        35.55,
+        33.1,
+        35.6,
+        33.15
+      ],
+      "nodes": 564,
+      "edges": 720,
+      "compactBytes": 364370,
+      "messagePackBytes": 315091,
+      "compactBinaryBytes": 64209
+    },
+    {
+      "id": "g711_663",
+      "path": "shards/g711_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_663.cwb",
+          "bytes": 70985,
+          "sha256": "b9ef1c19ce693e0929534a8ecbe0e75a3c73d974d5ca92e08c00709027ea445d"
+        }
+      },
+      "bounds": [
+        35.55,
+        33.15,
+        35.6,
+        33.2
+      ],
+      "nodes": 634,
+      "edges": 810,
+      "compactBytes": 399684,
+      "messagePackBytes": 345993,
+      "compactBinaryBytes": 70985
+    },
+    {
+      "id": "g711_664",
+      "path": "shards/g711_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_664.cwb",
+          "bytes": 265227,
+          "sha256": "760298fb6e35c690bd0ed483aebb3a1a361a6d2bcdcb364a7a565664c6a60675"
+        }
+      },
+      "bounds": [
+        35.55,
+        33.2,
+        35.6,
+        33.25
+      ],
+      "nodes": 2489,
+      "edges": 3172,
+      "compactBytes": 1505102,
+      "messagePackBytes": 1298287,
+      "compactBinaryBytes": 265227
+    },
+    {
+      "id": "g711_665",
+      "path": "shards/g711_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_665.cwb",
+          "bytes": 79865,
+          "sha256": "7d0e340f960dc558a19c1ecbee78ea2d029a991c74214fcd3021acfd2c353369"
+        }
+      },
+      "bounds": [
+        35.55,
+        33.25,
+        35.6,
+        33.3
+      ],
+      "nodes": 691,
+      "edges": 827,
+      "compactBytes": 454595,
+      "messagePackBytes": 392190,
+      "compactBinaryBytes": 79865
+    },
+    {
+      "id": "g711_666",
+      "path": "shards/g711_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_666.cwb",
+          "bytes": 73083,
+          "sha256": "dce37c2c6c0413f0612dc9ba99da37733216eec0072eae68a8603054e5903e9c"
+        }
+      },
+      "bounds": [
+        35.55,
+        33.3,
+        35.6,
+        33.35
+      ],
+      "nodes": 563,
+      "edges": 686,
+      "compactBytes": 438386,
+      "messagePackBytes": 378993,
+      "compactBinaryBytes": 73083
+    },
+    {
+      "id": "g711_667",
+      "path": "shards/g711_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g711_667.cwb",
+          "bytes": 44038,
+          "sha256": "624aa65290df016185b39d767061ba211dd561db57b449928ceff91b90d19c78"
+        }
+      },
+      "bounds": [
+        35.55,
+        33.35,
+        35.6,
+        33.4
+      ],
+      "nodes": 358,
+      "edges": 440,
+      "compactBytes": 262090,
+      "messagePackBytes": 226555,
+      "compactBinaryBytes": 44038
+    },
+    {
+      "id": "g712_658",
+      "path": "shards/g712_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_658.cwb",
+          "bytes": 57215,
+          "sha256": "8889adfffc63247f1a1266c12f609e3c60fca7ec5a614c58fb695344f549a022"
+        }
+      },
+      "bounds": [
+        35.6,
+        32.9,
+        35.65,
+        32.95
+      ],
+      "nodes": 509,
+      "edges": 629,
+      "compactBytes": 329535,
+      "messagePackBytes": 284829,
+      "compactBinaryBytes": 57215
+    },
+    {
+      "id": "g712_659",
+      "path": "shards/g712_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_659.cwb",
+          "bytes": 34097,
+          "sha256": "765e744f95cc4125cce4ca8dfba61ee746b7b22c45bfeb9816edbe71a0bec224"
+        }
+      },
+      "bounds": [
+        35.6,
+        32.95,
+        35.65,
+        33.0
+      ],
+      "nodes": 294,
+      "edges": 351,
+      "compactBytes": 192630,
+      "messagePackBytes": 166389,
+      "compactBinaryBytes": 34097
+    },
+    {
+      "id": "g712_660",
+      "path": "shards/g712_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_660.cwb",
+          "bytes": 67459,
+          "sha256": "984f636e890c896908d7d93214a69978e89809eb8ff9cf55cfadfec0d04edc98"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.0,
+        35.65,
+        33.05
+      ],
+      "nodes": 571,
+      "edges": 774,
+      "compactBytes": 388700,
+      "messagePackBytes": 336141,
+      "compactBinaryBytes": 67459
+    },
+    {
+      "id": "g712_661",
+      "path": "shards/g712_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_661.cwb",
+          "bytes": 60228,
+          "sha256": "3675872c7fe8ef33cade90d26c338e50c10eed1c5ccd74398fe3e3e58983507c"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.05,
+        35.65,
+        33.1
+      ],
+      "nodes": 552,
+      "edges": 705,
+      "compactBytes": 340506,
+      "messagePackBytes": 295079,
+      "compactBinaryBytes": 60228
+    },
+    {
+      "id": "g712_662",
+      "path": "shards/g712_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_662.cwb",
+          "bytes": 33165,
+          "sha256": "f406d51b177a6d5de9a4f39b5aac074daabc689d120dd8cc3e7a8018eeee2ab4"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.1,
+        35.65,
+        33.15
+      ],
+      "nodes": 300,
+      "edges": 377,
+      "compactBytes": 190306,
+      "messagePackBytes": 164634,
+      "compactBinaryBytes": 33165
+    },
+    {
+      "id": "g712_663",
+      "path": "shards/g712_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_663.cwb",
+          "bytes": 78386,
+          "sha256": "b6108251f020a85c70409581a31d3778e9142a3e4168ba519501bbcfd0acc830"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.15,
+        35.65,
+        33.2
+      ],
+      "nodes": 703,
+      "edges": 926,
+      "compactBytes": 444595,
+      "messagePackBytes": 385452,
+      "compactBinaryBytes": 78386
+    },
+    {
+      "id": "g712_664",
+      "path": "shards/g712_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_664.cwb",
+          "bytes": 187036,
+          "sha256": "341d1d9cebb461efe4d3b74bab0cc287f6b69db39ceea0e000ac6886a6d55364"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.2,
+        35.65,
+        33.25
+      ],
+      "nodes": 1738,
+      "edges": 2245,
+      "compactBytes": 1063050,
+      "messagePackBytes": 918027,
+      "compactBinaryBytes": 187036
+    },
+    {
+      "id": "g712_665",
+      "path": "shards/g712_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_665.cwb",
+          "bytes": 42016,
+          "sha256": "c8bcd5a172c4b21ddd58cb6ab6f90814964fdabbc7a4020291769ed00cb0e056"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.25,
+        35.65,
+        33.3
+      ],
+      "nodes": 347,
+      "edges": 408,
+      "compactBytes": 242345,
+      "messagePackBytes": 209443,
+      "compactBinaryBytes": 42016
+    },
+    {
+      "id": "g712_666",
+      "path": "shards/g712_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_666.cwb",
+          "bytes": 101068,
+          "sha256": "5e17f9269efe0099b938c6ba6058b701b210a1671a47ae9bf4bf4c78a1382475"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.3,
+        35.65,
+        33.35
+      ],
+      "nodes": 799,
+      "edges": 967,
+      "compactBytes": 608801,
+      "messagePackBytes": 526552,
+      "compactBinaryBytes": 101068
+    },
+    {
+      "id": "g712_667",
+      "path": "shards/g712_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_667.cwb",
+          "bytes": 57244,
+          "sha256": "3ff338dac84ec69242ec51c06d09782356ee8cfc21d832e1435c5911e25a39b9"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.35,
+        35.65,
+        33.4
+      ],
+      "nodes": 422,
+      "edges": 516,
+      "compactBytes": 344745,
+      "messagePackBytes": 298290,
+      "compactBinaryBytes": 57244
+    },
+    {
+      "id": "g712_668",
+      "path": "shards/g712_668.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g712_668.cwb",
+          "bytes": 5558,
+          "sha256": "bb9e0fd29dd6eb78036ea3202908c7cd4f0b35edf1d8d4ec418bfe8e7de03a6f"
+        }
+      },
+      "bounds": [
+        35.6,
+        33.4,
+        35.65,
+        33.45
+      ],
+      "nodes": 23,
+      "edges": 22,
+      "compactBytes": 37357,
+      "messagePackBytes": 32484,
+      "compactBinaryBytes": 5558
+    },
+    {
+      "id": "g713_658",
+      "path": "shards/g713_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_658.cwb",
+          "bytes": 8098,
+          "sha256": "897fdaae3c22d2ef07cb06e6f0083e657e96e1a3d7f416f8f68dcb1a66bafda3"
+        }
+      },
+      "bounds": [
+        35.65,
+        32.9,
+        35.7,
+        32.95
+      ],
+      "nodes": 57,
+      "edges": 60,
+      "compactBytes": 47412,
+      "messagePackBytes": 41191,
+      "compactBinaryBytes": 8098
+    },
+    {
+      "id": "g713_659",
+      "path": "shards/g713_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_659.cwb",
+          "bytes": 108739,
+          "sha256": "b67422cccc46bbbbe71a5c63bc678f931725186f62afce3a0a5f44785626c001"
+        }
+      },
+      "bounds": [
+        35.65,
+        32.95,
+        35.7,
+        33.0
+      ],
+      "nodes": 1000,
+      "edges": 1315,
+      "compactBytes": 616791,
+      "messagePackBytes": 531976,
+      "compactBinaryBytes": 108739
+    },
+    {
+      "id": "g713_660",
+      "path": "shards/g713_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_660.cwb",
+          "bytes": 43287,
+          "sha256": "e3904ff2bcb78f654236dd14c3e8494e3fb3147e496fe5c408068f7087d5c0fd"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.0,
+        35.7,
+        33.05
+      ],
+      "nodes": 389,
+      "edges": 496,
+      "compactBytes": 245716,
+      "messagePackBytes": 212108,
+      "compactBinaryBytes": 43287
+    },
+    {
+      "id": "g713_661",
+      "path": "shards/g713_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_661.cwb",
+          "bytes": 11299,
+          "sha256": "6ceb61526e2c05700cb2f8fb4ec3e5fda91c0f1e824da3e84f1ca39bbc316293"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.05,
+        35.7,
+        33.1
+      ],
+      "nodes": 81,
+      "edges": 94,
+      "compactBytes": 65405,
+      "messagePackBytes": 56574,
+      "compactBinaryBytes": 11299
+    },
+    {
+      "id": "g713_662",
+      "path": "shards/g713_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_662.cwb",
+          "bytes": 33974,
+          "sha256": "53198118e83d2727651f72e989116e0ce35f431bdf75cff63effffb29f422003"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.1,
+        35.7,
+        33.15
+      ],
+      "nodes": 257,
+      "edges": 331,
+      "compactBytes": 201616,
+      "messagePackBytes": 174315,
+      "compactBinaryBytes": 33974
+    },
+    {
+      "id": "g713_663",
+      "path": "shards/g713_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_663.cwb",
+          "bytes": 42980,
+          "sha256": "bd021b36fc005f119a48e63a56a90efdb9651f7efb0dc3597b1af1cdde36b2fa"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.15,
+        35.7,
+        33.2
+      ],
+      "nodes": 338,
+      "edges": 441,
+      "compactBytes": 248889,
+      "messagePackBytes": 215218,
+      "compactBinaryBytes": 42980
+    },
+    {
+      "id": "g713_664",
+      "path": "shards/g713_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_664.cwb",
+          "bytes": 76776,
+          "sha256": "777fb0e0744d1c3f45b2dfa72d9dec893dedee65ea7f1bec5afd093fbbb9aff6"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.2,
+        35.7,
+        33.25
+      ],
+      "nodes": 666,
+      "edges": 849,
+      "compactBytes": 436317,
+      "messagePackBytes": 376709,
+      "compactBinaryBytes": 76776
+    },
+    {
+      "id": "g713_665",
+      "path": "shards/g713_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_665.cwb",
+          "bytes": 22116,
+          "sha256": "862a1284b90f5871dce1bd8ef3ec7b69501fbd0cbe43f413fb5ab50bde133009"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.25,
+        35.7,
+        33.3
+      ],
+      "nodes": 146,
+      "edges": 167,
+      "compactBytes": 131857,
+      "messagePackBytes": 114064,
+      "compactBinaryBytes": 22116
+    },
+    {
+      "id": "g713_666",
+      "path": "shards/g713_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_666.cwb",
+          "bytes": 50609,
+          "sha256": "748cde1c5d15b55c487b28a71b1d4e68ab5ac4d8f7e4ebb49c3effefd0ee7a23"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.3,
+        35.7,
+        33.35
+      ],
+      "nodes": 338,
+      "edges": 387,
+      "compactBytes": 319597,
+      "messagePackBytes": 276670,
+      "compactBinaryBytes": 50609
+    },
+    {
+      "id": "g713_667",
+      "path": "shards/g713_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_667.cwb",
+          "bytes": 91393,
+          "sha256": "096f483181d988475be505e7061e0b0c66f28fd3f855d158afa4909fafe6a2d0"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.35,
+        35.7,
+        33.4
+      ],
+      "nodes": 629,
+      "edges": 781,
+      "compactBytes": 569360,
+      "messagePackBytes": 493127,
+      "compactBinaryBytes": 91393
+    },
+    {
+      "id": "g713_668",
+      "path": "shards/g713_668.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g713_668.cwb",
+          "bytes": 24166,
+          "sha256": "3649a282fb6b969e576a156a8c7d9b377597ea5d249946884b4a3ad23c70c997"
+        }
+      },
+      "bounds": [
+        35.65,
+        33.4,
+        35.7,
+        33.45
+      ],
+      "nodes": 144,
+      "edges": 162,
+      "compactBytes": 153851,
+      "messagePackBytes": 133350,
+      "compactBinaryBytes": 24166
+    },
+    {
+      "id": "g714_658",
+      "path": "shards/g714_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_658.cwb",
+          "bytes": 9660,
+          "sha256": "e6a3ae81437021ae97ef01799661f83f48029963b46982c875fc04322b6b6207"
+        }
+      },
+      "bounds": [
+        35.7,
+        32.9,
+        35.75,
+        32.95
+      ],
+      "nodes": 69,
+      "edges": 78,
+      "compactBytes": 55156,
+      "messagePackBytes": 47714,
+      "compactBinaryBytes": 9660
+    },
+    {
+      "id": "g714_659",
+      "path": "shards/g714_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_659.cwb",
+          "bytes": 64275,
+          "sha256": "bfb6d4d08ec7e461e8d235f1b69cddecc4b45daa9181022bb575d165292f51be"
+        }
+      },
+      "bounds": [
+        35.7,
+        32.95,
+        35.75,
+        33.0
+      ],
+      "nodes": 558,
+      "edges": 744,
+      "compactBytes": 367052,
+      "messagePackBytes": 316751,
+      "compactBinaryBytes": 64275
+    },
+    {
+      "id": "g714_660",
+      "path": "shards/g714_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_660.cwb",
+          "bytes": 22316,
+          "sha256": "37d3654c7e18d8be348227dd434d23d2ca427e375c83eeb3d734c422402f750f"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.0,
+        35.75,
+        33.05
+      ],
+      "nodes": 173,
+      "edges": 224,
+      "compactBytes": 127406,
+      "messagePackBytes": 109888,
+      "compactBinaryBytes": 22316
+    },
+    {
+      "id": "g714_661",
+      "path": "shards/g714_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_661.cwb",
+          "bytes": 12219,
+          "sha256": "728afc166090af2477b00ae37193a01bee266ca2c3b965d12ea1111ced8a010e"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.05,
+        35.75,
+        33.1
+      ],
+      "nodes": 112,
+      "edges": 131,
+      "compactBytes": 67509,
+      "messagePackBytes": 58158,
+      "compactBinaryBytes": 12219
+    },
+    {
+      "id": "g714_662",
+      "path": "shards/g714_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_662.cwb",
+          "bytes": 33595,
+          "sha256": "1152d67d2c352c2ee0e2d2c6d71cb593fbea632e25bd28b70e8d88497d2a707a"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.1,
+        35.75,
+        33.15
+      ],
+      "nodes": 286,
+      "edges": 366,
+      "compactBytes": 190516,
+      "messagePackBytes": 164315,
+      "compactBinaryBytes": 33595
+    },
+    {
+      "id": "g714_663",
+      "path": "shards/g714_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_663.cwb",
+          "bytes": 33210,
+          "sha256": "bb165bac640e3550b327d38235ebe99ee317713db3a9464dc35fff90c20ffcbb"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.15,
+        35.75,
+        33.2
+      ],
+      "nodes": 247,
+      "edges": 323,
+      "compactBytes": 191323,
+      "messagePackBytes": 165013,
+      "compactBinaryBytes": 33210
+    },
+    {
+      "id": "g714_664",
+      "path": "shards/g714_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_664.cwb",
+          "bytes": 42868,
+          "sha256": "05fae41386b86d4bdbb60eb27b30041701a080a80af4bbe3299d57330c1c7a47"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.2,
+        35.75,
+        33.25
+      ],
+      "nodes": 332,
+      "edges": 407,
+      "compactBytes": 242686,
+      "messagePackBytes": 209568,
+      "compactBinaryBytes": 42868
+    },
+    {
+      "id": "g714_665",
+      "path": "shards/g714_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_665.cwb",
+          "bytes": 29453,
+          "sha256": "e61b7bdb2afe0bb40d983fb00239494d2103c11f82f5d19c546bcbb3cf1108c4"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.25,
+        35.75,
+        33.3
+      ],
+      "nodes": 202,
+      "edges": 247,
+      "compactBytes": 175119,
+      "messagePackBytes": 151296,
+      "compactBinaryBytes": 29453
+    },
+    {
+      "id": "g714_666",
+      "path": "shards/g714_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_666.cwb",
+          "bytes": 26244,
+          "sha256": "94ad27cb8eb2ba9deeaa43699013b81459a63dfef7d1113b769912417368a40a"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.3,
+        35.75,
+        33.35
+      ],
+      "nodes": 163,
+      "edges": 169,
+      "compactBytes": 159013,
+      "messagePackBytes": 137487,
+      "compactBinaryBytes": 26244
+    },
+    {
+      "id": "g714_667",
+      "path": "shards/g714_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_667.cwb",
+          "bytes": 38603,
+          "sha256": "3b5494bc71531268debeda4b8f7df50ec1d0d3138c4ae2f30d905a036aacb606"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.35,
+        35.75,
+        33.4
+      ],
+      "nodes": 265,
+      "edges": 310,
+      "compactBytes": 240224,
+      "messagePackBytes": 207620,
+      "compactBinaryBytes": 38603
+    },
+    {
+      "id": "g714_668",
+      "path": "shards/g714_668.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g714_668.cwb",
+          "bytes": 42305,
+          "sha256": "15f957a7e32097e8740afab758c9e6f48e7003c7cdfc522f785375b50e44fe2d"
+        }
+      },
+      "bounds": [
+        35.7,
+        33.4,
+        35.75,
+        33.45
+      ],
+      "nodes": 265,
+      "edges": 340,
+      "compactBytes": 275436,
+      "messagePackBytes": 238642,
+      "compactBinaryBytes": 42305
+    },
+    {
+      "id": "g715_658",
+      "path": "shards/g715_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_658.cwb",
+          "bytes": 20008,
+          "sha256": "d5eec5821ab05d948c7410b6109b3e5c28e8b64eacb86ea3a7486db0a6942c85"
+        }
+      },
+      "bounds": [
+        35.75,
+        32.9,
+        35.8,
+        32.95
+      ],
+      "nodes": 183,
+      "edges": 226,
+      "compactBytes": 113499,
+      "messagePackBytes": 98014,
+      "compactBinaryBytes": 20008
+    },
+    {
+      "id": "g715_659",
+      "path": "shards/g715_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_659.cwb",
+          "bytes": 11933,
+          "sha256": "8e10ad9abb64d615cdf8cf35919aa078b8d9802ca772ca4f2b79c909f7d4bb0a"
+        }
+      },
+      "bounds": [
+        35.75,
+        32.95,
+        35.8,
+        33.0
+      ],
+      "nodes": 103,
+      "edges": 117,
+      "compactBytes": 66354,
+      "messagePackBytes": 57194,
+      "compactBinaryBytes": 11933
+    },
+    {
+      "id": "g715_660",
+      "path": "shards/g715_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_660.cwb",
+          "bytes": 9901,
+          "sha256": "fb84ed5f697b9e7c65f7c5672c6ff77fd4d03d14a5aa4666afa1a8972174e6db"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.0,
+        35.8,
+        33.05
+      ],
+      "nodes": 74,
+      "edges": 89,
+      "compactBytes": 55904,
+      "messagePackBytes": 48282,
+      "compactBinaryBytes": 9901
+    },
+    {
+      "id": "g715_661",
+      "path": "shards/g715_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_661.cwb",
+          "bytes": 54626,
+          "sha256": "8d796dc9c62495c40f4f085972f505a16b2913ed25cd4a6d0dea0464cc941380"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.05,
+        35.8,
+        33.1
+      ],
+      "nodes": 457,
+      "edges": 626,
+      "compactBytes": 307676,
+      "messagePackBytes": 265508,
+      "compactBinaryBytes": 54626
+    },
+    {
+      "id": "g715_662",
+      "path": "shards/g715_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_662.cwb",
+          "bytes": 60974,
+          "sha256": "35527aed524929c1d3d0ce2cc74a647af45e1b33ec0e79e739acb05955d1d227"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.1,
+        35.8,
+        33.15
+      ],
+      "nodes": 505,
+      "edges": 667,
+      "compactBytes": 345283,
+      "messagePackBytes": 297924,
+      "compactBinaryBytes": 60974
+    },
+    {
+      "id": "g715_663",
+      "path": "shards/g715_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_663.cwb",
+          "bytes": 56789,
+          "sha256": "380f6f0e90eaea89525712d36bb99eac9752cd3f11f8b5287164f39e54f28023"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.15,
+        35.8,
+        33.2
+      ],
+      "nodes": 483,
+      "edges": 632,
+      "compactBytes": 318008,
+      "messagePackBytes": 273317,
+      "compactBinaryBytes": 56789
+    },
+    {
+      "id": "g715_664",
+      "path": "shards/g715_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_664.cwb",
+          "bytes": 67066,
+          "sha256": "73d31e96128afc0c745bf026196a52271d5cca978b37b4ce540a735bcb3a2632"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.2,
+        35.8,
+        33.25
+      ],
+      "nodes": 562,
+      "edges": 737,
+      "compactBytes": 373571,
+      "messagePackBytes": 321604,
+      "compactBinaryBytes": 67066
+    },
+    {
+      "id": "g715_665",
+      "path": "shards/g715_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_665.cwb",
+          "bytes": 104199,
+          "sha256": "08d8565e67b3fea987e6c07fad1bcd0a7cb101f771ff541fc929c02a94260656"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.25,
+        35.8,
+        33.3
+      ],
+      "nodes": 973,
+      "edges": 1160,
+      "compactBytes": 571371,
+      "messagePackBytes": 490807,
+      "compactBinaryBytes": 104199
+    },
+    {
+      "id": "g715_666",
+      "path": "shards/g715_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_666.cwb",
+          "bytes": 28942,
+          "sha256": "173f2a85f511f782234b61281e217ba921b6618f3bff2eaa47223c0b758b89d7"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.3,
+        35.8,
+        33.35
+      ],
+      "nodes": 210,
+      "edges": 253,
+      "compactBytes": 164868,
+      "messagePackBytes": 141900,
+      "compactBinaryBytes": 28942
+    },
+    {
+      "id": "g715_667",
+      "path": "shards/g715_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_667.cwb",
+          "bytes": 8893,
+          "sha256": "aa8d2758af5bc401a122cf945ecbbbe40e9443cb986fac6b44beb47bab4a8bfd"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.35,
+        35.8,
+        33.4
+      ],
+      "nodes": 56,
+      "edges": 58,
+      "compactBytes": 56344,
+      "messagePackBytes": 48760,
+      "compactBinaryBytes": 8893
+    },
+    {
+      "id": "g715_668",
+      "path": "shards/g715_668.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g715_668.cwb",
+          "bytes": 3682,
+          "sha256": "3527aa9b15143d2bf8d303da74890e8df91882d145457cb0158c409c80492b31"
+        }
+      },
+      "bounds": [
+        35.75,
+        33.4,
+        35.8,
+        33.45
+      ],
+      "nodes": 15,
+      "edges": 12,
+      "compactBytes": 24073,
+      "messagePackBytes": 20911,
+      "compactBinaryBytes": 3682
+    },
+    {
+      "id": "g716_658",
+      "path": "shards/g716_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_658.cwb",
+          "bytes": 7591,
+          "sha256": "4722df615efdb546f58f2635930bdd7644c32c472ef760be15f8a54d1b64f1b2"
+        }
+      },
+      "bounds": [
+        35.8,
+        32.9,
+        35.85,
+        32.95
+      ],
+      "nodes": 66,
+      "edges": 75,
+      "compactBytes": 43508,
+      "messagePackBytes": 37526,
+      "compactBinaryBytes": 7591
+    },
+    {
+      "id": "g716_659",
+      "path": "shards/g716_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_659.cwb",
+          "bytes": 46078,
+          "sha256": "af84766c5ae21163677c615f5e3710c045100ef37e172aee8a7de24548bbc1df"
+        }
+      },
+      "bounds": [
+        35.8,
+        32.95,
+        35.85,
+        33.0
+      ],
+      "nodes": 417,
+      "edges": 550,
+      "compactBytes": 264486,
+      "messagePackBytes": 228188,
+      "compactBinaryBytes": 46078
+    },
+    {
+      "id": "g716_660",
+      "path": "shards/g716_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_660.cwb",
+          "bytes": 33777,
+          "sha256": "07e46d9d90ef7b9d6e023d43b6bd9d07d8058a79af306cd6f67ab4cd563a7788"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.0,
+        35.85,
+        33.05
+      ],
+      "nodes": 285,
+      "edges": 370,
+      "compactBytes": 188952,
+      "messagePackBytes": 163025,
+      "compactBinaryBytes": 33777
+    },
+    {
+      "id": "g716_661",
+      "path": "shards/g716_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_661.cwb",
+          "bytes": 16551,
+          "sha256": "c1369062c5627996783f7b939ee91bb009cf413438267958858502f9918b4003"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.05,
+        35.85,
+        33.1
+      ],
+      "nodes": 136,
+      "edges": 150,
+      "compactBytes": 91611,
+      "messagePackBytes": 78961,
+      "compactBinaryBytes": 16551
+    },
+    {
+      "id": "g716_662",
+      "path": "shards/g716_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_662.cwb",
+          "bytes": 20748,
+          "sha256": "d0607b45b65e70e6e0ead5239406c5743816cb30f3d3359884f338ea1f7fd147"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.1,
+        35.85,
+        33.15
+      ],
+      "nodes": 195,
+      "edges": 231,
+      "compactBytes": 113036,
+      "messagePackBytes": 97293,
+      "compactBinaryBytes": 20748
+    },
+    {
+      "id": "g716_663",
+      "path": "shards/g716_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_663.cwb",
+          "bytes": 17442,
+          "sha256": "e8acc1fa97c3f5e01c3fd3a75f85296c958fe6f0d1918174f60cbdda9e8f7e3a"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.15,
+        35.85,
+        33.2
+      ],
+      "nodes": 169,
+      "edges": 197,
+      "compactBytes": 95054,
+      "messagePackBytes": 81928,
+      "compactBinaryBytes": 17442
+    },
+    {
+      "id": "g716_664",
+      "path": "shards/g716_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_664.cwb",
+          "bytes": 11295,
+          "sha256": "aa7a016a3a44f5390c1407fc0db3bbc2d36b18d5d9edd675aef6dd26f94a517f"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.2,
+        35.85,
+        33.25
+      ],
+      "nodes": 98,
+      "edges": 114,
+      "compactBytes": 62586,
+      "messagePackBytes": 53730,
+      "compactBinaryBytes": 11295
+    },
+    {
+      "id": "g716_665",
+      "path": "shards/g716_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_665.cwb",
+          "bytes": 36457,
+          "sha256": "24e7910ada364ee3e5b66cedc1458246a4c2c3bfe089df27bf582d045df0862c"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.25,
+        35.85,
+        33.3
+      ],
+      "nodes": 285,
+      "edges": 372,
+      "compactBytes": 206282,
+      "messagePackBytes": 177523,
+      "compactBinaryBytes": 36457
+    },
+    {
+      "id": "g716_666",
+      "path": "shards/g716_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_666.cwb",
+          "bytes": 4166,
+          "sha256": "7691a5b434b9ce5ae634b972a9f89e932faacf03c0d5077f819c3aee9d7cf9c9"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.3,
+        35.85,
+        33.35
+      ],
+      "nodes": 28,
+      "edges": 24,
+      "compactBytes": 23050,
+      "messagePackBytes": 19957,
+      "compactBinaryBytes": 4166
+    },
+    {
+      "id": "g716_667",
+      "path": "shards/g716_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_667.cwb",
+          "bytes": 5243,
+          "sha256": "bdc9d9bb8c9be6fc0e32a45337abe8df1026c8fd7dc2a1a08510702d1b0e8b70"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.35,
+        35.85,
+        33.4
+      ],
+      "nodes": 33,
+      "edges": 29,
+      "compactBytes": 30238,
+      "messagePackBytes": 26166,
+      "compactBinaryBytes": 5243
+    },
+    {
+      "id": "g716_668",
+      "path": "shards/g716_668.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g716_668.cwb",
+          "bytes": 1152,
+          "sha256": "3fae1b06cb6c7b36b9dd1a5ae259fe09f90540581fa3e8586abb6c16ede16b82"
+        }
+      },
+      "bounds": [
+        35.8,
+        33.4,
+        35.85,
+        33.45
+      ],
+      "nodes": 8,
+      "edges": 6,
+      "compactBytes": 5947,
+      "messagePackBytes": 5146,
+      "compactBinaryBytes": 1152
+    },
+    {
+      "id": "g717_658",
+      "path": "shards/g717_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_658.cwb",
+          "bytes": 10732,
+          "sha256": "89203a968bdca6145c00579a2ecb0ff2404734474e619d176ea0291236553c49"
+        }
+      },
+      "bounds": [
+        35.85,
+        32.9,
+        35.9,
+        32.95
+      ],
+      "nodes": 99,
+      "edges": 111,
+      "compactBytes": 59437,
+      "messagePackBytes": 51188,
+      "compactBinaryBytes": 10732
+    },
+    {
+      "id": "g717_659",
+      "path": "shards/g717_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_659.cwb",
+          "bytes": 16910,
+          "sha256": "b847b6da2ce2ed3114053c2d793a8c7e2eb8fce3aeb10dbe1dbf34be5f47af3c"
+        }
+      },
+      "bounds": [
+        35.85,
+        32.95,
+        35.9,
+        33.0
+      ],
+      "nodes": 154,
+      "edges": 188,
+      "compactBytes": 93950,
+      "messagePackBytes": 81007,
+      "compactBinaryBytes": 16910
+    },
+    {
+      "id": "g717_660",
+      "path": "shards/g717_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_660.cwb",
+          "bytes": 21243,
+          "sha256": "76370c09563543a4b4c0e126f6da3840a6422989dcfe5f336fac7412da0ac42c"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.0,
+        35.9,
+        33.05
+      ],
+      "nodes": 187,
+      "edges": 217,
+      "compactBytes": 117916,
+      "messagePackBytes": 101800,
+      "compactBinaryBytes": 21243
+    },
+    {
+      "id": "g717_661",
+      "path": "shards/g717_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_661.cwb",
+          "bytes": 25700,
+          "sha256": "ae99424599cdfc52d02eec2d8db16a749cdc1a427812fe03483283b3d961d1d5"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.05,
+        35.9,
+        33.1
+      ],
+      "nodes": 226,
+      "edges": 276,
+      "compactBytes": 142240,
+      "messagePackBytes": 122796,
+      "compactBinaryBytes": 25700
+    },
+    {
+      "id": "g717_662",
+      "path": "shards/g717_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_662.cwb",
+          "bytes": 22665,
+          "sha256": "16436d72c3b3bdbe80af53309dfe2d101800ef17dc8d4a2a022ce63f4929f3f5"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.1,
+        35.9,
+        33.15
+      ],
+      "nodes": 200,
+      "edges": 247,
+      "compactBytes": 124625,
+      "messagePackBytes": 107564,
+      "compactBinaryBytes": 22665
+    },
+    {
+      "id": "g717_663",
+      "path": "shards/g717_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_663.cwb",
+          "bytes": 42457,
+          "sha256": "8cfcb7f0f7698158a7203afc1fa674275fde961418f61d27d426f3837370711b"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.15,
+        35.9,
+        33.2
+      ],
+      "nodes": 384,
+      "edges": 535,
+      "compactBytes": 234000,
+      "messagePackBytes": 201926,
+      "compactBinaryBytes": 42457
+    },
+    {
+      "id": "g717_664",
+      "path": "shards/g717_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_664.cwb",
+          "bytes": 4541,
+          "sha256": "43b42b8ed94d96d747484bac7019e190a6a0b602056d772a17c753e09ac57fba"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.2,
+        35.9,
+        33.25
+      ],
+      "nodes": 42,
+      "edges": 43,
+      "compactBytes": 24976,
+      "messagePackBytes": 21460,
+      "compactBinaryBytes": 4541
+    },
+    {
+      "id": "g717_665",
+      "path": "shards/g717_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_665.cwb",
+          "bytes": 10616,
+          "sha256": "f3f0bd90df9eb72ebbcca09e55017746bd059d200fb10eb5e11b0a7f3419835e"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.25,
+        35.9,
+        33.3
+      ],
+      "nodes": 82,
+      "edges": 90,
+      "compactBytes": 58927,
+      "messagePackBytes": 50727,
+      "compactBinaryBytes": 10616
+    },
+    {
+      "id": "g717_666",
+      "path": "shards/g717_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_666.cwb",
+          "bytes": 12748,
+          "sha256": "08fe099aedc066a8284232d904f3771ac96e49ddfcb986d2174dfd39f3e308c0"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.3,
+        35.9,
+        33.35
+      ],
+      "nodes": 92,
+      "edges": 108,
+      "compactBytes": 72749,
+      "messagePackBytes": 62691,
+      "compactBinaryBytes": 12748
+    },
+    {
+      "id": "g717_667",
+      "path": "shards/g717_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_667.cwb",
+          "bytes": 13921,
+          "sha256": "72605470b2a621a2ac1b4b078459a9d4f25c16e1b2c2705ba0cc75993469ced1"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.35,
+        35.9,
+        33.4
+      ],
+      "nodes": 95,
+      "edges": 101,
+      "compactBytes": 79877,
+      "messagePackBytes": 69003,
+      "compactBinaryBytes": 13921
+    },
+    {
+      "id": "g717_668",
+      "path": "shards/g717_668.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g717_668.cwb",
+          "bytes": 2155,
+          "sha256": "738c098e0dd5828510b5ae67e5ff4865d491e6f305a622dac4b1a496f395270f"
+        }
+      },
+      "bounds": [
+        35.85,
+        33.4,
+        35.9,
+        33.45
+      ],
+      "nodes": 10,
+      "edges": 6,
+      "compactBytes": 11556,
+      "messagePackBytes": 10022,
+      "compactBinaryBytes": 2155
+    },
+    {
+      "id": "g718_658",
+      "path": "shards/g718_658.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_658.cwb",
+          "bytes": 15672,
+          "sha256": "0bca789a052b6993df46e1bdb6938037682235557231e298529d2c138689b7bf"
+        }
+      },
+      "bounds": [
+        35.9,
+        32.9,
+        35.95,
+        32.95
+      ],
+      "nodes": 158,
+      "edges": 170,
+      "compactBytes": 85866,
+      "messagePackBytes": 73963,
+      "compactBinaryBytes": 15672
+    },
+    {
+      "id": "g718_659",
+      "path": "shards/g718_659.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_659.cwb",
+          "bytes": 15770,
+          "sha256": "e9c1ed371d59b0a10b1475d1bdc406c15adc278a5bba553fd86281b622fe3418"
+        }
+      },
+      "bounds": [
+        35.9,
+        32.95,
+        35.95,
+        33.0
+      ],
+      "nodes": 153,
+      "edges": 178,
+      "compactBytes": 86815,
+      "messagePackBytes": 74814,
+      "compactBinaryBytes": 15770
+    },
+    {
+      "id": "g718_660",
+      "path": "shards/g718_660.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_660.cwb",
+          "bytes": 4889,
+          "sha256": "1a1ecbb3ff104a1cd10699ae49ce3ba90bbd6389e05ce56f6c2836951e5ddc11"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.0,
+        35.95,
+        33.05
+      ],
+      "nodes": 52,
+      "edges": 48,
+      "compactBytes": 27448,
+      "messagePackBytes": 23652,
+      "compactBinaryBytes": 4889
+    },
+    {
+      "id": "g718_661",
+      "path": "shards/g718_661.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_661.cwb",
+          "bytes": 7065,
+          "sha256": "a280091333042392e5dc388087144ecf0c96d0661f87f4b344416fc426164793"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.05,
+        35.95,
+        33.1
+      ],
+      "nodes": 69,
+      "edges": 78,
+      "compactBytes": 38955,
+      "messagePackBytes": 33576,
+      "compactBinaryBytes": 7065
+    },
+    {
+      "id": "g718_662",
+      "path": "shards/g718_662.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_662.cwb",
+          "bytes": 10936,
+          "sha256": "ce97d068a56d825e6ac8d742f93e1731c50ec2624df7ddfe56329c38ed16c524"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.1,
+        35.95,
+        33.15
+      ],
+      "nodes": 101,
+      "edges": 118,
+      "compactBytes": 60532,
+      "messagePackBytes": 52172,
+      "compactBinaryBytes": 10936
+    },
+    {
+      "id": "g718_663",
+      "path": "shards/g718_663.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_663.cwb",
+          "bytes": 11012,
+          "sha256": "466dc2913244c680b6f84903bfb68c9f37df92c9dcee758ecf4e88818024522e"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.15,
+        35.95,
+        33.2
+      ],
+      "nodes": 102,
+      "edges": 136,
+      "compactBytes": 61451,
+      "messagePackBytes": 53029,
+      "compactBinaryBytes": 11012
+    },
+    {
+      "id": "g718_664",
+      "path": "shards/g718_664.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_664.cwb",
+          "bytes": 7471,
+          "sha256": "55a3bf2a5ab6b947df2cdfd5f8c8441625e05bc0bd0227a3083edf64f1091d8e"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.2,
+        35.95,
+        33.25
+      ],
+      "nodes": 63,
+      "edges": 71,
+      "compactBytes": 42783,
+      "messagePackBytes": 36945,
+      "compactBinaryBytes": 7471
+    },
+    {
+      "id": "g718_665",
+      "path": "shards/g718_665.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_665.cwb",
+          "bytes": 3998,
+          "sha256": "e316d9d3677022bdec5928e9ec28c03dbdb19ab8725e2aea06ba4c21833fd3fa"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.25,
+        35.95,
+        33.3
+      ],
+      "nodes": 33,
+      "edges": 35,
+      "compactBytes": 22212,
+      "messagePackBytes": 19128,
+      "compactBinaryBytes": 3998
+    },
+    {
+      "id": "g718_666",
+      "path": "shards/g718_666.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_666.cwb",
+          "bytes": 10555,
+          "sha256": "b1dac68b644d885c89ce55e6fe2b9e3104430617b5a9651f7e587e7f23e9f00a"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.3,
+        35.95,
+        33.35
+      ],
+      "nodes": 86,
+      "edges": 96,
+      "compactBytes": 59620,
+      "messagePackBytes": 51316,
+      "compactBinaryBytes": 10555
+    },
+    {
+      "id": "g718_667",
+      "path": "shards/g718_667.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_667.cwb",
+          "bytes": 7374,
+          "sha256": "78eb2e0bfde05750bd4103f451afec063f227ac13700e627b1be03fa0fe10c46"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.35,
+        35.95,
+        33.4
+      ],
+      "nodes": 63,
+      "edges": 68,
+      "compactBytes": 41410,
+      "messagePackBytes": 35649,
+      "compactBinaryBytes": 7374
+    },
+    {
+      "id": "g718_668",
+      "path": "shards/g718_668.cwb",
+      "format": "compact",
+      "formats": {
+        "compact": {
+          "path": "shards/g718_668.cwb",
+          "bytes": 1441,
+          "sha256": "b9f0c3531292192c79e308070e94e541c50dfabf35061b93fd0d71fc950aa70e"
+        }
+      },
+      "bounds": [
+        35.9,
+        33.4,
+        35.95,
+        33.45
+      ],
+      "nodes": 5,
+      "edges": 3,
+      "compactBytes": 7741,
+      "messagePackBytes": 6718,
+      "compactBinaryBytes": 1441
+    }
+  ]
+}

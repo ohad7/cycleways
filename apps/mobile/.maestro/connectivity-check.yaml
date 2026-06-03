@@ -1,0 +1,5 @@
+appId: app.cycleways.mobile
+---
+- assertVisible: "סיכום ושיתוף המסלול"
+- assertVisible: "חיפוש מיקום"
+- takeScreenshot: /tmp/maestro-connectivity

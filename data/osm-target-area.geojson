@@ -1,0 +1,43 @@
+{
+  "type": "Feature",
+  "properties": {
+    "id": "hula-golan-hermon-v1",
+    "name": "Hula Valley, Golan Heights, and Hermon exploration area",
+    "description": "Approximate OSM exploration envelope. Extends the current CycleWays area north to Mount Hermon and east to the Syrian border area."
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          35.4482364,
+          32.904992
+        ],
+        [
+          35.93,
+          32.904992
+        ],
+        [
+          35.93,
+          33.3
+        ],
+        [
+          35.89,
+          33.43
+        ],
+        [
+          35.7,
+          33.43
+        ],
+        [
+          35.4482364,
+          33.2994538
+        ],
+        [
+          35.4482364,
+          32.904992
+        ]
+      ]
+    ]
+  }
+}

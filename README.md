@@ -26,3 +26,18 @@ cp mapbox-token.example.js mapbox-token.js
 or start the dev server with `MAPBOX_TOKEN` or `CYCLEWAYS_MAPBOX_TOKEN` in the
 environment. The dev server serves `/mapbox-token.js` from that local file or
 environment variable.
+
+## Adding a featured route
+
+1. Create a JSX module at `src/featured/<slug>.jsx` that exports `meta`
+   (slug, name, summary, encoded `route`, hero image) and a default
+   React component using `<FeaturedRoute>` and its slot components
+   (`<FeaturedRoute.Map />`, `<FeaturedRoute.POIs />`,
+   `<FeaturedRoute.Gallery />`, `<FeaturedRoute.Video />`,
+   `<FeaturedRoute.Warnings />`).
+2. Place media under `public/images/featured/<slug>/`.
+3. POIs along the route come from `segments.json`; add new segment-level
+   POIs there with a stable `id` and `location`. New POI types are
+   defined in `src/data/poiTypes.js`.
+4. The route appears automatically at `/featured/<slug>` and in the
+   `/featured` gallery on next dev/build.

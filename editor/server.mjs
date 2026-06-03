@@ -1,10 +1,22 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
-import { copyFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { copyFile, cp, mkdir, readFile, readdir, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { createReadStream, watch } from "node:fs";
 import { spawn } from "node:child_process";
 import { dirname, extname, isAbsolute, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createVideoSync } from "../src/components/featured/videoSync.js";
+import sharp from "sharp";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+import {
+  createRouteManager,
+  restoreRouteFromParam,
+} from "@cycleways/core/routing/routeActions.js";
+import { mergeBaseRoutingShards } from "@cycleways/core/routing/baseRoutingShards.js";
+import { decodeCompactBaseRoutingShard } from "@cycleways/core/routing/compactBaseRoutingShard.js";
+import { decodeMessagePack } from "@cycleways/core/routing/messagePack.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -13,31 +25,185 @@ const iconsRoot = resolve(repoRoot, "icons");
 const sourcePath = resolve(repoRoot, "data/map-source.geojson");
 const tokenPath = resolve(repoRoot, "mapbox-token.js");
 const buildDir = resolve(repoRoot, "build");
+const dataDir = resolve(repoRoot, "data");
+const publicDataDir = resolve(repoRoot, "public-data");
+const buildPublicDataDir = resolve(buildDir, "public-data");
+const osmBuildDir = resolve(buildDir, "osm");
+const osmRawWaysPath = resolve(osmBuildDir, "osm-raw-ways.geojson");
+const osmIntersectionsPath = resolve(osmBuildDir, "osm-intersections.geojson");
+const osmBaseGraphPath = resolve(osmBuildDir, "osm-base-graph.json");
+const osmElevatedBaseGraphPath = resolve(osmBuildDir, "osm-base-graph-elevated.json");
 const reportPath = resolve(buildDir, "report.json");
-const buildManifestPath = resolve(buildDir, "map-manifest.json");
-const buildGeojsonPath = resolve(buildDir, "bike_roads.geojson");
-const buildSegmentsPath = resolve(buildDir, "segments.json");
-const buildKmlPath = resolve(buildDir, "map.kml");
-const promotedGeojsonPath = resolve(repoRoot, "bike_roads_v18.geojson");
-const promotedSegmentsPath = resolve(repoRoot, "segments.json");
-const promotedKmlPath = resolve(repoRoot, "exports/map.kml");
-const promotedManifestPath = resolve(repoRoot, "map-manifest.json");
+const buildManifestPath = resolve(buildPublicDataDir, "map-manifest.json");
+const osmGraphEdgesPath = resolve(osmBuildDir, "osm-base-edges.geojson");
+const osmMatchSummaryPath = resolve(osmBuildDir, "cw-osm-match-summary.json");
+const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson");
+const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
+const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
+const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
+const poiTypesModulePath = resolve(repoRoot, "packages/core/src/data/poiTypes.js");
+const videoSyncModulePath = resolve(repoRoot, "src/components/featured/videoSync.js");
+const coreSrcRoot = resolve(repoRoot, "packages/core/src");
+const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
+const videoKeyframesDraftDir = resolve(editorRoot, ".drafts/route-videos");
+const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
+const routeCatalogDraftPath = resolve(editorRoot, ".drafts/route-catalog.json");
+const routeCatalogPublicPath = resolve(publicDataDir, "route-catalog.json");
+const poiImagesDir = resolve(publicDataDir, "poi-images");
+const imagesDir = resolve(repoRoot, "public/images");
+const placesPath = resolve(repoRoot, "data/places.json");
+const regionZonesPath = resolve(repoRoot, "data/region-zones.json");
 const port = Number(process.env.EDITOR_PORT || 8899);
-const devReloadEnabled = process.env.EDITOR_DEV_RELOAD === "1";
+const devReloadEnabled = process.env.EDITOR_CLIENT_RELOAD === "1";
 let requestCounter = 0;
 let buildCounter = 0;
+let osmGraphCounter = 0;
 let promoteCounter = 0;
+let atomicWriteCounter = 0;
 const devReloadClients = new Set();
 
 const qualityKeys = ["overall", "safety", "comfort", "scenery"];
+const dataMarkerOptionalStringFields = [
+  "id",
+  "name",
+  "description",
+  "photo",
+  "thumbnail",
+  "website",
+  "phone",
+  "hours",
+];
+
+function hasText(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function hasGalleryImage(marker) {
+  if (Array.isArray(marker?.images)) {
+    return marker.images.some((entry) => entry && hasText(entry.photo));
+  }
+  return hasText(marker.photo) || hasText(marker.thumbnail);
+}
+
+const POI_IMAGE_PUBLIC_PATH = "public-data/poi-images";
+const POI_IMAGE_MAX_WIDTH = 1600;
+const POI_IMAGE_THUMB_WIDTH = 480;
+
+// Map an authored, stable POI id onto a filesystem-safe slug. Throws when the
+// id has no usable characters so we never write an empty or traversal filename.
+export function sanitizePoiImageId(id) {
+  const slug = String(id ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!slug) {
+    throw new Error("POI image id must contain at least one letter or digit");
+  }
+  return slug;
+}
+
+// Resize and re-encode an uploaded photo into a serving-sized WebP plus a small
+// thumbnail, both written under public-data/poi-images. Returns the canonical
+// web paths the editor stores on the marker. Phone photos are routinely 5-8MB;
+// this keeps committed assets small enough for the git repo.
+export async function processPoiImage({ id, buffer }, options = {}) {
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+    throw new Error("POI image upload is empty");
+  }
+  const safeId = sanitizePoiImageId(id);
+  const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 8);
+  const baseName = `${safeId}-${hash}`;
+  const outputDir = options.outputDir || poiImagesDir;
+  const publicPath = options.publicPath || POI_IMAGE_PUBLIC_PATH;
+  await mkdir(outputDir, { recursive: true });
+
+  const photoBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: POI_IMAGE_MAX_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer();
+  const thumbBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: POI_IMAGE_THUMB_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 72 })
+    .toBuffer();
+
+  await writeFile(join(outputDir, `${baseName}.webp`), photoBuffer);
+  await writeFile(join(outputDir, `${baseName}-thumb.webp`), thumbBuffer);
+
+  return {
+    photo: `${publicPath}/${baseName}.webp`,
+    thumbnail: `${publicPath}/${baseName}-thumb.webp`,
+    bytes: { photo: photoBuffer.length, thumbnail: thumbBuffer.length },
+  };
+}
+
+function isRemoteImagePath(value) {
+  return /^(https?:)?\/\//i.test(value) || value.startsWith("data:");
+}
+
+// Resolve a marker image reference to an absolute path on disk, or null for
+// remote/data URLs (which we cannot and should not check locally).
+function localImagePathToAbsolute(value, baseDir) {
+  if (typeof value !== "string" || value.trim() === "" || isRemoteImagePath(value)) {
+    return null;
+  }
+  return resolve(baseDir, value.replace(/^\/+/, ""));
+}
+
+function collectSourceImagePaths(source) {
+  const paths = [];
+  const features = Array.isArray(source?.features) ? source.features : [];
+  for (const feature of features) {
+    const data = feature?.properties?.data;
+    if (!Array.isArray(data)) continue;
+    for (const marker of data) {
+      for (const field of ["photo", "thumbnail"]) {
+        const value = marker?.[field];
+        if (typeof value === "string" && value.trim() !== "") paths.push(value);
+      }
+      if (Array.isArray(marker?.images)) {
+        for (const entry of marker.images) {
+          for (const field of ["photo", "thumbnail"]) {
+            const value = entry?.[field];
+            if (typeof value === "string" && value.trim() !== "") paths.push(value);
+          }
+        }
+      }
+    }
+  }
+  return paths;
+}
+
+// Return the local POI image references in the source that do not resolve to a
+// file on disk. Remote URLs are skipped. Used to block promote on broken refs.
+export async function findMissingSourceImages(source, baseDir = repoRoot) {
+  const missing = [];
+  const seen = new Set();
+  for (const imagePath of collectSourceImagePaths(source)) {
+    if (seen.has(imagePath)) continue;
+    seen.add(imagePath);
+    const absolute = localImagePathToAbsolute(imagePath, baseDir);
+    if (!absolute) continue;
+    const fileStat = await statOrNull(absolute);
+    if (!fileStat || !fileStat.isFile()) {
+      missing.push(imagePath);
+    }
+  }
+  return missing;
+}
 
 const mimeTypes = new Map([
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
+  [".mjs", "text/javascript; charset=utf-8"],
   [".css", "text/css; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
   [".svg", "image/svg+xml"],
   [".png", "image/png"],
+  [".webp", "image/webp"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
   [".ico", "image/x-icon"],
 ]);
 
@@ -139,7 +305,7 @@ function summarizeReport(report) {
   const elevation = report?.elevation || {};
   const topology = validation.topology || {};
   return {
-    version: report?.outputs?.versioned?.version,
+    version: report?.outputs?.runtime?.version,
     features: validation.featureCount,
     segmentRecords: validation.segmentsCount,
     newSegments: (validation.newSegments || []).length,
@@ -155,6 +321,14 @@ function summarizeReport(report) {
     topology: {
       components: topology.connectedComponents,
       orphanEndpoints: topology.orphanEndpointCount,
+    },
+    baseRouting: {
+      nodes: validation.baseRouting?.graphNodes,
+      edges: validation.baseRouting?.graphEdges,
+      cyclewaysEdges: validation.baseRouting?.cyclewaysEdges,
+      unresolvedSegments: validation.baseRouting?.unresolvedSegments,
+      warnings: (validation.baseRouting?.warnings || []).length,
+      blockers: (validation.baseRouting?.blockers || []).length,
     },
   };
 }
@@ -193,25 +367,25 @@ function injectDevReloadClient(html) {
   const script = `
 <script>
 (() => {
-  let connected = false;
-  let reloadTimer = null;
-  const source = new EventSource("/api/dev/events");
-  source.addEventListener("open", () => {
-    connected = true;
-    if (reloadTimer) {
-      clearTimeout(reloadTimer);
-      reloadTimer = null;
-    }
-  });
-  source.addEventListener("reload", () => {
-    window.location.reload();
-  });
-  source.addEventListener("error", () => {
-    if (!connected || reloadTimer) return;
-    reloadTimer = setTimeout(() => {
+  let source = null;
+  let reconnectTimer = null;
+
+  function connect() {
+    source = new EventSource("/api/dev/events");
+    source.addEventListener("reload", () => {
       window.location.reload();
-    }, 900);
-  });
+    });
+    source.addEventListener("error", () => {
+      source.close();
+      if (reconnectTimer) return;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, 1000);
+    });
+  }
+
+  connect();
 })();
 </script>`;
   if (html.includes("</body>")) {
@@ -283,6 +457,458 @@ function resolveManifestPath(root, manifestPath) {
   return resolved;
 }
 
+const nodeRequire = createRequire(import.meta.url);
+
+let cachedFeaturedAssets = null;
+async function loadFeaturedAssetsFromDisk() {
+  if (cachedFeaturedAssets) return cachedFeaturedAssets;
+  const manifestRaw = await readFile(promotedManifestPath, "utf-8");
+  const manifest = JSON.parse(manifestRaw);
+  const geoJsonData = JSON.parse(
+    await readFile(resolve(publicDataDir, manifest.bikeRoads), "utf-8"),
+  );
+  const segmentsData = JSON.parse(
+    await readFile(resolve(publicDataDir, manifest.segments), "utf-8"),
+  );
+  cachedFeaturedAssets = { geoJsonData, segmentsData };
+  return cachedFeaturedAssets;
+}
+
+// Base-graph routes (hybrid_route_v6 / base_route_v4 tokens) need the base
+// routing network + cw-base index to decode, just like the web app. Merge all
+// shards once and cache, so catalog recompute/promote and keyframe polyline
+// decoding handle base-graph routes (not only segment-based ones).
+let cachedBaseRoutingDecode = null;
+async function getBaseRoutingDecodeAssets() {
+  if (cachedBaseRoutingDecode) return cachedBaseRoutingDecode;
+  let baseRoutingNetwork = null;
+  let cwBaseIndex = null;
+  try {
+    const shardsDir = resolve(publicDataDir, "base-routing-shards");
+    const shardManifest = JSON.parse(
+      await readFile(resolve(shardsDir, "manifest.json"), "utf-8"),
+    );
+    const shards = await Promise.all(
+      (shardManifest.shards || []).map(async (entry) => {
+        const buf = await readFile(resolve(shardsDir, entry.path));
+        if (entry.format === "msgpack") return decodeMessagePack(buf);
+        if (entry.format === "compact") return decodeCompactBaseRoutingShard(buf);
+        return JSON.parse(new TextDecoder().decode(buf));
+      }),
+    );
+    const network = mergeBaseRoutingShards(shards);
+    network.graphVersion = shardManifest.generatedAt || "";
+    if (Array.isArray(network.edges) && network.edges.length > 0) {
+      baseRoutingNetwork = network;
+    }
+  } catch (err) {
+    log("warn", `base routing shards unavailable for route decode: ${err.message}`);
+  }
+  try {
+    cwBaseIndex = JSON.parse(
+      await readFile(resolve(publicDataDir, "cw-base-index.json"), "utf-8"),
+    );
+  } catch (err) {
+    log("warn", `cw-base-index unavailable for route decode: ${err.message}`);
+  }
+  cachedBaseRoutingDecode = { baseRoutingNetwork, cwBaseIndex };
+  return cachedBaseRoutingDecode;
+}
+
+export async function loadRoutePolylineForSlug(slug) {
+  // First try the draft catalog (for in-progress edits), then the promoted one,
+  // and fall back to the .meta.js seed for legacy compatibility.
+  let routeToken = null;
+  const draft = await readJsonOrNull(routeCatalogDraftPath);
+  const promoted = await readJsonOrNull(routeCatalogPublicPath);
+  const lookup = (cat) => cat?.entries?.find((e) => e.slug === slug)?.route;
+  routeToken = lookup(draft) || lookup(promoted) || null;
+  if (!routeToken) {
+    try {
+      const metaModulePath = resolve(repoRoot, `src/featured/${slug}.meta.js`);
+      const metaModule = await import(pathToFileURL(metaModulePath).href);
+      routeToken = metaModule.meta?.route || null;
+    } catch {}
+  }
+  if (typeof routeToken !== "string" || routeToken.length === 0) {
+    throw new Error(`featured route "${slug}" not found in catalog or meta`);
+  }
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets();
+  const manager = await createRouteManager(
+    RouteManagerClass,
+    geoJsonData,
+    segmentsData,
+    baseRoutingNetwork,
+  );
+  const snapshot = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
+  if (!snapshot) throw new Error(`route "${slug}" failed to decode`);
+  return snapshot.geometry;
+}
+
+export async function promoteKeyframesDraft({ slug, draftsDir, publicDir, routePolyline }) {
+  const draftPath = resolve(draftsDir, `${slug}.json`);
+  let raw;
+  try {
+    raw = await readFile(draftPath, "utf-8");
+  } catch (err) {
+    if (err?.code === "ENOENT") {
+      throw new Error(`No video-sync draft exists for "${slug}". Save draft before promoting.`);
+    }
+    throw err;
+  }
+  const draft = JSON.parse(raw);
+
+  validateKeyframesDraft(draft, routePolyline);
+
+  await mkdir(publicDir, { recursive: true });
+  const targetPath = resolve(publicDir, `${slug}.json`);
+  const tmpTarget = `${targetPath}.tmp`;
+  await writeFile(tmpTarget, JSON.stringify(draft, null, 2));
+  await rename(tmpTarget, targetPath);
+
+  const indexPath = resolve(publicDir, "index.json");
+  let index;
+  try {
+    index = JSON.parse(await readFile(indexPath, "utf-8"));
+  } catch {
+    index = { version: 1, routes: {} };
+  }
+  index.routes = index.routes || {};
+  index.routes[slug] = `${slug}.json`;
+  const tmpIndex = `${indexPath}.tmp`;
+  await writeFile(tmpIndex, JSON.stringify(index, null, 2));
+  await rename(tmpIndex, indexPath);
+
+  await unlink(draftPath);
+  return { ok: true, targetPath, indexPath };
+}
+
+const PASSES_NEAR_METERS = 500;
+
+function haversineMetersClassify(a, b) {
+  const R = 6371000;
+  const DEG = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * DEG;
+  const dLng = (b.lng - a.lng) * DEG;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * DEG) * Math.cos(b.lat * DEG) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function nearestDistanceToPolyline(point, polyline) {
+  let best = Infinity;
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const a = polyline[i];
+    const b = polyline[i + 1];
+    const DEG = Math.PI / 180;
+    const cosLat = Math.cos(((a.lat + b.lat) / 2) * DEG);
+    const ax = a.lng * cosLat, ay = a.lat;
+    const bx = b.lng * cosLat, by = b.lat;
+    const px = point.lng * cosLat, py = point.lat;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const projLat = a.lat + (b.lat - a.lat) * t;
+    const projLng = a.lng + (b.lng - a.lng) * t;
+    const d = haversineMetersClassify(point, { lat: projLat, lng: projLng });
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+function pointInPolygon(point, polygon) {
+  const x = point.lng, y = point.lat;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+    const intersect =
+      yi > y !== yj > y &&
+      x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-12) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function centroidOf(polyline) {
+  let sumLat = 0, sumLng = 0;
+  for (const p of polyline) {
+    sumLat += p.lat;
+    sumLng += p.lng;
+  }
+  return { lat: sumLat / polyline.length, lng: sumLng / polyline.length };
+}
+
+function distanceKmOf(polyline) {
+  let total = 0;
+  for (let i = 1; i < polyline.length; i++) {
+    total += haversineMetersClassify(polyline[i - 1], polyline[i]);
+  }
+  return total / 1000;
+}
+
+function elevationDeltas(polyline) {
+  let gain = 0, loss = 0;
+  for (let i = 1; i < polyline.length; i++) {
+    const dz = (polyline[i].elevation ?? 0) - (polyline[i - 1].elevation ?? 0);
+    if (dz > 0) gain += dz;
+    else loss -= dz;
+  }
+  return { elevationGainM: Math.round(gain), elevationLossM: Math.round(loss) };
+}
+
+function difficultyOf(distanceKm, elevationGainM) {
+  if (elevationGainM > 500 || distanceKm > 40) return "hard";
+  if (elevationGainM >= 150 || distanceKm >= 25) return "moderate";
+  return "easy";
+}
+
+function styleOf({ difficulty, roadMix, qualityScore, distanceKm }) {
+  const roadFrac = roadMix?.road ?? 0;
+  const dirtFrac = roadMix?.dirt ?? 0;
+  if (difficulty === "easy" && roadFrac < 0.1 && qualityScore >= 3) return "family";
+  if (qualityScore >= 4) return "scenic";
+  if (difficulty === "hard" || distanceKm > 30) return "sporty";
+  if (dirtFrac >= 0.5) return "adventurous";
+  return "scenic";
+}
+
+async function readJsonOrNull(filePath) {
+  try {
+    return JSON.parse(await readFile(filePath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+const ROUTE_CATALOG_SLUG_RE = /^[a-z][a-z0-9-]*$/;
+
+function validateRouteEndpoint(point, label) {
+  if (point === undefined || point === null) return;
+  if (typeof point !== "object") throw new Error(`${label} must be an object`);
+  if (!point.name || typeof point.name !== "string") {
+    throw new Error(`${label} is missing a name`);
+  }
+  if (point.description !== undefined && typeof point.description !== "string") {
+    throw new Error(`${label} description must be a string`);
+  }
+  const images = Array.isArray(point.images) ? point.images : [];
+  if (images.length === 0) throw new Error(`${label} must have at least one image`);
+  for (const [i, img] of images.entries()) {
+    if (!img || typeof img !== "object" || typeof img.photo !== "string" || !img.photo) {
+      throw new Error(`${label} image ${i} is missing a photo`);
+    }
+    if (img.thumbnail !== undefined && typeof img.thumbnail !== "string") {
+      throw new Error(`${label} image ${i} has an invalid thumbnail`);
+    }
+  }
+}
+
+export function validateCatalogDraft(catalog) {
+  if (!catalog || !Array.isArray(catalog.entries)) {
+    throw new Error("catalog.entries must be an array");
+  }
+  const seen = new Set();
+  for (const entry of catalog.entries) {
+    if (!entry || typeof entry !== "object") throw new Error("entry must be an object");
+    if (!ROUTE_CATALOG_SLUG_RE.test(String(entry.slug))) {
+      throw new Error(`invalid slug: ${entry.slug}`);
+    }
+    if (seen.has(entry.slug)) throw new Error(`duplicate slug: ${entry.slug}`);
+    seen.add(entry.slug);
+    if (!entry.name || !entry.summary) {
+      throw new Error(`entry ${entry.slug} missing name or summary`);
+    }
+    if (typeof entry.route !== "string" || entry.route.length === 0) {
+      throw new Error(`entry ${entry.slug} missing route token`);
+    }
+    validateRouteEndpoint(entry.start, `entry ${entry.slug} start point`);
+    validateRouteEndpoint(entry.end, `entry ${entry.slug} end point`);
+  }
+}
+
+async function seedCatalogFromFeaturedMeta() {
+  const featuredDir = resolve(repoRoot, "src/featured");
+  const entries = [];
+  let files = [];
+  try {
+    files = await readdir(featuredDir);
+  } catch {
+    return { version: 1, entries };
+  }
+  for (const file of files) {
+    if (!file.endsWith(".meta.js")) continue;
+    const slug = file.replace(/\.meta\.js$/, "");
+    try {
+      const mod = await import(pathToFileURL(resolve(featuredDir, file)).href);
+      const meta = mod.meta;
+      if (!meta || !meta.route) continue;
+      entries.push({
+        slug: meta.slug || slug,
+        name: meta.name || slug,
+        summary: meta.summary || "",
+        route: meta.route,
+        notes: "",
+        featured: true,
+      });
+    } catch (err) {
+      log("warn", `seed: failed to import ${file}`, err.message);
+    }
+  }
+  return { version: 1, entries };
+}
+
+export function recomputeCatalogMetadata(draft, refs) {
+  const { places, zones, decodeRoute } = refs;
+  validateCatalogDraft(draft);
+  const entries = draft.entries.map((entry) => {
+    const decoded = decodeRoute(entry.route);
+    if (!decoded) {
+      throw new Error(`entry ${entry.slug}: route token failed to decode`);
+    }
+    const computed = classifyRoute(decoded, { places, zones });
+    return { ...entry, ...computed };
+  });
+  return { version: 1, entries };
+}
+
+export async function buildLiveDecodeRoute() {
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets();
+  const manager = await createRouteManager(
+    RouteManagerClass,
+    geoJsonData,
+    segmentsData,
+    baseRoutingNetwork,
+  );
+  return function decodeRoute(token) {
+    try {
+      const snapshot = restoreRouteFromParam(manager, token, segmentsData, cwBaseIndex);
+      if (!snapshot || !Array.isArray(snapshot.geometry) || snapshot.geometry.length < 2) {
+        return null;
+      }
+      const counts = { paved: 0, dirt: 0, road: 0 };
+      let qualitySum = 0;
+      let qualityN = 0;
+      for (const segName of snapshot.selectedSegments || []) {
+        const segData = segmentsData[segName];
+        const rt = segData?.roadType || "paved";
+        if (counts[rt] !== undefined) counts[rt] += 1;
+        else counts.paved += 1;
+        const q = segData?.quality?.overall;
+        if (Number.isFinite(q)) {
+          qualitySum += q;
+          qualityN += 1;
+        }
+      }
+      const total = counts.paved + counts.dirt + counts.road;
+      const roadTypeFractions = total > 0
+        ? { paved: counts.paved / total, dirt: counts.dirt / total, road: counts.road / total }
+        : { paved: 1, dirt: 0, road: 0 };
+      const qualityScore = qualityN > 0 ? qualitySum / qualityN : 0;
+      return {
+        geometry: snapshot.geometry,
+        roadTypeFractions,
+        qualityScore,
+      };
+    } catch {
+      return null;
+    }
+  };
+}
+
+export async function promoteCatalogDraft({ draftPath, publicPath, places, zones, decodeRoute }) {
+  const draft = JSON.parse(await readFile(draftPath, "utf-8"));
+  const enriched = recomputeCatalogMetadata(draft, { places, zones, decodeRoute });
+  await mkdir(dirname(publicPath), { recursive: true });
+  const tmp = `${publicPath}.tmp`;
+  await writeFile(tmp, JSON.stringify(enriched, null, 2));
+  await rename(tmp, publicPath);
+  await unlink(draftPath);
+  return { ok: true, publicPath, entryCount: enriched.entries.length };
+}
+
+export function classifyRoute(input, refs) {
+  const { geometry, roadTypeFractions, qualityScore } = input;
+  if (!Array.isArray(geometry) || geometry.length < 2) {
+    throw new Error("classifyRoute: geometry must have at least 2 points");
+  }
+  const distanceKm = distanceKmOf(geometry);
+  const { elevationGainM, elevationLossM } = elevationDeltas(geometry);
+  const difficulty = difficultyOf(distanceKm, elevationGainM);
+  const roadMix = {
+    paved: roadTypeFractions?.paved ?? 0,
+    dirt: roadTypeFractions?.dirt ?? 0,
+    road: roadTypeFractions?.road ?? 0,
+  };
+  const style = styleOf({
+    difficulty,
+    roadMix,
+    qualityScore: qualityScore ?? 0,
+    distanceKm,
+  });
+  const centroid = centroidOf(geometry);
+  const regionId =
+    refs.zones.find((z) => pointInPolygon(centroid, z.polygon))?.id ?? "unknown";
+  const passesNear = refs.places
+    .filter((p) => nearestDistanceToPolyline(p, geometry) <= PASSES_NEAR_METERS)
+    .map((p) => p.id);
+  return {
+    distanceKm: Math.round(distanceKm * 10) / 10,
+    elevationGainM,
+    elevationLossM,
+    regionId,
+    passesNear,
+    difficulty,
+    style,
+    roadMix,
+    qualityScore: qualityScore ?? 0,
+  };
+}
+
+export function validateKeyframesDraft(draft, routePolyline, maxMeters = 80) {
+  if (!draft || typeof draft !== "object") {
+    throw new Error("draft must be an object");
+  }
+  const { youtubeId, videoDuration, keyframes } = draft;
+  if (typeof youtubeId !== "string" || !youtubeId) {
+    throw new Error("draft.youtubeId required");
+  }
+  if (typeof videoDuration !== "number" || videoDuration <= 0) {
+    throw new Error("draft.videoDuration must be a positive number");
+  }
+  if (!Array.isArray(keyframes) || keyframes.length < 2) {
+    throw new Error("draft.keyframes must have at least 2 entries");
+  }
+  // createVideoSync enforces schema + sort + boundary t-values + route validity.
+  let sync;
+  try {
+    sync = createVideoSync({
+      keyframes,
+      videoDuration,
+      routeGeometry: routePolyline,
+    });
+  } catch (err) {
+    throw new Error(`videoSync rejected draft: ${err.message}`);
+  }
+  for (const kf of keyframes) {
+    const snap = sync.snapClickToRoute(
+      { lat: kf.lat, lng: kf.lng ?? kf.lon },
+      maxMeters,
+    );
+    if (!snap) {
+      throw new Error(
+        `keyframe at t=${kf.t} is too far from route (>${maxMeters}m)`,
+      );
+    }
+  }
+}
+
 async function readRequestJson(request, limitBytes = 25 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
@@ -297,7 +923,32 @@ async function readRequestJson(request, limitBytes = 25 * 1024 * 1024) {
   return raw ? JSON.parse(raw) : {};
 }
 
-function validateSourceGeojson(source) {
+function backfillDeprecatedRouteAnchors(source) {
+  if (!source || !Array.isArray(source.features)) return;
+  for (const feature of source.features) {
+    const props = feature?.properties;
+    if (!props || typeof props !== "object") continue;
+    const isDeprecated =
+      props.deprecated === true || props.status === "deprecated";
+    if (!isDeprecated) continue;
+    if (Array.isArray(props.routeAnchors) && props.routeAnchors.length > 0) continue;
+    if (props.middle && typeof props.middle === "object") continue;
+    const coords = feature?.geometry?.coordinates;
+    if (!Array.isArray(coords) || coords.length === 0) continue;
+    // Sample up to 3 points along the LineString: first, middle, last.
+    const n = coords.length;
+    const picks = n === 1 ? [0] : n === 2 ? [0, 1] : [0, Math.floor(n / 2), n - 1];
+    const anchors = picks
+      .map((i) => coords[i])
+      .filter((c) => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]))
+      .map((c) => [c[0], c[1]]);
+    if (anchors.length > 0) {
+      props.routeAnchors = anchors;
+    }
+  }
+}
+
+export function validateSourceGeojson(source) {
   if (!source || source.type !== "FeatureCollection" || !Array.isArray(source.features)) {
     throw new Error("Source must be a GeoJSON FeatureCollection");
   }
@@ -350,6 +1001,41 @@ function validateSourceGeojson(source) {
         }
         if (marker.information !== undefined && typeof marker.information !== "string") {
           throw new Error(`Feature ${name || index} data marker ${markerIndex} has invalid information`);
+        }
+        for (const field of dataMarkerOptionalStringFields) {
+          if (marker[field] !== undefined && typeof marker[field] !== "string") {
+            throw new Error(`Feature ${name || index} data marker ${markerIndex} has invalid ${field}`);
+          }
+        }
+        if (marker.gallery !== undefined && typeof marker.gallery !== "boolean") {
+          throw new Error(`Feature ${name || index} data marker ${markerIndex} has invalid gallery flag`);
+        }
+        if (marker.images !== undefined) {
+          if (!Array.isArray(marker.images)) {
+            throw new Error(`Feature ${name || index} data marker ${markerIndex} has non-array images`);
+          }
+          for (const [imageIndex, entry] of marker.images.entries()) {
+            if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+              throw new Error(`Feature ${name || index} data marker ${markerIndex} image ${imageIndex} is invalid`);
+            }
+            if (!hasText(entry.photo)) {
+              throw new Error(`Feature ${name || index} data marker ${markerIndex} image ${imageIndex} is missing a photo`);
+            }
+            if (entry.thumbnail !== undefined && typeof entry.thumbnail !== "string") {
+              throw new Error(`Feature ${name || index} data marker ${markerIndex} image ${imageIndex} has invalid thumbnail`);
+            }
+          }
+        }
+        if (marker.gallery === true && !hasGalleryImage(marker)) {
+          throw new Error(`Feature ${name || index} data marker ${markerIndex} is in the gallery but has no image`);
+        }
+        if (hasGalleryImage(marker)) {
+          if (!hasText(marker.id)) {
+            throw new Error(`Feature ${name || index} data marker ${markerIndex} with an image is missing a stable id`);
+          }
+          if (!hasText(marker.name) && !hasText(marker.information)) {
+            throw new Error(`Feature ${name || index} data marker ${markerIndex} with an image is missing a name or short description`);
+          }
         }
         const location = marker.location;
         if (
@@ -410,6 +1096,165 @@ function validateSourceGeojson(source) {
   }
 }
 
+function emptyCwBaseOverlay() {
+  return {
+    schemaVersion: 1,
+    description: "CycleWays segment mappings onto the OSM/manual base graph.",
+    updatedAt: null,
+    segments: {},
+  };
+}
+
+function emptyManualBaseEdges() {
+  return {
+    type: "FeatureCollection",
+    features: [],
+  };
+}
+
+function normalizeCwBaseOverlay(overlay) {
+  if (!overlay || typeof overlay !== "object" || Array.isArray(overlay)) {
+    throw new Error("Overlay must be an object");
+  }
+  const segments = overlay.segments || {};
+  if (!segments || typeof segments !== "object" || Array.isArray(segments)) {
+    throw new Error("Overlay segments must be an object keyed by segment id");
+  }
+
+  for (const [key, mapping] of Object.entries(segments)) {
+    if (!mapping || typeof mapping !== "object" || Array.isArray(mapping)) {
+      throw new Error(`Overlay mapping ${key} must be an object`);
+    }
+    if (!Number.isInteger(mapping.segmentId)) {
+      throw new Error(`Overlay mapping ${key} is missing integer segmentId`);
+    }
+    if (String(mapping.segmentId) !== String(key)) {
+      throw new Error(`Overlay mapping key ${key} does not match segmentId ${mapping.segmentId}`);
+    }
+    if (!["accepted_auto_match", "accepted_edge_set", "manual_base_edge_needed", "needs_edit"].includes(mapping.status)) {
+      throw new Error(`Overlay mapping ${key} has unsupported status ${mapping.status}`);
+    }
+    if (mapping.segmentName !== undefined && typeof mapping.segmentName !== "string") {
+      throw new Error(`Overlay mapping ${key} has invalid segmentName`);
+    }
+    if (!Array.isArray(mapping.edgeRefs)) {
+      throw new Error(`Overlay mapping ${key} edgeRefs must be an array`);
+    }
+    for (const [index, edgeRef] of mapping.edgeRefs.entries()) {
+      if (!edgeRef || typeof edgeRef !== "object" || Array.isArray(edgeRef)) {
+        throw new Error(`Overlay mapping ${key} edgeRef ${index} must be an object`);
+      }
+      if (typeof edgeRef.edgeId !== "string" || edgeRef.edgeId.trim() === "") {
+        throw new Error(`Overlay mapping ${key} edgeRef ${index} is missing edgeId`);
+      }
+      for (const fractionKey of ["fromFraction", "toFraction"]) {
+        const value = edgeRef[fractionKey];
+        if (typeof value !== "number" || value < 0 || value > 1) {
+          throw new Error(`Overlay mapping ${key} edgeRef ${index} has invalid ${fractionKey}`);
+        }
+      }
+      if (edgeRef.sequenceIndex !== undefined && !Number.isInteger(edgeRef.sequenceIndex)) {
+        throw new Error(`Overlay mapping ${key} edgeRef ${index} has invalid sequenceIndex`);
+      }
+      if (edgeRef.direction !== undefined && !["forward", "reverse", "unknown"].includes(edgeRef.direction)) {
+        throw new Error(`Overlay mapping ${key} edgeRef ${index} has invalid direction`);
+      }
+    }
+  }
+
+  return {
+    schemaVersion: 1,
+    description:
+      typeof overlay.description === "string"
+        ? overlay.description
+        : "CycleWays segment mappings onto the OSM/manual base graph.",
+    updatedAt: new Date().toISOString(),
+    segments,
+  };
+}
+
+async function readCwBaseOverlay() {
+  try {
+    return JSON.parse(await readFile(cwBaseOverlayPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return emptyCwBaseOverlay();
+    }
+    throw error;
+  }
+}
+
+function normalizeManualBaseEdges(geojson) {
+  if (!geojson || geojson.type !== "FeatureCollection" || !Array.isArray(geojson.features)) {
+    throw new Error("Manual base edges must be a GeoJSON FeatureCollection");
+  }
+
+  const ids = new Set();
+  for (const [index, feature] of geojson.features.entries()) {
+    if (!feature || feature.type !== "Feature") {
+      throw new Error(`Manual base edge ${index} is not a GeoJSON Feature`);
+    }
+    const geometry = feature.geometry || {};
+    if (geometry.type !== "LineString" || !Array.isArray(geometry.coordinates) || geometry.coordinates.length < 2) {
+      throw new Error(`Manual base edge ${index} must be a LineString with at least two coordinates`);
+    }
+    for (const coord of geometry.coordinates) {
+      if (
+        !Array.isArray(coord) ||
+        coord.length < 2 ||
+        typeof coord[0] !== "number" ||
+        typeof coord[1] !== "number" ||
+        coord[0] < -180 ||
+        coord[0] > 180 ||
+        coord[1] < -90 ||
+        coord[1] > 90
+      ) {
+        throw new Error(`Manual base edge ${index} has invalid coordinates`);
+      }
+    }
+
+    const properties = feature.properties || (feature.properties = {});
+    const manualEdgeId = properties.manualEdgeId || properties.id || feature.id;
+    if (typeof manualEdgeId !== "string" || manualEdgeId.trim() === "") {
+      throw new Error(`Manual base edge ${index} is missing manualEdgeId`);
+    }
+    if (ids.has(manualEdgeId)) {
+      throw new Error(`Duplicate manual base edge id ${manualEdgeId}`);
+    }
+    ids.add(manualEdgeId);
+    properties.manualEdgeId = manualEdgeId;
+    properties.id = properties.id || manualEdgeId;
+    properties.source = "manual";
+
+    if (
+      properties.linkedSegmentId !== undefined &&
+      properties.linkedSegmentId !== null &&
+      !Number.isInteger(properties.linkedSegmentId)
+    ) {
+      throw new Error(`Manual base edge ${manualEdgeId} has invalid linkedSegmentId`);
+    }
+    if (properties.linkedSegmentName !== undefined && typeof properties.linkedSegmentName !== "string") {
+      throw new Error(`Manual base edge ${manualEdgeId} has invalid linkedSegmentName`);
+    }
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: geojson.features,
+  };
+}
+
+async function readManualBaseEdges() {
+  try {
+    return JSON.parse(await readFile(manualBaseEdgesPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return emptyManualBaseEdges();
+    }
+    throw error;
+  }
+}
+
 function validateQuality(quality, featureLabel, required) {
   if (quality === undefined || quality === null) {
     if (required) {
@@ -449,7 +1294,28 @@ async function serveStatic(request, response, url) {
   const allowedEditorFile = isInside(editorRoot, filePath) || filePath === resolve(editorRoot, "index.html");
   const allowedIconFile = isInside(iconsRoot, filePath);
   const allowedTokenFile = filePath === tokenPath;
-  if (!allowedEditorFile && !allowedIconFile && !allowedTokenFile) {
+  const allowedPoiTypesFile = filePath === poiTypesModulePath;
+  // The Video Sync editor reuses the production interpolator directly from
+  // src/, so serve that single shared module read-only.
+  const allowedVideoSyncFile = filePath === videoSyncModulePath;
+  // The editor loads shared core ES modules directly from source (e.g.
+  // data/poiTypes.js, map/emojiMarkerImage.js), so serve the read-only
+  // packages/core/src tree.
+  const allowedCoreFile = isInside(coreSrcRoot, filePath);
+  // POI image previews: uploads live under public-data/poi-images and seed
+  // placeholders under public/images. Serve those read-only so the editor's
+  // image thumbnails resolve.
+  const allowedImageFile =
+    isInside(poiImagesDir, filePath) || isInside(imagesDir, filePath);
+  if (
+    !allowedEditorFile &&
+    !allowedIconFile &&
+    !allowedTokenFile &&
+    !allowedPoiTypesFile &&
+    !allowedVideoSyncFile &&
+    !allowedCoreFile &&
+    !allowedImageFile
+  ) {
     sendText(response, 404, "Not found");
     return;
   }
@@ -516,7 +1382,162 @@ async function serveTokenFile(response) {
   );
 }
 
+async function statOrNull(pathname) {
+  try {
+    return await stat(pathname);
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function isStaleAgainst(targetStat, inputStat) {
+  return Boolean(inputStat && (!targetStat || targetStat.mtimeMs + 1000 < inputStat.mtimeMs));
+}
+
+async function fileDigest(pathname) {
+  const digest = createHash("sha256");
+  const contents = await readFile(pathname);
+  digest.update(contents);
+  return digest.digest("hex");
+}
+
+async function elevatedGraphMatchesBaseGraph() {
+  const elevatedGraph = JSON.parse(await readFile(osmElevatedBaseGraphPath, "utf-8"));
+  const sourceDigest = elevatedGraph?.metadata?.elevation?.sourceGraphDigest;
+  if (typeof sourceDigest !== "string") {
+    return false;
+  }
+  return sourceDigest === await fileDigest(osmBaseGraphPath);
+}
+
+async function runBuildDependencyStep(buildId, label, command, args) {
+  const startedAt = Date.now();
+  log("info", `build#${buildId} ${label} started`, {
+    command: `${command} ${args.join(" ")}`,
+  });
+
+  return await new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(command, args, {
+      cwd: repoRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+    const stdoutLogger = createLineLogger("info", `build#${buildId} ${label} stdout`, (text) => {
+      stdout += text;
+    });
+    const stderrLogger = createLineLogger("info", `build#${buildId} ${label} stderr`, (text) => {
+      stderr += text;
+    });
+    const heartbeat = setInterval(() => {
+      log("info", `build#${buildId} ${label} still running`, {
+        elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+        stdoutBytes: stdout.length,
+        stderrBytes: stderr.length,
+      });
+    }, 10000);
+    heartbeat.unref();
+
+    child.stdout.on("data", (chunk) => {
+      stdoutLogger.write(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderrLogger.write(chunk);
+    });
+    child.on("error", (error) => {
+      clearInterval(heartbeat);
+      stdoutLogger.flush();
+      stderrLogger.flush();
+      log("error", `build#${buildId} ${label} failed to start`, error.message);
+      rejectPromise(error);
+    });
+    child.on("close", (code) => {
+      clearInterval(heartbeat);
+      stdoutLogger.flush();
+      stderrLogger.flush();
+      const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+      if (code !== 0) {
+        log("error", `build#${buildId} ${label} failed`, {
+          exitCode: code,
+          durationSeconds,
+        });
+        rejectPromise(new Error(stderr || stdout || `${label} failed with exit code ${code}`));
+        return;
+      }
+      log("info", `build#${buildId} ${label} finished`, {
+        durationSeconds,
+      });
+      resolvePromise({ stdout, stderr, durationSeconds });
+    });
+  });
+}
+
+async function ensureCurrentBaseRoutingArtifacts(buildId, payload) {
+  const graphInputs = [
+    ["raw OSM ways", osmRawWaysPath],
+    ["OSM intersections", osmIntersectionsPath],
+    ["manual base edges", manualBaseEdgesPath],
+  ];
+  const inputStats = await Promise.all(
+    graphInputs.map(async ([label, pathname]) => ({
+      label,
+      pathname,
+      stat: await statOrNull(pathname),
+    })),
+  );
+  let graphStat = await statOrNull(osmBaseGraphPath);
+  const staleGraphInputs = inputStats.filter((input) => isStaleAgainst(graphStat, input.stat));
+  if (!graphStat || staleGraphInputs.length > 0) {
+    log("info", `build#${buildId} refreshing base graph before Build`, {
+      reason: !graphStat
+        ? "missing base graph"
+        : `stale relative to ${staleGraphInputs.map((input) => input.label).join(", ")}`,
+    });
+    await runBuildDependencyStep(buildId, "base graph refresh", "npm", ["run", "osm:graph"]);
+    graphStat = await statOrNull(osmBaseGraphPath);
+  }
+  if (!graphStat) {
+    throw new Error("Base graph refresh did not produce build/osm/osm-base-graph.json.");
+  }
+
+  let elevatedStat = await statOrNull(osmElevatedBaseGraphPath);
+  let elevatedDigestMatches = false;
+  if (elevatedStat && !isStaleAgainst(elevatedStat, graphStat)) {
+    elevatedDigestMatches = await elevatedGraphMatchesBaseGraph().catch(() => false);
+  }
+  if (!elevatedStat || isStaleAgainst(elevatedStat, graphStat) || !elevatedDigestMatches) {
+    const elevationArgs = ["processing/build_osm_base_graph_elevation.py"];
+    if (payload.elevationUrl) {
+      elevationArgs.push("--elevation-url", String(payload.elevationUrl));
+    }
+    log("info", `build#${buildId} refreshing elevated base graph before Build`, {
+      reason: !elevatedStat
+        ? "missing elevated base graph"
+        : isStaleAgainst(elevatedStat, graphStat)
+          ? "stale relative to base graph"
+          : "source digest does not match base graph",
+    });
+    try {
+      await runBuildDependencyStep(buildId, "base graph elevation refresh", "python3", elevationArgs);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Base graph elevation refresh failed before Build. Make sure the local elevation service is running, then try Build again.\n\n${message}`,
+      );
+    }
+    elevatedStat = await statOrNull(osmElevatedBaseGraphPath);
+  }
+  if (!elevatedStat) {
+    throw new Error("Base graph elevation refresh did not produce build/osm/osm-base-graph-elevated.json.");
+  }
+}
+
 async function handleBuild(payload) {
+  payload = payload || {};
   const buildId = ++buildCounter;
   const startedAt = Date.now();
   const args = [
@@ -540,6 +1561,8 @@ async function handleBuild(payload) {
     mode: payload.skipElevation ? "preview-skip-elevation" : "full-elevation",
     command: `python3 ${args.join(" ")}`,
   });
+
+  await ensureCurrentBaseRoutingArtifacts(buildId, payload);
 
   return await new Promise((resolvePromise, rejectPromise) => {
     const child = spawn("python3", args, {
@@ -598,6 +1621,263 @@ async function handleBuild(payload) {
   });
 }
 
+async function handleOsmGraphRecalculate() {
+  const graphId = ++osmGraphCounter;
+  const startedAt = Date.now();
+  const args = ["run", "osm:graph"];
+
+  log("info", `osm-graph#${graphId} started`, {
+    command: `npm ${args.join(" ")}`,
+  });
+
+  return await new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn("npm", args, {
+      cwd: repoRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+    const stdoutLogger = createLineLogger("info", `osm-graph#${graphId} stdout`, (text) => {
+      stdout += text;
+    });
+    const stderrLogger = createLineLogger("info", `osm-graph#${graphId} stderr`, (text) => {
+      stderr += text;
+    });
+    const heartbeat = setInterval(() => {
+      log("info", `osm-graph#${graphId} still running`, {
+        elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+        stdoutBytes: stdout.length,
+        stderrBytes: stderr.length,
+      });
+    }, 10000);
+    heartbeat.unref();
+
+    child.stdout.on("data", (chunk) => {
+      stdoutLogger.write(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderrLogger.write(chunk);
+    });
+    child.on("error", (error) => {
+      clearInterval(heartbeat);
+      stdoutLogger.flush();
+      stderrLogger.flush();
+      log("error", `osm-graph#${graphId} failed to start`, error.message);
+      rejectPromise(error);
+    });
+    child.on("close", (code) => {
+      clearInterval(heartbeat);
+      stdoutLogger.flush();
+      stderrLogger.flush();
+      const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+      if (code !== 0) {
+        log("error", `osm-graph#${graphId} failed`, {
+          exitCode: code,
+          durationSeconds,
+        });
+        rejectPromise(new Error(stderr || stdout || `OSM graph recalculation failed with exit code ${code}`));
+        return;
+      }
+      log("info", `osm-graph#${graphId} finished`, {
+        durationSeconds,
+      });
+      resolvePromise({ graphId, stdout, stderr, durationSeconds });
+    });
+  });
+}
+
+async function handleOsmSegmentRecalculate(payload) {
+  const graphId = ++osmGraphCounter;
+  const startedAt = Date.now();
+  const feature = payload?.feature;
+  validateSourceGeojson({ type: "FeatureCollection", features: [feature] });
+  const segmentId = feature.properties.id;
+  const tmpPrefix = resolve(osmBuildDir, `.selected-segment-${segmentId}-${Date.now()}-${graphId}`);
+  const segmentPath = `${tmpPrefix}.geojson`;
+  const outPath = `${tmpPrefix}.json`;
+  const args = [
+    "processing/match_cycleways_to_osm_graph.py",
+    "--graph-edges",
+    "build/osm/osm-base-edges.geojson",
+    "--single-segment-geojson",
+    repoRelative(segmentPath),
+    "--single-out-json",
+    repoRelative(outPath),
+  ];
+
+  await mkdir(osmBuildDir, { recursive: true });
+  await writeJsonAtomic(segmentPath, feature);
+
+  log("info", `osm-segment#${graphId} started`, {
+    segmentId,
+    command: `python3 ${args.join(" ")}`,
+  });
+
+  try {
+    const result = await new Promise((resolvePromise, rejectPromise) => {
+      const child = spawn("python3", args, {
+        cwd: repoRoot,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      let stdout = "";
+      let stderr = "";
+      const stdoutLogger = createLineLogger("info", `osm-segment#${graphId} stdout`, (text) => {
+        stdout += text;
+      });
+      const stderrLogger = createLineLogger("info", `osm-segment#${graphId} stderr`, (text) => {
+        stderr += text;
+      });
+      const heartbeat = setInterval(() => {
+        log("info", `osm-segment#${graphId} still running`, {
+          segmentId,
+          elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+          stdoutBytes: stdout.length,
+          stderrBytes: stderr.length,
+        });
+      }, 10000);
+      heartbeat.unref();
+
+      child.stdout.on("data", (chunk) => {
+        stdoutLogger.write(chunk);
+      });
+      child.stderr.on("data", (chunk) => {
+        stderrLogger.write(chunk);
+      });
+      child.on("error", (error) => {
+        clearInterval(heartbeat);
+        stdoutLogger.flush();
+        stderrLogger.flush();
+        log("error", `osm-segment#${graphId} failed to start`, error.message);
+        rejectPromise(error);
+      });
+      child.on("close", (code) => {
+        clearInterval(heartbeat);
+        stdoutLogger.flush();
+        stderrLogger.flush();
+        const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+        if (code !== 0) {
+          log("error", `osm-segment#${graphId} failed`, {
+            segmentId,
+            exitCode: code,
+            durationSeconds,
+          });
+          rejectPromise(new Error(stderr || stdout || `Segment recalculation failed with exit code ${code}`));
+          return;
+        }
+        log("info", `osm-segment#${graphId} finished`, {
+          segmentId,
+          durationSeconds,
+        });
+        resolvePromise({ graphId, segmentId, stdout, stderr, durationSeconds });
+      });
+    });
+    const match = JSON.parse(await readFile(outPath, "utf-8"));
+    return { ...result, match };
+  } finally {
+    await unlink(segmentPath).catch(() => {});
+    await unlink(outPath).catch(() => {});
+  }
+}
+
+function recomputeMatchSummaryTotals(summary) {
+  const segments = Array.isArray(summary.segments) ? summary.segments : [];
+  const confidenceCounts = {};
+  let totalDistanceM = 0;
+  let matchedDistanceM = 0;
+  let gapCount = 0;
+
+  for (const segment of segments) {
+    const confidence = segment.confidence || "none";
+    confidenceCounts[confidence] = (confidenceCounts[confidence] || 0) + 1;
+    const distanceMeters = Number(segment.distanceMeters) || 0;
+    const coverageRatio = Number(segment.coverageRatio) || 0;
+    totalDistanceM += distanceMeters;
+    matchedDistanceM += distanceMeters * coverageRatio;
+    gapCount += Number(segment.gapCount) || 0;
+  }
+
+  return {
+    ...summary,
+    sourceSegments: segments.length,
+    coverageRatio: totalDistanceM ? Number((matchedDistanceM / totalDistanceM).toFixed(4)) : 0,
+    totalKm: Number((totalDistanceM / 1000).toFixed(1)),
+    matchedKm: Number((matchedDistanceM / 1000).toFixed(1)),
+    unmatchedKm: Number(((totalDistanceM - matchedDistanceM) / 1000).toFixed(1)),
+    confidenceCounts,
+    gapCount,
+  };
+}
+
+async function persistOsmSegmentMatch(payload) {
+  const segmentId = Number(payload?.segmentId);
+  const summary = payload?.summary;
+  const preview = payload?.preview || { type: "FeatureCollection", features: [] };
+  if (!Number.isInteger(segmentId)) {
+    throw new Error("segmentId is required");
+  }
+  if (!summary || Number(summary.segmentId) !== segmentId) {
+    throw new Error("summary.segmentId must match segmentId");
+  }
+  if (!preview || preview.type !== "FeatureCollection" || !Array.isArray(preview.features)) {
+    throw new Error("preview must be a GeoJSON FeatureCollection");
+  }
+
+  await mkdir(osmBuildDir, { recursive: true });
+  const existingSummary = JSON.parse(await readFile(osmMatchSummaryPath, "utf-8"));
+  const nextSegments = [
+    ...(existingSummary.segments || []).filter((segment) => Number(segment.segmentId) !== segmentId),
+    summary,
+  ].sort((a, b) => Number(a.segmentId ?? 0) - Number(b.segmentId ?? 0));
+  const nextSummary = recomputeMatchSummaryTotals({
+    ...existingSummary,
+    generatedAt: new Date().toISOString(),
+    segments: nextSegments,
+  });
+
+  let existingPreview = { type: "FeatureCollection", features: [] };
+  try {
+    existingPreview = JSON.parse(await readFile(osmMatchPreviewPath, "utf-8"));
+  } catch {
+    existingPreview = { type: "FeatureCollection", features: [] };
+  }
+  const nextPreview = {
+    type: "FeatureCollection",
+    features: [
+      ...(existingPreview.features || []).filter(
+        (feature) => Number(feature.properties?.segmentId) !== segmentId,
+      ),
+      ...preview.features,
+    ],
+  };
+
+  let existingMatches = { generatedAt: nextSummary.generatedAt, segments: [] };
+  try {
+    existingMatches = JSON.parse(await readFile(osmMatchesPath, "utf-8"));
+  } catch {
+    existingMatches = { generatedAt: nextSummary.generatedAt, segments: [] };
+  }
+  const nextMatches = {
+    ...existingMatches,
+    generatedAt: nextSummary.generatedAt,
+    segments: [
+      ...(existingMatches.segments || []).filter((segment) => Number(segment.segmentId) !== segmentId),
+      summary,
+    ].sort((a, b) => Number(a.segmentId ?? 0) - Number(b.segmentId ?? 0)),
+  };
+
+  await writeJsonAtomic(osmMatchSummaryPath, nextSummary);
+  await writeJsonAtomic(osmMatchPreviewPath, nextPreview);
+  await writeJsonAtomic(osmMatchesPath, nextMatches);
+
+  return {
+    summary: nextSummary,
+    preview: nextPreview,
+    matches: nextMatches,
+  };
+}
+
 function validationBlockers(report) {
   const validation = report?.validation || {};
   const elevation = report?.elevation || {};
@@ -616,11 +1896,31 @@ function validationBlockers(report) {
   if ((validation.invalidDataMarkers || []).length > 0) {
     blockers.push("invalid data markers");
   }
+  if ((validation.invalidQuality || []).length > 0) {
+    blockers.push("invalid quality records");
+  }
   if ((validation.activeMissingMiddle || []).length > 0) {
     blockers.push("active segments missing middle points");
   }
   if ((validation.activeSplitNumberedNames || []).length > 0) {
     blockers.push("active split children with numbered names");
+  }
+  if ((validation.routeCompatibilityWarnings || []).length > 0) {
+    blockers.push(`${validation.routeCompatibilityWarnings.length} route compatibility warnings`);
+  }
+  const baseRouting = validation.baseRouting || {};
+  if ((baseRouting.blockers || []).length > 0) {
+    blockers.push(`${baseRouting.blockers.length} base routing blockers`);
+  }
+  if ((baseRouting.warnings || []).length > 0) {
+    blockers.push(`${baseRouting.warnings.length} base routing warnings`);
+  }
+  if ((baseRouting.unresolvedSegments || 0) > 0) {
+    blockers.push(`${baseRouting.unresolvedSegments} unresolved base routing segments`);
+  }
+  const displayFallbacks = validation.cyclewaysDisplayGeometry?.sourceFallbackSegments || 0;
+  if (displayFallbacks > 0) {
+    blockers.push(`${displayFallbacks} public CycleWays display geometry fallbacks`);
   }
 
   return blockers;
@@ -628,9 +1928,69 @@ function validationBlockers(report) {
 
 async function copyFileAtomic(source, target) {
   await mkdir(dirname(target), { recursive: true });
-  const tmpPath = `${target}.tmp`;
-  await copyFile(source, tmpPath);
-  await rename(tmpPath, target);
+  const tmpPath = uniqueAtomicTmpPath(target);
+  try {
+    await copyFile(source, tmpPath);
+    await rename(tmpPath, target);
+  } catch (error) {
+    await unlink(tmpPath).catch(() => {});
+    throw error;
+  }
+}
+
+async function copyDirectoryAtomic(source, target) {
+  await mkdir(dirname(target), { recursive: true });
+  const tmpPath = uniqueAtomicTmpPath(target);
+  try {
+    await rm(tmpPath, { recursive: true, force: true });
+    await cp(source, tmpPath, { recursive: true, force: true });
+    await rm(target, { recursive: true, force: true });
+    await rename(tmpPath, target);
+  } catch (error) {
+    await rm(tmpPath, { recursive: true, force: true }).catch(() => {});
+    throw error;
+  }
+}
+
+function uniqueAtomicTmpPath(target) {
+  atomicWriteCounter += 1;
+  return `${target}.${process.pid}.${Date.now()}.${atomicWriteCounter}.tmp`;
+}
+
+async function writeJsonAtomic(target, value) {
+  await mkdir(dirname(target), { recursive: true });
+  const tmpPath = uniqueAtomicTmpPath(target);
+  try {
+    await writeFile(tmpPath, `${JSON.stringify(value, null, 2)}\n`, "utf-8");
+    await rename(tmpPath, target);
+  } catch (error) {
+    await unlink(tmpPath).catch(() => {});
+    throw error;
+  }
+}
+
+async function writeJsonAtomicIfChanged(target, value) {
+  const nextContent = `${JSON.stringify(value, null, 2)}\n`;
+  let currentContent = null;
+  try {
+    currentContent = await readFile(target, "utf-8");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  if (currentContent === nextContent) {
+    return false;
+  }
+
+  await mkdir(dirname(target), { recursive: true });
+  const tmpPath = uniqueAtomicTmpPath(target);
+  try {
+    await writeFile(tmpPath, nextContent, "utf-8");
+    await rename(tmpPath, target);
+    return true;
+  } catch (error) {
+    await unlink(tmpPath).catch(() => {});
+    throw error;
+  }
 }
 
 async function existingVersionedFiles(directory, pattern) {
@@ -644,29 +2004,73 @@ async function existingVersionedFiles(directory, pattern) {
   }
 }
 
-async function cleanupOldVersionedArtifacts(manifest, promoteId, dryRun) {
-  const keep = new Set([
-    resolveManifestPath(repoRoot, manifest.bikeRoads),
-    resolveManifestPath(repoRoot, manifest.segments),
-    resolveManifestPath(repoRoot, manifest.kml),
-  ]);
+async function cleanupOldPublicArtifacts(promoteId, dryRun) {
   const candidates = [
     ...(await existingVersionedFiles(repoRoot, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
     ...(await existingVersionedFiles(repoRoot, /^segments\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(repoRoot, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(repoRoot, /^base-routing-shards\.[0-9a-f]{12}$/)),
+    ...(await existingVersionedFiles(repoRoot, /^base-routing-shards$/)),
+    ...(await existingVersionedFiles(repoRoot, /^bike_roads_v18\.geojson$/)),
+    ...(await existingVersionedFiles(repoRoot, /^segments\.json$/)),
+    ...(await existingVersionedFiles(repoRoot, /^base-routing-network\.json$/)),
+    ...(await existingVersionedFiles(repoRoot, /^map-manifest\.json$/)),
     ...(await existingVersionedFiles(resolve(repoRoot, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
-  ].filter((path) => !keep.has(path));
+    ...(await existingVersionedFiles(resolve(repoRoot, "exports"), /^map\.kml$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^segments\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.json$/)),
+    ...(await existingVersionedFiles(resolve(publicDataDir, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
+  ];
 
   for (const filePath of candidates) {
-    log("info", `promote#${promoteId} removing old versioned artifact`, {
+    log("info", `promote#${promoteId} removing old public artifact`, {
       path: repoRelative(filePath),
       dryRun,
     });
     if (!dryRun) {
-      await unlink(filePath);
+      await rm(filePath, { recursive: true, force: true });
     }
   }
 
   return candidates;
+}
+
+export function buildPromoteTargets(manifest) {
+  return [
+    {
+      label: "public manifest",
+      source: buildManifestPath,
+      target: promotedManifestPath,
+    },
+    {
+      label: "public geojson",
+      source: resolveManifestPath(buildPublicDataDir, manifest.bikeRoads),
+      target: resolveManifestPath(publicDataDir, manifest.bikeRoads),
+    },
+    {
+      label: "public segments",
+      source: resolveManifestPath(buildPublicDataDir, manifest.segments),
+      target: resolveManifestPath(publicDataDir, manifest.segments),
+    },
+    {
+      label: "public CW base index",
+      source: resolveManifestPath(buildPublicDataDir, manifest.cwBaseIndex),
+      target: resolveManifestPath(publicDataDir, manifest.cwBaseIndex),
+    },
+    {
+      label: "public kml",
+      source: resolveManifestPath(buildPublicDataDir, manifest.kml),
+      target: resolveManifestPath(publicDataDir, manifest.kml),
+    },
+    {
+      kind: "directory",
+      label: "base routing shards",
+      source: dirname(resolveManifestPath(buildPublicDataDir, manifest.baseRoutingShards)),
+      target: dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)),
+    },
+  ];
 }
 
 async function handlePromote(payload = {}) {
@@ -685,6 +2089,20 @@ async function handlePromote(payload = {}) {
     throw new Error("Build is stale. Run Build after saving the source, then promote.");
   }
 
+  for (const routingInput of [
+    osmBaseGraphPath,
+    osmElevatedBaseGraphPath,
+    cwBaseOverlayPath,
+    manualBaseEdgesPath,
+  ]) {
+    const routingInputStat = await stat(routingInput);
+    if (reportStat.mtimeMs + 1000 < routingInputStat.mtimeMs) {
+      throw new Error(
+        `Build is stale. ${repoRelative(routingInput)} changed after Build. Rebuild before promoting.`,
+      );
+    }
+  }
+
   if (report.elevation?.skipElevation && !payload.allowSkippedElevation) {
     throw new Error("Promote requires a full build. Uncheck skip elevation, run Build, then promote.");
   }
@@ -700,48 +2118,26 @@ async function handlePromote(payload = {}) {
     throw new Error(`Promote blocked by validation: ${blockers.join(", ")}`);
   }
 
+  const sourceForImages = JSON.parse(await readFile(sourcePath, "utf-8"));
+  const missingImages = await findMissingSourceImages(sourceForImages, repoRoot);
+  if (missingImages.length > 0) {
+    throw new Error(
+      `Promote blocked: ${missingImages.length} POI image file(s) are referenced but missing: ${missingImages.join(", ")}`,
+    );
+  }
+  if (!manifest.baseRoutingShards) {
+    throw new Error("Promote requires a base routing shard manifest in the build manifest.");
+  }
+  if (!manifest.cwBaseIndex) {
+    throw new Error("Promote requires a CW base index in the build manifest.");
+  }
+
   log("info", `promote#${promoteId} checks passed`, {
     version: manifest.version,
     warnings: (report.validation?.routeCompatibilityWarnings || []).length,
   });
 
-  const targets = [
-    {
-      label: "manifest",
-      source: buildManifestPath,
-      target: promotedManifestPath,
-    },
-    {
-      label: "versioned geojson",
-      source: resolveManifestPath(buildDir, manifest.bikeRoads),
-      target: resolveManifestPath(repoRoot, manifest.bikeRoads),
-    },
-    {
-      label: "versioned segments",
-      source: resolveManifestPath(buildDir, manifest.segments),
-      target: resolveManifestPath(repoRoot, manifest.segments),
-    },
-    {
-      label: "versioned kml",
-      source: resolveManifestPath(buildDir, manifest.kml.replace(/^exports\//, "")),
-      target: resolveManifestPath(repoRoot, manifest.kml),
-    },
-    {
-      label: "site geojson",
-      source: buildGeojsonPath,
-      target: promotedGeojsonPath,
-    },
-    {
-      label: "site segments",
-      source: buildSegmentsPath,
-      target: promotedSegmentsPath,
-    },
-    {
-      label: "kml export",
-      source: buildKmlPath,
-      target: promotedKmlPath,
-    },
-  ];
+  const targets = buildPromoteTargets(manifest);
 
   for (const target of targets) {
     await stat(target.source);
@@ -762,10 +2158,14 @@ async function handlePromote(payload = {}) {
         source: repoRelative(target.source),
         target: repoRelative(target.target),
       });
-      await copyFileAtomic(target.source, target.target);
+      if (target.kind === "directory") {
+        await copyDirectoryAtomic(target.source, target.target);
+      } else {
+        await copyFileAtomic(target.source, target.target);
+      }
     }
   }
-  removed = await cleanupOldVersionedArtifacts(manifest, promoteId, Boolean(payload.dryRun));
+  removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun));
 
   log("info", `promote#${promoteId} finished`, {
     dryRun: Boolean(payload.dryRun),
@@ -801,14 +2201,186 @@ const server = createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/source") {
       logApi(requestId, "GET /api/source started");
       const source = JSON.parse(await readFile(sourcePath, "utf-8"));
+      backfillDeprecatedRouteAnchors(source);
       logApi(requestId, "GET /api/source loaded", summarizeSource(source));
       sendJson(response, 200, source);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/osm/recalculate") {
+      logApi(requestId, "POST /api/osm/recalculate started");
+      const result = await handleOsmGraphRecalculate();
+      let graphSummary = null;
+      let matchSummary = null;
+      try {
+        graphSummary = JSON.parse(await readFile(resolve(osmBuildDir, "osm-base-graph-summary.json"), "utf-8"));
+      } catch {
+        graphSummary = null;
+      }
+      try {
+        matchSummary = JSON.parse(await readFile(osmMatchSummaryPath, "utf-8"));
+      } catch {
+        matchSummary = null;
+      }
+      logApi(requestId, "POST /api/osm/recalculate finished", {
+        durationMs: Date.now() - startedAt,
+        graphId: result.graphId,
+        graphEdges: graphSummary?.edges,
+        sourceSegments: matchSummary?.sourceSegments,
+      });
+      sendJson(response, 200, { ok: true, ...result, graphSummary, matchSummary });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/osm/recalculate-segment") {
+      logApi(requestId, "POST /api/osm/recalculate-segment started");
+      const payload = await readRequestJson(request);
+      let result;
+      try {
+        result = await handleOsmSegmentRecalculate(payload);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/osm/recalculate-segment failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      logApi(requestId, "POST /api/osm/recalculate-segment finished", {
+        durationMs: Date.now() - startedAt,
+        segmentId: result.segmentId,
+        coverageRatio: result.match?.summary?.coverageRatio,
+        confidence: result.match?.summary?.confidence,
+      });
+      sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/osm/persist-segment-match") {
+      logApi(requestId, "POST /api/osm/persist-segment-match started");
+      const payload = await readRequestJson(request);
+      let result;
+      try {
+        result = await persistOsmSegmentMatch(payload);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/osm/persist-segment-match failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      logApi(requestId, "POST /api/osm/persist-segment-match saved", {
+        durationMs: Date.now() - startedAt,
+        segmentId: payload.segmentId,
+      });
+      sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/osm/graph-edges") {
+      logApi(requestId, "GET /api/osm/graph-edges started");
+      const graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
+      const [graphStat, manualStat] = await Promise.all([
+        stat(osmGraphEdgesPath),
+        stat(manualBaseEdgesPath).catch(() => null),
+      ]);
+      graphEdges.metadata = {
+        ...(graphEdges.metadata || {}),
+        graphEdgesModifiedAt: graphStat.mtime.toISOString(),
+        manualBaseEdgesModifiedAt: manualStat?.mtime?.toISOString() || null,
+        graphStaleBecauseManualBaseEdgesChanged: Boolean(manualStat && manualStat.mtimeMs > graphStat.mtimeMs),
+      };
+      logApi(requestId, "GET /api/osm/graph-edges loaded", {
+        features: graphEdges.features?.length || 0,
+        stale: graphEdges.metadata.graphStaleBecauseManualBaseEdgesChanged,
+      });
+      sendJson(response, 200, graphEdges);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/osm/match-summary") {
+      logApi(requestId, "GET /api/osm/match-summary started");
+      const summary = JSON.parse(await readFile(osmMatchSummaryPath, "utf-8"));
+      logApi(requestId, "GET /api/osm/match-summary loaded", {
+        sourceSegments: summary.sourceSegments,
+        coverageRatio: summary.coverageRatio,
+        gapCount: summary.gapCount,
+      });
+      sendJson(response, 200, summary);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/osm/match-preview") {
+      logApi(requestId, "GET /api/osm/match-preview started");
+      const preview = JSON.parse(await readFile(osmMatchPreviewPath, "utf-8"));
+      logApi(requestId, "GET /api/osm/match-preview loaded", {
+        features: preview.features?.length || 0,
+      });
+      sendJson(response, 200, preview);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/cw-base-overlay") {
+      logApi(requestId, "GET /api/cw-base-overlay started");
+      const overlay = await readCwBaseOverlay();
+      logApi(requestId, "GET /api/cw-base-overlay loaded", {
+        mappings: Object.keys(overlay.segments || {}).length,
+      });
+      sendJson(response, 200, overlay);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/manual-base-edges") {
+      logApi(requestId, "GET /api/manual-base-edges started");
+      const manualBaseEdges = await readManualBaseEdges();
+      logApi(requestId, "GET /api/manual-base-edges loaded", {
+        features: manualBaseEdges.features?.length || 0,
+      });
+      sendJson(response, 200, manualBaseEdges);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay") {
+      logApi(requestId, "POST /api/cw-base-overlay started");
+      let overlay;
+      try {
+        overlay = normalizeCwBaseOverlay(await readRequestJson(request));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/cw-base-overlay validation failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      await writeJsonAtomic(cwBaseOverlayPath, overlay);
+      logApi(requestId, "POST /api/cw-base-overlay saved", {
+        path: repoRelative(cwBaseOverlayPath),
+        mappings: Object.keys(overlay.segments || {}).length,
+      });
+      sendJson(response, 200, { ok: true, path: cwBaseOverlayPath, overlay });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/manual-base-edges") {
+      logApi(requestId, "POST /api/manual-base-edges started");
+      let manualBaseEdges;
+      try {
+        manualBaseEdges = normalizeManualBaseEdges(await readRequestJson(request));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/manual-base-edges validation failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      await writeJsonAtomic(manualBaseEdgesPath, manualBaseEdges);
+      logApi(requestId, "POST /api/manual-base-edges saved", {
+        path: repoRelative(manualBaseEdgesPath),
+        features: manualBaseEdges.features?.length || 0,
+      });
+      sendJson(response, 200, { ok: true, path: manualBaseEdgesPath, manualBaseEdges });
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/api/source") {
       logApi(requestId, "POST /api/source started");
       const source = await readRequestJson(request);
+      backfillDeprecatedRouteAnchors(source);
       try {
         validateSourceGeojson(source);
       } catch (error) {
@@ -818,14 +2390,43 @@ const server = createServer(async (request, response) => {
         return;
       }
       logApi(requestId, "POST /api/source validated", summarizeSource(source));
-      const tmpPath = `${sourcePath}.tmp`;
-      await writeFile(tmpPath, `${JSON.stringify(source, null, 2)}\n`, "utf-8");
-      await rename(tmpPath, sourcePath);
+      const changed = await writeJsonAtomicIfChanged(sourcePath, source);
       logApi(requestId, "POST /api/source saved", {
         path: repoRelative(sourcePath),
+        changed,
         durationMs: Date.now() - startedAt,
       });
-      sendJson(response, 200, { ok: true, path: sourcePath });
+      sendJson(response, 200, { ok: true, path: sourcePath, changed });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/poi-image") {
+      logApi(requestId, "POST /api/poi-image started");
+      // Phone photos can be several MB; allow extra headroom for base64 inflation.
+      const payload = await readRequestJson(request, 40 * 1024 * 1024);
+      const rawData = typeof payload.data === "string" ? payload.data : "";
+      const base64 = rawData.replace(/^data:[^;]+;base64,/, "");
+      if (!base64) {
+        sendJson(response, 400, { ok: false, error: "missing image data" });
+        return;
+      }
+      let result;
+      try {
+        const buffer = Buffer.from(base64, "base64");
+        result = await processPoiImage({ id: payload.id, buffer });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/poi-image failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      logApi(requestId, "POST /api/poi-image stored", {
+        photo: result.photo,
+        thumbnail: result.thumbnail,
+        bytes: result.bytes,
+        durationMs: Date.now() - startedAt,
+      });
+      sendJson(response, 200, { ok: true, ...result });
       return;
     }
 
@@ -871,6 +2472,175 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (url.pathname.startsWith("/api/video-keyframes/")) {
+      const parts = url.pathname.split("/").filter(Boolean);
+      // /api/video-keyframes/<slug>/draft  (PUT save / GET fetch)
+      if (parts.length === 4 && parts[3] === "draft") {
+        const slug = parts[2];
+        if (request.method === "PUT") {
+          const payload = await readRequestJson(request);
+          await mkdir(videoKeyframesDraftDir, { recursive: true });
+          const draftPath = resolve(videoKeyframesDraftDir, `${slug}.json`);
+          await writeFile(draftPath, JSON.stringify(payload, null, 2));
+          sendJson(response, 200, { ok: true, path: repoRelative(draftPath) });
+          return;
+        }
+        if (request.method === "GET") {
+          const draftPath = resolve(videoKeyframesDraftDir, `${slug}.json`);
+          try {
+            const raw = await readFile(draftPath, "utf-8");
+            sendJson(response, 200, JSON.parse(raw));
+            return;
+          } catch {}
+          // Fall back to the promoted file so the editor can resume after a
+          // promote (which removes the draft by design).
+          const promotedPath = resolve(videoKeyframesPublicDir, `${slug}.json`);
+          try {
+            const raw = await readFile(promotedPath, "utf-8");
+            sendJson(response, 200, JSON.parse(raw));
+          } catch {
+            sendJson(response, 404, { ok: false });
+          }
+          return;
+        }
+      }
+      // /api/video-keyframes/<slug>/promote  (POST)
+      if (parts.length === 4 && parts[3] === "promote" && request.method === "POST") {
+        const slug = parts[2];
+        try {
+          const routePolyline = await loadRoutePolylineForSlug(slug);
+          const result = await promoteKeyframesDraft({
+            slug,
+            draftsDir: videoKeyframesDraftDir,
+            publicDir: videoKeyframesPublicDir,
+            routePolyline,
+          });
+          sendJson(response, 200, result);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          sendJson(response, 400, { ok: false, error: message });
+        }
+        return;
+      }
+      // /api/video-keyframes/<slug>/route-polyline  (GET)
+      if (parts.length === 4 && parts[3] === "route-polyline" && request.method === "GET") {
+        const slug = parts[2];
+        try {
+          const polyline = await loadRoutePolylineForSlug(slug);
+          sendJson(response, 200, polyline);
+        } catch (err) {
+          sendJson(response, 400, {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
+    }
+
+    if (url.pathname.startsWith("/api/route-catalog/")) {
+      const parts = url.pathname.split("/").filter(Boolean);
+      // /api/route-catalog/draft  (GET load with fallbacks, PUT save)
+      if (parts.length === 3 && parts[2] === "draft") {
+        if (request.method === "GET") {
+          const draft = await readJsonOrNull(routeCatalogDraftPath);
+          if (draft) {
+            sendJson(response, 200, draft);
+            return;
+          }
+          const promoted = await readJsonOrNull(routeCatalogPublicPath);
+          if (promoted) {
+            sendJson(response, 200, promoted);
+            return;
+          }
+          const seed = await seedCatalogFromFeaturedMeta();
+          sendJson(response, 200, seed);
+          return;
+        }
+        if (request.method === "PUT") {
+          const body = await readRequestJson(request);
+          try {
+            validateCatalogDraft(body);
+          } catch (err) {
+            sendJson(response, 400, { ok: false, error: err.message });
+            return;
+          }
+          await mkdir(dirname(routeCatalogDraftPath), { recursive: true });
+          await writeFile(routeCatalogDraftPath, JSON.stringify(body, null, 2));
+          sendJson(response, 200, { ok: true });
+          return;
+        }
+      }
+      // /api/route-catalog/places  (GET)
+      if (parts.length === 3 && parts[2] === "places" && request.method === "GET") {
+        const places = await readJsonOrNull(placesPath);
+        sendJson(response, 200, places || { version: 1, places: [] });
+        return;
+      }
+      // /api/route-catalog/recompute  (POST)
+      if (parts.length === 3 && parts[2] === "recompute" && request.method === "POST") {
+        const body = await readRequestJson(request);
+        try {
+          validateCatalogDraft(body);
+        } catch (err) {
+          sendJson(response, 400, { ok: false, error: err.message });
+          return;
+        }
+        const places = (await readJsonOrNull(placesPath))?.places || [];
+        const zones = (await readJsonOrNull(regionZonesPath))?.zones || [];
+        const decodeRoute = await buildLiveDecodeRoute();
+        try {
+          const enriched = recomputeCatalogMetadata(body, { places, zones, decodeRoute });
+          sendJson(response, 200, enriched);
+        } catch (err) {
+          sendJson(response, 400, { ok: false, error: err.message });
+        }
+        return;
+      }
+      // /api/route-catalog/promote  (POST)
+      if (parts.length === 3 && parts[2] === "promote" && request.method === "POST") {
+        const places = (await readJsonOrNull(placesPath))?.places || [];
+        const zones = (await readJsonOrNull(regionZonesPath))?.zones || [];
+        const decodeRoute = await buildLiveDecodeRoute();
+        try {
+          const result = await promoteCatalogDraft({
+            draftPath: routeCatalogDraftPath,
+            publicPath: routeCatalogPublicPath,
+            places,
+            zones,
+            decodeRoute,
+          });
+          sendJson(response, 200, result);
+        } catch (err) {
+          sendJson(response, 400, { ok: false, error: err.message });
+        }
+        return;
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/featured-slugs") {
+      // Source of truth is the catalog (draft first, then promoted). Fall back
+      // to legacy .meta.js enumeration if neither exists.
+      const draft = await readJsonOrNull(routeCatalogDraftPath);
+      const promoted = await readJsonOrNull(routeCatalogPublicPath);
+      const source = draft || promoted;
+      if (source && Array.isArray(source.entries)) {
+        sendJson(response, 200, source.entries.map((e) => e.slug));
+        return;
+      }
+      try {
+        const dir = resolve(repoRoot, "src/featured");
+        const entries = await readdir(dir);
+        const slugs = entries
+          .filter((f) => f.endsWith(".meta.js"))
+          .map((f) => f.replace(/\.meta\.js$/, ""));
+        sendJson(response, 200, slugs);
+      } catch {
+        sendJson(response, 200, []);
+      }
+      return;
+    }
+
     if (request.method === "GET") {
       await serveStatic(request, response, url);
       return;
@@ -889,7 +2659,10 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Map editor running at http://127.0.0.1:${port}/editor/`);
-  startDevReloadWatcher();
-});
+// Only listen when run directly (not when imported by tests).
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  server.listen(port, "127.0.0.1", () => {
+    console.log(`Map editor running at http://127.0.0.1:${port}/editor/`);
+    startDevReloadWatcher();
+  });
+}

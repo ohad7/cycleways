@@ -1,0 +1,53 @@
+{
+  "description": "Representative current base graph edges for choosing elevation sampling policy.",
+  "edges": [
+    {
+      "id": "e73965707_2",
+      "label": "Hula valley OSM track",
+      "terrain": "valley",
+      "reason": "Long OSM track through low valley terrain with existing shape vertices."
+    },
+    {
+      "id": "manual-157-mpcfo6ve",
+      "label": "Hula valley manual field edge",
+      "terrain": "valley_manual",
+      "reason": "Long editor-authored manual edge linked to a valley CycleWays segment."
+    },
+    {
+      "id": "e41169490_8",
+      "label": "Golan oil road",
+      "terrain": "golan",
+      "reason": "Sparse-geometry OSM road on the Golan approach corridor."
+    },
+    {
+      "id": "e56187053_1",
+      "label": "Southern Golan OSM road",
+      "terrain": "golan",
+      "reason": "Long Golan road edge with sustained net elevation change."
+    },
+    {
+      "id": "e96438319_1",
+      "label": "Hermon local road",
+      "terrain": "hermon",
+      "reason": "Long Hermon-area road edge with many geometry vertices."
+    },
+    {
+      "id": "e140387913_1",
+      "label": "Hermon track",
+      "terrain": "hermon",
+      "reason": "Hermon-area track edge for steep and irregular terrain."
+    },
+    {
+      "id": "manual-165-mpcarm66",
+      "label": "Metula viewpoint manual edge",
+      "terrain": "manual_hill",
+      "reason": "Short manual edge in hill terrain."
+    },
+    {
+      "id": "manual-manual-osm-65427287-mpc9f09g-a-mpc9f4b7",
+      "label": "Edited manual track split",
+      "terrain": "manual_hill",
+      "reason": "Edited manual copy of an OSM track split into the current base graph."
+    }
+  ]
+}

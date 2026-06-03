@@ -3,11 +3,11 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 
-import { generateGPX } from "../utils/gpx-generator.js";
-import { addPoint, createRouteManager } from "../src/routing/routeActions.js";
+import { generateGPX } from "@cycleways/core/utils/gpx-generator.js";
+import { addPoint, createRouteManager } from "@cycleways/core/routing/routeActions.js";
 
 const require = createRequire(import.meta.url);
-const RouteManager = require("../route-manager.js");
+const RouteManager = require("../packages/core/route-manager.js");
 
 const geoJsonData = JSON.parse(
   await readFile(new URL("./bike_roads_test.geojson", import.meta.url)),

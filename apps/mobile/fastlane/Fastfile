@@ -1,0 +1,117 @@
+default_platform(:ios)
+
+APP_IDENTIFIER = "app.cycleways.mobile"
+# The native iOS project is a generated (gitignored) folder one level up from
+# this fastlane dir. Resolve it absolutely so lanes work from any cwd.
+XCODEPROJ = File.expand_path("../ios/CycleWays.xcodeproj", __dir__)
+# Secrets live OUTSIDE the repo so they are never committed.
+ASC_ENV = File.expand_path("~/.appstoreconnect/cycleways-asc.env")
+SECRETS_DIR = File.expand_path("~/.appstoreconnect")
+
+# Load the App Store Connect API credentials from the out-of-repo env file.
+if File.exist?(ASC_ENV)
+  File.readlines(ASC_ENV).each do |line|
+    line = line.strip
+    next if line.empty? || line.start_with?("#")
+    key, value = line.split("=", 2)
+    ENV[key] = value if key && value
+  end
+end
+
+def asc_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: File.expand_path(ENV.fetch("ASC_KEY_PATH")),
+    in_house: false
+  )
+end
+
+# Ensure the App ID exists on the developer portal. `produce` can't use an
+# App Store Connect API key, so talk to ConnectAPI directly via Spaceship.
+def ensure_app_id
+  require "spaceship"
+  token = Spaceship::ConnectAPI::Token.create(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    filepath: File.expand_path(ENV.fetch("ASC_KEY_PATH"))
+  )
+  Spaceship::ConnectAPI.token = token
+
+  existing = Spaceship::ConnectAPI::BundleId.all.find { |b| b.identifier == APP_IDENTIFIER }
+  if existing
+    UI.message("App ID #{APP_IDENTIFIER} already exists on the portal.")
+  else
+    Spaceship::ConnectAPI::BundleId.create(
+      name: "CycleWays",
+      identifier: APP_IDENTIFIER,
+      platform: "IOS"
+    )
+    UI.success("Created App ID #{APP_IDENTIFIER} on the portal.")
+  end
+end
+
+platform :ios do
+  desc "Validate the API key and create/download the iOS Development certificate"
+  lane :dev_cert do
+    # Passing keychain_password lets fastlane set the keychain "partition list"
+    # at import time, so codesign can use the key without the GUI popup.
+    cert(
+      development: true,
+      api_key: asc_key,
+      output_path: File.join(SECRETS_DIR, "certs"),
+      keychain_password: ENV["KEYCHAIN_PASSWORD"]
+    )
+  end
+
+  desc "Register the connected device, ensure the App ID + profile exist, patch signing"
+  lane :dev_profile do |options|
+    key = asc_key
+
+    if options[:udid] && options[:name]
+      register_devices(
+        devices: { options[:name] => options[:udid] },
+        api_key: key
+      )
+    end
+
+    # Ensure the App ID exists on the developer portal (no App Store Connect record).
+    ensure_app_id
+
+    get_provisioning_profile(
+      development: true,
+      app_identifier: APP_IDENTIFIER,
+      api_key: key,
+      output_path: File.join(SECRETS_DIR, "profiles"),
+      readonly: false
+    )
+
+    # Read the profile's Name + UUID straight from the downloaded file so we
+    # don't depend on env-var names that vary between fastlane versions.
+    profile_path = lane_context[SharedValues::SIGH_PROFILE_PATH] ||
+                   File.join(SECRETS_DIR, "profiles", "Development_#{APP_IDENTIFIER}.mobileprovision")
+    decoded = `security cms -D -i "#{profile_path}" 2>/dev/null`
+    profile_name = decoded[%r{<key>Name</key>\s*<string>(.*?)</string>}m, 1]
+    profile_uuid = decoded[%r{<key>UUID</key>\s*<string>(.*?)</string>}m, 1]
+    team_id = decoded[%r{<key>TeamIdentifier</key>\s*<array>\s*<string>(.*?)</string>}m, 1]
+    UI.user_error!("Could not read profile name/UUID from #{profile_path}") unless profile_name && profile_uuid && team_id
+
+    # Install the profile where Xcode/xcodebuild looks it up for manual signing.
+    require "fileutils"
+    install_dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
+    FileUtils.mkdir_p(install_dir)
+    FileUtils.cp(profile_path, File.join(install_dir, "#{profile_uuid}.mobileprovision"))
+    UI.success("Installed profile '#{profile_name}' (#{profile_uuid}).")
+
+    # Switch the project to manual signing so xcodebuild signs offline with the
+    # fastlane-generated cert + profile (no Xcode GUI / 2FA needed).
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: XCODEPROJ,
+      team_id: team_id,
+      code_sign_identity: "Apple Development",
+      profile_name: profile_name,
+      targets: ["CycleWays"]
+    )
+  end
+end

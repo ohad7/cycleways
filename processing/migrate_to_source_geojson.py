@@ -165,8 +165,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Create canonical source GeoJSON from current map artifacts."
     )
-    parser.add_argument("--geojson", type=Path, default=Path("bike_roads_v18.geojson"))
-    parser.add_argument("--segments", type=Path, default=Path("segments.json"))
+    parser.add_argument("--geojson", type=Path, default=Path("public-data/bike_roads.geojson"))
+    parser.add_argument("--segments", type=Path, default=Path("public-data/segments.json"))
     parser.add_argument("--output", type=Path, default=Path("data/map-source.geojson"))
     return parser.parse_args()
 

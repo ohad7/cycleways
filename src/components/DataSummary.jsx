@@ -1,6 +1,8 @@
 import React from "react";
 
-function DataSummary({ activeDataPoints, selectedDataMarker }) {
+// The tapped-marker detail now lives in DataMarkerCard; this panel keeps showing
+// the active route's data points only.
+function DataSummary({ activeDataPoints }) {
   return (
     <section className="react-side-panel">
       <h2>מידע חשוב במסלול</h2>
@@ -15,20 +17,6 @@ function DataSummary({ activeDataPoints, selectedDataMarker }) {
             </li>
           ))}
         </ul>
-      )}
-
-      {selectedDataMarker && (
-        <div className="react-selected-marker">
-          <p className="react-shell__eyebrow">נקודת מידע שנבחרה</p>
-          <strong>
-            <span aria-hidden="true">{selectedDataMarker.emoji}</span>{" "}
-            {selectedDataMarker.type || "מידע"}
-          </strong>
-          <span>{selectedDataMarker.segmentName}</span>
-          {selectedDataMarker.information && (
-            <p>{selectedDataMarker.information}</p>
-          )}
-        </div>
       )}
     </section>
   );

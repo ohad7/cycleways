@@ -1,5 +1,5 @@
 import { cp, copyFile, mkdir } from "node:fs/promises";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,32 +10,16 @@ const files = new Set([
   "CNAME",
   "robots.txt",
   "sitemap.xml",
-  "map-manifest.json",
-  "bike_roads_v18.geojson",
-  "segments.json",
-  "route-manager.js",
 ]);
 
-const directories = ["attached_assets", "exports", "icons"];
+// Image assets live under public/ (Vite's publicDir), which Vite copies into
+// the build automatically — so they are not listed here.
+const directories = ["icons", "public-data"];
 
-const manifestPath = resolve(repoRoot, "map-manifest.json");
-if (existsSync(manifestPath)) {
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  for (const filePath of [manifest.bikeRoads, manifest.segments, manifest.kml]) {
-    if (filePath) {
-      files.add(filePath);
-    }
-  }
+const dataFiles = ["data/places.json", "data/region-zones.json"];
 
-  for (const filePath of [
-    manifest.stable?.bikeRoads,
-    manifest.stable?.segments,
-    manifest.stable?.kml,
-  ]) {
-    if (filePath && existsSync(resolve(repoRoot, filePath))) {
-      files.add(filePath);
-    }
-  }
+for (const filePath of dataFiles) {
+  files.add(filePath);
 }
 
 await mkdir(distDir, { recursive: true });

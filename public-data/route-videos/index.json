@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "routes": {
+    "sovev-beit-hillel": "sovev-beit-hillel.json",
+    "banias-gan-hatsafon": "banias-gan-hatsafon.json"
+  }
+}

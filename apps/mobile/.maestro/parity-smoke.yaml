@@ -1,0 +1,46 @@
+# End-to-end mobile-web parity smoke (Phase 2.8, HANDOFF §6).
+# Drives the native planner via accessibilityLabel selectors.
+# Run: maestro --device <UDID> test .maestro/parity-smoke.yaml
+# Requires Metro running (npm run mobile) and the dev-client build installed.
+appId: app.cycleways.mobile
+---
+- assertVisible: "חיפוש מיקום"          # planner chrome rendered
+
+# --- Search + add first point ---
+- tapOn: "חיפוש מיקום"
+- inputText: "Kfar Blum"
+- tapOn: "חיפוש"
+- assertVisible: "הוסף"                  # search result -> add affordance
+- tapOn: "הוסף"
+
+# --- Search + add second point ---
+- tapOn: "חיפוש מיקום"
+- eraseText
+- inputText: "HaGoshrim"
+- tapOn: "חיפוש"
+- assertVisible: "הוסף"
+- tapOn: "הוסף"
+- takeScreenshot: /tmp/maestro-route-ready
+
+# --- Undo / redo ---
+- tapOn: "ביטול"
+- tapOn: "חזרה"
+
+# --- Select + remove a waypoint, then reset ---
+# (waypoint chips use accessibilityLabel "נקודת מסלול <n>")
+- tapOn:
+    text: "נקודת מסלול .*"
+    index: 0
+- takeScreenshot: /tmp/maestro-waypoint-selected
+
+# --- Summary / share / download ---
+- tapOn: "סיכום ושיתוף המסלול"
+- takeScreenshot: /tmp/maestro-summary
+- tapOn: "סגירה"
+
+# --- Reset route ---
+- tapOn: "איפוס מסלול"
+
+# --- Native locate affordance ---
+- tapOn: "מיקום נוכחי"
+- takeScreenshot: /tmp/maestro-locate

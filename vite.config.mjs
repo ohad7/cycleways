@@ -1,10 +1,40 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createGzip } from "node:zlib";
 import { defineConfig } from "vite";
 
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 const localTokenPath = resolve(repoRoot, "mapbox-token.js");
+const gzipStaticExtensions = new Set([".cwb", ".geojson", ".json", ".msgpack"]);
+const gzipStaticMinBytes = 1024;
+// route-manager.js is authored as CommonJS (`module.exports = RouteManager`)
+// because the same file is shared verbatim with the Node test suite, the editor
+// server, and CLI scripts via require(). For the browser/React Native bundle we
+// expose its class as an ESM default export so
+// `import RouteManager from "../route-manager.js"` resolves in both dev
+// (esbuild) and build (Rollup). The on-disk source stays CommonJS.
+function routeManagerEsmPlugin() {
+  return {
+    name: "route-manager-esm",
+    enforce: "pre",
+    transform(code, id) {
+      if (!id.split("?")[0].endsWith("/route-manager.js")) return null;
+      if (!/module\.exports\s*=\s*RouteManager;/.test(code)) {
+        throw new Error(
+          "route-manager-esm: `module.exports = RouteManager;` marker not found",
+        );
+      }
+      return {
+        code: code.replace(
+          /module\.exports\s*=\s*RouteManager;/,
+          "export default RouteManager;",
+        ),
+        map: null,
+      };
+    },
+  };
+}
 
 function mapboxTokenPlugin() {
   function serveMapboxToken(request, response, next) {
@@ -52,9 +82,88 @@ function mapboxTokenPlugin() {
   };
 }
 
+function gzipStaticJsonPlugin() {
+  function resolveStaticPath(requestUrl) {
+    const pathname = new URL(requestUrl || "/", "http://127.0.0.1").pathname;
+    const decodedPathname = decodeURIComponent(pathname);
+    const filePath = resolve(repoRoot, `.${decodedPathname}`);
+    if (filePath !== repoRoot && !filePath.startsWith(`${repoRoot}${sep}`)) {
+      return null;
+    }
+    return filePath;
+  }
+
+  function serveGzipStaticJson(request, response, next) {
+    const acceptsGzip = /\bgzip\b/.test(request.headers["accept-encoding"] || "");
+    if (!acceptsGzip || !["GET", "HEAD"].includes(request.method || "")) {
+      next();
+      return;
+    }
+
+    let filePath;
+    try {
+      filePath = resolveStaticPath(request.url);
+    } catch {
+      next();
+      return;
+    }
+
+    if (!filePath || !gzipStaticExtensions.has(extname(filePath))) {
+      next();
+      return;
+    }
+
+    let fileStat;
+    try {
+      fileStat = statSync(filePath);
+    } catch {
+      next();
+      return;
+    }
+
+    if (!fileStat.isFile() || fileStat.size < gzipStaticMinBytes) {
+      next();
+      return;
+    }
+
+    const extension = extname(filePath);
+    const contentType =
+      extension === ".geojson"
+        ? "application/geo+json; charset=utf-8"
+        : extension === ".cwb"
+          ? "application/octet-stream"
+        : extension === ".msgpack"
+          ? "application/msgpack"
+          : "application/json; charset=utf-8";
+    response.statusCode = 200;
+    response.setHeader("Content-Type", contentType);
+    response.setHeader("Content-Encoding", "gzip");
+    response.setHeader("Vary", "Accept-Encoding");
+    response.setHeader("Cache-Control", "no-cache");
+    response.setHeader("Last-Modified", fileStat.mtime.toUTCString());
+
+    if (request.method === "HEAD") {
+      response.end();
+      return;
+    }
+
+    createReadStream(filePath).pipe(createGzip()).pipe(response);
+  }
+
+  return {
+    name: "cycleways-gzip-static-json",
+    configureServer(server) {
+      server.middlewares.use(serveGzipStaticJson);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(serveGzipStaticJson);
+    },
+  };
+}
+
 export default defineConfig({
-  appType: "mpa",
-  plugins: [mapboxTokenPlugin()],
+  appType: "spa",
+  plugins: [routeManagerEsmPlugin(), mapboxTokenPlugin(), gzipStaticJsonPlugin()],
   build: {
     rollupOptions: {
       input: {

@@ -4,16 +4,18 @@ import { readFile } from "node:fs/promises";
 
 import {
   addPoint,
+  buildShareInfo,
   buildShareUrl,
   clearRoute,
   createRouteManager,
   dragPoint,
+  expandHybridRoutePayload,
   removePoint,
   restoreRouteFromParam,
-} from "../src/routing/routeActions.js";
+} from "@cycleways/core/routing/routeActions.js";
 
 const require = createRequire(import.meta.url);
-const RouteManager = require("../route-manager.js");
+const RouteManager = require("../packages/core/route-manager.js");
 
 const geoJsonData = JSON.parse(
   await readFile(new URL("./bike_roads_test.geojson", import.meta.url)),
@@ -21,11 +23,14 @@ const geoJsonData = JSON.parse(
 const segmentsData = JSON.parse(
   await readFile(new URL("./segments-test.json", import.meta.url)),
 );
+const productionManifest = JSON.parse(
+  await readFile(new URL("../public-data/map-manifest.json", import.meta.url)),
+);
 const productionGeoJsonData = JSON.parse(
-  await readFile(new URL("../bike_roads.cd4bcf12c17f.geojson", import.meta.url)),
+  await readFile(new URL(`../public-data/${productionManifest.bikeRoads}`, import.meta.url)),
 );
 const productionSegmentsData = JSON.parse(
-  await readFile(new URL("../segments.cd4bcf12c17f.json", import.meta.url)),
+  await readFile(new URL(`../public-data/${productionManifest.segments}`, import.meta.url)),
 );
 
 const manager = await createRouteManager(
@@ -81,6 +86,72 @@ const shareUrl = buildShareUrl(
   new URL("https://example.test/"),
 );
 assert.match(shareUrl, /^https:\/\/example\.test\/\?route=/);
+const shareInfo = buildShareInfo(
+  snapshot,
+  segmentsData,
+  manager,
+  new URL("https://example.test/"),
+);
+assert.equal(shareInfo.status, "ok");
+assert.equal(shareInfo.format, "compact_route");
+assert.equal(shareInfo.url, shareUrl);
+
+const expandedHybridPayload = expandHybridRoutePayload(
+  {
+    type: "hybrid_route_v5",
+    graphVersion: "test",
+    routePoints: [
+      { lng: 35, lat: 33, baseEdgeShareId: 10, baseEdgeFraction: 0 },
+      { lng: 35.001, lat: 33, baseEdgeShareId: 12, baseEdgeFraction: 1 },
+    ],
+    shards: [{ id: "g700_660", x: 700, y: 660 }],
+    spans: [{ type: "cw", segmentId: 7, reversed: false }],
+  },
+  {
+    segments: {
+      7: [[10, 0], [11, 1], [12, 0]],
+    },
+  },
+);
+assert.deepEqual(expandedHybridPayload.legs[0], {
+  fromPoint: 0,
+  toPoint: 1,
+  edgeShareIds: [10, 11, 12],
+  directions: ["forward", "reverse", "forward"],
+});
+
+const expandedHybridV6Payload = expandHybridRoutePayload(
+  {
+    type: "hybrid_route_v6",
+    graphVersionHash: 123,
+    routePoints: [
+      { baseEdgeShareId: 10, baseEdgeFraction: 0 },
+      { baseEdgeShareId: 13, baseEdgeFraction: 1 },
+    ],
+    shards: [{ id: "g700_660", x: 700, y: 660 }],
+    spans: [
+      {
+        type: "cwChain",
+        runs: [
+          { segmentId: 7, reversed: false, startIndex: 0, edgeCount: 2 },
+          { segmentId: 8, reversed: true, startIndex: 1, edgeCount: 2 },
+        ],
+      },
+    ],
+  },
+  {
+    segments: {
+      7: [[10, 0], [11, 1]],
+      8: [[14, 0], [13, 1]],
+    },
+  },
+);
+assert.deepEqual(expandedHybridV6Payload.legs[0], {
+  fromPoint: 0,
+  toPoint: 1,
+  edgeShareIds: [10, 11, 13, 14],
+  directions: ["forward", "reverse", "forward", "reverse"],
+});
 
 const restoredManager = await createRouteManager(
   RouteManager,

@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const RouteManager = require("../route-manager.js");
+const RouteManager = require("../packages/core/route-manager.js");
 const { mockGeoJsonData, mockSegmentsData } = require("./test-route-manager.js");
 
 async function run() {
@@ -29,8 +29,13 @@ async function run() {
   manager.recalculateRoute([nearPoint, farPoint]);
   assert.equal(
     manager.getRouteInfo().points.length,
-    1,
-    "recalculation should filter unsnappable points",
+    2,
+    "recalculation should preserve unsnappable edit points",
+  );
+  assert.equal(
+    manager.getRouteInfo().points[1].unsnapped,
+    true,
+    "unsnappable edit points should be marked",
   );
 
   console.log("RouteManager snap threshold tests passed");

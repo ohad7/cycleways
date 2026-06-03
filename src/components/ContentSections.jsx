@@ -163,25 +163,6 @@ function ContentSections({ onFocusSegment }) {
                 </ul>
               </li>
             </ul>
-
-            <h2>מסלולים שלמים מומלצים</h2>
-            <p>
-              רשימת מסלולים שלמים מומלצים ברמות שונות, לחצו על הקישור כדי
-              לראות את המסלול במפה
-            </p>
-            <ul>
-              <li>
-                <a href="/?route=AQByAAcABAAFAFgAYABeAAoAeAAZAHIA">
-                  שדה נחמיה -&gt; בניאס -&gt; גן הצפון -&gt; שדה נחמיה
-                </a>
-                <ul>
-                  <li>
-                    מסלול קצר ונוח, מומלץ במיוחד לחובבי רכיבה ראשונית, עם
-                    פינות מנוחה רבות
-                  </li>
-                </ul>
-              </li>
-            </ul>
           </div>
         </section>
 

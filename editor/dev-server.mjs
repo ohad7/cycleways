@@ -7,26 +7,25 @@ import { fileURLToPath } from "node:url";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
 const serverPath = resolve(__dirname, "server.mjs");
+const serverRestartEnabled = process.env.EDITOR_SERVER_RESTART === "1";
 
 let child = null;
 let restartTimer = null;
 let restarting = false;
 let shuttingDown = false;
+let watcher = null;
 
 function startServer() {
   child = spawn(process.execPath, [serverPath], {
     cwd: repoRoot,
     stdio: "inherit",
-    env: {
-      ...process.env,
-      EDITOR_DEV_RELOAD: "1",
-    },
+    env: process.env,
   });
 
   child.on("exit", (code, signal) => {
     if (restarting || shuttingDown) return;
-    console.error(`[dev] editor server exited (${signal || code}); restarting in 1s`);
-    setTimeout(startServer, 1000);
+    console.error(`[dev] editor server exited (${signal || code})`);
+    process.exit(typeof code === "number" ? code : 1);
   });
 }
 
@@ -66,7 +65,7 @@ function restartServer(reason) {
 function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
-  watcher.close();
+  watcher?.close();
   if (!child || child.exitCode !== null) {
     process.exit(0);
   }
@@ -82,12 +81,18 @@ function shutdown(signal) {
   child.kill(signal);
 }
 
-const watcher = watch(serverPath, { persistent: true }, (eventType) => {
-  restartServer(`server.mjs ${eventType}`);
-});
+if (serverRestartEnabled) {
+  watcher = watch(serverPath, { persistent: true }, (eventType) => {
+    restartServer(`server.mjs ${eventType}`);
+  });
+}
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-console.log("[dev] watching editor/server.mjs for automatic restarts");
+if (serverRestartEnabled) {
+  console.log("[dev] watching editor/server.mjs for automatic restarts");
+} else {
+  console.log("[dev] automatic editor server restarts disabled");
+}
 startServer();

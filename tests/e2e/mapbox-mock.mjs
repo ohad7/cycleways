@@ -150,6 +150,28 @@ const MAPBOX_MOCK_SCRIPT = `
     isMoving() {
       return false;
     }
+    isStyleLoaded() {
+      return true;
+    }
+    getZoom() {
+      return Number.isFinite(this.options.zoom) ? this.options.zoom : 11.5;
+    }
+    getBounds() {
+      // Fixed bbox around the project area, consistent with project() below.
+      const west = 35.45;
+      const east = 35.78;
+      const south = 33.0;
+      const north = 33.25;
+      return {
+        getWest: () => west,
+        getEast: () => east,
+        getSouth: () => south,
+        getNorth: () => north,
+      };
+    }
+    easeTo(options) {
+      window.__mockMapboxEvents.push({ type: "easeTo", options });
+    }
 
     project(lngLat) {
       const lng = Array.isArray(lngLat) ? lngLat[0] : lngLat.lng;
@@ -248,10 +270,31 @@ const MAPBOX_MOCK_SCRIPT = `
     }
   }
 
+  class MockPopup {
+    constructor(options = {}) {
+      this.options = options;
+    }
+    setLngLat(lngLat) {
+      this.lngLat = lngLat;
+      return this;
+    }
+    setHTML(html) {
+      this.html = html;
+      return this;
+    }
+    addTo(map) {
+      this.map = map;
+      window.__mockMapboxEvents.push({ type: "popup", lngLat: this.lngLat });
+      return this;
+    }
+    remove() {}
+  }
+
   window.mapboxgl = {
     Map: MockMap,
     Marker: MockMarker,
     LngLatBounds: MockLngLatBounds,
+    Popup: MockPopup,
   };
 })();
 `;
