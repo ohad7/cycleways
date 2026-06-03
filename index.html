@@ -155,6 +155,7 @@
       function remove() {
         var s = splashEl();
         if (s && s.parentNode) s.parentNode.removeChild(s);
+        el = null;
       }
       window.__splash = {
         set: function (pct) {
@@ -171,14 +172,15 @@
           if (!s) return;
           s.classList.add("splash--hidden");
           var fallback = setTimeout(remove, 600);
-          s.addEventListener(
-            "transitionend",
-            function () {
-              clearTimeout(fallback);
-              remove();
-            },
-            { once: true },
-          );
+          function onEnd(e) {
+            // Only the opacity fade signals the splash finished fading out;
+            // ignore the progress-bar width transition bubbling up from a child.
+            if (e && e.propertyName && e.propertyName !== "opacity") return;
+            s.removeEventListener("transitionend", onEnd);
+            clearTimeout(fallback);
+            remove();
+          }
+          s.addEventListener("transitionend", onEnd);
         },
       };
       // Failure safety: never trap the user behind the splash.

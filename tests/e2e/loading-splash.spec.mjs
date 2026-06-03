@@ -25,17 +25,20 @@ test("splash paints with logo, title, and progress bar", async ({ page }) => {
 test("window.__splash API advances the bar and removes the splash", async ({
   page,
 }) => {
-  await page.goto("/");
+  // Isolate the controller from the React app: block the entry module so the
+  // app cannot auto-dismiss the splash during this controller-level test.
+  await page.route("**/src/main.jsx", (route) => route.abort());
+  await page.goto("/", { waitUntil: "commit" });
   const splash = page.locator("#splash");
+  await expect(splash).toBeVisible();
 
-  // API exists
-  const hasApi = await page.evaluate(
+  // API exists (defined by the inline <head> script)
+  await page.waitForFunction(
     () =>
       !!window.__splash &&
       typeof window.__splash.set === "function" &&
       typeof window.__splash.done === "function",
   );
-  expect(hasApi).toBe(true);
 
   // set() advances the progress variable
   await page.evaluate(() => window.__splash.set(0.5));
