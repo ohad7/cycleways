@@ -99,7 +99,7 @@ validateSourceGeojson(
     name: "Segment cafe",
     images: [
       { photo: "/images/background.png", thumbnail: "/images/background.png" },
-      { photo: "/images/background_grass.png" },
+      { photo: "/images/background.webp" },
     ],
     location: [33.105, 35.605],
   }),
