@@ -110,18 +110,25 @@ import { useSearchParams } from "react-router-dom";
 import { featuredLayoutFromParam } from "./featuredLayout.js";
 ```
 
-- [ ] **Step 2: Compute the layout inside the component**
+> **Naming note:** `FeaturedRoute` already has a `layout` **prop** (`"article"` |
+> `"video-first"`, the page template). Do NOT touch it. The new map-arrangement
+> concept is exposed on context under the distinct key **`mapLayout`** to avoid a
+> redeclaration collision. Downstream, only `FeaturedRouteMap` reads `mapLayout`
+> from context (Task 3); `FeaturedVideoRoute` computes its own value locally
+> (Task 7).
 
-Inside `function FeaturedRoute(...)`, near the top (after the existing `useState`/`useRef` declarations, before the effects), add:
+- [ ] **Step 2: Compute the map layout inside the component**
+
+Inside `function FeaturedRoute(...)`, near the top (after the existing `useState`/`useRef` declarations, before the effects), add (note: `mapLayout`, not `layout` — the `layout` identifier is already the page-template prop):
 
 ```jsx
 const [searchParams] = useSearchParams();
-const layout = featuredLayoutFromParam(searchParams.get("layout"));
+const mapLayout = featuredLayoutFromParam(searchParams.get("layout"));
 ```
 
-- [ ] **Step 3: Put `layout` on the context value**
+- [ ] **Step 3: Put `mapLayout` on the context value**
 
-In the `contextValue` `useMemo`, add `layout` to the returned object and to the dependency array. The object currently starts:
+In the `contextValue` `useMemo`, add `mapLayout` to the returned object and to the dependency array. The object currently starts:
 
 ```jsx
   const contextValue = useMemo(
@@ -130,17 +137,17 @@ In the `contextValue` `useMemo`, add `layout` to the returned object and to the 
       kicker,
 ```
 
-Change it to include `layout`:
+Change it to include `mapLayout`:
 
 ```jsx
   const contextValue = useMemo(
     () => ({
       meta,
       kicker,
-      layout,
+      mapLayout,
 ```
 
-and add `layout` to the dependency array at the end of the `useMemo` (the array beginning `[meta, kicker, ...]`).
+and add `mapLayout` to the dependency array at the end of the `useMemo` (the array beginning `[meta, kicker, ...]`).
 
 - [ ] **Step 4: Verify build/lint**
 
@@ -171,9 +178,9 @@ Currently the slot visibility gate is `isMobile`-only (lines ~116–118):
 
 Leave the first (`status`) line as-is; Step 2 replaces only the two `variant` lines.
 
-- [ ] **Step 1: Read `layout` from context**
+- [ ] **Step 1: Read `mapLayout` from context**
 
-The `useFeaturedRoute()` destructure at the top of `FeaturedRouteMapSlot` currently lists `status, dataMarkerFeatures, activeDataPointIds, routeState, focusedCoord, requestRouteFit, routeFitRequest, videoCursor, handleRouteClick, handleDataMarkerClick, playerPauseRef`. Add `layout,` to that list (do not re-add fields that are already there):
+The `useFeaturedRoute()` destructure at the top of `FeaturedRouteMapSlot` currently lists `status, dataMarkerFeatures, activeDataPointIds, routeState, focusedCoord, requestRouteFit, routeFitRequest, videoCursor, handleRouteClick, handleDataMarkerClick, playerPauseRef`. Add `mapLayout,` to that list (do not re-add fields that are already there):
 
 ```jsx
   const {
@@ -188,7 +195,7 @@ The `useFeaturedRoute()` destructure at the top of `FeaturedRouteMapSlot` curren
     handleRouteClick,
     handleDataMarkerClick,
     playerPauseRef,
-    layout,
+    mapLayout,
   } = useFeaturedRoute();
 ```
 
@@ -200,7 +207,7 @@ Replace the two `variant` early-returns with:
   // The in-shell "mobile" slot is the PiP map: shown on mobile, and on desktop
   // when the overlay layout is active. The "desktop" slot is the rail map:
   // shown only on the desktop default layout.
-  const overlay = layout === "overlay";
+  const overlay = mapLayout === "overlay";
   if (variant === "mobile" && !(isMobile || overlay)) return null;
   if (variant === "desktop" && (isMobile || overlay)) return null;
 ```
