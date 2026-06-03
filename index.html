@@ -92,6 +92,56 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
   <link href="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.css" rel="stylesheet">
   <link href="styles.css" rel="stylesheet">
+  <!-- Loading splash (inline so it paints before the JS bundle) -->
+  <style>
+    #splash {
+      --splash-progress: 0.15;
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      direction: rtl;
+      background: linear-gradient(180deg, #87CEEB 0%, #cde7c4 55%, #32CD32 100%);
+      transition: opacity 300ms ease;
+      font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #splash.splash--hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .splash__logo {
+      width: 96px;
+      height: 96px;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+    }
+    .splash__title {
+      margin: 0;
+      padding: 0 24px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1f3d1f;
+      text-align: center;
+      max-width: 90vw;
+    }
+    .splash__bar {
+      width: min(280px, 70vw);
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.55);
+      overflow: hidden;
+    }
+    .splash__bar-fill {
+      height: 100%;
+      width: calc(var(--splash-progress) * 100%);
+      border-radius: 999px;
+      background: #1f3d1f;
+      transition: width 350ms ease;
+    }
+  </style>
 </head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-P1TK7GTD2J"></script>
@@ -112,6 +162,11 @@
 </script>
 
 <body>
+  <div id="splash" role="status" aria-live="polite" aria-label="טוען את המפה">
+    <img class="splash__logo" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2387CEEB'/%3E%3Cpolygon points='4,48 14,26 24,48' fill='%23E0E0E0'/%3E%3Cpolygon points='20,48 30,24 40,48' fill='%23D8D8D8'/%3E%3Cpolygon points='38,48 48,26 58,48' fill='%23D0D0D0'/%3E%3Cpolygon points='0,48 12,22 28,48' fill='%23D3D3D3'/%3E%3Cpolygon points='28,48 46,16 64,48' fill='%23D3D3D3'/%3E%3Cpolygon points='42,24 46,16 50,24 48,22 46,23 44,22' fill='white'/%3E%3Crect y='48' width='64' height='16' fill='%2332CD32'/%3E%3Ccircle cx='44' cy='50' r='6' stroke='black' stroke-width='1.8' fill='none'/%3E%3Ccircle cx='20' cy='50' r='6' stroke='black' stroke-width='1.8' fill='none'/%3E%3Cline x1='44' y1='50' x2='36' y2='40' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='40' x2='20' y2='50' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='40' x2='36' y2='33' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='33' x2='40' y2='33' stroke='black' stroke-width='1.2'/%3E%3 Cline x1='36' y1='33' x2='29' y2='30' stroke='black' stroke-width='1.5'/%3E%3Cline x1='29' y1='30' x2='20' y2='50' stroke='black' stroke-width='1.5'/%3E%3 Cline x1='29' y1='30' x2='29' y2='27' stroke='black' stroke-width='1.5'/%3E%3 Cline x1='27' y1='27' x2='31' y2='27' stroke='black' stroke-width='1.2'/%3E%3Ccircle cx='36' cy='40' r='1.2' fill='black'/%3E%3Cline x1='36.5' y1='39.5' x2='38.5' y2='37.5' stroke='black' stroke-width='1'/%3E%3 Cline x1='35.5' y1='40.5' x2='33.5' y2='42.5' stroke='black' stroke-width='1'/%3E%3Ccircle cx='36' cy='40' r='2.5' stroke='black' stroke-width='1' fill='none'/%3E%3C/svg%3E">
+    <div class="splash__title">מפת שבילי אופניים - גליל עליון וגולן</div>
+    <div class="splash__bar"><div class="splash__bar-fill"></div></div>
+  </div>
   <div id="root"></div>
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
