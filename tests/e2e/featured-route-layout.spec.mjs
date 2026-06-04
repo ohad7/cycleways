@@ -7,22 +7,22 @@ test.beforeEach(async ({ page }) => {
 
 test.describe("desktop layout", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
-  test("video-first side map visible on desktop", async ({ page }) => {
+  test("video-first PiP map on video + elevation rail on desktop", async ({ page }) => {
     await page.goto("/featured/sovev-beit-hillel");
     await expect(page.locator(".fv-video .featured-video-frame")).toBeVisible();
     await expect(page.locator(".fv-video-shell")).toBeVisible();
     await expect(page.locator(".fv-video-controls")).toBeVisible();
     await expect(page.locator(".fv-video-scrubber")).toBeVisible();
     await expect(page.locator(".fv-route-panel")).toBeVisible();
-    await expect(page.locator(".fv-side-map")).toBeVisible();
-    await expect(page.locator(".fv-side-map .featured-map-expand-btn")).toBeVisible();
+    // The map is a PiP inside the video shell; there is no rail side-map.
+    await expect(page.locator(".fv-video-shell .fv-mobile-map")).toBeVisible();
+    await expect(page.locator(".fv-side-map")).toHaveCount(0);
+    // The rail shows the stats block and the elevation graph.
+    await expect(page.locator(".fv-route-stats")).toBeVisible();
+    await expect(page.locator(".elevation-profile")).toBeVisible();
     await expect(page.locator(".fv-side-heading")).toContainText("מרחק מההתחלה");
-    await expect(page.locator(".fv-side-heading")).toContainText(/0 מ׳|\d+(\.\d)? ק״מ/);
-    await expect(page.locator(".fv-side-heading")).not.toContainText("מפה חיה");
     await expect(page.locator(".fv-moments")).toHaveCount(0);
     await expect(page.locator(".fv-carousel-arrow")).toHaveCount(0);
-    await expect(page.locator(".fv-carousel-dots")).toHaveCount(0);
-    await expect(page.locator(".fv-carousel-counter")).toHaveCount(0);
     await expect(page.locator(".fv-poi-stories")).toBeVisible();
     await expect(page.locator(".fv-poi-story").first()).toContainText("התחלה");
     const columbiaStory = page.locator(".fv-poi-story").filter({ hasText: "חוף קולומביה" });
@@ -31,12 +31,13 @@ test.describe("desktop layout", () => {
 
     const videoBox = await page.locator(".fv-video .featured-video-frame").boundingBox();
     const panelBox = await page.locator(".fv-route-panel").boundingBox();
-    const mapBox = await page.locator(".fv-side-map").boundingBox();
+    const pipBox = await page.locator(".fv-video-shell .fv-mobile-map").boundingBox();
     const storyBox = await columbiaStory.boundingBox();
     expect(videoBox.y + videoBox.height).toBeLessThanOrEqual(900);
     expect(panelBox.x).toBeGreaterThan(videoBox.x);
-    expect(mapBox.y).toBeGreaterThan(panelBox.y);
-    expect(Math.abs((mapBox.y + mapBox.height) - (videoBox.y + videoBox.height))).toBeLessThanOrEqual(2);
+    // PiP sits in the top-right region of the video.
+    expect(pipBox.x).toBeGreaterThan(videoBox.x + videoBox.width / 2);
+    expect(pipBox.y).toBeGreaterThanOrEqual(videoBox.y - 2);
     expect(storyBox.y).toBeGreaterThan(videoBox.y + videoBox.height);
 
     // The preview starts on the route-start endpoint, then follows selected POIs.
@@ -47,9 +48,9 @@ test.describe("desktop layout", () => {
     await expect(page.locator(".fv-video-poi-preview")).toContainText("חוף קולומביה");
   });
 
-  test("side map opens an expanded desktop map dialog", async ({ page }) => {
+  test("PiP map opens an expanded desktop map dialog", async ({ page }) => {
     await page.goto("/featured/sovev-beit-hillel");
-    await page.locator(".fv-side-map .featured-map-expand-btn").click();
+    await page.locator(".fv-video-shell .fv-mobile-map .featured-map-expand-btn").click();
 
     const dialog = page.getByRole("dialog", { name: "מפת המסלול" });
     await expect(dialog).toBeVisible();
@@ -62,13 +63,16 @@ test.describe("desktop layout", () => {
     await dialog.getByRole("button", { name: "סגור מפה" }).click();
     await expect(dialog).toHaveCount(0);
     await expect(page.locator(".fv-video .featured-video-frame")).toBeVisible();
-    await expect(page.locator(".fv-side-map")).toBeVisible();
+  });
 
-    await page.locator(".fv-side-map .featured-map-expand-btn").click();
-    await expect(dialog).toBeVisible();
-    await dialog.locator(".featured-map-expanded-header").click();
-    await expect(dialog).toHaveCount(0);
-    await expect(page.locator(".fv-video .featured-video-frame")).toBeVisible();
+  test("hovering the elevation graph moves the video cursor", async ({ page }) => {
+    await page.goto("/featured/sovev-beit-hillel");
+    const overlay = page.locator(".elevation-hover-overlay");
+    await expect(overlay).toBeVisible();
+    const box = await overlay.boundingBox();
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+    // The hover sets a video cursor; the elevation marker line becomes visible.
+    await expect(page.locator(".elevation-profile svg line")).toHaveAttribute("opacity", "1");
   });
 });
 

@@ -2,6 +2,13 @@
 
 Date: 2026-06-04
 
+> **Update (2026-06-04):** after A/B comparison the overlay layout was adopted as
+> the **only** desktop layout. The `?layout=overlay` toggle, the
+> `featuredLayoutFromParam` helper, the `mapLayout` context value, and the old
+> rail side-map layout were removed; the video-first featured page now always
+> renders the PiP-on-video + description/stats/elevation rail. The sections below
+> describe the original opt-in design for historical context.
+
 ## Goal
 
 Users don't connect the featured-route map with the video. On mobile the map sits

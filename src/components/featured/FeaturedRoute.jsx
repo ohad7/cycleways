@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import "./featured.css";
 import { useIsMobile } from "./useIsMobile.js";
-import { featuredLayoutFromParam } from "./featuredLayout.js";
 import { emptyRouteSnapshot } from "@cycleways/core/routing/routeSnapshot.js";
 import {
   loadFeaturedRouteSnapshot,
@@ -24,8 +22,6 @@ import { findFeaturedMeta } from "../../featured/index.js";
 
 function FeaturedRoute({ slug, children, layout = "article", desktopMap = "sticky", kicker = null }) {
   const isMobile = useIsMobile();
-  const [searchParams] = useSearchParams();
-  const mapLayout = featuredLayoutFromParam(searchParams.get("layout"));
   const [meta, setMeta] = useState(null);
   const [dataMarkerFeatures, setDataMarkerFeatures] = useState([]);
   const [activeDataPointIds, setActiveDataPointIds] = useState([]);
@@ -193,7 +189,6 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     () => ({
       meta,
       kicker,
-      mapLayout,
       dataMarkerFeatures,
       activeDataPointIds,
       routeState,
@@ -216,7 +211,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       handleRouteClick,
       handleDataMarkerClick,
     }),
-    [meta, kicker, mapLayout, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
+    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;

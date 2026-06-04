@@ -560,7 +560,6 @@
   margin-top: -1px;
 }
 
-.fv-side-map-wrap,
 .fv-route-panel,
 .fv-moments {
   border: 1px solid rgba(36, 49, 58, 0.12);
@@ -631,13 +630,6 @@
   line-height: 1.45;
 }
 
-.fv-side-map-wrap {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 12px 12px 0;
-}
-
 .fv-side-heading {
   display: flex;
   align-items: baseline;
@@ -658,17 +650,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-.fv-side-map.featured-map-inline {
-  flex: 0 0 230px;
-  height: 230px;
-  margin: 10px -12px 0;
-  border-radius: 8px 8px 0 0;
-  overflow: hidden;
-}
-
 /* Overlay layout: map becomes a PiP on the video; rail becomes text + graph. */
 @media (min-width: 768px) {
-  .fv-playback--overlay .fv-mobile-map.featured-map-inline {
+  .fv-playback .fv-mobile-map.featured-map-inline {
     position: absolute;
     top: 14px;
     /* Physical `right` (not inset-inline-end): the video stage is RTL, so a
@@ -687,7 +671,7 @@
 
   /* The PiP reuses the desktop expand pill; shrink it to an icon-only button
      (bottom-right) so its label doesn't crowd the small map. Mirrors mobile. */
-  .fv-playback--overlay .fv-mobile-map .featured-map-expand-btn {
+  .fv-playback .fv-mobile-map .featured-map-expand-btn {
     top: auto;
     bottom: 8px;
     inset-inline-end: auto;
@@ -703,12 +687,12 @@
     color: #ffffff;
   }
 
-  .fv-playback--overlay .fv-mobile-map .featured-map-expand-label {
+  .fv-playback .fv-mobile-map .featured-map-expand-label {
     display: none;
   }
 
   /* Rail second row becomes the stats + elevation column. */
-  .fv-playback--overlay .fv-side-elevation-wrap {
+  .fv-playback .fv-side-elevation-wrap {
     display: flex;
     flex-direction: column;
     gap: 9px;
@@ -720,21 +704,21 @@
     box-shadow: 0 10px 30px rgba(16, 24, 32, 0.12);
   }
 
-  .fv-playback--overlay .fv-route-stats {
+  .fv-playback .fv-route-stats {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     margin: 0;
   }
 
-  .fv-playback--overlay .fv-route-stats div {
+  .fv-playback .fv-route-stats div {
     padding: 6px 10px;
     border-inline-start: 3px solid var(--fv-forest);
     border-radius: 0 6px 6px 0;
     background: var(--fv-paper);
   }
 
-  .fv-playback--overlay .fv-route-stats dt {
+  .fv-playback .fv-route-stats dt {
     margin: 0 0 2px;
     color: var(--fv-clay);
     font-size: 0.72rem;
@@ -742,7 +726,7 @@
     letter-spacing: 0.04em;
   }
 
-  .fv-playback--overlay .fv-route-stats dd {
+  .fv-playback .fv-route-stats dd {
     margin: 0;
     color: #24313a;
     font-size: 0.98rem;
@@ -754,18 +738,18 @@
      react-app.css, which only the planner (App.jsx) imports — featured pages
      never load it, so the graph is unstyled (and the absolutely-positioned SVG
      collapses to 0 height) without these scoped rules. */
-  .fv-playback--overlay .elevation-profile {
+  .fv-playback .elevation-profile {
     margin: 0;
   }
 
-  .fv-playback--overlay .elevation-profile h4 {
+  .fv-playback .elevation-profile h4 {
     margin: 0 0 6px;
     color: var(--fv-ink);
     font-size: 0.85rem;
     font-weight: 800;
   }
 
-  .fv-playback--overlay .elevation-chart {
+  .fv-playback .elevation-chart {
     position: relative;
     height: 112px;
     border-radius: 6px;
@@ -773,7 +757,7 @@
     overflow: hidden;
   }
 
-  .fv-playback--overlay .elevation-chart svg {
+  .fv-playback .elevation-chart svg {
     position: absolute;
     inset: 0;
     display: block;
@@ -781,13 +765,13 @@
     height: 100%;
   }
 
-  .fv-playback--overlay .elevation-hover-overlay {
+  .fv-playback .elevation-hover-overlay {
     position: absolute;
     inset: 0;
     cursor: pointer;
   }
 
-  .fv-playback--overlay .react-elevation-hover-info {
+  .fv-playback .react-elevation-hover-info {
     position: absolute;
     top: 4px;
     inset-inline: 8px;
@@ -804,7 +788,7 @@
     white-space: nowrap;
   }
 
-  .fv-playback--overlay .react-grade-chip {
+  .fv-playback .react-grade-chip {
     display: inline-block;
     margin-inline-start: 8px;
     padding: 1px 6px;
@@ -815,7 +799,7 @@
     font-weight: 600;
   }
 
-  .fv-playback--overlay .react-elevation-footer {
+  .fv-playback .react-elevation-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -826,12 +810,12 @@
     direction: rtl;
   }
 
-  .fv-playback--overlay .react-elevation-footer .distance-label {
+  .fv-playback .react-elevation-footer .distance-label {
     flex: 0 0 auto;
     white-space: nowrap;
   }
 
-  .fv-playback--overlay .react-elevation-legend {
+  .fv-playback .react-elevation-legend {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 10px;
@@ -842,13 +826,13 @@
     direction: rtl;
   }
 
-  .fv-playback--overlay .react-elevation-legend__item {
+  .fv-playback .react-elevation-legend__item {
     display: inline-flex;
     align-items: center;
     gap: 4px;
   }
 
-  .fv-playback--overlay .react-elevation-legend__swatch {
+  .fv-playback .react-elevation-legend__swatch {
     display: inline-block;
     width: 9px;
     height: 9px;
@@ -856,7 +840,7 @@
     flex: 0 0 auto;
   }
 
-  .fv-playback--overlay .react-elevation-legend__label {
+  .fv-playback .react-elevation-legend__label {
     line-height: 1;
   }
 }
@@ -1629,10 +1613,6 @@
   }
 
   .featured-map-expanded-overlay--mobile .featured-map-expanded-close-label {
-    display: none;
-  }
-
-  .fv-side-map-wrap {
     display: none;
   }
 
