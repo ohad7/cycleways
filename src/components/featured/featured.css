@@ -392,7 +392,7 @@
   left: 16px;
   z-index: 4;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: center;
   padding: 10px 12px;
@@ -428,6 +428,34 @@
 .fv-video-scrubber:disabled {
   cursor: default;
   opacity: 0.55;
+}
+
+.fv-video-progress-distance {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.86);
+  direction: rtl;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.fv-video-progress-distance span {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.fv-video-progress-distance .fv-video-progress-value {
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
 }
 
 .fv-video-scrubber {
@@ -552,7 +580,7 @@
   position: sticky;
   top: 72px;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) minmax(248px, 0.9fr);
   gap: 14px;
   height: calc(var(--fv-stage-height) + var(--fv-video-top-gap));
   max-height: calc(100vh - 78px);
@@ -570,6 +598,8 @@
 
 .fv-route-panel {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: auto;
   padding: 20px;
@@ -601,6 +631,58 @@
   color: #43505a;
   font-size: 0.98rem;
   line-height: 1.65;
+}
+
+.fv-route-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.fv-route-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 9px;
+  border: 1px solid rgba(36, 49, 58, 0.16);
+  border-radius: 8px;
+  background: var(--fv-paper);
+  color: var(--fv-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 5px 14px rgba(16, 24, 32, 0.08);
+}
+
+.fv-route-action--primary {
+  border-color: var(--fv-forest);
+  background: var(--fv-forest);
+  color: #ffffff;
+}
+
+.fv-route-action:disabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.fv-route-action svg {
+  flex: 0 0 auto;
+  width: 1.18em;
+  height: 1.18em;
+}
+
+.fv-route-action-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .fv-route-panel dl {
@@ -693,11 +775,12 @@
 
   /* Rail second row becomes the stats + elevation column. */
   .fv-playback .fv-side-elevation-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-    overflow: auto;
-    padding: 10px;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 6px;
+    overflow: hidden;
+    min-height: 0;
+    padding: 8px;
     border: 1px solid rgba(36, 49, 58, 0.12);
     border-radius: 8px;
     background: rgba(253, 252, 248, 0.96);
@@ -706,32 +789,37 @@
 
   .fv-playback .fv-route-stats {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
     margin: 0;
   }
 
   .fv-playback .fv-route-stats div {
-    padding: 6px 10px;
-    border-inline-start: 3px solid var(--fv-forest);
-    border-radius: 0 6px 6px 0;
+    min-width: 0;
+    padding: 5px 6px;
+    border-top: 2px solid var(--fv-forest);
+    border-inline-start: 0;
+    border-radius: 6px;
     background: var(--fv-paper);
   }
 
   .fv-playback .fv-route-stats dt {
     margin: 0 0 2px;
     color: var(--fv-clay);
-    font-size: 0.72rem;
+    font-size: 0.64rem;
     font-weight: 800;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
   .fv-playback .fv-route-stats dd {
     margin: 0;
     color: #24313a;
-    font-size: 0.98rem;
+    overflow-wrap: anywhere;
+    font-size: 0.8rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    line-height: 1.15;
   }
 
   /* Elevation graph styles. The shared <ElevationProfile> relies on
@@ -739,19 +827,21 @@
      never load it, so the graph is unstyled (and the absolutely-positioned SVG
      collapses to 0 height) without these scoped rules. */
   .fv-playback .elevation-profile {
+    align-self: end;
+    min-height: 0;
     margin: 0;
   }
 
   .fv-playback .elevation-profile h4 {
-    margin: 0 0 6px;
+    margin: 0 0 5px;
     color: var(--fv-ink);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 800;
   }
 
   .fv-playback .elevation-chart {
     position: relative;
-    height: 112px;
+    height: clamp(118px, 18vh, 150px);
     border-radius: 6px;
     background: var(--fv-paper);
     overflow: hidden;
@@ -804,8 +894,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 4px;
-    font-size: 11px;
+    margin-top: 3px;
+    font-size: 10px;
     color: #666;
     direction: rtl;
   }
@@ -818,10 +908,10 @@
   .fv-playback .react-elevation-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 10px;
+    gap: 3px 7px;
     flex: 1 1 auto;
     justify-content: center;
-    font-size: 11px;
+    font-size: 10px;
     color: #666;
     direction: rtl;
   }
@@ -1426,6 +1516,7 @@
 
   .fv-side-rail {
     position: static;
+    grid-template-rows: none;
     height: auto;
     max-height: none;
     margin-top: 0;
@@ -1514,6 +1605,39 @@
     width: 100%;
     height: 100%;
     max-width: none;
+  }
+
+  .fv-video-controls {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    grid-template-columns: 38px minmax(52px, 1fr) auto auto;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .fv-video-play-toggle {
+    width: 34px;
+    height: 34px;
+  }
+
+  .fv-video-progress-distance {
+    gap: 4px;
+    padding: 5px 7px;
+    font-size: 0.68rem;
+  }
+
+  .fv-video-progress-distance span {
+    display: none;
+  }
+
+  .fv-video-progress-distance .fv-video-progress-value {
+    font-size: 0.78rem;
+  }
+
+  .fv-video-time {
+    min-width: 70px;
+    font-size: 0.72rem;
   }
 
   /* Mini live map over the video. The desktop side-map (null on phones) and
@@ -1642,6 +1766,178 @@
     padding: 18px 16px;
     border-inline: 0;
     border-radius: 0;
+  }
+
+  .fv-route-actions {
+    gap: 7px;
+    margin-top: 16px;
+  }
+
+  .fv-route-action {
+    min-height: 50px;
+    padding: 8px 7px;
+    font-size: 0.82rem;
+  }
+
+  .fv-side-elevation-wrap {
+    display: grid;
+    gap: 10px;
+    overflow: hidden;
+    padding: 14px 16px 16px;
+    border-block: 1px solid var(--fv-line);
+    background: var(--fv-cream);
+  }
+
+  .fv-side-elevation-wrap .fv-side-heading {
+    align-items: center;
+  }
+
+  .fv-side-elevation-wrap .fv-side-heading span {
+    font-size: 0.74rem;
+  }
+
+  .fv-side-elevation-wrap .fv-side-heading strong {
+    font-size: 0.98rem;
+  }
+
+  .fv-side-elevation-wrap .fv-route-stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+    margin: 0;
+  }
+
+  .fv-side-elevation-wrap .fv-route-stats div {
+    min-width: 0;
+    padding: 5px 4px;
+    border-top: 2px solid var(--fv-forest);
+    border-inline-start: 0;
+    border-radius: 6px;
+    background: var(--fv-paper);
+    text-align: center;
+  }
+
+  .fv-side-elevation-wrap .fv-route-stats dt {
+    margin: 0 0 2px;
+    color: var(--fv-clay);
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  .fv-side-elevation-wrap .fv-route-stats dd {
+    margin: 0;
+    color: var(--fv-ink);
+    overflow-wrap: anywhere;
+    font-size: 0.76rem;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.12;
+  }
+
+  .fv-side-elevation-wrap .elevation-profile {
+    min-width: 0;
+    margin: 0;
+  }
+
+  .fv-side-elevation-wrap .elevation-profile h4 {
+    margin: 0 0 6px;
+    color: var(--fv-ink);
+    font-size: 0.86rem;
+    font-weight: 850;
+  }
+
+  .fv-side-elevation-wrap .elevation-chart {
+    position: relative;
+    height: 152px;
+    margin: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--fv-paper);
+  }
+
+  .fv-side-elevation-wrap .elevation-chart svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .fv-side-elevation-wrap .elevation-hover-overlay {
+    position: absolute;
+    inset: 0;
+    cursor: pointer;
+  }
+
+  .fv-side-elevation-wrap .react-elevation-hover-info {
+    position: absolute;
+    top: 5px;
+    inset-inline: 7px;
+    display: flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #1f2933;
+    direction: rtl;
+    font-size: 10px;
+    line-height: 1.35;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .fv-side-elevation-wrap .react-grade-chip {
+    display: inline-block;
+    margin-inline-start: 6px;
+    padding: 1px 5px;
+    border: 1px solid;
+    border-radius: 999px;
+    font-size: 10px;
+    line-height: 1.35;
+    font-weight: 650;
+  }
+
+  .fv-side-elevation-wrap .react-elevation-footer {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    margin-top: 4px;
+    color: var(--fv-ink-mute);
+    direction: rtl;
+    font-size: 10px;
+  }
+
+  .fv-side-elevation-wrap .react-elevation-footer .distance-label {
+    white-space: nowrap;
+  }
+
+  .fv-side-elevation-wrap .react-elevation-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 3px 7px;
+    min-width: 0;
+  }
+
+  .fv-side-elevation-wrap .react-elevation-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .fv-side-elevation-wrap .react-elevation-legend__swatch {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .fv-side-elevation-wrap .react-elevation-legend__label {
+    line-height: 1;
   }
 
   /* "על המסלול" — full-width reading band. */

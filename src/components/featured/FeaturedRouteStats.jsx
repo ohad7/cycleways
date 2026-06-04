@@ -15,16 +15,21 @@ function surfaceLabel(roadMix) {
   return "כביש";
 }
 
-export default function FeaturedRouteStats({ className = "" }) {
+export default function FeaturedRouteStats({
+  className = "",
+  difficultyLabel = null,
+  surfaceLabel: surfaceLabelOverride = null,
+}) {
   const { meta } = useFeaturedRoute();
   if (!meta) return null;
 
-  const surface = surfaceLabel(meta.roadMix);
+  const difficulty = difficultyLabel || (DIFFICULTY_HE[meta.difficulty] || meta.difficulty);
+  const surface = surfaceLabelOverride || surfaceLabel(meta.roadMix);
   const items = [
     Number.isFinite(meta.distanceKm) && { label: "אורך", value: `${meta.distanceKm} ק"מ` },
     Number.isFinite(meta.elevationGainM) && { label: "טיפוס", value: `${meta.elevationGainM} מ׳` },
     Number.isFinite(meta.elevationLossM) && { label: "ירידה", value: `${meta.elevationLossM} מ׳` },
-    meta.difficulty && { label: "רמת קושי", value: DIFFICULTY_HE[meta.difficulty] || meta.difficulty },
+    difficulty && { label: "רמת קושי", value: difficulty },
     surface && { label: "משטח", value: surface },
   ].filter(Boolean);
 

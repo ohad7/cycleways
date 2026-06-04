@@ -6,6 +6,8 @@ export default function BaniasGanHatsafon() {
     <FeaturedVideoRoute
       slug="banias-gan-hatsafon"
       kicker="גליל עליון · רכיבה למשפחות"
+      difficultyLabel="בינוני"
+      surfaceLabel="שטח/סלול"
       intro={{
         kicker: "רכיבה מעגלית רגועה",
         heading: "מה מחכה בדרך",

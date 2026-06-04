@@ -6,6 +6,8 @@ export default function SovevBeitHillel() {
     <FeaturedVideoRoute
       slug="sovev-beit-hillel"
       kicker="גליל עליון · רכיבה רגועה"
+      difficultyLabel="קל"
+      surfaceLabel="סלול"
       intro={{
         kicker: "רכיבה רגועה בגליל העליון",
         heading: "מה מחכה בדרך",

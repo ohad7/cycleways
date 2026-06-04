@@ -1,13 +1,8 @@
 {
   "version": 1,
   "youtubeId": "S8H2zx_Cnt0",
-  "videoDuration": 296.481,
+  "videoDuration": 297,
   "keyframes": [
-    {
-      "t": 1.00973,
-      "lat": 33.1839996906545,
-      "lon": 35.619315468316536
-    },
     {
       "t": 2.90963,
       "lat": 33.18471269550613,

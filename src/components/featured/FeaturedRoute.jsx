@@ -35,6 +35,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
   const [videoPlaying, setVideoPlaying] = useState(false);
   const videoSyncRef = useRef(null);
   const playerSeekRef = useRef(null);
+  const playerPlayRef = useRef(null);
   const playerPauseRef = useRef(null);
   const wasVideoPlayingRef = useRef(false);
 
@@ -207,6 +208,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       seekVideoToFraction,
       videoSyncRef,
       playerSeekRef,
+      playerPlayRef,
       playerPauseRef,
       handleRouteClick,
       handleDataMarkerClick,
