@@ -3,7 +3,6 @@ import { loadCatalog } from "@cycleways/core/data/catalog.js";
 const moduleLoaders = {
   "sovev-beit-hillel":     () => import("./sovev-beit-hillel.jsx"),
   "banias-gan-hatsafon":   () => import("./banias-gan-hatsafon.jsx"),
-  "shdeh-nehemia-baniyas": () => import("./shdeh-nehemia-baniyas.jsx"),
 };
 
 // Per-page top-nav links. Each featured page declares its own in-page jump
