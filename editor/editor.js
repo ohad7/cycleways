@@ -7846,6 +7846,7 @@ const routeCatalogState = {
   draft: null,
   selectedSlug: null,
   places: [],
+  imageCandidates: new Map(),
 };
 
 const rcEls = {
@@ -7870,6 +7871,87 @@ function rcSelectedEntry() {
   );
 }
 
+function rcEntryIssues(entry) {
+  const errors = [];
+  const warnings = [];
+  if (!entry?.slug || !/^[a-z][a-z0-9-]*$/.test(entry.slug)) errors.push("Invalid slug");
+  if (!entry?.name) errors.push("Missing name");
+  if (!entry?.summary) errors.push("Missing summary");
+  if (!entry?.route) errors.push("Missing route token");
+  if (!entry?.description) warnings.push("Missing long description");
+  if (!rcEntryDisplayImage(entry)) warnings.push("Missing representative image");
+  if (!entry?.start) warnings.push("Missing start point");
+  if ((entry?.story?.enabled || entry?.featured) && !entry?.featured) {
+    warnings.push("Story flag set; confirm a route story module exists");
+  }
+  return { errors, warnings };
+}
+
+function rcEntryDisplayImage(entry) {
+  if (entry?.heroImage?.thumbnail || entry?.heroImage?.photo) return entry.heroImage;
+  const startImage = Array.isArray(entry?.start?.images) ? entry.start.images[0] : null;
+  if (startImage?.thumbnail || startImage?.photo) return startImage;
+  const endImage = Array.isArray(entry?.end?.images) ? entry.end.images[0] : null;
+  if (endImage?.thumbnail || endImage?.photo) return endImage;
+  return null;
+}
+
+function extractRouteTokenInput(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, window.location.href);
+    const route = url.searchParams.get("route");
+    if (route) return route;
+  } catch {}
+  const match = raw.match(/[?&]route=([^&#\s]+)/);
+  if (match) return decodeURIComponent(match[1]);
+  return raw;
+}
+
+function rcImageCandidateCacheKey(entry) {
+  return String(entry?.route || "").trim();
+}
+
+function rcEnsureImageCandidates(entry) {
+  const key = rcImageCandidateCacheKey(entry);
+  if (!key) return { status: "empty", candidates: [] };
+  const cached = routeCatalogState.imageCandidates.get(key);
+  if (cached) return cached;
+
+  const loading = { status: "loading", candidates: [] };
+  routeCatalogState.imageCandidates.set(key, loading);
+  fetch("/api/route-catalog/image-candidates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ route: key }),
+  })
+    .then(async (res) => {
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      routeCatalogState.imageCandidates.set(key, {
+        status: "ready",
+        candidates: Array.isArray(body.candidates) ? body.candidates : [],
+      });
+    })
+    .catch((error) => {
+      routeCatalogState.imageCandidates.set(key, {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+        candidates: [],
+      });
+    })
+    .finally(() => {
+      if (rcImageCandidateCacheKey(rcSelectedEntry()) === key) rcRenderDetail();
+    });
+  return loading;
+}
+
+function rcClearImageCandidateCache(entry) {
+  const key = rcImageCandidateCacheKey(entry);
+  if (key) routeCatalogState.imageCandidates.delete(key);
+}
+
 function rcRenderList() {
   const draft = routeCatalogState.draft;
   rcEls.list.innerHTML = "";
@@ -7883,8 +7965,14 @@ function rcRenderList() {
   for (const entry of draft.entries) {
     const li = document.createElement("li");
     if (entry.slug === routeCatalogState.selectedSlug) li.classList.add("selected");
+    const issues = rcEntryIssues(entry);
+    if (issues.errors.length > 0) li.classList.add("invalid");
     const main = document.createElement("span");
-    main.textContent = `${entry.name || entry.slug}${entry.featured ? " ⭐" : ""}`;
+    main.textContent = [
+      entry.name || entry.slug,
+      entry.featured || entry.story?.enabled ? "⭐" : "",
+      issues.warnings.length > 0 ? "⚠" : "",
+    ].filter(Boolean).join(" ");
     const tags = document.createElement("span");
     tags.className = "rc-tags";
     const dist = entry.distanceKm != null ? `${entry.distanceKm} km` : "?";
@@ -7909,11 +7997,13 @@ function rcRenderDetail() {
   }
   rcEls.detail.hidden = false;
   rcEls.detail.innerHTML = "";
+  rcEls.detail.appendChild(rcReadinessPanel(entry));
   const fields = [
     { key: "slug", label: "Slug" },
     { key: "name", label: "Name" },
     { key: "summary", label: "Summary" },
-    { key: "route", label: "Route token" },
+    { key: "description", label: "Description", textarea: true },
+    { key: "route", label: "Route token / share URL", routeToken: true },
     { key: "notes", label: "Notes", textarea: true },
   ];
   for (const f of fields) {
@@ -7924,12 +8014,23 @@ function rcRenderDetail() {
     const input = document.createElement(f.textarea ? "textarea" : "input");
     input.value = entry[f.key] ?? "";
     if (!f.textarea) input.type = "text";
-    input.addEventListener("input", (e) => {
-      entry[f.key] = e.target.value;
-    });
+    if (f.routeToken) {
+      input.placeholder = "Paste a route token or a full /?route=... share URL";
+      input.addEventListener("change", (e) => {
+        entry[f.key] = extractRouteTokenInput(e.target.value);
+        e.target.value = entry[f.key];
+        rcRenderList();
+        rcRenderDetail();
+      });
+    } else {
+      input.addEventListener("input", (e) => {
+        entry[f.key] = e.target.value;
+      });
+    }
     row.append(label, input);
     rcEls.detail.appendChild(row);
   }
+  rcEls.detail.appendChild(rcHeroImageSection(entry));
   const featuredRow = document.createElement("div");
   featuredRow.className = "rc-row";
   const fLabel = document.createElement("label");
@@ -7977,6 +8078,226 @@ function rcRenderDetail() {
   });
   actionRow.appendChild(delBtn);
   rcEls.detail.appendChild(actionRow);
+}
+
+function rcReadinessPanel(entry) {
+  const panel = document.createElement("div");
+  panel.className = "rc-readiness";
+  const issues = rcEntryIssues(entry);
+  const title = document.createElement("strong");
+  title.textContent =
+    issues.errors.length > 0
+      ? `Blocking issues (${issues.errors.length})`
+      : issues.warnings.length > 0
+        ? `Warnings (${issues.warnings.length})`
+        : "Ready to promote";
+  panel.appendChild(title);
+  const list = document.createElement("ul");
+  const rows = [
+    ...issues.errors.map((text) => ({ text, type: "error" })),
+    ...issues.warnings.map((text) => ({ text, type: "warn" })),
+  ];
+  if (rows.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "Required route catalog fields are present.";
+    list.appendChild(li);
+  } else {
+    for (const row of rows) {
+      const li = document.createElement("li");
+      li.className = `rc-readiness__${row.type}`;
+      li.textContent = row.text;
+      list.appendChild(li);
+    }
+  }
+  panel.appendChild(list);
+  return panel;
+}
+
+function rcHeroImageSection(entry) {
+  const section = document.createElement("div");
+  section.className = "rc-endpoint";
+  const heading = document.createElement("div");
+  heading.className = "rc-endpoint-heading";
+  heading.textContent = "Representative image";
+  section.appendChild(heading);
+
+  const image = entry.heroImage;
+  if (image?.thumbnail || image?.photo) {
+    const strip = document.createElement("div");
+    strip.className = "rc-endpoint-images";
+    const fig = document.createElement("div");
+    const img = document.createElement("img");
+    img.src = dataImageSrc(image.thumbnail || image.photo);
+    img.alt = "";
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.className = "secondary-button danger";
+    rm.textContent = "Remove";
+    rm.addEventListener("click", () => {
+      delete entry.heroImage;
+      rcRenderList();
+      rcRenderDetail();
+    });
+    fig.append(img, rm);
+    strip.appendChild(fig);
+    section.appendChild(strip);
+  }
+
+  const altRow = document.createElement("div");
+  altRow.className = "rc-row";
+  const altLabel = document.createElement("label");
+  altLabel.textContent = "Alt text:";
+  const altInput = document.createElement("input");
+  altInput.type = "text";
+  altInput.value = entry.heroImage?.alt || "";
+  altInput.addEventListener("input", (event) => {
+    if (entry.heroImage?.photo || entry.heroImage?.thumbnail) {
+      entry.heroImage = {
+        ...entry.heroImage,
+        alt: event.target.value,
+      };
+    }
+  });
+  altRow.append(altLabel, altInput);
+  section.appendChild(altRow);
+
+  const upRow = document.createElement("div");
+  upRow.className = "rc-row";
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  const status = document.createElement("span");
+  status.className = "data-image-status";
+  fileInput.addEventListener("change", async () => {
+    const file = (fileInput.files || [])[0];
+    if (!file) return;
+    status.textContent = "Uploading…";
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const res = await fetch("/api/poi-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: `${entry.slug}-hero`, data: dataUrl }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || `upload failed (${res.status})`);
+      entry.heroImage = {
+        photo: body.photo,
+        thumbnail: body.thumbnail,
+        alt: entry.heroImage?.alt || entry.name || "",
+      };
+      rcRenderList();
+      rcRenderDetail();
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : String(error);
+    } finally {
+      fileInput.value = "";
+    }
+  });
+  upRow.append(fileInput, status);
+  section.appendChild(upRow);
+  section.appendChild(rcSegmentImagePicker(entry));
+
+  const fallback = rcEntryDisplayImage(entry);
+  if (!entry.heroImage && fallback) {
+    const note = document.createElement("p");
+    note.className = "rc-help";
+    note.textContent = "No route-level image set. The public card can fall back to start/end images.";
+    section.appendChild(note);
+  }
+
+  return section;
+}
+
+function rcSegmentImagePicker(entry) {
+  const picker = document.createElement("div");
+  picker.className = "rc-segment-image-picker";
+
+  const header = document.createElement("div");
+  header.className = "rc-segment-image-picker__header";
+  const title = document.createElement("strong");
+  title.textContent = "Images from included segments";
+  const refresh = document.createElement("button");
+  refresh.type = "button";
+  refresh.className = "secondary-button";
+  refresh.textContent = "Refresh";
+  refresh.disabled = !entry.route;
+  refresh.addEventListener("click", () => {
+    rcClearImageCandidateCache(entry);
+    rcRenderDetail();
+  });
+  header.append(title, refresh);
+  picker.appendChild(header);
+
+  if (!entry.route) {
+    const note = document.createElement("p");
+    note.className = "rc-help";
+    note.textContent = "Add a route token to list images from the route's included segments.";
+    picker.appendChild(note);
+    return picker;
+  }
+
+  const state = rcEnsureImageCandidates(entry);
+  if (state.status === "loading") {
+    const note = document.createElement("p");
+    note.className = "rc-help";
+    note.textContent = "Loading segment images…";
+    picker.appendChild(note);
+    return picker;
+  }
+  if (state.status === "error") {
+    const note = document.createElement("p");
+    note.className = "rc-help rc-help--error";
+    note.textContent = `Could not load segment images: ${state.error}`;
+    picker.appendChild(note);
+    return picker;
+  }
+
+  const candidates = Array.isArray(state.candidates) ? state.candidates : [];
+  if (candidates.length === 0) {
+    const note = document.createElement("p");
+    note.className = "rc-help";
+    note.textContent = "No reusable images found on this route's included segments.";
+    picker.appendChild(note);
+    return picker;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "rc-segment-image-grid";
+  const currentPhoto = entry.heroImage?.photo || "";
+  const currentThumb = entry.heroImage?.thumbnail || "";
+  candidates.forEach((candidate) => {
+    const choice = document.createElement("button");
+    choice.type = "button";
+    choice.className = "rc-segment-image-choice";
+    const isCurrent =
+      (currentPhoto && currentPhoto === candidate.photo) ||
+      (currentThumb && currentThumb === candidate.thumbnail);
+    if (isCurrent) choice.classList.add("selected");
+    choice.title = candidate.segmentName || candidate.label || "";
+    choice.addEventListener("click", () => {
+      entry.heroImage = {
+        photo: candidate.photo,
+        thumbnail: candidate.thumbnail || candidate.photo,
+        alt: entry.heroImage?.alt || candidate.alt || candidate.label || entry.name || "",
+      };
+      rcRenderList();
+      rcRenderDetail();
+    });
+
+    const img = document.createElement("img");
+    img.src = dataImageSrc(candidate.thumbnail || candidate.photo);
+    img.alt = "";
+    const meta = document.createElement("span");
+    meta.className = "rc-segment-image-choice__meta";
+    meta.textContent = candidate.label || candidate.segmentName || "Segment image";
+    const segment = document.createElement("small");
+    segment.textContent = candidate.segmentName || "";
+    choice.append(img, meta, segment);
+    grid.appendChild(choice);
+  });
+  picker.appendChild(grid);
+  return picker;
 }
 
 // Editor sub-form for a route start/end point: name, description, and a single
@@ -8163,6 +8484,7 @@ function rcNewEntry() {
     slug,
     name: slug,
     summary: "",
+    description: "",
     route: "",
     notes: "",
     featured: false,

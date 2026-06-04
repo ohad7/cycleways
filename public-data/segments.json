@@ -183,6 +183,23 @@
           33.163004,
           35.595931
         ]
+      },
+      {
+        "id": "poi-5b6da297",
+        "type": "flora",
+        "information": "בריכות נופרים יפהפהיות לקראת סוף החורף",
+        "location": [
+          33.12008325,
+          35.594871999999995
+        ],
+        "name": "בריכות נופרים",
+        "description": "בריכות נופרים יפהפהיות לקראת סוף החורף",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-5b6da297-fd491b50.webp",
+            "thumbnail": "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp"
+          }
+        ]
       }
     ],
     "quality": {

@@ -7,8 +7,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // base-routing decode) out of the entry bundle, so public featured-route pages
 // no longer download or parse planner-only code.
 const App = lazy(() => import("./App.jsx"));
-const FeaturedIndexPage = lazy(() => import("./pages/FeaturedIndexPage.jsx"));
 const FeaturedRoutePage = lazy(() => import("./pages/FeaturedRoutePage.jsx"));
+const RoutesIndexPage = lazy(() => import("./pages/RoutesIndexPage.jsx"));
+const RouteDetailPage = lazy(() => import("./pages/RouteDetailPage.jsx"));
 
 // Splash milestone: the main bundle has parsed and is executing.
 window.__splash?.set(0.75);
@@ -30,10 +31,26 @@ createRoot(document.getElementById("root")).render(
       <Suspense fallback={null}>
         <Routes>
           <Route
+            path="/routes"
+            element={
+              <RouteReady>
+                <RoutesIndexPage />
+              </RouteReady>
+            }
+          />
+          <Route
+            path="/routes/:slug"
+            element={
+              <RouteReady>
+                <RouteDetailPage />
+              </RouteReady>
+            }
+          />
+          <Route
             path="/featured"
             element={
               <RouteReady>
-                <FeaturedIndexPage />
+                <RoutesIndexPage />
               </RouteReady>
             }
           />

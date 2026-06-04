@@ -5,16 +5,33 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-test("/featured gallery lists known featured routes", async ({ page }) => {
-  await page.goto("/featured");
-  await expect(page.locator(".featured-gallery-card", { hasText: "סובב בית הלל" })).toBeVisible();
-  await expect(page.locator(".featured-gallery-card", { hasText: "בניאס" })).toBeVisible();
+test("/featured alias lists recommended routes", async ({ page }) => {
+  await page.goto("/featured/");
+  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
+  await expect(page.locator(".route-card", { hasText: "בניאס" })).toBeVisible();
+  await expect(page.locator(".route-card__media img")).toHaveCount(2);
+  await page.waitForFunction(() =>
+    Array.from(document.querySelectorAll(".route-card__media img")).every(
+      (img) => img.complete && img.naturalWidth > 0,
+    ),
+  );
+  const images = await page.locator(".route-card__media img").evaluateAll((imgs) =>
+    imgs.map((img) => ({
+      currentSrc: img.currentSrc,
+      naturalWidth: img.naturalWidth,
+    })),
+  );
+  expect(images.every((image) => image.currentSrc.includes("/public-data/poi-images/"))).toBe(true);
+  expect(images.every((image) => !image.currentSrc.includes("/featured/public-data/"))).toBe(true);
 });
 
-test("clicking a gallery card opens its featured-route page", async ({ page }) => {
+test("route card details open canonical /routes detail page", async ({ page }) => {
   await page.goto("/featured");
-  await page.locator(".featured-gallery-card", { hasText: "סובב בית הלל" }).click();
-  await expect(page).toHaveURL(/\/featured\/sovev-beit-hillel$/);
+  await page
+    .locator(".route-card", { hasText: "סובב בית הלל" })
+    .getByRole("link", { name: "פרטים" })
+    .click();
+  await expect(page).toHaveURL(/\/routes\/sovev-beit-hillel$/);
   await expect(page.locator(".featured-route-header h1")).toContainText("סובב בית הלל");
 });
 

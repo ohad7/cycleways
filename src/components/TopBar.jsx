@@ -86,6 +86,9 @@ function TopBar({
             >
               המלצות
             </a>
+            <Link className="nav-link" to="/routes">
+              מסלולים
+            </Link>
             <a
               className="nav-link"
               href="/#contact"

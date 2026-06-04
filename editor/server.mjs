@@ -631,6 +631,22 @@ function validateRouteEndpoint(point, label) {
   }
 }
 
+function validateCatalogImage(image, label) {
+  if (image === undefined || image === null) return;
+  if (typeof image !== "object" || Array.isArray(image)) {
+    throw new Error(`${label} must be an object`);
+  }
+  if (typeof image.photo !== "string" || !image.photo.trim()) {
+    throw new Error(`${label} is missing a photo`);
+  }
+  if (image.thumbnail !== undefined && typeof image.thumbnail !== "string") {
+    throw new Error(`${label} has an invalid thumbnail`);
+  }
+  if (image.alt !== undefined && typeof image.alt !== "string") {
+    throw new Error(`${label} has an invalid alt`);
+  }
+}
+
 export function validateCatalogDraft(catalog) {
   if (!catalog || !Array.isArray(catalog.entries)) {
     throw new Error("catalog.entries must be an array");
@@ -649,6 +665,10 @@ export function validateCatalogDraft(catalog) {
     if (typeof entry.route !== "string" || entry.route.length === 0) {
       throw new Error(`entry ${entry.slug} missing route token`);
     }
+    if (entry.description !== undefined && typeof entry.description !== "string") {
+      throw new Error(`entry ${entry.slug} description must be a string`);
+    }
+    validateCatalogImage(entry.heroImage, `entry ${entry.slug} heroImage`);
     validateRouteEndpoint(entry.start, `entry ${entry.slug} start point`);
     validateRouteEndpoint(entry.end, `entry ${entry.slug} end point`);
   }
@@ -743,6 +763,119 @@ export async function buildLiveDecodeRoute() {
       return null;
     }
   };
+}
+
+function catalogImageEntries(marker) {
+  if (Array.isArray(marker?.images)) {
+    return marker.images
+      .filter((entry) => entry && typeof entry === "object" && hasText(entry.photo))
+      .map((entry) => ({
+        photo: entry.photo.trim(),
+        thumbnail: hasText(entry.thumbnail) ? entry.thumbnail.trim() : entry.photo.trim(),
+        alt: hasText(entry.alt) ? entry.alt.trim() : "",
+      }));
+  }
+  if (hasText(marker?.photo)) {
+    const photo = marker.photo.trim();
+    return [
+      {
+        photo,
+        thumbnail: hasText(marker.thumbnail) ? marker.thumbnail.trim() : photo,
+        alt: hasText(marker.alt) ? marker.alt.trim() : "",
+      },
+    ];
+  }
+  return [];
+}
+
+export function routeCatalogImageCandidatesFromSnapshot(snapshot, segmentsData) {
+  const selectedSegments = Array.isArray(snapshot?.selectedSegments)
+    ? snapshot.selectedSegments
+    : [];
+  const segmentOrder = new Map();
+  selectedSegments.forEach((segmentName, index) => {
+    if (!segmentOrder.has(segmentName)) segmentOrder.set(segmentName, index);
+  });
+
+  const activeById = new Map();
+  const activeDataPoints = Array.isArray(snapshot?.activeDataPoints)
+    ? snapshot.activeDataPoints
+    : [];
+  activeDataPoints.forEach((point) => {
+    if (hasText(point?.id)) activeById.set(point.id, point);
+  });
+
+  const candidates = [];
+  const seen = new Set();
+  selectedSegments.forEach((segmentName, selectedIndex) => {
+    const segmentInfo = segmentsData?.[segmentName];
+    const dataPoints = Array.isArray(segmentInfo?.data) ? segmentInfo.data : [];
+    dataPoints.forEach((dataPoint, dataPointIndex) => {
+      const stableId = hasText(dataPoint?.id)
+        ? dataPoint.id
+        : `${segmentName}-${dataPointIndex}`;
+      const activePoint = activeById.get(stableId);
+      catalogImageEntries(dataPoint).forEach((image, imageIndex) => {
+        const key = `${image.photo}\n${image.thumbnail}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const progress = Number(activePoint?.routeProgressMeters);
+        candidates.push({
+          id: `${stableId}:${imageIndex}`,
+          photo: image.photo,
+          thumbnail: image.thumbnail,
+          alt: image.alt || dataPoint?.name || segmentName,
+          label: dataPoint?.name || segmentName,
+          segmentName,
+          dataPointId: stableId,
+          imageIndex,
+          routeProgressMeters: Number.isFinite(progress) ? progress : null,
+          segmentOrder: segmentOrder.get(segmentName) ?? selectedIndex,
+          dataPointIndex,
+        });
+      });
+    });
+  });
+
+  candidates.sort((a, b) => {
+    const ap =
+      a.routeProgressMeters === null ? Number.POSITIVE_INFINITY : Number(a.routeProgressMeters);
+    const bp =
+      b.routeProgressMeters === null ? Number.POSITIVE_INFINITY : Number(b.routeProgressMeters);
+    const aHasProgress = Number.isFinite(ap) && a.routeProgressMeters !== null;
+    const bHasProgress = Number.isFinite(bp) && b.routeProgressMeters !== null;
+    if (aHasProgress || bHasProgress) {
+      if (!aHasProgress) return 1;
+      if (!bHasProgress) return -1;
+      if (ap !== bp) return ap - bp;
+    }
+    if (a.segmentOrder !== b.segmentOrder) return a.segmentOrder - b.segmentOrder;
+    if (a.dataPointIndex !== b.dataPointIndex) return a.dataPointIndex - b.dataPointIndex;
+    return a.imageIndex - b.imageIndex;
+  });
+
+  return candidates.map(({ segmentOrder, dataPointIndex, ...candidate }) => candidate);
+}
+
+export async function routeCatalogImageCandidatesForRoute(routeToken) {
+  const token = String(routeToken || "").trim();
+  if (!token) {
+    throw new Error("route token is required");
+  }
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets({ log });
+  const manager = await createRouteManager(
+    RouteManagerClass,
+    geoJsonData,
+    segmentsData,
+    baseRoutingNetwork,
+  );
+  const snapshot = restoreRouteFromParam(manager, token, segmentsData, cwBaseIndex);
+  if (!snapshot || !Array.isArray(snapshot.selectedSegments)) {
+    throw new Error("route token failed to decode");
+  }
+  return routeCatalogImageCandidatesFromSnapshot(snapshot, segmentsData);
 }
 
 export async function promoteCatalogDraft({ draftPath, publicPath, places, zones, decodeRoute }) {
@@ -2537,6 +2670,20 @@ const server = createServer(async (request, response) => {
           sendJson(response, 200, enriched);
         } catch (err) {
           sendJson(response, 400, { ok: false, error: err.message });
+        }
+        return;
+      }
+      // /api/route-catalog/image-candidates  (POST)
+      if (parts.length === 3 && parts[2] === "image-candidates" && request.method === "POST") {
+        const body = await readRequestJson(request);
+        try {
+          const candidates = await routeCatalogImageCandidatesForRoute(body?.route);
+          sendJson(response, 200, { ok: true, candidates });
+        } catch (err) {
+          sendJson(response, 400, {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
         }
         return;
       }

@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 test("/featured index renders", async ({ page }) => {
   await page.goto("/featured");
-  await expect(page.locator(".featured-index")).toBeVisible();
+  await expect(page.locator(".routes-page")).toBeVisible();
 });
 
 test("/featured/:slug page renders 404 message for unknown slug", async ({ page }) => {

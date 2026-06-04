@@ -33,6 +33,11 @@
             "thumbnail": "public-data/poi-images/banias-gan-hatsafon-start-4d7040b6-thumb.webp"
           }
         ]
+      },
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-38b469d3-eadbb56a.webp",
+        "thumbnail": "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp",
+        "alt": "חניון הדקל"
       }
     },
     {
@@ -67,6 +72,32 @@
             "thumbnail": "public-data/poi-images/sovev-beit-hillel-start-88a84776-thumb.webp"
           }
         ]
+      }
+    },
+    {
+      "slug": "historic-jordan",
+      "name": "הירדן ההיסטורי",
+      "summary": "מסלול דרך נחלים ישנים ותעלות רכיבה מכפר בלום דרך הירדן ההיסטורי, אגמון החולה ותעלת הביטחון",
+      "route": "5vbUnLFA6HYL69PUsAaSZ2JS5QZJ3M7AXAw2cTYbDMCyrbosoQ9uSiPzkLURe8fJ7PHQAm4uVBqiJsmWMSqKeidgCia8abdPFoj4M61UDk23QHiBJPNDA2buWKXjuu7C7FpbLhbbhpcQSpJC3VfYBM7PtAzGscmepp7cS6MfimbNNYLP7JksEhWprnVQwo8XPryW4Bj695vKTxiQyQfV5vqiSwsHAn4FJwRwFVySCuv8kpn7nNio3zk84DBNHWbSaQuCxocrgraKhY8zBTWzd8qxNqRRDAhSRC4KgXi2j6t9wSgvu1qwCKsjPzeiDh9hCERwzLFYoaidQmJUoJH7qnEk5Mkazi9K3sZC9hsXpfZaWj5JSyKte5FpV6PCuWooG6JawWU9hQCUJ9HupqJsdXc6sbHqSoCLHceeFQHEDjMhGwCsGT",
+      "notes": "",
+      "featured": false,
+      "distanceKm": 23.6,
+      "elevationGainM": 48,
+      "elevationLossM": 48,
+      "regionId": "hula-valley",
+      "passesNear": [],
+      "difficulty": "easy",
+      "style": "family",
+      "roadMix": {
+        "paved": 1,
+        "dirt": 0,
+        "road": 0
+      },
+      "qualityScore": 3,
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-5b6da297-fd491b50.webp",
+        "thumbnail": "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp",
+        "alt": "בריכות נופרים"
       }
     }
   ]

@@ -22,11 +22,28 @@ const moduleNav = {
 };
 
 export function getFeaturedModuleLoader(slug) {
-  return moduleLoaders[slug] || null;
+  return getRouteStoryModuleLoader(slug);
 }
 
 export function getFeaturedNav(slug) {
+  return getRouteStoryNav(slug);
+}
+
+export function getRouteStoryModuleLoader(slug) {
+  return moduleLoaders[slug] || null;
+}
+
+export function getRouteStoryNav(slug) {
   return moduleNav[slug] || null;
+}
+
+export function hasRouteStory(slug) {
+  return Boolean(getRouteStoryModuleLoader(slug));
+}
+
+export async function loadRecommendedRouteList() {
+  const catalog = await loadCatalog();
+  return Array.isArray(catalog?.entries) ? catalog.entries : [];
 }
 
 export async function loadFeaturedMetaList() {
@@ -36,5 +53,11 @@ export async function loadFeaturedMetaList() {
 
 export async function findFeaturedMeta(slug) {
   const catalog = await loadCatalog();
-  return (catalog?.entries || []).find((e) => e.featured && e.slug === slug) || null;
+  return (
+    (catalog?.entries || []).find(
+      (e) =>
+        e.slug === slug &&
+        (e.featured || e.story?.enabled === true || hasRouteStory(slug)),
+    ) || null
+  );
 }

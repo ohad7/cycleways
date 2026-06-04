@@ -46,9 +46,7 @@ export default function RouteCard({ entry, places, onSelect }) {
           <button type="button" onClick={() => onSelect(entry)}>
             ראו את המסלול במפה
           </button>
-          {entry.featured && (
-            <Link to={`/featured/${entry.slug}`}>פרטים מלאים →</Link>
-          )}
+          <Link to={`/routes/${entry.slug}`}>פרטים מלאים →</Link>
         </div>
       </div>
     </article>
