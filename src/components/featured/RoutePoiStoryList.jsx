@@ -84,11 +84,7 @@ export default function RoutePoiStoryList({ className = "" }) {
       id="fv-poi-stories"
       className={["fv-poi-stories", className].filter(Boolean).join(" ")}
       aria-label="נקודות עניין ותמונות לאורך המסלול"
-    >
-      <div className="fv-poi-stories-heading">
-        <span>לעצור בדרך</span>
-        <h2>נקודות עם תמונות מהמסלול</h2>
-      </div>
+    >      
 
       <div className="fv-poi-story-list">
         {items.map(({ story, kicker }) => (
@@ -102,8 +98,8 @@ export default function RoutePoiStoryList({ className = "" }) {
               focusedPoiId === story.poiId ? "fv-poi-story--focused" : "",
             ].filter(Boolean).join(" ")}
             onClick={() => handleSelect(story)}
-          >
-            <div className="fv-poi-story-copy">
+          >            
+            <div className="fv-poi-story-copy">              
               <span className="fv-poi-story-kicker">{kicker}</span>
               <h3>{story.name || poiLabel(story.type)}</h3>
               {!story.kind && (
@@ -112,7 +108,7 @@ export default function RoutePoiStoryList({ className = "" }) {
               {story.description && (
                 <p className="fv-poi-story-description">{story.description}</p>
               )}
-            </div>
+            </div>            
 
             <div className="fv-poi-story-media">
               <div
