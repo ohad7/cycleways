@@ -5,9 +5,8 @@ import { previewSlideForCursor } from "./routePoiStoryData.js";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
 import { loadYouTubeIframeApi } from "./youtubeIframeApi.js";
 import { createVideoSync } from "./videoSync.js";
+import { computePlaybackRate, RAMP_STEP_2_M } from "./playbackRamp.js";
 
-const POI_PLAYBACK_RATE = 0.75;
-const DEFAULT_PLAYBACK_RATE = 1;
 const MANUAL_SCRUB_SAMPLE_MS = 300;
 const SEEK_SETTLE_MS = 4000;
 const SEEK_SETTLE_TOLERANCE_SECONDS = 0.35;
@@ -62,8 +61,10 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   const pendingSeekRef = useRef(null);
   const poiSlidesRef = useRef([]);
   const routeDistanceRef = useRef(0);
-  const slowPlaybackActiveRef = useRef(false);
-  const restorePlaybackRateRef = useRef(DEFAULT_PLAYBACK_RATE);
+  // Slow-start ramp is "armed" until it completes naturally (distance reaches
+  // RAMP_STEP_2_M) or the user performs a manual seek; once disarmed the base
+  // rate is 1.0 everywhere. See playbackRamp.js.
+  const rampDoneRef = useRef(false);
 
   useEffect(() => {
     poiSlidesRef.current = galleryImageSlides(routeState.activeDataPoints);
@@ -104,6 +105,9 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   }, [clampTime, setVideoCursor, videoSyncRef]);
 
   const seekToTime = useCallback((time) => {
+    // Any seek is user-initiated (slider scrub or map/POI click); "first play
+    // only" means the ramp does not re-apply after the user has navigated.
+    rampDoneRef.current = true;
     const t = clampTime(time);
     const player = playerRef.current;
     pendingSeekRef.current = {
@@ -255,6 +259,9 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
             playerPauseRef.current = () => {
               if (typeof player.pauseVideo === "function") player.pauseVideo();
             };
+            // Prime the rate to the ramp's opening speed before the first play
+            // so the video never flashes at full speed on start.
+            applyPlaybackRate(player, 0, false);
             setIsPlayerReady(true);
             startManualScrubSampler();
           },
@@ -269,11 +276,21 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
             // YT.PlayerState.PLAYING === 1
             if (isPlaying) {
               setVideoPlaying(true);
+              const pos = emitCurrentPosition(playerRef.current, { force: true });
+              if (pos) {
+                const nearPoi = Boolean(
+                  previewSlideForCursor(
+                    poiSlidesRef.current,
+                    pos.fraction,
+                    routeDistanceRef.current,
+                  ),
+                );
+                applyPlaybackRate(playerRef.current, pos.fraction, nearPoi);
+              }
               startTicker();
             } else {
               setVideoPlaying(false);
               stopTicker();
-              resetPlaybackRate();
             }
           },
         },
@@ -339,13 +356,14 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
         const p = playerRef.current;
         const pos = emitCurrentPosition(p, { force: true });
         if (!pos) return;
-        syncPoiPlaybackRate(p, Boolean(
+        const nearPoi = Boolean(
           previewSlideForCursor(
             poiSlidesRef.current,
             pos.fraction,
             routeDistanceRef.current,
           ),
-        ));
+        );
+        applyPlaybackRate(p, pos.fraction, nearPoi);
       };
       tickerRef.current = window.requestAnimationFrame(loop);
     }
@@ -355,12 +373,6 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
         window.cancelAnimationFrame(tickerRef.current);
         tickerRef.current = null;
       }
-    }
-
-    function getPlaybackRate(p) {
-      if (!p || typeof p.getPlaybackRate !== "function") return DEFAULT_PLAYBACK_RATE;
-      const rate = p.getPlaybackRate();
-      return Number.isFinite(rate) && rate > 0 ? rate : DEFAULT_PLAYBACK_RATE;
     }
 
     function canSetPlaybackRate(p, rate) {
@@ -381,24 +393,22 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
       }
     }
 
-    function syncPoiPlaybackRate(p, nearPoi) {
-      if (nearPoi) {
-        if (slowPlaybackActiveRef.current) return;
-        restorePlaybackRateRef.current = getPlaybackRate(p);
-        if (setPlaybackRate(p, POI_PLAYBACK_RATE)) {
-          slowPlaybackActiveRef.current = true;
-        }
-        return;
+    // Sole writer of the playback rate: derive it from route distance + POI
+    // proximity via the pure ramp function, flipping rampDone once the ramp
+    // completes so later ticks short-circuit to full speed.
+    function applyPlaybackRate(p, fraction, nearPoi) {
+      if (!p) return;
+      const distanceFromStartM =
+        (Number(fraction) || 0) * (routeDistanceRef.current || 0);
+      if (!rampDoneRef.current && distanceFromStartM >= RAMP_STEP_2_M) {
+        rampDoneRef.current = true;
       }
-      resetPlaybackRate();
-    }
-
-    function resetPlaybackRate() {
-      if (!slowPlaybackActiveRef.current) return;
-      const p = playerRef.current || player;
-      setPlaybackRate(p, restorePlaybackRateRef.current || DEFAULT_PLAYBACK_RATE);
-      slowPlaybackActiveRef.current = false;
-      restorePlaybackRateRef.current = DEFAULT_PLAYBACK_RATE;
+      const rate = computePlaybackRate({
+        distanceFromStartM,
+        nearPoi,
+        rampDone: rampDoneRef.current,
+      });
+      setPlaybackRate(p, rate);
     }
 
     return () => {
@@ -407,9 +417,12 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
       clearSettledPositionSamples();
       stopManualScrubSampler();
       stopTicker();
-      resetPlaybackRate();
       playingRef.current = false;
       scrubbingRef.current = false;
+      // Re-arm the slow-start ramp for the next video. This effect re-runs only
+      // when `data` changes (a route/video switch), so this never re-arms mid
+      // playthrough.
+      rampDoneRef.current = false;
       pendingSeekRef.current = null;
       lastEmittedTimeRef.current = null;
       if (player && typeof player.destroy === "function") {
