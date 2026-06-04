@@ -5,11 +5,11 @@
 // outputs land on YouTube's allowed rates {0.5, 0.75, 1.0} so the player's
 // setPlaybackRate always succeeds.
 
-export const RAMP_STEP_1_M = 250;
-export const RAMP_STEP_2_M = 500;
-const RAMP_RATE_1 = 0.5;
-const RAMP_RATE_2 = 0.75;
-export const POI_PLAYBACK_RATE = 0.75;
+export const RAMP_STEP_1_M = 400;
+export const RAMP_STEP_2_M = 800;
+const RAMP_RATE_1 = 0.25;
+const RAMP_RATE_2 = 0.5;
+export const POI_PLAYBACK_RATE = 0.5;
 
 // `rampDone` lets the caller disable the ramp outright — it is set true once
 // the route distance has permanently passed RAMP_STEP_2_M, or after a user seek
