@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "banias-gan-hatsafon",
-  "generatedAt": "2026-06-03T22:22:54.759Z",
+  "generatedAt": "2026-06-04T10:55:08.657Z",
   "source": {
     "routeTokenHash": "sha256:4f5d5c4fe65b9ec350310203dc092136b243ae28391ee50d7fb80f67c1ae547e",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "097bb3cfefdb",
+    "mapVersion": "18f545a40131",
     "assetHashes": {
       "bikeRoads": "e4a43a70547a3c7190907140b98a5203d3fe0a7d6983d52ab5b38e7aa5d5d3f3",
-      "segments": "b1bcf7b0bf906c2ee6a128fff279342a45a88d1bf1fa9f18ff27ca8158b7c655",
+      "segments": "6dbb9f2345a70821e91ca728fdb4d24f9f4e7060a1ee424c1f6d30456f9162a3",
       "cwBaseIndex": "23ec80fb6177b47e2df7665b5e24bd8ee438e839dc750c02c8bbb43362c9b2d4",
-      "baseRoutingShards": "ef37ba1592d903c20aadeead57df2fc1caa734e13a83736cc8966cb5d9776d8e"
+      "baseRoutingShards": "64d471e0d4f0110512c00b7cae3db95a37817710b29d44dd81b9d11cd4eeef2c"
     }
   },
   "route": {
@@ -1936,14 +1936,34 @@
         "description": "השביל כולו מלא פינות מנוחה ליד הבניאס, יש המון פינות מוצלות והמים זורמים כל השנה בטמפרטורות נמוכות",
         "images": [
           {
-            "photo": "public-data/poi-images/poi-38b469d3-28c48da0.webp",
-            "thumbnail": "public-data/poi-images/poi-38b469d3-28c48da0-thumb.webp"
+            "photo": "public-data/poi-images/poi-38b469d3-eadbb56a.webp",
+            "thumbnail": "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp"
           }
         ],
         "segmentName": "בניאס חניון האקליפטוס",
         "routeDistanceMeters": 0,
         "routeProgressMeters": 3076.718593260297,
         "routeFraction": 0.20765997939335373
+      },
+      {
+        "id": "poi-1eb44fd0",
+        "type": "viewpoint",
+        "information": "",
+        "location": [
+          33.2129776,
+          35.6428954
+        ],
+        "name": "תצפית לחרמון",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1eb44fd0-4dd46f81.webp",
+            "thumbnail": "public-data/poi-images/poi-1eb44fd0-4dd46f81-thumb.webp"
+          }
+        ],
+        "segmentName": "בניאס צפון",
+        "routeDistanceMeters": 0,
+        "routeProgressMeters": 4642.872403985591,
+        "routeFraction": 0.31336593143409724
       },
       {
         "id": "poi-dbc2c016",
@@ -1955,6 +1975,16 @@
         ],
         "name": "גשר הבניאס",
         "description": "המעבר מעל הבניאס באיזור הזה עובר בשוליים של כביש. השוליים עצמם די רחבים, רק צריך לרכב בזהירות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-dbc2c016-6f9ee817.webp",
+            "thumbnail": "public-data/poi-images/poi-dbc2c016-6f9ee817-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-dbc2c016-4bb5f9df.webp",
+            "thumbnail": "public-data/poi-images/poi-dbc2c016-4bb5f9df-thumb.webp"
+          }
+        ],
         "segmentName": "שביל אופניים 918 דפנה",
         "routeDistanceMeters": 0.16365325894472235,
         "routeProgressMeters": 5114.442364249037,
@@ -1970,10 +2000,81 @@
         ],
         "name": "יער מאכל קורן",
         "description": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-e144a450-8d7e7468.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-8d7e7468-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-e144a450-193d6660.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-193d6660-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-e144a450-bed713bd.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-bed713bd-thumb.webp"
+          }
+        ],
         "segmentName": "שביל אופניים 99 גן הצפון",
         "routeDistanceMeters": 0.1566511895821586,
         "routeProgressMeters": 7882.901516479552,
         "routeFraction": 0.5320483875443885
+      },
+      {
+        "id": "poi-7442a920",
+        "type": "viewpoint",
+        "information": "מצפה קורן, לזכרו של ניר פופקו",
+        "location": [
+          33.22658505087399,
+          35.62202280888957
+        ],
+        "name": "מצפה קורן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7442a920-eaed8fae.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-eaed8fae-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7442a920-68ca9d3e.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-68ca9d3e-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7442a920-6dcff0f6.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-6dcff0f6-thumb.webp"
+          }
+        ],
+        "segmentName": "שביל אופניים 99 גן הצפון",
+        "routeDistanceMeters": 0.5633745717524657,
+        "routeProgressMeters": 7664.771494150626,
+        "routeFraction": 0.5173259244497391
+      },
+      {
+        "id": "poi-53d4e045",
+        "type": "river",
+        "information": "גשר להולכי רגל מעל החצבאני",
+        "location": [
+          33.224609,
+          35.614702
+        ],
+        "name": "גשר מעל החצבאני",
+        "description": "גשר להולכי רגל מעל החצבאני. פינות ישיבה נחמדות וגישה לגשר קטן מעל שלושה נחלים: נחל עיון, נחל דן והחצבאני",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-24f5d79e.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-24f5d79e-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-bf53a6bc.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-bf53a6bc-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-67debd43.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-67debd43-thumb.webp"
+          }
+        ],
+        "segmentName": "שביל אופניים גשר חצבאני",
+        "routeDistanceMeters": 0.04731069620471311,
+        "routeProgressMeters": 8568.40278252005,
+        "routeFraction": 0.5783155954365614
       },
       {
         "id": "poi-77f69a67",
@@ -1987,8 +2088,12 @@
         "description": "מתחם מסעדות, בתי קפה וחנויות",
         "images": [
           {
-            "photo": "public-data/poi-images/poi-77f69a67-f1097ac6.webp",
-            "thumbnail": "public-data/poi-images/poi-77f69a67-f1097ac6-thumb.webp"
+            "photo": "public-data/poi-images/poi-77f69a67-3c7b3936.webp",
+            "thumbnail": "public-data/poi-images/poi-77f69a67-3c7b3936-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-77f69a67-c4064b12.webp",
+            "thumbnail": "public-data/poi-images/poi-77f69a67-c4064b12-thumb.webp"
           }
         ],
         "segmentName": "גן הצפון",
@@ -2021,6 +2126,16 @@
         ],
         "name": "מושב נחלים",
         "description": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-23d6dbf0-325f9ead.webp",
+            "thumbnail": "public-data/poi-images/poi-23d6dbf0-325f9ead-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-23d6dbf0-07580bf2.webp",
+            "thumbnail": "public-data/poi-images/poi-23d6dbf0-07580bf2-thumb.webp"
+          }
+        ],
         "segmentName": "שדות הגושרים",
         "routeDistanceMeters": 6.610204301297048e-10,
         "routeProgressMeters": 10830.033388140535,
@@ -2044,13 +2159,38 @@
           "name": "חניון הדקל",
           "information": "השביל כולו מלא פינות מנוחה ליד הבניאס",
           "description": "השביל כולו מלא פינות מנוחה ליד הבניאס, יש המון פינות מוצלות והמים זורמים כל השנה בטמפרטורות נמוכות",
-          "photo": "public-data/poi-images/poi-38b469d3-28c48da0.webp",
-          "thumbnail": "public-data/poi-images/poi-38b469d3-28c48da0-thumb.webp",
+          "photo": "public-data/poi-images/poi-38b469d3-eadbb56a.webp",
+          "thumbnail": "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp",
           "segmentName": "בניאס חניון האקליפטוס",
           "emoji": "🪑",
           "label": "פינת מנוחה",
           "color": "#16a085",
           "icon": "poi-emoji-rest_stop"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-1eb44fd0",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.6428954,
+            33.2129776
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-1eb44fd0",
+          "type": "viewpoint",
+          "name": "תצפית לחרמון",
+          "information": "",
+          "description": "",
+          "photo": "public-data/poi-images/poi-1eb44fd0-4dd46f81.webp",
+          "thumbnail": "public-data/poi-images/poi-1eb44fd0-4dd46f81-thumb.webp",
+          "segmentName": "בניאס צפון",
+          "emoji": "🔭",
+          "label": "תצפית",
+          "color": "#3aa17e",
+          "icon": "poi-emoji-viewpoint"
         }
       },
       {
@@ -2069,8 +2209,8 @@
           "name": "גשר הבניאס",
           "information": "מעבר הכרחי בצד הכביש, שוליים רחבים",
           "description": "המעבר מעל הבניאס באיזור הזה עובר בשוליים של כביש. השוליים עצמם די רחבים, רק צריך לרכב בזהירות",
-          "photo": "",
-          "thumbnail": "",
+          "photo": "public-data/poi-images/poi-dbc2c016-6f9ee817.webp",
+          "thumbnail": "public-data/poi-images/poi-dbc2c016-6f9ee817-thumb.webp",
           "segmentName": "שביל אופניים 918 דפנה",
           "emoji": "⚠️",
           "label": "אזהרה",
@@ -2094,13 +2234,63 @@
           "name": "יער מאכל קורן",
           "information": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
           "description": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
-          "photo": "",
-          "thumbnail": "",
+          "photo": "public-data/poi-images/poi-e144a450-8d7e7468.webp",
+          "thumbnail": "public-data/poi-images/poi-e144a450-8d7e7468-thumb.webp",
           "segmentName": "שביל אופניים 99 גן הצפון",
           "emoji": "🌿",
           "label": "טבע",
           "color": "#27ae60",
           "icon": "poi-emoji-nature"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-7442a920",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.62202280888957,
+            33.22658505087399
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-7442a920",
+          "type": "viewpoint",
+          "name": "מצפה קורן",
+          "information": "מצפה קורן, לזכרו של ניר פופקו",
+          "description": "",
+          "photo": "public-data/poi-images/poi-7442a920-eaed8fae.webp",
+          "thumbnail": "public-data/poi-images/poi-7442a920-eaed8fae-thumb.webp",
+          "segmentName": "שביל אופניים 99 גן הצפון",
+          "emoji": "🔭",
+          "label": "תצפית",
+          "color": "#3aa17e",
+          "icon": "poi-emoji-viewpoint"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-53d4e045",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.614702,
+            33.224609
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-53d4e045",
+          "type": "river",
+          "name": "גשר מעל החצבאני",
+          "information": "גשר להולכי רגל מעל החצבאני",
+          "description": "גשר להולכי רגל מעל החצבאני. פינות ישיבה נחמדות וגישה לגשר קטן מעל שלושה נחלים: נחל עיון, נחל דן והחצבאני",
+          "photo": "public-data/poi-images/poi-53d4e045-24f5d79e.webp",
+          "thumbnail": "public-data/poi-images/poi-53d4e045-24f5d79e-thumb.webp",
+          "segmentName": "שביל אופניים גשר חצבאני",
+          "emoji": "💧",
+          "label": "נחל",
+          "color": "#1580b7",
+          "icon": "poi-emoji-river"
         }
       },
       {
@@ -2119,8 +2309,8 @@
           "name": "גן הצפון",
           "information": "מתחם מסעדות, בתי קפה וחנויות",
           "description": "מתחם מסעדות, בתי קפה וחנויות",
-          "photo": "public-data/poi-images/poi-77f69a67-f1097ac6.webp",
-          "thumbnail": "public-data/poi-images/poi-77f69a67-f1097ac6-thumb.webp",
+          "photo": "public-data/poi-images/poi-77f69a67-3c7b3936.webp",
+          "thumbnail": "public-data/poi-images/poi-77f69a67-3c7b3936-thumb.webp",
           "segmentName": "גן הצפון",
           "emoji": "☕",
           "label": "בית קפה",
@@ -2169,8 +2359,8 @@
           "name": "מושב נחלים",
           "information": "מיקומו ההיסטורי של מושב נחלים הנטוש",
           "description": "מיקומו ההיסטורי של מושב נחלים הנטוש",
-          "photo": "",
-          "thumbnail": "",
+          "photo": "public-data/poi-images/poi-23d6dbf0-325f9ead.webp",
+          "thumbnail": "public-data/poi-images/poi-23d6dbf0-325f9ead-thumb.webp",
           "segmentName": "שדות הגושרים",
           "emoji": "🏛️",
           "label": "אתר היסטורי",
@@ -2181,8 +2371,11 @@
     ],
     "activeDataPointIds": [
       "poi-38b469d3",
+      "poi-1eb44fd0",
       "poi-dbc2c016",
       "poi-e144a450",
+      "poi-7442a920",
+      "poi-53d4e045",
       "poi-77f69a67",
       "poi-015cc38e",
       "poi-23d6dbf0"

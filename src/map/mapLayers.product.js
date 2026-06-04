@@ -20,6 +20,7 @@ import {
 } from "@cycleways/core/domain/routeNetwork.js";
 export { getRouteFeatureColor, prepareRouteNetworkFeatures };
 import { buildRouteDirectionPulseFeatureCollection } from "@cycleways/core/map/routeDirectionPulse.js";
+import { getDistance } from "@cycleways/core/utils/distance.js";
 export { buildRouteDirectionPulseFeatureCollection };
 
 import {
@@ -47,7 +48,17 @@ import {
   DATA_MARKERS_LAYER_ID,
   DATA_MARKERS_CIRCLE_LAYER_ID,
   VIDEO_CURSOR_SOURCE_ID,
+  VIDEO_CURSOR_TRAIL_SOURCE_ID,
+  VIDEO_CURSOR_PROGRESS_SOURCE_ID,
+  VIDEO_CURSOR_PROGRESS_LAYER_ID,
+  VIDEO_CURSOR_TRAIL_LAYER_ID,
+  VIDEO_CURSOR_PULSE_LAYER_ID,
+  VIDEO_CURSOR_HALO_LAYER_ID,
+  VIDEO_CURSOR_NAV_CIRCLE_LAYER_ID,
   VIDEO_CURSOR_LAYER_ID,
+  VIDEO_CURSOR_SYMBOL_LAYER_ID,
+  VIDEO_CURSOR_VARIANTS,
+  VIDEO_CURSOR_DEFAULT_VARIANT,
   ROUTE_NETWORK_LINE_STYLE,
   ROUTE_NETWORK_HIT_STYLE,
   ROUTE_NETWORK_HOVER_STYLE,
@@ -64,7 +75,13 @@ import {
   ROUTE_DIRECTION_LIT_POINT_TEXT_STYLE,
   DATA_MARKERS_STYLE,
   DATA_MARKERS_CIRCLE_STYLE,
+  VIDEO_CURSOR_PROGRESS_STYLE,
+  VIDEO_CURSOR_TRAIL_STYLE,
+  VIDEO_CURSOR_PULSE_STYLE,
+  VIDEO_CURSOR_HALO_STYLE,
+  VIDEO_CURSOR_NAV_CIRCLE_STYLE,
   VIDEO_CURSOR_STYLE,
+  VIDEO_CURSOR_SYMBOL_STYLE,
 } from "@cycleways/core/map/mapStyles.js";
 import { registerPoiEmojiImages } from "@cycleways/core/map/emojiMarkerImage.js";
 
@@ -77,6 +94,19 @@ const DATA_MARKER_ICON_FILES = {
   "car-11": "/icons/car.svg",
   "roadblock-11": "/icons/roadblock.svg",
 };
+
+const VIDEO_CURSOR_OPTION_VARIANTS = new Map([
+  ["1", VIDEO_CURSOR_VARIANTS.CHEVRON_HALO],
+  ["2", VIDEO_CURSOR_VARIANTS.CHEVRON_TRAIL],
+  ["3", VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD],
+  ["4", VIDEO_CURSOR_VARIANTS.NAV_CIRCLE],
+  ["5", VIDEO_CURSOR_VARIANTS.PULSE_RING],
+  ["6", VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE],
+]);
+
+const VIDEO_CURSOR_VARIANT_NAMES = new Set(Object.values(VIDEO_CURSOR_VARIANTS));
+
+const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
 
 export function getRouteNetworkLayerIds() {
   return [
@@ -707,30 +737,516 @@ export async function loadDataMarkerIcons(map) {
   registerPoiEmojiImages(map);
 }
 
-export function syncVideoCursorLayer(map, cursor) {
+export function syncVideoCursorLayer(map, cursor, options = {}) {
   if (!map || !map.isStyleLoaded()) return;
-  const features =
-    cursor && Number.isFinite(cursor.lat) && Number.isFinite(cursor.lng)
-      ? [
+
+  const layerData = buildVideoCursorLayerData(
+    cursor,
+    options.routeGeometry,
+    options.variant,
+  );
+  const hasCursor = layerData.cursor.features.length > 0;
+  if (!map.getSource(VIDEO_CURSOR_SOURCE_ID) && !hasCursor) {
+    syncVideoCursorPulseAnimation(map, false);
+    return;
+  }
+
+  syncVideoCursorSource(map, VIDEO_CURSOR_PROGRESS_SOURCE_ID, layerData.progress);
+  syncVideoCursorSource(map, VIDEO_CURSOR_TRAIL_SOURCE_ID, layerData.trail);
+  syncVideoCursorSource(map, VIDEO_CURSOR_SOURCE_ID, layerData.cursor);
+  ensureVideoCursorLayers(map);
+  const pulseProfile = videoCursorPulseProfileForVariant(layerData.variant);
+  syncVideoCursorPulseAnimation(
+    map,
+    hasCursor && Boolean(options.playing) ? pulseProfile : null,
+  );
+}
+
+export function clearVideoCursorLayer(map) {
+  if (!map) return;
+  syncVideoCursorPulseAnimation(map, false);
+
+  [
+    VIDEO_CURSOR_SYMBOL_LAYER_ID,
+    VIDEO_CURSOR_LAYER_ID,
+    VIDEO_CURSOR_NAV_CIRCLE_LAYER_ID,
+    VIDEO_CURSOR_HALO_LAYER_ID,
+    VIDEO_CURSOR_PULSE_LAYER_ID,
+    VIDEO_CURSOR_TRAIL_LAYER_ID,
+    VIDEO_CURSOR_PROGRESS_LAYER_ID,
+  ].forEach((layerId) => {
+    if (map.getLayer?.(layerId)) {
+      map.removeLayer(layerId);
+    }
+  });
+
+  [
+    VIDEO_CURSOR_SOURCE_ID,
+    VIDEO_CURSOR_TRAIL_SOURCE_ID,
+    VIDEO_CURSOR_PROGRESS_SOURCE_ID,
+  ].forEach((sourceId) => {
+    if (map.getSource?.(sourceId)) {
+      map.removeSource(sourceId);
+    }
+  });
+}
+
+export function buildVideoCursorLayerData(
+  cursor,
+  routeGeometry,
+  variantInput = VIDEO_CURSOR_DEFAULT_VARIANT,
+) {
+  const point = normalizePoint(cursor);
+  const variant = normalizeVideoCursorVariant(variantInput);
+  if (!point) {
+    return emptyVideoCursorLayerData(variant);
+  }
+
+  const routeArc = buildVideoCursorRouteArc(routeGeometry);
+  const fraction = clampUnit(Number(cursor?.fraction));
+  const headDistance = routeArc && Number.isFinite(fraction)
+    ? routeArc.totalDistMeters * fraction
+    : null;
+  const bearing = Number.isFinite(Number(cursor?.bearing))
+    ? normalizeBearing(Number(cursor.bearing))
+    : routeArc && Number.isFinite(headDistance)
+      ? bearingAtRouteDistance(routeArc, headDistance)
+      : 0;
+  const properties = videoCursorPropertiesForVariant(variant, bearing);
+
+  const cursorData = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [point.lng, point.lat],
+        },
+        properties,
+      },
+    ],
+  };
+
+  return {
+    variant,
+    cursor: cursorData,
+    trail: buildVideoCursorTrailData(routeArc, headDistance, variant),
+    progress: buildVideoCursorProgressData(routeArc, headDistance, variant),
+  };
+}
+
+export function normalizeVideoCursorVariant(value) {
+  const key = String(value ?? "").trim();
+  if (VIDEO_CURSOR_OPTION_VARIANTS.has(key)) {
+    return VIDEO_CURSOR_OPTION_VARIANTS.get(key);
+  }
+  return VIDEO_CURSOR_VARIANT_NAMES.has(key)
+    ? key
+    : VIDEO_CURSOR_DEFAULT_VARIANT;
+}
+
+function emptyVideoCursorLayerData(variant) {
+  return {
+    variant,
+    cursor: EMPTY_FEATURE_COLLECTION,
+    trail: EMPTY_FEATURE_COLLECTION,
+    progress: EMPTY_FEATURE_COLLECTION,
+  };
+}
+
+function videoCursorPropertiesForVariant(variant, bearing) {
+  const base = {
+    bearing,
+    showHalo: false,
+    showPulse: false,
+    showNavCircle: false,
+    showCore: false,
+    showSymbol: false,
+    coreRadius: 0,
+    coreColor: "#0f766e",
+    coreStrokeWidth: 0,
+    pulseRadius: 0,
+    pulseColor: "#f97316",
+    pulseOpacity: 0,
+    symbol: "",
+    symbolColor: "#0f172a",
+    symbolSize: 0,
+  };
+
+  if (variant === VIDEO_CURSOR_VARIANTS.CHEVRON_TRAIL) {
+    return {
+      ...base,
+      showHalo: true,
+      showSymbol: true,
+      symbol: "▲",
+      symbolSize: 20,
+    };
+  }
+
+  if (
+    variant === VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD
+    || variant === VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE
+  ) {
+    return {
+      ...base,
+      showPulse: variant === VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE,
+      showCore: true,
+      showSymbol: true,
+      coreRadius: 5.6,
+      coreColor: "#f97316",
+      coreStrokeWidth: 2,
+      pulseRadius: 13,
+      pulseColor: "#f97316",
+      pulseOpacity: 0.13,
+      symbol: "▲",
+      symbolSize: 15,
+      symbolColor: "#ffffff",
+    };
+  }
+
+  if (variant === VIDEO_CURSOR_VARIANTS.NAV_CIRCLE) {
+    return {
+      ...base,
+      showNavCircle: true,
+      showSymbol: true,
+      symbol: "▲",
+      symbolSize: 15,
+      symbolColor: "#ffffff",
+    };
+  }
+
+  if (variant === VIDEO_CURSOR_VARIANTS.PULSE_RING) {
+    return {
+      ...base,
+      showPulse: true,
+      showCore: true,
+      coreRadius: 6.2,
+      coreColor: "#f97316",
+      coreStrokeWidth: 2.5,
+      pulseRadius: 23,
+      pulseColor: "#f97316",
+      pulseOpacity: 0.18,
+    };
+  }
+
+  if (variant === VIDEO_CURSOR_VARIANTS.DOT) {
+    return {
+      ...base,
+      showCore: true,
+      coreRadius: 8.5,
+      coreColor: "#ff3d3d",
+      coreStrokeWidth: 3,
+    };
+  }
+
+  return {
+    ...base,
+    showHalo: true,
+    showSymbol: true,
+    symbol: "▲",
+    symbolSize: 20,
+  };
+}
+
+function buildVideoCursorTrailData(routeArc, headDistance, variant) {
+  if (
+    variant !== VIDEO_CURSOR_VARIANTS.CHEVRON_TRAIL
+    || !routeArc
+    || !Number.isFinite(headDistance)
+  ) {
+    return EMPTY_FEATURE_COLLECTION;
+  }
+
+  const trailMeters = Math.min(Math.max(routeArc.totalDistMeters * 0.025, 45), 140);
+  const startDistance = Math.max(0, headDistance - trailMeters);
+  return videoCursorLineData(routeArc, startDistance, headDistance);
+}
+
+function buildVideoCursorProgressData(routeArc, headDistance, variant) {
+  if (
+    variant !== VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD
+    && variant !== VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE
+    || !routeArc
+    || !Number.isFinite(headDistance)
+  ) {
+    return EMPTY_FEATURE_COLLECTION;
+  }
+
+  return videoCursorLineData(routeArc, 0, headDistance);
+}
+
+function videoCursorLineData(routeArc, startDistance, endDistance) {
+  const coordinates = sliceVideoCursorRouteCoordinates(
+    routeArc,
+    startDistance,
+    endDistance,
+  );
+
+  return coordinates.length >= 2
+    ? {
+        type: "FeatureCollection",
+        features: [
           {
             type: "Feature",
-            geometry: { type: "Point", coordinates: [cursor.lng, cursor.lat] },
+            geometry: {
+              type: "LineString",
+              coordinates,
+            },
             properties: {},
           },
-        ]
-      : [];
-  const data = { type: "FeatureCollection", features };
-  if (!map.getSource(VIDEO_CURSOR_SOURCE_ID)) {
-    map.addSource(VIDEO_CURSOR_SOURCE_ID, { type: "geojson", data });
-    map.addLayer({
-      id: VIDEO_CURSOR_LAYER_ID,
-      type: "circle",
-      source: VIDEO_CURSOR_SOURCE_ID,
-      ...VIDEO_CURSOR_STYLE,
-    });
-  } else {
-    map.getSource(VIDEO_CURSOR_SOURCE_ID).setData(data);
+        ],
+      }
+    : EMPTY_FEATURE_COLLECTION;
+}
+
+function buildVideoCursorRouteArc(routeGeometry) {
+  const points = Array.isArray(routeGeometry)
+    ? routeGeometry.map(normalizePoint).filter(Boolean)
+    : [];
+  if (points.length < 2) return null;
+
+  const cumDist = new Float64Array(points.length);
+  let totalDistMeters = 0;
+  for (let i = 1; i < points.length; i++) {
+    const distance = getDistance(points[i - 1], points[i]);
+    totalDistMeters += Number.isFinite(distance) && distance > 0 ? distance : 0;
+    cumDist[i] = totalDistMeters;
   }
+
+  return totalDistMeters > 0 ? { points, cumDist, totalDistMeters } : null;
+}
+
+function sliceVideoCursorRouteCoordinates(routeArc, startDistance, endDistance) {
+  const start = clampDistance(routeArc, startDistance);
+  const end = clampDistance(routeArc, endDistance);
+  if (end <= start) return [];
+
+  const coordinates = [videoCursorPointAtDistance(routeArc, start)];
+  for (let i = 1; i < routeArc.points.length - 1; i++) {
+    if (routeArc.cumDist[i] > start && routeArc.cumDist[i] < end) {
+      coordinates.push([routeArc.points[i].lng, routeArc.points[i].lat]);
+    }
+  }
+  coordinates.push(videoCursorPointAtDistance(routeArc, end));
+
+  return coordinates.filter((coordinate, index, all) => {
+    if (index === 0) return true;
+    const previous = all[index - 1];
+    return coordinate[0] !== previous[0] || coordinate[1] !== previous[1];
+  });
+}
+
+function videoCursorPointAtDistance(routeArc, distanceMeters) {
+  const target = clampDistance(routeArc, distanceMeters);
+  let segmentIndex = 0;
+
+  while (
+    segmentIndex < routeArc.cumDist.length - 2
+    && routeArc.cumDist[segmentIndex + 1] < target
+  ) {
+    segmentIndex++;
+  }
+
+  const a = routeArc.points[segmentIndex];
+  const b = routeArc.points[segmentIndex + 1];
+  const segmentStart = routeArc.cumDist[segmentIndex];
+  const segmentLength = routeArc.cumDist[segmentIndex + 1] - segmentStart;
+  const fraction = segmentLength > 0
+    ? (target - segmentStart) / segmentLength
+    : 0;
+
+  return [
+    a.lng + (b.lng - a.lng) * fraction,
+    a.lat + (b.lat - a.lat) * fraction,
+  ];
+}
+
+function bearingAtRouteDistance(routeArc, headDistance) {
+  const sampleMeters = Math.min(
+    Math.max(routeArc.totalDistMeters * 0.006, 12),
+    55,
+  );
+  const before = videoCursorPointAtDistance(routeArc, headDistance - sampleMeters);
+  const after = videoCursorPointAtDistance(routeArc, headDistance + sampleMeters);
+  return bearingBetweenCoordinates(before, after);
+}
+
+function bearingBetweenCoordinates(from, to) {
+  const [fromLng, fromLat] = from;
+  const [toLng, toLat] = to;
+  const dx = (toLng - fromLng) * Math.cos(((fromLat + toLat) / 2) * Math.PI / 180);
+  const dy = toLat - fromLat;
+  if (Math.abs(dx) < 1e-12 && Math.abs(dy) < 1e-12) return 0;
+  return normalizeBearing(Math.atan2(dx, dy) * 180 / Math.PI);
+}
+
+function clampUnit(value) {
+  if (!Number.isFinite(value)) return null;
+  return Math.max(0, Math.min(1, value));
+}
+
+function clampDistance(routeArc, distanceMeters) {
+  if (!Number.isFinite(distanceMeters)) return 0;
+  return Math.max(0, Math.min(routeArc.totalDistMeters, distanceMeters));
+}
+
+function normalizeBearing(value) {
+  return ((value % 360) + 360) % 360;
+}
+
+function syncVideoCursorSource(map, sourceId, data) {
+  if (map.getSource(sourceId)) {
+    map.getSource(sourceId).setData(data);
+    return;
+  }
+  map.addSource(sourceId, {
+    type: "geojson",
+    data,
+  });
+}
+
+function ensureVideoCursorLayers(map) {
+  const beforePointLayer = map.getLayer(ROUTE_POINTS_LAYER_ID)
+    ? ROUTE_POINTS_LAYER_ID
+    : undefined;
+
+  addVideoCursorLayer(
+    map,
+    {
+      id: VIDEO_CURSOR_PROGRESS_LAYER_ID,
+      type: "line",
+      source: VIDEO_CURSOR_PROGRESS_SOURCE_ID,
+      ...VIDEO_CURSOR_PROGRESS_STYLE,
+    },
+    beforePointLayer,
+  );
+  addVideoCursorLayer(
+    map,
+    {
+      id: VIDEO_CURSOR_TRAIL_LAYER_ID,
+      type: "line",
+      source: VIDEO_CURSOR_TRAIL_SOURCE_ID,
+      ...VIDEO_CURSOR_TRAIL_STYLE,
+    },
+    beforePointLayer,
+  );
+  addVideoCursorLayer(map, {
+    id: VIDEO_CURSOR_PULSE_LAYER_ID,
+    type: "circle",
+    source: VIDEO_CURSOR_SOURCE_ID,
+    ...VIDEO_CURSOR_PULSE_STYLE,
+  });
+  addVideoCursorLayer(map, {
+    id: VIDEO_CURSOR_HALO_LAYER_ID,
+    type: "circle",
+    source: VIDEO_CURSOR_SOURCE_ID,
+    ...VIDEO_CURSOR_HALO_STYLE,
+  });
+  addVideoCursorLayer(map, {
+    id: VIDEO_CURSOR_NAV_CIRCLE_LAYER_ID,
+    type: "circle",
+    source: VIDEO_CURSOR_SOURCE_ID,
+    ...VIDEO_CURSOR_NAV_CIRCLE_STYLE,
+  });
+  addVideoCursorLayer(map, {
+    id: VIDEO_CURSOR_LAYER_ID,
+    type: "circle",
+    source: VIDEO_CURSOR_SOURCE_ID,
+    ...VIDEO_CURSOR_STYLE,
+  });
+  addVideoCursorLayer(map, {
+    id: VIDEO_CURSOR_SYMBOL_LAYER_ID,
+    type: "symbol",
+    source: VIDEO_CURSOR_SOURCE_ID,
+    ...VIDEO_CURSOR_SYMBOL_STYLE,
+  });
+}
+
+function addVideoCursorLayer(map, layer, beforeLayerId) {
+  if (map.getLayer(layer.id)) return;
+  map.addLayer(layer, beforeLayerId);
+}
+
+function videoCursorPulseProfileForVariant(variant) {
+  if (variant === VIDEO_CURSOR_VARIANTS.PULSE_RING) {
+    return {
+      key: VIDEO_CURSOR_VARIANTS.PULSE_RING,
+      startRadius: 16,
+      endRadius: 33,
+      maxOpacity: 0.26,
+    };
+  }
+
+  if (variant === VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE) {
+    return {
+      key: VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE,
+      startRadius: 9,
+      endRadius: 17,
+      maxOpacity: 0.18,
+    };
+  }
+
+  return null;
+}
+
+function syncVideoCursorPulseAnimation(map, profile) {
+  const existing = map.__videoCursorPulseAnimation;
+  if (!profile) {
+    if (existing) {
+      existing.cancel(existing.frame);
+      delete map.__videoCursorPulseAnimation;
+    }
+    if (map.getLayer?.(VIDEO_CURSOR_PULSE_LAYER_ID)) {
+      map.setPaintProperty?.(
+        VIDEO_CURSOR_PULSE_LAYER_ID,
+        "circle-radius",
+        VIDEO_CURSOR_PULSE_STYLE.paint["circle-radius"],
+      );
+      map.setPaintProperty?.(
+        VIDEO_CURSOR_PULSE_LAYER_ID,
+        "circle-opacity",
+        VIDEO_CURSOR_PULSE_STYLE.paint["circle-opacity"],
+      );
+    }
+    return;
+  }
+  if (existing?.profileKey === profile.key) return;
+  if (existing) {
+    existing.cancel(existing.frame);
+    delete map.__videoCursorPulseAnimation;
+  }
+
+  const raf = typeof window !== "undefined" && window.requestAnimationFrame
+    ? window.requestAnimationFrame.bind(window)
+    : null;
+  const cancel = typeof window !== "undefined" && window.cancelAnimationFrame
+    ? window.cancelAnimationFrame.bind(window)
+    : null;
+  if (!raf || !cancel) return;
+
+  const state = { frame: null, cancel, profileKey: profile.key };
+  const tick = (now) => {
+    if (!map.getLayer?.(VIDEO_CURSOR_PULSE_LAYER_ID)) {
+      syncVideoCursorPulseAnimation(map, null);
+      return;
+    }
+    const phase = ((now % 1400) / 1400);
+    map.setPaintProperty?.(
+      VIDEO_CURSOR_PULSE_LAYER_ID,
+      "circle-radius",
+      profile.startRadius + phase * (profile.endRadius - profile.startRadius),
+    );
+    map.setPaintProperty?.(
+      VIDEO_CURSOR_PULSE_LAYER_ID,
+      "circle-opacity",
+      profile.maxOpacity * (1 - phase),
+    );
+    state.frame = raf(tick);
+  };
+
+  map.__videoCursorPulseAnimation = state;
+  state.frame = raf(tick);
 }
 
 export function getGeoJsonBounds(mapboxgl, geoJsonData) {

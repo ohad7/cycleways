@@ -8,6 +8,7 @@ export default function BaniasGanHatsafon() {
       kicker="גליל עליון · רכיבה למשפחות"
       difficultyLabel="בינוני"
       surfaceLabel="שטח/סלול"
+      videoCursorVariant="progress-head-pulse"
       intro={{
         kicker: "רכיבה מעגלית רגועה",
         heading: "מה מחכה בדרך",

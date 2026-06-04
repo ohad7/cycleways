@@ -204,6 +204,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       videoCursor,
       setVideoCursor,
       setVideoCursorFromFraction,
+      videoPlaying,
       setVideoPlaying,
       seekVideoToFraction,
       videoSyncRef,
@@ -213,7 +214,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       handleRouteClick,
       handleDataMarkerClick,
     }),
-    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
+    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, videoPlaying, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;

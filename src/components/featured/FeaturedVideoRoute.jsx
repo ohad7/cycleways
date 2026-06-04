@@ -14,6 +14,7 @@ import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 //   intro: { kicker?, heading?, body?: string[] }   - side "what's on the ride" panel
 //   about: { eyebrow?, heading?, paragraphs?: string[] } - below-the-fold "about" section
 //   difficultyLabel / surfaceLabel - optional stat text overrides for the rail
+//   videoCursorVariant - 1-6 or a named cursor style for the video map marker
 export default function FeaturedVideoRoute({
   slug,
   kicker = null,
@@ -21,6 +22,7 @@ export default function FeaturedVideoRoute({
   about = {},
   difficultyLabel = null,
   surfaceLabel = null,
+  videoCursorVariant = 1,
 }) {
   return (
     <FeaturedRoute slug={slug} layout="video-first" desktopMap="manual" kicker={kicker}>
@@ -34,6 +36,7 @@ export default function FeaturedVideoRoute({
               autoResetAfterInteraction
               autoResetDelayMs={5000}
               routeFitPadding={12}
+              videoCursorVariant={videoCursorVariant}
             />
           </div>
         </div>

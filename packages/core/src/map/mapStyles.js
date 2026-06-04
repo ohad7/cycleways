@@ -11,6 +11,9 @@ export const ROUTE_POINT_DRAG_PREVIEW_SOURCE_ID = "route-point-drag-preview";
 export const ROUTE_DIRECTION_PULSE_SOURCE_ID = "route-direction-pulse";
 export const ROUTE_DIRECTION_LIT_POINT_SOURCE_ID = "route-direction-lit-point";
 export const DATA_MARKERS_SOURCE_ID = "react-data-markers";
+export const VIDEO_CURSOR_SOURCE_ID = "video-cursor-source";
+export const VIDEO_CURSOR_TRAIL_SOURCE_ID = "video-cursor-trail-source";
+export const VIDEO_CURSOR_PROGRESS_SOURCE_ID = "video-cursor-progress-source";
 
 // ---------------------------------------------------------------------------
 // Layer IDs
@@ -37,6 +40,13 @@ export const ROUTE_DIRECTION_LIT_POINT_TEXT_LAYER_ID =
   "route-direction-lit-point-text";
 export const DATA_MARKERS_LAYER_ID = "react-data-markers-layer";
 export const DATA_MARKERS_CIRCLE_LAYER_ID = "react-data-markers-circle";
+export const VIDEO_CURSOR_PROGRESS_LAYER_ID = "video-cursor-progress-layer";
+export const VIDEO_CURSOR_TRAIL_LAYER_ID = "video-cursor-trail-layer";
+export const VIDEO_CURSOR_PULSE_LAYER_ID = "video-cursor-pulse-layer";
+export const VIDEO_CURSOR_HALO_LAYER_ID = "video-cursor-halo-layer";
+export const VIDEO_CURSOR_NAV_CIRCLE_LAYER_ID = "video-cursor-nav-circle-layer";
+export const VIDEO_CURSOR_LAYER_ID = "video-cursor-layer";
+export const VIDEO_CURSOR_SYMBOL_LAYER_ID = "video-cursor-symbol-layer";
 
 // ---------------------------------------------------------------------------
 // Color constants used in style specs
@@ -305,14 +315,103 @@ export const DATA_MARKERS_STYLE = {
   },
 };
 
-export const VIDEO_CURSOR_SOURCE_ID = "video-cursor-source";
-export const VIDEO_CURSOR_LAYER_ID = "video-cursor-layer";
+export const VIDEO_CURSOR_VARIANTS = Object.freeze({
+  CHEVRON_HALO: "chevron-halo",
+  CHEVRON_TRAIL: "chevron-trail",
+  PROGRESS_HEAD: "progress-head",
+  PROGRESS_HEAD_PULSE: "progress-head-pulse",
+  NAV_CIRCLE: "nav-circle",
+  PULSE_RING: "pulse-ring",
+  DOT: "dot",
+});
+
+export const VIDEO_CURSOR_DEFAULT_VARIANT = VIDEO_CURSOR_VARIANTS.CHEVRON_HALO;
+
+export const VIDEO_CURSOR_PROGRESS_STYLE = {
+  layout: {
+    "line-join": "round",
+    "line-cap": "round",
+  },
+  paint: {
+    "line-color": "#0f766e",
+    "line-width": 6,
+    "line-opacity": 0.72,
+  },
+};
+
+export const VIDEO_CURSOR_TRAIL_STYLE = {
+  layout: {
+    "line-join": "round",
+    "line-cap": "round",
+  },
+  paint: {
+    "line-color": "#f97316",
+    "line-width": 5,
+    "line-opacity": 0.82,
+  },
+};
+
+export const VIDEO_CURSOR_PULSE_STYLE = {
+  filter: ["==", ["get", "showPulse"], true],
+  paint: {
+    "circle-radius": ["get", "pulseRadius"],
+    "circle-color": ["get", "pulseColor"],
+    "circle-opacity": ["get", "pulseOpacity"],
+    "circle-stroke-color": "#ffffff",
+    "circle-stroke-width": 1,
+    "circle-stroke-opacity": 0.64,
+  },
+};
+
+export const VIDEO_CURSOR_HALO_STYLE = {
+  filter: ["==", ["get", "showHalo"], true],
+  paint: {
+    "circle-radius": 15,
+    "circle-color": "#ffffff",
+    "circle-opacity": 0.78,
+    "circle-stroke-color": "#0f766e",
+    "circle-stroke-width": 1.4,
+    "circle-stroke-opacity": 0.7,
+  },
+};
+
+export const VIDEO_CURSOR_NAV_CIRCLE_STYLE = {
+  filter: ["==", ["get", "showNavCircle"], true],
+  paint: {
+    "circle-radius": 12,
+    "circle-color": "#0f766e",
+    "circle-opacity": 0.96,
+    "circle-stroke-color": "#ffffff",
+    "circle-stroke-width": 2.5,
+  },
+};
 
 export const VIDEO_CURSOR_STYLE = {
+  filter: ["==", ["get", "showCore"], true],
   paint: {
-    "circle-radius": 9,
-    "circle-color": "#ff3d3d",
+    "circle-radius": ["get", "coreRadius"],
+    "circle-color": ["get", "coreColor"],
+    "circle-opacity": 0.96,
     "circle-stroke-color": "#ffffff",
-    "circle-stroke-width": 3,
+    "circle-stroke-width": ["get", "coreStrokeWidth"],
+  },
+};
+
+export const VIDEO_CURSOR_SYMBOL_STYLE = {
+  filter: ["==", ["get", "showSymbol"], true],
+  layout: {
+    "text-field": ["get", "symbol"],
+    "text-size": ["get", "symbolSize"],
+    "text-allow-overlap": true,
+    "text-ignore-placement": true,
+    "text-anchor": "center",
+    "text-rotation-alignment": "map",
+    "text-pitch-alignment": "map",
+    "text-rotate": ["get", "bearing"],
+  },
+  paint: {
+    "text-color": ["get", "symbolColor"],
+    "text-halo-color": "#ffffff",
+    "text-halo-width": 1.15,
   },
 };

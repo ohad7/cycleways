@@ -309,7 +309,17 @@
               35.64192395978628
             ],
             "name": "גשר הבניאס",
-            "description": "המעבר מעל הבניאס באיזור הזה עובר בשוליים של כביש. השוליים עצמם די רחבים, רק צריך לרכב בזהירות"
+            "description": "המעבר מעל הבניאס באיזור הזה עובר בשוליים של כביש. השוליים עצמם די רחבים, רק צריך לרכב בזהירות",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-dbc2c016-6f9ee817.webp",
+                "thumbnail": "public-data/poi-images/poi-dbc2c016-6f9ee817-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-dbc2c016-4bb5f9df.webp",
+                "thumbnail": "public-data/poi-images/poi-dbc2c016-4bb5f9df-thumb.webp"
+              }
+            ]
           }
         ]
       },
@@ -4257,7 +4267,17 @@
               35.6199385
             ],
             "name": "מושב נחלים",
-            "description": "מיקומו ההיסטורי של מושב נחלים הנטוש"
+            "description": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-23d6dbf0-325f9ead.webp",
+                "thumbnail": "public-data/poi-images/poi-23d6dbf0-325f9ead-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-23d6dbf0-07580bf2.webp",
+                "thumbnail": "public-data/poi-images/poi-23d6dbf0-07580bf2-thumb.webp"
+              }
+            ]
           }
         ]
       },
@@ -5053,8 +5073,12 @@
             "description": "מתחם מסעדות, בתי קפה וחנויות",
             "images": [
               {
-                "photo": "public-data/poi-images/poi-77f69a67-f1097ac6.webp",
-                "thumbnail": "public-data/poi-images/poi-77f69a67-f1097ac6-thumb.webp"
+                "photo": "public-data/poi-images/poi-77f69a67-3c7b3936.webp",
+                "thumbnail": "public-data/poi-images/poi-77f69a67-3c7b3936-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-77f69a67-c4064b12.webp",
+                "thumbnail": "public-data/poi-images/poi-77f69a67-c4064b12-thumb.webp"
               }
             ]
           }
@@ -23359,7 +23383,25 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-1eb44fd0",
+            "type": "viewpoint",
+            "information": "",
+            "location": [
+              33.2129776,
+              35.6428954
+            ],
+            "name": "תצפית לחרמון",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-1eb44fd0-4dd46f81.webp",
+                "thumbnail": "public-data/poi-images/poi-1eb44fd0-4dd46f81-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -23653,8 +23695,8 @@
             "description": "השביל כולו מלא פינות מנוחה ליד הבניאס, יש המון פינות מוצלות והמים זורמים כל השנה בטמפרטורות נמוכות",
             "images": [
               {
-                "photo": "public-data/poi-images/poi-38b469d3-28c48da0.webp",
-                "thumbnail": "public-data/poi-images/poi-38b469d3-28c48da0-thumb.webp"
+                "photo": "public-data/poi-images/poi-38b469d3-eadbb56a.webp",
+                "thumbnail": "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp"
               }
             ]
           }
@@ -42413,7 +42455,45 @@
               35.621684
             ],
             "name": "יער מאכל קורן",
-            "description": "מעבר יפהפה ליד נחל קורן אל יער מאכל"
+            "description": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-e144a450-8d7e7468.webp",
+                "thumbnail": "public-data/poi-images/poi-e144a450-8d7e7468-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-e144a450-193d6660.webp",
+                "thumbnail": "public-data/poi-images/poi-e144a450-193d6660-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-e144a450-bed713bd.webp",
+                "thumbnail": "public-data/poi-images/poi-e144a450-bed713bd-thumb.webp"
+              }
+            ]
+          },
+          {
+            "id": "poi-7442a920",
+            "type": "viewpoint",
+            "information": "מצפה קורן, לזכרו של ניר פופקו",
+            "location": [
+              33.22658505087399,
+              35.62202280888957
+            ],
+            "name": "מצפה קורן",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-7442a920-eaed8fae.webp",
+                "thumbnail": "public-data/poi-images/poi-7442a920-eaed8fae-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-7442a920-68ca9d3e.webp",
+                "thumbnail": "public-data/poi-images/poi-7442a920-68ca9d3e-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-7442a920-6dcff0f6.webp",
+                "thumbnail": "public-data/poi-images/poi-7442a920-6dcff0f6-thumb.webp"
+              }
+            ]
           }
         ]
       },
@@ -98995,7 +99075,34 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-53d4e045",
+            "type": "river",
+            "information": "גשר להולכי רגל מעל החצבאני",
+            "location": [
+              33.224609,
+              35.614702
+            ],
+            "name": "גשר מעל החצבאני",
+            "description": "גשר להולכי רגל מעל החצבאני. פינות ישיבה נחמדות וגישה לגשר קטן מעל שלושה נחלים: נחל עיון, נחל דן והחצבאני",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-53d4e045-24f5d79e.webp",
+                "thumbnail": "public-data/poi-images/poi-53d4e045-24f5d79e-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-53d4e045-bf53a6bc.webp",
+                "thumbnail": "public-data/poi-images/poi-53d4e045-bf53a6bc-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-53d4e045-67debd43.webp",
+                "thumbnail": "public-data/poi-images/poi-53d4e045-67debd43-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",

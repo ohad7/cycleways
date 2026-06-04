@@ -8,6 +8,7 @@ export default function SovevBeitHillel() {
       kicker="גליל עליון · רכיבה רגועה"
       difficultyLabel="קל"
       surfaceLabel="סלול"
+      videoCursorVariant="chevron-halo"
       intro={{
         kicker: "רכיבה רגועה בגליל העליון",
         heading: "מה מחכה בדרך",

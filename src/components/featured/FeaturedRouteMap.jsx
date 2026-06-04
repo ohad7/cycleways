@@ -21,6 +21,7 @@ export default function FeaturedRouteMapSlot({
   autoResetAfterInteraction = false,
   autoResetDelayMs = 8000,
   routeFitPadding,
+  videoCursorVariant = 1,
 }) {
   const isMobile = useIsMobile();
   const {
@@ -32,6 +33,7 @@ export default function FeaturedRouteMapSlot({
     requestRouteFit,
     routeFitRequest,
     videoCursor,
+    videoPlaying,
     handleRouteClick,
     handleDataMarkerClick,
     playerPauseRef,
@@ -135,6 +137,8 @@ export default function FeaturedRouteMapSlot({
       onDataMarkerClick={onDataMarkerSelect}
       onUserViewportChange={expandedMap ? undefined : handleUserViewportChange}
       videoCursor={videoCursor}
+      videoCursorVariant={videoCursorVariant}
+      videoPlaying={videoPlaying}
       onRouteClick={onRouteSelect}
     />
   );
