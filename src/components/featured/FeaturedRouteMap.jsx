@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import MapView from "../../map/MapView.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
+import { OVERLAY } from "./featuredLayout.js";
 import { useIsMobile } from "./useIsMobile.js";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
 
@@ -118,7 +119,7 @@ export default function FeaturedRouteMapSlot({
   // The in-shell "mobile" slot is the PiP map: shown on mobile, and on desktop
   // when the overlay layout is active. The "desktop" slot is the rail map:
   // shown only on the desktop default layout.
-  const overlay = mapLayout === "overlay";
+  const overlay = mapLayout === OVERLAY;
   if (variant === "mobile" && !(isMobile || overlay)) return null;
   if (variant === "desktop" && (isMobile || overlay)) return null;
 

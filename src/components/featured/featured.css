@@ -685,6 +685,28 @@
     border: 1px solid rgba(255, 255, 255, 0.4);
   }
 
+  /* The PiP reuses the desktop expand pill; shrink it to an icon-only button
+     (bottom-right) so its label doesn't crowd the small map. Mirrors mobile. */
+  .fv-playback--overlay .fv-mobile-map .featured-map-expand-btn {
+    top: auto;
+    bottom: 8px;
+    inset-inline-end: auto;
+    right: 8px;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    justify-content: center;
+    padding: 0;
+    border-color: rgba(253, 252, 248, 0.82);
+    background: rgba(16, 24, 32, 0.74);
+    color: #ffffff;
+  }
+
+  .fv-playback--overlay .fv-mobile-map .featured-map-expand-label {
+    display: none;
+  }
+
   /* Rail second row becomes the stats + elevation column. */
   .fv-playback--overlay .fv-side-elevation-wrap {
     display: flex;
