@@ -3,7 +3,10 @@ import {
   buildRouteGeometryFeatureCollection,
   buildRoutePointDragPreviewFeatureCollection,
   buildRouteDirectionPulseFeatureCollection,
+  buildVideoCursorLayerData,
   getRouteFeatureColor,
+  normalizeVideoCursorVariant,
+  VIDEO_CURSOR_VARIANTS,
 } from "../src/map/mapLayers.js";
 
 assert.equal(
@@ -131,6 +134,124 @@ assert.equal(
     0.5,
   );
   assert.equal(emptyPulse.features.length, 0, "invalid pulse input stays hidden");
+}
+
+assert.equal(
+  normalizeVideoCursorVariant(1),
+  VIDEO_CURSOR_VARIANTS.CHEVRON_HALO,
+  "cursor option 1 maps to chevron halo",
+);
+assert.equal(
+  normalizeVideoCursorVariant("5"),
+  VIDEO_CURSOR_VARIANTS.PULSE_RING,
+  "cursor option 5 maps to pulse ring",
+);
+assert.equal(
+  normalizeVideoCursorVariant("6"),
+  VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE,
+  "cursor option 6 maps to progress head pulse",
+);
+assert.equal(
+  normalizeVideoCursorVariant("progress-head"),
+  VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD,
+  "named cursor variants are accepted",
+);
+
+{
+  const route = [
+    { lat: 0, lng: 0 },
+    { lat: 0, lng: 0.01 },
+    { lat: 0.01, lng: 0.01 },
+  ];
+  const data = buildVideoCursorLayerData(
+    { lat: 0, lng: 0.005, fraction: 0.5 },
+    route,
+    "chevron-trail",
+  );
+  assert.equal(data.variant, VIDEO_CURSOR_VARIANTS.CHEVRON_TRAIL);
+  assert.equal(data.cursor.features.length, 1, "cursor point is visible");
+  assert.equal(data.trail.features.length, 1, "trail variant emits a route line");
+  assert.equal(data.progress.features.length, 0, "trail variant does not emit progress");
+  assert.equal(
+    data.cursor.features[0].properties.showSymbol,
+    true,
+    "directional variants render a symbol",
+  );
+  assert.ok(
+    Number.isFinite(data.cursor.features[0].properties.bearing),
+    "directional variants get a computed bearing",
+  );
+}
+
+{
+  const route = [
+    { lat: 0, lng: 0 },
+    { lat: 0, lng: 0.01 },
+    { lat: 0.01, lng: 0.01 },
+  ];
+  const data = buildVideoCursorLayerData(
+    { lat: 0, lng: 0.005, fraction: 0.5 },
+    route,
+    "progress-head",
+  );
+  assert.equal(data.progress.features.length, 1, "progress variant emits a route line");
+  assert.equal(data.trail.features.length, 0, "progress variant has no trail line");
+  assert.equal(
+    data.cursor.features[0].properties.showCore,
+    true,
+    "progress variant keeps a compact head marker",
+  );
+}
+
+{
+  const data = buildVideoCursorLayerData(
+    { lat: 0, lng: 0, fraction: 0.1 },
+    [],
+    "pulse-ring",
+  );
+  assert.equal(data.trail.features.length, 0, "missing geometry hides route-attached lines");
+  assert.equal(
+    data.cursor.features[0].properties.showPulse,
+    true,
+    "pulse variant sets the pulse layer flag",
+  );
+}
+
+{
+  const route = [
+    { lat: 0, lng: 0 },
+    { lat: 0, lng: 0.01 },
+    { lat: 0.01, lng: 0.01 },
+  ];
+  const data = buildVideoCursorLayerData(
+    { lat: 0, lng: 0.005, fraction: 0.5 },
+    route,
+    "progress-head-pulse",
+  );
+  assert.equal(
+    data.variant,
+    VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE,
+    "combined variant is normalized",
+  );
+  assert.equal(
+    data.progress.features.length,
+    1,
+    "combined variant emits the progress route line",
+  );
+  assert.equal(
+    data.cursor.features[0].properties.showPulse,
+    true,
+    "combined variant enables the pulse layer",
+  );
+  assert.ok(
+    data.cursor.features[0].properties.pulseRadius < 23,
+    "combined variant uses a smaller static pulse than pulse-ring",
+  );
+  assert.equal(
+    data.cursor.features[0].properties.symbolColor,
+    "#ffffff",
+    "combined variant keeps the directional progress head",
+  );
 }
 
 {

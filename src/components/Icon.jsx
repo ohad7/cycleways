@@ -52,6 +52,58 @@ const ICONS = {
       />
     </>
   ),
+  "download-outline": (
+    <>
+      <path
+        d="M336 176h40a40 40 0 0140 40v208a40 40 0 01-40 40H136a40 40 0 01-40-40V216a40 40 0 0140-40h40"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+      <path
+        d="M176 272l80 80 80-80M256 48v288"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+    </>
+  ),
+  "create-outline": (
+    <>
+      <path
+        d="M352 64l96 96-256 256H96v-96L352 64z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+      <path
+        d="M304 112l96 96"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+    </>
+  ),
+  "play-circle-outline": (
+    <>
+      <path
+        d="M256 48C141.13 48 48 141.13 48 256s93.13 208 208 208 208-93.13 208-208S370.87 48 256 48z"
+        fill="none"
+        stroke="currentColor"
+        strokeMiterlimit="10"
+        strokeWidth="32"
+      />
+      <path d="M224 176l112 80-112 80V176z" fill="currentColor" />
+    </>
+  ),
   "trash-outline": (
     <>
       <path

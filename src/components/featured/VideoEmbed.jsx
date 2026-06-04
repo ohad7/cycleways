@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { galleryImageSlides } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import { previewSlideForCursor } from "./routePoiStoryData.js";
+import RouteProgressDistance from "./RouteProgressDistance.jsx";
 import { loadYouTubeIframeApi } from "./youtubeIframeApi.js";
 import { createVideoSync } from "./videoSync.js";
 
@@ -40,6 +41,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
     setVideoPlaying,
     videoSyncRef,
     playerSeekRef,
+    playerPlayRef,
     playerPauseRef,
   } = useFeaturedRoute();
   const [data, setData] = useState(null);
@@ -247,6 +249,9 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
             timeoutId = null;
             playerRef.current = player;
             playerSeekRef.current = (t) => seekToTime(t);
+            playerPlayRef.current = () => {
+              if (typeof player.playVideo === "function") player.playVideo();
+            };
             playerPauseRef.current = () => {
               if (typeof player.pauseVideo === "function") player.pauseVideo();
             };
@@ -414,6 +419,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
       }
       playerRef.current = null;
       playerSeekRef.current = null;
+      playerPlayRef.current = null;
       playerPauseRef.current = null;
       setIsPlaying(false);
       setIsPlayerReady(false);
@@ -422,7 +428,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
       setVideoPlaying(false);
       setVideoCursor(null);
     };
-  }, [data, emitCursorForTime, playerPauseRef, playerSeekRef, seekToTime, setVideoCursor, setVideoPlaying, videoSyncRef]);
+  }, [data, emitCursorForTime, playerPauseRef, playerPlayRef, playerSeekRef, seekToTime, setVideoCursor, setVideoPlaying, videoSyncRef]);
 
   if (status !== "ready" || !data) return null;
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -472,6 +478,10 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
           <span className="fv-video-time">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
+          <div className="fv-video-progress-distance" aria-label="מרחק מההתחלה">
+            <span>מרחק מההתחלה</span>
+            <RouteProgressDistance className="fv-video-progress-value" />
+          </div>
         </div>
       </div>
     </section>

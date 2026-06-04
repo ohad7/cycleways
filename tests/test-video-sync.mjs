@@ -70,8 +70,8 @@ assert.throws(
   /last keyframe.*videoDuration/i,
 );
 
-// Sparse coverage (first > 0, last < duration) is now ACCEPTED;
-// runtime clamps the marker to first/last positions outside the range.
+// Sparse coverage (first > 0, last < duration) is accepted; runtime adds
+// virtual route start/end anchors so the video begins at 0m and ends at 100%.
 const sparseSync = createVideoSync({
   keyframes: [
     { t: 2, lat: 33.0, lng: 35.0 },
@@ -81,9 +81,25 @@ const sparseSync = createVideoSync({
   routeGeometry: simpleRoute,
 });
 const before = sparseSync.timeToPosition(0);
-assert.ok(Math.abs(before.lng - 35.0) < 1e-9, "t=0 clamps to first keyframe position");
+assert.ok(Math.abs(before.lng - 35.0) < 1e-9, "t=0 anchors to route start");
+assert.equal(before.fraction, 0, "t=0 fraction is route start");
 const after = sparseSync.timeToPosition(10);
-assert.ok(Math.abs(after.lng - 35.01) < 1e-9, "t=duration clamps to last keyframe position");
+assert.ok(Math.abs(after.lng - 35.01) < 1e-9, "t=duration anchors to route end");
+assert.equal(after.fraction, 1, "t=duration fraction is route end");
+
+// If an imprecise t=0 keyframe snaps down-route, the virtual boundary still
+// wins so the opening distance reads 0m.
+const impreciseStartSync = createVideoSync({
+  keyframes: [
+    { t: 0, lat: 33.0, lng: 35.005 },
+    { t: 10, lat: 33.0, lng: 35.01 },
+  ],
+  videoDuration: 10,
+  routeGeometry: simpleRoute,
+});
+const impreciseStart = impreciseStartSync.timeToPosition(0);
+assert.equal(impreciseStart.fraction, 0);
+assert.equal(impreciseStartSync.positionToTime(0), 0);
 
 // Route too short (< 2 points) — must throw
 assert.throws(

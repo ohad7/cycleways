@@ -116,21 +116,39 @@ export function createVideoSync(input) {
     return { t: k.t, fraction: snap.fraction };
   });
 
+  if (byTime[0].t > 0) {
+    byTime.unshift({ t: 0, fraction: 0 });
+  } else {
+    byTime[0] = { ...byTime[0], fraction: 0 };
+  }
+
+  const lastIndex = byTime.length - 1;
+  if (byTime[lastIndex].t < videoDuration) {
+    byTime.push({ t: videoDuration, fraction: 1 });
+  } else {
+    byTime[lastIndex] = { ...byTime[lastIndex], fraction: 1 };
+  }
+
   // For positionToTime we need byTime sorted by fraction. Defensive copy + sort.
   const byFraction = byTime
     .map(({ t, fraction }) => ({ t, fraction }))
-    .sort((a, b) => a.fraction - b.fraction);
+    .sort((a, b) => (a.fraction - b.fraction) || (a.t - b.t));
 
   function positionToTime(fraction) {
     const clamped = Math.max(0, Math.min(1, fraction));
-    let lo = 0;
-    let hi = byFraction.length - 1;
+    if (clamped <= byFraction[0].fraction) return byFraction[0].t;
+    if (clamped >= byFraction[byFraction.length - 1].fraction) {
+      return byFraction[byFraction.length - 1].t;
+    }
+
+    let lo = -1;
+    let hi = byFraction.length;
     while (hi - lo > 1) {
       const mid = (lo + hi) >> 1;
-      if (byFraction[mid].fraction <= clamped) lo = mid;
-      else hi = mid;
+      if (byFraction[mid].fraction >= clamped) hi = mid;
+      else lo = mid;
     }
-    const a = byFraction[lo];
+    const a = byFraction[Math.max(0, hi - 1)];
     const b = byFraction[hi];
     const span = b.fraction - a.fraction;
     let localT = span > 0 ? (clamped - a.fraction) / span : 0;

@@ -6,8 +6,16 @@ import {
   findClosestElevationPoint,
   formatLegacyDistance,
 } from "@cycleways/core/ui/elevationProfile.js";
+import { elevationCursorX } from "./elevationCursor.js";
 
-export default function ElevationProfile({ animator, distance, geometry, onElevationHover }) {
+export default function ElevationProfile({
+  animator,
+  distance,
+  geometry,
+  onElevationHover,
+  onElevationSelect = null,
+  cursorFraction = null,
+}) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
   const markerLineRef = useRef(null);
   const animatorMarkerEnabledRef = useRef(true);
@@ -31,6 +39,24 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
     return unsubscribe;
   }, [animator]);
 
+  // When there is no animator (e.g. featured pages), drive the marker line from
+  // an external cursor fraction (the video/map position). With an animator the
+  // animator owns the marker, so this effect is a no-op for the planner.
+  useEffect(() => {
+    if (animator) return undefined;
+    const line = markerLineRef.current;
+    if (!line) return undefined;
+    const x = elevationCursorX(cursorFraction);
+    if (x === null) {
+      line.setAttribute("opacity", "0");
+    } else {
+      line.setAttribute("x1", x);
+      line.setAttribute("x2", x);
+      line.setAttribute("opacity", "1");
+    }
+    return undefined;
+  }, [animator, cursorFraction]);
+
   useEffect(() => {
     animatorMarkerEnabledRef.current = true;
   }, [geometry]);
@@ -47,7 +73,7 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
     if (!closestPoint) return;
 
     const payload = buildElevationHoverPayload(closestPoint);
-    if (animatorMarkerEnabledRef.current) {
+    if (animator && animatorMarkerEnabledRef.current) {
       animatorMarkerEnabledRef.current = false;
       const line = markerLineRef.current;
       if (line) line.setAttribute("opacity", "0");
@@ -59,6 +85,17 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
   const clearHover = () => {
     setHoverInfo(null);
     onElevationHover?.(null);
+  };
+
+  const handleSelect = (event) => {
+    if (!onElevationSelect) return;
+    const clientX = event.changedTouches?.[0]?.clientX ?? event.clientX;
+    if (!Number.isFinite(clientX)) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const xPercent = ((clientX - rect.left) / rect.width) * 100;
+    const closestPoint = findClosestElevationPoint(profile.elevationData, xPercent);
+    if (!closestPoint) return;
+    onElevationSelect(buildElevationHoverPayload(closestPoint));
   };
 
   return (
@@ -128,6 +165,7 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
           onTouchStart={handleInteraction}
           onTouchMove={handleInteraction}
           onTouchEnd={clearHover}
+          onClick={handleSelect}
         />
       </div>
       <div className="react-elevation-footer">
@@ -150,4 +188,4 @@ export default function ElevationProfile({ animator, distance, geometry, onEleva
     </div>
   );
 }
-export { formatLegacyDistance };
+export { formatLegacyDistance, elevationCursorX };

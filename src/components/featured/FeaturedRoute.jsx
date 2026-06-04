@@ -35,6 +35,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
   const [videoPlaying, setVideoPlaying] = useState(false);
   const videoSyncRef = useRef(null);
   const playerSeekRef = useRef(null);
+  const playerPlayRef = useRef(null);
   const playerPauseRef = useRef(null);
   const wasVideoPlayingRef = useRef(false);
 
@@ -54,6 +55,18 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       cancelled = true;
     };
   }, [slug]);
+
+  // Set the document title to the route name so each featured page is
+  // distinguishable (and shareable) rather than inheriting the front-page
+  // title. Restore the original on unmount when navigating away.
+  useEffect(() => {
+    if (!meta?.name) return undefined;
+    const previousTitle = document.title;
+    document.title = `${meta.name} | מפת שבילי אופניים - גליל עליון וגולן`;
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [meta?.name]);
 
   useEffect(() => {
     if (!meta) return;
@@ -191,15 +204,17 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       videoCursor,
       setVideoCursor,
       setVideoCursorFromFraction,
+      videoPlaying,
       setVideoPlaying,
       seekVideoToFraction,
       videoSyncRef,
       playerSeekRef,
+      playerPlayRef,
       playerPauseRef,
       handleRouteClick,
       handleDataMarkerClick,
     }),
-    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
+    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, videoPlaying, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;

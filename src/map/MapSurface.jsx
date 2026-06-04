@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   addRouteNetworkLayers,
+  clearVideoCursorLayer,
   clearRouteDirectionPulseLayer,
   clearRouteNetworkLayers,
   DATA_MARKERS_LAYER_ID,
@@ -74,6 +75,8 @@ function MapSurface({
   searchHighlight,
   selectedRoutePointIndex = null,
   videoCursor = null,
+  videoCursorVariant = 1,
+  videoPlaying = false,
 }) {
   // Translate the mode into an explicit capability set. In planner mode every
   // flag is true, so every gated effect below behaves exactly as before.
@@ -211,6 +214,7 @@ function MapSurface({
         try {
           clearSearchHighlight(map, searchMarkerRef);
           clearHoverPreviewMarker(hoverPreviewMarkerRef);
+          clearVideoCursorLayer(map);
           if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
           }
@@ -402,8 +406,19 @@ function MapSurface({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready" || !caps.videoCursorLayer) return;
-    syncVideoCursorLayer(map, videoCursor);
-  }, [videoCursor, status, caps.videoCursorLayer]);
+    syncVideoCursorLayer(map, videoCursor, {
+      playing: videoPlaying,
+      routeGeometry: routeGeometryRef.current,
+      variant: videoCursorVariant,
+    });
+  }, [
+    videoCursor,
+    videoCursorVariant,
+    videoPlaying,
+    routeGeometry,
+    status,
+    caps.videoCursorLayer,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -13,8 +13,14 @@ assert.equal(
 // All layer/source IDs live in mapStyles — including the featured video cursor
 // IDs that are shared by MapSurface and mapLayers.
 assert.equal(typeof styles.VIDEO_CURSOR_SOURCE_ID, "string");
+assert.equal(typeof styles.VIDEO_CURSOR_TRAIL_SOURCE_ID, "string");
+assert.equal(typeof styles.VIDEO_CURSOR_PROGRESS_SOURCE_ID, "string");
 assert.equal(typeof styles.VIDEO_CURSOR_LAYER_ID, "string");
+assert.equal(typeof styles.VIDEO_CURSOR_SYMBOL_LAYER_ID, "string");
 assert.equal(typeof styles.VIDEO_CURSOR_STYLE, "object");
+assert.equal(typeof styles.VIDEO_CURSOR_SYMBOL_STYLE, "object");
+assert.equal(typeof styles.VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD, "string");
+assert.equal(typeof styles.VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE, "string");
 
 // At least one extracted style spec is exported as plain, serializable data.
 const styleKeys = Object.keys(styles).filter((k) => k.endsWith("_STYLE"));
