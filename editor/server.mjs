@@ -509,6 +509,7 @@ export async function promoteKeyframesDraft({ slug, draftsDir, publicDir, routeP
 }
 
 const PASSES_NEAR_METERS = 500;
+const ROUTE_CIRCULAR_ENDPOINT_THRESHOLD_METERS = 100;
 
 function haversineMetersClassify(a, b) {
   const R = 6371000;
@@ -574,6 +575,43 @@ function distanceKmOf(polyline) {
   return total / 1000;
 }
 
+function geoJsonLineDistanceMeters(feature) {
+  const geometry = feature?.geometry;
+  const lines =
+    geometry?.type === "LineString"
+      ? [geometry.coordinates]
+      : geometry?.type === "MultiLineString"
+        ? geometry.coordinates
+        : [];
+  let total = 0;
+  for (const line of lines) {
+    if (!Array.isArray(line)) continue;
+    for (let i = 1; i < line.length; i++) {
+      const prev = line[i - 1];
+      const current = line[i];
+      if (!Array.isArray(prev) || !Array.isArray(current)) continue;
+      total += haversineMetersClassify(
+        { lng: Number(prev[0]), lat: Number(prev[1]) },
+        { lng: Number(current[0]), lat: Number(current[1]) },
+      );
+    }
+  }
+  return total;
+}
+
+function routeShapeOf(polyline) {
+  const start = polyline[0];
+  const end = polyline[polyline.length - 1];
+  const endpointDistanceM = Math.round(haversineMetersClassify(start, end));
+  return {
+    type:
+      endpointDistanceM <= ROUTE_CIRCULAR_ENDPOINT_THRESHOLD_METERS
+        ? "circular"
+        : "one_way",
+    endpointDistanceM,
+  };
+}
+
 function elevationDeltas(polyline) {
   let gain = 0, loss = 0;
   for (let i = 1; i < polyline.length; i++) {
@@ -586,8 +624,36 @@ function elevationDeltas(polyline) {
 
 function difficultyOf(distanceKm, elevationGainM) {
   if (elevationGainM > 500 || distanceKm > 40) return "hard";
-  if (elevationGainM >= 150 || distanceKm >= 25) return "moderate";
+  if (elevationGainM >= 150 || distanceKm >= 20) return "moderate";
   return "easy";
+}
+
+function surfaceTypeOf(roadMix) {
+  const pavedShare = (Number(roadMix?.paved) || 0) + (Number(roadMix?.road) || 0);
+  const dirtShare = Number(roadMix?.dirt) || 0;
+  if (pavedShare >= 0.8) return "paved";
+  if (dirtShare >= 0.8) return "dirt";
+  return "mixed";
+}
+
+function normalizeRoadType(value) {
+  if (value === "paved" || value === "dirt" || value === "road") return value;
+  return "paved";
+}
+
+function buildSegmentFeatureLookup(geoJsonData) {
+  const lookup = new Map();
+  const features = Array.isArray(geoJsonData?.features) ? geoJsonData.features : [];
+  for (const feature of features) {
+    const name = feature?.properties?.name;
+    if (typeof name !== "string" || !name) continue;
+    lookup.set(name, {
+      roadType: normalizeRoadType(feature.properties?.roadType),
+      distanceM: geoJsonLineDistanceMeters(feature),
+      quality: feature.properties?.quality,
+    });
+  }
+  return lookup;
 }
 
 function styleOf({ difficulty, roadMix, qualityScore, distanceKm }) {
@@ -722,6 +788,7 @@ export function recomputeCatalogMetadata(draft, refs) {
 export async function buildLiveDecodeRoute() {
   const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const segmentFeatureLookup = buildSegmentFeatureLookup(geoJsonData);
   const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets({ log });
   const manager = await createRouteManager(
     RouteManagerClass,
@@ -737,23 +804,27 @@ export async function buildLiveDecodeRoute() {
       }
       const counts = { paved: 0, dirt: 0, road: 0 };
       let qualitySum = 0;
-      let qualityN = 0;
+      let qualityWeight = 0;
       for (const segName of snapshot.selectedSegments || []) {
-        const segData = segmentsData[segName];
-        const rt = segData?.roadType || "paved";
-        if (counts[rt] !== undefined) counts[rt] += 1;
-        else counts.paved += 1;
-        const q = segData?.quality?.overall;
+        const segData = segmentsData[segName] || {};
+        const featureData = segmentFeatureLookup.get(segName) || {};
+        const rt = normalizeRoadType(segData.roadType || featureData.roadType);
+        const weight =
+          Number.isFinite(featureData.distanceM) && featureData.distanceM > 0
+            ? featureData.distanceM
+            : 1;
+        counts[rt] += weight;
+        const q = segData?.quality?.overall ?? featureData?.quality?.overall;
         if (Number.isFinite(q)) {
-          qualitySum += q;
-          qualityN += 1;
+          qualitySum += q * weight;
+          qualityWeight += weight;
         }
       }
       const total = counts.paved + counts.dirt + counts.road;
       const roadTypeFractions = total > 0
         ? { paved: counts.paved / total, dirt: counts.dirt / total, road: counts.road / total }
         : { paved: 1, dirt: 0, road: 0 };
-      const qualityScore = qualityN > 0 ? qualitySum / qualityN : 0;
+      const qualityScore = qualityWeight > 0 ? qualitySum / qualityWeight : 0;
       return {
         geometry: snapshot.geometry,
         roadTypeFractions,
@@ -896,12 +967,14 @@ export function classifyRoute(input, refs) {
   }
   const distanceKm = distanceKmOf(geometry);
   const { elevationGainM, elevationLossM } = elevationDeltas(geometry);
+  const routeShape = routeShapeOf(geometry);
   const difficulty = difficultyOf(distanceKm, elevationGainM);
   const roadMix = {
     paved: roadTypeFractions?.paved ?? 0,
     dirt: roadTypeFractions?.dirt ?? 0,
     road: roadTypeFractions?.road ?? 0,
   };
+  const surfaceType = surfaceTypeOf(roadMix);
   const style = styleOf({
     difficulty,
     roadMix,
@@ -922,6 +995,8 @@ export function classifyRoute(input, refs) {
     passesNear,
     difficulty,
     style,
+    routeShape,
+    surfaceType,
     roadMix,
     qualityScore: qualityScore ?? 0,
   };
@@ -2700,9 +2775,9 @@ const server = createServer(async (request, response) => {
             zones,
             decodeRoute,
           });
-          // The promoted catalog determines which routes are featured. Drop the
+          // The promoted catalog determines the recommended route set. Drop the
           // long-lived decode caches so snapshots regenerate against the freshly
-          // promoted catalog/assets, then rebuild every featured snapshot (with
+          // promoted catalog/assets, then rebuild every route snapshot (with
           // orphan cleanup handled inside the builder).
           invalidateFeaturedAssetCache();
           let snapshots;

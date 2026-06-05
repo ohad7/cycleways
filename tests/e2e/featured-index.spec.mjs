@@ -9,12 +9,22 @@ test("/featured alias lists recommended routes", async ({ page }) => {
   await page.goto("/featured/");
   await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "בניאס" })).toBeVisible();
-  await expect(page.locator(".route-card__media img")).toHaveCount(2);
-  await page.waitForFunction(() =>
-    Array.from(document.querySelectorAll(".route-card__media img")).every(
-      (img) => img.complete && img.naturalWidth > 0,
-    ),
-  );
+  await expect(
+    page.locator(".route-card", { hasText: "סובב בית הלל" }).locator(".route-card__badges"),
+  ).toContainText("מעגלי");
+  await expect(
+    page.locator(".route-card", { hasText: "מסע בעקבות כובשי הגולן" }).locator(".route-card__badges"),
+  ).toContainText("חד כיווני");
+  const imageLocator = page.locator(".route-card__media img");
+  await expect(imageLocator).not.toHaveCount(0);
+  const imageCount = await imageLocator.count();
+  for (let i = 0; i < imageCount; i++) {
+    const image = imageLocator.nth(i);
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() =>
+      image.evaluate((img) => img.complete && img.naturalWidth > 0),
+    ).toBe(true);
+  }
   const images = await page.locator(".route-card__media img").evaluateAll((imgs) =>
     imgs.map((img) => ({
       currentSrc: img.currentSrc,
@@ -27,9 +37,11 @@ test("/featured alias lists recommended routes", async ({ page }) => {
 
 test("route card details open canonical /routes detail page", async ({ page }) => {
   await page.goto("/featured");
+  const card = page.locator(".route-card", { hasText: "סובב בית הלל" });
+  await expect(card.getByRole("link", { name: "פתח במפה" })).toHaveAttribute("href", /route=/);
   await page
     .locator(".route-card", { hasText: "סובב בית הלל" })
-    .getByRole("link", { name: "פרטים" })
+    .getByRole("link", { name: "פתח פרטי מסלול: סובב בית הלל" })
     .click();
   await expect(page).toHaveURL(/\/routes\/sovev-beit-hillel$/);
   await expect(page.locator(".featured-route-header h1")).toContainText("סובב בית הלל");

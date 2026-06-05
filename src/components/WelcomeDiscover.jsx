@@ -5,7 +5,7 @@ import { catalogFilter } from "./catalogFilter.js";
 const COMMON_CHIPS = [
   { axis: "difficulty", value: "easy",       label: "קל" },
   { axis: "difficulty", value: "moderate",   label: "בינוני" },
-  { axis: "difficulty", value: "hard",       label: "מאתגר" },
+  { axis: "difficulty", value: "hard",       label: "קשה" },
   { axis: "style",      value: "family",     label: "משפחתי" },
   { axis: "style",      value: "scenic",     label: "נוף" },
 ];
@@ -19,7 +19,7 @@ const ALL_FILTERS = {
   difficulty: [
     { value: "easy",     label: "קל" },
     { value: "moderate", label: "בינוני" },
-    { value: "hard",     label: "מאתגר" },
+    { value: "hard",     label: "קשה" },
   ],
   style: [
     { value: "family",      label: "משפחתי" },

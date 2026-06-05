@@ -1,13 +1,14 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { routeDifficultyLabel } from "@cycleways/core/data/catalog.js";
 
 const DIFFICULTY_LEVEL = { easy: 1, moderate: 2, hard: 3 };
-const DIFFICULTY_LABEL = { easy: "קל", moderate: "בינוני", hard: "מאתגר" };
 
 function DifficultyMeter({ difficulty }) {
   const level = DIFFICULTY_LEVEL[difficulty] ?? 0;
+  const label = routeDifficultyLabel(difficulty);
   return (
-    <span className="rc-difficulty" aria-label={`רמת קושי: ${DIFFICULTY_LABEL[difficulty] || difficulty}`}>
+    <span className="rc-difficulty" aria-label={`רמת קושי: ${label}`}>
       <span className="rc-difficulty__dots">
         {[1, 2, 3].map((i) => (
           <span
@@ -16,7 +17,7 @@ function DifficultyMeter({ difficulty }) {
           />
         ))}
       </span>
-      <span>{DIFFICULTY_LABEL[difficulty] || difficulty}</span>
+      <span>{label}</span>
     </span>
   );
 }

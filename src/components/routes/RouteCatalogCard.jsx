@@ -1,13 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { routeDisplayImage } from "@cycleways/core/data/catalog.js";
+import {
+  routeDisplayImage,
+  routeDifficultyLabel,
+  routeShapeLabel,
+  routeSurfaceLabel,
+} from "@cycleways/core/data/catalog.js";
 import { routeImageSrc } from "./routeImageSrc.js";
-
-const DIFFICULTY_LABEL = {
-  easy: "קל",
-  moderate: "בינוני",
-  hard: "מאתגר",
-};
 
 const STYLE_LABEL = {
   family: "משפחתי",
@@ -24,19 +23,6 @@ function formatElevation(meters) {
   return Number.isFinite(Number(meters)) ? `${Math.round(Number(meters))} מ׳ טיפוס` : "";
 }
 
-function surfaceLabel(roadMix) {
-  if (!roadMix || typeof roadMix !== "object") return "";
-  const entries = [
-    ["paved", "סלול"],
-    ["dirt", "עפר"],
-    ["road", "כביש"],
-  ]
-    .map(([key, label]) => [Number(roadMix[key]) || 0, label])
-    .filter(([value]) => value > 0);
-  entries.sort((a, b) => b[0] - a[0]);
-  return entries[0]?.[1] || "";
-}
-
 export default function RouteCatalogCard({
   entry,
   places = [],
@@ -50,16 +36,22 @@ export default function RouteCatalogCard({
     .filter(Boolean)
     .slice(0, 4);
   const plannerHref = entry.route ? `/?route=${encodeURIComponent(entry.route)}` : "/";
+  const shape = routeShapeLabel(entry);
   const stats = [
     formatDistance(entry.distanceKm),
     formatElevation(entry.elevationGainM),
-    DIFFICULTY_LABEL[entry.difficulty] || entry.difficulty,
-    surfaceLabel(entry.roadMix),
+    routeDifficultyLabel(entry),
+    routeSurfaceLabel(entry),
     STYLE_LABEL[entry.style] || entry.style,
   ].filter(Boolean);
 
   return (
     <article className="route-card">
+      <Link
+        className="route-card__details-link"
+        to={`/routes/${entry.slug}`}
+        aria-label={`פתח פרטי מסלול: ${entry.name}`}
+      />
       <div className="route-card__media">
         {image ? (
           <img
@@ -76,7 +68,7 @@ export default function RouteCatalogCard({
           <Heading>{entry.name}</Heading>
           <div className="route-card__badges" aria-label="מאפייני מסלול">
             {hasStory && <span>כתבה</span>}
-            {entry.end ? null : <span>מעגלי</span>}
+            {shape && <span>{shape}</span>}
           </div>
         </header>
         {entry.summary && <p className="route-card__summary">{entry.summary}</p>}

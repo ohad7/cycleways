@@ -7,7 +7,7 @@ export default function BaniasGanHatsafon() {
       slug="banias-gan-hatsafon"
       kicker="גליל עליון · טופ מסלול"
       difficultyLabel="בינוני"
-      surfaceLabel="שטח/סלול"
+      surfaceLabel="סלול/שטח"
       videoCursorVariant="progress-head-pulse"
       intro={{
         kicker: "שבילי האופניים היפים ביותר",

@@ -6,7 +6,7 @@ import { useIsMobile } from "./useIsMobile.js";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
 
 function scrollRoutePlayerIntoView() {
-  const target = document.querySelector(".fv-video-shell");
+  const target = document.querySelector("[data-route-stage]") || document.querySelector(".fv-video-shell");
   if (!target) return;
   const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   target.scrollIntoView({

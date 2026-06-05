@@ -27,6 +27,60 @@ export function findCatalogEntryBySlug(catalog, slug) {
 
 export const findRouteCatalogEntryBySlug = findCatalogEntryBySlug;
 
+export function routeShapeType(entry) {
+  const shape = entry?.routeShape;
+  const value = typeof shape === "string" ? shape : shape?.type;
+  if (value === "circular" || value === "loop") return "circular";
+  if (value === "one_way" || value === "one-way" || value === "point_to_point") {
+    return "one_way";
+  }
+  return null;
+}
+
+export function routeShapeLabel(entry) {
+  const type = routeShapeType(entry);
+  if (type === "circular") return "מעגלי";
+  if (type === "one_way") return "חד כיווני";
+  return "";
+}
+
+export function routeDifficultyLabel(entryOrDifficulty) {
+  const difficulty =
+    typeof entryOrDifficulty === "string"
+      ? entryOrDifficulty
+      : entryOrDifficulty?.difficulty;
+  if (difficulty === "easy") return "קל";
+  if (difficulty === "moderate") return "בינוני";
+  if (difficulty === "hard") return "קשה";
+  return difficulty || "";
+}
+
+export function routeSurfaceType(entry) {
+  const explicit = entry?.surfaceType || entry?.surface;
+  if (explicit === "paved" || explicit === "asphalt") return "paved";
+  if (explicit === "mixed" || explicit === "paved_dirt" || explicit === "paved/dirt") {
+    return "mixed";
+  }
+  if (explicit === "dirt" || explicit === "gravel" || explicit === "offroad") return "dirt";
+
+  const roadMix = entry?.roadMix;
+  if (!roadMix || typeof roadMix !== "object") return null;
+  const pavedShare = (Number(roadMix.paved) || 0) + (Number(roadMix.road) || 0);
+  const dirtShare = Number(roadMix.dirt) || 0;
+  if (pavedShare >= 0.8) return "paved";
+  if (dirtShare >= 0.8) return "dirt";
+  if (pavedShare > 0 || dirtShare > 0) return "mixed";
+  return null;
+}
+
+export function routeSurfaceLabel(entry) {
+  const type = routeSurfaceType(entry);
+  if (type === "paved") return "סלול";
+  if (type === "mixed") return "סלול/שטח";
+  if (type === "dirt") return "שטח";
+  return "";
+}
+
 function normalizedCatalogImage(image) {
   if (!image || typeof image !== "object") return null;
   const photo = typeof image.photo === "string" ? image.photo.trim() : "";

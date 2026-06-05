@@ -5,15 +5,33 @@ import { catalogFilter } from "../components/catalogFilter.js";
 import { hasRouteStory, loadRecommendedRouteList } from "../featured/index.js";
 import "../components/routes/routes.css";
 
-const FILTER_CHIPS = [
-  { axis: "difficulty", value: "easy", label: "קל" },
-  { axis: "difficulty", value: "moderate", label: "בינוני" },
-  { axis: "difficulty", value: "hard", label: "מאתגר" },
-  { axis: "style", value: "family", label: "משפחתי" },
-  { axis: "style", value: "scenic", label: "נוף" },
-  { axis: "distance", value: "short", label: "עד 10 ק״מ" },
-  { axis: "distance", value: "medium", label: "10-25 ק״מ" },
-  { axis: "distance", value: "long", label: "25 ק״מ ומעלה" },
+const FILTER_GROUPS = [
+  {
+    axis: "difficulty",
+    label: "רמת קושי",
+    options: [
+      { value: "easy", label: "קל" },
+      { value: "moderate", label: "בינוני" },
+      { value: "hard", label: "קשה" },
+    ],
+  },
+  {
+    axis: "style",
+    label: "אופי המסלול",
+    options: [
+      { value: "family", label: "משפחתי" },
+      { value: "scenic", label: "נוף" },
+    ],
+  },
+  {
+    axis: "distance",
+    label: "אורך",
+    options: [
+      { value: "short", label: "עד 10 ק״מ" },
+      { value: "medium", label: "10-25 ק״מ" },
+      { value: "long", label: "25 ק״מ ומעלה" },
+    ],
+  },
 ];
 
 function emptyFilters() {
@@ -70,6 +88,10 @@ export default function RoutesIndexPage() {
     () => sortRoutes(catalogFilter(entries, filters)),
     [entries, filters],
   );
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).reduce((sum, set) => sum + set.size, 0),
+    [filters],
+  );
 
   const toggleFilter = (axis, value) => {
     setFilters((current) => {
@@ -79,37 +101,65 @@ export default function RoutesIndexPage() {
       return { ...current, [axis]: next };
     });
   };
+  const clearFilters = () => setFilters(emptyFilters());
 
   return (
     <PageShell>
       <main className="routes-page">
         <div className="routes-page__inner">
           <header className="routes-page__header">
-            <h1>מסלולים מומלצים</h1>
-            <p>
-              מאגר המסלולים המומלצים שלנו בגליל העליון והגולן. כל מסלול נפתח
-              במפה לתכנון, שיתוף והורדת GPX.
-            </p>
-            <span className="routes-page__count">
-              {filtered.length} מתוך {entries.length} מסלולים
-            </span>
+            <div className="routes-page__header-copy">
+              <span className="routes-page__eyebrow">מאגר המסלולים</span>
+              <h1>מסלולים מומלצים</h1>
+              <p>
+                מאגר המסלולים המומלצים שלנו בגליל העליון והגולן. כל מסלול נפתח
+                במפה לתכנון, שיתוף והורדת GPX.
+              </p>
+            </div>
+            <div className="routes-page__summary" aria-label="סיכום תוצאות">
+              <strong>{filtered.length}</strong>
+              <span>מתוך {entries.length} מסלולים</span>
+            </div>
           </header>
 
-          <div className="routes-page__filters" aria-label="סינון מסלולים">
-            {FILTER_CHIPS.map((chip) => {
-              const active = filters[chip.axis].has(chip.value);
-              return (
+          <section className="routes-page__filters" aria-label="סינון מסלולים">
+            <div className="routes-page__filters-header">
+              <h2>סינון מסלולים</h2>
+              {activeFilterCount > 0 && (
                 <button
-                  key={`${chip.axis}:${chip.value}`}
-                  className={`routes-page__filter${active ? " active" : ""}`}
+                  className="routes-page__filters-reset"
                   type="button"
-                  onClick={() => toggleFilter(chip.axis, chip.value)}
+                  onClick={clearFilters}
                 >
-                  {chip.label}
+                  נקה סינון
                 </button>
-              );
-            })}
-          </div>
+              )}
+            </div>
+            <div className="routes-page__filter-groups">
+              {FILTER_GROUPS.map((group) => (
+                <fieldset className="routes-page__filter-group" key={group.axis}>
+                  <legend>{group.label}</legend>
+                  <div className="routes-page__filter-options">
+                    {group.options.map((chip) => {
+                      const active = filters[group.axis].has(chip.value);
+                      return (
+                        <button
+                          key={`${group.axis}:${chip.value}`}
+                          className={`routes-page__filter${active ? " active" : ""}`}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => toggleFilter(group.axis, chip.value)}
+                        >
+                          <span className="routes-page__filter-mark" aria-hidden="true" />
+                          <span>{chip.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          </section>
 
           <div className="routes-page__grid">
             {filtered.map((entry) => (

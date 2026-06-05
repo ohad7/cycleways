@@ -28209,7 +28209,26 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-a96860fc",
+            "type": "viewpoint",
+            "information": "אחת התצפיות לחרמון היפות ביותר בארץ",
+            "location": [
+              33.156947,
+              35.627448
+            ],
+            "name": "תצפית לחרמון",
+            "description": "תצפית לחרמון על רק השדות של קיבוץ עמיר וכפר בלום. מומלץ להגיע בחורף כשהחרמון מושלג והשדות ירוקים",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-a96860fc-71a8e561.webp",
+                "thumbnail": "public-data/poi-images/poi-a96860fc-71a8e561-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -66741,7 +66760,26 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-c6c5fae3",
+            "type": "tree",
+            "information": "תצפית לעגורים",
+            "location": [
+              33.1097855,
+              35.6109355
+            ],
+            "name": "עגורים",
+            "description": "שימו לב: אין להיכנס לאגמון החולה בלי לשלם, הרכיבה מותרת בשביל החיצוני מחוץ לאגמון לכיוון הירדן או לירדן ההיסטורי",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-c6c5fae3-e663e2e7.webp",
+                "thumbnail": "public-data/poi-images/poi-c6c5fae3-e663e2e7-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -98334,12 +98372,21 @@
         "roadType": "dirt",
         "data": [
           {
-            "type": "warning",
+            "type": "river",
             "information": "שביל גישה נסתר למחלק",
             "location": [
-              33.235869,
+              33.235867,
               35.636375
-            ]
+            ],
+            "name": "המחלק",
+            "id": "poi-df4652b4",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-df4652b4-3f8a59d2.webp",
+                "thumbnail": "public-data/poi-images/poi-df4652b4-3f8a59d2-thumb.webp"
+              }
+            ],
+            "description": "שביל גישה נסתר מעט שמוביל למחלק של דפנה. מקום יפה ושקט. המחלק הוא סכר קטן שמחלק את מי נחל הדן בין קיבוץ דפנה והשדות החקלאיים"
           }
         ],
         "quality": {
@@ -98529,6 +98576,23 @@
             "location": [
               33.236529,
               35.630683
+            ]
+          },
+          {
+            "id": "poi-a76cdd1b",
+            "type": "river",
+            "information": "שביל גישה קצר למחלק של דפנה",
+            "location": [
+              33.23625831990057,
+              35.63572481429375
+            ],
+            "name": "המחלק",
+            "description": "שביל גישה נסתר מעט שמוביל למחלק של דפנה. מקום יפה ושקט. המחלק הוא סכר קטן שמחלק את מי נחל הדן בין קיבוץ דפנה והשדות החקלאיים",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-a76cdd1b-3f8a59d2.webp",
+                "thumbnail": "public-data/poi-images/poi-a76cdd1b-3f8a59d2-thumb.webp"
+              }
             ]
           }
         ],

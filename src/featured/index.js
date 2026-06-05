@@ -12,12 +12,12 @@ const moduleNav = {
   "sovev-beit-hillel": [
     { label: "על המסלול", href: "#fv-about" },
     { label: "נקודות במסלול", href: "#fv-poi-stories" },
-    { label: "כל השבילים", to: "/" },
+    { label: "כל המסלולים", to: "/routes" },
   ],
   "banias-gan-hatsafon": [
     { label: "על המסלול", href: "#fv-about" },
     { label: "נקודות במסלול", href: "#fv-poi-stories" },
-    { label: "כל השבילים", to: "/" },
+    { label: "כל המסלולים", to: "/routes" },
   ],
 };
 
@@ -49,6 +49,11 @@ export async function loadRecommendedRouteList() {
 export async function loadFeaturedMetaList() {
   const catalog = await loadCatalog();
   return (catalog?.entries || []).filter((e) => e.featured);
+}
+
+export async function findRouteMeta(slug) {
+  const catalog = await loadCatalog();
+  return (catalog?.entries || []).find((e) => e.slug === slug) || null;
 }
 
 export async function findFeaturedMeta(slug) {

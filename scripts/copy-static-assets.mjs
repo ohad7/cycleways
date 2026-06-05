@@ -25,19 +25,19 @@ for (const filePath of dataFiles) {
 
 await mkdir(distDir, { recursive: true });
 
-// Regenerate featured-route snapshots BEFORE copying public-data/ into dist/ so
+// Regenerate route snapshots BEFORE copying public-data/ into dist/ so
 // the freshly generated public-data/featured-routes/*.json are included in the
 // build. Snapshots are derived public data; never hand-edit them.
 {
   const { written, removed, errors } = await buildFeaturedRouteSnapshots({});
   console.log(
-    `Featured snapshots: ${written.length} written, ${removed.length} removed`,
+    `Route snapshots: ${written.length} written, ${removed.length} removed`,
   );
   if (errors.length > 0) {
     for (const { slug, error } of errors) {
-      console.error(`Featured snapshot failed for ${slug}: ${error}`);
+      console.error(`Route snapshot failed for ${slug}: ${error}`);
     }
-    throw new Error("featured-route snapshot generation failed");
+    throw new Error("route snapshot generation failed");
   }
 }
 
@@ -73,21 +73,22 @@ if (existsSync(builtIndex)) {
   await copyFile(builtIndex, resolve(distDir, "404.html"));
   console.log("Copied built index.html to 404.html");
 
-  const spaShellDirectories = new Set(["featured"]);
+  const spaShellDirectories = new Set(["featured", "routes"]);
   try {
     const catalog = JSON.parse(
       await readFile(resolve(repoRoot, "public-data/route-catalog.json"), "utf8"),
     );
     for (const entry of catalog.entries || []) {
-      if (!entry?.featured || typeof entry.slug !== "string") continue;
+      if (typeof entry.slug !== "string") continue;
       if (!/^[a-z0-9-]+$/.test(entry.slug)) {
-        console.warn(`Skipping featured route with unsafe slug: ${entry.slug}`);
+        console.warn(`Skipping route with unsafe slug: ${entry.slug}`);
         continue;
       }
-      spaShellDirectories.add(`featured/${entry.slug}`);
+      spaShellDirectories.add(`routes/${entry.slug}`);
+      if (entry.featured) spaShellDirectories.add(`featured/${entry.slug}`);
     }
   } catch (error) {
-    console.warn(`Skipping featured route shells: ${error.message}`);
+    console.warn(`Skipping route shells: ${error.message}`);
   }
 
   for (const directoryPath of spaShellDirectories) {

@@ -42,6 +42,8 @@ export async function loadFeaturedRouteSnapshot(slug, options = {}) {
   return validateSnapshot(snapshot, slug);
 }
 
+export const loadRouteSnapshot = loadFeaturedRouteSnapshot;
+
 export function snapshotToRouteState(snapshot) {
   const route = snapshot?.route || {};
   const pois = snapshot?.pois || {};
@@ -61,3 +63,5 @@ export function snapshotToRouteState(snapshot) {
     routeFailure: null,
   };
 }
+
+export const routeSnapshotToRouteState = snapshotToRouteState;

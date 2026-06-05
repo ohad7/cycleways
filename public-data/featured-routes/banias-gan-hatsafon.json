@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "banias-gan-hatsafon",
-  "generatedAt": "2026-06-04T16:26:47.786Z",
+  "generatedAt": "2026-06-04T21:37:00.045Z",
   "source": {
     "routeTokenHash": "sha256:4f5d5c4fe65b9ec350310203dc092136b243ae28391ee50d7fb80f67c1ae547e",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "54e69ef0875d",
+    "mapVersion": "6e51dbf9bc60",
     "assetHashes": {
       "bikeRoads": "e4a43a70547a3c7190907140b98a5203d3fe0a7d6983d52ab5b38e7aa5d5d3f3",
-      "segments": "175d596f8373b632bdc3558262f6fd4aceedd055f021c0d96823d275b2bda8a9",
+      "segments": "79562ca4dd9a4c69f4d34c8bc0fadd93a9783ead0fa21b80f4444f826cd6ee16",
       "cwBaseIndex": "23ec80fb6177b47e2df7665b5e24bd8ee438e839dc750c02c8bbb43362c9b2d4",
-      "baseRoutingShards": "27a94b8f7949ee6b32d8dadea2e8d275a9e5ae2a32fa31de19855c9476963dd4"
+      "baseRoutingShards": "7fb1ee9b95ae84e0c65e6e86ebd448dcd91513d23e82e95f8bf7e5a566504108"
     }
   },
   "route": {

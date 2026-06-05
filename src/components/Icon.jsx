@@ -104,6 +104,25 @@ const ICONS = {
       <path d="M224 176l112 80-112 80V176z" fill="currentColor" />
     </>
   ),
+  "map-outline": (
+    <>
+      <path
+        d="M48 96l128-48 160 48 128-48v368l-128 48-160-48-128 48V96z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+      <path
+        d="M176 48v368M336 96v368"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+    </>
+  ),
   "trash-outline": (
     <>
       <path

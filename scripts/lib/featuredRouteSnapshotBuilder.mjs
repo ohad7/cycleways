@@ -300,14 +300,20 @@ async function listSnapshotSlugs() {
     .map((f) => f.replace(/\.json$/, ""));
 }
 
-export async function readFeaturedCatalogSlugs() {
+export async function readRouteCatalogSlugs() {
   const catalog = await readJsonOrNull(routeCatalogPublicPath);
   const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
-  return entries.filter((e) => e?.featured === true).map((e) => e.slug);
+  return entries
+    .map((e) => e?.slug)
+    .filter((slug) => typeof slug === "string" && slug.length > 0);
 }
 
-// Generate (and write) snapshots for every featured catalog entry, then delete
-// orphaned snapshot files for routes no longer marked featured.
+export async function readFeaturedCatalogSlugs() {
+  return readRouteCatalogSlugs();
+}
+
+// Generate (and write) snapshots for every catalog route entry, then delete
+// orphaned snapshot files for routes no longer present in the route catalog.
 export async function buildFeaturedRouteSnapshots({
   draftCatalogPath = null,
   generatedAt,
@@ -315,10 +321,10 @@ export async function buildFeaturedRouteSnapshots({
 } = {}) {
   const manifest = await readJsonOrNull(promotedManifestPath);
   if (!manifest) throw new Error("map-manifest.json not found");
-  const featuredSlugs = await readFeaturedCatalogSlugs();
+  const routeSlugs = await readRouteCatalogSlugs();
   const written = [];
   const errors = [];
-  for (const slug of featuredSlugs) {
+  for (const slug of routeSlugs) {
     try {
       const snapshot = await buildSnapshotForSlug(slug, {
         manifest,
@@ -328,22 +334,22 @@ export async function buildFeaturedRouteSnapshots({
       });
       const target = await writeSnapshotAtomic(slug, snapshot);
       written.push({ slug, path: target });
-      log("info", `featured snapshot: wrote ${slug} (${snapshot.route.geometry.length} coords)`);
+      log("info", `route snapshot: wrote ${slug} (${snapshot.route.geometry.length} coords)`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       errors.push({ slug, error: message });
-      log("error", `featured snapshot: failed for ${slug}: ${message}`);
+      log("error", `route snapshot: failed for ${slug}: ${message}`);
     }
   }
 
-  // Orphan cleanup: drop snapshots for routes no longer featured.
-  const featuredSet = new Set(featuredSlugs);
+  // Orphan cleanup: drop snapshots for routes no longer in the catalog.
+  const routeSet = new Set(routeSlugs);
   const removed = [];
   for (const slug of await listSnapshotSlugs()) {
-    if (!featuredSet.has(slug)) {
+    if (!routeSet.has(slug)) {
       await rm(resolve(featuredRoutesDir, `${slug}.json`), { force: true });
       removed.push(slug);
-      log("info", `featured snapshot: removed orphan ${slug}`);
+      log("info", `route snapshot: removed orphan ${slug}`);
     }
   }
 
@@ -361,10 +367,10 @@ export async function checkFeaturedRouteSnapshots({
     return { failures: ["map-manifest.json not found"], orphans: [] };
   }
   const { mapVersion } = loadManifestSource(manifest);
-  const featuredSlugs = await readFeaturedCatalogSlugs();
-  const featuredSet = new Set(featuredSlugs);
+  const routeSlugs = await readRouteCatalogSlugs();
+  const routeSet = new Set(routeSlugs);
 
-  for (const slug of featuredSlugs) {
+  for (const slug of routeSlugs) {
     const snapshot = await readJsonOrNull(resolve(featuredRoutesDir, `${slug}.json`));
     if (!snapshot) {
       failures.push(`${slug}: snapshot file is missing`);
@@ -429,7 +435,7 @@ export async function checkFeaturedRouteSnapshots({
   }
 
   // Orphans are failures in --check mode.
-  const orphans = (await listSnapshotSlugs()).filter((slug) => !featuredSet.has(slug));
+  const orphans = (await listSnapshotSlugs()).filter((slug) => !routeSet.has(slug));
   for (const slug of orphans) {
     failures.push(`${slug}: orphan snapshot (slug no longer featured)`);
   }

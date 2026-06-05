@@ -28,8 +28,23 @@ assert.ok(meta.passesNear.includes("beit-hillel"));
 assert.equal(meta.difficulty, "easy");
 assert.ok(meta.distanceKm > 0 && meta.distanceKm < 1);
 assert.ok(meta.elevationGainM > 0 && meta.elevationGainM < 20);
+assert.deepEqual(meta.routeShape, { type: "circular", endpointDistanceM: 93 });
+assert.equal(meta.surfaceType, "paved");
 // family wins by priority over scenic: easy + roadMix.road < 0.1 + qualityScore >= 3
 assert.equal(meta.style, "family");
+
+// Anything 20km or longer is at least moderate effort.
+const longFlat = {
+  geometry: [
+    { lat: 33.20, lng: 35.60, elevation: 100 },
+    { lat: 33.20, lng: 35.83, elevation: 105 },
+  ],
+  roadTypeFractions: { paved: 0.9, dirt: 0.1, road: 0.0 },
+  qualityScore: 3.5,
+};
+const longFlatMeta = classifyRoute(longFlat, { places, zones });
+assert.equal(longFlatMeta.difficulty, "moderate");
+assert.equal(longFlatMeta.surfaceType, "paved");
 
 // Hard climby route -> hard, sporty
 const hardClimb = {
@@ -44,6 +59,9 @@ const hardClimb = {
 const hardMeta = classifyRoute(hardClimb, { places, zones });
 assert.equal(hardMeta.difficulty, "hard");
 assert.equal(hardMeta.style, "sporty");
+assert.equal(hardMeta.routeShape.type, "one_way");
+assert.ok(hardMeta.routeShape.endpointDistanceM > 1000);
+assert.equal(hardMeta.surfaceType, "mixed");
 
 // Dirt-heavy, moderate -> adventurous
 const dirty = {
@@ -57,5 +75,16 @@ const dirty = {
 const dirtyMeta = classifyRoute(dirty, { places, zones });
 assert.equal(dirtyMeta.difficulty, "moderate");
 assert.equal(dirtyMeta.style, "adventurous");
+assert.equal(dirtyMeta.surfaceType, "mixed");
+
+const dirtSurface = classifyRoute({
+  geometry: [
+    { lat: 33.20, lng: 35.60, elevation: 100 },
+    { lat: 33.21, lng: 35.61, elevation: 110 },
+  ],
+  roadTypeFractions: { paved: 0.1, dirt: 0.85, road: 0.05 },
+  qualityScore: 3.2,
+}, { places, zones });
+assert.equal(dirtSurface.surfaceType, "dirt");
 
 console.log("classifyRoute tests passed");
