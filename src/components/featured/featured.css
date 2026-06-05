@@ -987,6 +987,11 @@
   transition: width 0.24s ease, height 0.24s ease, border-radius 0.24s ease;
 }
 
+.fv-video-poi-preview--warning {
+  border-color: rgba(179, 96, 45, 0.28);
+  background: rgba(255, 250, 243, 0.96);
+}
+
 .fv-video-poi-preview div {
   min-width: 0;
   max-width: 320px;
@@ -1042,6 +1047,27 @@
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.fv-video-poi-preview .fv-video-poi-preview__icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: var(--fv-clay-soft);
+  color: var(--fv-clay);
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1;
+  transition: width 0.24s ease, height 0.24s ease, font-size 0.24s ease;
+}
+
+.fv-video-poi-preview--mini .fv-video-poi-preview__icon {
+  width: 52px;
+  height: 52px;
+  font-size: 1.35rem;
 }
 
 .fv-moments {
@@ -1336,8 +1362,9 @@
 }
 
 .fv-route-warning-card {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
   gap: 12px;
   width: 100%;
   padding: 13px;
@@ -1352,9 +1379,31 @@
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
+.fv-route-warning-card--with-image {
+  grid-template-columns: minmax(86px, 0.35fr) auto minmax(0, 1fr);
+}
+
 .fv-route-warning-card--focused {
   border-color: var(--fv-clay);
   box-shadow: 0 0 0 3px var(--fv-clay-soft), 0 8px 18px rgba(16, 24, 32, 0.1);
+}
+
+.fv-route-warning-media {
+  display: block;
+  width: 100%;
+  min-width: 86px;
+  max-width: 128px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #f3ece2;
+}
+
+.fv-route-warning-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .fv-route-warning-icon {
@@ -1387,6 +1436,13 @@
 .fv-route-warning-meta strong {
   color: var(--fv-clay);
   font-weight: 900;
+}
+
+.fv-route-warning-name {
+  color: var(--fv-ink);
+  font-size: 1rem;
+  font-weight: 850;
+  line-height: 1.35;
 }
 
 .fv-route-warning-text {
@@ -1896,12 +1952,23 @@
   .fv-video-poi-preview img { width: 40px; height: 40px; border-radius: 999px; }
   .fv-video-poi-preview div { max-width: 154px; }
   .fv-video-poi-preview span { display: none; }
+  .fv-video-poi-preview .fv-video-poi-preview__icon {
+    display: inline-grid;
+    width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
+  }
   .fv-video-poi-preview strong { margin-top: 0; font-size: 0.9rem; line-height: 1.15; }
   .fv-video-poi-preview p { display: none; }
 
   /* Collapsed: image-only circle. */
   .fv-video-poi-preview--mini { padding: 4px; gap: 0; }
   .fv-video-poi-preview--mini img { width: 36px; height: 36px; }
+  .fv-video-poi-preview--mini .fv-video-poi-preview__icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
   .fv-video-poi-preview--mini div { max-width: 0; }
 
   /* Short route blurb — full-width band, no side chrome. */
@@ -2107,6 +2174,14 @@
 
   .fv-route-warning-card {
     padding: 12px;
+  }
+
+  .fv-route-warning-card--with-image {
+    grid-template-columns: minmax(76px, 92px) auto minmax(0, 1fr);
+  }
+
+  .fv-route-warning-media {
+    min-width: 76px;
   }
 
   /* POI stories — borderless full-bleed feed with a swipeable photo strip. */

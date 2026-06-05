@@ -3,8 +3,10 @@ import {
   isWarningType,
   POI_EMOJIS,
   poiLabel,
+  primaryPoiImage,
 } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
+import { imageSrc } from "./routePoiStoryData.js";
 
 function formatDistance(meters) {
   if (!Number.isFinite(meters) || meters <= 0) return "";
@@ -65,6 +67,49 @@ export default function Warnings({ extra = [], hide = [] }) {
 
   if (items.length === 0) return null;
 
+  function renderWarningCard(w, i) {
+    const image = primaryPoiImage(w);
+    return (
+      <button
+        key={w.id || i}
+        type="button"
+        data-poi-id={w.id || ""}
+        className={[
+          "fv-route-warning-card",
+          image ? "fv-route-warning-card--with-image" : "",
+          focusedPoiId === w.id ? "fv-route-warning-card--focused" : "",
+        ].filter(Boolean).join(" ")}
+        onClick={() => handleSelect(w)}
+      >
+        {image && (
+          <span className="fv-route-warning-media" aria-hidden="true">
+            <img src={imageSrc(image)} alt="" />
+          </span>
+        )}
+        <span className="fv-route-warning-icon" aria-hidden="true">
+          {POI_EMOJIS[w.type] || "⚠️"}
+        </span>
+        <span className="fv-route-warning-copy">
+          <span className="fv-route-warning-meta">
+            <strong>{poiLabel(w.type)}</strong>
+            {w.segmentName && <span>בקטע: {w.segmentName}</span>}
+            {formatDistance(w.routeProgressMeters) && (
+              <span>{formatDistance(w.routeProgressMeters)}</span>
+            )}
+          </span>
+          {w.name && (
+            <span className="fv-route-warning-name">
+              {w.name}
+            </span>
+          )}
+          <span className="fv-route-warning-text">
+            {w.information || w.description || w.name || poiLabel(w.type)}
+          </span>
+        </span>
+      </button>
+    );
+  }
+
   return (
     <section
       id="fv-route-warnings"
@@ -76,33 +121,7 @@ export default function Warnings({ extra = [], hide = [] }) {
         <h2>אזהרות ומידע לאורך הדרך</h2>
       </div>
       <div className="fv-route-warning-list">
-        {items.map((w, i) => (
-          <button
-            key={w.id || i}
-            type="button"
-            className={[
-              "fv-route-warning-card",
-              focusedPoiId === w.id ? "fv-route-warning-card--focused" : "",
-            ].filter(Boolean).join(" ")}
-            onClick={() => handleSelect(w)}
-          >
-            <span className="fv-route-warning-icon" aria-hidden="true">
-              {POI_EMOJIS[w.type] || "⚠️"}
-            </span>
-            <span className="fv-route-warning-copy">
-              <span className="fv-route-warning-meta">
-                <strong>{poiLabel(w.type)}</strong>
-                {w.segmentName && <span>בקטע: {w.segmentName}</span>}
-                {formatDistance(w.routeProgressMeters) && (
-                  <span>{formatDistance(w.routeProgressMeters)}</span>
-                )}
-              </span>
-              <span className="fv-route-warning-text">
-                {w.information || w.description || w.name || poiLabel(w.type)}
-              </span>
-            </span>
-          </button>
-        ))}
+        {items.map(renderWarningCard)}
       </div>
     </section>
   );

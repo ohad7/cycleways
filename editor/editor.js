@@ -7248,6 +7248,18 @@ const VS_GHOST_SOURCE_ID = "vs-ghost-source";
 const VS_GHOST_LAYER_ID = "vs-ghost-layer";
 const VS_SNAP_THRESHOLD_M = 80;
 const VS_TICK_MS = 100;
+const VS_PLAYBACK_BEHAVIOR_LEGACY = "legacy";
+const VS_PLAYBACK_BEHAVIOR_NONE = "none";
+const VS_PLAYBACK_BEHAVIORS = new Set([
+  VS_PLAYBACK_BEHAVIOR_LEGACY,
+  VS_PLAYBACK_BEHAVIOR_NONE,
+]);
+
+function vsNormalizePlaybackBehavior(value) {
+  return VS_PLAYBACK_BEHAVIORS.has(value)
+    ? value
+    : VS_PLAYBACK_BEHAVIOR_LEGACY;
+}
 
 const videoSyncState = {
   slug: null,
@@ -7256,6 +7268,7 @@ const videoSyncState = {
   youtubeId: null,
   player: null,
   videoDuration: 0,
+  playbackBehavior: VS_PLAYBACK_BEHAVIOR_LEGACY,
   selectedIndex: -1,
   sync: null,            // createVideoSync() interpolator, rebuilt on changes
   ticker: null,          // setInterval id for the live readout + ghost
@@ -7268,6 +7281,7 @@ const vsEls = {
   close: document.getElementById("vs-close"),
   slug: document.getElementById("vs-slug"),
   ytUrl: document.getElementById("vs-yt-url"),
+  playbackBehavior: document.getElementById("vs-playback-behavior"),
   bootstrapFile: document.getElementById("vs-bootstrap-file"),
   bootstrapMaxError: document.getElementById("vs-bootstrap-max-error"),
   bootstrapSpeed: document.getElementById("vs-bootstrap-speed"),
@@ -7320,6 +7334,13 @@ function vsReadNumberInput(input, fallback, predicate) {
 
 function vsFormatFraction(value) {
   return Number.isFinite(value) ? value.toFixed(3) : "n/a";
+}
+
+function vsSetPlaybackBehavior(value) {
+  videoSyncState.playbackBehavior = vsNormalizePlaybackBehavior(value);
+  if (vsEls.playbackBehavior) {
+    vsEls.playbackBehavior.value = videoSyncState.playbackBehavior;
+  }
 }
 
 function vsExtractYouTubeId(url) {
@@ -7807,11 +7828,13 @@ async function vsLoadExistingDraft(slug) {
     vsEls.ytUrl.value = "";
     videoSyncState.youtubeId = null;
     videoSyncState.videoDuration = 0;
+    vsSetPlaybackBehavior(VS_PLAYBACK_BEHAVIOR_LEGACY);
     vsUpdateBootstrapControls();
     return;
   }
   const draft = await r.json();
   videoSyncState.keyframes = (draft.keyframes || []).slice().sort((a, b) => a.t - b.t);
+  vsSetPlaybackBehavior(draft.playbackBehavior);
   vsRenderKeyframesList();
   vsRenderKeyframesLayer();
   if (draft.youtubeId) {
@@ -7863,6 +7886,7 @@ function vsBuildDraftPayload() {
       version: 1,
       youtubeId,
       videoDuration,
+      playbackBehavior: videoSyncState.playbackBehavior,
       keyframes: videoSyncState.keyframes.slice().sort((a, b) => a.t - b.t),
     },
   };
@@ -7886,6 +7910,10 @@ async function vsSaveDraft({ updateStatus = true } = {}) {
 
 // Wire static event handlers once at startup.
 vsEls.slug.addEventListener("change", () => vsOnSlugChange().catch(showError));
+vsEls.playbackBehavior.addEventListener("change", (event) => {
+  vsSetPlaybackBehavior(event.target.value);
+  vsSetStatus(`Playback behavior: ${videoSyncState.playbackBehavior}.`);
+});
 vsEls.ytUrl.addEventListener("change", (e) => {
   const id = vsExtractYouTubeId(e.target.value);
   if (id) {
@@ -8141,6 +8169,7 @@ function rcRenderDetail() {
     if (f.routeToken) {
       input.placeholder = "Paste a route token or a full /?route=... share URL";
       input.addEventListener("change", (e) => {
+        rcClearImageCandidateCache(entry);
         entry[f.key] = extractRouteTokenInput(e.target.value);
         e.target.value = entry[f.key];
         rcRenderList();

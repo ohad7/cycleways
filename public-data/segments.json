@@ -5335,11 +5335,19 @@
     "data": [
       {
         "type": "warning",
-        "information": "שביל דורש תחזוקה, מעבר קוצני וצר",
+        "information": "ענפי תאנה ושיחי פטל קוצניים מפריעים למעבר",
         "location": [
-          33.236529,
-          35.630683
-        ]
+          33.236979,
+          35.632165
+        ],
+        "id": "poi-1ed71e4f",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1ed71e4f-85f43b3d.webp",
+            "thumbnail": "public-data/poi-images/poi-1ed71e4f-85f43b3d-thumb.webp"
+          }
+        ],
+        "name": "תאנים ושיחי פטל"
       },
       {
         "id": "poi-a76cdd1b",
@@ -5363,8 +5371,8 @@
         "type": "rest_stop",
         "information": "על השביל יש פינות מנוחה רבות וחופים קטנים",
         "location": [
-          33.23699,
-          35.633163
+          33.236782,
+          35.634031
         ],
         "name": "פינות רבות לנוח",
         "description": "על השביל יש פינות מנוחה רבות וחופים קטנים שאפשר לרדת הם למים",

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import {
   computePlaybackRate,
+  normalizePlaybackBehavior,
+  PLAYBACK_BEHAVIOR_LEGACY,
+  PLAYBACK_BEHAVIOR_NONE,
   RAMP_STEP_1_M,
   RAMP_STEP_2_M,
   POI_PLAYBACK_RATE,
@@ -9,6 +12,13 @@ import {
 const ALLOWED = new Set([0.25, 0.5, 1]);
 const rate = (distanceFromStartM, nearPoi = false, rampDone = false) =>
   computePlaybackRate({ distanceFromStartM, nearPoi, rampDone });
+const noRate = (distanceFromStartM, nearPoi = false, rampDone = false) =>
+  computePlaybackRate({
+    distanceFromStartM,
+    nearPoi,
+    rampDone,
+    playbackBehavior: PLAYBACK_BEHAVIOR_NONE,
+  });
 
 // Ramp bands (no POI, ramp armed).
 assert.equal(rate(0), 0.25, "start → 0.25");
@@ -32,6 +42,17 @@ assert.equal(rate(0, true, true), 0.5, "rampDone near start + POI → 0.5");
 // Non-finite distance is treated as 0 (start of ramp).
 assert.equal(rate(NaN), 0.25, "NaN distance → 0.25");
 assert.equal(rate(undefined), 0.25, "undefined distance → 0.25");
+
+// "none" disables both the opening ramp and POI slowdown.
+assert.equal(noRate(0), 1, "none at start → 1.0");
+assert.equal(noRate(600), 1, "none mid-ramp → 1.0");
+assert.equal(noRate(1000, true), 1, "none near POI → 1.0");
+assert.equal(noRate(0, true, true), 1, "none ignores rampDone/POI → 1.0");
+
+// Missing/unknown behavior preserves legacy behavior for old video JSON.
+assert.equal(normalizePlaybackBehavior(undefined), PLAYBACK_BEHAVIOR_LEGACY);
+assert.equal(normalizePlaybackBehavior("bad-value"), PLAYBACK_BEHAVIOR_LEGACY);
+assert.equal(normalizePlaybackBehavior(PLAYBACK_BEHAVIOR_NONE), PLAYBACK_BEHAVIOR_NONE);
 
 // Every output is an allowed YouTube rate.
 for (const d of [-1, 0, 100, 250, 400, 500, 801, 1000, Infinity]) {

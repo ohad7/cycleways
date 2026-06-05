@@ -62,7 +62,7 @@ on when its driving prop is absent.
 | `elevationHover` | elevation-profile cursor payload that drives the on-map pulse |
 | `searchHighlight` | a searched location to highlight |
 | `videoCursor` | featured-route video playback cursor position on the route |
-| `videoCursorVariant` | featured-route cursor style; accepts options `1`-`6` or named variants |
+| `videoCursorVariant` | featured-route cursor style; accepts options `1`-`6` or named variants; defaults to `progress-head-pulse` |
 | `videoPlaying` | whether featured-route video playback is active; used for cursor animation |
 | `animator` | the route-direction pulse driver (ticks progress along the route) |
 

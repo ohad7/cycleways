@@ -5,32 +5,19 @@ import { previewSlideForCursor } from "./routePoiStoryData.js";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
 import { loadYouTubeIframeApi } from "./youtubeIframeApi.js";
 import { createVideoSync } from "./videoSync.js";
-import { computePlaybackRate, RAMP_STEP_2_M } from "./playbackRamp.js";
+import {
+  computePlaybackRate,
+  normalizePlaybackBehavior,
+  RAMP_STEP_2_M,
+} from "./playbackRamp.js";
+import {
+  loadRouteVideoIndex,
+  loadRouteVideoKeyframes,
+} from "./routeVideoIndex.js";
 
 const MANUAL_SCRUB_SAMPLE_MS = 300;
 const SEEK_SETTLE_MS = 4000;
 const SEEK_SETTLE_TOLERANCE_SECONDS = 0.35;
-
-let indexPromise = null;
-
-function loadVideoIndex() {
-  if (!indexPromise) {
-    const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
-    indexPromise = fetch(`${base}public-data/route-videos/index.json`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { routes: {} }))
-      .catch(() => ({ routes: {} }));
-  }
-  return indexPromise;
-}
-
-async function loadKeyframes(filename) {
-  const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
-  const response = await fetch(`${base}public-data/route-videos/${filename}`, {
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error(`keyframes ${filename}: HTTP ${response.status}`);
-  return response.json();
-}
 
 export default function VideoEmbed({ title = "סרטון", className = "" }) {
   const {
@@ -77,6 +64,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   const duration = Number.isFinite(data?.videoDuration) && data.videoDuration > 0
     ? data.videoDuration
     : 0;
+  const playbackBehavior = normalizePlaybackBehavior(data?.playbackBehavior);
 
   const clampTime = useCallback((time) => {
     const value = Number(time);
@@ -168,13 +156,13 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
     let cancelled = false;
     (async () => {
       try {
-        const index = await loadVideoIndex();
+        const index = await loadRouteVideoIndex();
         const filename = index?.routes?.[meta.slug];
         if (!filename) {
           if (!cancelled) setStatus("absent");
           return;
         }
-        const payload = await loadKeyframes(filename);
+        const payload = await loadRouteVideoKeyframes(filename);
         if (cancelled) return;
         setData(payload);
         setStatus("ready");
@@ -407,6 +395,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
         distanceFromStartM,
         nearPoi,
         rampDone: rampDoneRef.current,
+        playbackBehavior,
       });
       setPlaybackRate(p, rate);
     }

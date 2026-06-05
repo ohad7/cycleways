@@ -6,6 +6,9 @@ import FeaturedRoute from "./FeaturedRoute.jsx";
 import FeaturedRouteStats from "./FeaturedRouteStats.jsx";
 import FeaturedElevation from "./FeaturedElevation.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
+import {
+  VIDEO_CURSOR_DEFAULT_VARIANT,
+} from "@cycleways/core/map/mapStyles.js";
 
 // Shared route-story template. Video-backed routes render a video player with a
 // map overlay; catalog-only routes render the map in the same primary stage.
@@ -23,7 +26,7 @@ export default function FeaturedVideoRoute({
   difficultyLabel = null,
   surfaceLabel = null,
   media = "video",
-  videoCursorVariant = 1,
+  videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
 }) {
   const isMapStage = media === "map";
   const aboutParagraphs = Array.isArray(about.paragraphs) ? about.paragraphs : [];

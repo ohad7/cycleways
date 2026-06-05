@@ -6,6 +6,7 @@ import {
   buildVideoCursorLayerData,
   getRouteFeatureColor,
   normalizeVideoCursorVariant,
+  VIDEO_CURSOR_DEFAULT_VARIANT,
   VIDEO_CURSOR_VARIANTS,
 } from "../src/map/mapLayers.js";
 
@@ -140,6 +141,16 @@ assert.equal(
   normalizeVideoCursorVariant(1),
   VIDEO_CURSOR_VARIANTS.CHEVRON_HALO,
   "cursor option 1 maps to chevron halo",
+);
+assert.equal(
+  VIDEO_CURSOR_DEFAULT_VARIANT,
+  VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE,
+  "implicit cursor default is progress head pulse",
+);
+assert.equal(
+  normalizeVideoCursorVariant(undefined),
+  VIDEO_CURSOR_VARIANTS.PROGRESS_HEAD_PULSE,
+  "omitted cursor variant uses progress head pulse",
 );
 assert.equal(
   normalizeVideoCursorVariant("5"),

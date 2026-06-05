@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-dafna",
-  "generatedAt": "2026-06-05T22:18:15.517Z",
+  "generatedAt": "2026-06-05T23:24:45.750Z",
   "source": {
     "routeTokenHash": "sha256:c9c4aadc35073fcf53cc3a2572340cc45147c20faedb9a07d604473999aee0bf",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "5346000c542e",
+    "mapVersion": "6ee5d31a1bbd",
     "assetHashes": {
       "bikeRoads": "429931751296885402776d200b290f17a3781ffd1f30865d47cc649d32af92cd",
-      "segments": "0f738c8bf311ead13e595625726da34f6383bdb6145dfab8cb5d0150eb6be167",
+      "segments": "ff128e4f4b3f54286b32538dcba9c9defd76bcdd44413fe86e806b5fd6b0922e",
       "cwBaseIndex": "e60f0b6625238fb43e263af633d07e9f1f6ccd15b4ec1e407e026af88044324e",
-      "baseRoutingShards": "416d1de1ec2e892fcce1cfd6a7927189a4bd2dd2e6cbace2298e6ee2cbc96e87"
+      "baseRoutingShards": "f532c7281010b52d6d74fd4295317c476a0c7f062be51b48a948ac15b3f5f7e9"
     }
   },
   "route": {
@@ -1915,16 +1915,23 @@
       },
       {
         "type": "warning",
-        "information": "שביל דורש תחזוקה, מעבר קוצני וצר",
+        "information": "ענפי תאנה ושיחי פטל קוצניים מפריעים למעבר",
         "location": [
-          33.236529,
-          35.630683
+          33.236979,
+          35.632165
         ],
-        "id": "שביל צר לאורך נחל דן-0",
+        "id": "poi-1ed71e4f",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1ed71e4f-85f43b3d.webp",
+            "thumbnail": "public-data/poi-images/poi-1ed71e4f-85f43b3d-thumb.webp"
+          }
+        ],
+        "name": "תאנים ושיחי פטל",
         "segmentName": "שביל צר לאורך נחל דן",
-        "routeDistanceMeters": 0.27693728009775265,
-        "routeProgressMeters": 3440.9897470985434,
-        "routeFraction": 0.493450287182308
+        "routeDistanceMeters": 1.9276583210866534,
+        "routeProgressMeters": 3215.4897097864914,
+        "routeFraction": 0.4611127720051474
       },
       {
         "id": "poi-a76cdd1b",
@@ -1952,8 +1959,8 @@
         "type": "rest_stop",
         "information": "על השביל יש פינות מנוחה רבות וחופים קטנים",
         "location": [
-          33.23699,
-          35.633163
+          33.236782,
+          35.634031
         ],
         "name": "פינות רבות לנוח",
         "description": "על השביל יש פינות מנוחה רבות וחופים קטנים שאפשר לרדת הם למים",
@@ -1968,9 +1975,9 @@
           }
         ],
         "segmentName": "שביל צר לאורך נחל דן",
-        "routeDistanceMeters": 0.42659970901608174,
-        "routeProgressMeters": 3112.0558167121712,
-        "routeFraction": 0.4462799802815033
+        "routeDistanceMeters": 0.23352496369003037,
+        "routeProgressMeters": 3027.8023498766947,
+        "routeFraction": 0.43419773056218136
       },
       {
         "id": "poi-7004abaf",
@@ -2097,22 +2104,22 @@
       },
       {
         "type": "Feature",
-        "id": "שביל צר לאורך נחל דן-0",
+        "id": "poi-1ed71e4f",
         "geometry": {
           "type": "Point",
           "coordinates": [
-            35.630683,
-            33.236529
+            35.632165,
+            33.236979
           ]
         },
         "properties": {
-          "dataPointId": "שביל צר לאורך נחל דן-0",
+          "dataPointId": "poi-1ed71e4f",
           "type": "warning",
-          "name": "",
-          "information": "שביל דורש תחזוקה, מעבר קוצני וצר",
+          "name": "תאנים ושיחי פטל",
+          "information": "ענפי תאנה ושיחי פטל קוצניים מפריעים למעבר",
           "description": "",
-          "photo": "",
-          "thumbnail": "",
+          "photo": "public-data/poi-images/poi-1ed71e4f-85f43b3d.webp",
+          "thumbnail": "public-data/poi-images/poi-1ed71e4f-85f43b3d-thumb.webp",
           "segmentName": "שביל צר לאורך נחל דן",
           "emoji": "⚠️",
           "label": "אזהרה",
@@ -2151,8 +2158,8 @@
         "geometry": {
           "type": "Point",
           "coordinates": [
-            35.633163,
-            33.23699
+            35.634031,
+            33.236782
           ]
         },
         "properties": {
@@ -2201,7 +2208,7 @@
       "poi-1821461d",
       "poi-86a4607d",
       "poi-7f0a3972",
-      "שביל צר לאורך נחל דן-0",
+      "poi-1ed71e4f",
       "poi-a76cdd1b",
       "poi-0d152fab",
       "poi-7004abaf"

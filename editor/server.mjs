@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { dirname, extname, isAbsolute, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
+import { PLAYBACK_BEHAVIORS } from "../src/components/featured/playbackRamp.js";
 import sharp from "sharp";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -1221,9 +1222,17 @@ export function validateKeyframesDraft(draft, routePolyline, maxMeters = 80) {
   if (!draft || typeof draft !== "object") {
     throw new Error("draft must be an object");
   }
-  const { youtubeId, videoDuration, keyframes } = draft;
+  const { youtubeId, videoDuration, keyframes, playbackBehavior } = draft;
   if (typeof youtubeId !== "string" || !youtubeId) {
     throw new Error("draft.youtubeId required");
+  }
+  if (
+    playbackBehavior !== undefined &&
+    !PLAYBACK_BEHAVIORS.includes(playbackBehavior)
+  ) {
+    throw new Error(
+      `draft.playbackBehavior must be one of: ${PLAYBACK_BEHAVIORS.join(", ")}`,
+    );
   }
   if (typeof videoDuration !== "number" || videoDuration <= 0) {
     throw new Error("draft.videoDuration must be a positive number");

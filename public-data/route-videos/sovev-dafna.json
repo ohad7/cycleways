@@ -2,6 +2,7 @@
   "version": 1,
   "youtubeId": "HIE9wr-IYX4",
   "videoDuration": 337,
+  "playbackBehavior": "none",
   "keyframes": [
     {
       "t": 0,

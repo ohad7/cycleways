@@ -4,6 +4,12 @@ import PageShell from "../components/PageShell.jsx";
 import { loadCatalog, findCatalogEntryBySlug } from "@cycleways/core/data/catalog.js";
 import { getRouteStoryModuleLoader, getRouteStoryNav } from "../featured/index.js";
 import FeaturedMapRoute from "../components/featured/FeaturedMapRoute.jsx";
+import FeaturedVideoRoute from "../components/featured/FeaturedVideoRoute.jsx";
+import { hasRouteVideo } from "../components/featured/routeVideoIndex.js";
+import {
+  createGenericRouteStoryProps,
+  genericRouteNavLinks,
+} from "../featured/genericRouteStory.js";
 import "../components/routes/routes.css";
 import "../components/featured/featured.css";
 
@@ -34,16 +40,24 @@ export default function RouteDetailPage() {
 
 function GenericRouteDetail({ slug }) {
   const [entry, setEntry] = useState(null);
+  const [hasVideo, setHasVideo] = useState(false);
   const [status, setStatus] = useState("loading");
 
   useEffect(() => {
     let cancelled = false;
+    setEntry(null);
+    setHasVideo(false);
+    setStatus("loading");
     (async () => {
       try {
-        const catalog = await loadCatalog();
+        const [catalog, routeHasVideo] = await Promise.all([
+          loadCatalog(),
+          hasRouteVideo(slug),
+        ]);
         if (cancelled) return;
         const found = findCatalogEntryBySlug(catalog, slug);
         setEntry(found);
+        setHasVideo(Boolean(found && routeHasVideo));
         setStatus(found ? "ready" : "missing");
       } catch {
         if (!cancelled) setStatus("error");
@@ -74,41 +88,12 @@ function GenericRouteDetail({ slug }) {
         </main>
       )}
       {status === "ready" && entry && (
-        <FeaturedMapRoute
-          slug={entry.slug}
-          kicker={routeKicker(entry)}
-          intro={{
-            kicker: "מסלול מומלץ",
-            heading: "מה מחכה בדרך",
-            body: [entry.summary].filter(Boolean),
-          }}
-          about={{
-            eyebrow: "על המסלול",
-            heading: entry.name,
-            paragraphs: splitParagraphs(entry.description || entry.summary),
-          }}
-        />
+        hasVideo ? (
+          <FeaturedVideoRoute {...createGenericRouteStoryProps(entry)} />
+        ) : (
+          <FeaturedMapRoute {...createGenericRouteStoryProps(entry)} />
+        )
       )}
     </PageShell>
   );
-}
-
-function splitParagraphs(text) {
-  return String(text || "")
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
-function routeKicker(entry) {
-  return [entry.regionName || "גליל עליון וגולן", "מסלול מומלץ"].filter(Boolean).join(" · ");
-}
-
-function genericRouteNavLinks(entry) {
-  if (!entry) return null;
-  return [
-    { label: "על המסלול", href: "#fv-about" },
-    { label: "נקודות במסלול", href: "#fv-poi-stories" },
-    { label: "כל המסלולים", to: "/featured/" },
-  ];
 }

@@ -39,6 +39,9 @@ import {
   MAP_INITIAL_CENTER,
   MAP_INITIAL_ZOOM,
 } from "@cycleways/core/map/mapViewport.js";
+import {
+  VIDEO_CURSOR_DEFAULT_VARIANT,
+} from "@cycleways/core/map/mapStyles.js";
 import { capabilitiesForMode, MAP_MODE_PLANNER } from "./mapCapabilities.js";
 
 function isMapAvailableForCleanup(map) {
@@ -93,7 +96,7 @@ function MapSurface({
   searchHighlight,
   selectedRoutePointIndex = null,
   videoCursor = null,
-  videoCursorVariant = 1,
+  videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
   videoPlaying = false,
 }) {
   // Translate the mode into an explicit capability set. In planner mode every

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { promoteCatalogDraft, recomputeCatalogMetadata } from "../editor/server.mjs";
+import {
+  promoteCatalogDraft,
+  recomputeCatalogMetadata,
+  validateCatalogDraft,
+} from "../editor/server.mjs";
 
 const places = [
   { id: "beit-hillel", name: "בית הלל", lat: 33.2177, lng: 35.6097 },
@@ -30,7 +34,13 @@ const fakeDecode = (token) => {
 const draft = {
   version: 1,
   entries: [
-    { slug: "test-a", name: "A", summary: "x", route: "ok", featured: false },
+    {
+      slug: "test-a",
+      name: "A",
+      summary: "x",
+      route: "ok",
+      featured: false,
+    },
   ],
 };
 
@@ -47,6 +57,7 @@ assert.equal(recomputed.entries[0].regionId, "hula-valley");
 assert.equal(recomputed.entries[0].routeShape.type, "circular");
 assert.deepEqual(recomputed.entries[0].startPlaceIds, recomputed.entries[0].passesNear);
 assert.equal(recomputed.entries[0].surfaceType, "paved");
+validateCatalogDraft(recomputed);
 
 let decoderSawEntry = null;
 recomputeCatalogMetadata(draft, {

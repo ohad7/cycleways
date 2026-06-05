@@ -26,6 +26,22 @@ assert.doesNotThrow(() =>
   validateKeyframesDraft(validDraft, routePolyline),
 );
 
+assert.doesNotThrow(() =>
+  validateKeyframesDraft(
+    { ...validDraft, playbackBehavior: "none" },
+    routePolyline,
+  ),
+);
+
+assert.throws(
+  () =>
+    validateKeyframesDraft(
+      { ...validDraft, playbackBehavior: "fast" },
+      routePolyline,
+    ),
+  /playbackBehavior/,
+);
+
 // Wrong videoDuration
 assert.throws(
   () =>
@@ -79,7 +95,7 @@ await fs.mkdir(publicDir, { recursive: true });
 
 await fs.writeFile(
   path.join(draftsDir, "test-slug.json"),
-  JSON.stringify(validDraft),
+  JSON.stringify({ ...validDraft, playbackBehavior: "none" }),
 );
 
 const result = await promoteKeyframesDraft({
@@ -90,7 +106,10 @@ const result = await promoteKeyframesDraft({
 });
 
 assert.ok(result.ok);
-await fs.stat(path.join(publicDir, "test-slug.json")); // throws if missing
+const promoted = JSON.parse(
+  await fs.readFile(path.join(publicDir, "test-slug.json"), "utf8"),
+);
+assert.equal(promoted.playbackBehavior, "none");
 const index = JSON.parse(
   await fs.readFile(path.join(publicDir, "index.json"), "utf8"),
 );

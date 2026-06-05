@@ -146,6 +146,33 @@ test("/routes generic route renders from snapshot without planner assets", async
   }
 });
 
+test("/routes promoted video route renders the video template", async ({ page }) => {
+  const requestedUrls = [];
+  page.on("request", (request) => requestedUrls.push(request.url()));
+
+  await page.goto("/routes/sovev-dafna");
+  await expect(page.locator(".featured-route-video-first")).toBeVisible();
+  await expect(page.locator(".featured-route-header h1")).toContainText("סובב דפנה");
+  await expect(page.locator(".fv-video .featured-video-frame")).toBeVisible();
+  await expect(page.locator(".fv-video-shell--map")).toHaveCount(0);
+  await expect(page.locator(".fv-route-warning-card")).toHaveCount(2);
+  await expect(
+    page.locator(".fv-route-warning-card", { hasText: "שער יציאה מדפנה למטעים" }),
+  ).toBeVisible();
+  const figWarning = page.locator(".fv-route-warning-card", { hasText: "תאנים ושיחי פטל" });
+  await expect(figWarning).toBeVisible();
+  await expect(figWarning.locator("img")).toHaveCount(1);
+
+  expect(
+    requestedUrls.some((url) => url.includes("public-data/route-videos/index.json")),
+    `expected route video index to be requested; saw:\n${requestedUrls.join("\n")}`,
+  ).toBe(true);
+  expect(
+    requestedUrls.some((url) => url.includes("public-data/route-videos/sovev-dafna.json")),
+    `expected sovev-dafna video keyframes to be requested; saw:\n${requestedUrls.join("\n")}`,
+  ).toBe(true);
+});
+
 test("/routes detail stats show computed route shape", async ({ page }) => {
   await page.goto("/routes/kovshey-hagolan");
   await expect(page.locator(".featured-route-header h1")).toContainText("מסע בעקבות כובשי הגולן");

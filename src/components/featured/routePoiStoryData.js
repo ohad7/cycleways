@@ -1,7 +1,9 @@
 import {
   galleryImageSlides,
+  isWarningType,
   nearestSlideIndexByFraction,
   normalizePoiImages,
+  primaryPoiImage,
 } from "@cycleways/core/data/poiTypes.js";
 
 const PREVIEW_MAX_FRACTION = 0.025;
@@ -126,7 +128,55 @@ export function routePoiStories(points) {
   return stories;
 }
 
-// Returns the nearest gallery slide to the cursor and whether the cursor is
+function routeWarningCueSlides(points) {
+  const warnings = (Array.isArray(points) ? points : [])
+    .filter((point) => point && isWarningType(point.type))
+    .map((point) => {
+      const image = primaryPoiImage(point);
+      return {
+        poiId: point.id || `${point.type}-${point.location?.join(",")}`,
+        kind: "warning",
+        type: point.type,
+        name: point.name || "",
+        information: point.information || "",
+        description: point.description || "",
+        location: point.location,
+        routeProgressMeters: point.routeProgressMeters,
+        routeFraction: point.routeFraction,
+        imageIndex: 0,
+        photo: image?.photo || "",
+        thumbnail: image?.thumbnail || image?.photo || "",
+      };
+    });
+
+  warnings.sort(compareRouteCueProgress);
+  return warnings;
+}
+
+function compareRouteCueProgress(a, b) {
+  const ap = Number.isFinite(a?.routeProgressMeters)
+    ? a.routeProgressMeters
+    : Number.POSITIVE_INFINITY;
+  const bp = Number.isFinite(b?.routeProgressMeters)
+    ? b.routeProgressMeters
+    : Number.POSITIVE_INFINITY;
+  if (ap !== bp) return ap - bp;
+  return String(a?.poiId || "").localeCompare(String(b?.poiId || ""));
+}
+
+export function routeVideoCueSlides(meta, routeState) {
+  const activeDataPoints = routeState?.activeDataPoints || [];
+  const endpoints = routeEndpointSlides(meta, routeState);
+  const start = endpoints.filter((slide) => slide.kind === "start");
+  const end = endpoints.filter((slide) => slide.kind === "end");
+  const routeCues = [
+    ...galleryImageSlides(activeDataPoints),
+    ...routeWarningCueSlides(activeDataPoints),
+  ].sort(compareRouteCueProgress);
+  return [...start, ...routeCues, ...end];
+}
+
+// Returns the nearest video cue to the cursor and whether the cursor is
 // close enough to count as "at" that POI. `near` drives the expanded preview;
 // the slide itself is always returned (defaulting the cursor to the route
 // start) so callers can keep a persistent thumbnail of the nearest stop.
