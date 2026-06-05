@@ -13,8 +13,8 @@
       "elevationLossM": 71,
       "regionId": "hula-valley",
       "passesNear": [
-        "beit-hillel",
-        "hagoshrim"
+        "hagoshrim",
+        "beit-hillel"
       ],
       "difficulty": "easy",
       "style": "scenic",
@@ -43,7 +43,27 @@
         "type": "circular",
         "endpointDistanceM": 2
       },
-      "surfaceType": "mixed"
+      "surfaceType": "mixed",
+      "startPlaceIds": [
+        "hagoshrim",
+        "beit-hillel"
+      ],
+      "placeMatches": [
+        {
+          "id": "hagoshrim",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 422,
+          "routeProgressMeters": 7577
+        },
+        {
+          "id": "beit-hillel",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 429,
+          "routeProgressMeters": 9770
+        }
+      ]
     },
     {
       "slug": "sovev-beit-hillel",
@@ -82,7 +102,27 @@
         "type": "circular",
         "endpointDistanceM": 6
       },
-      "surfaceType": "paved"
+      "surfaceType": "paved",
+      "startPlaceIds": [
+        "beit-hillel",
+        "shdeh-nehemia"
+      ],
+      "placeMatches": [
+        {
+          "id": "beit-hillel",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 46,
+          "routeProgressMeters": 1
+        },
+        {
+          "id": "shdeh-nehemia",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 5,
+          "routeProgressMeters": 1501
+        }
+      ]
     },
     {
       "slug": "historic-jordan",
@@ -95,7 +135,11 @@
       "elevationGainM": 48,
       "elevationLossM": 48,
       "regionId": "hula-valley",
-      "passesNear": [],
+      "passesNear": [
+        "neot-mordechai",
+        "agamon-hahula",
+        "kfar-blum"
+      ],
       "difficulty": "moderate",
       "style": "adventurous",
       "roadMix": {
@@ -113,7 +157,44 @@
         "type": "circular",
         "endpointDistanceM": 18
       },
-      "surfaceType": "dirt"
+      "surfaceType": "dirt",
+      "startPlaceIds": [
+        "neot-mordechai",
+        "agamon-hahula",
+        "kfar-blum"
+      ],
+      "placeMatches": [
+        {
+          "id": "neot-mordechai",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 388,
+          "routeProgressMeters": 2468
+        },
+        {
+          "id": "agamon-hahula",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "אגמון החולה צפון",
+            "אגמון החולה גישה מזרח"
+          ],
+          "distanceM": 132,
+          "routeProgressMeters": 10567
+        },
+        {
+          "id": "kfar-blum",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "ירדן מערב כפר בלום",
+            "ירדן מערב שדות כפר בלום",
+            "ירדן מערב כפר בלום"
+          ],
+          "distanceM": 698,
+          "routeProgressMeters": 22989
+        }
+      ]
     },
     {
       "slug": "kovshey-hagolan",
@@ -145,7 +226,9 @@
         "type": "one_way",
         "endpointDistanceM": 6915
       },
-      "surfaceType": "dirt"
+      "surfaceType": "dirt",
+      "startPlaceIds": [],
+      "placeMatches": []
     },
     {
       "slug": "sovev-dafna",
@@ -185,7 +268,27 @@
         "type": "circular",
         "endpointDistanceM": 7
       },
-      "surfaceType": "mixed"
+      "surfaceType": "mixed",
+      "startPlaceIds": [
+        "dafna",
+        "hagoshrim"
+      ],
+      "placeMatches": [
+        {
+          "id": "dafna",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 238,
+          "routeProgressMeters": 4322
+        },
+        {
+          "id": "hagoshrim",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 428,
+          "routeProgressMeters": 4723
+        }
+      ]
     },
     {
       "slug": "roman-roads",
@@ -229,7 +332,19 @@
         "type": "circular",
         "endpointDistanceM": 10
       },
-      "surfaceType": "mixed"
+      "surfaceType": "mixed",
+      "startPlaceIds": [
+        "kfar-szold"
+      ],
+      "placeMatches": [
+        {
+          "id": "kfar-szold",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 96,
+          "routeProgressMeters": 25822
+        }
+      ]
     }
   ]
 }

@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import {
   routeDisplayImage,
   routeDifficultyLabel,
+  routePassesThroughPlaceIds,
   routeShapeLabel,
   routeShapeType,
+  routeStartPlaceIds,
   routeSurfaceLabel,
   routeSurfaceType,
 } from "../packages/core/src/data/catalog.js";
@@ -43,6 +45,27 @@ assert.equal(routeShapeType({}), null);
 assert.equal(routeShapeLabel({ routeShape: { type: "circular" } }), "מעגלי");
 assert.equal(routeShapeLabel({ routeShape: { type: "one_way" } }), "חד כיווני");
 assert.equal(routeShapeLabel({}), "");
+
+assert.deepEqual(
+  routePassesThroughPlaceIds({ passesNear: ["beit-hillel", "dafna"] }),
+  ["beit-hillel", "dafna"],
+);
+assert.deepEqual(
+  routeStartPlaceIds({
+    routeShape: { type: "circular" },
+    passesNear: ["beit-hillel", "dafna"],
+  }),
+  ["beit-hillel", "dafna"],
+);
+assert.deepEqual(
+  routeStartPlaceIds({
+    routeShape: { type: "one_way" },
+    passesNear: ["beit-hillel"],
+    startPlaceIds: ["dafna"],
+  }),
+  ["dafna"],
+);
+assert.deepEqual(routeStartPlaceIds({ routeShape: { type: "one_way" } }), []);
 
 assert.equal(routeDifficultyLabel({ difficulty: "easy" }), "קל");
 assert.equal(routeDifficultyLabel({ difficulty: "moderate" }), "בינוני");

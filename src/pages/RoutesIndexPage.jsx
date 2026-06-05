@@ -3,9 +3,13 @@ import PageShell from "../components/PageShell.jsx";
 import RouteCatalogCard from "../components/routes/RouteCatalogCard.jsx";
 import { catalogFilter } from "../components/catalogFilter.js";
 import { hasRouteStory, loadRecommendedRouteList } from "../featured/index.js";
+import {
+  routePassesThroughPlaceIds,
+  routeStartPlaceIds,
+} from "@cycleways/core/data/catalog.js";
 import "../components/routes/routes.css";
 
-const FILTER_GROUPS = [
+const STATIC_FILTER_GROUPS = [
   {
     axis: "difficulty",
     label: "רמת קושי",
@@ -39,6 +43,8 @@ function emptyFilters() {
     difficulty: new Set(),
     style: new Set(),
     distance: new Set(),
+    startLocation: new Set(),
+    throughLocation: new Set(),
   };
 }
 
@@ -88,6 +94,27 @@ export default function RoutesIndexPage() {
     () => sortRoutes(catalogFilter(entries, filters)),
     [entries, filters],
   );
+  const placeById = useMemo(
+    () => new Map(places.map((place) => [place.id, place])),
+    [places],
+  );
+  const filterGroups = useMemo(() => {
+    const startOptions = placeOptionsForEntries(entries, placeById, routeStartPlaceIds);
+    const throughOptions = placeOptionsForEntries(entries, placeById, routePassesThroughPlaceIds);
+    return [
+      ...STATIC_FILTER_GROUPS,
+      startOptions.length > 0 && {
+        axis: "startLocation",
+        label: "נקודת התחלה",
+        options: startOptions,
+      },
+      throughOptions.length > 0 && {
+        axis: "throughLocation",
+        label: "עובר דרך",
+        options: throughOptions,
+      },
+    ].filter(Boolean);
+  }, [entries, placeById]);
   const activeFilterCount = useMemo(
     () => Object.values(filters).reduce((sum, set) => sum + set.size, 0),
     [filters],
@@ -136,7 +163,7 @@ export default function RoutesIndexPage() {
               )}
             </div>
             <div className="routes-page__filter-groups">
-              {FILTER_GROUPS.map((group) => (
+              {filterGroups.map((group) => (
                 <fieldset className="routes-page__filter-group" key={group.axis}>
                   <legend>{group.label}</legend>
                   <div className="routes-page__filter-options">
@@ -186,4 +213,20 @@ async function loadPlaces() {
   } catch {
     return [];
   }
+}
+
+function placeOptionsForEntries(entries, placeById, placeIdsForEntry) {
+  const counts = new Map();
+  for (const entry of entries) {
+    for (const id of placeIdsForEntry(entry)) {
+      counts.set(id, (counts.get(id) || 0) + 1);
+    }
+  }
+  return Array.from(counts.keys())
+    .map((id) => ({
+      value: id,
+      label: placeById.get(id)?.name || id,
+      count: counts.get(id) || 0,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "he"));
 }

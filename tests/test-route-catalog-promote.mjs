@@ -39,8 +39,13 @@ const recomputed = recomputeCatalogMetadata(draft, { places, zones, decodeRoute:
 assert.equal(recomputed.entries[0].slug, "test-a");
 assert.equal(recomputed.entries[0].difficulty, "easy");
 assert.ok(recomputed.entries[0].passesNear.includes("beit-hillel"));
+assert.equal(
+  recomputed.entries[0].placeMatches.find((match) => match.id === "beit-hillel")?.matchType,
+  "radius",
+);
 assert.equal(recomputed.entries[0].regionId, "hula-valley");
 assert.equal(recomputed.entries[0].routeShape.type, "circular");
+assert.deepEqual(recomputed.entries[0].startPlaceIds, recomputed.entries[0].passesNear);
 assert.equal(recomputed.entries[0].surfaceType, "paved");
 
 // promote writes the public file atomically and removes the draft
@@ -60,7 +65,9 @@ await promoteCatalogDraft({
 const written = JSON.parse(await fs.readFile(publicPath, "utf-8"));
 assert.equal(written.entries.length, 1);
 assert.equal(written.entries[0].difficulty, "easy");
+assert.ok(written.entries[0].placeMatches.some((match) => match.id === "beit-hillel"));
 assert.equal(written.entries[0].routeShape.type, "circular");
+assert.deepEqual(written.entries[0].startPlaceIds, written.entries[0].passesNear);
 assert.equal(written.entries[0].surfaceType, "paved");
 await assert.rejects(fs.stat(draftPath));
 

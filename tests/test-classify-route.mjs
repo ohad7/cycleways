@@ -4,6 +4,14 @@ import { classifyRoute } from "../editor/server.mjs";
 const places = [
   { id: "beit-hillel", name: "בית הלל", lat: 33.2177, lng: 35.6097 },
   { id: "kfar-szold",  name: "כפר סאלד", lat: 33.1971, lng: 35.6552 },
+  {
+    id: "agamon-hahula",
+    name: "אגמון החולה",
+    lat: 33.1086,
+    lng: 35.6104,
+    matchRadiusM: 1500,
+    segmentNameIncludes: ["אגמון החולה"],
+  },
 ];
 const zones = [
   { id: "hula-valley", name: "עמק החולה",
@@ -29,6 +37,9 @@ assert.equal(meta.difficulty, "easy");
 assert.ok(meta.distanceKm > 0 && meta.distanceKm < 1);
 assert.ok(meta.elevationGainM > 0 && meta.elevationGainM < 20);
 assert.deepEqual(meta.routeShape, { type: "circular", endpointDistanceM: 93 });
+assert.equal(meta.placeMatches.find((match) => match.id === "beit-hillel")?.matchType, "radius");
+assert.deepEqual(meta.startPlaceIds, meta.passesNear);
+assert.ok(meta.startPlaceIds.includes("beit-hillel"));
 assert.equal(meta.surfaceType, "paved");
 // family wins by priority over scenic: easy + roadMix.road < 0.1 + qualityScore >= 3
 assert.equal(meta.style, "family");
@@ -86,5 +97,21 @@ const dirtSurface = classifyRoute({
   qualityScore: 3.2,
 }, { places, zones });
 assert.equal(dirtSurface.surfaceType, "dirt");
+
+const segmentMatchedPlace = classifyRoute({
+  geometry: [
+    { lat: 33.10, lng: 35.62, elevation: 100 },
+    { lat: 33.11, lng: 35.63, elevation: 105 },
+  ],
+  selectedSegments: ["אגמון החולה צפון"],
+  roadTypeFractions: { paved: 1, dirt: 0, road: 0 },
+  qualityScore: 3.2,
+}, { places, zones });
+const agamonMatch = segmentMatchedPlace.placeMatches.find(
+  (match) => match.id === "agamon-hahula",
+);
+assert.equal(agamonMatch?.relation, "passes_through");
+assert.equal(agamonMatch?.matchType, "segment");
+assert.ok(segmentMatchedPlace.passesNear.includes("agamon-hahula"));
 
 console.log("classifyRoute tests passed");

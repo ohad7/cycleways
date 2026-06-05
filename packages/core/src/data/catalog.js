@@ -44,6 +44,30 @@ export function routeShapeLabel(entry) {
   return "";
 }
 
+function normalizedPlaceIds(value) {
+  if (Array.isArray(value)) {
+    return value.filter((id) => typeof id === "string" && id.length > 0);
+  }
+  if (typeof value === "string" && value.length > 0) return [value];
+  return [];
+}
+
+export function routePassesThroughPlaceIds(entry) {
+  return normalizedPlaceIds(entry?.passesNear);
+}
+
+export function routeStartPlaceIds(entry) {
+  const explicit = [
+    ...normalizedPlaceIds(entry?.startPlaceIds),
+    ...normalizedPlaceIds(entry?.startPlaceId),
+    ...normalizedPlaceIds(entry?.start?.placeIds),
+    ...normalizedPlaceIds(entry?.start?.placeId),
+  ];
+  if (explicit.length > 0) return [...new Set(explicit)];
+  if (routeShapeType(entry) === "circular") return routePassesThroughPlaceIds(entry);
+  return [];
+}
+
 export function routeDifficultyLabel(entryOrDifficulty) {
   const difficulty =
     typeof entryOrDifficulty === "string"

@@ -523,10 +523,17 @@ function haversineMetersClassify(a, b) {
 }
 
 function nearestDistanceToPolyline(point, polyline) {
+  return nearestPointOnPolyline(point, polyline).distanceM;
+}
+
+function nearestPointOnPolyline(point, polyline) {
   let best = Infinity;
+  let bestProgress = 0;
+  let progress = 0;
   for (let i = 0; i < polyline.length - 1; i++) {
     const a = polyline[i];
     const b = polyline[i + 1];
+    const segmentMeters = haversineMetersClassify(a, b);
     const DEG = Math.PI / 180;
     const cosLat = Math.cos(((a.lat + b.lat) / 2) * DEG);
     const ax = a.lng * cosLat, ay = a.lat;
@@ -539,9 +546,121 @@ function nearestDistanceToPolyline(point, polyline) {
     const projLat = a.lat + (b.lat - a.lat) * t;
     const projLng = a.lng + (b.lng - a.lng) * t;
     const d = haversineMetersClassify(point, { lat: projLat, lng: projLng });
-    if (d < best) best = d;
+    if (d < best) {
+      best = d;
+      bestProgress = progress + segmentMeters * t;
+    }
+    progress += segmentMeters;
   }
-  return best;
+  return { distanceM: best, routeProgressMeters: bestProgress };
+}
+
+function placeMatchRadius(place) {
+  const radius = Number(place?.matchRadiusM);
+  return Number.isFinite(radius) && radius > 0 ? radius : PASSES_NEAR_METERS;
+}
+
+function nearbyPlaceIdsForPoint(point, places, maxMeters = PASSES_NEAR_METERS) {
+  return places
+    .filter((place) => {
+      const radius = Number.isFinite(Number(place?.matchRadiusM))
+        ? Number(place.matchRadiusM)
+        : maxMeters;
+      return haversineMetersClassify(place, point) <= radius;
+    })
+    .map((place) => place.id);
+}
+
+function placePolygon(place) {
+  if (Array.isArray(place?.polygon)) return place.polygon;
+  return null;
+}
+
+function routeProgressForPolygon(polyline, polygon) {
+  let progress = 0;
+  for (let i = 0; i < polyline.length; i++) {
+    const point = polyline[i];
+    if (pointInPolygon(point, polygon)) return progress;
+    if (i < polyline.length - 1) {
+      progress += haversineMetersClassify(point, polyline[i + 1]);
+    }
+  }
+  return null;
+}
+
+function placeSegmentMatches(place, selectedSegments) {
+  const includes = Array.isArray(place?.segmentNameIncludes)
+    ? place.segmentNameIncludes
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    : [];
+  if (includes.length === 0) return [];
+  return selectedSegments.filter((segmentName) =>
+    includes.some((needle) => String(segmentName || "").includes(needle)),
+  );
+}
+
+function classifyPlaceMatches(places, geometry, selectedSegments = []) {
+  return (places || [])
+    .map((place) => {
+      if (!place?.id) return null;
+      const nearest = Number.isFinite(place.lat) && Number.isFinite(place.lng)
+        ? nearestPointOnPolyline(place, geometry)
+        : { distanceM: Infinity, routeProgressMeters: null };
+      const polygon = placePolygon(place);
+      const polygonProgress =
+        polygon && Array.isArray(polygon)
+          ? routeProgressForPolygon(geometry, polygon)
+          : null;
+      const matchedSegments = placeSegmentMatches(place, selectedSegments);
+      const radius = placeMatchRadius(place);
+
+      if (polygonProgress !== null) {
+        return {
+          id: place.id,
+          relation: "passes_through",
+          matchType: "polygon",
+          distanceM: 0,
+          routeProgressMeters: Math.round(polygonProgress),
+        };
+      }
+
+      if (matchedSegments.length > 0) {
+        return {
+          id: place.id,
+          relation: "passes_through",
+          matchType: "segment",
+          segmentNames: matchedSegments,
+          distanceM: Number.isFinite(nearest.distanceM) ? Math.round(nearest.distanceM) : null,
+          routeProgressMeters: Number.isFinite(nearest.routeProgressMeters)
+            ? Math.round(nearest.routeProgressMeters)
+            : null,
+        };
+      }
+
+      if (nearest.distanceM <= radius) {
+        return {
+          id: place.id,
+          relation: "near",
+          matchType: "radius",
+          distanceM: Math.round(nearest.distanceM),
+          routeProgressMeters: Math.round(nearest.routeProgressMeters),
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const ap = Number.isFinite(a.routeProgressMeters)
+        ? a.routeProgressMeters
+        : Number.POSITIVE_INFINITY;
+      const bp = Number.isFinite(b.routeProgressMeters)
+        ? b.routeProgressMeters
+        : Number.POSITIVE_INFINITY;
+      if (ap !== bp) return ap - bp;
+      return String(a.id).localeCompare(String(b.id));
+    });
 }
 
 function pointInPolygon(point, polygon) {
@@ -827,6 +946,9 @@ export async function buildLiveDecodeRoute() {
       const qualityScore = qualityWeight > 0 ? qualitySum / qualityWeight : 0;
       return {
         geometry: snapshot.geometry,
+        selectedSegments: Array.isArray(snapshot.selectedSegments)
+          ? snapshot.selectedSegments
+          : [],
         roadTypeFractions,
         qualityScore,
       };
@@ -962,6 +1084,9 @@ export async function promoteCatalogDraft({ draftPath, publicPath, places, zones
 
 export function classifyRoute(input, refs) {
   const { geometry, roadTypeFractions, qualityScore } = input;
+  const selectedSegments = Array.isArray(input.selectedSegments)
+    ? input.selectedSegments
+    : [];
   if (!Array.isArray(geometry) || geometry.length < 2) {
     throw new Error("classifyRoute: geometry must have at least 2 points");
   }
@@ -984,15 +1109,20 @@ export function classifyRoute(input, refs) {
   const centroid = centroidOf(geometry);
   const regionId =
     refs.zones.find((z) => pointInPolygon(centroid, z.polygon))?.id ?? "unknown";
-  const passesNear = refs.places
-    .filter((p) => nearestDistanceToPolyline(p, geometry) <= PASSES_NEAR_METERS)
-    .map((p) => p.id);
+  const placeMatches = classifyPlaceMatches(refs.places, geometry, selectedSegments);
+  const passesNear = placeMatches.map((match) => match.id);
+  const startPlaceIds =
+    routeShape.type === "circular"
+      ? passesNear
+      : nearbyPlaceIdsForPoint(geometry[0], refs.places);
   return {
     distanceKm: Math.round(distanceKm * 10) / 10,
     elevationGainM,
     elevationLossM,
     regionId,
     passesNear,
+    placeMatches,
+    startPlaceIds,
     difficulty,
     style,
     routeShape,

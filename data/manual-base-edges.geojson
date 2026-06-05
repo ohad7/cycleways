@@ -3285,6 +3285,68 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-522855150-mq0nhinw",
+      "properties": {
+        "id": "manual-osm-522855150-mq0nhinw",
+        "manualEdgeId": "manual-osm-522855150-mq0nhinw",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e522855150_1",
+        "copiedFromOsmWayId": 522855150,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-06-05T08:16:39.356Z",
+        "updatedAt": "2026-06-05T08:16:45.565Z"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.635087,
+            33.233485
+          ],
+          [
+            35.635134,
+            33.233544
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-522855148-mq0nhqrc",
+      "properties": {
+        "id": "manual-osm-522855148-mq0nhqrc",
+        "manualEdgeId": "manual-osm-522855148-mq0nhqrc",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e522855148_1",
+        "copiedFromOsmWayId": 522855148,
+        "highway": "residential",
+        "osmRouteClass": "local_road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-06-05T08:16:49.848Z",
+        "updatedAt": "2026-06-05T08:16:57.769Z"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.635229,
+            33.233422
+          ],
+          [
+            35.635087,
+            33.233485
+          ]
+        ]
+      }
     }
   ]
 }

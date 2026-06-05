@@ -8,6 +8,8 @@ test.beforeEach(async ({ page }) => {
 test("/routes lists every recommended catalog route", async ({ page }) => {
   await page.goto("/routes");
   await expect(page.locator(".routes-page")).toBeVisible();
+  await expect(page.locator(".routes-page__filter-group", { hasText: "נקודת התחלה" })).toBeVisible();
+  await expect(page.locator(".routes-page__filter-group", { hasText: "עובר דרך" })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "בניאס" })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "הירדן ההיסטורי" })).toBeVisible();
@@ -28,6 +30,26 @@ test("/routes lists every recommended catalog route", async ({ page }) => {
   await expect(
     page.locator(".route-card", { hasText: "בניאס וגן הצפון" }).locator(".route-card__stats"),
   ).toContainText("סלול/שטח");
+});
+
+test("/routes filters by possible start location", async ({ page }) => {
+  await page.goto("/routes");
+  const startLocation = page.locator(".routes-page__filter-group", { hasText: "נקודת התחלה" });
+  await startLocation.getByRole("button", { name: "הגושרים", exact: true }).click();
+
+  await expect(page.locator(".route-card")).toHaveCount(2);
+  await expect(page.locator(".route-card", { hasText: "בניאס וגן הצפון" })).toBeVisible();
+  await expect(page.locator(".route-card", { hasText: "סובב דפנה" })).toBeVisible();
+  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toHaveCount(0);
+});
+
+test("/routes filters by goes-through location", async ({ page }) => {
+  await page.goto("/routes");
+  const throughLocation = page.locator(".routes-page__filter-group", { hasText: "עובר דרך" });
+  await throughLocation.getByRole("button", { name: "אגמון החולה", exact: true }).click();
+
+  await expect(page.locator(".route-card")).toHaveCount(1);
+  await expect(page.locator(".route-card", { hasText: "הירדן ההיסטורי" })).toBeVisible();
 });
 
 test("/routes card opens planner and detail actions", async ({ page }) => {

@@ -7,7 +7,30 @@
     { "id": "kfar-szold",        "name": "כפר סאלד",      "lat": 33.1971, "lng": 35.6552 },
     { "id": "hagoshrim",         "name": "הגושרים",       "lat": 33.2294, "lng": 35.6188 },
     { "id": "shdeh-nehemia",     "name": "שדה נחמיה",     "lat": 33.2056, "lng": 35.6101 },
-    { "id": "kfar-blum",         "name": "כפר בלום",      "lat": 33.1762, "lng": 35.6082 },
+    {
+      "id": "kfar-blum",
+      "name": "כפר בלום",
+      "lat": 33.1762,
+      "lng": 35.6082,
+      "matchRadiusM": 900,
+      "segmentNameIncludes": ["כפר בלום"]
+    },
+    {
+      "id": "neot-mordechai",
+      "name": "נאות מרדכי",
+      "lat": 33.1590,
+      "lng": 35.5962,
+      "matchRadiusM": 1600,
+      "segmentNameIncludes": ["נאות מרדכי"]
+    },
+    {
+      "id": "agamon-hahula",
+      "name": "אגמון החולה",
+      "lat": 33.1086,
+      "lng": 35.6104,
+      "matchRadiusM": 1600,
+      "segmentNameIncludes": ["אגמון החולה"]
+    },
     { "id": "ayelet-hashachar",  "name": "איילת השחר",    "lat": 33.0250, "lng": 35.5689 },
     { "id": "kiryat-shmona",     "name": "קרית שמונה",    "lat": 33.2086, "lng": 35.5704 },
     { "id": "metula",            "name": "מטולה",         "lat": 33.2786, "lng": 35.5760 },
