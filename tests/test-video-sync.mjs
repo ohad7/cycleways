@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
+import {
+  buildCumulativeDistances,
+  pointAtFraction,
+} from "../src/components/featured/routeGeometry.js";
 
 const simpleRoute = [
   { lat: 33.0, lng: 35.0 },
@@ -231,5 +235,40 @@ const loose = clickSync.snapClickToRoute(
   200,
 );
 assert.ok(loose, "expected loose threshold to accept the click");
+
+// Optional keyframe fractions preserve loop-seam intent when coordinates are
+// geometrically ambiguous between the start and end of a route.
+const seamRoute = [
+  { lat: 33.0, lng: 35.0 },
+  { lat: 33.0, lng: 35.004 },
+  { lat: 33.004, lng: 35.004 },
+  { lat: 33.004, lng: 35.0 },
+  { lat: 33.0, lng: 35.0001 },
+];
+const seamCumulative = buildCumulativeDistances(seamRoute);
+const lateSeamPoint = pointAtFraction(seamRoute, seamCumulative, 0.996);
+const seamSync = createVideoSync({
+  keyframes: [
+    { t: 0, lat: seamRoute[0].lat, lng: seamRoute[0].lng, fraction: 0 },
+    { t: 10, lat: lateSeamPoint.lat, lng: lateSeamPoint.lng, fraction: 0.996 },
+  ],
+  videoDuration: 10,
+  routeGeometry: seamRoute,
+});
+const lateSeam = seamSync.timeToPosition(10);
+assert.ok(lateSeam.fraction > 0.99, `expected late seam fraction, got ${lateSeam.fraction}`);
+
+assert.throws(
+  () =>
+    createVideoSync({
+      keyframes: [
+        { t: 0, lat: 33.0, lng: 35.0, fraction: -0.1 },
+        { t: 10, lat: 33.0, lng: 35.002, fraction: 1 },
+      ],
+      videoDuration: 10,
+      routeGeometry: straightRoute,
+    }),
+  /fraction.*between 0 and 1/i,
+);
 
 console.log("videoSync validation tests passed");

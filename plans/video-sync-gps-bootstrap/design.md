@@ -5,10 +5,11 @@ Date: 2026-06-06
 ## Problem
 
 The editor's video-sync mode produces keyframes `{ t, lat, lon }` that map a
-published YouTube video's playback time to a position along a route. Today every
-keyframe is placed by hand: pick a slug, paste a YouTube URL, scrub the video,
-click the map. Most clips were recorded without usable GPS, so manual placement
-was the only option.
+published YouTube video's playback time to a position along a route. Bootstrapped
+keyframes may also carry an optional `fraction` field to preserve loop-seam
+intent where coordinates are ambiguous. Today every keyframe is placed by hand:
+pick a slug, paste a YouTube URL, scrub the video, click the map. Most clips were
+recorded without usable GPS, so manual placement was the only option.
 
 The Dafna clip has a GPS sidecar:
 `data/videos/Dafna/dafna-output.gps.txt`
@@ -56,11 +57,12 @@ selects a temporally plausible candidate sequence:
 
 - Prefer the lowest near-equivalent fraction for the first fix on closed loops.
 - For later fixes, prefer candidates that continue from the previous selected
-  fraction with small/no backtracking.
+  fraction without backtracking by default.
 - Heavily penalize impossible forward jumps based on elapsed video time and a
   generous max route-progress speed.
 - Heavily penalize large backward jumps.
-- Still allow small backwards movement/noise; manual refinement remains possible.
+- Drop backward fixes by default; callers can raise `maxBacktrackMeters` if a
+  future clip intentionally doubles back.
 
 Rejected alternatives:
 
@@ -94,8 +96,8 @@ bootstrapKeyframesFromGps({
   speedFactor = 5,
   maxErrorMeters = 10,
   maxOffRouteMeters = 60,
-  maxBacktrackMeters = 35,
-  maxProgressMetersPerSecond = 120,
+  maxBacktrackMeters = 0,
+  maxProgressMetersPerSecond = 60,
 }) -> { keyframes, stats }
 ```
 
@@ -110,7 +112,8 @@ Pipeline:
 6. Select a continuity-aware projection candidate sequence.
 7. Simplify the selected `fraction(time)` curve with vertical-error
    Douglas-Peucker using `epsilon = maxErrorMeters / totalRouteLengthMeters`.
-8. Emit keyframes `{ t, lat, lon }` at the selected snapped route fractions.
+8. Emit keyframes `{ t, lat, lon, fraction }` at the selected snapped route
+   fractions. Existing keyframes without `fraction` remain supported.
 
 Stats include:
 
@@ -120,6 +123,7 @@ Stats include:
   offRouteDropped,
   beyondDurationDropped,
   nonIncreasingDropped,
+  continuityDropped,
   ambiguousFixes,
   continuityCorrections,
   keyframesOut,
@@ -157,11 +161,12 @@ draft, promote.
 ## Edge cases and invariants
 
 - Bootstrap replaces keyframes after confirmation; it does not merge.
-- The output is ordinary keyframes; no new draft/promote format is introduced.
+- The output is ordinary editable keyframes, with an optional backward-compatible
+  `fraction` field; no new draft/promote endpoint is introduced.
 - Keyframes are emitted on-route, so they pass the existing 80 m promotion
   validator.
-- Small GPS backtracking is allowed; large seam jumps are avoided by continuity
-  scoring.
+- GPS backtracking is dropped by default; large seam jumps are avoided by
+  continuity scoring.
 - If the GPS track starts/ends away from route start/end, runtime anchors will
   still force 0/1 at video boundaries. `startFraction`/`endFraction` stats make
   this visible so the user can choose a different route, speed factor, or manual

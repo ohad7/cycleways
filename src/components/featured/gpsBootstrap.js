@@ -7,7 +7,6 @@ import {
 
 const DEFAULT_INITIAL_TIE_METERS = 15;
 const DEFAULT_MAX_FORWARD_JUMP_SLACK_METERS = 120;
-const LARGE_JUMP_PENALTY = 1000;
 const SMALL_BACKTRACK_PENALTY = 2;
 
 export function parseGpsCsv(csvText) {
@@ -84,18 +83,16 @@ function transitionCost(candidate, previous, dt, totalLengthMeters, options) {
   const maxForwardMeters =
     options.maxProgressMetersPerSecond * Math.max(0, dt) +
     options.maxForwardJumpSlackMeters;
-  let cost = candidate.distanceMeters;
 
   if (deltaMeters < -options.maxBacktrackMeters) {
-    cost += (Math.abs(deltaMeters) - options.maxBacktrackMeters) * LARGE_JUMP_PENALTY;
-  } else if (deltaMeters < 0) {
-    cost += Math.abs(deltaMeters) * SMALL_BACKTRACK_PENALTY;
+    return Infinity;
   }
-
   if (deltaMeters > maxForwardMeters) {
-    cost += (deltaMeters - maxForwardMeters) * LARGE_JUMP_PENALTY;
+    return Infinity;
   }
 
+  let cost = candidate.distanceMeters;
+  if (deltaMeters < 0) cost += Math.abs(deltaMeters) * SMALL_BACKTRACK_PENALTY;
   return cost;
 }
 
@@ -116,7 +113,7 @@ function selectNextCandidate(candidates, previous, totalLengthMeters, options) {
     }
   }
 
-  return best;
+  return Number.isFinite(bestCost) ? best : null;
 }
 
 function formatSelectedProjection(fix, candidate) {
@@ -134,8 +131,8 @@ export function bootstrapKeyframesFromGps({
   speedFactor = 5,
   maxErrorMeters = 10,
   maxOffRouteMeters = 60,
-  maxBacktrackMeters = 35,
-  maxProgressMetersPerSecond = 120,
+  maxBacktrackMeters = 0,
+  maxProgressMetersPerSecond = 60,
   maxForwardJumpSlackMeters = DEFAULT_MAX_FORWARD_JUMP_SLACK_METERS,
   initialTieMeters = DEFAULT_INITIAL_TIE_METERS,
 } = {}) {
@@ -198,6 +195,7 @@ export function bootstrapKeyframesFromGps({
 
   let beyondDurationDropped = 0;
   let nonIncreasingDropped = 0;
+  let continuityDropped = 0;
   let ambiguousFixes = 0;
   let continuityCorrections = 0;
   let lastT = -Infinity;
@@ -218,6 +216,11 @@ export function bootstrapKeyframesFromGps({
     const candidate = previous
       ? selectNextCandidate(projectedFix.candidates, previous, totalLengthMeters, selectionOptions)
       : selectInitialCandidate(projectedFix.candidates, selectionOptions);
+    if (!candidate) {
+      continuityDropped++;
+      lastT = projectedFix.t;
+      continue;
+    }
     if (candidate !== projectedFix.candidates[0]) continuityCorrections++;
 
     const normalized = formatSelectedProjection(projectedFix, candidate);
@@ -230,7 +233,7 @@ export function bootstrapKeyframesFromGps({
   const simplified = simplifyFractionCurve(selected, epsilon);
   const keyframes = simplified.map((point) => {
     const snapped = pointAtFraction(routeGeometry, cumulative, point.fraction);
-    return { t: point.t, lat: snapped.lat, lon: snapped.lng };
+    return { t: point.t, lat: snapped.lat, lon: snapped.lng, fraction: point.fraction };
   });
 
   return {
@@ -240,6 +243,7 @@ export function bootstrapKeyframesFromGps({
       offRouteDropped,
       beyondDurationDropped,
       nonIncreasingDropped,
+      continuityDropped,
       ambiguousFixes,
       continuityCorrections,
       keyframesOut: keyframes.length,

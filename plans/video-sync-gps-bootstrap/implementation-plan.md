@@ -12,8 +12,9 @@ Reference design: `plans/video-sync-gps-bootstrap/design.md`.
 Add a pure GPS bootstrap module that parses the GPS CSV, rescales timestamps,
 snaps fixes to the selected route, selects a continuity-aware snapped route
 progress sequence, simplifies that sequence, and emits `{ t, lat, lon }`
-keyframes. The editor only supplies file input and replaces the in-memory
-keyframe list; the draft/promote format and validation path remain unchanged.
+keyframes with an optional `fraction` field for loop-seam-safe interpolation.
+The editor only supplies file input and replaces the in-memory keyframe list; the
+draft/promote endpoint path and validation path remain unchanged.
 
 Route projection math moves into `src/components/featured/routeGeometry.js` and
 is shared by:
@@ -70,12 +71,13 @@ Steps:
   non-increasing timestamp fixes.
 - [ ] Select candidate projections with continuity scoring:
   - first fix on closed loops prefers the lowest near-equivalent fraction;
-  - later fixes penalize large backtracking;
+  - later fixes drop backward progress by default;
   - later fixes penalize impossible forward jumps using elapsed video time;
-  - small backwards movement remains allowed.
+  - callers can opt into limited backtracking only if a future clip needs it.
 - [ ] Simplify the selected `fraction(time)` curve using vertical-error
   Douglas-Peucker, where `epsilon = maxErrorMeters / totalRouteLengthMeters`.
-- [ ] Emit ordinary on-route keyframes `{ t, lat, lon }`.
+- [ ] Emit ordinary on-route keyframes `{ t, lat, lon, fraction }`; legacy
+  keyframes without `fraction` remain supported.
 - [ ] Return stats including counts, `ambiguousFixes`,
   `continuityCorrections`, `startFraction`, and `endFraction`.
 - [ ] Add tests for parsing, time scaling, off-route drop, beyond-duration drop,

@@ -7341,6 +7341,7 @@ function vsSnapToPolyline(point, polyline) {
   return {
     lat: snappedPoint.lat,
     lng: snappedPoint.lng,
+    fraction: snap.fraction,
     distanceMeters: snap.distanceMeters,
   };
 }
@@ -7678,7 +7679,7 @@ function handleVideoSyncMapClick(event) {
   const t = videoSyncState.player.getCurrentTime();
   // Replace any existing keyframe at same t (within 50ms), else insert sorted.
   const filtered = videoSyncState.keyframes.filter((kf) => Math.abs(kf.t - t) > 0.05);
-  filtered.push({ t, lat: snap.lat, lon: snap.lng });
+  filtered.push({ t, lat: snap.lat, lon: snap.lng, fraction: snap.fraction });
   filtered.sort((a, b) => a.t - b.t);
   videoSyncState.keyframes = filtered;
   videoSyncState.selectedIndex = filtered.findIndex((kf) => kf.t === t);
@@ -7762,7 +7763,7 @@ async function vsHandleBootstrapFile(file) {
   vsSetStatus(
     `Bootstrapped ${s.keyframesOut} keyframes from ${s.fixesRead} fixes ` +
     `(${s.offRouteDropped} off-route, ${s.beyondDurationDropped} beyond end, ` +
-    `${s.continuityCorrections} continuity fixes; fractions ` +
+    `${s.continuityDropped} continuity drops, ${s.continuityCorrections} continuity fixes; fractions ` +
     `${vsFormatFraction(s.startFraction)} -> ${vsFormatFraction(s.endFraction)}).`,
   );
 }

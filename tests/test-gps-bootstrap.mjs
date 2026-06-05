@@ -42,6 +42,7 @@ const route = [
   assert.equal(keyframes[0].t, 0);
   assert.equal(keyframes[keyframes.length - 1].t, 10);
   assert.ok("lat" in keyframes[0] && "lon" in keyframes[0]);
+  assert.ok("fraction" in keyframes[0], "bootstrapped keyframes preserve route fraction");
 }
 
 {
@@ -176,6 +177,45 @@ const route = [
   assert.ok(stats.continuityCorrections > 0, "continuity chooses a non-nearest seam candidate");
   assert.ok(stats.startFraction < 0.05, `expected start near 0, got ${stats.startFraction}`);
   assert.ok(stats.endFraction > 0.95, `expected end near 1, got ${stats.endFraction}`);
+}
+
+{
+  const loopRoute = [
+    { lat: 33.0, lng: 35.0 },
+    { lat: 33.0, lng: 35.004 },
+    { lat: 33.004, lng: 35.004 },
+    { lat: 33.004, lng: 35.0 },
+    { lat: 33.0, lng: 35.0001 },
+  ];
+  const cumulative = buildCumulativeDistances(loopRoute);
+  const rowFor = (t, fraction) => {
+    const point = pointAtFraction(loopRoute, cumulative, fraction);
+    return `${t},${point.lat},${point.lng}`;
+  };
+  const csv =
+    "time_s,latitude,longitude\n" +
+    [
+      rowFor(0, 0.01),
+      rowFor(5, 0.02),
+      rowFor(10, 0.98), // impossible early jump to the far side of the seam
+      rowFor(15, 0.03),
+      rowFor(20, 0.04),
+    ].join("\n");
+  const { keyframes, stats } = bootstrapKeyframesFromGps({
+    csvText: csv,
+    routeGeometry: loopRoute,
+    videoDuration: 20,
+    speedFactor: 1,
+    maxErrorMeters: 0,
+    maxOffRouteMeters: 25,
+    maxProgressMetersPerSecond: 20,
+    maxForwardJumpSlackMeters: 20,
+  });
+  assert.ok(stats.continuityDropped >= 1, "impossible seam outlier is dropped");
+  assert.ok(
+    keyframes.every((keyframe) => keyframe.fraction < 0.1),
+    "remaining early keyframes stay on the start side of the seam",
+  );
 }
 
 {

@@ -22,11 +22,24 @@ function assertValid({ keyframes, videoDuration, routeGeometry }) {
   if (!Array.isArray(routeGeometry) || routeGeometry.length < 2) {
     throw new Error("videoSync route geometry must have at least 2 points");
   }
+  for (const keyframe of keyframes) {
+    if (
+      keyframe.fraction != null &&
+      (
+        typeof keyframe.fraction !== "number" ||
+        !Number.isFinite(keyframe.fraction) ||
+        keyframe.fraction < 0 ||
+        keyframe.fraction > 1
+      )
+    ) {
+      throw new Error("videoSync keyframe fraction must be between 0 and 1");
+    }
+  }
 }
 
 // Convert legacy `lon` to `lng` if present (keyframe JSON uses `lon`).
 function normalizeKeyframe(k) {
-  return { t: k.t, lat: k.lat, lng: k.lng ?? k.lon };
+  return { t: k.t, lat: k.lat, lng: k.lng ?? k.lon, fraction: k.fraction };
 }
 
 export function createVideoSync(input) {
@@ -37,6 +50,9 @@ export function createVideoSync(input) {
   const cumulative = buildCumulativeDistances(routeGeometry);
 
   const byTime = keyframes.map((k) => {
+    if (Number.isFinite(k.fraction)) {
+      return { t: k.t, fraction: k.fraction };
+    }
     const snap = nearestPointOnPolyline(k, routeGeometry, cumulative);
     return { t: k.t, fraction: snap.fraction };
   });
