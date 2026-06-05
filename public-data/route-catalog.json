@@ -19,8 +19,8 @@
       "difficulty": "easy",
       "style": "scenic",
       "roadMix": {
-        "paved": 0.6323820218984061,
-        "dirt": 0.36761797810159386,
+        "paved": 0.6225671675529246,
+        "dirt": 0.3774328324470753,
         "road": 0
       },
       "qualityScore": 2.9999999999999996,
@@ -249,8 +249,8 @@
       "difficulty": "easy",
       "style": "family",
       "roadMix": {
-        "paved": 0.5986861483337537,
-        "dirt": 0.4013138516662463,
+        "paved": 0.7476048609327682,
+        "dirt": 0.25239513906723177,
         "road": 0
       },
       "qualityScore": 3,
@@ -279,16 +279,21 @@
           "relation": "near",
           "matchType": "radius",
           "distanceM": 238,
-          "routeProgressMeters": 4322
+          "routeProgressMeters": 4342
         },
         {
           "id": "hagoshrim",
           "relation": "near",
           "matchType": "radius",
           "distanceM": 428,
-          "routeProgressMeters": 4723
+          "routeProgressMeters": 4743
         }
-      ]
+      ],
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-1821461d-91d526fa.webp",
+        "thumbnail": "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp",
+        "alt": "נחל דן"
+      }
     },
     {
       "slug": "roman-roads",

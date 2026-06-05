@@ -9,6 +9,7 @@ from processing.build_map import (
     build_base_routing_shards,
     build_public_cw_base_index,
     build_public_cycleways_display_geojson,
+    validate_outputs,
     write_base_routing_shards,
     write_runtime_manifest,
     write_site_geojson,
@@ -21,6 +22,67 @@ def write_json(path: Path, value):
 
 
 class BaseRoutingAssetTests(unittest.TestCase):
+    def test_validate_outputs_flags_active_placeholder_segment_names(self):
+        def segment(segment_id, status="active", deprecated=False):
+            return {
+                "id": segment_id,
+                "status": status,
+                "deprecated": deprecated,
+                "middle": [33.0, 35.0],
+                "quality": {
+                    "overall": 3,
+                    "safety": 3,
+                    "comfort": 3,
+                    "scenery": 3,
+                },
+            }
+
+        segments_data = {
+            "New segment": segment(1),
+            "new segment - 3": segment(2),
+            "New segment - 4": segment(3, status="draft"),
+            "New segment - 5": segment(4, deprecated=True),
+            "שביל אופניים דפנה": segment(5),
+        }
+        geojson_data = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {"name": name, "id": data["id"], "status": data["status"]},
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [[35.0, 33.0], [35.001, 33.0]],
+                    },
+                }
+                for name, data in segments_data.items()
+            ],
+        }
+
+        validation = validate_outputs(
+            geojson_data,
+            segments_data,
+            segments_data,
+            [],
+            12.0,
+        )
+
+        self.assertEqual(
+            validation["placeholderSegmentNames"],
+            [
+                {
+                    "segment": "New segment",
+                    "id": 1,
+                    "issue": "active segment still has a placeholder name",
+                },
+                {
+                    "segment": "new segment - 3",
+                    "id": 2,
+                    "issue": "active segment still has a placeholder name",
+                },
+            ],
+        )
+
     def test_site_geojson_writer_keeps_coordinate_diffs_local(self):
         with tempfile.TemporaryDirectory() as directory:
             output_path = Path(directory) / "bike_roads.geojson"

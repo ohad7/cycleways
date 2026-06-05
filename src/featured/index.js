@@ -12,12 +12,12 @@ const moduleNav = {
   "sovev-beit-hillel": [
     { label: "על המסלול", href: "#fv-about" },
     { label: "נקודות במסלול", href: "#fv-poi-stories" },
-    { label: "כל המסלולים", to: "/routes" },
+    { label: "כל המסלולים", to: "/featured/" },
   ],
   "banias-gan-hatsafon": [
     { label: "על המסלול", href: "#fv-about" },
     { label: "נקודות במסלול", href: "#fv-poi-stories" },
-    { label: "כל המסלולים", to: "/routes" },
+    { label: "כל המסלולים", to: "/featured/" },
   ],
 };
 

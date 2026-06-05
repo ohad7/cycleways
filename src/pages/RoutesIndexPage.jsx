@@ -75,6 +75,14 @@ export default function RoutesIndexPage() {
   const [filters, setFilters] = useState(emptyFilters);
 
   useEffect(() => {
+    const previousTitle = document.title;
+    document.title = "מסלולים מומלצים | מפת שבילי אופניים - גליל עליון וגולן";
+    return () => {
+      document.title = previousTitle;
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       const [routeEntries, placesData] = await Promise.all([

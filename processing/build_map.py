@@ -73,6 +73,7 @@ BASE_ROUTING_COMPACT_SHARD_MAGIC = b"CWBS1"
 BASE_ROUTING_COMPACT_COORDINATE_SCALE = 1_000_000
 BASE_ROUTING_COMPACT_DISTANCE_SCALE = 10
 BASE_ROUTING_SHARE_ID_SCHEMA_VERSION = 1
+PLACEHOLDER_SEGMENT_NAME_RE = re.compile(r"^new segment(?:\s*-\s*\d+)?$", re.IGNORECASE)
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -1655,12 +1656,21 @@ def validate_outputs(
     invalid_data_markers: list[dict[str, Any]] = []
     invalid_quality: list[dict[str, Any]] = []
     active_split_numbered_names: list[dict[str, Any]] = []
+    placeholder_segment_names: list[dict[str, Any]] = []
     for segment_name, data in segments_data.items():
         if not isinstance(data, dict):
             continue
 
         status = data.get("status", "active")
         active = not data.get("deprecated") and status not in {"deprecated", "draft", "legacy"}
+        if active and PLACEHOLDER_SEGMENT_NAME_RE.fullmatch(str(segment_name).strip()):
+            placeholder_segment_names.append(
+                {
+                    "segment": segment_name,
+                    "id": data.get("id"),
+                    "issue": "active segment still has a placeholder name",
+                }
+            )
         if active and data.get("splitFrom") is not None and re.search(r"\s-\s\d+$", segment_name):
             active_split_numbered_names.append(
                 {
@@ -1728,6 +1738,7 @@ def validate_outputs(
         "activeMissingMiddle": active_missing_middle,
         "invalidDataMarkers": invalid_data_markers,
         "invalidQuality": invalid_quality,
+        "placeholderSegmentNames": placeholder_segment_names,
         "activeSplitNumberedNames": active_split_numbered_names,
         "routeCompatibilityWarnings": route_compatibility_warnings(segments_data),
         "topology": endpoint_topology_report(geojson_data, threshold_m),

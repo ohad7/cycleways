@@ -7,6 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 test("/featured alias lists recommended routes", async ({ page }) => {
   await page.goto("/featured/");
+  await expect(page).toHaveTitle(/מסלולים מומלצים/);
   await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "בניאס" })).toBeVisible();
   await expect(
@@ -35,6 +36,14 @@ test("/featured alias lists recommended routes", async ({ page }) => {
   expect(images.every((image) => !image.currentSrc.includes("/featured/public-data/"))).toBe(true);
 });
 
+test("front page routes nav opens /featured without blank client transition", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "מסלולים", exact: true }).click();
+  await expect(page).toHaveURL(/\/featured\/$/);
+  await expect(page.locator(".routes-page")).toBeVisible();
+  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
+});
+
 test("route card details open canonical /routes detail page", async ({ page }) => {
   await page.goto("/featured");
   const card = page.locator(".route-card", { hasText: "סובב בית הלל" });
@@ -51,6 +60,7 @@ test("TopBar appears on /featured page", async ({ page }) => {
   await page.goto("/featured");
   await expect(page.locator("header.header")).toBeVisible();
   await expect(page.locator(".site-title")).toContainText("מפת שבילי אופניים");
+  await expect(page.getByRole("link", { name: "מסלולים" })).toHaveAttribute("href", /\/featured\/$/);
 });
 
 test("TopBar site title links back to /", async ({ page }) => {

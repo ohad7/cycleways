@@ -113,11 +113,9 @@ segments. The deprecated parent keeps compact `routeAnchors` as `[lng, lat]`
 coordinates so old route URLs can rebuild through points along the current map
 after a build. Longer split halves get more anchors automatically.
 
-The build panel defaults to skipping elevation for fast previews. Uncheck that option
-when the local elevation service is running and the generated artifacts should include
-fresh elevation data. Full builds fail when elevation lookups fail, and Promote
-requires a full build with zero elevation failures, so skipped-elevation builds stay
-preview-only.
+The build panel always runs a full elevation build, so the local elevation service
+must be running before Build. Full builds fail when elevation lookups fail, and
+Promote requires a full build with zero elevation failures.
 
 Build also produces the promoted public base-routing asset from the current
 elevated OSM/manual graph and accepted CW base overlay. Before running the map

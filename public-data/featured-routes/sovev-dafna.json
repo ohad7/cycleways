@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-dafna",
-  "generatedAt": "2026-06-05T05:29:15.770Z",
+  "generatedAt": "2026-06-05T13:54:11.870Z",
   "source": {
     "routeTokenHash": "sha256:a50ac30a7c5546b07855be7e9e417df50a57e68d7d790535c7bf9ddda1eb8e61",
     "routeFormat": "compact_route",
-    "mapVersion": "6e51dbf9bc60",
+    "mapVersion": "cfca2eb152cd",
     "assetHashes": {
-      "bikeRoads": "e4a43a70547a3c7190907140b98a5203d3fe0a7d6983d52ab5b38e7aa5d5d3f3",
-      "segments": "79562ca4dd9a4c69f4d34c8bc0fadd93a9783ead0fa21b80f4444f826cd6ee16",
-      "cwBaseIndex": "23ec80fb6177b47e2df7665b5e24bd8ee438e839dc750c02c8bbb43362c9b2d4",
-      "baseRoutingShards": "7fb1ee9b95ae84e0c65e6e86ebd448dcd91513d23e82e95f8bf7e5a566504108"
+      "bikeRoads": "429931751296885402776d200b290f17a3781ffd1f30865d47cc649d32af92cd",
+      "segments": "0f738c8bf311ead13e595625726da34f6383bdb6145dfab8cb5d0150eb6be167",
+      "cwBaseIndex": "e60f0b6625238fb43e263af633d07e9f1f6ccd15b4ec1e407e026af88044324e",
+      "baseRoutingShards": "884f531837e66249889f7495551493690b1c278dde28c9c6c3d6a8a6caf97525"
     }
   },
   "route": {
@@ -96,18 +96,33 @@
         "elevation": 135
       },
       {
-        "lat": 33.228103,
-        "lng": 35.640226,
+        "lat": 33.228072,
+        "lng": 35.64024,
         "elevation": 135
       },
       {
-        "lat": 33.228145,
+        "lat": 33.228074,
         "lng": 35.640195,
         "elevation": 135
       },
       {
-        "lat": 33.228194,
-        "lng": 35.640171,
+        "lat": 33.228063,
+        "lng": 35.640154,
+        "elevation": 135
+      },
+      {
+        "lat": 33.228044,
+        "lng": 35.640123,
+        "elevation": 135
+      },
+      {
+        "lat": 33.22811,
+        "lng": 35.640138,
+        "elevation": 135
+      },
+      {
+        "lat": 33.228161,
+        "lng": 35.640146,
         "elevation": 135
       },
       {
@@ -566,8 +581,8 @@
         "elevation": 154
       },
       {
-        "lat": 33.233521,
-        "lng": 35.635157,
+        "lat": 33.233485,
+        "lng": 35.635087,
         "elevation": 154
       },
       {
@@ -1286,23 +1301,18 @@
         "elevation": 125
       },
       {
-        "lat": 33.224176,
-        "lng": 35.631139,
+        "lat": 33.224142,
+        "lng": 35.631039,
         "elevation": 125
       },
       {
-        "lat": 33.224187,
-        "lng": 35.631194,
+        "lat": 33.224156,
+        "lng": 35.631143,
         "elevation": 125
       },
       {
-        "lat": 33.224199,
-        "lng": 35.631215,
-        "elevation": 125
-      },
-      {
-        "lat": 33.224219,
-        "lng": 35.631228,
+        "lat": 33.224182,
+        "lng": 35.631257,
         "elevation": 125
       },
       {
@@ -1777,10 +1787,12 @@
       "east": 35.641639988173516,
       "north": 33.237857
     },
-    "distance": 7019.699322937021,
+    "distance": 7044.499322937022,
     "elevationGain": 51.164905952796666,
     "elevationLoss": 50.89365554934801,
     "selectedSegments": [
+      "קיבוץ דפנה שביל המייסדים",
+      "שביל היקפי דפנה צפון",
       "סובב דפנה שער צפוני",
       "סובב דפנה אבוקדו",
       "שדות דפנה צפון",
@@ -1788,11 +1800,104 @@
       "שביל צר לאורך נחל דן",
       "שביל ישראל שמורת נחל שניר",
       "שביל גישה דג על הדן",
-      "שביל אופניים 99 הגושרים"
+      "שביל אופניים 99 הגושרים",
+      "רחבת כניסה מטעי דפנה",
+      "שביל אופניים דפנה",
+      "קיבוץ דפנה שביל המייסדים"
     ]
   },
   "pois": {
     "activeDataPoints": [
+      {
+        "id": "poi-2392c619",
+        "type": "gate",
+        "information": "שער לא נעול ליציאה מדפנה לכיוון נחל דן",
+        "location": [
+          33.23347,
+          35.635129
+        ],
+        "name": "שער יציאה מדפנה למטעים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-2392c619-0ee99404.webp",
+            "thumbnail": "public-data/poi-images/poi-2392c619-0ee99404-thumb.webp"
+          }
+        ],
+        "segmentName": "שביל היקפי דפנה צפון",
+        "routeDistanceMeters": 0.360104277829464,
+        "routeProgressMeters": 1219.771542115604,
+        "routeFraction": 0.17313983075326986
+      },
+      {
+        "id": "poi-1821461d",
+        "type": "river",
+        "information": "נחל דן זורם בחלקו בתוך קיבוץ דפנה. במקום יש מדשאות וירידה כיפית למים",
+        "location": [
+          33.2334903,
+          35.6363802
+        ],
+        "name": "נחל דן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1821461d-91d526fa.webp",
+            "thumbnail": "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-1821461d-f0069811.webp",
+            "thumbnail": "public-data/poi-images/poi-1821461d-f0069811-thumb.webp"
+          }
+        ],
+        "segmentName": "שביל היקפי דפנה צפון",
+        "routeDistanceMeters": 0.0381943723092753,
+        "routeProgressMeters": 1097.0832584296338,
+        "routeFraction": 0.1557249067782811
+      },
+      {
+        "id": "poi-86a4607d",
+        "type": "tree",
+        "information": "מטעי אבוקדו של קיבוץ דפנה",
+        "location": [
+          33.23353107025309,
+          35.63836313971484
+        ],
+        "name": "מטעי אבוקדו",
+        "description": "מטעי אבוקדו של קיבוץ דפנה. נא לא לקטוף!",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-86a4607d-aeab1967.webp",
+            "thumbnail": "public-data/poi-images/poi-86a4607d-aeab1967-thumb.webp"
+          }
+        ],
+        "segmentName": "סובב דפנה אבוקדו",
+        "routeDistanceMeters": 0.008868755063161798,
+        "routeProgressMeters": 1553.6165727481673,
+        "routeFraction": 0.22052728824493187
+      },
+      {
+        "id": "poi-7f0a3972",
+        "type": "river",
+        "information": "גשר מעל נחל דן, מים ישר מהחרמון",
+        "location": [
+          33.23739073146143,
+          35.63907383219774
+        ],
+        "name": "גשר מעל נחל דן",
+        "description": "נחל דן הוא הנחל עם ספיקת המים הגדולה ביותר בארץ, והוא מהווה את ספק המים העיקרי לירדן. הוא ניזון ממי שלגים ואגן ההיקוות של החרמון",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7f0a3972-1973492b.webp",
+            "thumbnail": "public-data/poi-images/poi-7f0a3972-1973492b-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7f0a3972-55fe7ce9.webp",
+            "thumbnail": "public-data/poi-images/poi-7f0a3972-55fe7ce9-thumb.webp"
+          }
+        ],
+        "segmentName": "גשר על נהר הדן",
+        "routeDistanceMeters": 0.17502979559076862,
+        "routeProgressMeters": 2435.012853116926,
+        "routeFraction": 0.3456366202309255
+      },
       {
         "type": "warning",
         "information": "שביל דורש תחזוקה, מעבר קוצני וצר",
@@ -1803,8 +1908,8 @@
         "id": "שביל צר לאורך נחל דן-0",
         "segmentName": "שביל צר לאורך נחל דן",
         "routeDistanceMeters": 0.27693728009775265,
-        "routeProgressMeters": 3394.8660799494405,
-        "routeFraction": 0.4835909860976593
+        "routeProgressMeters": 3415.099043225513,
+        "routeFraction": 0.48475443960938025
       },
       {
         "id": "poi-a76cdd1b",
@@ -1824,11 +1929,157 @@
         ],
         "segmentName": "שביל צר לאורך נחל דן",
         "routeDistanceMeters": 0.1568218227644885,
-        "routeProgressMeters": 2799.185009779996,
-        "routeFraction": 0.39873756645194514
+        "routeProgressMeters": 2819.4179730560686,
+        "routeFraction": 0.40020080303807426
+      },
+      {
+        "id": "poi-0d152fab",
+        "type": "rest_stop",
+        "information": "על השביל יש פינות מנוחה רבות וחופים קטנים",
+        "location": [
+          33.23699,
+          35.633163
+        ],
+        "name": "פינות רבות לנוח",
+        "description": "על השביל יש פינות מנוחה רבות וחופים קטנים שאפשר לרדת הם למים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-0d152fab-255f43bc.webp",
+            "thumbnail": "public-data/poi-images/poi-0d152fab-255f43bc-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-0d152fab-9a6dc0c0.webp",
+            "thumbnail": "public-data/poi-images/poi-0d152fab-9a6dc0c0-thumb.webp"
+          }
+        ],
+        "segmentName": "שביל צר לאורך נחל דן",
+        "routeDistanceMeters": 0.42659970901608174,
+        "routeProgressMeters": 3086.165112839141,
+        "routeFraction": 0.4380640856621763
+      },
+      {
+        "id": "poi-7004abaf",
+        "type": "cafe",
+        "information": "דג על הדן המסעדה המיתולוגית על נחל שניר",
+        "location": [
+          33.231024,
+          35.625048
+        ],
+        "name": "כניסה לקפה על הדן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7004abaf-b3f48c12.webp",
+            "thumbnail": "public-data/poi-images/poi-7004abaf-b3f48c12-thumb.webp"
+          }
+        ],
+        "description": "דג על הדן הוקמה בשנת 1979, לאחרונה נפתח במקום קפה על הדן.",
+        "segmentName": "שביל ישראל שמורת נחל שניר",
+        "routeDistanceMeters": 0,
+        "routeProgressMeters": 4367.787644683763,
+        "routeFraction": 0.619983322659857
       }
     ],
     "dataMarkerFeatures": [
+      {
+        "type": "Feature",
+        "id": "poi-2392c619",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.635129,
+            33.23347
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-2392c619",
+          "type": "gate",
+          "name": "שער יציאה מדפנה למטעים",
+          "information": "שער לא נעול ליציאה מדפנה לכיוון נחל דן",
+          "description": "",
+          "photo": "public-data/poi-images/poi-2392c619-0ee99404.webp",
+          "thumbnail": "public-data/poi-images/poi-2392c619-0ee99404-thumb.webp",
+          "segmentName": "שביל היקפי דפנה צפון",
+          "emoji": "🚧",
+          "label": "שער",
+          "color": "#FF5722",
+          "icon": "barrier-11"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-1821461d",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.6363802,
+            33.2334903
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-1821461d",
+          "type": "river",
+          "name": "נחל דן",
+          "information": "נחל דן זורם בחלקו בתוך קיבוץ דפנה. במקום יש מדשאות וירידה כיפית למים",
+          "description": "",
+          "photo": "public-data/poi-images/poi-1821461d-91d526fa.webp",
+          "thumbnail": "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp",
+          "segmentName": "שביל היקפי דפנה צפון",
+          "emoji": "💧",
+          "label": "נחל",
+          "color": "#1580b7",
+          "icon": "poi-emoji-river"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-86a4607d",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.63836313971484,
+            33.23353107025309
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-86a4607d",
+          "type": "tree",
+          "name": "מטעי אבוקדו",
+          "information": "מטעי אבוקדו של קיבוץ דפנה",
+          "description": "מטעי אבוקדו של קיבוץ דפנה. נא לא לקטוף!",
+          "photo": "public-data/poi-images/poi-86a4607d-aeab1967.webp",
+          "thumbnail": "public-data/poi-images/poi-86a4607d-aeab1967-thumb.webp",
+          "segmentName": "סובב דפנה אבוקדו",
+          "emoji": "🌳",
+          "label": "חי וצומח",
+          "color": "#2e7d32",
+          "icon": "poi-emoji-tree"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-7f0a3972",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.63907383219774,
+            33.23739073146143
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-7f0a3972",
+          "type": "river",
+          "name": "גשר מעל נחל דן",
+          "information": "גשר מעל נחל דן, מים ישר מהחרמון",
+          "description": "נחל דן הוא הנחל עם ספיקת המים הגדולה ביותר בארץ, והוא מהווה את ספק המים העיקרי לירדן. הוא ניזון ממי שלגים ואגן ההיקוות של החרמון",
+          "photo": "public-data/poi-images/poi-7f0a3972-1973492b.webp",
+          "thumbnail": "public-data/poi-images/poi-7f0a3972-1973492b-thumb.webp",
+          "segmentName": "גשר על נהר הדן",
+          "emoji": "💧",
+          "label": "נחל",
+          "color": "#1580b7",
+          "icon": "poi-emoji-river"
+        }
+      },
       {
         "type": "Feature",
         "id": "שביל צר לאורך נחל דן-0",
@@ -1878,11 +2129,67 @@
           "color": "#1580b7",
           "icon": "poi-emoji-river"
         }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-0d152fab",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.633163,
+            33.23699
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-0d152fab",
+          "type": "rest_stop",
+          "name": "פינות רבות לנוח",
+          "information": "על השביל יש פינות מנוחה רבות וחופים קטנים",
+          "description": "על השביל יש פינות מנוחה רבות וחופים קטנים שאפשר לרדת הם למים",
+          "photo": "public-data/poi-images/poi-0d152fab-255f43bc.webp",
+          "thumbnail": "public-data/poi-images/poi-0d152fab-255f43bc-thumb.webp",
+          "segmentName": "שביל צר לאורך נחל דן",
+          "emoji": "🪑",
+          "label": "פינת מנוחה",
+          "color": "#16a085",
+          "icon": "poi-emoji-rest_stop"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-7004abaf",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.625048,
+            33.231024
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-7004abaf",
+          "type": "cafe",
+          "name": "כניסה לקפה על הדן",
+          "information": "דג על הדן המסעדה המיתולוגית על נחל שניר",
+          "description": "דג על הדן הוקמה בשנת 1979, לאחרונה נפתח במקום קפה על הדן.",
+          "photo": "public-data/poi-images/poi-7004abaf-b3f48c12.webp",
+          "thumbnail": "public-data/poi-images/poi-7004abaf-b3f48c12-thumb.webp",
+          "segmentName": "שביל ישראל שמורת נחל שניר",
+          "emoji": "☕",
+          "label": "בית קפה",
+          "color": "#b07a3f",
+          "icon": "poi-emoji-cafe"
+        }
       }
     ],
     "activeDataPointIds": [
+      "poi-2392c619",
+      "poi-1821461d",
+      "poi-86a4607d",
+      "poi-7f0a3972",
       "שביל צר לאורך נחל דן-0",
-      "poi-a76cdd1b"
+      "poi-a76cdd1b",
+      "poi-0d152fab",
+      "poi-7004abaf"
     ]
   }
 }

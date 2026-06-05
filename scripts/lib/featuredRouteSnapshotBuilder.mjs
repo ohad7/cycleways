@@ -153,13 +153,38 @@ export async function loadRouteStateForSlug(slug, {
     segmentsData,
     baseRoutingNetwork,
   );
-  const routeState = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
-  if (!routeState) throw new Error(`route "${slug}" failed to decode`);
+  let routeState = null;
+  let decodeSource = null;
+  let decodeError = null;
+  try {
+    routeState = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
+    if (routeState) decodeSource = "live";
+  } catch (err) {
+    decodeError = err;
+  }
+  if (!routeState) {
+    const fallbackSnapshot = await readFeaturedRouteSnapshot(slug);
+    if (fallbackSnapshot && snapshotMatchesRouteToken(fallbackSnapshot, routeToken)) {
+      const fallbackState = routeStateFromFeaturedSnapshot(fallbackSnapshot);
+      if (Array.isArray(fallbackState.geometry) && fallbackState.geometry.length >= 2) {
+        routeState = fallbackState;
+        decodeSource = "existing_snapshot";
+        log(
+          "warn",
+          `route "${slug}" failed live decode; using existing snapshot fallback for matching route token`,
+        );
+      }
+    }
+  }
+  if (!routeState) {
+    const detail = decodeError instanceof Error ? `: ${decodeError.message}` : "";
+    throw new Error(`route "${slug}" failed to decode${detail}`);
+  }
   // Decode the payload again only to read its `.type`. restoreRouteFromParam
   // does not surface the format, and decodeRoutePayload is a cheap pure parse
   // (no routing/manager work), so the second call is intentional and harmless.
   const routeFormat = decodeRoutePayload(routeToken).type;
-  return { routeState, routeToken, routeFormat };
+  return { routeState, routeToken, routeFormat, decodeSource };
 }
 
 // Thin wrapper preserving the original editor/server.mjs contract: returns just
@@ -173,6 +198,32 @@ export async function loadRoutePolylineForSlug(slug, options = {}) {
 
 function sha256Hex(input) {
   return createHash("sha256").update(input).digest("hex");
+}
+
+export function routeTokenHash(routeToken) {
+  return `sha256:${sha256Hex(String(routeToken || ""))}`;
+}
+
+export async function readFeaturedRouteSnapshot(slug) {
+  if (typeof slug !== "string" || slug.length === 0) return null;
+  return readJsonOrNull(resolve(featuredRoutesDir, `${slug}.json`));
+}
+
+export function snapshotMatchesRouteToken(snapshot, routeToken) {
+  return snapshot?.source?.routeTokenHash === routeTokenHash(routeToken);
+}
+
+export function routeStateFromFeaturedSnapshot(snapshot) {
+  const route = snapshot?.route || {};
+  const pois = snapshot?.pois || {};
+  return {
+    geometry: Array.isArray(route.geometry) ? route.geometry : [],
+    distance: Number(route.distance) || 0,
+    elevationGain: Number(route.elevationGain) || 0,
+    elevationLoss: Number(route.elevationLoss) || 0,
+    selectedSegments: Array.isArray(route.selectedSegments) ? route.selectedSegments : [],
+    activeDataPoints: Array.isArray(pois.activeDataPoints) ? pois.activeDataPoints : [],
+  };
 }
 
 function computeBounds(geometry) {
@@ -211,6 +262,7 @@ export function buildSnapshotFromRouteState({
   routeFormat,
   manifest,
   generatedAt = new Date().toISOString(),
+  decodeSource = null,
 }) {
   const geometry = Array.isArray(routeState.geometry) ? routeState.geometry : [];
   const activeDataPoints = Array.isArray(routeState.activeDataPoints)
@@ -227,10 +279,11 @@ export function buildSnapshotFromRouteState({
     slug,
     generatedAt,
     source: {
-      routeTokenHash: `sha256:${sha256Hex(routeToken)}`,
+      routeTokenHash: routeTokenHash(routeToken),
       routeFormat,
       mapVersion,
       assetHashes,
+      ...(decodeSource ? { decodeSource } : {}),
     },
     route: {
       geometry,
@@ -259,7 +312,7 @@ export async function buildSnapshotForSlug(slug, {
 } = {}) {
   const resolvedManifest = manifest || (await readJsonOrNull(promotedManifestPath));
   if (!resolvedManifest) throw new Error("map-manifest.json not found");
-  const { routeState, routeToken, routeFormat } = await loadRouteStateForSlug(slug, {
+  const { routeState, routeToken, routeFormat, decodeSource } = await loadRouteStateForSlug(slug, {
     draftCatalogPath,
     log,
   });
@@ -270,6 +323,7 @@ export async function buildSnapshotForSlug(slug, {
     routeFormat,
     manifest: resolvedManifest,
     generatedAt,
+    decodeSource: decodeSource === "existing_snapshot" ? decodeSource : null,
   });
 }
 

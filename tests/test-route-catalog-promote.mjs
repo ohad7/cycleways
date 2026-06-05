@@ -48,6 +48,17 @@ assert.equal(recomputed.entries[0].routeShape.type, "circular");
 assert.deepEqual(recomputed.entries[0].startPlaceIds, recomputed.entries[0].passesNear);
 assert.equal(recomputed.entries[0].surfaceType, "paved");
 
+let decoderSawEntry = null;
+recomputeCatalogMetadata(draft, {
+  places,
+  zones,
+  decodeRoute: (token, entry) => {
+    decoderSawEntry = entry;
+    return fakeDecode(token);
+  },
+});
+assert.equal(decoderSawEntry?.slug, "test-a");
+
 // promote writes the public file atomically and removes the draft
 const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "rc-promote-"));
 const draftPath = path.join(tmpRoot, "draft.json");

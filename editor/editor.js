@@ -224,7 +224,6 @@ const els = {
   saveSource: document.getElementById("save-source"),
   runBuild: document.getElementById("run-build"),
   promoteBuild: document.getElementById("promote-build"),
-  skipElevation: document.getElementById("skip-elevation"),
   editorAlert: document.getElementById("editor-alert"),
   editorAlertTitle: document.getElementById("editor-alert-title"),
   editorAlertMessage: document.getElementById("editor-alert-message"),
@@ -6077,6 +6076,9 @@ function reportIssueDetails(report) {
   for (const item of validation.activeMissingMiddle || []) {
     issues.push(`Active segment missing middle: ${item.name || item.segment || item.id || JSON.stringify(item)}`);
   }
+  for (const item of validation.placeholderSegmentNames || []) {
+    issues.push(`Placeholder segment name: ${item.segment || item.name || item.id || JSON.stringify(item)}`);
+  }
   for (const item of validation.activeSplitNumberedNames || []) {
     issues.push(`Numbered split child: ${item.name || item.segment || item.id || JSON.stringify(item)}`);
   }
@@ -6116,6 +6118,7 @@ function buildSummary(report) {
       duplicateIds: validation.duplicateIds || {},
       activeMissingMiddle: validation.activeMissingMiddle?.length ?? 0,
       invalidQuality: validation.invalidQuality?.length ?? 0,
+      placeholderSegmentNames: validation.placeholderSegmentNames || [],
       activeSplitNumberedNames: validation.activeSplitNumberedNames || [],
       routeCompatibilityWarnings: validation.routeCompatibilityWarnings?.length ?? 0,
       routeCompatibilityWarningDetails: validation.routeCompatibilityWarnings || [],
@@ -6124,7 +6127,6 @@ function buildSummary(report) {
       connectedComponents: validation.topology?.connectedComponents,
       orphanEndpointCount: validation.topology?.orphanEndpointCount,
       elevation: {
-        skipElevation: elevation.skipElevation,
         lookups: elevation.lookups,
         cacheHits: elevation.cacheHits,
         failures: elevation.failures,
@@ -6161,7 +6163,7 @@ async function runBuild() {
     const response = await fetch("/api/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ skipElevation: els.skipElevation.checked }),
+      body: JSON.stringify({}),
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
@@ -6179,7 +6181,7 @@ async function runBuild() {
         "error",
       );
     } else {
-      setStatus(payload.report?.elevation?.skipElevation ? "Build complete. Run a full build before promoting." : "Build complete. Ready to promote.");
+      setStatus("Build complete. Ready to promote.");
     }
   } finally {
     els.runBuild.disabled = false;
@@ -7910,7 +7912,9 @@ function extractRouteTokenInput(value) {
 }
 
 function rcImageCandidateCacheKey(entry) {
-  return String(entry?.route || "").trim();
+  const route = String(entry?.route || "").trim();
+  if (!route) return "";
+  return `${String(entry?.slug || "").trim()}\n${route}`;
 }
 
 function rcEnsureImageCandidates(entry) {
@@ -7924,7 +7928,7 @@ function rcEnsureImageCandidates(entry) {
   fetch("/api/route-catalog/image-candidates", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ route: key }),
+    body: JSON.stringify({ slug: entry?.slug || null, route: entry?.route || "" }),
   })
     .then(async (res) => {
       const body = await res.json().catch(() => ({}));
@@ -8428,7 +8432,13 @@ async function rcSaveDraft() {
     body: JSON.stringify(routeCatalogState.draft),
   });
   const result = await r.json().catch(() => ({}));
-  rcSetStatus(r.ok ? "Draft saved." : `Save failed: ${result.error || r.statusText}`);
+  if (!r.ok) {
+    const message = result.error || r.statusText;
+    rcSetStatus(`Save failed: ${message}`);
+    showAlert("Route catalog save failed", message);
+    throw markAlertShown(new Error(message));
+  }
+  rcSetStatus("Draft saved.");
 }
 
 async function rcRecompute() {
@@ -8440,7 +8450,9 @@ async function rcRecompute() {
   });
   const result = await r.json().catch(() => ({}));
   if (!r.ok) {
-    rcSetStatus(`Recompute failed: ${result.error || r.statusText}`);
+    const message = result.error || r.statusText;
+    rcSetStatus(`Recompute failed: ${message}`);
+    showAlert("Route catalog recompute failed", message);
     return;
   }
   routeCatalogState.draft = result;
@@ -8455,19 +8467,25 @@ async function rcPromote() {
   const r = await fetch("/api/route-catalog/promote", { method: "POST" });
   const result = await r.json().catch(() => ({}));
   if (!r.ok) {
-    rcSetStatus(`Promote failed: ${result.error || r.statusText}`);
+    const message = result.error || r.statusText;
+    rcSetStatus(`Promote failed: ${message}`);
+    showAlert("Route catalog promote failed", message);
     return;
   }
   const snapErrs = result.snapshots?.errors ?? [];
+  let message;
   if (snapErrs.length) {
     const slugs = snapErrs.map((e) => e?.slug ?? "?").join(", ");
-    rcSetStatus(
-      `Promoted (${result.entryCount} entries) — ${snapErrs.length} snapshot(s) FAILED: ${slugs}`,
+    message = `Promoted (${result.entryCount} entries) — ${snapErrs.length} snapshot(s) FAILED: ${slugs}`;
+    showAlert(
+      "Route snapshot generation failed",
+      `The catalog was promoted, but these route snapshots failed: ${slugs}`,
     );
   } else {
-    rcSetStatus(`Promoted (${result.entryCount} entries).`);
+    message = `Promoted (${result.entryCount} entries).`;
   }
   await rcLoad();
+  rcSetStatus(message);
 }
 
 function rcNewEntry() {

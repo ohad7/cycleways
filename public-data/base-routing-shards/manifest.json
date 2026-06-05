@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "shardSchemaVersion": 1,
-  "generatedAt": "2026-06-04T19:55:44.319342Z",
+  "generatedAt": "2026-06-05T13:24:13.776595Z",
   "sourceRoutingSchemaVersion": 2,
   "defaultFormat": "compact",
   "routeShare": {
@@ -16,13 +16,13 @@
   "summary": {
     "shards": 115,
     "sourceNodes": 37583,
-    "sourceEdges": 48358,
-    "representedEdges": 48358,
-    "edgeReferences": 50556,
+    "sourceEdges": 48360,
+    "representedEdges": 48360,
+    "edgeReferences": 50558,
     "duplicatedSourceEdges": 2024,
-    "compactShardBytes": 27708423,
-    "messagePackShardBytes": 23928651,
-    "compactBinaryShardBytes": 4827149
+    "compactShardBytes": 27709421,
+    "messagePackShardBytes": 23929587,
+    "compactBinaryShardBytes": 4827482
   },
   "shards": [
     {
@@ -1044,8 +1044,8 @@
       "formats": {
         "compact": {
           "path": "shards/g712_664.cwb",
-          "bytes": 187065,
-          "sha256": "7bed39800ea7144ae501e4c5a1e6b05b2997d98703e4663c926e6f232b5110dc"
+          "bytes": 187398,
+          "sha256": "9d991bdb809a2dcccc9b8ae8b1911fffdaa321ba2497de3a15ac3aa8ee37d381"
         }
       },
       "bounds": [
@@ -1055,10 +1055,10 @@
         33.25
       ],
       "nodes": 1738,
-      "edges": 2245,
-      "compactBytes": 1063210,
-      "messagePackBytes": 918171,
-      "compactBinaryBytes": 187065
+      "edges": 2247,
+      "compactBytes": 1064208,
+      "messagePackBytes": 919107,
+      "compactBinaryBytes": 187398
     },
     {
       "id": "g712_665",
