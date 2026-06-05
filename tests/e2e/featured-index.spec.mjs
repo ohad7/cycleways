@@ -44,6 +44,22 @@ test("front page routes nav opens /featured without blank client transition", as
   await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
 });
 
+test("front page contact hash then routes nav still opens /featured", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await page.goto("/");
+  await page.getByRole("link", { name: "צרו קשר", exact: true }).click();
+  await expect(page).toHaveURL(/\/#contact$/);
+  await expect(page.locator("#contact")).toBeVisible();
+
+  await page.getByRole("link", { name: "מסלולים", exact: true }).click();
+  await expect(page).toHaveURL(/\/featured\/$/);
+  await expect(page.locator(".routes-page")).toBeVisible();
+  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
 test("route card details open canonical /routes detail page", async ({ page }) => {
   await page.goto("/featured");
   const card = page.locator(".route-card", { hasText: "סובב בית הלל" });

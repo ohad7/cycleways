@@ -25,7 +25,14 @@ function TopBar({
     if (!target) return;
     event.preventDefault();
     target.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.history.replaceState(null, "", href);
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+        hash: href,
+      },
+      { replace: true, preventScrollReset: true },
+    );
     if (mobileMenuOpen) onMobileMenuToggle?.();
   };
 
