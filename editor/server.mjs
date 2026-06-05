@@ -49,7 +49,11 @@ const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const poiTypesModulePath = resolve(repoRoot, "packages/core/src/data/poiTypes.js");
-const videoSyncModulePath = resolve(repoRoot, "src/components/featured/videoSync.js");
+const featuredEditorModulePaths = new Set([
+  resolve(repoRoot, "src/components/featured/videoSync.js"),
+  resolve(repoRoot, "src/components/featured/routeGeometry.js"),
+  resolve(repoRoot, "src/components/featured/gpsBootstrap.js"),
+]);
 const coreSrcRoot = resolve(repoRoot, "packages/core/src");
 const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
 const videoKeyframesDraftDir = resolve(editorRoot, ".drafts/route-videos");
@@ -1637,9 +1641,9 @@ async function serveStatic(request, response, url) {
   const allowedIconFile = isInside(iconsRoot, filePath);
   const allowedTokenFile = filePath === tokenPath;
   const allowedPoiTypesFile = filePath === poiTypesModulePath;
-  // The Video Sync editor reuses the production interpolator directly from
-  // src/, so serve that single shared module read-only.
-  const allowedVideoSyncFile = filePath === videoSyncModulePath;
+  // The Video Sync editor reuses a few production featured helpers directly
+  // from src/, so serve only that small allowlist read-only.
+  const allowedFeaturedEditorModule = featuredEditorModulePaths.has(filePath);
   // The editor loads shared core ES modules directly from source (e.g.
   // data/poiTypes.js, map/emojiMarkerImage.js), so serve the read-only
   // packages/core/src tree.
@@ -1654,7 +1658,7 @@ async function serveStatic(request, response, url) {
     !allowedIconFile &&
     !allowedTokenFile &&
     !allowedPoiTypesFile &&
-    !allowedVideoSyncFile &&
+    !allowedFeaturedEditorModule &&
     !allowedCoreFile &&
     !allowedImageFile
   ) {

@@ -11,7 +11,13 @@ import {
   poiMarkerIconName,
 } from "../packages/core/src/data/poiTypes.js";
 import { registerPoiEmojiImages } from "../packages/core/src/map/emojiMarkerImage.js";
+import { bootstrapKeyframesFromGps } from "../src/components/featured/gpsBootstrap.js";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
+import {
+  buildCumulativeDistances,
+  nearestPointOnPolyline,
+  pointAtFraction,
+} from "../src/components/featured/routeGeometry.js";
 import { vsFormatTime, vsParseTime } from "./lib/vs-time.mjs";
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
@@ -7262,6 +7268,9 @@ const vsEls = {
   close: document.getElementById("vs-close"),
   slug: document.getElementById("vs-slug"),
   ytUrl: document.getElementById("vs-yt-url"),
+  bootstrapFile: document.getElementById("vs-bootstrap-file"),
+  bootstrapMaxError: document.getElementById("vs-bootstrap-max-error"),
+  bootstrapSpeed: document.getElementById("vs-bootstrap-speed"),
   player: document.getElementById("vs-player"),
   keyframesList: document.getElementById("vs-keyframes"),
   saveDraft: document.getElementById("vs-save-draft"),
@@ -7281,6 +7290,36 @@ function vsSetStatus(msg) {
 function vsSetBusy(busy) {
   if (vsEls.saveDraft) vsEls.saveDraft.disabled = busy;
   if (vsEls.promote) vsEls.promote.disabled = busy;
+  vsUpdateBootstrapControls(busy);
+}
+
+function vsCanBootstrapFromGps() {
+  const hasRoute = videoSyncState.routePolyline && videoSyncState.routePolyline.length >= 2;
+  const hasVideo = (
+    videoSyncState.youtubeId ||
+    vsExtractYouTubeId(vsEls.ytUrl?.value || "")
+  ) && videoSyncState.videoDuration > 0;
+  return Boolean(hasRoute && hasVideo);
+}
+
+function vsUpdateBootstrapControls(forceDisabled = false) {
+  const disabled = forceDisabled || !vsCanBootstrapFromGps();
+  for (const el of [
+    vsEls.bootstrapFile,
+    vsEls.bootstrapMaxError,
+    vsEls.bootstrapSpeed,
+  ]) {
+    if (el) el.disabled = disabled;
+  }
+}
+
+function vsReadNumberInput(input, fallback, predicate) {
+  const value = Number(input?.value);
+  return Number.isFinite(value) && predicate(value) ? value : fallback;
+}
+
+function vsFormatFraction(value) {
+  return Number.isFinite(value) ? value.toFixed(3) : "n/a";
 }
 
 function vsExtractYouTubeId(url) {
@@ -7296,34 +7335,14 @@ function vsExtractYouTubeId(url) {
 // Returns { lat, lng, distanceMeters } or null if route empty.
 function vsSnapToPolyline(point, polyline) {
   if (!polyline || polyline.length < 2) return null;
-  const EARTH_R = 6371000;
-  const DEG = Math.PI / 180;
-  function hav(a, b) {
-    const dLat = (b.lat - a.lat) * DEG;
-    const dLng = (b.lng - a.lng) * DEG;
-    const h =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(a.lat * DEG) * Math.cos(b.lat * DEG) * Math.sin(dLng / 2) ** 2;
-    return 2 * EARTH_R * Math.asin(Math.sqrt(h));
-  }
-  let best = { lat: 0, lng: 0, dist: Infinity };
-  for (let i = 0; i < polyline.length - 1; i++) {
-    const a = polyline[i];
-    const b = polyline[i + 1];
-    const cosLat = Math.cos(((a.lat + b.lat) / 2) * DEG);
-    const ax = a.lng * cosLat, ay = a.lat;
-    const bx = b.lng * cosLat, by = b.lat;
-    const px = point.lng * cosLat, py = point.lat;
-    const dx = bx - ax, dy = by - ay;
-    const len2 = dx * dx + dy * dy;
-    let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
-    t = Math.max(0, Math.min(1, t));
-    const projLat = a.lat + (b.lat - a.lat) * t;
-    const projLng = a.lng + (b.lng - a.lng) * t;
-    const d = hav(point, { lat: projLat, lng: projLng });
-    if (d < best.dist) best = { lat: projLat, lng: projLng, dist: d };
-  }
-  return { lat: best.lat, lng: best.lng, distanceMeters: best.dist };
+  const cumulative = buildCumulativeDistances(polyline);
+  const snap = nearestPointOnPolyline(point, polyline, cumulative);
+  const snappedPoint = pointAtFraction(polyline, cumulative, snap.fraction);
+  return {
+    lat: snappedPoint.lat,
+    lng: snappedPoint.lng,
+    distanceMeters: snap.distanceMeters,
+  };
 }
 
 function vsLoadYouTubeIframeApi() {
@@ -7339,6 +7358,8 @@ function vsLoadYouTubeIframeApi() {
 async function vsLoadVideo(youtubeId) {
   if (videoSyncState.youtubeId === youtubeId && videoSyncState.player) return;
   videoSyncState.youtubeId = youtubeId;
+  videoSyncState.videoDuration = 0;
+  vsUpdateBootstrapControls();
   const YT = await vsLoadYouTubeIframeApi();
   vsEls.player.innerHTML = "";
   if (videoSyncState.player) {
@@ -7355,6 +7376,7 @@ async function vsLoadVideo(youtubeId) {
         if (typeof dur === "number" && dur > 0) {
           videoSyncState.videoDuration = dur;
           vsRebuildSync();
+          vsUpdateBootstrapControls();
         }
       },
     },
@@ -7437,6 +7459,7 @@ function vsRebuildSync() {
     videoSyncState.sync = null;
   }
   vsRenderGhost();
+  vsUpdateBootstrapControls();
 }
 
 // Move the blue "predicted position" ring to where the current keyframes say the
@@ -7665,6 +7688,85 @@ function handleVideoSyncMapClick(event) {
   vsSetStatus(`Added keyframe at ${vsFormatTime(t)}.`);
 }
 
+async function vsHandleBootstrapFile(file) {
+  if (!file) return;
+  if (!videoSyncState.routePolyline || videoSyncState.routePolyline.length < 2) {
+    vsSetStatus("Pick a route first.");
+    return;
+  }
+  const youtubeId = videoSyncState.youtubeId || vsExtractYouTubeId(vsEls.ytUrl.value);
+  const videoDuration =
+    videoSyncState.player?.getDuration?.() || videoSyncState.videoDuration;
+  if (!youtubeId || !videoDuration) {
+    vsSetStatus("Load a YouTube URL first (need its duration).");
+    return;
+  }
+
+  const maxErrorMeters = vsReadNumberInput(
+    vsEls.bootstrapMaxError,
+    10,
+    (value) => value >= 0,
+  );
+  const speedFactor = vsReadNumberInput(
+    vsEls.bootstrapSpeed,
+    5,
+    (value) => value > 0,
+  );
+
+  let csvText;
+  try {
+    csvText = await file.text();
+  } catch (err) {
+    vsSetStatus(`Couldn't read file: ${err.message}`);
+    return;
+  }
+
+  let result;
+  try {
+    result = bootstrapKeyframesFromGps({
+      csvText,
+      routeGeometry: videoSyncState.routePolyline,
+      videoDuration,
+      speedFactor,
+      maxErrorMeters,
+    });
+  } catch (err) {
+    vsSetStatus(`Bootstrap failed: ${err.message}`);
+    return;
+  }
+
+  if (result.keyframes.length < 2) {
+    vsSetStatus(
+      `Bootstrap produced ${result.keyframes.length} keyframes; check the GPS file matches this route.`,
+    );
+    return;
+  }
+  if (
+    videoSyncState.keyframes.length > 0 &&
+    !window.confirm(
+      `Replace ${videoSyncState.keyframes.length} existing keyframes with ${result.keyframes.length} from GPS?`,
+    )
+  ) {
+    vsSetStatus("Bootstrap cancelled.");
+    return;
+  }
+
+  videoSyncState.videoDuration = videoDuration;
+  videoSyncState.keyframes = result.keyframes;
+  videoSyncState.selectedIndex = -1;
+  vsRebuildSync();
+  vsRenderKeyframesList();
+  vsRenderKeyframesLayer();
+
+  const s = result.stats;
+  vsSetStatus(
+    `Bootstrapped ${s.keyframesOut} keyframes from ${s.fixesRead} fixes ` +
+    `(${s.offRouteDropped} off-route, ${s.beyondDurationDropped} beyond end, ` +
+    `${s.continuityCorrections} continuity fixes; fractions ` +
+    `${vsFormatFraction(s.startFraction)} -> ${vsFormatFraction(s.endFraction)}).`,
+  );
+}
+
 async function vsLoadRouteForSlug(slug) {
   vsSetStatus(`Loading route ${slug}…`);
   const r = await fetch(`/api/video-keyframes/${slug}/route-polyline`);
@@ -7673,6 +7775,7 @@ async function vsLoadRouteForSlug(slug) {
     vsSetStatus(`Route load failed: ${err}`);
     videoSyncState.routePolyline = null;
     vsRenderRouteLayer();
+    vsRebuildSync();
     return;
   }
   const polyline = await r.json();
@@ -7701,6 +7804,9 @@ async function vsLoadExistingDraft(slug) {
   const r = await fetch(`/api/video-keyframes/${slug}/draft`);
   if (!r.ok) {
     vsEls.ytUrl.value = "";
+    videoSyncState.youtubeId = null;
+    videoSyncState.videoDuration = 0;
+    vsUpdateBootstrapControls();
     return;
   }
   const draft = await r.json();
@@ -7713,6 +7819,7 @@ async function vsLoadExistingDraft(slug) {
   }
   if (typeof draft.videoDuration === "number") {
     videoSyncState.videoDuration = draft.videoDuration;
+    vsUpdateBootstrapControls();
   }
   vsRebuildSync();
   vsSetStatus(`Loaded draft with ${videoSyncState.keyframes.length} keyframes.`);
@@ -7780,7 +7887,19 @@ async function vsSaveDraft({ updateStatus = true } = {}) {
 vsEls.slug.addEventListener("change", () => vsOnSlugChange().catch(showError));
 vsEls.ytUrl.addEventListener("change", (e) => {
   const id = vsExtractYouTubeId(e.target.value);
-  if (id) vsLoadVideo(id).catch((err) => vsSetStatus(`YT load failed: ${err.message}`));
+  if (id) {
+    vsLoadVideo(id).catch((err) => vsSetStatus(`YT load failed: ${err.message}`));
+  } else {
+    videoSyncState.youtubeId = null;
+    videoSyncState.videoDuration = 0;
+    vsRebuildSync();
+    vsUpdateBootstrapControls();
+  }
+});
+vsEls.bootstrapFile.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  vsHandleBootstrapFile(file).catch((err) => vsSetStatus(`Bootstrap failed: ${err.message}`));
+  event.target.value = "";
 });
 vsEls.saveDraft.addEventListener("click", async () => {
   try {

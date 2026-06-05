@@ -1063,6 +1063,7 @@ button:disabled {
 }
 .vs-overlay-controls label { white-space: nowrap; }
 .vs-overlay-controls #vs-yt-url { flex: 1; min-width: 12rem; }
+.vs-overlay-controls .vs-num-input { width: 4.5rem; }
 .vs-overlay-status { color: #666; font-size: 0.85em; }
 #vs-close { margin-left: auto; }
 
