@@ -235,11 +235,11 @@
       "name": "סובב דפנה",
       "summary": "סובב דפנה",
       "description": "סובב דפנה",
-      "route": "3P1DB4ChViB5D7kKt8yQ9AyMfhhmwj1ipHsB4XAq9XYdGPcgQwF6dMm4pyhw3HEWQyRTXLr5y5TaY15F55y",
+      "route": "5WpMNtJrMmNyYsLV717nLYZXJgm2VhCeRmRs1ZVPCAswAvs5UHJ2tT3WTWSSxmvrAHyx5UFjYqVEgoRFCy2mGRkmvzYgRWZivd1TzbbqJgXqXu4k1mqk6CXzyfp7MsrY3wbQ5jZ3weTYRcbt8VXSjraCXpfzah8JbTGe3WoqDewoNX4cMrjXRb8W9AQuZiqexE66CofDEmSurnJo65PtkA5tR2k7WfJwMPE8izerqCiz",
       "notes": "",
       "featured": false,
       "distanceKm": 7,
-      "elevationGainM": 51,
+      "elevationGainM": 49,
       "elevationLossM": 51,
       "regionId": "galilee-panhandle",
       "passesNear": [
@@ -266,7 +266,7 @@
       },
       "routeShape": {
         "type": "circular",
-        "endpointDistanceM": 7
+        "endpointDistanceM": 55
       },
       "surfaceType": "mixed",
       "startPlaceIds": [
@@ -279,14 +279,14 @@
           "relation": "near",
           "matchType": "radius",
           "distanceM": 238,
-          "routeProgressMeters": 4342
+          "routeProgressMeters": 4368
         },
         {
           "id": "hagoshrim",
           "relation": "near",
           "matchType": "radius",
           "distanceM": 428,
-          "routeProgressMeters": 4743
+          "routeProgressMeters": 4769
         }
       ],
       "heroImage": {
