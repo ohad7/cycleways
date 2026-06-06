@@ -51,3 +51,5 @@ Current plans:
 - `recommended-routes/` - design and implementation plan for making `/routes` the canonical public catalog of all recommended routes, with optional route-story pages replacing the overloaded featured concept.
 - `video-sync-gps-bootstrap/` - design and implementation plan for bootstrapping editor video-sync keyframes from a clip's GPS track (time/5 rescale, route-snap, error-bounded simplification) instead of clicking each keyframe by hand.
 - `featured-map-playback/` - design and implementation plan for giving non-video featured/recommended route pages a synthetic playable map stage aligned with video-route controls, cursor animation, and POI/warning cues.
+- `route-map-thumbnails/` - design and implementation plan for editor-generated Mapbox route-map screenshots used as static route-card thumbnails.
+- `topbar-route-navigation/` - design and implementation plan for canonical route navigation, active topbar state, breadcrumbs, and removal of the stale recommendations section.

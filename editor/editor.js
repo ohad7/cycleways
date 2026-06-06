@@ -7999,6 +7999,23 @@ const routeCatalogState = {
   imageCandidates: new Map(),
 };
 
+const ROUTE_MAP_CAPTURE = {
+  width: 1200,
+  height: 800,
+  style: "mapbox://styles/mapbox/outdoors-v12",
+  routeSourceId: "rc-capture-route",
+  routeHaloLayerId: "rc-capture-route-halo",
+  routeLineLayerId: "rc-capture-route-line",
+  pointsSourceId: "rc-capture-points",
+  pointsLayerId: "rc-capture-points",
+};
+
+const routeMapCaptureState = {
+  map: null,
+  host: document.getElementById("rc-map-capture-host"),
+  busy: false,
+};
+
 const rcEls = {
   status: document.getElementById("rc-status"),
   list: document.getElementById("rc-list"),
@@ -8029,6 +8046,11 @@ function rcEntryIssues(entry) {
   if (!entry?.summary) errors.push("Missing summary");
   if (!entry?.route) errors.push("Missing route token");
   if (!entry?.description) warnings.push("Missing long description");
+  if (!entry?.routeMapImage?.thumbnail && !entry?.routeMapImage?.photo) {
+    warnings.push("Missing route map image");
+  } else if (entry?.routeMapImage?.source?.type !== "mapbox-screenshot") {
+    warnings.push("Route map image has no capture metadata");
+  }
   if (!rcEntryDisplayImage(entry)) warnings.push("Missing representative image");
   if (!entry?.start) warnings.push("Missing start point");
   if ((entry?.story?.enabled || entry?.featured) && !entry?.featured) {
@@ -8183,6 +8205,7 @@ function rcRenderDetail() {
     row.append(label, input);
     rcEls.detail.appendChild(row);
   }
+  rcEls.detail.appendChild(rcRouteMapImageSection(entry));
   rcEls.detail.appendChild(rcHeroImageSection(entry));
   const featuredRow = document.createElement("div");
   featuredRow.className = "rc-row";
@@ -8264,6 +8287,300 @@ function rcReadinessPanel(entry) {
   }
   panel.appendChild(list);
   return panel;
+}
+
+function rcRouteMapImageSection(entry) {
+  const section = document.createElement("div");
+  section.className = "rc-endpoint rc-route-map-image";
+
+  const heading = document.createElement("div");
+  heading.className = "rc-endpoint-heading";
+  heading.textContent = "Route map image";
+  section.appendChild(heading);
+
+  const image = entry.routeMapImage;
+  if (image?.thumbnail || image?.photo) {
+    const img = document.createElement("img");
+    img.className = "rc-route-map-image__preview";
+    img.src = dataImageSrc(image.thumbnail || image.photo);
+    img.alt = image.alt || `Route map ${entry.name || entry.slug}`;
+    section.appendChild(img);
+  }
+
+  const source = image?.source || {};
+  const note = document.createElement("p");
+  note.className = image ? "rc-help" : "rc-help rc-help--warn";
+  if (!image) {
+    note.textContent = "No generated route map image yet.";
+  } else if (source.type === "mapbox-screenshot") {
+    note.textContent = [
+      "Generated from Mapbox screenshot",
+      source.mapVersion ? `map ${source.mapVersion}` : "",
+      source.generatedAt ? new Date(source.generatedAt).toLocaleString() : "",
+    ].filter(Boolean).join(" · ");
+  } else {
+    note.textContent = "Image exists, but capture metadata is missing.";
+  }
+  section.appendChild(note);
+
+  const actions = document.createElement("div");
+  actions.className = "rc-route-map-image__actions";
+
+  const generate = document.createElement("button");
+  generate.type = "button";
+  generate.className = "secondary-button";
+  generate.textContent = image ? "Regenerate map image" : "Generate map image";
+  generate.disabled = routeMapCaptureState.busy || !entry.route;
+  generate.addEventListener("click", async () => {
+    try {
+      await rcGenerateRouteMapImage(entry);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      rcSetStatus(`Map image failed: ${message}`);
+      showAlert("Route map image failed", message);
+    }
+  });
+  actions.appendChild(generate);
+
+  if (image) {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary-button danger";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      delete entry.routeMapImage;
+      rcRenderList();
+      rcRenderDetail();
+    });
+    actions.appendChild(remove);
+  }
+
+  section.appendChild(actions);
+  return section;
+}
+
+async function rcGenerateRouteMapImage(entry) {
+  if (!entry?.route) throw new Error("Route token is required.");
+  if (routeMapCaptureState.busy) return;
+  routeMapCaptureState.busy = true;
+  rcSetStatus(`Generating map image for ${entry.slug}…`);
+  rcRenderDetail();
+  try {
+    const preview = await rcLoadRoutePreview(entry);
+    const dataUrl = await rcCaptureRouteMap(preview.geometry);
+    const res = await fetch("/api/route-catalog/map-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        slug: entry.slug,
+        route: entry.route,
+        data: dataUrl,
+        alt: `מפת מסלול ${entry.name || entry.slug}`,
+        style: ROUTE_MAP_CAPTURE.style,
+        width: ROUTE_MAP_CAPTURE.width,
+        height: ROUTE_MAP_CAPTURE.height,
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.ok) throw new Error(body.error || `upload failed (${res.status})`);
+    entry.routeMapImage = body.image;
+    rcSetStatus(`Map image generated for ${entry.slug}. Save draft to persist it.`);
+  } finally {
+    routeMapCaptureState.busy = false;
+    rcRenderList();
+    rcRenderDetail();
+  }
+}
+
+async function rcLoadRoutePreview(entry) {
+  const res = await fetch("/api/route-catalog/route-preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slug: entry.slug, route: entry.route }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.ok) throw new Error(body.error || `preview failed (${res.status})`);
+  if (!Array.isArray(body.geometry) || body.geometry.length < 2) {
+    throw new Error("Route preview has no geometry.");
+  }
+  return body;
+}
+
+async function rcCaptureRouteMap(geometry) {
+  const captureMap = await rcEnsureCaptureMap();
+  await rcRenderCaptureRoute(captureMap, geometry);
+  await rcWaitForMapEvent(captureMap, "idle", 8000);
+  const canvas = captureMap.getCanvas();
+  return rcCanvasToDataUrl(canvas);
+}
+
+async function rcEnsureCaptureMap() {
+  if (!routeMapCaptureState.host) {
+    throw new Error("Route map capture host is missing.");
+  }
+  if (routeMapCaptureState.map) return routeMapCaptureState.map;
+  routeMapCaptureState.host.style.width = `${ROUTE_MAP_CAPTURE.width}px`;
+  routeMapCaptureState.host.style.height = `${ROUTE_MAP_CAPTURE.height}px`;
+  const captureMap = new mapboxgl.Map({
+    container: routeMapCaptureState.host,
+    style: ROUTE_MAP_CAPTURE.style,
+    center: [35.617497, 33.183536],
+    zoom: 10,
+    interactive: false,
+    preserveDrawingBuffer: true,
+    attributionControl: false,
+  });
+  routeMapCaptureState.map = captureMap;
+  await rcWaitForMapEvent(captureMap, "style.load", 12000);
+  return captureMap;
+}
+
+async function rcRenderCaptureRoute(captureMap, geometry) {
+  captureMap.resize();
+  const coordinates = geometry
+    .map((point) => {
+      if (Array.isArray(point) && point.length >= 2) return [Number(point[0]), Number(point[1])];
+      return [Number(point?.lng), Number(point?.lat)];
+    })
+    .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat));
+  if (coordinates.length < 2) throw new Error("Route geometry is too short.");
+
+  for (const layerId of [
+    ROUTE_MAP_CAPTURE.routeLineLayerId,
+    ROUTE_MAP_CAPTURE.routeHaloLayerId,
+    ROUTE_MAP_CAPTURE.pointsLayerId,
+  ]) {
+    if (captureMap.getLayer(layerId)) captureMap.removeLayer(layerId);
+  }
+  for (const sourceId of [
+    ROUTE_MAP_CAPTURE.routeSourceId,
+    ROUTE_MAP_CAPTURE.pointsSourceId,
+  ]) {
+    if (captureMap.getSource(sourceId)) captureMap.removeSource(sourceId);
+  }
+
+  captureMap.addSource(ROUTE_MAP_CAPTURE.routeSourceId, {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: { type: "LineString", coordinates },
+    },
+  });
+  captureMap.addLayer({
+    id: ROUTE_MAP_CAPTURE.routeHaloLayerId,
+    type: "line",
+    source: ROUTE_MAP_CAPTURE.routeSourceId,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#ffffff",
+      "line-width": 15,
+      "line-opacity": 0.9,
+    },
+  });
+  captureMap.addLayer({
+    id: ROUTE_MAP_CAPTURE.routeLineLayerId,
+    type: "line",
+    source: ROUTE_MAP_CAPTURE.routeSourceId,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#245943",
+      "line-width": 8,
+      "line-opacity": 0.96,
+    },
+  });
+
+  const start = coordinates[0];
+  const end = coordinates[coordinates.length - 1];
+  captureMap.addSource(ROUTE_MAP_CAPTURE.pointsSourceId, {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { role: "start" },
+          geometry: { type: "Point", coordinates: start },
+        },
+        {
+          type: "Feature",
+          properties: { role: "end" },
+          geometry: { type: "Point", coordinates: end },
+        },
+      ],
+    },
+  });
+  captureMap.addLayer({
+    id: ROUTE_MAP_CAPTURE.pointsLayerId,
+    type: "circle",
+    source: ROUTE_MAP_CAPTURE.pointsSourceId,
+    paint: {
+      "circle-color": ["match", ["get", "role"], "start", "#245943", "#c97b3a"],
+      "circle-radius": 9,
+      "circle-stroke-width": 4,
+      "circle-stroke-color": "#ffffff",
+    },
+  });
+
+  const bounds = new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]);
+  coordinates.forEach((coord) => bounds.extend(coord));
+  captureMap.fitBounds(bounds, {
+    padding: 90,
+    duration: 0,
+    maxZoom: 14,
+  });
+}
+
+function rcWaitForMapEvent(captureMap, eventName, timeoutMs) {
+  return new Promise((resolveReady, rejectReady) => {
+    let timeoutId = null;
+    const cleanup = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      captureMap.off(eventName, onEvent);
+      captureMap.off("error", onError);
+    };
+    const onEvent = () => {
+      cleanup();
+      resolveReady();
+    };
+    const onError = (event) => {
+      cleanup();
+      rejectReady(event?.error || new Error(`Mapbox ${eventName} failed`));
+    };
+    timeoutId = window.setTimeout(() => {
+      cleanup();
+      rejectReady(new Error(`Timed out waiting for map ${eventName}`));
+    }, timeoutMs);
+    captureMap.once(eventName, onEvent);
+    captureMap.once("error", onError);
+  });
+}
+
+function rcCanvasToDataUrl(canvas) {
+  return new Promise((resolveDataUrl, rejectDataUrl) => {
+    if (!canvas) {
+      rejectDataUrl(new Error("Map canvas is missing."));
+      return;
+    }
+    if (canvas.toBlob) {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          rejectDataUrl(new Error("Map canvas capture failed."));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolveDataUrl(reader.result);
+        reader.onerror = () => rejectDataUrl(reader.error || new Error("Blob read failed"));
+        reader.readAsDataURL(blob);
+      }, "image/png");
+      return;
+    }
+    try {
+      resolveDataUrl(canvas.toDataURL("image/png"));
+    } catch (error) {
+      rejectDataUrl(error);
+    }
+  });
 }
 
 function rcHeroImageSection(entry) {

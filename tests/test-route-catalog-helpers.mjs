@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
+  routeCardImage,
   routeDisplayImage,
   routeDifficultyLabel,
+  routeMapImage,
   routePassesThroughPlaceIds,
   routeShapeLabel,
   routeShapeType,
@@ -12,10 +14,34 @@ import {
 
 const hero = routeDisplayImage({
   name: "Route",
+  routeMapImage: { photo: "map.webp", thumbnail: "map-thumb.webp", alt: "Map alt" },
   heroImage: { photo: "hero.webp", thumbnail: "hero-thumb.webp", alt: "Hero alt" },
   start: { name: "Start", images: [{ photo: "start.webp" }] },
 });
 assert.deepEqual(hero, { photo: "hero.webp", thumbnail: "hero-thumb.webp", alt: "Hero alt" });
+
+const cardMap = routeCardImage({
+  name: "Route",
+  routeMapImage: { photo: "map.webp", thumbnail: "map-thumb.webp", alt: "Map alt" },
+  heroImage: { photo: "hero.webp", thumbnail: "hero-thumb.webp", alt: "Hero alt" },
+});
+assert.deepEqual(cardMap, { photo: "map.webp", thumbnail: "map-thumb.webp", alt: "Map alt" });
+
+const routeMap = routeMapImage({
+  name: "Route",
+  routeMapImage: { photo: "map.webp", thumbnail: "map-thumb.webp", alt: "Map alt" },
+});
+assert.deepEqual(routeMap, { photo: "map.webp", thumbnail: "map-thumb.webp", alt: "Map alt" });
+
+const cardSnapshot = routeCardImage(
+  { name: "Route", heroImage: { photo: "hero.webp", thumbnail: "hero-thumb.webp" } },
+  { route: { displayImage: { photo: "snapshot.webp", thumbnail: "snapshot-thumb.webp" } } },
+);
+assert.deepEqual(cardSnapshot, {
+  photo: "snapshot.webp",
+  thumbnail: "snapshot-thumb.webp",
+  alt: "",
+});
 
 const start = routeDisplayImage({
   name: "Route",

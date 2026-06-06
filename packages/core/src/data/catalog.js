@@ -152,3 +152,19 @@ export function routeDisplayImage(entry, snapshot = null) {
 
   return null;
 }
+
+export function routeCardImage(entry, snapshot = null) {
+  const routeMap = routeMapImage(entry);
+  if (routeMap) return routeMap;
+
+  const snapshotImage =
+    normalizedCatalogImage(snapshot?.route?.displayImage) ||
+    normalizedCatalogImage(snapshot?.displayImage);
+  if (snapshotImage) return snapshotImage;
+
+  return routeDisplayImage(entry, snapshot);
+}
+
+export function routeMapImage(entry) {
+  return normalizedCatalogImage(entry?.routeMapImage);
+}

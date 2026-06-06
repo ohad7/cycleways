@@ -78,6 +78,12 @@ validateCatalogDraft({
       ...baseEntry,
       description: "Longer description",
       heroImage: { photo: "hero.webp", thumbnail: "hero-thumb.webp", alt: "Hero" },
+      routeMapImage: {
+        photo: "map.webp",
+        thumbnail: "map-thumb.webp",
+        alt: "Route map",
+        source: { type: "mapbox-screenshot" },
+      },
       start: { name: "S", description: "", images: [{ photo: "s.webp", thumbnail: "t.webp" }] },
       end: { name: "E", images: [{ photo: "e.webp" }] },
     },
@@ -106,6 +112,14 @@ assert.throws(
       entries: [{ ...baseEntry, heroImage: { thumbnail: "hero-thumb.webp" } }],
     }),
   /heroImage is missing a photo/,
+);
+
+assert.throws(
+  () =>
+    validateCatalogDraft({
+      entries: [{ ...baseEntry, routeMapImage: { thumbnail: "map-thumb.webp" } }],
+    }),
+  /routeMapImage is missing a photo/,
 );
 
 const segmentImageCandidates = routeCatalogImageCandidatesFromSnapshot(

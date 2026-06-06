@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  routeDisplayImage,
+  routeCardImage,
   routeDifficultyLabel,
   routeShapeLabel,
   routeSurfaceLabel,
@@ -30,7 +30,7 @@ export default function RouteCatalogCard({
   headingLevel = "h2",
 }) {
   const Heading = headingLevel === "h3" ? "h3" : "h2";
-  const image = routeDisplayImage(entry);
+  const image = routeCardImage(entry);
   const placeNames = (entry.passesNear || [])
     .map((id) => places.find((p) => p.id === id)?.name)
     .filter(Boolean)

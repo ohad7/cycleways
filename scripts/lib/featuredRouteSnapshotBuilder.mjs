@@ -118,11 +118,8 @@ async function resolveRouteTokenForSlug(slug, {
 } = {}) {
   // First try an optional draft catalog (for in-progress editor edits), then
   // the promoted one, and fall back to the .meta.js seed for legacy routes.
-  let routeToken = null;
-  const draft = draftCatalogPath ? await readJsonOrNull(draftCatalogPath) : null;
-  const promoted = await readJsonOrNull(routeCatalogPublicPath);
-  const lookup = (cat) => cat?.entries?.find((e) => e.slug === slug)?.route;
-  routeToken = lookup(draft) || lookup(promoted) || null;
+  const entry = await resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath });
+  let routeToken = entry?.route || null;
   if (!routeToken) {
     try {
       const metaModulePath = resolve(repoRoot, `src/featured/${slug}.meta.js`);
@@ -134,6 +131,13 @@ async function resolveRouteTokenForSlug(slug, {
     throw new Error(`featured route "${slug}" not found in catalog or meta`);
   }
   return routeToken;
+}
+
+async function resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath = null } = {}) {
+  const draft = draftCatalogPath ? await readJsonOrNull(draftCatalogPath) : null;
+  const promoted = await readJsonOrNull(routeCatalogPublicPath);
+  const lookup = (cat) => cat?.entries?.find((e) => e.slug === slug) || null;
+  return lookup(draft) || lookup(promoted) || null;
 }
 
 // Decode a slug's route token to the full route-state snapshot (the shape
@@ -257,6 +261,7 @@ function loadManifestSource(manifest) {
 // Project a decoded route state into the public, page-oriented snapshot schema.
 export function buildSnapshotFromRouteState({
   slug,
+  displayImage = null,
   routeState,
   routeToken,
   routeFormat,
@@ -286,6 +291,7 @@ export function buildSnapshotFromRouteState({
       ...(decodeSource ? { decodeSource } : {}),
     },
     route: {
+      ...(displayImage ? { displayImage } : {}),
       geometry,
       bounds: computeBounds(geometry),
       distance: routeState.distance || 0,
@@ -316,8 +322,10 @@ export async function buildSnapshotForSlug(slug, {
     draftCatalogPath,
     log,
   });
+  const entry = await resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath });
   return buildSnapshotFromRouteState({
     slug,
+    displayImage: entry?.routeMapImage || null,
     routeState,
     routeToken,
     routeFormat,

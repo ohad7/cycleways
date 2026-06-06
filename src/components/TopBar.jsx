@@ -107,7 +107,10 @@ function TopBar({
               <button
                 className="nav-link topbar-find-button"
                 type="button"
-                onClick={onOpenWizard}
+                onClick={() => {
+                  onOpenWizard();
+                  if (mobileMenuOpen) onMobileMenuToggle?.();
+                }}
               >
                 מצא מסלול
               </button>

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "slug": "kovshey-hagolan",
-  "generatedAt": "2026-06-05T23:24:45.311Z",
+  "generatedAt": "2026-06-06T16:53:51.738Z",
   "source": {
     "routeTokenHash": "sha256:a0ee06fea7634c16b7cc666d9b51064e985cb22a0ca98fea74336e441af1a533",
     "routeFormat": "compact_route",
@@ -14,6 +14,20 @@
     }
   },
   "route": {
+    "displayImage": {
+      "photo": "public-data/route-map-images/kovshey-hagolan-map-2ee412e3.webp",
+      "thumbnail": "public-data/route-map-images/kovshey-hagolan-map-2ee412e3-thumb.webp",
+      "alt": "מפת מסלול מסע בעקבות כובשי הגולן",
+      "source": {
+        "type": "mapbox-screenshot",
+        "routeTokenHash": "sha256:a0ee06fea7634c16b7cc666d9b51064e985cb22a0ca98fea74336e441af1a533",
+        "mapVersion": "6ee5d31a1bbd",
+        "style": "mapbox://styles/mapbox/outdoors-v12",
+        "width": 1200,
+        "height": 800,
+        "generatedAt": "2026-06-06T16:53:22.044Z"
+      }
+    },
     "geometry": [
       {
         "lat": 33.20617181606731,

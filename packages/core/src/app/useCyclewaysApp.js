@@ -17,7 +17,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { WELCOME_WIZARD_SKIP_FLAG } from "../data/welcomeFlags.js";
 import {
   featureFlagValue,
   getFeatureFlags,
@@ -31,7 +30,6 @@ import {
   removeUrlParam,
   getShardLoaderLocation,
 } from "../platform/location.js";
-import { getStoredItem } from "../platform/storage.js";
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
 import { POI_EMOJIS } from "../data/poiTypes.js";
 import { getDataPointLocation } from "../utils/route-data.js";
@@ -84,16 +82,7 @@ export function useCyclewaysApp() {
     elevationHover: null,
     tutorialOpen: false,
   });
-  const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(() => {
-    if (!featureFlagValue("routeDiscovery")) return false;
-    if (typeof window === "undefined") return false;
-    if (hasQueryParam("route")) return false;
-    try {
-      return getStoredItem(WELCOME_WIZARD_SKIP_FLAG) !== "1";
-    } catch {
-      return true;
-    }
-  });
+  const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(false);
   const routeManagerRef = useRef(null);
   const shardedRouteSessionRef = useRef(null);
   const dragStartSnapshotRef = useRef(null);

@@ -24,6 +24,7 @@ import {
   readFeaturedRouteSnapshot,
   routeStateFromFeaturedSnapshot,
   snapshotMatchesRouteToken,
+  routeTokenHash,
 } from "../scripts/lib/featuredRouteSnapshotBuilder.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -63,6 +64,7 @@ const routeCatalogDraftPath = resolve(editorRoot, ".drafts/route-catalog.json");
 const routeCatalogPublicPath = resolve(publicDataDir, "route-catalog.json");
 const featuredRoutesDir = resolve(publicDataDir, "featured-routes");
 const poiImagesDir = resolve(publicDataDir, "poi-images");
+const routeMapImagesDir = resolve(publicDataDir, "route-map-images");
 const imagesDir = resolve(repoRoot, "public/images");
 const placesPath = resolve(repoRoot, "data/places.json");
 const regionZonesPath = resolve(repoRoot, "data/region-zones.json");
@@ -101,6 +103,9 @@ function hasGalleryImage(marker) {
 const POI_IMAGE_PUBLIC_PATH = "public-data/poi-images";
 const POI_IMAGE_MAX_WIDTH = 1600;
 const POI_IMAGE_THUMB_WIDTH = 480;
+const ROUTE_MAP_IMAGE_PUBLIC_PATH = "public-data/route-map-images";
+const ROUTE_MAP_IMAGE_MAX_WIDTH = 1200;
+const ROUTE_MAP_IMAGE_THUMB_WIDTH = 640;
 
 // Map an authored, stable POI id onto a filesystem-safe slug. Throws when the
 // id has no usable characters so we never write an empty or traversal filename.
@@ -151,6 +156,46 @@ export async function processPoiImage({ id, buffer }, options = {}) {
   };
 }
 
+export async function processRouteMapImage(
+  { slug, buffer, source = {}, alt = "" },
+  options = {},
+) {
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+    throw new Error("Route map image upload is empty");
+  }
+  const safeSlug = String(slug || "").trim();
+  if (!ROUTE_CATALOG_SLUG_RE.test(safeSlug)) {
+    throw new Error("Route map image slug must be lowercase kebab-case");
+  }
+  const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 8);
+  const baseName = `${safeSlug}-map-${hash}`;
+  const outputDir = options.outputDir || routeMapImagesDir;
+  const publicPath = options.publicPath || ROUTE_MAP_IMAGE_PUBLIC_PATH;
+  await mkdir(outputDir, { recursive: true });
+
+  const photoBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: ROUTE_MAP_IMAGE_MAX_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
+  const thumbBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: ROUTE_MAP_IMAGE_THUMB_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 76 })
+    .toBuffer();
+
+  await writeFile(join(outputDir, `${baseName}.webp`), photoBuffer);
+  await writeFile(join(outputDir, `${baseName}-thumb.webp`), thumbBuffer);
+
+  return {
+    photo: `${publicPath}/${baseName}.webp`,
+    thumbnail: `${publicPath}/${baseName}-thumb.webp`,
+    alt: typeof alt === "string" && alt.trim() ? alt.trim() : `Route map ${safeSlug}`,
+    source: source && typeof source === "object" && !Array.isArray(source) ? source : {},
+    bytes: { photo: photoBuffer.length, thumbnail: thumbBuffer.length },
+  };
+}
+
 function isRemoteImagePath(value) {
   return /^(https?:)?\/\//i.test(value) || value.startsWith("data:");
 }
@@ -194,6 +239,45 @@ export async function findMissingSourceImages(source, baseDir = repoRoot) {
   const missing = [];
   const seen = new Set();
   for (const imagePath of collectSourceImagePaths(source)) {
+    if (seen.has(imagePath)) continue;
+    seen.add(imagePath);
+    const absolute = localImagePathToAbsolute(imagePath, baseDir);
+    if (!absolute) continue;
+    const fileStat = await statOrNull(absolute);
+    if (!fileStat || !fileStat.isFile()) {
+      missing.push(imagePath);
+    }
+  }
+  return missing;
+}
+
+function collectCatalogImagePaths(catalog) {
+  const paths = [];
+  const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
+  const addImage = (image) => {
+    if (!image || typeof image !== "object") return;
+    for (const field of ["photo", "thumbnail"]) {
+      const value = image?.[field];
+      if (typeof value === "string" && value.trim() !== "") paths.push(value);
+    }
+  };
+  const addEndpoint = (point) => {
+    if (!point || typeof point !== "object") return;
+    if (Array.isArray(point.images)) point.images.forEach(addImage);
+  };
+  for (const entry of entries) {
+    addImage(entry?.heroImage);
+    addImage(entry?.routeMapImage);
+    addEndpoint(entry?.start);
+    addEndpoint(entry?.end);
+  }
+  return paths;
+}
+
+export async function findMissingCatalogImages(catalog, baseDir = repoRoot) {
+  const missing = [];
+  const seen = new Set();
+  for (const imagePath of collectCatalogImagePaths(catalog)) {
     if (seen.has(imagePath)) continue;
     seen.add(imagePath);
     const absolute = localImagePathToAbsolute(imagePath, baseDir);
@@ -932,6 +1016,7 @@ export function validateCatalogDraft(catalog) {
       throw new Error(`entry ${entry.slug} description must be a string`);
     }
     validateCatalogImage(entry.heroImage, `entry ${entry.slug} heroImage`);
+    validateCatalogImage(entry.routeMapImage, `entry ${entry.slug} routeMapImage`);
     validateRouteEndpoint(entry.start, `entry ${entry.slug} start point`);
     validateRouteEndpoint(entry.end, `entry ${entry.slug} end point`);
   }
@@ -1157,9 +1242,58 @@ export async function routeCatalogImageCandidatesForRoute(routeToken, { slug = n
   return routeCatalogImageCandidatesFromSnapshot(snapshot, segmentsData);
 }
 
+export async function routeCatalogPreviewForRoute(routeToken, { slug = null } = {}) {
+  const token = String(routeToken || "").trim();
+  if (!token) {
+    throw new Error("route token is required");
+  }
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets({ log });
+  const manager = await createRouteManager(
+    RouteManagerClass,
+    geoJsonData,
+    segmentsData,
+    baseRoutingNetwork,
+  );
+  let snapshot = null;
+  let decodeError = null;
+  try {
+    snapshot = restoreRouteFromParam(manager, token, segmentsData, cwBaseIndex);
+  } catch (err) {
+    decodeError = err;
+  }
+  if (!snapshot || !Array.isArray(snapshot.geometry) || snapshot.geometry.length < 2) {
+    const fallback = slug ? await readFeaturedRouteSnapshot(slug) : null;
+    if (fallback && snapshotMatchesRouteToken(fallback, token)) {
+      snapshot = routeStateFromFeaturedSnapshot(fallback);
+      log("warn", `route catalog preview: ${slug} used existing snapshot fallback`);
+    }
+  }
+  if (!snapshot || !Array.isArray(snapshot.geometry) || snapshot.geometry.length < 2) {
+    const detail = decodeError instanceof Error ? `: ${decodeError.message}` : "";
+    throw new Error(`route token failed to decode${detail}`);
+  }
+  const manifest = await readJsonOrNull(promotedManifestPath);
+  return {
+    geometry: snapshot.geometry,
+    source: {
+      type: "mapbox-screenshot",
+      routeTokenHash: routeTokenHash(token),
+      mapVersion: manifest?.version ?? null,
+    },
+  };
+}
+
 export async function promoteCatalogDraft({ draftPath, publicPath, places, zones, decodeRoute }) {
   const draft = JSON.parse(await readFile(draftPath, "utf-8"));
   const enriched = recomputeCatalogMetadata(draft, { places, zones, decodeRoute });
+  const missingImages = await findMissingCatalogImages(enriched, repoRoot);
+  if (missingImages.length > 0) {
+    throw new Error(
+      `Route catalog promote blocked: ${missingImages.length} image file(s) are referenced but missing: ${missingImages.join(", ")}`,
+    );
+  }
   await mkdir(dirname(publicPath), { recursive: true });
   const tmp = `${publicPath}.tmp`;
   await writeFile(tmp, JSON.stringify(enriched, null, 2));
@@ -1661,7 +1795,9 @@ async function serveStatic(request, response, url) {
   // placeholders under public/images. Serve those read-only so the editor's
   // image thumbnails resolve.
   const allowedImageFile =
-    isInside(poiImagesDir, filePath) || isInside(imagesDir, filePath);
+    isInside(poiImagesDir, filePath) ||
+    isInside(routeMapImagesDir, filePath) ||
+    isInside(imagesDir, filePath);
   if (
     !allowedEditorFile &&
     !allowedIconFile &&
@@ -2979,6 +3115,63 @@ const server = createServer(async (request, response) => {
             slug: body?.slug,
           });
           sendJson(response, 200, { ok: true, candidates });
+        } catch (err) {
+          sendJson(response, 400, {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
+      // /api/route-catalog/route-preview  (POST)
+      if (parts.length === 3 && parts[2] === "route-preview" && request.method === "POST") {
+        const body = await readRequestJson(request);
+        try {
+          const preview = await routeCatalogPreviewForRoute(body?.route, {
+            slug: body?.slug,
+          });
+          sendJson(response, 200, { ok: true, ...preview });
+        } catch (err) {
+          sendJson(response, 400, {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
+      // /api/route-catalog/map-image  (POST)
+      if (parts.length === 3 && parts[2] === "map-image" && request.method === "POST") {
+        const body = await readRequestJson(request, 40 * 1024 * 1024);
+        const rawData = typeof body.data === "string" ? body.data : "";
+        const base64 = rawData.replace(/^data:[^;]+;base64,/, "");
+        if (!base64) {
+          sendJson(response, 400, { ok: false, error: "missing image data" });
+          return;
+        }
+        try {
+          const token = String(body.route || "").trim();
+          if (!token) throw new Error("route token is required");
+          const manifest = await readJsonOrNull(promotedManifestPath);
+          const source = {
+            type: "mapbox-screenshot",
+            routeTokenHash: routeTokenHash(token),
+            mapVersion: manifest?.version ?? null,
+            style:
+              typeof body.style === "string" && body.style.trim()
+                ? body.style.trim()
+                : null,
+            width: Number.isFinite(Number(body.width)) ? Number(body.width) : null,
+            height: Number.isFinite(Number(body.height)) ? Number(body.height) : null,
+            generatedAt: new Date().toISOString(),
+          };
+          const result = await processRouteMapImage({
+            slug: body.slug,
+            buffer: Buffer.from(base64, "base64"),
+            alt: body.alt,
+            source,
+          });
+          const { bytes, ...image } = result;
+          sendJson(response, 200, { ok: true, image, bytes });
         } catch (err) {
           sendJson(response, 400, {
             ok: false,

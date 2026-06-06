@@ -63,7 +63,21 @@
           "distanceM": 429,
           "routeProgressMeters": 9770
         }
-      ]
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/banias-gan-hatsafon-map-8ab7be6f.webp",
+        "thumbnail": "public-data/route-map-images/banias-gan-hatsafon-map-8ab7be6f-thumb.webp",
+        "alt": "מפת מסלול בניאס וגן הצפון",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:4f5d5c4fe65b9ec350310203dc092136b243ae28391ee50d7fb80f67c1ae547e",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:52:38.757Z"
+        }
+      }
     },
     {
       "slug": "sovev-beit-hillel",
@@ -122,7 +136,21 @@
           "distanceM": 5,
           "routeProgressMeters": 1501
         }
-      ]
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/sovev-beit-hillel-map-43357d52.webp",
+        "thumbnail": "public-data/route-map-images/sovev-beit-hillel-map-43357d52-thumb.webp",
+        "alt": "מפת מסלול סובב בית הלל",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:1b4e57e3cc362d4c8869f0ade487f914867a1954b2794ea94764cfacae1e5dfb",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:52:55.733Z"
+        }
+      }
     },
     {
       "slug": "historic-jordan",
@@ -194,7 +222,21 @@
           "distanceM": 698,
           "routeProgressMeters": 22989
         }
-      ]
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/historic-jordan-map-3e843005.webp",
+        "thumbnail": "public-data/route-map-images/historic-jordan-map-3e843005-thumb.webp",
+        "alt": "מפת מסלול הירדן ההיסטורי",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:c767a41708fc125fe2d3a8a8303305d7ca3215623dd3c13b4515e24627564993",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:53:09.727Z"
+        }
+      }
     },
     {
       "slug": "kovshey-hagolan",
@@ -263,7 +305,21 @@
           "distanceM": 0,
           "routeProgressMeters": 8967
         }
-      ]
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/kovshey-hagolan-map-2ee412e3.webp",
+        "thumbnail": "public-data/route-map-images/kovshey-hagolan-map-2ee412e3-thumb.webp",
+        "alt": "מפת מסלול מסע בעקבות כובשי הגולן",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:a0ee06fea7634c16b7cc666d9b51064e985cb22a0ca98fea74336e441af1a533",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:53:22.044Z"
+        }
+      }
     },
     {
       "slug": "sovev-dafna",
@@ -328,6 +384,20 @@
         "photo": "public-data/poi-images/poi-1821461d-91d526fa.webp",
         "thumbnail": "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp",
         "alt": "נחל דן"
+      },
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/sovev-dafna-map-bbee501b.webp",
+        "thumbnail": "public-data/route-map-images/sovev-dafna-map-bbee501b-thumb.webp",
+        "alt": "מפת מסלול סובב דפנה",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:c9c4aadc35073fcf53cc3a2572340cc45147c20faedb9a07d604473999aee0bf",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:53:35.126Z"
+        }
       }
     },
     {
@@ -421,7 +491,21 @@
           "distanceM": 96,
           "routeProgressMeters": 25822
         }
-      ]
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/roman-roads-map-11aa69c9.webp",
+        "thumbnail": "public-data/route-map-images/roman-roads-map-11aa69c9-thumb.webp",
+        "alt": "מפת מסלול דרכים רומיות",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:0f8f1a20551a4d73879adc905e5a50cb5d63941fb911ffc163d2051455503cbd",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:53:45.836Z"
+        }
+      }
     }
   ]
 }

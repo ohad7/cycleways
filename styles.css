@@ -240,9 +240,14 @@ body::before {
   }
 
   .nav-links.active {
-    transform: translateY(0);
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .nav-links.active .nav-link {
     opacity: 1;
-    visibility: visible;
+    visibility: visible !important;
   }
 
   .nav-links .nav-link {

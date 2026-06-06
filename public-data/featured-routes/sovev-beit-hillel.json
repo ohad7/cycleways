@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-beit-hillel",
-  "generatedAt": "2026-06-05T23:24:44.034Z",
+  "generatedAt": "2026-06-06T16:53:50.922Z",
   "source": {
     "routeTokenHash": "sha256:1b4e57e3cc362d4c8869f0ade487f914867a1954b2794ea94764cfacae1e5dfb",
     "routeFormat": "compact_route",
@@ -14,6 +14,20 @@
     }
   },
   "route": {
+    "displayImage": {
+      "photo": "public-data/route-map-images/sovev-beit-hillel-map-43357d52.webp",
+      "thumbnail": "public-data/route-map-images/sovev-beit-hillel-map-43357d52-thumb.webp",
+      "alt": "מפת מסלול סובב בית הלל",
+      "source": {
+        "type": "mapbox-screenshot",
+        "routeTokenHash": "sha256:1b4e57e3cc362d4c8869f0ade487f914867a1954b2794ea94764cfacae1e5dfb",
+        "mapVersion": "6ee5d31a1bbd",
+        "style": "mapbox://styles/mapbox/outdoors-v12",
+        "width": 1200,
+        "height": 800,
+        "generatedAt": "2026-06-06T16:52:55.733Z"
+      }
+    },
     "geometry": [
       {
         "lat": 33.21745724452543,
