@@ -16,6 +16,7 @@ export default function ElevationProfile({
   onElevationSelect = null,
   cursorFraction = null,
   cursorPlaying = false,
+  externalCursorActive = false,
 }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
   const animatorMarkerEnabledRef = useRef(true);
@@ -29,6 +30,7 @@ export default function ElevationProfile({
   useEffect(() => {
     if (!animator) return undefined;
     const unsubscribe = animator.subscribe("elevation", (payload) => {
+      if (externalCursorActive) return;
       if (!animatorMarkerEnabledRef.current) return;
       if (!payload) {
         setMarkerPoint(null);
@@ -37,16 +39,15 @@ export default function ElevationProfile({
       setMarkerPoint(markerPointForFraction(profile, payload.t));
     });
     return unsubscribe;
-  }, [animator, profile]);
+  }, [animator, externalCursorActive, profile]);
 
-  // When there is no animator (e.g. featured pages), drive the marker line from
-  // an external cursor fraction (the video/map position). With an animator the
-  // animator owns the marker, so this effect is a no-op for the planner.
+  // Featured pages have no animator. Planner playback opts into the same
+  // external cursor while the map route is playing or scrubbed.
   useEffect(() => {
-    if (animator) return undefined;
+    if (animator && !externalCursorActive) return undefined;
     setMarkerPoint(markerPointForFraction(profile, cursorFraction));
     return undefined;
-  }, [animator, cursorFraction, profile]);
+  }, [animator, cursorFraction, externalCursorActive, profile]);
 
   useEffect(() => {
     animatorMarkerEnabledRef.current = true;

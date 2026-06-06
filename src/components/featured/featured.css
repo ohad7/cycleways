@@ -427,6 +427,10 @@
   background: rgba(15, 22, 28, 0.9);
 }
 
+.fv-video-controls--distance-readout {
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+}
+
 .fv-video-play-toggle {
   display: grid;
   width: 38px;
@@ -1917,6 +1921,10 @@
     grid-template-columns: 38px minmax(52px, 1fr) auto auto;
     gap: 8px;
     padding: 8px;
+  }
+
+  .fv-video-controls--distance-readout {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
   }
 
   .fv-video-play-toggle {

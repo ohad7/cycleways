@@ -2,6 +2,8 @@ import React from "react";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
 
 export default function RoutePlaybackControls({
+  className = "",
+  readoutMode = "time",
   isPlaying = false,
   isReady = true,
   isScrubbing = false,
@@ -14,6 +16,8 @@ export default function RoutePlaybackControls({
   playLabel = "נגן מסלול",
   pauseLabel = "השהה מסלול",
   scrubberLabel = "מעבר בזמן המסלול",
+  progressFraction = null,
+  routeDistanceMeters = null,
 }) {
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
   const safeCurrentTime = Number.isFinite(currentTime)
@@ -22,13 +26,27 @@ export default function RoutePlaybackControls({
   const progressPercent = safeDuration > 0
     ? (safeCurrentTime / safeDuration) * 100
     : 0;
+  const progressFractionForReadout = Number.isFinite(progressFraction)
+    ? Math.max(0, Math.min(1, progressFraction))
+    : safeDuration > 0
+      ? progressPercent / 100
+      : 0;
   const disabled = !isReady || safeDuration <= 0;
+  const isDistanceReadout = readoutMode === "distance";
+  const routeDistance = Number.isFinite(routeDistanceMeters) && routeDistanceMeters > 0
+    ? routeDistanceMeters
+    : 0;
+  const readoutText = isDistanceReadout
+    ? `${formatDistance(routeDistance * progressFractionForReadout)} / ${formatDistance(routeDistance)}`
+    : `${formatTime(safeCurrentTime)} / ${formatTime(safeDuration)}`;
 
   return (
     <div
       className={[
         "fv-video-controls",
+        isDistanceReadout ? "fv-video-controls--distance-readout" : "",
         isScrubbing ? "fv-video-controls--scrubbing" : "",
+        className,
       ].filter(Boolean).join(" ")}
     >
       <button
@@ -57,12 +75,18 @@ export default function RoutePlaybackControls({
         style={{ "--fv-video-progress": `${progressPercent}%` }}
       />
       <span className="fv-video-time">
-        {formatTime(safeCurrentTime)} / {formatTime(safeDuration)}
+        {readoutText}
       </span>
-      <div className="fv-video-progress-distance" aria-label="מרחק מההתחלה">
-        <span>מרחק מההתחלה</span>
-        <RouteProgressDistance className="fv-video-progress-value" />
-      </div>
+      {!isDistanceReadout && (
+        <div className="fv-video-progress-distance" aria-label="מרחק מההתחלה">
+          <span>מרחק מההתחלה</span>
+          <RouteProgressDistance
+            className="fv-video-progress-value"
+            progressFraction={progressFraction}
+            routeDistanceMeters={routeDistanceMeters}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -72,4 +96,10 @@ function formatTime(seconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const remainingSeconds = totalSeconds % 60;
   return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+function formatDistance(meters) {
+  if (!Number.isFinite(meters) || meters <= 0) return "0 m";
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
 }

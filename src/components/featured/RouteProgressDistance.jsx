@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { useFeaturedRoute } from "./FeaturedRouteContext.js";
+import React, { useContext, useMemo } from "react";
+import { FeaturedRouteContext } from "./FeaturedRouteContext.js";
 
 function formatDistance(meters) {
   if (!Number.isFinite(meters) || meters <= 0) return "0 מ׳";
@@ -7,19 +7,33 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)} ק״מ`;
 }
 
-export default function RouteProgressDistance({ className = "" }) {
-  const { focusedPoiId, routeState, videoCursor } = useFeaturedRoute();
+export default function RouteProgressDistance({
+  className = "",
+  progressFraction = null,
+  routeDistanceMeters = null,
+}) {
+  const context = useContext(FeaturedRouteContext);
+  const focusedPoiId = context?.focusedPoiId;
+  const routeState = context?.routeState;
+  const videoCursor = context?.videoCursor;
   const focusedPoint = useMemo(
-    () => routeState.activeDataPoints.find((point) => point.id === focusedPoiId),
-    [focusedPoiId, routeState.activeDataPoints],
+    () => (routeState?.activeDataPoints || []).find((point) => point.id === focusedPoiId),
+    [focusedPoiId, routeState?.activeDataPoints],
   );
-  const fraction = Number.isFinite(videoCursor?.fraction)
+  const fraction = Number.isFinite(progressFraction)
+    ? progressFraction
+    : Number.isFinite(videoCursor?.fraction)
     ? videoCursor.fraction
     : Number.isFinite(focusedPoint?.routeFraction)
       ? focusedPoint.routeFraction
       : 0;
   const clampedFraction = Math.max(0, Math.min(1, fraction));
-  const meters = routeState.distance * clampedFraction;
+  const distance = Number.isFinite(routeDistanceMeters)
+    ? routeDistanceMeters
+    : Number.isFinite(routeState?.distance)
+      ? routeState.distance
+      : 0;
+  const meters = distance * clampedFraction;
 
   return (
     <strong className={className} aria-live="polite">

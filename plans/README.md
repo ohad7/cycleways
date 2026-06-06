@@ -53,3 +53,4 @@ Current plans:
 - `featured-map-playback/` - design and implementation plan for giving non-video featured/recommended route pages a synthetic playable map stage aligned with video-route controls, cursor animation, and POI/warning cues.
 - `route-map-thumbnails/` - design and implementation plan for editor-generated Mapbox route-map screenshots used as static route-card thumbnails.
 - `topbar-route-navigation/` - design and implementation plan for canonical route navigation, active topbar state, breadcrumbs, and removal of the stale recommendations section.
+- `front-page-route-playback/` - design and implementation plan for bringing shared featured-route playback controls, cursor animation, elevation tracking, and POI cue previews to the front-page planner.
