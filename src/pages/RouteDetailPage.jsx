@@ -17,32 +17,11 @@ export default function RouteDetailPage() {
   const { slug } = useParams();
   const loader = getRouteStoryModuleLoader(slug);
   const navLinks = getRouteStoryNav(slug);
-  const [routeName, setRouteName] = useState(slug);
   const LazyStory = useMemo(() => (loader ? lazy(loader) : null), [loader]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setRouteName(slug);
-    loadCatalog()
-      .then((catalog) => {
-        if (cancelled) return;
-        const entry = findCatalogEntryBySlug(catalog, slug);
-        setRouteName(entry?.name || slug);
-      })
-      .catch(() => {
-        if (!cancelled) setRouteName(slug);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [slug]);
 
   if (LazyStory) {
     return (
-      <PageShell
-        breadcrumbs={routeBreadcrumbs(routeName)}
-        navLinks={navLinks}
-      >
+      <PageShell navLinks={navLinks}>
         <Suspense
           fallback={
             <div className="route-detail">
@@ -91,9 +70,6 @@ function GenericRouteDetail({ slug }) {
 
   return (
     <PageShell
-      breadcrumbs={routeBreadcrumbs(
-        status === "missing" ? "לא נמצא" : entry?.name || "טוען מסלול…",
-      )}
       navLinks={genericRouteNavLinks(entry)}
     >
       {status === "loading" && (
@@ -122,12 +98,4 @@ function GenericRouteDetail({ slug }) {
       )}
     </PageShell>
   );
-}
-
-function routeBreadcrumbs(label) {
-  return [
-    { label: "מפה", to: "/" },
-    { label: "מסלולים", to: "/routes/" },
-    { label },
-  ];
 }

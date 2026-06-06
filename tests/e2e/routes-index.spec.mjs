@@ -23,8 +23,8 @@ function playbackTotalSeconds(timeText) {
 test("/routes lists every recommended catalog route", async ({ page }) => {
   await page.goto("/routes");
   await expect(page.locator(".routes-page")).toBeVisible();
-  await expect(page.locator(".breadcrumbs")).toContainText("מפה");
-  await expect(page.locator(".breadcrumbs")).toContainText("מסלולים");
+  await expect(page.locator(".routes-page__eyebrow .breadcrumbs")).toContainText("מפה");
+  await expect(page.locator(".routes-page__eyebrow .breadcrumbs")).toContainText("מסלולים");
   await expect(page.getByLabel("התחלה", { exact: true })).toBeVisible();
   await expect(page.getByLabel("עובר דרך", { exact: true })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
@@ -103,7 +103,7 @@ test("/routes card opens planner and detail actions", async ({ page }) => {
     "כל המסלולים",
   ]);
   await expect(page.getByRole("button", { name: "מדריך", exact: true })).toHaveCount(0);
-  await expect(page.locator(".breadcrumbs")).toContainText("הירדן ההיסטורי");
+  await expect(page.locator(".featured-route-header .breadcrumbs")).toContainText("הירדן ההיסטורי");
 });
 
 test("/routes rich story route keeps story shell", async ({ page }) => {
@@ -115,7 +115,7 @@ test("/routes rich story route keeps story shell", async ({ page }) => {
     "כל המסלולים",
   ]);
   await expect(page.getByRole("button", { name: "מדריך", exact: true })).toHaveCount(0);
-  await expect(page.locator(".breadcrumbs")).toContainText("סובב בית הלל");
+  await expect(page.locator(".featured-route-header .breadcrumbs")).toContainText("סובב בית הלל");
 });
 
 test("/routes generic route renders from snapshot without planner assets", async ({ page }) => {
@@ -254,8 +254,23 @@ test("/routes promoted video route renders the video template", async ({ page })
 test("/routes detail stats show computed route shape", async ({ page }) => {
   await page.goto("/routes/kovshey-hagolan");
   await expect(page.locator(".featured-route-header h1")).toContainText("מסע בעקבות כובשי הגולן");
+  await expect(page.locator(".featured-route-header .breadcrumbs")).toContainText("מסלולים");
+  await expect(page.locator(".featured-route-header .breadcrumbs")).toContainText("מסע בעקבות כובשי הגולן");
   await expect(page.locator(".fv-route-stage-map .route-endpoint-marker--start")).toHaveCount(1);
   await expect(page.locator(".fv-route-stage-map .route-endpoint-marker--end")).toHaveCount(1);
   await expect(page.locator(".fv-route-stats")).toContainText("סוג");
   await expect(page.locator(".fv-route-stats")).toContainText("חד כיווני");
+  const stagePlacement = await page.locator(".fv-video-shell--map").evaluate((stage) => {
+    const rect = stage.getBoundingClientRect();
+    return {
+      bottom: rect.bottom,
+      top: rect.top,
+      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  expect(stagePlacement.top).toBeLessThan(stagePlacement.viewportHeight);
+  if (stagePlacement.viewportWidth >= 900) {
+    expect(stagePlacement.bottom).toBeLessThanOrEqual(stagePlacement.viewportHeight + 2);
+  }
 });

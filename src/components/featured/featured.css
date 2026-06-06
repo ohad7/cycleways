@@ -71,7 +71,25 @@
   color: var(--fv-clay);
   font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
+}
+
+.featured-route-kicker .breadcrumbs {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.featured-route-kicker .breadcrumbs__link {
+  color: inherit;
+}
+
+.featured-route-kicker .breadcrumbs__current {
+  max-width: min(54vw, 460px);
+  color: var(--fv-ink-soft);
+  font: inherit;
 }
 
 .featured-route-video-first .featured-route-header h1 {

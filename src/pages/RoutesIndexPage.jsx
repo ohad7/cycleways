@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useMemo, useState } from "react";
+import Breadcrumbs from "../components/Breadcrumbs.jsx";
 import PageShell from "../components/PageShell.jsx";
 import RouteCatalogCard from "../components/routes/RouteCatalogCard.jsx";
 import { catalogFilter } from "../components/catalogFilter.js";
@@ -150,17 +151,19 @@ export default function RoutesIndexPage() {
   const clearFilters = () => setFilters(emptyFilters());
 
   return (
-    <PageShell
-      breadcrumbs={[
-        { label: "מפה", to: "/" },
-        { label: "מסלולים" },
-      ]}
-    >
+    <PageShell>
       <main className="routes-page">
         <div className="routes-page__inner">
           <header className="routes-page__header">
             <div className="routes-page__header-copy">
-              <span className="routes-page__eyebrow">מאגר המסלולים</span>
+              <div className="routes-page__eyebrow">
+                <Breadcrumbs
+                  items={[
+                    { label: "מפה", to: "/" },
+                    { label: "מסלולים" },
+                  ]}
+                />
+              </div>
               <h1>מסלולים מומלצים</h1>
               <p>
                 מאגר המסלולים המומלצים שלנו בגליל העליון והגולן. כל מסלול נפתח
