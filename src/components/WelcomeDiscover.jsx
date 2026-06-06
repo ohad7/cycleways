@@ -1,112 +1,153 @@
 import React, { useMemo, useState } from "react";
 import RouteCard from "./RouteCard.jsx";
 import { catalogFilter } from "./catalogFilter.js";
+import {
+  routePassesThroughPlaceIds,
+  routeStartPlaceIds,
+} from "@cycleways/core/data/catalog.js";
 
-const COMMON_CHIPS = [
-  { axis: "difficulty", value: "easy",       label: "קל" },
-  { axis: "difficulty", value: "moderate",   label: "בינוני" },
-  { axis: "difficulty", value: "hard",       label: "מאתגר" },
-  { axis: "style",      value: "family",     label: "משפחתי" },
-  { axis: "style",      value: "scenic",     label: "נוף" },
+const FILTER_GROUPS = [
+  {
+    axis: "difficulty",
+    label: "רמת קושי",
+    options: [
+      { value: "easy", label: "קל" },
+      { value: "moderate", label: "בינוני" },
+      { value: "hard", label: "קשה" },
+    ],
+  },
+  {
+    axis: "surface",
+    label: "משטח",
+    options: [
+      { value: "paved", label: "סלול" },
+      { value: "mixed", label: "שטח/סלול" },
+      { value: "dirt", label: "שטח" },
+    ],
+  },
+  {
+    axis: "distance",
+    label: "אורך",
+    options: [
+      { value: "short", label: "עד 10 ק״מ" },
+      { value: "medium", label: "10-25 ק״מ" },
+      { value: "long", label: "25 ק״מ ומעלה" },
+    ],
+  },
 ];
-
-const ALL_FILTERS = {
-  distance: [
-    { value: "short",  label: 'קצר (< 10 ק"מ)' },
-    { value: "medium", label: 'בינוני (10–25 ק"מ)' },
-    { value: "long",   label: 'ארוך (> 25 ק"מ)' },
-  ],
-  difficulty: [
-    { value: "easy",     label: "קל" },
-    { value: "moderate", label: "בינוני" },
-    { value: "hard",     label: "מאתגר" },
-  ],
-  style: [
-    { value: "family",      label: "משפחתי" },
-    { value: "scenic",      label: "נוף" },
-    { value: "sporty",      label: "ספורטיבי" },
-    { value: "adventurous", label: "הרפתקני" },
-  ],
-};
 
 function emptyFilters() {
   return {
-    place: null,
     difficulty: new Set(),
-    style: new Set(),
+    surface: new Set(),
     distance: new Set(),
+    startLocation: new Set(),
+    throughLocation: new Set(),
   };
 }
 
-function FilterChip({ active, onClick, children, removable }) {
+function FilterChip({ active, onClick, children }) {
   return (
     <button
       type="button"
       className={`wd-chip${active ? " wd-chip--active" : ""}`}
       onClick={onClick}
+      aria-pressed={active}
     >
-      {active && removable && <span className="wd-chip__check">✓</span>}
+      <span className="wd-chip__mark" aria-hidden="true" />
       {children}
-      {active && removable && <span className="wd-chip__remove" aria-hidden>✕</span>}
     </button>
   );
 }
 
-function PlaceSearch({ places, value, onChange }) {
+function PlaceAutocompleteFilter({
+  label,
+  onRemove,
+  onSelect,
+  options,
+  placeholder,
+  selected,
+}) {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
-  const selectedPlace = value
-    ? places.find((p) => p.id === value)
-    : null;
-  const q = query.trim();
-  const matches = q.length > 0
-    ? places.filter((p) => p.name.includes(q) || p.id.includes(q.toLowerCase())).slice(0, 8)
-    : [];
+  const selectedValues = Array.from(selected || []);
+  const optionByValue = useMemo(
+    () => new Map((options || []).map((option) => [option.value, option])),
+    [options],
+  );
+  const normalizedQuery = normalizeSearchText(query);
+  const matches = useMemo(
+    () =>
+      (options || [])
+        .filter((option) => !selected?.has(option.value))
+        .filter((option) => {
+          if (!normalizedQuery) return true;
+          return normalizeSearchText(`${option.label} ${option.value}`).includes(normalizedQuery);
+        })
+        .slice(0, 8),
+    [normalizedQuery, options, selected],
+  );
+  const showDropdown = focused && matches.length > 0;
 
-  if (selectedPlace) {
-    return (
-      <div className="wd-search wd-search--selected">
-        <span className="wd-search__icon">🔍</span>
-        <span className="wd-search__chip">
-          <span>{selectedPlace.name}</span>
-          <button
-            type="button"
-            className="wd-search__clear"
-            aria-label="הסר מקום"
-            onClick={() => onChange(null)}
-          >
-            ✕
-          </button>
-        </span>
-      </div>
-    );
-  }
+  const selectOption = (value) => {
+    onSelect(value);
+    setQuery("");
+  };
 
   return (
-    <div className="wd-search">
-      <span className="wd-search__icon">🔍</span>
-      <input
-        type="search"
-        className="wd-search__input"
-        placeholder="מאיפה תרצו להתחיל? בית הלל, דפנה…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), 150)}
-      />
-      {focused && matches.length > 0 && (
-        <ul className="wd-search__dropdown">
-          {matches.map((p) => (
-            <li key={p.id}>
+    <div className="wd-combo">
+      <span className="wd-combo__label">{label}</span>
+      <div className="wd-combo__box">
+        {selectedValues.map((value) => {
+          const option = optionByValue.get(value);
+          return (
+            <span className="wd-combo__selected" key={value}>
+              <span>{option?.label || value}</span>
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  onChange(p.id);
-                  setQuery("");
-                }}
+                aria-label={`הסר ${option?.label || value}`}
+                onClick={() => onRemove(value)}
               >
-                {p.name}
+                x
+              </button>
+            </span>
+          );
+        })}
+        <input
+          type="search"
+          value={query}
+          placeholder={selectedValues.length > 0 ? "הוספה..." : placeholder}
+          autoComplete="off"
+          aria-label={label}
+          onBlur={() => setTimeout(() => setFocused(false), 120)}
+          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => setFocused(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && matches[0]) {
+              event.preventDefault();
+              selectOption(matches[0].value);
+            }
+            if (
+              event.key === "Backspace" &&
+              query.length === 0 &&
+              selectedValues.length > 0
+            ) {
+              onRemove(selectedValues[selectedValues.length - 1]);
+            }
+          }}
+        />
+      </div>
+      {showDropdown && (
+        <ul className="wd-combo__menu">
+          {matches.map((option) => (
+            <li key={option.value}>
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectOption(option.value)}
+              >
+                <span>{option.label}</span>
+                {option.count > 0 && <small>{option.count}</small>}
               </button>
             </li>
           ))}
@@ -116,9 +157,21 @@ function PlaceSearch({ places, value, onChange }) {
   );
 }
 
-export default function WelcomeDiscover({ catalog, places, zones, onSelectRoute }) {
+export default function WelcomeDiscover({ catalog, places, onSelectRoute }) {
   const [filters, setFilters] = useState(emptyFilters);
-  const [showMore, setShowMore] = useState(false);
+  const entries = catalog?.entries || [];
+  const placeById = useMemo(
+    () => new Map(places.map((place) => [place.id, place])),
+    [places],
+  );
+  const startOptions = useMemo(
+    () => placeOptionsForEntries(entries, placeById, routeStartPlaceIds),
+    [entries, placeById],
+  );
+  const throughOptions = useMemo(
+    () => placeOptionsForEntries(entries, placeById, routePassesThroughPlaceIds),
+    [entries, placeById],
+  );
 
   const toggleAxis = (axis, value) => {
     setFilters((prev) => {
@@ -129,47 +182,82 @@ export default function WelcomeDiscover({ catalog, places, zones, onSelectRoute 
     });
   };
 
-  const setPlace = (placeId) => {
-    setFilters((prev) => ({ ...prev, place: placeId }));
+  const addFilterValue = (axis, value) => {
+    setFilters((prev) => {
+      if (prev[axis].has(value)) return prev;
+      const next = new Set(prev[axis]);
+      next.add(value);
+      return { ...prev, [axis]: next };
+    });
+  };
+
+  const removeFilterValue = (axis, value) => {
+    setFilters((prev) => {
+      if (!prev[axis].has(value)) return prev;
+      const next = new Set(prev[axis]);
+      next.delete(value);
+      return { ...prev, [axis]: next };
+    });
   };
 
   const clearAll = () => setFilters(emptyFilters());
 
   const results = useMemo(
-    () => catalogFilter(catalog?.entries || [], filters),
-    [catalog, filters],
+    () => sortFeaturedFirst(catalogFilter(entries, filters)),
+    [entries, filters],
   );
 
-  const activeCount =
-    (filters.place ? 1 : 0) +
-    filters.difficulty.size +
-    filters.style.size +
-    filters.distance.size;
+  const activeCount = Object.values(filters).reduce((sum, set) => sum + set.size, 0);
 
   return (
     <div className="wd">
       <div className="wd__controls">
-        <PlaceSearch places={places} value={filters.place} onChange={setPlace} />
+        <div className="wd__place-searches">
+          <PlaceAutocompleteFilter
+            label="התחלה"
+            placeholder="בחרו ישוב התחלה"
+            options={startOptions}
+            selected={filters.startLocation}
+            onSelect={(value) => addFilterValue("startLocation", value)}
+            onRemove={(value) => removeFilterValue("startLocation", value)}
+          />
+          <PlaceAutocompleteFilter
+            label="עובר דרך"
+            placeholder="בחרו מקום לאורך המסלול"
+            options={throughOptions}
+            selected={filters.throughLocation}
+            onSelect={(value) => addFilterValue("throughLocation", value)}
+            onRemove={(value) => removeFilterValue("throughLocation", value)}
+          />
+        </div>
 
-        <div className="wd__chips">
-          {COMMON_CHIPS.map((chip) => (
-            <FilterChip
-              key={`${chip.axis}:${chip.value}`}
-              active={filters[chip.axis].has(chip.value)}
-              onClick={() => toggleAxis(chip.axis, chip.value)}
-              removable
+        <div className="wd__filter-groups">
+          {FILTER_GROUPS.map((group) => (
+            <div
+              className="wd-filter-group"
+              key={group.axis}
+              role="group"
+              aria-label={group.label}
             >
-              {chip.label}
-            </FilterChip>
+              <span className="wd-filter-group__label">{group.label}</span>
+              <div className="wd__chips">
+                {group.options.map((opt) => (
+                  <FilterChip
+                    key={opt.value}
+                    active={filters[group.axis].has(opt.value)}
+                    onClick={() => toggleAxis(group.axis, opt.value)}
+                  >
+                    {opt.label}
+                  </FilterChip>
+                ))}
+              </div>
+            </div>
           ))}
-          <button
-            type="button"
-            className="wd-chip wd-chip--ghost"
-            onClick={() => setShowMore((v) => !v)}
-          >
-            סינון מורחב {showMore ? "▴" : "▾"}
-          </button>
-          {activeCount > 0 && (
+        </div>
+
+        {activeCount > 0 && (
+          <div className="wd__filter-actions">
+            <span>{activeCount} מסננים פעילים</span>
             <button
               type="button"
               className="wd-chip wd-chip--ghost"
@@ -177,23 +265,6 @@ export default function WelcomeDiscover({ catalog, places, zones, onSelectRoute 
             >
               נקה הכל
             </button>
-          )}
-        </div>
-
-        {showMore && (
-          <div className="wd__more">
-            <FilterGroup
-              label="מרחק"
-              options={ALL_FILTERS.distance}
-              active={filters.distance}
-              onToggle={(v) => toggleAxis("distance", v)}
-            />
-            <FilterGroup
-              label="סגנון"
-              options={ALL_FILTERS.style}
-              active={filters.style}
-              onToggle={(v) => toggleAxis("style", v)}
-            />
           </div>
         )}
       </div>
@@ -219,23 +290,33 @@ export default function WelcomeDiscover({ catalog, places, zones, onSelectRoute 
   );
 }
 
-function FilterGroup({ label, options, active, onToggle }) {
-  if (!options || options.length === 0) return null;
-  return (
-    <div className="wd-filter-group">
-      <span className="wd-filter-group__label">{label}</span>
-      <div className="wd__chips">
-        {options.map((opt) => (
-          <FilterChip
-            key={opt.value}
-            active={active.has(opt.value)}
-            onClick={() => onToggle(opt.value)}
-            removable
-          >
-            {opt.label}
-          </FilterChip>
-        ))}
-      </div>
-    </div>
-  );
+function placeOptionsForEntries(entries, placeById, placeIdsForEntry) {
+  const counts = new Map();
+  for (const entry of entries) {
+    for (const id of placeIdsForEntry(entry)) {
+      counts.set(id, (counts.get(id) || 0) + 1);
+    }
+  }
+  return Array.from(counts.keys())
+    .map((id) => ({
+      value: id,
+      label: placeById.get(id)?.name || id,
+      count: counts.get(id) || 0,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "he"));
+}
+
+function normalizeSearchText(value) {
+  return String(value || "").trim().toLocaleLowerCase("he");
+}
+
+function sortFeaturedFirst(entries) {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.entry?.featured)) -
+          Number(Boolean(a.entry?.featured)) || a.index - b.index,
+    )
+    .map(({ entry }) => entry);
 }

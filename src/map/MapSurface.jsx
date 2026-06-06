@@ -27,7 +27,10 @@ import {
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
 import { getMapboxGl, whenMapboxReady } from "./mapboxProvider.js";
-import { distanceToLineSegmentPixels } from "@cycleways/core/utils/distance.js";
+import {
+  distanceToLineSegmentPixels,
+  getDistance,
+} from "@cycleways/core/utils/distance.js";
 import {
   buildNetworkSegments,
   findClosestRouteSegment,
@@ -39,7 +42,30 @@ import {
   MAP_INITIAL_CENTER,
   MAP_INITIAL_ZOOM,
 } from "@cycleways/core/map/mapViewport.js";
+import {
+  VIDEO_CURSOR_DEFAULT_VARIANT,
+} from "@cycleways/core/map/mapStyles.js";
 import { capabilitiesForMode, MAP_MODE_PLANNER } from "./mapCapabilities.js";
+
+const ROUTE_CIRCULAR_ENDPOINT_MAX_METERS = 80;
+
+function isMapAvailableForCleanup(map) {
+  if (!map || map._removed) return false;
+  try {
+    return typeof map.getStyle !== "function" || Boolean(map.getStyle());
+  } catch {
+    return false;
+  }
+}
+
+function runMapCleanup(map, cleanup) {
+  if (!isMapAvailableForCleanup(map)) return;
+  try {
+    cleanup();
+  } catch (error) {
+    console.warn("MapSurface cleanup failed", error);
+  }
+}
 
 function MapSurface({
   activeDataPointIds = [],
@@ -75,7 +101,7 @@ function MapSurface({
   searchHighlight,
   selectedRoutePointIndex = null,
   videoCursor = null,
-  videoCursorVariant = 1,
+  videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
   videoPlaying = false,
 }) {
   // Translate the mode into an explicit capability set. In planner mode every
@@ -88,6 +114,7 @@ function MapSurface({
   const searchMarkerRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const hoverPreviewMarkerRef = useRef(null);
+  const routeEndpointMarkerRefs = useRef([]);
   const lastRouteClickRef = useRef(null);
   const callbacksRef = useRef({});
   const dataMarkerFeaturesRef = useRef([]);
@@ -211,13 +238,15 @@ function MapSurface({
       isDisposed = true;
       if (mapRef.current) {
         const map = mapRef.current;
-        try {
+        runMapCleanup(map, () => {
           clearSearchHighlight(map, searchMarkerRef);
           clearHoverPreviewMarker(hoverPreviewMarkerRef);
           clearVideoCursorLayer(map);
           if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
           }
+        });
+        try {
           map.remove();
         } catch (removeError) {
           console.warn("MapSurface cleanup failed", removeError);
@@ -294,12 +323,14 @@ function MapSurface({
     map.on("click", ROUTE_NETWORK_HIT_LAYER_ID, handleClick);
 
     return () => {
-      map.off("mousemove", handleMouseMove);
-      map.off("mouseout", handleMouseLeave);
-      map.off("click", ROUTE_NETWORK_HIT_LAYER_ID, handleClick);
-      clearHoverPreviewMarker(hoverPreviewMarkerRef);
-      networkSegmentsRef.current = [];
-      clearRouteNetworkLayers(map);
+      runMapCleanup(map, () => {
+        map.off("mousemove", handleMouseMove);
+        map.off("mouseout", handleMouseLeave);
+        map.off("click", ROUTE_NETWORK_HIT_LAYER_ID, handleClick);
+        clearHoverPreviewMarker(hoverPreviewMarkerRef);
+        networkSegmentsRef.current = [];
+        clearRouteNetworkLayers(map);
+      });
     };
   }, [geoJsonData, status, caps.networkLayers, caps.hoverPreview]);
 
@@ -321,6 +352,16 @@ function MapSurface({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || status !== "ready" || !caps.routeEndpointMarkers) {
+      clearRouteEndpointMarkers(routeEndpointMarkerRefs);
+      return undefined;
+    }
+    syncRouteEndpointMarkers(map, routeEndpointMarkerRefs, routeGeometry);
+    return () => clearRouteEndpointMarkers(routeEndpointMarkerRefs);
+  }, [routeGeometry, status, caps.routeEndpointMarkers]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || status !== "ready" || !caps.routePointDragPreview) return;
     syncRoutePointDragPreviewLayer(map, routePointDragPreview);
   }, [routePointDragPreview, status, caps.routePointDragPreview]);
@@ -329,7 +370,7 @@ function MapSurface({
     const map = mapRef.current;
     if (!map || status !== "ready" || !caps.routePointDragPreview) return undefined;
     return () => {
-      clearRoutePointDragPreviewLayer(map);
+      runMapCleanup(map, () => clearRoutePointDragPreviewLayer(map));
     };
   }, [status, caps.routePointDragPreview]);
 
@@ -359,7 +400,9 @@ function MapSurface({
     eventNames.forEach((eventName) => map.on(eventName, emitUserViewportChange));
 
     return () => {
-      eventNames.forEach((eventName) => map.off(eventName, emitUserViewportChange));
+      runMapCleanup(map, () => {
+        eventNames.forEach((eventName) => map.off(eventName, emitUserViewportChange));
+      });
     };
   }, [onUserViewportChange, status, caps.viewportPrefetch]);
 
@@ -382,7 +425,7 @@ function MapSurface({
 
     return () => {
       unsubscribe();
-      clearRouteDirectionPulseLayer(map);
+      runMapCleanup(map, () => clearRouteDirectionPulseLayer(map));
     };
   }, [animator, status, caps.directionPulse]);
 
@@ -435,7 +478,7 @@ function MapSurface({
       onRouteClick({ lat: e.lngLat.lat, lng: e.lngLat.lng });
     };
     map.on("click", handler);
-    return () => map.off("click", handler);
+    return () => runMapCleanup(map, () => map.off("click", handler));
   }, [status, onRouteClick, caps.routeClickCallback]);
 
   useEffect(() => {
@@ -487,7 +530,7 @@ function MapSurface({
       if (timeoutId) {
         window.clearTimeout(timeoutId);
       }
-      map.off("moveend", emitViewportIdle);
+      runMapCleanup(map, () => map.off("moveend", emitViewportIdle));
     };
   }, [status, caps.viewportPrefetch]);
 
@@ -575,13 +618,15 @@ function MapSurface({
     }
 
     return () => {
-      if (wantsMapClick) map.off("click", handleMapClick);
-      if (wantsDataMarkerClick) {
-        map.off("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
-      }
-      if (wantsRoutePointSelect) {
-        map.off("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
-      }
+      runMapCleanup(map, () => {
+        if (wantsMapClick) map.off("click", handleMapClick);
+        if (wantsDataMarkerClick) {
+          map.off("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
+        }
+        if (wantsRoutePointSelect) {
+          map.off("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
+        }
+      });
     };
   }, [status, caps.networkHitTest, caps.routePointSelect, caps.dataMarkerClick]);
 
@@ -743,23 +788,25 @@ function MapSurface({
     map.on("touchend", endDrag);
 
     return () => {
-      if (caps.routePointEditing) {
-        map.off("mousedown", ROUTE_POINTS_LAYER_ID, startDrag);
-        map.off("touchstart", ROUTE_POINTS_LAYER_ID, startDrag);
-        map.off("contextmenu", ROUTE_POINTS_LAYER_ID, removePoint);
-        map.off("mouseenter", ROUTE_POINTS_LAYER_ID, enterPoint);
-        map.off("mouseleave", ROUTE_POINTS_LAYER_ID, leavePoint);
-      }
-      if (caps.routeLineEditing && map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
-        map.off("mousedown", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
-        map.off("touchstart", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
-        map.off("mouseenter", ROUTE_GEOMETRY_HIT_LAYER_ID, enterRouteLine);
-        map.off("mouseleave", ROUTE_GEOMETRY_HIT_LAYER_ID, leaveRouteLine);
-      }
-      map.off("mousemove", moveDrag);
-      map.off("touchmove", moveDrag);
-      map.off("mouseup", endDrag);
-      map.off("touchend", endDrag);
+      runMapCleanup(map, () => {
+        if (caps.routePointEditing) {
+          map.off("mousedown", ROUTE_POINTS_LAYER_ID, startDrag);
+          map.off("touchstart", ROUTE_POINTS_LAYER_ID, startDrag);
+          map.off("contextmenu", ROUTE_POINTS_LAYER_ID, removePoint);
+          map.off("mouseenter", ROUTE_POINTS_LAYER_ID, enterPoint);
+          map.off("mouseleave", ROUTE_POINTS_LAYER_ID, leavePoint);
+        }
+        if (caps.routeLineEditing && map.getLayer(ROUTE_GEOMETRY_HIT_LAYER_ID)) {
+          map.off("mousedown", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
+          map.off("touchstart", ROUTE_GEOMETRY_HIT_LAYER_ID, startRouteLineDrag);
+          map.off("mouseenter", ROUTE_GEOMETRY_HIT_LAYER_ID, enterRouteLine);
+          map.off("mouseleave", ROUTE_GEOMETRY_HIT_LAYER_ID, leaveRouteLine);
+        }
+        map.off("mousemove", moveDrag);
+        map.off("touchmove", moveDrag);
+        map.off("mouseup", endDrag);
+        map.off("touchend", endDrag);
+      });
     };
   }, [routeGeometry, status, caps.routePointEditing, caps.routeLineEditing]);
 
@@ -1064,6 +1111,79 @@ function syncHoverPreviewMarker(map, markerRef, lngLat) {
 function clearHoverPreviewMarker(markerRef) {
   markerRef.current?.remove();
   markerRef.current = null;
+}
+
+function syncRouteEndpointMarkers(map, markerRefs, routeGeometry) {
+  clearRouteEndpointMarkers(markerRefs);
+  let mapboxgl;
+  try {
+    mapboxgl = getMapboxGl();
+  } catch {
+    return;
+  }
+
+  const endpoints = routeEndpointDescriptors(routeGeometry);
+  markerRefs.current = endpoints.map((endpoint) => {
+    const markerElement = routeEndpointMarkerElement(endpoint.kind);
+    return new mapboxgl.Marker(markerElement)
+      .setLngLat([endpoint.point.lng, endpoint.point.lat])
+      .addTo(map);
+  });
+}
+
+function clearRouteEndpointMarkers(markerRefs) {
+  markerRefs.current.forEach((marker) => marker.remove());
+  markerRefs.current = [];
+}
+
+function routeEndpointDescriptors(routeGeometry) {
+  const points = Array.isArray(routeGeometry)
+    ? routeGeometry.map(normalizeLngLat).filter(Boolean)
+    : [];
+  if (points.length < 2) return [];
+
+  const start = points[0];
+  const end = points[points.length - 1];
+  const endpointDistance = getDistance(start, end);
+  if (
+    Number.isFinite(endpointDistance) &&
+    endpointDistance <= ROUTE_CIRCULAR_ENDPOINT_MAX_METERS
+  ) {
+    return [{ kind: "circular", point: start }];
+  }
+
+  return [
+    { kind: "start", point: start },
+    { kind: "end", point: end },
+  ];
+}
+
+function normalizeLngLat(point) {
+  const lng = Number(point?.lng);
+  const lat = Number(point?.lat);
+  return Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : null;
+}
+
+function routeEndpointMarkerElement(kind) {
+  const markerElement = document.createElement("div");
+  markerElement.className = [
+    "route-endpoint-marker",
+    `route-endpoint-marker--${kind}`,
+  ].join(" ");
+  markerElement.setAttribute("aria-hidden", "true");
+  markerElement.title = kind === "circular"
+    ? "נקודת התחלה וסיום"
+    : kind === "start"
+      ? "נקודת התחלה"
+      : "נקודת סיום";
+
+  if (kind === "start") {
+    const glyph = document.createElement("span");
+    glyph.textContent = "▶";
+    markerElement.appendChild(glyph);
+  }
+
+  return markerElement;
 }
 
 function applyHebrewLabels(map) {

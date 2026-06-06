@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-06-02T18:36:34.455Z",
+  "updatedAt": "2026-06-05T12:19:54.413Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -4402,7 +4402,7 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.91,
+      "avgDistanceMeters": 0.83,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -4504,9 +4504,27 @@
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 675663120
+        },
+        {
+          "edgeId": "e675663120_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 11,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 675663120
+        },
+        {
+          "edgeId": "e675663116_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 12,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 675663116
         }
       ],
-      "updatedAt": "2026-05-20T22:37:25.899Z"
+      "updatedAt": "2026-06-05T08:21:05.298Z"
     },
     "75": {
       "segmentId": 75,
@@ -14836,33 +14854,15 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.56,
+      "avgDistanceMeters": 0.36,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e675663120_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 675663120
-        },
-        {
-          "edgeId": "e675663116_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 675663116
-        },
-        {
           "edgeId": "e675663116_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 2,
+          "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 675663116
@@ -14871,7 +14871,7 @@
           "edgeId": "e675663119_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 3,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 675663119
@@ -14880,13 +14880,13 @@
           "edgeId": "e627569527_9",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 4,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 627569527
         }
       ],
-      "updatedAt": "2026-05-20T21:53:44.403Z"
+      "updatedAt": "2026-06-05T08:21:07.310Z"
     },
     "247": {
       "segmentId": 247,
@@ -18313,6 +18313,962 @@
         }
       ],
       "updatedAt": "2026-06-02T15:42:30.242Z"
+    },
+    "328": {
+      "segmentId": 328,
+      "segmentName": "צומת חורשת טל",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.13,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e626697750_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 626697750
+        },
+        {
+          "edgeId": "e1024609349_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024609349
+        },
+        {
+          "edgeId": "e850531543_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 850531543
+        },
+        {
+          "edgeId": "e850531543_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 850531543
+        },
+        {
+          "edgeId": "e1024609346_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024609346
+        },
+        {
+          "edgeId": "e1024609346_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024609346
+        },
+        {
+          "edgeId": "manual-95-mpf3njl3",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-95-mpf3njl3"
+        },
+        {
+          "edgeId": "e1024609346_8",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024609346
+        },
+        {
+          "edgeId": "manual-osm-1036770657-mq0nscfb",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 8,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-osm-1036770657-mq0nscfb"
+        }
+      ],
+      "updatedAt": "2026-06-05T08:29:06.398Z"
+    },
+    "329": {
+      "segmentId": 329,
+      "segmentName": "רחבת כניסה מטעי דפנה",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.07,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-osm-73965591-mq0ntkde",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-osm-73965591-mq0ntkde"
+        }
+      ],
+      "updatedAt": "2026-06-05T08:29:08.434Z"
+    },
+    "330": {
+      "segmentId": 330,
+      "segmentName": "New segment - 2",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.03,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e363859827_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 363859827
+        },
+        {
+          "edgeId": "e842438981_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 842438981
+        },
+        {
+          "edgeId": "e842438982_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 842438982
+        },
+        {
+          "edgeId": "e815936019_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815936019
+        },
+        {
+          "edgeId": "manual-osm-815936019-mq0nu44u",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-osm-815936019-mq0nu44u"
+        }
+      ],
+      "updatedAt": "2026-06-05T10:45:12.876Z"
+    },
+    "331": {
+      "segmentId": 331,
+      "segmentName": "כביש 99 דפנה",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.34,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e1024904304_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024904304
+        },
+        {
+          "edgeId": "e1024904305_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024904305
+        }
+      ],
+      "updatedAt": "2026-06-05T11:53:57.906Z"
+    },
+    "332": {
+      "segmentId": 332,
+      "segmentName": "שביל אופניים 99 דפנה - 2",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.24,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e633633207_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 633633207
+        },
+        {
+          "edgeId": "e633633206_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 633633206
+        },
+        {
+          "edgeId": "e399650436_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 399650436
+        },
+        {
+          "edgeId": "e33058584_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 33058584
+        },
+        {
+          "edgeId": "e627265486_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 627265486
+        },
+        {
+          "edgeId": "e842438991_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 842438991
+        },
+        {
+          "edgeId": "e842438990_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 842438990
+        },
+        {
+          "edgeId": "e815936021_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815936021
+        },
+        {
+          "edgeId": "e626697749_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 8,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 626697749
+        },
+        {
+          "edgeId": "e363859828_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 9,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 363859828
+        }
+      ],
+      "updatedAt": "2026-06-05T11:53:59.957Z"
+    },
+    "333": {
+      "segmentId": 333,
+      "segmentName": "כניסה לקיבוץ דפנה",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.03,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e958921322_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 958921322
+        },
+        {
+          "edgeId": "e366274660_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 366274660
+        },
+        {
+          "edgeId": "manual-331-mq0svmxq",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-331-mq0svmxq"
+        },
+        {
+          "edgeId": "e33058576_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 33058576
+        }
+      ],
+      "updatedAt": "2026-06-05T11:54:02.103Z"
+    },
+    "334": {
+      "segmentId": 334,
+      "segmentName": "קיבוץ דפנה שביל המייסדים",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e33058576_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 33058576
+        },
+        {
+          "edgeId": "e1505032345_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1505032345
+        },
+        {
+          "edgeId": "e1230594681_5",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1230594681
+        },
+        {
+          "edgeId": "e1230594681_4",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1230594681
+        },
+        {
+          "edgeId": "e1231893592_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1231893592
+        },
+        {
+          "edgeId": "e1024904307_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024904307
+        },
+        {
+          "edgeId": "e1024904307_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1024904307
+        },
+        {
+          "edgeId": "e1034146153_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1034146153
+        },
+        {
+          "edgeId": "e46704981_6",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 8,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704981
+        },
+        {
+          "edgeId": "e46704981_5",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 9,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704981
+        },
+        {
+          "edgeId": "e46704981_4",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 10,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704981
+        },
+        {
+          "edgeId": "e1034146158_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 11,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1034146158
+        },
+        {
+          "edgeId": "e46704982_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 12,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704982
+        },
+        {
+          "edgeId": "e46704982_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 13,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704982
+        },
+        {
+          "edgeId": "e46704982_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 14,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704982
+        },
+        {
+          "edgeId": "e627581046_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 15,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 627581046
+        },
+        {
+          "edgeId": "e627581046_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 16,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 627581046
+        },
+        {
+          "edgeId": "e627581046_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 17,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 627581046
+        },
+        {
+          "edgeId": "e1505032338_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 18,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1505032338
+        },
+        {
+          "edgeId": "e1217588030_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 19,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1217588030
+        },
+        {
+          "edgeId": "e1217588030_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 20,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1217588030
+        },
+        {
+          "edgeId": "e1217588030_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 21,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1217588030
+        },
+        {
+          "edgeId": "e1505032342_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 22,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1505032342
+        },
+        {
+          "edgeId": "e46704986_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 23,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704986
+        },
+        {
+          "edgeId": "e46704986_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 24,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704986
+        },
+        {
+          "edgeId": "e46704986_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 25,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704986
+        },
+        {
+          "edgeId": "e46704986_4",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 26,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704986
+        },
+        {
+          "edgeId": "e46704986_5",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 27,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704986
+        },
+        {
+          "edgeId": "e46704986_6",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 28,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704986
+        }
+      ],
+      "updatedAt": "2026-06-05T11:54:04.122Z"
+    },
+    "335": {
+      "segmentId": 335,
+      "segmentName": "New segment - 3",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.01,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e46705040_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46705040
+        },
+        {
+          "edgeId": "e522855143_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 522855143
+        },
+        {
+          "edgeId": "e1231893600_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1231893600
+        },
+        {
+          "edgeId": "e1231893599_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1231893599
+        },
+        {
+          "edgeId": "manual-osm-522855148-mq0nhqrc",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-osm-522855148-mq0nhqrc"
+        },
+        {
+          "edgeId": "manual-osm-522855150-mq0nhinw",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-osm-522855150-mq0nhinw"
+        }
+      ],
+      "updatedAt": "2026-06-05T11:59:14.265Z"
+    },
+    "336": {
+      "segmentId": 336,
+      "segmentName": "שביל אופניים 99 דפנה",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.16,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e633633207_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 633633207
+        },
+        {
+          "edgeId": "e633633206_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 633633206
+        },
+        {
+          "edgeId": "e399650436_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 399650436
+        },
+        {
+          "edgeId": "e33058584_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 33058584
+        }
+      ],
+      "updatedAt": "2026-06-05T12:19:46.247Z"
+    },
+    "337": {
+      "segmentId": 337,
+      "segmentName": "שביל אופניים אנדרטת אסון המסוקים",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.29,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e627265486_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 627265486
+        },
+        {
+          "edgeId": "e842438991_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 842438991
+        },
+        {
+          "edgeId": "e842438990_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 842438990
+        },
+        {
+          "edgeId": "e815936021_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 815936021
+        },
+        {
+          "edgeId": "e626697749_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 626697749
+        },
+        {
+          "edgeId": "e363859828_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 363859828
+        }
+      ],
+      "updatedAt": "2026-06-05T12:19:48.303Z"
+    },
+    "338": {
+      "segmentId": 338,
+      "segmentName": "כביש 918 פלג הדן",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.76,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e825943264_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 825943264
+        },
+        {
+          "edgeId": "e825943265_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 825943265
+        },
+        {
+          "edgeId": "e825943262_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 825943262
+        },
+        {
+          "edgeId": "e46704871_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 46704871
+        },
+        {
+          "edgeId": "e363859829_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 363859829
+        }
+      ],
+      "updatedAt": "2026-06-05T12:19:50.311Z"
+    },
+    "339": {
+      "segmentId": 339,
+      "segmentName": "שביל אופניים 918 דפנה - 2",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.63,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e363859829_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 363859829
+        },
+        {
+          "edgeId": "e363859829_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 363859829
+        },
+        {
+          "edgeId": "e363859828_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 363859828
+        }
+      ],
+      "updatedAt": "2026-06-05T12:19:52.325Z"
+    },
+    "340": {
+      "segmentId": 340,
+      "segmentName": "New segment - 2",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.02,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e61302302_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 61302302
+        },
+        {
+          "edgeId": "manual-336-mq0w057m",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-336-mq0w057m"
+        }
+      ],
+      "updatedAt": "2026-06-05T12:19:54.384Z"
     }
   }
 }

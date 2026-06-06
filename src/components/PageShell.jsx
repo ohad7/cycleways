@@ -1,7 +1,14 @@
 import React, { useState } from "react";
+import Breadcrumbs from "./Breadcrumbs.jsx";
 import TopBar from "./TopBar.jsx";
 
-export default function PageShell({ children, onOpenTutorial, onOpenWizard, navLinks }) {
+export default function PageShell({
+  breadcrumbs,
+  children,
+  onOpenTutorial,
+  onOpenWizard,
+  navLinks,
+}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <>
@@ -13,6 +20,7 @@ export default function PageShell({ children, onOpenTutorial, onOpenWizard, navL
         navLinks={navLinks}
       />
       <div className="main-container react-main-container">
+        <Breadcrumbs items={breadcrumbs} />
         {children}
       </div>
     </>

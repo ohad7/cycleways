@@ -1,19 +1,34 @@
 {
   "schemaVersion": 1,
   "slug": "banias-gan-hatsafon",
-  "generatedAt": "2026-06-04T13:35:08.570Z",
+  "generatedAt": "2026-06-06T16:53:50.534Z",
   "source": {
     "routeTokenHash": "sha256:4f5d5c4fe65b9ec350310203dc092136b243ae28391ee50d7fb80f67c1ae547e",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "18f545a40131",
+    "mapVersion": "6ee5d31a1bbd",
     "assetHashes": {
-      "bikeRoads": "e4a43a70547a3c7190907140b98a5203d3fe0a7d6983d52ab5b38e7aa5d5d3f3",
-      "segments": "6dbb9f2345a70821e91ca728fdb4d24f9f4e7060a1ee424c1f6d30456f9162a3",
-      "cwBaseIndex": "23ec80fb6177b47e2df7665b5e24bd8ee438e839dc750c02c8bbb43362c9b2d4",
-      "baseRoutingShards": "64d471e0d4f0110512c00b7cae3db95a37817710b29d44dd81b9d11cd4eeef2c"
-    }
+      "bikeRoads": "429931751296885402776d200b290f17a3781ffd1f30865d47cc649d32af92cd",
+      "segments": "ff128e4f4b3f54286b32538dcba9c9defd76bcdd44413fe86e806b5fd6b0922e",
+      "cwBaseIndex": "e60f0b6625238fb43e263af633d07e9f1f6ccd15b4ec1e407e026af88044324e",
+      "baseRoutingShards": "f532c7281010b52d6d74fd4295317c476a0c7f062be51b48a948ac15b3f5f7e9"
+    },
+    "decodeSource": "existing_snapshot"
   },
   "route": {
+    "displayImage": {
+      "photo": "public-data/route-map-images/banias-gan-hatsafon-map-8ab7be6f.webp",
+      "thumbnail": "public-data/route-map-images/banias-gan-hatsafon-map-8ab7be6f-thumb.webp",
+      "alt": "מפת מסלול בניאס וגן הצפון",
+      "source": {
+        "type": "mapbox-screenshot",
+        "routeTokenHash": "sha256:4f5d5c4fe65b9ec350310203dc092136b243ae28391ee50d7fb80f67c1ae547e",
+        "mapVersion": "6ee5d31a1bbd",
+        "style": "mapbox://styles/mapbox/outdoors-v12",
+        "width": 1200,
+        "height": 800,
+        "generatedAt": "2026-06-06T16:52:38.757Z"
+      }
+    },
     "geometry": [
       {
         "lat": 33.18388362522316,

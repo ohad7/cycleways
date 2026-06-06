@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Build (or validate) public read-only snapshots for featured routes.
+// Build (or validate) public read-only snapshots for route catalog entries.
 //
 //   node scripts/build-featured-route-snapshots.mjs           # generate + cleanup
 //   node scripts/build-featured-route-snapshots.mjs --check    # validate, no writes
@@ -23,22 +23,22 @@ async function main() {
   if (checkMode) {
     const { failures } = await checkFeaturedRouteSnapshots({ log });
     if (failures.length > 0) {
-      log("error", "featured snapshot check FAILED:");
+      log("error", "route snapshot check FAILED:");
       for (const failure of failures) log("error", `  - ${failure}`);
       process.exitCode = 1;
       return;
     }
-    log("info", "featured snapshot check OK");
+    log("info", "route snapshot check OK");
     return;
   }
 
   const { written, removed, errors } = await buildFeaturedRouteSnapshots({ log });
   log(
     "info",
-    `featured snapshots: ${written.length} written, ${removed.length} removed`,
+    `route snapshots: ${written.length} written, ${removed.length} removed`,
   );
   if (errors.length > 0) {
-    log("error", "featured snapshot generation had errors:");
+    log("error", "route snapshot generation had errors:");
     for (const { slug, error } of errors) log("error", `  - ${slug}: ${error}`);
     process.exitCode = 1;
   }

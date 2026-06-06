@@ -6,10 +6,13 @@ import FeaturedRoute from "./FeaturedRoute.jsx";
 import FeaturedRouteStats from "./FeaturedRouteStats.jsx";
 import FeaturedElevation from "./FeaturedElevation.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
+import {
+  VIDEO_CURSOR_DEFAULT_VARIANT,
+} from "@cycleways/core/map/mapStyles.js";
 
-// Shared video-first featured-route template. The video player, maps, POI
-// preview, progress readout, and POI story list are identical across routes;
-// only the editorial copy differs and comes in via the `intro`/`about` props.
+// Shared route-story template. Video-backed routes render a video player with a
+// map overlay; catalog-only routes render the map in the same primary stage.
+// The header, side rail, stats, elevation profile, and POI stories stay shared.
 //
 //   intro: { kicker?, heading?, body?: string[] }   - side "what's on the ride" panel
 //   about: { eyebrow?, heading?, paragraphs?: string[] } - below-the-fold "about" section
@@ -22,22 +25,49 @@ export default function FeaturedVideoRoute({
   about = {},
   difficultyLabel = null,
   surfaceLabel = null,
-  videoCursorVariant = 1,
+  media = "video",
+  videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
 }) {
+  const isMapStage = media === "map";
+  const aboutParagraphs = Array.isArray(about.paragraphs) ? about.paragraphs : [];
+  const hasAbout = Boolean(about.eyebrow || about.heading || aboutParagraphs.length > 0);
+
   return (
     <FeaturedRoute slug={slug} layout="video-first" desktopMap="manual" kicker={kicker}>
-      <section className="fv-playback" aria-label="סרטון, תיאור ומפת המסלול">
+      <section
+        className={[
+          "fv-playback",
+          isMapStage ? "fv-playback--map-stage" : "",
+        ].filter(Boolean).join(" ")}
+        aria-label={isMapStage ? "מפה, תיאור ונתוני המסלול" : "סרטון, תיאור ומפת המסלול"}
+      >
         <div className="fv-video-stage">
-          <div className="fv-video-shell">
-            <FeaturedRoute.Video title="" className="fv-video" />
-            <FeaturedRoute.POIVideoPreview />
-            <FeaturedRoute.Map
-              className="fv-mobile-map"
-              autoResetAfterInteraction
-              autoResetDelayMs={5000}
-              routeFitPadding={12}
-              videoCursorVariant={videoCursorVariant}
-            />
+          <div
+            className={[
+              "fv-video-shell",
+              isMapStage ? "fv-video-shell--map" : "",
+            ].filter(Boolean).join(" ")}
+            data-route-stage
+          >
+            {isMapStage ? (
+              <FeaturedRoute.MapPlayback
+                autoResetAfterInteraction
+                autoResetDelayMs={5000}
+                videoCursorVariant={videoCursorVariant}
+              />
+            ) : (
+              <>
+                <FeaturedRoute.Video title="" className="fv-video" />
+                <FeaturedRoute.POIVideoPreview />
+                <FeaturedRoute.Map
+                  className="fv-mobile-map"
+                  autoResetAfterInteraction
+                  autoResetDelayMs={5000}
+                  routeFitPadding={12}
+                  videoCursorVariant={videoCursorVariant}
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -48,7 +78,7 @@ export default function FeaturedVideoRoute({
             {(intro.body || []).map((para, i) => (
               <p key={i}>{para}</p>
             ))}
-            <FeaturedRouteActions />
+            <FeaturedRouteActions media={media} />
           </section>
 
           <div className="fv-side-elevation-wrap">
@@ -61,27 +91,33 @@ export default function FeaturedVideoRoute({
         </aside>
       </section>
 
-      <section id="fv-about" className="fv-route-about" aria-label="על המסלול">
-        <div className="fv-route-about-heading">
-          {about.eyebrow && <span>{about.eyebrow}</span>}
-          {about.heading && <h2>{about.heading}</h2>}
-        </div>
-        <div className="fv-route-about-body">
-          {(about.paragraphs || []).map((para, i) => (
-            <p key={i}>{para}</p>
-          ))}
-        </div>
-      </section>
+      {hasAbout && (
+        <section id="fv-about" className="fv-route-about" aria-label="על המסלול">
+          <div className="fv-route-about-heading">
+            {about.eyebrow && <span>{about.eyebrow}</span>}
+            {about.heading && <h2>{about.heading}</h2>}
+          </div>
+          <div className="fv-route-about-body">
+            {aboutParagraphs.map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
+        </section>
+      )}
 
       <FeaturedRoute.POIStories />
+
+      <FeaturedRoute.Warnings />
     </FeaturedRoute>
   );
 }
 
-function FeaturedRouteActions() {
-  const { meta, routeState, playerPlayRef } = useFeaturedRoute();
+function FeaturedRouteActions({ media = "video" }) {
+  const { meta, routeState, playerPlayRef, requestRouteFit } = useFeaturedRoute();
   const hasRouteGeometry = routeState.geometry.length >= 2;
   const editHref = meta?.route ? `/?route=${encodeURIComponent(meta.route)}` : null;
+  const isMapStage = media === "map";
+  const primaryLabel = "נגן מסלול";
 
   const handleDownload = useCallback(() => {
     if (!hasRouteGeometry) return;
@@ -89,31 +125,45 @@ function FeaturedRouteActions() {
     executeDownloadGPX(generateGPX(routeState.geometry), filename);
   }, [hasRouteGeometry, meta?.slug, routeState.geometry]);
 
-  const handlePlayRoute = useCallback(() => {
-    playerPlayRef.current?.();
+  const scrollStageIntoView = useCallback(() => {
     const isMobile = window.matchMedia?.("(max-width: 767px)").matches
       ?? window.innerWidth < 768;
     if (!isMobile) return;
 
-    const target = document.querySelector(".fv-video-shell");
+    const target = document.querySelector("[data-route-stage]");
     if (!target) return;
     const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     target.scrollIntoView({
       behavior: prefersReducedMotion ? "auto" : "smooth",
       block: "start",
     });
-  }, [playerPlayRef]);
+  }, []);
+
+  const handlePrimaryAction = useCallback(() => {
+    if (isMapStage) {
+      if (playerPlayRef.current) {
+        playerPlayRef.current();
+      } else {
+        requestRouteFit?.("featured-map-primary-fit");
+      }
+      scrollStageIntoView();
+      return;
+    }
+
+    playerPlayRef.current?.();
+    scrollStageIntoView();
+  }, [isMapStage, playerPlayRef, requestRouteFit, scrollStageIntoView]);
 
   return (
     <div className="fv-route-actions" aria-label="פעולות מסלול">
       <button
         type="button"
         className="fv-route-action fv-route-action--primary"
-        onClick={handlePlayRoute}
-        aria-label="נגן מסלול"
+        onClick={handlePrimaryAction}
+        aria-label={primaryLabel}
       >
         <Icon name="play-circle-outline" />
-        <span className="fv-route-action-label">נגן מסלול</span>
+        <span className="fv-route-action-label">{primaryLabel}</span>
       </button>
       {editHref ? (
         <a

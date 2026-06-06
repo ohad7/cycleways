@@ -575,6 +575,43 @@ input {
   animation: react-search-pulse 1.4s ease-in-out infinite;
 }
 
+.route-endpoint-marker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 2px solid #ffffff;
+  box-shadow: 0 3px 10px rgba(16, 24, 32, 0.28);
+  pointer-events: none;
+}
+
+.route-endpoint-marker--start {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #159b54;
+  color: #ffffff;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.route-endpoint-marker--start span {
+  transform: translateX(1px);
+}
+
+.route-endpoint-marker--end {
+  width: 20px;
+  height: 16px;
+  border-radius: 4px;
+  background: #c53737;
+}
+
+.route-endpoint-marker--circular {
+  width: 23px;
+  height: 23px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #159b54 0 50%, #c53737 50% 100%);
+}
+
 .react-recommendation-link {
   display: inline;
   padding: 0;
@@ -941,6 +978,74 @@ input {
 
 .react-elevation-legend__label {
   line-height: 1;
+}
+
+.elevation-progress-line {
+  filter: drop-shadow(0 0.8px 1.6px rgba(15, 118, 110, 0.22));
+}
+
+.elevation-progress-head-pulse {
+  position: absolute;
+  z-index: 2;
+  --elevation-progress-head-core-size: 15.2px;
+  --elevation-progress-head-pulse-size: 36px;
+  width: var(--elevation-progress-head-core-size);
+  height: var(--elevation-progress-head-core-size);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.elevation-progress-head-pulse__pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--elevation-progress-head-pulse-size);
+  height: var(--elevation-progress-head-pulse-size);
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 999px;
+  background: #f97316;
+  opacity: 0.13;
+  transform: translate(-50%, -50%) scale(0.7778);
+  transform-origin: center;
+}
+
+.elevation-progress-head-pulse__core {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #f97316;
+  opacity: 0.96;
+  box-shadow: 0 1px 4px rgba(16, 24, 32, 0.26);
+}
+
+.elevation-progress-head-pulse__symbol {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: 4.1px solid transparent;
+  border-bottom: 4.1px solid transparent;
+  border-left: 6.2px solid #ffffff;
+  transform: translateX(0.8px);
+}
+
+.elevation-progress-head-pulse--playing .elevation-progress-head-pulse__pulse {
+  animation: elevation-progress-head-pulse 1.4s ease-out infinite;
+}
+
+@keyframes elevation-progress-head-pulse {
+  0% {
+    opacity: 0.18;
+    transform: translate(-50%, -50%) scale(0.5556);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .react-grade-chip {

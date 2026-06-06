@@ -6,7 +6,9 @@ import sharp from "sharp";
 import {
   sanitizePoiImageId,
   processPoiImage,
+  processRouteMapImage,
   findMissingSourceImages,
+  findMissingCatalogImages,
 } from "../editor/server.mjs";
 
 // --- sanitizePoiImageId ---
@@ -79,6 +81,62 @@ try {
 
 console.log("processPoiImage tests passed");
 
+// --- processRouteMapImage: resize + webp conversion ---
+
+const routeMapDir = await mkdtemp(join(tmpdir(), "route-map-image-test-"));
+try {
+  const sourceBuffer = await sharp({
+    create: {
+      width: 1600,
+      height: 1000,
+      channels: 3,
+      background: { r: 220, g: 235, b: 225 },
+    },
+  })
+    .png()
+    .toBuffer();
+
+  const result = await processRouteMapImage(
+    {
+      slug: "sovev-beit-hillel",
+      buffer: sourceBuffer,
+      alt: "מפת מסלול סובב בית הלל",
+      source: { type: "mapbox-screenshot", routeTokenHash: "sha256:test" },
+    },
+    { outputDir: routeMapDir, publicPath: "public-data/route-map-images" },
+  );
+
+  assert.match(
+    result.photo,
+    /^public-data\/route-map-images\/sovev-beit-hillel-map-[0-9a-f]{8}\.webp$/,
+  );
+  assert.match(
+    result.thumbnail,
+    /^public-data\/route-map-images\/sovev-beit-hillel-map-[0-9a-f]{8}-thumb\.webp$/,
+  );
+  assert.equal(result.alt, "מפת מסלול סובב בית הלל");
+  assert.equal(result.source.type, "mapbox-screenshot");
+
+  const photoMeta = await sharp(
+    await readFile(join(routeMapDir, result.photo.split("/").pop())),
+  ).metadata();
+  const thumbMeta = await sharp(
+    await readFile(join(routeMapDir, result.thumbnail.split("/").pop())),
+  ).metadata();
+  assert.equal(photoMeta.format, "webp");
+  assert.equal(thumbMeta.format, "webp");
+  assert.ok(photoMeta.width <= 1200);
+  assert.ok(thumbMeta.width <= 640);
+  await assert.rejects(
+    processRouteMapImage({ slug: "../bad", buffer: sourceBuffer }),
+    /slug/,
+  );
+} finally {
+  await rm(routeMapDir, { recursive: true, force: true });
+}
+
+console.log("processRouteMapImage tests passed");
+
 // --- findMissingSourceImages: pre-promote existence check ---
 
 const repoDir = await mkdtemp(join(tmpdir(), "poi-promote-test-"));
@@ -141,5 +199,33 @@ try {
 }
 
 console.log("findMissingSourceImages tests passed");
+
+// --- findMissingCatalogImages: route-catalog image references ---
+
+const catalogRepoDir = await mkdtemp(join(tmpdir(), "route-catalog-images-test-"));
+try {
+  await mkdir(join(catalogRepoDir, "public-data/route-map-images"), { recursive: true });
+  await writeFile(join(catalogRepoDir, "public-data/route-map-images/present.webp"), "x");
+
+  const catalog = {
+    entries: [
+      {
+        slug: "demo",
+        routeMapImage: {
+          photo: "public-data/route-map-images/present.webp",
+          thumbnail: "public-data/route-map-images/missing-thumb.webp",
+        },
+      },
+    ],
+  };
+
+  assert.deepEqual(await findMissingCatalogImages(catalog, catalogRepoDir), [
+    "public-data/route-map-images/missing-thumb.webp",
+  ]);
+} finally {
+  await rm(catalogRepoDir, { recursive: true, force: true });
+}
+
+console.log("findMissingCatalogImages tests passed");
 
 console.log("editor POI image tests passed");

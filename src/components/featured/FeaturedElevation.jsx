@@ -6,6 +6,7 @@ export default function FeaturedElevation() {
   const {
     routeState,
     videoCursor,
+    videoPlaying,
     setVideoCursorFromFraction,
     seekVideoToFraction,
   } = useFeaturedRoute();
@@ -33,6 +34,7 @@ export default function FeaturedElevation() {
       geometry={routeState.geometry}
       distance={routeState.distance}
       cursorFraction={Number.isFinite(videoCursor?.fraction) ? videoCursor.fraction : null}
+      cursorPlaying={videoPlaying}
       onElevationHover={handleHover}
       onElevationSelect={handleSelect}
     />

@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { dirname, extname, isAbsolute, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
+import { PLAYBACK_BEHAVIORS } from "../src/components/featured/playbackRamp.js";
 import sharp from "sharp";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -20,6 +21,10 @@ import {
   loadRoutePolylineForSlug,
   invalidateFeaturedAssetCache,
   buildFeaturedRouteSnapshots,
+  readFeaturedRouteSnapshot,
+  routeStateFromFeaturedSnapshot,
+  snapshotMatchesRouteToken,
+  routeTokenHash,
 } from "../scripts/lib/featuredRouteSnapshotBuilder.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -46,14 +51,20 @@ const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const poiTypesModulePath = resolve(repoRoot, "packages/core/src/data/poiTypes.js");
-const videoSyncModulePath = resolve(repoRoot, "src/components/featured/videoSync.js");
+const featuredEditorModulePaths = new Set([
+  resolve(repoRoot, "src/components/featured/videoSync.js"),
+  resolve(repoRoot, "src/components/featured/routeGeometry.js"),
+  resolve(repoRoot, "src/components/featured/gpsBootstrap.js"),
+]);
 const coreSrcRoot = resolve(repoRoot, "packages/core/src");
 const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
 const videoKeyframesDraftDir = resolve(editorRoot, ".drafts/route-videos");
 const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
 const routeCatalogDraftPath = resolve(editorRoot, ".drafts/route-catalog.json");
 const routeCatalogPublicPath = resolve(publicDataDir, "route-catalog.json");
+const featuredRoutesDir = resolve(publicDataDir, "featured-routes");
 const poiImagesDir = resolve(publicDataDir, "poi-images");
+const routeMapImagesDir = resolve(publicDataDir, "route-map-images");
 const imagesDir = resolve(repoRoot, "public/images");
 const placesPath = resolve(repoRoot, "data/places.json");
 const regionZonesPath = resolve(repoRoot, "data/region-zones.json");
@@ -92,6 +103,9 @@ function hasGalleryImage(marker) {
 const POI_IMAGE_PUBLIC_PATH = "public-data/poi-images";
 const POI_IMAGE_MAX_WIDTH = 1600;
 const POI_IMAGE_THUMB_WIDTH = 480;
+const ROUTE_MAP_IMAGE_PUBLIC_PATH = "public-data/route-map-images";
+const ROUTE_MAP_IMAGE_MAX_WIDTH = 1200;
+const ROUTE_MAP_IMAGE_THUMB_WIDTH = 640;
 
 // Map an authored, stable POI id onto a filesystem-safe slug. Throws when the
 // id has no usable characters so we never write an empty or traversal filename.
@@ -142,6 +156,46 @@ export async function processPoiImage({ id, buffer }, options = {}) {
   };
 }
 
+export async function processRouteMapImage(
+  { slug, buffer, source = {}, alt = "" },
+  options = {},
+) {
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+    throw new Error("Route map image upload is empty");
+  }
+  const safeSlug = String(slug || "").trim();
+  if (!ROUTE_CATALOG_SLUG_RE.test(safeSlug)) {
+    throw new Error("Route map image slug must be lowercase kebab-case");
+  }
+  const hash = createHash("sha256").update(buffer).digest("hex").slice(0, 8);
+  const baseName = `${safeSlug}-map-${hash}`;
+  const outputDir = options.outputDir || routeMapImagesDir;
+  const publicPath = options.publicPath || ROUTE_MAP_IMAGE_PUBLIC_PATH;
+  await mkdir(outputDir, { recursive: true });
+
+  const photoBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: ROUTE_MAP_IMAGE_MAX_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
+  const thumbBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: ROUTE_MAP_IMAGE_THUMB_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 76 })
+    .toBuffer();
+
+  await writeFile(join(outputDir, `${baseName}.webp`), photoBuffer);
+  await writeFile(join(outputDir, `${baseName}-thumb.webp`), thumbBuffer);
+
+  return {
+    photo: `${publicPath}/${baseName}.webp`,
+    thumbnail: `${publicPath}/${baseName}-thumb.webp`,
+    alt: typeof alt === "string" && alt.trim() ? alt.trim() : `Route map ${safeSlug}`,
+    source: source && typeof source === "object" && !Array.isArray(source) ? source : {},
+    bytes: { photo: photoBuffer.length, thumbnail: thumbBuffer.length },
+  };
+}
+
 function isRemoteImagePath(value) {
   return /^(https?:)?\/\//i.test(value) || value.startsWith("data:");
 }
@@ -185,6 +239,45 @@ export async function findMissingSourceImages(source, baseDir = repoRoot) {
   const missing = [];
   const seen = new Set();
   for (const imagePath of collectSourceImagePaths(source)) {
+    if (seen.has(imagePath)) continue;
+    seen.add(imagePath);
+    const absolute = localImagePathToAbsolute(imagePath, baseDir);
+    if (!absolute) continue;
+    const fileStat = await statOrNull(absolute);
+    if (!fileStat || !fileStat.isFile()) {
+      missing.push(imagePath);
+    }
+  }
+  return missing;
+}
+
+function collectCatalogImagePaths(catalog) {
+  const paths = [];
+  const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
+  const addImage = (image) => {
+    if (!image || typeof image !== "object") return;
+    for (const field of ["photo", "thumbnail"]) {
+      const value = image?.[field];
+      if (typeof value === "string" && value.trim() !== "") paths.push(value);
+    }
+  };
+  const addEndpoint = (point) => {
+    if (!point || typeof point !== "object") return;
+    if (Array.isArray(point.images)) point.images.forEach(addImage);
+  };
+  for (const entry of entries) {
+    addImage(entry?.heroImage);
+    addImage(entry?.routeMapImage);
+    addEndpoint(entry?.start);
+    addEndpoint(entry?.end);
+  }
+  return paths;
+}
+
+export async function findMissingCatalogImages(catalog, baseDir = repoRoot) {
+  const missing = [];
+  const seen = new Set();
+  for (const imagePath of collectCatalogImagePaths(catalog)) {
     if (seen.has(imagePath)) continue;
     seen.add(imagePath);
     const absolute = localImagePathToAbsolute(imagePath, baseDir);
@@ -314,6 +407,7 @@ function summarizeReport(report) {
     segmentRecords: validation.segmentsCount,
     newSegments: (validation.newSegments || []).length,
     routeWarnings: (validation.routeCompatibilityWarnings || []).length,
+    placeholderSegmentNames: (validation.placeholderSegmentNames || []).length,
     activeSplitNumberedNames: (validation.activeSplitNumberedNames || []).length,
     elevation: {
       skip: elevation.skipElevation,
@@ -509,6 +603,7 @@ export async function promoteKeyframesDraft({ slug, draftsDir, publicDir, routeP
 }
 
 const PASSES_NEAR_METERS = 500;
+const ROUTE_CIRCULAR_ENDPOINT_THRESHOLD_METERS = 100;
 
 function haversineMetersClassify(a, b) {
   const R = 6371000;
@@ -522,10 +617,17 @@ function haversineMetersClassify(a, b) {
 }
 
 function nearestDistanceToPolyline(point, polyline) {
+  return nearestPointOnPolyline(point, polyline).distanceM;
+}
+
+function nearestPointOnPolyline(point, polyline) {
   let best = Infinity;
+  let bestProgress = 0;
+  let progress = 0;
   for (let i = 0; i < polyline.length - 1; i++) {
     const a = polyline[i];
     const b = polyline[i + 1];
+    const segmentMeters = haversineMetersClassify(a, b);
     const DEG = Math.PI / 180;
     const cosLat = Math.cos(((a.lat + b.lat) / 2) * DEG);
     const ax = a.lng * cosLat, ay = a.lat;
@@ -538,9 +640,121 @@ function nearestDistanceToPolyline(point, polyline) {
     const projLat = a.lat + (b.lat - a.lat) * t;
     const projLng = a.lng + (b.lng - a.lng) * t;
     const d = haversineMetersClassify(point, { lat: projLat, lng: projLng });
-    if (d < best) best = d;
+    if (d < best) {
+      best = d;
+      bestProgress = progress + segmentMeters * t;
+    }
+    progress += segmentMeters;
   }
-  return best;
+  return { distanceM: best, routeProgressMeters: bestProgress };
+}
+
+function placeMatchRadius(place) {
+  const radius = Number(place?.matchRadiusM);
+  return Number.isFinite(radius) && radius > 0 ? radius : PASSES_NEAR_METERS;
+}
+
+function nearbyPlaceIdsForPoint(point, places, maxMeters = PASSES_NEAR_METERS) {
+  return places
+    .filter((place) => {
+      const radius = Number.isFinite(Number(place?.matchRadiusM))
+        ? Number(place.matchRadiusM)
+        : maxMeters;
+      return haversineMetersClassify(place, point) <= radius;
+    })
+    .map((place) => place.id);
+}
+
+function placePolygon(place) {
+  if (Array.isArray(place?.polygon)) return place.polygon;
+  return null;
+}
+
+function routeProgressForPolygon(polyline, polygon) {
+  let progress = 0;
+  for (let i = 0; i < polyline.length; i++) {
+    const point = polyline[i];
+    if (pointInPolygon(point, polygon)) return progress;
+    if (i < polyline.length - 1) {
+      progress += haversineMetersClassify(point, polyline[i + 1]);
+    }
+  }
+  return null;
+}
+
+function placeSegmentMatches(place, selectedSegments) {
+  const includes = Array.isArray(place?.segmentNameIncludes)
+    ? place.segmentNameIncludes
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+    : [];
+  if (includes.length === 0) return [];
+  return selectedSegments.filter((segmentName) =>
+    includes.some((needle) => String(segmentName || "").includes(needle)),
+  );
+}
+
+function classifyPlaceMatches(places, geometry, selectedSegments = []) {
+  return (places || [])
+    .map((place) => {
+      if (!place?.id) return null;
+      const nearest = Number.isFinite(place.lat) && Number.isFinite(place.lng)
+        ? nearestPointOnPolyline(place, geometry)
+        : { distanceM: Infinity, routeProgressMeters: null };
+      const polygon = placePolygon(place);
+      const polygonProgress =
+        polygon && Array.isArray(polygon)
+          ? routeProgressForPolygon(geometry, polygon)
+          : null;
+      const matchedSegments = placeSegmentMatches(place, selectedSegments);
+      const radius = placeMatchRadius(place);
+
+      if (polygonProgress !== null) {
+        return {
+          id: place.id,
+          relation: "passes_through",
+          matchType: "polygon",
+          distanceM: 0,
+          routeProgressMeters: Math.round(polygonProgress),
+        };
+      }
+
+      if (matchedSegments.length > 0) {
+        return {
+          id: place.id,
+          relation: "passes_through",
+          matchType: "segment",
+          segmentNames: matchedSegments,
+          distanceM: Number.isFinite(nearest.distanceM) ? Math.round(nearest.distanceM) : null,
+          routeProgressMeters: Number.isFinite(nearest.routeProgressMeters)
+            ? Math.round(nearest.routeProgressMeters)
+            : null,
+        };
+      }
+
+      if (nearest.distanceM <= radius) {
+        return {
+          id: place.id,
+          relation: "near",
+          matchType: "radius",
+          distanceM: Math.round(nearest.distanceM),
+          routeProgressMeters: Math.round(nearest.routeProgressMeters),
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const ap = Number.isFinite(a.routeProgressMeters)
+        ? a.routeProgressMeters
+        : Number.POSITIVE_INFINITY;
+      const bp = Number.isFinite(b.routeProgressMeters)
+        ? b.routeProgressMeters
+        : Number.POSITIVE_INFINITY;
+      if (ap !== bp) return ap - bp;
+      return String(a.id).localeCompare(String(b.id));
+    });
 }
 
 function pointInPolygon(point, polygon) {
@@ -574,6 +788,43 @@ function distanceKmOf(polyline) {
   return total / 1000;
 }
 
+function geoJsonLineDistanceMeters(feature) {
+  const geometry = feature?.geometry;
+  const lines =
+    geometry?.type === "LineString"
+      ? [geometry.coordinates]
+      : geometry?.type === "MultiLineString"
+        ? geometry.coordinates
+        : [];
+  let total = 0;
+  for (const line of lines) {
+    if (!Array.isArray(line)) continue;
+    for (let i = 1; i < line.length; i++) {
+      const prev = line[i - 1];
+      const current = line[i];
+      if (!Array.isArray(prev) || !Array.isArray(current)) continue;
+      total += haversineMetersClassify(
+        { lng: Number(prev[0]), lat: Number(prev[1]) },
+        { lng: Number(current[0]), lat: Number(current[1]) },
+      );
+    }
+  }
+  return total;
+}
+
+function routeShapeOf(polyline) {
+  const start = polyline[0];
+  const end = polyline[polyline.length - 1];
+  const endpointDistanceM = Math.round(haversineMetersClassify(start, end));
+  return {
+    type:
+      endpointDistanceM <= ROUTE_CIRCULAR_ENDPOINT_THRESHOLD_METERS
+        ? "circular"
+        : "one_way",
+    endpointDistanceM,
+  };
+}
+
 function elevationDeltas(polyline) {
   let gain = 0, loss = 0;
   for (let i = 1; i < polyline.length; i++) {
@@ -586,8 +837,104 @@ function elevationDeltas(polyline) {
 
 function difficultyOf(distanceKm, elevationGainM) {
   if (elevationGainM > 500 || distanceKm > 40) return "hard";
-  if (elevationGainM >= 150 || distanceKm >= 25) return "moderate";
+  if (elevationGainM >= 150 || distanceKm >= 20) return "moderate";
   return "easy";
+}
+
+function surfaceTypeOf(roadMix) {
+  const pavedShare = (Number(roadMix?.paved) || 0) + (Number(roadMix?.road) || 0);
+  const dirtShare = Number(roadMix?.dirt) || 0;
+  if (pavedShare >= 0.8) return "paved";
+  if (dirtShare >= 0.8) return "dirt";
+  return "mixed";
+}
+
+function normalizeRoadType(value) {
+  if (value === "paved" || value === "dirt" || value === "road") return value;
+  return "paved";
+}
+
+function buildSegmentFeatureLookup(geoJsonData) {
+  const lookup = new Map();
+  const features = Array.isArray(geoJsonData?.features) ? geoJsonData.features : [];
+  for (const feature of features) {
+    const name = feature?.properties?.name;
+    if (typeof name !== "string" || !name) continue;
+    lookup.set(name, {
+      roadType: normalizeRoadType(feature.properties?.roadType),
+      distanceM: geoJsonLineDistanceMeters(feature),
+      quality: feature.properties?.quality,
+    });
+  }
+  return lookup;
+}
+
+function catalogDecodedRouteFromState(routeState, segmentsData, segmentFeatureLookup) {
+  if (!routeState || !Array.isArray(routeState.geometry) || routeState.geometry.length < 2) {
+    return null;
+  }
+  const counts = { paved: 0, dirt: 0, road: 0 };
+  let qualitySum = 0;
+  let qualityWeight = 0;
+  for (const segName of routeState.selectedSegments || []) {
+    const segData = segmentsData[segName] || {};
+    const featureData = segmentFeatureLookup.get(segName) || {};
+    const rt = normalizeRoadType(segData.roadType || featureData.roadType);
+    const weight =
+      Number.isFinite(featureData.distanceM) && featureData.distanceM > 0
+        ? featureData.distanceM
+        : 1;
+    counts[rt] += weight;
+    const q = segData?.quality?.overall ?? featureData?.quality?.overall;
+    if (Number.isFinite(q)) {
+      qualitySum += q * weight;
+      qualityWeight += weight;
+    }
+  }
+  const total = counts.paved + counts.dirt + counts.road;
+  const roadTypeFractions = total > 0
+    ? { paved: counts.paved / total, dirt: counts.dirt / total, road: counts.road / total }
+    : { paved: 1, dirt: 0, road: 0 };
+  const qualityScore = qualityWeight > 0 ? qualitySum / qualityWeight : 0;
+  return {
+    geometry: routeState.geometry,
+    selectedSegments: Array.isArray(routeState.selectedSegments)
+      ? routeState.selectedSegments
+      : [],
+    roadTypeFractions,
+    qualityScore,
+  };
+}
+
+async function loadFeaturedRouteSnapshotFallbacks() {
+  const snapshots = new Map();
+  let files = [];
+  try {
+    files = await readdir(featuredRoutesDir);
+  } catch {
+    return snapshots;
+  }
+  for (const file of files) {
+    if (!file.endsWith(".json")) continue;
+    const slugFromFile = file.replace(/\.json$/, "");
+    const snapshot = await readJsonOrNull(resolve(featuredRoutesDir, file));
+    const slug = typeof snapshot?.slug === "string" && snapshot.slug
+      ? snapshot.slug
+      : slugFromFile;
+    snapshots.set(slug, snapshot);
+  }
+  return snapshots;
+}
+
+function routeStateFromMatchingSnapshotFallback({ token, entry, snapshotsBySlug }) {
+  const slug = typeof entry?.slug === "string" ? entry.slug : "";
+  if (!slug) return null;
+  const snapshot = snapshotsBySlug.get(slug);
+  if (!snapshot || !snapshotMatchesRouteToken(snapshot, token)) return null;
+  const routeState = routeStateFromFeaturedSnapshot(snapshot);
+  return Array.isArray(routeState.geometry) && routeState.geometry.length >= 2
+    ? routeState
+    : null;
 }
 
 function styleOf({ difficulty, roadMix, qualityScore, distanceKm }) {
@@ -631,6 +978,22 @@ function validateRouteEndpoint(point, label) {
   }
 }
 
+function validateCatalogImage(image, label) {
+  if (image === undefined || image === null) return;
+  if (typeof image !== "object" || Array.isArray(image)) {
+    throw new Error(`${label} must be an object`);
+  }
+  if (typeof image.photo !== "string" || !image.photo.trim()) {
+    throw new Error(`${label} is missing a photo`);
+  }
+  if (image.thumbnail !== undefined && typeof image.thumbnail !== "string") {
+    throw new Error(`${label} has an invalid thumbnail`);
+  }
+  if (image.alt !== undefined && typeof image.alt !== "string") {
+    throw new Error(`${label} has an invalid alt`);
+  }
+}
+
 export function validateCatalogDraft(catalog) {
   if (!catalog || !Array.isArray(catalog.entries)) {
     throw new Error("catalog.entries must be an array");
@@ -649,6 +1012,11 @@ export function validateCatalogDraft(catalog) {
     if (typeof entry.route !== "string" || entry.route.length === 0) {
       throw new Error(`entry ${entry.slug} missing route token`);
     }
+    if (entry.description !== undefined && typeof entry.description !== "string") {
+      throw new Error(`entry ${entry.slug} description must be a string`);
+    }
+    validateCatalogImage(entry.heroImage, `entry ${entry.slug} heroImage`);
+    validateCatalogImage(entry.routeMapImage, `entry ${entry.slug} routeMapImage`);
     validateRouteEndpoint(entry.start, `entry ${entry.slug} start point`);
     validateRouteEndpoint(entry.end, `entry ${entry.slug} end point`);
   }
@@ -689,7 +1057,7 @@ export function recomputeCatalogMetadata(draft, refs) {
   const { places, zones, decodeRoute } = refs;
   validateCatalogDraft(draft);
   const entries = draft.entries.map((entry) => {
-    const decoded = decodeRoute(entry.route);
+    const decoded = decodeRoute(entry.route, entry);
     if (!decoded) {
       throw new Error(`entry ${entry.slug}: route token failed to decode`);
     }
@@ -702,6 +1070,150 @@ export function recomputeCatalogMetadata(draft, refs) {
 export async function buildLiveDecodeRoute() {
   const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const segmentFeatureLookup = buildSegmentFeatureLookup(geoJsonData);
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets({ log });
+  const snapshotsBySlug = await loadFeaturedRouteSnapshotFallbacks();
+  const manager = await createRouteManager(
+    RouteManagerClass,
+    geoJsonData,
+    segmentsData,
+    baseRoutingNetwork,
+  );
+  return function decodeRoute(token, entry = null) {
+    const routeToken = String(token || "").trim();
+    let routeState = null;
+    let decodeError = null;
+    try {
+      routeState = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
+    } catch (err) {
+      decodeError = err;
+    }
+    let decoded = catalogDecodedRouteFromState(routeState, segmentsData, segmentFeatureLookup);
+    if (decoded) return decoded;
+
+    const fallbackState = routeStateFromMatchingSnapshotFallback({
+      token: routeToken,
+      entry,
+      snapshotsBySlug,
+    });
+    decoded = catalogDecodedRouteFromState(fallbackState, segmentsData, segmentFeatureLookup);
+    if (decoded) {
+      log(
+        "warn",
+        `route catalog decode: ${entry?.slug || "route"} used existing snapshot fallback`,
+      );
+      return { ...decoded, decodeSource: "existing_snapshot" };
+    }
+
+    if (decodeError instanceof Error) {
+      log(
+        "warn",
+        `route catalog decode failed for ${entry?.slug || "route"}: ${decodeError.message}`,
+      );
+    }
+    return null;
+  };
+}
+
+function catalogImageEntries(marker) {
+  if (Array.isArray(marker?.images)) {
+    return marker.images
+      .filter((entry) => entry && typeof entry === "object" && hasText(entry.photo))
+      .map((entry) => ({
+        photo: entry.photo.trim(),
+        thumbnail: hasText(entry.thumbnail) ? entry.thumbnail.trim() : entry.photo.trim(),
+        alt: hasText(entry.alt) ? entry.alt.trim() : "",
+      }));
+  }
+  if (hasText(marker?.photo)) {
+    const photo = marker.photo.trim();
+    return [
+      {
+        photo,
+        thumbnail: hasText(marker.thumbnail) ? marker.thumbnail.trim() : photo,
+        alt: hasText(marker.alt) ? marker.alt.trim() : "",
+      },
+    ];
+  }
+  return [];
+}
+
+export function routeCatalogImageCandidatesFromSnapshot(snapshot, segmentsData) {
+  const selectedSegments = Array.isArray(snapshot?.selectedSegments)
+    ? snapshot.selectedSegments
+    : [];
+  const segmentOrder = new Map();
+  selectedSegments.forEach((segmentName, index) => {
+    if (!segmentOrder.has(segmentName)) segmentOrder.set(segmentName, index);
+  });
+
+  const activeById = new Map();
+  const activeDataPoints = Array.isArray(snapshot?.activeDataPoints)
+    ? snapshot.activeDataPoints
+    : [];
+  activeDataPoints.forEach((point) => {
+    if (hasText(point?.id)) activeById.set(point.id, point);
+  });
+
+  const candidates = [];
+  const seen = new Set();
+  selectedSegments.forEach((segmentName, selectedIndex) => {
+    const segmentInfo = segmentsData?.[segmentName];
+    const dataPoints = Array.isArray(segmentInfo?.data) ? segmentInfo.data : [];
+    dataPoints.forEach((dataPoint, dataPointIndex) => {
+      const stableId = hasText(dataPoint?.id)
+        ? dataPoint.id
+        : `${segmentName}-${dataPointIndex}`;
+      const activePoint = activeById.get(stableId);
+      catalogImageEntries(dataPoint).forEach((image, imageIndex) => {
+        const key = `${image.photo}\n${image.thumbnail}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const progress = Number(activePoint?.routeProgressMeters);
+        candidates.push({
+          id: `${stableId}:${imageIndex}`,
+          photo: image.photo,
+          thumbnail: image.thumbnail,
+          alt: image.alt || dataPoint?.name || segmentName,
+          label: dataPoint?.name || segmentName,
+          segmentName,
+          dataPointId: stableId,
+          imageIndex,
+          routeProgressMeters: Number.isFinite(progress) ? progress : null,
+          segmentOrder: segmentOrder.get(segmentName) ?? selectedIndex,
+          dataPointIndex,
+        });
+      });
+    });
+  });
+
+  candidates.sort((a, b) => {
+    const ap =
+      a.routeProgressMeters === null ? Number.POSITIVE_INFINITY : Number(a.routeProgressMeters);
+    const bp =
+      b.routeProgressMeters === null ? Number.POSITIVE_INFINITY : Number(b.routeProgressMeters);
+    const aHasProgress = Number.isFinite(ap) && a.routeProgressMeters !== null;
+    const bHasProgress = Number.isFinite(bp) && b.routeProgressMeters !== null;
+    if (aHasProgress || bHasProgress) {
+      if (!aHasProgress) return 1;
+      if (!bHasProgress) return -1;
+      if (ap !== bp) return ap - bp;
+    }
+    if (a.segmentOrder !== b.segmentOrder) return a.segmentOrder - b.segmentOrder;
+    if (a.dataPointIndex !== b.dataPointIndex) return a.dataPointIndex - b.dataPointIndex;
+    return a.imageIndex - b.imageIndex;
+  });
+
+  return candidates.map(({ segmentOrder, dataPointIndex, ...candidate }) => candidate);
+}
+
+export async function routeCatalogImageCandidatesForRoute(routeToken, { slug = null } = {}) {
+  const token = String(routeToken || "").trim();
+  if (!token) {
+    throw new Error("route token is required");
+  }
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
   const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets({ log });
   const manager = await createRouteManager(
     RouteManagerClass,
@@ -709,45 +1221,79 @@ export async function buildLiveDecodeRoute() {
     segmentsData,
     baseRoutingNetwork,
   );
-  return function decodeRoute(token) {
-    try {
-      const snapshot = restoreRouteFromParam(manager, token, segmentsData, cwBaseIndex);
-      if (!snapshot || !Array.isArray(snapshot.geometry) || snapshot.geometry.length < 2) {
-        return null;
-      }
-      const counts = { paved: 0, dirt: 0, road: 0 };
-      let qualitySum = 0;
-      let qualityN = 0;
-      for (const segName of snapshot.selectedSegments || []) {
-        const segData = segmentsData[segName];
-        const rt = segData?.roadType || "paved";
-        if (counts[rt] !== undefined) counts[rt] += 1;
-        else counts.paved += 1;
-        const q = segData?.quality?.overall;
-        if (Number.isFinite(q)) {
-          qualitySum += q;
-          qualityN += 1;
-        }
-      }
-      const total = counts.paved + counts.dirt + counts.road;
-      const roadTypeFractions = total > 0
-        ? { paved: counts.paved / total, dirt: counts.dirt / total, road: counts.road / total }
-        : { paved: 1, dirt: 0, road: 0 };
-      const qualityScore = qualityN > 0 ? qualitySum / qualityN : 0;
-      return {
-        geometry: snapshot.geometry,
-        roadTypeFractions,
-        qualityScore,
-      };
-    } catch {
-      return null;
+  let snapshot = null;
+  let decodeError = null;
+  try {
+    snapshot = restoreRouteFromParam(manager, token, segmentsData, cwBaseIndex);
+  } catch (err) {
+    decodeError = err;
+  }
+  if (!snapshot || !Array.isArray(snapshot.selectedSegments)) {
+    const fallback = slug ? await readFeaturedRouteSnapshot(slug) : null;
+    if (fallback && snapshotMatchesRouteToken(fallback, token)) {
+      snapshot = routeStateFromFeaturedSnapshot(fallback);
+      log("warn", `route catalog image candidates: ${slug} used existing snapshot fallback`);
     }
+  }
+  if (!snapshot || !Array.isArray(snapshot.selectedSegments)) {
+    const detail = decodeError instanceof Error ? `: ${decodeError.message}` : "";
+    throw new Error(`route token failed to decode${detail}`);
+  }
+  return routeCatalogImageCandidatesFromSnapshot(snapshot, segmentsData);
+}
+
+export async function routeCatalogPreviewForRoute(routeToken, { slug = null } = {}) {
+  const token = String(routeToken || "").trim();
+  if (!token) {
+    throw new Error("route token is required");
+  }
+  const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets({ log });
+  const manager = await createRouteManager(
+    RouteManagerClass,
+    geoJsonData,
+    segmentsData,
+    baseRoutingNetwork,
+  );
+  let snapshot = null;
+  let decodeError = null;
+  try {
+    snapshot = restoreRouteFromParam(manager, token, segmentsData, cwBaseIndex);
+  } catch (err) {
+    decodeError = err;
+  }
+  if (!snapshot || !Array.isArray(snapshot.geometry) || snapshot.geometry.length < 2) {
+    const fallback = slug ? await readFeaturedRouteSnapshot(slug) : null;
+    if (fallback && snapshotMatchesRouteToken(fallback, token)) {
+      snapshot = routeStateFromFeaturedSnapshot(fallback);
+      log("warn", `route catalog preview: ${slug} used existing snapshot fallback`);
+    }
+  }
+  if (!snapshot || !Array.isArray(snapshot.geometry) || snapshot.geometry.length < 2) {
+    const detail = decodeError instanceof Error ? `: ${decodeError.message}` : "";
+    throw new Error(`route token failed to decode${detail}`);
+  }
+  const manifest = await readJsonOrNull(promotedManifestPath);
+  return {
+    geometry: snapshot.geometry,
+    source: {
+      type: "mapbox-screenshot",
+      routeTokenHash: routeTokenHash(token),
+      mapVersion: manifest?.version ?? null,
+    },
   };
 }
 
 export async function promoteCatalogDraft({ draftPath, publicPath, places, zones, decodeRoute }) {
   const draft = JSON.parse(await readFile(draftPath, "utf-8"));
   const enriched = recomputeCatalogMetadata(draft, { places, zones, decodeRoute });
+  const missingImages = await findMissingCatalogImages(enriched, repoRoot);
+  if (missingImages.length > 0) {
+    throw new Error(
+      `Route catalog promote blocked: ${missingImages.length} image file(s) are referenced but missing: ${missingImages.join(", ")}`,
+    );
+  }
   await mkdir(dirname(publicPath), { recursive: true });
   const tmp = `${publicPath}.tmp`;
   await writeFile(tmp, JSON.stringify(enriched, null, 2));
@@ -758,17 +1304,22 @@ export async function promoteCatalogDraft({ draftPath, publicPath, places, zones
 
 export function classifyRoute(input, refs) {
   const { geometry, roadTypeFractions, qualityScore } = input;
+  const selectedSegments = Array.isArray(input.selectedSegments)
+    ? input.selectedSegments
+    : [];
   if (!Array.isArray(geometry) || geometry.length < 2) {
     throw new Error("classifyRoute: geometry must have at least 2 points");
   }
   const distanceKm = distanceKmOf(geometry);
   const { elevationGainM, elevationLossM } = elevationDeltas(geometry);
+  const routeShape = routeShapeOf(geometry);
   const difficulty = difficultyOf(distanceKm, elevationGainM);
   const roadMix = {
     paved: roadTypeFractions?.paved ?? 0,
     dirt: roadTypeFractions?.dirt ?? 0,
     road: roadTypeFractions?.road ?? 0,
   };
+  const surfaceType = surfaceTypeOf(roadMix);
   const style = styleOf({
     difficulty,
     roadMix,
@@ -778,17 +1329,24 @@ export function classifyRoute(input, refs) {
   const centroid = centroidOf(geometry);
   const regionId =
     refs.zones.find((z) => pointInPolygon(centroid, z.polygon))?.id ?? "unknown";
-  const passesNear = refs.places
-    .filter((p) => nearestDistanceToPolyline(p, geometry) <= PASSES_NEAR_METERS)
-    .map((p) => p.id);
+  const placeMatches = classifyPlaceMatches(refs.places, geometry, selectedSegments);
+  const passesNear = placeMatches.map((match) => match.id);
+  const startPlaceIds =
+    routeShape.type === "circular"
+      ? passesNear
+      : nearbyPlaceIdsForPoint(geometry[0], refs.places);
   return {
     distanceKm: Math.round(distanceKm * 10) / 10,
     elevationGainM,
     elevationLossM,
     regionId,
     passesNear,
+    placeMatches,
+    startPlaceIds,
     difficulty,
     style,
+    routeShape,
+    surfaceType,
     roadMix,
     qualityScore: qualityScore ?? 0,
   };
@@ -798,9 +1356,17 @@ export function validateKeyframesDraft(draft, routePolyline, maxMeters = 80) {
   if (!draft || typeof draft !== "object") {
     throw new Error("draft must be an object");
   }
-  const { youtubeId, videoDuration, keyframes } = draft;
+  const { youtubeId, videoDuration, keyframes, playbackBehavior } = draft;
   if (typeof youtubeId !== "string" || !youtubeId) {
     throw new Error("draft.youtubeId required");
+  }
+  if (
+    playbackBehavior !== undefined &&
+    !PLAYBACK_BEHAVIORS.includes(playbackBehavior)
+  ) {
+    throw new Error(
+      `draft.playbackBehavior must be one of: ${PLAYBACK_BEHAVIORS.join(", ")}`,
+    );
   }
   if (typeof videoDuration !== "number" || videoDuration <= 0) {
     throw new Error("draft.videoDuration must be a positive number");
@@ -1218,9 +1784,9 @@ async function serveStatic(request, response, url) {
   const allowedIconFile = isInside(iconsRoot, filePath);
   const allowedTokenFile = filePath === tokenPath;
   const allowedPoiTypesFile = filePath === poiTypesModulePath;
-  // The Video Sync editor reuses the production interpolator directly from
-  // src/, so serve that single shared module read-only.
-  const allowedVideoSyncFile = filePath === videoSyncModulePath;
+  // The Video Sync editor reuses a few production featured helpers directly
+  // from src/, so serve only that small allowlist read-only.
+  const allowedFeaturedEditorModule = featuredEditorModulePaths.has(filePath);
   // The editor loads shared core ES modules directly from source (e.g.
   // data/poiTypes.js, map/emojiMarkerImage.js), so serve the read-only
   // packages/core/src tree.
@@ -1229,13 +1795,15 @@ async function serveStatic(request, response, url) {
   // placeholders under public/images. Serve those read-only so the editor's
   // image thumbnails resolve.
   const allowedImageFile =
-    isInside(poiImagesDir, filePath) || isInside(imagesDir, filePath);
+    isInside(poiImagesDir, filePath) ||
+    isInside(routeMapImagesDir, filePath) ||
+    isInside(imagesDir, filePath);
   if (
     !allowedEditorFile &&
     !allowedIconFile &&
     !allowedTokenFile &&
     !allowedPoiTypesFile &&
-    !allowedVideoSyncFile &&
+    !allowedFeaturedEditorModule &&
     !allowedCoreFile &&
     !allowedImageFile
   ) {
@@ -1472,16 +2040,12 @@ async function handleBuild(payload) {
     "--verbose",
   ];
 
-  if (payload.skipElevation) {
-    args.push("--skip-elevation");
-  }
-
   if (payload.elevationUrl) {
     args.push("--elevation-url", String(payload.elevationUrl));
   }
 
   log("info", `build#${buildId} started`, {
-    mode: payload.skipElevation ? "preview-skip-elevation" : "full-elevation",
+    mode: "full-elevation",
     command: `python3 ${args.join(" ")}`,
   });
 
@@ -1824,6 +2388,9 @@ function validationBlockers(report) {
   }
   if ((validation.activeMissingMiddle || []).length > 0) {
     blockers.push("active segments missing middle points");
+  }
+  if ((validation.placeholderSegmentNames || []).length > 0) {
+    blockers.push("active segments with placeholder names");
   }
   if ((validation.activeSplitNumberedNames || []).length > 0) {
     blockers.push("active split children with numbered names");
@@ -2540,6 +3107,79 @@ const server = createServer(async (request, response) => {
         }
         return;
       }
+      // /api/route-catalog/image-candidates  (POST)
+      if (parts.length === 3 && parts[2] === "image-candidates" && request.method === "POST") {
+        const body = await readRequestJson(request);
+        try {
+          const candidates = await routeCatalogImageCandidatesForRoute(body?.route, {
+            slug: body?.slug,
+          });
+          sendJson(response, 200, { ok: true, candidates });
+        } catch (err) {
+          sendJson(response, 400, {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
+      // /api/route-catalog/route-preview  (POST)
+      if (parts.length === 3 && parts[2] === "route-preview" && request.method === "POST") {
+        const body = await readRequestJson(request);
+        try {
+          const preview = await routeCatalogPreviewForRoute(body?.route, {
+            slug: body?.slug,
+          });
+          sendJson(response, 200, { ok: true, ...preview });
+        } catch (err) {
+          sendJson(response, 400, {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
+      // /api/route-catalog/map-image  (POST)
+      if (parts.length === 3 && parts[2] === "map-image" && request.method === "POST") {
+        const body = await readRequestJson(request, 40 * 1024 * 1024);
+        const rawData = typeof body.data === "string" ? body.data : "";
+        const base64 = rawData.replace(/^data:[^;]+;base64,/, "");
+        if (!base64) {
+          sendJson(response, 400, { ok: false, error: "missing image data" });
+          return;
+        }
+        try {
+          const token = String(body.route || "").trim();
+          if (!token) throw new Error("route token is required");
+          const manifest = await readJsonOrNull(promotedManifestPath);
+          const source = {
+            type: "mapbox-screenshot",
+            routeTokenHash: routeTokenHash(token),
+            mapVersion: manifest?.version ?? null,
+            style:
+              typeof body.style === "string" && body.style.trim()
+                ? body.style.trim()
+                : null,
+            width: Number.isFinite(Number(body.width)) ? Number(body.width) : null,
+            height: Number.isFinite(Number(body.height)) ? Number(body.height) : null,
+            generatedAt: new Date().toISOString(),
+          };
+          const result = await processRouteMapImage({
+            slug: body.slug,
+            buffer: Buffer.from(base64, "base64"),
+            alt: body.alt,
+            source,
+          });
+          const { bytes, ...image } = result;
+          sendJson(response, 200, { ok: true, image, bytes });
+        } catch (err) {
+          sendJson(response, 400, {
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
       // /api/route-catalog/promote  (POST)
       if (parts.length === 3 && parts[2] === "promote" && request.method === "POST") {
         const places = (await readJsonOrNull(placesPath))?.places || [];
@@ -2553,9 +3193,9 @@ const server = createServer(async (request, response) => {
             zones,
             decodeRoute,
           });
-          // The promoted catalog determines which routes are featured. Drop the
+          // The promoted catalog determines the recommended route set. Drop the
           // long-lived decode caches so snapshots regenerate against the freshly
-          // promoted catalog/assets, then rebuild every featured snapshot (with
+          // promoted catalog/assets, then rebuild every route snapshot (with
           // orphan cleanup handled inside the builder).
           invalidateFeaturedAssetCache();
           let snapshots;

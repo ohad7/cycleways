@@ -52,6 +52,17 @@ function baseRouteState(overrides = {}) {
   assert.equal(snapshot.route.elevationLoss, 50);
   assert.deepEqual(snapshot.route.selectedSegments, ["Seg A", "Seg B"]);
 
+  const displayImage = { photo: "map.webp", thumbnail: "map-thumb.webp", alt: "Route map" };
+  const snapshotWithImage = buildSnapshotFromRouteState({
+    slug: "demo",
+    displayImage,
+    routeState: baseRouteState(),
+    routeToken: "TOKEN-1",
+    routeFormat: "hybrid_route_v6",
+    manifest,
+  });
+  assert.deepEqual(snapshotWithImage.route.displayImage, displayImage);
+
   // Source metadata is derived from the manifest + token hash.
   assert.equal(snapshot.source.routeFormat, "hybrid_route_v6");
   assert.equal(snapshot.source.mapVersion, manifest.version);

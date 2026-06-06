@@ -118,11 +118,8 @@ async function resolveRouteTokenForSlug(slug, {
 } = {}) {
   // First try an optional draft catalog (for in-progress editor edits), then
   // the promoted one, and fall back to the .meta.js seed for legacy routes.
-  let routeToken = null;
-  const draft = draftCatalogPath ? await readJsonOrNull(draftCatalogPath) : null;
-  const promoted = await readJsonOrNull(routeCatalogPublicPath);
-  const lookup = (cat) => cat?.entries?.find((e) => e.slug === slug)?.route;
-  routeToken = lookup(draft) || lookup(promoted) || null;
+  const entry = await resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath });
+  let routeToken = entry?.route || null;
   if (!routeToken) {
     try {
       const metaModulePath = resolve(repoRoot, `src/featured/${slug}.meta.js`);
@@ -134,6 +131,13 @@ async function resolveRouteTokenForSlug(slug, {
     throw new Error(`featured route "${slug}" not found in catalog or meta`);
   }
   return routeToken;
+}
+
+async function resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath = null } = {}) {
+  const draft = draftCatalogPath ? await readJsonOrNull(draftCatalogPath) : null;
+  const promoted = await readJsonOrNull(routeCatalogPublicPath);
+  const lookup = (cat) => cat?.entries?.find((e) => e.slug === slug) || null;
+  return lookup(draft) || lookup(promoted) || null;
 }
 
 // Decode a slug's route token to the full route-state snapshot (the shape
@@ -153,13 +157,38 @@ export async function loadRouteStateForSlug(slug, {
     segmentsData,
     baseRoutingNetwork,
   );
-  const routeState = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
-  if (!routeState) throw new Error(`route "${slug}" failed to decode`);
+  let routeState = null;
+  let decodeSource = null;
+  let decodeError = null;
+  try {
+    routeState = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
+    if (routeState) decodeSource = "live";
+  } catch (err) {
+    decodeError = err;
+  }
+  if (!routeState) {
+    const fallbackSnapshot = await readFeaturedRouteSnapshot(slug);
+    if (fallbackSnapshot && snapshotMatchesRouteToken(fallbackSnapshot, routeToken)) {
+      const fallbackState = routeStateFromFeaturedSnapshot(fallbackSnapshot);
+      if (Array.isArray(fallbackState.geometry) && fallbackState.geometry.length >= 2) {
+        routeState = fallbackState;
+        decodeSource = "existing_snapshot";
+        log(
+          "warn",
+          `route "${slug}" failed live decode; using existing snapshot fallback for matching route token`,
+        );
+      }
+    }
+  }
+  if (!routeState) {
+    const detail = decodeError instanceof Error ? `: ${decodeError.message}` : "";
+    throw new Error(`route "${slug}" failed to decode${detail}`);
+  }
   // Decode the payload again only to read its `.type`. restoreRouteFromParam
   // does not surface the format, and decodeRoutePayload is a cheap pure parse
   // (no routing/manager work), so the second call is intentional and harmless.
   const routeFormat = decodeRoutePayload(routeToken).type;
-  return { routeState, routeToken, routeFormat };
+  return { routeState, routeToken, routeFormat, decodeSource };
 }
 
 // Thin wrapper preserving the original editor/server.mjs contract: returns just
@@ -173,6 +202,32 @@ export async function loadRoutePolylineForSlug(slug, options = {}) {
 
 function sha256Hex(input) {
   return createHash("sha256").update(input).digest("hex");
+}
+
+export function routeTokenHash(routeToken) {
+  return `sha256:${sha256Hex(String(routeToken || ""))}`;
+}
+
+export async function readFeaturedRouteSnapshot(slug) {
+  if (typeof slug !== "string" || slug.length === 0) return null;
+  return readJsonOrNull(resolve(featuredRoutesDir, `${slug}.json`));
+}
+
+export function snapshotMatchesRouteToken(snapshot, routeToken) {
+  return snapshot?.source?.routeTokenHash === routeTokenHash(routeToken);
+}
+
+export function routeStateFromFeaturedSnapshot(snapshot) {
+  const route = snapshot?.route || {};
+  const pois = snapshot?.pois || {};
+  return {
+    geometry: Array.isArray(route.geometry) ? route.geometry : [],
+    distance: Number(route.distance) || 0,
+    elevationGain: Number(route.elevationGain) || 0,
+    elevationLoss: Number(route.elevationLoss) || 0,
+    selectedSegments: Array.isArray(route.selectedSegments) ? route.selectedSegments : [],
+    activeDataPoints: Array.isArray(pois.activeDataPoints) ? pois.activeDataPoints : [],
+  };
 }
 
 function computeBounds(geometry) {
@@ -206,11 +261,13 @@ function loadManifestSource(manifest) {
 // Project a decoded route state into the public, page-oriented snapshot schema.
 export function buildSnapshotFromRouteState({
   slug,
+  displayImage = null,
   routeState,
   routeToken,
   routeFormat,
   manifest,
   generatedAt = new Date().toISOString(),
+  decodeSource = null,
 }) {
   const geometry = Array.isArray(routeState.geometry) ? routeState.geometry : [];
   const activeDataPoints = Array.isArray(routeState.activeDataPoints)
@@ -227,12 +284,14 @@ export function buildSnapshotFromRouteState({
     slug,
     generatedAt,
     source: {
-      routeTokenHash: `sha256:${sha256Hex(routeToken)}`,
+      routeTokenHash: routeTokenHash(routeToken),
       routeFormat,
       mapVersion,
       assetHashes,
+      ...(decodeSource ? { decodeSource } : {}),
     },
     route: {
+      ...(displayImage ? { displayImage } : {}),
       geometry,
       bounds: computeBounds(geometry),
       distance: routeState.distance || 0,
@@ -259,17 +318,20 @@ export async function buildSnapshotForSlug(slug, {
 } = {}) {
   const resolvedManifest = manifest || (await readJsonOrNull(promotedManifestPath));
   if (!resolvedManifest) throw new Error("map-manifest.json not found");
-  const { routeState, routeToken, routeFormat } = await loadRouteStateForSlug(slug, {
+  const { routeState, routeToken, routeFormat, decodeSource } = await loadRouteStateForSlug(slug, {
     draftCatalogPath,
     log,
   });
+  const entry = await resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath });
   return buildSnapshotFromRouteState({
     slug,
+    displayImage: entry?.routeMapImage || null,
     routeState,
     routeToken,
     routeFormat,
     manifest: resolvedManifest,
     generatedAt,
+    decodeSource: decodeSource === "existing_snapshot" ? decodeSource : null,
   });
 }
 
@@ -300,14 +362,20 @@ async function listSnapshotSlugs() {
     .map((f) => f.replace(/\.json$/, ""));
 }
 
-export async function readFeaturedCatalogSlugs() {
+export async function readRouteCatalogSlugs() {
   const catalog = await readJsonOrNull(routeCatalogPublicPath);
   const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
-  return entries.filter((e) => e?.featured === true).map((e) => e.slug);
+  return entries
+    .map((e) => e?.slug)
+    .filter((slug) => typeof slug === "string" && slug.length > 0);
 }
 
-// Generate (and write) snapshots for every featured catalog entry, then delete
-// orphaned snapshot files for routes no longer marked featured.
+export async function readFeaturedCatalogSlugs() {
+  return readRouteCatalogSlugs();
+}
+
+// Generate (and write) snapshots for every catalog route entry, then delete
+// orphaned snapshot files for routes no longer present in the route catalog.
 export async function buildFeaturedRouteSnapshots({
   draftCatalogPath = null,
   generatedAt,
@@ -315,10 +383,10 @@ export async function buildFeaturedRouteSnapshots({
 } = {}) {
   const manifest = await readJsonOrNull(promotedManifestPath);
   if (!manifest) throw new Error("map-manifest.json not found");
-  const featuredSlugs = await readFeaturedCatalogSlugs();
+  const routeSlugs = await readRouteCatalogSlugs();
   const written = [];
   const errors = [];
-  for (const slug of featuredSlugs) {
+  for (const slug of routeSlugs) {
     try {
       const snapshot = await buildSnapshotForSlug(slug, {
         manifest,
@@ -328,22 +396,22 @@ export async function buildFeaturedRouteSnapshots({
       });
       const target = await writeSnapshotAtomic(slug, snapshot);
       written.push({ slug, path: target });
-      log("info", `featured snapshot: wrote ${slug} (${snapshot.route.geometry.length} coords)`);
+      log("info", `route snapshot: wrote ${slug} (${snapshot.route.geometry.length} coords)`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       errors.push({ slug, error: message });
-      log("error", `featured snapshot: failed for ${slug}: ${message}`);
+      log("error", `route snapshot: failed for ${slug}: ${message}`);
     }
   }
 
-  // Orphan cleanup: drop snapshots for routes no longer featured.
-  const featuredSet = new Set(featuredSlugs);
+  // Orphan cleanup: drop snapshots for routes no longer in the catalog.
+  const routeSet = new Set(routeSlugs);
   const removed = [];
   for (const slug of await listSnapshotSlugs()) {
-    if (!featuredSet.has(slug)) {
+    if (!routeSet.has(slug)) {
       await rm(resolve(featuredRoutesDir, `${slug}.json`), { force: true });
       removed.push(slug);
-      log("info", `featured snapshot: removed orphan ${slug}`);
+      log("info", `route snapshot: removed orphan ${slug}`);
     }
   }
 
@@ -361,10 +429,10 @@ export async function checkFeaturedRouteSnapshots({
     return { failures: ["map-manifest.json not found"], orphans: [] };
   }
   const { mapVersion } = loadManifestSource(manifest);
-  const featuredSlugs = await readFeaturedCatalogSlugs();
-  const featuredSet = new Set(featuredSlugs);
+  const routeSlugs = await readRouteCatalogSlugs();
+  const routeSet = new Set(routeSlugs);
 
-  for (const slug of featuredSlugs) {
+  for (const slug of routeSlugs) {
     const snapshot = await readJsonOrNull(resolve(featuredRoutesDir, `${slug}.json`));
     if (!snapshot) {
       failures.push(`${slug}: snapshot file is missing`);
@@ -429,7 +497,7 @@ export async function checkFeaturedRouteSnapshots({
   }
 
   // Orphans are failures in --check mode.
-  const orphans = (await listSnapshotSlugs()).filter((slug) => !featuredSet.has(slug));
+  const orphans = (await listSnapshotSlugs()).filter((slug) => !routeSet.has(slug));
   for (const slug of orphans) {
     failures.push(`${slug}: orphan snapshot (slug no longer featured)`);
   }

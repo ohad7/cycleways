@@ -25,11 +25,13 @@ unit-tested helper `capabilitiesForMode(mode)` in `mapCapabilities.js`. Every
 gated behavior below is keyed on a named capability rather than on `mode`
 directly, so the mapping lives in one auditable place.
 
-- **`planner`** (default): every capability is `true`. This is the zero-diff
-  path — behavior at `/` is unchanged.
+- **`planner`** (default): planner capabilities are enabled and public-only
+  endpoint markers are disabled. This is the zero-diff path — behavior at `/`
+  is unchanged.
 - **`readonly-route`** (public featured pages): ENABLES map init, base style,
-  route geometry layer, route fit, focused-marker camera, data-marker layer +
-  click callback, video cursor layer, and the route click (video-sync) callback.
+  route geometry layer, readonly endpoint markers, route fit, focused-marker
+  camera, data-marker layer + click callback, video cursor layer, and the route
+  click (video-sync) callback.
   DISABLES the CW network source/layers, network hover/click snapping, the
   hover-preview marker, route-point layers, route-point dragging, route-line
   insert/drag, route-point removal/select, and viewport prefetch
@@ -62,7 +64,7 @@ on when its driving prop is absent.
 | `elevationHover` | elevation-profile cursor payload that drives the on-map pulse |
 | `searchHighlight` | a searched location to highlight |
 | `videoCursor` | featured-route video playback cursor position on the route |
-| `videoCursorVariant` | featured-route cursor style; accepts options `1`-`6` or named variants |
+| `videoCursorVariant` | featured-route cursor style; accepts options `1`-`6` or named variants; defaults to `progress-head-pulse` |
 | `videoPlaying` | whether featured-route video playback is active; used for cursor animation |
 | `animator` | the route-direction pulse driver (ticks progress along the route) |
 

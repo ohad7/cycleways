@@ -32,7 +32,15 @@ export async function getJsonAsset(filePath, { basePath = null, ...fetchOptions 
   if (!response.ok) {
     throw new Error(`${assetPath}: HTTP ${response.status} ${response.statusText}`);
   }
-  return response.json();
+  const contentType = response.headers?.get?.("content-type") || "";
+  if (/text\/html/i.test(contentType)) {
+    throw new Error(`${assetPath}: expected JSON asset but received HTML from ${requestPath}`);
+  }
+  try {
+    return await response.json();
+  } catch (error) {
+    throw new Error(`${assetPath}: failed to parse JSON asset: ${error.message}`);
+  }
 }
 
 // Binary asset (a routing shard) resolved relative to a base href.

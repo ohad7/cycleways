@@ -17,8 +17,9 @@ import FeaturedRouteMapSlot from "./FeaturedRouteMap.jsx";
 import RoutePoiGallery from "./RoutePoiGallery.jsx";
 import RoutePoiStoryList from "./RoutePoiStoryList.jsx";
 import RoutePoiVideoPreview from "./RoutePoiVideoPreview.jsx";
+import RouteMapPlayback from "./RouteMapPlayback.jsx";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
-import { findFeaturedMeta } from "../../featured/index.js";
+import { findRouteMeta } from "../../featured/index.js";
 
 function FeaturedRoute({ slug, children, layout = "article", desktopMap = "sticky", kicker = null }) {
   const isMobile = useIsMobile();
@@ -42,10 +43,10 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const found = await findFeaturedMeta(slug);
+      const found = await findRouteMeta(slug);
       if (cancelled) return;
       if (!found) {
-        setError(new Error(`featured route "${slug}" not found in catalog`));
+        setError(new Error(`route "${slug}" not found in catalog`));
         setStatus("error");
         return;
       }
@@ -160,6 +161,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     const t = sync.positionToTime(snap.fraction);
     seek(t);
     setVideoCursorFromFraction(snap.fraction);
+    playerPauseRef.current?.();
   }, [setVideoCursorFromFraction]);
 
   const handleDataMarkerClick = useCallback((marker) => {
@@ -229,7 +231,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
         )}
         {status === "error" && (
           <div className="page-card">
-            <FeaturedRouteHeader />
+            {meta && <FeaturedRouteHeader />}
             <div className="featured-route-error">שגיאה: {error?.message}</div>
           </div>
         )}
@@ -274,6 +276,7 @@ FeaturedRoute.Gallery = Gallery;
 FeaturedRoute.POIGallery = RoutePoiGallery;
 FeaturedRoute.POIStories = RoutePoiStoryList;
 FeaturedRoute.POIVideoPreview = RoutePoiVideoPreview;
+FeaturedRoute.MapPlayback = RouteMapPlayback;
 FeaturedRoute.ProgressDistance = RouteProgressDistance;
 FeaturedRoute.Video = VideoEmbed;
 FeaturedRoute.Warnings = Warnings;

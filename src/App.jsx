@@ -256,7 +256,7 @@ function App() {
           </div>
         </div>
 
-        <ContentSections onFocusSegment={handleSegmentFocus} />
+        <ContentSections />
       </PageShell>
 
       {state.status === "ready" && mapUi.downloadModalOpen && (

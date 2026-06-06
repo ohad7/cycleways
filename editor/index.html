@@ -227,11 +227,6 @@
             <h2>Build</h2>
           </header>
 
-          <label class="checkbox-row">
-            <input id="skip-elevation" type="checkbox" checked>
-            <span>Skip elevation for quick preview</span>
-          </label>
-
           <div class="action-row">
             <button id="save-source" class="primary-button" type="button" disabled>Save Source</button>
             <button id="run-build" class="secondary-button" type="button">Build</button>
@@ -253,6 +248,8 @@
         </section>
       </aside>
 
+      <div id="rc-map-capture-host" aria-hidden="true"></div>
+
       <section id="vs-overlay" class="vs-overlay" hidden aria-label="Video Sync">
         <header class="vs-overlay-header">
           <h2 id="vs-overlay-title">Video Sync</h2>
@@ -261,6 +258,17 @@
             <select id="vs-slug"></select>
             <label for="vs-yt-url">YouTube URL:</label>
             <input id="vs-yt-url" type="text" placeholder="https://youtube.com/watch?v=..." />
+            <label for="vs-playback-behavior">Playback:</label>
+            <select id="vs-playback-behavior" class="text-input compact-select">
+              <option value="legacy">legacy</option>
+              <option value="none">none</option>
+            </select>
+            <label for="vs-bootstrap-file">GPS:</label>
+            <input id="vs-bootstrap-file" type="file" accept=".txt,.csv" disabled />
+            <label for="vs-bootstrap-max-error">Max err (m):</label>
+            <input id="vs-bootstrap-max-error" type="number" value="10" min="0" step="1" class="vs-num-input" disabled />
+            <label for="vs-bootstrap-speed">Speed×:</label>
+            <input id="vs-bootstrap-speed" type="number" value="5" min="0.1" step="0.1" class="vs-num-input" disabled />
             <button id="vs-save-draft" class="secondary-button" type="button">Save Draft</button>
             <button id="vs-promote" class="primary-button" type="button">Promote</button>
             <span id="vs-status" class="vs-overlay-status"></span>

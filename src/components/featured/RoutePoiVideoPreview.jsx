@@ -1,14 +1,22 @@
 import React, { useMemo } from "react";
-import { galleryImageSlides, poiLabel } from "@cycleways/core/data/poiTypes.js";
+import {
+  isWarningType,
+  POI_EMOJIS,
+  poiLabel,
+} from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import {
   endpointLabel,
   imageSrc,
   nearestPreviewForCursor,
-  routeEndpointSlides,
+  routeVideoCueSlides,
 } from "./routePoiStoryData.js";
 
-export default function RoutePoiVideoPreview({ className = "" }) {
+export default function RoutePoiVideoPreview({
+  className = "",
+  previewMaxFraction,
+  previewMaxMeters,
+}) {
   const {
     meta,
     routeState,
@@ -17,16 +25,27 @@ export default function RoutePoiVideoPreview({ className = "" }) {
     setFocusedCoord,
     playerPauseRef,
   } = useFeaturedRoute();
-  const slides = useMemo(() => {
-    const gallery = galleryImageSlides(routeState.activeDataPoints);
-    const endpoints = routeEndpointSlides(meta, routeState);
-    const start = endpoints.filter((s) => s.kind === "start");
-    const end = endpoints.filter((s) => s.kind === "end");
-    return [...start, ...gallery, ...end];
-  }, [meta, routeState]);
+  const slides = useMemo(
+    () => routeVideoCueSlides(meta, routeState),
+    [meta, routeState],
+  );
   const { slide, near } = useMemo(
-    () => nearestPreviewForCursor(slides, videoCursor?.fraction, routeState.distance),
-    [slides, routeState.distance, videoCursor?.fraction],
+    () => nearestPreviewForCursor(
+      slides,
+      videoCursor?.fraction,
+      routeState.distance,
+      {
+        maxFraction: previewMaxFraction,
+        maxMeters: previewMaxMeters,
+      },
+    ),
+    [
+      previewMaxFraction,
+      previewMaxMeters,
+      slides,
+      routeState.distance,
+      videoCursor?.fraction,
+    ],
   );
 
   if (!slide) return null;
@@ -34,6 +53,8 @@ export default function RoutePoiVideoPreview({ className = "" }) {
   const poiId = slide.poiId || `${slide.type}-${slide.location?.join(",")}`;
   const typeLabel = endpointLabel(slide.kind) || poiLabel(slide.type);
   const name = slide.name || typeLabel;
+  const src = imageSrc(slide);
+  const isWarning = slide.kind === "warning" || isWarningType(slide.type);
 
   function handleClick() {
     playerPauseRef.current?.();
@@ -44,7 +65,7 @@ export default function RoutePoiVideoPreview({ className = "" }) {
         setFocusedCoord({ lat, lng });
       }
     }
-    const target = Array.from(document.querySelectorAll(".fv-poi-story")).find(
+    const target = Array.from(document.querySelectorAll("[data-poi-id]")).find(
       (node) => node.dataset.poiId === String(poiId),
     );
     if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -55,13 +76,21 @@ export default function RoutePoiVideoPreview({ className = "" }) {
       type="button"
       className={[
         "fv-video-poi-preview",
+        isWarning ? "fv-video-poi-preview--warning" : "",
+        src ? "" : "fv-video-poi-preview--icon-only",
         near ? "" : "fv-video-poi-preview--mini",
         className,
       ].filter(Boolean).join(" ")}
       onClick={handleClick}
       aria-label={`עבור אל ${name}`}
     >
-      <img src={imageSrc(slide)} alt="" />
+      {src ? (
+        <img src={src} alt="" />
+      ) : (
+        <span className="fv-video-poi-preview__icon" aria-hidden="true">
+          {POI_EMOJIS[slide.type] || "⚠️"}
+        </span>
+      )}
       <div>
         <span>{typeLabel}</span>
         <strong>{name}</strong>

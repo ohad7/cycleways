@@ -4,7 +4,10 @@ import {
   routeEndpointSlides,
   routeEndpointStories,
 } from "../src/components/featured/routePoiStoryData.js";
-import { validateCatalogDraft } from "../editor/server.mjs";
+import {
+  routeCatalogImageCandidatesFromSnapshot,
+  validateCatalogDraft,
+} from "../editor/server.mjs";
 
 const geometry = [
   { lat: 33.1, lng: 35.6 },
@@ -73,6 +76,14 @@ validateCatalogDraft({
   entries: [
     {
       ...baseEntry,
+      description: "Longer description",
+      heroImage: { photo: "hero.webp", thumbnail: "hero-thumb.webp", alt: "Hero" },
+      routeMapImage: {
+        photo: "map.webp",
+        thumbnail: "map-thumb.webp",
+        alt: "Route map",
+        source: { type: "mapbox-screenshot" },
+      },
       start: { name: "S", description: "", images: [{ photo: "s.webp", thumbnail: "t.webp" }] },
       end: { name: "E", images: [{ photo: "e.webp" }] },
     },
@@ -93,5 +104,66 @@ assert.throws(
     }),
   /start point is missing a name/,
 );
+
+// Malformed route-level image -> rejected.
+assert.throws(
+  () =>
+    validateCatalogDraft({
+      entries: [{ ...baseEntry, heroImage: { thumbnail: "hero-thumb.webp" } }],
+    }),
+  /heroImage is missing a photo/,
+);
+
+assert.throws(
+  () =>
+    validateCatalogDraft({
+      entries: [{ ...baseEntry, routeMapImage: { thumbnail: "map-thumb.webp" } }],
+    }),
+  /routeMapImage is missing a photo/,
+);
+
+const segmentImageCandidates = routeCatalogImageCandidatesFromSnapshot(
+  {
+    selectedSegments: ["B", "A"],
+    activeDataPoints: [
+      { id: "a-1", routeProgressMeters: 30 },
+      { id: "b-1", routeProgressMeters: 10 },
+    ],
+  },
+  {
+    A: {
+      data: [
+        {
+          id: "a-1",
+          name: "Alpha",
+          images: [{ photo: "a.webp", thumbnail: "a-thumb.webp" }],
+        },
+        {
+          id: "a-2",
+          name: "Fallback",
+          images: [{ photo: "fallback.webp" }],
+        },
+      ],
+    },
+    B: {
+      data: [
+        {
+          id: "b-1",
+          name: "Beta",
+          images: [
+            { photo: "b.webp", thumbnail: "b-thumb.webp" },
+            { photo: "a.webp", thumbnail: "a-thumb.webp" },
+          ],
+        },
+      ],
+    },
+  },
+);
+assert.deepEqual(
+  segmentImageCandidates.map((candidate) => candidate.photo),
+  ["b.webp", "a.webp", "fallback.webp"],
+);
+assert.equal(segmentImageCandidates[0].label, "Beta");
+assert.equal(segmentImageCandidates[2].thumbnail, "fallback.webp");
 
 console.log("route-endpoints tests passed");

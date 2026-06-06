@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { promoteCatalogDraft, recomputeCatalogMetadata } from "../editor/server.mjs";
+import {
+  promoteCatalogDraft,
+  recomputeCatalogMetadata,
+  validateCatalogDraft,
+} from "../editor/server.mjs";
 
 const places = [
   { id: "beit-hillel", name: "בית הלל", lat: 33.2177, lng: 35.6097 },
@@ -30,7 +34,13 @@ const fakeDecode = (token) => {
 const draft = {
   version: 1,
   entries: [
-    { slug: "test-a", name: "A", summary: "x", route: "ok", featured: false },
+    {
+      slug: "test-a",
+      name: "A",
+      summary: "x",
+      route: "ok",
+      featured: false,
+    },
   ],
 };
 
@@ -39,7 +49,26 @@ const recomputed = recomputeCatalogMetadata(draft, { places, zones, decodeRoute:
 assert.equal(recomputed.entries[0].slug, "test-a");
 assert.equal(recomputed.entries[0].difficulty, "easy");
 assert.ok(recomputed.entries[0].passesNear.includes("beit-hillel"));
+assert.equal(
+  recomputed.entries[0].placeMatches.find((match) => match.id === "beit-hillel")?.matchType,
+  "radius",
+);
 assert.equal(recomputed.entries[0].regionId, "hula-valley");
+assert.equal(recomputed.entries[0].routeShape.type, "circular");
+assert.deepEqual(recomputed.entries[0].startPlaceIds, recomputed.entries[0].passesNear);
+assert.equal(recomputed.entries[0].surfaceType, "paved");
+validateCatalogDraft(recomputed);
+
+let decoderSawEntry = null;
+recomputeCatalogMetadata(draft, {
+  places,
+  zones,
+  decodeRoute: (token, entry) => {
+    decoderSawEntry = entry;
+    return fakeDecode(token);
+  },
+});
+assert.equal(decoderSawEntry?.slug, "test-a");
 
 // promote writes the public file atomically and removes the draft
 const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "rc-promote-"));
@@ -58,6 +87,10 @@ await promoteCatalogDraft({
 const written = JSON.parse(await fs.readFile(publicPath, "utf-8"));
 assert.equal(written.entries.length, 1);
 assert.equal(written.entries[0].difficulty, "easy");
+assert.ok(written.entries[0].placeMatches.some((match) => match.id === "beit-hillel"));
+assert.equal(written.entries[0].routeShape.type, "circular");
+assert.deepEqual(written.entries[0].startPlaceIds, written.entries[0].passesNear);
+assert.equal(written.entries[0].surfaceType, "paved");
 await assert.rejects(fs.stat(draftPath));
 
 console.log("route catalog promote tests passed");

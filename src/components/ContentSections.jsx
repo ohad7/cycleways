@@ -1,14 +1,6 @@
 import React from "react";
 
-function ContentSections({ onFocusSegment }) {
-  const focusSegment = (segmentName) => {
-    onFocusSegment?.(segmentName);
-    document.querySelector(".map-container")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  };
-
+function ContentSections() {
   return (
     <>
       <main>
@@ -69,103 +61,6 @@ function ContentSections({ onFocusSegment }) {
           </div>
         </section>
 
-        <section className="content-section" id="reccomendations">
-          <header>
-            <h1 className="section-title">המומלצים שלנו</h1>
-          </header>
-          <div className="section-content">
-            <h2>קטעים מומלצים לרכיבה</h2>
-            <p>
-              כל השבילים על המפה שלנו יפים, אבל יש כמה שבילים יפים במיוחד
-              ומומלצים. להלן רשימה של השבילים היפים ביותר באיזור:
-            </p>
-            <ul>
-              <li>
-                <RecommendationButton
-                  label="בניאס שדה נחמיה"
-                  onClick={() => focusSegment("בניאס שדה נחמיה")}
-                />
-                <ul>
-                  <li>
-                    בקלות אחד המסלולים היפים בארץ אם לא היפה שבהם, מוצל ברובו
-                    ועמוס בפינות מנוחה נחמדות ליד הנחל. בקצה הצפוני השביל
-                    מתחבר לכביש לנבי יהודה ולשביל האופניים לכיוון דפנה, בקצה
-                    הדרומי השביל מסתיים במפגש הנחלים בניאס וחצבאני סמוך לשדה
-                    נחמיה, ומשם מתחבר למסלולים רבים.
-                  </li>
-                  <li>
-                    אורך: כ 5 ק״מ משדה נחמיה ועד שאר ישוב, שטוח ברובו, מוצל
-                    ברובו
-                  </li>
-                </ul>
-              </li>
-              <li>
-                <RecommendationButton
-                  label="שדות עמיר ירדן"
-                  onClick={() => focusSegment("שדות עמיר ירדן")}
-                />
-                <ul>
-                  <li>
-                    בין הירדן לקיבוץ עמיר עובר שביל חקלאי עם נוף משגע לגולן
-                    ולהר החרמון, מומלץ במיוחד בחורף כשהכל ירוק והחרמון מושלג.
-                    הכניסה לקיבוץ עמיר מכיוון השדות פתוחה בשעות היום אך זה כמו
-                    הכל בארצנו נתון לשינוי וכפוף למציאות הבטחונית
-                  </li>
-                  <li>אורך: כ 4 ק״מ מפארק גשר להבות עד קיבוץ עמיר, שטוח ברובו</li>
-                </ul>
-              </li>
-              <li>
-                <RecommendationButton
-                  label="ציר הנפט"
-                  onClick={() => focusSegment("ציר הנפט")}
-                />
-                <ul>
-                  <li>
-                    כביש העובר ממקורות הבניאס בצפון עד צומת רוויה בצפון רמת
-                    הגולן על בסיס ציר הנפט הישן, הכביש שופץ לפני כ 20 שנים
-                    והוא מאוד נוח לרכיבת אופניים, התנועה עליו מועטה מאוד, מה
-                    שהופך אותו לדרך אידיאלית לעלות לרמת הגולן באופניים בדרך
-                    נוחה יחסית. תוך כדי הרכיבה תוכלו להנות מתצפית לעמק החולה
-                    ומנופי רמת הגולן.
-                  </li>
-                  <li>אורך: כ 15 ק״מ מהבניאס עד צומת רוויה, כ 430 מטר עליות</li>
-                </ul>
-              </li>
-              <li>
-                <RecommendationButton
-                  label="שדות הגושרים"
-                  onClick={() => focusSegment("שדות הגושרים")}
-                />
-                <ul>
-                  <li>
-                    כביש סלול העובר בין השדות של קיבוץ הגושרים, תחילתו במתחם
-                    גן הצפון וסופו בנקודה הסופית של קייאקי הגושרים. בעבר נסעו
-                    שם האוטובוסים של קיאקי הגושרים אבל מאז המלחמה והבצורת
-                    המקום נסגר זמנית, לרוכבי אופניים ניתן להנות מהנוף המקיף
-                    ומדרך נוחה לרכיבה. מכיוון גן הצפון הכניסה היא דרך שער הולכי
-                    רגל שלרוב פתוח, ובקצה הדרומי של הדרך יש גישה לטיילת מפגש
-                    הנחלים ושדה נחמיה.
-                  </li>
-                  <li>אורך: כ 4 ק״מ מגן הצפון עד קייאקי הגושרים, שטוח ברובו</li>
-                </ul>
-              </li>
-              <li>
-                <RecommendationButton
-                  label="נחל דישון תחתון"
-                  onClick={() => focusSegment("נחל דישון תחתון")}
-                />
-                <ul>
-                  <li>
-                    עליה מתונה ומהנה מאיילת השחר עד קיבוץ דישון, שביל נעים עם
-                    נוף ייחודי ואפילו נקודת מים ליד בריכת אביב.
-                  </li>
-                  <li>אורך: כ 9 ק״מ בשיפוע מתון, כ 400 מטר עליות</li>
-                </ul>
-              </li>
-            </ul>
-          </div>
-        </section>
-
         <section className="content-section" id="contact">
           <header>
             <h1 className="section-title">איך אפשר לעזור</h1>
@@ -210,14 +105,6 @@ function ContentSections({ onFocusSegment }) {
         </div>
       </footer>
     </>
-  );
-}
-
-function RecommendationButton({ label, onClick }) {
-  return (
-    <button className="react-recommendation-link" type="button" onClick={onClick}>
-      {label}
-    </button>
   );
 }
 

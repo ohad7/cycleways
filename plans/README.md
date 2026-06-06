@@ -48,3 +48,8 @@ Current plans:
 - `banias-gan-hatsafon-page/` - design and implementation plan for the Banias/Gan HaTzafon featured page, generalizing the sovev video-first scaffold into a reusable `FeaturedVideoRoute` template (and renaming the `sbh-` CSS prefix to `fv-`).
 - `featured-desktop-overlay-layout/` - design and implementation plan for an opt-in (`?layout=overlay`) desktop featured-page layout that moves the map to a PiP on the video (like mobile) and fills the rail with the route description, a stats block, and an interactive synced elevation graph.
 - `featured-video-slow-start/` - design for a 3-step slow-start playback ramp (0.5 → 0.75 → 1.0 over the first ~500 m) on featured-page videos, composed with the existing POI-vicinity slowdown via a single pure rate function.
+- `recommended-routes/` - design and implementation plan for making `/routes` the canonical public catalog of all recommended routes, with optional route-story pages replacing the overloaded featured concept.
+- `video-sync-gps-bootstrap/` - design and implementation plan for bootstrapping editor video-sync keyframes from a clip's GPS track (time/5 rescale, route-snap, error-bounded simplification) instead of clicking each keyframe by hand.
+- `featured-map-playback/` - design and implementation plan for giving non-video featured/recommended route pages a synthetic playable map stage aligned with video-route controls, cursor animation, and POI/warning cues.
+- `route-map-thumbnails/` - design and implementation plan for editor-generated Mapbox route-map screenshots used as static route-card thumbnails.
+- `topbar-route-navigation/` - design and implementation plan for canonical route navigation, active topbar state, breadcrumbs, and removal of the stale recommendations section.

@@ -1,19 +1,10 @@
 import React from "react";
+import {
+  routeDifficultyLabel,
+  routeShapeLabel,
+  routeSurfaceLabel,
+} from "@cycleways/core/data/catalog.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
-
-const DIFFICULTY_HE = {
-  easy: "קל",
-  moderate: "בינוני",
-  hard: "מאתגר",
-};
-
-function surfaceLabel(roadMix) {
-  if (!roadMix) return null;
-  const { paved = 0, dirt = 0, road = 0 } = roadMix;
-  if (paved >= dirt && paved >= road) return "סלול";
-  if (dirt >= paved && dirt >= road) return "שביל עפר";
-  return "כביש";
-}
 
 export default function FeaturedRouteStats({
   className = "",
@@ -23,12 +14,14 @@ export default function FeaturedRouteStats({
   const { meta } = useFeaturedRoute();
   if (!meta) return null;
 
-  const difficulty = difficultyLabel || (DIFFICULTY_HE[meta.difficulty] || meta.difficulty);
-  const surface = surfaceLabelOverride || surfaceLabel(meta.roadMix);
+  const difficulty = difficultyLabel || routeDifficultyLabel(meta);
+  const surface = surfaceLabelOverride || routeSurfaceLabel(meta);
+  const shape = routeShapeLabel(meta);
   const items = [
     Number.isFinite(meta.distanceKm) && { label: "אורך", value: `${meta.distanceKm} ק"מ` },
     Number.isFinite(meta.elevationGainM) && { label: "טיפוס", value: `${meta.elevationGainM} מ׳` },
     Number.isFinite(meta.elevationLossM) && { label: "ירידה", value: `${meta.elevationLossM} מ׳` },
+    shape && { label: "סוג", value: shape },
     difficulty && { label: "רמת קושי", value: difficulty },
     surface && { label: "משטח", value: surface },
   ].filter(Boolean);

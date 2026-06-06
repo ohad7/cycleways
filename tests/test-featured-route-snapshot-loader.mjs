@@ -88,6 +88,7 @@ function mockFetch(value, { ok = true } = {}) {
     ok,
     status: ok ? 200 : 404,
     statusText: ok ? "OK" : "Not Found",
+    headers: { get: () => "application/json" },
     async json() {
       return value;
     },
@@ -142,6 +143,22 @@ try {
   // HTTP failure surfaces from getJsonAsset
   mockFetch(undefined, { ok: false });
   await assert.rejects(() => loadFeaturedRouteSnapshot("demo-route"), /HTTP 404/);
+
+  // SPA fallbacks return HTML with HTTP 200; surface that as a missing JSON asset
+  // instead of leaking the browser JSON parser's `Unexpected token '<'` message.
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    headers: { get: () => "text/html; charset=utf-8" },
+    async json() {
+      throw new SyntaxError("Unexpected token '<'");
+    },
+  });
+  await assert.rejects(
+    () => loadFeaturedRouteSnapshot("demo-route"),
+    /expected JSON asset but received HTML/,
+  );
 } finally {
   global.fetch = originalFetch;
 }

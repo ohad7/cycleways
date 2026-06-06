@@ -16,6 +16,7 @@ const profile = buildElevationProfile(geometry);
 assert.ok(profile, "profile should be built for valid geometry");
 assert.ok(Array.isArray(profile.elevationData) && profile.elevationData.length > 0, "elevationData present");
 assert.ok(Array.isArray(profile.clusterPaths) && profile.clusterPaths.length > 0, "clusterPaths present");
+assert.ok(typeof profile.baseAreaPath === "string" && profile.baseAreaPath.startsWith("M"), "base area path is present");
 assert.ok(typeof profile.outlinePath === "string" && profile.outlinePath.startsWith("M"), "outlinePath is an SVG path");
 for (const p of profile.elevationData) {
   assert.ok(p.distancePercent >= 0 && p.distancePercent <= 100, "distancePercent in [0,100]");
@@ -25,6 +26,16 @@ for (const p of profile.elevationData) {
 for (const c of profile.clusterPaths) {
   assert.ok(typeof c.d === "string" && c.d.includes("Z"), "cluster path closed");
   assert.ok(typeof c.color === "string" && c.color.startsWith("#"), "cluster has color");
+  assert.ok(Number.isFinite(c.startPercent), "cluster has finite startPercent");
+  assert.ok(Number.isFinite(c.endPercent), "cluster has finite endPercent");
+}
+assert.equal(profile.clusterPaths[0].startPercent, 0, "cluster fill starts at graph start");
+assert.ok(Math.abs(profile.clusterPaths.at(-1).endPercent - 100) < 1e-9, "cluster fill reaches graph end");
+for (let index = 1; index < profile.clusterPaths.length; index++) {
+  assert.ok(
+    Math.abs(profile.clusterPaths[index - 1].endPercent - profile.clusterPaths[index].startPercent) < 1e-9,
+    "cluster fills are continuous with no horizontal gaps",
+  );
 }
 const mid = findClosestElevationPoint(profile.elevationData, 50);
 assert.ok(mid && Math.abs(mid.distancePercent - 50) < 5, "closest point near 50%");

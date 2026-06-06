@@ -1,7 +1,9 @@
 import {
   galleryImageSlides,
+  isWarningType,
   nearestSlideIndexByFraction,
   normalizePoiImages,
+  primaryPoiImage,
 } from "@cycleways/core/data/poiTypes.js";
 
 const PREVIEW_MAX_FRACTION = 0.025;
@@ -126,29 +128,98 @@ export function routePoiStories(points) {
   return stories;
 }
 
-// Returns the nearest gallery slide to the cursor and whether the cursor is
+function routeWarningCueSlides(points) {
+  const warnings = (Array.isArray(points) ? points : [])
+    .filter((point) => point && isWarningType(point.type))
+    .map((point) => {
+      const image = primaryPoiImage(point);
+      return {
+        poiId: point.id || `${point.type}-${point.location?.join(",")}`,
+        kind: "warning",
+        type: point.type,
+        name: point.name || "",
+        information: point.information || "",
+        description: point.description || "",
+        location: point.location,
+        routeProgressMeters: point.routeProgressMeters,
+        routeFraction: point.routeFraction,
+        imageIndex: 0,
+        photo: image?.photo || "",
+        thumbnail: image?.thumbnail || image?.photo || "",
+      };
+    });
+
+  warnings.sort(compareRouteCueProgress);
+  return warnings;
+}
+
+function compareRouteCueProgress(a, b) {
+  const ap = Number.isFinite(a?.routeProgressMeters)
+    ? a.routeProgressMeters
+    : Number.POSITIVE_INFINITY;
+  const bp = Number.isFinite(b?.routeProgressMeters)
+    ? b.routeProgressMeters
+    : Number.POSITIVE_INFINITY;
+  if (ap !== bp) return ap - bp;
+  return String(a?.poiId || "").localeCompare(String(b?.poiId || ""));
+}
+
+export function routeVideoCueSlides(meta, routeState) {
+  const activeDataPoints = routeState?.activeDataPoints || [];
+  const endpoints = routeEndpointSlides(meta, routeState);
+  const start = endpoints.filter((slide) => slide.kind === "start");
+  const end = endpoints.filter((slide) => slide.kind === "end");
+  const routeCues = [
+    ...galleryImageSlides(activeDataPoints),
+    ...routeWarningCueSlides(activeDataPoints),
+  ].sort(compareRouteCueProgress);
+  return [...start, ...routeCues, ...end];
+}
+
+// Returns the nearest video cue to the cursor and whether the cursor is
 // close enough to count as "at" that POI. `near` drives the expanded preview;
 // the slide itself is always returned (defaulting the cursor to the route
 // start) so callers can keep a persistent thumbnail of the nearest stop.
-export function nearestPreviewForCursor(slides, fraction, routeDistanceMeters) {
+export function nearestPreviewForCursor(
+  slides,
+  fraction,
+  routeDistanceMeters,
+  options = {},
+) {
   const f = Number.isFinite(fraction) ? fraction : 0;
   const index = nearestSlideIndexByFraction(slides, f);
   const slide = slides[index] || null;
   if (!slide || !Number.isFinite(slide.routeFraction)) {
     return { slide, near: false };
   }
+  const maxMeters = Number.isFinite(options.maxMeters) && options.maxMeters > 0
+    ? options.maxMeters
+    : PREVIEW_MAX_METERS;
+  const maxFraction = Number.isFinite(options.maxFraction) && options.maxFraction > 0
+    ? options.maxFraction
+    : PREVIEW_MAX_FRACTION;
 
   const distanceThreshold =
     Number.isFinite(routeDistanceMeters) && routeDistanceMeters > 0
-      ? PREVIEW_MAX_METERS / routeDistanceMeters
-      : PREVIEW_MAX_FRACTION;
-  const threshold = Math.min(PREVIEW_MAX_FRACTION, distanceThreshold);
+      ? maxMeters / routeDistanceMeters
+      : maxFraction;
+  const threshold = Math.min(maxFraction, distanceThreshold);
   const delta = Math.abs(slide.routeFraction - f);
 
   return { slide, near: delta <= threshold };
 }
 
-export function previewSlideForCursor(slides, fraction, routeDistanceMeters) {
-  const { slide, near } = nearestPreviewForCursor(slides, fraction, routeDistanceMeters);
+export function previewSlideForCursor(slides, fraction, routeDistanceMeters, options = {}) {
+  const { slide, near } = nearestPreviewForCursor(
+    slides,
+    fraction,
+    routeDistanceMeters,
+    options,
+  );
   return near ? slide : null;
 }
+
+export {
+  PREVIEW_MAX_FRACTION,
+  PREVIEW_MAX_METERS,
+};

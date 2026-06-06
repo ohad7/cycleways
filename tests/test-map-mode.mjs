@@ -6,8 +6,8 @@ import {
 } from "../src/map/mapCapabilities.js";
 
 // The full planner capability set. This is the zero-diff contract: every flag
-// MUST be true so planner behavior at `/` is unchanged. If a capability is
-// added to the helper, it must be added here too.
+// that powers planner behavior MUST stay true so `/` is unchanged. If a
+// capability is added to the helper, it must be added here too.
 const PLANNER_CAPS = {
   mapInit: true,
   baseStyle: true,
@@ -17,6 +17,7 @@ const PLANNER_CAPS = {
   routeGeometryLayer: true,
   routePointDragPreview: true,
   routePointLayers: true,
+  routeEndpointMarkers: false,
   routePointSelect: true,
   routePointEditing: true,
   routeLineEditing: true,
@@ -35,9 +36,9 @@ const PLANNER_CAPS = {
 // planner: every capability on (the zero-diff guarantee).
 {
   const caps = capabilitiesForMode(MAP_MODE_PLANNER);
-  assert.deepEqual(caps, PLANNER_CAPS, "planner mode enables every capability");
+  assert.deepEqual(caps, PLANNER_CAPS, "planner mode matches the zero-diff capability set");
   for (const [name, value] of Object.entries(caps)) {
-    assert.equal(value, true, `planner caps.${name} must be true`);
+    assert.equal(value, PLANNER_CAPS[name], `planner caps.${name} mismatch`);
   }
 }
 
@@ -68,6 +69,7 @@ const PLANNER_CAPS = {
     "mapInit",
     "baseStyle",
     "routeGeometryLayer",
+    "routeEndpointMarkers",
     "routeFit",
     "focusedMarkerCamera",
     "dataMarkerLayer",

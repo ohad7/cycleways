@@ -129,23 +129,19 @@ export function buildElevationProfile(geometry) {
   // resampled elevationData points that fall within each cluster's
   // distance range, plus the cluster boundary x values for clean edges.
   const totalDistanceForClusters = cumDistances[cumDistances.length - 1];
+  const baseAreaPath = buildElevationAreaPath(elevationData);
   const clusterPaths = clusters.map((cluster) => {
     const startD = cumDistances[cluster.startIdx];
     const endD = cumDistances[cluster.endIdx];
     const startX = (startD / totalDistanceForClusters) * 100;
     const endX = (endD / totalDistanceForClusters) * 100;
-    const slice = elevationData.filter(
-      (p) => p.distancePercent >= startX && p.distancePercent <= endX,
-    );
+    const slice = elevationPointsForRange(elevationData, startX, endX);
     if (slice.length < 2) return null;
-    let d = `M ${slice[0].distancePercent} 100`;
-    for (const p of slice) {
-      d += ` L ${p.distancePercent} ${100 - p.heightPercent}`;
-    }
-    d += ` L ${slice[slice.length - 1].distancePercent} 100 Z`;
     return {
-      d,
+      d: buildElevationAreaPath(slice),
       color: GRADE_COLORS[cluster.gradeClass],
+      startPercent: startX,
+      endPercent: endX,
       gradeClass: cluster.gradeClass,
     };
   }).filter(Boolean);
@@ -160,9 +156,74 @@ export function buildElevationProfile(geometry) {
 
   return {
     elevationData,
+    baseAreaPath,
     clusterPaths,
     outlinePath,
   };
+}
+
+function buildElevationAreaPath(points) {
+  if (!Array.isArray(points) || points.length < 2) return "";
+  const first = points[0];
+  const last = points[points.length - 1];
+  let d = `M ${first.distancePercent} 100`;
+  for (const point of points) {
+    d += ` L ${point.distancePercent} ${100 - point.heightPercent}`;
+  }
+  return `${d} L ${last.distancePercent} 100 Z`;
+}
+
+function elevationPointsForRange(elevationData, startPercent, endPercent) {
+  const start = interpolateElevationPoint(elevationData, startPercent);
+  const end = interpolateElevationPoint(elevationData, endPercent);
+  if (!start || !end || end.distancePercent <= start.distancePercent) return [];
+  return [
+    start,
+    ...elevationData.filter(
+      (point) =>
+        point.distancePercent > start.distancePercent &&
+        point.distancePercent < end.distancePercent,
+    ),
+    end,
+  ];
+}
+
+function interpolateElevationPoint(elevationData, distancePercent) {
+  if (!Array.isArray(elevationData) || elevationData.length === 0) return null;
+  const x = Math.max(0, Math.min(100, Number(distancePercent)));
+  if (!Number.isFinite(x)) return null;
+
+  const first = elevationData[0];
+  const last = elevationData[elevationData.length - 1];
+  if (x <= first.distancePercent) return { ...first, distancePercent: x };
+  if (x >= last.distancePercent) return { ...last, distancePercent: x };
+
+  for (let index = 0; index < elevationData.length - 1; index++) {
+    const before = elevationData[index];
+    const after = elevationData[index + 1];
+    if (before.distancePercent > x || after.distancePercent < x) continue;
+    const span = after.distancePercent - before.distancePercent;
+    const ratio = span > 0 ? (x - before.distancePercent) / span : 0;
+    return {
+      ...before,
+      distancePercent: x,
+      heightPercent: lerp(before.heightPercent, after.heightPercent, ratio),
+      elevation: lerp(before.elevation, after.elevation, ratio),
+      distance: lerp(before.distance, after.distance, ratio),
+      progress: lerp(before.progress, after.progress, ratio),
+      coord: before.coord && after.coord ? {
+        lat: lerp(before.coord.lat, after.coord.lat, ratio),
+        lng: lerp(before.coord.lng, after.coord.lng, ratio),
+      } : before.coord,
+      bearing: before.bearing ?? after.bearing,
+    };
+  }
+
+  return { ...last, distancePercent: x };
+}
+
+function lerp(a, b, ratio) {
+  return a + (b - a) * ratio;
 }
 
 export function findClosestElevationPoint(elevationData, xPercent) {

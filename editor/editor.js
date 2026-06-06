@@ -11,7 +11,13 @@ import {
   poiMarkerIconName,
 } from "../packages/core/src/data/poiTypes.js";
 import { registerPoiEmojiImages } from "../packages/core/src/map/emojiMarkerImage.js";
+import { bootstrapKeyframesFromGps } from "../src/components/featured/gpsBootstrap.js";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
+import {
+  buildCumulativeDistances,
+  nearestPointOnPolyline,
+  pointAtFraction,
+} from "../src/components/featured/routeGeometry.js";
 import { vsFormatTime, vsParseTime } from "./lib/vs-time.mjs";
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
@@ -224,7 +230,6 @@ const els = {
   saveSource: document.getElementById("save-source"),
   runBuild: document.getElementById("run-build"),
   promoteBuild: document.getElementById("promote-build"),
-  skipElevation: document.getElementById("skip-elevation"),
   editorAlert: document.getElementById("editor-alert"),
   editorAlertTitle: document.getElementById("editor-alert-title"),
   editorAlertMessage: document.getElementById("editor-alert-message"),
@@ -6077,6 +6082,9 @@ function reportIssueDetails(report) {
   for (const item of validation.activeMissingMiddle || []) {
     issues.push(`Active segment missing middle: ${item.name || item.segment || item.id || JSON.stringify(item)}`);
   }
+  for (const item of validation.placeholderSegmentNames || []) {
+    issues.push(`Placeholder segment name: ${item.segment || item.name || item.id || JSON.stringify(item)}`);
+  }
   for (const item of validation.activeSplitNumberedNames || []) {
     issues.push(`Numbered split child: ${item.name || item.segment || item.id || JSON.stringify(item)}`);
   }
@@ -6116,6 +6124,7 @@ function buildSummary(report) {
       duplicateIds: validation.duplicateIds || {},
       activeMissingMiddle: validation.activeMissingMiddle?.length ?? 0,
       invalidQuality: validation.invalidQuality?.length ?? 0,
+      placeholderSegmentNames: validation.placeholderSegmentNames || [],
       activeSplitNumberedNames: validation.activeSplitNumberedNames || [],
       routeCompatibilityWarnings: validation.routeCompatibilityWarnings?.length ?? 0,
       routeCompatibilityWarningDetails: validation.routeCompatibilityWarnings || [],
@@ -6124,7 +6133,6 @@ function buildSummary(report) {
       connectedComponents: validation.topology?.connectedComponents,
       orphanEndpointCount: validation.topology?.orphanEndpointCount,
       elevation: {
-        skipElevation: elevation.skipElevation,
         lookups: elevation.lookups,
         cacheHits: elevation.cacheHits,
         failures: elevation.failures,
@@ -6161,7 +6169,7 @@ async function runBuild() {
     const response = await fetch("/api/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ skipElevation: els.skipElevation.checked }),
+      body: JSON.stringify({}),
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
@@ -6179,7 +6187,7 @@ async function runBuild() {
         "error",
       );
     } else {
-      setStatus(payload.report?.elevation?.skipElevation ? "Build complete. Run a full build before promoting." : "Build complete. Ready to promote.");
+      setStatus("Build complete. Ready to promote.");
     }
   } finally {
     els.runBuild.disabled = false;
@@ -7240,6 +7248,18 @@ const VS_GHOST_SOURCE_ID = "vs-ghost-source";
 const VS_GHOST_LAYER_ID = "vs-ghost-layer";
 const VS_SNAP_THRESHOLD_M = 80;
 const VS_TICK_MS = 100;
+const VS_PLAYBACK_BEHAVIOR_LEGACY = "legacy";
+const VS_PLAYBACK_BEHAVIOR_NONE = "none";
+const VS_PLAYBACK_BEHAVIORS = new Set([
+  VS_PLAYBACK_BEHAVIOR_LEGACY,
+  VS_PLAYBACK_BEHAVIOR_NONE,
+]);
+
+function vsNormalizePlaybackBehavior(value) {
+  return VS_PLAYBACK_BEHAVIORS.has(value)
+    ? value
+    : VS_PLAYBACK_BEHAVIOR_LEGACY;
+}
 
 const videoSyncState = {
   slug: null,
@@ -7248,6 +7268,7 @@ const videoSyncState = {
   youtubeId: null,
   player: null,
   videoDuration: 0,
+  playbackBehavior: VS_PLAYBACK_BEHAVIOR_LEGACY,
   selectedIndex: -1,
   sync: null,            // createVideoSync() interpolator, rebuilt on changes
   ticker: null,          // setInterval id for the live readout + ghost
@@ -7260,6 +7281,10 @@ const vsEls = {
   close: document.getElementById("vs-close"),
   slug: document.getElementById("vs-slug"),
   ytUrl: document.getElementById("vs-yt-url"),
+  playbackBehavior: document.getElementById("vs-playback-behavior"),
+  bootstrapFile: document.getElementById("vs-bootstrap-file"),
+  bootstrapMaxError: document.getElementById("vs-bootstrap-max-error"),
+  bootstrapSpeed: document.getElementById("vs-bootstrap-speed"),
   player: document.getElementById("vs-player"),
   keyframesList: document.getElementById("vs-keyframes"),
   saveDraft: document.getElementById("vs-save-draft"),
@@ -7279,6 +7304,43 @@ function vsSetStatus(msg) {
 function vsSetBusy(busy) {
   if (vsEls.saveDraft) vsEls.saveDraft.disabled = busy;
   if (vsEls.promote) vsEls.promote.disabled = busy;
+  vsUpdateBootstrapControls(busy);
+}
+
+function vsCanBootstrapFromGps() {
+  const hasRoute = videoSyncState.routePolyline && videoSyncState.routePolyline.length >= 2;
+  const hasVideo = (
+    videoSyncState.youtubeId ||
+    vsExtractYouTubeId(vsEls.ytUrl?.value || "")
+  ) && videoSyncState.videoDuration > 0;
+  return Boolean(hasRoute && hasVideo);
+}
+
+function vsUpdateBootstrapControls(forceDisabled = false) {
+  const disabled = forceDisabled || !vsCanBootstrapFromGps();
+  for (const el of [
+    vsEls.bootstrapFile,
+    vsEls.bootstrapMaxError,
+    vsEls.bootstrapSpeed,
+  ]) {
+    if (el) el.disabled = disabled;
+  }
+}
+
+function vsReadNumberInput(input, fallback, predicate) {
+  const value = Number(input?.value);
+  return Number.isFinite(value) && predicate(value) ? value : fallback;
+}
+
+function vsFormatFraction(value) {
+  return Number.isFinite(value) ? value.toFixed(3) : "n/a";
+}
+
+function vsSetPlaybackBehavior(value) {
+  videoSyncState.playbackBehavior = vsNormalizePlaybackBehavior(value);
+  if (vsEls.playbackBehavior) {
+    vsEls.playbackBehavior.value = videoSyncState.playbackBehavior;
+  }
 }
 
 function vsExtractYouTubeId(url) {
@@ -7294,34 +7356,15 @@ function vsExtractYouTubeId(url) {
 // Returns { lat, lng, distanceMeters } or null if route empty.
 function vsSnapToPolyline(point, polyline) {
   if (!polyline || polyline.length < 2) return null;
-  const EARTH_R = 6371000;
-  const DEG = Math.PI / 180;
-  function hav(a, b) {
-    const dLat = (b.lat - a.lat) * DEG;
-    const dLng = (b.lng - a.lng) * DEG;
-    const h =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(a.lat * DEG) * Math.cos(b.lat * DEG) * Math.sin(dLng / 2) ** 2;
-    return 2 * EARTH_R * Math.asin(Math.sqrt(h));
-  }
-  let best = { lat: 0, lng: 0, dist: Infinity };
-  for (let i = 0; i < polyline.length - 1; i++) {
-    const a = polyline[i];
-    const b = polyline[i + 1];
-    const cosLat = Math.cos(((a.lat + b.lat) / 2) * DEG);
-    const ax = a.lng * cosLat, ay = a.lat;
-    const bx = b.lng * cosLat, by = b.lat;
-    const px = point.lng * cosLat, py = point.lat;
-    const dx = bx - ax, dy = by - ay;
-    const len2 = dx * dx + dy * dy;
-    let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
-    t = Math.max(0, Math.min(1, t));
-    const projLat = a.lat + (b.lat - a.lat) * t;
-    const projLng = a.lng + (b.lng - a.lng) * t;
-    const d = hav(point, { lat: projLat, lng: projLng });
-    if (d < best.dist) best = { lat: projLat, lng: projLng, dist: d };
-  }
-  return { lat: best.lat, lng: best.lng, distanceMeters: best.dist };
+  const cumulative = buildCumulativeDistances(polyline);
+  const snap = nearestPointOnPolyline(point, polyline, cumulative);
+  const snappedPoint = pointAtFraction(polyline, cumulative, snap.fraction);
+  return {
+    lat: snappedPoint.lat,
+    lng: snappedPoint.lng,
+    fraction: snap.fraction,
+    distanceMeters: snap.distanceMeters,
+  };
 }
 
 function vsLoadYouTubeIframeApi() {
@@ -7337,6 +7380,8 @@ function vsLoadYouTubeIframeApi() {
 async function vsLoadVideo(youtubeId) {
   if (videoSyncState.youtubeId === youtubeId && videoSyncState.player) return;
   videoSyncState.youtubeId = youtubeId;
+  videoSyncState.videoDuration = 0;
+  vsUpdateBootstrapControls();
   const YT = await vsLoadYouTubeIframeApi();
   vsEls.player.innerHTML = "";
   if (videoSyncState.player) {
@@ -7353,6 +7398,7 @@ async function vsLoadVideo(youtubeId) {
         if (typeof dur === "number" && dur > 0) {
           videoSyncState.videoDuration = dur;
           vsRebuildSync();
+          vsUpdateBootstrapControls();
         }
       },
     },
@@ -7435,6 +7481,7 @@ function vsRebuildSync() {
     videoSyncState.sync = null;
   }
   vsRenderGhost();
+  vsUpdateBootstrapControls();
 }
 
 // Move the blue "predicted position" ring to where the current keyframes say the
@@ -7653,7 +7700,7 @@ function handleVideoSyncMapClick(event) {
   const t = videoSyncState.player.getCurrentTime();
   // Replace any existing keyframe at same t (within 50ms), else insert sorted.
   const filtered = videoSyncState.keyframes.filter((kf) => Math.abs(kf.t - t) > 0.05);
-  filtered.push({ t, lat: snap.lat, lon: snap.lng });
+  filtered.push({ t, lat: snap.lat, lon: snap.lng, fraction: snap.fraction });
   filtered.sort((a, b) => a.t - b.t);
   videoSyncState.keyframes = filtered;
   videoSyncState.selectedIndex = filtered.findIndex((kf) => kf.t === t);
@@ -7661,6 +7708,85 @@ function handleVideoSyncMapClick(event) {
   vsRenderKeyframesList();
   vsRenderKeyframesLayer();
   vsSetStatus(`Added keyframe at ${vsFormatTime(t)}.`);
+}
+
+async function vsHandleBootstrapFile(file) {
+  if (!file) return;
+  if (!videoSyncState.routePolyline || videoSyncState.routePolyline.length < 2) {
+    vsSetStatus("Pick a route first.");
+    return;
+  }
+  const youtubeId = videoSyncState.youtubeId || vsExtractYouTubeId(vsEls.ytUrl.value);
+  const videoDuration =
+    videoSyncState.player?.getDuration?.() || videoSyncState.videoDuration;
+  if (!youtubeId || !videoDuration) {
+    vsSetStatus("Load a YouTube URL first (need its duration).");
+    return;
+  }
+
+  const maxErrorMeters = vsReadNumberInput(
+    vsEls.bootstrapMaxError,
+    10,
+    (value) => value >= 0,
+  );
+  const speedFactor = vsReadNumberInput(
+    vsEls.bootstrapSpeed,
+    5,
+    (value) => value > 0,
+  );
+
+  let csvText;
+  try {
+    csvText = await file.text();
+  } catch (err) {
+    vsSetStatus(`Couldn't read file: ${err.message}`);
+    return;
+  }
+
+  let result;
+  try {
+    result = bootstrapKeyframesFromGps({
+      csvText,
+      routeGeometry: videoSyncState.routePolyline,
+      videoDuration,
+      speedFactor,
+      maxErrorMeters,
+    });
+  } catch (err) {
+    vsSetStatus(`Bootstrap failed: ${err.message}`);
+    return;
+  }
+
+  if (result.keyframes.length < 2) {
+    vsSetStatus(
+      `Bootstrap produced ${result.keyframes.length} keyframes; check the GPS file matches this route.`,
+    );
+    return;
+  }
+  if (
+    videoSyncState.keyframes.length > 0 &&
+    !window.confirm(
+      `Replace ${videoSyncState.keyframes.length} existing keyframes with ${result.keyframes.length} from GPS?`,
+    )
+  ) {
+    vsSetStatus("Bootstrap cancelled.");
+    return;
+  }
+
+  videoSyncState.videoDuration = videoDuration;
+  videoSyncState.keyframes = result.keyframes;
+  videoSyncState.selectedIndex = -1;
+  vsRebuildSync();
+  vsRenderKeyframesList();
+  vsRenderKeyframesLayer();
+
+  const s = result.stats;
+  vsSetStatus(
+    `Bootstrapped ${s.keyframesOut} keyframes from ${s.fixesRead} fixes ` +
+    `(${s.offRouteDropped} off-route, ${s.beyondDurationDropped} beyond end, ` +
+    `${s.continuityDropped} continuity drops, ${s.continuityCorrections} continuity fixes; fractions ` +
+    `${vsFormatFraction(s.startFraction)} -> ${vsFormatFraction(s.endFraction)}).`,
+  );
 }
 
 async function vsLoadRouteForSlug(slug) {
@@ -7671,6 +7797,7 @@ async function vsLoadRouteForSlug(slug) {
     vsSetStatus(`Route load failed: ${err}`);
     videoSyncState.routePolyline = null;
     vsRenderRouteLayer();
+    vsRebuildSync();
     return;
   }
   const polyline = await r.json();
@@ -7699,10 +7826,15 @@ async function vsLoadExistingDraft(slug) {
   const r = await fetch(`/api/video-keyframes/${slug}/draft`);
   if (!r.ok) {
     vsEls.ytUrl.value = "";
+    videoSyncState.youtubeId = null;
+    videoSyncState.videoDuration = 0;
+    vsSetPlaybackBehavior(VS_PLAYBACK_BEHAVIOR_LEGACY);
+    vsUpdateBootstrapControls();
     return;
   }
   const draft = await r.json();
   videoSyncState.keyframes = (draft.keyframes || []).slice().sort((a, b) => a.t - b.t);
+  vsSetPlaybackBehavior(draft.playbackBehavior);
   vsRenderKeyframesList();
   vsRenderKeyframesLayer();
   if (draft.youtubeId) {
@@ -7711,6 +7843,7 @@ async function vsLoadExistingDraft(slug) {
   }
   if (typeof draft.videoDuration === "number") {
     videoSyncState.videoDuration = draft.videoDuration;
+    vsUpdateBootstrapControls();
   }
   vsRebuildSync();
   vsSetStatus(`Loaded draft with ${videoSyncState.keyframes.length} keyframes.`);
@@ -7753,6 +7886,7 @@ function vsBuildDraftPayload() {
       version: 1,
       youtubeId,
       videoDuration,
+      playbackBehavior: videoSyncState.playbackBehavior,
       keyframes: videoSyncState.keyframes.slice().sort((a, b) => a.t - b.t),
     },
   };
@@ -7776,9 +7910,25 @@ async function vsSaveDraft({ updateStatus = true } = {}) {
 
 // Wire static event handlers once at startup.
 vsEls.slug.addEventListener("change", () => vsOnSlugChange().catch(showError));
+vsEls.playbackBehavior.addEventListener("change", (event) => {
+  vsSetPlaybackBehavior(event.target.value);
+  vsSetStatus(`Playback behavior: ${videoSyncState.playbackBehavior}.`);
+});
 vsEls.ytUrl.addEventListener("change", (e) => {
   const id = vsExtractYouTubeId(e.target.value);
-  if (id) vsLoadVideo(id).catch((err) => vsSetStatus(`YT load failed: ${err.message}`));
+  if (id) {
+    vsLoadVideo(id).catch((err) => vsSetStatus(`YT load failed: ${err.message}`));
+  } else {
+    videoSyncState.youtubeId = null;
+    videoSyncState.videoDuration = 0;
+    vsRebuildSync();
+    vsUpdateBootstrapControls();
+  }
+});
+vsEls.bootstrapFile.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  vsHandleBootstrapFile(file).catch((err) => vsSetStatus(`Bootstrap failed: ${err.message}`));
+  event.target.value = "";
 });
 vsEls.saveDraft.addEventListener("click", async () => {
   try {
@@ -7846,6 +7996,24 @@ const routeCatalogState = {
   draft: null,
   selectedSlug: null,
   places: [],
+  imageCandidates: new Map(),
+};
+
+const ROUTE_MAP_CAPTURE = {
+  width: 1200,
+  height: 800,
+  style: "mapbox://styles/mapbox/outdoors-v12",
+  routeSourceId: "rc-capture-route",
+  routeHaloLayerId: "rc-capture-route-halo",
+  routeLineLayerId: "rc-capture-route-line",
+  pointsSourceId: "rc-capture-points",
+  pointsLayerId: "rc-capture-points",
+};
+
+const routeMapCaptureState = {
+  map: null,
+  host: document.getElementById("rc-map-capture-host"),
+  busy: false,
 };
 
 const rcEls = {
@@ -7870,6 +8038,94 @@ function rcSelectedEntry() {
   );
 }
 
+function rcEntryIssues(entry) {
+  const errors = [];
+  const warnings = [];
+  if (!entry?.slug || !/^[a-z][a-z0-9-]*$/.test(entry.slug)) errors.push("Invalid slug");
+  if (!entry?.name) errors.push("Missing name");
+  if (!entry?.summary) errors.push("Missing summary");
+  if (!entry?.route) errors.push("Missing route token");
+  if (!entry?.description) warnings.push("Missing long description");
+  if (!entry?.routeMapImage?.thumbnail && !entry?.routeMapImage?.photo) {
+    warnings.push("Missing route map image");
+  } else if (entry?.routeMapImage?.source?.type !== "mapbox-screenshot") {
+    warnings.push("Route map image has no capture metadata");
+  }
+  if (!rcEntryDisplayImage(entry)) warnings.push("Missing representative image");
+  if (!entry?.start) warnings.push("Missing start point");
+  if ((entry?.story?.enabled || entry?.featured) && !entry?.featured) {
+    warnings.push("Story flag set; confirm a route story module exists");
+  }
+  return { errors, warnings };
+}
+
+function rcEntryDisplayImage(entry) {
+  if (entry?.heroImage?.thumbnail || entry?.heroImage?.photo) return entry.heroImage;
+  const startImage = Array.isArray(entry?.start?.images) ? entry.start.images[0] : null;
+  if (startImage?.thumbnail || startImage?.photo) return startImage;
+  const endImage = Array.isArray(entry?.end?.images) ? entry.end.images[0] : null;
+  if (endImage?.thumbnail || endImage?.photo) return endImage;
+  return null;
+}
+
+function extractRouteTokenInput(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, window.location.href);
+    const route = url.searchParams.get("route");
+    if (route) return route;
+  } catch {}
+  const match = raw.match(/[?&]route=([^&#\s]+)/);
+  if (match) return decodeURIComponent(match[1]);
+  return raw;
+}
+
+function rcImageCandidateCacheKey(entry) {
+  const route = String(entry?.route || "").trim();
+  if (!route) return "";
+  return `${String(entry?.slug || "").trim()}\n${route}`;
+}
+
+function rcEnsureImageCandidates(entry) {
+  const key = rcImageCandidateCacheKey(entry);
+  if (!key) return { status: "empty", candidates: [] };
+  const cached = routeCatalogState.imageCandidates.get(key);
+  if (cached) return cached;
+
+  const loading = { status: "loading", candidates: [] };
+  routeCatalogState.imageCandidates.set(key, loading);
+  fetch("/api/route-catalog/image-candidates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slug: entry?.slug || null, route: entry?.route || "" }),
+  })
+    .then(async (res) => {
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      routeCatalogState.imageCandidates.set(key, {
+        status: "ready",
+        candidates: Array.isArray(body.candidates) ? body.candidates : [],
+      });
+    })
+    .catch((error) => {
+      routeCatalogState.imageCandidates.set(key, {
+        status: "error",
+        error: error instanceof Error ? error.message : String(error),
+        candidates: [],
+      });
+    })
+    .finally(() => {
+      if (rcImageCandidateCacheKey(rcSelectedEntry()) === key) rcRenderDetail();
+    });
+  return loading;
+}
+
+function rcClearImageCandidateCache(entry) {
+  const key = rcImageCandidateCacheKey(entry);
+  if (key) routeCatalogState.imageCandidates.delete(key);
+}
+
 function rcRenderList() {
   const draft = routeCatalogState.draft;
   rcEls.list.innerHTML = "";
@@ -7883,8 +8139,14 @@ function rcRenderList() {
   for (const entry of draft.entries) {
     const li = document.createElement("li");
     if (entry.slug === routeCatalogState.selectedSlug) li.classList.add("selected");
+    const issues = rcEntryIssues(entry);
+    if (issues.errors.length > 0) li.classList.add("invalid");
     const main = document.createElement("span");
-    main.textContent = `${entry.name || entry.slug}${entry.featured ? " ⭐" : ""}`;
+    main.textContent = [
+      entry.name || entry.slug,
+      entry.featured || entry.story?.enabled ? "⭐" : "",
+      issues.warnings.length > 0 ? "⚠" : "",
+    ].filter(Boolean).join(" ");
     const tags = document.createElement("span");
     tags.className = "rc-tags";
     const dist = entry.distanceKm != null ? `${entry.distanceKm} km` : "?";
@@ -7909,11 +8171,13 @@ function rcRenderDetail() {
   }
   rcEls.detail.hidden = false;
   rcEls.detail.innerHTML = "";
+  rcEls.detail.appendChild(rcReadinessPanel(entry));
   const fields = [
     { key: "slug", label: "Slug" },
     { key: "name", label: "Name" },
     { key: "summary", label: "Summary" },
-    { key: "route", label: "Route token" },
+    { key: "description", label: "Description", textarea: true },
+    { key: "route", label: "Route token / share URL", routeToken: true },
     { key: "notes", label: "Notes", textarea: true },
   ];
   for (const f of fields) {
@@ -7924,12 +8188,25 @@ function rcRenderDetail() {
     const input = document.createElement(f.textarea ? "textarea" : "input");
     input.value = entry[f.key] ?? "";
     if (!f.textarea) input.type = "text";
-    input.addEventListener("input", (e) => {
-      entry[f.key] = e.target.value;
-    });
+    if (f.routeToken) {
+      input.placeholder = "Paste a route token or a full /?route=... share URL";
+      input.addEventListener("change", (e) => {
+        rcClearImageCandidateCache(entry);
+        entry[f.key] = extractRouteTokenInput(e.target.value);
+        e.target.value = entry[f.key];
+        rcRenderList();
+        rcRenderDetail();
+      });
+    } else {
+      input.addEventListener("input", (e) => {
+        entry[f.key] = e.target.value;
+      });
+    }
     row.append(label, input);
     rcEls.detail.appendChild(row);
   }
+  rcEls.detail.appendChild(rcRouteMapImageSection(entry));
+  rcEls.detail.appendChild(rcHeroImageSection(entry));
   const featuredRow = document.createElement("div");
   featuredRow.className = "rc-row";
   const fLabel = document.createElement("label");
@@ -7977,6 +8254,520 @@ function rcRenderDetail() {
   });
   actionRow.appendChild(delBtn);
   rcEls.detail.appendChild(actionRow);
+}
+
+function rcReadinessPanel(entry) {
+  const panel = document.createElement("div");
+  panel.className = "rc-readiness";
+  const issues = rcEntryIssues(entry);
+  const title = document.createElement("strong");
+  title.textContent =
+    issues.errors.length > 0
+      ? `Blocking issues (${issues.errors.length})`
+      : issues.warnings.length > 0
+        ? `Warnings (${issues.warnings.length})`
+        : "Ready to promote";
+  panel.appendChild(title);
+  const list = document.createElement("ul");
+  const rows = [
+    ...issues.errors.map((text) => ({ text, type: "error" })),
+    ...issues.warnings.map((text) => ({ text, type: "warn" })),
+  ];
+  if (rows.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "Required route catalog fields are present.";
+    list.appendChild(li);
+  } else {
+    for (const row of rows) {
+      const li = document.createElement("li");
+      li.className = `rc-readiness__${row.type}`;
+      li.textContent = row.text;
+      list.appendChild(li);
+    }
+  }
+  panel.appendChild(list);
+  return panel;
+}
+
+function rcRouteMapImageSection(entry) {
+  const section = document.createElement("div");
+  section.className = "rc-endpoint rc-route-map-image";
+
+  const heading = document.createElement("div");
+  heading.className = "rc-endpoint-heading";
+  heading.textContent = "Route map image";
+  section.appendChild(heading);
+
+  const image = entry.routeMapImage;
+  if (image?.thumbnail || image?.photo) {
+    const img = document.createElement("img");
+    img.className = "rc-route-map-image__preview";
+    img.src = dataImageSrc(image.thumbnail || image.photo);
+    img.alt = image.alt || `Route map ${entry.name || entry.slug}`;
+    section.appendChild(img);
+  }
+
+  const source = image?.source || {};
+  const note = document.createElement("p");
+  note.className = image ? "rc-help" : "rc-help rc-help--warn";
+  if (!image) {
+    note.textContent = "No generated route map image yet.";
+  } else if (source.type === "mapbox-screenshot") {
+    note.textContent = [
+      "Generated from Mapbox screenshot",
+      source.mapVersion ? `map ${source.mapVersion}` : "",
+      source.generatedAt ? new Date(source.generatedAt).toLocaleString() : "",
+    ].filter(Boolean).join(" · ");
+  } else {
+    note.textContent = "Image exists, but capture metadata is missing.";
+  }
+  section.appendChild(note);
+
+  const actions = document.createElement("div");
+  actions.className = "rc-route-map-image__actions";
+
+  const generate = document.createElement("button");
+  generate.type = "button";
+  generate.className = "secondary-button";
+  generate.textContent = image ? "Regenerate map image" : "Generate map image";
+  generate.disabled = routeMapCaptureState.busy || !entry.route;
+  generate.addEventListener("click", async () => {
+    try {
+      await rcGenerateRouteMapImage(entry);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      rcSetStatus(`Map image failed: ${message}`);
+      showAlert("Route map image failed", message);
+    }
+  });
+  actions.appendChild(generate);
+
+  if (image) {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary-button danger";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      delete entry.routeMapImage;
+      rcRenderList();
+      rcRenderDetail();
+    });
+    actions.appendChild(remove);
+  }
+
+  section.appendChild(actions);
+  return section;
+}
+
+async function rcGenerateRouteMapImage(entry) {
+  if (!entry?.route) throw new Error("Route token is required.");
+  if (routeMapCaptureState.busy) return;
+  routeMapCaptureState.busy = true;
+  rcSetStatus(`Generating map image for ${entry.slug}…`);
+  rcRenderDetail();
+  try {
+    const preview = await rcLoadRoutePreview(entry);
+    const dataUrl = await rcCaptureRouteMap(preview.geometry);
+    const res = await fetch("/api/route-catalog/map-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        slug: entry.slug,
+        route: entry.route,
+        data: dataUrl,
+        alt: `מפת מסלול ${entry.name || entry.slug}`,
+        style: ROUTE_MAP_CAPTURE.style,
+        width: ROUTE_MAP_CAPTURE.width,
+        height: ROUTE_MAP_CAPTURE.height,
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.ok) throw new Error(body.error || `upload failed (${res.status})`);
+    entry.routeMapImage = body.image;
+    rcSetStatus(`Map image generated for ${entry.slug}. Save draft to persist it.`);
+  } finally {
+    routeMapCaptureState.busy = false;
+    rcRenderList();
+    rcRenderDetail();
+  }
+}
+
+async function rcLoadRoutePreview(entry) {
+  const res = await fetch("/api/route-catalog/route-preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slug: entry.slug, route: entry.route }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.ok) throw new Error(body.error || `preview failed (${res.status})`);
+  if (!Array.isArray(body.geometry) || body.geometry.length < 2) {
+    throw new Error("Route preview has no geometry.");
+  }
+  return body;
+}
+
+async function rcCaptureRouteMap(geometry) {
+  const captureMap = await rcEnsureCaptureMap();
+  await rcRenderCaptureRoute(captureMap, geometry);
+  await rcWaitForMapEvent(captureMap, "idle", 8000);
+  const canvas = captureMap.getCanvas();
+  return rcCanvasToDataUrl(canvas);
+}
+
+async function rcEnsureCaptureMap() {
+  if (!routeMapCaptureState.host) {
+    throw new Error("Route map capture host is missing.");
+  }
+  if (routeMapCaptureState.map) return routeMapCaptureState.map;
+  routeMapCaptureState.host.style.width = `${ROUTE_MAP_CAPTURE.width}px`;
+  routeMapCaptureState.host.style.height = `${ROUTE_MAP_CAPTURE.height}px`;
+  const captureMap = new mapboxgl.Map({
+    container: routeMapCaptureState.host,
+    style: ROUTE_MAP_CAPTURE.style,
+    center: [35.617497, 33.183536],
+    zoom: 10,
+    interactive: false,
+    preserveDrawingBuffer: true,
+    attributionControl: false,
+  });
+  routeMapCaptureState.map = captureMap;
+  await rcWaitForMapEvent(captureMap, "style.load", 12000);
+  return captureMap;
+}
+
+async function rcRenderCaptureRoute(captureMap, geometry) {
+  captureMap.resize();
+  const coordinates = geometry
+    .map((point) => {
+      if (Array.isArray(point) && point.length >= 2) return [Number(point[0]), Number(point[1])];
+      return [Number(point?.lng), Number(point?.lat)];
+    })
+    .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat));
+  if (coordinates.length < 2) throw new Error("Route geometry is too short.");
+
+  for (const layerId of [
+    ROUTE_MAP_CAPTURE.routeLineLayerId,
+    ROUTE_MAP_CAPTURE.routeHaloLayerId,
+    ROUTE_MAP_CAPTURE.pointsLayerId,
+  ]) {
+    if (captureMap.getLayer(layerId)) captureMap.removeLayer(layerId);
+  }
+  for (const sourceId of [
+    ROUTE_MAP_CAPTURE.routeSourceId,
+    ROUTE_MAP_CAPTURE.pointsSourceId,
+  ]) {
+    if (captureMap.getSource(sourceId)) captureMap.removeSource(sourceId);
+  }
+
+  captureMap.addSource(ROUTE_MAP_CAPTURE.routeSourceId, {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      properties: {},
+      geometry: { type: "LineString", coordinates },
+    },
+  });
+  captureMap.addLayer({
+    id: ROUTE_MAP_CAPTURE.routeHaloLayerId,
+    type: "line",
+    source: ROUTE_MAP_CAPTURE.routeSourceId,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#ffffff",
+      "line-width": 15,
+      "line-opacity": 0.9,
+    },
+  });
+  captureMap.addLayer({
+    id: ROUTE_MAP_CAPTURE.routeLineLayerId,
+    type: "line",
+    source: ROUTE_MAP_CAPTURE.routeSourceId,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#245943",
+      "line-width": 8,
+      "line-opacity": 0.96,
+    },
+  });
+
+  const start = coordinates[0];
+  const end = coordinates[coordinates.length - 1];
+  captureMap.addSource(ROUTE_MAP_CAPTURE.pointsSourceId, {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { role: "start" },
+          geometry: { type: "Point", coordinates: start },
+        },
+        {
+          type: "Feature",
+          properties: { role: "end" },
+          geometry: { type: "Point", coordinates: end },
+        },
+      ],
+    },
+  });
+  captureMap.addLayer({
+    id: ROUTE_MAP_CAPTURE.pointsLayerId,
+    type: "circle",
+    source: ROUTE_MAP_CAPTURE.pointsSourceId,
+    paint: {
+      "circle-color": ["match", ["get", "role"], "start", "#245943", "#c97b3a"],
+      "circle-radius": 9,
+      "circle-stroke-width": 4,
+      "circle-stroke-color": "#ffffff",
+    },
+  });
+
+  const bounds = new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]);
+  coordinates.forEach((coord) => bounds.extend(coord));
+  captureMap.fitBounds(bounds, {
+    padding: 90,
+    duration: 0,
+    maxZoom: 14,
+  });
+}
+
+function rcWaitForMapEvent(captureMap, eventName, timeoutMs) {
+  return new Promise((resolveReady, rejectReady) => {
+    let timeoutId = null;
+    const cleanup = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      captureMap.off(eventName, onEvent);
+      captureMap.off("error", onError);
+    };
+    const onEvent = () => {
+      cleanup();
+      resolveReady();
+    };
+    const onError = (event) => {
+      cleanup();
+      rejectReady(event?.error || new Error(`Mapbox ${eventName} failed`));
+    };
+    timeoutId = window.setTimeout(() => {
+      cleanup();
+      rejectReady(new Error(`Timed out waiting for map ${eventName}`));
+    }, timeoutMs);
+    captureMap.once(eventName, onEvent);
+    captureMap.once("error", onError);
+  });
+}
+
+function rcCanvasToDataUrl(canvas) {
+  return new Promise((resolveDataUrl, rejectDataUrl) => {
+    if (!canvas) {
+      rejectDataUrl(new Error("Map canvas is missing."));
+      return;
+    }
+    if (canvas.toBlob) {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          rejectDataUrl(new Error("Map canvas capture failed."));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolveDataUrl(reader.result);
+        reader.onerror = () => rejectDataUrl(reader.error || new Error("Blob read failed"));
+        reader.readAsDataURL(blob);
+      }, "image/png");
+      return;
+    }
+    try {
+      resolveDataUrl(canvas.toDataURL("image/png"));
+    } catch (error) {
+      rejectDataUrl(error);
+    }
+  });
+}
+
+function rcHeroImageSection(entry) {
+  const section = document.createElement("div");
+  section.className = "rc-endpoint";
+  const heading = document.createElement("div");
+  heading.className = "rc-endpoint-heading";
+  heading.textContent = "Representative image";
+  section.appendChild(heading);
+
+  const image = entry.heroImage;
+  if (image?.thumbnail || image?.photo) {
+    const strip = document.createElement("div");
+    strip.className = "rc-endpoint-images";
+    const fig = document.createElement("div");
+    const img = document.createElement("img");
+    img.src = dataImageSrc(image.thumbnail || image.photo);
+    img.alt = "";
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.className = "secondary-button danger";
+    rm.textContent = "Remove";
+    rm.addEventListener("click", () => {
+      delete entry.heroImage;
+      rcRenderList();
+      rcRenderDetail();
+    });
+    fig.append(img, rm);
+    strip.appendChild(fig);
+    section.appendChild(strip);
+  }
+
+  const altRow = document.createElement("div");
+  altRow.className = "rc-row";
+  const altLabel = document.createElement("label");
+  altLabel.textContent = "Alt text:";
+  const altInput = document.createElement("input");
+  altInput.type = "text";
+  altInput.value = entry.heroImage?.alt || "";
+  altInput.addEventListener("input", (event) => {
+    if (entry.heroImage?.photo || entry.heroImage?.thumbnail) {
+      entry.heroImage = {
+        ...entry.heroImage,
+        alt: event.target.value,
+      };
+    }
+  });
+  altRow.append(altLabel, altInput);
+  section.appendChild(altRow);
+
+  const upRow = document.createElement("div");
+  upRow.className = "rc-row";
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  const status = document.createElement("span");
+  status.className = "data-image-status";
+  fileInput.addEventListener("change", async () => {
+    const file = (fileInput.files || [])[0];
+    if (!file) return;
+    status.textContent = "Uploading…";
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const res = await fetch("/api/poi-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: `${entry.slug}-hero`, data: dataUrl }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || `upload failed (${res.status})`);
+      entry.heroImage = {
+        photo: body.photo,
+        thumbnail: body.thumbnail,
+        alt: entry.heroImage?.alt || entry.name || "",
+      };
+      rcRenderList();
+      rcRenderDetail();
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : String(error);
+    } finally {
+      fileInput.value = "";
+    }
+  });
+  upRow.append(fileInput, status);
+  section.appendChild(upRow);
+  section.appendChild(rcSegmentImagePicker(entry));
+
+  const fallback = rcEntryDisplayImage(entry);
+  if (!entry.heroImage && fallback) {
+    const note = document.createElement("p");
+    note.className = "rc-help";
+    note.textContent = "No route-level image set. The public card can fall back to start/end images.";
+    section.appendChild(note);
+  }
+
+  return section;
+}
+
+function rcSegmentImagePicker(entry) {
+  const picker = document.createElement("div");
+  picker.className = "rc-segment-image-picker";
+
+  const header = document.createElement("div");
+  header.className = "rc-segment-image-picker__header";
+  const title = document.createElement("strong");
+  title.textContent = "Images from included segments";
+  const refresh = document.createElement("button");
+  refresh.type = "button";
+  refresh.className = "secondary-button";
+  refresh.textContent = "Refresh";
+  refresh.disabled = !entry.route;
+  refresh.addEventListener("click", () => {
+    rcClearImageCandidateCache(entry);
+    rcRenderDetail();
+  });
+  header.append(title, refresh);
+  picker.appendChild(header);
+
+  if (!entry.route) {
+    const note = document.createElement("p");
+    note.className = "rc-help";
+    note.textContent = "Add a route token to list images from the route's included segments.";
+    picker.appendChild(note);
+    return picker;
+  }
+
+  const state = rcEnsureImageCandidates(entry);
+  if (state.status === "loading") {
+    const note = document.createElement("p");
+    note.className = "rc-help";
+    note.textContent = "Loading segment images…";
+    picker.appendChild(note);
+    return picker;
+  }
+  if (state.status === "error") {
+    const note = document.createElement("p");
+    note.className = "rc-help rc-help--error";
+    note.textContent = `Could not load segment images: ${state.error}`;
+    picker.appendChild(note);
+    return picker;
+  }
+
+  const candidates = Array.isArray(state.candidates) ? state.candidates : [];
+  if (candidates.length === 0) {
+    const note = document.createElement("p");
+    note.className = "rc-help";
+    note.textContent = "No reusable images found on this route's included segments.";
+    picker.appendChild(note);
+    return picker;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "rc-segment-image-grid";
+  const currentPhoto = entry.heroImage?.photo || "";
+  const currentThumb = entry.heroImage?.thumbnail || "";
+  candidates.forEach((candidate) => {
+    const choice = document.createElement("button");
+    choice.type = "button";
+    choice.className = "rc-segment-image-choice";
+    const isCurrent =
+      (currentPhoto && currentPhoto === candidate.photo) ||
+      (currentThumb && currentThumb === candidate.thumbnail);
+    if (isCurrent) choice.classList.add("selected");
+    choice.title = candidate.segmentName || candidate.label || "";
+    choice.addEventListener("click", () => {
+      entry.heroImage = {
+        photo: candidate.photo,
+        thumbnail: candidate.thumbnail || candidate.photo,
+        alt: entry.heroImage?.alt || candidate.alt || candidate.label || entry.name || "",
+      };
+      rcRenderList();
+      rcRenderDetail();
+    });
+
+    const img = document.createElement("img");
+    img.src = dataImageSrc(candidate.thumbnail || candidate.photo);
+    img.alt = "";
+    const meta = document.createElement("span");
+    meta.className = "rc-segment-image-choice__meta";
+    meta.textContent = candidate.label || candidate.segmentName || "Segment image";
+    const segment = document.createElement("small");
+    segment.textContent = candidate.segmentName || "";
+    choice.append(img, meta, segment);
+    grid.appendChild(choice);
+  });
+  picker.appendChild(grid);
+  return picker;
 }
 
 // Editor sub-form for a route start/end point: name, description, and a single
@@ -8107,7 +8898,13 @@ async function rcSaveDraft() {
     body: JSON.stringify(routeCatalogState.draft),
   });
   const result = await r.json().catch(() => ({}));
-  rcSetStatus(r.ok ? "Draft saved." : `Save failed: ${result.error || r.statusText}`);
+  if (!r.ok) {
+    const message = result.error || r.statusText;
+    rcSetStatus(`Save failed: ${message}`);
+    showAlert("Route catalog save failed", message);
+    throw markAlertShown(new Error(message));
+  }
+  rcSetStatus("Draft saved.");
 }
 
 async function rcRecompute() {
@@ -8119,7 +8916,9 @@ async function rcRecompute() {
   });
   const result = await r.json().catch(() => ({}));
   if (!r.ok) {
-    rcSetStatus(`Recompute failed: ${result.error || r.statusText}`);
+    const message = result.error || r.statusText;
+    rcSetStatus(`Recompute failed: ${message}`);
+    showAlert("Route catalog recompute failed", message);
     return;
   }
   routeCatalogState.draft = result;
@@ -8134,19 +8933,25 @@ async function rcPromote() {
   const r = await fetch("/api/route-catalog/promote", { method: "POST" });
   const result = await r.json().catch(() => ({}));
   if (!r.ok) {
-    rcSetStatus(`Promote failed: ${result.error || r.statusText}`);
+    const message = result.error || r.statusText;
+    rcSetStatus(`Promote failed: ${message}`);
+    showAlert("Route catalog promote failed", message);
     return;
   }
   const snapErrs = result.snapshots?.errors ?? [];
+  let message;
   if (snapErrs.length) {
     const slugs = snapErrs.map((e) => e?.slug ?? "?").join(", ");
-    rcSetStatus(
-      `Promoted (${result.entryCount} entries) — ${snapErrs.length} snapshot(s) FAILED: ${slugs}`,
+    message = `Promoted (${result.entryCount} entries) — ${snapErrs.length} snapshot(s) FAILED: ${slugs}`;
+    showAlert(
+      "Route snapshot generation failed",
+      `The catalog was promoted, but these route snapshots failed: ${slugs}`,
     );
   } else {
-    rcSetStatus(`Promoted (${result.entryCount} entries).`);
+    message = `Promoted (${result.entryCount} entries).`;
   }
   await rcLoad();
+  rcSetStatus(message);
 }
 
 function rcNewEntry() {
@@ -8163,6 +8968,7 @@ function rcNewEntry() {
     slug,
     name: slug,
     summary: "",
+    description: "",
     route: "",
     notes: "",
     featured: false,

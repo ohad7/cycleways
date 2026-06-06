@@ -18,6 +18,7 @@ import {
 import {
   previewSlideForCursor,
   routePoiStories,
+  routeVideoCueSlides,
 } from "../src/components/featured/routePoiStoryData.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
@@ -222,7 +223,23 @@ const points = [
     routeFraction: 0.1,
     photo: "start.webp", // legacy single image
   },
-  { id: "warn", type: "gate", routeProgressMeters: 5 }, // not gallery eligible
+  {
+    id: "warn",
+    type: "gate",
+    routeProgressMeters: 5,
+    routeFraction: 0.005,
+  }, // not gallery eligible
+  {
+    id: "warn-img",
+    type: "warning",
+    name: "Image warning",
+    information: "warning text",
+    routeProgressMeters: 250,
+    routeFraction: 0.25,
+    gallery: false,
+    photo: "warn.webp",
+    thumbnail: "warn-thumb.webp",
+  },
   { id: "nogal", type: "cafe", gallery: false, routeProgressMeters: 1, photo: "x.webp" },
 ];
 
@@ -252,10 +269,38 @@ assert.deepEqual(
 assert.equal(stories[0].name, "Start view");
 assert.equal(stories[1].description, "desc");
 
+const videoCues = routeVideoCueSlides(null, { activeDataPoints: points });
+assert.deepEqual(
+  videoCues.map((s) => `${s.poiId}:${s.kind || "poi"}:${s.thumbnail || "no-image"}`),
+  [
+    "warn:warning:no-image",
+    "start:poi:start.webp",
+    "warn-img:warning:warn-thumb.webp",
+    "mid:poi:mid-1-t.webp",
+    "mid:poi:mid-2-t.webp",
+  ],
+);
+assert.equal(previewSlideForCursor(videoCues, 0.25, 5000)?.poiId, "warn-img");
+assert.equal(previewSlideForCursor(videoCues, 0.005, 5000)?.poiId, "warn");
+
 assert.equal(previewSlideForCursor(slides, 0.1, 5000)?.poiId, "start");
 assert.equal(previewSlideForCursor(slides, 0.115, 5000)?.poiId, "start");
 assert.equal(previewSlideForCursor(slides, 0.117, 5000), null);
 assert.equal(previewSlideForCursor(slides, 0.13, 5000), null);
+assert.equal(
+  previewSlideForCursor(slides, 0.13, 5000, {
+    maxFraction: 0.05,
+    maxMeters: 500,
+  })?.poiId,
+  "start",
+);
+assert.equal(
+  previewSlideForCursor(slides, 0.13, 5000, {
+    maxFraction: 0.05,
+    maxMeters: 100,
+  }),
+  null,
+);
 assert.equal(previewSlideForCursor(slides, 0.5, 5000)?.poiId, "mid");
 assert.equal(previewSlideForCursor(slides, Number.NaN, 5000), null);
 assert.equal(

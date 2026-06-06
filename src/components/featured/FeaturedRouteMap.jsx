@@ -4,9 +4,12 @@ import MapView from "../../map/MapView.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import { useIsMobile } from "./useIsMobile.js";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
+import {
+  VIDEO_CURSOR_DEFAULT_VARIANT,
+} from "@cycleways/core/map/mapStyles.js";
 
 function scrollRoutePlayerIntoView() {
-  const target = document.querySelector(".fv-video-shell");
+  const target = document.querySelector("[data-route-stage]") || document.querySelector(".fv-video-shell");
   if (!target) return;
   const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   target.scrollIntoView({
@@ -21,7 +24,7 @@ export default function FeaturedRouteMapSlot({
   autoResetAfterInteraction = false,
   autoResetDelayMs = 8000,
   routeFitPadding,
-  videoCursorVariant = 1,
+  videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
 }) {
   const isMobile = useIsMobile();
   const {

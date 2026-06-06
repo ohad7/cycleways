@@ -1,7 +1,7 @@
 import { getStoredItem } from "../platform/storage.js";
 
 const DEFAULT_FEATURE_FLAGS = {
-  routeDiscovery: false,
+  routeDiscovery: true,
   segmentQualityPublicDisplay: false,
   segmentQualityRouting: false,
 };
