@@ -62,7 +62,9 @@ import {
 } from "../platform/analytics.js";
 import { getDistance } from "../utils/distance.js";
 
-export function useCyclewaysApp() {
+export function useCyclewaysApp({
+  enableRouteDirectionAnimation = true,
+} = {}) {
   const [state, setState] = useState({
     status: "loading",
     assets: null,
@@ -91,7 +93,7 @@ export function useCyclewaysApp() {
   const routeClickProcessingRef = useRef(false);
   const routeClickIdRef = useRef(0);
   const directionAnimatorRef = useRef(null);
-  if (directionAnimatorRef.current === null) {
+  if (enableRouteDirectionAnimation && directionAnimatorRef.current === null) {
     directionAnimatorRef.current = createRouteDirectionAnimator();
   }
   const isDraggingRef = useRef(false);
@@ -113,6 +115,15 @@ export function useCyclewaysApp() {
   useEffect(() => {
     routePointDragPreviewRef.current = routePointDragPreview;
   }, [routePointDragPreview]);
+
+  useEffect(() => {
+    if (enableRouteDirectionAnimation || !directionAnimatorRef.current) {
+      return undefined;
+    }
+    directionAnimatorRef.current.dispose();
+    directionAnimatorRef.current = null;
+    return undefined;
+  }, [enableRouteDirectionAnimation]);
 
   useEffect(() => {
     return () => {
@@ -286,6 +297,7 @@ export function useCyclewaysApp() {
   }, []);
 
   useEffect(() => {
+    if (!enableRouteDirectionAnimation) return;
     const animator = directionAnimatorRef.current;
     if (!animator) return;
     if (isDragging) return;
@@ -305,7 +317,7 @@ export function useCyclewaysApp() {
     }
 
     animator.trigger(geometry, indices);
-  }, [routeState.geometry, routeState.points, isDragging]);
+  }, [enableRouteDirectionAnimation, routeState.geometry, routeState.points, isDragging]);
 
   const clearRouteUrl = useCallback(() => {
     if (!hasQueryParam("route")) return;

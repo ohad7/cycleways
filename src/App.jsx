@@ -1,10 +1,21 @@
-import React, { lazy, Suspense, useMemo, useState } from "react";
+import React, { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import ContentSections from "./components/ContentSections.jsx";
 import Icon from "./components/Icon.jsx";
 import DataMarkerCard from "./components/DataMarkerCard.jsx";
 import ElevationProfile, { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import PageShell from "./components/PageShell.jsx";
 import { getRouteMessage } from "./components/RoutePanel.jsx";
+import RoutePlaybackControls from "./components/featured/RoutePlaybackControls.jsx";
+import {
+  nearestPreviewForCursor,
+  routeVideoCueSlides,
+} from "./components/featured/routePoiStoryData.js";
+import RoutePoiPlaybackPreview from "./components/routePlayback/RoutePoiPlaybackPreview.jsx";
+import {
+  MAP_PLAYBACK_PREVIEW_MAX_FRACTION,
+  MAP_PLAYBACK_PREVIEW_MAX_METERS,
+  useSyntheticRoutePlayback,
+} from "./components/routePlayback/useRoutePlayback.js";
 import Tutorial from "./components/Tutorial.jsx";
 import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
@@ -38,7 +49,6 @@ function App() {
     shareUrl,
     shareInfo,
     featureFlags,
-    directionAnimatorRef,
     handleOpenTutorial,
     handleCloseTutorial,
     handleSearchSubmit,
@@ -65,7 +75,7 @@ function App() {
     handleSegmentHover,
     handleViewportIdle,
     handleElevationHover,
-  } = useCyclewaysApp();
+  } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
 
   // Fly to a focused data point (warning click). Memoised on the focus request
   // so MapSurface only flies when the token changes, not on every render.
@@ -81,6 +91,118 @@ function App() {
         : null,
     [mapUi.dataMarkerFocus],
   );
+  const plannerRouteReady = routeState.geometry.length >= 2;
+  const plannerCueSlides = useMemo(
+    () => routeVideoCueSlides(null, routeState),
+    [
+      routeState.activeDataPoints,
+      routeState.distance,
+      routeState.geometry,
+    ],
+  );
+  const plannerPlayback = useSyntheticRoutePlayback({
+    enabled: plannerRouteReady,
+    routeState,
+    cueSlides: plannerCueSlides,
+  });
+  const plannerPoiPreview = useMemo(
+    () => nearestPreviewForCursor(
+      plannerCueSlides,
+      plannerPlayback.cursor?.fraction,
+      routeState.distance,
+      {
+        maxFraction: MAP_PLAYBACK_PREVIEW_MAX_FRACTION,
+        maxMeters: MAP_PLAYBACK_PREVIEW_MAX_METERS,
+      },
+    ),
+    [
+      plannerCueSlides,
+      plannerPlayback.cursor?.fraction,
+      routeState.distance,
+    ],
+  );
+  const plannerPoiPreviewVisible =
+    plannerRouteReady &&
+    !mapUi.selectedDataMarker &&
+    Boolean(plannerPoiPreview.slide && plannerPoiPreview.near);
+  const pausePlannerPlayback = plannerPlayback.pause;
+  const handlePlannerElevationHover = useCallback((payload) => {
+    handleElevationHover(payload);
+    if (!payload || !Number.isFinite(payload.t)) return;
+    if (plannerPlayback.isPlaying) pausePlannerPlayback();
+    plannerPlayback.seekToFraction(payload.t);
+  }, [
+    handleElevationHover,
+    plannerPlayback.isPlaying,
+    pausePlannerPlayback,
+    plannerPlayback.seekToFraction,
+  ]);
+  const handlePlannerElevationSelect = useCallback((payload) => {
+    handleElevationHover(payload);
+    if (payload && Number.isFinite(payload.t)) {
+      plannerPlayback.seekToFraction(payload.t);
+    }
+    plannerPlayback.togglePlayback();
+  }, [
+    handleElevationHover,
+    plannerPlayback.seekToFraction,
+    plannerPlayback.togglePlayback,
+  ]);
+  const handlePlannerCueClick = useCallback(({ slide, poiId }) => {
+    pausePlannerPlayback();
+    const matchingPoint = routeState.activeDataPoints.find((point) => {
+      const pointId = point.id || `${point.type}-${point.location?.join(",")}`;
+      return String(pointId) === String(poiId);
+    });
+    if (matchingPoint) {
+      handleDataPointFocus(matchingPoint);
+      return;
+    }
+    if (Array.isArray(slide?.location) && slide.location.length >= 2) {
+      const [lat, lng] = slide.location;
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        handleDataPointFocus({
+          id: poiId,
+          type: slide.type || "route-point",
+          emoji: slide.kind === "start" ? "🚩" : slide.kind === "end" ? "🏁" : "📍",
+          information: slide.name || "",
+          location: [lat, lng],
+        });
+      }
+    }
+  }, [handleDataPointFocus, pausePlannerPlayback, routeState.activeDataPoints]);
+  const handlePlaybackAwareUndo = useCallback(() => {
+    pausePlannerPlayback();
+    handleUndo();
+  }, [handleUndo, pausePlannerPlayback]);
+  const handlePlaybackAwareRedo = useCallback(() => {
+    pausePlannerPlayback();
+    handleRedo();
+  }, [handleRedo, pausePlannerPlayback]);
+  const handlePlaybackAwareRouteClear = useCallback(() => {
+    pausePlannerPlayback();
+    handleRouteClear();
+  }, [handleRouteClear, pausePlannerPlayback]);
+  const handlePlaybackAwareMapClick = useCallback((event) => {
+    pausePlannerPlayback();
+    handleMapClick(event);
+  }, [handleMapClick, pausePlannerPlayback]);
+  const handlePlaybackAwareRoutePointDragStart = useCallback((...args) => {
+    pausePlannerPlayback();
+    handleRoutePointDragStart(...args);
+  }, [handleRoutePointDragStart, pausePlannerPlayback]);
+  const handlePlaybackAwareRoutePointRemove = useCallback((...args) => {
+    pausePlannerPlayback();
+    handleRoutePointRemove(...args);
+  }, [handleRoutePointRemove, pausePlannerPlayback]);
+  const handlePlaybackAwareRouteLineDragStart = useCallback((...args) => {
+    pausePlannerPlayback();
+    handleRouteLineDragStart(...args);
+  }, [handleRouteLineDragStart, pausePlannerPlayback]);
+  const handlePlaybackAwareAddDataMarkerToRoute = useCallback((...args) => {
+    pausePlannerPlayback();
+    handleAddDataMarkerToRoute(...args);
+  }, [handleAddDataMarkerToRoute, pausePlannerPlayback]);
 
   return (
     <>
@@ -111,7 +233,14 @@ function App() {
         </div>
 
         <div className="container">
-          <div className="map-container">
+          <div
+            className={[
+              "map-container",
+              plannerRouteReady ? "map-container--route-ready" : "",
+              plannerPoiPreviewVisible ? "map-container--has-planner-poi" : "",
+              plannerPlayback.isPlaying ? "map-container--planner-playing" : "",
+            ].filter(Boolean).join(" ")}
+          >
             {state.status === "loading" && <LoadingState />}
             {state.status === "ready" && (
               <>
@@ -148,7 +277,7 @@ function App() {
                         type="button"
                         title="ביטול (Ctrl+Z)"
                         aria-label="ביטול"
-                        onClick={handleUndo}
+                        onClick={handlePlaybackAwareUndo}
                       >
                         <Icon name="arrow-undo-outline" />
                       </button>
@@ -159,7 +288,7 @@ function App() {
                         type="button"
                         title="חזרה (Ctrl+Shift+Z)"
                         aria-label="חזרה"
-                        onClick={handleRedo}
+                        onClick={handlePlaybackAwareRedo}
                       >
                         <Icon name="arrow-redo-outline" />
                       </button>
@@ -170,7 +299,7 @@ function App() {
                         type="button"
                         title="איפוס מסלול"
                         aria-label="איפוס מסלול"
-                        onClick={handleRouteClear}
+                        onClick={handlePlaybackAwareRouteClear}
                       >
                         <Icon name="trash-outline" />
                       </button>
@@ -196,7 +325,7 @@ function App() {
 
                 <DataMarkerCard
                   marker={mapUi.selectedDataMarker}
-                  onAddToRoute={handleAddDataMarkerToRoute}
+                  onAddToRoute={handlePlaybackAwareAddDataMarkerToRoute}
                   onClose={handleSelectedDataMarkerClear}
                 />
 
@@ -208,7 +337,7 @@ function App() {
 
                 <MapView
                   activeDataPointIds={activeDataPointIds}
-                  animator={directionAnimatorRef.current}
+                  animator={null}
                   dataMarkerFeatures={dataMarkerFeatures}
                   focusedMarker={focusedMarker}
                   elevationHover={mapUi.elevationHover}
@@ -216,15 +345,15 @@ function App() {
                   geoJsonData={state.assets.geoJsonData}
                   hoveredSegment={routeState.hoveredSegment}
                   onDataMarkerClick={handleDataMarkerClick}
-                  onMapClick={handleMapClick}
+                  onMapClick={handlePlaybackAwareMapClick}
                   onRoutePointDrag={handleRoutePointDrag}
                   onRoutePointDragEnd={handleRoutePointDragEnd}
-                  onRoutePointDragStart={handleRoutePointDragStart}
-                  onRoutePointRemove={handleRoutePointRemove}
+                  onRoutePointDragStart={handlePlaybackAwareRoutePointDragStart}
+                  onRoutePointRemove={handlePlaybackAwareRoutePointRemove}
                   onRoutePointSelect={handleRoutePointSelect}
                   onRouteLineDrag={handleRouteLineDrag}
                   onRouteLineDragEnd={handleRoutePointDragEnd}
-                  onRouteLineDragStart={handleRouteLineDragStart}
+                  onRouteLineDragStart={handlePlaybackAwareRouteLineDragStart}
                   onSegmentFocus={handleSegmentFocus}
                   onSegmentHover={handleSegmentHover}
                   onViewportIdle={handleViewportIdle}
@@ -234,16 +363,53 @@ function App() {
                   routePoints={displayedRoutePoints}
                   searchHighlight={mapUi.searchHighlight}
                   selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
+                  videoCursor={plannerRouteReady ? plannerPlayback.cursor : null}
+                  videoCursorVariant="progress-head-pulse"
+                  videoPlaying={plannerPlayback.isPlaying}
                 />
 
+                {plannerRouteReady && (
+                  <RoutePlaybackControls
+                    className="planner-route-playback"
+                    readoutMode="distance"
+                    isPlaying={plannerPlayback.isPlaying}
+                    isReady={plannerPlayback.isReady}
+                    isScrubbing={plannerPlayback.isScrubbing}
+                    currentTime={plannerPlayback.currentTime}
+                    duration={plannerPlayback.duration}
+                    progressFraction={plannerPlayback.cursor?.fraction}
+                    routeDistanceMeters={routeState.distance}
+                    onTogglePlayback={plannerPlayback.togglePlayback}
+                    onScrubStart={plannerPlayback.onScrubStart}
+                    onScrubChange={plannerPlayback.onScrubChange}
+                    onScrubEnd={plannerPlayback.onScrubEnd}
+                    playLabel="נגן מסלול על המפה"
+                    pauseLabel="השהה מסלול על המפה"
+                    scrubberLabel="מעבר לאורך המסלול"
+                  />
+                )}
+
+                {plannerPoiPreviewVisible && (
+                  <RoutePoiPlaybackPreview
+                    className="planner-route-poi-preview"
+                    slides={plannerCueSlides}
+                    cursorFraction={plannerPlayback.cursor?.fraction}
+                    routeDistanceMeters={routeState.distance}
+                    previewMaxFraction={MAP_PLAYBACK_PREVIEW_MAX_FRACTION}
+                    previewMaxMeters={MAP_PLAYBACK_PREVIEW_MAX_METERS}
+                    onCueClick={handlePlannerCueClick}
+                  />
+                )}
+
                 <RouteDescription
-                  animator={directionAnimatorRef.current}
                   error={routeState.error}
                   hasBrokenRoute={hasBrokenRoute}
+                  playback={plannerPlayback}
                   routeState={routeState}
                   selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
-                  onElevationHover={handleElevationHover}
-                  onRemoveRoutePoint={handleRoutePointRemove}
+                  onElevationHover={handlePlannerElevationHover}
+                  onElevationSelect={handlePlannerElevationSelect}
+                  onRemoveRoutePoint={handlePlaybackAwareRoutePointRemove}
                   onSelectRoutePoint={handleRoutePointSelect}
                 />
 
@@ -380,15 +546,22 @@ function MapLegend({ activeDataPoints, hasBrokenRoute, onWarningFocus }) {
 }
 
 function RouteDescription({
-  animator,
   error,
   hasBrokenRoute,
   onElevationHover,
+  onElevationSelect,
   onRemoveRoutePoint,
   onSelectRoutePoint,
+  playback,
   routeState,
   selectedRoutePointIndex,
 }) {
+  const playbackActive = Boolean(
+    playback?.hasCursor ||
+    playback?.isPlaying ||
+    playback?.isScrubbing,
+  );
+
   return (
     <div
       className={`route-description-panel${
@@ -416,10 +589,13 @@ function RouteDescription({
             )}
             {routeState.geometry.length >= 2 && (
               <ElevationProfile
-                animator={animator}
+                cursorFraction={playback?.cursor?.fraction ?? null}
+                cursorPlaying={playback?.isPlaying}
                 distance={routeState.distance}
+                externalCursorActive={playbackActive}
                 geometry={routeState.geometry}
                 onElevationHover={onElevationHover}
+                onElevationSelect={onElevationSelect}
               />
             )}
           </>
