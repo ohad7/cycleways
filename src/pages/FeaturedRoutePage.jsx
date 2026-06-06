@@ -33,7 +33,6 @@ export default function FeaturedRoutePage() {
   }, [loader]);
 
   useEffect(() => {
-    if (loader) return undefined;
     let cancelled = false;
     setFallbackState({ status: "loading", meta: null, hasVideo: false });
     (async () => {
@@ -57,10 +56,17 @@ export default function FeaturedRoutePage() {
     return () => {
       cancelled = true;
     };
-  }, [loader, slug]);
+  }, [slug]);
 
   return (
-    <PageShell navLinks={navLinks}>
+    <PageShell
+      breadcrumbs={routeBreadcrumbs(
+        fallbackState.status === "missing"
+          ? "לא נמצא"
+          : fallbackState.meta?.name || "טוען מסלול…",
+      )}
+      navLinks={navLinks}
+    >
       {loader ? (
         <Suspense
           fallback={
@@ -110,4 +116,12 @@ function GenericFeaturedRouteFallback({ slug, fallbackState }) {
   ) : (
     <FeaturedMapRoute {...createGenericRouteStoryProps(meta)} />
   );
+}
+
+function routeBreadcrumbs(label) {
+  return [
+    { label: "מפה", to: "/" },
+    { label: "מסלולים", to: "/routes/" },
+    { label },
+  ];
 }

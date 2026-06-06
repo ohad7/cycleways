@@ -278,6 +278,13 @@ body::before {
   color: #748873;
 }
 
+.nav-link--active {
+  color: #4d6b42;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
 .help-tutorial-btn {
   background: transparent;
   color: black;
@@ -324,10 +331,70 @@ body::before {
   /* Account for fixed header height */
 }
 
+.breadcrumbs {
+  max-width: 1400px;
+  margin: 0 auto 10px;
+  padding: 0 4px;
+  color: #5d665b;
+  font-size: 0.92rem;
+}
+
+.breadcrumbs__list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbs__item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.breadcrumbs__item:not(:last-child)::after {
+  content: ">";
+  margin-inline: 0.35rem;
+  color: #8b9386;
+}
+
+.breadcrumbs__link {
+  color: #4d6b42;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(77, 107, 66, 0.35);
+}
+
+.breadcrumbs__link:hover {
+  color: #2f4e28;
+  border-bottom-color: currentColor;
+}
+
+.breadcrumbs__current {
+  display: inline-block;
+  max-width: min(70vw, 520px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #333;
+  font-weight: 700;
+}
+
 @media (max-width: 768px) {
   .main-container {
     padding: 2px;
     margin-top: 0px;
+  }
+
+  .breadcrumbs {
+    margin: 8px 10px 6px;
+    font-size: 0.86rem;
+  }
+
+  .breadcrumbs__current {
+    max-width: 62vw;
   }
 }
 

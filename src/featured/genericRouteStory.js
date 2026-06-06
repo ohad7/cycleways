@@ -20,7 +20,7 @@ export function genericRouteNavLinks(entry) {
   return [
     { label: "על המסלול", href: "#fv-about" },
     { label: "נקודות במסלול", href: "#fv-poi-stories" },
-    { label: "כל המסלולים", to: "/featured/" },
+    { label: "כל המסלולים", to: "/routes/" },
   ];
 }
 

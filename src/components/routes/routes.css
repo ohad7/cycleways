@@ -396,18 +396,20 @@
 }
 
 .route-card__media {
+  position: relative;
   min-height: 0;
+  overflow: hidden;
   background: #e7ece8;
 }
 
-.route-card__media img,
+.route-card__photo,
 .route-card__placeholder {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.route-card__media img {
+.route-card__photo {
   object-fit: cover;
 }
 
@@ -478,6 +480,27 @@
 
 .route-card__places {
   font-size: 0.88rem;
+}
+
+.route-card__map-thumb {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  width: 92px;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 6px;
+  background: #edf2ef;
+  box-shadow: 0 6px 16px rgba(27, 51, 40, 0.26);
+}
+
+.route-card__map-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .route-card__stats {

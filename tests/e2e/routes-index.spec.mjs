@@ -23,8 +23,10 @@ function playbackTotalSeconds(timeText) {
 test("/routes lists every recommended catalog route", async ({ page }) => {
   await page.goto("/routes");
   await expect(page.locator(".routes-page")).toBeVisible();
-  await expect(page.locator(".routes-page__filter-group", { hasText: "נקודת התחלה" })).toBeVisible();
-  await expect(page.locator(".routes-page__filter-group", { hasText: "עובר דרך" })).toBeVisible();
+  await expect(page.locator(".breadcrumbs")).toContainText("מפה");
+  await expect(page.locator(".breadcrumbs")).toContainText("מסלולים");
+  await expect(page.getByLabel("התחלה", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("עובר דרך", { exact: true })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "בניאס" })).toBeVisible();
   await expect(page.locator(".route-card", { hasText: "הירדן ההיסטורי" })).toBeVisible();
@@ -45,12 +47,21 @@ test("/routes lists every recommended catalog route", async ({ page }) => {
   await expect(
     page.locator(".route-card", { hasText: "בניאס וגן הצפון" }).locator(".route-card__stats"),
   ).toContainText("סלול/שטח");
+  const firstThreeRouteTitles = await page
+    .locator(".route-card__header h2, .route-card__header h3")
+    .evaluateAll((headings) => headings.slice(0, 3).map((heading) => heading.textContent.trim()));
+  expect(firstThreeRouteTitles).toEqual([
+    "סובב בית הלל",
+    "בניאס וגן הצפון",
+    "סובב דפנה",
+  ]);
 });
 
 test("/routes filters by possible start location", async ({ page }) => {
   await page.goto("/routes");
-  const startLocation = page.locator(".routes-page__filter-group", { hasText: "נקודת התחלה" });
-  await startLocation.getByRole("button", { name: "הגושרים", exact: true }).click();
+  const startLocation = page.getByLabel("התחלה", { exact: true });
+  await startLocation.fill("הגושרים");
+  await startLocation.press("Enter");
 
   await expect(page.locator(".route-card")).toHaveCount(2);
   await expect(page.locator(".route-card", { hasText: "בניאס וגן הצפון" })).toBeVisible();
@@ -60,8 +71,9 @@ test("/routes filters by possible start location", async ({ page }) => {
 
 test("/routes filters by goes-through location", async ({ page }) => {
   await page.goto("/routes");
-  const throughLocation = page.locator(".routes-page__filter-group", { hasText: "עובר דרך" });
-  await throughLocation.getByRole("button", { name: "אגמון החולה", exact: true }).click();
+  const throughLocation = page.getByLabel("עובר דרך", { exact: true });
+  await throughLocation.fill("אגמון החולה");
+  await throughLocation.press("Enter");
 
   await expect(page.locator(".route-card")).toHaveCount(1);
   await expect(page.locator(".route-card", { hasText: "הירדן ההיסטורי" })).toBeVisible();
@@ -90,6 +102,8 @@ test("/routes card opens planner and detail actions", async ({ page }) => {
     "נקודות במסלול",
     "כל המסלולים",
   ]);
+  await expect(page.getByRole("button", { name: "מדריך", exact: true })).toHaveCount(0);
+  await expect(page.locator(".breadcrumbs")).toContainText("הירדן ההיסטורי");
 });
 
 test("/routes rich story route keeps story shell", async ({ page }) => {
@@ -100,6 +114,8 @@ test("/routes rich story route keeps story shell", async ({ page }) => {
     "נקודות במסלול",
     "כל המסלולים",
   ]);
+  await expect(page.getByRole("button", { name: "מדריך", exact: true })).toHaveCount(0);
+  await expect(page.locator(".breadcrumbs")).toContainText("סובב בית הלל");
 });
 
 test("/routes generic route renders from snapshot without planner assets", async ({ page }) => {

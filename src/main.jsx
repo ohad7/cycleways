@@ -1,6 +1,6 @@
 import React, { Component, Suspense, lazy, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import "./route-boundary.css";
 
 // Each page is a lazy chunk so a route only downloads the code it needs. In
@@ -8,7 +8,6 @@ import "./route-boundary.css";
 // base-routing decode) out of the entry bundle, so public featured-route pages
 // no longer download or parse planner-only code.
 const App = lazyRoute("App", () => import("./App.jsx"));
-const FeaturedRoutePage = lazyRoute("FeaturedRoutePage", () => import("./pages/FeaturedRoutePage.jsx"));
 const RoutesIndexPage = lazyRoute("RoutesIndexPage", () => import("./pages/RoutesIndexPage.jsx"));
 const RouteDetailPage = lazyRoute("RouteDetailPage", () => import("./pages/RouteDetailPage.jsx"));
 
@@ -125,9 +124,72 @@ function RouteBoundary({ children }) {
   return <RouteErrorBoundary key={boundaryKey}>{children}</RouteErrorBoundary>;
 }
 
+function FeaturedRedirect() {
+  const location = useLocation();
+  const pathname = location.pathname.replace(/^\/featured/, "/routes") || "/routes";
+  return (
+    <Navigate
+      to={`${pathname}${location.search}${location.hash}`}
+      replace
+    />
+  );
+}
+
+function HashScroller() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!location.hash) return undefined;
+
+    let cancelled = false;
+    let frameId = null;
+    let timeoutId = null;
+    const maxAttempts = 16;
+
+    const scrollToTarget = (attempt = 0) => {
+      frameId = window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        const target = getHashTarget(location.hash);
+        if (target) {
+          target.scrollIntoView({ behavior: "auto", block: "start" });
+          return;
+        }
+        if (attempt < maxAttempts) {
+          timeoutId = window.setTimeout(() => scrollToTarget(attempt + 1), 75);
+        }
+      });
+    };
+
+    scrollToTarget();
+
+    return () => {
+      cancelled = true;
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [location.hash, location.key, location.pathname, location.search]);
+
+  return null;
+}
+
+function getHashTarget(hash) {
+  const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!rawHash) return null;
+
+  let id = rawHash;
+  try {
+    id = decodeURIComponent(rawHash);
+  } catch {
+    // Malformed hashes should not block regular rendering.
+  }
+
+  return document.getElementById(id);
+}
+
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
+      <HashScroller />
       <RouteBoundary>
         <Suspense fallback={<RouteLoadingFallback />}>
           <Routes>
@@ -151,7 +213,7 @@ createRoot(document.getElementById("root")).render(
               path="/featured"
               element={
                 <RouteReady>
-                  <RoutesIndexPage />
+                  <FeaturedRedirect />
                 </RouteReady>
               }
             />
@@ -159,7 +221,7 @@ createRoot(document.getElementById("root")).render(
               path="/featured/:slug"
               element={
                 <RouteReady>
-                  <FeaturedRoutePage />
+                  <FeaturedRedirect />
                 </RouteReady>
               }
             />

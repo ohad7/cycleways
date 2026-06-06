@@ -11,6 +11,9 @@ function TopBar({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const isRoutesSection =
+    location.pathname.startsWith("/routes") ||
+    location.pathname.startsWith("/featured");
 
   const handleTutorialClick = () => {
     if (location.pathname === "/" && onOpenTutorial) {
@@ -20,8 +23,24 @@ function TopBar({
     }
   };
 
+  const closeMobileMenu = () => {
+    if (mobileMenuOpen) onMobileMenuToggle?.();
+  };
+
   const handleAnchorClick = (event, href) => {
-    const target = document.querySelector(href);
+    const samePageHash = href.startsWith("#");
+    if (!samePageHash) {
+      closeMobileMenu();
+      return;
+    }
+    if (!navLinks && location.pathname !== "/") {
+      event.preventDefault();
+      navigate({ pathname: "/", hash: href });
+      closeMobileMenu();
+      return;
+    }
+
+    const target = document.getElementById(href.slice(1));
     if (!target) return;
     event.preventDefault();
     target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -33,8 +52,33 @@ function TopBar({
       },
       { replace: true, preventScrollReset: true },
     );
-    if (mobileMenuOpen) onMobileMenuToggle?.();
+    closeMobileMenu();
   };
+
+  const navLinkClass = (item) => {
+    const active = (() => {
+      if (item.section === "routes") return isRoutesSection;
+      if (item.section === "map") {
+        return location.pathname === "/" && !location.hash;
+      }
+      if (item.href && item.href.startsWith("#")) {
+        return location.pathname === "/" && location.hash === item.href;
+      }
+      if (item.to === "/routes/" || item.to === "/routes") return isRoutesSection;
+      if (item.to === "/") return location.pathname === "/" && !location.hash;
+      return false;
+    })();
+    return `nav-link${active ? " nav-link--active" : ""}`;
+  };
+
+  const defaultNavLinks = [
+    { label: "מפה", to: "/", section: "map" },
+    { label: "מסלולים", to: "/routes/", section: "routes" },
+    { label: "על המפה", href: "#trails" },
+    { label: "צרו קשר", href: "#contact" },
+  ];
+  const renderedNavLinks = navLinks || defaultNavLinks;
+  const showTutorialButton = Boolean(onOpenTutorial) && !isRoutesSection;
 
   return (
     <header className="header">
@@ -55,74 +99,54 @@ function TopBar({
         className={`nav-links${mobileMenuOpen ? " active" : ""}`}
         id="nav-links"
       >
-        {navLinks ? (
-          navLinks.map((item) =>
-            item.href ? (
-              <a
-                key={item.href}
-                className="nav-link"
-                href={item.href}
-                onClick={(e) => handleAnchorClick(e, item.href)}
-              >
-                {item.label}
-              </a>
-            ) : (
-              <Link
-                key={item.to}
-                className="nav-link"
-                to={item.to}
-                reloadDocument
-              >
-                {item.label}
-              </Link>
-            ),
-          )
-        ) : (
-          <>
+        {renderedNavLinks.map((item) =>
+          item.href ? (
             <a
-              className="nav-link"
-              href="/#trails"
-              onClick={(e) => handleAnchorClick(e, "#trails")}
+              key={item.href}
+              className={navLinkClass(item)}
+              href={
+                item.href.startsWith("#") && !navLinks
+                  ? `/${item.href}`
+                  : item.href
+              }
+              onClick={(e) => handleAnchorClick(e, item.href)}
             >
-              שבילים
+              {item.label}
             </a>
-            <a
-              className="nav-link"
-              href="/#reccomendations"
-              onClick={(e) => handleAnchorClick(e, "#reccomendations")}
+          ) : (
+            <Link
+              key={item.to}
+              className={navLinkClass(item)}
+              to={item.to}
+              onClick={closeMobileMenu}
             >
-              המלצות
-            </a>
-            <Link className="nav-link" to="/featured/">
-              מסלולים
+              {item.label}
             </Link>
-            <a
-              className="nav-link"
-              href="/#contact"
-              onClick={(e) => handleAnchorClick(e, "#contact")}
-            >
-              צרו קשר
-            </a>
-            {onOpenWizard && (
-              <button
-                className="nav-link topbar-find-button"
-                type="button"
-                onClick={() => {
-                  onOpenWizard();
-                  if (mobileMenuOpen) onMobileMenuToggle?.();
-                }}
-              >
-                מצא מסלול
-              </button>
-            )}
-            <button
-              className="nav-link help-tutorial-btn"
-              type="button"
-              onClick={handleTutorialClick}
-            >
-              מדריך
-            </button>
-          </>
+          ),
+        )}
+        {onOpenWizard && (
+          <button
+            className="nav-link topbar-find-button"
+            type="button"
+            onClick={() => {
+              onOpenWizard();
+              closeMobileMenu();
+            }}
+          >
+            מצא מסלול
+          </button>
+        )}
+        {showTutorialButton && (
+          <button
+            className="nav-link help-tutorial-btn"
+            type="button"
+            onClick={() => {
+              handleTutorialClick();
+              closeMobileMenu();
+            }}
+          >
+            מדריך
+          </button>
         )}
       </nav>
     </header>

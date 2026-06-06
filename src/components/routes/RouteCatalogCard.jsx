@@ -1,8 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  routeCardImage,
   routeDifficultyLabel,
+  routeDisplayImage,
+  routeMapImage,
   routeShapeLabel,
   routeSurfaceLabel,
 } from "@cycleways/core/data/catalog.js";
@@ -30,7 +31,8 @@ export default function RouteCatalogCard({
   headingLevel = "h2",
 }) {
   const Heading = headingLevel === "h3" ? "h3" : "h2";
-  const image = routeCardImage(entry);
+  const image = routeDisplayImage(entry);
+  const mapImage = routeMapImage(entry);
   const placeNames = (entry.passesNear || [])
     .map((id) => places.find((p) => p.id === id)?.name)
     .filter(Boolean)
@@ -55,6 +57,7 @@ export default function RouteCatalogCard({
       <div className="route-card__media">
         {image ? (
           <img
+            className="route-card__photo"
             alt={image.alt || entry.name || ""}
             loading="lazy"
             src={routeImageSrc(image.thumbnail || image.photo)}
@@ -62,11 +65,21 @@ export default function RouteCatalogCard({
         ) : (
           <div className="route-card__placeholder" aria-hidden="true" />
         )}
+        {mapImage && (
+          <div className="route-card__map-thumb">
+            <img
+              alt={mapImage.alt || `מפת המסלול ${entry.name || ""}`}
+              loading="lazy"
+              src={routeImageSrc(mapImage.thumbnail || mapImage.photo)}
+            />
+          </div>
+        )}
       </div>
       <div className="route-card__body">
         <header className="route-card__header">
           <Heading>{entry.name}</Heading>
           <div className="route-card__badges" aria-label="מאפייני מסלול">
+            {entry.featured && <span>מומלץ במיוחד</span>}
             {hasStory && <span>כתבה</span>}
             {shape && <span>{shape}</span>}
           </div>

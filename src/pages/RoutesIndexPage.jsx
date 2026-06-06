@@ -60,6 +60,9 @@ function sortRoutes(entries) {
       if (!bHasOrder) return -1;
       if (ao !== bo) return ao - bo;
     }
+    const aFeatured = a.featured ? 1 : 0;
+    const bFeatured = b.featured ? 1 : 0;
+    if (aFeatured !== bFeatured) return bFeatured - aFeatured;
     const aStory = hasRouteStory(a.slug) ? 1 : 0;
     const bStory = hasRouteStory(b.slug) ? 1 : 0;
     if (aStory !== bStory) return bStory - aStory;
@@ -147,7 +150,12 @@ export default function RoutesIndexPage() {
   const clearFilters = () => setFilters(emptyFilters());
 
   return (
-    <PageShell>
+    <PageShell
+      breadcrumbs={[
+        { label: "מפה", to: "/" },
+        { label: "מסלולים" },
+      ]}
+    >
       <main className="routes-page">
         <div className="routes-page__inner">
           <header className="routes-page__header">
