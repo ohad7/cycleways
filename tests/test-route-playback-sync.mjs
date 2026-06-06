@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { createLinearRoutePlaybackSync } from "../src/components/featured/routePlaybackSync.js";
+import {
+  buildVariableSpeedTimeline,
+  createLinearRoutePlaybackSync,
+  createVariableSpeedRoutePlaybackSync,
+} from "../src/components/featured/routePlaybackSync.js";
 
 const route = [
   { lat: 33.0, lng: 35.0 },
@@ -49,6 +53,45 @@ assert.equal(far, null);
 
 const loose = sync.snapClickToRoute({ lat: 33.0005, lng: 35.001 }, 200);
 assert.ok(loose, "expected larger threshold to accept nearby click");
+
+const noCueTimeline = buildVariableSpeedTimeline({
+  baseDurationSeconds: 100,
+  routeDistanceMeters: 10_000,
+  cueFractions: [],
+  cueMaxFraction: 0.1,
+  cueMaxMeters: 1000,
+  fastRate: 2,
+});
+assert.equal(noCueTimeline.durationSeconds, 50);
+assert.equal(noCueTimeline.fractionToTime(1), 50);
+assert.equal(noCueTimeline.timeToFraction(25), 0.5);
+
+const cueTimeline = buildVariableSpeedTimeline({
+  baseDurationSeconds: 100,
+  routeDistanceMeters: 10_000,
+  cueFractions: [0.5],
+  cueMaxFraction: 0.1,
+  cueMaxMeters: 1000,
+  fastRate: 2,
+});
+assert.equal(cueTimeline.durationSeconds, 60);
+assert.equal(cueTimeline.fractionToTime(0.4), 20);
+assert.equal(cueTimeline.fractionToTime(0.5), 30);
+assert.equal(cueTimeline.timeToFraction(30), 0.5);
+assert.equal(cueTimeline.fractionToTime(1), 60);
+
+const variableSync = createVariableSpeedRoutePlaybackSync({
+  baseDurationSeconds: 100,
+  routeGeometry: route,
+  routeDistanceMeters: 10_000,
+  cueSlides: [{ routeFraction: 0.5 }],
+  cueMaxFraction: 0.1,
+  cueMaxMeters: 1000,
+  fastRate: 2,
+});
+assert.equal(variableSync.durationSeconds, 60);
+assert.ok(Math.abs(variableSync.timeToPosition(30).fraction - 0.5) < 1e-6);
+assert.equal(variableSync.positionToTime(0.5), 30);
 
 assert.throws(
   () =>

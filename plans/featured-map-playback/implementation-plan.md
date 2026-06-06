@@ -84,6 +84,10 @@ to route position.
     - `timeToPosition(timeSeconds)`
     - `positionToTime(routeFraction)`
     - `snapClickToRoute({ lat, lng })`
+  - Add a variable-speed variant for map-only playback:
+    - cue windows play at `1x`;
+    - non-cue windows play at `2x`;
+    - total duration is derived by summing the timed windows.
 
 - [ ] Reuse existing geometry utilities.
   - Use `buildCumulativeDistances`, `pointAtFraction`, and
@@ -216,6 +220,12 @@ Add the synthetic map playback stage for `media="map"` routes.
     helper as video routes and a wider synthetic-playback vicinity threshold.
   - Render `RoutePlaybackControls` over or under the map using existing visual
     treatment.
+  - Keep the map expand button on the physical right of the playable stage so it
+    does not cover the physical-left cue preview in RTL layout.
+  - Render readonly endpoint markers on public route maps:
+    - green compact play marker for start;
+    - red compact stop marker for end;
+    - split green/red marker for circular routes.
 
 - [ ] End behavior.
   - When current time reaches duration, stop playback and emit the final cursor.
@@ -315,6 +325,10 @@ Wire the new component into the existing route-story template.
   - Assert `RouteProgressDistance` updates to a non-zero route distance.
   - Assert the cue preview reflects the nearest route cue when near one.
 
+- [ ] Map visual anchors test:
+  - Assert readonly endpoint markers render.
+  - Assert the expand button does not overlap the cue preview.
+
 - [ ] POI/warning seek test:
   - Click a POI story or warning card.
   - Assert the cursor/focused card updates.
@@ -324,6 +338,10 @@ Wire the new component into the existing route-story template.
   - `/routes/sovev-dafna` still requests video data.
   - It still shows the YouTube frame and existing controls.
   - It still shows warning cues/list behavior.
+
+- [ ] Featured elevation graph:
+  - Assert hover/playback renders the `progress-head-pulse` marker on the
+    elevation curve instead of the legacy blue vertical line.
 
 ### Visual / Browser Verification
 

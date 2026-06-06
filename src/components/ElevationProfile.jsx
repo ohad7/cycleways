@@ -15,50 +15,42 @@ export default function ElevationProfile({
   onElevationHover,
   onElevationSelect = null,
   cursorFraction = null,
+  cursorPlaying = false,
 }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
-  const markerLineRef = useRef(null);
   const animatorMarkerEnabledRef = useRef(true);
   const [hoverInfo, setHoverInfo] = useState(null);
+  const [markerPoint, setMarkerPoint] = useState(null);
+  const progressPath = useMemo(
+    () => markerPoint ? elevationProgressPath(profile?.elevationData, markerPoint.x) : "",
+    [markerPoint, profile],
+  );
 
   useEffect(() => {
     if (!animator) return undefined;
     const unsubscribe = animator.subscribe("elevation", (payload) => {
       if (!animatorMarkerEnabledRef.current) return;
-      const line = markerLineRef.current;
-      if (!line) return;
       if (!payload) {
-        line.setAttribute("opacity", "0");
+        setMarkerPoint(null);
         return;
       }
-      const x = Math.max(0, Math.min(100, payload.t * 100));
-      line.setAttribute("x1", x);
-      line.setAttribute("x2", x);
-      line.setAttribute("opacity", "1");
+      setMarkerPoint(markerPointForFraction(profile, payload.t));
     });
     return unsubscribe;
-  }, [animator]);
+  }, [animator, profile]);
 
   // When there is no animator (e.g. featured pages), drive the marker line from
   // an external cursor fraction (the video/map position). With an animator the
   // animator owns the marker, so this effect is a no-op for the planner.
   useEffect(() => {
     if (animator) return undefined;
-    const line = markerLineRef.current;
-    if (!line) return undefined;
-    const x = elevationCursorX(cursorFraction);
-    if (x === null) {
-      line.setAttribute("opacity", "0");
-    } else {
-      line.setAttribute("x1", x);
-      line.setAttribute("x2", x);
-      line.setAttribute("opacity", "1");
-    }
+    setMarkerPoint(markerPointForFraction(profile, cursorFraction));
     return undefined;
-  }, [animator, cursorFraction]);
+  }, [animator, cursorFraction, profile]);
 
   useEffect(() => {
     animatorMarkerEnabledRef.current = true;
+    setMarkerPoint(null);
   }, [geometry]);
 
   if (!profile) return null;
@@ -75,8 +67,7 @@ export default function ElevationProfile({
     const payload = buildElevationHoverPayload(closestPoint);
     if (animator && animatorMarkerEnabledRef.current) {
       animatorMarkerEnabledRef.current = false;
-      const line = markerLineRef.current;
-      if (line) line.setAttribute("opacity", "0");
+      setMarkerPoint(null);
     }
     setHoverInfo(payload);
     onElevationHover?.(payload);
@@ -128,13 +119,24 @@ export default function ElevationProfile({
           preserveAspectRatio="none"
           viewBox="0 0 100 100"
         >
+          {profile.baseAreaPath && (
+            <path
+              d={profile.baseAreaPath}
+              fill="#b7d3ba"
+              fillOpacity="0.18"
+              stroke="none"
+            />
+          )}
           {profile.clusterPaths.map((cluster, index) => (
             <path
               key={`${cluster.gradeClass}-${index}`}
               d={cluster.d}
               fill={cluster.color}
               fillOpacity="0.45"
-              stroke="none"
+              stroke={cluster.color}
+              strokeOpacity="0.38"
+              strokeWidth="0.08"
+              strokeLinejoin="round"
             />
           ))}
           <path
@@ -144,20 +146,38 @@ export default function ElevationProfile({
             strokeOpacity="0.5"
             strokeWidth="0.4"
           />
-          <line
-            ref={markerLineRef}
-            x1="0"
-            x2="0"
-            y1="0"
-            y2="100"
-            stroke="#74b8c8"
-            strokeOpacity="0.72"
-            strokeWidth="0.45"
-            strokeLinecap="round"
-            opacity="0"
-            style={{ pointerEvents: "none" }}
-          />
+          {progressPath && (
+            <path
+              className="elevation-progress-line"
+              d={progressPath}
+              fill="none"
+              stroke="#0f766e"
+              strokeOpacity="0.72"
+              strokeWidth="0.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ pointerEvents: "none" }}
+            />
+          )}
         </svg>
+        {markerPoint && (
+          <div
+            className={[
+              "elevation-progress-head-pulse",
+              cursorPlaying ? "elevation-progress-head-pulse--playing" : "",
+            ].filter(Boolean).join(" ")}
+            style={{
+              left: `${markerPoint.x}%`,
+              top: `${markerPoint.y}%`,
+            }}
+            aria-hidden="true"
+          >
+            <span className="elevation-progress-head-pulse__pulse" />
+            <span className="elevation-progress-head-pulse__core">
+              <span className="elevation-progress-head-pulse__symbol" />
+            </span>
+          </div>
+        )}
         <div
           className="elevation-hover-overlay"
           onMouseMove={handleInteraction}
@@ -189,3 +209,32 @@ export default function ElevationProfile({
   );
 }
 export { formatLegacyDistance, elevationCursorX };
+
+function markerPointForFraction(profile, fraction) {
+  const x = elevationCursorX(fraction);
+  if (x === null || !profile?.elevationData) return null;
+  const point = findClosestElevationPoint(profile.elevationData, x);
+  if (!point) return null;
+  return {
+    x: Math.max(2.4, Math.min(97.6, point.distancePercent)),
+    y: 100 - point.heightPercent,
+  };
+}
+
+function elevationProgressPath(elevationData, xPercent) {
+  if (!Array.isArray(elevationData) || elevationData.length === 0) return "";
+  const x = Math.max(0, Math.min(100, Number(xPercent)));
+  if (!Number.isFinite(x)) return "";
+  const points = elevationData.filter((point) => point.distancePercent <= x);
+  const marker = findClosestElevationPoint(elevationData, x);
+  if (marker && points.at(-1)?.distancePercent !== marker.distancePercent) {
+    points.push(marker);
+  }
+  if (points.length === 0) return "";
+  return points
+    .map((point, index) => {
+      const y = 100 - point.heightPercent;
+      return `${index === 0 ? "M" : "L"} ${point.distancePercent} ${y}`;
+    })
+    .join(" ");
+}

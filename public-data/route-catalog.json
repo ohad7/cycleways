@@ -213,7 +213,11 @@
       "elevationGainM": 719,
       "elevationLossM": 19,
       "regionId": "dafna-cluster",
-      "passesNear": [],
+      "passesNear": [
+        "givat-haem",
+        "mitzpe-golani",
+        "ein-fit"
+      ],
       "difficulty": "hard",
       "style": "sporty",
       "roadMix": {
@@ -227,8 +231,39 @@
         "endpointDistanceM": 6915
       },
       "surfaceType": "dirt",
-      "startPlaceIds": [],
-      "placeMatches": []
+      "startPlaceIds": [
+        "givat-haem"
+      ],
+      "placeMatches": [
+        {
+          "id": "givat-haem",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "גבעת האם"
+          ],
+          "distanceM": 0,
+          "routeProgressMeters": 901
+        },
+        {
+          "id": "mitzpe-golani",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 733,
+          "routeProgressMeters": 7116
+        },
+        {
+          "id": "ein-fit",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "ציר הנפט עין פית",
+            "עין פית"
+          ],
+          "distanceM": 0,
+          "routeProgressMeters": 8967
+        }
+      ]
     },
     {
       "slug": "sovev-dafna",
@@ -308,6 +343,9 @@
       "elevationLossM": 595,
       "regionId": "north-golan",
       "passesNear": [
+        "ein-fit",
+        "mitzpe-golani",
+        "givat-haem",
         "kfar-szold"
       ],
       "difficulty": "hard",
@@ -339,9 +377,43 @@
       },
       "surfaceType": "mixed",
       "startPlaceIds": [
+        "ein-fit",
+        "mitzpe-golani",
+        "givat-haem",
         "kfar-szold"
       ],
       "placeMatches": [
+        {
+          "id": "ein-fit",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "ציר הנפט עין פית"
+          ],
+          "distanceM": 749,
+          "routeProgressMeters": 13820
+        },
+        {
+          "id": "mitzpe-golani",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "ציר הנפט מצפה גולני"
+          ],
+          "distanceM": 0,
+          "routeProgressMeters": 15517
+        },
+        {
+          "id": "givat-haem",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "גבעת האם",
+            "כביש 918 כניסה לגבעת האם"
+          ],
+          "distanceM": 0,
+          "routeProgressMeters": 22493
+        },
         {
           "id": "kfar-szold",
           "relation": "near",

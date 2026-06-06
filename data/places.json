@@ -35,6 +35,30 @@
     { "id": "kiryat-shmona",     "name": "קרית שמונה",    "lat": 33.2086, "lng": 35.5704 },
     { "id": "metula",            "name": "מטולה",         "lat": 33.2786, "lng": 35.5760 },
     { "id": "amir",              "name": "עמיר",          "lat": 33.1797, "lng": 35.5856 },
-    { "id": "gan-hatzafon",      "name": "גן הצפון",      "lat": 33.2174, "lng": 35.6311 }
+    { "id": "gan-hatzafon",      "name": "גן הצפון",      "lat": 33.2174, "lng": 35.6311 },
+    {
+      "id": "givat-haem",
+      "name": "גבעת האם",
+      "lat": 33.208668,
+      "lng": 35.655870,
+      "matchRadiusM": 900,
+      "segmentNameIncludes": ["גבעת האם"]
+    },
+    {
+      "id": "mitzpe-golani",
+      "name": "מצפה גולני",
+      "lat": 33.233339,
+      "lng": 35.690581,
+      "matchRadiusM": 900,
+      "segmentNameIncludes": ["מצפה גולני"]
+    },
+    {
+      "id": "ein-fit",
+      "name": "עין פית",
+      "lat": 33.224765,
+      "lng": 35.705269,
+      "matchRadiusM": 900,
+      "segmentNameIncludes": ["עין פית"]
+    }
   ]
 }

@@ -27,7 +27,10 @@ import {
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
 import { getMapboxGl, whenMapboxReady } from "./mapboxProvider.js";
-import { distanceToLineSegmentPixels } from "@cycleways/core/utils/distance.js";
+import {
+  distanceToLineSegmentPixels,
+  getDistance,
+} from "@cycleways/core/utils/distance.js";
 import {
   buildNetworkSegments,
   findClosestRouteSegment,
@@ -43,6 +46,8 @@ import {
   VIDEO_CURSOR_DEFAULT_VARIANT,
 } from "@cycleways/core/map/mapStyles.js";
 import { capabilitiesForMode, MAP_MODE_PLANNER } from "./mapCapabilities.js";
+
+const ROUTE_CIRCULAR_ENDPOINT_MAX_METERS = 80;
 
 function isMapAvailableForCleanup(map) {
   if (!map || map._removed) return false;
@@ -109,6 +114,7 @@ function MapSurface({
   const searchMarkerRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const hoverPreviewMarkerRef = useRef(null);
+  const routeEndpointMarkerRefs = useRef([]);
   const lastRouteClickRef = useRef(null);
   const callbacksRef = useRef({});
   const dataMarkerFeaturesRef = useRef([]);
@@ -343,6 +349,16 @@ function MapSurface({
     if (!map || status !== "ready" || !caps.routeGeometryLayer) return;
     syncRouteGeometryLayer(map, routeGeometry, routePointDragPreview);
   }, [routeGeometry, routePointDragPreview, status, caps.routeGeometryLayer]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !caps.routeEndpointMarkers) {
+      clearRouteEndpointMarkers(routeEndpointMarkerRefs);
+      return undefined;
+    }
+    syncRouteEndpointMarkers(map, routeEndpointMarkerRefs, routeGeometry);
+    return () => clearRouteEndpointMarkers(routeEndpointMarkerRefs);
+  }, [routeGeometry, status, caps.routeEndpointMarkers]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1095,6 +1111,79 @@ function syncHoverPreviewMarker(map, markerRef, lngLat) {
 function clearHoverPreviewMarker(markerRef) {
   markerRef.current?.remove();
   markerRef.current = null;
+}
+
+function syncRouteEndpointMarkers(map, markerRefs, routeGeometry) {
+  clearRouteEndpointMarkers(markerRefs);
+  let mapboxgl;
+  try {
+    mapboxgl = getMapboxGl();
+  } catch {
+    return;
+  }
+
+  const endpoints = routeEndpointDescriptors(routeGeometry);
+  markerRefs.current = endpoints.map((endpoint) => {
+    const markerElement = routeEndpointMarkerElement(endpoint.kind);
+    return new mapboxgl.Marker(markerElement)
+      .setLngLat([endpoint.point.lng, endpoint.point.lat])
+      .addTo(map);
+  });
+}
+
+function clearRouteEndpointMarkers(markerRefs) {
+  markerRefs.current.forEach((marker) => marker.remove());
+  markerRefs.current = [];
+}
+
+function routeEndpointDescriptors(routeGeometry) {
+  const points = Array.isArray(routeGeometry)
+    ? routeGeometry.map(normalizeLngLat).filter(Boolean)
+    : [];
+  if (points.length < 2) return [];
+
+  const start = points[0];
+  const end = points[points.length - 1];
+  const endpointDistance = getDistance(start, end);
+  if (
+    Number.isFinite(endpointDistance) &&
+    endpointDistance <= ROUTE_CIRCULAR_ENDPOINT_MAX_METERS
+  ) {
+    return [{ kind: "circular", point: start }];
+  }
+
+  return [
+    { kind: "start", point: start },
+    { kind: "end", point: end },
+  ];
+}
+
+function normalizeLngLat(point) {
+  const lng = Number(point?.lng);
+  const lat = Number(point?.lat);
+  return Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : null;
+}
+
+function routeEndpointMarkerElement(kind) {
+  const markerElement = document.createElement("div");
+  markerElement.className = [
+    "route-endpoint-marker",
+    `route-endpoint-marker--${kind}`,
+  ].join(" ");
+  markerElement.setAttribute("aria-hidden", "true");
+  markerElement.title = kind === "circular"
+    ? "נקודת התחלה וסיום"
+    : kind === "start"
+      ? "נקודת התחלה"
+      : "נקודת סיום";
+
+  if (kind === "start") {
+    const glyph = document.createElement("span");
+    glyph.textContent = "▶";
+    markerElement.appendChild(glyph);
+  }
+
+  return markerElement;
 }
 
 function applyHebrewLabels(map) {

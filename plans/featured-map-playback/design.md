@@ -106,6 +106,11 @@ The map receives that cursor through the existing `videoCursor` prop, so the
 same route cursor layer and `progress-head-pulse` animation render for video and
 map-only routes.
 
+The same cursor fraction should also drive the featured elevation graph. The
+elevation graph should not use a separate blue vertical playhead on featured
+pages; it should render a green progress trace along the elevation curve with an
+orange `progress-head-pulse` marker at the current route fraction.
+
 ### Cursor Style
 
 Map playback should use the same default cursor variant as video routes:
@@ -195,7 +200,7 @@ through map behavior, but it should not be the primary action anymore.
 
 ## Playback Behavior
 
-Map-only playback should use constant progress by default.
+Map-only playback should use variable progress by default:
 
 Do **not** apply the YouTube-specific slowdown/speedup behavior to synthetic map
 playback in the first version:
@@ -204,13 +209,29 @@ playback in the first version:
 - no POI-vicinity slowdown;
 - no `playbackBehavior: legacy | none` setting.
 
-Reason: on a map, a constant route cursor is easier to understand, and there is
-no real footage speed to preserve. Cue expansion already gives POIs enough
-emphasis.
+Instead, divide the synthetic route into cue windows and non-cue windows:
+
+- cue windows are where the route cue preview is expanded;
+- cue windows play at normal route-summary speed;
+- non-cue windows play at `2x` speed, because no POI/warning is being shown;
+- the displayed duration is the sum of the timed windows, so speeding up boring
+  sections shortens the total playback duration.
 
 Map-only playback uses a map-specific cue vicinity threshold rather than
-slowing down near POIs. This keeps the cursor motion steady while giving POI and
-warning cards enough time on screen.
+slowing down near POIs. This keeps cue cards readable while letting the cursor
+move faster between them.
+
+## Map Endpoint Markers
+
+Readonly featured maps should render authored route endpoints even though the
+planner route-point editing layer remains disabled:
+
+- non-circular routes show a compact green start/play marker and a small red
+  stop marker;
+- circular routes, where the start and end are effectively the same location,
+  show one split green/red dot;
+- endpoint markers are visual anchors only and should not re-enable route point
+  editing on public route pages.
 
 ## Component Shape
 

@@ -20,10 +20,10 @@
 .routes-page__header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(128px, 180px);
-  gap: 18px 28px;
-  align-items: end;
-  margin-bottom: 16px;
-  padding: 24px;
+  gap: 14px 24px;
+  align-items: start;
+  margin-bottom: 18px;
+  padding: 20px;
   border: 1px solid #d7e1dc;
   border-radius: 8px;
   background:
@@ -33,7 +33,7 @@
 
 .routes-page__header-copy {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -46,7 +46,7 @@
 
 .routes-page__header h1 {
   margin: 0;
-  font-size: 2.35rem;
+  font-size: 2.2rem;
   line-height: 1.15;
   color: #1f352e;
 }
@@ -55,7 +55,7 @@
   max-width: 760px;
   margin: 0;
   color: #52615c;
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 .routes-page__summary {
@@ -82,28 +82,193 @@
   font-size: 0.9rem;
 }
 
-.routes-page__filters {
+.routes-page__search-panel {
+  grid-column: 1 / -1;
   display: grid;
-  gap: 14px;
-  margin: 0 0 20px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid #dce4df;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
 }
 
-.routes-page__filters-header {
+.routes-page__place-searches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.routes-page__combo {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.routes-page__combo-label {
+  color: #5f6f67;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.routes-page__combo-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 5px 8px;
+  border: 1px solid #d5ddd8;
+  border-radius: 8px;
+  background: #ffffff;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.routes-page__combo-box:focus-within {
+  border-color: #9dbba9;
+  box-shadow: 0 0 0 3px rgba(36, 89, 67, 0.1);
+}
+
+.routes-page__combo-box input {
+  flex: 1 1 120px;
+  min-width: 110px;
+  height: 28px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #25302b;
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.routes-page__combo-box input::placeholder {
+  color: #899690;
+}
+
+.routes-page__selected-place {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #245943;
+  color: #ffffff;
+  font-size: 0.86rem;
+  line-height: 1;
+}
+
+.routes-page__selected-place span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.routes-page__selected-place button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.routes-page__selected-place button:hover,
+.routes-page__selected-place button:focus-visible {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.routes-page__combo-menu {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  max-height: 240px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid #cbd9d0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px rgba(34, 57, 47, 0.16);
+}
+
+.routes-page__combo-menu button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #25302b;
+  cursor: pointer;
+  font: inherit;
+  text-align: start;
 }
 
-.routes-page__filters-header h2 {
+.routes-page__combo-menu button:hover,
+.routes-page__combo-menu button:focus-visible {
+  background: #eef5f1;
+  color: #245943;
+}
+
+.routes-page__combo-menu small {
+  flex: 0 0 auto;
+  min-width: 22px;
+  border-radius: 999px;
+  background: #f2f6f3;
+  color: #68766f;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.routes-page__quick-filter-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.routes-page__quick-filter-group {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
   margin: 0;
-  color: #1f352e;
-  font-size: 1rem;
-  line-height: 1.2;
+  padding: 0;
+}
+
+.routes-page__quick-filter-label {
+  color: #5f6f67;
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.routes-page__filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 34px;
+  color: #68766f;
+  font-size: 0.86rem;
 }
 
 .routes-page__filters-reset {
@@ -124,49 +289,26 @@
   background: #eef5f1;
 }
 
-.routes-page__filter-groups {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.routes-page__filter-group {
-  min-width: 0;
-  margin: 0;
-  padding: 12px;
-  border: 1px solid #e0e8e3;
-  border-radius: 8px;
-  background: #fbfdfb;
-}
-
-.routes-page__filter-group legend {
-  padding: 0 4px;
-  color: #5f6f67;
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
 .routes-page__filter-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 4px;
+  gap: 6px;
 }
 
 .routes-page__filter {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 36px;
+  min-height: 32px;
   border: 1px solid #d5ddd8;
   border-radius: 999px;
   background: #ffffff;
   color: #25302b;
   cursor: pointer;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   line-height: 1;
-  padding: 8px 12px;
+  padding: 7px 10px;
   transition:
     background-color 120ms ease,
     border-color 120ms ease,
@@ -504,20 +646,40 @@
   }
 
   .routes-page__summary {
-    justify-items: start;
+    display: flex;
+    align-items: baseline;
+    justify-items: initial;
+    gap: 8px;
+    min-width: 0;
+    padding: 9px 11px;
     text-align: start;
   }
 
-  .routes-page__filters {
-    padding: 12px;
+  .routes-page__summary strong {
+    font-size: 1.45rem;
   }
 
-  .routes-page__filters-header {
-    align-items: flex-start;
+  .routes-page__search-panel {
+    gap: 9px;
+    padding: 10px;
   }
 
-  .routes-page__filter-groups {
+  .routes-page__place-searches,
+  .routes-page__quick-filter-groups {
     grid-template-columns: 1fr;
+  }
+
+  .routes-page__combo-box {
+    min-height: 38px;
+  }
+
+  .routes-page__quick-filter-group {
+    grid-template-columns: minmax(70px, auto) minmax(0, 1fr);
+  }
+
+  .routes-page__filter-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .routes-page__grid {

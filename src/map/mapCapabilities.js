@@ -27,6 +27,7 @@ function plannerCapabilities() {
     routePointDragPreview: true,
     // User-placed waypoint markers + their interactions.
     routePointLayers: true,
+    routeEndpointMarkers: false,
     routePointSelect: true,
     routePointEditing: true,
     routeLineEditing: true,
@@ -62,6 +63,7 @@ function readonlyRouteCapabilities() {
     routeGeometryLayer: true,
     routePointDragPreview: false,
     routePointLayers: false,
+    routeEndpointMarkers: true,
     routePointSelect: false,
     routePointEditing: false,
     routeLineEditing: false,

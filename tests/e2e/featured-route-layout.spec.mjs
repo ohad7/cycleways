@@ -106,8 +106,30 @@ test.describe("desktop layout", () => {
     await expect(overlay).toBeVisible();
     const box = await overlay.boundingBox();
     await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
-    // The hover sets a video cursor; the elevation marker line becomes visible.
-    await expect(page.locator(".elevation-profile svg line")).toHaveAttribute("opacity", "1");
+    // The hover sets a video cursor; the elevation progress-head marker appears.
+    await expect(page.locator(".elevation-progress-head-pulse")).toBeVisible();
+    await expect(page.locator(".elevation-progress-line")).toBeVisible();
+    await expect(page.locator('.elevation-chart svg path[fill="#b7d3ba"]')).toHaveCount(1);
+    const markerShape = await page.locator(".elevation-progress-head-pulse__symbol").evaluate((el) => {
+      const style = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      const coreRect = el.closest(".elevation-progress-head-pulse__core").getBoundingClientRect();
+      return {
+        borderLeftWidth: Number.parseFloat(style.borderLeftWidth),
+        borderTopWidth: Number.parseFloat(style.borderTopWidth),
+        borderBottomWidth: Number.parseFloat(style.borderBottomWidth),
+        borderLeftColor: style.borderLeftColor,
+        centerDeltaX: Math.abs((rect.x + rect.width / 2) - (coreRect.x + coreRect.width / 2)),
+        centerDeltaY: Math.abs((rect.y + rect.height / 2) - (coreRect.y + coreRect.height / 2)),
+      };
+    });
+    expect(markerShape.borderLeftColor).toBe("rgb(255, 255, 255)");
+    expect(markerShape.borderLeftWidth).toBeGreaterThanOrEqual(5);
+    expect(markerShape.borderLeftWidth).toBeLessThanOrEqual(7);
+    expect(markerShape.borderTopWidth + markerShape.borderBottomWidth).toBeGreaterThanOrEqual(7);
+    expect(markerShape.borderTopWidth + markerShape.borderBottomWidth).toBeLessThanOrEqual(9);
+    expect(markerShape.centerDeltaX).toBeLessThanOrEqual(1.2);
+    expect(markerShape.centerDeltaY).toBeLessThanOrEqual(0.5);
   });
 });
 

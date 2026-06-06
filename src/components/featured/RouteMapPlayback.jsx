@@ -8,10 +8,11 @@ import RoutePoiVideoPreview from "./RoutePoiVideoPreview.jsx";
 import RoutePlaybackControls from "./RoutePlaybackControls.jsx";
 import { routeVideoCueSlides } from "./routePoiStoryData.js";
 import { computeMapPlaybackDuration } from "./routePlaybackDuration.js";
-import { createLinearRoutePlaybackSync } from "./routePlaybackSync.js";
+import { createVariableSpeedRoutePlaybackSync } from "./routePlaybackSync.js";
 
 const MAP_PLAYBACK_PREVIEW_MAX_FRACTION = 0.06;
 const MAP_PLAYBACK_PREVIEW_MAX_METERS = 1200;
+const MAP_PLAYBACK_BORING_RATE = 2;
 const MAP_PLAYBACK_ROUTE_FIT_PADDING = Object.freeze({
   top: 24,
   right: 24,
@@ -60,7 +61,7 @@ export default function RouteMapPlayback({
     () => cueSlides.filter((slide) => slide.kind !== "start" && slide.kind !== "end").length,
     [cueSlides],
   );
-  const duration = useMemo(
+  const baseDuration = useMemo(
     () => computeMapPlaybackDuration({
       distanceMeters: routeState.distance,
       elevationGainMeters: routeState.elevationGain,
@@ -72,11 +73,17 @@ export default function RouteMapPlayback({
     if (!Array.isArray(routeState.geometry) || routeState.geometry.length < 2) {
       return null;
     }
-    return createLinearRoutePlaybackSync({
-      durationSeconds: duration,
+    return createVariableSpeedRoutePlaybackSync({
+      baseDurationSeconds: baseDuration,
       routeGeometry: routeState.geometry,
+      routeDistanceMeters: routeState.distance,
+      cueSlides,
+      cueMaxFraction: MAP_PLAYBACK_PREVIEW_MAX_FRACTION,
+      cueMaxMeters: MAP_PLAYBACK_PREVIEW_MAX_METERS,
+      fastRate: MAP_PLAYBACK_BORING_RATE,
     });
-  }, [duration, routeState.geometry]);
+  }, [baseDuration, cueSlides, routeState.distance, routeState.geometry]);
+  const duration = sync?.durationSeconds ?? baseDuration;
 
   const stopTicker = useCallback(() => {
     if (tickerRef.current) {
@@ -275,6 +282,7 @@ export default function RouteMapPlayback({
 }
 
 export {
+  MAP_PLAYBACK_BORING_RATE,
   MAP_PLAYBACK_PREVIEW_MAX_FRACTION,
   MAP_PLAYBACK_PREVIEW_MAX_METERS,
   MAP_PLAYBACK_ROUTE_FIT_PADDING,

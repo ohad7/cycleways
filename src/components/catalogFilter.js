@@ -1,6 +1,7 @@
 import {
   routePassesThroughPlaceIds,
   routeStartPlaceIds,
+  routeSurfaceType,
 } from "@cycleways/core/data/catalog.js";
 
 const DISTANCE_BUCKETS = ["short", "medium", "long"];
@@ -35,6 +36,7 @@ export function catalogFilter(catalog, filters) {
     if (hasMembers(f.region) && !f.region.has(entry.regionId)) return false;
     if (hasMembers(f.difficulty) && !f.difficulty.has(entry.difficulty)) return false;
     if (hasMembers(f.style) && !f.style.has(entry.style)) return false;
+    if (hasMembers(f.surface) && !f.surface.has(routeSurfaceType(entry))) return false;
     if (hasMembers(f.distance)) {
       const bucket = distanceBucketOf(entry.distanceKm);
       if (!f.distance.has(bucket)) return false;

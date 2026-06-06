@@ -118,6 +118,16 @@ test("/routes generic route renders from snapshot without planner assets", async
   await expect(page.locator(".fv-route-stats")).toContainText("שטח");
   await expect(page.locator(".fv-video .featured-video-frame")).toHaveCount(0);
   await expect(page.locator(".fv-video-poi-preview")).toBeVisible();
+  await expect(
+    page.locator(".fv-route-stage-map .route-endpoint-marker--circular"),
+  ).toHaveCount(1);
+  const expandButtonBox = await page
+    .locator(".fv-route-map-playback .featured-map-expand-btn")
+    .boundingBox();
+  const previewBox = await page
+    .locator(".fv-route-map-playback .fv-video-poi-preview")
+    .boundingBox();
+  expect(expandButtonBox.x).toBeGreaterThan(previewBox.x + previewBox.width);
   const routeFitPadding = await page.evaluate(() => {
     const fitEvents = window.__mockMapboxEvents?.filter((event) =>
       event.type === "fitBounds" && typeof event.options?.padding === "object"
@@ -228,6 +238,8 @@ test("/routes promoted video route renders the video template", async ({ page })
 test("/routes detail stats show computed route shape", async ({ page }) => {
   await page.goto("/routes/kovshey-hagolan");
   await expect(page.locator(".featured-route-header h1")).toContainText("מסע בעקבות כובשי הגולן");
+  await expect(page.locator(".fv-route-stage-map .route-endpoint-marker--start")).toHaveCount(1);
+  await expect(page.locator(".fv-route-stage-map .route-endpoint-marker--end")).toHaveCount(1);
   await expect(page.locator(".fv-route-stats")).toContainText("סוג");
   await expect(page.locator(".fv-route-stats")).toContainText("חד כיווני");
 });
