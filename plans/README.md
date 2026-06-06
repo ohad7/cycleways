@@ -50,3 +50,4 @@ Current plans:
 - `featured-video-slow-start/` - design for a 3-step slow-start playback ramp (0.5 → 0.75 → 1.0 over the first ~500 m) on featured-page videos, composed with the existing POI-vicinity slowdown via a single pure rate function.
 - `recommended-routes/` - design and implementation plan for making `/routes` the canonical public catalog of all recommended routes, with optional route-story pages replacing the overloaded featured concept.
 - `video-sync-gps-bootstrap/` - design and implementation plan for bootstrapping editor video-sync keyframes from a clip's GPS track (time/5 rescale, route-snap, error-bounded simplification) instead of clicking each keyframe by hand.
+- `featured-map-playback/` - design and implementation plan for giving non-video featured/recommended route pages a synthetic playable map stage aligned with video-route controls, cursor animation, and POI/warning cues.

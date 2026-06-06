@@ -5,6 +5,21 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
+function clockSeconds(value) {
+  const parts = String(value || "")
+    .trim()
+    .split(":")
+    .map((part) => Number(part));
+  if (parts.some((part) => !Number.isFinite(part))) return Number.NaN;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return Number.NaN;
+}
+
+function playbackTotalSeconds(timeText) {
+  return clockSeconds(String(timeText || "").split("/").pop());
+}
+
 test("/routes lists every recommended catalog route", async ({ page }) => {
   await page.goto("/routes");
   await expect(page.locator(".routes-page")).toBeVisible();
@@ -65,7 +80,9 @@ test("/routes card opens planner and detail actions", async ({ page }) => {
   await expect(page.locator(".featured-route-header h1")).toContainText("הירדן ההיסטורי");
   await expect(page.locator(".fv-playback")).toBeVisible();
   await expect(page.locator(".fv-video-shell--map")).toBeVisible();
+  await expect(page.locator(".fv-route-map-playback")).toBeVisible();
   await expect(page.locator(".fv-route-stage-map")).toBeVisible();
+  await expect(page.locator(".fv-video-controls")).toBeVisible();
   await expect(page.locator(".fv-route-stats")).toBeVisible();
   await expect(page.locator(".elevation-profile")).toBeVisible();
   await expect(page.locator(".nav-links .nav-link")).toHaveText([
@@ -93,10 +110,26 @@ test("/routes generic route renders from snapshot without planner assets", async
   await expect(page.locator(".featured-route-video-first")).toBeVisible();
   await expect(page.locator(".featured-route-header h1")).toContainText("הירדן ההיסטורי");
   await expect(page.locator(".fv-video-shell--map")).toBeVisible();
+  await expect(page.locator(".fv-route-map-playback")).toBeVisible();
   await expect(page.locator(".fv-route-stage-map")).toBeVisible();
+  await expect(page.locator(".fv-video-controls")).toBeVisible();
+  await expect(page.locator(".fv-route-actions .fv-route-action--primary")).toContainText("נגן מסלול");
   await expect(page.locator(".fv-route-stats")).toContainText("בינוני");
   await expect(page.locator(".fv-route-stats")).toContainText("שטח");
   await expect(page.locator(".fv-video .featured-video-frame")).toHaveCount(0);
+  await expect(page.locator(".fv-video-poi-preview")).toBeVisible();
+  const routeFitPadding = await page.evaluate(() => {
+    const fitEvents = window.__mockMapboxEvents?.filter((event) =>
+      event.type === "fitBounds" && typeof event.options?.padding === "object"
+    ) || [];
+    return fitEvents.at(-1)?.options?.padding || null;
+  });
+  expect(routeFitPadding).toEqual({
+    top: 24,
+    right: 24,
+    bottom: 108,
+    left: 24,
+  });
   await expect(page.locator(".fv-route-warning-card")).toHaveCount(4);
   await expect(page.locator(".fv-route-warnings")).toContainText("ירדן מערב כפר בלום");
   await expect(page.locator(".fv-route-warnings")).toContainText("אגמון החולה גישה מזרח");
@@ -124,6 +157,25 @@ test("/routes generic route renders from snapshot without planner assets", async
   await expect(
     page.locator(".fv-route-warning-card--focused", { hasText: "אגמון החולה גישה מזרח" }),
   ).toBeVisible();
+
+  const initialMapPlaybackTime = await page.locator(".fv-video-time").textContent();
+  expect(playbackTotalSeconds(initialMapPlaybackTime)).toBeGreaterThanOrEqual(35);
+  expect(playbackTotalSeconds(initialMapPlaybackTime)).toBeLessThanOrEqual(80);
+  await page.locator(".fv-route-actions .fv-route-action--primary").click();
+  await expect(page.locator(".fv-video-play-toggle")).toHaveAttribute("aria-label", "השהה מסלול");
+  await expect.poll(
+    async () => page.locator(".fv-video-time").textContent(),
+    { timeout: 3000 },
+  ).not.toBe(initialMapPlaybackTime);
+
+  await page.locator(".fv-video-play-toggle").click();
+  await expect(page.locator(".fv-video-play-toggle")).toHaveAttribute("aria-label", "נגן מסלול");
+  await page.locator(".fv-video-scrubber").evaluate((input) => {
+    input.value = String(Number(input.max) / 2);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(page.locator(".fv-video-progress-value")).not.toHaveText("0 מ׳");
 
   expect(
     requestedUrls.some((url) =>

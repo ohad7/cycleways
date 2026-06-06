@@ -287,6 +287,20 @@ assert.equal(previewSlideForCursor(slides, 0.1, 5000)?.poiId, "start");
 assert.equal(previewSlideForCursor(slides, 0.115, 5000)?.poiId, "start");
 assert.equal(previewSlideForCursor(slides, 0.117, 5000), null);
 assert.equal(previewSlideForCursor(slides, 0.13, 5000), null);
+assert.equal(
+  previewSlideForCursor(slides, 0.13, 5000, {
+    maxFraction: 0.05,
+    maxMeters: 500,
+  })?.poiId,
+  "start",
+);
+assert.equal(
+  previewSlideForCursor(slides, 0.13, 5000, {
+    maxFraction: 0.05,
+    maxMeters: 100,
+  }),
+  null,
+);
 assert.equal(previewSlideForCursor(slides, 0.5, 5000)?.poiId, "mid");
 assert.equal(previewSlideForCursor(slides, Number.NaN, 5000), null);
 assert.equal(

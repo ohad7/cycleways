@@ -12,7 +12,11 @@ import {
   routeVideoCueSlides,
 } from "./routePoiStoryData.js";
 
-export default function RoutePoiVideoPreview({ className = "" }) {
+export default function RoutePoiVideoPreview({
+  className = "",
+  previewMaxFraction,
+  previewMaxMeters,
+}) {
   const {
     meta,
     routeState,
@@ -26,8 +30,22 @@ export default function RoutePoiVideoPreview({ className = "" }) {
     [meta, routeState],
   );
   const { slide, near } = useMemo(
-    () => nearestPreviewForCursor(slides, videoCursor?.fraction, routeState.distance),
-    [slides, routeState.distance, videoCursor?.fraction],
+    () => nearestPreviewForCursor(
+      slides,
+      videoCursor?.fraction,
+      routeState.distance,
+      {
+        maxFraction: previewMaxFraction,
+        maxMeters: previewMaxMeters,
+      },
+    ),
+    [
+      previewMaxFraction,
+      previewMaxMeters,
+      slides,
+      routeState.distance,
+      videoCursor?.fraction,
+    ],
   );
 
   if (!slide) return null;

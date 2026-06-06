@@ -17,6 +17,7 @@ import FeaturedRouteMapSlot from "./FeaturedRouteMap.jsx";
 import RoutePoiGallery from "./RoutePoiGallery.jsx";
 import RoutePoiStoryList from "./RoutePoiStoryList.jsx";
 import RoutePoiVideoPreview from "./RoutePoiVideoPreview.jsx";
+import RouteMapPlayback from "./RouteMapPlayback.jsx";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
 import { findRouteMeta } from "../../featured/index.js";
 
@@ -160,6 +161,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     const t = sync.positionToTime(snap.fraction);
     seek(t);
     setVideoCursorFromFraction(snap.fraction);
+    playerPauseRef.current?.();
   }, [setVideoCursorFromFraction]);
 
   const handleDataMarkerClick = useCallback((marker) => {
@@ -274,6 +276,7 @@ FeaturedRoute.Gallery = Gallery;
 FeaturedRoute.POIGallery = RoutePoiGallery;
 FeaturedRoute.POIStories = RoutePoiStoryList;
 FeaturedRoute.POIVideoPreview = RoutePoiVideoPreview;
+FeaturedRoute.MapPlayback = RouteMapPlayback;
 FeaturedRoute.ProgressDistance = RouteProgressDistance;
 FeaturedRoute.Video = VideoEmbed;
 FeaturedRoute.Warnings = Warnings;

@@ -50,11 +50,9 @@ export default function FeaturedVideoRoute({
             data-route-stage
           >
             {isMapStage ? (
-              <FeaturedRoute.Map
-                className="fv-route-stage-map"
+              <FeaturedRoute.MapPlayback
                 autoResetAfterInteraction
                 autoResetDelayMs={5000}
-                routeFitPadding={18}
                 videoCursorVariant={videoCursorVariant}
               />
             ) : (
@@ -119,6 +117,7 @@ function FeaturedRouteActions({ media = "video" }) {
   const hasRouteGeometry = routeState.geometry.length >= 2;
   const editHref = meta?.route ? `/?route=${encodeURIComponent(meta.route)}` : null;
   const isMapStage = media === "map";
+  const primaryLabel = "נגן מסלול";
 
   const handleDownload = useCallback(() => {
     if (!hasRouteGeometry) return;
@@ -142,7 +141,11 @@ function FeaturedRouteActions({ media = "video" }) {
 
   const handlePrimaryAction = useCallback(() => {
     if (isMapStage) {
-      requestRouteFit?.("featured-map-primary-fit");
+      if (playerPlayRef.current) {
+        playerPlayRef.current();
+      } else {
+        requestRouteFit?.("featured-map-primary-fit");
+      }
       scrollStageIntoView();
       return;
     }
@@ -157,10 +160,10 @@ function FeaturedRouteActions({ media = "video" }) {
         type="button"
         className="fv-route-action fv-route-action--primary"
         onClick={handlePrimaryAction}
-        aria-label={isMapStage ? "מרכז מפה" : "נגן מסלול"}
+        aria-label={primaryLabel}
       >
-        <Icon name={isMapStage ? "map-outline" : "play-circle-outline"} />
-        <span className="fv-route-action-label">{isMapStage ? "מרכז מפה" : "נגן מסלול"}</span>
+        <Icon name="play-circle-outline" />
+        <span className="fv-route-action-label">{primaryLabel}</span>
       </button>
       {editHref ? (
         <a

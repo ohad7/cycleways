@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { galleryImageSlides } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import { previewSlideForCursor } from "./routePoiStoryData.js";
-import RouteProgressDistance from "./RouteProgressDistance.jsx";
+import RoutePlaybackControls from "./RoutePlaybackControls.jsx";
 import { loadYouTubeIframeApi } from "./youtubeIframeApi.js";
 import { createVideoSync } from "./videoSync.js";
 import {
@@ -433,7 +433,6 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   }, [data, emitCursorForTime, playerPauseRef, playerPlayRef, playerSeekRef, seekToTime, setVideoCursor, setVideoPlaying, videoSyncRef]);
 
   if (status !== "ready" || !data) return null;
-  const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   return (
     <section className={["featured-video", className].filter(Boolean).join(" ")}>
       {title && <h2>{title}</h2>}
@@ -446,53 +445,21 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
           disabled={!isPlayerReady}
           aria-label={isPlaying ? "השהה סרטון" : "נגן סרטון"}
         />
-        <div
-          className={[
-            "fv-video-controls",
-            isScrubbing ? "fv-video-controls--scrubbing" : "",
-          ].filter(Boolean).join(" ")}
-        >
-          <button
-            type="button"
-            className="fv-video-play-toggle"
-            onClick={togglePlayback}
-            disabled={!isPlayerReady}
-            aria-label={isPlaying ? "השהה סרטון" : "נגן סרטון"}
-          >
-            <span aria-hidden="true">{isPlaying ? "❚❚" : "▶"}</span>
-          </button>
-          <input
-            className="fv-video-scrubber"
-            type="range"
-            min="0"
-            max={duration || 0}
-            step="0.1"
-            value={Math.min(currentTime, duration || currentTime)}
-            onChange={handleScrubChange}
-            onPointerDown={handleScrubStart}
-            onPointerUp={handleScrubEnd}
-            onPointerCancel={handleScrubEnd}
-            onBlur={handleScrubEnd}
-            disabled={!isPlayerReady || duration <= 0}
-            aria-label="מעבר בזמן הסרטון"
-            style={{ "--fv-video-progress": `${progressPercent}%` }}
-          />
-          <span className="fv-video-time">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
-          <div className="fv-video-progress-distance" aria-label="מרחק מההתחלה">
-            <span>מרחק מההתחלה</span>
-            <RouteProgressDistance className="fv-video-progress-value" />
-          </div>
-        </div>
+        <RoutePlaybackControls
+          isPlaying={isPlaying}
+          isReady={isPlayerReady}
+          isScrubbing={isScrubbing}
+          currentTime={currentTime}
+          duration={duration}
+          onTogglePlayback={togglePlayback}
+          onScrubStart={handleScrubStart}
+          onScrubChange={handleScrubChange}
+          onScrubEnd={handleScrubEnd}
+          playLabel="נגן סרטון"
+          pauseLabel="השהה סרטון"
+          scrubberLabel="מעבר בזמן הסרטון"
+        />
       </div>
     </section>
   );
-}
-
-function formatTime(seconds) {
-  const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0));
-  const minutes = Math.floor(totalSeconds / 60);
-  const remainingSeconds = totalSeconds % 60;
-  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
 }
