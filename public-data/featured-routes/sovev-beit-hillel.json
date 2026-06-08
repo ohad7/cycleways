@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-beit-hillel",
-  "generatedAt": "2026-06-06T16:53:50.922Z",
+  "generatedAt": "2026-06-08T04:19:37.120Z",
   "source": {
     "routeTokenHash": "sha256:1b4e57e3cc362d4c8869f0ade487f914867a1954b2794ea94764cfacae1e5dfb",
     "routeFormat": "compact_route",
-    "mapVersion": "6ee5d31a1bbd",
+    "mapVersion": "0d60a37c3376",
     "assetHashes": {
-      "bikeRoads": "429931751296885402776d200b290f17a3781ffd1f30865d47cc649d32af92cd",
-      "segments": "ff128e4f4b3f54286b32538dcba9c9defd76bcdd44413fe86e806b5fd6b0922e",
+      "bikeRoads": "21fb0c915a02b30020d121eda5ae550dc1d433350b06e3665ac29d790b1d5b3e",
+      "segments": "5e9a055254f59043ac1229f354d48cf1175e140d890957b18220ecda8b602271",
       "cwBaseIndex": "e60f0b6625238fb43e263af633d07e9f1f6ccd15b4ec1e407e026af88044324e",
-      "baseRoutingShards": "f532c7281010b52d6d74fd4295317c476a0c7f062be51b48a948ac15b3f5f7e9"
+      "baseRoutingShards": "742a9912097ef9b37d81989838d9eec99970dcaadbe2fbe776660f9c0f10b531"
     }
   },
   "route": {
@@ -1065,7 +1065,7 @@
             "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
           }
         ],
-        "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.",
+        "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג.",
         "segmentName": "גדר המערכת בית הלל",
         "routeDistanceMeters": 0.11121577194417649,
         "routeProgressMeters": 3572.279125128087,
@@ -1238,7 +1238,7 @@
           "type": "cafe",
           "name": "פרישטיק",
           "information": "עצירה טובה לקפה",
-          "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.",
+          "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג.",
           "photo": "public-data/poi-images/poi-95010070-e9f669c1.webp",
           "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp",
           "segmentName": "גדר המערכת בית הלל",

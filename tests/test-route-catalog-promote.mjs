@@ -38,6 +38,7 @@ const draft = {
       slug: "test-a",
       name: "A",
       summary: "x",
+      intro: "middle length",
       route: "ok",
       featured: false,
     },
@@ -47,6 +48,7 @@ const draft = {
 // recompute fills in computed fields
 const recomputed = recomputeCatalogMetadata(draft, { places, zones, decodeRoute: fakeDecode });
 assert.equal(recomputed.entries[0].slug, "test-a");
+assert.equal(recomputed.entries[0].intro, "middle length");
 assert.equal(recomputed.entries[0].difficulty, "easy");
 assert.ok(recomputed.entries[0].passesNear.includes("beit-hillel"));
 assert.equal(
@@ -58,6 +60,14 @@ assert.equal(recomputed.entries[0].routeShape.type, "circular");
 assert.deepEqual(recomputed.entries[0].startPlaceIds, recomputed.entries[0].passesNear);
 assert.equal(recomputed.entries[0].surfaceType, "paved");
 validateCatalogDraft(recomputed);
+assert.throws(
+  () =>
+    validateCatalogDraft({
+      version: 1,
+      entries: [{ slug: "bad-intro", name: "Bad", summary: "x", intro: [], route: "ok" }],
+    }),
+  /intro must be a string/,
+);
 
 let decoderSawEntry = null;
 recomputeCatalogMetadata(draft, {
@@ -86,6 +96,7 @@ await promoteCatalogDraft({
 
 const written = JSON.parse(await fs.readFile(publicPath, "utf-8"));
 assert.equal(written.entries.length, 1);
+assert.equal(written.entries[0].intro, "middle length");
 assert.equal(written.entries[0].difficulty, "easy");
 assert.ok(written.entries[0].placeMatches.some((match) => match.id === "beit-hillel"));
 assert.equal(written.entries[0].routeShape.type, "circular");

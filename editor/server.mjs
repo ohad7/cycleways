@@ -1012,6 +1012,9 @@ export function validateCatalogDraft(catalog) {
     if (typeof entry.route !== "string" || entry.route.length === 0) {
       throw new Error(`entry ${entry.slug} missing route token`);
     }
+    if (entry.intro !== undefined && typeof entry.intro !== "string") {
+      throw new Error(`entry ${entry.slug} intro must be a string`);
+    }
     if (entry.description !== undefined && typeof entry.description !== "string") {
       throw new Error(`entry ${entry.slug} description must be a string`);
     }
@@ -1042,6 +1045,7 @@ async function seedCatalogFromFeaturedMeta() {
         slug: meta.slug || slug,
         name: meta.name || slug,
         summary: meta.summary || "",
+        intro: meta.intro || "",
         route: meta.route,
         notes: "",
         featured: true,

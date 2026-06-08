@@ -717,6 +717,29 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-8e08b582",
+        "type": "landmark",
+        "information": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳",
+        "location": [
+          33.20986655083472,
+          35.658273167456514
+        ],
+        "name": "גבעת האם",
+        "description": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳. בגבעה יש תצפית לעמק החולה ולעבר הגולן, היא שמשה כנקודת הזינוק לכיבוש הגולן ביוני 1967",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-8e08b582-107f7255.webp",
+            "thumbnail": "public-data/poi-images/poi-8e08b582-107f7255-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-8e08b582-2da6d1e0.webp",
+            "thumbnail": "public-data/poi-images/poi-8e08b582-2da6d1e0-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.65587,
       "latitude": 33.208668,
@@ -3044,6 +3067,29 @@
     },
     "splitFrom": 258,
     "splitFromName": "ציר הנפט בניאס שמיר - 2",
+    "data": [
+      {
+        "id": "poi-521bbc87",
+        "type": "landmark",
+        "information": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני",
+        "location": [
+          33.22471482716924,
+          35.69313022319281
+        ],
+        "name": "מצפה גולני - תל פאחר",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-521bbc87-9fdd2f58.webp",
+            "thumbnail": "public-data/poi-images/poi-521bbc87-9fdd2f58-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-521bbc87-f68ae011.webp",
+            "thumbnail": "public-data/poi-images/poi-521bbc87-f68ae011-thumb.webp"
+          }
+        ],
+        "description": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני"
+      }
+    ],
     "middle": {
       "longitude": 35.694377,
       "latitude": 33.222118,
@@ -3460,7 +3506,7 @@
             "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
           }
         ],
-        "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה."
+        "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג."
       },
       {
         "id": "poi-c723c695",
@@ -5347,7 +5393,7 @@
             "thumbnail": "public-data/poi-images/poi-1ed71e4f-85f43b3d-thumb.webp"
           }
         ],
-        "name": "תאנים ושיחי פטל"
+        "name": "עצי תאנה ושיחי פטל"
       },
       {
         "id": "poi-a76cdd1b",
@@ -5623,6 +5669,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-972b4305",
+        "type": "landmark",
+        "information": "שרידי כלים צהליים שנפגעו בקרב על תל פאחר",
+        "location": [
+          33.224442,
+          35.685621
+        ],
+        "name": "שרידי זחלמ״ים",
+        "description": "בקרב על תל כיבוש תל פאחר נהרגו חיילים רבים, רובם חיילי שריון וגולני. במקום יש כלים צהליים שנפגעו תוך כדי העלייה הקשה למוצב שנשלטת מלמעלה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-972b4305-7eba303a.webp",
+            "thumbnail": "public-data/poi-images/poi-972b4305-7eba303a-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.682367,
       "latitude": 33.215836,
@@ -5641,6 +5706,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-482e2483",
+        "type": "landmark",
+        "information": "פרוייקט הנדסי סורי להטיית מי הבניאס והדן לכיוון הירמוך",
+        "location": [
+          33.226536,
+          35.69118
+        ],
+        "name": "תוואי ההטיה",
+        "description": "קטע מתוך תוואי ההטיה בעזרתה ביקשו הסורים בשנים 1962-6 להפנות ולהוביל את מי הבניאס הדן והחצבני ולהובילם באמצעות תעלה פתוחה וסיפונים (בחלקו העיקרי של התואי) ומנהרה (בחלקו הדרומי)ולהזרימם לירמוך.",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-482e2483-83028d1d.webp",
+            "thumbnail": "public-data/poi-images/poi-482e2483-83028d1d-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.689048,
       "latitude": 33.225426,
@@ -5659,6 +5743,29 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-f844255d",
+        "type": "landmark",
+        "information": "כפר סורי הרוס עם מעיין שנובע כל השנה",
+        "location": [
+          33.22439700072273,
+          35.705025987337734
+        ],
+        "name": "עין פית",
+        "description": "כפר סורי עלאווי עתיק שרובו נהרס לאחר מלחמת ששת הימים. במקום יש מעיין שממנו מתחילה הזרימה על נחל פרע. המעיין נמצא במרכז הכפר, מכוסה במבנה מקומר ומוקף בעצי תאנה ופטל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-f844255d-9beeb979.webp",
+            "thumbnail": "public-data/poi-images/poi-f844255d-9beeb979-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-f844255d-46ad3cad.webp",
+            "thumbnail": "public-data/poi-images/poi-f844255d-46ad3cad-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.705269,
       "latitude": 33.224765,
@@ -6036,7 +6143,8 @@
             "photo": "public-data/poi-images/poi-1821461d-f0069811.webp",
             "thumbnail": "public-data/poi-images/poi-1821461d-f0069811-thumb.webp"
           }
-        ]
+        ],
+        "description": "נחל דן זורם בחלקו בתוך קיבוץ דפנה. במקום יש מדשאות וירידה כיפית למים"
       }
     ],
     "middle": {

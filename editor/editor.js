@@ -8045,6 +8045,7 @@ function rcEntryIssues(entry) {
   if (!entry?.name) errors.push("Missing name");
   if (!entry?.summary) errors.push("Missing summary");
   if (!entry?.route) errors.push("Missing route token");
+  if (!String(entry?.intro || "").trim()) warnings.push("Missing intro");
   if (!entry?.description) warnings.push("Missing long description");
   if (!entry?.routeMapImage?.thumbnail && !entry?.routeMapImage?.photo) {
     warnings.push("Missing route map image");
@@ -8176,6 +8177,7 @@ function rcRenderDetail() {
     { key: "slug", label: "Slug" },
     { key: "name", label: "Name" },
     { key: "summary", label: "Summary" },
+    { key: "intro", label: "Intro", textarea: true },
     { key: "description", label: "Description", textarea: true },
     { key: "route", label: "Route token / share URL", routeToken: true },
     { key: "notes", label: "Notes", textarea: true },
@@ -8968,6 +8970,7 @@ function rcNewEntry() {
     slug,
     name: slug,
     summary: "",
+    intro: "",
     description: "",
     route: "",
     notes: "",
