@@ -27,7 +27,7 @@ test("mobile adapted layout remains usable", async ({ page }, testInfo) => {
 
   await page.locator(".mobile-menu-btn").click();
   await expect(page.locator("#nav-links")).toBeVisible();
-  await expect(page.locator("#nav-links")).toContainText("שבילים");
+  await expect(page.locator("#nav-links")).toContainText("מסלולים");
   await page.locator(".mobile-menu-btn").click();
   await expect(page.locator("#nav-links")).not.toHaveClass(/active/);
 
