@@ -103,7 +103,7 @@
 .discover-panel {
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 10px;
 }
 .discover-panel__intro {
   display: flex;
@@ -145,10 +145,15 @@
   flex-direction: column;
   gap: 8px;
 }
+.discover-panel__places--row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 .discover-panel__filters {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 /* Override the wizard's horizontal grid layout — stack vertically in the panel */
 .discover-panel__filters .wd-filter-group {
@@ -156,6 +161,35 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
+}
+/* Panel-specific combo styling */
+.discover-panel__places--row .wd-combo {
+  min-width: 0;
+}
+.discover-panel__places--row .wd-combo__box {
+  border: 1.5px solid #e7dfca;
+  border-radius: 10px;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  min-width: 0;
+}
+.discover-panel__places--row .wd-combo__box input {
+  min-width: 0;
+  flex: 1;
+}
+.wd-combo__icon {
+  color: #9aa08d;
+  font-size: 14px;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+.discover-panel__places--row .wd-combo__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #586056;
 }
 .discover-panel__list {
   display: flex;

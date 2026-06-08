@@ -66,14 +66,15 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild 
         </button>
       </div>
 
-      <div className="discover-panel__places">
+      <div className="discover-panel__places discover-panel__places--row">
         <PlaceAutocompleteFilter
-          label="התחלה"
+          label="נקודת התחלה"
           placeholder="בחרו ישוב התחלה"
           options={startOptions}
           selected={filters.startLocation}
           onSelect={(v) => addFilterValue("startLocation", v)}
           onRemove={(v) => removeFilterValue("startLocation", v)}
+          icon="📍"
         />
         <PlaceAutocompleteFilter
           label="עובר דרך"
@@ -82,6 +83,7 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild 
           selected={filters.throughLocation}
           onSelect={(v) => addFilterValue("throughLocation", v)}
           onRemove={(v) => removeFilterValue("throughLocation", v)}
+          icon="🛤️"
         />
       </div>
 

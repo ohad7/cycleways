@@ -67,6 +67,7 @@ export function PlaceAutocompleteFilter({
   options,
   placeholder,
   selected,
+  icon,
 }) {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
@@ -98,6 +99,7 @@ export function PlaceAutocompleteFilter({
     <div className="wd-combo">
       <span className="wd-combo__label">{label}</span>
       <div className="wd-combo__box">
+        {icon && <span className="wd-combo__icon" aria-hidden="true">{icon}</span>}
         {selectedValues.map((value) => {
           const option = optionByValue.get(value);
           return (
