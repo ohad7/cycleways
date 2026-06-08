@@ -54,3 +54,4 @@ Current plans:
 - `route-map-thumbnails/` - design and implementation plan for editor-generated Mapbox route-map screenshots used as static route-card thumbnails.
 - `topbar-route-navigation/` - design and implementation plan for canonical route navigation, active topbar state, breadcrumbs, and removal of the stale recommendations section.
 - `front-page-route-playback/` - design and implementation plan for bringing shared featured-route playback controls, cursor animation, elevation tracking, and POI cue previews to the front-page planner.
+- `front-page-overhaul/` - design and implementation plan for reshaping the desktop front page into a persistent two-column app shell (map + right Discover/Build panel), relocating the route-finder, elevation graph, route tools, and warnings into the panel while keeping geocoder search and play transport on the map.
