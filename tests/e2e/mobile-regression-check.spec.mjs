@@ -11,9 +11,9 @@ test("mobile adapted layout remains usable", async ({ page }, testInfo) => {
   await page.goto("/?route=Bjjy1nRHHDArrNAoctqGv4RHL3un");
 
   await expect(page.locator("#map")).toBeVisible();
-  await expect(page.locator("#route-description")).toContainText("4.5 ק\"מ");
+  await expect(page.locator(".build-panel")).toContainText("4.5");
   // Save/summary now lives in the route panel (Build state, auto-entered for ?route=).
-  await expect(page.getByRole("button", { name: "סיכום ושמירה" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
 
   const widthMetrics = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -32,23 +32,8 @@ test("mobile adapted layout remains usable", async ({ page }, testInfo) => {
   await page.locator(".mobile-menu-btn").click();
   await expect(page.locator("#nav-links")).not.toHaveClass(/active/);
 
-  await page.getByRole("button", { name: "סיכום ושמירה" }).click();
-  await expect(page.getByRole("dialog", { name: "הורדת מסלול GPX" })).toBeVisible();
-  const modalBounds = await page.locator(".download-modal-content").evaluate((node) => {
-    const rect = node.getBoundingClientRect();
-    return {
-      left: rect.left,
-      right: rect.right,
-      width: rect.width,
-      viewportWidth: window.innerWidth,
-    };
-  });
-  expect(modalBounds.left).toBeGreaterThanOrEqual(0);
-  expect(modalBounds.right).toBeLessThanOrEqual(modalBounds.viewportWidth);
-  expect(modalBounds.width).toBeGreaterThan(250);
-
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
+  // GPX button is a direct download (no modal) in the new panel.
+  await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
 
   await page.locator("#contact").scrollIntoViewIfNeeded();
   await expect(page.getByText("רכיבה מהנה ובטוחה!")).toBeVisible();

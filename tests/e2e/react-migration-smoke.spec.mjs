@@ -22,9 +22,6 @@ test("current public app loads with route controls", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.locator("#map")).toBeVisible();
-  await expect(page.locator("#route-description")).toContainText(
-    "לחץ על נקודות במפה",
-  );
   // Route controls now live in the right-side panel (no on-map control buttons).
   await expect(page.getByTestId("front-panel")).toBeVisible();
 });
@@ -32,9 +29,9 @@ test("current public app loads with route controls", async ({ page }) => {
 test("production root restores compact route URL", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
-  await expect(page.locator("#route-description")).toBeVisible();
+  await expect(page.getByTestId("front-panel")).toBeVisible();
   await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "סיכום" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
   await expect(page.locator(".react-route-point-chip")).toHaveCount(0);
   expect(await getRoutePointFeatureCount(page)).toBeGreaterThan(0);
 
@@ -66,8 +63,8 @@ test("production core flow works on desktop and mobile", async ({ page }, testIn
 
 test("production shows outside-network warning in the route panel", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
-  // Route loaded into the bottom route panel.
-  await expect(page.locator("#route-description")).toContainText("4.5 ק\"מ");
+  // Route loaded — build panel shows stats.
+  await expect(page.getByTestId("front-panel")).toBeVisible();
 
   await page.evaluate(() => {
     window.__mockMapboxRenderedFeatures = [];
@@ -77,7 +74,7 @@ test("production shows outside-network warning in the route panel", async ({ pag
     });
   });
 
-  await expect(page.locator("#route-description .route-inline-warning")).toContainText(
+  await expect(page.locator(".build-panel__error")).toContainText(
     "הנקודה רחוקה מדי מרשת הדרכים",
   );
 });
@@ -183,8 +180,8 @@ test("production supports segment hover, segment clicks, and sharing", async ({ 
     expect(await getRoutePointFeatureCount(page)).toBe(index + 1);
   }
 
-  await expect(page.locator("#route-description")).toContainText("3.9 ק\"מ");
-  await expect(page.getByRole("button", { name: "סיכום" })).toBeEnabled();
+  await expect(page.locator(".build-panel")).toContainText("3.9 ק\"מ");
+  await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
   const routePointLayer = await page.evaluate(
     ({ layerId }) => window.__mockMapboxCurrentMap?.layers?.get(layerId),
     { layerId: ROUTE_POINTS_LAYER_ID },

@@ -16,12 +16,16 @@ export default function BuildPanel({
   pois = [],
   onPoiClick,
   elevation,
+  error,
 }) {
   const hasRoute = routeState.geometry.length >= 2;
   const warningGroups = warningPresentation?.groups || [];
 
   return (
     <div className="build-panel">
+      {error && (
+        <div className="build-panel__error">{error.message || "לא הצלחנו לעדכן את המסלול"}</div>
+      )}
       <div className="build-panel__head">
         <div>
           <div className="eyebrow">המסלול שלי · טיוטה</div>

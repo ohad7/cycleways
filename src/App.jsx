@@ -2,9 +2,7 @@ import React, { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import ContentSections from "./components/ContentSections.jsx";
 import Icon from "./components/Icon.jsx";
 import DataMarkerCard from "./components/DataMarkerCard.jsx";
-import { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import PageShell from "./components/PageShell.jsx";
-import { getRouteMessage } from "./components/RoutePanel.jsx";
 import RoutePlaybackControls from "./components/featured/RoutePlaybackControls.jsx";
 import {
   nearestPreviewForCursor,
@@ -389,14 +387,6 @@ function App() {
                   />
                 )}
 
-                <RouteDescription
-                  error={routeState.error}
-                  hasBrokenRoute={hasBrokenRoute}
-                  routeState={routeState}
-                  selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
-                  onRemoveRoutePoint={handlePlaybackAwareRoutePointRemove}
-                  onSelectRoutePoint={handleRoutePointSelect}
-                />
 
                 <SegmentNameDisplay
                   details={inspectedSegmentDetails}
@@ -429,6 +419,7 @@ function App() {
                     onClear={handlePlaybackAwareRouteClear}
                     canDownload={canDownload}
                     onOpenDownload={handleOpenDownload}
+                    error={routeState.error}
                     warningPresentation={routeWarningPresentation}
                     onWarningFocus={handleDataPointFocus}
                     pois={buildPois}
@@ -542,71 +533,6 @@ function MapLegend({ hasBrokenRoute }) {
   );
 }
 
-function RouteDescription({
-  error,
-  hasBrokenRoute,
-  onRemoveRoutePoint,
-  onSelectRoutePoint,
-  routeState,
-  selectedRoutePointIndex,
-}) {
-  return (
-    <div
-      className={`route-description-panel${
-        routeState.points.length === 0 &&
-        routeState.pendingPoints.length === 0 &&
-        !error
-          ? " empty"
-          : ""
-      }`}
-      id="route-description-panel"
-    >
-      <div id="route-description" className="react-route-description-content">
-        {error && (
-          <span className="route-inline-warning">
-            {error.message || "לא הצלחנו לעדכן את המסלול"}
-          </span>
-        )}
-        {!error && (
-          <>
-            <div className="react-route-description-main">
-              <RouteDescriptionText routeState={routeState} />
-            </div>
-            {hasBrokenRoute && (
-              <div className="react-route-panel__warnings">מסלול שבור בין הנקודות שנבחרו.</div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function RouteDescriptionText({ routeState }) {
-  if (routeState.pendingPoints.length > 0) {
-    const pendingCount = routeState.pendingPoints.length;
-    return (
-      <span className="react-route-loading">
-        <span className="react-route-loading__spinner" aria-hidden="true" />
-        {pendingCount === 1
-          ? "בודק את נקודת המסלול על רשת הדרכים..."
-          : `בודק ${pendingCount} נקודות מסלול על רשת הדרכים...`}
-      </span>
-    );
-  }
-
-  if (routeState.geometry.length < 2) {
-    return getRouteMessage(routeState);
-  }
-
-  return (
-    <>
-      <strong>מרחק:</strong> {formatLegacyDistance(routeState.distance)} •{" "}
-      <strong>⬆️</strong> {Math.round(routeState.elevationGain || 0)} מ' •{" "}
-      <strong>⬇️</strong> {Math.round(routeState.elevationLoss || 0)} מ'
-    </>
-  );
-}
 
 function SegmentNameDisplay({
   details,

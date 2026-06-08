@@ -219,6 +219,13 @@
   flex-direction: column;
   gap: 13px;
 }
+.build-panel__error {
+  background: #fdecec;
+  color: #b42318;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
 .build-panel__head {
   display: flex;
   flex-direction: row;
