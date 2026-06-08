@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import RouteCard from "../RouteCard.jsx";
+import PanelRouteCard from "./PanelRouteCard.jsx";
 import "../welcome-wizard.css";
 import {
   FILTER_GROUPS,
@@ -109,7 +109,7 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild 
           {mode === "recommended" ? "מומלצים" : `${routes.length} מסלולים`}
         </div>
         {routes.map((entry) => (
-          <RouteCard
+          <PanelRouteCard
             key={entry.slug}
             entry={entry}
             places={places}

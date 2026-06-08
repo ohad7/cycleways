@@ -4,7 +4,12 @@
   gap: 10px;
   padding: 10px;
   align-items: stretch;
+  /* Fill the .container so the map-container gets the remaining width
+     deterministically (an empty Mapbox div has no intrinsic width). */
+  flex: 1 1 auto;
+  width: 100%;
   min-height: 0;
+  min-width: 0;
 }
 .front-shell .map-container {
   flex: 1 1 auto;
@@ -404,3 +409,59 @@
   opacity: 0.85;
 }
 .panel-elev__band:hover { opacity: 1; }
+
+/* Minimal recommended/result cards in the Discover panel */
+.panel-route-card {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: start;
+  padding: 8px;
+  border: 1px solid #efe8d7;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.panel-route-card:hover {
+  box-shadow: 0 4px 14px rgba(40, 48, 38, 0.1);
+  transform: translateY(-1px);
+}
+.panel-route-card__thumb {
+  flex: 0 0 88px;
+  width: 88px;
+  height: 64px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #e7dfca;
+}
+.panel-route-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.panel-route-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.panel-route-card__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #283026;
+  line-height: 1.25;
+}
+.panel-route-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+  color: #586056;
+}
+.panel-route-card__meta b {
+  color: #283026;
+  font-weight: 800;
+}
