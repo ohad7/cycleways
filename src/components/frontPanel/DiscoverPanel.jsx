@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import PanelRouteCard from "./PanelRouteCard.jsx";
 import "../welcome-wizard.css";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@cycleways/core/data/catalog.js";
 import { selectDiscoverRoutes } from "./discoverRouteList.js";
 
-export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild }) {
+export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild, onVisibleRoutesChange, onHoverRoute }) {
   const entries = useMemo(
     () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
     [catalog],
@@ -55,6 +55,10 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild 
     () => selectDiscoverRoutes(entries, filters),
     [entries, filters],
   );
+
+  useEffect(() => {
+    onVisibleRoutesChange?.(routes.map((r) => r.slug));
+  }, [routes, onVisibleRoutesChange]);
 
   return (
     <div className="discover-panel">
@@ -116,6 +120,7 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild 
             entry={entry}
             places={places}
             onSelect={onSelectRoute}
+            onHover={onHoverRoute}
           />
         ))}
       </div>

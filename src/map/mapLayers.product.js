@@ -460,6 +460,99 @@ export function clearSegmentHighlightLayer(map) {
   }
 }
 
+const RECOMMENDED_ROUTES_SOURCE_ID = "react-recommended-routes";
+const RECOMMENDED_ROUTES_LAYER_ID = "react-recommended-routes-line";
+
+export function syncRecommendedRoutesLayer(map, routes) {
+  const data = buildRecommendedRoutesFeatureCollection(routes);
+
+  if (map.getSource(RECOMMENDED_ROUTES_SOURCE_ID)) {
+    map.getSource(RECOMMENDED_ROUTES_SOURCE_ID).setData(data);
+    return;
+  }
+
+  // Don't add the source/layer if there's nothing to show yet.
+  if (data.features.length === 0) return;
+
+  map.addSource(RECOMMENDED_ROUTES_SOURCE_ID, {
+    type: "geojson",
+    data,
+  });
+
+  // Draw BELOW the main route geometry/points layers so a built route and
+  // waypoint circles always stay on top.
+  const beforeLayer = map.getLayer(ROUTE_GEOMETRY_LAYER_ID)
+    ? ROUTE_GEOMETRY_LAYER_ID
+    : map.getLayer(ROUTE_NETWORK_LINE_LAYER_ID)
+      ? ROUTE_NETWORK_LINE_LAYER_ID
+      : undefined;
+
+  map.addLayer(
+    {
+      id: RECOMMENDED_ROUTES_LAYER_ID,
+      type: "line",
+      source: RECOMMENDED_ROUTES_SOURCE_ID,
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": [
+          "case",
+          ["get", "hovered"],
+          "#1c6fb0",
+          "#9bb1c2",
+        ],
+        "line-width": [
+          "case",
+          ["get", "hovered"],
+          5,
+          2.5,
+        ],
+        "line-opacity": [
+          "case",
+          ["get", "hovered"],
+          0.95,
+          0.5,
+        ],
+      },
+    },
+    beforeLayer,
+  );
+}
+
+export function clearRecommendedRoutesLayer(map) {
+  if (!map) return;
+  if (map.getLayer(RECOMMENDED_ROUTES_LAYER_ID)) {
+    map.removeLayer(RECOMMENDED_ROUTES_LAYER_ID);
+  }
+  if (map.getSource(RECOMMENDED_ROUTES_SOURCE_ID)) {
+    map.removeSource(RECOMMENDED_ROUTES_SOURCE_ID);
+  }
+}
+
+function buildRecommendedRoutesFeatureCollection(routes) {
+  if (!Array.isArray(routes) || routes.length === 0) {
+    return { type: "FeatureCollection", features: [] };
+  }
+
+  const features = [];
+  for (const route of routes) {
+    if (!Array.isArray(route?.geometry) || route.geometry.length < 2) continue;
+    const coordinates = route.geometry
+      .map((point) => [Number(point.lng), Number(point.lat)])
+      .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat));
+    if (coordinates.length < 2) continue;
+    features.push({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates },
+      properties: { hovered: Boolean(route.hovered) },
+    });
+  }
+
+  return { type: "FeatureCollection", features };
+}
+
 function buildSegmentHighlightFeatureCollection(points) {
   const coordinates = Array.isArray(points)
     ? points

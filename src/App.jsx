@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ContentSections from "./components/ContentSections.jsx";
 import Icon from "./components/Icon.jsx";
 import DataMarkerCard from "./components/DataMarkerCard.jsx";
@@ -25,6 +25,7 @@ import { POI_EMOJIS as WARNING_EMOJIS, isWarningType } from "@cycleways/core/dat
 import { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
+import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
 import { routeSliceForRange } from "./components/frontPanel/routeSlice.js";
@@ -85,6 +86,10 @@ function App() {
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [hoveredBand, setHoveredBand] = useState(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [hoveredRouteSlug, setHoveredRouteSlug] = useState(null);
+  const [discoverSlugs, setDiscoverSlugs] = useState([]);
+  const [recommendedGeoms, setRecommendedGeoms] = useState({});
+  const recommendedGeomCacheRef = useRef(new Map());
   const routePointCount = routeState.points.length;
   const { catalog, places } = useCatalogData();
   const handleSelectRecommended = useCallback((entry) => {
@@ -98,6 +103,43 @@ function App() {
       resolvePanelState(prev, { type: "route-points-changed", pointCount: routePointCount }),
     );
   }, [routePointCount]);
+
+  useEffect(() => {
+    if (panel.state !== "discover" || discoverSlugs.length === 0) return;
+    let cancelled = false;
+    const slugsToLoad = discoverSlugs.filter(
+      (slug) => !recommendedGeomCacheRef.current.has(slug),
+    );
+    if (slugsToLoad.length === 0) return;
+    Promise.all(
+      slugsToLoad.map(async (slug) => {
+        try {
+          const snap = await loadFeaturedRouteSnapshot(slug);
+          if (!cancelled && Array.isArray(snap?.route?.geometry)) {
+            recommendedGeomCacheRef.current.set(slug, snap.route.geometry);
+          }
+        } catch {
+          // ignore failures for individual routes
+        }
+      }),
+    ).then(() => {
+      if (cancelled) return;
+      setRecommendedGeoms((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const [slug, geom] of recommendedGeomCacheRef.current) {
+          if (!prev[slug]) {
+            next[slug] = geom;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [discoverSlugs, panel.state]);
 
   const handlePanelStateChange = useCallback((to) => {
     setPanel((prev) => resolvePanelState(prev, { type: "toggle", to }));
@@ -156,6 +198,17 @@ function App() {
     routeState,
     cueSlides: plannerCueSlides,
   });
+  const recommendedRoutes = useMemo(() => {
+    if (panel.state !== "discover") return null;
+    return discoverSlugs
+      .map((slug) => {
+        const geometry = recommendedGeoms[slug];
+        if (!Array.isArray(geometry) || geometry.length < 2) return null;
+        return { slug, geometry, hovered: slug === hoveredRouteSlug };
+      })
+      .filter(Boolean);
+  }, [panel.state, discoverSlugs, recommendedGeoms, hoveredRouteSlug]);
+
   const bandHighlight = useMemo(() => {
     if (!hoveredBand || routeState.geometry.length < 2) return null;
     const cum = cumulativeMeters(routeState.geometry);
@@ -363,6 +416,7 @@ function App() {
                   videoCursorVariant="progress-head-pulse"
                   videoPlaying={plannerPlayback.isPlaying}
                   segmentHighlight={bandHighlight}
+                  recommendedRoutes={recommendedRoutes}
                 />
 
                 {plannerRouteReady && (
@@ -418,6 +472,8 @@ function App() {
                     places={places}
                     onSelectRoute={handleSelectRecommended}
                     onBuild={() => handlePanelStateChange("build")}
+                    onVisibleRoutesChange={setDiscoverSlugs}
+                    onHoverRoute={setHoveredRouteSlug}
                   />
                 }
                 build={

@@ -8,7 +8,7 @@ import { routeImageSrc } from "../routes/routeImageSrc.js";
 // Minimal horizontal route card for the narrow Discover panel: thumbnail +
 // title + a compact meta line (distance · level · via). The whole card loads
 // the route into the planner. The richer RouteCard is for the wide /routes page.
-export default function PanelRouteCard({ entry, places, onSelect }) {
+export default function PanelRouteCard({ entry, places, onSelect, onHover }) {
   const photo = routeDisplayImage(entry);
   const placeNames = (entry.passesNear || [])
     .map((id) => places.find((p) => p.id === id)?.name)
@@ -19,6 +19,10 @@ export default function PanelRouteCard({ entry, places, onSelect }) {
       type="button"
       className="panel-route-card"
       onClick={() => onSelect(entry)}
+      onMouseEnter={() => onHover?.(entry.slug)}
+      onMouseLeave={() => onHover?.(null)}
+      onFocus={() => onHover?.(entry.slug)}
+      onBlur={() => onHover?.(null)}
       aria-label={`פתח את ${entry.name} במפה`}
     >
       <span className="panel-route-card__thumb" aria-hidden="true">
