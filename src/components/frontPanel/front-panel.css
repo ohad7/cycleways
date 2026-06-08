@@ -327,6 +327,25 @@
   opacity: 0.5;
   cursor: default;
 }
+.btn-ghost {
+  flex: 1;
+  background: #fff;
+  color: #2c4f31;
+  border: 1.5px solid #e7dfca;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: #f6f2e9;
+}
+.btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .build-panel .dlabel {
   display: flex;
   align-items: center;

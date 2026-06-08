@@ -83,6 +83,7 @@ function App() {
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [hoveredBand, setHoveredBand] = useState(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const routePointCount = routeState.points.length;
   const { catalog, places } = useCatalogData();
   const handleSelectRecommended = useCallback((entry) => {
@@ -100,6 +101,15 @@ function App() {
   const handlePanelStateChange = useCallback((to) => {
     setPanel((prev) => resolvePanelState(prev, { type: "toggle", to }));
   }, []);
+
+  const handlePanelShare = useCallback(async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1800);
+    } catch {}
+  }, [shareUrl]);
 
   // Fly to a focused data point (warning click). Memoised on the focus request
   // so MapSurface only flies when the token changes, not on every render.
@@ -418,7 +428,10 @@ function App() {
                     onRedo={handlePlaybackAwareRedo}
                     onClear={handlePlaybackAwareRouteClear}
                     canDownload={canDownload}
-                    onOpenDownload={handleOpenDownload}
+                    onDownloadGpx={handleDownloadGpx}
+                    canShare={Boolean(shareUrl)}
+                    onShare={handlePanelShare}
+                    shareCopied={shareCopied}
                     error={routeState.error}
                     warningPresentation={routeWarningPresentation}
                     onWarningFocus={handleDataPointFocus}

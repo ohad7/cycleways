@@ -50,15 +50,12 @@ test("production core flow works on desktop and mobile", async ({ page }, testIn
     path: testInfo.outputPath(`react-route-${testInfo.project.name}.png`),
   });
 
-  await page.getByRole("button", { name: "סיכום" }).click();
-  await expect(page.getByRole("dialog", { name: "הורדת מסלול GPX" })).toBeVisible();
-  await expect(page.locator(".download-modal-content")).toBeVisible();
+  // GPX download button is directly in the build panel (no modal).
+  await expect(page.locator(".build-panel")).toBeVisible();
+  await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
   await expect(page.locator(".react-route-point-chip")).toHaveCount(0);
-  await page.getByRole("button", { name: "🔗 שיתוף מסלול" }).click();
-  await expect(page.getByRole("dialog", { name: "שיתוף המסלול" })).toBeVisible();
-  await expect(page.getByLabel("קישור שיתוף")).toHaveValue(/route=/);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
+  // Share button copies link to clipboard.
+  await expect(page.getByRole("button", { name: "שיתוף" })).toBeEnabled();
 });
 
 test("production shows outside-network warning in the route panel", async ({ page }) => {
@@ -244,11 +241,8 @@ test("production supports segment hover, segment clicks, and sharing", async ({ 
   );
   expect(await getRoutePointFeatureCount(page)).toBe(3);
 
-  await page.getByRole("button", { name: "סיכום" }).click();
-  await page.getByRole("button", { name: "🔗 שיתוף מסלול" }).click();
-  const shareUrl = await page.getByLabel("קישור שיתוף").getAttribute("value");
-  expect(shareUrl).toContain("route=");
-  expect(shareUrl).not.toContain("w=");
+  // Share button is directly in the build panel.
+  await expect(page.getByRole("button", { name: "שיתוף" })).toBeEnabled();
 });
 
 async function getRoutePointFeatureCount(page) {

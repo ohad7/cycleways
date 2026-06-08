@@ -10,7 +10,10 @@ export default function BuildPanel({
   onRedo,
   onClear,
   canDownload,
-  onOpenDownload,
+  onDownloadGpx,
+  canShare,
+  onShare,
+  shareCopied,
   warningPresentation,
   onWarningFocus,
   pois = [],
@@ -58,8 +61,11 @@ export default function BuildPanel({
 
       {hasRoute && (
         <div className="build-panel__actions">
-          <button type="button" className="btn-primary" disabled={!canDownload} onClick={onOpenDownload}>
-            סיכום ושמירה
+          <button type="button" className="btn-primary" disabled={!canDownload} onClick={onDownloadGpx}>
+            <Icon name="download-outline" /> GPX
+          </button>
+          <button type="button" className="btn-ghost" disabled={!canShare} onClick={onShare}>
+            {shareCopied ? "✓ הועתק" : "שיתוף"}
           </button>
         </div>
       )}
