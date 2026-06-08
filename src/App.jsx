@@ -18,6 +18,7 @@ import {
 } from "./components/routePlayback/useRoutePlayback.js";
 import Tutorial from "./components/Tutorial.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
+import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
 import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
@@ -77,6 +78,20 @@ function App() {
     handleViewportIdle,
     handleElevationHover,
   } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
+
+  const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const routePointCount = routeState.points.length;
+
+  React.useEffect(() => {
+    setPanel((prev) =>
+      resolvePanelState(prev, { type: "route-points-changed", pointCount: routePointCount }),
+    );
+  }, [routePointCount]);
+
+  const handlePanelStateChange = useCallback((to) => {
+    setPanel((prev) => resolvePanelState(prev, { type: "toggle", to }));
+  }, []);
 
   // Fly to a focused data point (warning click). Memoised on the focus request
   // so MapSurface only flies when the token changes, not on every render.
@@ -234,15 +249,15 @@ function App() {
         </div>
 
         <div className="container">
-          <div className="front-shell">
-          <div
-            className={[
-              "map-container",
-              plannerRouteReady ? "map-container--route-ready" : "",
-              plannerPoiPreviewVisible ? "map-container--has-planner-poi" : "",
-              plannerPlayback.isPlaying ? "map-container--planner-playing" : "",
-            ].filter(Boolean).join(" ")}
-          >
+          <div className={["front-shell", panelCollapsed ? "front-shell--collapsed" : ""].filter(Boolean).join(" ")}>
+            <div
+              className={[
+                "map-container",
+                plannerRouteReady ? "map-container--route-ready" : "",
+                plannerPoiPreviewVisible ? "map-container--has-planner-poi" : "",
+                plannerPlayback.isPlaying ? "map-container--planner-playing" : "",
+              ].filter(Boolean).join(" ")}
+            >
             {state.status === "loading" && <LoadingState />}
             {state.status === "ready" && (
               <>
@@ -421,8 +436,27 @@ function App() {
                 />
               </>
             )}
-          </div>
-            {state.status === "ready" && <FrontPanel />}
+            </div>
+            {state.status === "ready" && (
+              <FrontPanel
+                panelState={panel.state}
+                onPanelStateChange={handlePanelStateChange}
+                collapsed={panelCollapsed}
+                onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
+                discover={<div className="front-panel__placeholder">Discover</div>}
+                build={<div className="front-panel__placeholder">Build</div>}
+              />
+            )}
+            {state.status === "ready" && panelCollapsed && (
+              <button
+                type="button"
+                className="front-shell__reopen"
+                aria-label="הצג פאנל"
+                onClick={() => setPanelCollapsed(false)}
+              >
+                <Icon name="chevron-back-outline" />
+              </button>
+            )}
           </div>
         </div>
 

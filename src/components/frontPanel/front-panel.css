@@ -65,3 +65,27 @@
   border-color: #e7dfca;
   box-shadow: 0 1px 3px rgba(40, 48, 38, 0.05);
 }
+.front-panel__head {
+  display: flex;
+  align-items: stretch;
+}
+.front-panel__head .front-panel__statebar { flex: 1; border-bottom: 1px solid #efe8d7; }
+.front-panel__collapse {
+  border: none;
+  background: #faf6ec;
+  border-bottom: 1px solid #efe8d7;
+  padding: 0 12px;
+  cursor: pointer;
+}
+.front-shell__reopen {
+  position: absolute;
+  top: 78px;
+  inset-inline-end: 18px;
+  z-index: 5;
+  border: 1px solid #e7dfca;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 14px rgba(40, 48, 38, 0.1);
+  cursor: pointer;
+}

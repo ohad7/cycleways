@@ -123,6 +123,26 @@ const ICONS = {
       />
     </>
   ),
+  "chevron-back-outline": (
+    <path
+      d="M328 112L184 256l144 144"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="48"
+    />
+  ),
+  "chevron-forward-outline": (
+    <path
+      d="M184 112l144 144-144 144"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="48"
+    />
+  ),
   "trash-outline": (
     <>
       <path
