@@ -123,7 +123,7 @@ function App() {
 
   const buildPois = useMemo(
     () => plannerCueSlides
-      .filter((s) => s.kind !== "start" && s.kind !== "end")
+      .filter((s) => s.kind !== "start" && s.kind !== "end" && s.kind !== "warning")
       .map((s) => ({
         id: s.poiId,
         name: s.name,
