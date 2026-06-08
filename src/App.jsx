@@ -123,6 +123,15 @@ function App() {
     [routeState.activeDataPoints],
   );
 
+  const plannerRouteReady = routeState.geometry.length >= 2;
+  const plannerCueSlides = useMemo(
+    () => routeVideoCueSlides(null, routeState),
+    [
+      routeState.activeDataPoints,
+      routeState.distance,
+      routeState.geometry,
+    ],
+  );
   const buildPois = useMemo(
     () => plannerCueSlides
       .filter((s) => s.kind !== "start" && s.kind !== "end" && s.kind !== "warning")
@@ -133,16 +142,6 @@ function App() {
         distanceMeters: s.routeProgressMeters,
       })),
     [plannerCueSlides],
-  );
-
-  const plannerRouteReady = routeState.geometry.length >= 2;
-  const plannerCueSlides = useMemo(
-    () => routeVideoCueSlides(null, routeState),
-    [
-      routeState.activeDataPoints,
-      routeState.distance,
-      routeState.geometry,
-    ],
   );
   const plannerPlayback = useSyntheticRoutePlayback({
     enabled: plannerRouteReady,
