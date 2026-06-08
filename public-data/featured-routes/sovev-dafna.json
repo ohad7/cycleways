@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-dafna",
-  "generatedAt": "2026-06-08T04:19:38.400Z",
+  "generatedAt": "2026-06-08T04:31:01.693Z",
   "source": {
     "routeTokenHash": "sha256:c9c4aadc35073fcf53cc3a2572340cc45147c20faedb9a07d604473999aee0bf",
     "routeFormat": "hybrid_route_v6",

@@ -408,7 +408,7 @@
       "slug": "roman-roads",
       "name": "דרכים רומיות",
       "summary": "עליה בדרכים רומיות מכפר סאלד לרמת הגולן",
-      "description": "עליה בדרכים רומיות מכפר סאלד לרמת הגולן",
+      "description": "רכיבה בדרכים עתיקות (וקופצניות במיוחד) מכפר סאלד לציר הנפט, ומשם חזרה דרך תל עזזיאת וגבעת האם",
       "route": "AbBRHTfe82KH4s6xDWbL1fpTQxz4LzYMUBAo3sUYkhgbW7zPxzR9cgVR2x1ZMHPdihLmhjr8eZ13qLt14TCsdqW2afTEc1m7wr3NDXxfsYPpk6hLbbF6CDYwjthP8uCvmoNvrMckdKFUmwkvY1S99RqBaFK3Bq41CxcFDF35vekNgafeAPC2FnvNW8BzyZd3qaHLo8b4Ma43nxpnNxKsEDKrLR3gQJy2p2koMmrnAvnBcy2HXVk2GSZ5Vg6ev4HGfECN9owT4Vhrxc3StGT5qF8fMQBo4vudfPQTiY88CPXbbuVJiPzX9VXC6XUkmiH4jxJXxakA8HWdziS6Wdwf1chNCfG4DUENKkRp1E1Udy71g47JEUhzGVMNoepUDBQgS5PTrRgzvQ2eWTN6MdcfcnCbtra9nQDQgemzSRi2Br8",
       "notes": "",
       "featured": false,
@@ -509,7 +509,8 @@
           "height": 800,
           "generatedAt": "2026-06-06T16:53:45.836Z"
         }
-      }
+      },
+      "intro": "רכיבה בדרכים עתיקות (וקופצניות במיוחד) מכפר סאלד לציר הנפט, ומשם חזרה דרך תל עזזיאת וגבעת האם"
     }
   ]
 }
