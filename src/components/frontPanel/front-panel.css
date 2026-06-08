@@ -35,9 +35,13 @@
     padding: 0;
     gap: 0;
   }
+  .front-shell .map-container {
+    min-height: 52vh;
+  }
   .front-panel {
     flex: 1 1 auto;
     border-radius: 0;
+    max-height: 48vh;
   }
 }
 .front-panel__statebar {
