@@ -9,6 +9,8 @@ export default function BuildPanel({
   onUndo,
   onRedo,
   onClear,
+  canDownload,
+  onOpenDownload,
 }) {
   const hasRoute = routeState.geometry.length >= 2;
   return (
@@ -39,6 +41,14 @@ export default function BuildPanel({
         </div>
       ) : (
         <p className="build-panel__empty">סמנו נקודות על המפה כדי לבנות מסלול.</p>
+      )}
+
+      {hasRoute && (
+        <div className="build-panel__actions">
+          <button type="button" className="btn-primary" disabled={!canDownload} onClick={onOpenDownload}>
+            סיכום ושמירה
+          </button>
+        </div>
       )}
     </div>
   );

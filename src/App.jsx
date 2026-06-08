@@ -468,6 +468,8 @@ function App() {
                     onUndo={handlePlaybackAwareUndo}
                     onRedo={handlePlaybackAwareRedo}
                     onClear={handlePlaybackAwareRouteClear}
+                    canDownload={canDownload}
+                    onOpenDownload={handleOpenDownload}
                   />
                 }
               />

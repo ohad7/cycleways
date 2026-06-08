@@ -253,3 +253,27 @@
   color: #7a8c76;
   line-height: 1.4;
 }
+.build-panel__actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+.btn-primary {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: #355e3b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #2a4d30;
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
