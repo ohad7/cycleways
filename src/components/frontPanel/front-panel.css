@@ -1,8 +1,8 @@
 .front-shell {
   display: flex;
   flex-direction: row-reverse; /* RTL: map left, panel right */
-  gap: 10px;
-  padding: 10px;
+  gap: 8px;
+  padding: 6px;
   align-items: stretch;
   /* Fill the .container so the map-container gets the remaining width
      deterministically (an empty Mapbox div has no intrinsic width). */
@@ -24,6 +24,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* Animate collapse: shrink the basis to 0 so the map smoothly stretches. */
+  transition: flex-basis 0.28s ease, opacity 0.2s ease;
 }
 .front-panel__body {
   flex: 1 1 auto;
@@ -31,7 +33,10 @@
   padding: 16px;
 }
 .front-shell--collapsed .front-panel {
-  display: none;
+  flex-basis: 0;
+  opacity: 0;
+  border-width: 0;
+  pointer-events: none;
 }
 /* Narrow viewports: stack map then panel (no parallel legacy layout). */
 @media (max-width: 860px) {
@@ -86,10 +91,11 @@
   padding: 0 12px;
   cursor: pointer;
 }
+/* Reopen tab stays on the physical right edge, where the panel was. */
 .front-shell__reopen {
   position: absolute;
-  top: 78px;
-  inset-inline-end: 18px;
+  top: 74px;
+  right: 14px;
   z-index: 5;
   border: 1px solid #e7dfca;
   background: #fff;
@@ -97,6 +103,11 @@
   padding: 8px 10px;
   box-shadow: 0 4px 14px rgba(40, 48, 38, 0.1);
   cursor: pointer;
+  animation: front-reopen-in 0.2s ease both;
+}
+@keyframes front-reopen-in {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* ---- Discover panel ---- */
