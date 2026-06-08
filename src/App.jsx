@@ -27,6 +27,8 @@ import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
+import { getDistance } from "@cycleways/core/utils/distance.js";
+import { routeSliceForRange } from "./components/frontPanel/routeSlice.js";
 import "./react-app.css";
 
 // Code-split non-critical UI so it stays out of the initial bundle: the
@@ -148,6 +150,14 @@ function App() {
     routeState,
     cueSlides: plannerCueSlides,
   });
+  const bandHighlight = useMemo(() => {
+    if (!hoveredBand || routeState.geometry.length < 2) return null;
+    const cum = cumulativeMeters(routeState.geometry);
+    const total = routeState.distance; // meters
+    const startM = ((hoveredBand.startPercent ?? 0) / 100) * total;
+    const endM = ((hoveredBand.endPercent ?? 0) / 100) * total;
+    return routeSliceForRange(routeState.geometry, cum, startM, endM);
+  }, [hoveredBand, routeState.geometry, routeState.distance]);
   const plannerPoiPreview = useMemo(
     () => nearestPreviewForCursor(
       plannerCueSlides,
@@ -410,6 +420,7 @@ function App() {
                   videoCursor={plannerRouteReady ? plannerPlayback.cursor : null}
                   videoCursorVariant="progress-head-pulse"
                   videoPlaying={plannerPlayback.isPlaying}
+                  segmentHighlight={bandHighlight}
                 />
 
                 {plannerRouteReady && (
@@ -767,6 +778,14 @@ function SegmentNameDisplay({
       )}
     </div>
   );
+}
+
+function cumulativeMeters(points) {
+  const cum = [0];
+  for (let i = 1; i < points.length; i += 1) {
+    cum[i] = cum[i - 1] + getDistance(points[i - 1], points[i]);
+  }
+  return cum;
 }
 
 export default App;

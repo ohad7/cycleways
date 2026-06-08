@@ -409,6 +409,80 @@ function addRouteGeometryHitLayer(map) {
   });
 }
 
+const SEGMENT_HIGHLIGHT_SOURCE_ID = "react-segment-highlight";
+const SEGMENT_HIGHLIGHT_LAYER_ID = "react-segment-highlight-line";
+
+export function syncSegmentHighlightLayer(map, points) {
+  const data = buildSegmentHighlightFeatureCollection(points);
+
+  if (map.getSource(SEGMENT_HIGHLIGHT_SOURCE_ID)) {
+    map.getSource(SEGMENT_HIGHLIGHT_SOURCE_ID).setData(data);
+    return;
+  }
+
+  map.addSource(SEGMENT_HIGHLIGHT_SOURCE_ID, {
+    type: "geojson",
+    data,
+  });
+
+  // Draw above the main route line. Use ROUTE_POINTS_LAYER_ID as the "before"
+  // layer if it exists, so the highlight renders below the route point circles.
+  const beforePointLayer = map.getLayer(ROUTE_POINTS_LAYER_ID)
+    ? ROUTE_POINTS_LAYER_ID
+    : undefined;
+
+  map.addLayer(
+    {
+      id: SEGMENT_HIGHLIGHT_LAYER_ID,
+      type: "line",
+      source: SEGMENT_HIGHLIGHT_SOURCE_ID,
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": "#b5742e",
+        "line-width": 7,
+        "line-opacity": 0.85,
+      },
+    },
+    beforePointLayer,
+  );
+}
+
+export function clearSegmentHighlightLayer(map) {
+  if (!map) return;
+  if (map.getLayer(SEGMENT_HIGHLIGHT_LAYER_ID)) {
+    map.removeLayer(SEGMENT_HIGHLIGHT_LAYER_ID);
+  }
+  if (map.getSource(SEGMENT_HIGHLIGHT_SOURCE_ID)) {
+    map.removeSource(SEGMENT_HIGHLIGHT_SOURCE_ID);
+  }
+}
+
+function buildSegmentHighlightFeatureCollection(points) {
+  const coordinates = Array.isArray(points)
+    ? points
+        .map((point) => [Number(point.lng), Number(point.lat)])
+        .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
+    : [];
+
+  if (coordinates.length < 2) {
+    return { type: "FeatureCollection", features: [] };
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: { type: "LineString", coordinates },
+        properties: {},
+      },
+    ],
+  };
+}
+
 export function syncRoutePointDragPreviewLayer(map, preview) {
   const data = buildRoutePointDragPreviewFeatureCollection(preview);
 

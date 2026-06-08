@@ -24,6 +24,7 @@ import {
   syncRouteGeometryLayer,
   syncRoutePointLayers,
   syncVideoCursorLayer,
+  syncSegmentHighlightLayer,
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
 import { getMapboxGl, whenMapboxReady } from "./mapboxProvider.js";
@@ -99,6 +100,7 @@ function MapSurface({
   routePointDragPreview = null,
   routePoints = [],
   searchHighlight,
+  segmentHighlight = null,
   selectedRoutePointIndex = null,
   videoCursor = null,
   videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
@@ -349,6 +351,12 @@ function MapSurface({
     if (!map || status !== "ready" || !caps.routeGeometryLayer) return;
     syncRouteGeometryLayer(map, routeGeometry, routePointDragPreview);
   }, [routeGeometry, routePointDragPreview, status, caps.routeGeometryLayer]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    syncSegmentHighlightLayer(map, segmentHighlight);
+  }, [segmentHighlight, status]);
 
   useEffect(() => {
     const map = mapRef.current;
