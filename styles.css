@@ -21,7 +21,7 @@
 }
 
 body {
-  font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Assistant', -apple-system, 'Segoe UI', Tahoma, sans-serif;
   margin: 0;
   padding: 0;
   background-image: url('/images/background_grass.webp');
