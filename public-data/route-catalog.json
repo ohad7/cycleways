@@ -156,6 +156,7 @@
       "slug": "historic-jordan",
       "name": "הירדן ההיסטורי",
       "summary": "מסלול דרך נחלים ישנים ותעלות רכיבה מכפר בלום דרך הירדן ההיסטורי, אגמון החולה ותעלת הביטחון",
+      "intro": "רכיבה מכפר בלום לאורך הירדן ההיסטורי ששוקם, לצד שדות שקד וזית, דרך אגמון החולה ותעלת הירדן המזרחית, עם הרבה קטעי עפר פתוחים ונוף מים חקלאי.",
       "route": "5vbUnLFA6HYL69PUsAaSZ2JS5QZJ3M7AXAw2cTYbDMCyrbosoQ9uSiPzkLURe8fJ7PHQAm4uVBqiJsmWMSqKeidgCia8abdPFoj4M61UDk23QHiBJPNDA2buWKXjuu7C7FpbLhbbhpcQSpJC3VfYBM7PtAzGscmepp7cS6MfimbNNYLP7JksEhWprnVQwo8XPryW4Bj695vKTxiQyQfV5vqiSwsHAn4FJwRwFVySCuv8kpn7nNio3zk84DBNHWbSaQuCxocrgraKhY8zBTWzd8qxNqRRDAhSRC4KgXi2j6t9wSgvu1qwCKsjPzeiDh9hCERwzLFYoaidQmJUoJH7qnEk5Mkazi9K3sZC9hsXpfZaWj5JSyKte5FpV6PCuWooG6JawWU9hQCUJ9HupqJsdXc6sbHqSoCLHceeFQHEDjMhGwCsGT",
       "notes": "",
       "featured": false,
@@ -236,12 +237,13 @@
           "height": 800,
           "generatedAt": "2026-06-06T16:53:09.727Z"
         }
-      }
+      },
+      "description": "רכיבה על גדות הירדן - הירדן ההיסטורי ששוקם אחרי שנים רבות, ותעלת הירדן שמזרימה את רוב המים כיום לכנרת. המסלול מתחיל בכפר בלום ועובר בשדות שקד וזית, ממשיך על גדת הירדן ההיסטורי עד אגמון החולה, ומשם חזרה דרך תעלת הירדן המזרחית בשדות היפים של קיבוץ עמיר \n"
     },
     {
       "slug": "kovshey-hagolan",
       "name": "מסע בעקבות כובשי הגולן",
-      "summary": "מסע בעקבות כובשי הגולן",
+      "summary": "מגבעת האם ועד תצפית זעורה בדרך שעשו הלוחמים",
       "description": "",
       "route": "9h2QqmJURFxQsdfLq41Nb6ViW1cNgez9Pk5BctFb8ZPDcJX6tTRz3B",
       "notes": "",
@@ -319,13 +321,14 @@
           "height": 800,
           "generatedAt": "2026-06-06T16:53:22.044Z"
         }
-      }
+      },
+      "intro": "מסלול שטח מאתגר שעובר בנקודות המרכזיות של כיבוש הגולן ב 9 ביוני 1967. הרכיבה מתחילה בכניסה מהכביש לגבעת האם, עולה במעלה ההר בדרך הפטרולים הסורית עד למצפה גולני, ומשם לעין פית ותצפית זעורה"
     },
     {
       "slug": "sovev-dafna",
       "name": "סובב דפנה",
-      "summary": "סובב דפנה",
-      "description": "סובב דפנה",
+      "summary": "רכיבה סביב נחל דן וקיבוץ דפנה",
+      "description": "רכיבה נעימה מקיבוץ דפנה אל נחל דן והשדות שמסביבו. המסלול עובר ליד שמורת נחל שניר ובמסלול האופניים שבין הגושרים לדפנה",
       "route": "5WpMNtJrMmNyYsLV717nLYZXJgm2VhCeRmRs1ZVPCAswAvs5UHJ2tT3WTWSSxmvrAHyx5UFjYqVEgoRFCy2mGRkmvzYgRWZivd1TzbbqJgXqXu4k1mqk6CXzyfp7MsrY3wbQ5jZ3weTYRcbt8VXSjraCXpfzah8JbTGe3WoqDewoNX4cMrjXRb8W9AQuZiqexE66CofDEmSurnJo65PtkA5tR2k7WfJwMPE8izerqCiz",
       "notes": "",
       "featured": true,
@@ -347,7 +350,7 @@
       "qualityScore": 3,
       "start": {
         "name": "מתחם דפנה׳לה",
-        "description": "",
+        "description": "מתחם בילוי חדש בקיבוץ דפנה. במקום יש מספר מקומות לעצירה למנוחה, כמו ג׳ולאן, קלומפוס, בוזה ופיצה טראק",
         "images": [
           {
             "photo": "public-data/poi-images/sovev-dafna-start-12b6d107.webp",
@@ -398,7 +401,8 @@
           "height": 800,
           "generatedAt": "2026-06-06T16:53:35.126Z"
         }
-      }
+      },
+      "intro": "רכיבה נעימה מקיבוץ דפנה אל נחל דן והשדות שמסביבו. המסלול עובר ליד שמורת נחל שניר ובמסלול האופניים שבין הגושרים לדפנה"
     },
     {
       "slug": "roman-roads",

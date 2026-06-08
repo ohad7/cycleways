@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "roman-roads",
-  "generatedAt": "2026-06-06T16:53:53.187Z",
+  "generatedAt": "2026-06-08T04:19:38.875Z",
   "source": {
     "routeTokenHash": "sha256:0f8f1a20551a4d73879adc905e5a50cb5d63941fb911ffc163d2051455503cbd",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "6ee5d31a1bbd",
+    "mapVersion": "0d60a37c3376",
     "assetHashes": {
-      "bikeRoads": "429931751296885402776d200b290f17a3781ffd1f30865d47cc649d32af92cd",
-      "segments": "ff128e4f4b3f54286b32538dcba9c9defd76bcdd44413fe86e806b5fd6b0922e",
+      "bikeRoads": "21fb0c915a02b30020d121eda5ae550dc1d433350b06e3665ac29d790b1d5b3e",
+      "segments": "5e9a055254f59043ac1229f354d48cf1175e140d890957b18220ecda8b602271",
       "cwBaseIndex": "e60f0b6625238fb43e263af633d07e9f1f6ccd15b4ec1e407e026af88044324e",
-      "baseRoutingShards": "f532c7281010b52d6d74fd4295317c476a0c7f062be51b48a948ac15b3f5f7e9"
+      "baseRoutingShards": "742a9912097ef9b37d81989838d9eec99970dcaadbe2fbe776660f9c0f10b531"
     }
   },
   "route": {
@@ -3476,6 +3476,56 @@
         "routeDistanceMeters": 1.1133376945103521,
         "routeProgressMeters": 3769.8597358488987,
         "routeFraction": 0.14083698221911725
+      },
+      {
+        "id": "poi-521bbc87",
+        "type": "landmark",
+        "information": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני",
+        "location": [
+          33.22471482716924,
+          35.69313022319281
+        ],
+        "name": "מצפה גולני - תל פאחר",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-521bbc87-9fdd2f58.webp",
+            "thumbnail": "public-data/poi-images/poi-521bbc87-9fdd2f58-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-521bbc87-f68ae011.webp",
+            "thumbnail": "public-data/poi-images/poi-521bbc87-f68ae011-thumb.webp"
+          }
+        ],
+        "description": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני",
+        "segmentName": "ציר הנפט עין פית",
+        "routeDistanceMeters": 0.04264022166790057,
+        "routeProgressMeters": 14528.9050200145,
+        "routeFraction": 0.5427807083931889
+      },
+      {
+        "id": "poi-8e08b582",
+        "type": "landmark",
+        "information": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳",
+        "location": [
+          33.20986655083472,
+          35.658273167456514
+        ],
+        "name": "גבעת האם",
+        "description": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳. בגבעה יש תצפית לעמק החולה ולעבר הגולן, היא שמשה כנקודת הזינוק לכיבוש הגולן ביוני 1967",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-8e08b582-107f7255.webp",
+            "thumbnail": "public-data/poi-images/poi-8e08b582-107f7255-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-8e08b582-2da6d1e0.webp",
+            "thumbnail": "public-data/poi-images/poi-8e08b582-2da6d1e0-thumb.webp"
+          }
+        ],
+        "segmentName": "גבעת האם",
+        "routeDistanceMeters": 0.008248687585861166,
+        "routeProgressMeters": 22223.89704998396,
+        "routeFraction": 0.8302554505952409
       }
     ],
     "dataMarkerFeatures": [
@@ -3578,13 +3628,65 @@
           "color": "#FF9800",
           "icon": "caution-11"
         }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-521bbc87",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.69313022319281,
+            33.22471482716924
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-521bbc87",
+          "type": "landmark",
+          "name": "מצפה גולני - תל פאחר",
+          "information": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני",
+          "description": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני",
+          "photo": "public-data/poi-images/poi-521bbc87-9fdd2f58.webp",
+          "thumbnail": "public-data/poi-images/poi-521bbc87-9fdd2f58-thumb.webp",
+          "segmentName": "ציר הנפט עין פית",
+          "emoji": "🏛️",
+          "label": "אתר היסטורי",
+          "color": "#6c5ce7",
+          "icon": "poi-emoji-landmark"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "poi-8e08b582",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            35.658273167456514,
+            33.20986655083472
+          ]
+        },
+        "properties": {
+          "dataPointId": "poi-8e08b582",
+          "type": "landmark",
+          "name": "גבעת האם",
+          "information": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳",
+          "description": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳. בגבעה יש תצפית לעמק החולה ולעבר הגולן, היא שמשה כנקודת הזינוק לכיבוש הגולן ביוני 1967",
+          "photo": "public-data/poi-images/poi-8e08b582-107f7255.webp",
+          "thumbnail": "public-data/poi-images/poi-8e08b582-107f7255-thumb.webp",
+          "segmentName": "גבעת האם",
+          "emoji": "🏛️",
+          "label": "אתר היסטורי",
+          "color": "#6c5ce7",
+          "icon": "poi-emoji-landmark"
+        }
       }
     ],
     "activeDataPointIds": [
       "האגם הנעלם-0",
       "האגם הנעלם-1",
       "דרך רומית מעלה כפר סאלד-0",
-      "דרך הפטרולים קיבוץ שמיר צפון-0"
+      "דרך הפטרולים קיבוץ שמיר צפון-0",
+      "poi-521bbc87",
+      "poi-8e08b582"
     ]
   }
 }

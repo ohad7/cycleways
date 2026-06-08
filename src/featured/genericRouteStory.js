@@ -1,11 +1,12 @@
 export function createGenericRouteStoryProps(entry) {
+  const introBody = splitParagraphs(textOrFallback(entry.intro, entry.summary));
   return {
     slug: entry.slug,
     kicker: routeKicker(entry),
     intro: {
       kicker: "מסלול מומלץ",
       heading: "מה מחכה בדרך",
-      body: [entry.summary].filter(Boolean),
+      body: introBody,
     },
     about: {
       eyebrow: "על המסלול",
@@ -22,6 +23,11 @@ export function genericRouteNavLinks(entry) {
     { label: "נקודות במסלול", href: "#fv-poi-stories" },
     { label: "כל המסלולים", to: "/routes/" },
   ];
+}
+
+function textOrFallback(text, fallback) {
+  if (typeof text === "string" && text.trim()) return text;
+  return fallback;
 }
 
 function splitParagraphs(text) {

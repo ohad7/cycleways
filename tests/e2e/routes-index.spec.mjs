@@ -130,6 +130,10 @@ test("/routes generic route renders from snapshot without planner assets", async
   await expect(page.locator(".fv-route-stage-map")).toBeVisible();
   await expect(page.locator(".fv-video-controls")).toBeVisible();
   await expect(page.locator(".fv-route-actions .fv-route-action--primary")).toContainText("נגן מסלול");
+  await expect(page.locator(".fv-route-panel")).toContainText(
+    "רכיבה מכפר בלום לאורך הירדן ההיסטורי ששוקם",
+  );
+  await expect(page.locator("#fv-about")).toContainText("רכיבה על גדות הירדן");
   await expect(page.locator(".fv-route-stats")).toContainText("בינוני");
   await expect(page.locator(".fv-route-stats")).toContainText("שטח");
   await expect(page.locator(".fv-video .featured-video-frame")).toHaveCount(0);
