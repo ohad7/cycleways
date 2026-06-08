@@ -121,6 +121,18 @@ function App() {
     [routeState.activeDataPoints],
   );
 
+  const buildPois = useMemo(
+    () => plannerCueSlides
+      .filter((s) => s.kind !== "start" && s.kind !== "end")
+      .map((s) => ({
+        id: s.poiId,
+        name: s.name,
+        type: s.type,
+        distanceMeters: s.routeProgressMeters,
+      })),
+    [plannerCueSlides],
+  );
+
   const plannerRouteReady = routeState.geometry.length >= 2;
   const plannerCueSlides = useMemo(
     () => routeVideoCueSlides(null, routeState),
@@ -477,6 +489,8 @@ function App() {
                     onOpenDownload={handleOpenDownload}
                     warningPresentation={routeWarningPresentation}
                     onWarningFocus={handleDataPointFocus}
+                    pois={buildPois}
+                    onPoiClick={(p) => handlePlannerCueClick({ slide: p, poiId: p.id })}
                   />
                 }
               />

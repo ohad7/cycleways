@@ -13,6 +13,8 @@ export default function BuildPanel({
   onOpenDownload,
   warningPresentation,
   onWarningFocus,
+  pois = [],
+  onPoiClick,
 }) {
   const hasRoute = routeState.geometry.length >= 2;
   const warningGroups = warningPresentation?.groups || [];
@@ -68,6 +70,21 @@ export default function BuildPanel({
             >
               <span>{g.label}</span>
               <span aria-hidden="true">{g.icons.join(" ")}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {hasRoute && pois.length > 0 && (
+        <div className="build-panel__pois">
+          <div className="dlabel">נקודות עניין בדרך <span className="tag">{pois.length} נקודות זוהו</span></div>
+          {pois.map((p, i) => (
+            <button key={p.id || i} type="button" className="poi-card" onClick={() => onPoiClick?.(p)}>
+              <span className="poi-card__idx">{i + 1}</span>
+              <span className="poi-card__body">
+                <span className="poi-card__title">{p.name}</span>
+                <span className="poi-card__dist">{formatLegacyDistance(p.distanceMeters)}</span>
+              </span>
             </button>
           ))}
         </div>
