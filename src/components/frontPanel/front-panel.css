@@ -37,6 +37,9 @@
   opacity: 0;
   border-width: 0;
   pointer-events: none;
+  /* Hide from the a11y/hit tree once the slide finishes (delay matches width). */
+  visibility: hidden;
+  transition: flex-basis 0.28s ease, opacity 0.2s ease, visibility 0s linear 0.28s;
 }
 /* Narrow viewports: stack map then panel (no parallel legacy layout). */
 @media (max-width: 860px) {
