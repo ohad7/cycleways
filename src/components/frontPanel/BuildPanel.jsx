@@ -15,6 +15,7 @@ export default function BuildPanel({
   onWarningFocus,
   pois = [],
   onPoiClick,
+  elevation,
 }) {
   const hasRoute = routeState.geometry.length >= 2;
   const warningGroups = warningPresentation?.groups || [];
@@ -48,6 +49,8 @@ export default function BuildPanel({
       ) : (
         <p className="build-panel__empty">סמנו נקודות על המפה כדי לבנות מסלול.</p>
       )}
+
+      {hasRoute && elevation}
 
       {hasRoute && (
         <div className="build-panel__actions">

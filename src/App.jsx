@@ -21,6 +21,7 @@ import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
 import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
 import BuildPanel from "./components/frontPanel/BuildPanel.jsx";
+import PanelElevationGraph from "./components/frontPanel/PanelElevationGraph.jsx";
 import { useCatalogData } from "./components/frontPanel/useCatalogData.js";
 import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
@@ -84,6 +85,7 @@ function App() {
 
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [hoveredBand, setHoveredBand] = useState(null);
   const routePointCount = routeState.points.length;
   const { catalog, places } = useCatalogData();
   const handleSelectRecommended = useCallback((entry) => {
@@ -491,6 +493,25 @@ function App() {
                     onWarningFocus={handleDataPointFocus}
                     pois={buildPois}
                     onPoiClick={(p) => handlePlannerCueClick({ slide: p, poiId: p.id })}
+                    elevation={
+                      <PanelElevationGraph
+                        geometry={routeState.geometry}
+                        distance={routeState.distance}
+                        cursorFraction={plannerPlayback.cursor?.fraction ?? null}
+                        cursorPlaying={plannerPlayback.isPlaying}
+                        externalCursorActive={Boolean(
+                          plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
+                        )}
+                        onElevationHover={handlePlannerElevationHover}
+                        onElevationSelect={handlePlannerElevationSelect}
+                        onBandHover={setHoveredBand}
+                        onBandSelect={(band) => {
+                          const start = band.startPercent ?? 0;
+                          const end = band.endPercent ?? 0;
+                          plannerPlayback.seekToFraction(((start + end) / 2) / 100);
+                        }}
+                      />
+                    }
                   />
                 }
               />

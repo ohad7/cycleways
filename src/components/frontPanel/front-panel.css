@@ -380,3 +380,23 @@
   font-size: 11px;
   font-weight: 600;
 }
+
+/* ---- Panel elevation graph ---- */
+.panel-elev { position: relative; }
+.panel-elev__bands {
+  position: relative;
+  height: 10px;
+  margin-top: 4px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.panel-elev__band {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.panel-elev__band:hover { opacity: 1; }
