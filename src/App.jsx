@@ -17,6 +17,7 @@ import {
   useSyntheticRoutePlayback,
 } from "./components/routePlayback/useRoutePlayback.js";
 import Tutorial from "./components/Tutorial.jsx";
+import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
@@ -233,6 +234,7 @@ function App() {
         </div>
 
         <div className="container">
+          <div className="front-shell">
           <div
             className={[
               "map-container",
@@ -419,6 +421,8 @@ function App() {
                 />
               </>
             )}
+          </div>
+            {state.status === "ready" && <FrontPanel />}
           </div>
         </div>
 
