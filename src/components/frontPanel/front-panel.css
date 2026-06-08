@@ -40,3 +40,28 @@
     border-radius: 0;
   }
 }
+.front-panel__statebar {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  background: #faf6ec;
+  border-bottom: 1px solid #efe8d7;
+}
+.front-panel__statebar button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+.front-panel__statebar button.on {
+  background: #fff;
+  border-color: #e7dfca;
+  box-shadow: 0 1px 3px rgba(40, 48, 38, 0.05);
+}
