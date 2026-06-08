@@ -322,59 +322,10 @@ function App() {
                       }
                     />
                   </form>
-                  <div className="top-controls">
-                    <div className="control-buttons">
-                      <button
-                        id="undo-btn"
-                        className="control-btn"
-                        disabled={!canUndo}
-                        type="button"
-                        title="ביטול (Ctrl+Z)"
-                        aria-label="ביטול"
-                        onClick={handlePlaybackAwareUndo}
-                      >
-                        <Icon name="arrow-undo-outline" />
-                      </button>
-                      <button
-                        id="redo-btn"
-                        className="control-btn"
-                        disabled={!canRedo}
-                        type="button"
-                        title="חזרה (Ctrl+Shift+Z)"
-                        aria-label="חזרה"
-                        onClick={handlePlaybackAwareRedo}
-                      >
-                        <Icon name="arrow-redo-outline" />
-                      </button>
-                      <button
-                        id="reset-btn"
-                        className="control-btn"
-                        disabled={routeState.points.length === 0}
-                        type="button"
-                        title="איפוס מסלול"
-                        aria-label="איפוס מסלול"
-                        onClick={handlePlaybackAwareRouteClear}
-                      >
-                        <Icon name="trash-outline" />
-                      </button>
-                      <button
-                        id="download-gpx"
-                        className="control-btn gpx-download-button"
-                        disabled={!canDownload}
-                        type="button"
-                        title="סיכום, GPX, ושיתוף המסלול"
-                        onClick={handleOpenDownload}
-                      >
-                        סיכום
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
                 <MapLegend
-                  activeDataPoints={routeState.activeDataPoints}
                   hasBrokenRoute={hasBrokenRoute}
-                  onWarningFocus={handleDataPointFocus}
                 />
 
                 <DataMarkerCard
@@ -585,14 +536,7 @@ function ErrorState({ error }) {
   );
 }
 
-function MapLegend({ activeDataPoints, hasBrokenRoute, onWarningFocus }) {
-  const [warningsOpen, setWarningsOpen] = useState(false);
-  const warningPresentation = useMemo(
-    () => getRouteWarningPresentation(activeDataPoints),
-    [activeDataPoints],
-  );
-  const warnings = warningPresentation.warnings;
-
+function MapLegend({ hasBrokenRoute }) {
   return (
     <div className="legend-container">
       <div className="legend-box open" id="legend-box">
@@ -614,49 +558,6 @@ function MapLegend({ activeDataPoints, hasBrokenRoute, onWarningFocus }) {
         <div className="route-warning issue-warning" id="route-warning">
           ⚠️ מסלול שבור
         </div>
-      )}
-      {warnings.length > 0 && (
-        <>
-          <button
-            className="segment-warning issue-warning react-warning-toggle"
-            id="segment-warning"
-            type="button"
-            onClick={() => setWarningsOpen((current) => !current)}
-          >
-            {warningPresentation.toggleLabel}
-          </button>
-          <div
-            className="individual-warnings-container"
-            id="individual-warnings-container"
-            style={{ display: warningsOpen ? "block" : "none" }}
-          >
-            {warningPresentation.groups.map((warningGroup) => (
-              <button
-                className="individual-warning-item react-individual-warning-item"
-                key={warningGroup.segmentName}
-                type="button"
-                onClick={() => onWarningFocus?.(warningGroup.warnings?.[0])}
-                style={{
-                  backgroundColor: warningGroup.backgroundColor,
-                }}
-              >
-                <span className="warning-text">
-                  {warningGroup.label}
-                </span>
-                <span className="warning-icons" aria-hidden="true">
-                  {warningGroup.icons.map((icon, index) => (
-                    <span
-                      className="warning-icon react-warning-icon"
-                      key={`${warningGroup.segmentName}-${warningGroup.types[index] || index}`}
-                    >
-                      {icon}
-                    </span>
-                  ))}
-                </span>
-              </button>
-            ))}
-          </div>
-        </>
       )}
     </div>
   );
