@@ -433,6 +433,24 @@
 
 /* ---- Panel elevation graph ---- */
 .panel-elev { position: relative; }
+.panel-elev .elevation-chart {
+  position: relative;
+  width: 100%;
+  height: 120px;
+}
+.panel-elev .elevation-chart svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.panel-elev .elevation-hover-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
 .panel-elev__bands {
   position: relative;
   height: 10px;
