@@ -20,6 +20,7 @@ import Tutorial from "./components/Tutorial.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
 import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
+import BuildPanel from "./components/frontPanel/BuildPanel.jsx";
 import { useCatalogData } from "./components/frontPanel/useCatalogData.js";
 import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
@@ -459,7 +460,16 @@ function App() {
                     onBuild={() => handlePanelStateChange("build")}
                   />
                 }
-                build={<div className="front-panel__placeholder">Build</div>}
+                build={
+                  <BuildPanel
+                    routeState={routeState}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onUndo={handlePlaybackAwareUndo}
+                    onRedo={handlePlaybackAwareRedo}
+                    onClear={handlePlaybackAwareRouteClear}
+                  />
+                }
               />
             )}
             {state.status === "ready" && panelCollapsed && (
