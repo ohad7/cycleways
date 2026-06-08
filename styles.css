@@ -86,11 +86,7 @@ body::before {
     border-bottom: none;
   }
 
-  background: #F8F8F8;
-  background-image: url('/images/background.webp');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: linear-gradient(178deg,#aacbe6 0%,#bcd3df 26%,#cfe0c4 52%,#9cc06f 80%,#7faa55 100%);
   padding: 15px 40px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -123,7 +119,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(248, 248, 248, 0.2);
+  background: radial-gradient(120% 80% at 20% -20%, rgba(255,255,255,.45), transparent 60%);
   z-index: 1;
 }
 
@@ -175,8 +171,9 @@ body::before {
 
 .site-title {
   font-size: 24px;
-  font-weight: bold;
-  color: #333;
+  font-weight: 800;
+  color: #22402a;
+  text-shadow: 0 1px 0 rgba(255,255,255,.35);
   margin: 0;
   cursor: pointer;
   transition: color 0.2s;
@@ -211,11 +208,7 @@ body::before {
     top: 100%;
     left: 0;
     right: 0;
-    background: #F8F8F8;
-    background-image: url('/images/background.webp');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background: linear-gradient(178deg,#aacbe6 0%,#bcd3df 26%,#cfe0c4 52%,#9cc06f 80%,#7faa55 100%);
     flex-direction: column;
     gap: 0;
     padding: 20px;
@@ -266,7 +259,7 @@ body::before {
 }
 
 .nav-link {
-  color: #333;
+  color: #2f4533;
   text-decoration: none;
   font-size: 16px;
   font-weight: bold;
