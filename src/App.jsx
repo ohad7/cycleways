@@ -21,7 +21,8 @@ import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
 import BuildPanel from "./components/frontPanel/BuildPanel.jsx";
 import PanelElevationGraph from "./components/frontPanel/PanelElevationGraph.jsx";
 import { useCatalogData } from "./components/frontPanel/useCatalogData.js";
-import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
+import { POI_EMOJIS as WARNING_EMOJIS, isWarningType } from "@cycleways/core/data/poiTypes.js";
+import { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
@@ -140,15 +141,15 @@ function App() {
     ],
   );
   const buildPois = useMemo(
-    () => plannerCueSlides
-      .filter((s) => s.kind !== "start" && s.kind !== "end" && s.kind !== "warning")
-      .map((s) => ({
-        id: s.poiId,
-        name: s.name,
-        type: s.type,
-        distanceMeters: s.routeProgressMeters,
+    () => (routeState.activeDataPoints || [])
+      .filter((p) => p && !isWarningType(p.type))
+      .map((p) => ({
+        poi: p,
+        distanceLabel: Number.isFinite(p.routeFraction)
+          ? formatLegacyDistance(p.routeFraction * routeState.distance)
+          : null,
       })),
-    [plannerCueSlides],
+    [routeState.activeDataPoints, routeState.distance],
   );
   const plannerPlayback = useSyntheticRoutePlayback({
     enabled: plannerRouteReady,
@@ -436,7 +437,7 @@ function App() {
                     warningPresentation={routeWarningPresentation}
                     onWarningFocus={handleDataPointFocus}
                     pois={buildPois}
-                    onPoiClick={(p) => handlePlannerCueClick({ slide: p, poiId: p.id })}
+                    onPoiClick={(poi) => handleDataPointFocus(poi)}
                     elevation={
                       <PanelElevationGraph
                         geometry={routeState.geometry}

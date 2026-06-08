@@ -1,6 +1,7 @@
 import React from "react";
 import Icon from "../Icon.jsx";
 import { formatLegacyDistance } from "../ElevationProfile.jsx";
+import PanelPoiCard from "./PanelPoiCard.jsx";
 
 export default function BuildPanel({
   routeState,
@@ -91,14 +92,8 @@ export default function BuildPanel({
       {hasRoute && pois.length > 0 && (
         <div className="build-panel__pois">
           <div className="dlabel">נקודות עניין בדרך <span className="tag">{pois.length} נקודות זוהו</span></div>
-          {pois.map((p, i) => (
-            <button key={p.id || i} type="button" className="poi-card" onClick={() => onPoiClick?.(p)}>
-              <span className="poi-card__idx">{i + 1}</span>
-              <span className="poi-card__body">
-                <span className="poi-card__title">{p.name}</span>
-                <span className="poi-card__dist">{formatLegacyDistance(p.distanceMeters)}</span>
-              </span>
-            </button>
+          {pois.map(({ poi, distanceLabel }, i) => (
+            <PanelPoiCard key={poi.id || i} poi={poi} distanceLabel={distanceLabel} onSelect={onPoiClick} />
           ))}
         </div>
       )}
