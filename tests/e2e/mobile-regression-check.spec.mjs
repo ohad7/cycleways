@@ -12,7 +12,8 @@ test("mobile adapted layout remains usable", async ({ page }, testInfo) => {
 
   await expect(page.locator("#map")).toBeVisible();
   await expect(page.locator("#route-description")).toContainText("4.5 ק\"מ");
-  await expect(page.locator("#download-gpx")).toBeEnabled();
+  // Save/summary now lives in the route panel (Build state, auto-entered for ?route=).
+  await expect(page.getByRole("button", { name: "סיכום ושמירה" })).toBeEnabled();
 
   const widthMetrics = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -31,7 +32,7 @@ test("mobile adapted layout remains usable", async ({ page }, testInfo) => {
   await page.locator(".mobile-menu-btn").click();
   await expect(page.locator("#nav-links")).not.toHaveClass(/active/);
 
-  await page.locator("#download-gpx").click();
+  await page.getByRole("button", { name: "סיכום ושמירה" }).click();
   await expect(page.getByRole("dialog", { name: "הורדת מסלול GPX" })).toBeVisible();
   const modalBounds = await page.locator(".download-modal-content").evaluate((node) => {
     const rect = node.getBoundingClientRect();

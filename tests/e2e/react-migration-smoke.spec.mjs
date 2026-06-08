@@ -25,7 +25,8 @@ test("current public app loads with route controls", async ({ page }) => {
   await expect(page.locator("#route-description")).toContainText(
     "לחץ על נקודות במפה",
   );
-  await expect(page.locator("#download-gpx")).toBeDisabled();
+  // Route controls now live in the right-side panel (no on-map control buttons).
+  await expect(page.getByTestId("front-panel")).toBeVisible();
 });
 
 test("production root restores compact route URL", async ({ page }) => {
@@ -65,7 +66,8 @@ test("production core flow works on desktop and mobile", async ({ page }, testIn
 
 test("production shows outside-network warning in the route panel", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
-  await expect(page.locator(".elevation-hover-overlay")).toBeVisible();
+  // Route loaded into the bottom route panel.
+  await expect(page.locator("#route-description")).toContainText("4.5 ק\"מ");
 
   await page.evaluate(() => {
     window.__mockMapboxRenderedFeatures = [];
@@ -78,7 +80,6 @@ test("production shows outside-network warning in the route panel", async ({ pag
   await expect(page.locator("#route-description .route-inline-warning")).toContainText(
     "הנקודה רחוקה מדי מרשת הדרכים",
   );
-  await expect(page.locator("#route-description .elevation-hover-overlay")).toHaveCount(0);
 });
 
 test("production supports segment hover, segment clicks, and sharing", async ({ page }) => {

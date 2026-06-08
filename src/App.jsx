@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import ContentSections from "./components/ContentSections.jsx";
 import Icon from "./components/Icon.jsx";
 import DataMarkerCard from "./components/DataMarkerCard.jsx";
-import ElevationProfile, { formatLegacyDistance } from "./components/ElevationProfile.jsx";
+import { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import PageShell from "./components/PageShell.jsx";
 import { getRouteMessage } from "./components/RoutePanel.jsx";
 import RoutePlaybackControls from "./components/featured/RoutePlaybackControls.jsx";
@@ -35,12 +35,9 @@ import "./react-app.css";
 // download/share modal only loads when opened, and the route-discovery wizard
 // only loads when its feature flag is on (off by default).
 const DownloadModal = lazy(() => import("./components/DownloadModal.jsx"));
-const WelcomeWizard = lazy(() => import("./components/WelcomeWizard.jsx"));
 
 function App() {
   const {
-    welcomeWizardOpen,
-    setWelcomeWizardOpen,
     state,
     mapUi,
     routeState,
@@ -259,22 +256,7 @@ function App() {
 
   return (
     <>
-      {featureFlags.routeDiscovery && (
-        <Suspense fallback={null}>
-          <WelcomeWizard
-            visible={welcomeWizardOpen}
-            onDismiss={() => setWelcomeWizardOpen(false)}
-          />
-        </Suspense>
-      )}
-      <PageShell
-        onOpenTutorial={handleOpenTutorial}
-        onOpenWizard={
-          featureFlags.routeDiscovery
-            ? () => setWelcomeWizardOpen(true)
-            : undefined
-        }
-      >
+      <PageShell onOpenTutorial={handleOpenTutorial}>
         <div
           id="error-message"
           className={state.status === "error" ? "show" : ""}
@@ -410,11 +392,8 @@ function App() {
                 <RouteDescription
                   error={routeState.error}
                   hasBrokenRoute={hasBrokenRoute}
-                  playback={plannerPlayback}
                   routeState={routeState}
                   selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
-                  onElevationHover={handlePlannerElevationHover}
-                  onElevationSelect={handlePlannerElevationSelect}
                   onRemoveRoutePoint={handlePlaybackAwareRoutePointRemove}
                   onSelectRoutePoint={handleRoutePointSelect}
                 />
@@ -566,20 +545,11 @@ function MapLegend({ hasBrokenRoute }) {
 function RouteDescription({
   error,
   hasBrokenRoute,
-  onElevationHover,
-  onElevationSelect,
   onRemoveRoutePoint,
   onSelectRoutePoint,
-  playback,
   routeState,
   selectedRoutePointIndex,
 }) {
-  const playbackActive = Boolean(
-    playback?.hasCursor ||
-    playback?.isPlaying ||
-    playback?.isScrubbing,
-  );
-
   return (
     <div
       className={`route-description-panel${
@@ -604,17 +574,6 @@ function RouteDescription({
             </div>
             {hasBrokenRoute && (
               <div className="react-route-panel__warnings">מסלול שבור בין הנקודות שנבחרו.</div>
-            )}
-            {routeState.geometry.length >= 2 && (
-              <ElevationProfile
-                cursorFraction={playback?.cursor?.fraction ?? null}
-                cursorPlaying={playback?.isPlaying}
-                distance={routeState.distance}
-                externalCursorActive={playbackActive}
-                geometry={routeState.geometry}
-                onElevationHover={onElevationHover}
-                onElevationSelect={onElevationSelect}
-              />
             )}
           </>
         )}
