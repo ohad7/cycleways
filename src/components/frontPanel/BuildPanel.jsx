@@ -11,8 +11,12 @@ export default function BuildPanel({
   onClear,
   canDownload,
   onOpenDownload,
+  warningPresentation,
+  onWarningFocus,
 }) {
   const hasRoute = routeState.geometry.length >= 2;
+  const warningGroups = warningPresentation?.groups || [];
+
   return (
     <div className="build-panel">
       <div className="build-panel__head">
@@ -48,6 +52,24 @@ export default function BuildPanel({
           <button type="button" className="btn-primary" disabled={!canDownload} onClick={onOpenDownload}>
             סיכום ושמירה
           </button>
+        </div>
+      )}
+
+      {hasRoute && warningGroups.length > 0 && (
+        <div className="build-panel__warnings">
+          <div className="dlabel">מידע חשוב</div>
+          {warningGroups.map((g) => (
+            <button
+              key={g.segmentName}
+              type="button"
+              className="build-warning"
+              style={{ backgroundColor: g.backgroundColor }}
+              onClick={() => onWarningFocus?.(g.warnings?.[0])}
+            >
+              <span>{g.label}</span>
+              <span aria-hidden="true">{g.icons.join(" ")}</span>
+            </button>
+          ))}
         </div>
       )}
     </div>

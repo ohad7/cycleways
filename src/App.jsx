@@ -116,6 +116,11 @@ function App() {
         : null,
     [mapUi.dataMarkerFocus],
   );
+  const routeWarningPresentation = useMemo(
+    () => getRouteWarningPresentation(routeState.activeDataPoints),
+    [routeState.activeDataPoints],
+  );
+
   const plannerRouteReady = routeState.geometry.length >= 2;
   const plannerCueSlides = useMemo(
     () => routeVideoCueSlides(null, routeState),
@@ -470,6 +475,8 @@ function App() {
                     onClear={handlePlaybackAwareRouteClear}
                     canDownload={canDownload}
                     onOpenDownload={handleOpenDownload}
+                    warningPresentation={routeWarningPresentation}
+                    onWarningFocus={handleDataPointFocus}
                   />
                 }
               />
