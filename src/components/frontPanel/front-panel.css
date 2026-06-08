@@ -89,3 +89,83 @@
   box-shadow: 0 4px 14px rgba(40, 48, 38, 0.1);
   cursor: pointer;
 }
+
+/* ---- Discover panel ---- */
+.discover-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.discover-panel__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #b5742e;
+  text-transform: none;
+}
+.discover-panel h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  color: #283026;
+  line-height: 1.2;
+}
+.discover-panel__hint {
+  margin-top: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: #586056;
+  cursor: pointer;
+  text-align: right;
+  line-height: 1.4;
+}
+.discover-panel__hint:hover {
+  color: #355e3b;
+  text-decoration: underline;
+}
+.discover-panel__places {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.discover-panel__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* Override the wizard's horizontal grid layout — stack vertically in the panel */
+.discover-panel__filters .wd-filter-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.discover-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.discover-panel .dlabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #283026;
+  padding-top: 4px;
+  border-top: 1px solid #efe8d7;
+}
+.discover-panel .dlabel::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #efe8d7;
+}

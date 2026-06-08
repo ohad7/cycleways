@@ -19,6 +19,8 @@ import {
 import Tutorial from "./components/Tutorial.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
+import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
+import { useCatalogData } from "./components/frontPanel/useCatalogData.js";
 import { POI_EMOJIS as WARNING_EMOJIS } from "@cycleways/core/data/poiTypes.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
@@ -82,6 +84,12 @@ function App() {
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const routePointCount = routeState.points.length;
+  const { catalog, places } = useCatalogData();
+  const handleSelectRecommended = useCallback((entry) => {
+    if (entry?.route) {
+      window.location.assign(`/?route=${encodeURIComponent(entry.route)}`);
+    }
+  }, []);
 
   React.useEffect(() => {
     setPanel((prev) =>
@@ -443,7 +451,14 @@ function App() {
                 onPanelStateChange={handlePanelStateChange}
                 collapsed={panelCollapsed}
                 onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
-                discover={<div className="front-panel__placeholder">Discover</div>}
+                discover={
+                  <DiscoverPanel
+                    catalog={catalog}
+                    places={places}
+                    onSelectRoute={handleSelectRecommended}
+                    onBuild={() => handlePanelStateChange("build")}
+                  />
+                }
                 build={<div className="front-panel__placeholder">Build</div>}
               />
             )}
