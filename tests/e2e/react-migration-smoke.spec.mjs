@@ -60,8 +60,10 @@ test("production core flow works on desktop and mobile", async ({ page }, testIn
 
 test("production shows outside-network warning in the route panel", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
-  // Route loaded — build panel shows stats.
-  await expect(page.getByTestId("front-panel")).toBeVisible();
+  // Wait for the build panel to be visible (route loaded, panel auto-switched to build).
+  await expect(page.locator(".build-panel")).toBeVisible();
+  // Ensure the route stats are showing before triggering the outside-network click.
+  await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
 
   await page.evaluate(() => {
     window.__mockMapboxRenderedFeatures = [];
