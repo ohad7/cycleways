@@ -3,6 +3,7 @@ import { segmentPreviewImage } from "../src/components/segmentPreviewImage.js";
 
 // no / empty data points -> ""
 assert.equal(segmentPreviewImage(null), "");
+assert.equal(segmentPreviewImage(undefined), "");
 assert.equal(segmentPreviewImage({}), "");
 assert.equal(segmentPreviewImage({ dataPoints: [] }), "");
 
@@ -10,6 +11,16 @@ assert.equal(segmentPreviewImage({ dataPoints: [] }), "");
 assert.equal(
   segmentPreviewImage({ dataPoints: [{ type: "gate" }, { type: "mud" }] }),
   "",
+);
+
+// warning-type POIs that carry a photo are still picked (intentional)
+assert.equal(
+  segmentPreviewImage({
+    dataPoints: [
+      { type: "gate", images: [{ photo: "public-data/poi-images/gate.webp" }] },
+    ],
+  }),
+  "/public-data/poi-images/gate.webp",
 );
 
 // first data point that has an image wins; bare public-data path gets a leading slash
