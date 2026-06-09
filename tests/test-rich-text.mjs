@@ -99,3 +99,30 @@ assert.deepEqual(parseRichText("[x]("), [[{ t: "text", v: "[x](" }]]);
 assert.deepEqual(parseRichText("[x] (y)"), [[{ t: "text", v: "[x] (y)" }]]);
 
 console.log("rich-text: link tests passed");
+
+function visibleText(blocks) {
+  const walk = (nodes) =>
+    nodes
+      .map((n) => {
+        if (n.t === "text") return n.v;
+        if (n.t === "break") return "\n";
+        return walk(n.children);
+      })
+      .join("");
+  return blocks.map(walk).join("\n\n");
+}
+
+for (const sample of [
+  "plain prose with no markup",
+  "array[0] costs 3 * 4 shekels",
+  "see (parentheses) and [brackets] alone",
+  "first line\nsecond line\n\nnew paragraph",
+]) {
+  assert.equal(
+    visibleText(parseRichText(sample)),
+    sample,
+    `character preservation failed for: ${sample}`,
+  );
+}
+
+console.log("rich-text: character-preservation tests passed");
