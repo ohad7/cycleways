@@ -959,11 +959,21 @@ function fitMapToCoordinates(map, coordinates, options = {}) {
 
   if (!bounds.isEmpty()) {
     map.fitBounds(bounds, {
-      duration: 0,
+      duration: prefersReducedMotion() ? 0 : 600,
       maxZoom: options.maxZoom || 14,
       padding: options.padding || 48,
     });
   }
+}
+
+// Honor the user's reduced-motion preference: animate the camera by default,
+// but jump instantly when the OS/browser requests reduced motion.
+function prefersReducedMotion() {
+  return Boolean(
+    typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 }
 
 function routeLineInsertIndexFromEvent(map, event, routeGeometry, routePoints) {
