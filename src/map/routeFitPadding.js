@@ -48,12 +48,26 @@ export function resolveOverlayInsets({ mapRect, overlays = [], gap = 16, base = 
     const inset = Math.max(0, insetForEdge(side, mapRect, rect)) + gap;
     result[side] = Math.max(result[side], inset);
   }
-  const maxV = (mapRect.bottom - mapRect.top) * 0.8;
-  const maxH = (mapRect.right - mapRect.left) * 0.8;
+  // Per-edge clamp: no single edge eats more than 80% of the map.
+  const height = mapRect.bottom - mapRect.top;
+  const width = mapRect.right - mapRect.left;
+  const maxV = height * 0.8;
+  const maxH = width * 0.8;
   result.top = Math.min(result.top, maxV);
   result.bottom = Math.min(result.bottom, maxV);
   result.left = Math.min(result.left, maxH);
   result.right = Math.min(result.right, maxH);
+  // Joint clamp: opposing edges that together exceed the map dimension would
+  // leave fitBounds no room (it throws). Scale each offending pair down so it
+  // sums to 80% of the dimension.
+  for (const [a, b, dim] of [["top", "bottom", height], ["left", "right", width]]) {
+    const sum = result[a] + result[b];
+    if (sum > dim) {
+      const scale = (dim * 0.8) / sum;
+      result[a] *= scale;
+      result[b] *= scale;
+    }
+  }
   return result;
 }
 
