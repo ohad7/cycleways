@@ -718,7 +718,7 @@ function SegmentNameDisplay({
                 className="segment-card__chip"
                 key={`${dataPoint.type}-${index}`}
               >
-                {dataPoint.emoji || WARNING_EMOJIS[dataPoint.type] || "⚠️"}{" "}
+                {dataPoint.emoji || "⚠️"}{" "}
                 {dataPoint.information}
               </span>
             ))}
