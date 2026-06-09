@@ -77,7 +77,7 @@ export default function FeaturedVideoRoute({
             {intro.kicker && <span className="fv-route-panel-kicker">{intro.kicker}</span>}
             {intro.heading && <h2>{intro.heading}</h2>}
             {intro.bodyText ? (
-              <RichText text={intro.bodyText} />
+              <RichText className="fv-route-narrative" text={intro.bodyText} />
             ) : (
               (intro.body || []).map((para, i) => (
                 <p key={i}>{para}</p>
@@ -104,7 +104,7 @@ export default function FeaturedVideoRoute({
           </div>
           <div className="fv-route-about-body">
             {about.bodyText ? (
-              <RichText text={about.bodyText} />
+              <RichText className="fv-route-narrative" text={about.bodyText} />
             ) : (
               aboutParagraphs.map((para, i) => (
                 <p key={i}>{para}</p>

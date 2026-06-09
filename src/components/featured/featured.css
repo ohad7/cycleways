@@ -685,7 +685,8 @@
   line-height: 1.1;
 }
 
-.fv-route-panel p {
+.fv-route-panel p,
+.fv-route-panel .fv-route-narrative {
   margin: 0;
   color: #43505a;
   font-size: 0.98rem;
@@ -1428,7 +1429,8 @@
   max-width: 72ch;
 }
 
-.fv-route-about-body p {
+.fv-route-about-body p,
+.fv-route-about-body .fv-route-narrative {
   margin: 0;
   color: var(--fv-ink-soft);
   font-size: 1.05rem;
