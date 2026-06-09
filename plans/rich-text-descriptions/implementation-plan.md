@@ -887,14 +887,14 @@ git commit -m "feat(rich-text): route start/end descriptions render rich text + 
 
 **Files:**
 - Modify: `src/featured/genericRouteStory.js:1-16`
-- Modify: `src/components/featured/FeaturedVideoRoute.jsx:78,101` (and any other consumer of `intro.body` / `about.paragraphs`)
+- Modify: `src/components/featured/FeaturedVideoRoute.jsx` (intro body ~line 78; about ~lines 32, 101)
 - Modify: `editor/editor.js` (route-catalog `intro` / `description` / `notes` textareas ~8181)
 
-The narrative currently pre-splits strings into `string[]` (`intro.body`, `about.paragraphs`) and the template maps each to a `<p>`. Move the raw strings through `<RichText>` instead so links/bold work and paragraph splitting is handled by the parser.
+**Backward-compatibility constraint (important):** `FeaturedVideoRoute`'s `intro.body` / `about.paragraphs` array props are ALSO passed directly by hand-written pages — `src/featured/sovev-beit-hillel.jsx` and `src/featured/banias-gan-hatsafon.jsx` pass `intro={{ ..., body: [ "...", "..." ] }}` and `about={{ ..., paragraphs: [...] }}`. So we must NOT remove the array contract. Instead, add an OPTIONAL rich-text string prop (`bodyText`): when present it renders via `<RichText>`, otherwise the template falls back to the legacy array. `genericRouteStory` (editor-authored routes) emits `bodyText`; the hand-written pages keep their arrays and keep working unchanged.
 
-- [ ] **Step 1: Pass raw narrative strings, not pre-split arrays**
+- [ ] **Step 1: Emit `bodyText` raw strings from `genericRouteStory`**
 
-In `src/featured/genericRouteStory.js`, change `createGenericRouteStoryProps` to carry the raw strings (keep `splitParagraphs` only as the fallback-resolver for which source string to use):
+In `src/featured/genericRouteStory.js`, change `createGenericRouteStoryProps` to carry the raw strings under `bodyText` (no pre-splitting):
 
 ```js
 export function createGenericRouteStoryProps(entry) {
@@ -915,14 +915,23 @@ export function createGenericRouteStoryProps(entry) {
 }
 ```
 
-(Keep `splitParagraphs` exported if other modules import it; otherwise it may be removed in a later cleanup. Verify imports of `splitParagraphs` before deleting — leave it in place if referenced.)
+`splitParagraphs` is now unused in this file. Grep `grep -rn "splitParagraphs" src` — it is only defined and used in `genericRouteStory.js`, so remove the now-dead `splitParagraphs` function definition too. Keep `textOrFallback` (still used for `intro`).
 
-- [ ] **Step 2: Render narrative via RichText in the template**
+- [ ] **Step 2: Render `bodyText` via RichText with a legacy-array fallback**
 
 In `src/components/featured/FeaturedVideoRoute.jsx`, add the import:
 
 ```jsx
 import RichText from "./RichText.jsx";
+```
+
+Update the prop doc comments (lines ~17-18) to note the optional `bodyText?: string` (rich text) alongside the existing `body?: string[]` / `paragraphs?: string[]`.
+
+Update `hasAbout` (line ~33) so a `bodyText`-only about still renders:
+
+```jsx
+  const aboutParagraphs = Array.isArray(about.paragraphs) ? about.paragraphs : [];
+  const hasAbout = Boolean(about.eyebrow || about.heading || about.bodyText || aboutParagraphs.length > 0);
 ```
 
 Replace the intro body block (around line 78):
@@ -933,13 +942,19 @@ Replace the intro body block (around line 78):
             ))}
 ```
 
-with:
+with (rich text when `bodyText` is present, else the legacy array):
 
 ```jsx
-            <RichText text={intro.bodyText} />
+            {intro.bodyText ? (
+              <RichText text={intro.bodyText} />
+            ) : (
+              (intro.body || []).map((para, i) => (
+                <p key={i}>{para}</p>
+              ))
+            )}
 ```
 
-And replace the about paragraphs block (around lines 32 and 101). Remove the `const aboutParagraphs = ...` line (32) and replace the render (around line 101):
+Replace the about paragraphs render (around line 101):
 
 ```jsx
             {aboutParagraphs.map((para, i) => (
@@ -950,10 +965,16 @@ And replace the about paragraphs block (around lines 32 and 101). Remove the `co
 with:
 
 ```jsx
-            <RichText text={about.bodyText} />
+            {about.bodyText ? (
+              <RichText text={about.bodyText} />
+            ) : (
+              aboutParagraphs.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))
+            )}
 ```
 
-(Grep for other consumers of `intro.body` / `about.paragraphs` — e.g. other featured templates — and apply the same swap so no consumer still reads the removed array props.)
+Leave the `const aboutParagraphs` line in place (the fallback branch still uses it). Do NOT change the hand-written pages (`sovev-beit-hillel.jsx`, `banias-gan-hatsafon.jsx`) — they keep their array props and render through the fallback branch.
 
 - [ ] **Step 3: Turn on editor preview for narrative textareas**
 
@@ -970,7 +991,7 @@ In `editor/editor.js`, the route-catalog detail form (around line 8181) builds f
     }
 ```
 
-(Place this after `input` is created and its value/listeners are set, before the next field iteration. Adjust the parent (`row`) to match the actual variable name in that loop.)
+Insert this block immediately after `row.append(label, input);` and before `rcEls.detail.appendChild(row);` (so the preview becomes the last child of `row`, after the input). The loop variables are exactly `row`, `input`, and `f.key`, so no renaming is needed. `summary` is intentionally excluded — only `intro` / `description` / `notes` get previews.
 
 - [ ] **Step 4: Build and manually verify**
 
