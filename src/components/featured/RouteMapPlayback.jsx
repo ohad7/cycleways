@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   VIDEO_CURSOR_DEFAULT_VARIANT,
 } from "@cycleways/core/map/mapStyles.js";
@@ -14,6 +14,7 @@ import {
   MAP_PLAYBACK_ROUTE_FIT_PADDING,
   useSyntheticRoutePlayback,
 } from "../routePlayback/useRoutePlayback.js";
+import { useFitRouteOnPlay } from "../routePlayback/useFitRouteOnPlay.js";
 
 export default function RouteMapPlayback({
   className = "",
@@ -31,6 +32,8 @@ export default function RouteMapPlayback({
     playerSeekRef,
     playerPlayRef,
     playerPauseRef,
+    mapContainerRef,
+    requestRouteFit,
   } = useFeaturedRoute();
 
   const cueSlides = useMemo(
@@ -47,6 +50,22 @@ export default function RouteMapPlayback({
     cueSlides,
     onCursorChange: setVideoCursor,
     onPlayingChange: setVideoPlaying,
+  });
+
+  const sectionRef = useRef(null);
+  const featuredFitRegistry = useMemo(() => ([
+    { selector: ".fv-video-controls", side: "bottom" },
+    { selector: ".fv-video-poi-preview" },
+  ]), []);
+
+  useFitRouteOnPlay({
+    isPlaying: playback.isPlaying,
+    currentTime: playback.currentTime,
+    geometry: routeState.geometry,
+    getMapEl: () => mapContainerRef.current,
+    getScopeEl: () => sectionRef.current,
+    registry: featuredFitRegistry,
+    onRequestFit: (req) => requestRouteFit("play-fit", { padding: req.padding }),
   });
 
   useEffect(() => {
@@ -80,6 +99,7 @@ export default function RouteMapPlayback({
 
   return (
     <section
+      ref={sectionRef}
       className={["fv-route-map-playback", className].filter(Boolean).join(" ")}
       aria-label="מפת מסלול ניתנת לניגון"
     >
