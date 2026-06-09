@@ -30,3 +30,29 @@ assert.deepEqual(parseRichText("line one\nline two"), [
 ]);
 
 console.log("rich-text: text/paragraph/break tests passed");
+
+// Bold
+assert.deepEqual(parseRichText("a **bold** b"), [
+  [
+    { t: "text", v: "a " },
+    { t: "bold", children: [{ t: "text", v: "bold" }] },
+    { t: "text", v: " b" },
+  ],
+]);
+
+// Whole-string bold
+assert.deepEqual(parseRichText("**all**"), [
+  [{ t: "bold", children: [{ t: "text", v: "all" }] }],
+]);
+
+// Unclosed bold stays literal
+assert.deepEqual(parseRichText("**oops"), [
+  [{ t: "text", v: "**oops" }],
+]);
+
+// A lone asterisk stays literal
+assert.deepEqual(parseRichText("2 * 3 = 6"), [
+  [{ t: "text", v: "2 * 3 = 6" }],
+]);
+
+console.log("rich-text: bold tests passed");

@@ -11,6 +11,8 @@
 // is emitted as literal text. Links are validated against a scheme allow-list;
 // there is no raw-HTML path, so there is no injection surface.
 
+const BOLD_RE = /^\*\*([\s\S]+?)\*\*/;
+
 function parseInline(text) {
   const nodes = [];
   let buf = "";
@@ -20,13 +22,24 @@ function parseInline(text) {
       buf = "";
     }
   };
-  for (let i = 0; i < text.length; i += 1) {
-    if (text[i] === "\n") {
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === "\n") {
       flush();
       nodes.push({ t: "break" });
+      i += 1;
       continue;
     }
-    buf += text[i];
+    const bold = BOLD_RE.exec(text.slice(i));
+    if (bold) {
+      flush();
+      nodes.push({ t: "bold", children: parseInline(bold[1]) });
+      i += bold[0].length;
+      continue;
+    }
+    buf += ch;
+    i += 1;
   }
   flush();
   return nodes;
