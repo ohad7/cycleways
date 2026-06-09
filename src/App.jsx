@@ -221,6 +221,16 @@ function App() {
     registry: plannerFitRegistry,
     onRequestFit: setFitRequest,
   });
+
+  // Restoring a route from the ?route= URL param: re-fit overlay-aware. Defer
+  // one frame so the just-rendered play controls are in the DOM and measured.
+  useEffect(() => {
+    const geometry = mapUi.routeFitRequest?.geometry;
+    if (!Array.isArray(geometry) || geometry.length < 2) return undefined;
+    const raf = window.requestAnimationFrame(() => requestFit(geometry));
+    return () => window.cancelAnimationFrame(raf);
+  }, [mapUi.routeFitRequest, requestFit]);
+
   const recommendedRoutes = useMemo(() => {
     if (panel.state !== "discover") return null;
     return discoverSlugs
