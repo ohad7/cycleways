@@ -93,6 +93,12 @@ assert.deepEqual(parseRichText("[x](data:text/html;base64,AA)"), [
 assert.deepEqual(parseRichText("[x](/local/path)"), [
   [{ t: "text", v: "x" }],
 ]);
+// Empty href → visible text preserved, no link node emitted
+assert.deepEqual(parseRichText("[text]()"), [[{ t: "text", v: "text" }]]);
+// Scheme matching is case-insensitive (uppercase scheme still allowed)
+assert.deepEqual(parseRichText("[s](HTTPS://x.com)"), [
+  [{ t: "link", href: "HTTPS://x.com", children: [{ t: "text", v: "s" }] }],
+]);
 
 // Malformed link stays literal
 assert.deepEqual(parseRichText("[x]("), [[{ t: "text", v: "[x](" }]]);
