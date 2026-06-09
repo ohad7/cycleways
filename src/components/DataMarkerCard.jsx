@@ -1,5 +1,6 @@
 import React from "react";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
+import RichText from "./RichText.jsx";
 
 // Bottom-sheet detail card shown when a data marker (hazard or POI) is tapped.
 // Mirrors the iPhone DataMarkerCard: emoji + label + segment + information, with
@@ -35,9 +36,7 @@ function DataMarkerCard({ marker, onAddToRoute, onClose }) {
       {marker.segmentName && (
         <p className="data-marker-card__segment">{marker.segmentName}</p>
       )}
-      {marker.information && (
-        <p className="data-marker-card__info">{marker.information}</p>
-      )}
+      <RichText className="data-marker-card__info" text={marker.information} />
       {hasCoords && !marker.onRoute && (
         <div className="data-marker-card__actions">
           <button

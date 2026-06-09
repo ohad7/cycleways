@@ -1295,7 +1295,8 @@
   line-height: 1.42;
 }
 
-.fv-moment-card p {
+.fv-moment-card p,
+.fv-moment-card-body .fv-moment-desc {
   margin: 8px 0 0;
   color: #24313a;
   font-size: 0.86rem;

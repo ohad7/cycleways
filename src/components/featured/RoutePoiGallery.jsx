@@ -124,7 +124,7 @@ export default function RoutePoiGallery({ className = "" }) {
             <strong>{selected.name || poiLabel(selected.type)}</strong>
           </div>
           <RichText text={selected.information} />
-          <RichText text={selected.description} />
+          <RichText className="fv-moment-desc" text={selected.description} />
         </div>
       </article>
 
