@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { resolveOverlayInsets } from "../src/map/routeFitPadding.js";
+import { resolveOverlayInsets, buildRouteFitRequest } from "../src/map/routeFitPadding.js";
 
 // A 1000x800 map at the origin.
 const mapRect = { top: 0, left: 0, right: 1000, bottom: 800 };
@@ -70,6 +70,27 @@ const mapRect = { top: 0, left: 0, right: 1000, bottom: 800 };
   const p = resolveOverlayInsets({ mapRect, overlays, gap: 16, base: 24 });
   assert.equal(p.bottom, 640, "single bottom overlay still clamps to 0.8*height");
   assert.equal(p.top, 24, "top stays at base (664 sum < 800 height, no scaling)");
+}
+
+// 7. buildRouteFitRequest mints a token with id, geometry, and base padding
+//    when there are no overlays.
+{
+  const mapEl = {
+    getBoundingClientRect: () => ({ top: 0, left: 0, right: 1000, bottom: 800 }),
+    querySelectorAll: () => [],
+  };
+  const geometry = [{ lng: 0, lat: 0 }, { lng: 1, lat: 1 }];
+  const req = buildRouteFitRequest(geometry, { mapEl, registry: [] });
+  assert.ok(typeof req.id === "string" && req.id.startsWith("fit-"), "id present");
+  assert.equal(req.geometry, geometry, "geometry passed through");
+  assert.deepEqual(req.padding, { top: 24, right: 24, bottom: 24, left: 24 }, "base padding");
+}
+
+// 8. buildRouteFitRequest returns null for too-short geometry.
+{
+  const mapEl = { getBoundingClientRect: () => ({ top: 0, left: 0, right: 1000, bottom: 800 }), querySelectorAll: () => [] };
+  assert.equal(buildRouteFitRequest([{ lng: 0, lat: 0 }], { mapEl, registry: [] }), null, "null for 1 point");
+  assert.equal(buildRouteFitRequest(null, { mapEl, registry: [] }), null, "null for null geometry");
 }
 
 console.log("test-route-fit-padding.mjs passed");

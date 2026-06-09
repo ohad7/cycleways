@@ -99,3 +99,24 @@ export function computeOverlayFitPadding({ mapEl, registry = [], scopeEl, gap = 
   }
   return resolveOverlayInsets({ mapRect, overlays, gap, base });
 }
+
+// Flatten multiple route geometries ({ lng, lat }[]) into one point list,
+// skipping routes whose geometry has fewer than 2 points.
+export function combineRouteGeometries(routes) {
+  if (!Array.isArray(routes)) return [];
+  const points = [];
+  for (const route of routes) {
+    const geometry = route?.geometry;
+    if (!Array.isArray(geometry) || geometry.length < 2) continue;
+    for (const point of geometry) points.push(point);
+  }
+  return points;
+}
+
+// Build an overlay-aware route-fit token for MapSurface. Returns null when the
+// geometry is too short to fit.
+export function buildRouteFitRequest(geometry, { mapEl, registry, scopeEl, gap, base } = {}) {
+  if (!Array.isArray(geometry) || geometry.length < 2) return null;
+  const padding = computeOverlayFitPadding({ mapEl, registry, scopeEl, gap, base });
+  return { id: `fit-${Date.now()}`, geometry, padding };
+}
