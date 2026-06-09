@@ -262,6 +262,20 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [discoverFitRoutes, requestFit]);
 
+  // Hovering a Discover route fits to it; leaving restores the all-routes fit.
+  useEffect(() => {
+    if (panel.state !== "discover") return undefined;
+    const hoveredGeometry = hoveredRouteSlug ? recommendedGeoms[hoveredRouteSlug] : null;
+    const timer = window.setTimeout(() => {
+      if (Array.isArray(hoveredGeometry) && hoveredGeometry.length >= 2) {
+        requestFit(hoveredGeometry);
+      } else if (discoverFitGeometryRef.current.length >= 2) {
+        requestFit(discoverFitGeometryRef.current);
+      }
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [hoveredRouteSlug, recommendedGeoms, panel.state, requestFit]);
+
   const bandHighlight = useMemo(() => {
     if (!hoveredBand || routeState.geometry.length < 2) return null;
     const cum = cumulativeMeters(routeState.geometry);
