@@ -7,6 +7,7 @@ import {
   snapshotToRouteState,
 } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import MapView from "../../map/MapView.jsx";
+import { computeOverlayFitPadding } from "../../map/routeFitPadding.js";
 import { FeaturedRouteContext } from "./FeaturedRouteContext.js";
 import FeaturedRouteHeader from "./Header.jsx";
 import POIList from "./POIList.jsx";
@@ -33,6 +34,10 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
   const [focusedCoord, setFocusedCoord] = useState(null);
   const [routeFitRequest, setRouteFitRequest] = useState(null);
   const mapContainerRef = useRef(null);
+  const routeFitOverlaysRef = useRef(null);
+  const registerRouteFitOverlays = useCallback((config) => {
+    routeFitOverlaysRef.current = config;
+  }, []);
   const [videoCursor, setVideoCursor] = useState(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const videoSyncRef = useRef(null);
@@ -94,10 +99,19 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
 
   const requestRouteFit = useCallback((reason = "featured-route-fit", { padding } = {}) => {
     if (!meta || routeState.geometry.length < 2) return;
+    let resolvedPadding = padding;
+    if (!resolvedPadding && routeFitOverlaysRef.current && mapContainerRef.current) {
+      const { registry, getScopeEl } = routeFitOverlaysRef.current;
+      resolvedPadding = computeOverlayFitPadding({
+        mapEl: mapContainerRef.current,
+        registry,
+        scopeEl: getScopeEl?.(),
+      });
+    }
     setRouteFitRequest({
       id: `${reason}-${meta.slug}-${Date.now()}`,
       geometry: routeState.geometry,
-      ...(padding ? { padding } : {}),
+      ...(resolvedPadding ? { padding: resolvedPadding } : {}),
     });
   }, [meta, routeState.geometry]);
 
@@ -205,6 +219,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       setFocusedCoord,
       routeFitRequest,
       requestRouteFit,
+      registerRouteFitOverlays,
       mapContainerRef,
       videoCursor,
       setVideoCursor,
@@ -219,7 +234,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       handleRouteClick,
       handleDataMarkerClick,
     }),
-    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, mapContainerRef, videoCursor, videoPlaying, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
+    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, registerRouteFitOverlays, mapContainerRef, videoCursor, videoPlaying, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
