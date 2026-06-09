@@ -8861,6 +8861,13 @@ function rcEndpointSection(entry, key, label) {
   descRow.append(descLabel, descInput);
   section.appendChild(descRow);
 
+  const descPreview = document.createElement("div");
+  descPreview.className = "rich-text-preview";
+  descRow.appendChild(descPreview);
+  const updateDescPreview = () => renderRichTextPreview(descPreview, descInput.value);
+  descInput.addEventListener("input", updateDescPreview);
+  updateDescPreview();
+
   const images = Array.isArray(point?.images) ? point.images : [];
   if (images.length > 0) {
     const strip = document.createElement("div");
