@@ -242,6 +242,26 @@ function App() {
       .filter(Boolean);
   }, [panel.state, discoverSlugs, recommendedGeoms, hoveredRouteSlug]);
 
+  // Combined geometry of the currently-visible (filtered) Discover routes, kept
+  // independent of hover so hovering does not re-trigger the all-routes fit.
+  const discoverFitRoutes = useMemo(() => {
+    if (panel.state !== "discover") return null;
+    return discoverSlugs
+      .map((slug) => ({ geometry: recommendedGeoms[slug] }))
+      .filter((r) => Array.isArray(r.geometry) && r.geometry.length >= 2);
+  }, [panel.state, discoverSlugs, recommendedGeoms]);
+
+  // Fit the map to all relevant Discover routes; re-fit when the filtered list
+  // (or its loaded geometries) changes. Debounced so streaming loads converge.
+  useEffect(() => {
+    if (!discoverFitRoutes || discoverFitRoutes.length === 0) return undefined;
+    const combined = combineRouteGeometries(discoverFitRoutes);
+    if (combined.length < 2) return undefined;
+    discoverFitGeometryRef.current = combined;
+    const timer = window.setTimeout(() => requestFit(combined), 150);
+    return () => window.clearTimeout(timer);
+  }, [discoverFitRoutes, requestFit]);
+
   const bandHighlight = useMemo(() => {
     if (!hoveredBand || routeState.geometry.length < 2) return null;
     const cum = cumulativeMeters(routeState.geometry);
