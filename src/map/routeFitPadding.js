@@ -56,3 +56,32 @@ export function resolveOverlayInsets({ mapRect, overlays = [], gap = 16, base = 
   result.right = Math.min(result.right, maxH);
   return result;
 }
+
+function isHidden(el) {
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return true;
+  if (el.getAttribute && el.getAttribute("aria-hidden") === "true") return true;
+  const view = el.ownerDocument?.defaultView || window;
+  const style = view.getComputedStyle(el);
+  return style.display === "none" || style.visibility === "hidden";
+}
+
+// Measure obstruction overlays (resolved from a per-surface selector registry)
+// against the map element and return overlay-aware fit padding.
+//   mapEl   - element whose rect Mapbox pads against (the map container)
+//   registry - [{ selector, side? }] of overlays to clear
+//   scopeEl  - optional element to run selector queries within (default: mapEl)
+export function computeOverlayFitPadding({ mapEl, registry = [], scopeEl, gap = 16, base = 24 }) {
+  if (!mapEl) return { top: base, right: base, bottom: base, left: base };
+  const mapRect = mapEl.getBoundingClientRect();
+  const root = scopeEl || mapEl;
+  const overlays = [];
+  for (const entry of registry) {
+    if (!entry?.selector || !root.querySelectorAll) continue;
+    root.querySelectorAll(entry.selector).forEach((el) => {
+      if (isHidden(el)) return;
+      overlays.push({ rect: el.getBoundingClientRect(), side: entry.side });
+    });
+  }
+  return resolveOverlayInsets({ mapRect, overlays, gap, base });
+}
