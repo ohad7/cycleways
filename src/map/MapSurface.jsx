@@ -870,7 +870,7 @@ function MapSurface({
 
     fitMapToCoordinates(map, routeFitRequest.geometry, {
       maxZoom: 14,
-      padding: routeFitPadding,
+      padding: routeFitRequest.padding ?? routeFitPadding,
     });
   }, [routeFitPadding, routeFitRequest, status, caps.routeFit]);
 
