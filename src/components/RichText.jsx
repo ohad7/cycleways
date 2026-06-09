@@ -31,12 +31,20 @@ function renderInline(nodes, stopLinkPropagation) {
 export default function RichText({ text, className, stopLinkPropagation = false }) {
   const blocks = parseRichText(text);
   if (blocks.length === 0) return null;
+  // Each block is a paragraph, but the wrapper is a block-display <span> rather
+  // than a <p> so RichText is valid inside a <button> (POI cards) — <button>
+  // only permits phrasing content, which <p> is not. Multiple blocks get a top
+  // margin for paragraph spacing without relying on a <p>'s default margins.
   return (
     <>
       {blocks.map((block, i) => (
-        <p key={i} className={className}>
+        <span
+          key={i}
+          className={className}
+          style={{ display: "block", marginTop: i > 0 ? "0.5em" : undefined }}
+        >
           {renderInline(block, stopLinkPropagation)}
-        </p>
+        </span>
       ))}
     </>
   );
