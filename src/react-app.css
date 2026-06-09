@@ -1047,7 +1047,7 @@ input {
   position: absolute;
   top: 25px;
   bottom: auto;
-  left: 138px;
+  left: 25px;
   z-index: 1001;
   display: flex;
   align-items: center;
@@ -1257,6 +1257,14 @@ input {
 }
 
 .map-container--planner-playing .segment-name-display {
+  display: none;
+}
+
+.map-container--route-ready .legend-container {
+  bottom: 104px;
+}
+
+.map-container--planner-playing .legend-container {
   display: none;
 }
 
@@ -1509,6 +1517,10 @@ input {
   }
 
   .map-container--planner-playing .legend-container {
+    display: none;
+  }
+
+  .map-container--route-ready .legend-container {
     display: none;
   }
 

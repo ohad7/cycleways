@@ -595,7 +595,7 @@ html {
 
 .legend-container {
   position: absolute;
-  top: 25px;
+  bottom: 25px;
   left: 25px;
   z-index: 1000;
   direction: rtl;
@@ -604,7 +604,7 @@ html {
 
 @media (max-width: 768px) {
   .legend-container {
-    top: 15px;
+    bottom: 15px;
     left: 15px;
     right: auto;
     width: auto;
