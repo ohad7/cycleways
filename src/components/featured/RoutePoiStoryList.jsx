@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { poiLabel } from "@cycleways/core/data/poiTypes.js";
+import RichText from "../RichText.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import {
   endpointLabel,
@@ -105,9 +106,7 @@ export default function RoutePoiStoryList({ className = "" }) {
               {!story.kind && (
                 <span className="fv-poi-story-type">{poiLabel(story.type)}</span>
               )}
-              {story.description && (
-                <p className="fv-poi-story-description">{story.description}</p>
-              )}
+              <RichText className="fv-poi-story-description" text={story.description} />
             </div>            
 
             <div className="fv-poi-story-media">

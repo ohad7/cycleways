@@ -4,6 +4,7 @@ import {
   nearestSlideIndexByFraction,
   poiLabel,
 } from "@cycleways/core/data/poiTypes.js";
+import RichText from "../RichText.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 
 function imageSrc(item) {
@@ -122,8 +123,8 @@ export default function RoutePoiGallery({ className = "" }) {
             <span className="fv-moment-type">{poiLabel(selected.type)}</span>
             <strong>{selected.name || poiLabel(selected.type)}</strong>
           </div>
-          {selected.information && <span>{selected.information}</span>}
-          {selected.description && <p>{selected.description}</p>}
+          <RichText text={selected.information} />
+          <RichText text={selected.description} />
         </div>
       </article>
 

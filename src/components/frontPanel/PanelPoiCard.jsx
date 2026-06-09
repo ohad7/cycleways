@@ -1,5 +1,6 @@
 import React from "react";
 import { POI_EMOJIS, POI_LABELS, primaryPoiImage } from "@cycleways/core/data/poiTypes.js";
+import RichText from "../RichText.jsx";
 
 export default function PanelPoiCard({ poi, distanceLabel, onSelect }) {
   const img = primaryPoiImage(poi);
@@ -14,7 +15,7 @@ export default function PanelPoiCard({ poi, distanceLabel, onSelect }) {
         </div>
       </div>
       {src && <img className="panel-poi-card__photo" src={src} alt="" loading="lazy" />}
-      {poi.information && <p className="panel-poi-card__desc">{poi.information}</p>}
+      <RichText className="panel-poi-card__desc" text={poi.information} stopLinkPropagation />
     </button>
   );
 }
