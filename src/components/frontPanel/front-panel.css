@@ -523,3 +523,12 @@
   color: #283026;
   font-weight: 800;
 }
+.panel-route-card__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-inline-end: 6px;
+  vertical-align: middle;
+  flex: 0 0 auto;
+}

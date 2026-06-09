@@ -114,9 +114,10 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
         <div className="dlabel">
           {mode === "recommended" ? "מומלצים" : `${routes.length} מסלולים`}
         </div>
-        {routes.map((entry) => (
+        {routes.map((entry, index) => (
           <PanelRouteCard
             key={entry.slug}
+            index={index}
             entry={entry}
             places={places}
             onSelect={onSelectRoute}
