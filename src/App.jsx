@@ -15,6 +15,7 @@ import {
   useSyntheticRoutePlayback,
 } from "./components/routePlayback/useRoutePlayback.js";
 import { useFitRouteOnPlay } from "./components/routePlayback/useFitRouteOnPlay.js";
+import { buildRouteFitRequest, combineRouteGeometries } from "./map/routeFitPadding.js";
 import Tutorial from "./components/Tutorial.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
@@ -195,7 +196,8 @@ function App() {
     cueSlides: plannerCueSlides,
   });
   const mapContainerRef = useRef(null);
-  const [playFitRequest, setPlayFitRequest] = useState(null);
+  const [fitRequest, setFitRequest] = useState(null);
+  const discoverFitGeometryRef = useRef([]);
   const plannerFitRegistry = useMemo(() => ([
     { selector: ".planner-route-playback", side: "bottom" },
     { selector: ".search-container", side: "top" },
@@ -203,6 +205,13 @@ function App() {
     { selector: ".data-marker-card" },
     { selector: ".planner-route-poi-preview" },
   ]), []);
+  const requestFit = useCallback((geometry) => {
+    const req = buildRouteFitRequest(geometry, {
+      mapEl: mapContainerRef.current,
+      registry: plannerFitRegistry,
+    });
+    if (req) setFitRequest(req);
+  }, [plannerFitRegistry]);
 
   useFitRouteOnPlay({
     isPlaying: plannerPlayback.isPlaying,
@@ -210,7 +219,7 @@ function App() {
     geometry: routeState.geometry,
     getMapEl: () => mapContainerRef.current,
     registry: plannerFitRegistry,
-    onRequestFit: setPlayFitRequest,
+    onRequestFit: setFitRequest,
   });
   const recommendedRoutes = useMemo(() => {
     if (panel.state !== "discover") return null;
@@ -422,7 +431,7 @@ function App() {
                   onSegmentFocus={handleSegmentFocus}
                   onSegmentHover={handleSegmentHover}
                   onViewportIdle={handleViewportIdle}
-                  routeFitRequest={playFitRequest ?? mapUi.routeFitRequest}
+                  routeFitRequest={fitRequest ?? mapUi.routeFitRequest}
                   routeGeometry={routeState.geometry}
                   routePointDragPreview={routePointDragPreview}
                   routePoints={displayedRoutePoints}
