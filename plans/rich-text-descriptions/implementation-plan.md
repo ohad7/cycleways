@@ -536,7 +536,7 @@ with:
       <RichText className="poi-card-info" text={poi.information} stopLinkPropagation />
 ```
 
-- [ ] **Step 3: RoutePoiStoryList (long description, not a button)**
+- [ ] **Step 3: RoutePoiStoryList (long description — the whole story card IS a `<button>`, so pass `stopLinkPropagation`)**
 
 In `src/components/featured/RoutePoiStoryList.jsx`, add the import:
 
@@ -555,7 +555,7 @@ Replace lines 108-110:
 with:
 
 ```jsx
-              <RichText className="fv-poi-story-description" text={story.description} />
+              <RichText className="fv-poi-story-description" text={story.description} stopLinkPropagation />
 ```
 
 - [ ] **Step 4: RoutePoiGallery (short + long, not a button)**

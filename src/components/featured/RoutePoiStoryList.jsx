@@ -106,7 +106,7 @@ export default function RoutePoiStoryList({ className = "" }) {
               {!story.kind && (
                 <span className="fv-poi-story-type">{poiLabel(story.type)}</span>
               )}
-              <RichText className="fv-poi-story-description" text={story.description} />
+              <RichText className="fv-poi-story-description" text={story.description} stopLinkPropagation />
             </div>            
 
             <div className="fv-poi-story-media">
