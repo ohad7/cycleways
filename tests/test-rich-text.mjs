@@ -56,3 +56,46 @@ assert.deepEqual(parseRichText("2 * 3 = 6"), [
 ]);
 
 console.log("rich-text: bold tests passed");
+
+// Allowed link schemes
+assert.deepEqual(parseRichText("see [photos](https://x.com/a)"), [
+  [
+    { t: "text", v: "see " },
+    { t: "link", href: "https://x.com/a", children: [{ t: "text", v: "photos" }] },
+  ],
+]);
+assert.deepEqual(parseRichText("[mail](mailto:a@b.com)"), [
+  [{ t: "link", href: "mailto:a@b.com", children: [{ t: "text", v: "mail" }] }],
+]);
+assert.deepEqual(parseRichText("[call](tel:+972500000000)"), [
+  [{ t: "link", href: "tel:+972500000000", children: [{ t: "text", v: "call" }] }],
+]);
+
+// Bold may nest inside a link label
+assert.deepEqual(parseRichText("[**bold link**](https://x.com)"), [
+  [
+    {
+      t: "link",
+      href: "https://x.com",
+      children: [{ t: "bold", children: [{ t: "text", v: "bold link" }] }],
+    },
+  ],
+]);
+
+// Rejected schemes → link text kept as plain text, href dropped
+assert.deepEqual(parseRichText("[x](javascript:alert(1))"), [
+  [{ t: "text", v: "x" }],
+]);
+assert.deepEqual(parseRichText("[x](data:text/html;base64,AA)"), [
+  [{ t: "text", v: "x" }],
+]);
+// Relative / scheme-less → rejected (text kept)
+assert.deepEqual(parseRichText("[x](/local/path)"), [
+  [{ t: "text", v: "x" }],
+]);
+
+// Malformed link stays literal
+assert.deepEqual(parseRichText("[x]("), [[{ t: "text", v: "[x](" }]]);
+assert.deepEqual(parseRichText("[x] (y)"), [[{ t: "text", v: "[x] (y)" }]]);
+
+console.log("rich-text: link tests passed");
