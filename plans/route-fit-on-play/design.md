@@ -21,7 +21,12 @@ importantly the play controls themselves) so nothing hides the route.
   *video*, not the map, so the "don't hide the route" rationale does not apply
   there; it is out of scope.
 - **Obstructions:** all on-map overlays that are present at play time, opt-in
-  via a `data-route-fit-obstruct` attribute (optionally naming a side).
+  via a per-surface **selector registry** (`{ selector, side? }[]`). A registry
+  (rather than a DOM attribute) is used because the overlay components
+  (`RoutePlaybackControls`, `MapLegend`, `DataMarkerCard`, the POI preview)
+  render their own roots and do not forward arbitrary attributes; the registry
+  curates obstructions without editing any child component, and still carries
+  the optional `side` hint.
 - **Trigger:** fresh start only. Fit when playback starts from `t ≈ 0`.
   Resume-after-pause and scrub auto-resume do **not** re-fit.
 - **Always fit** on a qualifying play — no "already visible" short-circuit.
@@ -41,31 +46,41 @@ importantly the play controls themselves) so nothing hides the route.
   token; `FeaturedRouteMap` owns the `.featured-map-inline` element and the
   expanded portal.
 
-## A. Measurement model — `computeOverlayFitPadding`
+## A. Measurement model — `src/map/routeFitPadding.js`
 
-New pure helper, `src/map/routeFitPadding.js`:
+Two functions, split so the math is DOM-free and unit-testable:
 
-```
-computeOverlayFitPadding({ mapEl, obstructions, gap = 16, base = 24 })
-  -> { top, right, bottom, left }
-```
+### `resolveOverlayInsets({ mapRect, overlays, gap = 16, base = 24 })` (pure)
 
-1. `mapRect = mapEl.getBoundingClientRect()`. Seed each edge with `base` (a
-   small uniform minimum so even un-obstructed edges get breathing room).
-2. For each obstruction element:
-   - Skip if hidden — zero-size rect, `display:none` / `visibility:hidden`
-     (via `getComputedStyle`), or `aria-hidden="true"`.
-   - Skip if its rect does not overlap `mapRect`.
-   - **Side**: if `data-route-fit-obstruct` names one of
-     `top|right|bottom|left`, use it; otherwise infer the *nearest* map edge by
-     smallest gap (`rect.top - mapRect.top`, `mapRect.bottom - rect.bottom`,
-     etc.).
+`overlays` is an array of `{ rect, side? }` where `rect` is a plain
+`{ top, right, bottom, left }` (DOMRect-shaped). Returns
+`{ top, right, bottom, left }`:
+
+1. Seed each edge with `base` (a small uniform minimum so even un-obstructed
+   edges get breathing room).
+2. For each overlay:
+   - Skip if its `rect` does not overlap `mapRect`.
+   - **Side**: use `overlay.side` if it is one of `top|right|bottom|left`;
+     otherwise infer the *nearest* map edge by smallest gap
+     (`rect.top - mapRect.top`, `mapRect.bottom - rect.bottom`, etc.).
    - **Inset** = intrusion depth from that edge (e.g. bottom →
      `mapRect.bottom - rect.top`), clamped `>= 0`, plus `gap`.
    - `result[side] = max(result[side], inset)`.
-3. Clamp each edge so the combined padding can't exceed ~80% of the map's
-   width/height (Mapbox `fitBounds` throws if padding leaves no room).
+3. Clamp each edge so it can't exceed ~80% of the map's width/height (Mapbox
+   `fitBounds` throws if padding leaves no room): `top`/`bottom` ≤
+   `0.8 * mapHeight`, `left`/`right` ≤ `0.8 * mapWidth`.
 4. Return the padding object.
+
+### `computeOverlayFitPadding({ mapEl, registry, gap, base })` (DOM glue)
+
+Thin wrapper, verified manually:
+1. `mapRect = mapEl.getBoundingClientRect()`.
+2. For each `{ selector, side }` in `registry`, for each element matching
+   `mapEl`-scoped `querySelectorAll(selector)` (or a provided scope element):
+   skip if hidden (zero-size rect, `display:none`/`visibility:hidden` via
+   `getComputedStyle`, or `aria-hidden="true"`); otherwise push
+   `{ rect: el.getBoundingClientRect(), side }`.
+3. Return `resolveOverlayInsets({ mapRect, overlays, gap, base })`.
 
 This is a rectangular-inset approximation (Mapbox padding is rectangular) that
 assigns each overlay to a single edge, so a corner box pads one edge rather
@@ -75,13 +90,18 @@ over-padding keeps the route fully visible while under-padding would hide it.
 
 ## B. Trigger hook — `useFitRouteOnPlay`
 
-New hook, `src/components/routePlayback/useFitRouteOnPlay.js`:
+New hook, `src/components/routePlayback/useFitRouteOnPlay.js`. The decision is
+factored into a pure, exported predicate so it is unit-testable:
 
 ```
+shouldFitOnPlayStart({ wasPlaying, isPlaying, currentTime, geometryLength, freshStartSec = 0.25 })
+  -> boolean   // true only on a false→true transition at t<=freshStartSec with geometryLength>=2
+
 useFitRouteOnPlay({
   isPlaying, currentTime, geometry,
   getMapEl,         // () => map container element to measure against
-  getObstructions,  // () => iterable of [data-route-fit-obstruct] elements
+  registry,         // { selector, side? }[] of obstruction overlays
+  scopeEl,          // optional element to scope selector queries (defaults to getMapEl())
   onRequestFit,     // ({ id, geometry, padding }) => void
   gap = 16,
   freshStartSec = 0.25,
@@ -91,10 +111,11 @@ useFitRouteOnPlay({
 - Tracks the `isPlaying` false→true transition with a `wasPlaying` ref.
 - Reads the latest `currentTime` from a ref (kept current each render) so the
   transition effect — which depends only on `isPlaying` — sees the real time.
-- If `currentTime > freshStartSec`, it's a resume → **skip** (covers
-  resume-after-pause and scrub auto-resume, which start at `t > 0`).
-- On a fresh start with valid geometry (`length >= 2`): measure padding via
-  `computeOverlayFitPadding` and call
+- Calls `shouldFitOnPlayStart(...)`; `currentTime > freshStartSec` is a resume
+  → **skip** (covers resume-after-pause and scrub auto-resume, which start at
+  `t > 0`).
+- On a fresh start: measure padding via `computeOverlayFitPadding({ mapEl:
+  getMapEl(), registry, scopeEl, gap })` and call
   `onRequestFit({ id: 'play-fit-' + Date.now(), geometry, padding })`.
 
 ## C. `MapSurface` change
@@ -116,9 +137,12 @@ avoids threading a separate dynamic-padding prop through every surface.
 
 - Add a ref on `.map-container` (serves as both the map element to measure
   against and the obstruction query scope).
-- Mark on-map overlays with `data-route-fit-obstruct`:
-  `search-container`, `MapLegend`, `DataMarkerCard`, the POI preview, and
-  `planner-route-playback` (`="bottom"`).
+- Registry of overlay selectors (scoped to `.map-container`):
+  `{ selector: '.planner-route-playback', side: 'bottom' }`,
+  `{ selector: '.search-container', side: 'top' }`,
+  `{ selector: '.legend-container' }`,
+  `{ selector: '.data-marker-card' }`,
+  `{ selector: '.planner-route-poi-preview' }`.
 - Hold a local `playFitRequest` state; `onRequestFit = setPlayFitRequest`.
 - Call `useFitRouteOnPlay` with `plannerPlayback.isPlaying`,
   `plannerPlayback.currentTime`, and `routeState.geometry`.
@@ -132,11 +156,12 @@ avoids threading a separate dynamic-padding prop through every surface.
   by `FeaturedRouteMap`.
 - Extend `requestRouteFit(reason, { padding } = {})` to stash `padding` in the
   token.
-- In `RouteMapPlayback`: mark its `RoutePlaybackControls` (`="bottom"`) and the
-  POI video preview with `data-route-fit-obstruct`; add a section ref to scope
-  obstruction queries (the controls are siblings of the map element, so the
-  scope is the `.fv-route-map-playback` section and overlap is computed against
-  the inline map rect). Call `useFitRouteOnPlay`, with
+- In `RouteMapPlayback`: add a section ref (`.fv-route-map-playback`) used as
+  the `scopeEl` for obstruction queries (the controls are siblings of the map
+  element, so overlap is computed against the inline map rect). Registry:
+  `{ selector: '.fv-video-controls', side: 'bottom' }`,
+  `{ selector: '.fv-video-poi-preview' }`. Call `useFitRouteOnPlay` with
+  `getMapEl = () => mapContainerRef.current` and
   `onRequestFit = (req) => requestRouteFit('play-fit', { padding: req.padding })`.
 - Expanded portal: keeps its existing `48` fit. Opening the expanded map
   already issues `requestRouteFit('featured-map-expand')`, which supersedes the
@@ -144,15 +169,20 @@ avoids threading a separate dynamic-padding prop through every surface.
 
 ## E. Testing
 
-- Unit-test `computeOverlayFitPadding` with mocked rects:
-  - bottom full-width bar → only `bottom` grows by its height + gap;
-  - top-left box → `top` (or nearest edge) grows, others stay at `base`;
-  - hidden / non-overlapping overlays ignored;
-  - oversized padding clamped below the map dimension.
-- Unit-test the fresh-start gate in `useFitRouteOnPlay`:
-  - play at `t = 0` → emits a fit request;
-  - play at `t > freshStartSec` (resume) → no request;
-  - scrub auto-resume (starts at `t > 0`) → no request.
+Tests are plain Node scripts run via the `test` npm script (no test framework);
+use `node:assert/strict` and mock rects as plain objects.
+
+- `tests/test-route-fit-padding.mjs` — `resolveOverlayInsets` with mocked rects:
+  - bottom full-width bar (`side: 'bottom'`) → only `bottom` grows by its
+    height + gap; other edges stay at `base`;
+  - top-left box with no `side` → nearest edge grows, others stay at `base`;
+  - non-overlapping overlay → ignored (all edges stay at `base`);
+  - oversized overlay → that edge clamped to `0.8 * map dimension`.
+- `tests/test-fit-route-on-play.mjs` — `shouldFitOnPlayStart`:
+  - `wasPlaying:false, isPlaying:true, currentTime:0, geometryLength:5` → true;
+  - same but `currentTime:30` (resume) → false;
+  - `wasPlaying:true, isPlaying:true` (already playing) → false;
+  - `geometryLength:1` → false.
 
 ## Out of scope
 
