@@ -34,6 +34,7 @@ export default function FeaturedRouteMapSlot({
     routeState,
     focusedCoord,
     requestRouteFit,
+    mapContainerRef,
     routeFitRequest,
     videoCursor,
     videoPlaying,
@@ -165,6 +166,7 @@ export default function FeaturedRouteMapSlot({
 
   return (
     <div
+      ref={mapContainerRef}
       className={[
         "featured-map-inline",
         expanded ? "featured-map-inline--expanded" : "",

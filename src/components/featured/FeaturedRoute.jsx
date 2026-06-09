@@ -32,6 +32,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
   const [focusedPoiId, setFocusedPoiId] = useState(null);
   const [focusedCoord, setFocusedCoord] = useState(null);
   const [routeFitRequest, setRouteFitRequest] = useState(null);
+  const mapContainerRef = useRef(null);
   const [videoCursor, setVideoCursor] = useState(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const videoSyncRef = useRef(null);
@@ -91,11 +92,12 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     return () => controller.abort();
   }, [meta]);
 
-  const requestRouteFit = useCallback((reason = "featured-route-fit") => {
+  const requestRouteFit = useCallback((reason = "featured-route-fit", { padding } = {}) => {
     if (!meta || routeState.geometry.length < 2) return;
     setRouteFitRequest({
       id: `${reason}-${meta.slug}-${Date.now()}`,
       geometry: routeState.geometry,
+      ...(padding ? { padding } : {}),
     });
   }, [meta, routeState.geometry]);
 
@@ -203,6 +205,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       setFocusedCoord,
       routeFitRequest,
       requestRouteFit,
+      mapContainerRef,
       videoCursor,
       setVideoCursor,
       setVideoCursorFromFraction,
@@ -216,7 +219,7 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       handleRouteClick,
       handleDataMarkerClick,
     }),
-    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, videoCursor, videoPlaying, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
+    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, mapContainerRef, videoCursor, videoPlaying, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
