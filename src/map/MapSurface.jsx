@@ -15,6 +15,7 @@ import {
   ROUTE_GEOMETRY_HIT_LAYER_ID,
   ROUTE_NETWORK_HIT_LAYER_ID,
   ROUTE_POINTS_LAYER_ID,
+  setBuiltRouteVisibility,
   setRouteNetworkFocus,
   setRouteNetworkHover,
   syncDataMarkerLayers,
@@ -77,6 +78,7 @@ function MapSurface({
   focusedSegment,
   geoJsonData,
   elevationHover,
+  hideBuiltRoute = false,
   hoveredSegment,
   mode = MAP_MODE_PLANNER,
   onDataMarkerClick,
@@ -173,6 +175,29 @@ function MapSurface({
   useEffect(() => {
     dataMarkerFeaturesRef.current = dataMarkerFeatures;
   }, [dataMarkerFeatures]);
+
+  // Resize the Mapbox canvas whenever the container element changes size.
+  // This handles panel collapse/expand, window resize, and any other
+  // container-driven geometry change.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return undefined;
+
+    let rafId = null;
+    const observer = new ResizeObserver(() => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        mapRef.current?.resize?.();
+      });
+    });
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -365,6 +390,12 @@ function MapSurface({
     if (!map || status !== "ready") return;
     syncRecommendedRoutesLayer(map, recommendedRoutes);
   }, [recommendedRoutes, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    setBuiltRouteVisibility(map, !hideBuiltRoute);
+  }, [hideBuiltRoute, status]);
 
   useEffect(() => {
     const map = mapRef.current;
