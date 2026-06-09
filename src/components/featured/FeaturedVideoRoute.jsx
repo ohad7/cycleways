@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { generateGPX } from "@cycleways/core/utils/gpx-generator.js";
 import { executeDownloadGPX } from "@cycleways/core/platform/download.js";
 import Icon from "../Icon.jsx";
+import RichText from "../RichText.jsx";
 import FeaturedRoute from "./FeaturedRoute.jsx";
 import FeaturedRouteStats from "./FeaturedRouteStats.jsx";
 import FeaturedElevation from "./FeaturedElevation.jsx";
@@ -14,8 +15,8 @@ import {
 // map overlay; catalog-only routes render the map in the same primary stage.
 // The header, side rail, stats, elevation profile, and POI stories stay shared.
 //
-//   intro: { kicker?, heading?, body?: string[] }   - side "what's on the ride" panel
-//   about: { eyebrow?, heading?, paragraphs?: string[] } - below-the-fold "about" section
+//   intro: { kicker?, heading?, body?: string[], bodyText?: string } - side panel ("bodyText" = rich text, preferred)
+//   about: { eyebrow?, heading?, paragraphs?: string[], bodyText?: string } - below-the-fold "about" ("bodyText" = rich text, preferred)
 //   difficultyLabel / surfaceLabel - optional stat text overrides for the rail
 //   videoCursorVariant - 1-6 or a named cursor style for the video map marker
 export default function FeaturedVideoRoute({
@@ -30,7 +31,7 @@ export default function FeaturedVideoRoute({
 }) {
   const isMapStage = media === "map";
   const aboutParagraphs = Array.isArray(about.paragraphs) ? about.paragraphs : [];
-  const hasAbout = Boolean(about.eyebrow || about.heading || aboutParagraphs.length > 0);
+  const hasAbout = Boolean(about.eyebrow || about.heading || about.bodyText || aboutParagraphs.length > 0);
 
   return (
     <FeaturedRoute slug={slug} layout="video-first" desktopMap="manual" kicker={kicker}>
@@ -75,9 +76,13 @@ export default function FeaturedVideoRoute({
           <section className="fv-route-panel" aria-label="תקציר המסלול">
             {intro.kicker && <span className="fv-route-panel-kicker">{intro.kicker}</span>}
             {intro.heading && <h2>{intro.heading}</h2>}
-            {(intro.body || []).map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
+            {intro.bodyText ? (
+              <RichText text={intro.bodyText} />
+            ) : (
+              (intro.body || []).map((para, i) => (
+                <p key={i}>{para}</p>
+              ))
+            )}
             <FeaturedRouteActions media={media} />
           </section>
 
@@ -98,9 +103,13 @@ export default function FeaturedVideoRoute({
             {about.heading && <h2>{about.heading}</h2>}
           </div>
           <div className="fv-route-about-body">
-            {aboutParagraphs.map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
+            {about.bodyText ? (
+              <RichText text={about.bodyText} />
+            ) : (
+              aboutParagraphs.map((para, i) => (
+                <p key={i}>{para}</p>
+              ))
+            )}
           </div>
         </section>
       )}

@@ -8251,6 +8251,14 @@ function rcRenderDetail() {
       });
     }
     row.append(label, input);
+    if (f.textarea && ["intro", "description", "notes"].includes(f.key)) {
+      const fieldPreview = document.createElement("div");
+      fieldPreview.className = "rich-text-preview";
+      row.appendChild(fieldPreview);
+      const updateFieldPreview = () => renderRichTextPreview(fieldPreview, input.value);
+      input.addEventListener("input", updateFieldPreview);
+      updateFieldPreview();
+    }
     rcEls.detail.appendChild(row);
   }
   rcEls.detail.appendChild(rcRouteMapImageSection(entry));
