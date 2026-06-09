@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "historic-jordan",
-  "generatedAt": "2026-06-08T04:31:00.763Z",
+  "generatedAt": "2026-06-09T11:49:34.449Z",
   "source": {
     "routeTokenHash": "sha256:c767a41708fc125fe2d3a8a8303305d7ca3215623dd3c13b4515e24627564993",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "0d60a37c3376",
+    "mapVersion": "00f59f7dd38d",
     "assetHashes": {
-      "bikeRoads": "21fb0c915a02b30020d121eda5ae550dc1d433350b06e3665ac29d790b1d5b3e",
-      "segments": "5e9a055254f59043ac1229f354d48cf1175e140d890957b18220ecda8b602271",
+      "bikeRoads": "4bfda505df42ac500f5aac0087175697b1cdbcac1deb6f0fc23ed56471ae5615",
+      "segments": "27d80de8d54bdc8e82184702c3b02f4e4075985195cf432aedda269d2c73a8a4",
       "cwBaseIndex": "e60f0b6625238fb43e263af633d07e9f1f6ccd15b4ec1e407e026af88044324e",
-      "baseRoutingShards": "742a9912097ef9b37d81989838d9eec99970dcaadbe2fbe776660f9c0f10b531"
+      "baseRoutingShards": "12b4af7958263a747e41b5df8ecbd7ac6717adedfe3d6f676d58130386db9d37"
     }
   },
   "route": {

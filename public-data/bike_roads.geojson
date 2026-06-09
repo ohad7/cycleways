@@ -10781,7 +10781,7 @@
       [35.635087,33.233485,154.0],
       [35.635134,33.233544,154.0]
   ]}},
-  {"type":"Feature","properties":{"name":"פלג הדן","id":340,"status":"active","roadType":"paved","stroke":"#0288d1","stroke-opacity":1.0,"stroke-width":5.0},"geometry":{"type":"LineString","coordinates":[
+  {"type":"Feature","properties":{"name":"פלג הדן","id":340,"status":"active","roadType":"dirt","stroke":"#ae9067","stroke-opacity":1.0,"stroke-width":5.0},"geometry":{"type":"LineString","coordinates":[
       [35.639333,33.218815,104.0],
       [35.639451,33.218871,104.0],
       [35.639651,33.219071,104.0],
