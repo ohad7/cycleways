@@ -20,6 +20,7 @@ import {
 } from "@cycleways/core/domain/routeNetwork.js";
 export { getRouteFeatureColor, prepareRouteNetworkFeatures };
 import { buildRouteDirectionPulseFeatureCollection } from "@cycleways/core/map/routeDirectionPulse.js";
+import { DISCOVER_ROUTE_PALETTE } from "@cycleways/core/map/discoverRouteColors.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
 export { buildRouteDirectionPulseFeatureCollection };
 
@@ -479,13 +480,15 @@ export function syncRecommendedRoutesLayer(map, routes) {
     data,
   });
 
-  // Draw BELOW the main route geometry/points layers so a built route and
-  // waypoint circles always stay on top.
-  const beforeLayer = map.getLayer(ROUTE_GEOMETRY_LAYER_ID)
-    ? ROUTE_GEOMETRY_LAYER_ID
-    : map.getLayer(ROUTE_NETWORK_LINE_LAYER_ID)
-      ? ROUTE_NETWORK_LINE_LAYER_ID
-      : undefined;
+  // Draw ABOVE the CW network but below the built route, waypoints, and data
+  // markers (so those stay on top / tappable). Insert before the first of these
+  // that exists; if none exist, append on top (still above the network).
+  const beforeLayer = [
+    ROUTE_GEOMETRY_LAYER_ID,
+    ROUTE_POINTS_LAYER_ID,
+    DATA_MARKERS_CIRCLE_LAYER_ID,
+    DATA_MARKERS_LAYER_ID,
+  ].find((id) => map.getLayer(id));
 
   map.addLayer(
     {
@@ -497,23 +500,18 @@ export function syncRecommendedRoutesLayer(map, routes) {
         "line-join": "round",
       },
       paint: {
-        "line-color": [
-          "case",
-          ["get", "hovered"],
-          "#1c6fb0",
-          "#9bb1c2",
-        ],
+        "line-color": ["get", "color"],
         "line-width": [
           "case",
           ["get", "hovered"],
-          5,
-          2.5,
+          6,
+          3.5,
         ],
         "line-opacity": [
           "case",
           ["get", "hovered"],
-          0.95,
-          0.5,
+          1,
+          0.9,
         ],
       },
     },
@@ -559,7 +557,10 @@ function buildRecommendedRoutesFeatureCollection(routes) {
     features.push({
       type: "Feature",
       geometry: { type: "LineString", coordinates },
-      properties: { hovered: Boolean(route.hovered) },
+      properties: {
+        hovered: Boolean(route.hovered),
+        color: route.color || DISCOVER_ROUTE_PALETTE[0],
+      },
     });
   }
 
