@@ -531,6 +531,19 @@ export function clearRecommendedRoutesLayer(map) {
   }
 }
 
+// Show or hide the built-route layers (geometry line + hit target + points).
+// Used to suppress the user's route while a recommended route is being previewed.
+export function setBuiltRouteVisibility(map, visible) {
+  if (!map) return;
+  const visibility = visible ? "visible" : "none";
+  const layerIds = [ROUTE_GEOMETRY_LAYER_ID, ROUTE_GEOMETRY_HIT_LAYER_ID, ROUTE_POINTS_LAYER_ID];
+  for (const id of layerIds) {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, "visibility", visibility);
+    }
+  }
+}
+
 function buildRecommendedRoutesFeatureCollection(routes) {
   if (!Array.isArray(routes) || routes.length === 0) {
     return { type: "FeatureCollection", features: [] };
