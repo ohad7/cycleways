@@ -34,6 +34,7 @@ export default function RouteMapPlayback({
     playerPauseRef,
     mapContainerRef,
     requestRouteFit,
+    registerRouteFitOverlays,
   } = useFeaturedRoute();
 
   const cueSlides = useMemo(
@@ -67,6 +68,14 @@ export default function RouteMapPlayback({
     registry: featuredFitRegistry,
     onRequestFit: (req) => requestRouteFit("play-fit", { padding: req.padding }),
   });
+
+  useEffect(() => {
+    registerRouteFitOverlays({
+      registry: featuredFitRegistry,
+      getScopeEl: () => sectionRef.current,
+    });
+    return () => registerRouteFitOverlays(null);
+  }, [registerRouteFitOverlays, featuredFitRegistry]);
 
   useEffect(() => {
     if (!playback.sync) return undefined;
