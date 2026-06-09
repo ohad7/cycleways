@@ -15,15 +15,12 @@ export default function BuildPanel({
   canShare,
   onShare,
   shareCopied,
-  warningPresentation,
-  onWarningFocus,
   pois = [],
   onPoiClick,
   elevation,
   error,
 }) {
   const hasRoute = routeState.geometry.length >= 2;
-  const warningGroups = warningPresentation?.groups || [];
 
   return (
     <div className="build-panel">
@@ -68,24 +65,6 @@ export default function BuildPanel({
           <button type="button" className="btn-ghost" disabled={!canShare} onClick={onShare}>
             {shareCopied ? "✓ הועתק" : "שיתוף"}
           </button>
-        </div>
-      )}
-
-      {hasRoute && warningGroups.length > 0 && (
-        <div className="build-panel__warnings">
-          <div className="dlabel">מידע חשוב</div>
-          {warningGroups.map((g) => (
-            <button
-              key={g.segmentName}
-              type="button"
-              className="build-warning"
-              style={{ backgroundColor: g.backgroundColor }}
-              onClick={() => onWarningFocus?.(g.warnings?.[0])}
-            >
-              <span>{g.label}</span>
-              <span aria-hidden="true">{g.icons.join(" ")}</span>
-            </button>
-          ))}
         </div>
       )}
 

@@ -21,9 +21,7 @@ import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
 import BuildPanel from "./components/frontPanel/BuildPanel.jsx";
 import PanelElevationGraph from "./components/frontPanel/PanelElevationGraph.jsx";
 import { useCatalogData } from "./components/frontPanel/useCatalogData.js";
-import { POI_EMOJIS as WARNING_EMOJIS, isWarningType } from "@cycleways/core/data/poiTypes.js";
 import { formatLegacyDistance } from "./components/ElevationProfile.jsx";
-import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 import MapView from "./map/MapView.jsx";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
@@ -168,11 +166,6 @@ function App() {
         : null,
     [mapUi.dataMarkerFocus],
   );
-  const routeWarningPresentation = useMemo(
-    () => getRouteWarningPresentation(routeState.activeDataPoints),
-    [routeState.activeDataPoints],
-  );
-
   const plannerRouteReady = routeState.geometry.length >= 2;
   const plannerCueSlides = useMemo(
     () => routeVideoCueSlides(null, routeState),
@@ -184,7 +177,9 @@ function App() {
   );
   const buildPois = useMemo(
     () => (routeState.activeDataPoints || [])
-      .filter((p) => p && !isWarningType(p.type))
+      .filter(Boolean)
+      .slice()
+      .sort((a, b) => (a.routeFraction ?? 0) - (b.routeFraction ?? 0))
       .map((p) => ({
         poi: p,
         distanceLabel: Number.isFinite(p.routeFraction)
@@ -392,6 +387,7 @@ function App() {
                   elevationHover={mapUi.elevationHover}
                   focusedSegment={routeState.focusedSegment}
                   geoJsonData={state.assets.geoJsonData}
+                  hideBuiltRoute={Boolean(hoveredRouteSlug)}
                   hoveredSegment={routeState.hoveredSegment}
                   onDataMarkerClick={handleDataMarkerClick}
                   onMapClick={handlePlaybackAwareMapClick}
@@ -490,8 +486,6 @@ function App() {
                     onShare={handlePanelShare}
                     shareCopied={shareCopied}
                     error={routeState.error}
-                    warningPresentation={routeWarningPresentation}
-                    onWarningFocus={handleDataPointFocus}
                     pois={buildPois}
                     onPoiClick={(poi) => handleDataPointFocus(poi)}
                     elevation={
