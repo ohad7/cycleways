@@ -82,6 +82,7 @@ function MapSurface({
   hoveredSegment,
   mode = MAP_MODE_PLANNER,
   onDataMarkerClick,
+  onDataMarkerHover,
   onMapClick,
   onMapReady,
   onRouteClick = null,
@@ -133,6 +134,7 @@ function MapSurface({
   useEffect(() => {
     callbacksRef.current = {
       onDataMarkerClick,
+      onDataMarkerHover,
       onMapClick,
       onRoutePointDrag,
       onRoutePointDragEnd,
@@ -149,6 +151,7 @@ function MapSurface({
     };
   }, [
     onDataMarkerClick,
+    onDataMarkerHover,
     onMapClick,
     onRoutePointDrag,
     onRoutePointDragEnd,
@@ -656,9 +659,24 @@ function MapSurface({
       callbacksRef.current.onRoutePointSelect?.(index);
     };
 
+    // Hover a data marker → report its id so linked UI (the segment card chips)
+    // can highlight the matching entry. Deduped so we only notify on change.
+    let hoveredDataPointId = null;
+    const emitDataMarkerHover = (next) => {
+      if (next === hoveredDataPointId) return;
+      hoveredDataPointId = next;
+      callbacksRef.current.onDataMarkerHover?.(next);
+    };
+    const handleDataMarkerMove = (event) => {
+      emitDataMarkerHover(event.features?.[0]?.properties?.dataPointId ?? null);
+    };
+    const handleDataMarkerLeave = () => emitDataMarkerHover(null);
+
     if (wantsMapClick) map.on("click", handleMapClick);
     if (wantsDataMarkerClick) {
       map.on("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
+      map.on("mousemove", DATA_MARKERS_LAYER_ID, handleDataMarkerMove);
+      map.on("mouseleave", DATA_MARKERS_LAYER_ID, handleDataMarkerLeave);
     }
     if (wantsRoutePointSelect) {
       map.on("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
@@ -669,6 +687,8 @@ function MapSurface({
         if (wantsMapClick) map.off("click", handleMapClick);
         if (wantsDataMarkerClick) {
           map.off("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
+          map.off("mousemove", DATA_MARKERS_LAYER_ID, handleDataMarkerMove);
+          map.off("mouseleave", DATA_MARKERS_LAYER_ID, handleDataMarkerLeave);
         }
         if (wantsRoutePointSelect) {
           map.off("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);

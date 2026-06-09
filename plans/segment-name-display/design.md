@@ -206,3 +206,46 @@ desktop.
   `מקטע` eyebrow keeps the framing clear.
 - Bottom-left legend must not fight the bottom-center data-marker card or the
   playback bar; the route-ready lift + playback hide handle the known cases.
+
+## Refinements (follow-up, 2026-06-10)
+
+Two enhancements added after the initial implementation:
+
+### Per-road-type fallback icon
+
+When a segment has no photo, the fallback glyph reflects its road type instead
+of a single generic icon. Road type comes from the cycleway geojson
+(`properties.roadType`, one of `paved` / `dirt` / `road`), surfaced through
+`getSegmentDetails` as `details.roadType`. A pure helper
+`segmentRoadTypeIcon(roadType)` (in `src/components/segmentCardHelpers.js`) maps
+it to a monochrome line icon rendered via the shared `<Icon>` component (three
+ionicons v7 outline glyphs added to `Icon.jsx`):
+
+- `paved` → `bicycle-outline` (cycleway)
+- `dirt` → `trail-sign-outline`
+- `road` → `car-outline`
+- unknown/missing → `trail-sign-outline` (neutral default)
+
+The glyph inherits the forest accent (`currentColor`) inside the existing
+`.segment-card__icon` circle.
+
+### Hover-link: POI marker → card chip
+
+Hovering a POI marker on the map highlights the matching chip in the segment
+card, so the user can tell which chip belongs to the marker under the cursor.
+
+- A shared `dataPointId(segmentName, dataPoint, index)` helper is extracted in
+  `@cycleways/core/data/dataMarkers.js` and reused both by
+  `dataMarkerFeaturesFromSegments` (marker ids) and by the card (chip ids),
+  guaranteeing the two derive identical ids.
+- `MapSurface` gains a web-only `onDataMarkerHover(dataPointId | null)` channel
+  (deduped `mousemove`/`mouseleave` on the data-markers layer, gated on the same
+  `dataMarkerClick` capability as the existing click handler).
+- `App` tracks the hovered id in local state and passes it to
+  `SegmentNameDisplay`; the chip whose `dataPointId(...)` matches gets
+  `.segment-card__chip--highlight` (deeper forest fill + ring). Marker → chip
+  only (the requested direction).
+
+Tests: `tests/test-segment-card-helpers.mjs` covers `segmentRoadTypeIcon` and the
+`dataPointId` parity cases. Verified live: three distinct road-type icons render
+per type, and a chip lights up when its marker is hovered.

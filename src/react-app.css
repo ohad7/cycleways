@@ -1256,6 +1256,13 @@ input {
   color: #53616a;
 }
 
+/* Lit when the matching POI marker is hovered on the map, so the user can tell
+   which chip belongs to the marker under their cursor. */
+.segment-card__chip--highlight {
+  background: rgba(63, 93, 51, 0.32);
+  box-shadow: 0 0 0 2px rgba(63, 93, 51, 0.55);
+}
+
 .map-container--planner-playing .segment-name-display {
   display: none;
 }

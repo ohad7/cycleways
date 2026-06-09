@@ -15,6 +15,16 @@ export function namespacedDataMarkerIconName(iconName, namespace) {
   return `${namespace}-${iconName}`;
 }
 
+// The stable identifier for a segment's data point: its own `id` when present,
+// otherwise a positional fallback. Shared so map markers and any UI listing the
+// same data points (e.g. the segment card chips) derive identical ids and can
+// be linked by hover.
+export function dataPointId(segmentName, dataPoint, index) {
+  return typeof dataPoint?.id === "string" && dataPoint.id.length > 0
+    ? dataPoint.id
+    : `${segmentName}-${index}`;
+}
+
 // Project a single data point into the GeoJSON feature shape that
 // syncDataMarkerLayers expects. `location` is the resolved [lat, lng] pair and
 // `dataPointId` / `segmentName` are the already-resolved identifiers.
@@ -60,12 +70,9 @@ export function dataMarkerFeaturesFromSegments(segmentsData) {
       const [lat, lng] = location;
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-      const dataPointId =
-        typeof dataPoint.id === "string" && dataPoint.id.length > 0
-          ? dataPoint.id
-          : `${segmentName}-${index}`;
+      const id = dataPointId(segmentName, dataPoint, index);
       features.push(
-        dataMarkerFeature(dataPoint, { dataPointId, location, segmentName }),
+        dataMarkerFeature(dataPoint, { dataPointId: id, location, segmentName }),
       );
     });
   });

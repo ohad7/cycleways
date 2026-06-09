@@ -182,7 +182,7 @@ function SegmentNameDisplay({
                 className="segment-card__chip"
                 key={`${dataPoint.type}-${index}`}
               >
-                {dataPoint.emoji || WARNING_EMOJIS[dataPoint.type] || "⚠️"}{" "}
+                {dataPoint.emoji || "⚠️"}{" "}
                 {dataPoint.information}
               </span>
             ))}
@@ -199,7 +199,7 @@ function SegmentNameDisplay({
 }
 ```
 
-Note: `WARNING_EMOJIS` is already imported/used in `App.jsx` — leave its import as-is.
+Note: the chip emoji uses `dataPoint.emoji || "⚠️"`. `getSegmentDetails` (in core) already resolves `dataPoint.emoji` to a non-empty string, so no per-type emoji map is needed here. (The original code referenced an undefined `WARNING_EMOJIS` binding that was never actually imported in `App.jsx`; do not reintroduce it.)
 
 - [ ] **Step 3: Verify the existing JS test suite still passes**
 
@@ -243,12 +243,16 @@ Replace the existing `.segment-name-display { ... }` block (the steel-blue one, 
   background: rgba(253, 252, 248, 0.96);
   box-shadow: 0 12px 28px rgba(16, 24, 32, 0.22);
   color: #24313a;
+  overflow: hidden;
 }
 ```
 
+`overflow: hidden` matches the sibling POI-preview card and guarantees the
+rounded `__media` image corners clip cleanly across browsers.
+
 - [ ] **Step 2: Replace the mobile `.segment-name-display` rule in `styles.css`**
 
-Replace the `@media (max-width: 768px) { .segment-name-display { ... } }` block (~lines 568–580) with:
+Replace the `@media (max-width: 768px) { .segment-name-display { ... } }` block (~lines 568–580) with (also shrink the media/icon/name to fit a phone, mirroring the POI preview's mobile sizing):
 
 ```css
 @media (max-width: 768px) {
@@ -259,6 +263,21 @@ Replace the `@media (max-width: 768px) { .segment-name-display { ... } }` block 
     gap: 8px;
     max-width: min(280px, calc(100% - 30px));
     padding: 8px;
+  }
+
+  .segment-card__media {
+    width: 64px;
+    height: 56px;
+  }
+
+  .segment-card__icon {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+
+  .segment-card__name {
+    font-size: 15px;
   }
 }
 ```

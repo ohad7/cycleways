@@ -3,6 +3,7 @@ import ContentSections from "./components/ContentSections.jsx";
 import Icon from "./components/Icon.jsx";
 import DataMarkerCard from "./components/DataMarkerCard.jsx";
 import { segmentPreviewImage } from "./components/segmentPreviewImage.js";
+import { segmentRoadTypeIcon } from "./components/segmentCardHelpers.js";
 import PageShell from "./components/PageShell.jsx";
 import RoutePlaybackControls from "./components/featured/RoutePlaybackControls.jsx";
 import {
@@ -30,6 +31,7 @@ import MapView from "./map/MapView.jsx";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
+import { dataPointId } from "@cycleways/core/data/dataMarkers.js";
 import { routeSliceForRange } from "./components/frontPanel/routeSlice.js";
 import "./react-app.css";
 
@@ -89,6 +91,7 @@ function App() {
   const [hoveredBand, setHoveredBand] = useState(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [hoveredRouteSlug, setHoveredRouteSlug] = useState(null);
+  const [hoveredPoiId, setHoveredPoiId] = useState(null);
   const [discoverSlugs, setDiscoverSlugs] = useState([]);
   const [recommendedGeoms, setRecommendedGeoms] = useState({});
   const recommendedGeomCacheRef = useRef(new Map());
@@ -470,6 +473,7 @@ function App() {
                   hideBuiltRoute={Boolean(hoveredRouteSlug)}
                   hoveredSegment={routeState.hoveredSegment}
                   onDataMarkerClick={handleDataMarkerClick}
+                  onDataMarkerHover={setHoveredPoiId}
                   onMapClick={handlePlaybackAwareMapClick}
                   onRoutePointDrag={handleRoutePointDrag}
                   onRoutePointDragEnd={handleRoutePointDragEnd}
@@ -532,6 +536,7 @@ function App() {
                 <SegmentNameDisplay
                   details={inspectedSegmentDetails}
                   inspectedSegment={inspectedSegment}
+                  hoveredPoiId={hoveredPoiId}
                 />
               </>
             )}
@@ -683,6 +688,7 @@ const SEGMENT_CHIP_CAP = 3;
 function SegmentNameDisplay({
   details,
   inspectedSegment,
+  hoveredPoiId = null,
 }) {
   if (!inspectedSegment) {
     return <div className="segment-name-display" id="segment-name-display" />;
@@ -701,7 +707,9 @@ function SegmentNameDisplay({
       {imageUrl ? (
         <img className="segment-card__media" src={imageUrl} alt="" />
       ) : (
-        <span className="segment-card__icon" aria-hidden="true">🛣️</span>
+        <span className="segment-card__icon" aria-hidden="true">
+          <Icon name={segmentRoadTypeIcon(details?.roadType)} />
+        </span>
       )}
       <div className="segment-card__body">
         <span className="segment-card__eyebrow">מקטע</span>
@@ -713,15 +721,23 @@ function SegmentNameDisplay({
         </div>
         {shownChips.length > 0 && (
           <div className="segment-card__chips">
-            {shownChips.map((dataPoint, index) => (
-              <span
-                className="segment-card__chip"
-                key={`${dataPoint.type}-${index}`}
-              >
-                {dataPoint.emoji || "⚠️"}{" "}
-                {dataPoint.information}
-              </span>
-            ))}
+            {shownChips.map((dataPoint, index) => {
+              const highlighted =
+                hoveredPoiId != null &&
+                dataPointId(inspectedSegment, dataPoint, index) === hoveredPoiId;
+              return (
+                <span
+                  className={[
+                    "segment-card__chip",
+                    highlighted ? "segment-card__chip--highlight" : "",
+                  ].filter(Boolean).join(" ")}
+                  key={`${dataPoint.type}-${index}`}
+                >
+                  {dataPoint.emoji || "⚠️"}{" "}
+                  {dataPoint.information}
+                </span>
+              );
+            })}
             {extraChips > 0 && (
               <span className="segment-card__chip segment-card__chip--more">
                 +{extraChips} נוספים

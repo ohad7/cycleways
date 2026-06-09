@@ -1266,18 +1266,21 @@ function getSegmentDetails(
       }))
     : [];
 
+  const feature = (geoJsonData?.features || []).find(
+    (candidate) => candidate?.properties?.name === segmentName,
+  );
+  const roadType = feature?.properties?.roadType || null;
+
   if (managerMetrics) {
     return {
       distanceKm: managerMetrics.distanceKm,
       elevationGain: managerMetrics.forward?.elevationGain || 0,
       elevationLoss: managerMetrics.forward?.elevationLoss || 0,
+      roadType,
       dataPoints,
     };
   }
 
-  const feature = (geoJsonData?.features || []).find(
-    (candidate) => candidate?.properties?.name === segmentName,
-  );
   const coordinates = Array.isArray(feature?.geometry?.coordinates)
     ? feature.geometry.coordinates
     : [];
@@ -1299,6 +1302,7 @@ function getSegmentDetails(
     distanceKm: (distance / 1000).toFixed(1),
     elevationGain: Math.round(elevationGain || 0),
     elevationLoss: Math.round(elevationLoss || 0),
+    roadType,
     dataPoints,
   };
 }
