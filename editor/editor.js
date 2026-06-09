@@ -11,6 +11,7 @@ import {
   poiMarkerIconName,
 } from "../packages/core/src/data/poiTypes.js";
 import { registerPoiEmojiImages } from "../packages/core/src/map/emojiMarkerImage.js";
+import { parseRichText } from "../packages/core/src/utils/richText.js";
 import { bootstrapKeyframesFromGps } from "../src/components/featured/gpsBootstrap.js";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
 import {
@@ -4753,7 +4754,40 @@ function cleanOptionalText(value) {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function appendDataTextField(item, { label, value = "", rows = 0, onCommit }) {
+// Renders the rich-text AST into a DOM preview node (mirrors the app renderers;
+// links validated by the shared parser, so no raw-HTML path here either).
+function renderRichTextPreview(target, value) {
+  target.replaceChildren();
+  const blocks = parseRichText(value);
+  const renderInline = (parent, nodes) => {
+    for (const node of nodes) {
+      if (node.t === "text") {
+        parent.appendChild(document.createTextNode(node.v));
+      } else if (node.t === "break") {
+        parent.appendChild(document.createElement("br"));
+      } else if (node.t === "bold") {
+        const strong = document.createElement("strong");
+        renderInline(strong, node.children);
+        parent.appendChild(strong);
+      } else if (node.t === "link") {
+        const a = document.createElement("a");
+        a.href = node.href;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        renderInline(a, node.children);
+        parent.appendChild(a);
+      }
+    }
+  };
+  for (const block of blocks) {
+    const p = document.createElement("p");
+    renderInline(p, block);
+    target.appendChild(p);
+  }
+  target.hidden = blocks.length === 0;
+}
+
+function appendDataTextField(item, { label, value = "", rows = 0, onCommit, preview = false }) {
   const fieldLabel = document.createElement("label");
   fieldLabel.className = "field-label";
   fieldLabel.textContent = label;
@@ -4770,6 +4804,16 @@ function appendDataTextField(item, { label, value = "", rows = 0, onCommit }) {
   input.value = value || "";
   input.addEventListener("change", () => onCommit(cleanOptionalText(input.value)));
   item.appendChild(input);
+
+  if (preview) {
+    const previewEl = document.createElement("div");
+    previewEl.className = "rich-text-preview";
+    item.appendChild(previewEl);
+    const update = () => renderRichTextPreview(previewEl, input.value);
+    input.addEventListener("input", update);
+    update();
+  }
+
   return input;
 }
 
@@ -5131,6 +5175,7 @@ function renderDataList() {
       label: "Short description",
       value: marker.information,
       rows: 2,
+      preview: true,
       onCommit: (information) => {
         updateDataMarker(index, { information });
         renderDataList();
@@ -5141,6 +5186,7 @@ function renderDataList() {
       label: "Long description",
       value: marker.description,
       rows: 3,
+      preview: true,
       onCommit: (description) => {
         updateDataMarker(index, { description });
         renderDataList();

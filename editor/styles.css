@@ -1353,3 +1353,16 @@ button:disabled {
   color: var(--muted);
   padding: 6px 0;
 }
+
+.rich-text-preview {
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px dashed #c9c9c9;
+  border-radius: 4px;
+  background: #fafafa;
+  font-size: 0.85em;
+  color: #333;
+}
+.rich-text-preview p { margin: 0 0 4px; }
+.rich-text-preview p:last-child { margin-bottom: 0; }
+.rich-text-preview a { color: #1580b7; }
