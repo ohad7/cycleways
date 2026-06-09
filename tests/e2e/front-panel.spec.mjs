@@ -10,7 +10,7 @@ test("front panel shows discover by default and toggles to build", async ({ page
   const panel = page.getByTestId("front-panel");
   await expect(panel).toBeVisible();
   // Discover by default.
-  await expect(panel.getByRole("tab", { name: "גילוי מסלול" })).toHaveAttribute("aria-selected", "true");
+  await expect(panel.getByRole("tab", { name: "חפש מסלול" })).toHaveAttribute("aria-selected", "true");
   await expect(panel.getByText("מצאו את הרכיבה הבאה")).toBeVisible();
   // Toggle to build.
   await panel.getByRole("tab", { name: "בניית מסלול" }).click();

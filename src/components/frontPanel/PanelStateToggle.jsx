@@ -11,7 +11,7 @@ export default function PanelStateToggle({ state, onChange }) {
         className={state === "discover" ? "on" : ""}
         onClick={() => onChange("discover")}
       >
-        <Icon name="search-outline" /> גילוי מסלול
+        <Icon name="search-outline" /> חפש מסלול
       </button>
       <button
         type="button"

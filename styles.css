@@ -430,7 +430,7 @@ html {
   display: flex;
   gap: 20px;
   align-items: stretch;
-  max-width: 1400px;
+  max-width: none;
   margin: 0 auto;
   height: calc(100vh - 100px) !important;
   flex-direction: row-reverse;
