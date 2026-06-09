@@ -71,10 +71,19 @@ Scope is the **planner only**. The shared POI preview component is untouched.
 
 ### 1. Restyled card
 
-`.segment-name-display` becomes a cream editorial card using the shared
-`--fv-*` palette (already reachable on the planner — the planner POI preview
-uses `var(--fv-clay)` etc. successfully). Accent color is **forest/green**
-(`--fv-forest` / `--fv-forest-soft`) so segment info reads as distinct from a
+`.segment-name-display` becomes a cream editorial card matching the POI
+preview. **Important:** `featured.css` (which defines the `--fv-*` `:root`
+variables) is **not** loaded on the planner — the planner's POI preview rules
+live in `src/react-app.css` and hardcode the palette (e.g. `#24313a`,
+`rgba(253,252,248,.95)`, `#b65e20`). The segment card follows the same approach
+and **hardcodes** the palette rather than using `var(--fv-*)`:
+
+- cream card: `background: rgba(253,252,248,.96)`
+- ink text: `#24313a`; muted: `#53616a`
+- forest accent (eyebrow + chips): `#3f5d33`, soft `rgba(63,93,51,.18)`
+- hairline border: `rgba(36,49,58,.16)`
+
+Accent color is **forest/green** so segment info reads as distinct from a
 clay-accented POI while staying in the same palette family.
 
 Layout (RTL), mirroring the POI preview's media + body structure:
@@ -189,9 +198,9 @@ desktop.
 
 ## Risks / notes
 
-- `--fv-*` variables must be in scope on the planner. They are (the planner POI
-  preview already consumes them); verify the relevant `:root`/global definition
-  still applies after the restyle.
+- The `--fv-*` variables are **not** available on the planner (`featured.css` is
+  not loaded there). The segment card must hardcode the palette, matching the
+  planner POI preview rules in `react-app.css`. Do not use `var(--fv-*)`.
 - Using a POI's photo as the segment "image" is intentionally opportunistic —
   the photo belongs to a data point on the segment, not the segment itself. The
   `מקטע` eyebrow keeps the framing clear.
