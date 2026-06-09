@@ -487,19 +487,20 @@ html {
 .segment-name-display {
   position: absolute;
   top: 25px;
-  left: 135px;
-  background: rgba(70, 130, 180, 0.9);
-  color: white;
-  padding: 10px 15px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  max-width: 250px;
-  min-height: 50px;
-  word-wrap: break-word;
+  left: 25px;
+  z-index: 1001;
   display: none;
-  margin-bottom: 8px;
+  align-items: stretch;
+  gap: 12px;
+  direction: rtl;
+  text-align: right;
+  max-width: 340px;
+  padding: 12px;
+  border: 1px solid rgba(36, 49, 58, 0.16);
+  border-radius: 8px;
+  background: rgba(253, 252, 248, 0.96);
+  box-shadow: 0 12px 28px rgba(16, 24, 32, 0.22);
+  color: #24313a;
 }
 
 .segment-name-display.bounce-intro {
@@ -567,15 +568,12 @@ html {
 
 @media (max-width: 768px) {
   .segment-name-display {
-    position: absolute;
-    top: 60px;
-    right: 75px;
-    left: auto;
-    max-width: 150px;
-    font-size: 12px;
-    padding: 8px 12px;
-    text-align: right;
-    margin-bottom: 6px;
+    top: 15px;
+    left: 15px;
+    right: auto;
+    gap: 8px;
+    max-width: min(280px, calc(100% - 30px));
+    padding: 8px;
   }
 }
 
