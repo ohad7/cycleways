@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useStat
 import ContentSections from "./components/ContentSections.jsx";
 import Icon from "./components/Icon.jsx";
 import DataMarkerCard from "./components/DataMarkerCard.jsx";
+import { segmentPreviewImage } from "./components/segmentPreviewImage.js";
 import PageShell from "./components/PageShell.jsx";
 import RoutePlaybackControls from "./components/featured/RoutePlaybackControls.jsx";
 import {
@@ -677,34 +678,58 @@ function MapLegend({ hasBrokenRoute }) {
 }
 
 
+const SEGMENT_CHIP_CAP = 3;
+
 function SegmentNameDisplay({
   details,
   inspectedSegment,
 }) {
   if (!inspectedSegment) {
-    return (
-      <div className="segment-name-display" id="segment-name-display">
-        No segment selected
-      </div>
-    );
+    return <div className="segment-name-display" id="segment-name-display" />;
   }
 
+  const dataPoints = details?.dataPoints || [];
+  const imageUrl = segmentPreviewImage(details);
+  const shownChips = dataPoints.slice(0, SEGMENT_CHIP_CAP);
+  const extraChips = dataPoints.length - shownChips.length;
+
   return (
-    <div className="segment-name-display react-segment-name-display--active" id="segment-name-display">
-      <strong>{inspectedSegment}</strong>
-      <br />
-      📏 {details?.distanceKm || "0.0"} ק"מ • ⬆️{" "}
-      {details?.elevationGain || 0} מ' • ⬇️ {details?.elevationLoss || 0} מ'
-      {details?.dataPoints?.length > 0 && (
-        <div className="react-segment-data-list">
-          {details.dataPoints.map((dataPoint, index) => (
-            <div key={`${dataPoint.type}-${index}`}>
-              {dataPoint.emoji || WARNING_EMOJIS[dataPoint.type] || "⚠️"}{" "}
-              {dataPoint.information}
-            </div>
-          ))}
-        </div>
+    <div
+      className="segment-name-display react-segment-name-display--active"
+      id="segment-name-display"
+    >
+      {imageUrl ? (
+        <img className="segment-card__media" src={imageUrl} alt="" />
+      ) : (
+        <span className="segment-card__icon" aria-hidden="true">🛣️</span>
       )}
+      <div className="segment-card__body">
+        <span className="segment-card__eyebrow">מקטע</span>
+        <strong className="segment-card__name">{inspectedSegment}</strong>
+        <div className="segment-card__stats">
+          <span>📏 {details?.distanceKm || "0.0"} ק"מ</span>
+          <span>⬆️ {details?.elevationGain || 0} מ'</span>
+          <span>⬇️ {details?.elevationLoss || 0} מ'</span>
+        </div>
+        {shownChips.length > 0 && (
+          <div className="segment-card__chips">
+            {shownChips.map((dataPoint, index) => (
+              <span
+                className="segment-card__chip"
+                key={`${dataPoint.type}-${index}`}
+              >
+                {dataPoint.emoji || WARNING_EMOJIS[dataPoint.type] || "⚠️"}{" "}
+                {dataPoint.information}
+              </span>
+            ))}
+            {extraChips > 0 && (
+              <span className="segment-card__chip segment-card__chip--more">
+                +{extraChips} נוספים
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
