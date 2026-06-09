@@ -16,6 +16,7 @@ import {
 } from "./components/routePlayback/useRoutePlayback.js";
 import { useFitRouteOnPlay } from "./components/routePlayback/useFitRouteOnPlay.js";
 import { buildRouteFitRequest, combineRouteGeometries } from "./map/routeFitPadding.js";
+import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
 import Tutorial from "./components/Tutorial.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
@@ -234,10 +235,15 @@ function App() {
   const recommendedRoutes = useMemo(() => {
     if (panel.state !== "discover") return null;
     return discoverSlugs
-      .map((slug) => {
+      .map((slug, index) => {
         const geometry = recommendedGeoms[slug];
         if (!Array.isArray(geometry) || geometry.length < 2) return null;
-        return { slug, geometry, hovered: slug === hoveredRouteSlug };
+        return {
+          slug,
+          geometry,
+          hovered: slug === hoveredRouteSlug,
+          color: discoverRouteColor(index),
+        };
       })
       .filter(Boolean);
   }, [panel.state, discoverSlugs, recommendedGeoms, hoveredRouteSlug]);
