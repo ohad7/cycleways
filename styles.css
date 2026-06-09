@@ -501,6 +501,7 @@ html {
   background: rgba(253, 252, 248, 0.96);
   box-shadow: 0 12px 28px rgba(16, 24, 32, 0.22);
   color: #24313a;
+  overflow: hidden;
 }
 
 .segment-name-display.bounce-intro {
@@ -574,6 +575,21 @@ html {
     gap: 8px;
     max-width: min(280px, calc(100% - 30px));
     padding: 8px;
+  }
+
+  .segment-card__media {
+    width: 64px;
+    height: 56px;
+  }
+
+  .segment-card__icon {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+
+  .segment-card__name {
+    font-size: 15px;
   }
 }
 
