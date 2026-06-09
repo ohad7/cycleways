@@ -14,6 +14,7 @@ import {
   MAP_PLAYBACK_PREVIEW_MAX_METERS,
   useSyntheticRoutePlayback,
 } from "./components/routePlayback/useRoutePlayback.js";
+import { useFitRouteOnPlay } from "./components/routePlayback/useFitRouteOnPlay.js";
 import Tutorial from "./components/Tutorial.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
@@ -193,6 +194,24 @@ function App() {
     routeState,
     cueSlides: plannerCueSlides,
   });
+  const mapContainerRef = useRef(null);
+  const [playFitRequest, setPlayFitRequest] = useState(null);
+  const plannerFitRegistry = useMemo(() => ([
+    { selector: ".planner-route-playback", side: "bottom" },
+    { selector: ".search-container", side: "top" },
+    { selector: ".legend-container" },
+    { selector: ".data-marker-card" },
+    { selector: ".planner-route-poi-preview" },
+  ]), []);
+
+  useFitRouteOnPlay({
+    isPlaying: plannerPlayback.isPlaying,
+    currentTime: plannerPlayback.currentTime,
+    geometry: routeState.geometry,
+    getMapEl: () => mapContainerRef.current,
+    registry: plannerFitRegistry,
+    onRequestFit: setPlayFitRequest,
+  });
   const recommendedRoutes = useMemo(() => {
     if (panel.state !== "discover") return null;
     return discoverSlugs
@@ -327,6 +346,7 @@ function App() {
         <div className="container">
           <div className={["front-shell", panelCollapsed ? "front-shell--collapsed" : ""].filter(Boolean).join(" ")}>
             <div
+              ref={mapContainerRef}
               className={[
                 "map-container",
                 plannerRouteReady ? "map-container--route-ready" : "",
@@ -402,7 +422,7 @@ function App() {
                   onSegmentFocus={handleSegmentFocus}
                   onSegmentHover={handleSegmentHover}
                   onViewportIdle={handleViewportIdle}
-                  routeFitRequest={mapUi.routeFitRequest}
+                  routeFitRequest={playFitRequest ?? mapUi.routeFitRequest}
                   routeGeometry={routeState.geometry}
                   routePointDragPreview={routePointDragPreview}
                   routePoints={displayedRoutePoints}
