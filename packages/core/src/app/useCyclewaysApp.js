@@ -28,6 +28,7 @@ import {
   getQueryParam,
   hasQueryParam,
   removeUrlParam,
+  setUrlParam,
   getShardLoaderLocation,
 } from "../platform/location.js";
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
@@ -638,6 +639,61 @@ export function useCyclewaysApp({
     });
   }, [clearRouteUrl, routeState]);
 
+  // Loads an encoded route (the ?route= share format) into the live planner
+  // session — the in-app path for "open this recommended route" without a
+  // full page reload. Pushes the previous route (if any) onto the undo stack,
+  // requests a map fit to the loaded geometry, and mirrors the param onto the
+  // URL. Returns false when the routing session isn't ready or the param
+  // doesn't decode, so callers can fall back to a full-page restore.
+  const handleLoadRouteParam = useCallback(
+    async (routeParam) => {
+      if (!routeParam || !routeManagerRef.current || state.status !== "ready") {
+        return false;
+      }
+      try {
+        const shardedSession = shardedRouteSessionRef.current;
+        const snapshot = shardedSession
+          ? await shardedSession.restoreRouteParam(routeParam)
+          : restoreRouteFromParam(
+              routeManagerRef.current,
+              routeParam,
+              state.assets.segmentsData,
+              state.assets.cwBaseIndexData,
+            );
+        if (shardedSession) {
+          routeManagerRef.current = shardedSession.manager;
+        }
+        if (!snapshot) return false;
+        const previousSnapshot = routeStateSnapshot(routeStateRef.current);
+        if (previousSnapshot.points.length > 0) {
+          setRouteHistory((current) => ({
+            past: [...current.past, previousSnapshot],
+            future: [],
+          }));
+        }
+        routeStateRef.current = routeStateFromSnapshot(
+          routeStateRef.current,
+          snapshot,
+        );
+        dispatchRoute({ type: "route/update", snapshot });
+        setMapUi((current) => ({
+          ...current,
+          selectedRoutePointIndex: null,
+          routeFitRequest: {
+            id: `select-${Date.now()}`,
+            geometry: snapshot.geometry,
+          },
+        }));
+        setUrlParam("route", routeParam);
+        return true;
+      } catch (error) {
+        dispatchRoute({ type: "route/error", error });
+        return false;
+      }
+    },
+    [state.assets, state.status],
+  );
+
   const restoreHistorySnapshot = useCallback(
     (snapshot, action) => {
       if (!routeManagerRef.current) return;
@@ -1037,6 +1093,7 @@ export function useCyclewaysApp({
     handleUndo,
     handleRedo,
     handleRouteClear,
+    handleLoadRouteParam,
     handleOpenDownload,
     handleCloseDownload,
     handleDownloadGpx,
