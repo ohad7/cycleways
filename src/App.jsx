@@ -40,6 +40,12 @@ import "./react-app.css";
 // only loads when its feature flag is on (off by default).
 const DownloadModal = lazy(() => import("./components/DownloadModal.jsx"));
 
+// When true, hovering a Discover route also flies the camera to it (and restores
+// the visible-set fit on mouse-out). Disabled by default: the constant zoom in/
+// out on hover was disorienting. Hover still bolds the line either way (the
+// `hovered` tier in recommendedRoutes). Flip to true to restore the old behavior.
+const DISCOVER_HOVER_FITS_CAMERA = false;
+
 function App() {
   const {
     state,
@@ -294,7 +300,10 @@ function App() {
   }, [discoverFitRoutes, requestFit]);
 
   // Hovering a Discover route fits to it; leaving restores the all-routes fit.
+  // Gated by DISCOVER_HOVER_FITS_CAMERA — off by default (hover only bolds the
+  // line, no camera move). Kept intact so the old behavior is one flag flip away.
   useEffect(() => {
+    if (!DISCOVER_HOVER_FITS_CAMERA) return undefined;
     if (panel.state !== "discover") return undefined;
     const hoveredGeometry = hoveredRouteSlug ? recommendedGeoms[hoveredRouteSlug] : null;
     const timer = window.setTimeout(() => {
