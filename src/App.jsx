@@ -512,7 +512,7 @@ function App() {
                   elevationHover={mapUi.elevationHover}
                   focusedSegment={routeState.focusedSegment}
                   geoJsonData={state.assets.geoJsonData}
-                  hideBuiltRoute={Boolean(hoveredRouteSlug)}
+                  hideBuiltRoute={panel.state === "discover" && Boolean(hoveredRouteSlug)}
                   hoveredSegment={routeState.hoveredSegment}
                   onDataMarkerClick={handleDataMarkerClick}
                   onDataMarkerHover={setHoveredPoiId}

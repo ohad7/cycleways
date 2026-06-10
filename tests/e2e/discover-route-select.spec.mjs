@@ -28,4 +28,11 @@ test("selecting a Discover route loads it in place without a full reload", async
   ).toHaveAttribute("aria-selected", "true");
   // Still the same document — no reload happened.
   expect(await page.evaluate(() => window.__sameDocument)).toBe(true);
+  // NOTE: We do not assert that the built-route layer is visible (not hidden)
+  // after the card click. The hideBuiltRoute bug is fixed declaratively in
+  // App.jsx: `hideBuiltRoute={panel.state === "discover" && Boolean(hoveredRouteSlug)}`.
+  // That guard makes hoveredRouteSlug irrelevant once the panel leaves "discover",
+  // so the route is always shown in Build. Asserting it here would require either
+  // recording setLayoutProperty calls in the Mapbox mock (a new seam) or inspecting
+  // internal React state — neither is worth the coupling. Skipped.
 });
