@@ -22,7 +22,13 @@ export function useCardViewport(orderedSlugs) {
   const [sets, setSets] = useState(EMPTY);
 
   const recompute = useCallback(() => {
-    setSets(deriveViewportSets(orderedSlugs, intersecting.current));
+    const next = deriveViewportSets(orderedSlugs, intersecting.current);
+    // A transient empty set — cards exist but none have been measured yet
+    // (initial mount, mid-fling) — should not clear the map; hold the last good
+    // sets until the next observer callback. A genuinely empty list (no cards,
+    // e.g. a filter with zero results) must still clear.
+    if (orderedSlugs.length > 0 && next.visibleSlugs.length === 0) return;
+    setSets(next);
   }, [orderedSlugs]);
 
   // Coalesce bursts of observer callbacks into one recompute per frame.
