@@ -8,12 +8,12 @@ export function hasActiveDiscoverFilters(filters) {
   );
 }
 
-// No active filters → curated "recommended" = featured entries.
+// No active filters → "all" = the full catalog, catalog order.
 // Any active filter → "results" = the full catalog finder.
 export function selectDiscoverRoutes(entries, filters) {
   const list = Array.isArray(entries) ? entries : [];
   if (!hasActiveDiscoverFilters(filters)) {
-    return { mode: "recommended", routes: list.filter((e) => e && e.featured) };
+    return { mode: "all", routes: list };
   }
   return { mode: "results", routes: catalogFilter(list, filters) };
 }

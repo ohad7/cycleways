@@ -18,10 +18,10 @@ assert.equal(
 );
 assert.equal(hasActiveDiscoverFilters({ difficulty: new Set(["easy"]) }), true);
 
-// No active filters → recommended mode = featured entries only.
-const rec = selectDiscoverRoutes(entries, {});
-assert.equal(rec.mode, "recommended");
-assert.deepEqual(rec.routes.map((r) => r.slug), ["a", "c"]);
+// No active filters → all mode = every entry in catalog order.
+const all = selectDiscoverRoutes(entries, {});
+assert.equal(all.mode, "all");
+assert.deepEqual(all.routes.map((r) => r.slug), ["a", "b", "c"]);
 
 // Active filter → results mode = catalogFilter output.
 const res = selectDiscoverRoutes(entries, { difficulty: new Set(["moderate"]) });
