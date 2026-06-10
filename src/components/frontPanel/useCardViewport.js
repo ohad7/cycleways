@@ -62,22 +62,30 @@ export function useCardViewport(orderedSlugs) {
     };
   }, [orderedSlugs, schedule]);
 
-  // Ref-callback factory: registers/unregisters a card element by slug.
-  const registerCard = useCallback(
-    (slug) => (el) => {
-      const prev = cardEls.current.get(slug);
-      if (prev && observerRef.current) observerRef.current.unobserve(prev);
-      if (el) {
-        el.dataset.discoverSlug = slug;
-        cardEls.current.set(slug, el);
-        if (observerRef.current) observerRef.current.observe(el);
-      } else {
-        cardEls.current.delete(slug);
-        intersecting.current.delete(slug);
-      }
-    },
-    [],
-  );
+  // Cache one stable ref-callback per slug. Consumers call registerCard(slug)
+  // inline during render; returning a cached function keeps the ref identity
+  // stable so React does not detach/re-attach (and wipe intersection state) on
+  // every re-render.
+  const cardCallbacks = useRef(new Map());
+  const registerCard = useCallback((slug) => {
+    let cb = cardCallbacks.current.get(slug);
+    if (!cb) {
+      cb = (el) => {
+        const prev = cardEls.current.get(slug);
+        if (prev && observerRef.current) observerRef.current.unobserve(prev);
+        if (el) {
+          el.dataset.discoverSlug = slug;
+          cardEls.current.set(slug, el);
+          if (observerRef.current) observerRef.current.observe(el);
+        } else {
+          cardEls.current.delete(slug);
+          intersecting.current.delete(slug);
+        }
+      };
+      cardCallbacks.current.set(slug, cb);
+    }
+    return cb;
+  }, []);
 
   return { containerRef, registerCard, sets };
 }
