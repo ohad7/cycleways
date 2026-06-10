@@ -8,7 +8,6 @@
   button,
   .control-btn,
   .nav-link {
-    color: red;
     touch-action: manipulation;
   }
 
