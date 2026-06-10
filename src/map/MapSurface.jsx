@@ -483,13 +483,16 @@ function MapSurface({
     const map = mapRef.current;
     if (!map || status !== "ready" || !caps.elevationPulse) return;
 
+    // Elevation-graph hover is shown with the standard orange route-progress
+    // cursor (the video-cursor PROGRESS_HEAD marker), which already tracks the
+    // hover position because the elevation handler seeks playback to the hovered
+    // fraction. Here we only suppress the direction-pulse chevron so the two
+    // don't both render on the route.
     if (Number.isFinite(elevationHover?.t)) {
       // Disable animator-driven visuals for this route — only reset on route change.
       animatorVisibleRef.current = false;
-      syncRouteDirectionPulseLayer(map, routeGeometryRef.current, elevationHover.t);
-    } else {
-      clearRouteDirectionPulseLayer(map);
     }
+    clearRouteDirectionPulseLayer(map);
   }, [elevationHover, status, caps.elevationPulse]);
 
   useEffect(() => {

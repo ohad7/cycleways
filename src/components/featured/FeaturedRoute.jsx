@@ -40,6 +40,9 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
   }, []);
   const [videoCursor, setVideoCursor] = useState(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  // When true the map fills the stage and the video shrinks to a corner PiP
+  // (the two swap places). Toggled from the map's expand button / the video PiP.
+  const [mapPrimary, setMapPrimary] = useState(false);
   const videoSyncRef = useRef(null);
   const playerSeekRef = useRef(null);
   const playerPlayRef = useRef(null);
@@ -114,6 +117,10 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       ...(resolvedPadding ? { padding: resolvedPadding } : {}),
     });
   }, [meta, routeState.geometry]);
+
+  const toggleMapPrimary = useCallback(() => {
+    setMapPrimary((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     if (!meta || status !== "ready" || routeState.geometry.length < 2) return;
@@ -233,8 +240,10 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
       playerPauseRef,
       handleRouteClick,
       handleDataMarkerClick,
+      mapPrimary,
+      toggleMapPrimary,
     }),
-    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, registerRouteFitOverlays, mapContainerRef, videoCursor, videoPlaying, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick],
+    [meta, kicker, dataMarkerFeatures, activeDataPointIds, routeState, status, error, focusedPoiId, focusedCoord, routeFitRequest, requestRouteFit, registerRouteFitOverlays, mapContainerRef, videoCursor, videoPlaying, setVideoCursorFromFraction, seekVideoToFraction, handleRouteClick, handleDataMarkerClick, mapPrimary, toggleMapPrimary],
   );
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;

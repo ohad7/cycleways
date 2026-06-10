@@ -19,6 +19,16 @@ import {
 //   about: { eyebrow?, heading?, paragraphs?: string[], bodyText?: string } - below-the-fold "about" ("bodyText" = rich text, preferred)
 //   difficultyLabel / surfaceLabel - optional stat text overrides for the rail
 //   videoCursorVariant - 1-6 or a named cursor style for the video map marker
+// Obstruction overlays the route fit should clear: the bottom control bar, the
+// corner video PiP poster, and the transient POI preview. computeOverlayFitPadding
+// only counts the ones actually overlapping the map, so this works in both the
+// PiP (video-primary) and full (map-primary) layouts.
+const FEATURED_VIDEO_FIT_OVERLAYS = [
+  { selector: ".fv-video-controls", side: "bottom" },
+  { selector: ".fv-video-poster" },
+  { selector: ".fv-video-poi-preview" },
+];
+
 export default function FeaturedVideoRoute({
   slug,
   kicker = null,
@@ -66,6 +76,7 @@ export default function FeaturedVideoRoute({
                   autoResetDelayMs={5000}
                   routeFitPadding={12}
                   videoCursorVariant={videoCursorVariant}
+                  fitOverlayRegistry={FEATURED_VIDEO_FIT_OVERLAYS}
                 />
               </>
             )}

@@ -3,6 +3,7 @@
   "routes": {
     "sovev-beit-hillel": "sovev-beit-hillel.json",
     "banias-gan-hatsafon": "banias-gan-hatsafon.json",
-    "sovev-dafna": "sovev-dafna.json"
+    "sovev-dafna": "sovev-dafna.json",
+    "sovev-shear-yeshuv": "sovev-shear-yeshuv.json"
   }
 }

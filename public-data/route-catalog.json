@@ -511,6 +511,60 @@
         }
       },
       "intro": "רכיבה בדרכים עתיקות (וקופצניות במיוחד) מכפר סאלד לציר הנפט, ומשם חזרה דרך תל עזזיאת וגבעת האם"
+    },
+    {
+      "slug": "sovev-shear-yeshuv",
+      "name": "סובב שאר ישוב",
+      "summary": "סיבוב מסביב שאר ישוב וביקור בפינה קסומה על הבניאס",
+      "intro": "רכיבה קצרה ונעימה בכביש הביטחון של מושב שאר ישוב. המסלול מתחיל ליד קמפינג חניון הבניאס ומקיף את שאר ישוב דרך שדות ונופים, בסוף הסיבוב נעשה ירידה קטנה לכיוון גשר שאר ישוב ומשם בחזרה לנקודת ההתחלה",
+      "description": "רכיבה קצרה ונעימה בכביש הביטחון של מושב שאר ישוב. המסלול מתחיל ליד קמפינג חניון הבניאס ומקיף את שאר ישוב דרך שדות ונופים, בסוף הסיבוב נעשה ירידה קטנה לכיוון גשר שאר ישוב ומשם בחזרה לנקודת ההתחלה\n\n",
+      "route": "6YxSYYqsaxoiCE5uoSski3PTfHJE96J7ZoK2wqmNoa6UDy5NczHyTs2vEPdRZJ3cETHxx2nkJACbjRDmRCyZfZCJGUWq5DhBzM8qMbXdMiNgyLdLS96BVyqcqQgmKqKKWvxdf6uiE5x1mLpVRMaDjiEdCT",
+      "notes": "",
+      "featured": false,
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/sovev-shear-yeshuv-map-e0b908da.webp",
+        "thumbnail": "public-data/route-map-images/sovev-shear-yeshuv-map-e0b908da-thumb.webp",
+        "alt": "מפת מסלול סובב שאר ישוב",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:fdf64e9baffac071fb1d734731308332dea648fbba128986d6a95250763c01dc",
+          "mapVersion": "00f59f7dd38d",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-09T21:59:21.951Z"
+        }
+      },
+      "start": {
+        "name": "קמפינג חניון הבניאס",
+        "description": "",
+        "images": [
+          {
+            "photo": "public-data/poi-images/sovev-shear-yeshuv-start-ef0530c1.webp",
+            "thumbnail": "public-data/poi-images/sovev-shear-yeshuv-start-ef0530c1-thumb.webp"
+          }
+        ]
+      },
+      "distanceKm": 5.8,
+      "elevationGainM": 59,
+      "elevationLossM": 59,
+      "regionId": "galilee-panhandle",
+      "passesNear": [],
+      "placeMatches": [],
+      "startPlaceIds": [],
+      "difficulty": "easy",
+      "style": "family",
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 1
+      },
+      "surfaceType": "paved",
+      "roadMix": {
+        "paved": 0.9222495302309194,
+        "dirt": 0.07775046976908064,
+        "road": 0
+      },
+      "qualityScore": 3
     }
   ]
 }

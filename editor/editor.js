@@ -18,6 +18,7 @@ import {
   buildCumulativeDistances,
   nearestPointOnPolyline,
   pointAtFraction,
+  snapPointToRouteWithinWindow,
 } from "../src/components/featured/routeGeometry.js";
 import { vsFormatTime, vsParseTime } from "./lib/vs-time.mjs";
 
@@ -7400,10 +7401,15 @@ function vsExtractYouTubeId(url) {
 
 // Snap a {lat, lng} point to the nearest point on the polyline.
 // Returns { lat, lng, distanceMeters } or null if route empty.
-function vsSnapToPolyline(point, polyline) {
+//
+// `window` ({ afterFraction, beforeFraction }) constrains the snap to the leg
+// consistent with the surrounding keyframes' progress, so an out-and-back spur
+// (where a point projects equally onto the outbound and return leg) snaps to the
+// forward leg instead of jumping backward.
+function vsSnapToPolyline(point, polyline, window = {}) {
   if (!polyline || polyline.length < 2) return null;
   const cumulative = buildCumulativeDistances(polyline);
-  const snap = nearestPointOnPolyline(point, polyline, cumulative);
+  const snap = snapPointToRouteWithinWindow(point, polyline, cumulative, window);
   const snappedPoint = pointAtFraction(polyline, cumulative, snap.fraction);
   return {
     lat: snappedPoint.lat,
@@ -7735,17 +7741,27 @@ function handleVideoSyncMapClick(event) {
     vsSetStatus("Load a YouTube URL first.");
     return;
   }
+  const t = videoSyncState.player.getCurrentTime();
+  // Replace any existing keyframe at same t (within 50ms), else insert sorted.
+  const filtered = videoSyncState.keyframes.filter((kf) => Math.abs(kf.t - t) > 0.05);
+  // Constrain the snap to the leg consistent with the neighbouring keyframes'
+  // progress, so out-and-back spurs don't snap the return leg onto the overlapping
+  // outbound leg (which would send the animation backward).
+  const prevKf = filtered
+    .filter((kf) => kf.t < t && Number.isFinite(kf.fraction))
+    .reduce((best, kf) => (!best || kf.t > best.t ? kf : best), null);
+  const nextKf = filtered
+    .filter((kf) => kf.t > t && Number.isFinite(kf.fraction))
+    .reduce((best, kf) => (!best || kf.t < best.t ? kf : best), null);
   const snap = vsSnapToPolyline(
     { lat: event.lngLat.lat, lng: event.lngLat.lng },
     videoSyncState.routePolyline,
+    { afterFraction: prevKf?.fraction ?? null, beforeFraction: nextKf?.fraction ?? null },
   );
   if (!snap || snap.distanceMeters > VS_SNAP_THRESHOLD_M) {
     vsSetStatus(`Click too far from route (${snap?.distanceMeters?.toFixed(0)}m).`);
     return;
   }
-  const t = videoSyncState.player.getCurrentTime();
-  // Replace any existing keyframe at same t (within 50ms), else insert sorted.
-  const filtered = videoSyncState.keyframes.filter((kf) => Math.abs(kf.t - t) > 0.05);
   filtered.push({ t, lat: snap.lat, lon: snap.lng, fraction: snap.fraction });
   filtered.sort((a, b) => a.t - b.t);
   videoSyncState.keyframes = filtered;

@@ -183,9 +183,40 @@
   margin: 16px 0;
 }
 
-.featured-map-inline--expanded {
-  z-index: 80;
-  overflow: visible;
+/* Swap layout: clicking "expand" swaps the map and video. The map fills the
+   stage (becomes the in-flow element that gives the shell its height) and the
+   video shrinks to a corner PiP. See the desktop/mobile blocks below for the
+   per-breakpoint geometry; this is the shared piece.
+
+   The video keeps playing in the PiP; the shared playback control bar stays
+   pinned to the bottom of the stage (over the map) because .fv-video stays a
+   full transparent overlay and only its iframe shrinks. */
+/* Static poster shown in the corner PiP while map-primary: it covers the paused
+   video iframe, and clicks fall through to the hit-shield (swap back). */
+.fv-video-poster {
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.fv-video-swap-back {
+  position: absolute;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(253, 252, 248, 0.82);
+  border-radius: 999px;
+  background: rgba(16, 24, 32, 0.74);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: auto;
+  box-shadow: 0 5px 14px rgba(16, 24, 32, 0.28);
 }
 
 .featured-map-expand-hit {
@@ -217,116 +248,6 @@
 .featured-map-expand-btn span[aria-hidden="true"] {
   font-size: 1rem;
   line-height: 1;
-}
-
-.featured-map-expanded-overlay {
-  --fv-cream: #fdfcf8;
-  --fv-paper: #ffffff;
-  --fv-ink: #24313a;
-  --fv-ink-mute: #5d6a72;
-  --fv-line: rgba(36, 49, 58, 0.12);
-  position: fixed;
-  inset: 0;
-  z-index: 1000010;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(16, 24, 32, 0.48);
-}
-
-.featured-map-expanded-overlay--hidden {
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.featured-map-expanded-panel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: min(1040px, calc(100vw - 48px));
-  height: min(760px, calc(100vh - 48px));
-  overflow: hidden;
-  border: 1px solid rgba(253, 252, 248, 0.42);
-  border-radius: 10px;
-  background: var(--fv-cream);
-  box-shadow: 0 24px 70px rgba(16, 24, 32, 0.36);
-  direction: rtl;
-}
-
-.featured-map-expanded-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--fv-line);
-  color: var(--fv-ink);
-  cursor: pointer;
-}
-
-.featured-map-expanded-title {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-
-.featured-map-expanded-title span {
-  font-size: 1rem;
-  font-weight: 900;
-}
-
-.featured-map-expanded-distance {
-  color: var(--fv-ink-mute);
-  font-size: 0.9rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.featured-map-expanded-close {
-  position: absolute;
-  top: 14px;
-  inset-inline-start: 14px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 82px;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(36, 49, 58, 0.22);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  color: var(--fv-ink);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 900;
-  line-height: 1;
-  box-shadow: 0 8px 22px rgba(16, 24, 32, 0.18);
-}
-
-.featured-map-expanded-close span[aria-hidden="true"] {
-  font-size: 1.35rem;
-  line-height: 1;
-}
-
-.featured-map-expanded-close-label {
-  line-height: 1;
-}
-
-.featured-map-expanded-body {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  cursor: auto;
-}
-
-.featured-map-expanded-body .react-map {
-  border-radius: 0;
-  box-shadow: none;
 }
 
 .poi-list-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
@@ -809,6 +730,79 @@
     overflow: hidden;
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+
+  /* Map-primary (swapped): the map fills the stage in normal flow so the shell
+     keeps its height, and the video becomes the corner PiP overlay. */
+  .fv-playback .fv-mobile-map.featured-map-inline--map-primary {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: var(--fv-stage-height);
+    margin: 0;
+    z-index: 1;
+    border: 0;
+    box-shadow: none;
+  }
+
+  /* Video shrinks to a corner PiP. .fv-video stays a full transparent overlay
+     (pointer-events: none) so the map underneath stays interactive; only the
+     iframe, its hit target, the swap-back button and the control bar opt back in. */
+  .fv-playback .fv-video.featured-video--pip {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .fv-playback .featured-video--pip .featured-video-frame {
+    height: 100%;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .fv-playback .featured-video--pip .featured-video-iframe-host,
+  .fv-playback .featured-video--pip .featured-video-frame > iframe,
+  .fv-playback .featured-video--pip .fv-video-poster,
+  .fv-playback .featured-video--pip .fv-video-hit-shield {
+    position: absolute;
+    inset: auto;
+    top: 14px;
+    right: 14px;
+    width: clamp(220px, 26%, 300px);
+    height: clamp(150px, 20vh, 200px);
+    border-radius: 8px;
+    overflow: hidden;
+    pointer-events: auto;
+  }
+
+  .fv-playback .featured-video--pip .featured-video-iframe-host,
+  .fv-playback .featured-video--pip .featured-video-frame > iframe,
+  .fv-playback .featured-video--pip .fv-video-poster {
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  .fv-playback .featured-video--pip .fv-video-hit-shield {
+    z-index: 6;
+  }
+
+  .fv-playback .featured-video--pip .fv-video-swap-back {
+    top: 22px;
+    right: 22px;
+  }
+
+  /* Keep the playback control bar pinned to the bottom of the stage (over the
+     map), full width, and clickable. */
+  .fv-playback .featured-video--pip .fv-video-controls {
+    z-index: 6;
+    pointer-events: auto;
   }
 
   /* The PiP reuses the desktop expand pill; shrink it to an icon-only button
@@ -1971,9 +1965,92 @@
     box-shadow: 0 10px 22px rgba(16, 24, 32, 0.28);
   }
 
-  .fv-mobile-map.featured-map-inline--expanded {
-    z-index: 80;
+  /* Map-primary (swapped): the map fills the 4:5 stage in normal flow; the
+     video shrinks to the corner PiP overlay. */
+  .fv-mobile-map.featured-map-inline--map-primary {
+    position: relative;
+    inset: auto;
+    top: auto;
+    right: auto;
+    left: auto;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    margin: 0;
+    z-index: 1;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .fv-video.featured-video--pip {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .fv-video.featured-video--pip .featured-video-frame {
+    height: 100%;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
     overflow: visible;
+  }
+
+  /* The video iframe (and its hit target) become a small 16:9 corner thumbnail,
+     overriding the portrait crop used in full-screen video mode. */
+  .fv-video.featured-video--pip .featured-video-iframe-host,
+  .fv-video.featured-video--pip .featured-video-frame > iframe,
+  .fv-video.featured-video--pip .fv-video-poster,
+  .fv-video.featured-video--pip .fv-video-hit-shield {
+    position: absolute;
+    inset: auto;
+    top: 8px;
+    right: 8px;
+    left: auto;
+    width: clamp(120px, 38vw, 150px);
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-width: none;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .fv-video.featured-video--pip .featured-video-iframe-host,
+  .fv-video.featured-video--pip .featured-video-frame > iframe,
+  .fv-video.featured-video--pip .fv-video-poster {
+    z-index: 5;
+    overflow: hidden;
+    border: 1px solid rgba(253, 252, 248, 0.78);
+    border-radius: 8px;
+    box-shadow: 0 10px 22px rgba(16, 24, 32, 0.28);
+  }
+
+  .fv-video.featured-video--pip .featured-video-iframe-host iframe {
+    width: 100%;
+    height: 100%;
+    left: 0;
+    transform: none;
+  }
+
+  .fv-video.featured-video--pip .fv-video-hit-shield {
+    z-index: 6;
+  }
+
+  .fv-video.featured-video--pip .fv-video-swap-back {
+    top: 12px;
+    right: 12px;
+  }
+
+  .fv-video.featured-video--pip .fv-video-controls {
+    z-index: 6;
+    pointer-events: auto;
   }
 
   .fv-mobile-map .react-map {
@@ -2010,47 +2087,6 @@
   }
 
   .fv-mobile-map .featured-map-expand-label {
-    display: none;
-  }
-
-  .featured-map-expanded-overlay--mobile {
-    align-items: flex-end;
-    padding: 0;
-    background: rgba(16, 24, 32, 0.44);
-  }
-
-  .featured-map-expanded-overlay--mobile .featured-map-expanded-panel {
-    width: 100%;
-    height: min(82vh, 720px);
-    border-inline: 0;
-    border-bottom: 0;
-    border-radius: 14px 14px 0 0;
-  }
-
-  .featured-map-expanded-overlay--mobile .featured-map-expanded-panel::before {
-    align-self: center;
-    width: 42px;
-    height: 4px;
-    margin-top: 8px;
-    border-radius: 999px;
-    background: rgba(36, 49, 58, 0.28);
-    content: "";
-  }
-
-  .featured-map-expanded-overlay--mobile .featured-map-expanded-header {
-    padding: 10px 14px 11px;
-  }
-
-  .featured-map-expanded-overlay--mobile .featured-map-expanded-close {
-    top: 13px;
-    inset-inline-start: 14px;
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
-    padding: 0;
-  }
-
-  .featured-map-expanded-overlay--mobile .featured-map-expanded-close-label {
     display: none;
   }
 

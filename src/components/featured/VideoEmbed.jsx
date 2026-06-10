@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { galleryImageSlides } from "@cycleways/core/data/poiTypes.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
-import { previewSlideForCursor } from "./routePoiStoryData.js";
+import { previewSlideForCursor, routeVideoCueSlides } from "./routePoiStoryData.js";
 import RoutePlaybackControls from "./RoutePlaybackControls.jsx";
+import { useSyntheticRoutePlayback } from "../routePlayback/useRoutePlayback.js";
 import { loadYouTubeIframeApi } from "./youtubeIframeApi.js";
 import { createVideoSync } from "./videoSync.js";
 import {
@@ -29,10 +30,13 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
     playerSeekRef,
     playerPlayRef,
     playerPauseRef,
+    mapPrimary,
+    toggleMapPrimary,
   } = useFeaturedRoute();
   const [data, setData] = useState(null);
   const [status, setStatus] = useState("loading");
   const [currentTime, setCurrentTime] = useState(0);
+  const [routeFraction, setRouteFraction] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -52,6 +56,38 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   // RAMP_STEP_2_M) or the user performs a manual seek; once disarmed the base
   // rate is 1.0 everywhere. See playbackRamp.js.
   const rampDoneRef = useRef(false);
+
+  // In map-primary mode the live video is stopped and the route is animated by a
+  // synthetic (front-page) playback engine instead. These guards + refs let the
+  // two engines hand the cursor/position back and forth without fighting.
+  const mapPrimaryRef = useRef(mapPrimary);
+  mapPrimaryRef.current = mapPrimary;
+  const routeFractionRef = useRef(0);
+  const videoSyncObjRef = useRef(null);
+
+  const cueSlides = useMemo(
+    () => routeVideoCueSlides(meta, routeState),
+    [meta, routeState.activeDataPoints, routeState.distance, routeState.geometry],
+  );
+  const handleSyntheticCursor = useCallback((cursor) => {
+    if (!mapPrimaryRef.current) return;
+    if (cursor) {
+      routeFractionRef.current = cursor.fraction;
+      setRouteFraction(cursor.fraction);
+    }
+    setVideoCursor(cursor);
+  }, [setVideoCursor]);
+  const handleSyntheticPlaying = useCallback((playing) => {
+    if (!mapPrimaryRef.current) return;
+    setVideoPlaying(playing);
+  }, [setVideoPlaying]);
+  const synthetic = useSyntheticRoutePlayback({
+    enabled: mapPrimary,
+    routeState,
+    cueSlides,
+    onCursorChange: handleSyntheticCursor,
+    onPlayingChange: handleSyntheticPlaying,
+  });
 
   useEffect(() => {
     poiSlidesRef.current = galleryImageSlides(routeState.activeDataPoints);
@@ -84,10 +120,14 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
     lastEmittedTimeRef.current = t;
     setCurrentTime(t);
 
-    const sync = videoSyncRef.current;
+    // While map-primary, the synthetic engine owns the cursor; the video is paused.
+    if (mapPrimaryRef.current) return { t };
+    const sync = videoSyncObjRef.current;
     if (!sync) return { t };
     const pos = sync.timeToPosition(t);
     const cursor = { t, lat: pos.lat, lng: pos.lng, fraction: pos.fraction };
+    routeFractionRef.current = pos.fraction;
+    setRouteFraction(pos.fraction);
     setVideoCursor(cursor);
     return cursor;
   }, [clampTime, setVideoCursor, videoSyncRef]);
@@ -180,19 +220,68 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   useEffect(() => {
     if (!data || !routeState?.geometry?.length) return;
     try {
-      videoSyncRef.current = createVideoSync({
+      const sync = createVideoSync({
         keyframes: data.keyframes,
         videoDuration: data.videoDuration,
         routeGeometry: routeState.geometry,
       });
+      videoSyncObjRef.current = sync;
+      // While map-primary the shared videoSyncRef points at the synthetic engine.
+      if (!mapPrimaryRef.current) videoSyncRef.current = sync;
     } catch (err) {
       console.warn("videoSync construction failed", err);
-      videoSyncRef.current = null;
+      videoSyncObjRef.current = null;
+      if (!mapPrimaryRef.current) videoSyncRef.current = null;
     }
     return () => {
-      videoSyncRef.current = null;
+      videoSyncObjRef.current = null;
+      if (!mapPrimaryRef.current) videoSyncRef.current = null;
     };
   }, [data, routeState?.geometry, videoSyncRef]);
+
+  // Swap the active engine when entering/leaving map-primary: stop the video and
+  // hand its position to the synthetic engine (and back on the way out), and point
+  // the shared player refs (POI/elevation seeks) at whichever engine is active.
+  // The position handoff only runs on an actual swap transition — never on the
+  // initial mount — so loading the page never seeks (and so never auto-plays) the
+  // video (YouTube's seekTo starts a freshly-cued player playing).
+  const prevMapPrimaryRef = useRef(mapPrimary);
+  useEffect(() => {
+    const swapped = prevMapPrimaryRef.current !== mapPrimary;
+    prevMapPrimaryRef.current = mapPrimary;
+    if (mapPrimary) {
+      videoSyncRef.current = synthetic.sync;
+      playerSeekRef.current = synthetic.seekToTime;
+      playerPlayRef.current = synthetic.play;
+      playerPauseRef.current = synthetic.pause;
+      if (swapped) {
+        playerRef.current?.pauseVideo?.();
+        if (synthetic.sync) synthetic.seekToFraction(routeFractionRef.current);
+      }
+    } else {
+      synthetic.pause();
+      videoSyncRef.current = videoSyncObjRef.current;
+      playerSeekRef.current = (t) => seekToTime(t);
+      playerPlayRef.current = () => playerRef.current?.playVideo?.();
+      playerPauseRef.current = () => playerRef.current?.pauseVideo?.();
+      if (swapped && videoSyncObjRef.current) {
+        seekToTime(videoSyncObjRef.current.positionToTime(routeFractionRef.current));
+      }
+    }
+  }, [
+    mapPrimary,
+    isPlayerReady,
+    synthetic.sync,
+    synthetic.seekToFraction,
+    synthetic.seekToTime,
+    synthetic.play,
+    synthetic.pause,
+    seekToTime,
+    playerPauseRef,
+    playerPlayRef,
+    playerSeekRef,
+    videoSyncRef,
+  ]);
 
   // Construct YouTube player when data + container are ready.
   useEffect(() => {
@@ -433,28 +522,87 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   }, [data, emitCursorForTime, playerPauseRef, playerPlayRef, playerSeekRef, seekToTime, setVideoCursor, setVideoPlaying, videoSyncRef]);
 
   if (status !== "ready" || !data) return null;
+
+  // In map-primary the synthetic engine drives the controls; otherwise the video.
+  const activePlayback = mapPrimary
+    ? {
+        isPlaying: synthetic.isPlaying,
+        isReady: synthetic.isReady,
+        isScrubbing: synthetic.isScrubbing,
+        currentTime: synthetic.currentTime,
+        duration: synthetic.duration,
+        progressFraction: synthetic.cursor?.fraction ?? 0,
+        onTogglePlayback: synthetic.togglePlayback,
+        onScrubStart: synthetic.onScrubStart,
+        onScrubChange: synthetic.onScrubChange,
+        onScrubEnd: synthetic.onScrubEnd,
+      }
+    : {
+        isPlaying,
+        isReady: isPlayerReady,
+        isScrubbing,
+        currentTime,
+        duration,
+        progressFraction: routeFraction,
+        onTogglePlayback: togglePlayback,
+        onScrubStart: handleScrubStart,
+        onScrubChange: handleScrubChange,
+        onScrubEnd: handleScrubEnd,
+      };
+  const posterSrc = meta?.hero
+    || (data?.youtubeId ? `https://i.ytimg.com/vi/${data.youtubeId}/hqdefault.jpg` : null);
+
   return (
-    <section className={["featured-video", className].filter(Boolean).join(" ")}>
+    <section
+      className={[
+        "featured-video",
+        mapPrimary ? "featured-video--pip" : "",
+        className,
+      ].filter(Boolean).join(" ")}
+    >
       {title && <h2>{title}</h2>}
       <div className="featured-video-frame">
         <div ref={iframeContainerRef} className="featured-video-iframe-host" />
+        {mapPrimary && posterSrc && (
+          <img className="fv-video-poster" src={posterSrc} alt="" aria-hidden="true" />
+        )}
         <button
           type="button"
           className="fv-video-hit-shield"
-          onClick={togglePlayback}
-          disabled={!isPlayerReady}
-          aria-label={isPlaying ? "השהה סרטון" : "נגן סרטון"}
+          onClick={mapPrimary ? toggleMapPrimary : togglePlayback}
+          disabled={!isPlayerReady && !mapPrimary}
+          aria-label={
+            mapPrimary
+              ? "החזר את הסרטון למסך מלא"
+              : isPlaying
+                ? "השהה סרטון"
+                : "נגן סרטון"
+          }
         />
+        {mapPrimary && (
+          <button
+            type="button"
+            className="fv-video-swap-back"
+            onClick={toggleMapPrimary}
+            aria-label="החזר את הסרטון למסך מלא"
+            title="החזר את הסרטון למסך מלא"
+          >
+            <span aria-hidden="true">⤡</span>
+          </button>
+        )}
         <RoutePlaybackControls
-          isPlaying={isPlaying}
-          isReady={isPlayerReady}
-          isScrubbing={isScrubbing}
-          currentTime={currentTime}
-          duration={duration}
-          onTogglePlayback={togglePlayback}
-          onScrubStart={handleScrubStart}
-          onScrubChange={handleScrubChange}
-          onScrubEnd={handleScrubEnd}
+          readoutMode="distance"
+          isPlaying={activePlayback.isPlaying}
+          isReady={activePlayback.isReady}
+          isScrubbing={activePlayback.isScrubbing}
+          currentTime={activePlayback.currentTime}
+          duration={activePlayback.duration}
+          progressFraction={activePlayback.progressFraction}
+          routeDistanceMeters={routeState.distance}
+          onTogglePlayback={activePlayback.onTogglePlayback}
+          onScrubStart={activePlayback.onScrubStart}
+          onScrubChange={activePlayback.onScrubChange}
+          onScrubEnd={activePlayback.onScrubEnd}
           playLabel="נגן סרטון"
           pauseLabel="השהה סרטון"
           scrubberLabel="מעבר בזמן הסרטון"
