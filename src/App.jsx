@@ -71,6 +71,7 @@ function App() {
     handleUndo,
     handleRedo,
     handleRouteClear,
+    handleLoadRouteParam,
     handleOpenDownload,
     handleCloseDownload,
     handleDownloadGpx,
@@ -108,11 +109,6 @@ function App() {
   const recommendedGeomCacheRef = useRef(new Map());
   const routePointCount = routeState.points.length;
   const { catalog, places } = useCatalogData();
-  const handleSelectRecommended = useCallback((entry) => {
-    if (entry?.route) {
-      window.location.assign(`/?route=${encodeURIComponent(entry.route)}`);
-    }
-  }, []);
 
   React.useEffect(() => {
     setPanel((prev) =>
@@ -161,6 +157,22 @@ function App() {
   const handlePanelStateChange = useCallback((to) => {
     setPanel((prev) => resolvePanelState(prev, { type: "toggle", to }));
   }, []);
+
+  // Loads a recommended route into the live planner (no reload) and shows it
+  // in the Build panel. Falls back to the full-page ?route= restore when the
+  // routing session isn't ready yet or the param fails to decode.
+  const handleSelectRecommended = useCallback(
+    async (entry) => {
+      if (!entry?.route) return;
+      const loaded = await handleLoadRouteParam(entry.route);
+      if (loaded) {
+        handlePanelStateChange("build");
+      } else {
+        window.location.assign(`/?route=${encodeURIComponent(entry.route)}`);
+      }
+    },
+    [handleLoadRouteParam, handlePanelStateChange],
+  );
 
   const handlePanelShare = useCallback(async () => {
     if (!shareUrl) return;
@@ -575,6 +587,7 @@ function App() {
               <FrontPanel
                 panelState={panel.state}
                 onPanelStateChange={handlePanelStateChange}
+                routeStatus={routeState.status}
                 collapsed={panelCollapsed}
                 onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
                 discover={

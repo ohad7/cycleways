@@ -10,9 +10,14 @@ export default function FrontPanel({
   onToggleCollapsed,
   discover,
   build,
+  routeStatus,
 }) {
   return (
-    <aside className="front-panel" data-testid="front-panel">
+    <aside
+      className="front-panel"
+      data-testid="front-panel"
+      data-route-status={routeStatus}
+    >
       <div className="front-panel__head">
         <PanelStateToggle state={panelState} onChange={onPanelStateChange} />
         <button
