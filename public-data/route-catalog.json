@@ -565,6 +565,89 @@
         "road": 0
       },
       "qualityScore": 3
+    },
+    {
+      "slug": "naftali-dishon-yosha",
+      "name": "נפתלי - דישון - יער ישע",
+      "summary": "רכיבה ביערות הרי נפתלי ובנחל דישון",
+      "intro": "עליה קלילה בדרך נוף הרי נפתלי, תצפית לעמק החולה מקרן נפתלי, יריד דרך נחל דישון המקסים, וחזרה ביער ישע, מסלול פחות מוכר ומטוייל",
+      "description": "",
+      "route": "H5YPjfPvUFiJobcx56arCNFzt2aVExrubD9wbDfoXtejEiekiKauWWUNcrY92C8YzNDLS7n7oxEeCoo75cjbYXLAzYWVaPP1kL2FzCH97a6wXzQtm7eRLuuRdWsswGW4f68wDJC39jvVFykyLX8rua6N9JqhNGiK6sjj2fZyW3T9F3HmoCKP97gTK65jtxnC7uLnQLikmWVVgoXaHUpeYDbuyM6kKdERaeekDtW6dmnx8ddJXxTERH4zTQf3jNpmJNQsw49p2NVwbZmGm42ontExkfCddLvvBXZpDWwqxLXyHbQkXDQ46Be8S27dCgcS53CMtMzua7cSxDQQmZLaoqaVEr33JVtLDR1QotRvXBcx9BjUiWC4jQGKLFVhwxrtGzJh58aHvfJ1LqBe2Aeb85Y2PQGsDrpQ2o6yCbQV4eVeBvVYg1ATAxmwbUuTdHz7ybb42WYPpfAJ7WS9mM1GLsiwMiCgcyoezJm9Jmx9PDBBMmwS3aEyvMUeZHgzkx2yEMsdZ",
+      "notes": "",
+      "featured": false,
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/naftali-dishon-yosha-map-6080d6ff.webp",
+        "thumbnail": "public-data/route-map-images/naftali-dishon-yosha-map-6080d6ff-thumb.webp",
+        "alt": "מפת מסלול נפתלי - דישון - יער ישע",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:6aed7196d6cc9938593dc498adb12f4368b55aaad7aadafd2f3c21bd5764ceb8",
+          "mapVersion": "528fc6edbff9",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-10T18:38:56.197Z"
+        }
+      },
+      "distanceKm": 53.8,
+      "elevationGainM": 839,
+      "elevationLossM": 839,
+      "regionId": "unknown",
+      "passesNear": [
+        "neot-mordechai",
+        "amir"
+      ],
+      "placeMatches": [
+        {
+          "id": "neot-mordechai",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "שדות נאות מרדכי מערב"
+          ],
+          "distanceM": 1930,
+          "routeProgressMeters": 44931
+        },
+        {
+          "id": "amir",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 121,
+          "routeProgressMeters": 48506
+        }
+      ],
+      "startPlaceIds": [
+        "neot-mordechai",
+        "amir"
+      ],
+      "difficulty": "hard",
+      "style": "sporty",
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 5
+      },
+      "surfaceType": "mixed",
+      "roadMix": {
+        "paved": 0.18632039001794853,
+        "dirt": 0.596681237023331,
+        "road": 0.21699837295872054
+      },
+      "qualityScore": 3.0000000000000004,
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-11102fea-572cdcba.webp",
+        "thumbnail": "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp",
+        "alt": "קרן נפתלי"
+      },
+      "start": {
+        "name": "חורשת הנופלים קריית שמונה",
+        "description": "חורשה קטנה על גבעה בכניסה לעיר, במקום עץ אקליפטוס מרשים ושלושה טנקי שלל ישנים צבועים ",
+        "images": [
+          {
+            "photo": "public-data/poi-images/naftali-dishon-yosha-start-226e5cfb.webp",
+            "thumbnail": "public-data/poi-images/naftali-dishon-yosha-start-226e5cfb-thumb.webp"
+          }
+        ]
+      }
     }
   ]
 }

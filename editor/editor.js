@@ -2625,6 +2625,19 @@ function toggleEdgeInCompose(feature) {
   if (!isComposingNewSegmentEdges()) return;
   const ref = edgeRefFromBaseFeature(feature, state.draw.edgeRefs.length);
   if (!ref) return;
+  // A manual base edge that has been folded into the graph lives in BOTH the
+  // base-graph and manual-base-edges hit layers under the same edgeId. A single
+  // map click dispatches to both layer handlers, which would otherwise toggle
+  // the edge on then immediately back off — leaving the draft empty and Done
+  // disabled. Process each edgeId at most once per click dispatch.
+  if (!state.composeToggledThisClick) {
+    state.composeToggledThisClick = new Set();
+    window.setTimeout(() => {
+      state.composeToggledThisClick = null;
+    }, 0);
+  }
+  if (state.composeToggledThisClick.has(String(ref.edgeId))) return;
+  state.composeToggledThisClick.add(String(ref.edgeId));
   const currentIdx = state.draw.edgeRefs.findIndex(
     (existing) => String(existing.edgeId) === String(ref.edgeId),
   );

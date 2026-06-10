@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-06-05T12:19:54.413Z",
+  "updatedAt": "2026-06-10T14:45:25.728Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -19269,6 +19269,274 @@
         }
       ],
       "updatedAt": "2026-06-05T12:19:54.384Z"
+    },
+    "341": {
+      "segmentId": 341,
+      "segmentName": "נחל מכברם",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.42,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-manual-osm-386982531-mq838nnx-a-mq838si0",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-386982531-mq838nnx-a-mq838si0"
+        },
+        {
+          "edgeId": "manual-manual-osm-386982531-mq838nnx-b-mq838si0",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-386982531-mq838nnx-b-mq838si0"
+        },
+        {
+          "edgeId": "e386982531_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 386982531
+        },
+        {
+          "edgeId": "e386982531_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 386982531
+        },
+        {
+          "edgeId": "e386982531_4",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 386982531
+        },
+        {
+          "edgeId": "e386982531_5",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 386982531
+        },
+        {
+          "edgeId": "e79589965_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 79589965
+        },
+        {
+          "edgeId": "manual-manual-osm-126342416-mq83ahvr-a-mq83am80",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-126342416-mq83ahvr-a-mq83am80"
+        }
+      ],
+      "updatedAt": "2026-06-10T14:21:52.044Z"
+    },
+    "342": {
+      "segmentId": 342,
+      "segmentName": "אחוזת הירדן",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.52,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-manual-osm-126342416-mq83ahvr-b-mq83am80",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-126342416-mq83ahvr-b-mq83am80"
+        },
+        {
+          "edgeId": "e555547700_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 555547700
+        },
+        {
+          "edgeId": "e976962520_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 976962520
+        },
+        {
+          "edgeId": "e976962520_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 976962520
+        },
+        {
+          "edgeId": "e841155119_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841155119
+        }
+      ],
+      "updatedAt": "2026-06-10T14:21:54.072Z"
+    },
+    "343": {
+      "segmentId": 343,
+      "segmentName": "צומת איילת השחר",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.02,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-manual-osm-386982531-mq838nnx-a-mq838si0",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-386982531-mq838nnx-a-mq838si0"
+        }
+      ],
+      "updatedAt": "2026-06-10T14:35:20.369Z"
+    },
+    "344": {
+      "segmentId": 344,
+      "segmentName": "נחל מכברם - 2",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.35,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-manual-osm-386982531-mq838nnx-b-mq838si0",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-386982531-mq838nnx-b-mq838si0"
+        },
+        {
+          "edgeId": "e386982531_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 386982531
+        },
+        {
+          "edgeId": "e386982531_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 386982531
+        },
+        {
+          "edgeId": "e386982531_4",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 386982531
+        },
+        {
+          "edgeId": "e386982531_5",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 386982531
+        },
+        {
+          "edgeId": "e79589965_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 79589965
+        },
+        {
+          "edgeId": "manual-manual-osm-126342416-mq83ahvr-a-mq83am80",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-126342416-mq83ahvr-a-mq83am80"
+        }
+      ],
+      "updatedAt": "2026-06-10T14:35:22.450Z"
+    },
+    "345": {
+      "segmentId": 345,
+      "segmentName": "איילת השחר שדות צפוניים",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-edge-mq83a8h6",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-edge-mq83a8h6"
+        }
+      ],
+      "updatedAt": "2026-06-10T14:45:25.713Z"
     }
   }
 }
