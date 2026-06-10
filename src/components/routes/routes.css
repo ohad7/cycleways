@@ -740,3 +740,49 @@
     min-height: 210px;
   }
 }
+
+/* Mobile: the search/filter panel collapses behind a toggle so route cards are
+   visible on the first screen; desktop always shows the panel inline. */
+.routes-page__filters-toggle {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .routes-page__filters-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    grid-column: 1 / -1;
+    padding: 10px 12px;
+    border: 1px solid #dce4df;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2f3e38;
+    cursor: pointer;
+  }
+
+  .routes-page__filters-toggle-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #2f6b3c;
+    color: #fff;
+    font-size: 0.78rem;
+  }
+
+  .routes-page__search-panel {
+    display: none;
+  }
+
+  .routes-page__search-panel--open {
+    display: grid;
+  }
+}

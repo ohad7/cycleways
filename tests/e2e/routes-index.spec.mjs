@@ -42,8 +42,12 @@ test("/routes lists every recommended catalog route", async ({ page }) => {
   ]);
 });
 
-test("/routes filters by possible start location", async ({ page }) => {
+test("/routes filters by possible start location", async ({ page, isMobile }) => {
   await page.goto("/routes");
+  // On mobile the filter panel is collapsed behind a toggle; open it first.
+  if (isMobile) {
+    await page.getByRole("button", { name: /סינון/ }).click();
+  }
   const startLocation = page.getByLabel("התחלה", { exact: true });
   await startLocation.fill("הגושרים");
   await startLocation.press("Enter");
@@ -54,8 +58,12 @@ test("/routes filters by possible start location", async ({ page }) => {
   await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toHaveCount(0);
 });
 
-test("/routes filters by goes-through location", async ({ page }) => {
+test("/routes filters by goes-through location", async ({ page, isMobile }) => {
   await page.goto("/routes");
+  // On mobile the filter panel is collapsed behind a toggle; open it first.
+  if (isMobile) {
+    await page.getByRole("button", { name: /סינון/ }).click();
+  }
   const throughLocation = page.getByLabel("עובר דרך", { exact: true });
   await throughLocation.fill("אגמון החולה");
   await throughLocation.press("Enter");
