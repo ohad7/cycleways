@@ -642,7 +642,7 @@ export function useCyclewaysApp({
 
   // Loads an encoded route (the ?route= share format) into the live planner
   // session — the in-app path for "open this recommended route" without a
-  // full page reload. Pushes the previous route (if any) onto the undo stack,
+  // full page reload. Pushes the previous route state onto the undo stack,
   // requests a map fit to the loaded geometry, and mirrors the param onto the
   // URL. Returns false when the routing session isn't ready or the param
   // doesn't decode, so callers can fall back to a full-page restore.
@@ -679,12 +679,10 @@ export function useCyclewaysApp({
         }
         if (!snapshot) return false;
         const previousSnapshot = routeStateSnapshot(routeStateRef.current);
-        if (previousSnapshot.points.length > 0) {
-          setRouteHistory((current) => ({
-            past: [...current.past, previousSnapshot],
-            future: [],
-          }));
-        }
+        setRouteHistory((current) => ({
+          past: [...current.past, previousSnapshot],
+          future: [],
+        }));
         routeStateRef.current = routeStateFromSnapshot(
           routeStateRef.current,
           snapshot,
