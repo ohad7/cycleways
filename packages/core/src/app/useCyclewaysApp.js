@@ -93,6 +93,7 @@ export function useCyclewaysApp({
   const routeClickQueueRef = useRef([]);
   const routeClickProcessingRef = useRef(false);
   const routeClickIdRef = useRef(0);
+  const routeParamLoadingRef = useRef(false);
   const directionAnimatorRef = useRef(null);
   if (enableRouteDirectionAnimation && directionAnimatorRef.current === null) {
     directionAnimatorRef.current = createRouteDirectionAnimator();
@@ -645,11 +646,18 @@ export function useCyclewaysApp({
   // requests a map fit to the loaded geometry, and mirrors the param onto the
   // URL. Returns false when the routing session isn't ready or the param
   // doesn't decode, so callers can fall back to a full-page restore.
+  // Concurrent loads are rejected while one is already in flight.
   const handleLoadRouteParam = useCallback(
     async (routeParam) => {
-      if (!routeParam || !routeManagerRef.current || state.status !== "ready") {
+      if (
+        !routeParam ||
+        !routeManagerRef.current ||
+        state.status !== "ready" ||
+        routeParamLoadingRef.current
+      ) {
         return false;
       }
+      routeParamLoadingRef.current = true;
       try {
         const shardedSession = shardedRouteSessionRef.current;
         const snapshot = shardedSession
@@ -660,6 +668,12 @@ export function useCyclewaysApp({
               state.assets.segmentsData,
               state.assets.cwBaseIndexData,
             );
+        // The routing session may have been torn down while we awaited
+        // (initializeRouting cleanup nulls the refs); don't resurrect it.
+        const sessionAlive = shardedSession
+          ? shardedRouteSessionRef.current === shardedSession
+          : routeManagerRef.current !== null;
+        if (!sessionAlive) return false;
         if (shardedSession) {
           routeManagerRef.current = shardedSession.manager;
         }
@@ -689,6 +703,8 @@ export function useCyclewaysApp({
       } catch (error) {
         dispatchRoute({ type: "route/error", error });
         return false;
+      } finally {
+        routeParamLoadingRef.current = false;
       }
     },
     [state.assets, state.status],
