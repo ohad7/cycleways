@@ -7,7 +7,7 @@ test("mobile: route cards show first; filters are behind a toggle", async ({ pag
   await expect(firstCard).toBeVisible();
   // Filters collapsed by default; toggle visible instead.
   await expect(page.locator(".routes-page__search-panel")).toBeHidden();
-  const toggle = page.getByRole("button", { name: /סינון/ });
+  const toggle = page.getByRole("button", { name: "סינון וחיפוש" });
   await expect(toggle).toBeVisible();
   // First card starts within the first viewport (no filter wall above it).
   const box = await firstCard.boundingBox();

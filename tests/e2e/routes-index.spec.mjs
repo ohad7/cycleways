@@ -46,7 +46,7 @@ test("/routes filters by possible start location", async ({ page, isMobile }) =>
   await page.goto("/routes");
   // On mobile the filter panel is collapsed behind a toggle; open it first.
   if (isMobile) {
-    await page.getByRole("button", { name: /סינון/ }).click();
+    await page.getByRole("button", { name: "סינון וחיפוש" }).click();
   }
   const startLocation = page.getByLabel("התחלה", { exact: true });
   await startLocation.fill("הגושרים");
@@ -62,7 +62,7 @@ test("/routes filters by goes-through location", async ({ page, isMobile }) => {
   await page.goto("/routes");
   // On mobile the filter panel is collapsed behind a toggle; open it first.
   if (isMobile) {
-    await page.getByRole("button", { name: /סינון/ }).click();
+    await page.getByRole("button", { name: "סינון וחיפוש" }).click();
   }
   const throughLocation = page.getByLabel("עובר דרך", { exact: true });
   await throughLocation.fill("אגמון החולה");
