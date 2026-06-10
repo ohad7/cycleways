@@ -12,8 +12,9 @@ import {
   routeStartPlaceIds,
 } from "@cycleways/core/data/catalog.js";
 import { selectDiscoverRoutes } from "./discoverRouteList.js";
+import { useCardViewport } from "./useCardViewport.js";
 
-export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild, onVisibleRoutesChange, onHoverRoute }) {
+export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild, onSlugsChange, onRouteViewport, onHoverRoute }) {
   const entries = useMemo(
     () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
     [catalog],
@@ -51,14 +52,22 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
       return { ...prev, [axis]: next };
     });
 
-  const { mode, routes } = useMemo(
+  const { routes } = useMemo(
     () => selectDiscoverRoutes(entries, filters),
     [entries, filters],
   );
 
+  const orderedSlugs = useMemo(() => routes.map((r) => r.slug), [routes]);
+  const { containerRef, registerCard, sets } = useCardViewport(orderedSlugs);
+
+  // Full ordered list drives stable per-route colors; the derived sets drive the
+  // map's bright/ghost tiers and lazy geometry loading.
   useEffect(() => {
-    onVisibleRoutesChange?.(routes.map((r) => r.slug));
-  }, [routes, onVisibleRoutesChange]);
+    onSlugsChange?.(orderedSlugs);
+  }, [orderedSlugs, onSlugsChange]);
+  useEffect(() => {
+    onRouteViewport?.(sets);
+  }, [sets, onRouteViewport]);
 
   return (
     <div className="discover-panel">
@@ -110,10 +119,8 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
         ))}
       </div>
 
-      <div className="discover-panel__list">
-        <div className="dlabel">
-          {mode === "recommended" ? "מומלצים" : `${routes.length} מסלולים`}
-        </div>
+      <div className="discover-panel__list" ref={containerRef}>
+        <div className="dlabel">{`${routes.length} מסלולים`}</div>
         {routes.map((entry, index) => (
           <PanelRouteCard
             key={entry.slug}
@@ -122,6 +129,7 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
             places={places}
             onSelect={onSelectRoute}
             onHover={onHoverRoute}
+            cardRef={registerCard(entry.slug)}
           />
         ))}
       </div>
