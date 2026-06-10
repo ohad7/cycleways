@@ -93,6 +93,11 @@ function App() {
   const [hoveredRouteSlug, setHoveredRouteSlug] = useState(null);
   const [hoveredPoiId, setHoveredPoiId] = useState(null);
   const [discoverSlugs, setDiscoverSlugs] = useState([]);
+  const [discoverViewport, setDiscoverViewport] = useState({
+    visibleSlugs: [],
+    ghostSlugs: [],
+    prefetchSlugs: [],
+  });
   const [recommendedGeoms, setRecommendedGeoms] = useState({});
   const recommendedGeomCacheRef = useRef(new Map());
   const routePointCount = routeState.points.length;
@@ -110,9 +115,10 @@ function App() {
   }, [routePointCount]);
 
   useEffect(() => {
-    if (panel.state !== "discover" || discoverSlugs.length === 0) return;
+    const prefetch = discoverViewport.prefetchSlugs;
+    if (panel.state !== "discover" || prefetch.length === 0) return;
     let cancelled = false;
-    const slugsToLoad = discoverSlugs.filter(
+    const slugsToLoad = prefetch.filter(
       (slug) => !recommendedGeomCacheRef.current.has(slug),
     );
     if (slugsToLoad.length === 0) return;
@@ -144,7 +150,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [discoverSlugs, panel.state]);
+  }, [discoverViewport.prefetchSlugs, panel.state]);
 
   const handlePanelStateChange = useCallback((to) => {
     setPanel((prev) => resolvePanelState(prev, { type: "toggle", to }));
@@ -238,28 +244,43 @@ function App() {
 
   const recommendedRoutes = useMemo(() => {
     if (panel.state !== "discover") return null;
-    return discoverSlugs
-      .map((slug, index) => {
+    const bright = new Set(discoverViewport.visibleSlugs);
+    const drawSlugs = [
+      ...discoverViewport.visibleSlugs,
+      ...discoverViewport.ghostSlugs,
+    ];
+    return drawSlugs
+      .map((slug) => {
         const geometry = recommendedGeoms[slug];
         if (!Array.isArray(geometry) || geometry.length < 2) return null;
+        // Color is keyed to the route's position in the full ordered list so it
+        // stays stable regardless of which routes are currently drawn.
+        const index = discoverSlugs.indexOf(slug);
         return {
           slug,
           geometry,
           hovered: slug === hoveredRouteSlug,
+          tier: bright.has(slug) ? "bright" : "ghost",
           color: discoverRouteColor(index),
         };
       })
       .filter(Boolean);
-  }, [panel.state, discoverSlugs, recommendedGeoms, hoveredRouteSlug]);
+  }, [
+    panel.state,
+    discoverViewport,
+    discoverSlugs,
+    recommendedGeoms,
+    hoveredRouteSlug,
+  ]);
 
-  // Combined geometry of the currently-visible (filtered) Discover routes, kept
-  // independent of hover so hovering does not re-trigger the all-routes fit.
+  // Fit only the bright (in-viewport) routes — ghosts are drawn but excluded so
+  // the camera frames what the user is actually reading.
   const discoverFitRoutes = useMemo(() => {
     if (panel.state !== "discover") return null;
-    return discoverSlugs
+    return discoverViewport.visibleSlugs
       .map((slug) => ({ geometry: recommendedGeoms[slug] }))
       .filter((r) => Array.isArray(r.geometry) && r.geometry.length >= 2);
-  }, [panel.state, discoverSlugs, recommendedGeoms]);
+  }, [panel.state, discoverViewport.visibleSlugs, recommendedGeoms]);
 
   // Fit the map to all relevant Discover routes; re-fit when the filtered list
   // (or its loaded geometries) changes. Debounced so streaming loads converge.
@@ -268,7 +289,7 @@ function App() {
     const combined = combineRouteGeometries(discoverFitRoutes);
     if (combined.length < 2) return undefined;
     discoverFitGeometryRef.current = combined;
-    const timer = window.setTimeout(() => requestFit(combined), 150);
+    const timer = window.setTimeout(() => requestFit(combined), 200);
     return () => window.clearTimeout(timer);
   }, [discoverFitRoutes, requestFit]);
 
@@ -553,7 +574,8 @@ function App() {
                     places={places}
                     onSelectRoute={handleSelectRecommended}
                     onBuild={() => handlePanelStateChange("build")}
-                    onVisibleRoutesChange={setDiscoverSlugs}
+                    onSlugsChange={setDiscoverSlugs}
+                    onRouteViewport={setDiscoverViewport}
                     onHoverRoute={setHoveredRouteSlug}
                   />
                 }
