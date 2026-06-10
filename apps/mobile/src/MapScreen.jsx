@@ -40,6 +40,7 @@ import DataMarkerImages, {
   NATIVE_DATA_MARKER_ICON_NAMESPACE,
 } from "./DataMarkerImages.jsx";
 import ElevationProfileChart from "./ElevationProfileChart.jsx";
+import RichText from "./RichText.jsx";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
   getRoutePlannerPresentation,
@@ -1139,9 +1140,7 @@ function DataMarkerCard({ marker, onAddToRoute, onClose }) {
         {marker.segmentName ? (
           <Text style={styles.markerCardSegment}>{marker.segmentName}</Text>
         ) : null}
-        {marker.information ? (
-          <Text style={styles.markerCardInfo}>{marker.information}</Text>
-        ) : null}
+        <RichText style={styles.markerCardInfo} text={marker.information} />
         {hasCoords && !marker.onRoute ? (
           <View style={styles.markerCardActions}>
             <ChromeButton

@@ -6150,7 +6150,29 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-03007424",
+            "type": "tree",
+            "information": "ניתן לצפות מכאן בלהקות גדולות של חסידות בסוף האביב",
+            "location": [
+              33.172261,
+              35.556551
+            ],
+            "name": "חסידות",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-03007424-8e53f5c4.webp",
+                "thumbnail": "public-data/poi-images/poi-03007424-8e53f5c4-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-03007424-0a04ce34.webp",
+                "thumbnail": "public-data/poi-images/poi-03007424-0a04ce34-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -7115,7 +7137,29 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-11102fea",
+            "type": "viewpoint",
+            "information": "כניסה לכביש גישה לקרן נפתלי: תצפית לעמק החולה ולחרמון",
+            "location": [
+              33.091983,
+              35.550171
+            ],
+            "name": "קרן נפתלי",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-11102fea-572cdcba.webp",
+                "thumbnail": "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-11102fea-10303cb8.webp",
+                "thumbnail": "public-data/poi-images/poi-11102fea-10303cb8-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -13989,7 +14033,30 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-b0a7c0c7",
+            "type": "nature",
+            "information": "גשר ביילי מעל הבניאס, מתחתיו גישה למים ופינה נהדרת למנוחה",
+            "location": [
+              33.22552974040883,
+              35.65442162844337
+            ],
+            "name": "גשר שאר ישוב",
+            "description": "גשר ביילי מעל הבניאס, מתחתיו גישה למים ופינה נהדרת למנוחה",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-b0a7c0c7-d717983c.webp",
+                "thumbnail": "public-data/poi-images/poi-b0a7c0c7-d717983c-thumb.webp"
+              },
+              {
+                "photo": "public-data/poi-images/poi-b0a7c0c7-69ed2ce2.webp",
+                "thumbnail": "public-data/poi-images/poi-b0a7c0c7-69ed2ce2-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -14000,8 +14067,8 @@
             123
           ],
           [
-            35.654458,
-            33.225519,
+            35.65442162844337,
+            33.22552974040883,
             123
           ],
           [
@@ -37563,10 +37630,19 @@
           },
           {
             "type": "warning",
-            "information": "הכניסה אסורה למעיין",
+            "information": "אפשר להנות מהנוף, הכניסה למים אסורה",
             "location": [
               33.133896,
               35.56918
+            ],
+            "name": "עין תאו",
+            "description": "שמרו על הטבע, בעין תאו אפשר להנות מהנוף אולם אסור להכנס לשמורה או למים, על מנת לשמור על ערכי הטבע שם.",
+            "id": "poi-a77bbe8c",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-a77bbe8c-13ec0055.webp",
+                "thumbnail": "public-data/poi-images/poi-a77bbe8c-13ec0055-thumb.webp"
+              }
             ]
           }
         ],
@@ -62974,7 +63050,7 @@
                 "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
               }
             ],
-            "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג."
+            "description": "[פרישטיק](https://www.vitrage-resort.co.il/%D7%A4%D7%A8%D7%99%D7%A9%D7%98%D7%99%D7%A7/) הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג.\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג."
           },
           {
             "id": "poi-c723c695",
@@ -84205,6 +84281,135 @@
       "type": "Feature",
       "properties": {
         "id": 76,
+        "name": "נחל מכברם [split archive 76]",
+        "status": "deprecated",
+        "roadType": "dirt",
+        "styleUrl": "#sty-175",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "נחל מכברם",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.576607,
+            33.031017
+          ],
+          [
+            35.583957,
+            33.033561
+          ],
+          [
+            35.585642,
+            33.04138
+          ],
+          [
+            35.576873,
+            33.042851
+          ],
+          [
+            35.572122,
+            33.044247
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 341,
+        "name": "נחל מכברם [split archive 341]",
+        "status": "deprecated",
+        "roadType": "dirt",
+        "styleUrl": "#sty-175",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 76,
+        "splitFromName": "נחל מכברם",
+        "originalName": "נחל מכברם",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.572685,
+            33.030355
+          ],
+          [
+            35.576759,
+            33.030959
+          ],
+          [
+            35.583969,
+            33.033674
+          ],
+          [
+            35.585679,
+            33.041461
+          ],
+          [
+            35.576802,
+            33.042855
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 343,
+        "name": "צומת איילת השחר",
+        "status": "active",
+        "roadType": "dirt",
+        "styleUrl": "#sty-175",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 341,
+        "splitFromName": "נחל מכברם"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.57254803359541,
+            33.030324430908536,
+            143
+          ],
+          [
+            35.57277017043566,
+            33.030374318345466,
+            143
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 344,
         "name": "נחל מכברם",
         "status": "active",
         "roadType": "dirt",
@@ -84218,19 +84423,16 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "splitFrom": 341,
+        "splitFromName": "נחל מכברם"
       },
       "geometry": {
         "type": "LineString",
         "coordinates": [
           [
-            35.5725968262532,
-            33.03033405461774,
-            143
-          ],
-          [
-            35.572774,
-            33.030375,
+            35.57279791717389,
+            33.03039092563522,
             143
           ],
           [
@@ -84954,18 +85156,50 @@
             135
           ],
           [
-            35.5726836,
-            33.0422072,
+            35.5726782116723,
+            33.04217931735994,
             135
           ],
           [
-            35.572484,
-            33.042164,
+            35.572473051319776,
+            33.04213375009198,
             136
           ],
           [
-            35.5721846,
-            33.0420992,
+            35.57214163844185,
+            33.042057314621815,
+            136
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 342,
+        "name": "אחוזת הירדן",
+        "status": "active",
+        "roadType": "dirt",
+        "styleUrl": "#sty-175",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 76,
+        "splitFromName": "נחל מכברם"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.57209796705837,
+            33.042070757605046,
             136
           ],
           [
@@ -98229,7 +98463,26 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "data": [
+          {
+            "id": "poi-3af86b92",
+            "type": "landmark",
+            "information": "המקום בו נפל אחד מהמסוקים באסון ב 1997. אין גישה לאתר הנצחה",
+            "location": [
+              33.221945,
+              35.64153
+            ],
+            "name": "אתר אסון המסוקים",
+            "description": "המקום בו נפל אחד מהמסוקים באסון ב 1997. אין גישה לאתר הנצחה, יש להגיע דרך הצומת שמול קיבוץ דפנה",
+            "images": [
+              {
+                "photo": "public-data/poi-images/poi-3af86b92-04323504.webp",
+                "thumbnail": "public-data/poi-images/poi-3af86b92-04323504-thumb.webp"
+              }
+            ]
+          }
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -103533,7 +103786,7 @@
         "id": 340,
         "name": "פלג הדן",
         "status": "active",
-        "roadType": "paved",
+        "roadType": "dirt",
         "quality": {
           "overall": 3,
           "safety": 3,
@@ -103647,6 +103900,142 @@
           [
             35.63730535441459,
             33.22582620217453
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 345,
+        "name": "איילת השחר שדות צפוניים",
+        "status": "active",
+        "roadType": "dirt",
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.572776,
+            33.030376
+          ],
+          [
+            35.572793,
+            33.030516
+          ],
+          [
+            35.572786,
+            33.030794
+          ],
+          [
+            35.572806,
+            33.031107
+          ],
+          [
+            35.57282,
+            33.031421
+          ],
+          [
+            35.572842,
+            33.031696
+          ],
+          [
+            35.572913,
+            33.032594
+          ],
+          [
+            35.572932,
+            33.032835
+          ],
+          [
+            35.57297,
+            33.033052
+          ],
+          [
+            35.572994,
+            33.03347
+          ],
+          [
+            35.57299,
+            33.033663
+          ],
+          [
+            35.57296,
+            33.033833
+          ],
+          [
+            35.572914,
+            33.03401
+          ],
+          [
+            35.57294,
+            33.034274
+          ],
+          [
+            35.572967,
+            33.034589
+          ],
+          [
+            35.573007,
+            33.035285
+          ],
+          [
+            35.572998,
+            33.035467
+          ],
+          [
+            35.573028,
+            33.03568
+          ],
+          [
+            35.573007,
+            33.036273
+          ],
+          [
+            35.572909,
+            33.037112
+          ],
+          [
+            35.572779,
+            33.037761
+          ],
+          [
+            35.572567,
+            33.038584
+          ],
+          [
+            35.57227,
+            33.039608
+          ],
+          [
+            35.572067,
+            33.040405
+          ],
+          [
+            35.571998,
+            33.040663
+          ],
+          [
+            35.571957,
+            33.040917
+          ],
+          [
+            35.571919,
+            33.041522
+          ],
+          [
+            35.57196,
+            33.041854
+          ],
+          [
+            35.572099,
+            33.042047
           ]
         ]
       }

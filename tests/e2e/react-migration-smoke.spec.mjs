@@ -22,18 +22,16 @@ test("current public app loads with route controls", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.locator("#map")).toBeVisible();
-  await expect(page.locator("#route-description")).toContainText(
-    "לחץ על נקודות במפה",
-  );
-  await expect(page.locator("#download-gpx")).toBeDisabled();
+  // Route controls now live in the right-side panel (no on-map control buttons).
+  await expect(page.getByTestId("front-panel")).toBeVisible();
 });
 
 test("production root restores compact route URL", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
-  await expect(page.locator("#route-description")).toBeVisible();
+  await expect(page.getByTestId("front-panel")).toBeVisible();
   await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "סיכום" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
   await expect(page.locator(".react-route-point-chip")).toHaveCount(0);
   expect(await getRoutePointFeatureCount(page)).toBeGreaterThan(0);
 
@@ -52,20 +50,20 @@ test("production core flow works on desktop and mobile", async ({ page }, testIn
     path: testInfo.outputPath(`react-route-${testInfo.project.name}.png`),
   });
 
-  await page.getByRole("button", { name: "סיכום" }).click();
-  await expect(page.getByRole("dialog", { name: "הורדת מסלול GPX" })).toBeVisible();
-  await expect(page.locator(".download-modal-content")).toBeVisible();
+  // GPX download button is directly in the build panel (no modal).
+  await expect(page.locator(".build-panel")).toBeVisible();
+  await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
   await expect(page.locator(".react-route-point-chip")).toHaveCount(0);
-  await page.getByRole("button", { name: "🔗 שיתוף מסלול" }).click();
-  await expect(page.getByRole("dialog", { name: "שיתוף המסלול" })).toBeVisible();
-  await expect(page.getByLabel("קישור שיתוף")).toHaveValue(/route=/);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
+  // Share button copies link to clipboard.
+  await expect(page.getByRole("button", { name: "שיתוף" })).toBeEnabled();
 });
 
 test("production shows outside-network warning in the route panel", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
-  await expect(page.locator(".elevation-hover-overlay")).toBeVisible();
+  // Wait for the build panel to be visible (route loaded, panel auto-switched to build).
+  await expect(page.locator(".build-panel")).toBeVisible();
+  // Ensure the route stats are showing before triggering the outside-network click.
+  await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
 
   await page.evaluate(() => {
     window.__mockMapboxRenderedFeatures = [];
@@ -75,10 +73,9 @@ test("production shows outside-network warning in the route panel", async ({ pag
     });
   });
 
-  await expect(page.locator("#route-description .route-inline-warning")).toContainText(
+  await expect(page.locator(".build-panel__error")).toContainText(
     "הנקודה רחוקה מדי מרשת הדרכים",
   );
-  await expect(page.locator("#route-description .elevation-hover-overlay")).toHaveCount(0);
 });
 
 test("production supports segment hover, segment clicks, and sharing", async ({ page }) => {
@@ -182,8 +179,8 @@ test("production supports segment hover, segment clicks, and sharing", async ({ 
     expect(await getRoutePointFeatureCount(page)).toBe(index + 1);
   }
 
-  await expect(page.locator("#route-description")).toContainText("3.9 ק\"מ");
-  await expect(page.getByRole("button", { name: "סיכום" })).toBeEnabled();
+  await expect(page.locator(".build-panel")).toContainText("3.9 ק\"מ");
+  await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
   const routePointLayer = await page.evaluate(
     ({ layerId }) => window.__mockMapboxCurrentMap?.layers?.get(layerId),
     { layerId: ROUTE_POINTS_LAYER_ID },
@@ -246,11 +243,8 @@ test("production supports segment hover, segment clicks, and sharing", async ({ 
   );
   expect(await getRoutePointFeatureCount(page)).toBe(3);
 
-  await page.getByRole("button", { name: "סיכום" }).click();
-  await page.getByRole("button", { name: "🔗 שיתוף מסלול" }).click();
-  const shareUrl = await page.getByLabel("קישור שיתוף").getAttribute("value");
-  expect(shareUrl).toContain("route=");
-  expect(shareUrl).not.toContain("w=");
+  // Share button is directly in the build panel.
+  await expect(page.getByRole("button", { name: "שיתוף" })).toBeEnabled();
 });
 
 async function getRoutePointFeatureCount(page) {

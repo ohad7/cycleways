@@ -18,7 +18,7 @@ test("mobile: elevation slope legend renders within the panel", async ({
 
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
-  await expect(page.locator("#route-description")).toBeVisible();
+  await expect(page.getByTestId("front-panel")).toBeVisible();
   await expect(page.getByText('4.5 ק"מ').first()).toBeVisible();
 
   const legend = page.locator(".react-elevation-legend");

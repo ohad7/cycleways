@@ -28,6 +28,7 @@ import {
   getQueryParam,
   hasQueryParam,
   removeUrlParam,
+  setUrlParam,
   getShardLoaderLocation,
 } from "../platform/location.js";
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
@@ -92,6 +93,7 @@ export function useCyclewaysApp({
   const routeClickQueueRef = useRef([]);
   const routeClickProcessingRef = useRef(false);
   const routeClickIdRef = useRef(0);
+  const routeParamLoadingRef = useRef(false);
   const directionAnimatorRef = useRef(null);
   if (enableRouteDirectionAnimation && directionAnimatorRef.current === null) {
     directionAnimatorRef.current = createRouteDirectionAnimator();
@@ -638,6 +640,74 @@ export function useCyclewaysApp({
     });
   }, [clearRouteUrl, routeState]);
 
+  // Loads an encoded route (the ?route= share format) into the live planner
+  // session — the in-app path for "open this recommended route" without a
+  // full page reload. Pushes the previous route state onto the undo stack,
+  // requests a map fit to the loaded geometry, and mirrors the param onto the
+  // URL. Returns false when the routing session isn't ready or the param
+  // doesn't decode, so callers can fall back to a full-page restore.
+  // Concurrent loads are rejected while one is already in flight.
+  const handleLoadRouteParam = useCallback(
+    async (routeParam) => {
+      if (
+        !routeParam ||
+        !routeManagerRef.current ||
+        state.status !== "ready" ||
+        routeParamLoadingRef.current
+      ) {
+        return false;
+      }
+      routeParamLoadingRef.current = true;
+      try {
+        const shardedSession = shardedRouteSessionRef.current;
+        const snapshot = shardedSession
+          ? await shardedSession.restoreRouteParam(routeParam)
+          : restoreRouteFromParam(
+              routeManagerRef.current,
+              routeParam,
+              state.assets.segmentsData,
+              state.assets.cwBaseIndexData,
+            );
+        // The routing session may have been torn down while we awaited
+        // (initializeRouting cleanup nulls the refs); don't resurrect it.
+        const sessionAlive = shardedSession
+          ? shardedRouteSessionRef.current === shardedSession
+          : routeManagerRef.current !== null;
+        if (!sessionAlive) return false;
+        if (shardedSession) {
+          routeManagerRef.current = shardedSession.manager;
+        }
+        if (!snapshot) return false;
+        const previousSnapshot = routeStateSnapshot(routeStateRef.current);
+        setRouteHistory((current) => ({
+          past: [...current.past, previousSnapshot],
+          future: [],
+        }));
+        routeStateRef.current = routeStateFromSnapshot(
+          routeStateRef.current,
+          snapshot,
+        );
+        dispatchRoute({ type: "route/update", snapshot });
+        setMapUi((current) => ({
+          ...current,
+          selectedRoutePointIndex: null,
+          routeFitRequest: {
+            id: `select-${Date.now()}`,
+            geometry: snapshot.geometry,
+          },
+        }));
+        setUrlParam("route", routeParam);
+        return true;
+      } catch (error) {
+        dispatchRoute({ type: "route/error", error });
+        return false;
+      } finally {
+        routeParamLoadingRef.current = false;
+      }
+    },
+    [state.assets, state.status],
+  );
+
   const restoreHistorySnapshot = useCallback(
     (snapshot, action) => {
       if (!routeManagerRef.current) return;
@@ -1037,6 +1107,7 @@ export function useCyclewaysApp({
     handleUndo,
     handleRedo,
     handleRouteClear,
+    handleLoadRouteParam,
     handleOpenDownload,
     handleCloseDownload,
     handleDownloadGpx,
@@ -1266,18 +1337,21 @@ function getSegmentDetails(
       }))
     : [];
 
+  const feature = (geoJsonData?.features || []).find(
+    (candidate) => candidate?.properties?.name === segmentName,
+  );
+  const roadType = feature?.properties?.roadType || null;
+
   if (managerMetrics) {
     return {
       distanceKm: managerMetrics.distanceKm,
       elevationGain: managerMetrics.forward?.elevationGain || 0,
       elevationLoss: managerMetrics.forward?.elevationLoss || 0,
+      roadType,
       dataPoints,
     };
   }
 
-  const feature = (geoJsonData?.features || []).find(
-    (candidate) => candidate?.properties?.name === segmentName,
-  );
   const coordinates = Array.isArray(feature?.geometry?.coordinates)
     ? feature.geometry.coordinates
     : [];
@@ -1299,6 +1373,7 @@ function getSegmentDetails(
     distanceKm: (distance / 1000).toFixed(1),
     elevationGain: Math.round(elevationGain || 0),
     elevationLoss: Math.round(elevationLoss || 0),
+    roadType,
     dataPoints,
   };
 }

@@ -1,5 +1,6 @@
 import React from "react";
 import { POI_EMOJIS, POI_LABELS, primaryPoiImage } from "@cycleways/core/data/poiTypes.js";
+import RichText from "../RichText.jsx";
 
 export default function POICard({ poi, focused, onSelect }) {
   const primary = primaryPoiImage(poi);
@@ -20,7 +21,7 @@ export default function POICard({ poi, focused, onSelect }) {
         </div>
       </div>
       {photoSrc && <img className="poi-card-photo" src={photoSrc} alt={poi.name || poi.type} />}
-      {poi.information && <p className="poi-card-info">{poi.information}</p>}
+      <RichText className="poi-card-info" text={poi.information} stopLinkPropagation />
       {(poi.phone || poi.website || poi.hours) && (
         <ul className="poi-card-meta">
           {poi.phone && <li>📞 <a href={`tel:${poi.phone}`}>{poi.phone}</a></li>}

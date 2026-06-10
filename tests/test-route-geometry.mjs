@@ -5,6 +5,7 @@ import {
   nearestPointOnPolyline,
   pointAtFraction,
   projectPointToRouteCandidates,
+  snapPointToRouteWithinWindow,
 } from "../src/components/featured/routeGeometry.js";
 
 const route = [
@@ -56,6 +57,56 @@ assert.ok(
 assert.ok(
   seamCandidates.some((candidate) => candidate.fraction > 0.95),
   "includes an end-of-loop candidate",
+);
+
+// Out-and-back spur: the route runs east to a turnaround then retraces west,
+// so the midpoint of the spur projects equally (distance 0) onto both the
+// outbound and the return leg.
+const outAndBack = [
+  { lat: 33.0, lng: 35.0 },
+  { lat: 33.0, lng: 35.001 },
+  { lat: 33.0, lng: 35.002 }, // turnaround
+  { lat: 33.0, lng: 35.001 },
+  { lat: 33.0, lng: 35.0 },
+];
+const oabCum = buildCumulativeDistances(outAndBack);
+const spurPoint = { lat: 33.0, lng: 35.001 };
+
+// Without a window, ties resolve to the earliest (outbound) leg — this is the
+// behaviour that mis-snapped the return-leg keyframes onto the outbound leg.
+const plainSnap = snapPointToRouteWithinWindow(spurPoint, outAndBack, oabCum, {});
+assert.ok(
+  Math.abs(plainSnap.fraction - 0.25) < 1e-3,
+  `unconstrained snap picks the outbound leg (0.25), got ${plainSnap.fraction}`,
+);
+
+// With a previous keyframe already on the return leg, snap forward to the
+// return leg (0.75) instead of jumping back to the outbound leg (0.25).
+const forwardSnap = snapPointToRouteWithinWindow(spurPoint, outAndBack, oabCum, {
+  afterFraction: 0.6,
+});
+assert.ok(
+  Math.abs(forwardSnap.fraction - 0.75) < 1e-3,
+  `windowed snap picks the return leg (0.75), got ${forwardSnap.fraction}`,
+);
+
+// An upper bound (next keyframe) keeps the snap on the outbound leg.
+const boundedSnap = snapPointToRouteWithinWindow(spurPoint, outAndBack, oabCum, {
+  beforeFraction: 0.4,
+});
+assert.ok(
+  Math.abs(boundedSnap.fraction - 0.25) < 1e-3,
+  `upper-bounded snap stays on the outbound leg (0.25), got ${boundedSnap.fraction}`,
+);
+
+// When no candidate fits the window, fall back to the global nearest leg rather
+// than forcing an implausible far snap.
+const fallbackSnap = snapPointToRouteWithinWindow(spurPoint, outAndBack, oabCum, {
+  afterFraction: 0.95,
+});
+assert.ok(
+  Math.abs(fallbackSnap.fraction - 0.25) < 1e-3,
+  `out-of-window snap falls back to nearest (0.25), got ${fallbackSnap.fraction}`,
 );
 
 console.log("routeGeometry tests passed");

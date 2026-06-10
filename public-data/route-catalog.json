@@ -408,7 +408,7 @@
       "slug": "roman-roads",
       "name": "דרכים רומיות",
       "summary": "עליה בדרכים רומיות מכפר סאלד לרמת הגולן",
-      "description": "עליה בדרכים רומיות מכפר סאלד לרמת הגולן",
+      "description": "רכיבה בדרכים עתיקות (וקופצניות במיוחד) מכפר סאלד לציר הנפט, ומשם חזרה דרך תל עזזיאת וגבעת האם",
       "route": "AbBRHTfe82KH4s6xDWbL1fpTQxz4LzYMUBAo3sUYkhgbW7zPxzR9cgVR2x1ZMHPdihLmhjr8eZ13qLt14TCsdqW2afTEc1m7wr3NDXxfsYPpk6hLbbF6CDYwjthP8uCvmoNvrMckdKFUmwkvY1S99RqBaFK3Bq41CxcFDF35vekNgafeAPC2FnvNW8BzyZd3qaHLo8b4Ma43nxpnNxKsEDKrLR3gQJy2p2koMmrnAvnBcy2HXVk2GSZ5Vg6ev4HGfECN9owT4Vhrxc3StGT5qF8fMQBo4vudfPQTiY88CPXbbuVJiPzX9VXC6XUkmiH4jxJXxakA8HWdziS6Wdwf1chNCfG4DUENKkRp1E1Udy71g47JEUhzGVMNoepUDBQgS5PTrRgzvQ2eWTN6MdcfcnCbtra9nQDQgemzSRi2Br8",
       "notes": "",
       "featured": false,
@@ -509,6 +509,144 @@
           "height": 800,
           "generatedAt": "2026-06-06T16:53:45.836Z"
         }
+      },
+      "intro": "רכיבה בדרכים עתיקות (וקופצניות במיוחד) מכפר סאלד לציר הנפט, ומשם חזרה דרך תל עזזיאת וגבעת האם"
+    },
+    {
+      "slug": "sovev-shear-yeshuv",
+      "name": "סובב שאר ישוב",
+      "summary": "סיבוב מסביב שאר ישוב וביקור בפינה קסומה על הבניאס",
+      "intro": "רכיבה קצרה ונעימה בכביש הביטחון של מושב שאר ישוב. המסלול מתחיל ליד קמפינג חניון הבניאס ומקיף את שאר ישוב דרך שדות ונופים, בסוף הסיבוב נעשה ירידה קטנה לכיוון גשר שאר ישוב ומשם בחזרה לנקודת ההתחלה",
+      "description": "רכיבה קצרה ונעימה בכביש הביטחון של מושב שאר ישוב. המסלול מתחיל ליד קמפינג חניון הבניאס ומקיף את שאר ישוב דרך שדות ונופים, בסוף הסיבוב נעשה ירידה קטנה לכיוון גשר שאר ישוב ומשם בחזרה לנקודת ההתחלה\n\n",
+      "route": "6YxSYYqsaxoiCE5uoSski3PTfHJE96J7ZoK2wqmNoa6UDy5NczHyTs2vEPdRZJ3cETHxx2nkJACbjRDmRCyZfZCJGUWq5DhBzM8qMbXdMiNgyLdLS96BVyqcqQgmKqKKWvxdf6uiE5x1mLpVRMaDjiEdCT",
+      "notes": "",
+      "featured": false,
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/sovev-shear-yeshuv-map-e0b908da.webp",
+        "thumbnail": "public-data/route-map-images/sovev-shear-yeshuv-map-e0b908da-thumb.webp",
+        "alt": "מפת מסלול סובב שאר ישוב",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:fdf64e9baffac071fb1d734731308332dea648fbba128986d6a95250763c01dc",
+          "mapVersion": "00f59f7dd38d",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-09T21:59:21.951Z"
+        }
+      },
+      "start": {
+        "name": "קמפינג חניון הבניאס",
+        "description": "",
+        "images": [
+          {
+            "photo": "public-data/poi-images/sovev-shear-yeshuv-start-ef0530c1.webp",
+            "thumbnail": "public-data/poi-images/sovev-shear-yeshuv-start-ef0530c1-thumb.webp"
+          }
+        ]
+      },
+      "distanceKm": 5.8,
+      "elevationGainM": 59,
+      "elevationLossM": 59,
+      "regionId": "galilee-panhandle",
+      "passesNear": [],
+      "placeMatches": [],
+      "startPlaceIds": [],
+      "difficulty": "easy",
+      "style": "family",
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 1
+      },
+      "surfaceType": "paved",
+      "roadMix": {
+        "paved": 0.9222495302309194,
+        "dirt": 0.07775046976908064,
+        "road": 0
+      },
+      "qualityScore": 3
+    },
+    {
+      "slug": "naftali-dishon-yosha",
+      "name": "נפתלי - דישון - יער ישע",
+      "summary": "רכיבה ביערות הרי נפתלי ובנחל דישון",
+      "intro": "עליה קלילה בדרך נוף הרי נפתלי, תצפית לעמק החולה מקרן נפתלי, יריד דרך נחל דישון המקסים, וחזרה ביער ישע, מסלול פחות מוכר ומטוייל",
+      "description": "",
+      "route": "H5YPjfPvUFiJobcx56arCNFzt2aVExrubD9wbDfoXtejEiekiKauWWUNcrY92C8YzNDLS7n7oxEeCoo75cjbYXLAzYWVaPP1kL2FzCH97a6wXzQtm7eRLuuRdWsswGW4f68wDJC39jvVFykyLX8rua6N9JqhNGiK6sjj2fZyW3T9F3HmoCKP97gTK65jtxnC7uLnQLikmWVVgoXaHUpeYDbuyM6kKdERaeekDtW6dmnx8ddJXxTERH4zTQf3jNpmJNQsw49p2NVwbZmGm42ontExkfCddLvvBXZpDWwqxLXyHbQkXDQ46Be8S27dCgcS53CMtMzua7cSxDQQmZLaoqaVEr33JVtLDR1QotRvXBcx9BjUiWC4jQGKLFVhwxrtGzJh58aHvfJ1LqBe2Aeb85Y2PQGsDrpQ2o6yCbQV4eVeBvVYg1ATAxmwbUuTdHz7ybb42WYPpfAJ7WS9mM1GLsiwMiCgcyoezJm9Jmx9PDBBMmwS3aEyvMUeZHgzkx2yEMsdZ",
+      "notes": "",
+      "featured": false,
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/naftali-dishon-yosha-map-6080d6ff.webp",
+        "thumbnail": "public-data/route-map-images/naftali-dishon-yosha-map-6080d6ff-thumb.webp",
+        "alt": "מפת מסלול נפתלי - דישון - יער ישע",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:6aed7196d6cc9938593dc498adb12f4368b55aaad7aadafd2f3c21bd5764ceb8",
+          "mapVersion": "528fc6edbff9",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-10T18:38:56.197Z"
+        }
+      },
+      "distanceKm": 53.8,
+      "elevationGainM": 839,
+      "elevationLossM": 839,
+      "regionId": "unknown",
+      "passesNear": [
+        "neot-mordechai",
+        "amir"
+      ],
+      "placeMatches": [
+        {
+          "id": "neot-mordechai",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "שדות נאות מרדכי מערב"
+          ],
+          "distanceM": 1930,
+          "routeProgressMeters": 44931
+        },
+        {
+          "id": "amir",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 121,
+          "routeProgressMeters": 48506
+        }
+      ],
+      "startPlaceIds": [
+        "neot-mordechai",
+        "amir"
+      ],
+      "difficulty": "hard",
+      "style": "sporty",
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 5
+      },
+      "surfaceType": "mixed",
+      "roadMix": {
+        "paved": 0.18632039001794853,
+        "dirt": 0.596681237023331,
+        "road": 0.21699837295872054
+      },
+      "qualityScore": 3.0000000000000004,
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-11102fea-572cdcba.webp",
+        "thumbnail": "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp",
+        "alt": "קרן נפתלי"
+      },
+      "start": {
+        "name": "חורשת הנופלים קריית שמונה",
+        "description": "חורשה קטנה על גבעה בכניסה לעיר, במקום עץ אקליפטוס מרשים ושלושה טנקי שלל ישנים צבועים ",
+        "images": [
+          {
+            "photo": "public-data/poi-images/naftali-dishon-yosha-start-226e5cfb.webp",
+            "thumbnail": "public-data/poi-images/naftali-dishon-yosha-start-226e5cfb-thumb.webp"
+          }
+        ]
       }
     }
   ]

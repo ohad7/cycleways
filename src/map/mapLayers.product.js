@@ -20,6 +20,7 @@ import {
 } from "@cycleways/core/domain/routeNetwork.js";
 export { getRouteFeatureColor, prepareRouteNetworkFeatures };
 import { buildRouteDirectionPulseFeatureCollection } from "@cycleways/core/map/routeDirectionPulse.js";
+import { DISCOVER_ROUTE_PALETTE } from "@cycleways/core/map/discoverRouteColors.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
 export { buildRouteDirectionPulseFeatureCollection };
 
@@ -407,6 +408,187 @@ function addRouteGeometryHitLayer(map) {
     source: ROUTE_GEOMETRY_SOURCE_ID,
     ...ROUTE_GEOMETRY_HIT_STYLE,
   });
+}
+
+const SEGMENT_HIGHLIGHT_SOURCE_ID = "react-segment-highlight";
+const SEGMENT_HIGHLIGHT_LAYER_ID = "react-segment-highlight-line";
+
+export function syncSegmentHighlightLayer(map, points) {
+  const data = buildSegmentHighlightFeatureCollection(points);
+
+  if (map.getSource(SEGMENT_HIGHLIGHT_SOURCE_ID)) {
+    map.getSource(SEGMENT_HIGHLIGHT_SOURCE_ID).setData(data);
+    return;
+  }
+
+  map.addSource(SEGMENT_HIGHLIGHT_SOURCE_ID, {
+    type: "geojson",
+    data,
+  });
+
+  // Draw above the main route line. Use ROUTE_POINTS_LAYER_ID as the "before"
+  // layer if it exists, so the highlight renders below the route point circles.
+  const beforePointLayer = map.getLayer(ROUTE_POINTS_LAYER_ID)
+    ? ROUTE_POINTS_LAYER_ID
+    : undefined;
+
+  map.addLayer(
+    {
+      id: SEGMENT_HIGHLIGHT_LAYER_ID,
+      type: "line",
+      source: SEGMENT_HIGHLIGHT_SOURCE_ID,
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": "#b5742e",
+        "line-width": 7,
+        "line-opacity": 0.85,
+      },
+    },
+    beforePointLayer,
+  );
+}
+
+export function clearSegmentHighlightLayer(map) {
+  if (!map) return;
+  if (map.getLayer(SEGMENT_HIGHLIGHT_LAYER_ID)) {
+    map.removeLayer(SEGMENT_HIGHLIGHT_LAYER_ID);
+  }
+  if (map.getSource(SEGMENT_HIGHLIGHT_SOURCE_ID)) {
+    map.removeSource(SEGMENT_HIGHLIGHT_SOURCE_ID);
+  }
+}
+
+const RECOMMENDED_ROUTES_SOURCE_ID = "react-recommended-routes";
+const RECOMMENDED_ROUTES_LAYER_ID = "react-recommended-routes-line";
+
+export function syncRecommendedRoutesLayer(map, routes) {
+  const data = buildRecommendedRoutesFeatureCollection(routes);
+
+  if (map.getSource(RECOMMENDED_ROUTES_SOURCE_ID)) {
+    map.getSource(RECOMMENDED_ROUTES_SOURCE_ID).setData(data);
+    return;
+  }
+
+  // Don't add the source/layer if there's nothing to show yet.
+  if (data.features.length === 0) return;
+
+  map.addSource(RECOMMENDED_ROUTES_SOURCE_ID, {
+    type: "geojson",
+    data,
+  });
+
+  // Draw ABOVE the CW network but below the built route, waypoints, and data
+  // markers (so those stay on top / tappable). Insert before the first of these
+  // that exists; if none exist, append on top (still above the network).
+  const beforeLayer = [
+    ROUTE_GEOMETRY_LAYER_ID,
+    ROUTE_POINTS_LAYER_ID,
+    DATA_MARKERS_CIRCLE_LAYER_ID,
+    DATA_MARKERS_LAYER_ID,
+  ].find((id) => map.getLayer(id));
+
+  map.addLayer(
+    {
+      id: RECOMMENDED_ROUTES_LAYER_ID,
+      type: "line",
+      source: RECOMMENDED_ROUTES_SOURCE_ID,
+      layout: {
+        "line-cap": "round",
+        "line-join": "round",
+      },
+      paint: {
+        "line-color": ["get", "color"],
+        "line-width": [
+          "case",
+          ["get", "hovered"], 6,
+          ["==", ["get", "tier"], "ghost"], 2,
+          3.5,
+        ],
+        "line-opacity": [
+          "case",
+          ["get", "hovered"], 1,
+          ["==", ["get", "tier"], "ghost"], 0.25,
+          0.9,
+        ],
+      },
+    },
+    beforeLayer,
+  );
+}
+
+export function clearRecommendedRoutesLayer(map) {
+  if (!map) return;
+  if (map.getLayer(RECOMMENDED_ROUTES_LAYER_ID)) {
+    map.removeLayer(RECOMMENDED_ROUTES_LAYER_ID);
+  }
+  if (map.getSource(RECOMMENDED_ROUTES_SOURCE_ID)) {
+    map.removeSource(RECOMMENDED_ROUTES_SOURCE_ID);
+  }
+}
+
+// Show or hide the built-route layers (geometry line + hit target + points).
+// Used to suppress the user's route while a recommended route is being previewed.
+export function setBuiltRouteVisibility(map, visible) {
+  if (!map) return;
+  const visibility = visible ? "visible" : "none";
+  const layerIds = [ROUTE_GEOMETRY_LAYER_ID, ROUTE_GEOMETRY_HIT_LAYER_ID, ROUTE_POINTS_LAYER_ID];
+  for (const id of layerIds) {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, "visibility", visibility);
+    }
+  }
+}
+
+export function buildRecommendedRoutesFeatureCollection(routes) {
+  if (!Array.isArray(routes) || routes.length === 0) {
+    return { type: "FeatureCollection", features: [] };
+  }
+
+  const features = [];
+  for (const route of routes) {
+    if (!Array.isArray(route?.geometry) || route.geometry.length < 2) continue;
+    const coordinates = route.geometry
+      .map((point) => [Number(point.lng), Number(point.lat)])
+      .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat));
+    if (coordinates.length < 2) continue;
+    features.push({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates },
+      properties: {
+        hovered: Boolean(route.hovered),
+        tier: route.tier === "ghost" ? "ghost" : "bright",
+        color: route.color || DISCOVER_ROUTE_PALETTE[0],
+      },
+    });
+  }
+
+  return { type: "FeatureCollection", features };
+}
+
+function buildSegmentHighlightFeatureCollection(points) {
+  const coordinates = Array.isArray(points)
+    ? points
+        .map((point) => [Number(point.lng), Number(point.lat)])
+        .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
+    : [];
+
+  if (coordinates.length < 2) {
+    return { type: "FeatureCollection", features: [] };
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: { type: "LineString", coordinates },
+        properties: {},
+      },
+    ],
+  };
 }
 
 export function syncRoutePointDragPreviewLayer(map, preview) {

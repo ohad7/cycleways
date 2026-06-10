@@ -87,6 +87,41 @@ export function nearestPointOnPolyline(point, polyline, cumulativeDistances) {
   };
 }
 
+// Snap a point to the route, preferring a projection whose fraction is
+// consistent with the surrounding progress. On an out-and-back (or a loop seam)
+// a point can project equally onto two legs; the plain nearest-point snap breaks
+// such ties toward the lowest fraction, which sends progress backward. Passing
+// the fraction of the temporally-previous (`afterFraction`) and/or next
+// (`beforeFraction`) keyframe constrains the choice to the forward leg.
+//
+// Among candidates within `tieMeters` of the closest projection, the one that
+// falls inside [afterFraction, beforeFraction] is chosen; if none qualify the
+// global nearest is returned so genuine off-window clicks still snap sensibly.
+export function snapPointToRouteWithinWindow(point, polyline, cumulativeDistances, options = {}) {
+  const { afterFraction = null, beforeFraction = null, tieMeters = 25 } = options;
+  const candidates = projectPointToRouteCandidates(point, polyline, cumulativeDistances);
+  if (candidates.length === 0) {
+    return { index: 0, fraction: 0, distanceMeters: Infinity };
+  }
+  const nearest = candidates[0];
+  const lo = Number.isFinite(afterFraction) ? afterFraction : -Infinity;
+  const hi = Number.isFinite(beforeFraction) ? beforeFraction : Infinity;
+
+  if (lo === -Infinity && hi === Infinity) {
+    return { index: nearest.index, fraction: nearest.fraction, distanceMeters: nearest.distanceMeters };
+  }
+
+  let best = null;
+  for (const candidate of candidates) {
+    if (candidate.distanceMeters > nearest.distanceMeters + tieMeters) break;
+    if (candidate.fraction < lo || candidate.fraction > hi) continue;
+    if (!best || candidate.distanceMeters < best.distanceMeters) best = candidate;
+  }
+
+  const chosen = best || nearest;
+  return { index: chosen.index, fraction: chosen.fraction, distanceMeters: chosen.distanceMeters };
+}
+
 export function pointAtFraction(polyline, cumulativeDistances, fraction) {
   const f = Math.max(0, Math.min(1, fraction));
   const total = cumulativeDistances[cumulativeDistances.length - 1];

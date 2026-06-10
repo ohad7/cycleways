@@ -1,22 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import React, { useCallback, useEffect, useRef } from "react";
 import MapView from "../../map/MapView.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import { useIsMobile } from "./useIsMobile.js";
-import RouteProgressDistance from "./RouteProgressDistance.jsx";
 import {
   VIDEO_CURSOR_DEFAULT_VARIANT,
 } from "@cycleways/core/map/mapStyles.js";
-
-function scrollRoutePlayerIntoView() {
-  const target = document.querySelector("[data-route-stage]") || document.querySelector(".fv-video-shell");
-  if (!target) return;
-  const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  target.scrollIntoView({
-    behavior: prefersReducedMotion ? "auto" : "smooth",
-    block: "start",
-  });
-}
 
 export default function FeaturedRouteMapSlot({
   variant = "mobile",
@@ -25,6 +13,7 @@ export default function FeaturedRouteMapSlot({
   autoResetDelayMs = 8000,
   routeFitPadding,
   videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
+  fitOverlayRegistry = null,
 }) {
   const isMobile = useIsMobile();
   const {
@@ -34,17 +23,18 @@ export default function FeaturedRouteMapSlot({
     routeState,
     focusedCoord,
     requestRouteFit,
+    registerRouteFitOverlays,
+    mapContainerRef,
     routeFitRequest,
     videoCursor,
     videoPlaying,
     handleRouteClick,
     handleDataMarkerClick,
-    playerPauseRef,
+    mapPrimary,
+    toggleMapPrimary,
   } = useFeaturedRoute();
-  const [expanded, setExpanded] = useState(false);
-  const portalElementRef = useRef(null);
   const resetTimerRef = useRef(null);
-  const closeButtonRef = useRef(null);
+  const prevMapPrimaryRef = useRef(mapPrimary);
 
   const clearResetTimer = useCallback(() => {
     if (resetTimerRef.current) {
@@ -73,166 +63,96 @@ export default function FeaturedRouteMapSlot({
     requestRouteFit,
   ]);
 
-  const openExpandedMap = useCallback(() => {
-    if (!portalElementRef.current) {
-      const portalNode = document.createElement("div");
-      portalNode.className = "featured-map-portal-root";
-      document.body.appendChild(portalNode);
-      portalElementRef.current = portalNode;
-    }
-    playerPauseRef.current?.();
-    setExpanded(true);
-    requestRouteFit?.("featured-map-expand");
-  }, [playerPauseRef, requestRouteFit]);
-
-  const closeExpandedMap = useCallback(() => {
-    setExpanded(false);
-  }, []);
-
+  // Esc swaps back to video-primary when the map is filling the stage.
   useEffect(() => {
-    if (!expanded) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (!mapPrimary) return undefined;
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        closeExpandedMap();
-      }
+      if (event.key === "Escape") toggleMapPrimary();
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [expanded, closeExpandedMap]);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mapPrimary, toggleMapPrimary]);
 
+  // Register the obstruction overlays (control bar, video PiP, POI preview) so
+  // requestRouteFit computes overlay-aware padding for this map, scoped to the
+  // surrounding video shell.
   useEffect(() => {
-    if (expanded) {
-      closeButtonRef.current?.focus();
-    }
-  }, [expanded]);
+    if (!fitOverlayRegistry) return undefined;
+    registerRouteFitOverlays({
+      registry: fitOverlayRegistry,
+      getScopeEl: () =>
+        mapContainerRef.current?.closest(".fv-video-shell")
+        ?? mapContainerRef.current?.parentElement
+        ?? null,
+    });
+    return () => registerRouteFitOverlays(null);
+  }, [fitOverlayRegistry, registerRouteFitOverlays, mapContainerRef]);
 
-  useEffect(() => (
-    () => {
-      portalElementRef.current?.remove();
-      portalElementRef.current = null;
-    }
-  ), []);
+  // On either swap direction the map container resizes; once it has settled, refit
+  // the whole route with the overlay-aware fit. Only on an actual swap, not mount.
+  useEffect(() => {
+    const swapped = prevMapPrimaryRef.current !== mapPrimary;
+    prevMapPrimaryRef.current = mapPrimary;
+    if (!swapped) return undefined;
+    const id = window.setTimeout(
+      () => requestRouteFit?.(mapPrimary ? "map-primary-fit" : "video-primary-fit"),
+      180,
+    );
+    return () => window.clearTimeout(id);
+  }, [mapPrimary, requestRouteFit]);
 
   if (status !== "ready" || routeState.geometry.length < 2) return null;
 
   const focusedMarker = focusedCoord ? { coord: focusedCoord } : null;
-  const variantLabel = isMobile ? "פתח מפה גדולה" : "הגדל מפה";
-
-  const renderMap = ({
-    expandedMap = false,
-    onDataMarkerSelect = handleDataMarkerClick,
-    onRouteSelect = handleRouteClick,
-  } = {}) => (
-    <MapView
-      mode="readonly-route"
-      dataMarkerFeatures={dataMarkerFeatures}
-      activeDataPointIds={activeDataPointIds}
-      routeGeometry={routeState.geometry}
-      routePoints={routeState.points}
-      routeFitRequest={routeFitRequest}
-      routeFitPadding={expandedMap ? 48 : routeFitPadding}
-      focusedMarker={focusedMarker}
-      onDataMarkerClick={onDataMarkerSelect}
-      onUserViewportChange={expandedMap ? undefined : handleUserViewportChange}
-      videoCursor={videoCursor}
-      videoCursorVariant={videoCursorVariant}
-      videoPlaying={videoPlaying}
-      onRouteClick={onRouteSelect}
-    />
-  );
-
-  const handleExpandedMarkerClick = (marker) => {
-    handleDataMarkerClick(marker);
-    closeExpandedMap();
-    window.requestAnimationFrame(scrollRoutePlayerIntoView);
-  };
-
-  const handleExpandedRouteClick = (latLng) => {
-    handleRouteClick(latLng);
-    playerPauseRef.current?.();
-  };
-
-  const handleCloseButtonClick = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    closeExpandedMap();
-  };
+  const expandLabel = isMobile ? "פתח מפה גדולה" : "הגדל מפה";
 
   return (
     <div
+      ref={mapContainerRef}
       className={[
         "featured-map-inline",
-        expanded ? "featured-map-inline--expanded" : "",
+        mapPrimary ? "featured-map-inline--map-primary" : "",
         className,
       ].filter(Boolean).join(" ")}
     >
-      <button
-        type="button"
-        className="featured-map-expand-hit"
-        onClick={openExpandedMap}
-        aria-label={variantLabel}
+      {!mapPrimary && (
+        <button
+          type="button"
+          className="featured-map-expand-hit"
+          onClick={toggleMapPrimary}
+          aria-label={expandLabel}
+        />
+      )}
+      <MapView
+        mode="readonly-route"
+        dataMarkerFeatures={dataMarkerFeatures}
+        activeDataPointIds={activeDataPointIds}
+        routeGeometry={routeState.geometry}
+        routePoints={routeState.points}
+        routeFitRequest={routeFitRequest}
+        routeFitPadding={mapPrimary ? 48 : routeFitPadding}
+        focusedMarker={focusedMarker}
+        onDataMarkerClick={handleDataMarkerClick}
+        onUserViewportChange={handleUserViewportChange}
+        videoCursor={videoCursor}
+        videoCursorVariant={videoCursorVariant}
+        videoPlaying={videoPlaying}
+        onRouteClick={handleRouteClick}
       />
-      {renderMap()}
-      <button
-        type="button"
-        className="featured-map-expand-btn"
-        onClick={openExpandedMap}
-        aria-label={isMobile ? undefined : variantLabel}
-        aria-hidden={isMobile ? "true" : undefined}
-        tabIndex={isMobile ? -1 : undefined}
-        title={variantLabel}
-      >
-        <span aria-hidden="true">⛶</span>
-        <span className="featured-map-expand-label">{variantLabel}</span>
-      </button>
-      {portalElementRef.current && createPortal((
-        <div
-          className={[
-            "featured-map-expanded-overlay",
-            expanded ? "" : "featured-map-expanded-overlay--hidden",
-            isMobile ? "featured-map-expanded-overlay--mobile" : "featured-map-expanded-overlay--desktop",
-          ].filter(Boolean).join(" ")}
-          role={expanded ? "dialog" : undefined}
-          aria-hidden={expanded ? undefined : "true"}
-          aria-modal={expanded ? "true" : undefined}
-          aria-label="מפת המסלול"
-          onClick={closeExpandedMap}
+      {!mapPrimary && (
+        <button
+          type="button"
+          className="featured-map-expand-btn"
+          onClick={toggleMapPrimary}
+          aria-label={isMobile ? undefined : expandLabel}
+          aria-hidden={isMobile ? "true" : undefined}
+          tabIndex={isMobile ? -1 : undefined}
+          title={expandLabel}
         >
-          <section className="featured-map-expanded-panel">
-            <header className="featured-map-expanded-header">
-              <div className="featured-map-expanded-title">
-                <span>מפת המסלול</span>
-                <RouteProgressDistance className="featured-map-expanded-distance" />
-              </div>
-              <button
-                type="button"
-                className="featured-map-expanded-close"
-                onClick={handleCloseButtonClick}
-                ref={closeButtonRef}
-                aria-label="סגור מפה"
-              >
-                <span aria-hidden="true">×</span>
-                <span className="featured-map-expanded-close-label">סגור</span>
-              </button>
-            </header>
-            <div
-              className="featured-map-expanded-body"
-              onClick={(event) => event.stopPropagation()}
-            >
-              {renderMap({
-                expandedMap: true,
-                onDataMarkerSelect: handleExpandedMarkerClick,
-                onRouteSelect: handleExpandedRouteClick,
-              })}
-            </div>
-          </section>
-        </div>
-      ), portalElementRef.current)}
+          <span aria-hidden="true">⛶</span>
+          <span className="featured-map-expand-label">{expandLabel}</span>
+        </button>
+      )}
     </div>
   );
 }

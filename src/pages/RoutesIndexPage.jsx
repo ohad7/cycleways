@@ -78,6 +78,7 @@ export default function RoutesIndexPage() {
   const [entries, setEntries] = useState([]);
   const [places, setPlaces] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -175,7 +176,26 @@ export default function RoutesIndexPage() {
               <span>מתוך {entries.length} מסלולים</span>
             </div>
 
-            <section className="routes-page__search-panel" aria-label="חיפוש וסינון מסלולים">
+            <button
+              type="button"
+              className="routes-page__filters-toggle"
+              aria-expanded={filtersOpen}
+              aria-controls="routes-search-panel"
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              <span>סינון וחיפוש</span>
+              {activeFilterCount > 0 && (
+                <span className="routes-page__filters-toggle-count">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            <section
+              id="routes-search-panel"
+              className={`routes-page__search-panel${filtersOpen ? " routes-page__search-panel--open" : ""}`}
+              aria-label="חיפוש וסינון מסלולים"
+            >
               <div className="routes-page__place-searches">
                 <PlaceAutocompleteFilter
                   label="התחלה"

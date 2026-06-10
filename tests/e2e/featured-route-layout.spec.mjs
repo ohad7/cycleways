@@ -26,7 +26,9 @@ test.describe("desktop layout", () => {
     // The rail shows the stats block and the elevation graph.
     await expect(page.locator(".fv-route-stats")).toBeVisible();
     await expect(page.locator(".elevation-profile")).toBeVisible();
-    await expect(page.locator(".fv-video-progress-distance")).toContainText("מרחק מההתחלה");
+    // The control readout is the route distance (progress / total), like the planner.
+    await expect(page.locator(".fv-video-time")).toContainText("/");
+    await expect(page.locator(".fv-video-time")).toContainText("km");
     await expect(page.locator(".fv-side-heading")).toHaveCount(0);
     await expect(page.locator(".fv-moments")).toHaveCount(0);
     await expect(page.locator(".fv-carousel-arrow")).toHaveCount(0);
@@ -41,7 +43,6 @@ test.describe("desktop layout", () => {
     const actionsBox = await page.locator(".fv-route-actions").boundingBox();
     const elevationWrapBox = await page.locator(".fv-side-elevation-wrap").boundingBox();
     const elevationChartBox = await page.locator(".elevation-chart").boundingBox();
-    const videoDistanceBox = await page.locator(".fv-video-progress-distance").boundingBox();
     const videoTimeBox = await page.locator(".fv-video-time").boundingBox();
     const pipBox = await page.locator(".fv-video-shell .fv-mobile-map").boundingBox();
     const storyBox = await columbiaStory.boundingBox();
@@ -50,9 +51,8 @@ test.describe("desktop layout", () => {
     expect(panelBox.y + panelBox.height - (actionsBox.y + actionsBox.height)).toBeLessThanOrEqual(24);
     expect(elevationChartBox.y + elevationChartBox.height).toBeLessThanOrEqual(900);
     expect(elevationChartBox.y).toBeGreaterThan(elevationWrapBox.y);
-    expect(videoDistanceBox.x).toBeGreaterThan(videoBox.x);
-    expect(videoDistanceBox.x).toBeGreaterThan(videoTimeBox.x);
-    expect(videoDistanceBox.y).toBeGreaterThan(videoBox.y + videoBox.height - 90);
+    expect(videoTimeBox.x).toBeGreaterThan(videoBox.x);
+    expect(videoTimeBox.y).toBeGreaterThan(videoBox.y + videoBox.height - 90);
     const elevationScroll = await page.locator(".fv-side-elevation-wrap").evaluate((el) => ({
       clientHeight: el.clientHeight,
       scrollHeight: el.scrollHeight,
@@ -83,20 +83,45 @@ test.describe("desktop layout", () => {
     expect(download.suggestedFilename()).toBe("sovev-beit-hillel.gpx");
   });
 
-  test("PiP map opens an expanded desktop map dialog", async ({ page }) => {
+  test("expand swaps the map to fill the stage and the video to a PiP", async ({ page }) => {
     await page.goto("/featured/sovev-beit-hillel");
-    await page.locator(".fv-video-shell .fv-mobile-map .featured-map-expand-btn").click();
+    const shell = page.locator(".fv-video-shell");
+    const map = page.locator(".fv-video-shell .fv-mobile-map");
 
-    const dialog = page.getByRole("dialog", { name: "מפת המסלול" });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.locator(".featured-map-expanded-distance")).toBeVisible();
+    await map.locator(".featured-map-expand-btn").click();
 
-    const panelBox = await dialog.locator(".featured-map-expanded-panel").boundingBox();
-    expect(panelBox.width).toBeGreaterThan(800);
-    expect(panelBox.height).toBeGreaterThan(600);
+    // The map now fills the stage; the video shrinks to a corner PiP.
+    await expect(map).toHaveClass(/featured-map-inline--map-primary/);
+    const shellBox = await shell.boundingBox();
+    const mapBox = await map.boundingBox();
+    expect(mapBox.width).toBeGreaterThan(shellBox.width - 4);
+    expect(mapBox.height).toBeGreaterThan(500);
 
-    await dialog.getByRole("button", { name: "סגור מפה" }).click();
-    await expect(dialog).toHaveCount(0);
+    const pip = page
+      .locator(
+        ".fv-video.featured-video--pip .featured-video-frame > iframe, .fv-video.featured-video--pip .featured-video-iframe-host",
+      )
+      .first();
+    const pipBox = await pip.boundingBox();
+    expect(pipBox.width).toBeLessThan(360);
+    expect(pipBox.x).toBeGreaterThan(shellBox.x + shellBox.width / 2);
+
+    // The shared playback control bar stays pinned to the bottom of the stage.
+    const controlsBox = await page.locator(".fv-video-controls").boundingBox();
+    expect(controlsBox.y).toBeGreaterThan(shellBox.y + shellBox.height / 2);
+
+    // The live video is replaced by a static poster; the synthetic engine drives
+    // the route animation, so hitting play advances the distance readout.
+    await expect(page.locator(".fv-video-poster")).toBeVisible();
+    const distanceBefore = await page.locator(".fv-video-time").textContent();
+    await page.locator(".fv-video-play-toggle").click();
+    await page.waitForTimeout(700);
+    const distanceAfter = await page.locator(".fv-video-time").textContent();
+    expect(distanceAfter).not.toBe(distanceBefore);
+
+    // Swap back to video-primary.
+    await page.locator(".fv-video-swap-back").click();
+    await expect(map).not.toHaveClass(/featured-map-inline--map-primary/);
     await expect(page.locator(".fv-video .featured-video-frame")).toBeVisible();
   });
 
@@ -145,12 +170,10 @@ test.describe("mobile layout", () => {
     await expect(page.getByRole("link", { name: "פתח לעריכה" })).toBeVisible();
     await expect(page.getByRole("button", { name: /הורד קובץ ניווט/ })).toBeVisible();
     await expect(page.locator(".fv-side-elevation-wrap")).toBeVisible();
-    await expect(page.locator(".fv-video-progress-distance")).toBeVisible();
+    await expect(page.locator(".fv-video-time")).toContainText("km");
 
     const videoBox = await page.locator(".fv-video .featured-video-frame").boundingBox();
     const mapBox = await page.locator(".fv-mobile-map").boundingBox();
-    const mobileDistanceBox = await page.locator(".fv-video-progress-distance").boundingBox();
-    const mobileTimeBox = await page.locator(".fv-video-time").boundingBox();
     const mobileStatsBox = await page.locator(".fv-side-elevation-wrap .fv-route-stats").boundingBox();
     const mobileChartBox = await page.locator(".fv-side-elevation-wrap .elevation-chart").boundingBox();
     const mobileSvgBox = await page.locator(".fv-side-elevation-wrap .elevation-chart svg").boundingBox();
@@ -160,8 +183,8 @@ test.describe("mobile layout", () => {
     expect(mapBox.x).toBeGreaterThan(videoBox.x + videoBox.width / 2);
     expect(mapBox.y).toBeGreaterThanOrEqual(videoBox.y);
     expect(mapBox.y + mapBox.height).toBeLessThan(videoBox.y + videoBox.height);
-    expect(mobileDistanceBox.x).toBeGreaterThan(mobileTimeBox.x);
-    expect(mobileDistanceBox.y).toBeGreaterThan(videoBox.y + videoBox.height - 80);
+    const mobileTimeBox = await page.locator(".fv-video-time").boundingBox();
+    expect(mobileTimeBox.y).toBeGreaterThan(videoBox.y + videoBox.height - 80);
     expect(mobileStatsBox.height).toBeLessThanOrEqual(52);
     expect(mobileChartBox.height).toBeGreaterThanOrEqual(145);
     expect(Math.abs(mobileSvgBox.height - mobileChartBox.height)).toBeLessThanOrEqual(1);
@@ -181,21 +204,28 @@ test.describe("mobile layout", () => {
     });
   });
 
-  test("mini map opens an expanded mobile map sheet", async ({ page }) => {
+  test("tapping the mini map swaps it to full-screen with the video as a PiP", async ({ page }) => {
     await page.goto("/featured/sovev-beit-hillel");
-    await page.locator(".fv-mobile-map .featured-map-expand-hit").click();
+    const map = page.locator(".fv-mobile-map");
+    await map.locator(".featured-map-expand-hit").click();
 
-    const dialog = page.getByRole("dialog", { name: "מפת המסלול" });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.locator(".featured-map-expanded-distance")).toBeVisible();
+    // The map fills the stage; the video becomes a small corner thumbnail.
+    await expect(map).toHaveClass(/featured-map-inline--map-primary/);
+    const mapBox = await map.boundingBox();
+    expect(mapBox.width).toBeGreaterThan(360);
+    expect(mapBox.height).toBeGreaterThan(400);
 
-    const panelBox = await dialog.locator(".featured-map-expanded-panel").boundingBox();
-    expect(panelBox.width).toBeGreaterThan(360);
-    expect(panelBox.height).toBeGreaterThan(560);
-    expect(panelBox.y).toBeGreaterThan(100);
+    const pip = page
+      .locator(
+        ".fv-video.featured-video--pip .featured-video-frame > iframe, .fv-video.featured-video--pip .featured-video-iframe-host",
+      )
+      .first();
+    const pipBox = await pip.boundingBox();
+    expect(pipBox.width).toBeLessThanOrEqual(160);
 
-    await dialog.getByRole("button", { name: "סגור מפה" }).click();
-    await expect(dialog).toHaveCount(0);
+    // Swap back to video-primary.
+    await page.locator(".fv-video-swap-back").click();
+    await expect(map).not.toHaveClass(/featured-map-inline--map-primary/);
     await expect(page.locator(".fv-video .featured-video-frame")).toBeVisible();
   });
 

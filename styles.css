@@ -8,7 +8,6 @@
   button,
   .control-btn,
   .nav-link {
-    color: red;
     touch-action: manipulation;
   }
 
@@ -21,7 +20,7 @@
 }
 
 body {
-  font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Assistant', -apple-system, 'Segoe UI', Tahoma, sans-serif;
   margin: 0;
   padding: 0;
   background-image: url('/images/background_grass.webp');
@@ -86,11 +85,7 @@ body::before {
     border-bottom: none;
   }
 
-  background: #F8F8F8;
-  background-image: url('/images/background.webp');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: linear-gradient(178deg,#aacbe6 0%,#bcd3df 26%,#cfe0c4 52%,#9cc06f 80%,#7faa55 100%);
   padding: 15px 40px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -123,7 +118,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(248, 248, 248, 0.2);
+  background: radial-gradient(120% 80% at 20% -20%, rgba(255,255,255,.45), transparent 60%);
   z-index: 1;
 }
 
@@ -175,8 +170,9 @@ body::before {
 
 .site-title {
   font-size: 24px;
-  font-weight: bold;
-  color: #333;
+  font-weight: 800;
+  color: #22402a;
+  text-shadow: 0 1px 0 rgba(255,255,255,.35);
   margin: 0;
   cursor: pointer;
   transition: color 0.2s;
@@ -211,11 +207,7 @@ body::before {
     top: 100%;
     left: 0;
     right: 0;
-    background: #F8F8F8;
-    background-image: url('/images/background.webp');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background: linear-gradient(178deg,#aacbe6 0%,#bcd3df 26%,#cfe0c4 52%,#9cc06f 80%,#7faa55 100%);
     flex-direction: column;
     gap: 0;
     padding: 20px;
@@ -266,7 +258,7 @@ body::before {
 }
 
 .nav-link {
-  color: #333;
+  color: #2f4533;
   text-decoration: none;
   font-size: 16px;
   font-weight: bold;
@@ -437,7 +429,7 @@ html {
   display: flex;
   gap: 20px;
   align-items: stretch;
-  max-width: 1400px;
+  max-width: none;
   margin: 0 auto;
   height: calc(100vh - 100px) !important;
   flex-direction: row-reverse;
@@ -494,19 +486,21 @@ html {
 .segment-name-display {
   position: absolute;
   top: 25px;
-  left: 135px;
-  background: rgba(70, 130, 180, 0.9);
-  color: white;
-  padding: 10px 15px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  max-width: 250px;
-  min-height: 50px;
-  word-wrap: break-word;
+  left: 25px;
+  z-index: 1001;
   display: none;
-  margin-bottom: 8px;
+  align-items: stretch;
+  gap: 12px;
+  direction: rtl;
+  text-align: right;
+  max-width: 340px;
+  padding: 12px;
+  border: 1px solid rgba(36, 49, 58, 0.16);
+  border-radius: 8px;
+  background: rgba(253, 252, 248, 0.96);
+  box-shadow: 0 12px 28px rgba(16, 24, 32, 0.22);
+  color: #24313a;
+  overflow: hidden;
 }
 
 .segment-name-display.bounce-intro {
@@ -574,21 +568,33 @@ html {
 
 @media (max-width: 768px) {
   .segment-name-display {
-    position: absolute;
-    top: 60px;
-    right: 75px;
-    left: auto;
-    max-width: 150px;
-    font-size: 12px;
-    padding: 8px 12px;
-    text-align: right;
-    margin-bottom: 6px;
+    top: 15px;
+    left: 15px;
+    right: auto;
+    gap: 8px;
+    max-width: min(280px, calc(100% - 30px));
+    padding: 8px;
+  }
+
+  .segment-card__media {
+    width: 64px;
+    height: 56px;
+  }
+
+  .segment-card__icon {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+
+  .segment-card__name {
+    font-size: 15px;
   }
 }
 
 .legend-container {
   position: absolute;
-  top: 25px;
+  bottom: 25px;
   left: 25px;
   z-index: 1000;
   direction: rtl;
@@ -597,7 +603,7 @@ html {
 
 @media (max-width: 768px) {
   .legend-container {
-    top: 15px;
+    bottom: 15px;
     left: 15px;
     right: auto;
     width: auto;

@@ -892,12 +892,12 @@ input {
   .map-container .segment-name-display {
     top: 25px;
     right: auto;
-    left: 138px;
+    left: 25px;
   }
 
   .map-container--has-planner-poi .segment-name-display {
     top: 122px;
-    left: 138px;
+    left: 25px;
   }
 }
 
@@ -1047,7 +1047,7 @@ input {
   position: absolute;
   top: 25px;
   bottom: auto;
-  left: 138px;
+  left: 25px;
   z-index: 1001;
   display: flex;
   align-items: center;
@@ -1157,19 +1157,122 @@ input {
 }
 
 .react-segment-name-display--active {
+  display: flex;
+  animation: segmentCardIn 0.18s ease-out;
+}
+
+@keyframes segmentCardIn {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+    box-shadow: 0 12px 28px rgba(16, 24, 32, 0.22), 0 0 0 0 rgba(63, 93, 51, 0);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0);
+    box-shadow: 0 12px 28px rgba(16, 24, 32, 0.22), 0 0 14px 2px rgba(63, 93, 51, 0.35);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    box-shadow: 0 12px 28px rgba(16, 24, 32, 0.22), 0 0 0 0 rgba(63, 93, 51, 0);
+  }
+}
+
+.segment-card__media {
+  flex: 0 0 auto;
+  width: 104px;
+  height: 96px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.segment-card__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: rgba(63, 93, 51, 0.18);
+  color: #3f5d33;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.segment-card__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.segment-card__eyebrow {
+  color: #3f5d33;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.segment-card__name {
   display: block;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  color: #24313a;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.18;
 }
 
-.react-segment-data-list {
-  margin-top: 5px;
-  padding: 5px;
-  background-color: #fff;
-  color: #ff9800;
+.segment-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 8px;
+  color: #53616a;
   font-size: 12px;
+  font-weight: 600;
 }
 
-.react-segment-data-list div {
-  margin: 2px 0;
+.segment-card__chips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.segment-card__chip {
+  align-self: flex-start;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(63, 93, 51, 0.18);
+  color: #3f5d33;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.segment-card__chip--more {
+  background: rgba(36, 49, 58, 0.08);
+  color: #53616a;
+}
+
+/* Lit when the matching POI marker is hovered on the map, so the user can tell
+   which chip belongs to the marker under their cursor. */
+.segment-card__chip--highlight {
+  background: rgba(63, 93, 51, 0.32);
+  box-shadow: 0 0 0 2px rgba(63, 93, 51, 0.55);
+}
+
+.map-container--planner-playing .segment-name-display {
+  display: none;
+}
+
+.map-container--route-ready .legend-container {
+  bottom: 104px;
+}
+
+.map-container--planner-playing .legend-container {
+  display: none;
 }
 
 .react-warning-toggle {
@@ -1421,6 +1524,10 @@ input {
   }
 
   .map-container--planner-playing .legend-container {
+    display: none;
+  }
+
+  .map-container--route-ready .legend-container {
     display: none;
   }
 

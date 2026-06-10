@@ -15,6 +15,7 @@ import {
   ROUTE_GEOMETRY_HIT_LAYER_ID,
   ROUTE_NETWORK_HIT_LAYER_ID,
   ROUTE_POINTS_LAYER_ID,
+  setBuiltRouteVisibility,
   setRouteNetworkFocus,
   setRouteNetworkHover,
   syncDataMarkerLayers,
@@ -24,6 +25,8 @@ import {
   syncRouteGeometryLayer,
   syncRoutePointLayers,
   syncVideoCursorLayer,
+  syncSegmentHighlightLayer,
+  syncRecommendedRoutesLayer,
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
 import { getMapboxGl, whenMapboxReady } from "./mapboxProvider.js";
@@ -75,9 +78,11 @@ function MapSurface({
   focusedSegment,
   geoJsonData,
   elevationHover,
+  hideBuiltRoute = false,
   hoveredSegment,
   mode = MAP_MODE_PLANNER,
   onDataMarkerClick,
+  onDataMarkerHover,
   onMapClick,
   onMapReady,
   onRouteClick = null,
@@ -99,6 +104,8 @@ function MapSurface({
   routePointDragPreview = null,
   routePoints = [],
   searchHighlight,
+  recommendedRoutes = null,
+  segmentHighlight = null,
   selectedRoutePointIndex = null,
   videoCursor = null,
   videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
@@ -127,6 +134,7 @@ function MapSurface({
   useEffect(() => {
     callbacksRef.current = {
       onDataMarkerClick,
+      onDataMarkerHover,
       onMapClick,
       onRoutePointDrag,
       onRoutePointDragEnd,
@@ -143,6 +151,7 @@ function MapSurface({
     };
   }, [
     onDataMarkerClick,
+    onDataMarkerHover,
     onMapClick,
     onRoutePointDrag,
     onRoutePointDragEnd,
@@ -169,6 +178,29 @@ function MapSurface({
   useEffect(() => {
     dataMarkerFeaturesRef.current = dataMarkerFeatures;
   }, [dataMarkerFeatures]);
+
+  // Resize the Mapbox canvas whenever the container element changes size.
+  // This handles panel collapse/expand, window resize, and any other
+  // container-driven geometry change.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return undefined;
+
+    let rafId = null;
+    const observer = new ResizeObserver(() => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        mapRef.current?.resize?.();
+      });
+    });
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -352,6 +384,24 @@ function MapSurface({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    syncSegmentHighlightLayer(map, segmentHighlight);
+  }, [segmentHighlight, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    syncRecommendedRoutesLayer(map, recommendedRoutes);
+  }, [recommendedRoutes, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    setBuiltRouteVisibility(map, !hideBuiltRoute);
+  }, [hideBuiltRoute, status]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || status !== "ready" || !caps.routeEndpointMarkers) {
       clearRouteEndpointMarkers(routeEndpointMarkerRefs);
       return undefined;
@@ -433,13 +483,16 @@ function MapSurface({
     const map = mapRef.current;
     if (!map || status !== "ready" || !caps.elevationPulse) return;
 
+    // Elevation-graph hover is shown with the standard orange route-progress
+    // cursor (the video-cursor PROGRESS_HEAD marker), which already tracks the
+    // hover position because the elevation handler seeks playback to the hovered
+    // fraction. Here we only suppress the direction-pulse chevron so the two
+    // don't both render on the route.
     if (Number.isFinite(elevationHover?.t)) {
       // Disable animator-driven visuals for this route — only reset on route change.
       animatorVisibleRef.current = false;
-      syncRouteDirectionPulseLayer(map, routeGeometryRef.current, elevationHover.t);
-    } else {
-      clearRouteDirectionPulseLayer(map);
     }
+    clearRouteDirectionPulseLayer(map);
   }, [elevationHover, status, caps.elevationPulse]);
 
   useEffect(() => {
@@ -609,9 +662,24 @@ function MapSurface({
       callbacksRef.current.onRoutePointSelect?.(index);
     };
 
+    // Hover a data marker → report its id so linked UI (the segment card chips)
+    // can highlight the matching entry. Deduped so we only notify on change.
+    let hoveredDataPointId = null;
+    const emitDataMarkerHover = (next) => {
+      if (next === hoveredDataPointId) return;
+      hoveredDataPointId = next;
+      callbacksRef.current.onDataMarkerHover?.(next);
+    };
+    const handleDataMarkerMove = (event) => {
+      emitDataMarkerHover(event.features?.[0]?.properties?.dataPointId ?? null);
+    };
+    const handleDataMarkerLeave = () => emitDataMarkerHover(null);
+
     if (wantsMapClick) map.on("click", handleMapClick);
     if (wantsDataMarkerClick) {
       map.on("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
+      map.on("mousemove", DATA_MARKERS_LAYER_ID, handleDataMarkerMove);
+      map.on("mouseleave", DATA_MARKERS_LAYER_ID, handleDataMarkerLeave);
     }
     if (wantsRoutePointSelect) {
       map.on("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
@@ -622,6 +690,8 @@ function MapSurface({
         if (wantsMapClick) map.off("click", handleMapClick);
         if (wantsDataMarkerClick) {
           map.off("click", DATA_MARKERS_LAYER_ID, handleDataMarkerClick);
+          map.off("mousemove", DATA_MARKERS_LAYER_ID, handleDataMarkerMove);
+          map.off("mouseleave", DATA_MARKERS_LAYER_ID, handleDataMarkerLeave);
         }
         if (wantsRoutePointSelect) {
           map.off("click", ROUTE_POINTS_LAYER_ID, handleRoutePointClick);
@@ -823,7 +893,7 @@ function MapSurface({
 
     fitMapToCoordinates(map, routeFitRequest.geometry, {
       maxZoom: 14,
-      padding: routeFitPadding,
+      padding: routeFitRequest.padding ?? routeFitPadding,
     });
   }, [routeFitPadding, routeFitRequest, status, caps.routeFit]);
 
@@ -912,11 +982,21 @@ function fitMapToCoordinates(map, coordinates, options = {}) {
 
   if (!bounds.isEmpty()) {
     map.fitBounds(bounds, {
-      duration: 0,
+      duration: prefersReducedMotion() ? 0 : 600,
       maxZoom: options.maxZoom || 14,
       padding: options.padding || 48,
     });
   }
+}
+
+// Honor the user's reduced-motion preference: animate the camera by default,
+// but jump instantly when the OS/browser requests reduced motion.
+function prefersReducedMotion() {
+  return Boolean(
+    typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 }
 
 function routeLineInsertIndexFromEvent(map, event, routeGeometry, routePoints) {

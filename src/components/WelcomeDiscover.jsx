@@ -6,7 +6,7 @@ import {
   routeStartPlaceIds,
 } from "@cycleways/core/data/catalog.js";
 
-const FILTER_GROUPS = [
+export const FILTER_GROUPS = [
   {
     axis: "difficulty",
     label: "רמת קושי",
@@ -36,7 +36,7 @@ const FILTER_GROUPS = [
   },
 ];
 
-function emptyFilters() {
+export function emptyFilters() {
   return {
     difficulty: new Set(),
     surface: new Set(),
@@ -46,7 +46,7 @@ function emptyFilters() {
   };
 }
 
-function FilterChip({ active, onClick, children }) {
+export function FilterChip({ active, onClick, children }) {
   return (
     <button
       type="button"
@@ -60,13 +60,14 @@ function FilterChip({ active, onClick, children }) {
   );
 }
 
-function PlaceAutocompleteFilter({
+export function PlaceAutocompleteFilter({
   label,
   onRemove,
   onSelect,
   options,
   placeholder,
   selected,
+  icon,
 }) {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
@@ -98,6 +99,7 @@ function PlaceAutocompleteFilter({
     <div className="wd-combo">
       <span className="wd-combo__label">{label}</span>
       <div className="wd-combo__box">
+        {icon && <span className="wd-combo__icon" aria-hidden="true">{icon}</span>}
         {selectedValues.map((value) => {
           const option = optionByValue.get(value);
           return (

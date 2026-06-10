@@ -6,7 +6,6 @@ function TopBar({
   onOpenTutorial,
   mobileMenuOpen,
   onMobileMenuToggle,
-  onOpenWizard,
   navLinks,
 }) {
   const navigate = useNavigate();
@@ -123,18 +122,6 @@ function TopBar({
               {item.label}
             </Link>
           ),
-        )}
-        {onOpenWizard && (
-          <button
-            className="nav-link topbar-find-button"
-            type="button"
-            onClick={() => {
-              onOpenWizard();
-              closeMobileMenu();
-            }}
-          >
-            מצא מסלול
-          </button>
         )}
         {showTutorialButton && (
           <button

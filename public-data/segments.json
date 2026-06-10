@@ -414,6 +414,28 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-03007424",
+        "type": "tree",
+        "information": "ניתן לצפות מכאן בלהקות גדולות של חסידות בסוף האביב",
+        "location": [
+          33.172261,
+          35.556551
+        ],
+        "name": "חסידות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-03007424-8e53f5c4.webp",
+            "thumbnail": "public-data/poi-images/poi-03007424-8e53f5c4-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-03007424-0a04ce34.webp",
+            "thumbnail": "public-data/poi-images/poi-03007424-0a04ce34-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.556086,
       "latitude": 33.165232,
@@ -432,6 +454,28 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-11102fea",
+        "type": "viewpoint",
+        "information": "כניסה לכביש גישה לקרן נפתלי: תצפית לעמק החולה ולחרמון",
+        "location": [
+          33.091983,
+          35.550171
+        ],
+        "name": "קרן נפתלי",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-11102fea-572cdcba.webp",
+            "thumbnail": "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-11102fea-10303cb8.webp",
+            "thumbnail": "public-data/poi-images/poi-11102fea-10303cb8-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.549372,
       "latitude": 33.112833,
@@ -680,6 +724,29 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-b0a7c0c7",
+        "type": "nature",
+        "information": "גשר ביילי מעל הבניאס, מתחתיו גישה למים ופינה נהדרת למנוחה",
+        "location": [
+          33.22552974040883,
+          35.65442162844337
+        ],
+        "name": "גשר שאר ישוב",
+        "description": "גשר ביילי מעל הבניאס, מתחתיו גישה למים ופינה נהדרת למנוחה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-b0a7c0c7-d717983c.webp",
+            "thumbnail": "public-data/poi-images/poi-b0a7c0c7-d717983c-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-b0a7c0c7-69ed2ce2.webp",
+            "thumbnail": "public-data/poi-images/poi-b0a7c0c7-69ed2ce2-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.653047,
       "latitude": 33.227179,
@@ -1952,10 +2019,19 @@
       },
       {
         "type": "warning",
-        "information": "הכניסה אסורה למעיין",
+        "information": "אפשר להנות מהנוף, הכניסה למים אסורה",
         "location": [
           33.133896,
           35.56918
+        ],
+        "name": "עין תאו",
+        "description": "שמרו על הטבע, בעין תאו אפשר להנות מהנוף אולם אסור להכנס לשמורה או למים, על מנת לשמור על ערכי הטבע שם.",
+        "id": "poi-a77bbe8c",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-a77bbe8c-13ec0055.webp",
+            "thumbnail": "public-data/poi-images/poi-a77bbe8c-13ec0055-thumb.webp"
+          }
         ]
       }
     ],
@@ -3506,7 +3582,7 @@
             "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
           }
         ],
-        "description": "פרישטיק הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג."
+        "description": "[פרישטיק](https://www.vitrage-resort.co.il/%D7%A4%D7%A8%D7%99%D7%A9%D7%98%D7%99%D7%A7/) הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג.\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג."
       },
       {
         "id": "poi-c723c695",
@@ -4603,8 +4679,8 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 6.2
   },
-  "נחל מכברם": {
-    "id": 76,
+  "צומת איילת השחר": {
+    "id": 343,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -4612,14 +4688,56 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 341,
+    "splitFromName": "נחל מכברם",
     "middle": {
-      "longitude": 35.584908,
-      "latitude": 33.039456,
-      "elevation": 124.0
+      "longitude": 35.572548,
+      "latitude": 33.030324,
+      "elevation": 143.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל מכברם": {
+    "id": 344,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 341,
+    "splitFromName": "נחל מכברם",
+    "middle": {
+      "longitude": 35.583817,
+      "latitude": 33.037748,
+      "elevation": 126.0
     },
     "elevation_gain_m": 10.8,
     "elevation_loss_m": 18.2,
     "net_elevation_change_m": -7.4
+  },
+  "אחוזת הירדן": {
+    "id": 342,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 76,
+    "splitFromName": "נחל מכברם",
+    "middle": {
+      "longitude": 35.57212,
+      "latitude": 33.044213,
+      "elevation": 143.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
   },
   "כביש 9118 תל חצור": {
     "id": 192,
@@ -5270,6 +5388,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-3af86b92",
+        "type": "landmark",
+        "information": "המקום בו נפל אחד מהמסוקים באסון ב 1997. אין גישה לאתר הנצחה",
+        "location": [
+          33.221945,
+          35.64153
+        ],
+        "name": "אתר אסון המסוקים",
+        "description": "המקום בו נפל אחד מהמסוקים באסון ב 1997. אין גישה לאתר הנצחה, יש להגיע דרך הצומת שמול קיבוץ דפנה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-3af86b92-04323504.webp",
+            "thumbnail": "public-data/poi-images/poi-3af86b92-04323504-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.643157,
       "latitude": 33.224347,
@@ -6173,6 +6310,24 @@
     "elevation_gain_m": 2.0,
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 2.0
+  },
+  "איילת השחר שדות צפוניים": {
+    "id": 345,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.57301,
+      "latitude": 33.036188,
+      "elevation": 150.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
   },
   "שביל אופניים 918 דפנה [split archive 88]": {
     "id": 88,
@@ -7153,6 +7308,76 @@
       [
         35.579914,
         33.211613
+      ]
+    ]
+  },
+  "נחל מכברם [split archive 76]": {
+    "id": 76,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "נחל מכברם",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.576607,
+        33.031017
+      ],
+      [
+        35.583957,
+        33.033561
+      ],
+      [
+        35.585642,
+        33.04138
+      ],
+      [
+        35.576873,
+        33.042851
+      ],
+      [
+        35.572122,
+        33.044247
+      ]
+    ]
+  },
+  "נחל מכברם [split archive 341]": {
+    "id": 341,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 76,
+    "splitFromName": "נחל מכברם",
+    "originalName": "נחל מכברם",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.572685,
+        33.030355
+      ],
+      [
+        35.576759,
+        33.030959
+      ],
+      [
+        35.583969,
+        33.033674
+      ],
+      [
+        35.585679,
+        33.041461
+      ],
+      [
+        35.576802,
+        33.042855
       ]
     ]
   },

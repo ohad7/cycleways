@@ -11,12 +11,14 @@ import {
   poiMarkerIconName,
 } from "../packages/core/src/data/poiTypes.js";
 import { registerPoiEmojiImages } from "../packages/core/src/map/emojiMarkerImage.js";
+import { parseRichText } from "../packages/core/src/utils/richText.js";
 import { bootstrapKeyframesFromGps } from "../src/components/featured/gpsBootstrap.js";
 import { createVideoSync } from "../src/components/featured/videoSync.js";
 import {
   buildCumulativeDistances,
   nearestPointOnPolyline,
   pointAtFraction,
+  snapPointToRouteWithinWindow,
 } from "../src/components/featured/routeGeometry.js";
 import { vsFormatTime, vsParseTime } from "./lib/vs-time.mjs";
 
@@ -2623,6 +2625,19 @@ function toggleEdgeInCompose(feature) {
   if (!isComposingNewSegmentEdges()) return;
   const ref = edgeRefFromBaseFeature(feature, state.draw.edgeRefs.length);
   if (!ref) return;
+  // A manual base edge that has been folded into the graph lives in BOTH the
+  // base-graph and manual-base-edges hit layers under the same edgeId. A single
+  // map click dispatches to both layer handlers, which would otherwise toggle
+  // the edge on then immediately back off — leaving the draft empty and Done
+  // disabled. Process each edgeId at most once per click dispatch.
+  if (!state.composeToggledThisClick) {
+    state.composeToggledThisClick = new Set();
+    window.setTimeout(() => {
+      state.composeToggledThisClick = null;
+    }, 0);
+  }
+  if (state.composeToggledThisClick.has(String(ref.edgeId))) return;
+  state.composeToggledThisClick.add(String(ref.edgeId));
   const currentIdx = state.draw.edgeRefs.findIndex(
     (existing) => String(existing.edgeId) === String(ref.edgeId),
   );
@@ -4753,7 +4768,40 @@ function cleanOptionalText(value) {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function appendDataTextField(item, { label, value = "", rows = 0, onCommit }) {
+// Renders the rich-text AST into a DOM preview node (mirrors the app renderers;
+// links validated by the shared parser, so no raw-HTML path here either).
+function renderRichTextPreview(target, value) {
+  target.replaceChildren();
+  const blocks = parseRichText(value);
+  const renderInline = (parent, nodes) => {
+    for (const node of nodes) {
+      if (node.t === "text") {
+        parent.appendChild(document.createTextNode(node.v));
+      } else if (node.t === "break") {
+        parent.appendChild(document.createElement("br"));
+      } else if (node.t === "bold") {
+        const strong = document.createElement("strong");
+        renderInline(strong, node.children);
+        parent.appendChild(strong);
+      } else if (node.t === "link") {
+        const a = document.createElement("a");
+        a.href = node.href;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        renderInline(a, node.children);
+        parent.appendChild(a);
+      }
+    }
+  };
+  for (const block of blocks) {
+    const p = document.createElement("p");
+    renderInline(p, block);
+    target.appendChild(p);
+  }
+  target.hidden = blocks.length === 0;
+}
+
+function appendDataTextField(item, { label, value = "", rows = 0, onCommit, preview = false }) {
   const fieldLabel = document.createElement("label");
   fieldLabel.className = "field-label";
   fieldLabel.textContent = label;
@@ -4770,6 +4818,16 @@ function appendDataTextField(item, { label, value = "", rows = 0, onCommit }) {
   input.value = value || "";
   input.addEventListener("change", () => onCommit(cleanOptionalText(input.value)));
   item.appendChild(input);
+
+  if (preview) {
+    const previewEl = document.createElement("div");
+    previewEl.className = "rich-text-preview";
+    item.appendChild(previewEl);
+    const update = () => renderRichTextPreview(previewEl, input.value);
+    input.addEventListener("input", update);
+    update();
+  }
+
   return input;
 }
 
@@ -5131,6 +5189,7 @@ function renderDataList() {
       label: "Short description",
       value: marker.information,
       rows: 2,
+      preview: true,
       onCommit: (information) => {
         updateDataMarker(index, { information });
         renderDataList();
@@ -5141,6 +5200,7 @@ function renderDataList() {
       label: "Long description",
       value: marker.description,
       rows: 3,
+      preview: true,
       onCommit: (description) => {
         updateDataMarker(index, { description });
         renderDataList();
@@ -7354,10 +7414,15 @@ function vsExtractYouTubeId(url) {
 
 // Snap a {lat, lng} point to the nearest point on the polyline.
 // Returns { lat, lng, distanceMeters } or null if route empty.
-function vsSnapToPolyline(point, polyline) {
+//
+// `window` ({ afterFraction, beforeFraction }) constrains the snap to the leg
+// consistent with the surrounding keyframes' progress, so an out-and-back spur
+// (where a point projects equally onto the outbound and return leg) snaps to the
+// forward leg instead of jumping backward.
+function vsSnapToPolyline(point, polyline, window = {}) {
   if (!polyline || polyline.length < 2) return null;
   const cumulative = buildCumulativeDistances(polyline);
-  const snap = nearestPointOnPolyline(point, polyline, cumulative);
+  const snap = snapPointToRouteWithinWindow(point, polyline, cumulative, window);
   const snappedPoint = pointAtFraction(polyline, cumulative, snap.fraction);
   return {
     lat: snappedPoint.lat,
@@ -7689,17 +7754,27 @@ function handleVideoSyncMapClick(event) {
     vsSetStatus("Load a YouTube URL first.");
     return;
   }
+  const t = videoSyncState.player.getCurrentTime();
+  // Replace any existing keyframe at same t (within 50ms), else insert sorted.
+  const filtered = videoSyncState.keyframes.filter((kf) => Math.abs(kf.t - t) > 0.05);
+  // Constrain the snap to the leg consistent with the neighbouring keyframes'
+  // progress, so out-and-back spurs don't snap the return leg onto the overlapping
+  // outbound leg (which would send the animation backward).
+  const prevKf = filtered
+    .filter((kf) => kf.t < t && Number.isFinite(kf.fraction))
+    .reduce((best, kf) => (!best || kf.t > best.t ? kf : best), null);
+  const nextKf = filtered
+    .filter((kf) => kf.t > t && Number.isFinite(kf.fraction))
+    .reduce((best, kf) => (!best || kf.t < best.t ? kf : best), null);
   const snap = vsSnapToPolyline(
     { lat: event.lngLat.lat, lng: event.lngLat.lng },
     videoSyncState.routePolyline,
+    { afterFraction: prevKf?.fraction ?? null, beforeFraction: nextKf?.fraction ?? null },
   );
   if (!snap || snap.distanceMeters > VS_SNAP_THRESHOLD_M) {
     vsSetStatus(`Click too far from route (${snap?.distanceMeters?.toFixed(0)}m).`);
     return;
   }
-  const t = videoSyncState.player.getCurrentTime();
-  // Replace any existing keyframe at same t (within 50ms), else insert sorted.
-  const filtered = videoSyncState.keyframes.filter((kf) => Math.abs(kf.t - t) > 0.05);
   filtered.push({ t, lat: snap.lat, lon: snap.lng, fraction: snap.fraction });
   filtered.sort((a, b) => a.t - b.t);
   videoSyncState.keyframes = filtered;
@@ -8205,6 +8280,14 @@ function rcRenderDetail() {
       });
     }
     row.append(label, input);
+    if (f.textarea && ["intro", "description", "notes"].includes(f.key)) {
+      const fieldPreview = document.createElement("div");
+      fieldPreview.className = "rich-text-preview";
+      row.appendChild(fieldPreview);
+      const updateFieldPreview = () => renderRichTextPreview(fieldPreview, input.value);
+      input.addEventListener("input", updateFieldPreview);
+      updateFieldPreview();
+    }
     rcEls.detail.appendChild(row);
   }
   rcEls.detail.appendChild(rcRouteMapImageSection(entry));
@@ -8814,6 +8897,13 @@ function rcEndpointSection(entry, key, label) {
   });
   descRow.append(descLabel, descInput);
   section.appendChild(descRow);
+
+  const descPreview = document.createElement("div");
+  descPreview.className = "rich-text-preview";
+  descRow.appendChild(descPreview);
+  const updateDescPreview = () => renderRichTextPreview(descPreview, descInput.value);
+  descInput.addEventListener("input", updateDescPreview);
+  updateDescPreview();
 
   const images = Array.isArray(point?.images) ? point.images : [];
   if (images.length > 0) {

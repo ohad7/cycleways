@@ -3,6 +3,7 @@ import MapSurface from "./MapSurface.jsx";
 
 // Composition root for the map. Keeps the map instance available for callers
 // without exposing MapSurface's initialization lifecycle.
+// segmentHighlight is passed through to MapSurface via the spread props.
 export default function MapView({ onMapReady, ...props }) {
   // Keep onMapReady current without making handleReady's identity change.
   // MapSurface's map-init effect depends on the onMapReady it receives; if that

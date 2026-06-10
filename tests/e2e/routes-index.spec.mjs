@@ -5,21 +5,6 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-function clockSeconds(value) {
-  const parts = String(value || "")
-    .trim()
-    .split(":")
-    .map((part) => Number(part));
-  if (parts.some((part) => !Number.isFinite(part))) return Number.NaN;
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  return Number.NaN;
-}
-
-function playbackTotalSeconds(timeText) {
-  return clockSeconds(String(timeText || "").split("/").pop());
-}
-
 test("/routes lists every recommended catalog route", async ({ page }) => {
   await page.goto("/routes");
   await expect(page.locator(".routes-page")).toBeVisible();
@@ -57,8 +42,12 @@ test("/routes lists every recommended catalog route", async ({ page }) => {
   ]);
 });
 
-test("/routes filters by possible start location", async ({ page }) => {
+test("/routes filters by possible start location", async ({ page, isMobile }) => {
   await page.goto("/routes");
+  // On mobile the filter panel is collapsed behind a toggle; open it first.
+  if (isMobile) {
+    await page.getByRole("button", { name: "סינון וחיפוש" }).click();
+  }
   const startLocation = page.getByLabel("התחלה", { exact: true });
   await startLocation.fill("הגושרים");
   await startLocation.press("Enter");
@@ -69,8 +58,12 @@ test("/routes filters by possible start location", async ({ page }) => {
   await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toHaveCount(0);
 });
 
-test("/routes filters by goes-through location", async ({ page }) => {
+test("/routes filters by goes-through location", async ({ page, isMobile }) => {
   await page.goto("/routes");
+  // On mobile the filter panel is collapsed behind a toggle; open it first.
+  if (isMobile) {
+    await page.getByRole("button", { name: "סינון וחיפוש" }).click();
+  }
   const throughLocation = page.getByLabel("עובר דרך", { exact: true });
   await throughLocation.fill("אגמון החולה");
   await throughLocation.press("Enter");
@@ -189,8 +182,9 @@ test("/routes generic route renders from snapshot without planner assets", async
   ).toBeVisible();
 
   const initialMapPlaybackTime = await page.locator(".fv-video-time").textContent();
-  expect(playbackTotalSeconds(initialMapPlaybackTime)).toBeGreaterThanOrEqual(35);
-  expect(playbackTotalSeconds(initialMapPlaybackTime)).toBeLessThanOrEqual(80);
+  expect(initialMapPlaybackTime).toMatch(
+    /^\s*\d+(\.\d+)?\s*(m|km)\s*\/\s*\d+(\.\d+)?\s*km\s*$/,
+  );
   await page.locator(".fv-route-actions .fv-route-action--primary").click();
   await expect(page.locator(".fv-video-play-toggle")).toHaveAttribute("aria-label", "השהה מסלול");
   await expect.poll(
@@ -205,7 +199,9 @@ test("/routes generic route renders from snapshot without planner assets", async
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   });
-  await expect(page.locator(".fv-video-progress-value")).not.toHaveText("0 מ׳");
+  const scrubbedReadout = await page.locator(".fv-video-time").textContent();
+  const scrubbedProgress = scrubbedReadout.split("/")[0].trim();
+  expect(scrubbedProgress).not.toMatch(/^0\s*(m|km)$/);
 
   expect(
     requestedUrls.some((url) =>
@@ -241,7 +237,7 @@ test("/routes promoted video route renders the video template", async ({ page })
   await expect(
     page.locator(".fv-route-warning-card", { hasText: "שער יציאה מדפנה למטעים" }),
   ).toBeVisible();
-  const figWarning = page.locator(".fv-route-warning-card", { hasText: "תאנים ושיחי פטל" });
+  const figWarning = page.locator(".fv-route-warning-card", { hasText: "עצי תאנה ושיחי פטל" });
   await expect(figWarning).toBeVisible();
   await expect(figWarning.locator("img")).toHaveCount(1);
 

@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "kovshey-hagolan",
-  "generatedAt": "2026-06-08T04:19:37.983Z",
+  "generatedAt": "2026-06-10T18:45:11.258Z",
   "source": {
     "routeTokenHash": "sha256:a0ee06fea7634c16b7cc666d9b51064e985cb22a0ca98fea74336e441af1a533",
     "routeFormat": "compact_route",
-    "mapVersion": "0d60a37c3376",
+    "mapVersion": "528fc6edbff9",
     "assetHashes": {
-      "bikeRoads": "21fb0c915a02b30020d121eda5ae550dc1d433350b06e3665ac29d790b1d5b3e",
-      "segments": "5e9a055254f59043ac1229f354d48cf1175e140d890957b18220ecda8b602271",
-      "cwBaseIndex": "e60f0b6625238fb43e263af633d07e9f1f6ccd15b4ec1e407e026af88044324e",
-      "baseRoutingShards": "742a9912097ef9b37d81989838d9eec99970dcaadbe2fbe776660f9c0f10b531"
+      "bikeRoads": "94b5afa2b851fe3744cbc784fb57e805131d4f022ee6bd70a173709f3257535b",
+      "segments": "b09ec8c5e36f482c8165858fc9b44c47d60c406467eeac43a19243827185f461",
+      "cwBaseIndex": "0f1dd292f87e93731c9bad4b506f8b611a0c7f3c59312ac51e3b5f5eea50f3ff",
+      "baseRoutingShards": "fe364839d4bf1fad7f9f65ecdbee600427966d9d06e344a78de9960a0698fb3e"
     }
   },
   "route": {
