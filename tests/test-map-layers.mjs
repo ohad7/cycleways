@@ -4,6 +4,7 @@ import {
   buildRoutePointDragPreviewFeatureCollection,
   buildRouteDirectionPulseFeatureCollection,
   buildVideoCursorLayerData,
+  buildRecommendedRoutesFeatureCollection,
   getRouteFeatureColor,
   normalizeVideoCursorVariant,
   VIDEO_CURSOR_DEFAULT_VARIANT,
@@ -310,4 +311,44 @@ assert.equal(
   );
 }
 
-console.log("Map layer style tests passed");
+{
+  const routes = [
+    {
+      slug: "bright-one",
+      geometry: [{ lng: 0, lat: 0 }, { lng: 1, lat: 1 }],
+      color: "#e8590c",
+      tier: "bright",
+      hovered: false,
+    },
+    {
+      slug: "ghost-one",
+      geometry: [{ lng: 2, lat: 2 }, { lng: 3, lat: 3 }],
+      color: "#ae3ec9",
+      tier: "ghost",
+      hovered: false,
+    },
+    {
+      slug: "hovered-one",
+      geometry: [{ lng: 4, lat: 4 }, { lng: 5, lat: 5 }],
+      color: "#7048e8",
+      tier: "bright",
+      hovered: true,
+    },
+  ];
+  const fc = buildRecommendedRoutesFeatureCollection(routes);
+  assert.equal(fc.features.length, 3, "one feature per valid route");
+  assert.equal(fc.features[0].properties.tier, "bright");
+  assert.equal(fc.features[0].properties.hovered, false);
+  assert.equal(fc.features[1].properties.tier, "ghost");
+  assert.equal(fc.features[2].properties.hovered, true);
+
+  // Missing tier defaults to "bright"; too-short geometry is dropped.
+  const fallback = buildRecommendedRoutesFeatureCollection([
+    { geometry: [{ lng: 0, lat: 0 }, { lng: 1, lat: 1 }], color: "#000" },
+    { geometry: [{ lng: 0, lat: 0 }], color: "#000", tier: "ghost" },
+  ]);
+  assert.equal(fallback.features.length, 1, "drops <2-point geometry");
+  assert.equal(fallback.features[0].properties.tier, "bright", "tier defaults to bright");
+}
+
+console.log("test-map-layers.mjs passed");

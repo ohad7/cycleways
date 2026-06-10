@@ -503,14 +503,14 @@ export function syncRecommendedRoutesLayer(map, routes) {
         "line-color": ["get", "color"],
         "line-width": [
           "case",
-          ["get", "hovered"],
-          6,
+          ["get", "hovered"], 6,
+          ["==", ["get", "tier"], "ghost"], 2,
           3.5,
         ],
         "line-opacity": [
           "case",
-          ["get", "hovered"],
-          1,
+          ["get", "hovered"], 1,
+          ["==", ["get", "tier"], "ghost"], 0.25,
           0.9,
         ],
       },
@@ -542,7 +542,7 @@ export function setBuiltRouteVisibility(map, visible) {
   }
 }
 
-function buildRecommendedRoutesFeatureCollection(routes) {
+export function buildRecommendedRoutesFeatureCollection(routes) {
   if (!Array.isArray(routes) || routes.length === 0) {
     return { type: "FeatureCollection", features: [] };
   }
@@ -559,6 +559,7 @@ function buildRecommendedRoutesFeatureCollection(routes) {
       geometry: { type: "LineString", coordinates },
       properties: {
         hovered: Boolean(route.hovered),
+        tier: route.tier === "ghost" ? "ghost" : "bright",
         color: route.color || DISCOVER_ROUTE_PALETTE[0],
       },
     });
