@@ -552,13 +552,17 @@
 .panel-elev__band:hover { opacity: 1; }
 
 /* Minimal recommended/result cards in the Discover panel */
+.panel-route-card-wrap {
+  position: relative;
+}
+
 .panel-route-card {
   display: flex;
   gap: 10px;
   align-items: center;
   width: 100%;
   text-align: start;
-  padding: 8px;
+  padding: 8px 8px 26px;
   border: 1px solid #efe8d7;
   border-radius: 12px;
   background: #fff;
@@ -623,6 +627,21 @@
 .panel-route-card__near {
   color: #1d6ee8;
   font-weight: 700;
+}
+
+.panel-route-card__story-link {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2f6b3c;
+  text-decoration: none;
+}
+
+.panel-route-card__story-link:hover,
+.panel-route-card__story-link:focus-visible {
+  text-decoration: underline;
 }
 
 .recent-routes {

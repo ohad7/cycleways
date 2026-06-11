@@ -90,3 +90,16 @@ test("Discover filters survive a toggle to Build and back", async ({ page }) => 
     panel.getByRole("button", { name: "קל", exact: true }).first(),
   ).toHaveAttribute("aria-pressed", "true");
 });
+
+test("Discover cards link to the route page without hijacking card selection", async ({ page }) => {
+  await page.goto("/");
+  const panel = page.getByTestId("front-panel");
+  await ensurePanelOpen(page);
+  await expect(panel).toBeVisible();
+  const link = panel
+    .locator(".panel-route-card-wrap")
+    .first()
+    .getByRole("link", { name: "לעמוד המסלול" });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute("href", /\/routes\/[a-z0-9-]+/);
+});
