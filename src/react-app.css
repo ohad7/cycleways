@@ -482,7 +482,7 @@ input {
 
 .react-modal {
   position: fixed;
-  z-index: 10;
+  z-index: 100; /* must be above the mobile bottom sheet (z-index: 20) */
   inset: 0;
   display: grid;
   place-items: center;

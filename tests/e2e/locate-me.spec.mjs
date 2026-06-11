@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { installMapboxMock } from "./mapbox-mock.mjs";
+import { ensurePanelOpen } from "./sheet-helpers.mjs";
 
 // A fix at Shde Nehemia (inside the Upper-Galilee map area).
 // Using Shde Nehemia rather than Beit Hillel itself so that sovev-beit-hillel
@@ -18,6 +19,8 @@ test.beforeEach(async ({ page }) => {
 test("locate button surfaces near-me labels and sort in Discover", async ({ page }) => {
   await page.goto("/");
   const panel = page.getByTestId("front-panel");
+  // On mobile the panel is in a bottom sheet — open it so panel content is visible.
+  await ensurePanelOpen(page);
   await expect(panel).toBeVisible();
   const locate = page.getByRole("button", { name: "מצא את המיקום שלי" });
   await expect(locate).toBeVisible();
@@ -33,6 +36,8 @@ test("locate button surfaces near-me labels and sort in Discover", async ({ page
 test("denied geolocation degrades to an error message", async ({ page, context }) => {
   await context.clearPermissions();
   await page.goto("/");
+  // On mobile the panel is in a bottom sheet — open it before interacting.
+  await ensurePanelOpen(page);
   await expect(page.getByTestId("front-panel")).toBeVisible();
   await page.getByRole("button", { name: "מצא את המיקום שלי" }).click();
   // The geolocation error path may take up to ~10s in some configurations.
