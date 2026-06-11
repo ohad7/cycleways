@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   offsetsForHeight,
   resolveSnap,
@@ -27,6 +27,16 @@ export default function BottomSheet({ snap, onSnapChange, peekContent, children 
   }, []);
 
   const offsets = offsetsForHeight(shellHeight);
+
+  useLayoutEffect(() => {
+    const shell = sheetRef.current?.parentElement;
+    if (!shell) return undefined;
+    shell.scrollTop = 0;
+    const raf = window.requestAnimationFrame(() => {
+      shell.scrollTop = 0;
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [snap]);
 
   const handleTouchStart = useCallback(
     (event) => {

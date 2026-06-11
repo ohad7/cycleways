@@ -75,6 +75,8 @@
 }
 
 :root {
+  --front-sheet-peek-height: 96px;
+  --front-sheet-peek-gap: 12px;
   color: #172026;
   background: #eef3f0;
   font-family:
@@ -1622,6 +1624,21 @@ input {
      Use 74px to give 13px clearance above the transport. */
   .map-container--route-ready .route-point-actions {
     bottom: 74px;
+  }
+}
+
+@media (max-width: 860px) {
+  .planner-route-playback.fv-video-controls {
+    bottom: calc(var(--front-sheet-peek-height) + var(--front-sheet-peek-gap));
+    z-index: 12;
+  }
+
+  .route-point-actions {
+    bottom: calc(var(--front-sheet-peek-height) + 18px);
+  }
+
+  .map-container--route-ready .route-point-actions {
+    bottom: calc(var(--front-sheet-peek-height) + 74px);
   }
 }
 

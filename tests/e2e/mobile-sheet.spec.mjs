@@ -29,6 +29,30 @@ test("mobile: selecting a route drops the sheet back to peek", async ({ page, is
   await sheet.locator(".panel-route-card").first().click();
   await expect(page).toHaveURL(/[?&]route=/, { timeout: 20_000 });
   await expect(sheet).toHaveAttribute("data-snap", "peek");
+  await expect.poll(async () => page.locator(".front-shell").evaluate((shell) => {
+    const sheetEl = shell.querySelector(".front-sheet");
+    const shellRect = shell.getBoundingClientRect();
+    const sheetRect = sheetEl.getBoundingClientRect();
+    return Math.round(shellRect.bottom - sheetRect.top);
+  })).toBeLessThanOrEqual(112);
+  const peekLayout = await page.locator(".front-shell").evaluate((shell) => {
+    const peekEl = shell.querySelector(".front-sheet__peek");
+    const playbackEl = shell.querySelector(".planner-route-playback");
+    const shellRect = shell.getBoundingClientRect();
+    const sheetRect = shell.querySelector(".front-sheet").getBoundingClientRect();
+    const peekRect = peekEl.getBoundingClientRect();
+    const playbackRect = playbackEl?.getBoundingClientRect();
+    return {
+      shellScrollTop: shell.scrollTop,
+      visibleSheetPx: Math.round(shellRect.bottom - sheetRect.top),
+      playbackBottom: playbackRect ? Math.round(playbackRect.bottom) : null,
+      peekTop: Math.round(peekRect.top),
+    };
+  });
+  expect(peekLayout.shellScrollTop).toBe(0);
+  expect(peekLayout.visibleSheetPx).toBeGreaterThanOrEqual(80);
+  expect(peekLayout.visibleSheetPx).toBeLessThanOrEqual(112);
+  expect(peekLayout.playbackBottom).toBeLessThan(peekLayout.peekTop);
 });
 
 test("mobile: בנו מסלול switches to Build and keeps the map front", async ({ page, isMobile }) => {
