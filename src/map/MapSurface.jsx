@@ -722,7 +722,10 @@ function MapSurface({
     };
 
     // Point drags activate only past the slop threshold, so a touch that's
-    // really a tap (select) or a wobbly pan start doesn't move the point.
+    // really a tap or a wobbly pan start doesn't move the point. A no-move
+    // release is cleaned up in endDrag; selection is left to the layer click
+    // handler (handleRoutePointClick) which runs after handleMapClick's
+    // blocking query has read the still-intact points layer.
     // Mirrors the routeLineDrag pending→active pattern below.
     const POINT_DRAG_SLOP_PX = 6;
 
@@ -824,11 +827,11 @@ function MapSurface({
         map.getCanvas().style.cursor = "";
         if (pointDrag.active) {
           callbacksRef.current.onRoutePointDragEnd?.(pointDrag.index);
-        } else {
-          // A no-move release is a tap: select the point. Idempotent with the
-          // layer click handler, which also fires on genuine clicks/taps.
-          callbacksRef.current.onRoutePointSelect?.(pointDrag.index);
         }
+        // A no-move release is a tap; selection is handled by the layer click
+        // handler, which fires after handleMapClick's blocking query has seen
+        // the still-intact points layer (selecting here at mouseup would
+        // setData the layer and break that query → a bogus extra point).
         return;
       }
 
