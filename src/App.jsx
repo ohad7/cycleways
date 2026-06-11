@@ -22,6 +22,7 @@ import { buildRouteFitRequest, combineRouteGeometries } from "./map/routeFitPadd
 import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
 import PlannerHints from "./components/PlannerHints.jsx";
 import DraftRestoreBanner from "./components/DraftRestoreBanner.jsx";
+import { emptyFilters } from "./components/WelcomeDiscover.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import BottomSheet from "./components/frontPanel/BottomSheet.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
@@ -110,6 +111,8 @@ function App() {
   const [sendToPhoneOpen, setSendToPhoneOpen] = useState(false);
   const [hoveredRouteSlug, setHoveredRouteSlug] = useState(null);
   const [hoveredPoiId, setHoveredPoiId] = useState(null);
+  const [discoverFilters, setDiscoverFilters] = useState(emptyFilters);
+  const [nearMeSort, setNearMeSort] = useState(false);
   const [discoverSlugs, setDiscoverSlugs] = useState([]);
   const [discoverViewport, setDiscoverViewport] = useState({
     visibleSlugs: [],
@@ -683,6 +686,10 @@ function App() {
                       onRouteViewport={setDiscoverViewport}
                       onHoverRoute={setHoveredRouteSlug}
                       locationFix={mapUi.locationFix}
+                      filters={discoverFilters}
+                      onFiltersChange={setDiscoverFilters}
+                      nearMeSort={nearMeSort}
+                      onNearMeSortChange={setNearMeSort}
                       recentRoutes={recentRoutes}
                       onSelectRecent={(entry) =>
                         handleSelectRecommended({

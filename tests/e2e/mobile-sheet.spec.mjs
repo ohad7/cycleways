@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { installMapboxMock } from "./mapbox-mock.mjs";
+import { ensurePanelOpen } from "./sheet-helpers.mjs";
 
 test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
@@ -73,4 +74,19 @@ test("desktop: no sheet affordances, side panel as before", async ({ page, isMob
   await expect(page.getByTestId("front-panel")).toBeVisible();
   await expect(page.locator(".front-sheet__grip")).toBeHidden();
   await expect(page.locator(".front-sheet__peek")).toBeHidden();
+});
+
+test("Discover filters survive a toggle to Build and back", async ({ page }) => {
+  await page.goto("/");
+  const panel = page.getByTestId("front-panel");
+  await ensurePanelOpen(page);
+  await expect(panel).toBeVisible();
+  const chip = panel.getByRole("button", { name: "קל", exact: true }).first();
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await panel.getByRole("tab", { name: "בניית מסלול" }).click();
+  await panel.getByRole("tab", { name: "חפש מסלול" }).click();
+  await expect(
+    panel.getByRole("button", { name: "קל", exact: true }).first(),
+  ).toHaveAttribute("aria-pressed", "true");
 });
