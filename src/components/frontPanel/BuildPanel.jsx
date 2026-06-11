@@ -15,6 +15,7 @@ export default function BuildPanel({
   canShare,
   onShare,
   shareCopied,
+  onSendToPhone,
   pois = [],
   onPoiClick,
   elevation,
@@ -64,6 +65,9 @@ export default function BuildPanel({
           </button>
           <button type="button" className="btn-ghost" disabled={!canShare} onClick={onShare}>
             {shareCopied ? "✓ הועתק" : "שיתוף"}
+          </button>
+          <button type="button" className="btn-ghost" disabled={!canShare} onClick={onSendToPhone}>
+            שלחו לטלפון
           </button>
         </div>
       )}

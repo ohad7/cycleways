@@ -42,6 +42,7 @@ import "./react-app.css";
 // download/share modal only loads when opened, and the route-discovery wizard
 // only loads when its feature flag is on (off by default).
 const DownloadModal = lazy(() => import("./components/DownloadModal.jsx"));
+const SendToPhone = lazy(() => import("./components/SendToPhone.jsx"));
 
 // When true, hovering a Discover route also flies the camera to it (and restores
 // the visible-set fit on mouse-out). Disabled by default: the constant zoom in/
@@ -104,6 +105,7 @@ function App() {
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [hoveredBand, setHoveredBand] = useState(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [sendToPhoneOpen, setSendToPhoneOpen] = useState(false);
   const [hoveredRouteSlug, setHoveredRouteSlug] = useState(null);
   const [hoveredPoiId, setHoveredPoiId] = useState(null);
   const [discoverSlugs, setDiscoverSlugs] = useState([]);
@@ -672,6 +674,7 @@ function App() {
                     canShare={Boolean(shareUrl)}
                     onShare={handlePanelShare}
                     shareCopied={shareCopied}
+                    onSendToPhone={() => setSendToPhoneOpen(true)}
                     error={routeState.error}
                     pois={buildPois}
                     onPoiClick={(poi) => handleDataPointFocus(poi)}
@@ -727,6 +730,11 @@ function App() {
             onClose={handleCloseDownload}
             onDownload={handleDownloadGpx}
           />
+        </Suspense>
+      )}
+      {state.status === "ready" && sendToPhoneOpen && (
+        <Suspense fallback={null}>
+          <SendToPhone shareUrl={shareUrl} onClose={() => setSendToPhoneOpen(false)} />
         </Suspense>
       )}
     </>

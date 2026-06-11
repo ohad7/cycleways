@@ -1689,3 +1689,20 @@ input {
   font-weight: 700;
   cursor: pointer;
 }
+
+.send-to-phone__qr {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.send-to-phone__qr svg {
+  width: 240px;
+  height: 240px;
+}
+
+.send-to-phone__hint {
+  text-align: center;
+  color: #52615c;
+  margin: 0 0 12px;
+}
