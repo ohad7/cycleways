@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { catalogFilter } from "../src/components/catalogFilter.js";
+import { catalogFilter } from "../packages/core/src/data/catalog.js";
 
 const catalog = [
   { slug: "a", distanceKm: 5,  elevationGainM: 50,  regionId: "hula-valley", passesNear: ["beit-hillel"], startPlaceIds: ["beit-hillel"], routeShape: { type: "circular" }, difficulty: "easy",     style: "family", surfaceType: "paved", qualityScore: 4.5 },

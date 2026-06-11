@@ -2,9 +2,11 @@ import React, { useEffect, useId, useMemo, useState } from "react";
 import Breadcrumbs from "../components/Breadcrumbs.jsx";
 import PageShell from "../components/PageShell.jsx";
 import RouteCatalogCard from "../components/routes/RouteCatalogCard.jsx";
-import { catalogFilter } from "../components/catalogFilter.js";
 import { hasRouteStory, loadRecommendedRouteList } from "../featured/index.js";
 import {
+  catalogFilter,
+  loadPlaces,
+  placeOptionsForEntries,
   routePassesThroughPlaceIds,
   routeStartPlaceIds,
 } from "@cycleways/core/data/catalog.js";
@@ -374,33 +376,6 @@ function PlaceAutocompleteFilter({
       )}
     </div>
   );
-}
-
-async function loadPlaces() {
-  try {
-    const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
-    const res = await fetch(`${base}data/places.json`);
-    if (!res.ok) return [];
-    return (await res.json())?.places || [];
-  } catch {
-    return [];
-  }
-}
-
-function placeOptionsForEntries(entries, placeById, placeIdsForEntry) {
-  const counts = new Map();
-  for (const entry of entries) {
-    for (const id of placeIdsForEntry(entry)) {
-      counts.set(id, (counts.get(id) || 0) + 1);
-    }
-  }
-  return Array.from(counts.keys())
-    .map((id) => ({
-      value: id,
-      label: placeById.get(id)?.name || id,
-      count: counts.get(id) || 0,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label, "he"));
 }
 
 function normalizeSearchText(value) {

@@ -7,12 +7,14 @@ const mobileRoot = path.resolve(scriptDir, "..");
 const repoRoot = path.resolve(mobileRoot, "../..");
 const sourceRoot = path.join(repoRoot, "public-data");
 const targetRoot = path.join(mobileRoot, "assets/data/public-data");
+const targetDataRoot = path.join(mobileRoot, "assets/data");
 const generatedFile = path.join(
   repoRoot,
   "packages/core/src/platform/bundledAssets.native.js",
 );
 
 const jsonAssets = [
+  { logicalPath: "data/places.json", sourcePath: "data/places.json" },
   { logicalPath: "public-data/map-manifest.json" },
   {
     logicalPath: "public-data/bike_roads.geojson",
@@ -20,6 +22,7 @@ const jsonAssets = [
   },
   { logicalPath: "public-data/segments.json" },
   { logicalPath: "public-data/cw-base-index.json" },
+  { logicalPath: "public-data/route-catalog.json" },
   { logicalPath: "public-data/base-routing-shards/manifest.json" },
 ];
 
@@ -28,7 +31,22 @@ async function main() {
   await fs.mkdir(targetRoot, { recursive: true });
 
   for (const asset of jsonAssets) {
-    await copyLogicalAsset(asset.logicalPath, asset.targetPath);
+    await copyLogicalAsset(asset);
+  }
+
+  const featuredRouteSourceDir = path.join(sourceRoot, "featured-routes");
+  const featuredRouteNames = (await fs.readdir(featuredRouteSourceDir))
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+  for (const name of featuredRouteNames) {
+    await copyLogicalAsset({
+      logicalPath: `public-data/featured-routes/${name}`,
+    });
+  }
+
+  const imagePaths = await collectImagePaths(featuredRouteNames);
+  for (const logicalPath of imagePaths) {
+    await copyLogicalAsset({ logicalPath });
   }
 
   const shardSourceDir = path.join(sourceRoot, "base-routing-shards/shards");
@@ -36,34 +54,81 @@ async function main() {
     .filter((name) => name.endsWith(".cwb"))
     .sort();
   for (const shardName of shardNames) {
-    await copyLogicalAsset(
-      `public-data/base-routing-shards/shards/${shardName}`,
-    );
+    await copyLogicalAsset({
+      logicalPath: `public-data/base-routing-shards/shards/${shardName}`,
+    });
   }
 
   await fs.writeFile(
     generatedFile,
-    generateBundledAssetModule(shardNames),
+    generateBundledAssetModule({ featuredRouteNames, imagePaths, shardNames }),
     "utf8",
   );
 
   console.log(
-    `[mobile-assets] copied ${jsonAssets.length} JSON assets and ${shardNames.length} routing shards`,
+    `[mobile-assets] copied ${jsonAssets.length + featuredRouteNames.length} JSON assets, ${imagePaths.length} images, and ${shardNames.length} routing shards`,
   );
 }
 
-async function copyLogicalAsset(logicalPath, targetLogicalPath = logicalPath) {
-  const relativePath = logicalPath.replace(/^public-data\//, "");
-  const targetRelativePath = targetLogicalPath.replace(/^public-data\//, "");
-  const sourcePath = path.join(sourceRoot, relativePath);
-  const targetPath = path.join(targetRoot, targetRelativePath);
-  await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  await fs.copyFile(sourcePath, targetPath);
+async function copyLogicalAsset(asset) {
+  const { logicalPath, sourcePath = logicalPath, targetPath = logicalPath } = asset;
+  const source = path.join(repoRoot, sourcePath);
+  const target = path.join(targetDataRoot, targetPath);
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.copyFile(source, target);
 }
 
-function generateBundledAssetModule(shardNames) {
-  const jsonEntries = jsonAssets
+function jsonAssetList(featuredRouteNames) {
+  return [
+    ...jsonAssets,
+    ...featuredRouteNames.map((name) => ({
+      logicalPath: `public-data/featured-routes/${name}`,
+    })),
+  ];
+}
+
+async function collectImagePaths(featuredRouteNames) {
+  const imagePaths = new Set();
+  const jsonPaths = [
+    "public-data/route-catalog.json",
+    ...featuredRouteNames.map((name) => `public-data/featured-routes/${name}`),
+  ];
+
+  for (const logicalPath of jsonPaths) {
+    const source = path.join(repoRoot, logicalPath);
+    const json = JSON.parse(await fs.readFile(source, "utf8"));
+    collectImagePathsFromValue(json, imagePaths);
+  }
+
+  return Array.from(imagePaths)
+    .filter((logicalPath) => logicalPath.startsWith("public-data/"))
+    .sort();
+}
+
+function collectImagePathsFromValue(value, imagePaths) {
+  if (typeof value === "string") {
+    if (/\.(?:png|jpe?g|webp)$/i.test(value)) {
+      imagePaths.add(value);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectImagePathsFromValue(item, imagePaths);
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const item of Object.values(value)) {
+      collectImagePathsFromValue(item, imagePaths);
+    }
+  }
+}
+
+function generateBundledAssetModule({ featuredRouteNames, imagePaths, shardNames }) {
+  const jsonEntries = jsonAssetList(featuredRouteNames)
     .map((asset) => assetMapEntry(asset.logicalPath, asset.targetPath))
+    .join("\n");
+  const imageEntries = imagePaths
+    .map((logicalPath) => assetMapEntry(logicalPath))
     .join("\n");
   const binaryEntries = shardNames
     .map((name) =>
@@ -77,6 +142,10 @@ function generateBundledAssetModule(shardNames) {
 
 export const JSON_ASSETS = {
 ${jsonEntries}
+};
+
+export const IMAGE_ASSETS = {
+${imageEntries}
 };
 
 export const BINARY_ASSETS = {

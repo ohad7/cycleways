@@ -7,6 +7,8 @@
 # Usage:
 #   scripts/run-on-device.sh            # detect + profile + patch signing
 #   scripts/run-on-device.sh --build    # also run `expo run:ios --device`
+#   scripts/run-on-device.sh --build-offline
+#                                      # build Release with bundled JS, no Metro
 #
 # No personal data is hardcoded here: the UDID, device name, Team ID and
 # profile are all derived at runtime. Credentials are read from the
@@ -18,8 +20,17 @@ MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 IOS_DIR="$MOBILE_DIR/ios"
 ASC_ENV="$HOME/.appstoreconnect/cycleways-asc.env"
 
-BUILD=0
-[ "${1:-}" = "--build" ] && BUILD=1
+BUILD_MODE="none"
+case "${1:-}" in
+  --build) BUILD_MODE="debug" ;;
+  --build-offline|--offline) BUILD_MODE="offline" ;;
+  "") ;;
+  *)
+    echo "ERROR: unknown option: $1"
+    echo "Usage: scripts/run-on-device.sh [--build|--build-offline]"
+    exit 1
+    ;;
+esac
 
 # --- preconditions -----------------------------------------------------------
 command -v fastlane >/dev/null 2>&1 || { echo "ERROR: fastlane not found (brew install fastlane)."; exit 1; }
@@ -92,7 +103,7 @@ echo "==> Registering device, ensuring App ID + profile, patching signing..."
 echo "==> Signing configured (manual, fastlane-managed profile)."
 
 # --- optional build + install ------------------------------------------------
-if [ "$BUILD" -eq 1 ]; then
+if [ "$BUILD_MODE" = "debug" ]; then
   echo "==> Building & installing onto the device (expo run:ios --device)..."
   if ! ( cd "$MOBILE_DIR" && npx expo run:ios --device "$UDID" ); then
     cat <<'MSG'
@@ -108,10 +119,25 @@ then re-run this script.
 MSG
     exit 1
   fi
+elif [ "$BUILD_MODE" = "offline" ]; then
+  echo "==> Building & installing offline Release onto the device (bundled JS, no Metro)..."
+  if ! ( cd "$MOBILE_DIR" && npm run ios:offline -- --device "$UDID" ); then
+    cat <<'MSG'
+
+Offline build failed. If the error mentions code signing, run this script once
+without build flags to refresh the provisioning profile, then retry:
+
+    scripts/run-on-device.sh
+    scripts/run-on-device.sh --build-offline
+MSG
+    exit 1
+  fi
 else
   echo
   echo "Done. To build & install now, run:"
   echo "    scripts/run-on-device.sh --build"
+  echo "or for a no-Metro standalone build:"
+  echo "    scripts/run-on-device.sh --build-offline"
   echo "or:"
   echo "    (cd \"$MOBILE_DIR\" && npx expo run:ios --device)"
 fi

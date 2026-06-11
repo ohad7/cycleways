@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
+  Image,
   Keyboard,
   Modal,
   PanResponder,
@@ -26,7 +27,27 @@ import Mapbox, {
 } from "@rnmapbox/maps";
 import Svg, { Path } from "react-native-svg";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
+import {
+  catalogFilter,
+  createEmptyCatalogFilters,
+  DISCOVERY_FILTER_GROUPS,
+  loadCatalog,
+  loadPlaces,
+  placeOptionsForEntries,
+  routeDifficultyLabel,
+  routeDisplayImage,
+  routeMapImage,
+  routePassesThroughPlaceIds,
+  routeShapeLabel,
+  routeStartPlaceIds,
+  routeSurfaceLabel,
+} from "@cycleways/core/data/catalog.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
+import {
+  loadFeaturedRouteSnapshot,
+  snapshotToRouteState,
+} from "@cycleways/core/data/featuredRouteSnapshots.js";
+import { IMAGE_ASSETS } from "@cycleways/core/platform/bundledAssets.native.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
 import {
   DATA_MARKERS_STYLE,
@@ -231,6 +252,9 @@ export default function MapScreen() {
     handleOpenDownload,
     handleCloseDownload,
     handleDownloadGpx,
+    handleLoadRouteParam,
+    handleAddRecentRoute,
+    recentRoutes,
     handleRoutePointSelect,
     handleRoutePointDragStart,
     handleRoutePointDrag,
@@ -242,6 +266,127 @@ export default function MapScreen() {
     handleAddDataMarkerToRoute,
     handleViewportIdle,
   } = useCyclewaysApp();
+  const [panelMode, setPanelMode] = useState("build");
+  const [catalogState, setCatalogState] = useState({
+    status: "loading",
+    catalog: null,
+    places: [],
+    error: null,
+  });
+  const [discoverFilters, setDiscoverFilters] = useState(() =>
+    createEmptyCatalogFilters(),
+  );
+  const [detailEntry, setDetailEntry] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [catalog, places] = await Promise.all([
+          loadCatalog(),
+          loadPlaces(),
+        ]);
+        if (cancelled) return;
+        setCatalogState({
+          status: "ready",
+          catalog,
+          places,
+          error: null,
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setCatalogState({
+            status: "error",
+            catalog: null,
+            places: [],
+            error,
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const discoverEntries = useMemo(() => {
+    const entries = Array.isArray(catalogState.catalog?.entries)
+      ? catalogState.catalog.entries
+      : [];
+    return sortNativeDiscoverRoutes(catalogFilter(entries, discoverFilters));
+  }, [catalogState.catalog, discoverFilters]);
+
+  const placeById = useMemo(
+    () => new Map(catalogState.places.map((place) => [place.id, place])),
+    [catalogState.places],
+  );
+
+  const startPlaceOptions = useMemo(
+    () =>
+      placeOptionsForEntries(
+        Array.isArray(catalogState.catalog?.entries)
+          ? catalogState.catalog.entries
+          : [],
+        placeById,
+        routeStartPlaceIds,
+      ),
+    [catalogState.catalog, placeById],
+  );
+  const throughPlaceOptions = useMemo(
+    () =>
+      placeOptionsForEntries(
+        Array.isArray(catalogState.catalog?.entries)
+          ? catalogState.catalog.entries
+          : [],
+        placeById,
+        routePassesThroughPlaceIds,
+      ),
+    [catalogState.catalog, placeById],
+  );
+  const featuredDiscoverEntries = useMemo(
+    () => discoverEntries.filter((entry) => entry.featured).slice(0, 3),
+    [discoverEntries],
+  );
+  const activeDiscoverFilterCount = useMemo(
+    () =>
+      Object.values(discoverFilters).reduce(
+        (sum, value) => sum + (value?.size || 0),
+        0,
+      ),
+    [discoverFilters],
+  );
+
+  const toggleDiscoverFilter = useCallback((axis, value) => {
+    setDiscoverFilters((current) => {
+      const next = new Set(current[axis]);
+      next.has(value) ? next.delete(value) : next.add(value);
+      return { ...current, [axis]: next.size > 1 ? new Set([value]) : next };
+    });
+  }, []);
+
+  const clearDiscoverFilters = useCallback(() => {
+    setDiscoverFilters(createEmptyCatalogFilters());
+  }, []);
+
+  const handleSelectDiscoverRoute = useCallback(
+    async (entry) => {
+      if (!entry?.route) return false;
+      const loaded = await handleLoadRouteParam(entry.route);
+      if (!loaded) return false;
+      handleAddRecentRoute({
+        param: entry.route,
+        name: entry.name || "מסלול",
+        distanceKm: Number(entry.distanceKm) || undefined,
+      });
+      setPanelMode("build");
+      return true;
+    },
+    [handleAddRecentRoute, handleLoadRouteParam],
+  );
+
+  const handleOpenRouteDetails = useCallback((entry) => {
+    if (entry) setDetailEntry(entry);
+  }, []);
 
   const networkFeatures = useMemo(() => {
     if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
@@ -762,16 +907,31 @@ export default function MapScreen() {
         canDownload={canDownload}
         canRedo={canRedo}
         canUndo={canUndo}
+        activeDiscoverFilterCount={activeDiscoverFilterCount}
+        catalogState={catalogState}
+        discoverEntries={discoverEntries}
+        discoverFilters={discoverFilters}
+        featuredDiscoverEntries={featuredDiscoverEntries}
         onOpenSummary={handleOpenDownload}
+        onPanelModeChange={setPanelMode}
         onRedo={handleRedo}
+        onOpenRouteDetails={handleOpenRouteDetails}
         onSearchChange={handleSearchQueryChange}
         onSearchSubmit={submitSearch}
+        onSelectDiscoverRoute={handleSelectDiscoverRoute}
+        onToggleDiscoverFilter={toggleDiscoverFilter}
+        onClearDiscoverFilters={clearDiscoverFilters}
         onUndo={handleUndo}
         locationState={locationState}
         mapUi={mapUi}
+        panelMode={panelMode}
+        placeById={placeById}
         presentation={routePresentation}
+        recentRoutes={recentRoutes}
         routeState={routeState}
         routePoints={displayedRoutePoints}
+        startPlaceOptions={startPlaceOptions}
+        throughPlaceOptions={throughPlaceOptions}
         onClear={handleRouteClear}
         onScrub={setScrubPoint}
       />
@@ -792,6 +952,12 @@ export default function MapScreen() {
         shareUrlLength={shareInfo.length}
         shareUrl={shareUrl}
         visible={mapUi.downloadModalOpen}
+      />
+      <RouteDetailModal
+        entry={detailEntry}
+        onClose={() => setDetailEntry(null)}
+        onOpenRoute={handleSelectDiscoverRoute}
+        placeById={placeById}
       />
     </View>
   );
@@ -945,22 +1111,37 @@ function RouteDirectionPulseLayer({ animator, routeGeometry }) {
 }
 
 function RoutePlannerChrome({
+  activeDiscoverFilterCount,
   animator,
   canDownload,
   canRedo,
   canUndo,
+  catalogState,
+  discoverEntries,
+  discoverFilters,
+  featuredDiscoverEntries,
   onClear,
+  onClearDiscoverFilters,
   onOpenSummary,
+  onOpenRouteDetails,
+  onPanelModeChange,
   onRedo,
   onSearchChange,
   onSearchSubmit,
+  onSelectDiscoverRoute,
+  onToggleDiscoverFilter,
   onUndo,
   onScrub,
   locationState,
   mapUi,
+  panelMode,
+  placeById,
   presentation,
+  recentRoutes,
   routeState,
   routePoints,
+  startPlaceOptions,
+  throughPlaceOptions,
 }) {
   const hasPoints = routePoints.length > 0;
   const hasElevationProfile = routeState.geometry.length >= 2;
@@ -1007,6 +1188,17 @@ function RoutePlannerChrome({
             <ChromeButton
               compact
               rail
+              label={panelMode === "discover" ? "בנה" : "מצא"}
+              onPress={() =>
+                onPanelModeChange?.(panelMode === "discover" ? "build" : "discover")
+              }
+              accessibilityLabel={
+                panelMode === "discover" ? "חזרה לבניית מסלול" : "מצא מסלול מוכן"
+              }
+            />
+            <ChromeButton
+              compact
+              rail
               disabled={!canUndo}
               icon="undo"
               label=""
@@ -1044,68 +1236,547 @@ function RoutePlannerChrome({
       </View>
 
       <View pointerEvents="box-none" style={styles.bottomSheetWrap}>
-        <View
-          style={[
-            styles.routeSheet,
-            hasPoints ? null : styles.routeSheetEmpty,
-          ]}
-        >
-          <View style={styles.routeSheetHeader}>
-            <Text style={styles.routeSheetTitle}>מסלול</Text>
-            <View style={styles.routeSheetHeaderActions}>
-              {presentation.canDownload ? (
+        {panelMode === "discover" ? (
+          <DiscoverSheet
+            activeFilterCount={activeDiscoverFilterCount}
+            catalogState={catalogState}
+            entries={discoverEntries}
+            featuredEntries={featuredDiscoverEntries}
+            filters={discoverFilters}
+            onBuild={() => onPanelModeChange?.("build")}
+            onClearFilters={onClearDiscoverFilters}
+            onOpenDetails={onOpenRouteDetails}
+            onSelectRoute={onSelectDiscoverRoute}
+            onToggleFilter={onToggleDiscoverFilter}
+            placeById={placeById}
+            recentRoutes={recentRoutes}
+            startPlaceOptions={startPlaceOptions}
+            throughPlaceOptions={throughPlaceOptions}
+          />
+        ) : (
+          <View
+            style={[
+              styles.routeSheet,
+              hasPoints ? null : styles.routeSheetEmpty,
+            ]}
+          >
+            <View style={styles.routeSheetHeader}>
+              <Text style={styles.routeSheetTitle}>מסלול</Text>
+              <View style={styles.routeSheetHeaderActions}>
+                {presentation.canDownload ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="סיכום ושיתוף המסלול"
+                    onPress={onOpenSummary}
+                    style={styles.routeSheetBadge}
+                  >
+                    <Text style={styles.routeSheetBadgeText}>סיכום</Text>
+                  </Pressable>
+                ) : null}
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="סיכום ושיתוף המסלול"
-                  onPress={onOpenSummary}
-                  style={styles.routeSheetBadge}
+                  accessibilityLabel={
+                    sheetCollapsed ? "הרחבת פאנל המסלול" : "מזעור פאנל המסלול"
+                  }
+                  onPress={() => setSheetCollapsed((current) => !current)}
+                  style={styles.routeSheetCollapse}
                 >
-                  <Text style={styles.routeSheetBadgeText}>סיכום</Text>
+                  <Text style={styles.routeSheetCollapseText}>
+                    {sheetCollapsed ? "⌃" : "⌄"}
+                  </Text>
                 </Pressable>
-              ) : null}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  sheetCollapsed ? "הרחבת פאנל המסלול" : "מזעור פאנל המסלול"
-                }
-                onPress={() => setSheetCollapsed((current) => !current)}
-                style={styles.routeSheetCollapse}
-              >
-                <Text style={styles.routeSheetCollapseText}>
-                  {sheetCollapsed ? "⌃" : "⌄"}
-                </Text>
-              </Pressable>
+              </View>
             </View>
+            <Text
+              numberOfLines={sheetCollapsed ? 1 : undefined}
+              style={routeState.error ? styles.errorText : styles.routeMessage}
+            >
+              {routeMessage}
+            </Text>
+            {!sheetCollapsed && presentation.warnings.length > 0 ? (
+              <View style={styles.warningList}>
+                {presentation.warnings.map((warning) => (
+                  <Text key={warning} style={styles.warningText}>
+                    {warning}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
+            {!sheetCollapsed && locationText ? (
+              <Text style={styles.locationText}>{locationText}</Text>
+            ) : null}
+            {!sheetCollapsed && hasElevationProfile ? (
+              <ElevationProfileChart
+                animator={animator}
+                distance={routeState.distance}
+                geometry={routeState.geometry}
+                onScrub={onScrub}
+              />
+            ) : null}
           </View>
-          <Text
-            numberOfLines={sheetCollapsed ? 1 : undefined}
-            style={routeState.error ? styles.errorText : styles.routeMessage}
-          >
-            {routeMessage}
-          </Text>
-          {!sheetCollapsed && presentation.warnings.length > 0 ? (
-            <View style={styles.warningList}>
-              {presentation.warnings.map((warning) => (
-                <Text key={warning} style={styles.warningText}>
-                  {warning}
-                </Text>
+        )}
+      </View>
+    </>
+  );
+}
+
+function DiscoverSheet({
+  activeFilterCount,
+  catalogState,
+  entries = [],
+  featuredEntries = [],
+  filters,
+  onBuild,
+  onClearFilters,
+  onOpenDetails,
+  onSelectRoute,
+  onToggleFilter,
+  placeById,
+  recentRoutes = [],
+  startPlaceOptions = [],
+  throughPlaceOptions = [],
+}) {
+  return (
+    <View style={[styles.routeSheet, styles.discoverSheet]}>
+      <View style={styles.routeSheetHeader}>
+        <View>
+          <Text style={styles.discoverEyebrow}>מצא מסלול</Text>
+          <Text style={styles.routeSheetTitle}>מצאו את הרכיבה הבאה</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="בנה מסלול משלך"
+          onPress={onBuild}
+          style={styles.routeSheetBadge}
+        >
+          <Text style={styles.routeSheetBadgeText}>בנה מסלול</Text>
+        </Pressable>
+      </View>
+
+      {catalogState?.status === "loading" ? (
+        <Text style={styles.discoverStatusText}>טוען מסלולים...</Text>
+      ) : null}
+      {catalogState?.status === "error" ? (
+        <Text style={styles.errorText}>
+          לא הצלחנו לטעון את רשימת המסלולים.
+        </Text>
+      ) : null}
+
+      {catalogState?.status === "ready" ? (
+        <ScrollView
+          showsVerticalScrollIndicator
+          contentContainerStyle={styles.discoverScrollContent}
+        >
+          {recentRoutes.length > 0 ? (
+            <View style={styles.discoverSection}>
+              <Text style={styles.discoverSectionTitle}>אחרונים</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.discoverHorizontalList}
+              >
+                {recentRoutes.slice(0, 6).map((route) => (
+                  <Pressable
+                    key={route.param}
+                    accessibilityRole="button"
+                    accessibilityLabel={`פתח את ${route.name || "מסלול אחרון"}`}
+                    onPress={() =>
+                      onSelectRoute?.({
+                        route: route.param,
+                        name: route.name,
+                        distanceKm: route.distanceKm,
+                      })
+                    }
+                    style={({ pressed }) => [
+                      styles.recentRouteChip,
+                      pressed ? styles.discoverCardPressed : null,
+                    ]}
+                  >
+                    <Text numberOfLines={1} style={styles.recentRouteText}>
+                      {route.name || "מסלול אחרון"}
+                    </Text>
+                    {Number.isFinite(Number(route.distanceKm)) ? (
+                      <Text style={styles.recentRouteMeta}>
+                        {formatRouteKm(route.distanceKm)}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          {featuredEntries.length > 0 ? (
+            <View style={styles.discoverSection}>
+              <Text style={styles.discoverSectionTitle}>מומלצים במיוחד</Text>
+              {featuredEntries.map((entry) => (
+                <NativeRouteCard
+                  key={`featured-${entry.slug}`}
+                  entry={entry}
+                  featured
+                  onOpenDetails={onOpenDetails}
+                  onSelect={onSelectRoute}
+                  placeById={placeById}
+                />
               ))}
             </View>
           ) : null}
-          {!sheetCollapsed && locationText ? (
-            <Text style={styles.locationText}>{locationText}</Text>
-          ) : null}
-          {!sheetCollapsed && hasElevationProfile ? (
-            <ElevationProfileChart
-              animator={animator}
-              distance={routeState.distance}
-              geometry={routeState.geometry}
-              onScrub={onScrub}
+
+          <View style={styles.discoverSection}>
+            <View style={styles.discoverFilterHeader}>
+              <Text style={styles.discoverSectionTitle}>סינון</Text>
+              {activeFilterCount > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="נקה סינון"
+                  onPress={onClearFilters}
+                  style={styles.clearFiltersButton}
+                >
+                  <Text style={styles.clearFiltersText}>נקה</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            <NativeFilterRow
+              axis="startLocation"
+              label="התחלה"
+              options={startPlaceOptions}
+              selected={filters.startLocation}
+              onToggle={onToggleFilter}
             />
+            <NativeFilterRow
+              axis="throughLocation"
+              label="עובר דרך"
+              options={throughPlaceOptions}
+              selected={filters.throughLocation}
+              onToggle={onToggleFilter}
+            />
+            {DISCOVERY_FILTER_GROUPS.map((group) => (
+              <NativeFilterRow
+                key={group.axis}
+                axis={group.axis}
+                label={group.label}
+                options={group.options}
+                selected={filters[group.axis]}
+                onToggle={onToggleFilter}
+              />
+            ))}
+          </View>
+
+          <View style={styles.discoverSection}>
+            <Text style={styles.discoverSectionTitle}>
+              {entries.length} מסלולים
+            </Text>
+            {entries.map((entry) => (
+              <NativeRouteCard
+                key={entry.slug}
+                entry={entry}
+                onOpenDetails={onOpenDetails}
+                onSelect={onSelectRoute}
+                placeById={placeById}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      ) : null}
+    </View>
+  );
+}
+
+function NativeFilterRow({ axis, label, options = [], selected, onToggle }) {
+  const shownOptions = options.slice(0, axis === "throughLocation" ? 10 : 8);
+  if (shownOptions.length === 0) return null;
+  return (
+    <View style={styles.filterRow}>
+      <Text style={styles.filterRowLabel}>{label}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterChipList}
+      >
+        {shownOptions.map((option) => {
+          const active = selected?.has(option.value);
+          return (
+            <Pressable
+              key={`${axis}:${option.value}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${label}: ${option.label}`}
+              onPress={() => onToggle?.(axis, option.value)}
+              style={({ pressed }) => [
+                styles.nativeFilterChip,
+                active ? styles.nativeFilterChipActive : null,
+                pressed ? styles.discoverCardPressed : null,
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.nativeFilterChipText,
+                  active ? styles.nativeFilterChipTextActive : null,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+function NativeRouteCard({
+  entry,
+  featured = false,
+  onOpenDetails,
+  onSelect,
+  placeById,
+}) {
+  const placeNames = routePlaceNames(entry, placeById);
+  const shape = routeShapeLabel(entry);
+  const image = routeMapImage(entry) || routeDisplayImage(entry);
+  const imageSource = nativeImageSource(image?.thumbnail || image?.photo);
+  const stats = [
+    formatRouteKm(entry.distanceKm),
+    formatRouteElevation(entry.elevationGainM),
+    routeDifficultyLabel(entry),
+    routeSurfaceLabel(entry),
+    shape,
+  ].filter(Boolean);
+
+  return (
+    <View
+      style={[
+        styles.discoverRouteCard,
+        featured ? styles.discoverRouteCardFeatured : null,
+      ]}
+    >
+      <View style={styles.discoverRouteCardTop}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`פרטי מסלול: ${entry.name}`}
+          onPress={() => onOpenDetails?.(entry)}
+          style={({ pressed }) => [
+            styles.discoverRouteThumb,
+            pressed ? styles.discoverCardPressed : null,
+          ]}
+        >
+          {imageSource ? (
+            <Image
+              source={imageSource}
+              resizeMode="cover"
+              style={styles.discoverRouteImage}
+            />
+          ) : (
+            <View style={styles.discoverRouteImagePlaceholder} />
+          )}
+        </Pressable>
+        <View style={styles.discoverRouteBody}>
+          <View style={styles.discoverRouteCardHeader}>
+            <Text numberOfLines={2} style={styles.discoverRouteTitle}>
+              {entry.name}
+            </Text>
+            {featured ? (
+              <Text style={styles.discoverFeaturedBadge}>מומלץ</Text>
+            ) : null}
+          </View>
+          {entry.summary ? (
+            <Text numberOfLines={2} style={styles.discoverRouteSummary}>
+              {entry.summary}
+            </Text>
           ) : null}
         </View>
       </View>
-    </>
+      {stats.length > 0 ? (
+        <Text numberOfLines={2} style={styles.discoverRouteMeta}>
+          {stats.join(" · ")}
+        </Text>
+      ) : null}
+      {placeNames.length > 0 ? (
+        <Text numberOfLines={1} style={styles.discoverRoutePlaces}>
+          עובר ליד: {placeNames.join(" · ")}
+        </Text>
+      ) : null}
+      <View style={styles.discoverRouteActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`פתח את ${entry.name} במפה`}
+          onPress={() => onSelect?.(entry)}
+          style={({ pressed }) => [
+            styles.discoverPrimaryAction,
+            pressed ? styles.discoverCardPressed : null,
+          ]}
+        >
+          <Text style={styles.discoverPrimaryActionText}>פתח במפה</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`פרטים על ${entry.name}`}
+          onPress={() => onOpenDetails?.(entry)}
+          style={({ pressed }) => [
+            styles.discoverSecondaryAction,
+            pressed ? styles.discoverCardPressed : null,
+          ]}
+        >
+          <Text style={styles.discoverSecondaryActionText}>פרטים</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function RouteDetailModal({ entry, onClose, onOpenRoute, placeById }) {
+  const [snapshotState, setSnapshotState] = useState({
+    status: "idle",
+    snapshot: null,
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!entry?.slug) {
+      setSnapshotState({ status: "idle", snapshot: null, error: null });
+      return undefined;
+    }
+    let cancelled = false;
+    setSnapshotState({ status: "loading", snapshot: null, error: null });
+    loadFeaturedRouteSnapshot(entry.slug)
+      .then((snapshot) => {
+        if (!cancelled) {
+          setSnapshotState({ status: "ready", snapshot, error: null });
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setSnapshotState({ status: "error", snapshot: null, error });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entry?.slug]);
+
+  if (!entry) return null;
+
+  const routeSnapshot = snapshotState.snapshot
+    ? snapshotToRouteState(snapshotState.snapshot)
+    : null;
+  const image = routeDisplayImage(entry, snapshotState.snapshot) || routeMapImage(entry);
+  const imageSource = nativeImageSource(image?.photo || image?.thumbnail);
+  const placeNames = routePlaceNames(entry, placeById);
+  const stats = [
+    formatRouteKm(routeSnapshot?.distance ? routeSnapshot.distance / 1000 : entry.distanceKm),
+    formatRouteElevation(routeSnapshot?.elevationGain || entry.elevationGainM),
+    routeDifficultyLabel(entry),
+    routeSurfaceLabel(entry),
+    routeShapeLabel(entry),
+  ].filter(Boolean);
+  const pois = Array.isArray(snapshotState.snapshot?.pois?.activeDataPoints)
+    ? snapshotState.snapshot.pois.activeDataPoints.slice(0, 8)
+    : [];
+
+  return (
+    <Modal
+      animationType="slide"
+      onRequestClose={onClose}
+      transparent
+      visible={Boolean(entry)}
+    >
+      <View style={styles.modalBackdrop}>
+        <View style={styles.detailModal}>
+          <View style={styles.summaryHeader}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="סגירה"
+              onPress={onClose}
+              style={styles.summaryCloseButton}
+            >
+              <Text style={styles.summaryCloseText}>×</Text>
+            </Pressable>
+            <Text style={styles.summaryTitle}>פרטי מסלול</Text>
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.detailBody}
+            showsVerticalScrollIndicator
+          >
+            {imageSource ? (
+              <Image
+                source={imageSource}
+                resizeMode="cover"
+                style={styles.detailHeroImage}
+              />
+            ) : null}
+            <View style={styles.detailHeaderCopy}>
+              <Text style={styles.detailTitle}>{entry.name}</Text>
+              {entry.summary ? (
+                <Text style={styles.detailSummary}>{entry.summary}</Text>
+              ) : null}
+              {stats.length > 0 ? (
+                <Text style={styles.detailStats}>{stats.join(" · ")}</Text>
+              ) : null}
+              {placeNames.length > 0 ? (
+                <Text style={styles.detailPlaces}>
+                  עובר ליד: {placeNames.join(" · ")}
+                </Text>
+              ) : null}
+            </View>
+
+            {entry.description ? (
+              <SummarySection title="על המסלול">
+                <RichText style={styles.summaryText} text={entry.description} />
+              </SummarySection>
+            ) : null}
+
+            {snapshotState.status === "loading" ? (
+              <Text style={styles.summaryMuted}>טוען נתוני מסלול...</Text>
+            ) : null}
+            {snapshotState.status === "error" ? (
+              <Text style={styles.summaryWarningText}>
+                לא הצלחנו לטעון את נתוני המסלול המלאים.
+              </Text>
+            ) : null}
+
+            {pois.length > 0 ? (
+              <SummarySection title="נקודות בדרך">
+                <View style={styles.detailPoiList}>
+                  {pois.map((poi, index) => (
+                    <View key={poi.id || index} style={styles.detailPoiItem}>
+                      <Text style={styles.detailPoiIcon}>
+                        {poi.emoji || "📍"}
+                      </Text>
+                      <View style={styles.detailPoiTextWrap}>
+                        {poi.segmentName ? (
+                          <Text style={styles.detailPoiSegment}>
+                            {poi.segmentName}
+                          </Text>
+                        ) : null}
+                        <RichText
+                          style={styles.detailPoiText}
+                          text={poi.information || poi.name || ""}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </SummarySection>
+            ) : null}
+          </ScrollView>
+          <View style={styles.summaryActions}>
+            <ChromeButton label="סגור" onPress={onClose} />
+            <ChromeButton
+              label="פתח במפה"
+              disabled={!entry.route}
+              onPress={() => {
+                void (async () => {
+                  const loaded = await onOpenRoute?.(entry);
+                  if (loaded) onClose?.();
+                })();
+              }}
+              primary
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -1590,6 +2261,49 @@ function fitCameraToPoints(camera, points) {
   camera.fitBounds?.([east, north], [west, south], [96, 42, 84, 42], 550);
 }
 
+function sortNativeDiscoverRoutes(entries) {
+  return (entries || []).slice().sort((a, b) => {
+    const ao = Number(a.sortOrder);
+    const bo = Number(b.sortOrder);
+    const aHasOrder = Number.isFinite(ao);
+    const bHasOrder = Number.isFinite(bo);
+    if (aHasOrder || bHasOrder) {
+      if (!aHasOrder) return 1;
+      if (!bHasOrder) return -1;
+      if (ao !== bo) return ao - bo;
+    }
+    const af = a.featured ? 1 : 0;
+    const bf = b.featured ? 1 : 0;
+    if (af !== bf) return bf - af;
+    const aq = Number(a.qualityScore) || 0;
+    const bq = Number(b.qualityScore) || 0;
+    if (aq !== bq) return bq - aq;
+    return (Number(a.distanceKm) || 0) - (Number(b.distanceKm) || 0);
+  });
+}
+
+function routePlaceNames(entry, placeById) {
+  return (entry?.passesNear || [])
+    .map((id) => placeById?.get(id)?.name)
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function formatRouteKm(km) {
+  const value = Number(km);
+  return Number.isFinite(value) ? `${value.toFixed(1)} ק״מ` : "";
+}
+
+function formatRouteElevation(meters) {
+  const value = Number(meters);
+  return Number.isFinite(value) ? `${Math.round(value)} מ׳ טיפוס` : "";
+}
+
+function nativeImageSource(logicalPath) {
+  if (!logicalPath) return null;
+  return IMAGE_ASSETS[String(logicalPath).split("?")[0].split("#")[0]] || null;
+}
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
@@ -1884,6 +2598,10 @@ const styles = StyleSheet.create({
     maxHeight: 132,
     paddingVertical: 12,
   },
+  discoverSheet: {
+    maxHeight: 430,
+    paddingBottom: 8,
+  },
   routeSheetHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -1955,6 +2673,340 @@ const styles = StyleSheet.create({
     color: "#991b1b",
     fontSize: 12,
     fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverEyebrow: {
+    color: "#52616f",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverStatusText: {
+    color: "#52616f",
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverScrollContent: {
+    gap: 12,
+    paddingBottom: 6,
+  },
+  discoverSection: {
+    gap: 7,
+  },
+  discoverSectionTitle: {
+    color: "#172026",
+    fontSize: 13,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverHorizontalList: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    paddingHorizontal: 1,
+  },
+  recentRouteChip: {
+    maxWidth: 150,
+    minHeight: 48,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 4,
+    backgroundColor: "#f3f6f4",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  recentRouteText: {
+    color: "#172026",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  recentRouteMeta: {
+    marginTop: 2,
+    color: "#52616f",
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverFilterHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  clearFiltersButton: {
+    minHeight: 26,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: "#f3f6f4",
+  },
+  clearFiltersText: {
+    color: "#333333",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  filterRow: {
+    gap: 5,
+  },
+  filterRowLabel: {
+    color: "#52616f",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  filterChipList: {
+    flexDirection: "row-reverse",
+    gap: 6,
+    paddingHorizontal: 1,
+  },
+  nativeFilterChip: {
+    maxWidth: 130,
+    minHeight: 30,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: "#f8f8f8",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  nativeFilterChipActive: {
+    backgroundColor: "#4682B4",
+    borderColor: "#4682B4",
+  },
+  nativeFilterChipText: {
+    color: "#333333",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  nativeFilterChipTextActive: {
+    color: "#ffffff",
+  },
+  discoverRouteCard: {
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 4,
+    backgroundColor: "#ffffff",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  discoverRouteCardFeatured: {
+    borderColor: "#4682B4",
+    backgroundColor: "#f4fafc",
+  },
+  discoverRouteCardTop: {
+    flexDirection: "row-reverse",
+    gap: 9,
+    alignItems: "stretch",
+  },
+  discoverRouteThumb: {
+    width: 82,
+    minHeight: 72,
+    borderRadius: 4,
+    overflow: "hidden",
+    backgroundColor: "#d8e2dd",
+  },
+  discoverRouteImage: {
+    width: "100%",
+    height: "100%",
+  },
+  discoverRouteImagePlaceholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#d8e2dd",
+  },
+  discoverRouteBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
+  },
+  discoverCardPressed: {
+    opacity: 0.76,
+  },
+  discoverRouteCardHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  discoverRouteTitle: {
+    flex: 1,
+    color: "#172026",
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverFeaturedBadge: {
+    overflow: "hidden",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+    backgroundColor: "#4682B4",
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  discoverRouteSummary: {
+    color: "#333333",
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverRouteMeta: {
+    color: "#1f5268",
+    fontSize: 12,
+    fontWeight: "800",
+    lineHeight: 17,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverRoutePlaces: {
+    color: "#52616f",
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  discoverRouteActions: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 8,
+    marginTop: 2,
+  },
+  discoverPrimaryAction: {
+    minHeight: 30,
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: "#4682B4",
+  },
+  discoverPrimaryActionText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  discoverSecondaryAction: {
+    minHeight: 30,
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: "#f3f6f4",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  discoverSecondaryActionText: {
+    color: "#333333",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  detailModal: {
+    maxHeight: "84%",
+    borderRadius: 6,
+    overflow: "hidden",
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
+    borderColor: "#c6d4cf",
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+  },
+  detailBody: {
+    gap: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  detailHeroImage: {
+    width: "100%",
+    height: 178,
+    borderRadius: 4,
+    backgroundColor: "#d8e2dd",
+  },
+  detailHeaderCopy: {
+    gap: 6,
+  },
+  detailTitle: {
+    color: "#172026",
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailSummary: {
+    color: "#333333",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailStats: {
+    color: "#1f5268",
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailPlaces: {
+    color: "#52616f",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailPoiList: {
+    gap: 8,
+  },
+  detailPoiItem: {
+    flexDirection: "row-reverse",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 4,
+    backgroundColor: "#f8faf9",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  detailPoiIcon: {
+    fontSize: 18,
+    lineHeight: 23,
+  },
+  detailPoiTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  detailPoiSegment: {
+    color: "#52616f",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailPoiText: {
+    color: "#333333",
+    fontSize: 12,
+    lineHeight: 18,
     textAlign: "right",
     writingDirection: "rtl",
   },

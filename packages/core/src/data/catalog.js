@@ -1,12 +1,52 @@
 import { primaryPoiImage } from "./poiTypes.js";
+import { getJsonAsset } from "../platform/assets.js";
 
 let catalogPromise = null;
+let placesPromise = null;
+
+export const DISCOVERY_FILTER_GROUPS = [
+  {
+    axis: "difficulty",
+    label: "רמת קושי",
+    options: [
+      { value: "easy", label: "קל" },
+      { value: "moderate", label: "בינוני" },
+      { value: "hard", label: "קשה" },
+    ],
+  },
+  {
+    axis: "surface",
+    label: "משטח",
+    options: [
+      { value: "paved", label: "סלול" },
+      { value: "mixed", label: "שטח/סלול" },
+      { value: "dirt", label: "שטח" },
+    ],
+  },
+  {
+    axis: "distance",
+    label: "אורך",
+    options: [
+      { value: "short", label: "עד 10 ק״מ" },
+      { value: "medium", label: "10-25 ק״מ" },
+      { value: "long", label: "25 ק״מ ומעלה" },
+    ],
+  },
+];
+
+export function createEmptyCatalogFilters() {
+  return {
+    difficulty: new Set(),
+    surface: new Set(),
+    distance: new Set(),
+    startLocation: new Set(),
+    throughLocation: new Set(),
+  };
+}
 
 export function loadCatalog() {
   if (catalogPromise) return catalogPromise;
-  const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
-  catalogPromise = fetch(`${base}public-data/route-catalog.json`)
-    .then((r) => (r.ok ? r.json() : { version: 1, entries: [] }))
+  catalogPromise = getJsonAsset("public-data/route-catalog.json")
     .catch((err) => {
       console.warn("loadCatalog failed", err);
       return { version: 1, entries: [] };
@@ -19,6 +59,20 @@ export const loadRouteCatalog = loadCatalog;
 export async function loadRouteCatalogEntries() {
   const catalog = await loadRouteCatalog();
   return Array.isArray(catalog?.entries) ? catalog.entries : [];
+}
+
+export function loadPlacesData() {
+  if (placesPromise) return placesPromise;
+  placesPromise = getJsonAsset("data/places.json").catch((err) => {
+    console.warn("loadPlaces failed", err);
+    return { version: 1, places: [] };
+  });
+  return placesPromise;
+}
+
+export async function loadPlaces() {
+  const data = await loadPlacesData();
+  return Array.isArray(data?.places) ? data.places : [];
 }
 
 export function findCatalogEntryBySlug(catalog, slug) {
@@ -167,4 +221,65 @@ export function routeCardImage(entry, snapshot = null) {
 
 export function routeMapImage(entry) {
   return normalizedCatalogImage(entry?.routeMapImage);
+}
+
+export const DISTANCE_BUCKETS = ["short", "medium", "long"];
+export const DIFFICULTY_BUCKETS = ["easy", "moderate", "hard"];
+
+export function distanceBucketOf(km) {
+  const value = Number(km);
+  if (value < 10) return "short";
+  if (value <= 25) return "medium";
+  return "long";
+}
+
+function hasMembers(set) {
+  return set && typeof set.size === "number" && set.size > 0;
+}
+
+export function catalogFilter(catalog, filters) {
+  const f = filters || {};
+  const filtered = (catalog || []).filter((entry) => {
+    if (f.place && f.place !== "any") {
+      if (!routePassesThroughPlaceIds(entry).includes(f.place)) {
+        return false;
+      }
+    }
+    if (hasMembers(f.startLocation)) {
+      const starts = routeStartPlaceIds(entry);
+      if (!starts.some((id) => f.startLocation.has(id))) return false;
+    }
+    if (hasMembers(f.throughLocation)) {
+      const through = routePassesThroughPlaceIds(entry);
+      if (!through.some((id) => f.throughLocation.has(id))) return false;
+    }
+    if (hasMembers(f.region) && !f.region.has(entry.regionId)) return false;
+    if (hasMembers(f.difficulty) && !f.difficulty.has(entry.difficulty)) return false;
+    if (hasMembers(f.style) && !f.style.has(entry.style)) return false;
+    if (hasMembers(f.surface) && !f.surface.has(routeSurfaceType(entry))) return false;
+    if (hasMembers(f.distance)) {
+      const bucket = distanceBucketOf(entry.distanceKm);
+      if (!f.distance.has(bucket)) return false;
+    }
+    return true;
+  });
+
+  filtered.sort((a, b) => (b.qualityScore || 0) - (a.qualityScore || 0));
+  return filtered;
+}
+
+export function placeOptionsForEntries(entries, placeById, placeIdsForEntry) {
+  const counts = new Map();
+  for (const entry of entries || []) {
+    for (const id of placeIdsForEntry(entry)) {
+      counts.set(id, (counts.get(id) || 0) + 1);
+    }
+  }
+  return Array.from(counts.keys())
+    .map((id) => ({
+      value: id,
+      label: placeById.get(id)?.name || id,
+      count: counts.get(id) || 0,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "he"));
 }

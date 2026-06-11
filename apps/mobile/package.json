@@ -22,6 +22,7 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios:offline": "bash scripts/run-offline-ios.sh",
     "web": "expo start --web"
   },
   "private": true

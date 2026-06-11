@@ -12,6 +12,7 @@
     "mobile:assets": "npm run assets:sync -w @cycleways/mobile",
     "mobile": "npm run start -w @cycleways/mobile",
     "mobile:ios": "npm run ios -w @cycleways/mobile",
+    "mobile:ios:offline": "npm run ios:offline -w @cycleways/mobile",
     "osm:fetch": "python3 processing/fetch_osm_network.py && python3 processing/detect_osm_intersections.py && python3 processing/build_osm_base_graph.py && python3 processing/match_cycleways_to_osm_graph.py",
     "osm:intersections": "python3 processing/detect_osm_intersections.py",
     "osm:graph": "python3 processing/build_osm_base_graph.py && python3 processing/match_cycleways_to_osm_graph.py",

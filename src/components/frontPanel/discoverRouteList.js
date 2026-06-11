@@ -1,4 +1,4 @@
-import { catalogFilter } from "../catalogFilter.js";
+import { catalogFilter } from "@cycleways/core/data/catalog.js";
 
 // True if any filter axis has a selected value.
 export function hasActiveDiscoverFilters(filters) {

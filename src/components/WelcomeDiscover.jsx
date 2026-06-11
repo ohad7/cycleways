@@ -1,49 +1,18 @@
 import React, { useMemo, useState } from "react";
 import RouteCard from "./RouteCard.jsx";
-import { catalogFilter } from "./catalogFilter.js";
 import {
+  catalogFilter,
+  createEmptyCatalogFilters,
+  DISCOVERY_FILTER_GROUPS,
+  placeOptionsForEntries,
   routePassesThroughPlaceIds,
   routeStartPlaceIds,
 } from "@cycleways/core/data/catalog.js";
 
-export const FILTER_GROUPS = [
-  {
-    axis: "difficulty",
-    label: "רמת קושי",
-    options: [
-      { value: "easy", label: "קל" },
-      { value: "moderate", label: "בינוני" },
-      { value: "hard", label: "קשה" },
-    ],
-  },
-  {
-    axis: "surface",
-    label: "משטח",
-    options: [
-      { value: "paved", label: "סלול" },
-      { value: "mixed", label: "שטח/סלול" },
-      { value: "dirt", label: "שטח" },
-    ],
-  },
-  {
-    axis: "distance",
-    label: "אורך",
-    options: [
-      { value: "short", label: "עד 10 ק״מ" },
-      { value: "medium", label: "10-25 ק״מ" },
-      { value: "long", label: "25 ק״מ ומעלה" },
-    ],
-  },
-];
+export const FILTER_GROUPS = DISCOVERY_FILTER_GROUPS;
 
 export function emptyFilters() {
-  return {
-    difficulty: new Set(),
-    surface: new Set(),
-    distance: new Set(),
-    startLocation: new Set(),
-    throughLocation: new Set(),
-  };
+  return createEmptyCatalogFilters();
 }
 
 export function FilterChip({ active, onClick, children }) {
@@ -290,22 +259,6 @@ export default function WelcomeDiscover({ catalog, places, onSelectRoute }) {
       </div>
     </div>
   );
-}
-
-function placeOptionsForEntries(entries, placeById, placeIdsForEntry) {
-  const counts = new Map();
-  for (const entry of entries) {
-    for (const id of placeIdsForEntry(entry)) {
-      counts.set(id, (counts.get(id) || 0) + 1);
-    }
-  }
-  return Array.from(counts.keys())
-    .map((id) => ({
-      value: id,
-      label: placeById.get(id)?.name || id,
-      count: counts.get(id) || 0,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label, "he"));
 }
 
 function normalizeSearchText(value) {
