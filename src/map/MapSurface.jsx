@@ -49,6 +49,7 @@ import {
   VIDEO_CURSOR_DEFAULT_VARIANT,
 } from "@cycleways/core/map/mapStyles.js";
 import { capabilitiesForMode, MAP_MODE_PLANNER } from "./mapCapabilities.js";
+import { circlePolygon } from "@cycleways/core/utils/geoCircle.js";
 
 const ROUTE_CIRCULAR_ENDPOINT_MAX_METERS = 80;
 
@@ -103,6 +104,7 @@ function MapSurface({
   routeGeometry = [],
   routePointDragPreview = null,
   routePoints = [],
+  locationFix = null,
   searchHighlight,
   recommendedRoutes = null,
   segmentHighlight = null,
@@ -119,6 +121,7 @@ function MapSurface({
   const routeLineDragRef = useRef(null);
   const mapRef = useRef(null);
   const searchMarkerRef = useRef(null);
+  const locationMarkerRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const hoverPreviewMarkerRef = useRef(null);
   const routeEndpointMarkerRefs = useRef([]);
@@ -948,6 +951,33 @@ function MapSurface({
     };
   }, [searchHighlight, status, caps.searchHighlight]);
 
+  // Locate-me fix: persistent marker + meter-accurate accuracy ring. Replaced
+  // wholesale when a new fix arrives; camera flies only to in-bounds fixes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !caps.locationFix || !locationFix) {
+      return undefined;
+    }
+
+    locationMarkerRef.current?.remove();
+    const mapboxgl = getMapboxGl();
+    const el = document.createElement("div");
+    el.className = "react-locate-marker";
+    locationMarkerRef.current = new mapboxgl.Marker(el)
+      .setLngLat([locationFix.lng, locationFix.lat])
+      .addTo(map);
+
+    syncLocationAccuracyRing(map, locationFix);
+    if (locationFix.withinBounds) {
+      map.flyTo({
+        center: [locationFix.lng, locationFix.lat],
+        zoom: Math.max(typeof map.getZoom === "function" ? map.getZoom() : 13, 13),
+        duration: 1000,
+      });
+    }
+    return undefined;
+  }, [locationFix, status, caps.locationFix]);
+
   return (
     <>
       <div
@@ -1098,6 +1128,32 @@ function screenPointDistance(a, b) {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
   return Math.sqrt(dx * dx + dy * dy);
+}
+
+const LOCATION_RING_SOURCE_ID = "locate-accuracy-ring";
+const LOCATION_RING_LAYER_ID = "locate-accuracy-ring-fill";
+
+function syncLocationAccuracyRing(map, locationFix) {
+  const radius = Number.isFinite(locationFix.accuracy)
+    ? Math.max(locationFix.accuracy, 15)
+    : 15;
+  const data = {
+    type: "Feature",
+    properties: {},
+    geometry: circlePolygon(locationFix.lat, locationFix.lng, radius),
+  };
+  const source = map.getSource(LOCATION_RING_SOURCE_ID);
+  if (source) {
+    source.setData(data);
+    return;
+  }
+  map.addSource(LOCATION_RING_SOURCE_ID, { type: "geojson", data });
+  map.addLayer({
+    id: LOCATION_RING_LAYER_ID,
+    type: "fill",
+    source: LOCATION_RING_SOURCE_ID,
+    paint: { "fill-color": "#1d6ee8", "fill-opacity": 0.15 },
+  });
 }
 
 function syncSearchHighlightCircle(map, searchHighlight) {

@@ -45,6 +45,8 @@ function plannerCapabilities() {
     elevationPulse: true,
     // Searched-location highlight.
     searchHighlight: true,
+    // Locate-me fix marker + accuracy ring.
+    locationFix: true,
     // Viewport prefetch: user-viewport-change + viewport-idle reporting.
     viewportPrefetch: true,
   };
@@ -76,6 +78,7 @@ function readonlyRouteCapabilities() {
     directionPulse: false,
     elevationPulse: false,
     searchHighlight: false,
+    locationFix: false,
     viewportPrefetch: false,
   };
 }

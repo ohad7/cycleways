@@ -532,6 +532,7 @@ function App() {
                   routeGeometry={routeState.geometry}
                   routePointDragPreview={routePointDragPreview}
                   routePoints={displayedRoutePoints}
+                  locationFix={mapUi.locationFix}
                   searchHighlight={mapUi.searchHighlight}
                   selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
                   videoCursor={plannerRouteReady ? plannerPlayback.cursor : null}
