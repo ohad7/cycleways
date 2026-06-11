@@ -31,6 +31,7 @@ import {
   setUrlParam,
   getShardLoaderLocation,
 } from "../platform/location.js";
+import { getCurrentPosition } from "../platform/geolocation.js";
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
 import { POI_EMOJIS } from "../data/poiTypes.js";
 import { getDataPointLocation } from "../utils/route-data.js";
@@ -84,6 +85,8 @@ export function useCyclewaysApp({
     dataMarkerFocus: null,
     elevationHover: null,
     tutorialOpen: false,
+    locationFix: null,
+    locateStatus: "idle",
   });
   const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(false);
   const routeManagerRef = useRef(null);
@@ -852,6 +855,38 @@ export function useCyclewaysApp({
     }));
   }, []);
 
+  // One-shot locate-me: resolves the device position (permission is requested
+  // by the browser only at this tap), stores a fix for the map marker and the
+  // Discover near-me labels, and flags whether it's inside the map area so the
+  // camera only flies to in-bounds fixes. Never watches/tracks position.
+  const handleLocateMe = useCallback(async () => {
+    setMapUi((current) => ({
+      ...current,
+      locateStatus: "locating",
+      searchError: null,
+    }));
+    try {
+      const fix = await getCurrentPosition();
+      const bounds = getGeoJsonCoordinateBounds(state.assets.geoJsonData);
+      const withinBounds = isPointWithinBounds(
+        { lat: fix.lat, lng: fix.lng },
+        bounds,
+      );
+      setMapUi((current) => ({
+        ...current,
+        locateStatus: "idle",
+        locationFix: { id: `locate-${Date.now()}`, ...fix, withinBounds },
+        searchError: withinBounds ? null : "המיקום שלך מחוץ לאזור המפה",
+      }));
+    } catch {
+      setMapUi((current) => ({
+        ...current,
+        locateStatus: "error",
+        searchError: "לא הצלחנו לאתר את המיקום שלך",
+      }));
+    }
+  }, [state.assets]);
+
   const handleSearchQueryChange = useCallback((query) => {
     setMapUi((current) => ({
       ...current,
@@ -1104,6 +1139,7 @@ export function useCyclewaysApp({
     handleCloseTutorial,
     handleSearchSubmit,
     handleSearchQueryChange,
+    handleLocateMe,
     handleUndo,
     handleRedo,
     handleRouteClear,
