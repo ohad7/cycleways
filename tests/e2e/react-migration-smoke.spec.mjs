@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installMapboxMock } from "./mapbox-mock.mjs";
+import { ensurePanelOpen } from "./sheet-helpers.mjs";
 
 const COMPACT_ROUTE = "Bjjy1nRHHDArrNAoctqGv4RHL3un";
 const ROUTE_NETWORK_HIT_LAYER_ID = "cycleways-network-hit";
@@ -23,12 +24,14 @@ test("current public app loads with route controls", async ({ page }) => {
 
   await expect(page.locator("#map")).toBeVisible();
   // Route controls now live in the right-side panel (no on-map control buttons).
+  await ensurePanelOpen(page);
   await expect(page.getByTestId("front-panel")).toBeVisible();
 });
 
 test("production root restores compact route URL", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
+  await ensurePanelOpen(page);
   await expect(page.getByTestId("front-panel")).toBeVisible();
   await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
@@ -44,6 +47,7 @@ test("production root restores compact route URL", async ({ page }) => {
 test("production core flow works on desktop and mobile", async ({ page }, testInfo) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
+  await ensurePanelOpen(page);
   await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
   await page.screenshot({
     fullPage: true,
@@ -61,6 +65,7 @@ test("production core flow works on desktop and mobile", async ({ page }, testIn
 test("production shows outside-network warning in the route panel", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
   // Wait for the build panel to be visible (route loaded, panel auto-switched to build).
+  await ensurePanelOpen(page);
   await expect(page.locator(".build-panel")).toBeVisible();
   // Ensure the route stats are showing before triggering the outside-network click.
   await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
@@ -179,6 +184,7 @@ test("production supports segment hover, segment clicks, and sharing", async ({ 
     expect(await getRoutePointFeatureCount(page)).toBe(index + 1);
   }
 
+  await ensurePanelOpen(page);
   await expect(page.locator(".build-panel")).toContainText("3.9 ק\"מ");
   await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
   const routePointLayer = await page.evaluate(

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installMapboxMock } from "./mapbox-mock.mjs";
+import { ensurePanelOpen } from "./sheet-helpers.mjs";
 
 test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
@@ -11,6 +12,7 @@ test("mobile adapted layout remains usable", async ({ page }, testInfo) => {
   await page.goto("/?route=Bjjy1nRHHDArrNAoctqGv4RHL3un");
 
   await expect(page.locator("#map")).toBeVisible();
+  await ensurePanelOpen(page);
   await expect(page.locator(".build-panel")).toContainText("4.5");
   // Save/summary now lives in the route panel (Build state, auto-entered for ?route=).
   await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
