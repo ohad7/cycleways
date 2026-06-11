@@ -336,6 +336,10 @@ function MapSurface({
     };
 
     const handleClick = (event) => {
+      // A click on an existing route point / built line / data marker belongs
+      // to that feature's own handler — without this guard, points (which
+      // always sit on network paths) would re-add a point on every tap.
+      if (clickOnBlockingFeature(map, event)) return;
       const feature = event.features?.[0];
       const segmentName = feature?.properties?.name || null;
       if (!segmentName) return;
@@ -604,19 +608,9 @@ function MapSurface({
       return undefined;
     }
 
-    const hasBlockingClickFeature = (event) => {
-      const layers = [
-        ROUTE_POINTS_LAYER_ID,
-        ROUTE_GEOMETRY_HIT_LAYER_ID,
-        DATA_MARKERS_LAYER_ID,
-      ].filter((layerId) => map.getLayer(layerId));
-      if (layers.length === 0) return false;
-      return map.queryRenderedFeatures(event.point, { layers }).length > 0;
-    };
-
     const handleMapClick = (event) => {
       if (draggingPointRef.current !== null) return;
-      if (hasBlockingClickFeature(event)) return;
+      if (clickOnBlockingFeature(map, event)) return;
       if (isDuplicateRouteClick(lastRouteClickRef.current, event)) return;
 
       const closest = findClosestRouteSegment(
@@ -1247,6 +1241,19 @@ function clearSearchHighlight(map, markerRef) {
   if (map?.getSource("react-search-highlight")) {
     map.removeSource("react-search-highlight");
   }
+}
+
+// True when a click landed on an interactive feature (route point, built
+// route line, data marker) that owns the interaction — both the map-level and
+// the network-layer click handlers must not treat such clicks as add-point.
+function clickOnBlockingFeature(map, event) {
+  const layers = [
+    ROUTE_POINTS_LAYER_ID,
+    ROUTE_GEOMETRY_HIT_LAYER_ID,
+    DATA_MARKERS_LAYER_ID,
+  ].filter((layerId) => map.getLayer(layerId));
+  if (layers.length === 0) return false;
+  return map.queryRenderedFeatures(event.point, { layers }).length > 0;
 }
 
 function syncHoverPreviewMarker(map, markerRef, lngLat) {
