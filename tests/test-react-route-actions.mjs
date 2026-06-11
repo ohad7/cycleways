@@ -95,6 +95,11 @@ const shareInfo = buildShareInfo(
 assert.equal(shareInfo.status, "ok");
 assert.equal(shareInfo.format, "compact_route");
 assert.equal(shareInfo.url, shareUrl);
+assert.equal(
+  new URL(shareInfo.url).searchParams.get("route"),
+  shareInfo.param,
+  "shareInfo.param is the raw encoded route string",
+);
 
 const expandedHybridPayload = expandHybridRoutePayload(
   {

@@ -326,6 +326,7 @@ function emptyShareInfo() {
     format: null,
     length: 0,
     status: "unavailable",
+    param: "",
   };
 }
 
@@ -351,6 +352,7 @@ function shareInfoFromEncodedRoute(encodedRoute, format, location) {
         : shareUrl.length > ROUTE_SHARE_WARN_URL_LENGTH
           ? "long"
           : "ok",
+    param: encodedRoute,
   };
 }
 

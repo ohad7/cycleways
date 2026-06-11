@@ -1054,7 +1054,7 @@ export function useCyclewaysApp({
       routeState.points.length === 0 ||
       !routeManagerRef.current
     ) {
-      return { url: "", status: "unavailable", length: 0, format: null };
+      return { url: "", status: "unavailable", length: 0, format: null, param: "" };
     }
 
     return buildShareInfo(
