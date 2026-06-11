@@ -21,6 +21,7 @@ import { useFitRouteOnPlay } from "./components/routePlayback/useFitRouteOnPlay.
 import { buildRouteFitRequest, combineRouteGeometries } from "./map/routeFitPadding.js";
 import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
 import Tutorial from "./components/Tutorial.jsx";
+import DraftRestoreBanner from "./components/DraftRestoreBanner.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
 import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
@@ -31,6 +32,7 @@ import { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import MapView from "./map/MapView.jsx";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
+import { hasQueryParam } from "@cycleways/core/platform/location.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
 import { dataPointId } from "@cycleways/core/data/dataMarkers.js";
 import { routeSliceForRange } from "./components/frontPanel/routeSlice.js";
@@ -93,6 +95,11 @@ function App() {
     handleSegmentHover,
     handleViewportIdle,
     handleElevationHover,
+    plannerDraft,
+    recentRoutes,
+    handleRestoreDraft,
+    handleDismissDraft,
+    handleAddRecentRoute,
   } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
 
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
@@ -169,11 +176,16 @@ function App() {
       const loaded = await handleLoadRouteParam(entry.route);
       if (loaded) {
         handlePanelStateChange("build");
+        handleAddRecentRoute({
+          param: entry.route,
+          name: entry.name || "מסלול",
+          distanceKm: Number(entry.distanceKm) || undefined,
+        });
       } else {
         window.location.assign(`/?route=${encodeURIComponent(entry.route)}`);
       }
     },
-    [handleLoadRouteParam, handlePanelStateChange],
+    [handleLoadRouteParam, handlePanelStateChange, handleAddRecentRoute],
   );
 
   const handlePanelShare = useCallback(async () => {
@@ -500,6 +512,17 @@ function App() {
                     <Icon name="locate-outline" />
                   </button>
                 </div>
+
+                {plannerDraft && !hasQueryParam("route") && routePointCount === 0 && (
+                  <DraftRestoreBanner
+                    draft={plannerDraft}
+                    onRestore={async () => {
+                      const ok = await handleRestoreDraft();
+                      if (ok) handlePanelStateChange("build");
+                    }}
+                    onDismiss={handleDismissDraft}
+                  />
+                )}
 
                 <MapLegend
                   hasBrokenRoute={hasBrokenRoute}

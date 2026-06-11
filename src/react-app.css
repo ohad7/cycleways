@@ -1633,3 +1633,39 @@ input {
     bottom: 74px;
   }
 }
+
+.draft-restore-banner {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #e7dfca;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 4px 14px rgb(40 48 38 / 18%);
+  font-size: 0.9rem;
+}
+
+.draft-restore-banner__restore {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: #2f6b3c;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.draft-restore-banner__dismiss {
+  border: none;
+  background: transparent;
+  color: #52615c;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
