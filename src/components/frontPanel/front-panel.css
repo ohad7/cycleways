@@ -532,3 +532,12 @@
   vertical-align: middle;
   flex: 0 0 auto;
 }
+
+.discover-panel__near-me {
+  margin: 8px 0 2px;
+}
+
+.panel-route-card__near {
+  color: #1d6ee8;
+  font-weight: 700;
+}

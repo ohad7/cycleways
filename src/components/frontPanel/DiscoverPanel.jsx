@@ -13,8 +13,13 @@ import {
 } from "@cycleways/core/data/catalog.js";
 import { selectDiscoverRoutes } from "./discoverRouteList.js";
 import { useCardViewport } from "./useCardViewport.js";
+import {
+  distanceToRouteStartMeters,
+  formatDistanceFromUser,
+  sortByDistanceFromUser,
+} from "@cycleways/core/data/nearMe.js";
 
-export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild, onSlugsChange, onRouteViewport, onHoverRoute }) {
+export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild, onSlugsChange, onRouteViewport, onHoverRoute, locationFix }) {
   const entries = useMemo(
     () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
     [catalog],
@@ -52,9 +57,17 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
       return { ...prev, [axis]: next };
     });
 
-  const { routes } = useMemo(
+  const [nearMeSort, setNearMeSort] = useState(false);
+  const { routes: filteredRoutes } = useMemo(
     () => selectDiscoverRoutes(entries, filters),
     [entries, filters],
+  );
+  const routes = useMemo(
+    () =>
+      nearMeSort && locationFix
+        ? sortByDistanceFromUser(filteredRoutes, placeById, locationFix)
+        : filteredRoutes,
+    [filteredRoutes, nearMeSort, locationFix, placeById],
   );
 
   const orderedSlugs = useMemo(() => routes.map((r) => r.slug), [routes]);
@@ -100,6 +113,14 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
         />
       </div>
 
+      {locationFix && (
+        <div className="discover-panel__near-me">
+          <FilterChip active={nearMeSort} onClick={() => setNearMeSort((v) => !v)}>
+            קרוב אליי
+          </FilterChip>
+        </div>
+      )}
+
       <div className="discover-panel__filters">
         {FILTER_GROUPS.map((group) => (
           <div className="wd-filter-group" key={group.axis} role="group" aria-label={group.label}>
@@ -130,6 +151,13 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
             onSelect={onSelectRoute}
             onHover={onHoverRoute}
             cardRef={registerCard(entry.slug)}
+            distanceFromUserLabel={
+              locationFix
+                ? formatDistanceFromUser(
+                    distanceToRouteStartMeters(entry, placeById, locationFix),
+                  )
+                : ""
+            }
           />
         ))}
       </div>

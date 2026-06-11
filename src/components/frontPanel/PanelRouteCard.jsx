@@ -9,7 +9,7 @@ import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
 // Minimal horizontal route card for the narrow Discover panel: thumbnail +
 // title + a compact meta line (distance · level · via). The whole card loads
 // the route into the planner. The richer RouteCard is for the wide /routes page.
-export default function PanelRouteCard({ entry, places, onSelect, onHover, index = 0, cardRef }) {
+export default function PanelRouteCard({ entry, places, onSelect, onHover, index = 0, cardRef, distanceFromUserLabel = "" }) {
   const photo = routeDisplayImage(entry);
   const placeNames = (entry.passesNear || [])
     .map((id) => places.find((p) => p.id === id)?.name)
@@ -49,6 +49,9 @@ export default function PanelRouteCard({ entry, places, onSelect, onHover, index
           <b>{entry.distanceKm} ק״מ</b>
           <span>· {routeDifficultyLabel(entry.difficulty)}</span>
           {placeNames.length > 0 && <span>· {placeNames.join(" · ")}</span>}
+          {distanceFromUserLabel && (
+            <span className="panel-route-card__near"> · {distanceFromUserLabel}</span>
+          )}
         </span>
       </span>
     </button>

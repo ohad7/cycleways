@@ -611,6 +611,7 @@ function App() {
                     onSlugsChange={setDiscoverSlugs}
                     onRouteViewport={setDiscoverViewport}
                     onHoverRoute={setHoveredRouteSlug}
+                    locationFix={mapUi.locationFix}
                   />
                 }
                 build={
