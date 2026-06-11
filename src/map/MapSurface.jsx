@@ -275,6 +275,7 @@ function MapSurface({
         const map = mapRef.current;
         runMapCleanup(map, () => {
           clearSearchHighlight(map, searchMarkerRef);
+          clearLocationFix(map, locationMarkerRef);
           clearHoverPreviewMarker(hoverPreviewMarkerRef);
           clearVideoCursorLayer(map);
           if (searchTimeoutRef.current) {
@@ -1197,6 +1198,18 @@ function syncSearchHighlightCircle(map, searchHighlight) {
         "circle-stroke-opacity": 0.8,
       },
     });
+  }
+}
+
+function clearLocationFix(map, markerRef) {
+  markerRef.current?.remove();
+  markerRef.current = null;
+
+  if (map?.getLayer(LOCATION_RING_LAYER_ID)) {
+    map.removeLayer(LOCATION_RING_LAYER_ID);
+  }
+  if (map?.getSource(LOCATION_RING_SOURCE_ID)) {
+    map.removeSource(LOCATION_RING_SOURCE_ID);
   }
 }
 
