@@ -541,3 +541,41 @@
   color: #1d6ee8;
   font-weight: 700;
 }
+
+.recent-routes {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #efe8d7;
+}
+
+.recent-routes__title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #5f6f67;
+  margin-bottom: 6px;
+}
+
+.recent-routes__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recent-routes__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid #dce4df;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2f4533;
+  cursor: pointer;
+}
+
+.recent-routes__meta {
+  color: #5f6f67;
+  font-weight: 500;
+}

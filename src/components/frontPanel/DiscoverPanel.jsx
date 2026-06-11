@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import PanelRouteCard from "./PanelRouteCard.jsx";
+import RecentRoutesStrip from "./RecentRoutesStrip.jsx";
 import "../welcome-wizard.css";
 import {
   FILTER_GROUPS,
@@ -19,7 +20,7 @@ import {
   sortByDistanceFromUser,
 } from "@cycleways/core/data/nearMe.js";
 
-export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild, onSlugsChange, onRouteViewport, onHoverRoute, locationFix }) {
+export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild, onSlugsChange, onRouteViewport, onHoverRoute, locationFix, recentRoutes, onSelectRecent }) {
   const entries = useMemo(
     () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
     [catalog],
@@ -84,6 +85,7 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
 
   return (
     <div className="discover-panel">
+      <RecentRoutesStrip recents={recentRoutes} onSelect={onSelectRecent} />
       <div className="discover-panel__intro">
         <div className="eyebrow">מצא מסלול</div>
         <h2>מצאו את הרכיבה הבאה</h2>

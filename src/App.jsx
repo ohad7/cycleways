@@ -646,6 +646,14 @@ function App() {
                     onRouteViewport={setDiscoverViewport}
                     onHoverRoute={setHoveredRouteSlug}
                     locationFix={mapUi.locationFix}
+                    recentRoutes={recentRoutes}
+                    onSelectRecent={(entry) =>
+                      handleSelectRecommended({
+                        route: entry.param,
+                        name: entry.name,
+                        distanceKm: entry.distanceKm,
+                      })
+                    }
                   />
                 }
                 build={
