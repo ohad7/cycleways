@@ -228,6 +228,15 @@ const ICONS = {
       />
     </>
   ),
+  "locate-outline": (
+    <>
+      <line x1="256" y1="48" x2="256" y2="96" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="32" />
+      <line x1="256" y1="416" x2="256" y2="464" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="32" />
+      <line x1="464" y1="256" x2="416" y2="256" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="32" />
+      <line x1="96" y1="256" x2="48" y2="256" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="32" />
+      <circle cx="256" cy="256" r="160" fill="none" stroke="currentColor" strokeWidth="32" />
+    </>
+  ),
   "car-outline": (
     <>
       <path

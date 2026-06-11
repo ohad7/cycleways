@@ -68,6 +68,7 @@ function App() {
     handleCloseTutorial,
     handleSearchSubmit,
     handleSearchQueryChange,
+    handleLocateMe,
     handleUndo,
     handleRedo,
     handleRouteClear,
@@ -486,6 +487,16 @@ function App() {
                       }
                     />
                   </form>
+                  <button
+                    type="button"
+                    className="locate-btn"
+                    title="מצא את המיקום שלי"
+                    aria-label="מצא את המיקום שלי"
+                    disabled={mapUi.locateStatus === "locating"}
+                    onClick={handleLocateMe}
+                  >
+                    <Icon name="locate-outline" />
+                  </button>
                 </div>
 
                 <MapLegend
