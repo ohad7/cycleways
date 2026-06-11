@@ -23,6 +23,7 @@ import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
 import PlannerHints from "./components/PlannerHints.jsx";
 import DraftRestoreBanner from "./components/DraftRestoreBanner.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
+import BottomSheet from "./components/frontPanel/BottomSheet.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
 import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
 import BuildPanel from "./components/frontPanel/BuildPanel.jsx";
@@ -103,6 +104,7 @@ function App() {
 
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [sheetSnap, setSheetSnap] = useState("peek");
   const [hoveredBand, setHoveredBand] = useState(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [sendToPhoneOpen, setSendToPhoneOpen] = useState(false);
@@ -120,10 +122,11 @@ function App() {
   const { catalog, places } = useCatalogData();
 
   React.useEffect(() => {
+    if (panel.lastPointCount === 0 && routePointCount > 0) setSheetSnap("peek");
     setPanel((prev) =>
       resolvePanelState(prev, { type: "route-points-changed", pointCount: routePointCount }),
     );
-  }, [routePointCount]);
+  }, [routePointCount, panel.lastPointCount]);
 
   useEffect(() => {
     const prefetch = discoverViewport.prefetchSlugs;
@@ -176,6 +179,7 @@ function App() {
       const loaded = await handleLoadRouteParam(entry.route);
       if (loaded) {
         handlePanelStateChange("build");
+        setSheetSnap("peek");
         handleAddRecentRoute({
           param: entry.route,
           name: entry.name || "מסלול",
@@ -248,6 +252,7 @@ function App() {
     { selector: ".data-marker-card" },
     { selector: ".planner-route-poi-preview" },
     { selector: ".route-point-actions", side: "bottom" },
+    { selector: ".front-sheet", side: "bottom" },
   ]), []);
   const requestFit = useCallback((geometry) => {
     const req = buildRouteFitRequest(geometry, {
@@ -635,71 +640,99 @@ function App() {
             )}
             </div>
             {state.status === "ready" && (
-              <FrontPanel
-                panelState={panel.state}
-                onPanelStateChange={handlePanelStateChange}
-                routeStatus={routeState.status}
-                collapsed={panelCollapsed}
-                onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
-                discover={
-                  <DiscoverPanel
-                    catalog={catalog}
-                    places={places}
-                    onSelectRoute={handleSelectRecommended}
-                    onBuild={() => handlePanelStateChange("build")}
-                    onSlugsChange={setDiscoverSlugs}
-                    onRouteViewport={setDiscoverViewport}
-                    onHoverRoute={setHoveredRouteSlug}
-                    locationFix={mapUi.locationFix}
-                    recentRoutes={recentRoutes}
-                    onSelectRecent={(entry) =>
-                      handleSelectRecommended({
-                        route: entry.param,
-                        name: entry.name,
-                        distanceKm: entry.distanceKm,
-                      })
-                    }
-                  />
+              <BottomSheet
+                snap={sheetSnap}
+                onSnapChange={setSheetSnap}
+                peekContent={
+                  <>
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => {
+                        handlePanelStateChange("discover");
+                        setSheetSnap("half");
+                      }}
+                    >
+                      מצאו מסלול מוכן
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handlePanelStateChange("build");
+                        setSheetSnap("peek");
+                      }}
+                    >
+                      בנו מסלול
+                    </button>
+                  </>
                 }
-                build={
-                  <BuildPanel
-                    routeState={routeState}
-                    canUndo={canUndo}
-                    canRedo={canRedo}
-                    onUndo={handlePlaybackAwareUndo}
-                    onRedo={handlePlaybackAwareRedo}
-                    onClear={handlePlaybackAwareRouteClear}
-                    canDownload={canDownload}
-                    onDownloadGpx={handleDownloadGpx}
-                    canShare={Boolean(shareUrl)}
-                    onShare={handlePanelShare}
-                    shareCopied={shareCopied}
-                    onSendToPhone={() => setSendToPhoneOpen(true)}
-                    error={routeState.error}
-                    pois={buildPois}
-                    onPoiClick={(poi) => handleDataPointFocus(poi)}
-                    elevation={
-                      <PanelElevationGraph
-                        geometry={routeState.geometry}
-                        distance={routeState.distance}
-                        cursorFraction={plannerPlayback.cursor?.fraction ?? null}
-                        cursorPlaying={plannerPlayback.isPlaying}
-                        externalCursorActive={Boolean(
-                          plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
-                        )}
-                        onElevationHover={handlePlannerElevationHover}
-                        onElevationSelect={handlePlannerElevationSelect}
-                        onBandHover={setHoveredBand}
-                        onBandSelect={(band) => {
-                          const start = band.startPercent ?? 0;
-                          const end = band.endPercent ?? 0;
-                          plannerPlayback.seekToFraction(((start + end) / 2) / 100);
-                        }}
-                      />
-                    }
-                  />
-                }
-              />
+              >
+                <FrontPanel
+                  panelState={panel.state}
+                  onPanelStateChange={handlePanelStateChange}
+                  routeStatus={routeState.status}
+                  collapsed={panelCollapsed}
+                  onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
+                  discover={
+                    <DiscoverPanel
+                      catalog={catalog}
+                      places={places}
+                      onSelectRoute={handleSelectRecommended}
+                      onBuild={() => handlePanelStateChange("build")}
+                      onSlugsChange={setDiscoverSlugs}
+                      onRouteViewport={setDiscoverViewport}
+                      onHoverRoute={setHoveredRouteSlug}
+                      locationFix={mapUi.locationFix}
+                      recentRoutes={recentRoutes}
+                      onSelectRecent={(entry) =>
+                        handleSelectRecommended({
+                          route: entry.param,
+                          name: entry.name,
+                          distanceKm: entry.distanceKm,
+                        })
+                      }
+                    />
+                  }
+                  build={
+                    <BuildPanel
+                      routeState={routeState}
+                      canUndo={canUndo}
+                      canRedo={canRedo}
+                      onUndo={handlePlaybackAwareUndo}
+                      onRedo={handlePlaybackAwareRedo}
+                      onClear={handlePlaybackAwareRouteClear}
+                      canDownload={canDownload}
+                      onDownloadGpx={handleDownloadGpx}
+                      canShare={Boolean(shareUrl)}
+                      onShare={handlePanelShare}
+                      shareCopied={shareCopied}
+                      onSendToPhone={() => setSendToPhoneOpen(true)}
+                      error={routeState.error}
+                      pois={buildPois}
+                      onPoiClick={(poi) => handleDataPointFocus(poi)}
+                      elevation={
+                        <PanelElevationGraph
+                          geometry={routeState.geometry}
+                          distance={routeState.distance}
+                          cursorFraction={plannerPlayback.cursor?.fraction ?? null}
+                          cursorPlaying={plannerPlayback.isPlaying}
+                          externalCursorActive={Boolean(
+                            plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
+                          )}
+                          onElevationHover={handlePlannerElevationHover}
+                          onElevationSelect={handlePlannerElevationSelect}
+                          onBandHover={setHoveredBand}
+                          onBandSelect={(band) => {
+                            const start = band.startPercent ?? 0;
+                            const end = band.endPercent ?? 0;
+                            plannerPlayback.seekToFraction(((start + end) / 2) / 100);
+                          }}
+                        />
+                      }
+                    />
+                  }
+                />
+              </BottomSheet>
             )}
             {state.status === "ready" && panelCollapsed && (
               <button

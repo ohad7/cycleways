@@ -438,7 +438,7 @@ html {
 @media (max-width: 768px) {
   .container {
     flex-direction: column;
-    height: calc(100vh - 140px) !important;
+    height: calc(100dvh - 140px) !important;
     gap: 5px;
   }
 }
