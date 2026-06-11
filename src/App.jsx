@@ -20,7 +20,7 @@ import {
 import { useFitRouteOnPlay } from "./components/routePlayback/useFitRouteOnPlay.js";
 import { buildRouteFitRequest, combineRouteGeometries } from "./map/routeFitPadding.js";
 import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
-import Tutorial from "./components/Tutorial.jsx";
+import PlannerHints from "./components/PlannerHints.jsx";
 import DraftRestoreBanner from "./components/DraftRestoreBanner.jsx";
 import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
@@ -67,8 +67,6 @@ function App() {
     shareUrl,
     shareInfo,
     featureFlags,
-    handleOpenTutorial,
-    handleCloseTutorial,
     handleSearchSubmit,
     handleSearchQueryChange,
     handleLocateMe,
@@ -452,7 +450,7 @@ function App() {
 
   return (
     <>
-      <PageShell onOpenTutorial={handleOpenTutorial}>
+      <PageShell>
         <div
           id="error-message"
           className={state.status === "error" ? "show" : ""}
@@ -617,6 +615,11 @@ function App() {
                   inspectedSegment={inspectedSegment}
                   hoveredPoiId={hoveredPoiId}
                 />
+                <PlannerHints
+                  panelState={panel.state}
+                  pointCount={routePointCount}
+                  routeReady={plannerRouteReady}
+                />
                 <RoutePointActions
                   selectedIndex={mapUi.selectedRoutePointIndex}
                   pointCount={routeState.points.length}
@@ -726,7 +729,6 @@ function App() {
           />
         </Suspense>
       )}
-      <Tutorial open={mapUi.tutorialOpen} onClose={handleCloseTutorial} />
     </>
   );
 }

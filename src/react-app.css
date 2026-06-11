@@ -633,15 +633,6 @@ input {
   text-decoration: underline;
 }
 
-.react-tutorial {
-  display: grid;
-  gap: 12px;
-  margin: 0;
-  padding: 18px 42px 22px 18px;
-  color: #52625d;
-  line-height: 1.5;
-}
-
 .react-shell__state {
   display: flex;
   align-items: center;
@@ -1667,5 +1658,34 @@ input {
   background: transparent;
   color: #52615c;
   font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.planner-hint {
+  position: absolute;
+  top: 112px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 32px);
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #e7dfca;
+  background: rgba(47, 69, 51, 0.92);
+  color: #fff;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 14px rgb(40 48 38 / 25%);
+}
+
+.planner-hint button {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-weight: 700;
   cursor: pointer;
 }

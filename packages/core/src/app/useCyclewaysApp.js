@@ -59,7 +59,6 @@ import {
   trackRouteOperation,
   trackRoutePointEvent,
   trackSearchEvent,
-  trackTutorial,
   trackUndoRedoEvent,
 } from "../platform/analytics.js";
 import { getDistance } from "../utils/distance.js";
@@ -107,7 +106,6 @@ export function useCyclewaysApp({
     selectedDataMarker: null,
     dataMarkerFocus: null,
     elevationHover: null,
-    tutorialOpen: false,
     locationFix: null,
     locateStatus: "idle",
   });
@@ -833,25 +831,6 @@ export function useCyclewaysApp({
     }));
   }, []);
 
-  const handleOpenTutorial = useCallback(() => {
-    setMapUi((current) => ({
-      ...current,
-      tutorialOpen: true,
-    }));
-    trackTutorial(
-      "started",
-      routeState.selectedSegments.length > 0,
-      "help_button",
-    );
-  }, [routeState.selectedSegments.length]);
-
-  const handleCloseTutorial = useCallback(() => {
-    setMapUi((current) => ({
-      ...current,
-      tutorialOpen: false,
-    }));
-  }, []);
-
   const handleDataMarkerClick = useCallback((dataMarker) => {
     setMapUi((current) => ({
       ...current,
@@ -1065,7 +1044,6 @@ export function useCyclewaysApp({
         setMapUi((current) => ({
           ...current,
           downloadModalOpen: false,
-          tutorialOpen: false,
         }));
         return;
       }
@@ -1220,8 +1198,6 @@ export function useCyclewaysApp({
     shareInfo,
     featureFlags,
     directionAnimatorRef,
-    handleOpenTutorial,
-    handleCloseTutorial,
     handleSearchSubmit,
     handleSearchQueryChange,
     handleLocateMe,

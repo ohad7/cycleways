@@ -132,10 +132,3 @@ export function trackPageLoad(hasRouteParam, userAgent) {
     device: userAgent.includes("Mobile") ? "mobile" : "desktop",
   });
 }
-
-export function trackTutorial(action, hasCurrentRoute, source = "unknown") {
-  trackEvent(`tutorial_${action}`, {
-    has_route: hasCurrentRoute,
-    source: source,
-  });
-}
