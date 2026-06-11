@@ -30,6 +30,7 @@ const PLANNER_CAPS = {
   directionPulse: true,
   elevationPulse: true,
   searchHighlight: true,
+  locationFix: true,
   viewportPrefetch: true,
 };
 
@@ -93,6 +94,7 @@ const PLANNER_CAPS = {
     "directionPulse",
     "elevationPulse",
     "searchHighlight",
+    "locationFix",
     "viewportPrefetch",
   ];
   for (const name of disabled) {
