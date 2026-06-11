@@ -11,6 +11,7 @@ import {
   routeVideoCueSlides,
 } from "./components/featured/routePoiStoryData.js";
 import RoutePoiPlaybackPreview from "./components/routePlayback/RoutePoiPlaybackPreview.jsx";
+import RoutePointActions from "./components/RoutePointActions.jsx";
 import {
   MAP_PLAYBACK_PREVIEW_MAX_FRACTION,
   MAP_PLAYBACK_PREVIEW_MAX_METERS,
@@ -234,6 +235,7 @@ function App() {
     { selector: ".legend-container" },
     { selector: ".data-marker-card" },
     { selector: ".planner-route-poi-preview" },
+    { selector: ".route-point-actions", side: "bottom" },
   ]), []);
   const requestFit = useCallback((geometry) => {
     const req = buildRouteFitRequest(geometry, {
@@ -591,6 +593,15 @@ function App() {
                   details={inspectedSegmentDetails}
                   inspectedSegment={inspectedSegment}
                   hoveredPoiId={hoveredPoiId}
+                />
+                <RoutePointActions
+                  selectedIndex={mapUi.selectedRoutePointIndex}
+                  pointCount={routeState.points.length}
+                  onRemove={() => {
+                    handlePlaybackAwareRoutePointRemove(mapUi.selectedRoutePointIndex);
+                    handleRoutePointSelect(null);
+                  }}
+                  onDismiss={() => handleRoutePointSelect(null)}
                 />
               </>
             )}
