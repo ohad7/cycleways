@@ -1571,10 +1571,8 @@ html {
 
 @media (max-width: 768px) {
   .search-input-group {
-    position: absolute;
-    right: 0px;
-    top: 0px;
     width: 200px;
+    flex-shrink: 0;
   }
 }
 

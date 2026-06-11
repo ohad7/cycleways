@@ -19,12 +19,9 @@ test("locate button surfaces near-me labels and sort in Discover", async ({ page
   await page.goto("/");
   const panel = page.getByTestId("front-panel");
   await expect(panel).toBeVisible();
-  const locate = page.locator(".locate-btn");
+  const locate = page.getByRole("button", { name: "מצא את המיקום שלי" });
   await expect(locate).toBeVisible();
-  // dispatchEvent bypasses Playwright's pointer-event interactability check,
-  // which on narrow (mobile) viewports falsely sees the adjacent search form's
-  // SVG as intercepting the locate button.
-  await locate.dispatchEvent("click");
+  await locate.click();
   // Distance labels appear on the cards.
   await expect(panel.locator(".panel-route-card__near").first()).toContainText("ממך");
   // The near-me sort chip appears and re-orders by distance: the fix sits in
@@ -37,7 +34,7 @@ test("denied geolocation degrades to an error message", async ({ page, context }
   await context.clearPermissions();
   await page.goto("/");
   await expect(page.getByTestId("front-panel")).toBeVisible();
-  await page.locator(".locate-btn").dispatchEvent("click");
+  await page.getByRole("button", { name: "מצא את המיקום שלי" }).click();
   // The geolocation error path may take up to ~10s in some configurations.
   await expect(page.locator("#search-error")).toContainText("לא הצלחנו לאתר את המיקום שלך", { timeout: 15000 });
 });
