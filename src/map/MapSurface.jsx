@@ -721,15 +721,23 @@ function MapSurface({
       return Number.isInteger(index) ? index : null;
     };
 
+    // Point drags activate only past the slop threshold, so a touch that's
+    // really a tap (select) or a wobbly pan start doesn't move the point.
+    // Mirrors the routeLineDrag pending→active pattern below.
+    const POINT_DRAG_SLOP_PX = 6;
+
     const startDrag = (event) => {
       const pointIndex = getPointIndex(event);
       if (!Number.isInteger(pointIndex)) return;
 
       event.preventDefault?.();
-      draggingPointRef.current = pointIndex;
+      draggingPointRef.current = {
+        index: pointIndex,
+        startPoint: event.point,
+        active: false,
+      };
       map.dragPan.disable();
-      map.getCanvas().style.cursor = "grabbing";
-      callbacksRef.current.onRoutePointDragStart?.(draggingPointRef.current);
+      map.getCanvas().style.cursor = "grab";
     };
 
     const startRouteLineDrag = (event) => {
@@ -770,9 +778,16 @@ function MapSurface({
     };
 
     const moveDrag = (event) => {
-      const pointIndex = draggingPointRef.current;
-      if (Number.isInteger(pointIndex)) {
-        callbacksRef.current.onRoutePointDrag?.(pointIndex, {
+      const pointDrag = draggingPointRef.current;
+      if (pointDrag) {
+        if (!pointDrag.active) {
+          const movedPixels = screenPointDistance(event.point, pointDrag.startPoint);
+          if (movedPixels < POINT_DRAG_SLOP_PX) return;
+          pointDrag.active = true;
+          map.getCanvas().style.cursor = "grabbing";
+          callbacksRef.current.onRoutePointDragStart?.(pointDrag.index);
+        }
+        callbacksRef.current.onRoutePointDrag?.(pointDrag.index, {
           lng: event.lngLat.lng,
           lat: event.lngLat.lat,
         });
@@ -800,14 +815,20 @@ function MapSurface({
     };
 
     const endDrag = () => {
-      const pointIndex = draggingPointRef.current;
+      const pointDrag = draggingPointRef.current;
       const routeLineDrag = routeLineDragRef.current;
 
-      if (Number.isInteger(pointIndex)) {
+      if (pointDrag) {
         draggingPointRef.current = null;
         map.dragPan.enable();
         map.getCanvas().style.cursor = "";
-        callbacksRef.current.onRoutePointDragEnd?.(pointIndex);
+        if (pointDrag.active) {
+          callbacksRef.current.onRoutePointDragEnd?.(pointDrag.index);
+        } else {
+          // A no-move release is a tap: select the point. Idempotent with the
+          // layer click handler, which also fires on genuine clicks/taps.
+          callbacksRef.current.onRoutePointSelect?.(pointDrag.index);
+        }
         return;
       }
 
@@ -826,19 +847,19 @@ function MapSurface({
     };
 
     const leavePoint = () => {
-      if (!Number.isInteger(draggingPointRef.current)) {
+      if (!draggingPointRef.current) {
         map.getCanvas().style.cursor = "";
       }
     };
 
     const enterRouteLine = () => {
-      if (!Number.isInteger(draggingPointRef.current) && !routeLineDragRef.current) {
+      if (!draggingPointRef.current && !routeLineDragRef.current) {
         map.getCanvas().style.cursor = "grab";
       }
     };
 
     const leaveRouteLine = () => {
-      if (!Number.isInteger(draggingPointRef.current) && !routeLineDragRef.current) {
+      if (!draggingPointRef.current && !routeLineDragRef.current) {
         map.getCanvas().style.cursor = "";
       }
     };
