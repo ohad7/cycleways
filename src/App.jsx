@@ -151,6 +151,16 @@ function App() {
     () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
     [catalog],
   );
+  // The catalog route currently loaded in the planner, tracked by slug. Set
+  // when a Discover card / recent is selected; cleared on any route edit so
+  // the route-page CTA only shows while the map matches the catalog route.
+  const [selectedCatalogSlug, setSelectedCatalogSlug] = useState(null);
+  const selectedCatalogEntry = useMemo(
+    () =>
+      catalogEntries.find((entry) => entry.slug === selectedCatalogSlug) ||
+      null,
+    [catalogEntries, selectedCatalogSlug],
+  );
   const placeById = useMemo(() => {
     const map = new Map();
     for (const place of Array.isArray(places) ? places : []) map.set(place.id, place);
@@ -249,6 +259,7 @@ function App() {
   useEffect(() => {
     const onPopState = async () => {
       const param = getQueryParam("route");
+      setSelectedCatalogSlug(null);
       if (param) {
         await handleLoadRouteParam(param);
       } else {
@@ -282,10 +293,12 @@ function App() {
       if (loaded) {
         handlePanelStateChange("build");
         setSheetSnap("peek");
+        setSelectedCatalogSlug(entry.slug || null);
         handleAddRecentRoute({
           param: entry.route,
           name: entry.name || "מסלול",
           distanceKm: Number(entry.distanceKm) || undefined,
+          slug: entry.slug || undefined,
         });
       } else {
         window.location.assign(`/?route=${encodeURIComponent(entry.route)}`);
@@ -593,35 +606,43 @@ function App() {
   }, [handleDataPointFocus, pausePlannerPlayback, routeState.activeDataPoints]);
   const handlePlaybackAwareUndo = useCallback(() => {
     pausePlannerPlayback();
+    setSelectedCatalogSlug(null);
     handleUndo();
   }, [handleUndo, pausePlannerPlayback]);
   const handlePlaybackAwareRedo = useCallback(() => {
     pausePlannerPlayback();
+    setSelectedCatalogSlug(null);
     handleRedo();
   }, [handleRedo, pausePlannerPlayback]);
   const handlePlaybackAwareRouteClear = useCallback(() => {
     plannerPlayback.reset();
     setHoveredBand(null);
+    setSelectedCatalogSlug(null);
     handleRouteClear();
   }, [handleRouteClear, plannerPlayback.reset]);
   const handlePlaybackAwareMapClick = useCallback((event) => {
     pausePlannerPlayback();
+    setSelectedCatalogSlug(null);
     handleMapClick(event);
   }, [handleMapClick, pausePlannerPlayback]);
   const handlePlaybackAwareRoutePointDragStart = useCallback((...args) => {
     pausePlannerPlayback();
+    setSelectedCatalogSlug(null);
     handleRoutePointDragStart(...args);
   }, [handleRoutePointDragStart, pausePlannerPlayback]);
   const handlePlaybackAwareRoutePointRemove = useCallback((...args) => {
     pausePlannerPlayback();
+    setSelectedCatalogSlug(null);
     handleRoutePointRemove(...args);
   }, [handleRoutePointRemove, pausePlannerPlayback]);
   const handlePlaybackAwareRouteLineDragStart = useCallback((...args) => {
     pausePlannerPlayback();
+    setSelectedCatalogSlug(null);
     handleRouteLineDragStart(...args);
   }, [handleRouteLineDragStart, pausePlannerPlayback]);
   const handlePlaybackAwareAddDataMarkerToRoute = useCallback((...args) => {
     pausePlannerPlayback();
+    setSelectedCatalogSlug(null);
     handleAddDataMarkerToRoute(...args);
   }, [handleAddDataMarkerToRoute, pausePlannerPlayback]);
 
@@ -896,6 +917,7 @@ function App() {
                           route: entry.param,
                           name: entry.name,
                           distanceKm: entry.distanceKm,
+                          slug: entry.slug,
                         })
                       }
                     />
@@ -903,6 +925,7 @@ function App() {
                   build={
                     <BuildPanel
                       routeState={routeState}
+                      catalogEntry={selectedCatalogEntry}
                       canUndo={canUndo}
                       canRedo={canRedo}
                       onUndo={handlePlaybackAwareUndo}
