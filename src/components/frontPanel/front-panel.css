@@ -71,7 +71,7 @@
   .front-sheet {
     position: absolute;
     inset: 0 0 auto 0;
-    height: 100%;
+    height: var(--sheet-visible-height, 100%);
     z-index: 20;
     flex: none;
     transform: translateY(var(--sheet-offset, 0px));
@@ -80,6 +80,7 @@
     border-radius: 16px 16px 0 0;
     background: #fff;
     box-shadow: 0 -6px 24px rgb(40 48 38 / 18%);
+    overflow: hidden;
   }
   .front-sheet--dragging {
     transition: none;
@@ -102,42 +103,168 @@
     display: none;
   }
   .front-sheet--peek .front-sheet__peek {
-    display: flex;
-    gap: 10px;
-    padding: 4px 14px 12px;
+    display: block;
+    padding: 4px 12px 10px;
   }
   /* At peek only the handle + actions are useful; hide the panel beneath. */
   .front-sheet--peek .front-panel {
     visibility: hidden;
   }
-  .front-panel {
-    flex: 1 1 auto;
+  .front-sheet .front-panel {
+    flex: 1 1 0;
     max-height: none;
     border-radius: 0;
     border: none;
     box-shadow: none;
     min-height: 0;
   }
+  .front-panel__body {
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 22px;
+  }
   /* The desktop collapse affordance is replaced by the sheet. */
   .front-panel__collapse,
   .front-shell__reopen {
     display: none;
   }
-  .front-sheet__peek button {
-    flex: 1;
-    padding: 12px 10px;
-    border-radius: 12px;
+  .front-sheet__mode-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 3px;
     border: 1px solid #dce4df;
-    background: #fff;
-    font-weight: 800;
-    font-size: 0.95rem;
-    color: #2f4533;
-    cursor: pointer;
+    border-radius: 12px;
+    background: #f6f8f4;
   }
-  .front-sheet__peek button.primary {
-    background: #2f6b3c;
-    border-color: #2f6b3c;
-    color: #fff;
+  .front-sheet__mode-switch button {
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #33483b;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 800;
+  }
+  .front-sheet__mode-switch button.is-active {
+    border-color: #d6dfd8;
+    background: #fff;
+    box-shadow: 0 1px 4px rgb(40 48 38 / 12%);
+    color: #1f5d35;
+  }
+  .front-sheet__peek-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+  }
+  .front-sheet__discover-peek {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .front-sheet__discover-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    min-height: 20px;
+    padding: 0 2px;
+    border: none;
+    background: transparent;
+    color: #33483b;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .front-sheet__discover-head span:last-child {
+    color: #5f6b62;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .front-sheet__route-chips {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+    min-width: 0;
+  }
+  .front-sheet__route-chip {
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 46px;
+    padding: 7px 8px;
+    border: 1px solid #dce4df;
+    border-radius: 10px;
+    background: #fff;
+    color: #283026;
+    cursor: pointer;
+    font: inherit;
+    text-align: start;
+    box-shadow: 0 1px 4px rgb(40 48 38 / 10%);
+  }
+  .front-sheet__route-chip-swatch {
+    width: 8px;
+    height: 28px;
+    border-radius: 999px;
+  }
+  .front-sheet__route-chip-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .front-sheet__route-chip-title,
+  .front-sheet__route-chip-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .front-sheet__route-chip-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .front-sheet__route-chip-meta {
+    color: #627066;
+    font-size: 0.73rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .front-sheet__build-peek {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 58px;
+    padding: 10px 12px;
+    border: 1px solid #dce4df;
+    border-radius: 12px;
+    background: #fff;
+    color: #283026;
+    cursor: pointer;
+    font: inherit;
+    box-shadow: 0 1px 4px rgb(40 48 38 / 10%);
+  }
+  .front-sheet__build-peek span:first-child {
+    font-size: 0.95rem;
+    font-weight: 850;
+  }
+  .front-sheet__build-peek span:last-child {
+    color: #5f6b62;
+    font-size: 0.82rem;
+    font-weight: 750;
+    white-space: nowrap;
   }
 }
 .front-panel__statebar {

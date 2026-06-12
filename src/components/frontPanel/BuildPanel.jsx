@@ -19,6 +19,7 @@ export default function BuildPanel({
   pois = [],
   onPoiClick,
   elevation,
+  playback,
   error,
 }) {
   const hasRoute = routeState.geometry.length >= 2;
@@ -57,6 +58,7 @@ export default function BuildPanel({
       )}
 
       {hasRoute && elevation}
+      {hasRoute && playback}
 
       {hasRoute && (
         <div className="build-panel__actions">

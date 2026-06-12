@@ -18,7 +18,11 @@ import {
   useSyntheticRoutePlayback,
 } from "./components/routePlayback/useRoutePlayback.js";
 import { useFitRouteOnPlay } from "./components/routePlayback/useFitRouteOnPlay.js";
-import { buildRouteFitRequest, combineRouteGeometries } from "./map/routeFitPadding.js";
+import {
+  buildRouteFitRequest,
+  combineRouteGeometries,
+  computeOverlayFitPadding,
+} from "./map/routeFitPadding.js";
 import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
 import PlannerHints from "./components/PlannerHints.jsx";
 import DraftRestoreBanner from "./components/DraftRestoreBanner.jsx";
@@ -27,6 +31,8 @@ import FrontPanel from "./components/frontPanel/FrontPanel.jsx";
 import BottomSheet from "./components/frontPanel/BottomSheet.jsx";
 import { INITIAL_PANEL_STATE, resolvePanelState } from "./components/frontPanel/panelState.js";
 import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
+import DiscoverPeekPreview from "./components/frontPanel/DiscoverPeekPreview.jsx";
+import { selectDiscoverRoutes } from "./components/frontPanel/discoverRouteList.js";
 import BuildPanel from "./components/frontPanel/BuildPanel.jsx";
 import PanelElevationGraph from "./components/frontPanel/PanelElevationGraph.jsx";
 import { useCatalogData } from "./components/frontPanel/useCatalogData.js";
@@ -37,6 +43,7 @@ import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { hasQueryParam } from "@cycleways/core/platform/location.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
 import { dataPointId } from "@cycleways/core/data/dataMarkers.js";
+import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
 import { routeSliceForRange } from "./components/frontPanel/routeSlice.js";
 import "./react-app.css";
 
@@ -51,6 +58,18 @@ const SendToPhone = lazy(() => import("./components/SendToPhone.jsx"));
 // out on hover was disorienting. Hover still bolds the line either way (the
 // `hovered` tier in recommendedRoutes). Flip to true to restore the old behavior.
 const DISCOVER_HOVER_FITS_CAMERA = false;
+const DISCOVER_PEEK_ROUTE_COUNT = 2;
+
+function samePadding(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.top === b.top &&
+    a.right === b.right &&
+    a.bottom === b.bottom &&
+    a.left === b.left
+  );
+}
 
 function App() {
   const {
@@ -106,9 +125,15 @@ function App() {
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sheetSnap, setSheetSnap] = useState("peek");
+  const [isMobileSheet, setIsMobileSheet] = useState(() =>
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 860px)").matches,
+  );
   const [hoveredBand, setHoveredBand] = useState(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [sendToPhoneOpen, setSendToPhoneOpen] = useState(false);
+  const [endedPoiPreviewDismissed, setEndedPoiPreviewDismissed] = useState(false);
   const [hoveredRouteSlug, setHoveredRouteSlug] = useState(null);
   const [hoveredPoiId, setHoveredPoiId] = useState(null);
   const [discoverFilters, setDiscoverFilters] = useState(emptyFilters);
@@ -123,6 +148,44 @@ function App() {
   const recommendedGeomCacheRef = useRef(new Map());
   const routePointCount = routeState.points.length;
   const { catalog, places } = useCatalogData();
+  const catalogEntries = useMemo(
+    () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
+    [catalog],
+  );
+  const placeById = useMemo(() => {
+    const map = new Map();
+    for (const place of Array.isArray(places) ? places : []) map.set(place.id, place);
+    return map;
+  }, [places]);
+  const discoverRouteEntries = useMemo(() => {
+    const { routes } = selectDiscoverRoutes(catalogEntries, discoverFilters);
+    return nearMeSort && mapUi.locationFix
+      ? sortByDistanceFromUser(routes, placeById, mapUi.locationFix)
+      : routes;
+  }, [catalogEntries, discoverFilters, mapUi.locationFix, nearMeSort, placeById]);
+  const discoverPeekRoutes = useMemo(
+    () => discoverRouteEntries.slice(0, DISCOVER_PEEK_ROUTE_COUNT),
+    [discoverRouteEntries],
+  );
+  const discoverPeekSlugs = useMemo(
+    () => discoverPeekRoutes.map((route) => route.slug),
+    [discoverPeekRoutes],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+    const query = window.matchMedia("(max-width: 860px)");
+    const update = () => setIsMobileSheet(query.matches);
+    update();
+    if (typeof query.addEventListener === "function") {
+      query.addEventListener("change", update);
+      return () => query.removeEventListener("change", update);
+    }
+    query.addListener?.(update);
+    return () => query.removeListener?.(update);
+  }, []);
 
   React.useEffect(() => {
     if (panel.lastPointCount === 0 && routePointCount > 0) setSheetSnap("peek");
@@ -132,7 +195,14 @@ function App() {
   }, [routePointCount, panel.lastPointCount]);
 
   useEffect(() => {
-    const prefetch = discoverViewport.prefetchSlugs;
+    const prefetch = [
+      ...new Set([
+        ...discoverViewport.prefetchSlugs,
+        ...(panel.state === "discover" && isMobileSheet && sheetSnap === "peek"
+          ? discoverPeekSlugs
+          : []),
+      ]),
+    ];
     if (panel.state !== "discover" || prefetch.length === 0) return;
     let cancelled = false;
     const slugsToLoad = prefetch.filter(
@@ -167,11 +237,22 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [discoverViewport.prefetchSlugs, panel.state]);
+  }, [discoverPeekSlugs, discoverViewport.prefetchSlugs, isMobileSheet, panel.state, sheetSnap]);
 
   const handlePanelStateChange = useCallback((to) => {
     setPanel((prev) => resolvePanelState(prev, { type: "toggle", to }));
   }, []);
+
+  const handlePeekDiscover = useCallback(() => {
+    handlePanelStateChange("discover");
+    setSheetSnap("half");
+  }, [handlePanelStateChange]);
+
+  const handlePeekBuild = useCallback(() => {
+    const openBuildDetails = panel.state === "build" || routePointCount > 0;
+    handlePanelStateChange("build");
+    setSheetSnap(openBuildDetails ? "half" : "peek");
+  }, [handlePanelStateChange, panel.state, routePointCount]);
 
   // Loads a recommended route into the live planner (no reload) and shows it
   // in the Build panel. Falls back to the full-page ?route= restore when the
@@ -247,6 +328,7 @@ function App() {
   });
   const mapContainerRef = useRef(null);
   const [fitRequest, setFitRequest] = useState(null);
+  const [cameraPadding, setCameraPadding] = useState(null);
   const discoverFitGeometryRef = useRef([]);
   const plannerFitRegistry = useMemo(() => ([
     { selector: ".planner-route-playback", side: "bottom" },
@@ -257,19 +339,38 @@ function App() {
     { selector: ".route-point-actions", side: "bottom" },
     { selector: ".front-sheet", side: "bottom" },
   ]), []);
+  const getMapOverlayScope = useCallback(
+    () => mapContainerRef.current?.parentElement ?? mapContainerRef.current,
+    [],
+  );
+  const measureCameraPadding = useCallback(() => {
+    const mapEl = mapContainerRef.current;
+    if (!mapEl) return null;
+    return computeOverlayFitPadding({
+      mapEl,
+      registry: plannerFitRegistry,
+      scopeEl: getMapOverlayScope(),
+    });
+  }, [getMapOverlayScope, plannerFitRegistry]);
+  const refreshCameraPadding = useCallback(() => {
+    const next = measureCameraPadding();
+    setCameraPadding((prev) => (samePadding(prev, next) ? prev : next));
+  }, [measureCameraPadding]);
   const requestFit = useCallback((geometry) => {
     const req = buildRouteFitRequest(geometry, {
       mapEl: mapContainerRef.current,
       registry: plannerFitRegistry,
+      scopeEl: getMapOverlayScope(),
     });
     if (req) setFitRequest(req);
-  }, [plannerFitRegistry]);
+  }, [getMapOverlayScope, plannerFitRegistry]);
 
   useFitRouteOnPlay({
     isPlaying: plannerPlayback.isPlaying,
     currentTime: plannerPlayback.currentTime,
     geometry: routeState.geometry,
     getMapEl: () => mapContainerRef.current,
+    getScopeEl: getMapOverlayScope,
     registry: plannerFitRegistry,
     onRequestFit: setFitRequest,
   });
@@ -285,11 +386,14 @@ function App() {
 
   const recommendedRoutes = useMemo(() => {
     if (panel.state !== "discover") return null;
+    const peekMode = isMobileSheet && sheetSnap === "peek";
     const bright = new Set(discoverViewport.visibleSlugs);
-    const drawSlugs = [
-      ...discoverViewport.visibleSlugs,
-      ...discoverViewport.ghostSlugs,
-    ];
+    const drawSlugs = peekMode
+      ? discoverPeekSlugs
+      : [
+          ...discoverViewport.visibleSlugs,
+          ...discoverViewport.ghostSlugs,
+        ];
     return drawSlugs
       .map((slug) => {
         const geometry = recommendedGeoms[slug];
@@ -297,31 +401,35 @@ function App() {
         // Color is keyed to the route's position in the full ordered list so it
         // stays stable regardless of which routes are currently drawn.
         const index = discoverSlugs.indexOf(slug);
+        const colorIndex = index >= 0 ? index : discoverPeekSlugs.indexOf(slug);
         return {
           slug,
           geometry,
-          hovered: slug === hoveredRouteSlug,
-          tier: bright.has(slug) ? "bright" : "ghost",
-          color: discoverRouteColor(index),
+          hovered: !peekMode && slug === hoveredRouteSlug,
+          tier: !peekMode && bright.has(slug) ? "bright" : "ghost",
+          color: discoverRouteColor(colorIndex),
         };
       })
       .filter(Boolean);
   }, [
     panel.state,
+    discoverPeekSlugs,
     discoverViewport,
     discoverSlugs,
     recommendedGeoms,
     hoveredRouteSlug,
+    isMobileSheet,
+    sheetSnap,
   ]);
 
   // Fit only the bright (in-viewport) routes — ghosts are drawn but excluded so
   // the camera frames what the user is actually reading.
   const discoverFitRoutes = useMemo(() => {
-    if (panel.state !== "discover") return null;
+    if (panel.state !== "discover" || (isMobileSheet && sheetSnap === "peek")) return null;
     return discoverViewport.visibleSlugs
       .map((slug) => ({ geometry: recommendedGeoms[slug] }))
       .filter((r) => Array.isArray(r.geometry) && r.geometry.length >= 2);
-  }, [panel.state, discoverViewport.visibleSlugs, recommendedGeoms]);
+  }, [isMobileSheet, panel.state, sheetSnap, discoverViewport.visibleSlugs, recommendedGeoms]);
 
   // Fit the map to all relevant Discover routes; re-fit when the filtered list
   // (or its loaded geometries) changes. Debounced so streaming loads converge.
@@ -375,10 +483,50 @@ function App() {
       routeState.distance,
     ],
   );
+  const plannerPlaybackEnded =
+    plannerRouteReady &&
+    Number.isFinite(plannerPlayback.duration) &&
+    plannerPlayback.duration > 0 &&
+    !plannerPlayback.isPlaying &&
+    !plannerPlayback.isScrubbing &&
+    plannerPlayback.currentTime >= plannerPlayback.duration - 0.05;
+
+  useEffect(() => {
+    if (!plannerPlaybackEnded) {
+      setEndedPoiPreviewDismissed(false);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setEndedPoiPreviewDismissed(true), 3000);
+    return () => window.clearTimeout(timer);
+  }, [plannerPlaybackEnded, routeState.geometry]);
+
   const plannerPoiPreviewVisible =
     plannerRouteReady &&
     !mapUi.selectedDataMarker &&
+    !endedPoiPreviewDismissed &&
     Boolean(plannerPoiPreview.slide && plannerPoiPreview.near);
+
+  useEffect(() => {
+    if (state.status !== "ready") {
+      setCameraPadding(null);
+      return undefined;
+    }
+    const raf = window.requestAnimationFrame(refreshCameraPadding);
+    const timer = window.setTimeout(refreshCameraPadding, 280);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
+  }, [
+    state.status,
+    sheetSnap,
+    panel.state,
+    plannerRouteReady,
+    plannerPoiPreviewVisible,
+    panelCollapsed,
+    refreshCameraPadding,
+  ]);
+
   const pausePlannerPlayback = plannerPlayback.pause;
   const handlePlannerElevationHover = useCallback((payload) => {
     handleElevationHover(payload);
@@ -434,9 +582,10 @@ function App() {
     handleRedo();
   }, [handleRedo, pausePlannerPlayback]);
   const handlePlaybackAwareRouteClear = useCallback(() => {
-    pausePlannerPlayback();
+    plannerPlayback.reset();
+    setHoveredBand(null);
     handleRouteClear();
-  }, [handleRouteClear, pausePlannerPlayback]);
+  }, [handleRouteClear, plannerPlayback.reset]);
   const handlePlaybackAwareMapClick = useCallback((event) => {
     pausePlannerPlayback();
     handleMapClick(event);
@@ -458,6 +607,29 @@ function App() {
     handleAddDataMarkerToRoute(...args);
   }, [handleAddDataMarkerToRoute, pausePlannerPlayback]);
 
+  const renderPlannerPlaybackControls = (className) => (
+    plannerRouteReady ? (
+      <RoutePlaybackControls
+        className={className}
+        readoutMode="distance"
+        isPlaying={plannerPlayback.isPlaying}
+        isReady={plannerPlayback.isReady}
+        isScrubbing={plannerPlayback.isScrubbing}
+        currentTime={plannerPlayback.currentTime}
+        duration={plannerPlayback.duration}
+        progressFraction={plannerPlayback.cursor?.fraction}
+        routeDistanceMeters={routeState.distance}
+        onTogglePlayback={plannerPlayback.togglePlayback}
+        onScrubStart={plannerPlayback.onScrubStart}
+        onScrubChange={plannerPlayback.onScrubChange}
+        onScrubEnd={plannerPlayback.onScrubEnd}
+        playLabel="נגן מסלול על המפה"
+        pauseLabel="השהה מסלול על המפה"
+        scrubberLabel="מעבר לאורך המסלול"
+      />
+    ) : null
+  );
+
   return (
     <>
       <PageShell>
@@ -472,7 +644,13 @@ function App() {
         </div>
 
         <div className="container">
-          <div className={["front-shell", panelCollapsed ? "front-shell--collapsed" : ""].filter(Boolean).join(" ")}>
+          <div
+            className={[
+              "front-shell",
+              `front-shell--sheet-${sheetSnap}`,
+              panelCollapsed ? "front-shell--collapsed" : "",
+            ].filter(Boolean).join(" ")}
+          >
             <div
               ref={mapContainerRef}
               className={[
@@ -552,6 +730,7 @@ function App() {
                   activeDataPointIds={activeDataPointIds}
                   animator={null}
                   dataMarkerFeatures={dataMarkerFeatures}
+                  cameraPadding={cameraPadding}
                   focusedMarker={focusedMarker}
                   elevationHover={mapUi.elevationHover}
                   focusedSegment={routeState.focusedSegment}
@@ -586,26 +765,7 @@ function App() {
                   recommendedRoutes={recommendedRoutes}
                 />
 
-                {plannerRouteReady && (
-                  <RoutePlaybackControls
-                    className="planner-route-playback"
-                    readoutMode="distance"
-                    isPlaying={plannerPlayback.isPlaying}
-                    isReady={plannerPlayback.isReady}
-                    isScrubbing={plannerPlayback.isScrubbing}
-                    currentTime={plannerPlayback.currentTime}
-                    duration={plannerPlayback.duration}
-                    progressFraction={plannerPlayback.cursor?.fraction}
-                    routeDistanceMeters={routeState.distance}
-                    onTogglePlayback={plannerPlayback.togglePlayback}
-                    onScrubStart={plannerPlayback.onScrubStart}
-                    onScrubChange={plannerPlayback.onScrubChange}
-                    onScrubEnd={plannerPlayback.onScrubEnd}
-                    playLabel="נגן מסלול על המפה"
-                    pauseLabel="השהה מסלול על המפה"
-                    scrubberLabel="מעבר לאורך המסלול"
-                  />
-                )}
+                {renderPlannerPlaybackControls("planner-route-playback planner-route-playback--map")}
 
                 {plannerPoiPreviewVisible && (
                   <RoutePoiPlaybackPreview
@@ -647,27 +807,48 @@ function App() {
                 snap={sheetSnap}
                 onSnapChange={setSheetSnap}
                 peekContent={
-                  <>
-                    <button
-                      type="button"
-                      className="primary"
-                      onClick={() => {
-                        handlePanelStateChange("discover");
-                        setSheetSnap("half");
-                      }}
-                    >
-                      מצאו מסלול מוכן
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handlePanelStateChange("build");
-                        setSheetSnap("peek");
-                      }}
-                    >
-                      בנו מסלול
-                    </button>
-                  </>
+                  <div className="front-sheet__peek-stack">
+                    <div className="front-sheet__mode-switch" role="tablist" aria-label="מצב עבודה">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={panel.state === "discover"}
+                        className={panel.state === "discover" ? "is-active" : ""}
+                        onClick={handlePeekDiscover}
+                      >
+                        חפש מסלול
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={panel.state === "build"}
+                        className={panel.state === "build" ? "is-active" : ""}
+                        onClick={handlePeekBuild}
+                      >
+                        בניית מסלול
+                      </button>
+                    </div>
+                    {panel.state === "discover" ? (
+                      <DiscoverPeekPreview
+                        routes={discoverPeekRoutes}
+                        onOpen={handlePeekDiscover}
+                        onSelect={handleSelectRecommended}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="front-sheet__build-peek"
+                        onClick={handlePeekBuild}
+                      >
+                        <span>מסלול חדש</span>
+                        <span>
+                          {routePointCount > 0
+                            ? `${routePointCount} נקודות · ${formatLegacyDistance(routeState.distance)}`
+                            : "0 נקודות"}
+                        </span>
+                      </button>
+                    )}
+                  </div>
                 }
               >
                 <FrontPanel
@@ -681,10 +862,11 @@ function App() {
                       catalog={catalog}
                       places={places}
                       onSelectRoute={handleSelectRecommended}
-                      onBuild={() => handlePanelStateChange("build")}
+                      onBuild={handlePeekBuild}
                       onSlugsChange={setDiscoverSlugs}
                       onRouteViewport={setDiscoverViewport}
                       onHoverRoute={setHoveredRouteSlug}
+                      viewportKey={`${isMobileSheet ? "mobile" : "desktop"}:${sheetSnap}:${panel.state}`}
                       locationFix={mapUi.locationFix}
                       filters={discoverFilters}
                       onFiltersChange={setDiscoverFilters}
@@ -717,6 +899,9 @@ function App() {
                       error={routeState.error}
                       pois={buildPois}
                       onPoiClick={(poi) => handleDataPointFocus(poi)}
+                      playback={renderPlannerPlaybackControls(
+                        "planner-route-playback planner-route-playback--panel",
+                      )}
                       elevation={
                         <PanelElevationGraph
                           geometry={routeState.geometry}

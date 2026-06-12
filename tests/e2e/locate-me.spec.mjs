@@ -16,17 +16,27 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-test("locate button surfaces near-me labels and sort in Discover", async ({ page }) => {
+test("locate button surfaces near-me labels and sort in Discover", async ({ page, isMobile }) => {
   await page.goto("/");
   const panel = page.getByTestId("front-panel");
   // On mobile the panel is in a bottom sheet — open it so panel content is visible.
   await ensurePanelOpen(page);
   await expect(panel).toBeVisible();
+  if (isMobile) {
+    await page.waitForTimeout(320);
+  }
   const locate = page.getByRole("button", { name: "מצא את המיקום שלי" });
   await expect(locate).toBeVisible();
   await locate.click();
   // Distance labels appear on the cards.
   await expect(panel.locator(".panel-route-card__near").first()).toContainText("ממך");
+  if (isMobile) {
+    await expect.poll(async () => page.evaluate(() => {
+      const events = window.__mockMapboxEvents || [];
+      const flyTo = [...events].reverse().find((event) => event.type === "flyTo");
+      return flyTo?.options?.padding?.bottom ?? 0;
+    })).toBeGreaterThan(120);
+  }
   // The near-me sort chip appears and re-orders by distance: the fix sits in
   // Beit Hillel, so sovev-beit-hillel must come first.
   await panel.getByRole("button", { name: "קרוב אליי" }).click();

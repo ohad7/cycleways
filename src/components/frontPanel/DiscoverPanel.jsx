@@ -34,6 +34,7 @@ export default function DiscoverPanel({
   onNearMeSortChange,
   recentRoutes,
   onSelectRecent,
+  viewportKey = "",
 }) {
   const entries = useMemo(
     () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
@@ -84,7 +85,7 @@ export default function DiscoverPanel({
   );
 
   const orderedSlugs = useMemo(() => routes.map((r) => r.slug), [routes]);
-  const { containerRef, registerCard, sets } = useCardViewport(orderedSlugs);
+  const { containerRef, registerCard, sets } = useCardViewport(orderedSlugs, viewportKey);
 
   // Full ordered list drives stable per-route colors; the derived sets drive the
   // map's bright/ghost tiers and lazy geometry loading.

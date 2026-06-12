@@ -1,7 +1,7 @@
 // Pure snap math for the mobile bottom sheet. Offsets are translateY pixels
 // from the top of the shell (small offset = sheet mostly open).
 export const SNAPS = ["full", "half", "peek"];
-export const PEEK_PX = 96;
+export const PEEK_PX = 164;
 const TOP_GAP_PX = 12;
 // How far (ms) a fling is projected forward before picking the nearest snap.
 const FLING_LOOKAHEAD_MS = 300;

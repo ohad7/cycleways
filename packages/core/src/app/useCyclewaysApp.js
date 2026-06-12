@@ -753,9 +753,8 @@ export function useCyclewaysApp({
     recordRecentRoute(setRecentRoutes, entry);
   }, []);
 
-  // Restores the autosaved draft into the live session. The draft offer is
-  // consumed either way; the stored draft itself survives (it will simply be
-  // re-offered next session if the user clears the restored route).
+  // Restores the autosaved draft into the live session. Dismissing the offer
+  // deletes the stored draft; restoring leaves autosave in charge of the route.
   const handleRestoreDraft = useCallback(async () => {
     const draft = plannerDraft;
     setPlannerDraft(null);
@@ -764,6 +763,7 @@ export function useCyclewaysApp({
   }, [plannerDraft, handleLoadRouteParam]);
 
   const handleDismissDraft = useCallback(() => {
+    setStoredItem(PLANNER_DRAFT_KEY, "");
     setPlannerDraft(null);
   }, []);
 

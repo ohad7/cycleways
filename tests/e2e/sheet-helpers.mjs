@@ -14,4 +14,10 @@ export async function ensurePanelOpen(page) {
     await grip.click();
     await expect(sheet).toHaveAttribute("data-snap", "half");
   }
+  await expect.poll(() => sheet.evaluate((element) => {
+    const styles = window.getComputedStyle(element);
+    const expectedOffset = Number.parseFloat(styles.getPropertyValue("--sheet-offset")) || 0;
+    const matrix = new window.DOMMatrixReadOnly(styles.transform);
+    return Math.abs(matrix.m42 - expectedOffset);
+  })).toBeLessThanOrEqual(1);
 }

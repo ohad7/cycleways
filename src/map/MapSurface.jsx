@@ -74,6 +74,7 @@ function runMapCleanup(map, cleanup) {
 function MapSurface({
   activeDataPointIds = [],
   animator = null,
+  cameraPadding = null,
   dataMarkerFeatures = [],
   focusedMarker,
   focusedSegment,
@@ -510,6 +511,10 @@ function MapSurface({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready" || !caps.videoCursorLayer) return;
+    if (!videoCursor) {
+      clearVideoCursorLayer(map);
+      return;
+    }
     syncVideoCursorLayer(map, videoCursor, {
       playing: videoPlaying,
       routeGeometry: routeGeometryRef.current,
@@ -925,12 +930,12 @@ function MapSurface({
     const { lng, lat } = focusedMarker.coord;
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
     const currentZoom = typeof map.getZoom === "function" ? map.getZoom() : 14;
-    map.flyTo({
+    map.flyTo(withCameraPadding({
       center: [lng, lat],
       zoom: Math.max(currentZoom, 14),
       speed: 1.2,
-    });
-  }, [focusedMarker, status, caps.focusedMarkerCamera]);
+    }, cameraPadding));
+  }, [cameraPadding, focusedMarker, status, caps.focusedMarkerCamera]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -952,11 +957,11 @@ function MapSurface({
       .addTo(map);
 
     syncSearchHighlightCircle(map, searchHighlight);
-    map.flyTo({
+    map.flyTo(withCameraPadding({
       center: [searchHighlight.lng, searchHighlight.lat],
       zoom: 11.5,
       duration: 1000,
-    });
+    }, cameraPadding));
 
     searchTimeoutRef.current = setTimeout(() => {
       clearSearchHighlight(map, searchMarkerRef);
@@ -968,7 +973,7 @@ function MapSurface({
         searchTimeoutRef.current = null;
       }
     };
-  }, [searchHighlight, status, caps.searchHighlight]);
+  }, [cameraPadding, searchHighlight, status, caps.searchHighlight]);
 
   // Locate-me fix: persistent marker + meter-accurate accuracy ring. Replaced
   // wholesale when a new fix arrives; camera flies only to in-bounds fixes.
@@ -988,14 +993,14 @@ function MapSurface({
 
     syncLocationAccuracyRing(map, locationFix);
     if (locationFix.withinBounds) {
-      map.flyTo({
+      map.flyTo(withCameraPadding({
         center: [locationFix.lng, locationFix.lat],
         zoom: Math.max(typeof map.getZoom === "function" ? map.getZoom() : 13, 13),
         duration: 1000,
-      });
+      }, cameraPadding));
     }
     return undefined;
-  }, [locationFix, status, caps.locationFix]);
+  }, [cameraPadding, locationFix, status, caps.locationFix]);
 
   return (
     <>
@@ -1036,6 +1041,15 @@ function fitMapToCoordinates(map, coordinates, options = {}) {
       padding: options.padding || 48,
     });
   }
+}
+
+function withCameraPadding(options, cameraPadding) {
+  if (!cameraPadding) return options;
+  return {
+    ...options,
+    padding: cameraPadding,
+    retainPadding: false,
+  };
 }
 
 // Honor the user's reduced-motion preference: animate the camera by default,

@@ -35,12 +35,17 @@ test("draft restore banner revives the last route after a reload", async ({ page
   ).toHaveAttribute("aria-selected", "true");
 });
 
-test("dismissing the draft banner hides it for the session", async ({ page }) => {
+test("dismissing the draft banner deletes it", async ({ page }) => {
   await loadFirstDiscoverRoute(page);
   await page.goto("/");
   const banner = page.locator(".draft-restore-banner");
   await expect(banner).toBeVisible({ timeout: 30_000 });
   await banner.getByRole("button", { name: "סגירה" }).click();
+  await expect(banner).toBeHidden();
+  await expect.poll(() =>
+    page.evaluate(() => window.localStorage.getItem("cycleways:planner-draft") || ""),
+  ).toBe("");
+  await page.goto("/");
   await expect(banner).toBeHidden();
 });
 

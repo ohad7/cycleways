@@ -14,29 +14,50 @@ export default function BottomSheet({ snap, onSnapChange, peekContent, children 
   const sheetRef = useRef(null);
   const [shellHeight, setShellHeight] = useState(0);
   const dragRef = useRef(null); // { startY, startOffset, lastY, lastT, velocity }
+  const dragOffsetRef = useRef(null);
   const [dragOffset, setDragOffset] = useState(null);
+
+  const measureShellHeight = useCallback(() => {
+    const shell = sheetRef.current?.parentElement;
+    if (!shell) return;
+    const rect = shell.getBoundingClientRect();
+    const viewportHeight = window.visualViewport?.height || window.innerHeight || shell.clientHeight;
+    const visibleHeight = Math.max(
+      0,
+      Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0),
+    );
+    setShellHeight(visibleHeight || shell.clientHeight);
+  }, []);
 
   // Track the shell's height (the sheet's positioning parent) for offsets.
   useEffect(() => {
     const shell = sheetRef.current?.parentElement;
     if (!shell || typeof ResizeObserver === "undefined") return undefined;
-    const ro = new ResizeObserver(() => setShellHeight(shell.clientHeight));
+    const ro = new ResizeObserver(measureShellHeight);
     ro.observe(shell);
-    setShellHeight(shell.clientHeight);
-    return () => ro.disconnect();
-  }, []);
+    measureShellHeight();
+    window.addEventListener("resize", measureShellHeight);
+    window.visualViewport?.addEventListener("resize", measureShellHeight);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measureShellHeight);
+      window.visualViewport?.removeEventListener("resize", measureShellHeight);
+    };
+  }, [measureShellHeight]);
 
   const offsets = offsetsForHeight(shellHeight);
 
   useLayoutEffect(() => {
     const shell = sheetRef.current?.parentElement;
     if (!shell) return undefined;
+    measureShellHeight();
     shell.scrollTop = 0;
     const raf = window.requestAnimationFrame(() => {
+      measureShellHeight();
       shell.scrollTop = 0;
     });
     return () => window.cancelAnimationFrame(raf);
-  }, [snap]);
+  }, [measureShellHeight, snap]);
 
   const handleTouchStart = useCallback(
     (event) => {
@@ -62,31 +83,34 @@ export default function BottomSheet({ snap, onSnapChange, peekContent, children 
     drag.lastY = y;
     drag.lastT = now;
     const offset = Math.max(drag.startOffset + (y - drag.startY), 0);
+    dragOffsetRef.current = offset;
     setDragOffset(offset);
   }, []);
 
   const handleTouchEnd = useCallback(() => {
     const drag = dragRef.current;
+    const current = dragOffsetRef.current;
     dragRef.current = null;
-    setDragOffset((current) => {
-      if (current !== null && drag) {
-        onSnapChange(resolveSnap(current, drag.velocity, offsetsForHeight(
-          sheetRef.current?.parentElement?.clientHeight ?? 0,
-        )));
-      }
-      return null;
-    });
-  }, [onSnapChange]);
+    dragOffsetRef.current = null;
+    setDragOffset(null);
+    if (current !== null && drag) {
+      onSnapChange(resolveSnap(current, drag.velocity, offsets));
+    }
+  }, [offsets, onSnapChange]);
 
   const dragging = dragOffset !== null;
   const offset = dragging ? dragOffset : offsets[snap] ?? 0;
+  const visibleHeight = Math.max(shellHeight - offset, 0);
 
   return (
     <div
       ref={sheetRef}
       className={`front-sheet front-sheet--${snap}${dragging ? " front-sheet--dragging" : ""}`}
       data-snap={snap}
-      style={{ "--sheet-offset": `${offset}px` }}
+      style={{
+        "--sheet-offset": `${offset}px`,
+        "--sheet-visible-height": `${visibleHeight}px`,
+      }}
     >
       <div
         className="front-sheet__handle"
