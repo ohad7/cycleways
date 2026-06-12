@@ -31,9 +31,13 @@ test("current public app loads with route controls", async ({ page }) => {
 test("production root restores compact route URL", async ({ page }) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
+  // Wait for the restored route (its first-point transition drops the
+  // sheet to peek) before opening the panel.
+  await page.waitForSelector(".map-container--route-ready", { timeout: 30000 });
+
   await ensurePanelOpen(page);
   await expect(page.getByTestId("front-panel")).toBeVisible();
-  await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
+  await expect(page.getByTestId("front-panel").getByText("4.5 ק\"מ").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
   await expect(page.locator(".react-route-point-chip")).toHaveCount(0);
   expect(await getRoutePointFeatureCount(page)).toBeGreaterThan(0);
@@ -47,8 +51,12 @@ test("production root restores compact route URL", async ({ page }) => {
 test("production core flow works on desktop and mobile", async ({ page }, testInfo) => {
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
+  // Wait for the restored route (its first-point transition drops the
+  // sheet to peek) before opening the panel.
+  await page.waitForSelector(".map-container--route-ready", { timeout: 30000 });
+
   await ensurePanelOpen(page);
-  await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
+  await expect(page.getByTestId("front-panel").getByText("4.5 ק\"מ").first()).toBeVisible();
   await page.screenshot({
     fullPage: true,
     path: testInfo.outputPath(`react-route-${testInfo.project.name}.png`),
@@ -68,7 +76,7 @@ test("production shows outside-network warning in the route panel", async ({ pag
   await ensurePanelOpen(page);
   await expect(page.locator(".build-panel")).toBeVisible();
   // Ensure the route stats are showing before triggering the outside-network click.
-  await expect(page.getByText("4.5 ק\"מ").first()).toBeVisible();
+  await expect(page.getByTestId("front-panel").getByText("4.5 ק\"מ").first()).toBeVisible();
 
   await page.evaluate(() => {
     window.__mockMapboxRenderedFeatures = [];
