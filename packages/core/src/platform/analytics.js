@@ -5,7 +5,9 @@ export function trackEvent(eventName, parameters = {}) {
   var host = window.location.hostname;
   if (
     host != "localhost" &&
+    host != "127.0.0.1" &&
     !host.startsWith("10.0.") &&
+    !navigator.webdriver &&
     typeof gtag !== "undefined"
   ) {
     gtag("event", eventName, parameters);

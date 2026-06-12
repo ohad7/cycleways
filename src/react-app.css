@@ -75,6 +75,8 @@
 }
 
 :root {
+  --front-sheet-peek-height: 164px;
+  --front-sheet-peek-gap: 32px;
   color: #172026;
   background: #eef3f0;
   font-family:
@@ -482,7 +484,7 @@ input {
 
 .react-modal {
   position: fixed;
-  z-index: 10;
+  z-index: 100; /* must be above the mobile bottom sheet (z-index: 20) */
   inset: 0;
   display: grid;
   place-items: center;
@@ -919,6 +921,10 @@ input {
   color: #fff;
   direction: ltr;
   backdrop-filter: blur(8px);
+}
+
+.planner-route-playback--panel.fv-video-controls {
+  display: none;
 }
 
 .planner-route-playback.fv-video-controls--scrubbing {
@@ -1625,6 +1631,37 @@ input {
   }
 }
 
+@media (max-width: 860px) {
+  .planner-route-playback.fv-video-controls {
+    bottom: calc(var(--front-sheet-peek-height) + var(--front-sheet-peek-gap));
+    z-index: 12;
+  }
+
+  .front-shell:not(.front-shell--sheet-peek) .planner-route-playback--map.fv-video-controls {
+    display: none;
+  }
+
+  .front-shell:not(.front-shell--sheet-peek) .planner-route-playback--panel.fv-video-controls {
+    position: static;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    z-index: auto;
+    display: grid;
+    width: 100%;
+    margin: 0;
+    box-shadow: 0 6px 16px rgba(16, 24, 32, 0.16);
+  }
+
+  .route-point-actions {
+    bottom: calc(var(--front-sheet-peek-height) + 18px);
+  }
+
+  .map-container--route-ready .route-point-actions {
+    bottom: calc(var(--front-sheet-peek-height) + 74px);
+  }
+}
+
 .draft-restore-banner {
   position: absolute;
   top: 64px;
@@ -1661,6 +1698,38 @@ input {
   cursor: pointer;
 }
 
+@media (max-width: 860px) {
+  .draft-restore-banner {
+    top: 64px;
+    gap: 6px;
+    max-width: calc(100% - 18px);
+    padding: 6px 8px 6px 10px;
+    border-radius: 14px;
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+
+  .draft-restore-banner__text {
+    min-width: 0;
+  }
+
+  .draft-restore-banner__restore {
+    flex: 0 0 auto;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    line-height: 1;
+  }
+
+  .draft-restore-banner__dismiss {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+  }
+}
+
 .planner-hint {
   position: absolute;
   top: 112px;
@@ -1688,4 +1757,21 @@ input {
   color: #fff;
   font-weight: 700;
   cursor: pointer;
+}
+
+.send-to-phone__qr {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.send-to-phone__qr svg {
+  width: 240px;
+  height: 240px;
+}
+
+.send-to-phone__hint {
+  text-align: center;
+  color: #52615c;
+  margin: 0 0 12px;
 }

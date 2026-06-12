@@ -277,6 +277,7 @@ export default function MapScreen() {
     createEmptyCatalogFilters(),
   );
   const [detailEntry, setDetailEntry] = useState(null);
+  const [selectedCatalogSlug, setSelectedCatalogSlug] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -309,12 +310,24 @@ export default function MapScreen() {
     };
   }, []);
 
-  const discoverEntries = useMemo(() => {
-    const entries = Array.isArray(catalogState.catalog?.entries)
-      ? catalogState.catalog.entries
-      : [];
-    return sortNativeDiscoverRoutes(catalogFilter(entries, discoverFilters));
-  }, [catalogState.catalog, discoverFilters]);
+  const catalogEntries = useMemo(
+    () =>
+      Array.isArray(catalogState.catalog?.entries)
+        ? catalogState.catalog.entries
+        : [],
+    [catalogState.catalog],
+  );
+
+  const selectedCatalogEntry = useMemo(
+    () =>
+      catalogEntries.find((entry) => entry.slug === selectedCatalogSlug) || null,
+    [catalogEntries, selectedCatalogSlug],
+  );
+
+  const discoverEntries = useMemo(
+    () => sortNativeDiscoverRoutes(catalogFilter(catalogEntries, discoverFilters)),
+    [catalogEntries, discoverFilters],
+  );
 
   const placeById = useMemo(
     () => new Map(catalogState.places.map((place) => [place.id, place])),
@@ -324,24 +337,20 @@ export default function MapScreen() {
   const startPlaceOptions = useMemo(
     () =>
       placeOptionsForEntries(
-        Array.isArray(catalogState.catalog?.entries)
-          ? catalogState.catalog.entries
-          : [],
+        catalogEntries,
         placeById,
         routeStartPlaceIds,
       ),
-    [catalogState.catalog, placeById],
+    [catalogEntries, placeById],
   );
   const throughPlaceOptions = useMemo(
     () =>
       placeOptionsForEntries(
-        Array.isArray(catalogState.catalog?.entries)
-          ? catalogState.catalog.entries
-          : [],
+        catalogEntries,
         placeById,
         routePassesThroughPlaceIds,
       ),
-    [catalogState.catalog, placeById],
+    [catalogEntries, placeById],
   );
   const featuredDiscoverEntries = useMemo(
     () => discoverEntries.filter((entry) => entry.featured).slice(0, 3),
@@ -377,7 +386,9 @@ export default function MapScreen() {
         param: entry.route,
         name: entry.name || "מסלול",
         distanceKm: Number(entry.distanceKm) || undefined,
+        slug: entry.slug || undefined,
       });
+      setSelectedCatalogSlug(entry.slug || null);
       setPanelMode("build");
       return true;
     },
@@ -387,6 +398,41 @@ export default function MapScreen() {
   const handleOpenRouteDetails = useCallback((entry) => {
     if (entry) setDetailEntry(entry);
   }, []);
+
+  const handleRouteEditStart = useCallback(() => {
+    setSelectedCatalogSlug(null);
+  }, []);
+
+  const handleNativeUndo = useCallback(() => {
+    handleRouteEditStart();
+    handleUndo();
+  }, [handleRouteEditStart, handleUndo]);
+
+  const handleNativeRedo = useCallback(() => {
+    handleRouteEditStart();
+    handleRedo();
+  }, [handleRouteEditStart, handleRedo]);
+
+  const handleNativeRouteClear = useCallback(() => {
+    handleRouteEditStart();
+    handleRouteClear();
+  }, [handleRouteClear, handleRouteEditStart]);
+
+  const handleNativeRoutePointDragStart = useCallback(
+    (index) => {
+      handleRouteEditStart();
+      handleRoutePointDragStart(index);
+    },
+    [handleRouteEditStart, handleRoutePointDragStart],
+  );
+
+  const handleNativeAddDataMarkerToRoute = useCallback(
+    (marker) => {
+      handleRouteEditStart();
+      handleAddDataMarkerToRoute(marker);
+    },
+    [handleAddDataMarkerToRoute, handleRouteEditStart],
+  );
 
   const networkFeatures = useMemo(() => {
     if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
@@ -529,7 +575,7 @@ export default function MapScreen() {
               if (dragRef.current.index === index && !dragRef.current.armed) {
                 dragRef.current.armed = true;
                 routePointPressGuardRef.current = Date.now();
-                handleRoutePointDragStart(index);
+                handleNativeRoutePointDragStart(index);
               }
             }, LONG_PRESS_MS);
           }
@@ -602,7 +648,7 @@ export default function MapScreen() {
     [
       clearLongPressTimer,
       hitTestRoutePoint,
-      handleRoutePointDragStart,
+      handleNativeRoutePointDragStart,
       handleRoutePointDrag,
       handleRoutePointDragEnd,
       handleRoutePointSelect,
@@ -650,9 +696,10 @@ export default function MapScreen() {
       if (Date.now() - routePointPressGuardRef.current < ADD_GUARD_MS) return;
       const point = pointFromFeature(feature);
       if (!point) return;
+      handleRouteEditStart();
       handleMapClick(point);
     },
-    [handleMapClick, state.status],
+    [handleMapClick, handleRouteEditStart, state.status],
   );
 
   const handleDataMarkerPress = useCallback(
@@ -914,14 +961,14 @@ export default function MapScreen() {
         featuredDiscoverEntries={featuredDiscoverEntries}
         onOpenSummary={handleOpenDownload}
         onPanelModeChange={setPanelMode}
-        onRedo={handleRedo}
+        onRedo={handleNativeRedo}
         onOpenRouteDetails={handleOpenRouteDetails}
         onSearchChange={handleSearchQueryChange}
         onSearchSubmit={submitSearch}
         onSelectDiscoverRoute={handleSelectDiscoverRoute}
         onToggleDiscoverFilter={toggleDiscoverFilter}
         onClearDiscoverFilters={clearDiscoverFilters}
-        onUndo={handleUndo}
+        onUndo={handleNativeUndo}
         locationState={locationState}
         mapUi={mapUi}
         panelMode={panelMode}
@@ -930,14 +977,15 @@ export default function MapScreen() {
         recentRoutes={recentRoutes}
         routeState={routeState}
         routePoints={displayedRoutePoints}
+        selectedCatalogEntry={selectedCatalogEntry}
         startPlaceOptions={startPlaceOptions}
         throughPlaceOptions={throughPlaceOptions}
-        onClear={handleRouteClear}
+        onClear={handleNativeRouteClear}
         onScrub={setScrubPoint}
       />
       <DataMarkerCard
         marker={mapUi.selectedDataMarker}
-        onAddToRoute={handleAddDataMarkerToRoute}
+        onAddToRoute={handleNativeAddDataMarkerToRoute}
         onClose={handleSelectedDataMarkerClear}
       />
       <RouteSummaryModal
@@ -1140,6 +1188,7 @@ function RoutePlannerChrome({
   recentRoutes,
   routeState,
   routePoints,
+  selectedCatalogEntry,
   startPlaceOptions,
   throughPlaceOptions,
 }) {
@@ -1261,8 +1310,20 @@ function RoutePlannerChrome({
             ]}
           >
             <View style={styles.routeSheetHeader}>
-              <Text style={styles.routeSheetTitle}>מסלול</Text>
+              <Text numberOfLines={1} style={styles.routeSheetTitle}>
+                {selectedCatalogEntry?.name || "מסלול"}
+              </Text>
               <View style={styles.routeSheetHeaderActions}>
+                {selectedCatalogEntry ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`פרטי מסלול: ${selectedCatalogEntry.name}`}
+                    onPress={() => onOpenRouteDetails?.(selectedCatalogEntry)}
+                    style={styles.routeSheetBadge}
+                  >
+                    <Text style={styles.routeSheetBadgeText}>פרטים</Text>
+                  </Pressable>
+                ) : null}
                 {presentation.canDownload ? (
                   <Pressable
                     accessibilityRole="button"
@@ -1385,6 +1446,7 @@ function DiscoverSheet({
                         route: route.param,
                         name: route.name,
                         distanceKm: route.distanceKm,
+                        slug: route.slug,
                       })
                     }
                     style={({ pressed }) => [
@@ -2610,6 +2672,7 @@ const styles = StyleSheet.create({
   },
   routeSheetHeaderActions: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   routeSheetTitle: {
+    flexShrink: 1,
     color: "#172026",
     fontSize: 16,
     fontWeight: "800",

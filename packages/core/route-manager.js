@@ -10,6 +10,27 @@
 // See plans/cw-edge-snap-preference/design.md.
 const CW_SNAP_PREFERENCE_MARGIN_METERS = 20;
 
+// The CW preference also requires the CW edge to be within this multiple of
+// the closest edge's distance (with a small floor so tiny distances still
+// allow the preference). Without this, a click 2 m from a road would snap to
+// a CW path 18 m away, and re-snapping a point that sits exactly on a road
+// would migrate it onto any CW edge within the absolute margin.
+const CW_SNAP_PREFERENCE_MAX_RATIO = 4;
+const CW_SNAP_PREFERENCE_RATIO_FLOOR_METERS = 6;
+
+// When a click carries metersPerPixel (from the map's zoom at click time),
+// snap distances are expressed in screen pixels instead of fixed metres so
+// zooming in lets users pick points precisely while zoomed-out clicks keep
+// fat-finger tolerance. Values are clamped to the fixed-metre defaults above.
+const SNAP_THRESHOLD_PIXELS = 40;
+const SNAP_THRESHOLD_MIN_METERS = 25;
+const CW_SNAP_PREFERENCE_PIXELS = 12;
+const CW_SNAP_PREFERENCE_MIN_METERS = 4;
+
+function clampMeters(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
 class RouteManager {
   constructor() {
     this.segments = new Map(); // segmentName -> segment data
@@ -232,7 +253,7 @@ class RouteManager {
    * @param {number} thresholdMeters - Maximum allowed snap distance
    * @returns {Object|null} Snapped point with segmentName and distanceMeters
    */
-  snapToNetwork(point, thresholdMeters = this.snapThresholdMeters) {
+  snapToNetwork(point, thresholdMeters = null) {
     if (this.baseRoutingNetwork) {
       return this._snapToBaseRoutingNetwork(point, thresholdMeters);
     }
@@ -724,7 +745,7 @@ class RouteManager {
     );
   }
 
-  _snapToNearestSegment(point, thresholdMeters = this.snapThresholdMeters) {
+  _snapToNearestSegment(point, thresholdMeters = null) {
     if (!this._isValidPoint(point)) {
       return null;
     }
@@ -733,6 +754,17 @@ class RouteManager {
       lat: Number(point.lat),
       lng: Number(point.lng),
     };
+    const metersPerPixel = Number(point.metersPerPixel);
+    if (!Number.isFinite(thresholdMeters)) {
+      thresholdMeters =
+        Number.isFinite(metersPerPixel) && metersPerPixel > 0
+          ? clampMeters(
+              SNAP_THRESHOLD_PIXELS * metersPerPixel,
+              SNAP_THRESHOLD_MIN_METERS,
+              this.snapThresholdMeters,
+            )
+          : this.snapThresholdMeters;
+    }
     let closestSegment = null;
     let minDistance = Infinity;
     let closestPoint = null;
@@ -1102,12 +1134,30 @@ class RouteManager {
     return candidates;
   }
 
-  _snapToBaseRoutingNetwork(point, thresholdMeters = this.snapThresholdMeters) {
+  _snapToBaseRoutingNetwork(point, thresholdMeters = null) {
     if (!this._isValidPoint(point)) return null;
     const normalizedPoint = {
       lat: Number(point.lat),
       lng: Number(point.lng),
     };
+    const metersPerPixel = Number(point.metersPerPixel);
+    const hasPixelScale = Number.isFinite(metersPerPixel) && metersPerPixel > 0;
+    const effectiveThresholdMeters = Number.isFinite(thresholdMeters)
+      ? thresholdMeters
+      : hasPixelScale
+        ? clampMeters(
+            SNAP_THRESHOLD_PIXELS * metersPerPixel,
+            SNAP_THRESHOLD_MIN_METERS,
+            this.snapThresholdMeters,
+          )
+        : this.snapThresholdMeters;
+    const cwMarginMeters = hasPixelScale
+      ? clampMeters(
+          CW_SNAP_PREFERENCE_PIXELS * metersPerPixel,
+          CW_SNAP_PREFERENCE_MIN_METERS,
+          CW_SNAP_PREFERENCE_MARGIN_METERS,
+        )
+      : CW_SNAP_PREFERENCE_MARGIN_METERS;
     let best = null;
     let bestCw = null;
 
@@ -1120,7 +1170,7 @@ class RouteManager {
         candidate.end,
       );
       const distanceMeters = this._getDistance(normalizedPoint, snapped);
-      if (distanceMeters > thresholdMeters) continue;
+      if (distanceMeters > effectiveThresholdMeters) continue;
 
       const isCyclewaysEdge = edge.cwSegmentIds.length > 0;
       const improvesOverall = !best || distanceMeters < best.distanceMeters;
@@ -1141,11 +1191,16 @@ class RouteManager {
     if (!best) return null;
     // Prefer the closest CycleWays edge when it is within the preference margin
     // of the closest edge overall, so endpoints favour the CW network where a CW
-    // path runs near a road.
+    // path runs near a road. The ratio guard keeps clicks (and re-snaps) that
+    // land decisively closer to a non-CW edge on that edge.
     if (
       bestCw &&
+      bestCw.distanceMeters <= best.distanceMeters + cwMarginMeters &&
       bestCw.distanceMeters <=
-        best.distanceMeters + CW_SNAP_PREFERENCE_MARGIN_METERS
+        Math.max(
+          CW_SNAP_PREFERENCE_MAX_RATIO * best.distanceMeters,
+          CW_SNAP_PREFERENCE_RATIO_FLOOR_METERS,
+        )
     ) {
       return bestCw;
     }

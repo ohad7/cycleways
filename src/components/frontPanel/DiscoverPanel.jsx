@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import PanelRouteCard from "./PanelRouteCard.jsx";
 import RecentRoutesStrip from "./RecentRoutesStrip.jsx";
 import "../welcome-wizard.css";
@@ -6,7 +6,6 @@ import {
   FILTER_GROUPS,
   FilterChip,
   PlaceAutocompleteFilter,
-  emptyFilters,
 } from "../WelcomeDiscover.jsx";
 import {
   routePassesThroughPlaceIds,
@@ -20,12 +19,27 @@ import {
   sortByDistanceFromUser,
 } from "@cycleways/core/data/nearMe.js";
 
-export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild, onSlugsChange, onRouteViewport, onHoverRoute, locationFix, recentRoutes, onSelectRecent }) {
+export default function DiscoverPanel({
+  catalog,
+  places,
+  onSelectRoute,
+  onBuild,
+  onSlugsChange,
+  onRouteViewport,
+  onHoverRoute,
+  locationFix,
+  filters,
+  onFiltersChange,
+  nearMeSort,
+  onNearMeSortChange,
+  recentRoutes,
+  onSelectRecent,
+  viewportKey = "",
+}) {
   const entries = useMemo(
     () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
     [catalog],
   );
-  const [filters, setFilters] = useState(emptyFilters);
 
   const placeById = useMemo(() => {
     const map = new Map();
@@ -43,22 +57,21 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
   );
 
   const toggleAxis = (axis, value) =>
-    setFilters((prev) => {
+    onFiltersChange((prev) => {
       const next = new Set(prev[axis]);
       next.has(value) ? next.delete(value) : next.add(value);
       // single-select per pill group
       return { ...prev, [axis]: next.size > 1 ? new Set([value]) : next };
     });
   const addFilterValue = (axis, value) =>
-    setFilters((prev) => ({ ...prev, [axis]: new Set(prev[axis]).add(value) }));
+    onFiltersChange((prev) => ({ ...prev, [axis]: new Set(prev[axis]).add(value) }));
   const removeFilterValue = (axis, value) =>
-    setFilters((prev) => {
+    onFiltersChange((prev) => {
       const next = new Set(prev[axis]);
       next.delete(value);
       return { ...prev, [axis]: next };
     });
 
-  const [nearMeSort, setNearMeSort] = useState(false);
   const { routes: filteredRoutes } = useMemo(
     () => selectDiscoverRoutes(entries, filters),
     [entries, filters],
@@ -72,7 +85,7 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
   );
 
   const orderedSlugs = useMemo(() => routes.map((r) => r.slug), [routes]);
-  const { containerRef, registerCard, sets } = useCardViewport(orderedSlugs);
+  const { containerRef, registerCard, sets } = useCardViewport(orderedSlugs, viewportKey);
 
   // Full ordered list drives stable per-route colors; the derived sets drive the
   // map's bright/ghost tiers and lazy geometry loading.
@@ -117,7 +130,7 @@ export default function DiscoverPanel({ catalog, places, onSelectRoute, onBuild,
 
       {locationFix && (
         <div className="discover-panel__near-me">
-          <FilterChip active={nearMeSort} onClick={() => setNearMeSort((v) => !v)}>
+          <FilterChip active={nearMeSort} onClick={() => onNearMeSortChange((v) => !v)}>
             קרוב אליי
           </FilterChip>
         </div>

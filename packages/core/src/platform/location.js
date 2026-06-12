@@ -28,6 +28,19 @@ export function removeUrlParam(name) {
   setUrlParam(name, null);
 }
 
+// Like setUrlParam but creates a history entry (history.pushState), so the
+// browser back button can step out of a user-initiated navigation (e.g.
+// selecting a Discover route).
+export function pushUrlParam(name, value) {
+  const url = new URL(window.location.href);
+  if (value == null) {
+    url.searchParams.delete(name);
+  } else {
+    url.searchParams.set(name, value);
+  }
+  window.history.pushState(null, "", url.toString());
+}
+
 // The base location the routing-shard fetch loader resolves shard URLs against.
 export function getShardLoaderLocation() {
   return window.location;

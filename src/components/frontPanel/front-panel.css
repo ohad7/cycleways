@@ -15,8 +15,32 @@
   flex: 1 1 auto;
   min-width: 0;
 }
-.front-panel {
+/* The sheet wrapper owns the desktop flex slot; the panel fills it. */
+.front-sheet {
+  display: flex;
+  flex-direction: column;
   flex: 0 0 408px;
+  min-height: 0;
+  /* Animate collapse: shrink the basis to 0 so the map smoothly stretches. */
+  transition: flex-basis 0.28s ease, opacity 0.2s ease;
+}
+.front-sheet .front-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.front-sheet__handle,
+.front-sheet__peek {
+  display: none; /* mobile-only affordances */
+}
+.front-shell--collapsed .front-sheet {
+  flex-basis: 0;
+  opacity: 0;
+  pointer-events: none;
+  /* Hide from the a11y/hit tree once the slide finishes (delay matches width). */
+  visibility: hidden;
+  transition: flex-basis 0.28s ease, opacity 0.2s ease, visibility 0s linear 0.28s;
+}
+.front-panel {
   background: #fff;
   border: 1px solid #e7dfca;
   border-radius: 14px;
@@ -24,37 +48,256 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* Animate collapse: shrink the basis to 0 so the map smoothly stretches. */
-  transition: flex-basis 0.28s ease, opacity 0.2s ease;
 }
 .front-panel__body {
   flex: 1 1 auto;
   overflow-y: auto;
   padding: 16px;
 }
-.front-shell--collapsed .front-panel {
-  flex-basis: 0;
-  opacity: 0;
-  border-width: 0;
-  pointer-events: none;
-  /* Hide from the a11y/hit tree once the slide finishes (delay matches width). */
-  visibility: hidden;
-  transition: flex-basis 0.28s ease, opacity 0.2s ease, visibility 0s linear 0.28s;
-}
-/* Narrow viewports: stack map then panel (no parallel legacy layout). */
+/* Narrow viewports: full-height map stage with the panel in a bottom sheet. */
 @media (max-width: 860px) {
   .front-shell {
+    position: relative;
     flex-direction: column;
     padding: 0;
     gap: 0;
+    height: 100%;
+    overflow: hidden;
   }
   .front-shell .map-container {
-    min-height: 52vh;
+    min-height: 0;
+    height: 100%;
   }
-  .front-panel {
-    flex: 1 1 auto;
+  .front-sheet {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: var(--sheet-visible-height, 100%);
+    z-index: 20;
+    flex: none;
+    transform: translateY(var(--sheet-offset, 0px));
+    transition: transform 0.25s ease;
+    will-change: transform;
+    border-radius: 16px 16px 0 0;
+    background: #fff;
+    box-shadow: 0 -6px 24px rgb(40 48 38 / 18%);
+    overflow: hidden;
+  }
+  .front-sheet--dragging {
+    transition: none;
+  }
+  .front-sheet__handle {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 4px;
+    touch-action: none;
+  }
+  .front-sheet__grip {
+    width: 44px;
+    height: 5px;
+    border: none;
+    border-radius: 999px;
+    background: #d5ddd8;
+    cursor: pointer;
+  }
+  .front-sheet__peek {
+    display: none;
+  }
+  .front-sheet--peek .front-sheet__peek {
+    display: block;
+    padding: 4px 12px 10px;
+  }
+  /* At peek only the handle + actions are useful; hide the panel beneath. */
+  .front-sheet--peek .front-panel {
+    visibility: hidden;
+  }
+  .front-sheet .front-panel {
+    flex: 1 1 0;
+    max-height: none;
     border-radius: 0;
-    max-height: 48vh;
+    border: none;
+    box-shadow: none;
+    min-height: 0;
+  }
+  .front-panel__body {
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 22px;
+  }
+  /* The desktop collapse affordance is replaced by the sheet. */
+  .front-panel__collapse,
+  .front-shell__reopen {
+    display: none;
+  }
+  .front-sheet__mode-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid #dce4df;
+    border-radius: 12px;
+    background: #f6f8f4;
+  }
+  .front-sheet__mode-switch button {
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #33483b;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 800;
+  }
+  .front-sheet__mode-switch button.is-active {
+    border-color: #d6dfd8;
+    background: #fff;
+    box-shadow: 0 1px 4px rgb(40 48 38 / 12%);
+    color: #1f5d35;
+  }
+  .front-sheet__peek-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+  }
+  .front-sheet__discover-peek {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .front-sheet__discover-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    min-height: 20px;
+    padding: 0 2px;
+    border: none;
+    background: transparent;
+    color: #33483b;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .front-sheet__discover-head span:last-child {
+    color: #5f6b62;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .front-sheet__route-chips {
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding-bottom: 2px;
+  }
+  .front-sheet__route-chips > * {
+    flex: 0 0 200px;
+    scroll-snap-align: start;
+  }
+  .front-sheet__route-chip {
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    min-height: 46px;
+    padding: 7px 8px;
+    border: 1px solid #dce4df;
+    border-radius: 10px;
+    background: #fff;
+    color: #283026;
+    cursor: pointer;
+    font: inherit;
+    text-align: start;
+    box-shadow: 0 1px 4px rgb(40 48 38 / 10%);
+  }
+  .front-sheet__route-chip-swatch {
+    width: 8px;
+    height: 28px;
+    border-radius: 999px;
+  }
+  .front-sheet__route-chip-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .front-sheet__route-chip-title,
+  .front-sheet__route-chip-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .front-sheet__route-chip-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .front-sheet__route-chip-meta {
+    color: #627066;
+    font-size: 0.73rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .front-sheet__build-peek {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 58px;
+    padding: 10px 12px;
+    border: 1px solid #dce4df;
+    border-radius: 12px;
+    background: #fff;
+    color: #283026;
+    cursor: pointer;
+    font: inherit;
+    box-shadow: 0 1px 4px rgb(40 48 38 / 10%);
+  }
+  .front-sheet__build-peek span:first-child {
+    font-size: 0.95rem;
+    font-weight: 850;
+  }
+  .front-sheet__build-peek span:last-child {
+    color: #5f6b62;
+    font-size: 0.82rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+  .front-sheet__build-peek-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .front-sheet__build-peek-row .front-sheet__build-peek {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .front-sheet__build-peek-link {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border: 1px solid #dce4df;
+    border-radius: 12px;
+    background: #f3f7f1;
+    color: #2f6b3c;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .front-sheet__build-peek-link:focus-visible {
+    background: #e6efe6;
+    border-color: #2f6b3c;
   }
 }
 .front-panel__statebar {
@@ -252,6 +495,32 @@
   color: #283026;
   line-height: 1.2;
   margin: 0;
+}
+.build-panel__story-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid #dce4df;
+  border-radius: 12px;
+  background: #f3f7f1;
+  color: #2f6b3c;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: box-shadow 0.15s ease;
+}
+.build-panel__story-cta:hover,
+.build-panel__story-cta:focus-visible {
+  box-shadow: 0 4px 14px rgba(40, 48, 38, 0.12);
+}
+.build-panel__story-cta img {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
 }
 .build-panel__tools {
   display: flex;
@@ -469,13 +738,17 @@
 .panel-elev__band:hover { opacity: 1; }
 
 /* Minimal recommended/result cards in the Discover panel */
+.panel-route-card-wrap {
+  position: relative;
+}
+
 .panel-route-card {
   display: flex;
   gap: 10px;
   align-items: center;
   width: 100%;
   text-align: start;
-  padding: 8px;
+  padding: 8px 8px 26px;
   border: 1px solid #efe8d7;
   border-radius: 12px;
   background: #fff;
@@ -540,6 +813,26 @@
 .panel-route-card__near {
   color: #1d6ee8;
   font-weight: 700;
+}
+
+.panel-route-card__story-link {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  padding: 3px 9px;
+  border: 1px solid #cfe0d2;
+  border-radius: 999px;
+  background: #f3f7f1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2f6b3c;
+  text-decoration: none;
+}
+
+.panel-route-card__story-link:hover,
+.panel-route-card__story-link:focus-visible {
+  background: #e6efe6;
+  border-color: #2f6b3c;
 }
 
 .recent-routes {

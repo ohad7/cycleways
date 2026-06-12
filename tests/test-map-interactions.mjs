@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   buildNetworkSegments,
   getClosestPointOnLineSegment,
+  metersPerPixelAtLatitude,
   pixelDistance,
   createClickStamp,
   isDuplicateRouteClick,
@@ -45,6 +46,19 @@ assert.equal(pixelDistance({ x: 0, y: 0 }, { x: 3, y: 4 }), 5);
   assert.equal(isDuplicateRouteClick(stamp, evt, () => 1050), true);
   // same coords, 400ms later -> not a duplicate (stale)
   assert.equal(isDuplicateRouteClick(stamp, evt, () => 1400), false);
+}
+
+// metersPerPixelAtLatitude follows the Web Mercator ground resolution:
+// 156543.03392 * cos(lat) / 2^zoom, and rejects bad inputs.
+{
+  const equatorZ0 = metersPerPixelAtLatitude(0, 0);
+  assert.ok(Math.abs(equatorZ0 - 156543.03392) < 0.01, "zoom 0 at the equator");
+  const equatorZ10 = metersPerPixelAtLatitude(10, 0);
+  assert.ok(Math.abs(equatorZ10 - 156543.03392 / 1024) < 0.001, "halves per zoom level");
+  const lat60 = metersPerPixelAtLatitude(0, 60);
+  assert.ok(Math.abs(lat60 - 156543.03392 / 2) < 0.01, "cos(60°) = 0.5 shrinks ground distance");
+  assert.equal(metersPerPixelAtLatitude(NaN, 32), null, "NaN zoom yields null");
+  assert.equal(metersPerPixelAtLatitude(14, NaN), null, "NaN latitude yields null");
 }
 
 console.log("test-map-interactions OK");
