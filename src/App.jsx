@@ -875,18 +875,29 @@ function App() {
                         onSelect={handleSelectRecommended}
                       />
                     ) : (
-                      <button
-                        type="button"
-                        className="front-sheet__build-peek"
-                        onClick={handlePeekBuild}
-                      >
-                        <span>מסלול חדש</span>
-                        <span>
-                          {routePointCount > 0
-                            ? `${routePointCount} נקודות · ${formatLegacyDistance(routeState.distance)}`
-                            : "0 נקודות"}
-                        </span>
-                      </button>
+                      <div className="front-sheet__build-peek-row">
+                        <button
+                          type="button"
+                          className="front-sheet__build-peek"
+                          onClick={handlePeekBuild}
+                        >
+                          <span>{selectedCatalogEntry?.name || "מסלול חדש"}</span>
+                          <span>
+                            {routePointCount > 0
+                              ? `${routePointCount} נקודות · ${formatLegacyDistance(routeState.distance)}`
+                              : "0 נקודות"}
+                          </span>
+                        </button>
+                        {selectedCatalogEntry && (
+                          <a
+                            className="front-sheet__build-peek-link"
+                            href={`/routes/${selectedCatalogEntry.slug}`}
+                            aria-label="לעמוד המסלול"
+                          >
+                            לעמוד המסלול ←
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                 }
