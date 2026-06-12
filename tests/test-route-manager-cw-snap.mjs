@@ -97,4 +97,83 @@ function buildNetwork({ cwLat }) {
   );
 }
 
+// Case 3: ratio guard. Click ~2.2 m from the road with the CW edge ~17.8 m
+// away: inside the absolute margin, but ~8x farther than the road. A click
+// this decisively close to the road should keep the road.
+{
+  const manager = new RouteManager();
+  await manager.load(geoJsonData, segmentsData, buildNetwork({ cwLat: 33.00018 }));
+  const snapped = manager.snapToNetwork({ lat: 33.00002, lng: 35.001 });
+  assert.ok(snapped, "point should snap within threshold");
+  assert.equal(
+    snapped.baseEdgeId,
+    "road",
+    "a CW edge many times farther than the road should not win the snap",
+  );
+}
+
+// Case 4: re-snap stability. A point exactly on the road (distance 0) must
+// stay on the road even with a CW edge ~8 m away, so recalculations do not
+// migrate previously snapped points onto the CW network.
+{
+  const manager = new RouteManager();
+  await manager.load(geoJsonData, segmentsData, buildNetwork({ cwLat: 33.00007 }));
+  const snapped = manager.snapToNetwork({ lat: 33.0, lng: 35.001 });
+  assert.ok(snapped, "point should snap within threshold");
+  assert.equal(
+    snapped.baseEdgeId,
+    "road",
+    "a point sitting on the road should not migrate to a nearby CW edge",
+  );
+}
+
+// Case 5: zoom-aware preference margin. Click ~3.3 m from the road with the
+// CW edge ~10 m away: with no zoom info the CW edge wins (margin 20 m, ratio
+// ok), but when the click carries metersPerPixel from a zoomed-in map the
+// margin shrinks to pixel scale and the road wins.
+{
+  const manager = new RouteManager();
+  await manager.load(geoJsonData, segmentsData, buildNetwork({ cwLat: 33.00012 }));
+  const noZoom = manager.snapToNetwork({ lat: 33.00003, lng: 35.001 });
+  assert.equal(
+    noZoom?.baseEdgeId,
+    "cw",
+    "without zoom info the CW preference margin should still apply",
+  );
+  const zoomedIn = manager.snapToNetwork({
+    lat: 33.00003,
+    lng: 35.001,
+    metersPerPixel: 0.3,
+  });
+  assert.equal(
+    zoomedIn?.baseEdgeId,
+    "road",
+    "zoomed in, the CW margin shrinks and the closer road should win",
+  );
+}
+
+// Case 6: zoom-aware snap threshold. A click ~40 m from the only edge snaps
+// with the default 100 m threshold, but is rejected when the click carries a
+// zoomed-in metersPerPixel (threshold becomes pixel-scaled).
+{
+  const manager = new RouteManager();
+  await manager.load(geoJsonData, segmentsData, buildNetwork({ cwLat: 33.01 }));
+  const noZoom = manager.snapToNetwork({ lat: 33.00036, lng: 35.001 });
+  assert.equal(
+    noZoom?.baseEdgeId,
+    "road",
+    "without zoom info the default 100 m threshold should snap the click",
+  );
+  const zoomedIn = manager.snapToNetwork({
+    lat: 33.00036,
+    lng: 35.001,
+    metersPerPixel: 0.5,
+  });
+  assert.equal(
+    zoomedIn,
+    null,
+    "zoomed in, a click ~40 m from the network should not snap",
+  );
+}
+
 console.log("RouteManager CW snap preference tests passed");

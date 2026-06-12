@@ -37,6 +37,7 @@ import {
 import {
   buildNetworkSegments,
   findClosestRouteSegment,
+  clickMetersPerPixel,
   isPointTooCloseToRouteUi,
   createClickStamp,
   isDuplicateRouteClick,
@@ -356,6 +357,7 @@ function MapSurface({
       callbacksRef.current.onMapClick?.({
         lng: closest?.point?.lng ?? event.lngLat.lng,
         lat: closest?.point?.lat ?? event.lngLat.lat,
+        metersPerPixel: clickMetersPerPixel(map, event.lngLat),
       });
     };
 
@@ -618,15 +620,14 @@ function MapSurface({
       if (clickOnBlockingFeature(map, event)) return;
       if (isDuplicateRouteClick(lastRouteClickRef.current, event)) return;
 
-      const closest = findClosestRouteSegment(
-        map,
-        event,
-        networkSegmentsRef.current,
-      );
+      // Pass the raw click through: the route manager snaps against the full
+      // base network (roads + CW), so relocating onto the CW-only network
+      // here would bias every click toward CW edges.
       clearHoverPreviewMarker(hoverPreviewMarkerRef);
       callbacksRef.current.onMapClick?.({
-        lng: closest?.point?.lng ?? event.lngLat.lng,
-        lat: closest?.point?.lat ?? event.lngLat.lat,
+        lng: event.lngLat.lng,
+        lat: event.lngLat.lat,
+        metersPerPixel: clickMetersPerPixel(map, event.lngLat),
       });
     };
 
