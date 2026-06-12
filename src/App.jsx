@@ -293,12 +293,12 @@ function App() {
       if (loaded) {
         handlePanelStateChange("build");
         setSheetSnap("peek");
-        setSelectedCatalogSlug(entry.slug || null);
+        setSelectedCatalogSlug(entry.slug ?? null);
         handleAddRecentRoute({
           param: entry.route,
           name: entry.name || "מסלול",
           distanceKm: Number(entry.distanceKm) || undefined,
-          slug: entry.slug || undefined,
+          slug: entry.slug ?? undefined,
         });
       } else {
         window.location.assign(`/?route=${encodeURIComponent(entry.route)}`);
@@ -742,6 +742,7 @@ function App() {
                   <DraftRestoreBanner
                     draft={plannerDraft}
                     onRestore={async () => {
+                      setSelectedCatalogSlug(null);
                       const ok = await handleRestoreDraft();
                       if (ok) handlePanelStateChange("build");
                     }}
