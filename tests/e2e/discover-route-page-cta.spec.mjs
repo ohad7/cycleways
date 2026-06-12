@@ -20,9 +20,10 @@ async function selectFirstDiscoverRoute(page) {
   });
   const card = panel.locator(".panel-route-card-wrap").first();
   await expect(card).toBeVisible();
-  const storyHref = await card
-    .locator(".panel-route-card__story-link")
-    .getAttribute("href");
+  const storyLink = card.locator(".panel-route-card__story-link");
+  await expect(storyLink).toBeVisible();
+  const storyHref = await storyLink.getAttribute("href");
+  expect(storyHref).toBeTruthy();
   const title = (
     await card.locator(".panel-route-card__title").innerText()
   ).trim();
@@ -43,11 +44,13 @@ test("selecting a Discover card shows the route-page CTA in Build", async ({ pag
 test("mobile: build peek shows the route name and a route-page link", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mobile-only");
   const { storyHref, title } = await selectFirstDiscoverRoute(page);
+  // Do NOT call ensurePanelOpen here — the peek strip is only visible at
+  // data-snap="peek"; opening the sheet would replace it with panel content.
   const sheet = page.locator(".front-sheet");
   // Route selection snaps the sheet back to peek.
   await expect(sheet).toHaveAttribute("data-snap", "peek");
   await expect(
-    sheet.locator(".front-sheet__build-peek span").first(),
+    sheet.locator(".front-sheet__build-peek span:first-child"),
   ).toContainText(title);
   const link = sheet.locator(".front-sheet__build-peek-link");
   await expect(link).toBeVisible();
@@ -83,5 +86,6 @@ test("the Build CTA navigates to the route page", async ({ page }) => {
   const { storyHref } = await selectFirstDiscoverRoute(page);
   await ensurePanelOpen(page);
   await page.locator(".build-panel__story-cta").click();
-  await expect(page).toHaveURL(new RegExp(`${storyHref}$`));
+  const escapedHref = storyHref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  await expect(page).toHaveURL(new RegExp(`${escapedHref}$`));
 });
