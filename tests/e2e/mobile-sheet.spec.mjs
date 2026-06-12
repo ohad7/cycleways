@@ -35,14 +35,15 @@ test("mobile: peek shows the mode switch; search opens Discover", async ({ page,
   await expect(sheet.locator(".panel-route-card").first()).toBeVisible();
 });
 
-test("mobile: Discover route overlay starts as ghost preview", async ({ page, isMobile }) => {
+test("mobile: Discover route overlay draws full routes at peek", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mobile-only");
   await page.goto("/");
   const sheet = page.locator(".front-sheet");
   await expect(sheet).toHaveAttribute("data-snap", "peek");
   await expect.poll(() => recommendedRouteFeatureCount(page), { timeout: 30_000 }).toBeGreaterThan(0);
   const peekFeatures = await recommendedRouteFeatures(page);
-  expect(peekFeatures.every((feature) => feature.tier === "ghost")).toBe(true);
+  // Peek shows the routes in full (bright) so the map gives real context.
+  expect(peekFeatures.every((feature) => feature.tier === "bright")).toBe(true);
   expect(peekFeatures.some((feature) => feature.hovered)).toBe(false);
   await sheet.getByRole("tab", { name: "חפש מסלול" }).click();
   await expect(sheet).toHaveAttribute("data-snap", "half");

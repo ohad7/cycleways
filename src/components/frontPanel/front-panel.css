@@ -191,10 +191,17 @@
     white-space: nowrap;
   }
   .front-sheet__route-chips {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    display: flex;
     gap: 6px;
     min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    padding-bottom: 2px;
+  }
+  .front-sheet__route-chips > * {
+    flex: 0 0 200px;
+    scroll-snap-align: start;
   }
   .front-sheet__route-chip {
     display: grid;

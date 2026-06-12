@@ -29,6 +29,7 @@ import {
   hasQueryParam,
   removeUrlParam,
   setUrlParam,
+  pushUrlParam,
   getShardLoaderLocation,
 } from "../platform/location.js";
 import { getCurrentPosition } from "../platform/geolocation.js";
@@ -686,7 +687,7 @@ export function useCyclewaysApp({
   // doesn't decode, so callers can fall back to a full-page restore.
   // Concurrent loads are rejected while one is already in flight.
   const handleLoadRouteParam = useCallback(
-    async (routeParam) => {
+    async (routeParam, { pushHistory = false } = {}) => {
       if (
         !routeParam ||
         !routeManagerRef.current ||
@@ -734,7 +735,7 @@ export function useCyclewaysApp({
             geometry: snapshot.geometry,
           },
         }));
-        setUrlParam("route", routeParam);
+        (pushHistory ? pushUrlParam : setUrlParam)("route", routeParam);
         return true;
       } catch (error) {
         dispatchRoute({ type: "route/error", error });

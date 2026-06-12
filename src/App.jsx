@@ -40,7 +40,7 @@ import { formatLegacyDistance } from "./components/ElevationProfile.jsx";
 import MapView from "./map/MapView.jsx";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
-import { hasQueryParam } from "@cycleways/core/platform/location.js";
+import { getQueryParam, hasQueryParam } from "@cycleways/core/platform/location.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
 import { dataPointId } from "@cycleways/core/data/dataMarkers.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
@@ -58,7 +58,6 @@ const SendToPhone = lazy(() => import("./components/SendToPhone.jsx"));
 // out on hover was disorienting. Hover still bolds the line either way (the
 // `hovered` tier in recommendedRoutes). Flip to true to restore the old behavior.
 const DISCOVER_HOVER_FITS_CAMERA = false;
-const DISCOVER_PEEK_ROUTE_COUNT = 2;
 
 function samePadding(a, b) {
   if (a === b) return true;
@@ -164,7 +163,7 @@ function App() {
       : routes;
   }, [catalogEntries, discoverFilters, mapUi.locationFix, nearMeSort, placeById]);
   const discoverPeekRoutes = useMemo(
-    () => discoverRouteEntries.slice(0, DISCOVER_PEEK_ROUTE_COUNT),
+    () => discoverRouteEntries,
     [discoverRouteEntries],
   );
   const discoverPeekSlugs = useMemo(
@@ -243,6 +242,25 @@ function App() {
     setPanel((prev) => resolvePanelState(prev, { type: "toggle", to }));
   }, []);
 
+  // Back/forward re-syncs the planner with the ?route= URL state: a route
+  // param loads that route (without pushing again); no param returns to an
+  // empty planner with Discover open. This makes a Discover selection
+  // back-button-friendly (the select pushes a history entry).
+  useEffect(() => {
+    const onPopState = async () => {
+      const param = getQueryParam("route");
+      if (param) {
+        await handleLoadRouteParam(param);
+      } else {
+        handleRouteClear();
+        handlePanelStateChange("discover");
+        setSheetSnap("half");
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [handleLoadRouteParam, handleRouteClear, handlePanelStateChange]);
+
   const handlePeekDiscover = useCallback(() => {
     handlePanelStateChange("discover");
     setSheetSnap("half");
@@ -260,7 +278,7 @@ function App() {
   const handleSelectRecommended = useCallback(
     async (entry) => {
       if (!entry?.route) return;
-      const loaded = await handleLoadRouteParam(entry.route);
+      const loaded = await handleLoadRouteParam(entry.route, { pushHistory: true });
       if (loaded) {
         handlePanelStateChange("build");
         setSheetSnap("peek");
@@ -406,7 +424,7 @@ function App() {
           slug,
           geometry,
           hovered: !peekMode && slug === hoveredRouteSlug,
-          tier: !peekMode && bright.has(slug) ? "bright" : "ghost",
+          tier: peekMode || bright.has(slug) ? "bright" : "ghost",
           color: discoverRouteColor(colorIndex),
         };
       })
