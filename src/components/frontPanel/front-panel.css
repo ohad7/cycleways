@@ -295,6 +295,10 @@
     text-decoration: none;
     white-space: nowrap;
   }
+  .front-sheet__build-peek-link:focus-visible {
+    background: #e6efe6;
+    border-color: #2f6b3c;
+  }
 }
 .front-panel__statebar {
   display: flex;
@@ -813,8 +817,12 @@
 
 .panel-route-card__story-link {
   position: absolute;
-  bottom: 8px;
-  left: 10px;
+  bottom: 6px;
+  left: 8px;
+  padding: 3px 9px;
+  border: 1px solid #cfe0d2;
+  border-radius: 999px;
+  background: #f3f7f1;
   font-size: 0.78rem;
   font-weight: 700;
   color: #2f6b3c;
@@ -823,7 +831,8 @@
 
 .panel-route-card__story-link:hover,
 .panel-route-card__story-link:focus-visible {
-  text-decoration: underline;
+  background: #e6efe6;
+  border-color: #2f6b3c;
 }
 
 .recent-routes {
