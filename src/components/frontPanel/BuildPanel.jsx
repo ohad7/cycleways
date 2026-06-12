@@ -2,9 +2,12 @@ import React from "react";
 import Icon from "../Icon.jsx";
 import { formatLegacyDistance } from "../ElevationProfile.jsx";
 import PanelPoiCard from "./PanelPoiCard.jsx";
+import { routeDisplayImage } from "@cycleways/core/data/catalog.js";
+import { routeImageSrc } from "../routes/routeImageSrc.js";
 
 export default function BuildPanel({
   routeState,
+  catalogEntry,
   canUndo,
   canRedo,
   onUndo,
@@ -31,8 +34,12 @@ export default function BuildPanel({
       )}
       <div className="build-panel__head">
         <div>
-          <div className="eyebrow">המסלול שלי · טיוטה</div>
-          <div className="build-panel__title">מסלול חדש</div>
+          <div className="eyebrow">
+            {catalogEntry ? "מסלול מומלץ" : "המסלול שלי · טיוטה"}
+          </div>
+          <div className="build-panel__title">
+            {catalogEntry?.name || "מסלול חדש"}
+          </div>
         </div>
         <div className="build-panel__tools">
           <button type="button" disabled={!canUndo} onClick={onUndo} title="בטל" aria-label="בטל">
@@ -46,6 +53,7 @@ export default function BuildPanel({
           </button>
         </div>
       </div>
+      {catalogEntry && <RoutePageCta entry={catalogEntry} />}
 
       {hasRoute ? (
         <div className="build-panel__stats">
@@ -92,5 +100,23 @@ function Stat({ k, v }) {
       <div className="build-stat__k">{k}</div>
       <div className="build-stat__v">{v}</div>
     </div>
+  );
+}
+
+// Photo-strip CTA to the route's dedicated page, shown while the planner
+// holds an unedited catalog route (the moment of highest intent).
+function RoutePageCta({ entry }) {
+  const photo = routeDisplayImage(entry);
+  return (
+    <a className="build-panel__story-cta" href={`/routes/${entry.slug}`}>
+      {photo ? (
+        <img
+          src={routeImageSrc(photo.thumbnail || photo.photo)}
+          alt=""
+          loading="lazy"
+        />
+      ) : null}
+      <span>לעמוד המסלול המלא ←</span>
+    </a>
   );
 }
