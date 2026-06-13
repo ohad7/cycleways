@@ -67,6 +67,21 @@ export function findClosestRouteSegment(map, event, networkSegments, thresholdPi
   return minPixelDistance < thresholdPixels ? closest : null;
 }
 
+// Web Mercator ground resolution at a latitude/zoom, in metres per screen
+// pixel. Route clicks carry this so snapping thresholds can scale with zoom
+// (zoomed in = precise picking, zoomed out = fat-finger tolerance).
+export function metersPerPixelAtLatitude(zoom, latitude) {
+  if (!Number.isFinite(zoom) || !Number.isFinite(latitude)) return null;
+  return (
+    (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom)
+  );
+}
+
+export function clickMetersPerPixel(map, lngLat) {
+  if (typeof map?.getZoom !== "function") return null;
+  return metersPerPixelAtLatitude(map.getZoom(), lngLat?.lat);
+}
+
 function projectPoint(map, point) {
   if (typeof map.project !== "function") return null;
   return map.project([point.lng, point.lat]);

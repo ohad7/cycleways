@@ -37,6 +37,7 @@ import {
 import {
   buildNetworkSegments,
   findClosestRouteSegment,
+  clickMetersPerPixel,
   isPointTooCloseToRouteUi,
   createClickStamp,
   isDuplicateRouteClick,
@@ -49,6 +50,7 @@ import {
   VIDEO_CURSOR_DEFAULT_VARIANT,
 } from "@cycleways/core/map/mapStyles.js";
 import { capabilitiesForMode, MAP_MODE_PLANNER } from "./mapCapabilities.js";
+import { circlePolygon } from "@cycleways/core/utils/geoCircle.js";
 
 const ROUTE_CIRCULAR_ENDPOINT_MAX_METERS = 80;
 
@@ -73,6 +75,7 @@ function runMapCleanup(map, cleanup) {
 function MapSurface({
   activeDataPointIds = [],
   animator = null,
+  cameraPadding = null,
   dataMarkerFeatures = [],
   focusedMarker,
   focusedSegment,
@@ -103,6 +106,7 @@ function MapSurface({
   routeGeometry = [],
   routePointDragPreview = null,
   routePoints = [],
+  locationFix = null,
   searchHighlight,
   recommendedRoutes = null,
   segmentHighlight = null,
@@ -119,6 +123,7 @@ function MapSurface({
   const routeLineDragRef = useRef(null);
   const mapRef = useRef(null);
   const searchMarkerRef = useRef(null);
+  const locationMarkerRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const hoverPreviewMarkerRef = useRef(null);
   const routeEndpointMarkerRefs = useRef([]);
@@ -272,6 +277,7 @@ function MapSurface({
         const map = mapRef.current;
         runMapCleanup(map, () => {
           clearSearchHighlight(map, searchMarkerRef);
+          clearLocationFix(map, locationMarkerRef);
           clearHoverPreviewMarker(hoverPreviewMarkerRef);
           clearVideoCursorLayer(map);
           if (searchTimeoutRef.current) {
@@ -332,6 +338,10 @@ function MapSurface({
     };
 
     const handleClick = (event) => {
+      // A click on an existing route point / built line / data marker belongs
+      // to that feature's own handler — without this guard, points (which
+      // always sit on network paths) would re-add a point on every tap.
+      if (clickOnBlockingFeature(map, event)) return;
       const feature = event.features?.[0];
       const segmentName = feature?.properties?.name || null;
       if (!segmentName) return;
@@ -347,6 +357,7 @@ function MapSurface({
       callbacksRef.current.onMapClick?.({
         lng: closest?.point?.lng ?? event.lngLat.lng,
         lat: closest?.point?.lat ?? event.lngLat.lat,
+        metersPerPixel: clickMetersPerPixel(map, event.lngLat),
       });
     };
 
@@ -502,6 +513,10 @@ function MapSurface({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready" || !caps.videoCursorLayer) return;
+    if (!videoCursor) {
+      clearVideoCursorLayer(map);
+      return;
+    }
     syncVideoCursorLayer(map, videoCursor, {
       playing: videoPlaying,
       routeGeometry: routeGeometryRef.current,
@@ -600,30 +615,19 @@ function MapSurface({
       return undefined;
     }
 
-    const hasBlockingClickFeature = (event) => {
-      const layers = [
-        ROUTE_POINTS_LAYER_ID,
-        ROUTE_GEOMETRY_HIT_LAYER_ID,
-        DATA_MARKERS_LAYER_ID,
-      ].filter((layerId) => map.getLayer(layerId));
-      if (layers.length === 0) return false;
-      return map.queryRenderedFeatures(event.point, { layers }).length > 0;
-    };
-
     const handleMapClick = (event) => {
       if (draggingPointRef.current !== null) return;
-      if (hasBlockingClickFeature(event)) return;
+      if (clickOnBlockingFeature(map, event)) return;
       if (isDuplicateRouteClick(lastRouteClickRef.current, event)) return;
 
-      const closest = findClosestRouteSegment(
-        map,
-        event,
-        networkSegmentsRef.current,
-      );
+      // Pass the raw click through: the route manager snaps against the full
+      // base network (roads + CW), so relocating onto the CW-only network
+      // here would bias every click toward CW edges.
       clearHoverPreviewMarker(hoverPreviewMarkerRef);
       callbacksRef.current.onMapClick?.({
-        lng: closest?.point?.lng ?? event.lngLat.lng,
-        lat: closest?.point?.lat ?? event.lngLat.lat,
+        lng: event.lngLat.lng,
+        lat: event.lngLat.lat,
+        metersPerPixel: clickMetersPerPixel(map, event.lngLat),
       });
     };
 
@@ -717,15 +721,26 @@ function MapSurface({
       return Number.isInteger(index) ? index : null;
     };
 
+    // Point drags activate only past the slop threshold, so a touch that's
+    // really a tap or a wobbly pan start doesn't move the point. A no-move
+    // release is cleaned up in endDrag; selection is left to the layer click
+    // handler (handleRoutePointClick) which runs after handleMapClick's
+    // blocking query has read the still-intact points layer.
+    // Mirrors the routeLineDrag pending→active pattern below.
+    const POINT_DRAG_SLOP_PX = 6;
+
     const startDrag = (event) => {
       const pointIndex = getPointIndex(event);
       if (!Number.isInteger(pointIndex)) return;
 
       event.preventDefault?.();
-      draggingPointRef.current = pointIndex;
+      draggingPointRef.current = {
+        index: pointIndex,
+        startPoint: event.point,
+        active: false,
+      };
       map.dragPan.disable();
-      map.getCanvas().style.cursor = "grabbing";
-      callbacksRef.current.onRoutePointDragStart?.(draggingPointRef.current);
+      map.getCanvas().style.cursor = "grab";
     };
 
     const startRouteLineDrag = (event) => {
@@ -766,9 +781,16 @@ function MapSurface({
     };
 
     const moveDrag = (event) => {
-      const pointIndex = draggingPointRef.current;
-      if (Number.isInteger(pointIndex)) {
-        callbacksRef.current.onRoutePointDrag?.(pointIndex, {
+      const pointDrag = draggingPointRef.current;
+      if (pointDrag) {
+        if (!pointDrag.active) {
+          const movedPixels = screenPointDistance(event.point, pointDrag.startPoint);
+          if (movedPixels < POINT_DRAG_SLOP_PX) return;
+          pointDrag.active = true;
+          map.getCanvas().style.cursor = "grabbing";
+          callbacksRef.current.onRoutePointDragStart?.(pointDrag.index);
+        }
+        callbacksRef.current.onRoutePointDrag?.(pointDrag.index, {
           lng: event.lngLat.lng,
           lat: event.lngLat.lat,
         });
@@ -796,14 +818,20 @@ function MapSurface({
     };
 
     const endDrag = () => {
-      const pointIndex = draggingPointRef.current;
+      const pointDrag = draggingPointRef.current;
       const routeLineDrag = routeLineDragRef.current;
 
-      if (Number.isInteger(pointIndex)) {
+      if (pointDrag) {
         draggingPointRef.current = null;
         map.dragPan.enable();
         map.getCanvas().style.cursor = "";
-        callbacksRef.current.onRoutePointDragEnd?.(pointIndex);
+        if (pointDrag.active) {
+          callbacksRef.current.onRoutePointDragEnd?.(pointDrag.index);
+        }
+        // A no-move release is a tap; selection is handled by the layer click
+        // handler, which fires after handleMapClick's blocking query has seen
+        // the still-intact points layer (selecting here at mouseup would
+        // setData the layer and break that query → a bogus extra point).
         return;
       }
 
@@ -822,19 +850,19 @@ function MapSurface({
     };
 
     const leavePoint = () => {
-      if (!Number.isInteger(draggingPointRef.current)) {
+      if (!draggingPointRef.current) {
         map.getCanvas().style.cursor = "";
       }
     };
 
     const enterRouteLine = () => {
-      if (!Number.isInteger(draggingPointRef.current) && !routeLineDragRef.current) {
+      if (!draggingPointRef.current && !routeLineDragRef.current) {
         map.getCanvas().style.cursor = "grab";
       }
     };
 
     const leaveRouteLine = () => {
-      if (!Number.isInteger(draggingPointRef.current) && !routeLineDragRef.current) {
+      if (!draggingPointRef.current && !routeLineDragRef.current) {
         map.getCanvas().style.cursor = "";
       }
     };
@@ -903,12 +931,12 @@ function MapSurface({
     const { lng, lat } = focusedMarker.coord;
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
     const currentZoom = typeof map.getZoom === "function" ? map.getZoom() : 14;
-    map.flyTo({
+    map.flyTo(withCameraPadding({
       center: [lng, lat],
       zoom: Math.max(currentZoom, 14),
       speed: 1.2,
-    });
-  }, [focusedMarker, status, caps.focusedMarkerCamera]);
+    }, cameraPadding));
+  }, [cameraPadding, focusedMarker, status, caps.focusedMarkerCamera]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -930,11 +958,11 @@ function MapSurface({
       .addTo(map);
 
     syncSearchHighlightCircle(map, searchHighlight);
-    map.flyTo({
+    map.flyTo(withCameraPadding({
       center: [searchHighlight.lng, searchHighlight.lat],
       zoom: 11.5,
       duration: 1000,
-    });
+    }, cameraPadding));
 
     searchTimeoutRef.current = setTimeout(() => {
       clearSearchHighlight(map, searchMarkerRef);
@@ -946,7 +974,34 @@ function MapSurface({
         searchTimeoutRef.current = null;
       }
     };
-  }, [searchHighlight, status, caps.searchHighlight]);
+  }, [cameraPadding, searchHighlight, status, caps.searchHighlight]);
+
+  // Locate-me fix: persistent marker + meter-accurate accuracy ring. Replaced
+  // wholesale when a new fix arrives; camera flies only to in-bounds fixes.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !caps.locationFix || !locationFix) {
+      return undefined;
+    }
+
+    locationMarkerRef.current?.remove();
+    const mapboxgl = getMapboxGl();
+    const el = document.createElement("div");
+    el.className = "react-locate-marker";
+    locationMarkerRef.current = new mapboxgl.Marker(el)
+      .setLngLat([locationFix.lng, locationFix.lat])
+      .addTo(map);
+
+    syncLocationAccuracyRing(map, locationFix);
+    if (locationFix.withinBounds) {
+      map.flyTo(withCameraPadding({
+        center: [locationFix.lng, locationFix.lat],
+        zoom: Math.max(typeof map.getZoom === "function" ? map.getZoom() : 13, 13),
+        duration: 1000,
+      }, cameraPadding));
+    }
+    return undefined;
+  }, [cameraPadding, locationFix, status, caps.locationFix]);
 
   return (
     <>
@@ -987,6 +1042,15 @@ function fitMapToCoordinates(map, coordinates, options = {}) {
       padding: options.padding || 48,
     });
   }
+}
+
+function withCameraPadding(options, cameraPadding) {
+  if (!cameraPadding) return options;
+  return {
+    ...options,
+    padding: cameraPadding,
+    retainPadding: false,
+  };
 }
 
 // Honor the user's reduced-motion preference: animate the camera by default,
@@ -1100,6 +1164,32 @@ function screenPointDistance(a, b) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+const LOCATION_RING_SOURCE_ID = "locate-accuracy-ring";
+const LOCATION_RING_LAYER_ID = "locate-accuracy-ring-fill";
+
+function syncLocationAccuracyRing(map, locationFix) {
+  const radius = Number.isFinite(locationFix.accuracy)
+    ? Math.max(locationFix.accuracy, 15)
+    : 15;
+  const data = {
+    type: "Feature",
+    properties: {},
+    geometry: circlePolygon(locationFix.lat, locationFix.lng, radius),
+  };
+  const source = map.getSource(LOCATION_RING_SOURCE_ID);
+  if (source) {
+    source.setData(data);
+    return;
+  }
+  map.addSource(LOCATION_RING_SOURCE_ID, { type: "geojson", data });
+  map.addLayer({
+    id: LOCATION_RING_LAYER_ID,
+    type: "fill",
+    source: LOCATION_RING_SOURCE_ID,
+    paint: { "fill-color": "#1d6ee8", "fill-opacity": 0.15 },
+  });
+}
+
 function syncSearchHighlightCircle(map, searchHighlight) {
   const sourceId = "react-search-highlight";
   const layerId = "react-search-highlight-circle";
@@ -1144,6 +1234,18 @@ function syncSearchHighlightCircle(map, searchHighlight) {
   }
 }
 
+function clearLocationFix(map, markerRef) {
+  markerRef.current?.remove();
+  markerRef.current = null;
+
+  if (map?.getLayer(LOCATION_RING_LAYER_ID)) {
+    map.removeLayer(LOCATION_RING_LAYER_ID);
+  }
+  if (map?.getSource(LOCATION_RING_SOURCE_ID)) {
+    map.removeSource(LOCATION_RING_SOURCE_ID);
+  }
+}
+
 function clearSearchHighlight(map, markerRef) {
   markerRef.current?.remove();
   markerRef.current = null;
@@ -1154,6 +1256,19 @@ function clearSearchHighlight(map, markerRef) {
   if (map?.getSource("react-search-highlight")) {
     map.removeSource("react-search-highlight");
   }
+}
+
+// True when a click landed on an interactive feature (route point, built
+// route line, data marker) that owns the interaction — both the map-level and
+// the network-layer click handlers must not treat such clicks as add-point.
+function clickOnBlockingFeature(map, event) {
+  const layers = [
+    ROUTE_POINTS_LAYER_ID,
+    ROUTE_GEOMETRY_HIT_LAYER_ID,
+    DATA_MARKERS_LAYER_ID,
+  ].filter((layerId) => map.getLayer(layerId));
+  if (layers.length === 0) return false;
+  return map.queryRenderedFeatures(event.point, { layers }).length > 0;
 }
 
 function syncHoverPreviewMarker(map, markerRef, lngLat) {

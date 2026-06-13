@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installMapboxMock } from "./mapbox-mock.mjs";
+import { ensurePanelOpen } from "./sheet-helpers.mjs";
 
 // A pre-encoded route in the network that has an elevation profile.
 const COMPACT_ROUTE = "Bjjy1nRHHDArrNAoctqGv4RHL3un";
@@ -18,8 +19,13 @@ test("mobile: elevation slope legend renders within the panel", async ({
 
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
+  // Wait for the restored route (its first-point transition drops the
+  // sheet to peek) before opening the panel.
+  await page.waitForSelector(".map-container--route-ready", { timeout: 30000 });
+
+  await ensurePanelOpen(page);
   await expect(page.getByTestId("front-panel")).toBeVisible();
-  await expect(page.getByText('4.5 ק"מ').first()).toBeVisible();
+  await expect(page.getByTestId("front-panel").getByText('4.5 ק"מ').first()).toBeVisible();
 
   const legend = page.locator(".react-elevation-legend");
   await expect(legend).toBeVisible();

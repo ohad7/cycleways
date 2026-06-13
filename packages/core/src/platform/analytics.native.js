@@ -15,5 +15,3 @@ export function trackWarningClick() {}
 export function trackRouteOperation() {}
 
 export function trackPageLoad() {}
-
-export function trackTutorial() {}

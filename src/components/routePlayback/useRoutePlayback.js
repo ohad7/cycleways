@@ -136,6 +136,20 @@ export function useRoutePlayback({
     stopTicker();
   }, [setPlaying, stopTicker]);
 
+  const reset = useCallback(() => {
+    stopTicker();
+    currentTimeRef.current = 0;
+    playingRef.current = false;
+    scrubbingRef.current = false;
+    wasPlayingBeforeScrubRef.current = false;
+    setCurrentTime(0);
+    setCursor(null);
+    setIsPlaying(false);
+    setIsScrubbing(false);
+    onCursorChangeRef.current?.(null);
+    onPlayingChangeRef.current?.(false);
+  }, [stopTicker]);
+
   const startTicker = useCallback(() => {
     if (!sync || tickerRef.current) return;
     lastFrameTimeRef.current = window.performance.now();
@@ -261,6 +275,7 @@ export function useRoutePlayback({
     isScrubbing,
     pause,
     play,
+    reset,
     seekToFraction,
     seekToTime,
     togglePlayback,

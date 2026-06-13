@@ -15,7 +15,6 @@ const {
   trackRouteOperation,
   trackRoutePointEvent,
   trackSearchEvent,
-  trackTutorial,
   trackUndoRedoEvent,
 } = await import("@cycleways/core/platform/analytics.js");
 
@@ -34,7 +33,6 @@ trackRouteOperation("reset", [], [], {
   cleared_points: 2,
   cleared_segments: 3,
 });
-trackTutorial("started", true, "help_button");
 
 assert.deepEqual(
   events.map((event) => event.name),
@@ -45,7 +43,6 @@ assert.deepEqual(
     "location_search_success",
     "gpx_download",
     "route_reset",
-    "tutorial_started",
   ],
 );
 
@@ -55,6 +52,5 @@ assert.equal(events[2].parameters.has_route, true);
 assert.equal(events[3].parameters.within_bounds, true);
 assert.equal(events[4].parameters.distance_km, 4.5);
 assert.equal(events[5].parameters.cleared_points, 2);
-assert.equal(events[6].parameters.source, "help_button");
 
 console.log("Analytics parity test passed");

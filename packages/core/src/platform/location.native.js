@@ -35,6 +35,11 @@ export function setUrlParam(name, value) {
   return nativeLocationHref;
 }
 
+// Native has no history stack; a push behaves like a plain set.
+export function pushUrlParam(name, value) {
+  setUrlParam(name, value);
+}
+
 export function removeUrlParam(name) {
   return setUrlParam(name, null);
 }

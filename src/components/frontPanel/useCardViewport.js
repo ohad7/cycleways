@@ -3,6 +3,11 @@ import { deriveViewportSets } from "./discoverViewport.js";
 
 const EMPTY = { visibleSlugs: [], ghostSlugs: [], prefetchSlugs: [] };
 
+function fallbackViewportSets(orderedSlugs) {
+  const firstSlugs = orderedSlugs.slice(0, Math.min(2, orderedSlugs.length));
+  return deriveViewportSets(orderedSlugs, new Set(firstSlugs));
+}
+
 // Observe the Discover cards against their scrolling ancestor and report the
 // bright / ghost / prefetch slug sets. `orderedSlugs` is the catalog-ordered
 // list of every card's slug.
@@ -13,7 +18,7 @@ const EMPTY = { visibleSlugs: [], ghostSlugs: [], prefetchSlugs: [] };
 //                  `.front-panel__body` ancestor (falls back to the viewport).
 //   registerCard – `registerCard(slug)` returns a ref callback for that card.
 //   sets         – { visibleSlugs, ghostSlugs, prefetchSlugs }, recomputed on scroll.
-export function useCardViewport(orderedSlugs) {
+export function useCardViewport(orderedSlugs, refreshKey = "") {
   const containerRef = useRef(null);
   const cardEls = useRef(new Map());       // slug -> element
   const intersecting = useRef(new Set());  // slugs currently intersecting
@@ -21,15 +26,48 @@ export function useCardViewport(orderedSlugs) {
   const rafRef = useRef(0);
   const [sets, setSets] = useState(EMPTY);
 
+  const measureIntersections = useCallback(() => {
+    const container = containerRef.current;
+    const root = container?.closest(".front-panel__body") || null;
+    const rootRect = root
+      ? root.getBoundingClientRect()
+      : {
+          top: 0,
+          right: window.innerWidth,
+          bottom: window.innerHeight,
+          left: 0,
+        };
+    if (!(rootRect.right > rootRect.left && rootRect.bottom > rootRect.top)) return;
+    const next = new Set();
+    for (const [slug, el] of cardEls.current) {
+      const rect = el.getBoundingClientRect();
+      if (
+        rect.left < rootRect.right &&
+        rect.right > rootRect.left &&
+        rect.top < rootRect.bottom &&
+        rect.bottom > rootRect.top
+      ) {
+        next.add(slug);
+      }
+    }
+    intersecting.current = next;
+  }, []);
+
   const recompute = useCallback(() => {
+    measureIntersections();
     const next = deriveViewportSets(orderedSlugs, intersecting.current);
     // A transient empty set — cards exist but none have been measured yet
     // (initial mount, mid-fling) — should not clear the map; hold the last good
     // sets until the next observer callback. A genuinely empty list (no cards,
     // e.g. a filter with zero results) must still clear.
-    if (orderedSlugs.length > 0 && next.visibleSlugs.length === 0) return;
+    if (orderedSlugs.length > 0 && next.visibleSlugs.length === 0) {
+      setSets((prev) => (
+        prev.visibleSlugs.length > 0 ? prev : fallbackViewportSets(orderedSlugs)
+      ));
+      return;
+    }
     setSets(next);
-  }, [orderedSlugs]);
+  }, [measureIntersections, orderedSlugs]);
 
   // Coalesce bursts of observer callbacks into one recompute per frame.
   const schedule = useCallback(() => {
@@ -68,6 +106,10 @@ export function useCardViewport(orderedSlugs) {
     };
   }, [orderedSlugs, schedule]);
 
+  useEffect(() => {
+    schedule();
+  }, [refreshKey, schedule]);
+
   // Cache one stable ref-callback per slug. Consumers call registerCard(slug)
   // inline during render; returning a cached function keeps the ref identity
   // stable so React does not detach/re-attach (and wipe intersection state) on
@@ -83,6 +125,7 @@ export function useCardViewport(orderedSlugs) {
           el.dataset.discoverSlug = slug;
           cardEls.current.set(slug, el);
           if (observerRef.current) observerRef.current.observe(el);
+          schedule();
         } else {
           cardEls.current.delete(slug);
           intersecting.current.delete(slug);
@@ -91,7 +134,7 @@ export function useCardViewport(orderedSlugs) {
       cardCallbacks.current.set(slug, cb);
     }
     return cb;
-  }, []);
+  }, [schedule]);
 
   return { containerRef, registerCard, sets };
 }

@@ -5,7 +5,9 @@ export function trackEvent(eventName, parameters = {}) {
   var host = window.location.hostname;
   if (
     host != "localhost" &&
+    host != "127.0.0.1" &&
     !host.startsWith("10.0.") &&
+    !navigator.webdriver &&
     typeof gtag !== "undefined"
   ) {
     gtag("event", eventName, parameters);
@@ -130,12 +132,5 @@ export function trackPageLoad(hasRouteParam, userAgent) {
   trackEvent("page_load", {
     has_route: hasRouteParam,
     device: userAgent.includes("Mobile") ? "mobile" : "desktop",
-  });
-}
-
-export function trackTutorial(action, hasCurrentRoute, source = "unknown") {
-  trackEvent(`tutorial_${action}`, {
-    has_route: hasCurrentRoute,
-    source: source,
   });
 }

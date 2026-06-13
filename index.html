@@ -215,22 +215,24 @@
     })();
   </script>
 </head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-P1TK7GTD2J"></script>
+<!-- Google tag (gtag.js) — skipped on local hosts and automated browsers (Playwright) -->
 <script>
   var host = window.location.hostname;
-  if(host != "localhost" && !host.startsWith("10.0."))
+  if(host != "localhost" && host != "127.0.0.1" && !host.startsWith("10.0.") && !navigator.webdriver)
   {
-      // your google analytic code here
+      var gaScript = document.createElement('script');
+      gaScript.async = true;
+      gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-P1TK7GTD2J';
+      document.head.appendChild(gaScript);
+
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
       gtag('config', 'G-P1TK7GTD2J');
   } else {
-     window['ga-disable-UA-G-P1TK7GTD2J'] = true; 
+     window['ga-disable-G-P1TK7GTD2J'] = true;
   }
-  
 </script>
 
 <body>

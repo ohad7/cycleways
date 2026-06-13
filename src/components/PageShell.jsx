@@ -5,7 +5,6 @@ import TopBar from "./TopBar.jsx";
 export default function PageShell({
   breadcrumbs,
   children,
-  onOpenTutorial,
   navLinks,
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -14,7 +13,6 @@ export default function PageShell({
       <TopBar
         mobileMenuOpen={mobileMenuOpen}
         onMobileMenuToggle={() => setMobileMenuOpen((v) => !v)}
-        onOpenTutorial={onOpenTutorial}
         navLinks={navLinks}
       />
       <div className="main-container react-main-container">

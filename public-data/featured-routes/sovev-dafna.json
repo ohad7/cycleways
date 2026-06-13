@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-dafna",
-  "generatedAt": "2026-06-10T18:45:11.718Z",
+  "generatedAt": "2026-06-10T23:13:46.312Z",
   "source": {
     "routeTokenHash": "sha256:c9c4aadc35073fcf53cc3a2572340cc45147c20faedb9a07d604473999aee0bf",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "528fc6edbff9",
+    "mapVersion": "5d144ed04090",
     "assetHashes": {
-      "bikeRoads": "94b5afa2b851fe3744cbc784fb57e805131d4f022ee6bd70a173709f3257535b",
-      "segments": "b09ec8c5e36f482c8165858fc9b44c47d60c406467eeac43a19243827185f461",
-      "cwBaseIndex": "0f1dd292f87e93731c9bad4b506f8b611a0c7f3c59312ac51e3b5f5eea50f3ff",
-      "baseRoutingShards": "fe364839d4bf1fad7f9f65ecdbee600427966d9d06e344a78de9960a0698fb3e"
+      "bikeRoads": "bd5d4a59d790ca6fa70002bf9f9e61fbd25a5c5debdaccdf5f44eb2f10464f92",
+      "segments": "6a707f2e66b27f03e3a8d8e0dc2b08de57303f60f863ef1e34b501d65c14259f",
+      "cwBaseIndex": "f51ce7d59967869d635ac19a8b3eac9774c05e13a13d5bd2619a81b0862026fa",
+      "baseRoutingShards": "e7b0eb41391d1bbcd8579ecfb37ffc4af03334d422a0cf70aacb96921a28a0dc"
     }
   },
   "route": {

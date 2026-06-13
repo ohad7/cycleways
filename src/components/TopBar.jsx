@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
 
 function TopBar({
-  onOpenTutorial,
   mobileMenuOpen,
   onMobileMenuToggle,
   navLinks,
@@ -13,14 +12,6 @@ function TopBar({
   const isRoutesSection =
     location.pathname.startsWith("/routes") ||
     location.pathname.startsWith("/featured");
-
-  const handleTutorialClick = () => {
-    if (location.pathname === "/" && onOpenTutorial) {
-      onOpenTutorial();
-    } else {
-      navigate("/");
-    }
-  };
 
   const closeMobileMenu = () => {
     if (mobileMenuOpen) onMobileMenuToggle?.();
@@ -77,7 +68,6 @@ function TopBar({
     { label: "צרו קשר", href: "#contact" },
   ];
   const renderedNavLinks = navLinks || defaultNavLinks;
-  const showTutorialButton = Boolean(onOpenTutorial) && !isRoutesSection;
 
   return (
     <header className="header">
@@ -122,18 +112,6 @@ function TopBar({
               {item.label}
             </Link>
           ),
-        )}
-        {showTutorialButton && (
-          <button
-            className="nav-link help-tutorial-btn"
-            type="button"
-            onClick={() => {
-              handleTutorialClick();
-              closeMobileMenu();
-            }}
-          >
-            מדריך
-          </button>
         )}
       </nav>
     </header>

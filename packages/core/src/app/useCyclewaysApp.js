@@ -29,8 +29,10 @@ import {
   hasQueryParam,
   removeUrlParam,
   setUrlParam,
+  pushUrlParam,
   getShardLoaderLocation,
 } from "../platform/location.js";
+import { getCurrentPosition } from "../platform/geolocation.js";
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
 import { POI_EMOJIS } from "../data/poiTypes.js";
 import { getDataPointLocation } from "../utils/route-data.js";
@@ -58,10 +60,32 @@ import {
   trackRouteOperation,
   trackRoutePointEvent,
   trackSearchEvent,
-  trackTutorial,
   trackUndoRedoEvent,
 } from "../platform/analytics.js";
 import { getDistance } from "../utils/distance.js";
+import { getStoredItem, setStoredItem } from "../platform/storage.js";
+import {
+  parseDraft,
+  serializeDraft,
+  parseRecents,
+  serializeRecents,
+  upsertRecent,
+} from "../data/plannerMemory.js";
+
+const PLANNER_DRAFT_KEY = "cycleways:planner-draft";
+const RECENT_ROUTES_KEY = "cycleways:recent-routes";
+
+// Records a route in the recents list and persists it. Shared by the
+// callback below and the initializeRouting effect (which runs before the
+// callback exists in source order).
+function recordRecentRoute(setRecentRoutes, entry) {
+  if (!entry?.param) return;
+  setRecentRoutes((current) => {
+    const next = upsertRecent(current, { savedAt: Date.now(), ...entry });
+    setStoredItem(RECENT_ROUTES_KEY, serializeRecents(next));
+    return next;
+  });
+}
 
 export function useCyclewaysApp({
   enableRouteDirectionAnimation = true,
@@ -83,9 +107,17 @@ export function useCyclewaysApp({
     selectedDataMarker: null,
     dataMarkerFocus: null,
     elevationHover: null,
-    tutorialOpen: false,
+    locationFix: null,
+    locateStatus: "idle",
   });
   const [welcomeWizardOpen, setWelcomeWizardOpen] = useState(false);
+  // Draft offered for restore (read once at mount); null once consumed/dismissed.
+  const [plannerDraft, setPlannerDraft] = useState(() =>
+    parseDraft(getStoredItem(PLANNER_DRAFT_KEY)),
+  );
+  const [recentRoutes, setRecentRoutes] = useState(() =>
+    parseRecents(getStoredItem(RECENT_ROUTES_KEY)),
+  );
   const routeManagerRef = useRef(null);
   const shardedRouteSessionRef = useRef(null);
   const dragStartSnapshotRef = useRef(null);
@@ -266,6 +298,11 @@ export function useCyclewaysApp({
                 geometry: snapshot.geometry,
               },
             }));
+            recordRecentRoute(setRecentRoutes, {
+              param: routeParam,
+              name: "מסלול משותף",
+              distanceKm: Math.round((snapshot.distance / 1000) * 10) / 10,
+            });
           }
         }
       } catch (error) {
@@ -634,6 +671,8 @@ export function useCyclewaysApp({
       selectedRoutePointIndex: null,
     }));
     clearRouteUrl();
+    setStoredItem(PLANNER_DRAFT_KEY, "");
+    setPlannerDraft(null);
     trackRouteOperation("reset", previousSnapshot.points, previousSnapshot.selectedSegments, {
       cleared_points: previousSnapshot.points.length,
       cleared_segments: previousSnapshot.selectedSegments.length,
@@ -648,7 +687,7 @@ export function useCyclewaysApp({
   // doesn't decode, so callers can fall back to a full-page restore.
   // Concurrent loads are rejected while one is already in flight.
   const handleLoadRouteParam = useCallback(
-    async (routeParam) => {
+    async (routeParam, { pushHistory = false } = {}) => {
       if (
         !routeParam ||
         !routeManagerRef.current ||
@@ -696,7 +735,7 @@ export function useCyclewaysApp({
             geometry: snapshot.geometry,
           },
         }));
-        setUrlParam("route", routeParam);
+        (pushHistory ? pushUrlParam : setUrlParam)("route", routeParam);
         return true;
       } catch (error) {
         dispatchRoute({ type: "route/error", error });
@@ -707,6 +746,27 @@ export function useCyclewaysApp({
     },
     [state.assets, state.status],
   );
+
+  // Records a route in the recents list ("המסלולים שלי"). Callers supply the
+  // best name they have (catalog name for Discover selects, a generic label
+  // for downloads of a hand-built route).
+  const handleAddRecentRoute = useCallback((entry) => {
+    recordRecentRoute(setRecentRoutes, entry);
+  }, []);
+
+  // Restores the autosaved draft into the live session. Dismissing the offer
+  // deletes the stored draft; restoring leaves autosave in charge of the route.
+  const handleRestoreDraft = useCallback(async () => {
+    const draft = plannerDraft;
+    setPlannerDraft(null);
+    if (!draft?.param) return false;
+    return handleLoadRouteParam(draft.param);
+  }, [plannerDraft, handleLoadRouteParam]);
+
+  const handleDismissDraft = useCallback(() => {
+    setStoredItem(PLANNER_DRAFT_KEY, "");
+    setPlannerDraft(null);
+  }, []);
 
   const restoreHistorySnapshot = useCallback(
     (snapshot, action) => {
@@ -772,25 +832,6 @@ export function useCyclewaysApp({
     }));
   }, []);
 
-  const handleOpenTutorial = useCallback(() => {
-    setMapUi((current) => ({
-      ...current,
-      tutorialOpen: true,
-    }));
-    trackTutorial(
-      "started",
-      routeState.selectedSegments.length > 0,
-      "help_button",
-    );
-  }, [routeState.selectedSegments.length]);
-
-  const handleCloseTutorial = useCallback(() => {
-    setMapUi((current) => ({
-      ...current,
-      tutorialOpen: false,
-    }));
-  }, []);
-
   const handleDataMarkerClick = useCallback((dataMarker) => {
     setMapUi((current) => ({
       ...current,
@@ -851,6 +892,38 @@ export function useCyclewaysApp({
       selectedRoutePointIndex: index,
     }));
   }, []);
+
+  // One-shot locate-me: resolves the device position (permission is requested
+  // by the browser only at this tap), stores a fix for the map marker and the
+  // Discover near-me labels, and flags whether it's inside the map area so the
+  // camera only flies to in-bounds fixes. Never watches/tracks position.
+  const handleLocateMe = useCallback(async () => {
+    setMapUi((current) => ({
+      ...current,
+      locateStatus: "locating",
+      searchError: null,
+    }));
+    try {
+      const fix = await getCurrentPosition();
+      const bounds = getGeoJsonCoordinateBounds(state.assets.geoJsonData);
+      const withinBounds = isPointWithinBounds(
+        { lat: fix.lat, lng: fix.lng },
+        bounds,
+      );
+      setMapUi((current) => ({
+        ...current,
+        locateStatus: "idle",
+        locationFix: { id: `locate-${Date.now()}`, ...fix, withinBounds },
+        searchError: withinBounds ? null : "המיקום שלך מחוץ לאזור המפה",
+      }));
+    } catch {
+      setMapUi((current) => ({
+        ...current,
+        locateStatus: "error",
+        searchError: "לא הצלחנו לאתר את המיקום שלך",
+      }));
+    }
+  }, [state.assets]);
 
   const handleSearchQueryChange = useCallback((query) => {
     setMapUi((current) => ({
@@ -972,7 +1045,6 @@ export function useCyclewaysApp({
         setMapUi((current) => ({
           ...current,
           downloadModalOpen: false,
-          tutorialOpen: false,
         }));
         return;
       }
@@ -1019,7 +1091,7 @@ export function useCyclewaysApp({
       routeState.points.length === 0 ||
       !routeManagerRef.current
     ) {
-      return { url: "", status: "unavailable", length: 0, format: null };
+      return { url: "", status: "unavailable", length: 0, format: null, param: "" };
     }
 
     return buildShareInfo(
@@ -1037,6 +1109,25 @@ export function useCyclewaysApp({
     state.status,
   ]);
   const shareUrl = shareInfo.url;
+
+  // Autosave the in-progress route as a draft (the encoded ?route= param is
+  // the storage format). Empty routes don't overwrite an existing draft —
+  // clearing is explicit (handleRouteClear) or via restore/dismiss.
+  useEffect(() => {
+    if (!shareInfo.param || routeState.points.length === 0) return undefined;
+    const timer = setTimeout(() => {
+      setStoredItem(
+        PLANNER_DRAFT_KEY,
+        serializeDraft({
+          param: shareInfo.param,
+          distanceKm: Math.round((routeState.distance / 1000) * 10) / 10,
+          savedAt: Date.now(),
+        }),
+      );
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [shareInfo.param, routeState.distance, routeState.points.length]);
+
   const featureFlags = useMemo(() => getFeatureFlags(), []);
   const canDownload = routeState.geometry.length >= 2;
   const canUndo = routeHistory.past.length > 0;
@@ -1064,12 +1155,20 @@ export function useCyclewaysApp({
     });
     executeDownloadGPX(generateGPX(routeState.geometry), filename);
     handleCloseDownload();
+    if (shareInfo.param) {
+      recordRecentRoute(setRecentRoutes, {
+        param: shareInfo.param,
+        name: "מסלול שבניתי",
+        distanceKm: Math.round((routeState.distance / 1000) * 10) / 10,
+      });
+    }
   }, [
     handleCloseDownload,
     routeState.distance,
     routeState.geometry,
     routeState.points,
     routeState.selectedSegments,
+    shareInfo.param,
     shareUrl,
   ]);
 
@@ -1100,10 +1199,9 @@ export function useCyclewaysApp({
     shareInfo,
     featureFlags,
     directionAnimatorRef,
-    handleOpenTutorial,
-    handleCloseTutorial,
     handleSearchSubmit,
     handleSearchQueryChange,
+    handleLocateMe,
     handleUndo,
     handleRedo,
     handleRouteClear,
@@ -1127,6 +1225,11 @@ export function useCyclewaysApp({
     handleSegmentHover,
     handleViewportIdle,
     handleElevationHover,
+    plannerDraft,
+    recentRoutes,
+    handleRestoreDraft,
+    handleDismissDraft,
+    handleAddRecentRoute,
   };
 }
 

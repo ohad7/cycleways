@@ -3666,13 +3666,13 @@
     "splitFrom": 142,
     "splitFromName": "גבעת שחומית",
     "middle": {
-      "longitude": 35.578102,
-      "latitude": 33.200801,
-      "elevation": 94.0
+      "longitude": 35.578304,
+      "latitude": 33.203473,
+      "elevation": 122.0
     },
-    "elevation_gain_m": 20.8,
-    "elevation_loss_m": 26.4,
-    "net_elevation_change_m": -5.6
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.4,
+    "net_elevation_change_m": -2.4
   },
   "גבעת שחומית שביל גישה": {
     "id": 299,

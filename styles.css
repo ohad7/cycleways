@@ -438,7 +438,7 @@ html {
 @media (max-width: 768px) {
   .container {
     flex-direction: column;
-    height: calc(100vh - 140px) !important;
+    height: calc(100dvh - 78px) !important;
     gap: 5px;
   }
 }
@@ -1571,10 +1571,8 @@ html {
 
 @media (max-width: 768px) {
   .search-input-group {
-    position: absolute;
-    right: 0px;
-    top: 0px;
     width: 200px;
+    flex-shrink: 0;
   }
 }
 
@@ -1697,6 +1695,42 @@ html {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(70, 130, 180, 0.4);
   /* Reduced shadow */
+}
+
+.locate-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 2px solid #d5ddd8;
+  border-radius: 4px;
+  background: #fff;
+  color: #2f4533;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgb(40 48 38 / 12%);
+  font-size: 20px;
+  transition: all 0.2s;
+}
+
+.locate-btn:hover:not(:disabled) {
+  background: #f0f4f1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(40 48 38 / 20%);
+}
+
+.locate-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (max-width: 768px) {
+  .locate-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
 }
 
 .leaflet-interactive {
