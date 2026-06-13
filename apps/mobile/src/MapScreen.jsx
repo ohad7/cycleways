@@ -28,27 +28,44 @@ import Mapbox, {
 import Svg, { Path } from "react-native-svg";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import {
-  catalogFilter,
   createEmptyCatalogFilters,
   DISCOVERY_FILTER_GROUPS,
   loadCatalog,
   loadPlaces,
-  placeOptionsForEntries,
   routeDifficultyLabel,
   routeDisplayImage,
   routeMapImage,
-  routePassesThroughPlaceIds,
   routeShapeLabel,
-  routeStartPlaceIds,
   routeSurfaceLabel,
 } from "@cycleways/core/data/catalog.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import {
+  buildDiscoveryFilterOptions,
+  buildDiscoveryRoutes,
+  buildRouteCardViewModels,
+  createPlaceById,
+  featuredDiscoveryRoutes,
+  routeCardViewModel,
+} from "@cycleways/core/discovery/discoverySurfaceModel.js";
+import {
   loadFeaturedRouteSnapshot,
   snapshotToRouteState,
 } from "@cycleways/core/data/featuredRouteSnapshots.js";
+import {
+  endpointLabel,
+  routeEndpointStories,
+  routePoiStories,
+} from "@cycleways/core/data/routePoiStoryData.js";
+import {
+  buildActivePoiList,
+  buildRouteStatCards,
+} from "@cycleways/core/build/buildSurfaceModel.js";
 import { IMAGE_ASSETS } from "@cycleways/core/platform/bundledAssets.native.js";
-import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
+import {
+  POI_LABELS,
+  POI_COLORS,
+  poiLabel,
+} from "@cycleways/core/data/poiTypes.js";
 import {
   DATA_MARKERS_STYLE,
   ROUTE_DIRECTION_PULSE_CASING_STYLE,
@@ -61,6 +78,7 @@ import DataMarkerImages, {
   NATIVE_DATA_MARKER_ICON_NAMESPACE,
 } from "./DataMarkerImages.jsx";
 import ElevationProfileChart from "./ElevationProfileChart.jsx";
+import NativeBottomSheet from "./NativeBottomSheet.jsx";
 import RichText from "./RichText.jsx";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
@@ -266,7 +284,7 @@ export default function MapScreen() {
     handleAddDataMarkerToRoute,
     handleViewportIdle,
   } = useCyclewaysApp();
-  const [panelMode, setPanelMode] = useState("build");
+  const [panelMode, setPanelMode] = useState("discover");
   const [catalogState, setCatalogState] = useState({
     status: "loading",
     catalog: null,
@@ -278,6 +296,8 @@ export default function MapScreen() {
   );
   const [detailEntry, setDetailEntry] = useState(null);
   const [selectedCatalogSlug, setSelectedCatalogSlug] = useState(null);
+  const [sheetSnap, setSheetSnap] = useState("half");
+  const [nearMeSort, setNearMeSort] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -324,38 +344,52 @@ export default function MapScreen() {
     [catalogEntries, selectedCatalogSlug],
   );
 
-  const discoverEntries = useMemo(
-    () => sortNativeDiscoverRoutes(catalogFilter(catalogEntries, discoverFilters)),
-    [catalogEntries, discoverFilters],
-  );
-
   const placeById = useMemo(
-    () => new Map(catalogState.places.map((place) => [place.id, place])),
+    () => createPlaceById(catalogState.places),
     [catalogState.places],
   );
 
-  const startPlaceOptions = useMemo(
+  const discoverResult = useMemo(
     () =>
-      placeOptionsForEntries(
-        catalogEntries,
+      buildDiscoveryRoutes({
+        entries: catalogEntries,
+        filters: discoverFilters,
+        locationFix: nearMeSort ? locationState.point : null,
+        nearMeSort,
         placeById,
-        routeStartPlaceIds,
-      ),
-    [catalogEntries, placeById],
+      }),
+    [catalogEntries, discoverFilters, locationState.point, nearMeSort, placeById],
   );
-  const throughPlaceOptions = useMemo(
-    () =>
-      placeOptionsForEntries(
-        catalogEntries,
-        placeById,
-        routePassesThroughPlaceIds,
-      ),
-    [catalogEntries, placeById],
+  const discoverEntries = useMemo(
+    () => sortNativeDiscoverRoutes(discoverResult.routes),
+    [discoverResult.routes],
   );
   const featuredDiscoverEntries = useMemo(
-    () => discoverEntries.filter((entry) => entry.featured).slice(0, 3),
+    () => featuredDiscoveryRoutes(discoverEntries, 3),
     [discoverEntries],
   );
+  const { startPlaceOptions, throughPlaceOptions } = useMemo(
+    () => buildDiscoveryFilterOptions(catalogEntries, placeById),
+    [catalogEntries, placeById],
+  );
+  const discoverRouteModels = useMemo(
+    () =>
+      buildRouteCardViewModels(discoverEntries, {
+        locationFix: nearMeSort ? locationState.point : null,
+        placeById,
+      }),
+    [discoverEntries, locationState.point, nearMeSort, placeById],
+  );
+  const featuredDiscoverRouteModels = useMemo(
+    () =>
+      buildRouteCardViewModels(featuredDiscoverEntries, {
+        locationFix: nearMeSort ? locationState.point : null,
+        placeById,
+      }),
+    [featuredDiscoverEntries, locationState.point, nearMeSort, placeById],
+  );
+  const routeStats = useMemo(() => buildRouteStatCards(routeState), [routeState]);
+  const buildPois = useMemo(() => buildActivePoiList(routeState), [routeState]);
   const activeDiscoverFilterCount = useMemo(
     () =>
       Object.values(discoverFilters).reduce(
@@ -390,6 +424,7 @@ export default function MapScreen() {
       });
       setSelectedCatalogSlug(entry.slug || null);
       setPanelMode("build");
+      setSheetSnap("peek");
       return true;
     },
     [handleAddRecentRoute, handleLoadRouteParam],
@@ -865,7 +900,7 @@ export default function MapScreen() {
     <View style={styles.fill} {...routePointPanResponder.panHandlers}>
       <MapView
         ref={mapViewRef}
-        style={styles.fill}
+        style={styles.mapView}
         styleURL={Mapbox.StyleURL.Outdoors}
         scrollEnabled={!pointGestureActive}
         onPress={handleMapPress}
@@ -958,7 +993,9 @@ export default function MapScreen() {
         catalogState={catalogState}
         discoverEntries={discoverEntries}
         discoverFilters={discoverFilters}
+        discoverRouteModels={discoverRouteModels}
         featuredDiscoverEntries={featuredDiscoverEntries}
+        featuredDiscoverRouteModels={featuredDiscoverRouteModels}
         onOpenSummary={handleOpenDownload}
         onPanelModeChange={setPanelMode}
         onRedo={handleNativeRedo}
@@ -968,16 +1005,23 @@ export default function MapScreen() {
         onSelectDiscoverRoute={handleSelectDiscoverRoute}
         onToggleDiscoverFilter={toggleDiscoverFilter}
         onClearDiscoverFilters={clearDiscoverFilters}
+        onPoiFocus={handleDataPointFocus}
         onUndo={handleNativeUndo}
+        buildPois={buildPois}
         locationState={locationState}
         mapUi={mapUi}
+        nearMeSort={nearMeSort}
+        onNearMeSortChange={setNearMeSort}
         panelMode={panelMode}
         placeById={placeById}
         presentation={routePresentation}
         recentRoutes={recentRoutes}
+        routeStats={routeStats}
         routeState={routeState}
         routePoints={displayedRoutePoints}
         selectedCatalogEntry={selectedCatalogEntry}
+        sheetSnap={sheetSnap}
+        onSheetSnapChange={setSheetSnap}
         startPlaceOptions={startPlaceOptions}
         throughPlaceOptions={throughPlaceOptions}
         onClear={handleNativeRouteClear}
@@ -1167,7 +1211,10 @@ function RoutePlannerChrome({
   catalogState,
   discoverEntries,
   discoverFilters,
+  discoverRouteModels,
   featuredDiscoverEntries,
+  featuredDiscoverRouteModels,
+  buildPois,
   onClear,
   onClearDiscoverFilters,
   onOpenSummary,
@@ -1178,28 +1225,46 @@ function RoutePlannerChrome({
   onSearchSubmit,
   onSelectDiscoverRoute,
   onToggleDiscoverFilter,
+  onPoiFocus,
   onUndo,
   onScrub,
   locationState,
   mapUi,
+  nearMeSort,
+  onNearMeSortChange,
   panelMode,
   placeById,
   presentation,
   recentRoutes,
+  routeStats,
   routeState,
   routePoints,
   selectedCatalogEntry,
+  sheetSnap,
+  onSheetSnapChange,
   startPlaceOptions,
   throughPlaceOptions,
 }) {
   const hasPoints = routePoints.length > 0;
   const hasElevationProfile = routeState.geometry.length >= 2;
-  const [sheetCollapsed, setSheetCollapsed] = useState(false);
   const searchBusy = mapUi.searchStatus === "searching";
   const locationText = locationStatusText(locationState);
   const routeMessage = routeState.error
     ? routeState.error.message || "לא הצלחנו לעדכן את המסלול"
     : presentation.message;
+  const openDiscoverPanel = () => {
+    onPanelModeChange?.("discover");
+    onSheetSnapChange?.("half");
+  };
+  const openBuildPanel = () => {
+    onPanelModeChange?.("build");
+    onSheetSnapChange?.("half");
+  };
+  const openBuildPeek = () => {
+    const showDetails = panelMode === "build" || hasPoints;
+    onPanelModeChange?.("build");
+    onSheetSnapChange?.(showDetails ? "half" : "peek");
+  };
 
   return (
     <>
@@ -1232,152 +1297,509 @@ function RoutePlannerChrome({
         {mapUi.searchError ? (
           <Text style={styles.searchError}>{mapUi.searchError}</Text>
         ) : null}
-        <View style={styles.controlBar}>
-          <View style={styles.controlGroup}>
-            <ChromeButton
-              compact
-              rail
-              label={panelMode === "discover" ? "בנה" : "מצא"}
-              onPress={() =>
-                onPanelModeChange?.(panelMode === "discover" ? "build" : "discover")
-              }
-              accessibilityLabel={
-                panelMode === "discover" ? "חזרה לבניית מסלול" : "מצא מסלול מוכן"
-              }
+      </View>
+
+      <NativeBottomSheet
+        snap={sheetSnap}
+        onSnapChange={onSheetSnapChange}
+        peekContent={
+          <NativeSheetPeek
+            discoverModels={
+              featuredDiscoverRouteModels.length > 0
+                ? featuredDiscoverRouteModels
+                : discoverRouteModels
+            }
+            onOpenBuild={openBuildPeek}
+            onOpenDiscover={openDiscoverPanel}
+            onOpenRouteDetails={onOpenRouteDetails}
+            onSelectRoute={onSelectDiscoverRoute}
+            panelMode={panelMode}
+            routePoints={routePoints}
+            routeState={routeState}
+            selectedCatalogEntry={selectedCatalogEntry}
+          />
+        }
+      >
+        <View style={styles.sheetPanelBody}>
+          <NativePanelModeTabs
+            panelMode={panelMode}
+            onOpenBuild={openBuildPanel}
+            onOpenDiscover={openDiscoverPanel}
+          />
+          {panelMode === "discover" ? (
+            <DiscoverSheet
+              activeFilterCount={activeDiscoverFilterCount}
+              catalogState={catalogState}
+              entries={discoverEntries}
+              featuredEntries={featuredDiscoverEntries}
+              featuredModels={featuredDiscoverRouteModels}
+              filters={discoverFilters}
+              onBuild={openBuildPanel}
+              onClearFilters={onClearDiscoverFilters}
+              onOpenDetails={onOpenRouteDetails}
+              onSelectRoute={onSelectDiscoverRoute}
+              onToggleFilter={onToggleDiscoverFilter}
+              nearMeAvailable={Boolean(locationState.point)}
+              nearMeSort={nearMeSort}
+              onNearMeSortChange={onNearMeSortChange}
+              placeById={placeById}
+              recentRoutes={recentRoutes}
+              routeModels={discoverRouteModels}
+              startPlaceOptions={startPlaceOptions}
+              throughPlaceOptions={throughPlaceOptions}
             />
-            <ChromeButton
-              compact
-              rail
-              disabled={!canUndo}
-              icon="undo"
-              label=""
-              onPress={onUndo}
-              accessibilityLabel="ביטול"
+          ) : (
+            <NativeBuildSheet
+              animator={animator}
+              buildPois={buildPois}
+              canDownload={canDownload}
+              canRedo={canRedo}
+              canUndo={canUndo}
+              hasElevationProfile={hasElevationProfile}
+              hasPoints={hasPoints}
+              locationText={locationText}
+              onClear={onClear}
+              onOpenRouteDetails={onOpenRouteDetails}
+              onOpenSummary={onOpenSummary}
+              onPoiFocus={onPoiFocus}
+              onRedo={onRedo}
+              onScrub={onScrub}
+              onUndo={onUndo}
+              presentation={presentation}
+              routeMessage={routeMessage}
+              routeState={routeState}
+              routeStats={routeStats}
+              selectedCatalogEntry={selectedCatalogEntry}
             />
-            <ChromeButton
-              compact
-              rail
-              disabled={!canRedo}
-              icon="redo"
-              label=""
-              onPress={onRedo}
-              accessibilityLabel="חזרה"
-            />
-            <ChromeButton
-              compact
-              rail
-              disabled={!hasPoints}
-              icon="trash"
-              label=""
-              onPress={onClear}
-              accessibilityLabel="איפוס מסלול"
-            />
-            <ChromeButton
-              compact
-              rail
-              disabled={!canDownload}
-              label="סיכום"
-              onPress={onOpenSummary}
-              accessibilityLabel="סיכום ושיתוף המסלול"
-            />
+          )}
+        </View>
+      </NativeBottomSheet>
+    </>
+  );
+}
+
+function NativePanelModeTabs({ onOpenBuild, onOpenDiscover, panelMode }) {
+  return (
+    <View style={styles.panelModeSwitch}>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={{ selected: panelMode === "discover" }}
+        onPress={onOpenDiscover}
+        style={[
+          styles.panelModeButton,
+          panelMode === "discover" ? styles.panelModeButtonActive : null,
+        ]}
+      >
+        <Text
+          style={[
+            styles.panelModeText,
+            panelMode === "discover" ? styles.panelModeTextActive : null,
+          ]}
+        >
+          חפש מסלול
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={{ selected: panelMode === "build" }}
+        onPress={onOpenBuild}
+        style={[
+          styles.panelModeButton,
+          panelMode === "build" ? styles.panelModeButtonActive : null,
+        ]}
+      >
+        <Text
+          style={[
+            styles.panelModeText,
+            panelMode === "build" ? styles.panelModeTextActive : null,
+          ]}
+        >
+          בניית מסלול
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function NativeSheetPeek({
+  discoverModels = [],
+  onOpenBuild,
+  onOpenDiscover,
+  onOpenRouteDetails,
+  onSelectRoute,
+  panelMode,
+  routePoints = [],
+  routeState,
+  selectedCatalogEntry,
+}) {
+  const hasRoute = routePoints.length > 0;
+  const routeTitle = selectedCatalogEntry?.name || "מסלול חדש";
+  const routeMeta = hasRoute
+    ? `${routePoints.length} נקודות · ${formatRouteKm((routeState?.distance || 0) / 1000)}`
+    : "0 נקודות";
+
+  return (
+    <View style={styles.peekStack}>
+      <View style={styles.peekModeSwitch}>
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: panelMode === "discover" }}
+          onPress={onOpenDiscover}
+          style={[
+            styles.peekModeButton,
+            panelMode === "discover" ? styles.peekModeButtonActive : null,
+          ]}
+        >
+          <Text
+            style={[
+              styles.peekModeText,
+              panelMode === "discover" ? styles.peekModeTextActive : null,
+            ]}
+          >
+            חפש מסלול
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: panelMode === "build" }}
+          onPress={onOpenBuild}
+          style={[
+            styles.peekModeButton,
+            panelMode === "build" ? styles.peekModeButtonActive : null,
+          ]}
+        >
+          <Text
+            style={[
+              styles.peekModeText,
+              panelMode === "build" ? styles.peekModeTextActive : null,
+            ]}
+          >
+            בניית מסלול
+          </Text>
+        </Pressable>
+      </View>
+      {panelMode === "discover" ? (
+        <View style={styles.peekRouteChipsWrap}>
+          <View style={styles.peekHeaderRow}>
+            <Text style={styles.peekTitle}>מסלולים מומלצים</Text>
+            <Pressable onPress={onOpenDiscover} style={styles.peekHeaderAction}>
+              <Text style={styles.peekHeaderActionText}>סינון וחיפוש</Text>
+            </Pressable>
           </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.peekRouteChips}
+          >
+            {discoverModels.slice(0, 8).map((model) => (
+              <Pressable
+                key={model.slug}
+                accessibilityRole="button"
+                accessibilityLabel={`פתח את ${model.name}`}
+                onLongPress={() => onOpenRouteDetails?.(model.entry)}
+                onPress={() => onSelectRoute?.(model.entry)}
+                style={({ pressed }) => [
+                  styles.peekRouteChip,
+                  pressed ? styles.discoverCardPressed : null,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.peekRouteSwatch,
+                    { backgroundColor: model.color },
+                  ]}
+                />
+                <View style={styles.peekRouteTextWrap}>
+                  <Text numberOfLines={1} style={styles.peekRouteTitle}>
+                    {model.name}
+                  </Text>
+                  <Text numberOfLines={1} style={styles.peekRouteMeta}>
+                    {model.stats.slice(0, 3).join(" · ")}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      ) : (
+        <View style={styles.peekBuildRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="פתח את פאנל בניית המסלול"
+            onPress={onOpenBuild}
+            style={({ pressed }) => [
+              styles.peekBuildMain,
+              pressed ? styles.discoverCardPressed : null,
+            ]}
+          >
+            <Text numberOfLines={1} style={styles.peekBuildTitle}>
+              {routeTitle}
+            </Text>
+            <Text numberOfLines={1} style={styles.peekBuildMeta}>
+              {routeMeta}
+            </Text>
+          </Pressable>
+          {selectedCatalogEntry ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`פרטי מסלול: ${selectedCatalogEntry.name}`}
+              onPress={() => onOpenRouteDetails?.(selectedCatalogEntry)}
+              style={({ pressed }) => [
+                styles.peekDetailsButton,
+                pressed ? styles.discoverCardPressed : null,
+              ]}
+            >
+              <Text style={styles.peekDetailsText}>פרטים</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function NativeBuildSheet({
+  animator,
+  buildPois = [],
+  canDownload,
+  canRedo,
+  canUndo,
+  hasElevationProfile,
+  hasPoints,
+  locationText,
+  onClear,
+  onOpenRouteDetails,
+  onOpenSummary,
+  onPoiFocus,
+  onRedo,
+  onScrub,
+  onUndo,
+  presentation,
+  routeMessage,
+  routeState,
+  routeStats = [],
+  selectedCatalogEntry,
+}) {
+  const hasRoute = Array.isArray(routeState?.geometry) && routeState.geometry.length >= 2;
+  const warnings = Array.isArray(presentation?.warnings) ? presentation.warnings : [];
+
+  return (
+    <ScrollView
+      style={styles.buildSheetScroll}
+      showsVerticalScrollIndicator
+      contentContainerStyle={[
+        styles.buildSheetContent,
+        !hasRoute ? styles.routeSheetEmpty : null,
+      ]}
+    >
+      {routeState?.error ? (
+        <Text style={styles.errorText}>{routeMessage}</Text>
+      ) : null}
+      <View style={styles.buildPanelHeader}>
+        <View style={styles.buildPanelTitleBlock}>
+          <Text style={styles.discoverEyebrow}>
+            {selectedCatalogEntry ? "מסלול מומלץ" : "המסלול שלי · טיוטה"}
+          </Text>
+          <Text numberOfLines={2} style={styles.buildPanelTitle}>
+            {selectedCatalogEntry?.name || "מסלול חדש"}
+          </Text>
+        </View>
+        <View style={styles.buildToolRow}>
+          <NativeBuildToolButton
+            disabled={!canUndo}
+            icon="undo"
+            onPress={onUndo}
+            accessibilityLabel="בטל"
+          />
+          <NativeBuildToolButton
+            disabled={!canRedo}
+            icon="redo"
+            onPress={onRedo}
+            accessibilityLabel="בצע שוב"
+          />
+          <NativeBuildToolButton
+            disabled={!hasPoints}
+            icon="trash"
+            onPress={onClear}
+            accessibilityLabel="נקה מסלול"
+          />
         </View>
       </View>
 
-      <View pointerEvents="box-none" style={styles.bottomSheetWrap}>
-        {panelMode === "discover" ? (
-          <DiscoverSheet
-            activeFilterCount={activeDiscoverFilterCount}
-            catalogState={catalogState}
-            entries={discoverEntries}
-            featuredEntries={featuredDiscoverEntries}
-            filters={discoverFilters}
-            onBuild={() => onPanelModeChange?.("build")}
-            onClearFilters={onClearDiscoverFilters}
-            onOpenDetails={onOpenRouteDetails}
-            onSelectRoute={onSelectDiscoverRoute}
-            onToggleFilter={onToggleDiscoverFilter}
-            placeById={placeById}
-            recentRoutes={recentRoutes}
-            startPlaceOptions={startPlaceOptions}
-            throughPlaceOptions={throughPlaceOptions}
-          />
-        ) : (
-          <View
-            style={[
-              styles.routeSheet,
-              hasPoints ? null : styles.routeSheetEmpty,
+      {selectedCatalogEntry ? (
+        <NativeRouteStoryCta
+          entry={selectedCatalogEntry}
+          onOpen={() => onOpenRouteDetails?.(selectedCatalogEntry)}
+        />
+      ) : null}
+
+      {hasRoute ? (
+        <NativeRouteStats stats={routeStats} />
+      ) : (
+        <Text style={styles.buildEmptyText}>
+          סמנו נקודות על המפה כדי לבנות מסלול.
+        </Text>
+      )}
+
+      {hasRoute && !routeState?.error && routeMessage ? (
+        <Text style={styles.routeMessage}>{routeMessage}</Text>
+      ) : null}
+
+      {hasRoute && warnings.length > 0 ? (
+        <View style={styles.warningList}>
+          {warnings.map((warning) => (
+            <Text key={warning} style={styles.warningText}>
+              {warning}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
+      {hasRoute && locationText ? (
+        <Text style={styles.locationText}>{locationText}</Text>
+      ) : null}
+
+      {hasRoute && hasElevationProfile ? (
+        <ElevationProfileChart
+          animator={animator}
+          distance={routeState.distance}
+          geometry={routeState.geometry}
+          onScrub={onScrub}
+        />
+      ) : null}
+
+      {hasRoute ? (
+        <View style={styles.buildPanelActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="סיכום ושיתוף המסלול"
+            disabled={!canDownload}
+            onPress={onOpenSummary}
+            style={({ pressed }) => [
+              styles.buildPrimaryAction,
+              pressed && canDownload ? styles.discoverCardPressed : null,
+              !canDownload ? styles.buildActionDisabled : null,
             ]}
           >
-            <View style={styles.routeSheetHeader}>
-              <Text numberOfLines={1} style={styles.routeSheetTitle}>
-                {selectedCatalogEntry?.name || "מסלול"}
+            <Text style={styles.buildPrimaryActionText}>סיכום ושיתוף</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {hasRoute && buildPois.length > 0 ? (
+        <NativePoiList
+          items={buildPois}
+          onPoiFocus={onPoiFocus}
+        />
+      ) : null}
+    </ScrollView>
+  );
+}
+
+function NativeBuildToolButton({
+  accessibilityLabel,
+  disabled,
+  icon,
+  onPress,
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.buildToolButton,
+        pressed && !disabled ? styles.discoverCardPressed : null,
+        disabled ? styles.buildToolButtonDisabled : null,
+      ]}
+    >
+      <ChromeIcon
+        name={icon}
+        color={disabled ? "#8d958f" : "#283026"}
+        size={17}
+      />
+    </Pressable>
+  );
+}
+
+function NativeRouteStoryCta({ entry, onOpen }) {
+  const image = routeDisplayImage(entry) || routeMapImage(entry);
+  const imageSource = nativeImageSource(image?.thumbnail || image?.photo);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`פרטי המסלול המלא: ${entry?.name || "מסלול"}`}
+      onPress={onOpen}
+      style={({ pressed }) => [
+        styles.buildStoryCta,
+        pressed ? styles.discoverCardPressed : null,
+      ]}
+    >
+      {imageSource ? (
+        <Image
+          source={imageSource}
+          resizeMode="cover"
+          style={styles.buildStoryCtaImage}
+        />
+      ) : null}
+      <Text numberOfLines={1} style={styles.buildStoryCtaText}>
+        פרטי המסלול המלא
+      </Text>
+    </Pressable>
+  );
+}
+
+function NativeRouteStats({ stats = [] }) {
+  return (
+    <View style={styles.nativeStatsRow}>
+      {stats.map((stat) => (
+        <View key={stat.key} style={styles.nativeStatCard}>
+          <Text style={styles.nativeStatLabel}>{stat.label}</Text>
+          <Text style={styles.nativeStatValue}>{stat.value}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function NativePoiList({ items = [], onPoiFocus }) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  return (
+    <View style={styles.nativePoiPanel}>
+      <Text style={styles.nativePoiTitle}>
+        נקודות עניין בדרך · {items.length}
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.nativePoiList}
+      >
+        {items.slice(0, 12).map(({ poi, distanceLabel }, index) => (
+          <Pressable
+            key={poi?.id || index}
+            accessibilityRole="button"
+            accessibilityLabel={poi?.information || poi?.name || "נקודת עניין"}
+            onPress={() => onPoiFocus?.(poi)}
+            style={({ pressed }) => [
+              styles.nativePoiChip,
+              pressed ? styles.discoverCardPressed : null,
+            ]}
+          >
+            <Text style={styles.nativePoiEmoji}>{poi?.emoji || "📍"}</Text>
+            <View style={styles.nativePoiCopy}>
+              {distanceLabel ? (
+                <Text style={styles.nativePoiDistance}>{distanceLabel}</Text>
+              ) : null}
+              <Text numberOfLines={2} style={styles.nativePoiText}>
+                {poi?.information || poi?.name || "מידע בדרך"}
               </Text>
-              <View style={styles.routeSheetHeaderActions}>
-                {selectedCatalogEntry ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`פרטי מסלול: ${selectedCatalogEntry.name}`}
-                    onPress={() => onOpenRouteDetails?.(selectedCatalogEntry)}
-                    style={styles.routeSheetBadge}
-                  >
-                    <Text style={styles.routeSheetBadgeText}>פרטים</Text>
-                  </Pressable>
-                ) : null}
-                {presentation.canDownload ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="סיכום ושיתוף המסלול"
-                    onPress={onOpenSummary}
-                    style={styles.routeSheetBadge}
-                  >
-                    <Text style={styles.routeSheetBadgeText}>סיכום</Text>
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    sheetCollapsed ? "הרחבת פאנל המסלול" : "מזעור פאנל המסלול"
-                  }
-                  onPress={() => setSheetCollapsed((current) => !current)}
-                  style={styles.routeSheetCollapse}
-                >
-                  <Text style={styles.routeSheetCollapseText}>
-                    {sheetCollapsed ? "⌃" : "⌄"}
-                  </Text>
-                </Pressable>
-              </View>
             </View>
-            <Text
-              numberOfLines={sheetCollapsed ? 1 : undefined}
-              style={routeState.error ? styles.errorText : styles.routeMessage}
-            >
-              {routeMessage}
-            </Text>
-            {!sheetCollapsed && presentation.warnings.length > 0 ? (
-              <View style={styles.warningList}>
-                {presentation.warnings.map((warning) => (
-                  <Text key={warning} style={styles.warningText}>
-                    {warning}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-            {!sheetCollapsed && locationText ? (
-              <Text style={styles.locationText}>{locationText}</Text>
-            ) : null}
-            {!sheetCollapsed && hasElevationProfile ? (
-              <ElevationProfileChart
-                animator={animator}
-                distance={routeState.distance}
-                geometry={routeState.geometry}
-                onScrub={onScrub}
-              />
-            ) : null}
-          </View>
-        )}
-      </View>
-    </>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -1386,32 +1808,42 @@ function DiscoverSheet({
   catalogState,
   entries = [],
   featuredEntries = [],
+  featuredModels = [],
   filters,
+  nearMeAvailable = false,
+  nearMeSort = false,
   onBuild,
   onClearFilters,
   onOpenDetails,
+  onNearMeSortChange,
   onSelectRoute,
   onToggleFilter,
   placeById,
   recentRoutes = [],
+  routeModels = [],
   startPlaceOptions = [],
   throughPlaceOptions = [],
 }) {
   return (
     <View style={[styles.routeSheet, styles.discoverSheet]}>
       <View style={styles.routeSheetHeader}>
-        <View>
+        <View style={styles.discoverIntroCopy}>
           <Text style={styles.discoverEyebrow}>מצא מסלול</Text>
           <Text style={styles.routeSheetTitle}>מצאו את הרכיבה הבאה</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="בניית מסלול משלך"
+            onPress={onBuild}
+            style={({ pressed }) => [
+              styles.discoverBuildHint,
+              pressed ? styles.discoverCardPressed : null,
+            ]}
+          >
+            <Text style={styles.discoverBuildHintText}>
+              אפשר גם לסמן נקודות על המפה ולבנות מסלול משלכם
+            </Text>
+          </Pressable>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="בנה מסלול משלך"
-          onPress={onBuild}
-          style={styles.routeSheetBadge}
-        >
-          <Text style={styles.routeSheetBadgeText}>בנה מסלול</Text>
-        </Pressable>
       </View>
 
       {catalogState?.status === "loading" ? (
@@ -1468,35 +1900,42 @@ function DiscoverSheet({
             </View>
           ) : null}
 
-          {featuredEntries.length > 0 ? (
-            <View style={styles.discoverSection}>
-              <Text style={styles.discoverSectionTitle}>מומלצים במיוחד</Text>
-              {featuredEntries.map((entry) => (
-                <NativeRouteCard
-                  key={`featured-${entry.slug}`}
-                  entry={entry}
-                  featured
-                  onOpenDetails={onOpenDetails}
-                  onSelect={onSelectRoute}
-                  placeById={placeById}
-                />
-              ))}
-            </View>
-          ) : null}
-
           <View style={styles.discoverSection}>
             <View style={styles.discoverFilterHeader}>
               <Text style={styles.discoverSectionTitle}>סינון</Text>
-              {activeFilterCount > 0 ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="נקה סינון"
-                  onPress={onClearFilters}
-                  style={styles.clearFiltersButton}
-                >
-                  <Text style={styles.clearFiltersText}>נקה</Text>
-                </Pressable>
-              ) : null}
+              <View style={styles.discoverFilterActions}>
+                {nearMeAvailable ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: nearMeSort }}
+                    accessibilityLabel="מיון מסלולים קרובים אליי"
+                    onPress={() => onNearMeSortChange?.((current) => !current)}
+                    style={[
+                      styles.clearFiltersButton,
+                      nearMeSort ? styles.nativeFilterChipActive : null,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.clearFiltersText,
+                        nearMeSort ? styles.nativeFilterChipTextActive : null,
+                      ]}
+                    >
+                      קרוב אליי
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {activeFilterCount > 0 ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="נקה סינון"
+                    onPress={onClearFilters}
+                    style={styles.clearFiltersButton}
+                  >
+                    <Text style={styles.clearFiltersText}>נקה</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
             <NativeFilterRow
               axis="startLocation"
@@ -1524,17 +1963,31 @@ function DiscoverSheet({
             ))}
           </View>
 
+          {featuredModels.length > 0 ? (
+            <View style={styles.discoverSection}>
+              <Text style={styles.discoverSectionTitle}>מומלצים במיוחד</Text>
+              {featuredModels.map((model) => (
+                <NativeRouteCard
+                  key={`featured-${model.slug}`}
+                  model={model}
+                  featured
+                  onOpenDetails={onOpenDetails}
+                  onSelect={onSelectRoute}
+                />
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.discoverSection}>
             <Text style={styles.discoverSectionTitle}>
               {entries.length} מסלולים
             </Text>
-            {entries.map((entry) => (
+            {routeModels.map((model) => (
               <NativeRouteCard
-                key={entry.slug}
-                entry={entry}
+                key={model.slug}
+                model={model}
                 onOpenDetails={onOpenDetails}
                 onSelect={onSelectRoute}
-                placeById={placeById}
               />
             ))}
           </View>
@@ -1590,21 +2043,15 @@ function NativeFilterRow({ axis, label, options = [], selected, onToggle }) {
 function NativeRouteCard({
   entry,
   featured = false,
+  model,
   onOpenDetails,
   onSelect,
   placeById,
 }) {
-  const placeNames = routePlaceNames(entry, placeById);
-  const shape = routeShapeLabel(entry);
-  const image = routeMapImage(entry) || routeDisplayImage(entry);
-  const imageSource = nativeImageSource(image?.thumbnail || image?.photo);
-  const stats = [
-    formatRouteKm(entry.distanceKm),
-    formatRouteElevation(entry.elevationGainM),
-    routeDifficultyLabel(entry),
-    routeSurfaceLabel(entry),
-    shape,
-  ].filter(Boolean);
+  const card = model || routeCardViewModel(entry, { placeById });
+  const imageSource = nativeImageSource(
+    card.image?.thumbnail || card.image?.photo,
+  );
 
   return (
     <View
@@ -1616,8 +2063,8 @@ function NativeRouteCard({
       <View style={styles.discoverRouteCardTop}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`פרטי מסלול: ${entry.name}`}
-          onPress={() => onOpenDetails?.(entry)}
+          accessibilityLabel={`פרטי מסלול: ${card.name}`}
+          onPress={() => onOpenDetails?.(card.entry)}
           style={({ pressed }) => [
             styles.discoverRouteThumb,
             pressed ? styles.discoverCardPressed : null,
@@ -1636,34 +2083,47 @@ function NativeRouteCard({
         <View style={styles.discoverRouteBody}>
           <View style={styles.discoverRouteCardHeader}>
             <Text numberOfLines={2} style={styles.discoverRouteTitle}>
-              {entry.name}
+              <Text
+                style={[
+                  styles.discoverRouteColorDot,
+                  { color: card.color || "#4682B4" },
+                ]}
+              >
+                ●{" "}
+              </Text>
+              {card.name}
             </Text>
-            {featured ? (
+            {featured || card.featured ? (
               <Text style={styles.discoverFeaturedBadge}>מומלץ</Text>
             ) : null}
           </View>
-          {entry.summary ? (
+          {card.summary ? (
             <Text numberOfLines={2} style={styles.discoverRouteSummary}>
-              {entry.summary}
+              {card.summary}
             </Text>
           ) : null}
         </View>
       </View>
-      {stats.length > 0 ? (
+      {card.stats.length > 0 ? (
         <Text numberOfLines={2} style={styles.discoverRouteMeta}>
-          {stats.join(" · ")}
+          {card.stats.join(" · ")}
         </Text>
       ) : null}
-      {placeNames.length > 0 ? (
+      {card.distanceFromUserLabel ? (
         <Text numberOfLines={1} style={styles.discoverRoutePlaces}>
-          עובר ליד: {placeNames.join(" · ")}
+          {card.distanceFromUserLabel}
+        </Text>
+      ) : null}
+      {card.placeNames.length > 0 ? (
+        <Text numberOfLines={1} style={styles.discoverRoutePlaces}>
+          עובר ליד: {card.placeNames.join(" · ")}
         </Text>
       ) : null}
       <View style={styles.discoverRouteActions}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`פתח את ${entry.name} במפה`}
-          onPress={() => onSelect?.(entry)}
+          accessibilityLabel={`פתח את ${card.name} במפה`}
+          onPress={() => onSelect?.(card.entry)}
           style={({ pressed }) => [
             styles.discoverPrimaryAction,
             pressed ? styles.discoverCardPressed : null,
@@ -1673,8 +2133,8 @@ function NativeRouteCard({
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`פרטים על ${entry.name}`}
-          onPress={() => onOpenDetails?.(entry)}
+          accessibilityLabel={`פרטים על ${card.name}`}
+          onPress={() => onOpenDetails?.(card.entry)}
           style={({ pressed }) => [
             styles.discoverSecondaryAction,
             pressed ? styles.discoverCardPressed : null,
@@ -1717,11 +2177,41 @@ function RouteDetailModal({ entry, onClose, onOpenRoute, placeById }) {
     };
   }, [entry?.slug]);
 
+  const routeSnapshot = useMemo(
+    () =>
+      snapshotState.snapshot
+        ? snapshotToRouteState(snapshotState.snapshot)
+        : null,
+    [snapshotState.snapshot],
+  );
+  const pois = Array.isArray(snapshotState.snapshot?.pois?.activeDataPoints)
+    ? snapshotState.snapshot.pois.activeDataPoints.slice(0, 8)
+    : [];
+  const storyItems = useMemo(() => {
+    if (!entry || !routeSnapshot) return [];
+    const endpointStories = routeEndpointStories(entry, routeSnapshot);
+    const start = endpointStories.find((story) => story.kind === "start");
+    const end = endpointStories.find((story) => story.kind === "end");
+    return [
+      ...(start ? [start] : []),
+      ...routePoiStories(routeSnapshot.activeDataPoints),
+      ...(end ? [end] : []),
+    ];
+  }, [entry, routeSnapshot]);
+  const storyGallery = useMemo(
+    () =>
+      storyItems.flatMap((story) =>
+        (story.images || []).map((imageEntry, imageIndex) => ({
+          ...imageEntry,
+          imageIndex,
+          story,
+        })),
+      ),
+    [storyItems],
+  );
+
   if (!entry) return null;
 
-  const routeSnapshot = snapshotState.snapshot
-    ? snapshotToRouteState(snapshotState.snapshot)
-    : null;
   const image = routeDisplayImage(entry, snapshotState.snapshot) || routeMapImage(entry);
   const imageSource = nativeImageSource(image?.photo || image?.thumbnail);
   const placeNames = routePlaceNames(entry, placeById);
@@ -1732,9 +2222,6 @@ function RouteDetailModal({ entry, onClose, onOpenRoute, placeById }) {
     routeSurfaceLabel(entry),
     routeShapeLabel(entry),
   ].filter(Boolean);
-  const pois = Array.isArray(snapshotState.snapshot?.pois?.activeDataPoints)
-    ? snapshotState.snapshot.pois.activeDataPoints.slice(0, 8)
-    : [];
 
   return (
     <Modal
@@ -1782,6 +2269,10 @@ function RouteDetailModal({ entry, onClose, onOpenRoute, placeById }) {
               ) : null}
             </View>
 
+            {storyGallery.length > 0 ? (
+              <NativeRouteDetailGallery images={storyGallery} />
+            ) : null}
+
             {entry.description ? (
               <SummarySection title="על המסלול">
                 <RichText style={styles.summaryText} text={entry.description} />
@@ -1797,28 +2288,13 @@ function RouteDetailModal({ entry, onClose, onOpenRoute, placeById }) {
               </Text>
             ) : null}
 
-            {pois.length > 0 ? (
+            {storyItems.length > 0 ? (
+              <SummarySection title="נקודות ותמונות לאורך המסלול">
+                <NativeRouteStoryList stories={storyItems} />
+              </SummarySection>
+            ) : pois.length > 0 ? (
               <SummarySection title="נקודות בדרך">
-                <View style={styles.detailPoiList}>
-                  {pois.map((poi, index) => (
-                    <View key={poi.id || index} style={styles.detailPoiItem}>
-                      <Text style={styles.detailPoiIcon}>
-                        {poi.emoji || "📍"}
-                      </Text>
-                      <View style={styles.detailPoiTextWrap}>
-                        {poi.segmentName ? (
-                          <Text style={styles.detailPoiSegment}>
-                            {poi.segmentName}
-                          </Text>
-                        ) : null}
-                        <RichText
-                          style={styles.detailPoiText}
-                          text={poi.information || poi.name || ""}
-                        />
-                      </View>
-                    </View>
-                  ))}
-                </View>
+                <NativeLegacyPoiList pois={pois} />
               </SummarySection>
             ) : null}
           </ScrollView>
@@ -1839,6 +2315,146 @@ function RouteDetailModal({ entry, onClose, onOpenRoute, placeById }) {
         </View>
       </View>
     </Modal>
+  );
+}
+
+function NativeRouteDetailGallery({ images = [] }) {
+  const visibleImages = images
+    .map((item, index) => ({
+      ...item,
+      index,
+      source: nativeImageSource(item?.thumbnail || item?.photo),
+    }))
+    .filter((item) => item.source)
+    .slice(0, 14);
+  if (visibleImages.length === 0) return null;
+
+  return (
+    <View style={styles.detailGallerySection}>
+      <Text style={styles.detailGalleryTitle}>תמונות מהמסלול</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.detailGalleryList}
+      >
+        {visibleImages.map((item) => (
+          <View
+            key={`${item.story?.poiId || "story"}-${item.index}`}
+            style={styles.detailGalleryCard}
+          >
+            <Image
+              source={item.source}
+              resizeMode="cover"
+              style={styles.detailGalleryImage}
+            />
+            <View style={styles.detailGalleryCaption}>
+              <Text numberOfLines={1} style={styles.detailGalleryKicker}>
+                {storyLabel(item.story)}
+              </Text>
+              <Text numberOfLines={2} style={styles.detailGalleryName}>
+                {item.story?.name || poiLabel(item.story?.type)}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function NativeRouteStoryList({ stories = [] }) {
+  if (!Array.isArray(stories) || stories.length === 0) return null;
+  let stopNumber = 0;
+  return (
+    <View style={styles.detailStoryList}>
+      {stories.map((story, index) => {
+        const endpoint = endpointLabel(story.kind);
+        if (!endpoint) stopNumber += 1;
+        const kicker =
+          endpoint ||
+          `תחנה ${stopNumber}${formatMetersLabel(story.routeProgressMeters) ? ` · ${formatMetersLabel(story.routeProgressMeters)}` : ""}`;
+        const storyImages = (story.images || [])
+          .map((image, imageIndex) => ({
+            ...image,
+            imageIndex,
+            source: nativeImageSource(image?.thumbnail || image?.photo),
+          }))
+          .filter((image) => image.source);
+
+        return (
+          <View
+            key={story.poiId || `${story.type || "story"}-${index}`}
+            style={[
+              styles.detailStoryCard,
+              story.kind ? styles.detailStoryCardEndpoint : null,
+            ]}
+          >
+            <View style={styles.detailStoryCopy}>
+              <Text style={styles.detailStoryKicker}>{kicker}</Text>
+              <Text style={styles.detailStoryName}>
+                {story.name || poiLabel(story.type)}
+              </Text>
+              {!story.kind ? (
+                <Text style={styles.detailStoryType}>
+                  {poiLabel(story.type)}
+                </Text>
+              ) : null}
+              {story.description ? (
+                <RichText
+                  style={styles.detailStoryDescription}
+                  text={story.description}
+                />
+              ) : story.information ? (
+                <RichText
+                  style={styles.detailStoryDescription}
+                  text={story.information}
+                />
+              ) : null}
+            </View>
+            {storyImages.length > 0 ? (
+              <View style={styles.detailStoryMedia}>
+                <View style={styles.detailStoryImageRow}>
+                  {storyImages.slice(0, 3).map((image) => (
+                    <Image
+                      key={`${story.poiId || index}-${image.imageIndex}`}
+                      source={image.source}
+                      resizeMode="cover"
+                      style={styles.detailStoryImage}
+                    />
+                  ))}
+                </View>
+                {storyImages.length > 3 ? (
+                  <Text style={styles.detailStoryImageCount}>
+                    {storyImages.length} תמונות
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function NativeLegacyPoiList({ pois = [] }) {
+  return (
+    <View style={styles.detailPoiList}>
+      {pois.map((poi, index) => (
+        <View key={poi.id || index} style={styles.detailPoiItem}>
+          <Text style={styles.detailPoiIcon}>{poi.emoji || "📍"}</Text>
+          <View style={styles.detailPoiTextWrap}>
+            {poi.segmentName ? (
+              <Text style={styles.detailPoiSegment}>{poi.segmentName}</Text>
+            ) : null}
+            <RichText
+              style={styles.detailPoiText}
+              text={poi.information || poi.name || ""}
+            />
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -2361,13 +2977,29 @@ function formatRouteElevation(meters) {
   return Number.isFinite(value) ? `${Math.round(value)} מ׳ טיפוס` : "";
 }
 
+function formatMetersLabel(meters) {
+  const value = Number(meters);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  if (value < 1000) return `${Math.round(value)} מ׳`;
+  return `${(value / 1000).toFixed(1)} ק״מ`;
+}
+
+function storyLabel(story) {
+  return endpointLabel(story?.kind) || poiLabel(story?.type);
+}
+
 function nativeImageSource(logicalPath) {
   if (!logicalPath) return null;
-  return IMAGE_ASSETS[String(logicalPath).split("?")[0].split("#")[0]] || null;
+  const key = String(logicalPath)
+    .replace(/^\/+/, "")
+    .split("?")[0]
+    .split("#")[0];
+  return IMAGE_ASSETS[key] || null;
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
+  fill: { flex: 1, position: "relative", backgroundColor: "#eef3f1" },
+  mapView: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   hint: { fontSize: 15, textAlign: "center", color: "#333" },
   topChrome: {
@@ -2378,6 +3010,8 @@ const styles = StyleSheet.create({
     left: 127,
     right: 15,
     gap: 4,
+    zIndex: 40,
+    elevation: 40,
   },
   searchPanel: {
     flexDirection: "row-reverse",
@@ -2420,16 +3054,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderLeftWidth: 0,
   },
-  controlBar: {
-    alignSelf: "flex-end",
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 4,
-  },
-  controlGroup: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
   searchError: {
     alignSelf: "flex-end",
     maxWidth: 280,
@@ -2449,6 +3073,8 @@ const styles = StyleSheet.create({
     left: 15,
     width: 104,
     alignItems: "flex-start",
+    zIndex: 35,
+    elevation: 35,
   },
   legendBox: {
     width: "100%",
@@ -2568,12 +3194,16 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     bottom: 14,
+    zIndex: 45,
+    elevation: 45,
   },
   markerCardWrap: {
     position: "absolute",
     left: 12,
     right: 12,
     bottom: 14,
+    zIndex: 60,
+    elevation: 60,
   },
   markerCard: {
     borderRadius: 6,
@@ -2643,26 +3273,81 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   routeSheet: {
-    maxHeight: 238,
-    borderRadius: 6,
+    flex: 1,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderColor: "#c6d4cf",
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingTop: 4,
+    paddingBottom: 12,
+    backgroundColor: "transparent",
     gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
   },
   routeSheetEmpty: {
-    maxHeight: 132,
     paddingVertical: 12,
   },
   discoverSheet: {
-    maxHeight: 430,
+    flex: 1,
     paddingBottom: 8,
+  },
+  discoverIntroCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  discoverBuildHint: {
+    alignSelf: "flex-end",
+    minHeight: 24,
+    justifyContent: "center",
+    paddingVertical: 2,
+  },
+  discoverBuildHintText: {
+    color: "#5f6b62",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  sheetPanelBody: {
+    flex: 1,
+    minHeight: 0,
+    backgroundColor: "transparent",
+  },
+  panelModeSwitch: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    marginHorizontal: 10,
+    marginBottom: 6,
+    padding: 3,
+    borderRadius: 8,
+    backgroundColor: "#f6f8f4",
+    borderColor: "#dce4df",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  panelModeButton: {
+    flex: 1,
+    minHeight: 38,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    borderColor: "transparent",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  panelModeButtonActive: {
+    backgroundColor: "#ffffff",
+    borderColor: "#d6dfd8",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  panelModeText: {
+    color: "#33483b",
+    fontSize: 13,
+    fontWeight: "900",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  panelModeTextActive: {
+    color: "#1f5d35",
   },
   routeSheetHeader: {
     flexDirection: "row-reverse",
@@ -2670,7 +3355,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
-  routeSheetHeaderActions: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   routeSheetTitle: {
     flexShrink: 1,
     color: "#172026",
@@ -2678,34 +3362,339 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "right",
   },
-  routeSheetBadge: {
-    minHeight: 26,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 4,
-    overflow: "hidden",
-    backgroundColor: "#f8f8f8",
-    alignItems: "center",
-    justifyContent: "center",
+  buildPanelHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
   },
-  routeSheetBadgeText: {
-    color: "#333333",
-    fontSize: 12,
-    fontWeight: "700",
+  buildSheetScroll: {
+    flex: 1,
   },
-  routeSheetCollapse: {
-    width: 30,
-    height: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 4,
-    backgroundColor: "#f3f6f4",
+  buildSheetContent: {
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 14,
+    backgroundColor: "transparent",
+    gap: 8,
   },
-  routeSheetCollapseText: {
-    color: "#333333",
+  buildPanelTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  buildPanelTitle: {
+    color: "#283026",
     fontSize: 18,
-    lineHeight: 20,
+    lineHeight: 22,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  buildToolRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+  },
+  buildToolButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    borderColor: "#e7dfca",
+    borderWidth: 1.5,
+    backgroundColor: "transparent",
+  },
+  buildToolButtonDisabled: {
+    opacity: 0.42,
+  },
+  buildStoryCta: {
+    minHeight: 58,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
+    padding: 8,
+    borderRadius: 8,
+    borderColor: "#dce4df",
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "#f3f7f1",
+  },
+  buildStoryCtaImage: {
+    width: 64,
+    height: 42,
+    borderRadius: 6,
+    backgroundColor: "#d8e2dd",
+  },
+  buildStoryCtaText: {
+    flex: 1,
+    color: "#2f6b3c",
+    fontSize: 14,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  buildEmptyText: {
+    color: "#7a8c76",
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  buildPanelActions: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  buildPrimaryAction: {
+    flex: 1,
+    minHeight: 38,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    backgroundColor: "#355e3b",
+  },
+  buildActionDisabled: {
+    opacity: 0.5,
+  },
+  buildPrimaryActionText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "900",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  peekStack: {
+    gap: 8,
+  },
+  peekModeSwitch: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 3,
+    padding: 3,
+    borderRadius: 6,
+    backgroundColor: "#eef3f1",
+  },
+  peekModeButton: {
+    flex: 1,
+    minHeight: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+  },
+  peekModeButtonActive: {
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  peekModeText: {
+    color: "#52616f",
+    fontSize: 12,
     fontWeight: "800",
+    textAlign: "center",
+  },
+  peekModeTextActive: {
+    color: "#172026",
+  },
+  peekRouteChipsWrap: {
+    gap: 6,
+  },
+  peekHeaderRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  peekTitle: {
+    flexShrink: 1,
+    color: "#172026",
+    fontSize: 13,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  peekHeaderAction: {
+    minHeight: 24,
+    paddingHorizontal: 8,
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: "#f8faf9",
+  },
+  peekHeaderActionText: {
+    color: "#1f5268",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  peekRouteChips: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    paddingHorizontal: 1,
+  },
+  peekRouteChip: {
+    width: 178,
+    minHeight: 48,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 5,
+    backgroundColor: "#ffffff",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  peekRouteSwatch: {
+    width: 5,
+    height: 30,
+    borderRadius: 999,
+  },
+  peekRouteTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  peekRouteTitle: {
+    color: "#172026",
+    fontSize: 12,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  peekRouteMeta: {
+    color: "#52616f",
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  peekBuildRow: {
+    flexDirection: "row-reverse",
+    alignItems: "stretch",
+    gap: 8,
+  },
+  peekBuildMain: {
+    flex: 1,
+    minHeight: 50,
+    justifyContent: "center",
+    gap: 3,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    backgroundColor: "#ffffff",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  peekBuildTitle: {
+    color: "#172026",
+    fontSize: 14,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  peekBuildMeta: {
+    color: "#52616f",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  peekDetailsButton: {
+    minWidth: 64,
+    minHeight: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 5,
+    backgroundColor: "#4682B4",
+  },
+  peekDetailsText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  nativeStatsRow: {
+    flexDirection: "row-reverse",
+    gap: 6,
+  },
+  nativeStatCard: {
+    flex: 1,
+    minHeight: 48,
+    justifyContent: "center",
+    gap: 2,
+    paddingHorizontal: 8,
+    borderRadius: 5,
+    backgroundColor: "#f8faf9",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  nativeStatLabel: {
+    color: "#52616f",
+    fontSize: 10,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  nativeStatValue: {
+    color: "#172026",
+    fontSize: 14,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  nativePoiPanel: {
+    gap: 6,
+  },
+  nativePoiTitle: {
+    color: "#172026",
+    fontSize: 12,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  nativePoiList: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    paddingHorizontal: 1,
+  },
+  nativePoiChip: {
+    width: 168,
+    minHeight: 58,
+    flexDirection: "row-reverse",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 5,
+    backgroundColor: "#ffffff",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  nativePoiEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  nativePoiCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  nativePoiDistance: {
+    color: "#1f5268",
+    fontSize: 11,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  nativePoiText: {
+    color: "#333333",
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   routeMessage: {
     color: "#333333",
@@ -2802,6 +3791,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+  },
+  discoverFilterActions: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
   },
   clearFiltersButton: {
     minHeight: 26,
@@ -2910,6 +3904,10 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     textAlign: "right",
     writingDirection: "rtl",
+  },
+  discoverRouteColorDot: {
+    fontSize: 12,
+    lineHeight: 19,
   },
   discoverFeaturedBadge: {
     overflow: "hidden",
@@ -3036,6 +4034,123 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
+  detailGallerySection: {
+    gap: 8,
+  },
+  detailGalleryTitle: {
+    color: "#172026",
+    fontSize: 13,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailGalleryList: {
+    flexDirection: "row-reverse",
+    gap: 10,
+    paddingHorizontal: 1,
+  },
+  detailGalleryCard: {
+    width: 170,
+    overflow: "hidden",
+    borderRadius: 6,
+    backgroundColor: "#ffffff",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  detailGalleryImage: {
+    width: "100%",
+    height: 104,
+    backgroundColor: "#d8e2dd",
+  },
+  detailGalleryCaption: {
+    gap: 2,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  detailGalleryKicker: {
+    color: "#1f5268",
+    fontSize: 11,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailGalleryName: {
+    color: "#172026",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailStoryList: {
+    gap: 10,
+  },
+  detailStoryCard: {
+    gap: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 6,
+    backgroundColor: "#ffffff",
+    borderColor: "#d8e2dd",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  detailStoryCardEndpoint: {
+    backgroundColor: "#f4fafc",
+    borderColor: "#b8d4e3",
+  },
+  detailStoryCopy: {
+    gap: 4,
+  },
+  detailStoryKicker: {
+    color: "#1f5268",
+    fontSize: 11,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailStoryName: {
+    color: "#172026",
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailStoryType: {
+    color: "#52616f",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailStoryDescription: {
+    color: "#333333",
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  detailStoryMedia: {
+    gap: 5,
+  },
+  detailStoryImageRow: {
+    flexDirection: "row-reverse",
+    gap: 6,
+  },
+  detailStoryImage: {
+    flex: 1,
+    minWidth: 0,
+    height: 78,
+    borderRadius: 5,
+    backgroundColor: "#d8e2dd",
+  },
+  detailStoryImageCount: {
+    color: "#52616f",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   detailPoiList: {
     gap: 8,
   },
@@ -3079,6 +4194,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 16,
     backgroundColor: "rgba(15, 23, 42, 0.28)",
+    zIndex: 80,
+    elevation: 80,
   },
   summaryModal: {
     maxHeight: "78%",

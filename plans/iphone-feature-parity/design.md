@@ -1,189 +1,212 @@
 # iPhone Feature Parity Design
 
-Date: 2026-06-11
+Date: 2026-06-13
 
 ## Purpose
 
-Bring the iPhone application back into product parity with the current mobile
-web experience without forking the product into two separate apps. The native
-app should keep its React Native Mapbox renderer and shared `useCyclewaysApp`
-controller, but it should expose the same route discovery, recommended route
-content, route selection, and route consumption flows that now exist on mobile
-web.
+Bring the installed iPhone app to product parity with the current mobile web
+planner. The goal is not to make the native app a separate simplified product.
+It should have the same two primary surfaces:
 
-The second goal is to make installed iPhone builds usable away from the
-development machine. Today the Debug iOS build expects a Metro/Expo server for
-JavaScript; the app needs an explicit local-device build path that embeds the JS
-bundle and bundled data assets.
+- Discover: browse, filter, preview, open, and consume recommended routes.
+- Build: plan/edit a custom route, inspect elevation and POIs, play the route,
+  and export/share it.
 
-## Current Surfaces
+The iPhone app should keep its native Mapbox renderer and React Native UI. Web
+DOM components should not be imported into the app, but the data shaping,
+selection semantics, route playback math, catalog filtering, and POI/elevation
+view models should move into shared code wherever practical.
+
+## Current Baseline
 
 ### Mobile Web
 
-The root web app uses `useCyclewaysApp` as the shared planner/controller, then
-adds a richer web shell around it:
+The mobile web app now uses a full-screen map with a snap bottom sheet:
 
-- a `FrontPanel` with Discover and Build states;
-- catalog loading from `public-data/route-catalog.json`;
-- places loading from `data/places.json`;
-- route filtering by start, through-place, difficulty, surface, and distance;
-- near-me ordering when a location fix exists;
-- recent route restoration;
-- scroll-synced route discovery cards and map overlays;
-- client-side recommended route selection through `handleLoadRouteParam`;
-- route playback controls, POI cue preview, and elevation interaction;
-- canonical `/routes` and `/routes/:slug` pages for all recommended routes;
-- optional route story/video pages for richer route content.
+- `BottomSheet` supports peek, half, and full states.
+- `DiscoverPanel` has recents, place filters, difficulty/surface/distance
+  filters, near-me sort, scroll viewport tracking, and route cards.
+- `DiscoverPeekPreview` shows tappable recommended route chips in the collapsed
+  sheet.
+- Discover cards draw recommended route overlays on the map. Visible routes are
+  bright; nearby routes can be ghosted; colors are stable through
+  `discoverRouteColor`.
+- Selecting a route loads it client-side through `handleLoadRouteParam`, pushes
+  a route URL entry, records recents including `slug`, and switches to Build.
+- Build tracks the selected catalog route until the user edits it, then clears
+  that identity.
+- `BuildPanel` has route stats, GPX/share/send-to-phone actions, route-page CTA,
+  elevation graph, route playback controls, POI list, POI cue preview, and
+  overlay-aware map fit.
 
 ### iPhone App
 
-The iPhone app is no longer just a proof of concept. It already has a native map
-planner backed by the shared controller:
+The native app has more than a scaffold, but the surface is still sparse:
 
-- native Mapbox rendering for the CycleWays network, planned route, route
-  points, warning/data markers, route direction pulse, and elevation scrub;
-- search, tap-to-add route points, waypoint drag, undo, redo, reset;
-- current-location follow/locate;
-- warning legend and data-marker detail card;
-- elevation profile chart in the native bottom sheet;
-- route summary/share/GPX entry point;
-- deep-link route restore through the native location adapter;
-- offline bundled planner data: map manifest, network GeoJSON, segments,
-  cw-base index, routing-shard manifest, and `.cwb` shards.
+- Uses shared `useCyclewaysApp` for routing, search, route state, recents, and
+  data markers.
+- Renders the CycleWays network, route geometry, route points, warnings/POIs,
+  current location, elevation scrub marker, and direction pulse with RNMapbox.
+- Supports search, tap-to-add, waypoint drag, undo/redo, route clear, locate,
+  route summary, GPX, native share, warning chips, and data-marker add-to-route.
+- Loads bundled catalog, places, featured-route snapshots, route images, POI
+  images, map data, and routing shards.
+- Has a first-pass native Discover sheet with recents, featured routes,
+  filters, route cards, image thumbnails, route detail modal, and open-in-map.
+- Has a no-Metro Release build path through `mobile:ios:offline`.
 
-The native gaps are therefore concentrated in content and discovery:
+## Parity Gap
 
-- no native Discover state or catalog list;
-- no featured/recommended route cards;
-- no route-card filters or near-me ranking against the catalog;
-- no scroll/list-to-map recommended route overlays;
-- no route detail/story consumption screens;
-- no bundled route catalog, places file, featured-route snapshots, or route-map
-  images in the native asset sync;
-- Debug builds still load JavaScript from Metro/Expo instead of embedding it.
+### Discovery Surface
 
-## Product Direction
+| Capability | Mobile Web | iPhone App | Gap |
+| --- | --- | --- | --- |
+| Sheet model | Peek/half/full snap sheet with dedicated peek content | Fixed bottom sheet plus collapse toggle | Missing native snap sheet and peek UX |
+| Mode switch | Peek tabs: Discover/Build | Small top rail button toggles Find/Build | Partial, not discoverable enough |
+| Catalog data | Shared catalog and places | Shared catalog and places | Done |
+| Recents | Strip with slug-preserving reload | Horizontal chips with slug-preserving reload | Partial, less prominent |
+| Place filters | Autocomplete add/remove chips | Horizontal first 8/10 place chips | Partial, does not scale |
+| Difficulty/surface/distance filters | Shared filter semantics | Shared filter semantics | Done |
+| Near-me sorting | Uses location fix and shared near-me helpers | Not wired into Discover | Missing |
+| Featured/recommended | Recommended route cards and peek route chips | Featured section plus all-route cards | Partial, no peek chips |
+| Route card CTA | Card opens route; visible route-page link | Open-in-map and native details buttons | Partial, native detail exists but not tied to playback |
+| Map overlays | Discover routes drawn on map, viewport synced | No recommended route overlays | Missing |
+| Scroll-to-map sync | List viewport drives bright/ghost/prefetch | None | Missing |
+| Route selection | Loads route, switches Build, records slug | Loads route, switches Build, records slug | Done |
 
-Use one product model with platform-specific renderers:
+### Build Surface
 
-- `@cycleways/core` owns pure data loading, catalog helpers, route selection
-  semantics, distance/label helpers, and view-model shaping.
-- Web DOM components and React Native components remain separate renderers.
-- The iPhone app should not import web JSX or CSS.
-- The iPhone app should mirror the mobile web information architecture:
-  Discover for route choice, Build for custom route planning, and Detail/Story
-  for consuming an existing route.
+| Capability | Mobile Web | iPhone App | Gap |
+| --- | --- | --- | --- |
+| Build shell | Bottom-sheet Build panel with peek row | Fixed compact sheet | Missing snap/full panel structure |
+| Selected route identity | Shows route name and route-page CTA until edit | Shows route name and Details chip until edit | Partial, no playback/story handoff |
+| Stats | Distance, climb, descent cards | Text summary plus route summary modal | Partial |
+| Elevation | Interactive `PanelElevationGraph`, bands, cursor, playback sync | Native `ElevationProfileChart` with scrub marker | Partial |
+| Route playback | Synthetic playback controls on map and panel | No route playback controls | Missing |
+| POI cue preview | Playback cue preview on map | No playback POI preview | Missing |
+| POI list | Build panel lists active POIs with distances | No Build POI list; only map-tap marker card | Missing |
+| Warning/data marker focus | Warning chips and POI cards focus map | Warning chips and data marker card | Partial |
+| Add POI to route | From marker cards | From marker cards | Done |
+| Waypoint editing | Add, drag, remove, route-line insertion | Add and drag; no visible remove or route-line insert | Partial |
+| Share/export | GPX, share, send-to-phone | GPX and native share; no send-to-phone | Partial |
+| Overlay-aware fit | Measures sheet/search/play controls | Basic route fit | Partial |
 
-The iPhone app may exceed mobile web only where the capability is genuinely
-native: continuous GPS, heading camera, future navigation/recording, local
-offline data, share sheets, and on-device storage.
+### Route Detail and Playback
 
-## Target iPhone Information Architecture
+| Capability | Mobile Web | iPhone App | Gap |
+| --- | --- | --- | --- |
+| Route detail page | `/routes/:slug`, editorial route content | Native modal with image, summary, stats, POIs | Partial |
+| Route playback in detail | Web route pages and planner playback controls | No native route playback surface | Missing |
+| POI story richness | Web story pages for rich routes | Structured POI text only | Expected gap; native should use structured data |
+| Offline detail assets | Web loads public assets | Native bundles snapshots/images | Done for current catalog |
 
-### Main Map Screen
+## Reuse Strategy
 
-Keep the current full-screen native map as the home surface. Add a segmented
-bottom sheet or tab state equivalent to the web `FrontPanel`:
+Do not try to reuse web JSX in React Native. Reuse the model, not the view.
 
-- Discover: catalog list, filters, nearby sorting, recent routes, route cards.
-- Build: current native planner sheet, stats, elevation, POIs, summary/share.
+Move these reusable pieces toward `@cycleways/core`:
 
-Selecting a route in Discover should use the existing shared
-`handleLoadRouteParam` flow, switch to Build, fit the route on the map, and add
-the route to recents. It should not remount the app or require a network
-request.
+- Discovery model:
+  - filter state normalization;
+  - place option derivation;
+  - route sorting, featured/promoted grouping, near-me ranking;
+  - card view-model creation, including image, stats, places, and color index;
+  - recommended route overlay view-model from loaded snapshots.
+- Build model:
+  - route stats view model;
+  - active POI list ordered by route progress, with distance labels;
+  - selected catalog route identity rules;
+  - route-edit actions that clear selected catalog identity.
+- Playback model:
+  - move the synthetic route playback controller/math out of web-only
+    `src/components/routePlayback`;
+  - expose a platform-neutral controller API for play/pause/scrub/cursor;
+  - keep web and native renderers separate for controls and charts.
+- Sheet model:
+  - keep snap math shared where possible;
+  - native uses `Animated`/gesture handling rather than DOM `BottomSheet`.
 
-### Native Discover
+The native code should then become a composition of native renderers:
 
-The first native parity milestone should reproduce the functional Discover
-surface, not the full web visual implementation:
+- `NativeBottomSheet`
+- `NativeDiscoverSurface`
+- `NativeBuildSurface`
+- `NativeRouteCard`
+- `NativeRoutePlaybackControls`
+- `NativePoiList`
+- `NativeRouteDetail`
 
-- load all catalog entries;
-- show featured routes as a promoted section, while still listing every route;
-- support the same filter axes as mobile web;
-- show route cards with route-map thumbnails, distance, elevation, difficulty,
-  surface, route shape, and nearby places;
-- expose "open route" into the planner;
-- optionally expose "details" for native route detail screens once those exist;
-- draw visible recommended routes on the native map with the shared
-  `discoverRouteColor` palette.
+## Target Native UX
 
-### Native Route Detail and Featured Content
+### First Screen
 
-Implement generic route detail before custom story parity:
+The app opens to the map with a native bottom sheet in `peek` state. The peek
+area has two tabs:
 
-- route header media from `routeMapImage` or `heroImage`;
-- route summary/description;
-- stats and warnings from the generated route snapshot;
-- route map playback/preview using the native map renderer;
-- POI/story list from snapshot active data points;
-- primary "open in planner" action.
+- חפש מסלול
+- בניית מסלול
 
-Custom web route-story JSX modules should stay web-only. Native should consume
-structured route snapshot/catalog data. If richer editorial text is needed on
-native, add it to the catalog/snapshot schema rather than trying to render web
-story components.
+When Discover is active, peek shows recommended route chips, matching mobile
+web. Tapping the sheet opens it to half/full. Tapping a route chip loads the
+route and switches to Build.
 
-## Offline Data Direction
+### Discover
 
-Extend the existing mobile asset sync from planner data to content data:
+Discover should feel like a route browser, not a hidden tool:
 
-- `public-data/route-catalog.json`;
-- `data/places.json`;
-- `public-data/featured-routes/*.json`;
-- route-map images referenced by catalog/snapshots;
-- POI images referenced by route cards, detail pages, and active route POIs.
+- recents at the top;
+- near-me toggle when location is available;
+- place filter search for start and through-place;
+- difficulty, surface, distance filters;
+- route cards with thumbnails, stable color swatches, stats, nearby places,
+  open-in-map, and details;
+- recommended route overlays on the native map while browsing;
+- selected visible/nearby route overlays should use the same color model as web.
 
-Metro needs static literal `require(...)` entries, so the current generated
-`bundledAssets.native.js` approach should be generalized rather than replaced.
-Add an image asset map alongside `JSON_ASSETS` and `BINARY_ASSETS`, and expose a
-small native image resolver that converts a logical `public-data/...webp` path
-into an `Image` source.
+### Build
 
-The minimum offline target is route discovery and route loading without the
-project dev server. Offline Mapbox base tiles are separate and should remain out
-of scope for this parity pass.
+Build should be useful after either a catalog route selection or manual route
+creation:
 
-## Expo/Metro Independence
+- route name or "new route" header;
+- route stats;
+- GPX/share actions;
+- selected-route Details CTA while unedited;
+- interactive elevation graph;
+- route playback controls;
+- POI list with distances along route;
+- warning/data marker affordances;
+- visible waypoint remove action and eventually route-line insertion.
 
-The native iOS project already has the correct split:
+### Route Detail
 
-- Debug `AppDelegate.swift` resolves JavaScript from Metro.
-- Non-Debug builds resolve `main.jsbundle` from the app bundle.
-- The Xcode "Bundle React Native code and images" phase skips bundling only for
-  Debug configurations.
+Native route detail should stay structured:
 
-Therefore the path is not to remove Expo. The path is to create an explicit
-"field/dev-offline" build profile that embeds JS and assets, installs on a
-phone, and does not require Metro. Options:
+- hero/route-map image;
+- summary and rich text description;
+- stats from route snapshot;
+- POIs from active data points;
+- open in planner;
+- later: play route in detail using the same native playback controller.
 
-1. Use a Release build for physical-device testing.
-2. Add a custom non-Debug Xcode configuration/scheme such as `OfflineDebug`
-   that keeps development signing but does not define `DEBUG` and does not set
-   `SKIP_BUNDLING=1`.
-3. Add scripts that run mobile asset sync, export/embed JS, build/install the
-   scheme, and verify the app launches with the Mac offline.
+## Decisions
 
-This keeps normal `expo start` / `expo run:ios` fast for local iteration while
-making an explicit standalone build available for outdoor testing.
-
-## Non-Goals
-
-- Full offline Mapbox tile packs.
-- Replacing Expo with a bare React Native bootstrap.
-- Accounts or server sync.
-- Native rendering of existing web-only JSX story modules.
-- Navigation/ride recording, except as future native-only follow-up work.
+- Native route story rendering uses structured catalog/snapshot data, not web
+  route-page JSX.
+- Discovery and Build parity should be implemented through shared core
+  view-models before expanding native UI further.
+- The first high-value native work is a real snap bottom sheet plus route
+  playback/POI list, because those make loaded routes useful outdoors.
+- Mapbox offline tile packs remain out of scope. Bundled CycleWays data and JS
+  independence are already the offline target for this phase.
 
 ## Risks
 
-- App size can grow quickly if every POI image and full-resolution route image is
-  bundled. Prefer thumbnails in Discover and lazy/detail-only full images.
-- `loadCatalog()` currently fetches through web asset APIs and uses
-  `import.meta.env`; this needs a platform-safe loader before native can consume
-  it directly.
-- Metro static asset maps can become large and noisy. Generate them
-  deterministically and keep generated edits isolated.
-- Route detail parity should not block initial discovery. Users get most value
-  as soon as route cards can open routes in the planner.
-
+- `MapScreen.jsx` is already too large. Continuing to add UI there will slow
+  iteration and make parity harder to reason about.
+- Native route playback can diverge if it reimplements the web playback math
+  instead of sharing the controller.
+- Discovery overlay loading can cause jank if every snapshot loads at once.
+  Match web's lazy/prefetch approach.
+- App size will grow if full POI images are used in list surfaces. Use
+  thumbnails in Discover and reserve full images for detail.

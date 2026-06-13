@@ -3,7 +3,7 @@ import {
   endpointLabel,
   routeEndpointSlides,
   routeEndpointStories,
-} from "../src/components/featured/routePoiStoryData.js";
+} from "@cycleways/core/data/routePoiStoryData.js";
 import {
   routeCatalogImageCandidatesFromSnapshot,
   validateCatalogDraft,

@@ -19,7 +19,7 @@ import {
   previewSlideForCursor,
   routePoiStories,
   routeVideoCueSlides,
-} from "../src/components/featured/routePoiStoryData.js";
+} from "@cycleways/core/data/routePoiStoryData.js";
 import { getRouteWarningPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 const require = createRequire(import.meta.url);
