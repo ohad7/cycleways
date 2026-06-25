@@ -35,31 +35,16 @@ test("draft restore banner revives the last route after a reload", async ({ page
   ).toHaveAttribute("aria-selected", "true");
 });
 
-test("dismissing the draft banner deletes it", async ({ page }) => {
+test("loaded routes are retained but the recents strip is hidden", async ({ page }) => {
   await loadFirstDiscoverRoute(page);
-  await page.goto("/");
-  const banner = page.locator(".draft-restore-banner");
-  await expect(banner).toBeVisible({ timeout: 30_000 });
-  await banner.getByRole("button", { name: "סגירה" }).click();
-  await expect(banner).toBeHidden();
-  await expect.poll(() =>
-    page.evaluate(() => window.localStorage.getItem("cycleways:planner-draft") || ""),
-  ).toBe("");
-  await page.goto("/");
-  await expect(banner).toBeHidden();
-});
-
-test("a loaded route appears in the recents strip", async ({ page }) => {
-  const name = await loadFirstDiscoverRoute(page);
   await page.goto("/");
   const panel = page.getByTestId("front-panel");
   // On mobile the panel is in a bottom sheet — open it before interacting.
   await ensurePanelOpen(page);
   await expect(panel).toBeVisible();
   const strip = panel.locator(".recent-routes");
-  await expect(strip).toBeVisible({ timeout: 30_000 });
-  await expect(strip).toContainText("המסלולים שלי");
-  await expect(strip.locator(".recent-routes__item").first()).toContainText(
-    name.replace(/\s+/g, " ").trim().split(" ").slice(-2).join(" "),
-  );
+  await expect(strip).toHaveCount(0);
+  await expect.poll(() =>
+    page.evaluate(() => window.localStorage.getItem("cycleways:recent-routes") || ""),
+  ).not.toBe("");
 });

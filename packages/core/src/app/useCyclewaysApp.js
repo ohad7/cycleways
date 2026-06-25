@@ -74,6 +74,8 @@ import {
 
 const PLANNER_DRAFT_KEY = "cycleways:planner-draft";
 const RECENT_ROUTES_KEY = "cycleways:recent-routes";
+const LOCATE_UNAVAILABLE_ERROR = "לא הצלחנו לאתר את המיקום שלך";
+const TRANSIENT_ERROR_CLEAR_MS = 5000;
 
 // Records a route in the recents list and persists it. Shared by the
 // callback below and the initializeRouting effect (which runs before the
@@ -127,9 +129,35 @@ export function useCyclewaysApp({
   const routeClickIdRef = useRef(0);
   const routeParamLoadingRef = useRef(false);
   const directionAnimatorRef = useRef(null);
+  const transientErrorTimerRef = useRef(null);
   if (enableRouteDirectionAnimation && directionAnimatorRef.current === null) {
     directionAnimatorRef.current = createRouteDirectionAnimator();
   }
+
+  useEffect(() => () => {
+    if (transientErrorTimerRef.current !== null) {
+      clearTimeout(transientErrorTimerRef.current);
+    }
+  }, []);
+
+  const clearTransientErrorTimer = useCallback(() => {
+    if (transientErrorTimerRef.current !== null) {
+      clearTimeout(transientErrorTimerRef.current);
+      transientErrorTimerRef.current = null;
+    }
+  }, []);
+
+  const clearSearchErrorAfterDelay = useCallback((message) => {
+    clearTransientErrorTimer();
+    transientErrorTimerRef.current = setTimeout(() => {
+      transientErrorTimerRef.current = null;
+      setMapUi((current) => (
+        current.searchError === message
+          ? { ...current, searchError: null }
+          : current
+      ));
+    }, TRANSIENT_ERROR_CLEAR_MS);
+  }, [clearTransientErrorTimer]);
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [routePointDragPreview, setRoutePointDragPreview] = useState(null);
@@ -898,6 +926,7 @@ export function useCyclewaysApp({
   // Discover near-me labels, and flags whether it's inside the map area so the
   // camera only flies to in-bounds fixes. Never watches/tracks position.
   const handleLocateMe = useCallback(async () => {
+    clearTransientErrorTimer();
     setMapUi((current) => ({
       ...current,
       locateStatus: "locating",
@@ -920,18 +949,20 @@ export function useCyclewaysApp({
       setMapUi((current) => ({
         ...current,
         locateStatus: "error",
-        searchError: "לא הצלחנו לאתר את המיקום שלך",
+        searchError: LOCATE_UNAVAILABLE_ERROR,
       }));
+      clearSearchErrorAfterDelay(LOCATE_UNAVAILABLE_ERROR);
     }
-  }, [state.assets]);
+  }, [clearSearchErrorAfterDelay, clearTransientErrorTimer, state.assets]);
 
   const handleSearchQueryChange = useCallback((query) => {
+    clearTransientErrorTimer();
     setMapUi((current) => ({
       ...current,
       searchError: null,
       searchQuery: query,
     }));
-  }, []);
+  }, [clearTransientErrorTimer]);
 
   const handleSearchSubmit = useCallback(
     async (event) => {
@@ -947,6 +978,7 @@ export function useCyclewaysApp({
       }
 
       trackSearchEvent(query, routeState.points, routeState.selectedSegments);
+      clearTransientErrorTimer();
       setMapUi((current) => ({
         ...current,
         searchError: null,
@@ -1013,6 +1045,7 @@ export function useCyclewaysApp({
     },
     [
       mapUi.searchQuery,
+      clearTransientErrorTimer,
       routeState.points,
       routeState.selectedSegments,
       state.assets,

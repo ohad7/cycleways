@@ -25,6 +25,28 @@ test("collapse hides the panel and the reopen button restores it", async ({ page
   await page.goto("/");
   await page.getByRole("button", { name: "הסתר פאנל" }).click();
   await expect(page.getByTestId("front-panel")).toBeHidden();
+
+  await page.waitForTimeout(350);
+  const collapsedBounds = await page.locator(".front-shell").evaluate((shell) => {
+    const shellBox = shell.getBoundingClientRect();
+    const mapBox = shell.querySelector(".map-container").getBoundingClientRect();
+    return {
+      shell: {
+        x: shellBox.x,
+        right: shellBox.right,
+        width: shellBox.width,
+      },
+      map: {
+        x: mapBox.x,
+        right: mapBox.right,
+        width: mapBox.width,
+      },
+    };
+  });
+  expect(collapsedBounds.map.width).toBeGreaterThan(collapsedBounds.shell.width - 20);
+  expect(collapsedBounds.map.x).toBeLessThanOrEqual(collapsedBounds.shell.x + 8);
+  expect(collapsedBounds.map.right).toBeGreaterThanOrEqual(collapsedBounds.shell.right - 8);
+
   await page.getByRole("button", { name: "הצג פאנל" }).first().click();
   await expect(page.getByTestId("front-panel")).toBeVisible();
 });

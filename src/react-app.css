@@ -819,18 +819,51 @@ input {
 
 #search-error.react-search-error {
   position: absolute;
-  top: 70px;
+  top: 76px;
   left: 20px;
   z-index: 1001;
-  display: block;
-  max-width: 260px;
-  margin-top: 5px;
-  padding: 5px 8px;
-  border-radius: 4px;
-  background: white;
-  color: red;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 280px;
+  padding: 9px 11px;
+  border: 1px solid rgba(181, 116, 46, 0.28);
+  border-inline-start: 4px solid #d28b2f;
+  border-radius: 8px;
+  background: rgba(255, 252, 244, 0.96);
+  color: #6f3d13;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.35;
+  box-shadow: 0 8px 20px rgba(40, 48, 38, 0.16);
+  backdrop-filter: blur(8px);
+  direction: rtl;
+  text-align: right;
+}
+
+#search-error.react-search-error::before {
+  content: "!";
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: #d28b2f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+@media (max-width: 860px) {
+  #search-error.react-search-error {
+    top: auto;
+    right: 12px;
+    bottom: calc(var(--front-sheet-peek-height) + 16px);
+    left: 12px;
+    max-width: none;
+  }
 }
 
 .route-description-panel.empty {

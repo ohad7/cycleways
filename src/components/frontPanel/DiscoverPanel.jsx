@@ -19,6 +19,8 @@ import {
   sortByDistanceFromUser,
 } from "@cycleways/core/data/nearMe.js";
 
+const SHOW_RECENT_ROUTES_STRIP = false;
+
 export default function DiscoverPanel({
   catalog,
   places,
@@ -98,7 +100,9 @@ export default function DiscoverPanel({
 
   return (
     <div className="discover-panel">
-      <RecentRoutesStrip recents={recentRoutes} onSelect={onSelectRecent} />
+      {SHOW_RECENT_ROUTES_STRIP && (
+        <RecentRoutesStrip recents={recentRoutes} onSelect={onSelectRecent} />
+      )}
       <div className="discover-panel__intro">
         <div className="eyebrow">מצא מסלול</div>
         <h2>מצאו את הרכיבה הבאה</h2>
