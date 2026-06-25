@@ -58,6 +58,7 @@ const SendToPhone = lazy(() => import("./components/SendToPhone.jsx"));
 // out on hover was disorienting. Hover still bolds the line either way (the
 // `hovered` tier in recommendedRoutes). Flip to true to restore the old behavior.
 const DISCOVER_HOVER_FITS_CAMERA = false;
+const SHOW_DRAFT_RESTORE_BANNER = true;
 
 function samePadding(a, b) {
   if (a === b) return true;
@@ -738,7 +739,7 @@ function App() {
                   </button>
                 </div>
 
-                {plannerDraft && !hasQueryParam("route") && routePointCount === 0 && (
+                {SHOW_DRAFT_RESTORE_BANNER && plannerDraft && !hasQueryParam("route") && routePointCount === 0 && (
                   <DraftRestoreBanner
                     draft={plannerDraft}
                     onRestore={async () => {

@@ -52,4 +52,5 @@ test("denied geolocation degrades to an error message", async ({ page, context }
   await page.getByRole("button", { name: "מצא את המיקום שלי" }).click();
   // The geolocation error path may take up to ~10s in some configurations.
   await expect(page.locator("#search-error")).toContainText("לא הצלחנו לאתר את המיקום שלך", { timeout: 15000 });
+  await expect(page.locator("#search-error")).toBeHidden({ timeout: 7000 });
 });
