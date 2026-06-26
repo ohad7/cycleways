@@ -46,6 +46,7 @@ import Icon from "./planner/Icon.jsx";
 import { palette } from "./planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import { getRoutePlannerPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
+import { useSharedValue } from "react-native-reanimated";
 
 // Legacy planner icon names -> Ionicons names (same set the web Icon.jsx uses).
 const CHROME_IONICON = {
@@ -218,6 +219,9 @@ export default function MapScreen() {
   // starts in build to keep the map-first planner as the primary surface.
   const [panelState, setPanelState] = useState("build");
   const [catalogEntries, setCatalogEntries] = useState([]);
+  // Live Y of the bottom sheet's top edge; lets the floating map controls ride
+  // just above the sheet at any snap (see PlannerSheet/MapControls).
+  const sheetTopY = useSharedValue(0);
   // Slug of the catalog route currently loaded in the planner; drives the Build
   // panel's "מסלול מומלץ" eyebrow. Cleared once the rider edits the route.
   const [selectedCatalogSlug, setSelectedCatalogSlug] = useState(null);
@@ -821,6 +825,7 @@ export default function MapScreen() {
         onLocate={handleLocatePress}
         onFit={fitRoute}
         following={locationState.following}
+        sheetTopY={sheetTopY}
       />
       <DataMarkerCard
         marker={mapUi.selectedDataMarker}
@@ -843,6 +848,7 @@ export default function MapScreen() {
       <PlannerSheet
         panelState={panelState}
         onPanelStateChange={setPanelState}
+        animatedPosition={sheetTopY}
         discover={
           <DiscoverPanel
             entries={catalogEntries}

@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import Icon from "./Icon.jsx";
 import { palette, radius } from "./theme.js";
 
@@ -13,10 +18,20 @@ const LEGEND = [
 // Native floating map controls: a vertical stack of circular buttons (locate,
 // fit-to-route, layers) above the sheet peek. The layers button toggles a
 // compact road-type legend popover, replacing the old always-on legend box.
-export default function MapControls({ onLocate, onFit, following }) {
+export default function MapControls({ onLocate, onFit, following, sheetTopY }) {
+  const { height } = useWindowDimensions();
   const [legendOpen, setLegendOpen] = useState(false);
+  // Ride just above the sheet's top edge at any snap; fade out as the sheet
+  // covers the lower screen (so the buttons never sit behind the full sheet).
+  const followStyle = useAnimatedStyle(() => {
+    const top = sheetTopY?.value ?? height;
+    return {
+      bottom: Math.max(12, height - top + 12),
+      opacity: interpolate(top, [140, 240], [0, 1], Extrapolation.CLAMP),
+    };
+  });
   return (
-    <View pointerEvents="box-none" style={styles.wrap}>
+    <Animated.View pointerEvents="box-none" style={[styles.wrap, followStyle]}>
       {legendOpen ? (
         <View style={styles.legend}>
           <Text style={styles.legendTitle}>סוגי דרכים</Text>
@@ -45,7 +60,7 @@ export default function MapControls({ onLocate, onFit, following }) {
         active={following}
         onPress={onLocate}
       />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -74,8 +89,6 @@ const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
     right: 14,
-    // Sit above the sheet peek snap (~16% of an ~844pt screen ≈ 135pt).
-    bottom: 160,
     alignItems: "flex-end",
     gap: 10,
   },

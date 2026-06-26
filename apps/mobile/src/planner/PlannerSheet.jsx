@@ -11,6 +11,7 @@ export default function PlannerSheet({
   onPanelStateChange,
   discover,
   build,
+  animatedPosition,
 }) {
   const ref = useRef(null);
   const snapPoints = useMemo(() => ["16%", "48%", "92%"], []);
@@ -20,6 +21,7 @@ export default function PlannerSheet({
       ref={ref}
       index={1}
       snapPoints={snapPoints}
+      animatedPosition={animatedPosition}
       handleIndicatorStyle={styles.grab}
       backgroundStyle={styles.bg}
     >
