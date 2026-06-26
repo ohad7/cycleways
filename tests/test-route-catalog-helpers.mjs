@@ -110,3 +110,16 @@ assert.equal(routeSurfaceLabel({ surfaceType: "dirt" }), "שטח");
 assert.equal(routeSurfaceLabel({}), "");
 
 console.log("route catalog helper tests passed");
+
+// routeThumbnailPath: prefers -thumb, falls back to photo, null when absent.
+import { routeThumbnailPath } from "../packages/core/src/data/catalog.js";
+assert.equal(
+  routeThumbnailPath({ heroImage: { thumbnail: "a-thumb.webp", photo: "a.webp" } }),
+  "a-thumb.webp",
+);
+assert.equal(
+  routeThumbnailPath({ heroImage: { photo: "b.webp" } }),
+  "b.webp",
+);
+assert.equal(routeThumbnailPath({}), null);
+assert.equal(routeThumbnailPath(null), null);

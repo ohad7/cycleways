@@ -21,6 +21,19 @@ function siteBase() {
   return (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
 }
 
+// Web image source for a logical asset path. The native sibling returns a
+// bundled require module; on web we return a `{ uri }` resolved against the site
+// base, keeping the API uniform for platform-agnostic callers.
+export function getImageAsset(filePath) {
+  if (!filePath) return null;
+  const path = String(filePath);
+  const uri =
+    path.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(path)
+      ? path
+      : `${siteBase()}${path.replace(/^\.?\//, "")}`;
+  return { uri };
+}
+
 // JSON asset resolved relative to a manifest base (segments, network, manifests).
 export async function getJsonAsset(filePath, { basePath = null, ...fetchOptions } = {}) {
   const assetPath = resolveAssetPath(filePath, basePath);
