@@ -20,7 +20,7 @@ export default function MapControls({ onLocate, onFit, following }) {
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.wrap, { top: insets.top + 62 }]}
+      style={[styles.wrap, { top: insets.top + 10 }]}
     >
       <CircleButton
         accessibilityLabel="סוגי דרכים"

@@ -52,7 +52,8 @@ const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
     left: 14,
-    right: 14,
+    // Leave room on the right for the top-pinned map-control column.
+    right: 66,
     gap: 6,
   },
   pill: {
