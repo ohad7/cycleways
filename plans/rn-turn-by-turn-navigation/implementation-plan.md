@@ -1,16 +1,37 @@
 # React Native Turn-by-Turn Navigation Implementation Plan
 
 **Date:** 2026-06-26
-**Status:** draft plan
+**Status:** in progress — Phases 0-3 landed; Phases 4+ blocked on parity re-align.
 
-## Phase 0 - Baseline Verification
+## Progress Snapshot (2026-06-26)
 
-1. Verify current mobile route restore still works for `cycleways:///?route=...`.
-2. Verify route sharing still produces a valid `shareInfo.param` for hand-built
+- **Phases 0-3 done and committed** (`6d6535f` "making slight progress…",
+  `2d4c134` "turn by turn phase 2-3"):
+  - Phase 1: `route-catalog.json` bundled into `apps/mobile/assets/` via
+    `sync-offline-assets.mjs`; `catalog.js` loads through the native asset
+    adapter; `tests/test-route-catalog-loading.mjs`.
+  - Phase 2: native slug/pathname parsing in
+    `packages/core/src/platform/location.native.js` + `App.js` link routing;
+    `tests/test-native-location.mjs`.
+  - Phase 3: `packages/core/src/navigation/navigationRoute.js` builders for
+    built + catalog routes; `tests/test-navigation-route.mjs`.
+- **Phases 4-10 not started:** route progress engine, cue generation, native
+  location service, navigation session hook, navigation UI, voice/haptics,
+  universal links.
+- **Sequencing dependency:** the Phase 8 navigation UI must be built on the
+  re-aligned mobile-web Build/Discover panel, not the stale 2026-06-03 chrome.
+  Land `plans/rn-mobile-web-parity` **Phase 2.8b** first. The Discover/catalog
+  list from 2.8b is also the route picker that selects a catalog route to
+  navigate.
+
+## Phase 0 - Baseline Verification ✅ (done)
+
+1. [x] Verify current mobile route restore still works for `cycleways:///?route=...`.
+2. [x] Verify route sharing still produces a valid `shareInfo.param` for hand-built
    routes.
-3. Run the existing pure tests that cover native location, route encoding,
+3. [x] Run the existing pure tests that cover native location, route encoding,
    route restore, route geometry, distance, and catalog helpers.
-4. Confirm `apps/mobile/scripts/sync-offline-assets.mjs` output before adding
+4. [x] Confirm `apps/mobile/scripts/sync-offline-assets.mjs` output before adding
    catalog assets.
 
 Expected validation:
@@ -19,7 +40,7 @@ Expected validation:
 - `cd apps/mobile && npm run assets:sync`
 - `cd apps/mobile && npx expo export --platform ios --output-dir /tmp/isravelo-mobile-export-nav`
 
-## Phase 1 - Bundle And Load Catalog Routes On Native
+## Phase 1 - Bundle And Load Catalog Routes On Native ✅ (done — `6d6535f`)
 
 1. Add `public-data/route-catalog.json` to the mobile asset sync list and
    generated native JSON asset map.
@@ -37,7 +58,7 @@ Acceptance criteria:
 - Web catalog pages still load unchanged.
 - A catalog entry's `route` token can be restored by `handleLoadRouteParam`.
 
-## Phase 2 - Native Route Launch Sources
+## Phase 2 - Native Route Launch Sources ✅ (done — `2d4c134`)
 
 1. Extend native URL parsing to expose pathname and route slug helpers in
    `location.native.js`.
@@ -60,7 +81,7 @@ Acceptance criteria:
 - A route-slug deep link restores the matching catalog route.
 - Unknown slugs show a recoverable native error state, not a blank map.
 
-## Phase 3 - Navigation Route View Model
+## Phase 3 - Navigation Route View Model ✅ (done — `2d4c134`)
 
 1. Create `packages/core/src/navigation/navigationRoute.js`.
 2. Add builders:
@@ -176,6 +197,11 @@ Acceptance criteria:
 - Returning to planner mode leaves the loaded route intact.
 
 ## Phase 8 - Navigation UI In `MapScreen`
+
+> Depends on `rn-mobile-web-parity` Phase 2.8b: build this navigation chrome on
+> the re-aligned Build/Discover front-panel. "Start navigation" should live in
+> the Build panel (and/or a catalog route's context header), and the Discover
+> list is the catalog route picker.
 
 1. Add a "Start navigation" action when `canDownload` and route geometry are
    available.

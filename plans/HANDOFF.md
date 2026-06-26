@@ -399,6 +399,25 @@ current parity pass:
   Follow-up fix (`efbf557`): a point drag is claimed only at touch-start —
   `onMoveShouldSetPanResponder` no longer re-hit-tests on move, so panning the
   map is never hijacked into a drag when the finger passes near a point.
+- **Phase 2.8b mobile-web drift re-align — DONE + VERIFIED**
+  (`plans/rn-mobile-web-parity/` Phase 2.8b): the mobile web planner was rebuilt
+  into the `src/components/frontPanel/` Discover/Build front panel after the
+  original 2.8 pass, so the app had drifted. `apps/mobile/src/MapScreen.jsx` now
+  renders a collapsible front-panel sheet with a `PanelStateToggle`
+  (`חפש מסלול` / `בניית מסלול`): **Build** mirrors the web `BuildPanel` (eyebrow
+  `מסלול מומלץ`/`המסלול שלי · טיוטה`, title, in-panel undo/redo/clear tool row,
+  shared `presentation.stats` grid, route status, warnings, elevation chart,
+  summary/share footer); **Discover** lists the bundled `route-catalog.json`
+  (`loadRouteCatalogEntries`) as `PanelRouteCardNative` cards (name · distance ·
+  difficulty · shape), and selecting one restores the entry's `route` token via
+  `handleLoadRouteParam`, records a recent, and switches to Build. The old top
+  control rail is gone (tools moved into the Build head, web parity). **Verified:**
+  `npm test` green; iOS export clean; `apps/mobile/.maestro/discover-build-smoke.yaml`
+  passes end-to-end on the iOS 17.5 iPhone 15 sim (`/tmp/maestro-2-8b-discover.png`,
+  `/tmp/build-loaded-now.png`, `/tmp/maestro-2-8b-after-clear.png`). **Deferred:**
+  bundle `places.json` (→ card thumbnails / "via" line / near-me sort), Build POI
+  cards, re-wiring orphaned locate/fit, recents/draft/send-to-phone chrome. This
+  is the route picker that feeds turn-by-turn (`rn-turn-by-turn-navigation`).
 - **Then:** route-following/navigation mode on top of the current-location puck,
   offline Mapbox tile-pack polish, release hardening, and optional splitting of
   `useCyclewaysApp` into focused hooks.

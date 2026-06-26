@@ -29,6 +29,11 @@ import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
 import {
+  loadRouteCatalogEntries,
+  routeDifficultyLabel,
+  routeShapeLabel,
+} from "@cycleways/core/data/catalog.js";
+import {
   DATA_MARKERS_STYLE,
   ROUTE_DIRECTION_PULSE_CASING_STYLE,
   ROUTE_DIRECTION_PULSE_CORE_STYLE,
@@ -209,6 +214,14 @@ export default function MapScreen() {
     point: null,
     status: "idle",
   });
+  // Front-panel mode (mirrors the web FrontPanel / PanelStateToggle): "discover"
+  // browses the bundled route catalog, "build" is the planner. The native app
+  // starts in build to keep the map-first planner as the primary surface.
+  const [panelState, setPanelState] = useState("build");
+  const [catalogEntries, setCatalogEntries] = useState([]);
+  // Slug of the catalog route currently loaded in the planner; drives the Build
+  // panel's "מסלול מומלץ" eyebrow. Cleared once the rider edits the route.
+  const [selectedCatalogSlug, setSelectedCatalogSlug] = useState(null);
   const {
     state,
     mapUi,
@@ -228,6 +241,8 @@ export default function MapScreen() {
     handleUndo,
     handleRedo,
     handleRouteClear,
+    handleLoadRouteParam,
+    handleAddRecentRoute,
     handleOpenDownload,
     handleCloseDownload,
     handleDownloadGpx,
@@ -505,6 +520,7 @@ export default function MapScreen() {
       if (Date.now() - routePointPressGuardRef.current < ADD_GUARD_MS) return;
       const point = pointFromFeature(feature);
       if (!point) return;
+      setSelectedCatalogSlug(null);
       handleMapClick(point);
     },
     [handleMapClick, state.status],
@@ -580,6 +596,58 @@ export default function MapScreen() {
       console.warn("Native route share failed:", error);
     });
   }, [shareUrl]);
+
+  // Load the bundled route catalog once for the native Discover list. The
+  // catalog already loads through the native asset adapter (see
+  // @cycleways/core/data/catalog.js + bundledAssets.native.js).
+  useEffect(() => {
+    let cancelled = false;
+    loadRouteCatalogEntries()
+      .then((entries) => {
+        if (!cancelled) setCatalogEntries(Array.isArray(entries) ? entries : []);
+      })
+      .catch((error) => {
+        console.warn("Native route catalog load failed:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedCatalogEntry = useMemo(
+    () =>
+      selectedCatalogSlug
+        ? catalogEntries.find((entry) => entry.slug === selectedCatalogSlug) ||
+          null
+        : null,
+    [catalogEntries, selectedCatalogSlug],
+  );
+
+  // Discover -> Build: restore the catalog entry's encoded route token through
+  // the same shared path used by deep links, record it in recents, and switch
+  // to the planner. The map auto-fits via the routeFitRequest effect.
+  const handleSelectCatalogRoute = useCallback(
+    async (entry) => {
+      if (!entry?.route) return;
+      const loaded = await handleLoadRouteParam(entry.route);
+      if (!loaded) return;
+      setSelectedCatalogSlug(entry.slug ?? null);
+      setPanelState("build");
+      handleAddRecentRoute?.({
+        name: entry.name,
+        slug: entry.slug,
+        param: entry.route,
+        source: "catalog",
+      });
+    },
+    [handleAddRecentRoute, handleLoadRouteParam],
+  );
+
+  // Any hand edit detaches the route from the catalog entry it was loaded from.
+  const handleClearRoute = useCallback(() => {
+    setSelectedCatalogSlug(null);
+    handleRouteClear();
+  }, [handleRouteClear]);
 
   const handleMapIdle = useCallback(
     (mapState) => {
@@ -766,14 +834,21 @@ export default function MapScreen() {
         onRedo={handleRedo}
         onSearchChange={handleSearchQueryChange}
         onSearchSubmit={submitSearch}
+        onShare={shareRoute}
+        canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
         onUndo={handleUndo}
         locationState={locationState}
         mapUi={mapUi}
         presentation={routePresentation}
         routeState={routeState}
         routePoints={displayedRoutePoints}
-        onClear={handleRouteClear}
+        onClear={handleClearRoute}
         onScrub={setScrubPoint}
+        panelState={panelState}
+        onPanelStateChange={setPanelState}
+        catalogEntries={catalogEntries}
+        onSelectCatalogRoute={handleSelectCatalogRoute}
+        selectedCatalogEntry={selectedCatalogEntry}
       />
       <DataMarkerCard
         marker={mapUi.selectedDataMarker}
@@ -949,11 +1024,13 @@ function RoutePlannerChrome({
   canDownload,
   canRedo,
   canUndo,
+  canShare,
   onClear,
   onOpenSummary,
   onRedo,
   onSearchChange,
   onSearchSubmit,
+  onShare,
   onUndo,
   onScrub,
   locationState,
@@ -961,15 +1038,14 @@ function RoutePlannerChrome({
   presentation,
   routeState,
   routePoints,
+  panelState,
+  onPanelStateChange,
+  catalogEntries,
+  onSelectCatalogRoute,
+  selectedCatalogEntry,
 }) {
-  const hasPoints = routePoints.length > 0;
-  const hasElevationProfile = routeState.geometry.length >= 2;
   const [sheetCollapsed, setSheetCollapsed] = useState(false);
   const searchBusy = mapUi.searchStatus === "searching";
-  const locationText = locationStatusText(locationState);
-  const routeMessage = routeState.error
-    ? routeState.error.message || "לא הצלחנו לעדכן את המסלול"
-    : presentation.message;
 
   return (
     <>
@@ -1002,110 +1078,282 @@ function RoutePlannerChrome({
         {mapUi.searchError ? (
           <Text style={styles.searchError}>{mapUi.searchError}</Text>
         ) : null}
-        <View style={styles.controlBar}>
-          <View style={styles.controlGroup}>
-            <ChromeButton
-              compact
-              rail
-              disabled={!canUndo}
-              icon="undo"
-              label=""
-              onPress={onUndo}
-              accessibilityLabel="ביטול"
-            />
-            <ChromeButton
-              compact
-              rail
-              disabled={!canRedo}
-              icon="redo"
-              label=""
-              onPress={onRedo}
-              accessibilityLabel="חזרה"
-            />
-            <ChromeButton
-              compact
-              rail
-              disabled={!hasPoints}
-              icon="trash"
-              label=""
-              onPress={onClear}
-              accessibilityLabel="איפוס מסלול"
-            />
-            <ChromeButton
-              compact
-              rail
-              disabled={!canDownload}
-              label="סיכום"
-              onPress={onOpenSummary}
-              accessibilityLabel="סיכום ושיתוף המסלול"
-            />
-          </View>
-        </View>
       </View>
 
       <View pointerEvents="box-none" style={styles.bottomSheetWrap}>
-        <View
-          style={[
-            styles.routeSheet,
-            hasPoints ? null : styles.routeSheetEmpty,
-          ]}
-        >
-          <View style={styles.routeSheetHeader}>
-            <Text style={styles.routeSheetTitle}>מסלול</Text>
-            <View style={styles.routeSheetHeaderActions}>
-              {presentation.canDownload ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="סיכום ושיתוף המסלול"
-                  onPress={onOpenSummary}
-                  style={styles.routeSheetBadge}
-                >
-                  <Text style={styles.routeSheetBadgeText}>סיכום</Text>
-                </Pressable>
-              ) : null}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  sheetCollapsed ? "הרחבת פאנל המסלול" : "מזעור פאנל המסלול"
-                }
-                onPress={() => setSheetCollapsed((current) => !current)}
-                style={styles.routeSheetCollapse}
-              >
-                <Text style={styles.routeSheetCollapseText}>
-                  {sheetCollapsed ? "⌃" : "⌄"}
-                </Text>
-              </Pressable>
-            </View>
+        <View style={styles.frontPanel}>
+          <View style={styles.frontPanelHead}>
+            <PanelStateToggle state={panelState} onChange={onPanelStateChange} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                sheetCollapsed ? "הרחבת הפאנל" : "מזעור הפאנל"
+              }
+              onPress={() => setSheetCollapsed((current) => !current)}
+              style={styles.frontPanelCollapse}
+            >
+              <Text style={styles.frontPanelCollapseText}>
+                {sheetCollapsed ? "⌃" : "⌄"}
+              </Text>
+            </Pressable>
           </View>
-          <Text
-            numberOfLines={sheetCollapsed ? 1 : undefined}
-            style={routeState.error ? styles.errorText : styles.routeMessage}
-          >
-            {routeMessage}
-          </Text>
-          {!sheetCollapsed && presentation.warnings.length > 0 ? (
-            <View style={styles.warningList}>
-              {presentation.warnings.map((warning) => (
-                <Text key={warning} style={styles.warningText}>
-                  {warning}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-          {!sheetCollapsed && locationText ? (
-            <Text style={styles.locationText}>{locationText}</Text>
-          ) : null}
-          {!sheetCollapsed && hasElevationProfile ? (
-            <ElevationProfileChart
-              animator={animator}
-              distance={routeState.distance}
-              geometry={routeState.geometry}
-              onScrub={onScrub}
+          {sheetCollapsed ? null : panelState === "discover" ? (
+            <DiscoverPanelContent
+              entries={catalogEntries}
+              onSelect={onSelectCatalogRoute}
             />
-          ) : null}
+          ) : (
+            <BuildPanelContent
+              animator={animator}
+              canDownload={canDownload}
+              canRedo={canRedo}
+              canShare={canShare}
+              canUndo={canUndo}
+              catalogEntry={selectedCatalogEntry}
+              locationState={locationState}
+              onClear={onClear}
+              onOpenSummary={onOpenSummary}
+              onRedo={onRedo}
+              onScrub={onScrub}
+              onShare={onShare}
+              onUndo={onUndo}
+              presentation={presentation}
+              routePoints={routePoints}
+              routeState={routeState}
+            />
+          )}
         </View>
       </View>
     </>
+  );
+}
+
+// Native equivalent of the web PanelStateToggle: switches the front panel
+// between the catalog browser ("חפש מסלול") and the planner ("בניית מסלול").
+function PanelStateToggle({ state, onChange }) {
+  return (
+    <View style={styles.stateBar}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="חפש מסלול"
+        onPress={() => onChange("discover")}
+        style={[
+          styles.stateTab,
+          state === "discover" ? styles.stateTabOn : null,
+        ]}
+      >
+        <Text
+          style={[
+            styles.stateTabText,
+            state === "discover" ? styles.stateTabTextOn : null,
+          ]}
+        >
+          חפש מסלול
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="בניית מסלול"
+        onPress={() => onChange("build")}
+        style={[styles.stateTab, state === "build" ? styles.stateTabOn : null]}
+      >
+        <Text
+          style={[
+            styles.stateTabText,
+            state === "build" ? styles.stateTabTextOn : null,
+          ]}
+        >
+          בניית מסלול
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+// Native equivalent of the web BuildPanel: eyebrow context + title, an
+// undo/redo/clear tool row, a stats block, route status, warnings, the
+// elevation profile, and a summary/share footer.
+function BuildPanelContent({
+  animator,
+  canDownload,
+  canRedo,
+  canShare,
+  canUndo,
+  catalogEntry,
+  locationState,
+  onClear,
+  onOpenSummary,
+  onRedo,
+  onScrub,
+  onShare,
+  onUndo,
+  presentation,
+  routePoints,
+  routeState,
+}) {
+  const hasPoints = routePoints.length > 0;
+  const hasElevationProfile = routeState.geometry.length >= 2;
+  const locationText = locationStatusText(locationState);
+  const routeMessage = routeState.error
+    ? routeState.error.message || "לא הצלחנו לעדכן את המסלול"
+    : presentation.message;
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.buildBody}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.buildHead}>
+        <View style={styles.buildHeadText}>
+          <Text style={styles.buildEyebrow}>
+            {catalogEntry ? "מסלול מומלץ" : "המסלול שלי · טיוטה"}
+          </Text>
+          <Text style={styles.buildTitle} numberOfLines={1}>
+            {catalogEntry?.name || "מסלול חדש"}
+          </Text>
+        </View>
+        <View style={styles.buildTools}>
+          <ChromeButton
+            compact
+            rail
+            disabled={!canUndo}
+            icon="undo"
+            label=""
+            onPress={onUndo}
+            accessibilityLabel="ביטול"
+          />
+          <ChromeButton
+            compact
+            rail
+            disabled={!canRedo}
+            icon="redo"
+            label=""
+            onPress={onRedo}
+            accessibilityLabel="חזרה"
+          />
+          <ChromeButton
+            compact
+            rail
+            disabled={!hasPoints}
+            icon="trash"
+            label=""
+            onPress={onClear}
+            accessibilityLabel="איפוס מסלול"
+          />
+        </View>
+      </View>
+
+      <Text style={routeState.error ? styles.errorText : styles.routeMessage}>
+        {routeMessage}
+      </Text>
+
+      {hasPoints ? (
+        <View style={styles.statGrid}>
+          {presentation.stats.map(([label, value]) => (
+            <View key={label} style={styles.statTile}>
+              <Text style={styles.statValue}>{value}</Text>
+              <Text style={styles.statLabel}>{label}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {presentation.warnings.length > 0 ? (
+        <View style={styles.warningList}>
+          {presentation.warnings.map((warning) => (
+            <Text key={warning} style={styles.warningText}>
+              {warning}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
+      {locationText ? (
+        <Text style={styles.locationText}>{locationText}</Text>
+      ) : null}
+
+      {hasElevationProfile ? (
+        <ElevationProfileChart
+          animator={animator}
+          distance={routeState.distance}
+          geometry={routeState.geometry}
+          onScrub={onScrub}
+        />
+      ) : null}
+
+      {canDownload ? (
+        <View style={styles.buildActions}>
+          <ChromeButton
+            label="סיכום"
+            onPress={onOpenSummary}
+            accessibilityLabel="סיכום ושיתוף המסלול"
+          />
+          <ChromeButton
+            disabled={!canShare}
+            label="שיתוף"
+            onPress={onShare}
+            primary
+            accessibilityLabel="שיתוף המסלול"
+          />
+        </View>
+      ) : null}
+    </ScrollView>
+  );
+}
+
+// Native equivalent of the web DiscoverPanel: a scrollable list of bundled
+// catalog routes. Selecting a card loads the route into the planner.
+function DiscoverPanelContent({ entries, onSelect }) {
+  if (!entries || entries.length === 0) {
+    return (
+      <View style={styles.discoverEmpty}>
+        <Text style={styles.discoverEmptyText}>טוען מסלולים...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.discoverBody}
+      showsVerticalScrollIndicator={false}
+    >
+      {entries.map((entry) => (
+        <PanelRouteCardNative
+          key={entry.slug || entry.name}
+          entry={entry}
+          onSelect={onSelect}
+        />
+      ))}
+    </ScrollView>
+  );
+}
+
+function PanelRouteCardNative({ entry, onSelect }) {
+  const meta = [
+    Number.isFinite(entry?.distanceKm) ? `${entry.distanceKm} ק״מ` : null,
+    routeDifficultyLabel(entry?.difficulty),
+    routeShapeLabel(entry),
+  ].filter(Boolean);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`פתח את ${entry.name} במפה`}
+      onPress={() => onSelect?.(entry)}
+      style={({ pressed }) => [
+        styles.routeCard,
+        pressed ? styles.routeCardPressed : null,
+      ]}
+    >
+      <Text style={styles.routeCardTitle} numberOfLines={1}>
+        {entry.name}
+      </Text>
+      {meta.length > 0 ? (
+        <Text style={styles.routeCardMeta} numberOfLines={1}>
+          {meta.join(" · ")}
+        </Text>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -1644,16 +1892,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderLeftWidth: 0,
   },
-  controlBar: {
-    alignSelf: "flex-end",
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 4,
-  },
-  controlGroup: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
   searchError: {
     alignSelf: "flex-end",
     maxWidth: 280,
@@ -1866,66 +2104,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     marginTop: 2,
   },
-  routeSheet: {
-    maxHeight: 238,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderColor: "#c6d4cf",
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-  },
-  routeSheetEmpty: {
-    maxHeight: 132,
-    paddingVertical: 12,
-  },
-  routeSheetHeader: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  routeSheetHeaderActions: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
-  routeSheetTitle: {
-    color: "#172026",
-    fontSize: 16,
-    fontWeight: "800",
-    textAlign: "right",
-  },
-  routeSheetBadge: {
-    minHeight: 26,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 4,
-    overflow: "hidden",
-    backgroundColor: "#f8f8f8",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  routeSheetBadgeText: {
-    color: "#333333",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  routeSheetCollapse: {
-    width: 30,
-    height: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 4,
-    backgroundColor: "#f3f6f4",
-  },
-  routeSheetCollapseText: {
-    color: "#333333",
-    fontSize: 18,
-    lineHeight: 20,
-    fontWeight: "800",
-  },
   routeMessage: {
     color: "#333333",
     fontSize: 13,
@@ -2112,5 +2290,181 @@ const styles = StyleSheet.create({
   },
   chromeButtonTextDisabled: {
     color: "#777777",
+  },
+  frontPanel: {
+    maxHeight: 360,
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    borderColor: "#c6d4cf",
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+  },
+  frontPanelHead: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderBottomColor: "#e3ebe7",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  frontPanelCollapse: {
+    width: 30,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: "#f3f6f4",
+  },
+  frontPanelCollapseText: {
+    color: "#333333",
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: "800",
+  },
+  stateBar: {
+    flex: 1,
+    flexDirection: "row-reverse",
+    backgroundColor: "#eef3f1",
+    borderRadius: 6,
+    padding: 3,
+    gap: 3,
+  },
+  stateTab: {
+    flex: 1,
+    minHeight: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+  },
+  stateTabOn: {
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+  },
+  stateTabText: {
+    color: "#52616f",
+    fontSize: 13,
+    fontWeight: "700",
+    writingDirection: "rtl",
+  },
+  stateTabTextOn: {
+    color: "#172026",
+  },
+  buildBody: {
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  buildHead: {
+    flexDirection: "row-reverse",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  buildHeadText: {
+    flexShrink: 1,
+    flexGrow: 1,
+  },
+  buildEyebrow: {
+    color: "#6b8f86",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  buildTitle: {
+    color: "#172026",
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  buildTools: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+  },
+  statGrid: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  statTile: {
+    minWidth: 64,
+    flexGrow: 1,
+    flexBasis: 64,
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 4,
+    backgroundColor: "#f3f6f4",
+  },
+  statValue: {
+    color: "#172026",
+    fontSize: 14,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  statLabel: {
+    color: "#52616f",
+    fontSize: 10,
+    fontWeight: "700",
+    writingDirection: "rtl",
+  },
+  buildActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 2,
+  },
+  discoverBody: {
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  discoverEmpty: {
+    paddingHorizontal: 12,
+    paddingVertical: 18,
+    alignItems: "center",
+  },
+  discoverEmptyText: {
+    color: "#52616f",
+    fontSize: 13,
+    fontWeight: "700",
+    writingDirection: "rtl",
+  },
+  routeCard: {
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#f8faf9",
+    borderColor: "#e3ebe7",
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 3,
+  },
+  routeCardPressed: {
+    backgroundColor: "#eef3f1",
+  },
+  routeCardTitle: {
+    color: "#172026",
+    fontSize: 15,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  routeCardMeta: {
+    color: "#52616f",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
   },
 });

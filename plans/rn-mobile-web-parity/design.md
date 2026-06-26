@@ -8,9 +8,13 @@ functionality, same Hebrew copy, same visual language, and the same underlying
 controller state. The native app may adjust layout for iPhone ergonomics, but
 it should not become a separate route-planning UI.
 
-Status: in progress. The first implementation slice extracted shared route
-presentation helpers and replaced the native proof overlay with a light Hebrew
-planner chrome plus bottom route sheet.
+Status: **superseded by a parity-drift re-audit (2026-06-26).** The original
+Phase 2.8 work (Slices 1-11) shipped and reached parity with the mobile web
+planner *as it stood on 2026-06-03*. Since then the mobile web planner was
+rebuilt (front-page-overhaul, discovery-surface, planning-surface), so the app
+is now in parity with a planner that no longer exists. See
+"Parity-Drift Re-Audit" below for the current target and the active Phase 2.8b
+work in `implementation-plan.md`.
 
 ## Context
 
@@ -84,6 +88,60 @@ they are pure and useful on both platforms:
 
 Do not try to share DOM components directly. The practical split remains:
 shared controller/view-model semantics, separate DOM and React Native renderers.
+
+## Parity-Drift Re-Audit (2026-06-26)
+
+The original parity pass is done, but the mobile web planner has moved on. The
+native `apps/mobile/src/MapScreen.jsx` still mirrors the 2026-06-03 design: a
+top search row, a right-side icon rail, a fixed bottom route sheet, and a map
+legend. The current mobile web planner is a different shape.
+
+### What changed on mobile web
+
+The web planner is now a bottom-sheet **front panel** with two modes
+(`src/components/frontPanel/`):
+
+- `FrontPanel` + `PanelStateToggle` switch between **Discover** and **Build**.
+- `BuildPanel` is the planner: eyebrow context (`מסלול מומלץ` /
+  `המסלול שלי · טיוטה`), undo/redo/clear icon tools, a stats block, POI cards
+  (`PanelPoiCard`), an elevation graph (`PanelElevationGraph`), playback
+  controls, GPX, share, send-to-phone, and a recommended-route page CTA when a
+  catalog entry is loaded.
+- `DiscoverPanel` is the catalog browser: near-me sorting/filtering
+  (`@cycleways/core/data/nearMe.js`), place filters, route cards
+  (`PanelRouteCard`), and recents.
+- Surrounding chrome added: `TopBar`, `Breadcrumbs`, `PageShell`,
+  `DraftRestoreBanner`, `PlannerHints`, `SendToPhone`, dedicated route pages.
+
+The native app has **none** of these (verified: 0 references to Discover,
+recents, TopBar, breadcrumbs, draft, or catalog in `MapScreen.jsx`).
+
+### Re-audit scope decision
+
+Per the saved surface-roles principle (mobile web = discovery, native app =
+navigation/recording) and a 2026-06-26 scoping decision, the app should adopt
+**Build panel parity + a Discover/catalog entry**, and **defer** the
+website-oriented chrome:
+
+- **In scope (Phase 2.8b):**
+  - Restyle the native planner to the new `BuildPanel` model: eyebrow context,
+    icon undo/redo/clear tools, stats block, POI cards, elevation, GPX, share,
+    and the recommended-route context header when a catalog entry is loaded.
+  - Adopt the bottom-sheet front-panel shell with a Discover/Build toggle.
+  - Add a native **Discover** entry: browse the bundled `route-catalog.json`
+    (already loadable on native via `@cycleways/core/data/catalog.js`), select a
+    route, and load it into the planner. This doubles as the route picker that
+    feeds turn-by-turn navigation.
+- **Deferred (not app-critical yet):** send-to-phone, draft-restore banner,
+  breadcrumbs/TopBar, dedicated route detail pages, PlannerHints onboarding.
+
+### Re-audit non-goals
+
+- Re-implementing the desktop two-column app shell on the phone.
+- Near-me ranking polish beyond a basic distance sort (can reuse the shared
+  `nearMe.js` helper as-is).
+- Any navigation-mode chrome (that is the turn-by-turn plan; it should be built
+  on top of the re-aligned panel, not the stale chrome).
 
 ## Non-Goals
 

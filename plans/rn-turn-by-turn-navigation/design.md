@@ -1,7 +1,12 @@
 # React Native Turn-by-Turn Navigation Design
 
 **Date:** 2026-06-26
-**Status:** design
+**Status:** in progress — foundation landed (catalog bundling, native link
+routing, `NavigationRoute` model + tests; Phases 1-3 of the implementation
+plan). The route-progress engine, cues, native location service, session hook,
+and navigation UI are still to come, and the navigation chrome (Phase 8) is
+gated on the `rn-mobile-web-parity` Phase 2.8b re-alignment so it builds on the
+current Build/Discover panel rather than the stale 2026-06-03 chrome.
 
 ## Goal
 
