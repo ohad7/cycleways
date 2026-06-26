@@ -4,7 +4,6 @@ import {
   Linking,
   LogBox,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
@@ -73,7 +72,9 @@ export default function App() {
     <GestureHandlerRootView style={styles.fill}>
       <SafeAreaProvider>
         <BottomSheetModalProvider>
-          <SafeAreaView style={styles.fill}>
+          {/* Full-bleed: the map fills the screen under the status bar; overlays
+              (search pill, map controls, sheet) apply their own safe-area insets. */}
+          <View style={styles.fill}>
             {locationReady ? <MapScreen key={screenKey} /> : null}
             {launchError ? (
               <LaunchErrorOverlay
@@ -82,7 +83,7 @@ export default function App() {
               />
             ) : null}
             <StatusBar style="auto" />
-          </SafeAreaView>
+          </View>
         </BottomSheetModalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
