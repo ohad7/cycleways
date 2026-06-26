@@ -21,12 +21,7 @@ export default function BottomSheet({ snap, onSnapChange, peekContent, children 
     const shell = sheetRef.current?.parentElement;
     if (!shell) return;
     const rect = shell.getBoundingClientRect();
-    const viewportHeight = window.visualViewport?.height || window.innerHeight || shell.clientHeight;
-    const visibleHeight = Math.max(
-      0,
-      Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0),
-    );
-    setShellHeight(visibleHeight || shell.clientHeight);
+    setShellHeight(rect.height || shell.clientHeight);
   }, []);
 
   // Track the shell's height (the sheet's positioning parent) for offsets.
