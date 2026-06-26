@@ -1694,12 +1694,15 @@ const styles = StyleSheet.create({
   chromeButtonRail: {
     width: 40,
     minWidth: 40,
-    height: 36,
-    minHeight: 36,
-    paddingHorizontal: 2,
+    height: 40,
+    minHeight: 40,
+    borderRadius: 20,
+    paddingHorizontal: 0,
+    backgroundColor: palette.cream,
+    shadowOpacity: 0,
   },
   chromeButtonPrimary: {
-    backgroundColor: "#4682B4",
+    backgroundColor: palette.forest,
   },
   chromeButtonPressed: {
     backgroundColor: "#e0e0e0",
