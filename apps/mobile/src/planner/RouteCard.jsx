@@ -1,13 +1,15 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   routeDifficultyLabel,
   routeShapeLabel,
+  routeThumbnailPath,
 } from "@cycleways/core/data/catalog.js";
 import {
   distanceToRouteStartMeters,
   formatDistanceFromUser,
 } from "@cycleways/core/data/nearMe.js";
 import Icon from "./Icon.jsx";
+import { ROUTE_IMAGES } from "./routeImages.js";
 import { palette, radius } from "./theme.js";
 
 const DIFFICULTY_COLOR = {
@@ -25,14 +27,13 @@ function tintFor(hex) {
   return `rgba(${r}, ${g}, ${b}, 0.14)`;
 }
 
-// Branded native Discover card: a difficulty-tinted icon tile, title, difficulty
-// chip, and a "distance · shape · via place" meta line (+ near-me distance when a
-// location fix is available). (Photo thumbnails are bundled but deferred — see
-// plans/rn-mobile-native-ui: Metro doesn't serve images required from the
-// @cycleways/core workspace package.)
+// Branded native Discover card: a route photo thumbnail (or a difficulty-tinted
+// icon tile fallback), title, difficulty chip, and a "distance · shape · via
+// place" meta line (+ near-me distance when a location fix is available).
 export default function RouteCard({ entry, placeById, fix, onSelect }) {
   const difficultyLabel = routeDifficultyLabel(entry?.difficulty);
   const chipColor = DIFFICULTY_COLOR[entry?.difficulty] || palette.muted;
+  const photo = ROUTE_IMAGES[routeThumbnailPath(entry)] || null;
 
   const viaNames = (entry?.passesNear || [])
     .map((id) => placeById?.get?.(id)?.name)
@@ -55,9 +56,13 @@ export default function RouteCard({ entry, placeById, fix, onSelect }) {
       onPress={() => onSelect?.(entry)}
       style={({ pressed }) => [styles.card, pressed ? styles.cardPressed : null]}
     >
-      <View style={[styles.thumb, { backgroundColor: tintFor(chipColor) }]}>
-        <Icon name="bicycle-outline" size={26} color={chipColor} />
-      </View>
+      {photo ? (
+        <Image source={photo} style={styles.thumb} resizeMode="cover" />
+      ) : (
+        <View style={[styles.thumb, { backgroundColor: tintFor(chipColor) }]}>
+          <Icon name="bicycle-outline" size={26} color={chipColor} />
+        </View>
+      )}
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={1}>

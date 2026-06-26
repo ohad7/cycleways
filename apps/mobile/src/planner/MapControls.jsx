@@ -1,10 +1,6 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-} from "react-native-reanimated";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "./Icon.jsx";
 import { palette, radius } from "./theme.js";
 
@@ -15,34 +11,17 @@ const LEGEND = [
   { color: "rgb(138, 147, 158)", label: "כביש" },
 ];
 
-// Native floating map controls: a vertical stack of circular buttons (locate,
-// fit-to-route, layers) above the sheet peek. The layers button toggles a
-// compact road-type legend popover, replacing the old always-on legend box.
-export default function MapControls({ onLocate, onFit, following, sheetTopY }) {
-  const { height } = useWindowDimensions();
+// Native floating map controls, clustered at the top-right just under the search
+// pill: a vertical stack of circular buttons (layers, fit-to-route, locate). The
+// layers button toggles a compact road-type legend popover below the stack.
+export default function MapControls({ onLocate, onFit, following }) {
+  const insets = useSafeAreaInsets();
   const [legendOpen, setLegendOpen] = useState(false);
-  // Ride just above the sheet's top edge at any snap; fade out as the sheet
-  // covers the lower screen (so the buttons never sit behind the full sheet).
-  const followStyle = useAnimatedStyle(() => {
-    const top = sheetTopY?.value ?? height;
-    return {
-      bottom: Math.max(12, height - top + 12),
-      opacity: interpolate(top, [140, 240], [0, 1], Extrapolation.CLAMP),
-    };
-  });
   return (
-    <Animated.View pointerEvents="box-none" style={[styles.wrap, followStyle]}>
-      {legendOpen ? (
-        <View style={styles.legend}>
-          <Text style={styles.legendTitle}>סוגי דרכים</Text>
-          {LEGEND.map((item) => (
-            <View key={item.label} style={styles.legendRow}>
-              <View style={[styles.swatch, { backgroundColor: item.color }]} />
-              <Text style={styles.legendLabel}>{item.label}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
+    <View
+      pointerEvents="box-none"
+      style={[styles.wrap, { top: insets.top + 62 }]}
+    >
       <CircleButton
         accessibilityLabel="סוגי דרכים"
         icon="layers-outline"
@@ -60,7 +39,18 @@ export default function MapControls({ onLocate, onFit, following, sheetTopY }) {
         active={following}
         onPress={onLocate}
       />
-    </Animated.View>
+      {legendOpen ? (
+        <View style={styles.legend}>
+          <Text style={styles.legendTitle}>סוגי דרכים</Text>
+          {LEGEND.map((item) => (
+            <View key={item.label} style={styles.legendRow}>
+              <View style={[styles.swatch, { backgroundColor: item.color }]} />
+              <Text style={styles.legendLabel}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -93,16 +83,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   btn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.96)",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
   },
   btnActive: {
     backgroundColor: palette.teal,
@@ -114,7 +104,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.97)",
     borderRadius: radius.md,
     padding: 10,
-    marginBottom: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.18,

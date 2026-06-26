@@ -2,18 +2,8 @@ import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
 import {
   BINARY_ASSETS,
-  IMAGE_ASSETS,
   JSON_ASSETS,
 } from "./bundledAssets.native.js";
-
-// Returns a React Native Image `source` (the bundled require module) for a
-// logical image path like "public-data/poi-images/foo-thumb.webp", or null when
-// the image was not bundled. Native counterpart of the web getImageAsset.
-export function getImageAsset(filePath) {
-  if (!filePath) return null;
-  const key = normalizeLogicalPath(String(filePath));
-  return IMAGE_ASSETS?.[key] ?? null;
-}
 
 const BUNDLED_BASE_HREF = "cycleways:///";
 const binaryAssetPromises = new Map();

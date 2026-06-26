@@ -177,7 +177,7 @@ export function routeMapImage(entry) {
 
 // Logical asset path of a catalog entry's hero thumbnail (preferring the small
 // -thumb variant), or null. Used by the native Discover cards to look up the
-// bundled image via getImageAsset().
+// bundled route image (apps/mobile ROUTE_IMAGES map).
 export function routeThumbnailPath(entry) {
   const hero = entry?.heroImage;
   const t = hero?.thumbnail || hero?.photo;

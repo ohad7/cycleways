@@ -439,10 +439,15 @@ current parity pass:
   **Gotchas hit:** gorhom groups the sheet body as one a11y node (drive in-sheet
   via coordinate taps + screenshots; chrome outside the sheet stays
   testID/label-matchable); `babel-preset-expo` SDK 56 auto-injects the worklets
-  plugin (don't add it manually). **Deferred:** photo thumbnails (Metro won't
-  serve images `require`d from the `@cycleways/core` workspace pkg — cards use an
-  icon tile; expo-image backed out for an ABI mismatch) and the optional
-  `BuildPanel` file extraction.
+  plugin (don't add it manually). **Polish pass:** real photo thumbnails now
+  render — the image `require` map is generated INSIDE the app
+  (`apps/mobile/src/planner/routeImages.js`) because Metro won't serve images
+  `require`d from the symlinked `@cycleways/core` pkg (webp→png conversion kept;
+  dead `getImageAsset`/core `IMAGE_ASSETS` removed). Map controls moved to the
+  top-right under the search pill (per request, replacing the sheet-follow
+  behavior); circular tonal Build tool buttons + forest primary. **Deferred:**
+  optional `BuildPanel` file extraction (expo-image was tried for thumbnails and
+  backed out — ABI mismatch with expo-modules-core 56.0.14).
 - **Then:** route-following/navigation mode on top of the current-location puck,
   offline Mapbox tile-pack polish, release hardening, and optional splitting of
   `useCyclewaysApp` into focused hooks.
