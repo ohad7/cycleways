@@ -19,6 +19,7 @@ const jsonAssets = [
     targetPath: "public-data/bike_roads.geojson.json",
   },
   { logicalPath: "public-data/segments.json" },
+  { logicalPath: "public-data/route-catalog.json" },
   { logicalPath: "public-data/cw-base-index.json" },
   { logicalPath: "public-data/base-routing-shards/manifest.json" },
 ];
