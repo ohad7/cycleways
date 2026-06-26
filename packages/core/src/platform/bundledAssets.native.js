@@ -13,12 +13,12 @@ export const JSON_ASSETS = {
 };
 
 export const IMAGE_ASSETS = {
-  "public-data/poi-images/kovshey-hagolan-hero-4403bbce-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/kovshey-hagolan-hero-4403bbce-thumb.webp"),
-  "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/poi-11102fea-572cdcba-thumb.webp"),
-  "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/poi-1821461d-91d526fa-thumb.webp"),
-  "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp"),
-  "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp"),
-  "public-data/poi-images/roman-roads-hero-89879e81-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/roman-roads-hero-89879e81-thumb.webp"),
+  "public-data/poi-images/kovshey-hagolan-hero-4403bbce-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/kovshey-hagolan-hero-4403bbce-thumb.png"),
+  "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/poi-11102fea-572cdcba-thumb.png"),
+  "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/poi-1821461d-91d526fa-thumb.png"),
+  "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/poi-38b469d3-eadbb56a-thumb.png"),
+  "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/poi-5b6da297-fd491b50-thumb.png"),
+  "public-data/poi-images/roman-roads-hero-89879e81-thumb.webp": require("../../../../apps/mobile/assets/data/public-data/poi-images/roman-roads-hero-89879e81-thumb.png"),
 };
 
 export const BINARY_ASSETS = {

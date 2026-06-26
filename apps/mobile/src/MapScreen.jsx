@@ -24,11 +24,7 @@ import Mapbox, {
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
-import {
-  loadRouteCatalogEntries,
-  routeDifficultyLabel,
-  routeShapeLabel,
-} from "@cycleways/core/data/catalog.js";
+import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
 import {
   DATA_MARKERS_STYLE,
   ROUTE_DIRECTION_PULSE_CASING_STYLE,
@@ -45,6 +41,7 @@ import RichText from "./RichText.jsx";
 import PlannerSheet from "./planner/PlannerSheet.jsx";
 import TopSearch from "./planner/TopSearch.jsx";
 import MapControls from "./planner/MapControls.jsx";
+import DiscoverPanel from "./planner/DiscoverPanel.jsx";
 import Icon from "./planner/Icon.jsx";
 import { palette } from "./planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
@@ -847,9 +844,17 @@ export default function MapScreen() {
         panelState={panelState}
         onPanelStateChange={setPanelState}
         discover={
-          <DiscoverPanelContent
+          <DiscoverPanel
             entries={catalogEntries}
             onSelect={handleSelectCatalogRoute}
+            fix={
+              locationState.enabled && locationState.point
+                ? {
+                    lat: locationState.point.lat,
+                    lng: locationState.point.lng,
+                  }
+                : null
+            }
           />
         }
         build={
@@ -1043,63 +1048,6 @@ function BuildPanelContent({
 
 // Native equivalent of the web DiscoverPanel: a scrollable list of bundled
 // catalog routes. Selecting a card loads the route into the planner.
-function DiscoverPanelContent({ entries, onSelect }) {
-  if (!entries || entries.length === 0) {
-    return (
-      <View style={styles.discoverEmpty}>
-        <Text style={styles.discoverEmptyText}>טוען מסלולים...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView
-      contentContainerStyle={styles.discoverBody}
-      showsVerticalScrollIndicator={false}
-    >
-      {entries.map((entry) => (
-        <PanelRouteCardNative
-          key={entry.slug || entry.name}
-          entry={entry}
-          onSelect={onSelect}
-        />
-      ))}
-    </ScrollView>
-  );
-}
-
-function PanelRouteCardNative({ entry, onSelect }) {
-  const meta = [
-    Number.isFinite(entry?.distanceKm) ? `${entry.distanceKm} ק״מ` : null,
-    routeDifficultyLabel(entry?.difficulty),
-    routeShapeLabel(entry),
-  ].filter(Boolean);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`פתח את ${entry.name} במפה`}
-      testID={`route-card-${entry.slug || entry.name}`}
-      onPress={() => onSelect?.(entry)}
-      style={({ pressed }) => [
-        styles.routeCard,
-        pressed ? styles.routeCardPressed : null,
-      ]}
-    >
-      <Text style={styles.routeCardTitle} numberOfLines={1}>
-        {entry.name}
-      </Text>
-      {meta.length > 0 ? (
-        <Text style={styles.routeCardMeta} numberOfLines={1}>
-          {meta.join(" · ")}
-        </Text>
-      ) : null}
-    </Pressable>
-  );
-}
-
-// Bottom-sheet detail card shown when a data marker (hazard or POI) is tapped.
-// Sits above the route sheet; offers adding the marker to the route or closing.
 function DataMarkerCard({ marker, onAddToRoute, onClose }) {
   if (!marker) return null;
   const label = POI_LABELS[marker.type] || marker.type || "מידע";
@@ -1836,47 +1784,5 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 8,
     marginTop: 2,
-  },
-  discoverBody: {
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  discoverEmpty: {
-    paddingHorizontal: 12,
-    paddingVertical: 18,
-    alignItems: "center",
-  },
-  discoverEmptyText: {
-    color: "#52616f",
-    fontSize: 13,
-    fontWeight: "700",
-    writingDirection: "rtl",
-  },
-  routeCard: {
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#f8faf9",
-    borderColor: "#e3ebe7",
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: 3,
-  },
-  routeCardPressed: {
-    backgroundColor: "#eef3f1",
-  },
-  routeCardTitle: {
-    color: "#172026",
-    fontSize: 15,
-    fontWeight: "800",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  routeCardMeta: {
-    color: "#52616f",
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "right",
-    writingDirection: "rtl",
   },
 });
