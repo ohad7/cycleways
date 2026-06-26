@@ -24,7 +24,6 @@ import Mapbox, {
   UserLocationRenderMode,
   UserTrackingMode,
 } from "@rnmapbox/maps";
-import Svg, { Path } from "react-native-svg";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
@@ -47,11 +46,21 @@ import DataMarkerImages, {
 import ElevationProfileChart from "./ElevationProfileChart.jsx";
 import RichText from "./RichText.jsx";
 import PlannerSheet from "./planner/PlannerSheet.jsx";
+import Icon from "./planner/Icon.jsx";
+import { palette } from "./planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
   getRoutePlannerPresentation,
   getRouteWarningPresentation,
 } from "@cycleways/core/ui/routePlannerPresentation.js";
+
+// Legacy planner icon names -> Ionicons names (same set the web Icon.jsx uses).
+const CHROME_IONICON = {
+  search: "search-outline",
+  undo: "arrow-undo-outline",
+  redo: "arrow-redo-outline",
+  trash: "trash-outline",
+};
 
 // Short placeholder for the narrow native search box (the shared web one,
 // "ישוב/עיר, לדוגמא: דפנה", is too long to fit on the phone).
@@ -1454,11 +1463,9 @@ function ChromeButton({
       ]}
     >
       {icon ? (
-        <ChromeIcon
-          name={icon}
-          color={
-            disabled ? "#777777" : primary ? "#ffffff" : "#333333"
-          }
+        <Icon
+          name={CHROME_IONICON[icon] || icon}
+          color={disabled ? palette.muted : primary ? palette.white : palette.ink}
           size={rail ? 19 : 16}
         />
       ) : null}
@@ -1478,79 +1485,6 @@ function ChromeButton({
       ) : null}
     </Pressable>
   );
-}
-
-function ChromeIcon({ color, name, size }) {
-  const common = { fill: "none", stroke: color, strokeWidth: 32 };
-
-  if (name === "search") {
-    return (
-      <Svg width={size} height={size} viewBox="0 0 512 512">
-        <Path
-          d="M221.09 64a157.09 157.09 0 10157.09 157.09A157.1 157.1 0 00221.09 64z"
-          {...common}
-          strokeMiterlimit={10}
-        />
-        <Path
-          d="M338.29 338.29L448 448"
-          {...common}
-          strokeLinecap="round"
-          strokeMiterlimit={10}
-        />
-      </Svg>
-    );
-  }
-
-  if (name === "undo") {
-    return (
-      <Svg width={size} height={size} viewBox="0 0 512 512">
-        <Path
-          d="M240 424v-96c116.4 0 159.39 33.76 208 96 0-119.23-39.57-240-208-240V88L64 256z"
-          {...common}
-          strokeLinejoin="round"
-        />
-      </Svg>
-    );
-  }
-
-  if (name === "redo") {
-    return (
-      <Svg width={size} height={size} viewBox="0 0 512 512">
-        <Path
-          d="M448 256L272 88v96C103.57 184 64 304.77 64 424c48.61-62.24 91.6-96 208-96v96z"
-          {...common}
-          strokeLinejoin="round"
-        />
-      </Svg>
-    );
-  }
-
-  if (name === "trash") {
-    return (
-      <Svg width={size} height={size} viewBox="0 0 512 512">
-        <Path
-          d="M112 112l20 320c.95 18.49 14.4 32 32 32h184c17.67 0 30.87-13.51 32-32l20-320"
-          {...common}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <Path
-          d="M80 112h352"
-          {...common}
-          strokeLinecap="round"
-          strokeMiterlimit={10}
-        />
-        <Path
-          d="M192 112V72h0a23.93 23.93 0 0124-24h80a23.93 23.93 0 0124 24h0v40M256 176v224M184 176l8 224M328 176l-8 224"
-          {...common}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </Svg>
-    );
-  }
-
-  return null;
 }
 
 function locationStatusText(locationState) {
