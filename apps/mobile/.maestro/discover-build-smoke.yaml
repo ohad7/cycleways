@@ -1,29 +1,31 @@
-# Phase 2.8b/2.8c smoke: the front-panel Discover/Build toggle and the native
-# catalog -> planner flow, now inside a @gorhom/bottom-sheet.
+# Phase 2.8c smoke: the front-panel Discover/Build toggle and the native catalog
+# -> planner flow, inside a @gorhom/bottom-sheet.
 # Run: maestro --device <UDID> test .maestro/discover-build-smoke.yaml
 # Requires Metro running and the dev-client build installed.
 #
-# IMPORTANT gorhom/Maestro limitation: @gorhom/bottom-sheet renders its content
-# (BottomSheetScrollView / BottomSheetView) as an opaque accessibility group, so
-# XCUITest/Maestro cannot see text OR testIDs of elements INSIDE the sheet body.
-# Only the sheet HEADER (a plain View) is introspectable — that is why the
-# Discover/Build toggle is matchable by testID but the route cards / Build
-# controls are not. We therefore drive in-sheet content by coordinate tap and
-# verify the result with screenshots (reviewed by a human / the controller).
+# gorhom/Maestro limitation: @gorhom/bottom-sheet renders its content as an
+# opaque accessibility group, so XCUITest/Maestro cannot see text or testIDs of
+# elements INSIDE the sheet body. Only the sheet HEADER (the Discover/Build
+# toggle) is introspectable. We therefore select a route by coordinate tap and
+# verify the loaded route via the screenshot (human/controller review).
 appId: app.cycleways.mobile
 ---
-- assertVisible: "חיפוש מיקום"          # search chrome (outside the sheet)
+- assertVisible: "חיפוש מיקום"          # search pill (outside the sheet)
 - assertVisible:
     id: "seg-discover"                  # Discover toggle tab (sheet header)
 - assertVisible:
     id: "seg-build"                     # Build toggle tab (sheet header)
 
-# --- Switch to Discover, expand the sheet, open the first catalog route ---
+# --- Switch to Discover; the bundled catalog lists as branded cards ---
 - tapOn:
     id: "seg-discover"
-- swipe:
-    direction: UP                       # expand sheet to the full snap
-- takeScreenshot: /tmp/maestro-2-8c-discover      # expect: catalog list of routes
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: /tmp/maestro-2-8c-discover      # expect: route cards w/ chips
+
+# --- Select a catalog route by coordinate; it loads into Build ---
 - tapOn:
-    point: "50%,30%"                    # first catalog card (בניאס וגן הצפון)
+    point: "50%,72%"                    # a catalog card at the default snap
+- waitForAnimationToEnd:
+    timeout: 3000
 - takeScreenshot: /tmp/maestro-2-8c-build-loaded  # expect: route loaded in Build

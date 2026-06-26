@@ -1,0 +1,23 @@
+# Phase 2.8c native-UI chrome smoke: verifies the native shell that IS
+# introspectable by Maestro (everything outside the gorhom sheet body) — the
+# search pill, the floating map controls, and the legend popover. The in-sheet
+# Discover/Build flow is covered by discover-build-smoke.yaml.
+# Run: maestro --device <UDID> test .maestro/native-ui-smoke.yaml
+appId: app.cycleways.mobile
+---
+- assertVisible: "חיפוש מיקום"          # floating search pill
+- assertVisible:
+    id: "seg-discover"                  # sheet header toggle
+- assertVisible:
+    id: "seg-build"
+
+# --- Floating map controls (outside the sheet -> queryable) ---
+- assertVisible: "מיקום נוכחי"          # locate
+- assertVisible: "התאם מסלול"          # fit-to-route
+- assertVisible: "סוגי דרכים"          # layers
+
+# --- Legend popover toggles from the layers button ---
+- tapOn: "סוגי דרכים"
+- assertVisible: "שביל סלול"            # legend row (paved)
+- assertVisible: "כביש"                 # legend row (road)
+- takeScreenshot: /tmp/maestro-2-8c-chrome

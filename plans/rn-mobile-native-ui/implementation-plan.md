@@ -1,5 +1,32 @@
 # Mobile Native UI (Phase 2.8c) Implementation Plan
 
+> **STATUS (2026-06-27): IMPLEMENTED on `codex/iphone-turn-by-turn`.** Executed
+> Tasks 0–10 (commits `0d58287` baseline → `ddb006d` deps/sheet-boot →
+> `079c58f` theme → `402f4ee` bottom sheet → `c40ddc3` Ionicons →
+> `7722802` search pill + map controls → `3b5a8a9`/`fdfb82d` Discover cards +
+> assets). Verified per task via `npm test` + `expo export` + Maestro on the
+> iOS 17.5 iPhone 15 sim (`discover-build-smoke.yaml`, `native-ui-smoke.yaml`).
+> Result: full-bleed map, real draggable `@gorhom/bottom-sheet`
+> (peek/half/full), safe-area search pill, floating locate/fit/layers controls
+> with a legend popover, Ionicons throughout, and branded Discover cards
+> (difficulty-tinted icon tile + chip + meta + near-me).
+>
+> **Deferred:** (1) **Photo thumbnails** — thumbnails are bundled (webp→png at
+> sync) and `getImageAsset` is wired, but Metro doesn't serve images
+> `require()`d from the symlinked `@cycleways/core` workspace package, so cards
+> render a branded bicycle icon tile instead; needs Metro monorepo asset
+> resolution (move the image require map into `apps/mobile`, or fix
+> watchFolders/nodeModulesPaths). expo-image was tried and backed out (native
+> ABI mismatch with expo-modules-core 56.0.14). (2) **Build-panel file
+> extraction** to `planner/BuildPanel.jsx` — the Build panel already reads as
+> branded-native (eyebrow/title/Ionicons tools/cream stat tiles/elevation), so
+> the extraction is organizational-only cleanup, not done.
+>
+> **Maestro note:** `@gorhom/bottom-sheet` groups its body as one a11y node, so
+> only the sheet header (toggle) + non-sheet chrome (search pill, map controls,
+> legend) are introspectable; in-sheet content is driven by coordinate tap and
+> verified via screenshots.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use

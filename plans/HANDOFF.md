@@ -418,6 +418,31 @@ current parity pass:
   bundle `places.json` (→ card thumbnails / "via" line / near-me sort), Build POI
   cards, re-wiring orphaned locate/fit, recents/draft/send-to-phone chrome. This
   is the route picker that feeds turn-by-turn (`rn-turn-by-turn-navigation`).
+- **Phase 2.8c native-UI reskin — DONE + VERIFIED**
+  (`plans/rn-mobile-native-ui/`): made the iPhone app read as a native iOS app
+  instead of web-on-a-phone. Added `@gorhom/bottom-sheet` (+ reanimated v4 /
+  worklets / gesture-handler), `react-native-safe-area-context`, and
+  `@expo/vector-icons` (Ionicons). `apps/mobile/src/MapScreen.jsx` is slimmed and
+  the chrome lives in `apps/mobile/src/planner/` (`PlannerSheet`, `TopSearch`,
+  `MapControls`, `DiscoverPanel`, `RouteCard`, `Icon`, `theme.js`):
+  full-bleed map; a real draggable sheet (peek/half/full) hosting the
+  Discover/Build toggle; a safe-area search pill; floating circular locate/fit/
+  layers buttons (wiring the previously-orphaned locate/fit) with a legend
+  popover (the old map-corner legend box is gone); Ionicons throughout; branded
+  Discover cards (difficulty-tinted icon tile + colored chip + distance/shape/via
+  meta + near-me). Forest/cream palette in `planner/theme.js`. **Verified:**
+  `npm test` green; iOS export clean; native rebuild boots; Maestro
+  `native-ui-smoke.yaml` (search pill + map controls + legend popover) and
+  `discover-build-smoke.yaml` (toggle → catalog select → Build) pass on the iOS
+  17.5 iPhone 15 sim (`/tmp/maestro-2-8c-chrome.png`,
+  `/tmp/maestro-2-8c-discover.png`, `/tmp/maestro-2-8c-build-loaded.png`).
+  **Gotchas hit:** gorhom groups the sheet body as one a11y node (drive in-sheet
+  via coordinate taps + screenshots; chrome outside the sheet stays
+  testID/label-matchable); `babel-preset-expo` SDK 56 auto-injects the worklets
+  plugin (don't add it manually). **Deferred:** photo thumbnails (Metro won't
+  serve images `require`d from the `@cycleways/core` workspace pkg — cards use an
+  icon tile; expo-image backed out for an ABI mismatch) and the optional
+  `BuildPanel` file extraction.
 - **Then:** route-following/navigation mode on top of the current-location puck,
   offline Mapbox tile-pack polish, release hardening, and optional splitting of
   `useCyclewaysApp` into focused hooks.
