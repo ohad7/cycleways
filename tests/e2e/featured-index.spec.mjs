@@ -6,15 +6,37 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function clickTopbarLink(page, name) {
-  const link = page.getByRole("link", { name, exact: true });
-  if (await link.isVisible().catch(() => false)) {
-    await link.click();
-    return;
+  await expect.poll(async () => {
+    const links = page.getByRole("link", { name, exact: true });
+    const count = await links.count();
+    for (let i = 0; i < count; i += 1) {
+      if (await links.nth(i).isVisible().catch(() => false)) return "link";
+    }
+    if (await page.getByRole("button", { name: "פתיחת תפריט", exact: true }).isVisible().catch(() => false)) {
+      return "menu";
+    }
+    return "waiting";
+  }).not.toBe("waiting");
+  const links = page.getByRole("link", { name, exact: true });
+  const count = await links.count();
+  for (let i = 0; i < count; i += 1) {
+    const link = links.nth(i);
+    if (await link.isVisible().catch(() => false)) {
+      await link.click();
+      return;
+    }
   }
   const menuButton = page.getByRole("button", { name: "פתיחת תפריט", exact: true });
+  await expect(menuButton).toBeVisible();
   await menuButton.click();
   await expect(page.locator("#nav-links")).toHaveClass(/active/);
-  await link.click();
+  await links.first().click();
+}
+
+function routeCardByTitle(page, title) {
+  return page.locator(".route-card").filter({
+    has: page.getByRole("heading", { name: title, exact: true }),
+  });
 }
 
 async function expectSectionScrolledIntoView(page, selector) {
@@ -39,13 +61,13 @@ test("/routes lists recommended routes", async ({ page }) => {
   await expect(page).toHaveTitle(/מסלולים מומלצים/);
   await expect(page.locator(".breadcrumbs")).toContainText("מפה");
   await expect(page.locator(".breadcrumbs")).toContainText("מסלולים");
-  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "בניאס" })).toBeVisible();
+  await expect(routeCardByTitle(page, "סובב בית הלל")).toBeVisible();
+  await expect(routeCardByTitle(page, "בניאס וגן הצפון")).toBeVisible();
   await expect(
-    page.locator(".route-card", { hasText: "סובב בית הלל" }).locator(".route-card__badges"),
+    routeCardByTitle(page, "סובב בית הלל").locator(".route-card__badges"),
   ).toContainText("מעגלי");
   await expect(
-    page.locator(".route-card", { hasText: "מסע בעקבות כובשי הגולן" }).locator(".route-card__badges"),
+    routeCardByTitle(page, "מסע בעקבות כובשי הגולן").locator(".route-card__badges"),
   ).toContainText("חד כיווני");
   const imageLocator = page.locator(".route-card__photo");
   await expect(imageLocator).not.toHaveCount(0);
@@ -103,7 +125,7 @@ test("front page routes nav opens /routes without blank client transition", asyn
   await clickTopbarLink(page, "מסלולים");
   await expect(page).toHaveURL(/\/routes\/$/);
   await expect(page.locator(".routes-page")).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
+  await expect(routeCardByTitle(page, "סובב בית הלל")).toBeVisible();
 });
 
 test("front page contact hash then routes nav still opens /routes", async ({ page }) => {
@@ -120,7 +142,7 @@ test("front page contact hash then routes nav still opens /routes", async ({ pag
   await clickTopbarLink(page, "מסלולים");
   await expect(page).toHaveURL(/\/routes\/$/);
   await expect(page.locator(".routes-page")).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
+  await expect(routeCardByTitle(page, "סובב בית הלל")).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
 
