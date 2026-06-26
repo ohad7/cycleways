@@ -1,5 +1,19 @@
 import assert from "node:assert/strict";
 import {
+  featureFlagStringValue,
+  getFeatureFlags,
+} from "@cycleways/core/config/featureFlags.js";
+import {
+  ROUTE_NETWORK_BUCKETS,
+  ROUTE_NETWORK_PRESENTATION_VARIANTS,
+  normalizeRouteNetworkPresentationVariant,
+  routeGeometryCasingStyleForPresentation,
+  routeGeometryLineStyleForPresentation,
+  routeNetworkLineStyleForPresentation,
+  routeNetworkPresentation,
+} from "@cycleways/core/map/networkPresentation.js";
+import {
+  addRouteNetworkLayers,
   buildRouteGeometryFeatureCollection,
   buildRoutePointDragPreviewFeatureCollection,
   buildRouteDirectionPulseFeatureCollection,
@@ -7,6 +21,13 @@ import {
   buildRecommendedRoutesFeatureCollection,
   getRouteFeatureColor,
   normalizeVideoCursorVariant,
+  prepareRouteNetworkFeatures,
+  ROUTE_GEOMETRY_CASING_LAYER_ID,
+  ROUTE_GEOMETRY_LAYER_ID,
+  ROUTE_NETWORK_CASING_LAYER_ID,
+  ROUTE_NETWORK_LINE_LAYER_ID,
+  ROUTE_NETWORK_SHADOW_LAYER_ID,
+  syncRouteGeometryLayer,
   VIDEO_CURSOR_DEFAULT_VARIANT,
   VIDEO_CURSOR_VARIANTS,
 } from "../src/map/mapLayers.js";
@@ -25,6 +46,276 @@ assert.equal(
   getRouteFeatureColor({ properties: { roadType: "road", stroke: "#8f2424" } }),
   "rgb(138, 147, 158)",
 );
+
+{
+  const typedBold = routeNetworkPresentation({ variant: "typed-bold" });
+  assert.equal(typedBold.variant, ROUTE_NETWORK_PRESENTATION_VARIANTS.TYPED_BOLD);
+  assert.equal(typedBold.cased, false, "typed-bold stays a single core line");
+  assert.notEqual(
+    typedBold.colors[ROUTE_NETWORK_BUCKETS.PRIMARY],
+    "rgb(101, 170, 162)",
+    "typed-bold uses a stronger adaptive palette",
+  );
+  assert.deepEqual(
+    routeNetworkLineStyleForPresentation(typedBold).paint["line-width"],
+    [
+      "interpolate",
+      ["linear"],
+      ["zoom"],
+      8,
+      3.2,
+      11,
+      4.2,
+      14,
+      5.6,
+    ],
+    "typed-bold uses zoom-aware line width",
+  );
+}
+
+{
+  const idleBuildFocus = routeNetworkPresentation({ variant: "build-focus" });
+  assert.equal(
+    idleBuildFocus.variant,
+    ROUTE_NETWORK_PRESENTATION_VARIANTS.CURRENT,
+    "build-focus is current until route building starts",
+  );
+  const activeBuildFocus = routeNetworkPresentation({
+    variant: "build-focus",
+    routeBuilding: true,
+  });
+  assert.equal(activeBuildFocus.variant, "build-focus");
+  assert.equal(activeBuildFocus.cased, true, "build-focus is cased while building");
+}
+
+{
+  const singleBlue = routeNetworkPresentation({ variant: "single-blue" });
+  assert.equal(
+    new Set(Object.values(singleBlue.colors)).size,
+    1,
+    "single-blue intentionally collapses typed colors",
+  );
+  assert.equal(
+    normalizeRouteNetworkPresentationVariant("missing"),
+    "current",
+    "unknown network variant falls back to current",
+  );
+}
+
+{
+  const casedRoute = routeGeometryCasingStyleForPresentation("cased");
+  assert.ok(casedRoute, "cased built route has a casing style");
+  assert.equal(
+    routeGeometryCasingStyleForPresentation("current"),
+    null,
+    "current built route has no casing style",
+  );
+}
+
+{
+  assert.equal(
+    featureFlagStringValue(
+      "routeNetworkPresentation",
+      ["current", "typed-bold"],
+      "typed-bold",
+    ),
+    "typed-bold",
+    "string flags return their default when no window is present",
+  );
+  const previousWindow = globalThis.window;
+  globalThis.window = {
+    location: {
+      search: "",
+    },
+    CYCLEWAYS_FEATURE_FLAGS: {
+      routeNetworkPresentation: "typed-cased",
+    },
+  };
+  assert.equal(
+    getFeatureFlags().routeNetworkPresentation,
+    "typed-cased",
+    "global string flag is used when no query param is present",
+  );
+  globalThis.window = {
+    location: {
+      search: "",
+    },
+    CYCLEWAYS_FEATURE_FLAGS: {
+      routeNetworkPresentation: "not-valid",
+    },
+  };
+  assert.equal(
+    getFeatureFlags().routeNetworkPresentation,
+    "typed-cased",
+    "invalid global string flag falls back to the default",
+  );
+  globalThis.window = {
+    location: {
+      search: "?networkStyle=single-blue&routeStyle=bright-blue&networkScheme=gray-map-saturated",
+    },
+    CYCLEWAYS_FEATURE_FLAGS: {
+      routeNetworkPresentation: "typed-cased",
+      routeGeometryPresentation: "current",
+      routeNetworkColorScheme: "outdoors-balanced",
+    },
+  };
+  const queryFlags = getFeatureFlags();
+  assert.equal(
+    queryFlags.routeNetworkPresentation,
+    "single-blue",
+    "networkStyle query param wins over global values",
+  );
+  assert.equal(
+    queryFlags.routeGeometryPresentation,
+    "bright-blue",
+    "routeStyle query param maps to routeGeometryPresentation",
+  );
+  assert.equal(
+    queryFlags.routeNetworkColorScheme,
+    "gray-map-saturated",
+    "networkScheme query param maps to routeNetworkColorScheme",
+  );
+  globalThis.window = {
+    location: {
+      search: "?networkStyle=bad-value&routeNetworkPresentation=typed-cased",
+    },
+    CYCLEWAYS_FEATURE_FLAGS: {
+      routeNetworkPresentation: "single-blue",
+    },
+  };
+  assert.equal(
+    getFeatureFlags().routeNetworkPresentation,
+    "typed-cased",
+    "long query param is used when the short alias is invalid",
+  );
+  if (previousWindow === undefined) {
+    delete globalThis.window;
+  } else {
+    globalThis.window = previousWindow;
+  }
+}
+
+class FakeMap {
+  constructor() {
+    this.layers = new Map();
+    this.sources = new Map();
+  }
+
+  addSource(id, source) {
+    this.sources.set(id, {
+      ...source,
+      setData: (data) => {
+        this.sources.set(id, { ...this.sources.get(id), data });
+      },
+    });
+  }
+
+  getSource(id) {
+    return this.sources.get(id);
+  }
+
+  removeSource(id) {
+    this.sources.delete(id);
+  }
+
+  addLayer(layer, before) {
+    this.layers.set(layer.id, { ...layer, before });
+  }
+
+  getLayer(id) {
+    return this.layers.get(id);
+  }
+
+  removeLayer(id) {
+    this.layers.delete(id);
+  }
+}
+
+{
+  const geoJson = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [35, 33],
+            [35.1, 33.1],
+          ],
+        },
+        properties: { name: "typed", stroke: "#0288d1" },
+      },
+    ],
+  };
+  const currentMap = new FakeMap();
+  addRouteNetworkLayers(currentMap, prepareRouteNetworkFeatures(geoJson));
+  assert.ok(currentMap.getLayer(ROUTE_NETWORK_LINE_LAYER_ID));
+  assert.equal(
+    currentMap.getLayer(ROUTE_NETWORK_CASING_LAYER_ID),
+    undefined,
+    "current network presentation does not add casing",
+  );
+
+  const casedMap = new FakeMap();
+  const options = { variant: "typed-cased" };
+  casedMap.addLayer({ id: ROUTE_GEOMETRY_LAYER_ID, type: "line" });
+  addRouteNetworkLayers(
+    casedMap,
+    prepareRouteNetworkFeatures(geoJson, options),
+    options,
+  );
+  assert.ok(
+    casedMap.getLayer(ROUTE_NETWORK_SHADOW_LAYER_ID),
+    "typed-cased adds network shadow",
+  );
+  assert.ok(
+    casedMap.getLayer(ROUTE_NETWORK_CASING_LAYER_ID),
+    "typed-cased adds network casing",
+  );
+  assert.deepEqual(
+    casedMap.getLayer(ROUTE_NETWORK_LINE_LAYER_ID).paint["line-width"],
+    routeNetworkPresentation(options).coreWidth,
+    "typed-cased network core uses variant width expression",
+  );
+  assert.equal(
+    casedMap.getLayer(ROUTE_NETWORK_LINE_LAYER_ID).before,
+    ROUTE_GEOMETRY_LAYER_ID,
+    "route network is inserted below built route geometry when both exist",
+  );
+}
+
+{
+  const fakeMap = new FakeMap();
+  const route = [
+    { lng: 35, lat: 33 },
+    { lng: 35.1, lat: 33.1 },
+  ];
+  syncRouteGeometryLayer(fakeMap, route, null, { variant: "cased" });
+  assert.ok(fakeMap.getLayer(ROUTE_GEOMETRY_CASING_LAYER_ID));
+  assert.deepEqual(
+    fakeMap.getLayer(ROUTE_GEOMETRY_LAYER_ID).paint["line-width"],
+    routeGeometryLineStyleForPresentation("cased").paint["line-width"],
+    "cased route geometry uses zoom-aware core width",
+  );
+  syncRouteGeometryLayer(fakeMap, route, null, { variant: "orange" });
+  assert.equal(
+    fakeMap.getLayer(ROUTE_GEOMETRY_LAYER_ID).paint["line-color"],
+    "#f97316",
+    "emphasized route geometry variants update the built-route color",
+  );
+  assert.equal(
+    fakeMap.getLayer(ROUTE_GEOMETRY_CASING_LAYER_ID).paint["line-color"],
+    routeGeometryCasingStyleForPresentation("orange").paint["line-color"],
+    "switching between cased route variants refreshes casing paint",
+  );
+  syncRouteGeometryLayer(fakeMap, route, null, { variant: "current" });
+  assert.equal(
+    fakeMap.getLayer(ROUTE_GEOMETRY_CASING_LAYER_ID),
+    undefined,
+    "switching route geometry back to current removes casing",
+  );
+}
 
 {
   const geometry = [

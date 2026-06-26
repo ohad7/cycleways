@@ -6,6 +6,7 @@ export const JSON_ASSETS = {
   "public-data/map-manifest.json": require("../../../../apps/mobile/assets/data/public-data/map-manifest.json"),
   "public-data/bike_roads.geojson": require("../../../../apps/mobile/assets/data/public-data/bike_roads.geojson.json"),
   "public-data/segments.json": require("../../../../apps/mobile/assets/data/public-data/segments.json"),
+  "public-data/route-catalog.json": require("../../../../apps/mobile/assets/data/public-data/route-catalog.json"),
   "public-data/cw-base-index.json": require("../../../../apps/mobile/assets/data/public-data/cw-base-index.json"),
   "public-data/base-routing-shards/manifest.json": require("../../../../apps/mobile/assets/data/public-data/base-routing-shards/manifest.json"),
 };

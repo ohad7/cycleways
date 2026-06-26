@@ -35,6 +35,7 @@ export default function FeaturedElevation() {
       distance={routeState.distance}
       cursorFraction={Number.isFinite(videoCursor?.fraction) ? videoCursor.fraction : null}
       cursorPlaying={videoPlaying}
+      cursorInfoVisible={Number.isFinite(videoCursor?.fraction)}
       onElevationHover={handleHover}
       onElevationSelect={handleSelect}
     />

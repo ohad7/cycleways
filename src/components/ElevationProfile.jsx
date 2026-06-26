@@ -16,16 +16,36 @@ export default function ElevationProfile({
   onElevationSelect = null,
   cursorFraction = null,
   cursorPlaying = false,
+  cursorInfoVisible = false,
   externalCursorActive = false,
 }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
   const animatorMarkerEnabledRef = useRef(true);
   const [hoverInfo, setHoverInfo] = useState(null);
   const [markerPoint, setMarkerPoint] = useState(null);
-  const progressPath = useMemo(
-    () => markerPoint ? elevationProgressPath(profile?.elevationData, markerPoint.x) : "",
-    [markerPoint, profile],
+  const usesExternalCursor = externalCursorActive || !animator;
+  const displayedMarkerPoint = useMemo(
+    () =>
+      usesExternalCursor
+        ? markerPointForFraction(profile, cursorFraction)
+        : markerPoint,
+    [cursorFraction, markerPoint, profile, usesExternalCursor],
   );
+  const progressPath = useMemo(
+    () =>
+      displayedMarkerPoint
+        ? elevationProgressPath(profile?.elevationData, displayedMarkerPoint.x)
+        : "",
+    [displayedMarkerPoint, profile],
+  );
+  const cursorInfo = useMemo(
+    () =>
+      cursorInfoVisible
+        ? hoverPayloadForFraction(profile, cursorFraction)
+        : null,
+    [cursorFraction, cursorInfoVisible, profile],
+  );
+  const displayedInfo = hoverInfo || cursorInfo;
 
   useEffect(() => {
     if (!animator) return undefined;
@@ -40,14 +60,6 @@ export default function ElevationProfile({
     });
     return unsubscribe;
   }, [animator, externalCursorActive, profile]);
-
-  // Featured pages have no animator. Planner playback opts into the same
-  // external cursor while the map route is playing or scrubbed.
-  useEffect(() => {
-    if (animator && !externalCursorActive) return undefined;
-    setMarkerPoint(markerPointForFraction(profile, cursorFraction));
-    return undefined;
-  }, [animator, cursorFraction, externalCursorActive, profile]);
 
   useEffect(() => {
     animatorMarkerEnabledRef.current = true;
@@ -94,22 +106,22 @@ export default function ElevationProfile({
     <div className="elevation-profile">
       <h4>גרף גובה (Elevation Profile)</h4>
       <div className="elevation-chart" id="elevation-chart">
-        {hoverInfo && (
+        {displayedInfo && (
           <div className="react-elevation-hover-info">
             <span>
-              📍 מרחק: {(hoverInfo.distance / 1000).toFixed(1)} km • גובה:{" "}
-              {Math.round(hoverInfo.elevation)} m
+              📍 מרחק: {(displayedInfo.distance / 1000).toFixed(1)} km • גובה:{" "}
+              {Math.round(displayedInfo.elevation)} m
             </span>
-            {hoverInfo.gradeClass && Number.isFinite(hoverInfo.grade) && (
+            {displayedInfo.gradeClass && Number.isFinite(displayedInfo.grade) && (
               <span
                 className="react-grade-chip"
                 style={{
-                  background: `${GRADE_COLORS[hoverInfo.gradeClass]}2e`,
-                  color: GRADE_COLORS[hoverInfo.gradeClass],
-                  borderColor: `${GRADE_COLORS[hoverInfo.gradeClass]}66`,
+                  background: `${GRADE_COLORS[displayedInfo.gradeClass]}2e`,
+                  color: GRADE_COLORS[displayedInfo.gradeClass],
+                  borderColor: `${GRADE_COLORS[displayedInfo.gradeClass]}66`,
                 }}
               >
-                {GRADE_LABELS_HE[hoverInfo.gradeClass]} · {hoverInfo.grade.toFixed(1)}%
+                {GRADE_LABELS_HE[displayedInfo.gradeClass]} · {displayedInfo.grade.toFixed(1)}%
               </span>
             )}
           </div>
@@ -161,15 +173,15 @@ export default function ElevationProfile({
             />
           )}
         </svg>
-        {markerPoint && (
+        {displayedMarkerPoint && (
           <div
             className={[
               "elevation-progress-head-pulse",
               cursorPlaying ? "elevation-progress-head-pulse--playing" : "",
             ].filter(Boolean).join(" ")}
             style={{
-              left: `${markerPoint.x}%`,
-              top: `${markerPoint.y}%`,
+              left: `${displayedMarkerPoint.x}%`,
+              top: `${displayedMarkerPoint.y}%`,
             }}
             aria-hidden="true"
           >
@@ -220,6 +232,12 @@ function markerPointForFraction(profile, fraction) {
     x: Math.max(2.4, Math.min(97.6, point.distancePercent)),
     y: 100 - point.heightPercent,
   };
+}
+
+function hoverPayloadForFraction(profile, fraction) {
+  const x = elevationCursorX(fraction);
+  if (x === null || !profile?.elevationData) return null;
+  return buildElevationHoverPayload(findClosestElevationPoint(profile.elevationData, x));
 }
 
 function elevationProgressPath(elevationData, xPercent) {

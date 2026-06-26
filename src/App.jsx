@@ -45,6 +45,10 @@ import { getDistance } from "@cycleways/core/utils/distance.js";
 import { dataPointId } from "@cycleways/core/data/dataMarkers.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
 import { routeSliceForRange } from "./components/frontPanel/routeSlice.js";
+import {
+  ROUTE_NETWORK_BUCKETS,
+  routeNetworkPresentation,
+} from "@cycleways/core/map/networkPresentation.js";
 import "./react-app.css";
 
 // Code-split non-critical UI so it stays out of the initial bundle: the
@@ -59,6 +63,59 @@ const SendToPhone = lazy(() => import("./components/SendToPhone.jsx"));
 // `hovered` tier in recommendedRoutes). Flip to true to restore the old behavior.
 const DISCOVER_HOVER_FITS_CAMERA = false;
 const SHOW_DRAFT_RESTORE_BANNER = true;
+const SHOW_MAP_PRESENTATION_EXPERIMENT_CONTROL = false;
+
+const NETWORK_STYLE_OPTIONS = [
+  { label: "Current", value: "current" },
+  { label: "Typed bold", value: "typed-bold" },
+  { label: "Typed cased", value: "typed-cased" },
+  { label: "Build focus", value: "build-focus" },
+  { label: "Single blue", value: "single-blue" },
+];
+
+const ROUTE_STYLE_OPTIONS = [
+  { label: "Current", value: "current" },
+  { label: "Cased teal", value: "cased" },
+  { label: "Bright blue", value: "bright-blue" },
+  { label: "Orange", value: "orange" },
+  { label: "Dark", value: "dark" },
+  { label: "Magenta", value: "magenta" },
+];
+
+const NETWORK_SCHEME_OPTIONS = [
+  { label: "Auto", value: "auto" },
+  { label: "Current muted", value: "current-muted" },
+  { label: "Outdoors balanced", value: "outdoors-balanced" },
+  { label: "Topo contrast", value: "topo-high-contrast" },
+  { label: "Gray saturated", value: "gray-map-saturated" },
+  { label: "Aerial bright", value: "aerial-bright" },
+];
+
+const BASE_MAP_PROFILE_OPTIONS = [
+  { label: "Mapbox outdoors", value: "mapbox-outdoors" },
+  { label: "Topo", value: "topo" },
+  { label: "Gray", value: "gray" },
+  { label: "Aerial", value: "aerial" },
+];
+
+const MAP_PRESENTATION_CONTROL_CONFIG = {
+  networkStyle: {
+    queryParam: "networkStyle",
+    options: NETWORK_STYLE_OPTIONS,
+  },
+  routeStyle: {
+    queryParam: "routeStyle",
+    options: ROUTE_STYLE_OPTIONS,
+  },
+  networkScheme: {
+    queryParam: "networkScheme",
+    options: NETWORK_SCHEME_OPTIONS,
+  },
+  baseMapProfile: {
+    queryParam: "baseMapProfile",
+    options: BASE_MAP_PROFILE_OPTIONS,
+  },
+};
 
 function samePadding(a, b) {
   if (a === b) return true;
@@ -69,6 +126,45 @@ function samePadding(a, b) {
     a.bottom === b.bottom &&
     a.left === b.left
   );
+}
+
+function optionIndexForValue(options, value) {
+  const index = options.findIndex((option) => option.value === value);
+  return index >= 0 ? index : 0;
+}
+
+function writeMapPresentationQueryValue(key, value) {
+  if (typeof window === "undefined") return;
+  const config = MAP_PRESENTATION_CONTROL_CONFIG[key];
+  if (!config) return;
+  const url = new URL(window.location.href);
+  url.searchParams.set(config.queryParam, value);
+  window.history.replaceState(null, "", url.toString());
+}
+
+function cyclewaysNetworkFitGeometry(geoJsonData) {
+  const geometry = [];
+  for (const feature of geoJsonData?.features || []) {
+    const rawCoordinates = feature?.geometry?.coordinates;
+    if (feature?.geometry?.type === "LineString") {
+      appendFitCoordinates(geometry, rawCoordinates);
+    } else if (feature?.geometry?.type === "MultiLineString") {
+      for (const line of rawCoordinates || []) {
+        appendFitCoordinates(geometry, line);
+      }
+    }
+  }
+  return geometry;
+}
+
+function appendFitCoordinates(target, coordinates) {
+  for (const coord of coordinates || []) {
+    const lng = Number(coord?.[0]);
+    const lat = Number(coord?.[1]);
+    if (Number.isFinite(lng) && Number.isFinite(lat)) {
+      target.push({ lng, lat });
+    }
+  }
 }
 
 function App() {
@@ -123,6 +219,19 @@ function App() {
   } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
 
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
+  const [networkStyleIndex, setNetworkStyleIndex] = useState(() =>
+    optionIndexForValue(NETWORK_STYLE_OPTIONS, featureFlags.routeNetworkPresentation),
+  );
+  const [routeStyleIndex, setRouteStyleIndex] = useState(() =>
+    optionIndexForValue(ROUTE_STYLE_OPTIONS, featureFlags.routeGeometryPresentation),
+  );
+  const [networkSchemeIndex, setNetworkSchemeIndex] = useState(() =>
+    optionIndexForValue(NETWORK_SCHEME_OPTIONS, featureFlags.routeNetworkColorScheme),
+  );
+  const [baseMapProfileIndex, setBaseMapProfileIndex] = useState(() =>
+    optionIndexForValue(BASE_MAP_PROFILE_OPTIONS, featureFlags.routeNetworkBaseMapProfile),
+  );
+  const fitNetworkOnBuildRef = useRef(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sheetSnap, setSheetSnap] = useState("peek");
   const [isMobileSheet, setIsMobileSheet] = useState(() =>
@@ -280,6 +389,9 @@ function App() {
 
   const handlePeekBuild = useCallback(() => {
     const openBuildDetails = panel.state === "build" || routePointCount > 0;
+    if (panel.state !== "build") {
+      fitNetworkOnBuildRef.current = true;
+    }
     handlePanelStateChange("build");
     setSheetSnap(openBuildDetails ? "half" : "peek");
   }, [handlePanelStateChange, panel.state, routePointCount]);
@@ -332,6 +444,62 @@ function App() {
     [mapUi.dataMarkerFocus],
   );
   const plannerRouteReady = routeState.geometry.length >= 2;
+  const routeBuildingActive =
+    routePointCount > 0 ||
+    (routeState.pendingPoints || []).length > 0 ||
+    Boolean(routePointDragPreview);
+  const selectedNetworkStyle =
+    NETWORK_STYLE_OPTIONS[networkStyleIndex]?.value ||
+    NETWORK_STYLE_OPTIONS[0].value;
+  const selectedRouteStyle =
+    ROUTE_STYLE_OPTIONS[routeStyleIndex]?.value || ROUTE_STYLE_OPTIONS[0].value;
+  const selectedNetworkScheme =
+    NETWORK_SCHEME_OPTIONS[networkSchemeIndex]?.value ||
+    NETWORK_SCHEME_OPTIONS[0].value;
+  const selectedBaseMapProfile =
+    BASE_MAP_PROFILE_OPTIONS[baseMapProfileIndex]?.value ||
+    BASE_MAP_PROFILE_OPTIONS[0].value;
+  const mapPresentationActive = panel.state === "build";
+  const effectiveNetworkPresentationVariant = mapPresentationActive
+    ? selectedNetworkStyle
+    : "current";
+  const effectiveRouteGeometryPresentation = mapPresentationActive
+    ? selectedRouteStyle
+    : "current";
+  const effectiveNetworkColorScheme = mapPresentationActive
+    ? selectedNetworkScheme
+    : "auto";
+  const effectiveNetworkBaseMapProfile = mapPresentationActive
+    ? selectedBaseMapProfile
+    : "mapbox-outdoors";
+  const legendPresentation = useMemo(
+    () => routeNetworkPresentation({
+      baseMapProfile: effectiveNetworkBaseMapProfile,
+      colorScheme: effectiveNetworkColorScheme,
+      routeBuilding: routeBuildingActive,
+      variant: effectiveNetworkPresentationVariant,
+    }),
+    [
+      effectiveNetworkBaseMapProfile,
+      effectiveNetworkColorScheme,
+      effectiveNetworkPresentationVariant,
+      routeBuildingActive,
+    ],
+  );
+  const handleMapPresentationControlChange = useCallback((key, index) => {
+    const config = MAP_PRESENTATION_CONTROL_CONFIG[key];
+    if (!config) return;
+    const nextIndex = Math.max(
+      0,
+      Math.min(config.options.length - 1, Number(index) || 0),
+    );
+    const option = config.options[nextIndex] || config.options[0];
+    if (key === "networkStyle") setNetworkStyleIndex(nextIndex);
+    if (key === "routeStyle") setRouteStyleIndex(nextIndex);
+    if (key === "networkScheme") setNetworkSchemeIndex(nextIndex);
+    if (key === "baseMapProfile") setBaseMapProfileIndex(nextIndex);
+    writeMapPresentationQueryValue(key, option.value);
+  }, []);
   const plannerCueSlides = useMemo(
     () => routeVideoCueSlides(null, routeState),
     [
@@ -396,6 +564,26 @@ function App() {
     });
     if (req) setFitRequest(req);
   }, [getMapOverlayScope, plannerFitRegistry]);
+  const networkFitGeometry = useMemo(
+    () => cyclewaysNetworkFitGeometry(state.assets?.geoJsonData),
+    [state.assets?.geoJsonData],
+  );
+  const handleFrontPanelStateChange = useCallback((to) => {
+    if (to === "build" && panel.state !== "build") {
+      fitNetworkOnBuildRef.current = true;
+    }
+    handlePanelStateChange(to);
+  }, [handlePanelStateChange, panel.state]);
+
+  useEffect(() => {
+    if (panel.state !== "build" || !fitNetworkOnBuildRef.current) {
+      return undefined;
+    }
+    fitNetworkOnBuildRef.current = false;
+    if (networkFitGeometry.length < 2) return undefined;
+    const timer = window.setTimeout(() => requestFit(networkFitGeometry), 80);
+    return () => window.clearTimeout(timer);
+  }, [networkFitGeometry, panel.state, requestFit]);
 
   useFitRouteOnPlay({
     isPlaying: plannerPlayback.isPlaying,
@@ -753,7 +941,40 @@ function App() {
 
                 <MapLegend
                   hasBrokenRoute={hasBrokenRoute}
+                  presentation={legendPresentation}
                 />
+                {SHOW_MAP_PRESENTATION_EXPERIMENT_CONTROL && (
+                  <MapPresentationExperimentControl
+                    active={mapPresentationActive}
+                    controls={[
+                      {
+                        key: "networkStyle",
+                        label: "Network style",
+                        index: networkStyleIndex,
+                        options: NETWORK_STYLE_OPTIONS,
+                      },
+                      {
+                        key: "routeStyle",
+                        label: "Built route",
+                        index: routeStyleIndex,
+                        options: ROUTE_STYLE_OPTIONS,
+                      },
+                      {
+                        key: "networkScheme",
+                        label: "Network colors",
+                        index: networkSchemeIndex,
+                        options: NETWORK_SCHEME_OPTIONS,
+                      },
+                      {
+                        key: "baseMapProfile",
+                        label: "Map profile",
+                        index: baseMapProfileIndex,
+                        options: BASE_MAP_PROFILE_OPTIONS,
+                      },
+                    ]}
+                    onChange={handleMapPresentationControlChange}
+                  />
+                )}
 
                 <DataMarkerCard
                   marker={mapUi.selectedDataMarker}
@@ -796,9 +1017,14 @@ function App() {
                   routeGeometry={routeState.geometry}
                   routePointDragPreview={routePointDragPreview}
                   routePoints={displayedRoutePoints}
+                  routeBuilding={routeBuildingActive}
+                  networkBaseMapProfile={effectiveNetworkBaseMapProfile}
+                  networkColorScheme={effectiveNetworkColorScheme}
+                  networkPresentationVariant={effectiveNetworkPresentationVariant}
                   locationFix={mapUi.locationFix}
                   searchHighlight={mapUi.searchHighlight}
                   selectedRoutePointIndex={mapUi.selectedRoutePointIndex}
+                  routeGeometryPresentation={effectiveRouteGeometryPresentation}
                   videoCursor={plannerRouteReady ? plannerPlayback.cursor : null}
                   videoCursorVariant="progress-head-pulse"
                   videoPlaying={plannerPlayback.isPlaying}
@@ -905,7 +1131,7 @@ function App() {
               >
                 <FrontPanel
                   panelState={panel.state}
-                  onPanelStateChange={handlePanelStateChange}
+                  onPanelStateChange={handleFrontPanelStateChange}
                   routeStatus={routeState.status}
                   collapsed={panelCollapsed}
                   onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
@@ -962,6 +1188,7 @@ function App() {
                           distance={routeState.distance}
                           cursorFraction={plannerPlayback.cursor?.fraction ?? null}
                           cursorPlaying={plannerPlayback.isPlaying}
+                          cursorInfoVisible={plannerPlayback.hasCursor}
                           externalCursorActive={Boolean(
                             plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
                           )}
@@ -1043,21 +1270,75 @@ function ErrorState({ error }) {
   );
 }
 
-function MapLegend({ hasBrokenRoute }) {
+function MapPresentationExperimentControl({ active, controls, onChange }) {
+  return (
+    <div className="map-presentation-control" dir="ltr">
+      <div className="map-presentation-control__top">
+        <span className="map-presentation-control__label">Map style test</span>
+        <strong className="map-presentation-control__value">
+          {active ? "Active in Build" : "Switch to Build"}
+        </strong>
+      </div>
+      {controls.map((control) => {
+        const option = control.options[control.index] || control.options[0];
+        const queryParam =
+          MAP_PRESENTATION_CONTROL_CONFIG[control.key]?.queryParam ||
+          control.key;
+        return (
+          <label className="map-presentation-control__row" key={control.key}>
+            <span className="map-presentation-control__row-head">
+              <span className="map-presentation-control__label">
+                {control.label}
+              </span>
+              <strong className="map-presentation-control__value">
+                {option.label}
+              </strong>
+            </span>
+            <input
+              aria-label={`${control.label} option`}
+              className="map-presentation-control__range"
+              type="range"
+              min="0"
+              max={Math.max(0, control.options.length - 1)}
+              step="1"
+              value={control.index}
+              onChange={(event) => onChange(control.key, event.target.value)}
+            />
+            <code className="map-presentation-control__query">
+              {queryParam}={option.value}
+            </code>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function MapLegend({ hasBrokenRoute, presentation }) {
+  const colors = presentation?.colors || {};
   return (
     <div className="legend-container">
       <div className="legend-box open" id="legend-box">
         <div className="legend-title">סוגי דרכים</div>
         <div className="legend-item">
-          <div className="legend-color paved-trail" />
+          <div
+            className="legend-color paved-trail"
+            style={{ backgroundColor: colors[ROUTE_NETWORK_BUCKETS.PRIMARY] }}
+          />
           <div className="legend-label">שביל סלול</div>
         </div>
         <div className="legend-item">
-          <div className="legend-color dirt-trail" />
+          <div
+            className="legend-color dirt-trail"
+            style={{ backgroundColor: colors[ROUTE_NETWORK_BUCKETS.TRAIL] }}
+          />
           <div className="legend-label">שביל עפר</div>
         </div>
         <div className="legend-item">
-          <div className="legend-color road" />
+          <div
+            className="legend-color road"
+            style={{ backgroundColor: colors[ROUTE_NETWORK_BUCKETS.ROAD] }}
+          />
           <div className="legend-label">כביש</div>
         </div>
       </div>

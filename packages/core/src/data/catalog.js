@@ -1,15 +1,21 @@
 import { primaryPoiImage } from "./poiTypes.js";
+import { getJsonAsset } from "../platform/assets.js";
 
+const ROUTE_CATALOG_PATH = "public-data/route-catalog.json";
+const EMPTY_ROUTE_CATALOG = { version: 1, entries: [] };
 let catalogPromise = null;
+
+export async function loadRouteCatalogWithAssetLoader(loadJsonAsset = getJsonAsset, options = {}) {
+  const catalog = await loadJsonAsset(ROUTE_CATALOG_PATH, options);
+  return catalog && typeof catalog === "object" ? catalog : EMPTY_ROUTE_CATALOG;
+}
 
 export function loadCatalog() {
   if (catalogPromise) return catalogPromise;
-  const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
-  catalogPromise = fetch(`${base}public-data/route-catalog.json`)
-    .then((r) => (r.ok ? r.json() : { version: 1, entries: [] }))
+  catalogPromise = loadRouteCatalogWithAssetLoader()
     .catch((err) => {
       console.warn("loadCatalog failed", err);
-      return { version: 1, entries: [] };
+      return EMPTY_ROUTE_CATALOG;
     });
   return catalogPromise;
 }

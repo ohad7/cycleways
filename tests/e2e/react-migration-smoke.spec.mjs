@@ -214,11 +214,13 @@ test("production supports segment hover, segment clicks, and sharing", async ({ 
     { layerId: ROUTE_GEOMETRY_LAYER_ID },
   );
   expect(routeGeometryPaint).toMatchObject({
-    "line-color": "#006699",
-    "line-width": 5,
+    "line-color": "#102a43",
   });
+  expect(routeGeometryPaint["line-width"]).toEqual(
+    expect.arrayContaining([5.2, 6.8, 8.4]),
+  );
   expect(routeGeometryPaint["line-opacity"]).toEqual(
-    expect.arrayContaining([0.3, 0.9]),
+    expect.arrayContaining([0.42, 1]),
   );
   expect(
     await page.evaluate(

@@ -63,10 +63,27 @@ on when its driving prop is absent.
 | `selectedRoutePointIndex` | index of the selected waypoint |
 | `elevationHover` | elevation-profile cursor payload that drives the on-map pulse |
 | `searchHighlight` | a searched location to highlight |
+| `networkPresentationVariant` | route-network visual experiment; accepts `current`, `typed-bold`, `typed-cased`, `build-focus`, or `single-blue`; defaults to `current` |
+| `networkColorScheme` | route-network color-scheme override; accepts `auto` or a named scheme; defaults to `auto` |
+| `networkBaseMapProfile` | base-map profile for adaptive network colors; defaults to `mapbox-outdoors` |
+| `routeBuilding` | whether the planner is actively building/editing; used by `build-focus` network presentation |
+| `routeGeometryPresentation` | built-route visual style; accepts `current`, `cased`, `bright-blue`, `orange`, `dark`, or `magenta`; defaults to `current` |
 | `videoCursor` | featured-route video playback cursor position on the route |
 | `videoCursorVariant` | featured-route cursor style; accepts options `1`-`6` or named variants; defaults to `progress-head-pulse` |
 | `videoPlaying` | whether featured-route video playback is active; used for cursor animation |
 | `animator` | the route-direction pulse driver (ticks progress along the route) |
+
+Web accepts shareable query-param overrides for the presentation props:
+
+- `networkStyle=current|typed-bold|typed-cased|build-focus|single-blue`
+- `routeStyle=current|cased|bright-blue|orange|dark|magenta`
+- `networkScheme=auto|current-muted|outdoors-balanced|topo-high-contrast|gray-map-saturated|aerial-bright`
+- `baseMapProfile=mapbox-outdoors|topo|gray|aerial`
+
+The longer internal names (`routeNetworkPresentation`,
+`routeGeometryPresentation`, `routeNetworkColorScheme`,
+`routeNetworkBaseMapProfile`) are also accepted. Query params take precedence
+over `window.CYCLEWAYS_FEATURE_FLAGS`.
 
 ## Inputs — commands (imperative intent as a changing prop)
 

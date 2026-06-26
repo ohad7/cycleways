@@ -110,6 +110,11 @@ function MapSurface({
   searchHighlight,
   recommendedRoutes = null,
   segmentHighlight = null,
+  networkBaseMapProfile = "mapbox-outdoors",
+  networkColorScheme = "auto",
+  networkPresentationVariant = "current",
+  routeBuilding = false,
+  routeGeometryPresentation = "current",
   selectedRoutePointIndex = null,
   videoCursor = null,
   videoCursorVariant = VIDEO_CURSOR_DEFAULT_VARIANT,
@@ -300,9 +305,18 @@ function MapSurface({
       return undefined;
     }
 
-    const features = prepareRouteNetworkFeatures(geoJsonData);
+    const networkPresentationOptions = {
+      baseMapProfile: networkBaseMapProfile,
+      colorScheme: networkColorScheme,
+      routeBuilding,
+      variant: networkPresentationVariant,
+    };
+    const features = prepareRouteNetworkFeatures(
+      geoJsonData,
+      networkPresentationOptions,
+    );
     networkSegmentsRef.current = buildNetworkSegments(features);
-    addRouteNetworkLayers(map, features);
+    addRouteNetworkLayers(map, features, networkPresentationOptions);
 
     const handleMouseMove = (event) => {
       const closest = findClosestRouteSegment(
@@ -375,7 +389,16 @@ function MapSurface({
         clearRouteNetworkLayers(map);
       });
     };
-  }, [geoJsonData, status, caps.networkLayers, caps.hoverPreview]);
+  }, [
+    geoJsonData,
+    networkBaseMapProfile,
+    networkColorScheme,
+    networkPresentationVariant,
+    routeBuilding,
+    status,
+    caps.networkLayers,
+    caps.hoverPreview,
+  ]);
 
   useEffect(() => {
     if (status !== "ready") return;
@@ -390,8 +413,16 @@ function MapSurface({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || status !== "ready" || !caps.routeGeometryLayer) return;
-    syncRouteGeometryLayer(map, routeGeometry, routePointDragPreview);
-  }, [routeGeometry, routePointDragPreview, status, caps.routeGeometryLayer]);
+    syncRouteGeometryLayer(map, routeGeometry, routePointDragPreview, {
+      variant: routeGeometryPresentation,
+    });
+  }, [
+    routeGeometry,
+    routePointDragPreview,
+    routeGeometryPresentation,
+    status,
+    caps.routeGeometryLayer,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -7,6 +7,7 @@ export default function PanelElevationGraph({
   distance,
   cursorFraction,
   cursorPlaying,
+  cursorInfoVisible,
   externalCursorActive,
   onElevationHover,
   onElevationSelect,
@@ -24,6 +25,7 @@ export default function PanelElevationGraph({
         distance={distance}
         cursorFraction={cursorFraction}
         cursorPlaying={cursorPlaying}
+        cursorInfoVisible={cursorInfoVisible}
         externalCursorActive={externalCursorActive}
         onElevationHover={onElevationHover}
         onElevationSelect={onElevationSelect}

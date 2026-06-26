@@ -5,32 +5,91 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-test("/routes lists every recommended catalog route", async ({ page }) => {
+function routeCardByTitle(page, title) {
+  return page.locator(".route-card").filter({
+    has: page.getByRole("heading", { name: title, exact: true }),
+  });
+}
+
+async function expectedRouteFitPadding(page) {
+  return page.locator(".fv-route-map-playback").evaluate((section) => {
+    const map = section.querySelector(".fv-route-stage-map");
+    if (!map) return null;
+    const mapRect = map.getBoundingClientRect();
+    const edges = ["top", "right", "bottom", "left"];
+    const padding = { top: 24, right: 24, bottom: 24, left: 24 };
+    const rectsOverlap = (a, b) =>
+      a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    const nearestEdge = (rect) => {
+      const gaps = {
+        top: rect.top - mapRect.top,
+        bottom: mapRect.bottom - rect.bottom,
+        left: rect.left - mapRect.left,
+        right: mapRect.right - rect.right,
+      };
+      return edges.reduce((best, edge) => (gaps[edge] < gaps[best] ? edge : best), "top");
+    };
+    const insetForEdge = (edge, rect) => {
+      if (edge === "top") return rect.bottom - mapRect.top;
+      if (edge === "bottom") return mapRect.bottom - rect.top;
+      if (edge === "left") return rect.right - mapRect.left;
+      if (edge === "right") return mapRect.right - rect.left;
+      return 0;
+    };
+    const overlays = [
+      { el: section.querySelector(".fv-video-controls"), side: "bottom" },
+      { el: section.querySelector(".fv-video-poi-preview") },
+    ];
+    for (const { el, side } of overlays) {
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      if (
+        rect.width === 0 ||
+        rect.height === 0 ||
+        el.getAttribute("aria-hidden") === "true" ||
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        !rectsOverlap(mapRect, rect)
+      ) {
+        continue;
+      }
+      const edge = edges.includes(side) ? side : nearestEdge(rect);
+      padding[edge] = Math.max(padding[edge], Math.max(0, insetForEdge(edge, rect)) + 16);
+    }
+    return padding;
+  });
+}
+
+test("/routes lists every recommended catalog route", async ({ page, isMobile }) => {
   await page.goto("/routes");
   await expect(page.locator(".routes-page")).toBeVisible();
   await expect(page.locator(".routes-page__eyebrow .breadcrumbs")).toContainText("מפה");
   await expect(page.locator(".routes-page__eyebrow .breadcrumbs")).toContainText("מסלולים");
+  if (isMobile) {
+    await page.getByRole("button", { name: "סינון וחיפוש" }).click();
+  }
   await expect(page.getByLabel("התחלה", { exact: true })).toBeVisible();
   await expect(page.getByLabel("עובר דרך", { exact: true })).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "בניאס" })).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "הירדן ההיסטורי" })).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "מסע בעקבות כובשי הגולן" })).toBeVisible();
+  await expect(routeCardByTitle(page, "סובב בית הלל")).toBeVisible();
+  await expect(routeCardByTitle(page, "בניאס וגן הצפון")).toBeVisible();
+  await expect(routeCardByTitle(page, "הירדן ההיסטורי")).toBeVisible();
+  await expect(routeCardByTitle(page, "מסע בעקבות כובשי הגולן")).toBeVisible();
 
   await expect(
-    page.locator(".route-card", { hasText: "סובב דפנה" }).locator(".route-card__badges"),
+    routeCardByTitle(page, "סובב דפנה").locator(".route-card__badges"),
   ).toContainText("מעגלי");
   await expect(
-    page.locator(".route-card", { hasText: "מסע בעקבות כובשי הגולן" }).locator(".route-card__badges"),
+    routeCardByTitle(page, "מסע בעקבות כובשי הגולן").locator(".route-card__badges"),
   ).toContainText("חד כיווני");
   await expect(
-    page.locator(".route-card", { hasText: "הירדן ההיסטורי" }).locator(".route-card__stats"),
+    routeCardByTitle(page, "הירדן ההיסטורי").locator(".route-card__stats"),
   ).toContainText("בינוני");
   await expect(
-    page.locator(".route-card", { hasText: "הירדן ההיסטורי" }).locator(".route-card__stats"),
+    routeCardByTitle(page, "הירדן ההיסטורי").locator(".route-card__stats"),
   ).toContainText("שטח");
   await expect(
-    page.locator(".route-card", { hasText: "בניאס וגן הצפון" }).locator(".route-card__stats"),
+    routeCardByTitle(page, "בניאס וגן הצפון").locator(".route-card__stats"),
   ).toContainText("סלול/שטח");
   const firstThreeRouteTitles = await page
     .locator(".route-card__header h2, .route-card__header h3")
@@ -53,9 +112,9 @@ test("/routes filters by possible start location", async ({ page, isMobile }) =>
   await startLocation.press("Enter");
 
   await expect(page.locator(".route-card")).toHaveCount(2);
-  await expect(page.locator(".route-card", { hasText: "בניאס וגן הצפון" })).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "סובב דפנה" })).toBeVisible();
-  await expect(page.locator(".route-card", { hasText: "סובב בית הלל" })).toHaveCount(0);
+  await expect(routeCardByTitle(page, "בניאס וגן הצפון")).toBeVisible();
+  await expect(routeCardByTitle(page, "סובב דפנה")).toBeVisible();
+  await expect(routeCardByTitle(page, "סובב בית הלל")).toHaveCount(0);
 });
 
 test("/routes filters by goes-through location", async ({ page, isMobile }) => {
@@ -69,12 +128,12 @@ test("/routes filters by goes-through location", async ({ page, isMobile }) => {
   await throughLocation.press("Enter");
 
   await expect(page.locator(".route-card")).toHaveCount(1);
-  await expect(page.locator(".route-card", { hasText: "הירדן ההיסטורי" })).toBeVisible();
+  await expect(routeCardByTitle(page, "הירדן ההיסטורי")).toBeVisible();
 });
 
 test("/routes card opens planner and detail actions", async ({ page }) => {
   await page.goto("/routes");
-  const historic = page.locator(".route-card", { hasText: "הירדן ההיסטורי" });
+  const historic = routeCardByTitle(page, "הירדן ההיסטורי");
   await expect(historic.getByRole("link", { name: "פתח במפה" })).toHaveAttribute("href", /route=/);
   await expect(
     historic.getByRole("link", { name: "פתח פרטי מסלול: הירדן ההיסטורי" }),
@@ -147,12 +206,7 @@ test("/routes generic route renders from snapshot without planner assets", async
     ) || [];
     return fitEvents.at(-1)?.options?.padding || null;
   });
-  expect(routeFitPadding).toEqual({
-    top: 24,
-    right: 24,
-    bottom: 108,
-    left: 24,
-  });
+  expect(routeFitPadding).toEqual(await expectedRouteFitPadding(page));
   await expect(page.locator(".fv-route-warning-card")).toHaveCount(4);
   await expect(page.locator(".fv-route-warnings")).toContainText("ירדן מערב כפר בלום");
   await expect(page.locator(".fv-route-warnings")).toContainText("אגמון החולה גישה מזרח");

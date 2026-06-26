@@ -773,6 +773,63 @@ input {
   isolation: isolate;
 }
 
+.map-presentation-control {
+  position: absolute;
+  left: 24px;
+  bottom: 132px;
+  z-index: 1150;
+  width: min(400px, calc(100% - 48px));
+  padding: 10px 12px;
+  border: 1px solid rgba(24, 38, 49, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(24, 38, 49, 0.16);
+  color: #172631;
+}
+
+.map-presentation-control__top,
+.map-presentation-control__row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.map-presentation-control__top {
+  margin-bottom: 6px;
+}
+
+.map-presentation-control__row {
+  display: block;
+  padding-top: 6px;
+  border-top: 1px solid rgba(24, 38, 49, 0.1);
+}
+
+.map-presentation-control__label {
+  color: #52616f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.map-presentation-control__value {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.map-presentation-control__range {
+  width: 100%;
+  margin: 6px 0 2px;
+}
+
+.map-presentation-control__query {
+  display: block;
+  color: #52616f;
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .map-container > .react-shell__state {
   position: absolute;
   inset: 0;
