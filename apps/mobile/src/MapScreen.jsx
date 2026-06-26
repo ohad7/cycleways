@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
-  Easing,
   Keyboard,
   Modal,
   PanResponder,
@@ -10,7 +8,6 @@ import {
   Share,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import Mapbox, {
@@ -46,13 +43,12 @@ import DataMarkerImages, {
 import ElevationProfileChart from "./ElevationProfileChart.jsx";
 import RichText from "./RichText.jsx";
 import PlannerSheet from "./planner/PlannerSheet.jsx";
+import TopSearch from "./planner/TopSearch.jsx";
+import MapControls from "./planner/MapControls.jsx";
 import Icon from "./planner/Icon.jsx";
 import { palette } from "./planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
-import {
-  getRoutePlannerPresentation,
-  getRouteWarningPresentation,
-} from "@cycleways/core/ui/routePlannerPresentation.js";
+import { getRoutePlannerPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 // Legacy planner icon names -> Ionicons names (same set the web Icon.jsx uses).
 const CHROME_IONICON = {
@@ -61,10 +57,6 @@ const CHROME_IONICON = {
   redo: "arrow-redo-outline",
   trash: "trash-outline",
 };
-
-// Short placeholder for the narrow native search box (the shared web one,
-// "ישוב/עיר, לדוגמא: דפנה", is too long to fit on the phone).
-const SEARCH_PLACEHOLDER = "חיפוש יישוב/עיר";
 
 // Publishable token, inlined by Expo at build from EXPO_PUBLIC_MAPBOX_TOKEN.
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "";
@@ -262,7 +254,6 @@ export default function MapScreen() {
     handleRoutePointDragEnd,
     routePointDragPreview,
     handleDataMarkerClick,
-    handleDataPointFocus,
     handleSelectedDataMarkerClear,
     handleAddDataMarkerToRoute,
     handleViewportIdle,
@@ -514,14 +505,6 @@ export default function MapScreen() {
         mapUi.selectedRoutePointIndex,
       ),
     [mapUi.selectedRoutePointIndex, routeState],
-  );
-  const warningPresentation = useMemo(
-    () =>
-      getRouteWarningPresentation(
-        routeState.activeDataPoints,
-        mapUi.selectedDataMarker,
-      ),
-    [mapUi.selectedDataMarker, routeState.activeDataPoints],
   );
 
   const handleMapPress = useCallback(
@@ -830,15 +813,17 @@ export default function MapScreen() {
           <CircleLayer id="route-points-circle" style={ROUTE_POINT_STYLE} />
         </ShapeSource>
       </MapView>
-      <MapLegendOverlay
-        hasBrokenRoute={routePresentation.hasBrokenRoute}
-        warningPresentation={warningPresentation}
-        onWarningFocus={handleDataPointFocus}
+      <TopSearch
+        query={mapUi.searchQuery}
+        onChange={handleSearchQueryChange}
+        onSubmit={submitSearch}
+        busy={mapUi.searchStatus === "searching"}
+        error={mapUi.searchError}
       />
-      <RoutePlannerChrome
-        onSearchChange={handleSearchQueryChange}
-        onSearchSubmit={submitSearch}
-        mapUi={mapUi}
+      <MapControls
+        onLocate={handleLocatePress}
+        onFit={fitRoute}
+        following={locationState.following}
       />
       <DataMarkerCard
         marker={mapUi.selectedDataMarker}
@@ -892,119 +877,6 @@ export default function MapScreen() {
   );
 }
 
-function MapLegendOverlay({ hasBrokenRoute, warningPresentation, onWarningFocus }) {
-  const [warningsOpen, setWarningsOpen] = useState(false);
-  const warningPulseOpacity = useRef(new Animated.Value(1)).current;
-  const hasWarnings = warningPresentation.count > 0;
-
-  useEffect(() => {
-    if (!hasBrokenRoute && !hasWarnings) return undefined;
-
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(warningPulseOpacity, {
-          toValue: 0.7,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(warningPulseOpacity, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    animation.start();
-
-    return () => {
-      animation.stop();
-      warningPulseOpacity.setValue(1);
-    };
-  }, [hasBrokenRoute, hasWarnings, warningPulseOpacity]);
-
-  return (
-    <View pointerEvents="box-none" style={styles.legendContainer}>
-      <View style={styles.legendBox}>
-        <Text style={styles.legendTitle}>סוגי דרכים</Text>
-        <LegendItem color="rgb(101, 170, 162)" label="שביל סלול" />
-        <LegendItem color="rgb(174, 144, 103)" label="שביל עפר" />
-        <LegendItem color="rgb(138, 147, 158)" label="כביש" />
-      </View>
-      {hasBrokenRoute ? (
-        <Animated.View
-          style={[
-            styles.issueChip,
-            styles.issueChipRoute,
-            { opacity: warningPulseOpacity },
-          ]}
-        >
-          <Text style={styles.issueChipText}>⚠️ מסלול שבור</Text>
-        </Animated.View>
-      ) : null}
-      {hasWarnings ? (
-        <>
-          <Animated.View
-            style={[
-              styles.issueChip,
-              styles.issueChipData,
-              { opacity: warningPulseOpacity },
-            ]}
-          >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={warningPresentation.toggleLabel}
-              onPress={() => setWarningsOpen((current) => !current)}
-              style={({ pressed }) => [
-                styles.issueChipPressable,
-                pressed ? styles.issueChipPressed : null,
-              ]}
-            >
-              <Text style={styles.issueChipText}>
-                {warningPresentation.toggleLabel}
-              </Text>
-            </Pressable>
-          </Animated.View>
-          {warningsOpen ? (
-            <View style={styles.warningDetails}>
-              {warningPresentation.groups.map((warningGroup) => (
-                <Pressable
-                  key={warningGroup.segmentName}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${warningGroup.label} — מיקוד במפה`}
-                  onPress={() => onWarningFocus?.(warningGroup.warnings?.[0])}
-                  style={({ pressed }) => [
-                    styles.warningDetailItem,
-                    { backgroundColor: warningGroup.backgroundColor },
-                    pressed ? styles.issueChipPressed : null,
-                  ]}
-                >
-                  <Text style={styles.warningDetailLabel}>
-                    {warningGroup.label}
-                  </Text>
-                  <Text style={styles.warningDetailIcons}>
-                    {warningGroup.icons.join(" ")}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-        </>
-      ) : null}
-    </View>
-  );
-}
-
-function LegendItem({ color, label }) {
-  return (
-    <View style={styles.legendItem}>
-      <View style={[styles.legendSwatch, { backgroundColor: color }]} />
-      <Text style={styles.legendLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function RouteDirectionPulseLayer({ animator, routeGeometry }) {
   const [routePulse, setRoutePulse] = useState(EMPTY_FEATURE_COLLECTION);
 
@@ -1039,50 +911,6 @@ function RouteDirectionPulseLayer({ animator, routeGeometry }) {
   );
 }
 
-function RoutePlannerChrome({
-  onSearchChange,
-  onSearchSubmit,
-  mapUi,
-}) {
-  const searchBusy = mapUi.searchStatus === "searching";
-
-  return (
-    <View pointerEvents="box-none" style={styles.topChrome}>
-      <View style={styles.searchPanel}>
-        <ChromeButton
-          compact
-          disabled={searchBusy}
-          icon={searchBusy ? null : "search"}
-          label={searchBusy ? "..." : ""}
-          onPress={onSearchSubmit}
-          primary
-          accessibilityLabel="חיפוש"
-          buttonStyle={styles.searchButton}
-        />
-        <TextInput
-          accessibilityLabel="חיפוש מיקום"
-          autoCapitalize="none"
-          autoCorrect={false}
-          onChangeText={onSearchChange}
-          onSubmitEditing={onSearchSubmit}
-          placeholder={SEARCH_PLACEHOLDER}
-          placeholderTextColor="#52616f"
-          returnKeyType="search"
-          style={styles.searchInput}
-          textAlign="right"
-          value={mapUi.searchQuery}
-        />
-      </View>
-      {mapUi.searchError ? (
-        <Text style={styles.searchError}>{mapUi.searchError}</Text>
-      ) : null}
-    </View>
-  );
-}
-
-// Native equivalent of the web BuildPanel: eyebrow context + title, an
-// undo/redo/clear tool row, a stats block, route status, warnings, the
-// elevation profile, and a summary/share footer.
 function BuildPanelContent({
   animator,
   canDownload,
@@ -1682,189 +1510,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   hint: { fontSize: 15, textAlign: "center", color: "#333" },
-  topChrome: {
-    position: "absolute",
-    top: 15,
-    // Start to the right of the legend (left:15 + width:104 + gap) so the
-    // search box and controls never overlap it, on any screen width.
-    left: 127,
-    right: 15,
-    gap: 4,
-  },
-  searchPanel: {
-    flexDirection: "row-reverse",
-    alignItems: "stretch",
-    // Fill the chrome band (right of the legend) instead of a fixed width, so
-    // it shrinks on narrow phones rather than overrunning the legend, while
-    // staying right-aligned and capped on wide screens.
-    alignSelf: "flex-end",
-    width: "100%",
-    maxWidth: 320,
-  },
-  searchInput: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 36,
-    borderTopLeftRadius: 4,
-    borderBottomLeftRadius: 4,
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-    paddingHorizontal: 12,
-    color: "#172026",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderColor: "#e0e0e0",
-    borderWidth: 2,
-    borderRightWidth: 0,
-    fontSize: 14,
-    writingDirection: "rtl",
-  },
-  searchButton: {
-    minWidth: 40,
-    width: 40,
-    minHeight: 36,
-    height: 36,
-    paddingHorizontal: 0,
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 4,
-    borderColor: "#4682B4",
-    borderWidth: 2,
-    borderLeftWidth: 0,
-  },
-  searchError: {
-    alignSelf: "flex-end",
-    maxWidth: 280,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
-    color: "#991b1b",
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  legendContainer: {
-    position: "absolute",
-    top: 15,
-    left: 15,
-    width: 104,
-    alignItems: "flex-start",
-  },
-  legendBox: {
-    width: "100%",
-    minWidth: 104,
-    padding: 6,
-    borderRadius: 4,
-    backgroundColor: "#f8f8f8",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-  },
-  legendTitle: {
-    marginBottom: 4,
-    color: "#333333",
-    fontSize: 11,
-    fontWeight: "800",
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  legendItem: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    gap: 5,
-    marginBottom: 3,
-  },
-  legendSwatch: {
-    width: 14,
-    height: 3,
-    borderRadius: 1,
-  },
-  legendLabel: {
-    color: "#333333",
-    fontSize: 10,
-    fontWeight: "600",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  issueChip: {
-    width: "100%",
-    minHeight: 32,
-    marginTop: 8,
-    marginBottom: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 4,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.22,
-    shadowRadius: 6,
-  },
-  issueChipPressed: {
-    opacity: 0.82,
-  },
-  issueChipPressable: {
-    width: "100%",
-    minHeight: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  issueChipText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "800",
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  issueChipRoute: {
-    backgroundColor: "#ff9800",
-    shadowColor: "#ff9800",
-  },
-  issueChipData: {
-    backgroundColor: "#c35353",
-    shadowColor: "#f44336",
-  },
-  warningDetails: {
-    width: "100%",
-    marginTop: 3,
-    gap: 4,
-  },
-  warningDetailItem: {
-    width: "100%",
-    minHeight: 32,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-    overflow: "hidden",
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    shadowColor: "#f44336",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.22,
-    shadowRadius: 6,
-  },
-  warningDetailLabel: {
-    flexShrink: 1,
-    flexGrow: 1,
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "800",
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  warningDetailIcons: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "800",
-  },
   markerCardWrap: {
     position: "absolute",
     left: 12,
