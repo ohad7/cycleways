@@ -27,11 +27,14 @@ export { buildRouteDirectionPulseFeatureCollection };
 import {
   ROUTE_NETWORK_SOURCE_ID,
   ROUTE_NETWORK_LINE_LAYER_ID,
+  ROUTE_NETWORK_CASING_LAYER_ID,
+  ROUTE_NETWORK_SHADOW_LAYER_ID,
   ROUTE_NETWORK_HIT_LAYER_ID,
   ROUTE_NETWORK_HOVER_LAYER_ID,
   ROUTE_NETWORK_FOCUS_LAYER_ID,
   ROUTE_GEOMETRY_SOURCE_ID,
   ROUTE_GEOMETRY_LAYER_ID,
+  ROUTE_GEOMETRY_CASING_LAYER_ID,
   ROUTE_GEOMETRY_HIT_LAYER_ID,
   ROUTE_POINTS_SOURCE_ID,
   ROUTE_POINTS_LAYER_ID,
@@ -84,6 +87,17 @@ import {
   VIDEO_CURSOR_STYLE,
   VIDEO_CURSOR_SYMBOL_STYLE,
 } from "@cycleways/core/map/mapStyles.js";
+import {
+  normalizeRouteGeometryPresentationVariant,
+  routeGeometryCasingStyleForPresentation,
+  routeGeometryLineStyleForPresentation,
+  routeNetworkCasingStyleForPresentation,
+  routeNetworkFocusStyleForPresentation,
+  routeNetworkHoverStyleForPresentation,
+  routeNetworkLineStyleForPresentation,
+  routeNetworkPresentation,
+  routeNetworkShadowStyleForPresentation,
+} from "@cycleways/core/map/networkPresentation.js";
 import { registerPoiEmojiImages } from "@cycleways/core/map/emojiMarkerImage.js";
 
 const DATA_MARKER_ICON_FILES = {
@@ -115,6 +129,8 @@ export function getRouteNetworkLayerIds() {
     ROUTE_NETWORK_FOCUS_LAYER_ID,
     ROUTE_NETWORK_HOVER_LAYER_ID,
     ROUTE_NETWORK_LINE_LAYER_ID,
+    ROUTE_NETWORK_CASING_LAYER_ID,
+    ROUTE_NETWORK_SHADOW_LAYER_ID,
   ];
 }
 
@@ -149,6 +165,9 @@ export function clearRouteGeometryLayers(map) {
   }
   if (map.getLayer(ROUTE_GEOMETRY_LAYER_ID)) {
     map.removeLayer(ROUTE_GEOMETRY_LAYER_ID);
+  }
+  if (map.getLayer(ROUTE_GEOMETRY_CASING_LAYER_ID)) {
+    map.removeLayer(ROUTE_GEOMETRY_CASING_LAYER_ID);
   }
   if (map.getSource(ROUTE_GEOMETRY_SOURCE_ID)) {
     map.removeSource(ROUTE_GEOMETRY_SOURCE_ID);
@@ -185,10 +204,11 @@ function setRouteNetworkFilter(map, layerId, segmentName) {
   );
 }
 
-export function addRouteNetworkLayers(map, features) {
+export function addRouteNetworkLayers(map, features, presentationOptions = {}) {
   if (!map || features.length === 0) return;
 
   clearRouteNetworkLayers(map);
+  const presentation = routeNetworkPresentation(presentationOptions);
 
   map.addSource(ROUTE_NETWORK_SOURCE_ID, {
     type: "geojson",
@@ -198,35 +218,91 @@ export function addRouteNetworkLayers(map, features) {
     },
   });
 
-  map.addLayer({
-    id: ROUTE_NETWORK_LINE_LAYER_ID,
-    type: "line",
-    source: ROUTE_NETWORK_SOURCE_ID,
-    ...ROUTE_NETWORK_LINE_STYLE,
-  });
+  const beforeNetworkOverlayLayer = [
+    RECOMMENDED_ROUTES_LAYER_ID,
+    ROUTE_GEOMETRY_CASING_LAYER_ID,
+    ROUTE_GEOMETRY_LAYER_ID,
+    ROUTE_GEOMETRY_HIT_LAYER_ID,
+    ROUTE_POINTS_LAYER_ID,
+    DATA_MARKERS_CIRCLE_LAYER_ID,
+    DATA_MARKERS_LAYER_ID,
+  ].find((id) => map.getLayer(id));
 
-  map.addLayer({
-    id: ROUTE_NETWORK_HIT_LAYER_ID,
-    type: "line",
-    source: ROUTE_NETWORK_SOURCE_ID,
-    ...ROUTE_NETWORK_HIT_STYLE,
-  });
+  if (presentation.cased) {
+    map.addLayer(
+      {
+        id: ROUTE_NETWORK_SHADOW_LAYER_ID,
+        type: "line",
+        source: ROUTE_NETWORK_SOURCE_ID,
+        ...routeNetworkShadowStyleForPresentation(presentation),
+      },
+      beforeNetworkOverlayLayer,
+    );
 
-  map.addLayer({
-    id: ROUTE_NETWORK_HOVER_LAYER_ID,
-    type: "line",
-    source: ROUTE_NETWORK_SOURCE_ID,
-    filter: ["==", ["get", "name"], ""],
-    ...ROUTE_NETWORK_HOVER_STYLE,
-  });
+    map.addLayer(
+      {
+        id: ROUTE_NETWORK_CASING_LAYER_ID,
+        type: "line",
+        source: ROUTE_NETWORK_SOURCE_ID,
+        ...routeNetworkCasingStyleForPresentation(presentation),
+      },
+      beforeNetworkOverlayLayer,
+    );
+  }
 
-  map.addLayer({
-    id: ROUTE_NETWORK_FOCUS_LAYER_ID,
-    type: "line",
-    source: ROUTE_NETWORK_SOURCE_ID,
-    filter: ["==", ["get", "name"], ""],
-    ...ROUTE_NETWORK_FOCUS_STYLE,
-  });
+  map.addLayer(
+    {
+      id: ROUTE_NETWORK_LINE_LAYER_ID,
+      type: "line",
+      source: ROUTE_NETWORK_SOURCE_ID,
+      ...(
+        presentation.variant === "current"
+          ? ROUTE_NETWORK_LINE_STYLE
+          : routeNetworkLineStyleForPresentation(presentation)
+      ),
+    },
+    beforeNetworkOverlayLayer,
+  );
+
+  map.addLayer(
+    {
+      id: ROUTE_NETWORK_HIT_LAYER_ID,
+      type: "line",
+      source: ROUTE_NETWORK_SOURCE_ID,
+      ...ROUTE_NETWORK_HIT_STYLE,
+    },
+    beforeNetworkOverlayLayer,
+  );
+
+  map.addLayer(
+    {
+      id: ROUTE_NETWORK_HOVER_LAYER_ID,
+      type: "line",
+      source: ROUTE_NETWORK_SOURCE_ID,
+      filter: ["==", ["get", "name"], ""],
+      ...(
+        presentation.variant === "current"
+          ? ROUTE_NETWORK_HOVER_STYLE
+          : routeNetworkHoverStyleForPresentation(presentation)
+      ),
+    },
+    beforeNetworkOverlayLayer,
+  );
+
+  map.addLayer(
+    {
+      id: ROUTE_NETWORK_FOCUS_LAYER_ID,
+      type: "line",
+      source: ROUTE_NETWORK_SOURCE_ID,
+      filter: ["==", ["get", "name"], ""],
+      ...(
+        presentation.variant === "current"
+          ? ROUTE_NETWORK_FOCUS_STYLE
+          : routeNetworkFocusStyleForPresentation(presentation)
+      ),
+    },
+    beforeNetworkOverlayLayer,
+  );
 }
 
 export function syncRoutePointLayers(map, routePoints, selectedRoutePointIndex) {
@@ -272,11 +348,20 @@ export function syncRoutePointLayers(map, routePoints, selectedRoutePointIndex) 
   });
 }
 
-export function syncRouteGeometryLayer(map, routeGeometry, dragPreview = null) {
+export function syncRouteGeometryLayer(
+  map,
+  routeGeometry,
+  dragPreview = null,
+  presentationOptions = {},
+) {
   const data = buildRouteGeometryFeatureCollection(routeGeometry, dragPreview);
+  const variant = normalizeRouteGeometryPresentationVariant(
+    presentationOptions.variant,
+  );
 
   if (map.getSource(ROUTE_GEOMETRY_SOURCE_ID)) {
     map.getSource(ROUTE_GEOMETRY_SOURCE_ID).setData(data);
+    syncRouteGeometryStyleLayers(map, variant);
     addRouteGeometryHitLayer(map);
     return;
   }
@@ -286,14 +371,49 @@ export function syncRouteGeometryLayer(map, routeGeometry, dragPreview = null) {
     data,
   });
 
+  syncRouteGeometryStyleLayers(map, variant);
+  addRouteGeometryHitLayer(map);
+}
+
+function syncRouteGeometryStyleLayers(map, variant) {
+  const casedStyle = routeGeometryCasingStyleForPresentation(variant);
+  const lineStyle =
+    routeGeometryLineStyleForPresentation(variant) || ROUTE_GEOMETRY_LINE_STYLE;
+  const beforeInteractiveLayer = [
+    ROUTE_GEOMETRY_HIT_LAYER_ID,
+    ROUTE_POINTS_LAYER_ID,
+    DATA_MARKERS_CIRCLE_LAYER_ID,
+    DATA_MARKERS_LAYER_ID,
+  ].find((id) => map.getLayer(id));
+
+  if (map.getLayer(ROUTE_GEOMETRY_CASING_LAYER_ID)) {
+    map.removeLayer(ROUTE_GEOMETRY_CASING_LAYER_ID);
+  }
+
+  if (casedStyle) {
+    map.addLayer(
+      {
+        id: ROUTE_GEOMETRY_CASING_LAYER_ID,
+        type: "line",
+        source: ROUTE_GEOMETRY_SOURCE_ID,
+        ...casedStyle,
+      },
+      map.getLayer(ROUTE_GEOMETRY_LAYER_ID)
+        ? ROUTE_GEOMETRY_LAYER_ID
+        : beforeInteractiveLayer,
+    );
+  }
+
+  if (map.getLayer(ROUTE_GEOMETRY_LAYER_ID)) {
+    map.removeLayer(ROUTE_GEOMETRY_LAYER_ID);
+  }
+
   map.addLayer({
     id: ROUTE_GEOMETRY_LAYER_ID,
     type: "line",
     source: ROUTE_GEOMETRY_SOURCE_ID,
-    ...ROUTE_GEOMETRY_LINE_STYLE,
-  });
-
-  addRouteGeometryHitLayer(map);
+    ...lineStyle,
+  }, beforeInteractiveLayer);
 }
 
 export function buildRouteGeometryFeatureCollection(routeGeometry, dragPreview = null) {
@@ -534,7 +654,12 @@ export function clearRecommendedRoutesLayer(map) {
 export function setBuiltRouteVisibility(map, visible) {
   if (!map) return;
   const visibility = visible ? "visible" : "none";
-  const layerIds = [ROUTE_GEOMETRY_LAYER_ID, ROUTE_GEOMETRY_HIT_LAYER_ID, ROUTE_POINTS_LAYER_ID];
+  const layerIds = [
+    ROUTE_GEOMETRY_CASING_LAYER_ID,
+    ROUTE_GEOMETRY_LAYER_ID,
+    ROUTE_GEOMETRY_HIT_LAYER_ID,
+    ROUTE_POINTS_LAYER_ID,
+  ];
   for (const id of layerIds) {
     if (map.getLayer(id)) {
       map.setLayoutProperty(id, "visibility", visibility);

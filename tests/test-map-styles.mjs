@@ -4,6 +4,9 @@ import { ROUTE_NETWORK_LINE_LAYER_ID } from "../src/map/mapLayers.js";
 
 // IDs live in mapStyles and are re-exported by mapLayers (back-compat).
 assert.equal(typeof styles.ROUTE_NETWORK_LINE_LAYER_ID, "string");
+assert.equal(typeof styles.ROUTE_NETWORK_CASING_LAYER_ID, "string");
+assert.equal(typeof styles.ROUTE_NETWORK_SHADOW_LAYER_ID, "string");
+assert.equal(typeof styles.ROUTE_GEOMETRY_CASING_LAYER_ID, "string");
 assert.equal(
   styles.ROUTE_NETWORK_LINE_LAYER_ID,
   ROUTE_NETWORK_LINE_LAYER_ID,

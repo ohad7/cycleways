@@ -19,10 +19,13 @@ export const VIDEO_CURSOR_PROGRESS_SOURCE_ID = "video-cursor-progress-source";
 // Layer IDs
 // ---------------------------------------------------------------------------
 export const ROUTE_NETWORK_LINE_LAYER_ID = "cycleways-network-line";
+export const ROUTE_NETWORK_CASING_LAYER_ID = "cycleways-network-casing";
+export const ROUTE_NETWORK_SHADOW_LAYER_ID = "cycleways-network-shadow";
 export const ROUTE_NETWORK_HIT_LAYER_ID = "cycleways-network-hit";
 export const ROUTE_NETWORK_HOVER_LAYER_ID = "cycleways-network-hover";
 export const ROUTE_NETWORK_FOCUS_LAYER_ID = "cycleways-network-focus";
 export const ROUTE_GEOMETRY_LAYER_ID = "react-route-geometry-line";
+export const ROUTE_GEOMETRY_CASING_LAYER_ID = "react-route-geometry-casing";
 export const ROUTE_GEOMETRY_HIT_LAYER_ID = "react-route-geometry-hit";
 export const ROUTE_POINTS_LAYER_ID = "react-route-points-circle";
 export const ROUTE_POINT_DRAG_PREVIEW_LINE_CASING_LAYER_ID =
