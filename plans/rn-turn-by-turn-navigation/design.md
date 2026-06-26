@@ -3,10 +3,28 @@
 **Date:** 2026-06-26
 **Status:** in progress — foundation landed (catalog bundling, native link
 routing, `NavigationRoute` model + tests; Phases 1-3 of the implementation
-plan). The route-progress engine, cues, native location service, session hook,
-and navigation UI are still to come, and the navigation chrome (Phase 8) is
-gated on the `rn-mobile-web-parity` Phase 2.8b re-alignment so it builds on the
-current Build/Discover panel rather than the stale 2026-06-03 chrome.
+plan). **Both UI prerequisites are now DONE** (2026-06-27): the mobile-web
+parity re-align (`rn-mobile-web-parity` Phase 2.8b) and the native-UI reskin
+(`rn-mobile-native-ui` Phase 2.8c). So the navigation chrome (Phase 8) now has a
+current, native planner to build on. **Next task: Phase 4 (route-progress
+engine)** — pure core logic, no native rebuild, fast to TDD. The cues, native
+location service, session hook, and navigation UI follow.
+
+### Current native UI the nav mode builds on (read before Phase 8)
+`apps/mobile/src/MapScreen.jsx` renders a full-bleed `@rnmapbox/maps` map with
+the shared `useCyclewaysApp` state, plus chrome in `apps/mobile/src/planner/`:
+`PlannerSheet` (`@gorhom/bottom-sheet`, snap points peek/half/full, hosts a
+Discover/Build segmented toggle), `TopSearch` (top-pinned search pill),
+`MapControls` (top-right circular locate/fit/layers + legend popover),
+`DiscoverPanel`/`RouteCard` (catalog browser → loads a route via
+`handleSelectCatalogRoute`), `Icon` (Ionicons), `theme.js` (forest/cream
+palette). The map is full-bleed (no `SafeAreaView` wrapper — overlays use
+`useSafeAreaInsets`). Navigation mode should be a new sheet/overlay state in this
+structure (e.g. a `NavPanel` in `planner/`), reusing `theme.js`/`Icon`, and a
+"Start navigation" entry from the Build panel + a catalog route's context.
+Note: `@gorhom/bottom-sheet` groups its body as one a11y node — Maestro can only
+see the sheet header + non-sheet chrome; drive in-sheet content via coordinate
+taps + screenshots.
 
 ## Goal
 

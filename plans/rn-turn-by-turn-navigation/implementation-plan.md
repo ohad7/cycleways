@@ -18,11 +18,18 @@
 - **Phases 4-10 not started:** route progress engine, cue generation, native
   location service, navigation session hook, navigation UI, voice/haptics,
   universal links.
-- **Sequencing dependency:** the Phase 8 navigation UI must be built on the
-  re-aligned mobile-web Build/Discover panel, not the stale 2026-06-03 chrome.
-  Land `plans/rn-mobile-web-parity` **Phase 2.8b** first. The Discover/catalog
-  list from 2.8b is also the route picker that selects a catalog route to
-  navigate.
+- **Sequencing dependency — now CLEARED (2026-06-27):** the UI prerequisites are
+  done — `plans/rn-mobile-web-parity` **Phase 2.8b** (Discover/Build front panel)
+  and `plans/rn-mobile-native-ui` **Phase 2.8c** (native reskin: real gorhom
+  bottom sheet, full-bleed map, top-pinned search pill + map controls, Ionicons,
+  branded Discover cards with photos). The Phase 8 navigation UI builds on the
+  native chrome in `apps/mobile/src/planner/` (see the design doc's "Current
+  native UI" section). The Discover/catalog list is the route picker that selects
+  a catalog route to navigate.
+
+- **>>> NEXT TASK: Phase 4 (Route Progress Engine) <<<** — pure core logic in
+  `packages/core/src/navigation/`, TDD with `tests/*.mjs` in the `npm test`
+  chain, no native rebuild required. Start here.
 
 ## Phase 0 - Baseline Verification ✅ (done)
 

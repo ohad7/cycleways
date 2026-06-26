@@ -1,7 +1,14 @@
 # React Native Mobile Native UI Design
 
 **Date:** 2026-06-26
-**Status:** design (approved)
+**Status:** IMPLEMENTED (2026-06-27) on `codex/iphone-turn-by-turn`. See the
+implementation plan for the per-task commits and deferrals. What shipped: real
+`@gorhom/bottom-sheet` (peek/half/full) hosting the Discover/Build toggle; a
+full-bleed map; a top-pinned safe-area search pill + top-right circular
+locate/fit/layers controls with a legend popover; Ionicons throughout; branded
+Discover cards with real photo thumbnails, difficulty chips, meta + near-me;
+forest/cream palette. Native chrome lives in `apps/mobile/src/planner/`.
+Deferred: optional `BuildPanel` file extraction.
 **Phase:** 2.8c — native-feel UI/UX reskin, between mobile-web parity (2.8b) and
 turn-by-turn navigation (`rn-turn-by-turn-navigation` phases 4+).
 
