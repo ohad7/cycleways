@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "shardSchemaVersion": 1,
-  "generatedAt": "2026-05-27T01:23:16.053036Z",
+  "generatedAt": "2026-06-10T23:13:38.404494Z",
   "sourceRoutingSchemaVersion": 2,
   "defaultFormat": "compact",
   "routeShare": {
@@ -15,14 +15,14 @@
   },
   "summary": {
     "shards": 115,
-    "sourceNodes": 37583,
-    "sourceEdges": 48358,
-    "representedEdges": 48358,
-    "edgeReferences": 50556,
+    "sourceNodes": 37585,
+    "sourceEdges": 48365,
+    "representedEdges": 48365,
+    "edgeReferences": 50563,
     "duplicatedSourceEdges": 2024,
-    "compactShardBytes": 27708263,
-    "messagePackShardBytes": 23928507,
-    "compactBinaryShardBytes": 4827120
+    "compactShardBytes": 27712404,
+    "messagePackShardBytes": 23932223,
+    "compactBinaryShardBytes": 4828102
   },
   "shards": [
     {
@@ -722,8 +722,8 @@
       "formats": {
         "compact": {
           "path": "shards/g711_660.cwb",
-          "bytes": 84331,
-          "sha256": "2597ac7308735ee2f30da5ab78cdef1a6b89aec7b0fa6db7614b99774137572b"
+          "bytes": 84790,
+          "sha256": "c2bc191ef6b00adfcab407d844566f9d16ccd53e3f94bcaf5c38a0ea9b86fe20"
         }
       },
       "bounds": [
@@ -732,11 +732,11 @@
         35.6,
         33.05
       ],
-      "nodes": 777,
-      "edges": 977,
-      "compactBytes": 478671,
-      "messagePackBytes": 412963,
-      "compactBinaryBytes": 84331
+      "nodes": 779,
+      "edges": 980,
+      "compactBytes": 480595,
+      "messagePackBytes": 414678,
+      "compactBinaryBytes": 84790
     },
     {
       "id": "g711_661",
@@ -815,7 +815,7 @@
         "compact": {
           "path": "shards/g711_664.cwb",
           "bytes": 265227,
-          "sha256": "760298fb6e35c690bd0ed483aebb3a1a361a6d2bcdcb364a7a565664c6a60675"
+          "sha256": "c5d87b5d467c5f50271e28c3cc51cf6fd4f6206cdec66bbe2c3877e7c262ec47"
         }
       },
       "bounds": [
@@ -1044,8 +1044,8 @@
       "formats": {
         "compact": {
           "path": "shards/g712_664.cwb",
-          "bytes": 187036,
-          "sha256": "341d1d9cebb461efe4d3b74bab0cc287f6b69db39ceea0e000ac6886a6d55364"
+          "bytes": 187559,
+          "sha256": "1b12b18298270ee4f0e0c551b4dda39815b32e5ddcf4958781f20112a7b364b5"
         }
       },
       "bounds": [
@@ -1055,10 +1055,10 @@
         33.25
       ],
       "nodes": 1738,
-      "edges": 2245,
-      "compactBytes": 1063050,
-      "messagePackBytes": 918027,
-      "compactBinaryBytes": 187036
+      "edges": 2249,
+      "compactBytes": 1065267,
+      "messagePackBytes": 920028,
+      "compactBinaryBytes": 187559
     },
     {
       "id": "g712_665",

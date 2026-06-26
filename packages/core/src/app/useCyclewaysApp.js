@@ -299,6 +299,9 @@ export function useCyclewaysApp({
 
         const routeParam = getQueryParam("route");
         if (routeParam) {
+          const routeSource = getQueryParam("routeSource");
+          const routeSlug = getQueryParam("routeSlug");
+          const routeName = getQueryParam("routeName");
           const snapshot = shardedSession
             ? await shardedSession.restoreRouteParam(routeParam)
             : restoreRouteFromParam(
@@ -325,7 +328,14 @@ export function useCyclewaysApp({
             }));
             recordRecentRoute(setRecentRoutes, {
               param: routeParam,
-              name: "מסלול משותף",
+              name:
+                routeSource === "catalog" && routeName
+                  ? routeName
+                  : "מסלול משותף",
+              slug:
+                routeSource === "catalog" && routeSlug
+                  ? routeSlug
+                  : undefined,
               distanceKm: Math.round((snapshot.distance / 1000) * 10) / 10,
             });
           }
