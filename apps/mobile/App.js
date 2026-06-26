@@ -18,6 +18,9 @@ import {
   findRouteCatalogEntryBySlug,
   loadRouteCatalogEntries,
 } from "@cycleways/core/data/catalog.js";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import MapScreen from "./src/MapScreen.jsx";
 
 LogBox.ignoreLogs([
@@ -67,16 +70,22 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.fill}>
-      {locationReady ? <MapScreen key={screenKey} /> : null}
-      {launchError ? (
-        <LaunchErrorOverlay
-          message={launchError.message}
-          onDismiss={() => setLaunchError(null)}
-        />
-      ) : null}
-      <StatusBar style="auto" />
-    </SafeAreaView>
+    <GestureHandlerRootView style={styles.fill}>
+      <SafeAreaProvider>
+        <BottomSheetModalProvider>
+          <SafeAreaView style={styles.fill}>
+            {locationReady ? <MapScreen key={screenKey} /> : null}
+            {launchError ? (
+              <LaunchErrorOverlay
+                message={launchError.message}
+                onDismiss={() => setLaunchError(null)}
+              />
+            ) : null}
+            <StatusBar style="auto" />
+          </SafeAreaView>
+        </BottomSheetModalProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

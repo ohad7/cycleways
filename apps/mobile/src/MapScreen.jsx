@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import Mapbox, {
   Camera,
   CircleLayer,
@@ -868,6 +869,17 @@ export default function MapScreen() {
         shareUrl={shareUrl}
         visible={mapUi.downloadModalOpen}
       />
+      <BottomSheet snapPoints={["18%", "92%"]} index={0}>
+        <BottomSheetView>
+          <Text
+            testID="sheet-boot-probe"
+            accessibilityLabel="sheet-boot-probe"
+            style={{ padding: 16 }}
+          >
+            sheet-boot-probe
+          </Text>
+        </BottomSheetView>
+      </BottomSheet>
     </View>
   );
 }
