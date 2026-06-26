@@ -13,7 +13,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import Mapbox, {
   Camera,
   CircleLayer,
@@ -47,6 +46,7 @@ import DataMarkerImages, {
 } from "./DataMarkerImages.jsx";
 import ElevationProfileChart from "./ElevationProfileChart.jsx";
 import RichText from "./RichText.jsx";
+import PlannerSheet from "./planner/PlannerSheet.jsx";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
   getRoutePlannerPresentation,
@@ -827,29 +827,9 @@ export default function MapScreen() {
         onWarningFocus={handleDataPointFocus}
       />
       <RoutePlannerChrome
-        animator={directionAnimatorRef.current}
-        canDownload={canDownload}
-        canRedo={canRedo}
-        canUndo={canUndo}
-        onOpenSummary={handleOpenDownload}
-        onRedo={handleRedo}
         onSearchChange={handleSearchQueryChange}
         onSearchSubmit={submitSearch}
-        onShare={shareRoute}
-        canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
-        onUndo={handleUndo}
-        locationState={locationState}
         mapUi={mapUi}
-        presentation={routePresentation}
-        routeState={routeState}
-        routePoints={displayedRoutePoints}
-        onClear={handleClearRoute}
-        onScrub={setScrubPoint}
-        panelState={panelState}
-        onPanelStateChange={setPanelState}
-        catalogEntries={catalogEntries}
-        onSelectCatalogRoute={handleSelectCatalogRoute}
-        selectedCatalogEntry={selectedCatalogEntry}
       />
       <DataMarkerCard
         marker={mapUi.selectedDataMarker}
@@ -869,17 +849,36 @@ export default function MapScreen() {
         shareUrl={shareUrl}
         visible={mapUi.downloadModalOpen}
       />
-      <BottomSheet snapPoints={["18%", "92%"]} index={0}>
-        <BottomSheetView>
-          <Text
-            testID="sheet-boot-probe"
-            accessibilityLabel="sheet-boot-probe"
-            style={{ padding: 16 }}
-          >
-            sheet-boot-probe
-          </Text>
-        </BottomSheetView>
-      </BottomSheet>
+      <PlannerSheet
+        panelState={panelState}
+        onPanelStateChange={setPanelState}
+        discover={
+          <DiscoverPanelContent
+            entries={catalogEntries}
+            onSelect={handleSelectCatalogRoute}
+          />
+        }
+        build={
+          <BuildPanelContent
+            animator={directionAnimatorRef.current}
+            canDownload={canDownload}
+            canRedo={canRedo}
+            canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
+            canUndo={canUndo}
+            catalogEntry={selectedCatalogEntry}
+            locationState={locationState}
+            onClear={handleClearRoute}
+            onOpenSummary={handleOpenDownload}
+            onRedo={handleRedo}
+            onScrub={setScrubPoint}
+            onShare={shareRoute}
+            onUndo={handleUndo}
+            presentation={routePresentation}
+            routePoints={displayedRoutePoints}
+            routeState={routeState}
+          />
+        }
+      />
     </View>
   );
 }
@@ -1032,152 +1031,42 @@ function RouteDirectionPulseLayer({ animator, routeGeometry }) {
 }
 
 function RoutePlannerChrome({
-  animator,
-  canDownload,
-  canRedo,
-  canUndo,
-  canShare,
-  onClear,
-  onOpenSummary,
-  onRedo,
   onSearchChange,
   onSearchSubmit,
-  onShare,
-  onUndo,
-  onScrub,
-  locationState,
   mapUi,
-  presentation,
-  routeState,
-  routePoints,
-  panelState,
-  onPanelStateChange,
-  catalogEntries,
-  onSelectCatalogRoute,
-  selectedCatalogEntry,
 }) {
-  const [sheetCollapsed, setSheetCollapsed] = useState(false);
   const searchBusy = mapUi.searchStatus === "searching";
 
   return (
-    <>
-      <View pointerEvents="box-none" style={styles.topChrome}>
-        <View style={styles.searchPanel}>
-          <ChromeButton
-            compact
-            disabled={searchBusy}
-            icon={searchBusy ? null : "search"}
-            label={searchBusy ? "..." : ""}
-            onPress={onSearchSubmit}
-            primary
-            accessibilityLabel="חיפוש"
-            buttonStyle={styles.searchButton}
-          />
-          <TextInput
-            accessibilityLabel="חיפוש מיקום"
-            autoCapitalize="none"
-            autoCorrect={false}
-            onChangeText={onSearchChange}
-            onSubmitEditing={onSearchSubmit}
-            placeholder={SEARCH_PLACEHOLDER}
-            placeholderTextColor="#52616f"
-            returnKeyType="search"
-            style={styles.searchInput}
-            textAlign="right"
-            value={mapUi.searchQuery}
-          />
-        </View>
-        {mapUi.searchError ? (
-          <Text style={styles.searchError}>{mapUi.searchError}</Text>
-        ) : null}
+    <View pointerEvents="box-none" style={styles.topChrome}>
+      <View style={styles.searchPanel}>
+        <ChromeButton
+          compact
+          disabled={searchBusy}
+          icon={searchBusy ? null : "search"}
+          label={searchBusy ? "..." : ""}
+          onPress={onSearchSubmit}
+          primary
+          accessibilityLabel="חיפוש"
+          buttonStyle={styles.searchButton}
+        />
+        <TextInput
+          accessibilityLabel="חיפוש מיקום"
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={onSearchChange}
+          onSubmitEditing={onSearchSubmit}
+          placeholder={SEARCH_PLACEHOLDER}
+          placeholderTextColor="#52616f"
+          returnKeyType="search"
+          style={styles.searchInput}
+          textAlign="right"
+          value={mapUi.searchQuery}
+        />
       </View>
-
-      <View pointerEvents="box-none" style={styles.bottomSheetWrap}>
-        <View style={styles.frontPanel}>
-          <View style={styles.frontPanelHead}>
-            <PanelStateToggle state={panelState} onChange={onPanelStateChange} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                sheetCollapsed ? "הרחבת הפאנל" : "מזעור הפאנל"
-              }
-              onPress={() => setSheetCollapsed((current) => !current)}
-              style={styles.frontPanelCollapse}
-            >
-              <Text style={styles.frontPanelCollapseText}>
-                {sheetCollapsed ? "⌃" : "⌄"}
-              </Text>
-            </Pressable>
-          </View>
-          {sheetCollapsed ? null : panelState === "discover" ? (
-            <DiscoverPanelContent
-              entries={catalogEntries}
-              onSelect={onSelectCatalogRoute}
-            />
-          ) : (
-            <BuildPanelContent
-              animator={animator}
-              canDownload={canDownload}
-              canRedo={canRedo}
-              canShare={canShare}
-              canUndo={canUndo}
-              catalogEntry={selectedCatalogEntry}
-              locationState={locationState}
-              onClear={onClear}
-              onOpenSummary={onOpenSummary}
-              onRedo={onRedo}
-              onScrub={onScrub}
-              onShare={onShare}
-              onUndo={onUndo}
-              presentation={presentation}
-              routePoints={routePoints}
-              routeState={routeState}
-            />
-          )}
-        </View>
-      </View>
-    </>
-  );
-}
-
-// Native equivalent of the web PanelStateToggle: switches the front panel
-// between the catalog browser ("חפש מסלול") and the planner ("בניית מסלול").
-function PanelStateToggle({ state, onChange }) {
-  return (
-    <View style={styles.stateBar}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="חפש מסלול"
-        onPress={() => onChange("discover")}
-        style={[
-          styles.stateTab,
-          state === "discover" ? styles.stateTabOn : null,
-        ]}
-      >
-        <Text
-          style={[
-            styles.stateTabText,
-            state === "discover" ? styles.stateTabTextOn : null,
-          ]}
-        >
-          חפש מסלול
-        </Text>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="בניית מסלול"
-        onPress={() => onChange("build")}
-        style={[styles.stateTab, state === "build" ? styles.stateTabOn : null]}
-      >
-        <Text
-          style={[
-            styles.stateTabText,
-            state === "build" ? styles.stateTabTextOn : null,
-          ]}
-        >
-          בניית מסלול
-        </Text>
-      </Pressable>
+      {mapUi.searchError ? (
+        <Text style={styles.searchError}>{mapUi.searchError}</Text>
+      ) : null}
     </View>
   );
 }
@@ -1251,6 +1140,7 @@ function BuildPanelContent({
             label=""
             onPress={onClear}
             accessibilityLabel="איפוס מסלול"
+            testID="tool-clear"
           />
         </View>
       </View>
@@ -1260,7 +1150,7 @@ function BuildPanelContent({
       </Text>
 
       {hasPoints ? (
-        <View style={styles.statGrid}>
+        <View testID="route-stats" style={styles.statGrid}>
           {presentation.stats.map(([label, value]) => (
             <View key={label} style={styles.statTile}>
               <Text style={styles.statValue}>{value}</Text>
@@ -1299,6 +1189,7 @@ function BuildPanelContent({
             label="סיכום"
             onPress={onOpenSummary}
             accessibilityLabel="סיכום ושיתוף המסלול"
+            testID="action-summary"
           />
           <ChromeButton
             disabled={!canShare}
@@ -1351,6 +1242,7 @@ function PanelRouteCardNative({ entry, onSelect }) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`פתח את ${entry.name} במפה`}
+      testID={`route-card-${entry.slug || entry.name}`}
       onPress={() => onSelect?.(entry)}
       style={({ pressed }) => [
         styles.routeCard,
@@ -1542,11 +1434,13 @@ function ChromeButton({
   primary = false,
   rail = false,
   symbol = false,
+  testID,
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || label}
+      testID={testID}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
@@ -2037,12 +1931,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
-  bottomSheetWrap: {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 14,
-  },
   markerCardWrap: {
     position: "absolute",
     left: 12,
@@ -2302,73 +2190,6 @@ const styles = StyleSheet.create({
   },
   chromeButtonTextDisabled: {
     color: "#777777",
-  },
-  frontPanel: {
-    maxHeight: 360,
-    borderRadius: 6,
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
-    borderColor: "#c6d4cf",
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-  },
-  frontPanelHead: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderBottomColor: "#e3ebe7",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  frontPanelCollapse: {
-    width: 30,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 4,
-    backgroundColor: "#f3f6f4",
-  },
-  frontPanelCollapseText: {
-    color: "#333333",
-    fontSize: 18,
-    lineHeight: 20,
-    fontWeight: "800",
-  },
-  stateBar: {
-    flex: 1,
-    flexDirection: "row-reverse",
-    backgroundColor: "#eef3f1",
-    borderRadius: 6,
-    padding: 3,
-    gap: 3,
-  },
-  stateTab: {
-    flex: 1,
-    minHeight: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 4,
-  },
-  stateTabOn: {
-    backgroundColor: "#ffffff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-  },
-  stateTabText: {
-    color: "#52616f",
-    fontSize: 13,
-    fontWeight: "700",
-    writingDirection: "rtl",
-  },
-  stateTabTextOn: {
-    color: "#172026",
   },
   buildBody: {
     gap: 8,

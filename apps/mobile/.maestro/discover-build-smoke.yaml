@@ -1,28 +1,29 @@
-# Phase 2.8b parity-realign smoke: the front-panel Discover/Build toggle and the
-# native catalog -> planner flow.
+# Phase 2.8b/2.8c smoke: the front-panel Discover/Build toggle and the native
+# catalog -> planner flow, now inside a @gorhom/bottom-sheet.
 # Run: maestro --device <UDID> test .maestro/discover-build-smoke.yaml
 # Requires Metro running and the dev-client build installed.
+#
+# IMPORTANT gorhom/Maestro limitation: @gorhom/bottom-sheet renders its content
+# (BottomSheetScrollView / BottomSheetView) as an opaque accessibility group, so
+# XCUITest/Maestro cannot see text OR testIDs of elements INSIDE the sheet body.
+# Only the sheet HEADER (a plain View) is introspectable — that is why the
+# Discover/Build toggle is matchable by testID but the route cards / Build
+# controls are not. We therefore drive in-sheet content by coordinate tap and
+# verify the result with screenshots (reviewed by a human / the controller).
 appId: app.cycleways.mobile
 ---
-- assertVisible: "חיפוש מיקום"          # search chrome rendered
-- assertVisible: "חפש מסלול"            # Discover toggle tab
-- assertVisible: "בניית מסלול"          # Build toggle tab
+- assertVisible: "חיפוש מיקום"          # search chrome (outside the sheet)
+- assertVisible:
+    id: "seg-discover"                  # Discover toggle tab (sheet header)
+- assertVisible:
+    id: "seg-build"                     # Build toggle tab (sheet header)
 
-# --- Switch to Discover and confirm the bundled catalog lists ---
-# Route cards are Pressables: the inner title Text collapses into the parent
-# a11y node, so target the card's accessibilityLabel (HANDOFF Slice 10 note).
-- tapOn: "חפש מסלול"
-- assertVisible: "פתח את בניאס וגן הצפון במפה"   # a known catalog route card
-- takeScreenshot: /tmp/maestro-2-8b-discover
-
-# --- Select a catalog route: should load it and switch to Build ---
-- tapOn: "פתח את בניאס וגן הצפון במפה"
-- assertVisible: "מסלול מומלץ"          # Build eyebrow for a catalog route
-- assertVisible: "בניאס וגן הצפון"      # catalog route title in Build head
-- assertVisible: "נקודות"               # stats grid rendered => route is ready
-- takeScreenshot: /tmp/maestro-2-8b-build-loaded
-
-# --- Clear detaches from the catalog entry ---
-- tapOn: "איפוס מסלול"
-- assertVisible: "המסלול שלי · טיוטה"   # eyebrow falls back to draft
-- takeScreenshot: /tmp/maestro-2-8b-after-clear
+# --- Switch to Discover, expand the sheet, open the first catalog route ---
+- tapOn:
+    id: "seg-discover"
+- swipe:
+    direction: UP                       # expand sheet to the full snap
+- takeScreenshot: /tmp/maestro-2-8c-discover      # expect: catalog list of routes
+- tapOn:
+    point: "50%,30%"                    # first catalog card (בניאס וגן הצפון)
+- takeScreenshot: /tmp/maestro-2-8c-build-loaded  # expect: route loaded in Build
