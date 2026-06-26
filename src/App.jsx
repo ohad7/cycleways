@@ -1188,6 +1188,7 @@ function App() {
                           distance={routeState.distance}
                           cursorFraction={plannerPlayback.cursor?.fraction ?? null}
                           cursorPlaying={plannerPlayback.isPlaying}
+                          cursorInfoVisible={plannerPlayback.hasCursor}
                           externalCursorActive={Boolean(
                             plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
                           )}

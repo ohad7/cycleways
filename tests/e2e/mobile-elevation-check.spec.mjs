@@ -47,3 +47,37 @@ test("mobile: elevation slope legend renders within the panel", async ({
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(widths.clientWidth);
 });
+
+test("mobile: elevation progress head remains visible during route playback", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "mobile-only layout check");
+
+  await page.goto(`/?route=${COMPACT_ROUTE}`);
+  await page.waitForSelector(".map-container--route-ready", { timeout: 30000 });
+  await ensurePanelOpen(page);
+
+  const panelPlayback = page.locator(".planner-route-playback--panel");
+  await expect(panelPlayback).toBeVisible();
+  await panelPlayback.getByRole("button", { name: "נגן מסלול על המפה" }).click();
+
+  const marker = page.locator(".panel-elev .elevation-progress-head-pulse");
+  const cursorInfo = page.locator(".panel-elev .react-elevation-hover-info");
+  await expect(marker).toBeVisible();
+  await expect(marker).toHaveClass(/elevation-progress-head-pulse--playing/);
+  await expect(cursorInfo).toBeVisible();
+  await expect(cursorInfo).toContainText("מרחק:");
+  await expect(cursorInfo).toContainText("גובה:");
+  await expect(cursorInfo.locator(".react-grade-chip")).toBeVisible();
+
+  await panelPlayback.getByRole("button", { name: "השהה מסלול על המפה" }).click();
+  await expect(cursorInfo).toBeVisible();
+  await panelPlayback.locator(".fv-video-scrubber").evaluate((input) => {
+    input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    input.value = String(Number(input.max) / 2);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(marker).toBeVisible();
+  await expect(cursorInfo).toBeVisible();
+});
