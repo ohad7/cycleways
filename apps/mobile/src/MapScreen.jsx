@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSyntheticRoutePlaybackEngine } from "@cycleways/core/ui/routePlaybackEngine.js";
+import PlaybackControls from "./planner/PlaybackControls.jsx";
 import {
   Keyboard,
   Modal,
@@ -657,6 +659,22 @@ export default function MapScreen() {
 
   // Derive build-panel presentation options (matches the web's typed-cased variant).
   const mapPresentationActive = panelState === "build" && !isNavigating;
+
+  // Route playback engine: drives the scrub marker along the route while
+  // the build sheet is open and the user presses play / scrubs.
+  const playback = useSyntheticRoutePlaybackEngine({
+    enabled: mapPresentationActive,
+    routeState,
+    cueSlides: [],
+    onCursorChange: (cursor) => {
+      setScrubPoint(cursor ? { coord: { lng: cursor.lng, lat: cursor.lat } } : null);
+    },
+  });
+  const seekToFraction = useCallback(
+    (fraction) => { playback.seekToFraction(fraction); },
+    [playback],
+  );
+
   const networkPresentationOptions = useMemo(
     () => ({
       variant: mapPresentationActive ? "typed-cased" : "current",
@@ -1014,9 +1032,11 @@ export default function MapScreen() {
               onOpenSummary={handleOpenDownload}
               onRedo={handleRedo}
               onScrub={setScrubPoint}
+              onSeekToFraction={seekToFraction}
               onShare={shareRoute}
               onStartNavigation={nav.start}
               onUndo={handleUndo}
+              playback={playback}
               presentation={routePresentation}
               routePoints={displayedRoutePoints}
               routeState={routeState}
@@ -1074,9 +1094,11 @@ function BuildPanelContent({
   onOpenSummary,
   onRedo,
   onScrub,
+  onSeekToFraction,
   onShare,
   onStartNavigation,
   onUndo,
+  playback,
   presentation,
   routePoints,
   routeState,
@@ -1177,6 +1199,16 @@ function BuildPanelContent({
 
       {canDownload ? (
         <>
+          {playback ? (
+            <PlaybackControls
+              isPlaying={playback.isPlaying}
+              isReady={playback.isReady}
+              currentTime={playback.currentTime}
+              duration={playback.duration}
+              onTogglePlayback={playback.togglePlayback}
+              onSeekToFraction={onSeekToFraction}
+            />
+          ) : null}
           <View style={styles.buildActions}>
             <ChromeButton
               label="סיכום"
