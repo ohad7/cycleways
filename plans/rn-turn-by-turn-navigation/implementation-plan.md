@@ -1,7 +1,10 @@
 # React Native Turn-by-Turn Navigation Implementation Plan
 
-**Date:** 2026-06-26
-**Status:** in progress — Phases 0-3 landed; Phases 4+ blocked on parity re-align.
+**Date:** 2026-06-26 (Phases 4-5 landed 2026-06-27)
+**Status:** in progress — Phases 0-5 landed; parity dependency CLEARED.
+**Next task: Phase 6 (native location service)** — first native-app phase
+(`expo-location`/`expo-task-manager`, iOS permission strings); feeds the Phase 7
+session hook. All pure-core navigation logic (progress + cues) is now in place.
 
 ## Progress Snapshot (2026-06-26)
 
@@ -27,9 +30,21 @@
   native UI" section). The Discover/catalog list is the route picker that selects
   a catalog route to navigate.
 
-- **>>> NEXT TASK: Phase 4 (Route Progress Engine) <<<** — pure core logic in
-  `packages/core/src/navigation/`, TDD with `tests/*.mjs` in the `npm test`
-  chain, no native rebuild required. Start here.
+- **Phase 4 done (2026-06-27):** `packages/core/src/navigation/routeProgress.js`
+  (`createRouteProgressTracker`) — metric-frame projection, windowed forward
+  cursor (loop/out-and-back safe), accuracy-aware off-route hysteresis with
+  enter/confirm/recover dwell, wrong-way detection (low-speed safe),
+  `bearingToNextDeg` + `distanceToRouteStart`. Shared arc-length/bearing helpers
+  extracted to `packages/core/src/utils/geometry.js` (animator re-exports them).
+  Tests: `tests/test-route-progress.mjs` (in the `npm test` chain).
+- **Phase 5 done (2026-06-27):** `packages/core/src/navigation/navigationCues.js`
+  — static `buildRouteCues(navigationRoute)` (start/turn/hazard/arrive cues,
+  deterministic + sorted, distance-gated turn dedupe) and per-fix
+  `selectActiveCue(cues, progress)` (preview ≤120 m / final ≤35 m scheduling).
+  Tests: `tests/test-navigation-cues.mjs` (in the `npm test` chain).
+- **>>> NEXT TASK: Phase 6 (Native Location Service) <<<** — first native phase;
+  `expo-location` (+ `expo-task-manager` for background), iOS permission
+  strings, foreground watch first, feeding a native `useNavigationSession` hook.
 
 ## Phase 0 - Baseline Verification ✅ (done)
 
@@ -111,29 +126,75 @@ Acceptance criteria:
 - Both built and catalog routes produce the same `NavigationRoute` shape.
 - Broken/empty routes cannot start navigation.
 
-## Phase 4 - Route Progress Engine
+## Phase 4 - Route Progress Engine ✅ (done — 2026-06-27)
 
-1. Create `packages/core/src/navigation/routeProgress.js`.
-2. Implement nearest-point-on-polyline projection with cumulative progress.
-3. Include GPS accuracy, heading, and speed inputs.
-4. Add hysteresis for off-route state:
-   - candidate off-route
-   - confirmed off-route
-   - recovered
-5. Compute remaining distance and next geometry bearing.
-6. Add fixture tests for:
+**Reuse, don't reinvent.** `routeDirectionAnimator.js` already exports
+`precomputeArcLength(geometry) → {cumDist, totalDistMeters}` and
+`computeBearing(from, to)`, and `navigationRoute.geometry` already carries
+`distanceFromStartMeters` per vertex. Extract the arc-length + bearing helpers
+into a shared `packages/core/src/utils/geometry.js` consumed by both the
+animator and the progress engine — do not write a third copy. Build the engine's
+index **once per NavigationRoute**, not per GPS fix.
+
+1. Create `packages/core/src/utils/geometry.js` (shared arc-length + bearing;
+   migrate the animator's copies) and `packages/core/src/navigation/routeProgress.js`.
+2. **Metric-frame projection (critical).** Do NOT reuse
+   `distanceToLineSegment` from `utils/distance.js` for progress — its
+   along-segment fraction is computed in raw lat/lng degrees and is biased
+   (lng is compressed ~cos(lat)). Write `projectToSegment` that scales lng by
+   `cos(lat)` (local equirectangular) and returns
+   `{ crossTrackMeters, t, snapped }` in a consistent metric frame.
+3. **Windowed forward cursor (not global min).** Keep a progress cursor and
+   search a forward window (±N meters / ±k segments) around last-known
+   progress; only fall back to a global nearest search on (re)acquisition or
+   confirmed off-route. This is what keeps progress monotonic and resolves
+   loop / out-and-back / circular-start "arrived at the start" failures.
+4. **Pure stateful updater with injected time.**
+   `createRouteProgressTracker(navigationRoute, options) → { update(fix), reset() }`
+   where `fix = { lat, lng, accuracy, heading, speed, timestamp }`. No
+   `Date.now`/RAF inside — feed timestamps in (mirror the animator's injectable
+   clock) so the engine is fixture-testable and reusable by the Phase 7 hook.
+5. **Off-route state machine (accuracy-aware, two thresholds + dwell).**
+   States: on-route → candidate → off-route → recovered.
+   - enter candidate when `crossTrack > enter` AND heading disagrees;
+   - `enter = 30 m + k·accuracy` (accuracy-inflated), `exit = 15 m`;
+   - confirm off-route after a sustained dwell (time or distance);
+   - recover when `crossTrack < exit` for a dwell.
+   Two thresholds (enter > exit) + dwell prevents flapping.
+6. **Low-speed heading.** Derive course from displacement between consecutive
+   fixes when `speed > ~1 m/s`; fall back to reported heading otherwise; do not
+   let heading drive off-route near zero speed (stopped ≠ wrong-way).
+7. Output model (per `design.md` D4): nearest point, progress meters + fraction,
+   cross-track, heading agreement, remaining distance, next geometry bearing,
+   passed/upcoming cue index, off-route status. **Plus** `onRoute` +
+   `distanceToRouteStart` so the UI can show a "head to route start" approach
+   state before progress begins (resolves the start-approach open question).
+8. Add fixture tests (`tests/test-route-progress.mjs`, appended to the `npm test`
+   `&&` chain) for:
    - start/middle/end progress
    - wrong-direction movement
-   - noisy GPS near route
-   - off-route threshold crossing
-   - loop route near overlapping start/end
+   - noisy GPS near route (progress stays monotonic-ish; no off-route flap)
+   - off-route enter/confirm/recover with accuracy inflation
+   - loop / out-and-back route near overlapping start/end (cursor stays local)
+   - start-away-from-route approach state
+   Use a real slice of a catalog route's geometry as a fixture, not only
+   synthetic straight lines, so projection + loop behavior is exercised.
 
 Acceptance criteria:
 
-- Progress is stable under realistic GPS jitter.
-- Off-route does not flap around the threshold.
+- Progress is stable and monotonic under realistic GPS jitter.
+- Off-route does not flap around the threshold; accuracy inflates it.
+- Loop/circular routes do not snap progress backward across the overlap.
+- Engine is pure (no wall-clock/RAF); fixtures fully drive it.
 
-## Phase 5 - Maneuver/Cue Generation
+## Phase 5 - Maneuver/Cue Generation ✅ (done — 2026-06-27)
+
+Split into a pure static builder and a cheap per-fix selector:
+
+- `buildRouteCues(navigationRoute)` — precomputed **once** from geometry +
+  segment boundaries + on-route hazards/POIs; deterministic ordered cue list.
+- `selectActiveCue(cues, progress)` — light per-fix selector driven by the
+  Phase 4 progress fraction/cursor.
 
 1. Create `packages/core/src/navigation/navigationCues.js`.
 2. Generate conservative cues from:
@@ -236,10 +297,14 @@ Acceptance criteria:
 
 ## Phase 9 - Voice, Haptics, And Settings
 
+> v1 scope decision (2026-06-27): ship **visual + haptic** cues first; voice/TTS
+> is a follow-up. Keep the cue-output interface voice-ready (Phase 5 emits cue
+> events) but do not block v1 on TTS tuning.
+
 1. Add cue output adapters:
-   - haptic warnings
-   - voice/text-to-speech if in first release
-2. Add per-session toggles for voice/haptics.
+   - haptic warnings (v1)
+   - voice/text-to-speech (follow-up, behind the same cue-event interface)
+2. Add per-session toggles for haptics (and voice once added).
 3. Ensure off-route alerts are rate-limited.
 4. Add tests for cue-event dedupe and cooldown.
 

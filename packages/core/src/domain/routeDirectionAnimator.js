@@ -1,19 +1,9 @@
-import { getDistance } from "../utils/distance.js";
+import { computeBearing, precomputeArcLength } from "../utils/geometry.js";
+
+export { computeBearing, precomputeArcLength };
 
 const CHANNELS = new Set(["chevron", "litPoint", "elevation"]);
 const GAP_DURATION_MS = 1200;
-
-export function precomputeArcLength(geometry) {
-  const n = geometry.length;
-  const cumDist = new Float64Array(n);
-  let acc = 0;
-  for (let i = 1; i < n; i++) {
-    const segment = getDistance(geometry[i - 1], geometry[i]);
-    acc += Number.isFinite(segment) && segment > 0 ? segment : 0;
-    cumDist[i] = acc;
-  }
-  return { cumDist, totalDistMeters: acc };
-}
 
 export function computeCycleDuration(totalDistanceMeters) {
   const distanceKm = (totalDistanceMeters || 0) / 1000;
@@ -279,18 +269,6 @@ function buildLitPayload(state, k) {
   const geomIndex = state.routePointIndices[k];
   const coord = state.geometry[geomIndex];
   return { index: k, lng: coord.lng, lat: coord.lat };
-}
-
-export function computeBearing(from, to) {
-  const φ1 = (from.lat * Math.PI) / 180;
-  const φ2 = (to.lat * Math.PI) / 180;
-  const Δλ = ((to.lng - from.lng) * Math.PI) / 180;
-  const y = Math.sin(Δλ) * Math.cos(φ2);
-  const x =
-    Math.cos(φ1) * Math.sin(φ2) -
-    Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-  const θ = Math.atan2(y, x);
-  return ((θ * 180) / Math.PI + 360) % 360;
 }
 
 function defaultClock() {
