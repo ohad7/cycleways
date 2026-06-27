@@ -76,14 +76,6 @@ const CHROME_IONICON = {
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "";
 Mapbox.setAccessToken(MAPBOX_TOKEN);
 
-const ROUTE_LINE_STYLE = {
-  lineColor: "#006699",
-  lineWidth: 5,
-  lineOpacity: 0.9,
-  lineJoin: "round",
-  lineCap: "round",
-};
-
 // Completed portion of the route during navigation: muted, drawn over the route
 // line so the remaining route reads as the emphasized one.
 const ROUTE_TRAVELED_LINE_STYLE = {
@@ -692,6 +684,13 @@ export default function MapScreen() {
     }),
     [networkPresentation],
   );
+  const routeLineStyles = useMemo(
+    () => ({
+      casing: paintToRNStyle(routeGeometryCasingStyleForPresentation("dark")),
+      core: paintToRNStyle(routeGeometryLineStyleForPresentation("dark")),
+    }),
+    [],
+  );
 
   const networkFeatures = useMemo(() => {
     if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
@@ -876,7 +875,8 @@ export default function MapScreen() {
           <LineLayer id="network-line" style={networkLayerStyles.core} />
         </ShapeSource>
         <ShapeSource id="route-geometry" shape={routeGeometry}>
-          <LineLayer id="route-line" style={ROUTE_LINE_STYLE} />
+          <LineLayer id="route-casing" style={routeLineStyles.casing} />
+          <LineLayer id="route-line" style={routeLineStyles.core} />
         </ShapeSource>
         {isNavigating ? (
           <>
