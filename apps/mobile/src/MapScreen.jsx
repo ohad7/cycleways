@@ -50,7 +50,10 @@ import { useNavigationSession } from "./navigation/useNavigationSession.js";
 import Icon from "./planner/Icon.jsx";
 import { palette } from "./planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
-import { getRoutePlannerPresentation } from "@cycleways/core/ui/routePlannerPresentation.js";
+import {
+  getPlannerBuildModel,
+  getRoutePlannerPresentation,
+} from "@cycleways/core/ui/routePlannerPresentation.js";
 
 // Legacy planner icon names -> Ionicons names (same set the web Icon.jsx uses).
 const CHROME_IONICON = {
@@ -1044,6 +1047,7 @@ function BuildPanelContent({
   routePoints,
   routeState,
 }) {
+  const buildModel = getPlannerBuildModel(routeState);
   const hasPoints = routePoints.length > 0;
   const hasElevationProfile = routeState.geometry.length >= 2;
   const locationText = locationStatusText(locationState);
@@ -1101,9 +1105,9 @@ function BuildPanelContent({
         {routeMessage}
       </Text>
 
-      {hasPoints ? (
+      {buildModel.hasRoute ? (
         <View testID="route-stats" style={styles.statGrid}>
-          {presentation.stats.map(([label, value]) => (
+          {buildModel.stats.map(([label, value]) => (
             <View key={label} style={styles.statTile}>
               <Text style={styles.statValue}>{value}</Text>
               <Text style={styles.statLabel}>{label}</Text>
