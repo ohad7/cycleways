@@ -12,6 +12,8 @@ import { palette, radius, space } from "./theme.js";
 // NOTE: native UI — verified visually in the simulator, not by the node suite.
 export default function NavPanel({
   sessionState,
+  hapticsEnabled = true,
+  onToggleHaptics,
   onRecenter,
   onPauseResume,
   onStop,
@@ -58,6 +60,11 @@ export default function NavPanel({
           icon={paused ? "play" : "pause"}
           label={paused ? "המשך" : "השהה"}
           onPress={onPauseResume}
+        />
+        <NavButton
+          icon={hapticsEnabled ? "notifications-outline" : "notifications-off-outline"}
+          label={hapticsEnabled ? "רטט" : "מושתק"}
+          onPress={onToggleHaptics}
         />
         <NavButton icon="stop" label="סיום" danger onPress={onStop} />
       </View>

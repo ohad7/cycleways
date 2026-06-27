@@ -4,12 +4,13 @@
 **Status:** in progress — the full first-pass turn-by-turn slice is implemented.
 Phases 0-5 + Phase 7 core are node-tested; **Phases 6 (native location) and 8
 (navigation UI) are scaffolded and parse/bundle cleanly but are NOT yet verified
-on a simulator/device.** Parity dependency CLEARED. **Next task: build + verify
-in the simulator** — `cd apps/mobile && npx expo install expo-location`, prebuild,
-then exercise Start→navigate→off-route→stop on a built and a catalog route with a
-simulated GPX. Then Phase 9 (haptics; voice deferred) and Phase 10
-(universal/app links). Deferred UI polish: progress-line styling + snapped-rider
-marker (see Phase 8).
+on a simulator/device.** Phase 8 polish (progress-line + snapped rider marker)
+and **Phase 9 haptics** are also implemented (haptics scaffolded; voice
+deferred). Parity dependency CLEARED. **Next task: build + verify the slice in
+the simulator** — `cd apps/mobile && npx expo install expo-location
+expo-haptics`, prebuild, then exercise Start→navigate→off-route→stop on a built
+and a catalog route with a simulated GPX (confirm haptics + mute toggle). Then
+Phase 10 (universal/app links).
 
 ## Progress Snapshot (2026-06-26)
 
@@ -366,7 +367,24 @@ Acceptance criteria:
 - Accidental taps do not add route points during navigation.
 - The map remains usable if the rider pans away and recenters.
 
-## Phase 9 - Voice, Haptics, And Settings
+## Phase 9 - Voice, Haptics, And Settings ⚠️ (haptics scaffolded 2026-06-27 — needs device verification; voice deferred)
+
+**Landed (unverified on device):**
+- Pure planner `packages/core/src/navigation/cueHaptics.js`
+  (`createCueHapticPlanner`): maps a session cue event to intensity
+  (off-route → heavy, final cue → medium, preview → light) with a global
+  cooldown so a ride never buzzes constantly. Tested:
+  `tests/test-cue-haptics.mjs`. (Builds on the session's existing cue/off-route
+  event dedupe.)
+- Native adapter `apps/mobile/src/navigation/cueHapticsAdapter.js` (`fireHaptic`
+  → expo-haptics) + `expo-haptics` dep.
+- `useNavigationSession` runs the planner on each cue event when haptics are on,
+  exposes `hapticsEnabled` + `setHapticsEnabled`; `NavPanel` has a mute toggle.
+
+**Verify in the simulator/device:** turn/off-route events vibrate at distinct
+intensities, the same event does not buzz repeatedly, and the mute toggle
+silences haptics without affecting the visual overlay. **Voice/TTS deferred** to
+a follow-up behind the same cue-event interface.
 
 > v1 scope decision (2026-06-27): ship **visual + haptic** cues first; voice/TTS
 > is a follow-up. Keep the cue-output interface voice-ready (Phase 5 emits cue

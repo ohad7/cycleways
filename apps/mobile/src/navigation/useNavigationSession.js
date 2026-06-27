@@ -16,18 +16,28 @@ import {
   NAV_ACTIONS,
   createNavigationSession,
 } from "@cycleways/core/navigation/navigationSession.js";
+import { createCueHapticPlanner } from "@cycleways/core/navigation/cueHaptics.js";
 import {
   requestNavigationPermissions,
   startNavigationWatch,
 } from "./locationService.js";
+import { fireHaptic } from "./cueHapticsAdapter.js";
 
 export function useNavigationSession(navigationRoute, options = {}) {
-  const { background = false, ...sessionOptions } = options;
+  const { background = false, haptics = true, ...sessionOptions } = options;
 
   const sessionRef = useRef(null);
   const watchRef = useRef(null);
   const watchActiveRef = useRef(false);
+  const hapticPlannerRef = useRef(createCueHapticPlanner());
+  const hapticsEnabledRef = useRef(haptics);
+  const [hapticsEnabled, setHapticsEnabledState] = useState(haptics);
   const [state, setState] = useState(null);
+
+  const setHapticsEnabled = useCallback((next) => {
+    hapticsEnabledRef.current = next;
+    setHapticsEnabledState(next);
+  }, []);
 
   // (Re)create the session whenever the route identity changes.
   const routeId = navigationRoute?.id ?? null;
@@ -38,6 +48,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
       return undefined;
     }
     sessionRef.current = createNavigationSession(navigationRoute, sessionOptions);
+    hapticPlannerRef.current.reset();
     setState(sessionRef.current.getState());
     return () => {
       stopWatch();
@@ -63,7 +74,12 @@ export function useNavigationSession(navigationRoute, options = {}) {
     (action) => {
       const session = sessionRef.current;
       if (!session) return null;
-      return apply(session.dispatch(action));
+      const next = apply(session.dispatch(action));
+      if (next.cueEvent && hapticsEnabledRef.current) {
+        const plan = hapticPlannerRef.current.plan(next.cueEvent, Date.now());
+        if (plan.kind) fireHaptic(plan.kind);
+      }
+      return next;
     },
     [apply],
   );
@@ -119,5 +135,15 @@ export function useNavigationSession(navigationRoute, options = {}) {
     [dispatch],
   );
 
-  return { state, start, stop, pause, resume, recenter, userPanned };
+  return {
+    state,
+    start,
+    stop,
+    pause,
+    resume,
+    recenter,
+    userPanned,
+    hapticsEnabled,
+    setHapticsEnabled,
+  };
 }

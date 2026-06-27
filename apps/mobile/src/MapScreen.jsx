@@ -937,6 +937,8 @@ export default function MapScreen() {
       {isNavigating ? (
         <NavPanel
           sessionState={nav.state}
+          hapticsEnabled={nav.hapticsEnabled}
+          onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
           onRecenter={nav.recenter}
           onPauseResume={() =>
             navStatus === "paused" ? nav.resume() : nav.pause()
