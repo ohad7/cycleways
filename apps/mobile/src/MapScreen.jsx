@@ -672,8 +672,14 @@ export default function MapScreen() {
   });
   const seekToFraction = useCallback(
     (fraction) => { playback.seekToFraction(fraction); },
-    [playback],
+    [playback.seekToFraction],
   );
+
+  // Clear the scrub marker immediately when the build panel is closed or
+  // navigation starts; the engine never emits onCursorChange(null) on teardown.
+  useEffect(() => {
+    if (!mapPresentationActive) setScrubPoint(null);
+  }, [mapPresentationActive]);
 
   const networkPresentationOptions = useMemo(
     () => ({
@@ -1199,16 +1205,14 @@ function BuildPanelContent({
 
       {canDownload ? (
         <>
-          {playback ? (
-            <PlaybackControls
-              isPlaying={playback.isPlaying}
-              isReady={playback.isReady}
-              currentTime={playback.currentTime}
-              duration={playback.duration}
-              onTogglePlayback={playback.togglePlayback}
-              onSeekToFraction={onSeekToFraction}
-            />
-          ) : null}
+          <PlaybackControls
+            isPlaying={playback.isPlaying}
+            isReady={playback.isReady}
+            currentTime={playback.currentTime}
+            duration={playback.duration}
+            onTogglePlayback={playback.togglePlayback}
+            onSeekToFraction={onSeekToFraction}
+          />
           <View style={styles.buildActions}>
             <ChromeButton
               label="סיכום"
