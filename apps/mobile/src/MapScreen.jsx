@@ -76,16 +76,6 @@ const CHROME_IONICON = {
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "";
 Mapbox.setAccessToken(MAPBOX_TOKEN);
 
-// camelCase form of the shared ROUTE_NETWORK_LINE_STYLE paint; reads the same
-// routeColor/routeWidth/routeOpacity properties core bakes into each feature.
-const NETWORK_LINE_STYLE = {
-  lineColor: ["get", "routeColor"],
-  lineWidth: ["get", "routeWidth"],
-  lineOpacity: ["get", "routeOpacity"],
-  lineJoin: "round",
-  lineCap: "round",
-};
-
 const ROUTE_LINE_STYLE = {
   lineColor: "#006699",
   lineWidth: 5,
@@ -688,6 +678,20 @@ export default function MapScreen() {
     () => routeNetworkPresentation(networkPresentationOptions),
     [networkPresentationOptions],
   );
+  const networkLayerStyles = useMemo(
+    () => ({
+      shadow: paintToRNStyle(
+        routeNetworkShadowStyleForPresentation(networkPresentation),
+      ),
+      casing: paintToRNStyle(
+        routeNetworkCasingStyleForPresentation(networkPresentation),
+      ),
+      core: paintToRNStyle(
+        routeNetworkLineStyleForPresentation(networkPresentation),
+      ),
+    }),
+    [networkPresentation],
+  );
 
   const networkFeatures = useMemo(() => {
     if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
@@ -867,7 +871,9 @@ export default function MapScreen() {
           />
         ) : null}
         <ShapeSource id="network" shape={networkFeatures}>
-          <LineLayer id="network-line" style={NETWORK_LINE_STYLE} />
+          <LineLayer id="network-shadow" style={networkLayerStyles.shadow} />
+          <LineLayer id="network-casing" style={networkLayerStyles.casing} />
+          <LineLayer id="network-line" style={networkLayerStyles.core} />
         </ShapeSource>
         <ShapeSource id="route-geometry" shape={routeGeometry}>
           <LineLayer id="route-line" style={ROUTE_LINE_STYLE} />
