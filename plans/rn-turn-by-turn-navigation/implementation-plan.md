@@ -1,14 +1,13 @@
 # React Native Turn-by-Turn Navigation Implementation Plan
 
-**Date:** 2026-06-26 (Phases 4-5 + Phase 7 core landed 2026-06-27)
-**Status:** in progress — Phases 0-5 landed; **Phase 7's pure session state
-machine landed** (`packages/core/src/navigation/navigationSession.js`); parity
-dependency CLEARED. All node-testable navigation logic (progress + cues +
-session) is now in place. **Next task: Phase 6 (native location service)** — the
-only remaining unverifiable-by-pure-test piece: `expo-location`
-(+ `expo-task-manager`), iOS permission strings, and the thin native
-`useNavigationSession.js` hook that pipes the location stream into the core
-session. Then Phase 8 (navigation UI).
+**Date:** 2026-06-26 (Phases 4-7 landed 2026-06-27; Phase 6 needs device verification)
+**Status:** in progress — Phases 0-5 + Phase 7 core landed and node-tested;
+**Phase 6 scaffolded** (`expo-location` service + `useNavigationSession` hook +
+`app.json` permissions) but NOT yet verified on a simulator/device. Parity
+dependency CLEARED. **Next task: verify Phase 6 in the simulator** (`expo install`
+the exact `expo-location` version, prebuild, confirm a foreground watch advances
+progress), then **Phase 8 (navigation UI in `MapScreen`)** — the `NavPanel`
+overlay + "Start navigation" entry driven by `useNavigationSession`.
 
 ## Progress Snapshot (2026-06-26)
 
@@ -219,7 +218,34 @@ Acceptance criteria:
 - Cues do not spam tight geometry noise.
 - Segment and hazard cue metadata is available to UI.
 
-## Phase 6 - Native Location Service
+## Phase 6 - Native Location Service ⚠️ (scaffolded 2026-06-27 — needs simulator verification)
+
+**Landed (unverified on device):**
+- Pure mapper `packages/core/src/navigation/locationFix.js`
+  (`toNavigationFix`: Expo `LocationObject` → progress fix; -1/null heading &
+  speed → null). Tested: `tests/test-location-fix.mjs`.
+- Native `apps/mobile/src/navigation/locationService.js` — `expo-location`
+  wrapper: `requestNavigationPermissions({background})` + a high-accuracy
+  (`BestForNavigation`) foreground `watchPositionAsync` with leak-safe `stop()`.
+- Native `apps/mobile/src/navigation/useNavigationSession.js` — the thin hook
+  wrapping the core session: START → permission request → PERMISSION_GRANTED/
+  DENIED → foreground watch feeding `LOCATION`; `stop/pause/resume/recenter/
+  userPanned`; watch teardown on stop/unmount (race-guarded).
+- `app.json`: `NSLocationAlwaysAndWhenInUseUsageDescription`,
+  `UIBackgroundModes:["location"]`, and the `expo-location` config plugin.
+- `apps/mobile/package.json`: `expo-location` dep.
+
+**Before this can be trusted (do on a machine that can build):**
+- Run `cd apps/mobile && npx expo install expo-location` to pin the exact
+  SDK-56-aligned version (the `~56.0.0` placeholder is a guess), then `npm i`.
+- `npx expo prebuild` / `expo run:ios`; confirm the permission prompt copy and
+  that a foreground watch advances progress in the simulator (Features → custom
+  GPX route works well).
+- **Background/lock-screen is config-ready but RUNTIME-DISABLED for v1**: the
+  hook defaults `background:false` (foreground-only). Enabling it needs
+  `expo-task-manager` + a defined background task and physical-device testing.
+
+Original plan (for reference):
 
 1. Add `expo-location` and `expo-task-manager` only if Expo can satisfy iOS
    background needs; otherwise document the need to prebuild/bare-module the
