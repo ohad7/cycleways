@@ -73,6 +73,26 @@ export function getRoutePlannerPresentation(
   };
 }
 
+export function getPlannerBuildModel(routeState) {
+  const hasRoute = routeState.geometry.length >= 2;
+  const activeDataPoints = Array.isArray(routeState.activeDataPoints)
+    ? routeState.activeDataPoints
+    : [];
+  return {
+    hasRoute,
+    canDownload: hasRoute,
+    stats: hasRoute
+      ? [
+          ["אורך", formatDistance(routeState.distance)],
+          ["טיפוס", `${Math.round(routeState.elevationGain || 0)} מ׳`],
+          ["ירידה", `${Math.round(routeState.elevationLoss || 0)} מ׳`],
+        ]
+      : [],
+    poiCount: activeDataPoints.length,
+    warningCount: activeDataPoints.length,
+  };
+}
+
 export function getRouteWarningPresentation(
   activeDataPoints = [],
   selectedDataMarker = null,
