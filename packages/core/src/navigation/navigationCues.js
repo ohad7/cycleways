@@ -79,6 +79,7 @@ export function selectActiveCue(cues, progressMeters) {
   let nearest = null;
   let nearestDistance = Infinity;
   for (const cue of cues) {
+    if (cue.type === "start") continue; // start is informational, not a maneuver
     const d = cue.distanceMeters - progressMeters;
     if (d < 0) continue; // already passed
     if (d < nearestDistance) {

@@ -9,12 +9,17 @@ cursor (loop/out-and-back safe), accuracy-aware off-route hysteresis, wrong-way
 detection, and start-approach output. The **cue layer (Phase 5) is also DONE**
 (2026-06-27): `navigationCues.js` with a static `buildRouteCues` (start/turn/
 hazard/arrive, deterministic, dedup-gated) and a per-fix `selectActiveCue`
-(preview/final scheduling). **Both UI prerequisites are also DONE** (2026-06-27):
-the mobile-web parity re-align (`rn-mobile-web-parity` Phase 2.8b) and the
-native-UI reskin (`rn-mobile-native-ui` Phase 2.8c), so the navigation chrome
-(Phase 8) has a current native planner to build on. All pure-core navigation
-logic is now in place. **Next task: Phase 6 (native location service)** — the
-first native-app phase — then the session hook (Phase 7) and navigation UI.
+(preview/final scheduling). The **session state machine (Phase 7 core) is also
+DONE** (2026-06-27): `navigationSession.js` (`createNavigationSession`) owns the
+tracker + cues and exposes idle/permission/navigating/off-route/paused/ended/
+error states with deduped cue events, never mutating the loaded route. **Both UI
+prerequisites are also DONE** (2026-06-27): the mobile-web parity re-align
+(`rn-mobile-web-parity` Phase 2.8b) and the native-UI reskin
+(`rn-mobile-native-ui` Phase 2.8c), so the navigation chrome (Phase 8) has a
+current native planner to build on. All node-testable navigation logic is now in
+place. **Next task: Phase 6 (native location service)** — the first native-app
+phase (and the thin `useNavigationSession` hook wrapping the core session) —
+then the navigation UI (Phase 8).
 
 ### Current native UI the nav mode builds on (read before Phase 8)
 `apps/mobile/src/MapScreen.jsx` renders a full-bleed `@rnmapbox/maps` map with

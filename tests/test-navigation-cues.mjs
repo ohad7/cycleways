@@ -117,6 +117,9 @@ function routeFrom(geometry, extra = {}) {
   // Passed cues are not re-emitted.
   const afterTurn = selectActiveCue(cues, 520);
   assert.notEqual(afterTurn?.cue?.type, "turn", "passed turn is not re-selected");
+
+  // The start cue is informational and never selected as a maneuver.
+  assert.equal(selectActiveCue(cues, 0), null, "start cue is not an active maneuver");
 }
 
 // --- Short-segment suppression: close turns do not spam -------------------

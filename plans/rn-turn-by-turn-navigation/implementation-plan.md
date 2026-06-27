@@ -1,10 +1,14 @@
 # React Native Turn-by-Turn Navigation Implementation Plan
 
-**Date:** 2026-06-26 (Phases 4-5 landed 2026-06-27)
-**Status:** in progress — Phases 0-5 landed; parity dependency CLEARED.
-**Next task: Phase 6 (native location service)** — first native-app phase
-(`expo-location`/`expo-task-manager`, iOS permission strings); feeds the Phase 7
-session hook. All pure-core navigation logic (progress + cues) is now in place.
+**Date:** 2026-06-26 (Phases 4-5 + Phase 7 core landed 2026-06-27)
+**Status:** in progress — Phases 0-5 landed; **Phase 7's pure session state
+machine landed** (`packages/core/src/navigation/navigationSession.js`); parity
+dependency CLEARED. All node-testable navigation logic (progress + cues +
+session) is now in place. **Next task: Phase 6 (native location service)** — the
+only remaining unverifiable-by-pure-test piece: `expo-location`
+(+ `expo-task-manager`), iOS permission strings, and the thin native
+`useNavigationSession.js` hook that pipes the location stream into the core
+session. Then Phase 8 (navigation UI).
 
 ## Progress Snapshot (2026-06-26)
 
@@ -238,7 +242,19 @@ Acceptance criteria:
 
 ## Phase 7 - Navigation Session Hook
 
-1. Add `apps/mobile/src/navigation/useNavigationSession.js`.
+**Split landed (2026-06-27):** the pure session state machine is implemented and
+tested in core — `packages/core/src/navigation/navigationSession.js`
+(`createNavigationSession` → `{ getState, dispatch }`, owning the Phase 4 tracker
++ Phase 5 cues). States idle/requesting-permission/navigating/off-route/paused/
+ended/error; outputs progress, activeCue, offRoute, cameraIntent, and a
+deduped `cueEvent` (cue / off-route) for the voice/haptic layer; a non-navigable
+route cannot start; the NavigationRoute is never mutated. Tests:
+`tests/test-navigation-session.mjs`. **Remaining:** the thin native
+`apps/mobile/src/navigation/useNavigationSession.js` wrapper that wires the
+Phase 6 location stream + permission prompts into `dispatch` and re-renders
+`getState()` — do this together with Phase 6.
+
+1. ✅ Pure state machine in `@cycleways/core/navigation/navigationSession.js`.
 2. Session states:
    - idle
    - requesting-permission
