@@ -1,9 +1,9 @@
 import React from "react";
 import Icon from "../Icon.jsx";
-import { formatLegacyDistance } from "../ElevationProfile.jsx";
 import PanelPoiCard from "./PanelPoiCard.jsx";
 import { routeDisplayImage } from "@cycleways/core/data/catalog.js";
 import { routeImageSrc } from "../routes/routeImageSrc.js";
+import { getPlannerBuildModel } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 export default function BuildPanel({
   routeState,
@@ -25,7 +25,8 @@ export default function BuildPanel({
   playback,
   error,
 }) {
-  const hasRoute = routeState.geometry.length >= 2;
+  const buildModel = getPlannerBuildModel(routeState);
+  const hasRoute = buildModel.hasRoute;
 
   return (
     <div className="build-panel">
@@ -57,9 +58,9 @@ export default function BuildPanel({
 
       {hasRoute ? (
         <div className="build-panel__stats">
-          <Stat k="אורך" v={formatLegacyDistance(routeState.distance)} />
-          <Stat k="טיפוס" v={`${Math.round(routeState.elevationGain || 0)} מ׳`} />
-          <Stat k="ירידה" v={`${Math.round(routeState.elevationLoss || 0)} מ׳`} />
+          {buildModel.stats.map(([k, v]) => (
+            <Stat key={k} k={k} v={v} />
+          ))}
         </div>
       ) : (
         <p className="build-panel__empty">סמנו נקודות על המפה כדי לבנות מסלול.</p>
