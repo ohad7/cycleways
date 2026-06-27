@@ -33,6 +33,7 @@ import {
   DATA_MARKERS_STYLE,
   ROUTE_DIRECTION_PULSE_CASING_STYLE,
   ROUTE_DIRECTION_PULSE_CORE_STYLE,
+  ROUTE_GEOMETRY_LINE_STYLE,
 } from "@cycleways/core/map/mapStyles.js";
 import { MAP_INITIAL_CAMERA } from "@cycleways/core/map/mapViewport.js";
 import { buildRouteDirectionPulseFeatureCollection } from "@cycleways/core/map/routeDirectionPulse.js";
@@ -709,13 +710,16 @@ export default function MapScreen() {
     }),
     [networkPresentation],
   );
-  const routeLineStyles = useMemo(
-    () => ({
-      casing: paintToRNStyle(routeGeometryCasingStyleForPresentation("dark")),
-      core: paintToRNStyle(routeGeometryLineStyleForPresentation("dark")),
-    }),
-    [],
-  );
+  const routeLineStyles = useMemo(() => {
+    const variant = mapPresentationActive ? "dark" : "current";
+    const casingSpec = routeGeometryCasingStyleForPresentation(variant);
+    const coreSpec =
+      routeGeometryLineStyleForPresentation(variant) || ROUTE_GEOMETRY_LINE_STYLE;
+    return {
+      casing: casingSpec ? paintToRNStyle(casingSpec) : null,
+      core: paintToRNStyle(coreSpec),
+    };
+  }, [mapPresentationActive]);
 
   const networkFeatures = useMemo(() => {
     if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
@@ -900,7 +904,9 @@ export default function MapScreen() {
           <LineLayer id="network-line" style={networkLayerStyles.core} />
         </ShapeSource>
         <ShapeSource id="route-geometry" shape={routeGeometry}>
-          <LineLayer id="route-casing" style={routeLineStyles.casing} />
+          {routeLineStyles.casing ? (
+            <LineLayer id="route-casing" style={routeLineStyles.casing} />
+          ) : null}
           <LineLayer id="route-line" style={routeLineStyles.core} />
         </ShapeSource>
         {isNavigating ? (
