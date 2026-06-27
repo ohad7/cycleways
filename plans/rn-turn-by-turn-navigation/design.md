@@ -17,11 +17,13 @@ prerequisites are also DONE** (2026-06-27): the mobile-web parity re-align
 (`rn-mobile-web-parity` Phase 2.8b) and the native-UI reskin
 (`rn-mobile-native-ui` Phase 2.8c), so the navigation chrome (Phase 8) has a
 current native planner to build on. All node-testable navigation logic is now in
-place. **Phase 6 (native location service) is scaffolded** (2026-06-27):
-`expo-location` service + the `useNavigationSession` hook + `app.json`
-permissions, foreground-only for v1 (background config-ready but runtime-
-disabled) — **not yet verified on a simulator/device**. **Next: verify Phase 6
-on a build**, then the navigation UI (Phase 8).
+place. **Phases 6 (native location service) and 8 (navigation UI) are
+scaffolded** (2026-06-27): the `expo-location` service + `useNavigationSession`
+hook + `app.json` permissions (foreground-only for v1; background config-ready
+but runtime-disabled), and a `NavPanel` overlay with a "Start navigation" entry
+in the Build panel that locks edits, follows the rider, and shows cue/remaining/
+off-route — **not yet verified on a simulator/device**. **Next: build + verify
+the slice in the simulator**, then Phase 9 (haptics) and Phase 10 (app links).
 
 ### Current native UI the nav mode builds on (read before Phase 8)
 `apps/mobile/src/MapScreen.jsx` renders a full-bleed `@rnmapbox/maps` map with

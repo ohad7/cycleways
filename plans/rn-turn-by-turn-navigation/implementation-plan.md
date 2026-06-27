@@ -1,13 +1,15 @@
 # React Native Turn-by-Turn Navigation Implementation Plan
 
-**Date:** 2026-06-26 (Phases 4-7 landed 2026-06-27; Phase 6 needs device verification)
-**Status:** in progress — Phases 0-5 + Phase 7 core landed and node-tested;
-**Phase 6 scaffolded** (`expo-location` service + `useNavigationSession` hook +
-`app.json` permissions) but NOT yet verified on a simulator/device. Parity
-dependency CLEARED. **Next task: verify Phase 6 in the simulator** (`expo install`
-the exact `expo-location` version, prebuild, confirm a foreground watch advances
-progress), then **Phase 8 (navigation UI in `MapScreen`)** — the `NavPanel`
-overlay + "Start navigation" entry driven by `useNavigationSession`.
+**Date:** 2026-06-26 (Phases 4-8 landed 2026-06-27; Phases 6+8 need device verification)
+**Status:** in progress — the full first-pass turn-by-turn slice is implemented.
+Phases 0-5 + Phase 7 core are node-tested; **Phases 6 (native location) and 8
+(navigation UI) are scaffolded and parse/bundle cleanly but are NOT yet verified
+on a simulator/device.** Parity dependency CLEARED. **Next task: build + verify
+in the simulator** — `cd apps/mobile && npx expo install expo-location`, prebuild,
+then exercise Start→navigate→off-route→stop on a built and a catalog route with a
+simulated GPX. Then Phase 9 (haptics; voice deferred) and Phase 10
+(universal/app links). Deferred UI polish: progress-line styling + snapped-rider
+marker (see Phase 8).
 
 ## Progress Snapshot (2026-06-26)
 
@@ -306,12 +308,37 @@ Acceptance criteria:
 - Starting/stopping navigation does not mutate planner route state.
 - Returning to planner mode leaves the loaded route intact.
 
-## Phase 8 - Navigation UI In `MapScreen`
+## Phase 8 - Navigation UI In `MapScreen` ⚠️ (scaffolded 2026-06-27 — needs simulator verification)
 
-> Depends on `rn-mobile-web-parity` Phase 2.8b: build this navigation chrome on
-> the re-aligned Build/Discover front-panel. "Start navigation" should live in
-> the Build panel (and/or a catalog route's context header), and the Discover
-> list is the catalog route picker.
+**Landed (unverified on device):**
+- Pure presenter `packages/core/src/navigation/navigationPresentation.js`
+  (`getNavigationPresentation` → Hebrew cue/status/distance strings + icons;
+  `formatDistanceMeters`). Tested: `tests/test-navigation-presentation.mjs`.
+- `apps/mobile/src/planner/NavPanel.jsx` — active-nav overlay: top cue banner
+  (or red off-route banner) + remaining distance + a recenter / pause-resume /
+  stop control row (safe-area aware).
+- `MapScreen` wiring: builds the `NavigationRoute` from the loaded route, runs
+  `useNavigationSession`, shows a primary **"התחל ניווט" (Start navigation)**
+  button in the Build panel actions (when `canDownload`), and while navigating:
+  swaps `PlannerSheet` → `NavPanel`, hides `TopSearch`/`MapControls`, **locks
+  route edits** (map-press, point-drag, and data-marker taps all gated via
+  `isNavigatingRef`), and follows the user with heading (zoom 16.5,
+  `cameraIntent`-aware) with a recenter control.
+
+**Deferred (not in this cut):**
+- Route-progress line styling (completed muted / remaining emphasized) and a
+  snapped-rider marker — needs a `snappedPoint` on the progress output and line
+  splitting; the RNMapbox `UserLocation` puck covers the rider for now.
+- A route-overview/fit button while navigating (recenter only for v1).
+
+**Verify in the simulator:** Start navigation from a built and a catalog route →
+permission prompt → overlay shows cue/remaining → simulated GPX advances
+progress, off-route banner appears when you diverge, stop returns to the planner
+with the route intact, and taps cannot add points while navigating.
+
+> Original plan (depends on `rn-mobile-web-parity` Phase 2.8b): build this
+> navigation chrome on the re-aligned Build/Discover front-panel. "Start
+> navigation" lives in the Build panel; the Discover list is the route picker.
 
 1. Add a "Start navigation" action when `canDownload` and route geometry are
    available.

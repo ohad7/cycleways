@@ -25,6 +25,7 @@ import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
 import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
+import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
 import {
   DATA_MARKERS_STYLE,
   ROUTE_DIRECTION_PULSE_CASING_STYLE,
@@ -42,6 +43,8 @@ import PlannerSheet from "./planner/PlannerSheet.jsx";
 import TopSearch from "./planner/TopSearch.jsx";
 import MapControls from "./planner/MapControls.jsx";
 import DiscoverPanel from "./planner/DiscoverPanel.jsx";
+import NavPanel from "./planner/NavPanel.jsx";
+import { useNavigationSession } from "./navigation/useNavigationSession.js";
 import Icon from "./planner/Icon.jsx";
 import { palette } from "./planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
@@ -362,6 +365,7 @@ export default function MapScreen() {
         // candidates. Multi-finger touches (pinch zoom/rotate) are never
         // claimed so they pass straight through to Mapbox.
         onStartShouldSetPanResponder: (evt) =>
+          !isNavigatingRef.current &&
           evt.nativeEvent.touches.length <= 1 &&
           hitTestRoutePoint(
             evt.nativeEvent.locationX,
@@ -507,6 +511,7 @@ export default function MapScreen() {
   const handleMapPress = useCallback(
     (feature) => {
       if (state.status !== "ready") return;
+      if (isNavigatingRef.current) return; // route edits are locked while navigating
       if (Date.now() - routePointPressGuardRef.current < ADD_GUARD_MS) return;
       const point = pointFromFeature(feature);
       if (!point) return;
@@ -518,6 +523,7 @@ export default function MapScreen() {
 
   const handleDataMarkerPress = useCallback(
     (event) => {
+      if (isNavigatingRef.current) return; // marker add-to-route is locked while navigating
       const marker = dataMarkerFromPressEvent(event);
       if (!marker) return;
       handleDataMarkerClick(marker);
@@ -612,6 +618,36 @@ export default function MapScreen() {
         : null,
     [catalogEntries, selectedCatalogSlug],
   );
+
+  // --- Turn-by-turn navigation (Phase 8) ----------------------------------
+  // Normalize the loaded route (built or catalog) into the shared NavigationRoute
+  // the session consumes. Memoized on the route geometry + share token so its id
+  // stays stable while navigating (edits are locked, so it will not churn).
+  const navigationRoute = useMemo(
+    () =>
+      navigationRouteFromRouteState(routeState, shareInfo, {
+        source: selectedCatalogEntry ? "catalog" : "built",
+        slug: selectedCatalogEntry?.slug || "",
+        name: selectedCatalogEntry?.name || "המסלול שלי",
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeState.geometry, shareInfo.param, selectedCatalogSlug],
+  );
+
+  const nav = useNavigationSession(navigationRoute);
+  const navStatus = nav.state?.status ?? "idle";
+  const isNavigating =
+    navStatus === "navigating" ||
+    navStatus === "off-route" ||
+    navStatus === "paused" ||
+    navStatus === "requesting-permission";
+
+  // Ref mirror so the earlier-defined map-press / point-drag gesture handlers can
+  // lock out route edits while navigating without a declaration-order dependency.
+  const isNavigatingRef = useRef(false);
+  useEffect(() => {
+    isNavigatingRef.current = isNavigating;
+  }, [isNavigating]);
 
   // Discover -> Build: restore the catalog entry's encoded route token through
   // the same shared path used by deep links, record it in recents, and switch
@@ -742,11 +778,16 @@ export default function MapScreen() {
           defaultSettings={INITIAL_CAMERA_SETTINGS}
           animationDuration={0}
           animationMode="none"
-          followUserLocation={locationState.following}
+          followUserLocation={
+            locationState.following ||
+            (isNavigating &&
+              navStatus !== "paused" &&
+              nav.state?.cameraIntent === "follow")
+          }
           followUserMode={UserTrackingMode.FollowWithHeading}
-          followZoomLevel={14.5}
+          followZoomLevel={isNavigating ? 16.5 : 14.5}
         />
-        {locationState.enabled ? (
+        {locationState.enabled || isNavigating ? (
           <UserLocation
             visible
             onUpdate={handleUserLocationUpdate}
@@ -810,18 +851,22 @@ export default function MapScreen() {
           <CircleLayer id="route-points-circle" style={ROUTE_POINT_STYLE} />
         </ShapeSource>
       </MapView>
-      <TopSearch
-        query={mapUi.searchQuery}
-        onChange={handleSearchQueryChange}
-        onSubmit={submitSearch}
-        busy={mapUi.searchStatus === "searching"}
-        error={mapUi.searchError}
-      />
-      <MapControls
-        onLocate={handleLocatePress}
-        onFit={fitRoute}
-        following={locationState.following}
-      />
+      {!isNavigating ? (
+        <>
+          <TopSearch
+            query={mapUi.searchQuery}
+            onChange={handleSearchQueryChange}
+            onSubmit={submitSearch}
+            busy={mapUi.searchStatus === "searching"}
+            error={mapUi.searchError}
+          />
+          <MapControls
+            onLocate={handleLocatePress}
+            onFit={fitRoute}
+            following={locationState.following}
+          />
+        </>
+      ) : null}
       <DataMarkerCard
         marker={mapUi.selectedDataMarker}
         onAddToRoute={handleAddDataMarkerToRoute}
@@ -840,44 +885,56 @@ export default function MapScreen() {
         shareUrl={shareUrl}
         visible={mapUi.downloadModalOpen}
       />
-      <PlannerSheet
-        panelState={panelState}
-        onPanelStateChange={setPanelState}
-        discover={
-          <DiscoverPanel
-            entries={catalogEntries}
-            onSelect={handleSelectCatalogRoute}
-            fix={
-              locationState.enabled && locationState.point
-                ? {
-                    lat: locationState.point.lat,
-                    lng: locationState.point.lng,
-                  }
-                : null
-            }
-          />
-        }
-        build={
-          <BuildPanelContent
-            animator={directionAnimatorRef.current}
-            canDownload={canDownload}
-            canRedo={canRedo}
-            canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
-            canUndo={canUndo}
-            catalogEntry={selectedCatalogEntry}
-            locationState={locationState}
-            onClear={handleClearRoute}
-            onOpenSummary={handleOpenDownload}
-            onRedo={handleRedo}
-            onScrub={setScrubPoint}
-            onShare={shareRoute}
-            onUndo={handleUndo}
-            presentation={routePresentation}
-            routePoints={displayedRoutePoints}
-            routeState={routeState}
-          />
-        }
-      />
+      {isNavigating ? (
+        <NavPanel
+          sessionState={nav.state}
+          onRecenter={nav.recenter}
+          onPauseResume={() =>
+            navStatus === "paused" ? nav.resume() : nav.pause()
+          }
+          onStop={nav.stop}
+        />
+      ) : (
+        <PlannerSheet
+          panelState={panelState}
+          onPanelStateChange={setPanelState}
+          discover={
+            <DiscoverPanel
+              entries={catalogEntries}
+              onSelect={handleSelectCatalogRoute}
+              fix={
+                locationState.enabled && locationState.point
+                  ? {
+                      lat: locationState.point.lat,
+                      lng: locationState.point.lng,
+                    }
+                  : null
+              }
+            />
+          }
+          build={
+            <BuildPanelContent
+              animator={directionAnimatorRef.current}
+              canDownload={canDownload}
+              canRedo={canRedo}
+              canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
+              canUndo={canUndo}
+              catalogEntry={selectedCatalogEntry}
+              locationState={locationState}
+              onClear={handleClearRoute}
+              onOpenSummary={handleOpenDownload}
+              onRedo={handleRedo}
+              onScrub={setScrubPoint}
+              onShare={shareRoute}
+              onStartNavigation={nav.start}
+              onUndo={handleUndo}
+              presentation={routePresentation}
+              routePoints={displayedRoutePoints}
+              routeState={routeState}
+            />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -929,6 +986,7 @@ function BuildPanelContent({
   onRedo,
   onScrub,
   onShare,
+  onStartNavigation,
   onUndo,
   presentation,
   routePoints,
@@ -1026,21 +1084,30 @@ function BuildPanelContent({
       ) : null}
 
       {canDownload ? (
-        <View style={styles.buildActions}>
+        <>
+          <View style={styles.buildActions}>
+            <ChromeButton
+              label="סיכום"
+              onPress={onOpenSummary}
+              accessibilityLabel="סיכום ושיתוף המסלול"
+              testID="action-summary"
+            />
+            <ChromeButton
+              disabled={!canShare}
+              label="שיתוף"
+              onPress={onShare}
+              accessibilityLabel="שיתוף המסלול"
+            />
+          </View>
           <ChromeButton
-            label="סיכום"
-            onPress={onOpenSummary}
-            accessibilityLabel="סיכום ושיתוף המסלול"
-            testID="action-summary"
-          />
-          <ChromeButton
-            disabled={!canShare}
-            label="שיתוף"
-            onPress={onShare}
+            icon="navigate"
+            label="התחל ניווט"
+            onPress={onStartNavigation}
             primary
-            accessibilityLabel="שיתוף המסלול"
+            accessibilityLabel="התחל ניווט מונחה במסלול"
+            testID="action-start-navigation"
           />
-        </View>
+        </>
       ) : null}
     </ScrollView>
   );
