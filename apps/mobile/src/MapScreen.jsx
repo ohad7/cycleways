@@ -44,6 +44,7 @@ import PlannerSheet from "./planner/PlannerSheet.jsx";
 import TopSearch from "./planner/TopSearch.jsx";
 import MapControls from "./planner/MapControls.jsx";
 import DiscoverPanel from "./planner/DiscoverPanel.jsx";
+import RoutePoiList from "./planner/RoutePoiList.jsx";
 import NavPanel from "./planner/NavPanel.jsx";
 import { useNavigationSession } from "./navigation/useNavigationSession.js";
 import Icon from "./planner/Icon.jsx";
@@ -1133,6 +1134,8 @@ function BuildPanelContent({
           onScrub={onScrub}
         />
       ) : null}
+
+      <RoutePoiList activeDataPoints={routeState.activeDataPoints} />
 
       {canDownload ? (
         <>
