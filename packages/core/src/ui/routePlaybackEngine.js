@@ -176,6 +176,7 @@ export function useRoutePlaybackEngine({
   }, [engine]);
 
   return {
+    sync,
     currentTime: state.currentTime,
     cursor: state.cursor,
     duration: state.duration,
