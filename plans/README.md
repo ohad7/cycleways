@@ -4,7 +4,7 @@ This directory contains planning documents for larger project changes before imp
 
 Current plans:
 
-- `rn-mobile-map-style-parity/` - design for aligning the iPhone app map and route-building UI with the more-polished mobile web by sharing presentation specs + a planner view-model (network/route colors, build summary, playback controls).
+- `rn-mobile-map-style-parity/` - design + implementation plan for aligning the iPhone app map and route-building UI with the more-polished mobile web by sharing presentation specs + a planner view-model + a clock-injected playback engine (network/route colors, build summary, playback controls).
 
 - `map-editor-workflow/` - design and implementation plan for the map editor and source-data processing workflow.
 - `editor-name-release/` - design and implementation plan for freeing names held by deprecated map records.
