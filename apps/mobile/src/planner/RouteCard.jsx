@@ -8,6 +8,7 @@ import {
   distanceToRouteStartMeters,
   formatDistanceFromUser,
 } from "@cycleways/core/data/nearMe.js";
+import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
 import Icon from "./Icon.jsx";
 import { ROUTE_IMAGES } from "./routeImages.js";
 import { palette, radius } from "./theme.js";
@@ -30,10 +31,11 @@ function tintFor(hex) {
 // Branded native Discover card: a route photo thumbnail (or a difficulty-tinted
 // icon tile fallback), title, difficulty chip, and a "distance · shape · via
 // place" meta line (+ near-me distance when a location fix is available).
-export default function RouteCard({ entry, placeById, fix, onSelect }) {
+export default function RouteCard({ entry, index = 0, placeById, fix, onSelect }) {
   const difficultyLabel = routeDifficultyLabel(entry?.difficulty);
   const chipColor = DIFFICULTY_COLOR[entry?.difficulty] || palette.muted;
   const photo = ROUTE_IMAGES[routeThumbnailPath(entry)] || null;
+  const swatchColor = discoverRouteColor(index);
 
   const viaNames = (entry?.passesNear || [])
     .map((id) => placeById?.get?.(id)?.name)
@@ -65,6 +67,7 @@ export default function RouteCard({ entry, placeById, fix, onSelect }) {
       )}
       <View style={styles.body}>
         <View style={styles.titleRow}>
+          <View style={[styles.swatch, { backgroundColor: swatchColor }]} />
           <Text style={styles.title} numberOfLines={1}>
             {entry.name}
           </Text>
@@ -108,7 +111,13 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+  },
+  swatch: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    flexShrink: 0,
   },
   title: {
     flexShrink: 1,

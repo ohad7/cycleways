@@ -236,9 +236,9 @@ export default function MapScreen() {
     status: "idle",
   });
   // Front-panel mode (mirrors the web FrontPanel / PanelStateToggle): "discover"
-  // browses the bundled route catalog, "build" is the planner. The native app
-  // starts in build to keep the map-first planner as the primary surface.
-  const [panelState, setPanelState] = useState("build");
+  // browses the bundled route catalog, "build" is the planner. The app opens in
+  // discovery (the primary navigation entry point) with the drawer already open.
+  const [panelState, setPanelState] = useState("discover");
   const [catalogEntries, setCatalogEntries] = useState([]);
   // Slug of the catalog route currently loaded in the planner; drives the Build
   // panel's "מסלול מומלץ" eyebrow. Cleared once the rider edits the route.

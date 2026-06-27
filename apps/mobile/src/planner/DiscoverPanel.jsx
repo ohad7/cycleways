@@ -1,14 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getJsonAsset } from "@cycleways/core/platform/assets.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
+import {
+  FILTER_GROUPS,
+  emptyFilters,
+  selectDiscoverRoutes,
+} from "@cycleways/core/data/discoverFilters.js";
 import RouteCard from "./RouteCard.jsx";
-import { palette } from "./theme.js";
+import { palette, radius, space } from "./theme.js";
 
-// Native Discover list: the bundled catalog as branded route cards. Loads
-// places.json for the "via place" line + near-me ordering when a fix exists.
+// Native Discover list with feature parity to the mobile-web Discover panel:
+// difficulty / surface / distance chip filters + a "near me" toggle + a result
+// count, then the catalog as branded route cards. Filtering + ordering reuse the
+// shared @cycleways/core helpers; only the chip rendering is native.
 export default function DiscoverPanel({ entries, onSelect, fix }) {
   const [places, setPlaces] = useState([]);
+  const [filters, setFilters] = useState(emptyFilters);
+  const [nearMeSort, setNearMeSort] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,9 +38,25 @@ export default function DiscoverPanel({ entries, onSelect, fix }) {
     return map;
   }, [places]);
 
+  // Single-select per chip group (mirrors the web toggleAxis behavior).
+  const toggleAxis = (axis, value) =>
+    setFilters((prev) => {
+      const next = new Set(prev[axis]);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return { ...prev, [axis]: next.size > 1 ? new Set([value]) : next };
+    });
+
+  const filtered = useMemo(
+    () => selectDiscoverRoutes(entries, filters).routes,
+    [entries, filters],
+  );
   const ordered = useMemo(
-    () => (fix ? sortByDistanceFromUser(entries, placeById, fix) : entries || []),
-    [entries, placeById, fix],
+    () =>
+      nearMeSort && fix
+        ? sortByDistanceFromUser(filtered, placeById, fix)
+        : filtered,
+    [filtered, nearMeSort, fix, placeById],
   );
 
   if (!entries || entries.length === 0) {
@@ -43,21 +68,116 @@ export default function DiscoverPanel({ entries, onSelect, fix }) {
   }
 
   return (
-    <View style={styles.list}>
-      {ordered.map((entry) => (
-        <RouteCard
-          key={entry.slug || entry.name}
-          entry={entry}
-          placeById={placeById}
-          fix={fix}
-          onSelect={onSelect}
-        />
-      ))}
+    <View style={styles.root}>
+      <View style={styles.filters}>
+        {FILTER_GROUPS.map((group) => (
+          <View key={group.axis} style={styles.group}>
+            <Text style={styles.groupLabel}>{group.label}</Text>
+            <View style={styles.chipRow}>
+              {group.options.map((opt) => (
+                <Chip
+                  key={opt.value}
+                  label={opt.label}
+                  active={filters[group.axis].has(opt.value)}
+                  onPress={() => toggleAxis(group.axis, opt.value)}
+                />
+              ))}
+            </View>
+          </View>
+        ))}
+        {fix ? (
+          <Chip
+            label="קרוב אליי"
+            icon
+            active={nearMeSort}
+            onPress={() => setNearMeSort((v) => !v)}
+          />
+        ) : null}
+      </View>
+
+      <Text style={styles.count}>{`${ordered.length} מסלולים`}</Text>
+
+      <View style={styles.list}>
+        {ordered.map((entry, index) => (
+          <RouteCard
+            key={entry.slug || entry.name}
+            entry={entry}
+            index={index}
+            placeById={placeById}
+            fix={fix}
+            onSelect={onSelect}
+          />
+        ))}
+      </View>
     </View>
   );
 }
 
+function Chip({ label, active, onPress, icon = false }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        active ? styles.chipActive : null,
+        pressed ? styles.chipPressed : null,
+      ]}
+    >
+      {icon ? <Text style={styles.chipIcon}>📍</Text> : null}
+      <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  root: { gap: space.sm },
+  filters: { paddingHorizontal: 12, gap: space.sm },
+  group: { gap: 5 },
+  groupLabel: {
+    color: palette.muted,
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  chipRow: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 },
+  chip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: palette.cream,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.line,
+  },
+  chipActive: {
+    backgroundColor: palette.forest,
+    borderColor: palette.forest,
+  },
+  chipPressed: { opacity: 0.8 },
+  chipIcon: { fontSize: 12 },
+  chipText: {
+    color: palette.ink,
+    fontSize: 13,
+    fontWeight: "700",
+    writingDirection: "rtl",
+  },
+  chipTextActive: { color: palette.white },
+  count: {
+    paddingHorizontal: 12,
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   list: { gap: 8, paddingHorizontal: 12 },
   empty: { paddingHorizontal: 12, paddingVertical: 18, alignItems: "center" },
   emptyText: {

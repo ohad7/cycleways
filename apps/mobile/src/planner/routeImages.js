@@ -11,4 +11,6 @@ export const ROUTE_IMAGES = {
   "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp": require("../../assets/data/public-data/poi-images/poi-38b469d3-eadbb56a-thumb.png"),
   "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp": require("../../assets/data/public-data/poi-images/poi-5b6da297-fd491b50-thumb.png"),
   "public-data/poi-images/roman-roads-hero-89879e81-thumb.webp": require("../../assets/data/public-data/poi-images/roman-roads-hero-89879e81-thumb.png"),
+  "public-data/poi-images/sovev-beit-hillel-start-88a84776-thumb.webp": require("../../assets/data/public-data/poi-images/sovev-beit-hillel-start-88a84776-thumb.png"),
+  "public-data/poi-images/sovev-shear-yeshuv-start-ef0530c1-thumb.webp": require("../../assets/data/public-data/poi-images/sovev-shear-yeshuv-start-ef0530c1-thumb.png"),
 };

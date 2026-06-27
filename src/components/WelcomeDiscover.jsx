@@ -2,49 +2,16 @@ import React, { useMemo, useState } from "react";
 import RouteCard from "./RouteCard.jsx";
 import { catalogFilter } from "./catalogFilter.js";
 import {
+  FILTER_GROUPS,
+  emptyFilters,
+} from "@cycleways/core/data/discoverFilters.js";
+import {
   routePassesThroughPlaceIds,
   routeStartPlaceIds,
 } from "@cycleways/core/data/catalog.js";
 
-export const FILTER_GROUPS = [
-  {
-    axis: "difficulty",
-    label: "רמת קושי",
-    options: [
-      { value: "easy", label: "קל" },
-      { value: "moderate", label: "בינוני" },
-      { value: "hard", label: "קשה" },
-    ],
-  },
-  {
-    axis: "surface",
-    label: "משטח",
-    options: [
-      { value: "paved", label: "סלול" },
-      { value: "mixed", label: "שטח/סלול" },
-      { value: "dirt", label: "שטח" },
-    ],
-  },
-  {
-    axis: "distance",
-    label: "אורך",
-    options: [
-      { value: "short", label: "עד 10 ק״מ" },
-      { value: "medium", label: "10-25 ק״מ" },
-      { value: "long", label: "25 ק״מ ומעלה" },
-    ],
-  },
-];
-
-export function emptyFilters() {
-  return {
-    difficulty: new Set(),
-    surface: new Set(),
-    distance: new Set(),
-    startLocation: new Set(),
-    throughLocation: new Set(),
-  };
-}
+// Shared with the React Native app; re-exported for existing web imports.
+export { FILTER_GROUPS, emptyFilters };
 
 export function FilterChip({ active, onClick, children }) {
   return (

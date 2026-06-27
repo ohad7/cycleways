@@ -3,6 +3,7 @@ import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { fileURLToPath } from "url";
+import { routeThumbnailPath } from "@cycleways/core/data/catalog.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -97,8 +98,9 @@ async function collectCatalogThumbnailPaths() {
   const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
   const sources = new Set();
   for (const entry of entries) {
-    const hero = entry?.heroImage;
-    const t = hero?.thumbnail || hero?.photo;
+    // Same resolver the native Discover card uses (heroImage -> start/end POI
+    // photo -> ...), so every route whose card shows a photo has it bundled.
+    const t = routeThumbnailPath(entry);
     if (typeof t === "string" && t.startsWith("public-data/")) {
       sources.add(t);
     }
