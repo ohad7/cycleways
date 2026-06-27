@@ -1,12 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
-import { execFile } from "child_process";
-import { promisify } from "util";
 import { fileURLToPath } from "url";
+import sharp from "sharp";
 import { routeThumbnailPath } from "@cycleways/core/data/catalog.js";
 import { isWarningType, primaryPoiImage } from "@cycleways/core/data/poiTypes.js";
-
-const execFileAsync = promisify(execFile);
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const mobileRoot = path.resolve(scriptDir, "..");
@@ -58,14 +55,15 @@ async function main() {
 
   // Catalog hero thumbnails (Discover cards) + on-route POI thumbnails (the
   // "נקודות עניין בדרך" panel). Source images are webp, which React Native's
-  // core <Image> can't decode on iOS, so convert each to PNG (via macOS sips)
-  // at the same logical key. Deduped by source path.
+  // core <Image> can't decode on iOS, so transcode each to JPG (via sharp, the
+  // same image lib the editor uses) at the same logical key. JPG keeps photo
+  // thumbnails small (~10x smaller than PNG). Deduped by source path.
   const imagePaths = dedupeBySource([
     ...(await collectCatalogThumbnailPaths()),
     ...(await collectPoiThumbnailPaths()),
   ]);
   for (const image of imagePaths) {
-    await convertWebpToPng(image.sourceLogical, image.targetLogical);
+    await convertWebpToJpg(image.sourceLogical, image.targetLogical);
   }
 
   const shardSourceDir = path.join(sourceRoot, "base-routing-shards/shards");
@@ -94,9 +92,9 @@ async function main() {
   );
 }
 
-// Returns [{ sourceLogical (webp), targetLogical (png) }] for each catalog
-// hero thumbnail. getImageAsset is keyed by the original (webp) logical path so
-// callers don't need to know about the png conversion.
+// Returns [{ sourceLogical (webp), targetLogical (jpg) }] for each catalog
+// hero thumbnail. Keyed by the original (webp) logical path so callers don't
+// need to know about the jpg transcode.
 async function collectCatalogThumbnailPaths() {
   const catalogPath = path.join(sourceRoot, "route-catalog.json");
   const catalog = JSON.parse(await fs.readFile(catalogPath, "utf8"));
@@ -112,7 +110,7 @@ async function collectCatalogThumbnailPaths() {
   }
   return [...sources].sort().map((sourceLogical) => ({
     sourceLogical,
-    targetLogical: sourceLogical.replace(/\.webp$/i, ".png"),
+    targetLogical: sourceLogical.replace(/\.webp$/i, ".jpg"),
   }));
 }
 
@@ -133,7 +131,7 @@ async function collectPoiThumbnailPaths() {
   }
   return [...sources].sort().map((sourceLogical) => ({
     sourceLogical,
-    targetLogical: sourceLogical.replace(/\.webp$/i, ".png"),
+    targetLogical: sourceLogical.replace(/\.webp$/i, ".jpg"),
   }));
 }
 
@@ -145,20 +143,16 @@ function dedupeBySource(images) {
   );
 }
 
-async function convertWebpToPng(sourceLogical, targetLogical) {
+async function convertWebpToJpg(sourceLogical, targetLogical) {
   const sourceRel = sourceLogical.replace(/^public-data\//, "");
   const targetRel = targetLogical.replace(/^public-data\//, "");
   const sourcePath = path.join(sourceRoot, sourceRel);
   const targetPath = path.join(targetRoot, targetRel);
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  await execFileAsync("sips", [
-    "-s",
-    "format",
-    "png",
-    sourcePath,
-    "--out",
-    targetPath,
-  ]);
+  await sharp(sourcePath)
+    .flatten({ background: "#ffffff" }) // JPG has no alpha; composite onto white
+    .jpeg({ quality: 80 })
+    .toFile(targetPath);
 }
 
 async function copyLogicalAsset(logicalPath, targetLogicalPath = logicalPath) {
@@ -219,7 +213,7 @@ function generateAppImageModule(imagePaths) {
 // Do not edit by hand. Bundled route images: Discover-card hero thumbnails AND
 // on-route POI thumbnails ("נקודות עניין בדרך"), required from within the app
 // package (Metro won't serve images required from the @cycleways/core workspace
-// package). Keyed by the original webp logical path; the bundled file is a png
+// package). Keyed by the original webp logical path; the bundled file is a jpg
 // (RN core <Image> can't decode webp on iOS).
 
 export const ROUTE_IMAGES = {
