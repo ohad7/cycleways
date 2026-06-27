@@ -133,13 +133,16 @@ export function createRoutePlaybackEngine({
   }
   function dispose() {
     stopTicker();
+    onCursorChange?.(null);
+    onPlayingChange?.(false);
     subscribers.clear();
   }
-
-  if (sync) emitCursorForTime(0);
+  function primeCursor() {
+    if (sync) emitCursorForTime(0);
+  }
 
   return {
-    getState, subscribe,
+    getState, subscribe, primeCursor,
     play, pause, togglePlayback,
     seekToTime, seekToFraction, reset, dispose,
   };
@@ -172,6 +175,7 @@ export function useRoutePlaybackEngine({
   useEffect(() => {
     setState(engine.getState());
     const unsubscribe = engine.subscribe(setState);
+    engine.primeCursor();
     return () => { unsubscribe(); engine.dispose(); };
   }, [engine]);
 

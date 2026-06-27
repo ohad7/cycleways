@@ -208,6 +208,7 @@ const INITIAL_CAMERA_SETTINGS = {
 };
 
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
+const NO_CUE_SLIDES = [];
 
 // --- Touch intent tuning (see plans/mobile-map-gesture-intent/design.md) -----
 // A touch within POINT_HIT_RADIUS px of a committed route point is a candidate
@@ -665,7 +666,7 @@ export default function MapScreen() {
   const playback = useSyntheticRoutePlaybackEngine({
     enabled: mapPresentationActive,
     routeState,
-    cueSlides: [],
+    cueSlides: NO_CUE_SLIDES,
     onCursorChange: (cursor) => {
       setScrubPoint(cursor ? { coord: { lng: cursor.lng, lat: cursor.lat } } : null);
     },
