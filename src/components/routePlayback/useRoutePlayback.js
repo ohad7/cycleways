@@ -17,6 +17,8 @@ export function useSyntheticRoutePlayback(options) {
   const scrubbingRef = useRef(false);
   const wasPlayingRef = useRef(false);
 
+  const { pause: enginePause, play: enginePlay, seekToTime: engineSeekToTime, reset: engineReset } = engine;
+
   const onScrubStart = useCallback((event) => {
     if (event?.currentTarget?.setPointerCapture && Number.isFinite(event.pointerId)) {
       try { event.currentTarget.setPointerCapture(event.pointerId); } catch {}
@@ -24,12 +26,12 @@ export function useSyntheticRoutePlayback(options) {
     scrubbingRef.current = true;
     setIsScrubbing(true);
     wasPlayingRef.current = engine.isPlaying;
-    if (engine.isPlaying) engine.pause();
-  }, [engine]);
+    if (engine.isPlaying) enginePause();
+  }, [engine.isPlaying, enginePause]);
 
   const onScrubChange = useCallback((event) => {
-    engine.seekToTime(event.currentTarget.value);
-  }, [engine]);
+    engineSeekToTime(event.currentTarget.value);
+  }, [engineSeekToTime]);
 
   const onScrubEnd = useCallback((event) => {
     if (event?.currentTarget?.releasePointerCapture && Number.isFinite(event.pointerId)) {
@@ -38,11 +40,17 @@ export function useSyntheticRoutePlayback(options) {
     if (!scrubbingRef.current) return;
     scrubbingRef.current = false;
     setIsScrubbing(false);
-    if (wasPlayingRef.current) engine.play();
+    if (wasPlayingRef.current) enginePlay();
     wasPlayingRef.current = false;
-  }, [engine]);
+  }, [enginePlay]);
 
-  return { ...engine, isScrubbing, onScrubStart, onScrubChange, onScrubEnd };
+  const reset = useCallback(() => {
+    engineReset();
+    scrubbingRef.current = false;
+    setIsScrubbing(false);
+  }, [engineReset]);
+
+  return { ...engine, isScrubbing, onScrubStart, onScrubChange, onScrubEnd, reset };
 }
 
 export {
