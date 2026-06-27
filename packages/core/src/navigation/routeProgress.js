@@ -37,7 +37,30 @@ function projectToSegment(p, a, b) {
   }
   const dx = px - t * bx;
   const dy = py - t * by;
-  return { t, crossTrackMeters: Math.sqrt(dx * dx + dy * dy) };
+  return {
+    t,
+    crossTrackMeters: Math.sqrt(dx * dx + dy * dy),
+    snapped: { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) },
+  };
+}
+
+// Completed-portion coordinates for the navigation progress line: every route
+// vertex already passed (0..snappedIndex) plus the current snapped point.
+export function traveledCoordinates(geometry, snappedIndex, snappedPoint) {
+  if (
+    !Array.isArray(geometry) ||
+    snappedIndex === null ||
+    snappedIndex === undefined ||
+    !snappedPoint
+  ) {
+    return [];
+  }
+  const path = [];
+  for (let i = 0; i <= snappedIndex && i < geometry.length; i++) {
+    path.push({ lat: geometry[i].lat, lng: geometry[i].lng });
+  }
+  path.push({ lat: snappedPoint.lat, lng: snappedPoint.lng });
+  return path;
 }
 
 const DEFAULTS = {
@@ -100,6 +123,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
           index: i,
           crossTrackMeters: proj.crossTrackMeters,
           progressMeters: a.distanceFromStartMeters + proj.t * legMeters,
+          snapped: proj.snapped,
         };
       }
     }
@@ -212,6 +236,8 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       headingAgreementDeg,
       wrongWay,
       distanceToRouteStart,
+      snappedPoint: best ? best.snapped : null,
+      snappedIndex: best ? best.index : null,
     };
   }
 

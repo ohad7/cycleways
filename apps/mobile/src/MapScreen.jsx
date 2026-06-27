@@ -26,6 +26,7 @@ import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
 import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
+import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import {
   DATA_MARKERS_STYLE,
   ROUTE_DIRECTION_PULSE_CASING_STYLE,
@@ -78,6 +79,24 @@ const ROUTE_LINE_STYLE = {
   lineOpacity: 0.9,
   lineJoin: "round",
   lineCap: "round",
+};
+
+// Completed portion of the route during navigation: muted, drawn over the route
+// line so the remaining route reads as the emphasized one.
+const ROUTE_TRAVELED_LINE_STYLE = {
+  lineColor: "#9aa6ab",
+  lineWidth: 5,
+  lineOpacity: 0.85,
+  lineJoin: "round",
+  lineCap: "round",
+};
+
+// Snapped rider position on the route while navigating.
+const RIDER_MARKER_STYLE = {
+  circleRadius: 7,
+  circleColor: "#006699",
+  circleStrokeColor: "#ffffff",
+  circleStrokeWidth: 3,
 };
 
 const ROUTE_DIRECTION_PULSE_CASING_LINE_STYLE = {
@@ -649,6 +668,26 @@ export default function MapScreen() {
     isNavigatingRef.current = isNavigating;
   }, [isNavigating]);
 
+  // Completed-progress line + snapped rider marker (only while navigating).
+  const navProgress = nav.state?.progress ?? null;
+  const traveledGeometry = useMemo(
+    () =>
+      navProgress
+        ? buildRouteGeometryFeatureCollection(
+            traveledCoordinates(
+              routeState.geometry,
+              navProgress.snappedIndex,
+              navProgress.snappedPoint,
+            ),
+          )
+        : EMPTY_FEATURE_COLLECTION,
+    [navProgress, routeState.geometry],
+  );
+  const riderMarker = useMemo(
+    () => buildSnappedRiderFeatureCollection(navProgress?.snappedPoint),
+    [navProgress],
+  );
+
   // Discover -> Build: restore the catalog entry's encoded route token through
   // the same shared path used by deep links, record it in recents, and switch
   // to the planner. The map auto-fits via the routeFitRequest effect.
@@ -801,6 +840,16 @@ export default function MapScreen() {
         <ShapeSource id="route-geometry" shape={routeGeometry}>
           <LineLayer id="route-line" style={ROUTE_LINE_STYLE} />
         </ShapeSource>
+        {isNavigating ? (
+          <>
+            <ShapeSource id="route-traveled" shape={traveledGeometry}>
+              <LineLayer id="route-traveled-line" style={ROUTE_TRAVELED_LINE_STYLE} />
+            </ShapeSource>
+            <ShapeSource id="rider-marker" shape={riderMarker}>
+              <CircleLayer id="rider-marker-circle" style={RIDER_MARKER_STYLE} />
+            </ShapeSource>
+          </>
+        ) : null}
         <RouteDirectionPulseLayer
           animator={directionAnimatorRef.current}
           routeGeometry={routeState.geometry}
@@ -1355,6 +1404,24 @@ function buildRouteGeometryFeatureCollection(routeGeometry) {
         type: "Feature",
         geometry: { type: "LineString", coordinates },
         properties: { affected: false },
+      },
+    ],
+  };
+}
+
+function buildSnappedRiderFeatureCollection(snappedPoint) {
+  const lng = Number(snappedPoint?.lng);
+  const lat = Number(snappedPoint?.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+    return EMPTY_FEATURE_COLLECTION;
+  }
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lng, lat] },
+        properties: {},
       },
     ],
   };

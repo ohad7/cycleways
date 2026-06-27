@@ -324,11 +324,13 @@ Acceptance criteria:
   route edits** (map-press, point-drag, and data-marker taps all gated via
   `isNavigatingRef`), and follows the user with heading (zoom 16.5,
   `cameraIntent`-aware) with a recenter control.
+- **Progress-line styling + rider marker (added 2026-06-27):** the progress
+  engine now emits `snappedPoint`/`snappedIndex` and a pure `traveledCoordinates`
+  helper (both tested in `tests/test-route-progress.mjs`); `MapScreen` draws the
+  completed portion muted over the route line and a snapped rider dot while
+  navigating.
 
 **Deferred (not in this cut):**
-- Route-progress line styling (completed muted / remaining emphasized) and a
-  snapped-rider marker — needs a `snappedPoint` on the progress output and line
-  splitting; the RNMapbox `UserLocation` puck covers the rider for now.
 - A route-overview/fit button while navigating (recenter only for v1).
 
 **Verify in the simulator:** Start navigation from a built and a catalog route →

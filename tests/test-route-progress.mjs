@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
-import { createRouteProgressTracker } from "@cycleways/core/navigation/routeProgress.js";
+import {
+  createRouteProgressTracker,
+  traveledCoordinates,
+} from "@cycleways/core/navigation/routeProgress.js";
 
 // A straight ~931 m route heading due east along lat 33.10. Three vertices,
 // each leg ~465.8 m. Used for deterministic projection/progress assertions.
@@ -80,6 +83,12 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
   assert.equal(off.onRoute, true, "11 m off centre is still on route");
   assert.equal(off.offRoute, false, "11 m off centre is not off-route");
   assert.ok(near(off.progressMeters, 465.8, 3), "progress unaffected by lateral");
+
+  // Snapped point sits on the route line (used for the progress line + marker).
+  assert.ok(off.snappedPoint, "snapped point present");
+  assert.ok(near(off.snappedPoint.lat, 33.1, 0.0001), "snapped onto the line (lat)");
+  assert.ok(near(off.snappedPoint.lng, 35.605, 0.0002), "snapped at mid (lng)");
+  assert.ok(Number.isInteger(off.snappedIndex), "snapped segment index present");
 }
 
 // --- Accuracy inflation keeps noisy-but-close fixes on route --------------
@@ -254,6 +263,25 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
   });
   assert.equal(stopped.courseDeg, null, "no course when stopped");
   assert.equal(stopped.wrongWay, false, "stopped is never wrong-way");
+}
+
+// --- traveledCoordinates: completed path for the progress line ------------
+{
+  const geometry = straightRoute().geometry;
+
+  // Mid of the first segment: [v0, snapped].
+  const a = traveledCoordinates(geometry, 0, { lat: 33.1, lng: 35.605 });
+  assert.equal(a.length, 2, "two points up to the snapped mid");
+  assert.deepEqual(a[0], { lat: 33.1, lng: 35.6 }, "starts at route start");
+  assert.deepEqual(a[1], { lat: 33.1, lng: 35.605 }, "ends at the snapped point");
+
+  // Into the second segment: [v0, v1, snapped].
+  const b = traveledCoordinates(geometry, 1, { lat: 33.1, lng: 35.608 });
+  assert.equal(b.length, 3, "includes the passed vertex");
+  assert.deepEqual(b[2], { lat: 33.1, lng: 35.608 });
+
+  // No progress yet -> empty (nothing to draw).
+  assert.deepEqual(traveledCoordinates(geometry, null, null), []);
 }
 
 console.log("route progress tests passed");
