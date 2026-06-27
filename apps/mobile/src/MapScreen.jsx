@@ -54,6 +54,15 @@ import {
   getPlannerBuildModel,
   getRoutePlannerPresentation,
 } from "@cycleways/core/ui/routePlannerPresentation.js";
+import { routeNetworkPresentation } from "@cycleways/core/map/networkPresentation.js";
+import { paintToRNStyle } from "@cycleways/core/map/paintToRNStyle.js";
+import {
+  routeNetworkLineStyleForPresentation,
+  routeNetworkCasingStyleForPresentation,
+  routeNetworkShadowStyleForPresentation,
+  routeGeometryLineStyleForPresentation,
+  routeGeometryCasingStyleForPresentation,
+} from "@cycleways/core/map/networkPresentation.js";
 
 // Legacy planner icon names -> Ionicons names (same set the web Icon.jsx uses).
 const CHROME_IONICON = {
@@ -281,14 +290,6 @@ export default function MapScreen() {
     handleAddDataMarkerToRoute,
     handleViewportIdle,
   } = useCyclewaysApp();
-
-  const networkFeatures = useMemo(() => {
-    if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
-    return {
-      type: "FeatureCollection",
-      features: prepareRouteNetworkFeatures(state.assets.geoJsonData),
-    };
-  }, [state.assets, state.status]);
 
   const routeGeometry = useMemo(
     () => buildRouteGeometryFeatureCollection(routeState.geometry),
@@ -671,6 +672,33 @@ export default function MapScreen() {
   useEffect(() => {
     isNavigatingRef.current = isNavigating;
   }, [isNavigating]);
+
+  // Derive build-panel presentation options (matches the web's typed-cased variant).
+  const mapPresentationActive = panelState === "build" && !isNavigating;
+  const networkPresentationOptions = useMemo(
+    () => ({
+      variant: mapPresentationActive ? "typed-cased" : "current",
+      routeBuilding: mapPresentationActive,
+      baseMapProfile: "mapbox-outdoors",
+      colorScheme: "auto",
+    }),
+    [mapPresentationActive],
+  );
+  const networkPresentation = useMemo(
+    () => routeNetworkPresentation(networkPresentationOptions),
+    [networkPresentationOptions],
+  );
+
+  const networkFeatures = useMemo(() => {
+    if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
+    return {
+      type: "FeatureCollection",
+      features: prepareRouteNetworkFeatures(
+        state.assets.geoJsonData,
+        networkPresentationOptions,
+      ),
+    };
+  }, [state.assets, state.status, networkPresentationOptions]);
 
   // Completed-progress line + snapped rider marker (only while navigating).
   const navProgress = nav.state?.progress ?? null;
