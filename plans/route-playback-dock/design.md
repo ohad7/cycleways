@@ -39,13 +39,19 @@ two drawer surfaces (mobile web and the iPhone app):
 
 ## Decisions taken during brainstorming
 
-- **Layout:** during preview/play the bottom panel docks at a **partial
-  (medium) height** containing the player + the **full interactive elevation
-  graph**, with the map (and its route animation) staying visible above it.
-  POIs/actions live in a further-expanded snap. The map shrinks but is never
-  fully covered. (This supersedes an earlier "thin dock with a mini-sparkline"
-  idea — the requirement is to see all three views at once with a *usable*,
-  scrubbable elevation graph.)
+- **Layout:** the map is a **full-bleed layer that is always present behind
+  everything**; it never resizes. During preview/play the bottom panel overlays
+  the **lower portion** of the map at a **partial (medium) height**, containing
+  the player + the **full interactive elevation graph**. The uncovered upper part
+  of the map shows the route animation. POIs/actions live in a further-expanded
+  snap. (This supersedes an earlier "thin dock with a mini-sparkline" idea — the
+  requirement is to see all three views at once with a *usable*, scrubbable
+  elevation graph.)
+- **Camera framing (not map resizing):** because the panel covers the lower map,
+  the camera fits/pads the route into the *uncovered* region so the animation is
+  watchable while the panel is up — using the existing overlay-aware route-fit
+  padding (`src/map/routeFitPadding.js` on web; the equivalent padding applied on
+  iOS). The map element itself is never shrunk.
 - **Three views at once:** map (with route animation) + player + interactive
   elevation graph are all visible simultaneously during playback, on both
   surfaces.
@@ -65,16 +71,17 @@ two drawer surfaces (mobile web and the iPhone app):
 
 ### A. Partial-height playback panel (mobile web + iOS)
 
-During preview/play the bottom panel docks at a partial (medium) height whose
-top section is the **playback area**: the player controls + the full interactive
-elevation graph. The map (with the route animation) stays visible above. The
-POIs/actions are below, reachable only by expanding the panel further.
+During preview/play the bottom panel overlays the lower part of the full-bleed
+map at a partial (medium) height; its top section is the **playback area**: the
+player controls + the full interactive elevation graph. The uncovered upper map
+shows the route animation. The POIs/actions are below, reachable only by
+expanding the panel further.
 
 ```
 ┌─────────────────────────────────────┐
-│         (map + route pulse)          │   ← stays visible (shrinks)
-│                                      │
-│  ════════ panel handle ════════      │
+│         (map + route pulse)          │   ← full-bleed map, always behind
+│                                      │     (uncovered area; never resized)
+│  ════════ panel handle ════════      │   ← panel overlays lower map from here
 │  ▶  0:42 / 1:35      2.1 / 5.0 km     │   ← player row
 │   ╱╲      ╱╲___                       │
 │  ╱  ╲___╱      ╲___●___               │   ← full interactive elevation graph
@@ -84,7 +91,8 @@ POIs/actions are below, reachable only by expanding the panel further.
 ```
 
 - The panel auto-snaps to the **partial** height when a route becomes playable /
-  on entering preview, so the playback area shows without covering the map.
+  on entering preview, so the playback area shows while the upper map stays
+  uncovered (camera padding keeps the route framed there).
 - **Player row:** play/pause + scrub track + `current / total` readout, pinned at
   the top of the panel.
 - **Elevation graph:** the full, scrubbable graph (not a sparkline), directly
