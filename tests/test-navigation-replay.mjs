@@ -38,4 +38,22 @@ function straightRoute() {
   );
 }
 
+// --- synthetic generator ---
+import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
+{
+  const route = straightRoute();
+  const fixes = generateTrack(route, { speedMps: 5, intervalMs: 1000, seed: 7 });
+  assert.ok(fixes.length >= 2, "generator emits multiple fixes");
+  assert.equal(fixes[0].timestamp, 0, "default start timestamp is 0");
+  assert.equal(fixes[1].timestamp - fixes[0].timestamp, 1000, "interval honored");
+  // Approach lead-in: fixes before the route start.
+  const withApproach = generateTrack(route, {
+    speedMps: 5,
+    approachFrom: { lat: 33.1, lng: 35.594 }, // ~560 m west of start
+  });
+  const first = withApproach[0];
+  const distToStart = Math.hypot((first.lat - 33.1), (first.lng - 35.6));
+  assert.ok(distToStart > 0.001, "approach fixes start away from the route");
+}
+
 console.log("test-navigation-replay OK");
