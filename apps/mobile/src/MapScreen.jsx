@@ -57,6 +57,9 @@ import DiscoverPanel from "./planner/DiscoverPanel.jsx";
 import RoutePoiList from "./planner/RoutePoiList.jsx";
 import NavPanel from "./planner/NavPanel.jsx";
 import { useNavigationSession } from "./navigation/useNavigationSession.js";
+import { createDefaultLocationSource } from "./navigation/locationService.js";
+import { createSimulateRideSource } from "./navigation/simulateRideSource.js";
+import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
 import Icon from "./planner/Icon.jsx";
 import { palette } from "./planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
@@ -639,7 +642,31 @@ export default function MapScreen() {
     [routeState.geometry, shareInfo.param, selectedCatalogSlug],
   );
 
-  const nav = useNavigationSession(navigationRoute);
+  // --- Dev-only simulate-ride harness + GPS recorder (Task 17) ---------------
+  // A stable proxy source delegates to whichever inner source the dev buttons
+  // install synchronously before calling nav.start(). In production __DEV__ is
+  // false, so devLocationSource is never passed and this block is dead code
+  // eliminated by Metro's inliner + the minifier.
+  //
+  // The recorder button wraps the real GPS source and captures every onFix call
+  // into recorderFixesRef; on stop() the full array is logged as JSON so it can
+  // be copied into tests/fixtures/*.json for deterministic replay (Task 18).
+  const devInnerSourceRef = useRef(null);
+  const recorderFixesRef = useRef([]);
+  // Stable proxy: created once, delegates to devInnerSourceRef at call time.
+  const devSourceProxy = useRef(null);
+  if (devSourceProxy.current === null) {
+    devSourceProxy.current = {
+      requestPermissions: (opts) =>
+        (devInnerSourceRef.current ?? createDefaultLocationSource()).requestPermissions(opts),
+      startWatch: (handlers) =>
+        (devInnerSourceRef.current ?? createDefaultLocationSource()).startWatch(handlers),
+    };
+  }
+
+  const nav = useNavigationSession(navigationRoute, {
+    locationSource: __DEV__ ? devSourceProxy.current : undefined,
+  });
   const navStatus = nav.state?.status ?? "idle";
   const isNavigating =
     navStatus === "navigating" ||
@@ -653,6 +680,56 @@ export default function MapScreen() {
   useEffect(() => {
     isNavigatingRef.current = isNavigating;
   }, [isNavigating]);
+
+  // Dev-only: handlers for the simulate and record buttons. Each installs a new
+  // inner source on devInnerSourceRef synchronously then calls nav.start().
+  // The proxy (devSourceProxy) is already pointing at the hook's locationSource,
+  // so the hook picks up the new inner source on the very next requestPermissions
+  // / startWatch call without any re-render or useEffect delay.
+  const handleDevSimulate = useCallback(() => {
+    if (!__DEV__) return;
+    const fixes =
+      navigationRoute?.geometry?.length >= 2
+        ? generateTrack(navigationRoute, {
+            approachFrom: locationState.point ?? null,
+            jitterM: 8,
+            intervalMs: 500,
+          })
+        : [];
+    devInnerSourceRef.current = createSimulateRideSource(fixes, { intervalMs: 500 });
+    nav.start();
+  }, [locationState.point, nav, navigationRoute]);
+
+  const handleDevRecord = useCallback(() => {
+    if (!__DEV__) return;
+    recorderFixesRef.current = [];
+    const base = createDefaultLocationSource();
+    devInnerSourceRef.current = {
+      requestPermissions: (opts) => base.requestPermissions(opts),
+      startWatch: async ({ onFix, onError }) => {
+        const handle = await base.startWatch({
+          onFix: (fix) => {
+            recorderFixesRef.current.push(fix);
+            onFix(fix);
+          },
+          onError,
+        });
+        return {
+          stop: () => {
+            handle.stop();
+            // Log the captured fix array so it can be saved as a test fixture.
+            console.log(
+              "[NAV-RECORDER] " +
+                recorderFixesRef.current.length +
+                " fixes captured:\n" +
+                JSON.stringify(recorderFixesRef.current),
+            );
+          },
+        };
+      },
+    };
+    nav.start();
+  }, [nav]);
 
   // Derive build-panel presentation options (matches the web's typed-cased variant).
   const mapPresentationActive = panelState === "build" && !isNavigating;
@@ -1205,6 +1282,26 @@ export default function MapScreen() {
         shareUrl={shareUrl}
         visible={mapUi.downloadModalOpen}
       />
+      {/* Dev-only simulate + record controls. __DEV__ is false in production
+          builds so this entire block is dead-code-eliminated by Metro. */}
+      {__DEV__ && !isNavigating && navigationRoute?.geometry?.length >= 2 ? (
+        <View pointerEvents="box-none" style={styles.devControls}>
+          <Pressable
+            accessibilityLabel="Dev: simulate ride"
+            onPress={handleDevSimulate}
+            style={styles.devButton}
+          >
+            <Text style={styles.devButtonText}>SIM</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Dev: record GPS fixes"
+            onPress={handleDevRecord}
+            style={styles.devButton}
+          >
+            <Text style={styles.devButtonText}>REC</Text>
+          </Pressable>
+        </View>
+      ) : null}
       {isNavigating ? (
         <NavPanel
           sessionState={nav.state}
@@ -2196,5 +2293,26 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 8,
     marginTop: 2,
+  },
+  // Dev-only simulate/record overlay — dead code in production builds.
+  devControls: {
+    position: "absolute",
+    bottom: 128,
+    right: 12,
+    flexDirection: "row",
+    gap: 4,
+    zIndex: 100,
+  },
+  devButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: "rgba(0,0,0,0.62)",
+    borderRadius: 4,
+  },
+  devButtonText: {
+    color: "#ffe600",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
 });

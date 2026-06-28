@@ -17,14 +17,19 @@ import {
   createNavigationSession,
 } from "@cycleways/core/navigation/navigationSession.js";
 import { createCueHapticPlanner } from "@cycleways/core/navigation/cueHaptics.js";
-import {
-  requestNavigationPermissions,
-  startNavigationWatch,
-} from "./locationService.js";
+import { createDefaultLocationSource } from "./locationService.js";
 import { fireHaptic } from "./cueHapticsAdapter.js";
 
 export function useNavigationSession(navigationRoute, options = {}) {
-  const { background = false, haptics = true, ...sessionOptions } = options;
+  const { background = false, haptics = true, locationSource, ...sessionOptions } = options;
+
+  // Stable ref so start/beginWatch always read the current source at call time
+  // without needing to be listed as a useCallback dependency. Updated each
+  // render (synchronous, before any effect) so that the caller can set a new
+  // source (e.g. a dev simulate source) before calling start(), and the hook
+  // picks it up on the very next start() invocation.
+  const locationSourceRef = useRef(null);
+  locationSourceRef.current = locationSource ?? createDefaultLocationSource();
 
   const sessionRef = useRef(null);
   const watchRef = useRef(null);
@@ -86,7 +91,11 @@ export function useNavigationSession(navigationRoute, options = {}) {
 
   const beginWatch = useCallback(() => {
     watchActiveRef.current = true;
-    startNavigationWatch({
+    // Route through the current source (real GPS or injected simulate/recorder).
+    // The race-guard pattern (watchActiveRef / watchRef) is preserved exactly:
+    // if stop() fires before the async startWatch resolves, the handle is
+    // dropped immediately rather than stored.
+    locationSourceRef.current.startWatch({
       onFix: (fix) => dispatch({ type: NAV_ACTIONS.LOCATION, fix }),
       onError: (error) =>
         dispatch({ type: NAV_ACTIONS.ERROR, message: String(error?.message || error) }),
@@ -105,7 +114,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
     if (!session) return;
     const requested = apply(session.dispatch({ type: NAV_ACTIONS.START }));
     if (requested.status === "error") return; // non-navigable route
-    const result = await requestNavigationPermissions({ background });
+    const result = await locationSourceRef.current.requestPermissions({ background });
     if (!result.granted) {
       apply(session.dispatch({ type: NAV_ACTIONS.PERMISSION_DENIED }));
       return;

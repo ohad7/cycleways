@@ -67,3 +67,14 @@ export async function startNavigationWatch({ onFix, onError } = {}) {
     },
   };
 }
+
+// Default real-GPS location source implementing the injectable locationSource
+// interface consumed by useNavigationSession. Returns a fresh wrapper object
+// each call so callers can safely hold the reference for the lifetime of one
+// navigation session. Swap for createSimulateRideSource (dev-only) in tests.
+export function createDefaultLocationSource() {
+  return {
+    requestPermissions: (opts) => requestNavigationPermissions(opts),
+    startWatch: (handlers) => startNavigationWatch(handlers),
+  };
+}
