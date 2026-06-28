@@ -136,4 +136,48 @@ function routeFrom(geometry, extra = {}) {
   assert.ok(near(turns[0].distanceMeters, 9.3, 2), "kept the first turn");
 }
 
+// --- enter-segment cues + merge ---
+import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCues.js";
+{
+  // Route whose sharp turn coincides with a new segment boundary.
+  const route = {
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 500 },
+      { lat: 33.11, lng: 35.61, distanceFromStartMeters: 1000 }, // ~90° turn at 500m
+    ],
+    segmentSpans: [
+      { startMeters: 0, endMeters: 500, name: "First", onNetwork: true, cwSegmentId: 1, routeClass: "cycleway" },
+      { startMeters: 500, endMeters: 1000, name: "Second", onNetwork: true, cwSegmentId: 2, routeClass: "cycleway" },
+    ],
+    activeDataPoints: [],
+  };
+  const cues = _brc(route);
+  const turn = cues.find((c) => c.type === "turn");
+  assert.ok(turn, "turn cue exists at the bend");
+  assert.equal(turn.ontoSegmentName, "Second", "turn merged with segment entry");
+  assert.equal(
+    cues.filter((c) => c.type === "enter-segment" && Math.abs(c.distanceMeters - 500) < 20).length,
+    0,
+    "standalone enter-segment near the turn is suppressed",
+  );
+}
+{
+  // Segment boundary with no nearby turn -> standalone enter-segment cue.
+  const route = {
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.62, distanceFromStartMeters: 1000 },
+    ],
+    segmentSpans: [
+      { startMeters: 0, endMeters: 400, name: "A", onNetwork: true, cwSegmentId: 1, routeClass: "cycleway" },
+      { startMeters: 400, endMeters: 1000, name: "B", onNetwork: true, cwSegmentId: 2, routeClass: "cycleway" },
+    ],
+    activeDataPoints: [],
+  };
+  const cues = _brc(route);
+  assert.ok(cues.some((c) => c.type === "enter-segment" && c.segmentName === "B"),
+    "standalone enter-segment cue for B");
+}
+
 console.log("navigation cue tests passed");

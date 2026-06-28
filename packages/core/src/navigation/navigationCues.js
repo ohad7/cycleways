@@ -67,8 +67,29 @@ export function buildRouteCues(navigationRoute) {
 
   cues.push({ type: "arrive", distanceMeters: totalMeters });
 
-  // Stable sort by distance keeps start first and arrive last.
-  cues.sort((a, b) => a.distanceMeters - b.distanceMeters);
+  // Enter-segment cues at named span boundaries, with merge/suppression.
+  const spans = Array.isArray(navigationRoute?.segmentSpans)
+    ? navigationRoute.segmentSpans
+    : [];
+  const turnCues = cues.filter((c) => c.type === "turn");
+  for (const span of spans) {
+    if (!span.name || span.startMeters <= 0) continue;
+    const near = turnCues.find(
+      (t) => Math.abs(t.distanceMeters - span.startMeters) <= MIN_TURN_SPACING_M,
+    );
+    if (near) {
+      near.ontoSegmentName = span.name; // merge into the turn
+      continue;
+    }
+    cues.push({ type: "enter-segment", distanceMeters: span.startMeters, segmentName: span.name });
+  }
+
+  // Sort by distance; when distances tie, turn/arrive before enter-segment.
+  const PRIORITY = { start: 0, turn: 1, arrive: 1, "enter-segment": 2 };
+  cues.sort((a, b) =>
+    a.distanceMeters - b.distanceMeters ||
+    (PRIORITY[a.type] ?? 3) - (PRIORITY[b.type] ?? 3),
+  );
   return cues;
 }
 
