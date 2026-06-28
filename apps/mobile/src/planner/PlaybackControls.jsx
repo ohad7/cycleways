@@ -12,6 +12,7 @@ export default function PlaybackControls({
   duration,
   onTogglePlayback,
   onSeekToFraction,
+  onScrubStart,
 }) {
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
   const fraction = safeDuration > 0 ? currentTime / safeDuration : 0;
@@ -32,6 +33,7 @@ export default function PlaybackControls({
         minimumValue={0}
         maximumValue={1}
         value={fraction}
+        onSlidingStart={onScrubStart}
         onValueChange={onSeekToFraction}
         disabled={!isReady || safeDuration <= 0}
         minimumTrackTintColor={palette.accent ?? "#1976c9"}

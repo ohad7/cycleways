@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSyntheticRoutePlaybackEngine } from "@cycleways/core/ui/routePlaybackEngine.js";
 import PlaybackControls from "./planner/PlaybackControls.jsx";
 import {
+  Dimensions,
   Keyboard,
   Modal,
   PanResponder,
@@ -206,7 +207,7 @@ const LONG_PRESS_MAX_DRIFT = 12;
 const ADD_GUARD_MS = 350;
 // Bottom camera padding used when the playback panel is docked at ~48% height,
 // so the route stays framed in the uncovered upper area during preview.
-const PLAYBACK_FIT_BOTTOM_PADDING = 340;
+const PLAYBACK_FIT_BOTTOM_PADDING = Math.round(Dimensions.get("window").height * 0.48) + 24;
 
 export default function MapScreen() {
   const cameraRef = useRef(null);
@@ -1138,6 +1139,7 @@ function BuildPanelContent({
             duration={playback.duration}
             onTogglePlayback={playback.togglePlayback}
             onSeekToFraction={onSeekToFraction}
+            onScrubStart={playback.pause}
           />
           <ElevationProfileChart
             cursorFraction={playback.cursor?.fraction ?? null}

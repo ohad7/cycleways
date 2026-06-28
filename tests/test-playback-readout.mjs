@@ -8,4 +8,5 @@ assert.equal(formatPlaybackTime(600), "10:00");
 assert.equal(formatPlaybackTime(-5), "0:00");
 assert.equal(formatPlaybackTime(NaN), "0:00");
 assert.equal(formatPlaybackTime(undefined), "0:00");
+assert.equal(formatPlaybackTime(59.6), "1:00");
 console.log("test-playback-readout: OK");
