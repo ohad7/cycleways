@@ -319,10 +319,46 @@ import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
   const tracker = createRouteProgressTracker(route);
   tracker.update({ lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 1000 }); // acquire at start
   const p = tracker.update({ lat: 33.1, lng: 35.602, accuracy: 5, speed: 4, timestamp: 4000 });
+  assert.equal(p.currentSpanIndex, 0, "currentSpanIndex is 0 for first span");
   assert.equal(p.currentSegmentName, "First", "reports current segment");
   assert.equal(p.currentOnNetwork, true);
   assert.equal(p.nextSegmentName, "Second", "reports next named segment");
   assert.ok(p.distanceToNextSegmentMeters > 0, "distance to next segment");
+}
+
+// --- segment context: approaching (pre-acquisition) path has all null/false ---
+{
+  const base = straightRoute();
+  const route = { ...base, segmentSpans: [
+    { startMeters: 0, endMeters: 465, name: "First", cwSegmentId: 1, onNetwork: true, routeClass: "cycleway" },
+    { startMeters: 465, endMeters: base.geometry[base.geometry.length-1].distanceFromStartMeters, name: "Second", cwSegmentId: 2, onNetwork: true, routeClass: "cycleway" },
+  ]};
+  const tracker = createRouteProgressTracker(route);
+  // Fix far from route: not yet acquired (approaching state)
+  const approaching = tracker.update({ lat: 33.105, lng: 35.6, accuracy: 8, speed: 4, timestamp: 1000 });
+  assert.equal(approaching.hasAcquiredRoute, false, "approaching: not yet acquired");
+  assert.equal(approaching.currentSpanIndex, null, "approaching: currentSpanIndex null");
+  assert.equal(approaching.currentSegmentName, null, "approaching: currentSegmentName null");
+  assert.equal(approaching.currentOnNetwork, false, "approaching: currentOnNetwork false");
+  assert.equal(approaching.currentRouteClass, null, "approaching: currentRouteClass null");
+  assert.equal(approaching.nextSegmentName, null, "approaching: nextSegmentName null");
+  assert.equal(approaching.distanceToNextSegmentMeters, null, "approaching: distanceToNextSegmentMeters null");
+}
+
+// --- segment context: empty segmentSpans returns all null/false, no throw ---
+{
+  const base = straightRoute();
+  const route = { ...base, segmentSpans: [] }; // explicit empty spans
+  const tracker = createRouteProgressTracker(route);
+  tracker.update({ lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 1000 }); // acquire at start
+  const p = tracker.update({ lat: 33.1, lng: 35.605, accuracy: 5, speed: 4, timestamp: 4000 }); // mid-route
+  assert.equal(p.hasAcquiredRoute, true, "empty-spans route is acquired");
+  assert.equal(p.currentSpanIndex, null, "empty spans: currentSpanIndex null");
+  assert.equal(p.currentSegmentName, null, "empty spans: currentSegmentName null");
+  assert.equal(p.currentOnNetwork, false, "empty spans: currentOnNetwork false");
+  assert.equal(p.currentRouteClass, null, "empty spans: currentRouteClass null");
+  assert.equal(p.nextSegmentName, null, "empty spans: nextSegmentName null");
+  assert.equal(p.distanceToNextSegmentMeters, null, "empty spans: distanceToNextSegmentMeters null");
 }
 
 console.log("route progress tests passed");
