@@ -1,6 +1,6 @@
-import { computeBearing, precomputeArcLength } from "../utils/geometry.js";
+import { computeBearing, precomputeArcLength, pointAndBearingAtDistance } from "../utils/geometry.js";
 
-export { computeBearing, precomputeArcLength };
+export { computeBearing, precomputeArcLength, pointAndBearingAtDistance };
 
 const CHANNELS = new Set(["chevron", "litPoint", "elevation"]);
 const GAP_DURATION_MS = 1200;
@@ -224,29 +224,13 @@ export function createRouteDirectionAnimator(options = {}) {
 function computeChevronPayload(state, t) {
   const { arc, geometry } = state;
   const target = t * arc.totalDistMeters;
-  const i = findSegmentIndex(arc.cumDist, target);
-  const segLen = arc.cumDist[i + 1] - arc.cumDist[i];
-  const localFrac = segLen > 0 ? (target - arc.cumDist[i]) / segLen : 0;
-  const a = geometry[i];
-  const b = geometry[i + 1];
+  const { point, bearingDeg } = pointAndBearingAtDistance(arc, geometry, target);
   return {
-    lng: a.lng + (b.lng - a.lng) * localFrac,
-    lat: a.lat + (b.lat - a.lat) * localFrac,
-    bearing: computeBearing(a, b),
+    lng: point.lng,
+    lat: point.lat,
+    bearing: bearingDeg,
     t,
   };
-}
-
-function findSegmentIndex(cumDist, target) {
-  // Binary search for the largest i such that cumDist[i] <= target.
-  let lo = 0;
-  let hi = cumDist.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >>> 1;
-    if (cumDist[mid] <= target) lo = mid;
-    else hi = mid - 1;
-  }
-  return Math.min(lo, cumDist.length - 2);
 }
 
 function detectLitIndex(state, t) {

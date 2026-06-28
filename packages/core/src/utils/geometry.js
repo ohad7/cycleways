@@ -29,6 +29,32 @@ export function computeBearing(from, to) {
   return ((θ * 180) / Math.PI + 360) % 360;
 }
 
+// Point and bearing at a given distance (meters) along the arc.
+// Clamps meters to [0, totalDistMeters]; binary-searches cumDist; linearly
+// interpolates the point on the bracketing segment; bearing = segment bearing.
+export function pointAndBearingAtDistance(arc, geometry, meters) {
+  const total = arc.totalDistMeters;
+  const target = Math.max(0, Math.min(meters, total));
+  const cum = arc.cumDist;
+  // binary search: largest i with cum[i] <= target
+  let lo = 0;
+  let hi = cum.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (cum[mid] <= target) lo = mid;
+    else hi = mid;
+  }
+  const i = Math.min(lo, geometry.length - 2);
+  const a = geometry[i];
+  const b = geometry[i + 1];
+  const segLen = cum[i + 1] - cum[i];
+  const t = segLen > 0 ? (target - cum[i]) / segLen : 0;
+  return {
+    point: { lat: a.lat + t * (b.lat - a.lat), lng: a.lng + t * (b.lng - a.lng) },
+    bearingDeg: computeBearing(a, b),
+  };
+}
+
 // Smallest absolute angular difference between two bearings (0-180 degrees).
 export function bearingDelta(a, b) {
   const diff = Math.abs(((a - b + 540) % 360) - 180);
