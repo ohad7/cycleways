@@ -17,10 +17,14 @@ const HAZARD_FALLBACK = { text: "שים לב", icon: "alert-circle-outline" };
 function cueDisplay(cue) {
   if (!cue) return { text: "המשך במסלול", icon: "navigate-outline" };
   switch (cue.type) {
-    case "turn":
-      return cue.direction === "right"
+    case "turn": {
+      const base = cue.direction === "right"
         ? { text: "פנה ימינה", icon: "arrow-forward-outline" }
         : { text: "פנה שמאלה", icon: "arrow-back-outline" };
+      return cue.ontoSegmentName ? { ...base, text: `${base.text} אל ${cue.ontoSegmentName}` } : base;
+    }
+    case "enter-segment":
+      return { text: cue.segmentName ? `כניסה אל ${cue.segmentName}` : "המשך במסלול", icon: "navigate-outline" };
     case "arrive":
       return { text: "הגעת ליעד", icon: "flag-outline" };
     case "start":
@@ -28,6 +32,32 @@ function cueDisplay(cue) {
     default:
       return HAZARD_FALLBACK;
   }
+}
+
+function routeClassLabel(routeClass) {
+  switch (routeClass) {
+    case "track": return "בדרך עפר";
+    case "path": return "בשביל";
+    case "footway": return "במדרכה";
+    default: return "במקטע מקשר";
+  }
+}
+
+function buildContextText(progress) {
+  if (!progress?.hasAcquiredRoute) return "";
+  const here = progress.currentOnNetwork && progress.currentSegmentName
+    ? progress.currentSegmentName
+    : routeClassLabel(progress.currentRouteClass);
+  const next = progress.nextSegmentName
+    ? ` · הבא: ${progress.nextSegmentName} בעוד ${formatDistanceMeters(progress.distanceToNextSegmentMeters)}`
+    : "";
+  return here ? `${here}${next}` : "";
+}
+
+function relativeArrowDeg(progress) {
+  if (!Number.isFinite(progress?.guidanceBearingDeg)) return null;
+  const course = Number.isFinite(progress?.courseDeg) ? progress.courseDeg : 0;
+  return ((progress.guidanceBearingDeg - course) % 360 + 360) % 360;
 }
 
 // Round to a friendly precision: nearest 10 m below 1 km, else 0.1 km.
@@ -55,6 +85,7 @@ export function getNavigationPresentation(state = {}) {
       ? `נותרו ${formatDistanceMeters(remainingMeters)}`
       : "";
 
+  const navigatingNow = navigating;
   return {
     mode: status,
     statusText: STATUS_TEXT[status] ?? "",
@@ -65,5 +96,15 @@ export function getNavigationPresentation(state = {}) {
     remainingText,
     offRoute,
     offRouteText: "חזרו למסלול",
+    showContext: navigatingNow && !offRoute && Boolean(state.progress?.hasAcquiredRoute),
+    contextText: buildContextText(state.progress),
+    showGuidance: status === "approaching" || offRoute,
+    guidanceText: Number.isFinite(state.progress?.guidanceDistanceMeters)
+      ? `${status === "approaching" ? "לכיוון תחילת המסלול" : "חזרה למסלול"} · ${formatDistanceMeters(state.progress.guidanceDistanceMeters)}`
+      : "",
+    guidanceArrowDeg: relativeArrowDeg(state.progress),
+    wrongWay: state.progress?.wrongWay === true,
+    wrongWayText: "אתה נוסע בכיוון הלא נכון — סובב",
+    currentOnNetwork: state.progress?.currentOnNetwork ?? false,
   };
 }

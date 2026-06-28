@@ -72,4 +72,49 @@ import { getNavigationPresentation } from "@cycleways/core/navigation/navigation
   assert.equal(paused.statusText, "מושהה");
 }
 
+// --- context line ---
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    progress: {
+      remainingMeters: 1000, hasAcquiredRoute: true,
+      currentSegmentName: "שביל הירקון", currentOnNetwork: true, currentRouteClass: "cycleway",
+      nextSegmentName: "גשר איילון", distanceToNextSegmentMeters: 400,
+      wrongWay: false,
+    },
+  });
+  assert.equal(p.showContext, true);
+  assert.match(p.contextText, /שביל הירקון/);
+  assert.match(p.contextText, /גשר איילון/);
+}
+// --- off-network context uses neutral copy, not "local roads" ---
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    progress: { hasAcquiredRoute: true, currentSegmentName: null, currentOnNetwork: false, currentRouteClass: "track", nextSegmentName: "גשר איילון", distanceToNextSegmentMeters: 1200, wrongWay: false },
+  });
+  assert.equal(p.currentOnNetwork ?? false, false);
+  assert.ok(p.contextText.length > 0, "off-network still shows context");
+  assert.doesNotMatch(p.contextText, /local roads/);
+}
+// --- approach guidance ---
+{
+  const p = getNavigationPresentation({
+    status: "approaching",
+    progress: { hasAcquiredRoute: false, guidanceDistanceMeters: 420, guidanceBearingDeg: 90, courseDeg: 0, wrongWay: false },
+  });
+  assert.equal(p.showGuidance, true);
+  assert.equal(p.guidanceArrowDeg, 90, "arrow relative to course");
+  assert.match(p.guidanceText, /420|0\.4/);
+}
+// --- wrong-way ---
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    progress: { hasAcquiredRoute: true, wrongWay: true, remainingMeters: 500 },
+  });
+  assert.equal(p.wrongWay, true);
+  assert.ok(p.wrongWayText.length > 0);
+}
+
 console.log("navigation presentation tests passed");
