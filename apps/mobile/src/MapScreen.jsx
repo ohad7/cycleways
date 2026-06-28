@@ -18,6 +18,7 @@ import Mapbox, {
   CircleLayer,
   LineLayer,
   MapView,
+  MarkerView,
   ShapeSource,
   SymbolLayer,
   UserLocation,
@@ -30,6 +31,14 @@ import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
 import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
+import {
+  precomputeArcLength,
+  pointAndBearingAtDistance,
+} from "@cycleways/core/utils/geometry.js";
+import {
+  nextSmoothedMeters,
+  shortestAngleLerp,
+} from "@cycleways/core/navigation/navigationSmoothing.js";
 import {
   DATA_MARKERS_STYLE,
   ROUTE_GEOMETRY_LINE_STYLE,
@@ -87,13 +96,15 @@ const ROUTE_TRAVELED_LINE_STYLE = {
   lineCap: "round",
 };
 
-// Snapped rider position on the route while navigating.
-const RIDER_MARKER_STYLE = {
-  circleRadius: 7,
-  circleColor: "#006699",
-  circleStrokeColor: "#ffffff",
-  circleStrokeWidth: 3,
-};
+// Adaptive rider puck colors: on-route uses the brand blue; approaching /
+// off-route is muted gray (matches the traveled line) to signal "not snapped".
+const RIDER_PUCK_COLOR = "#006699";
+const RIDER_PUCK_MUTED_COLOR = "#9aa6ab";
+// Camera zoom while following the rider during navigation.
+const NAV_FOLLOW_ZOOM = 16.5;
+// Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
+// is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
+const BEARING_SMOOTH_MS = 260;
 
 const ROUTE_POINT_STYLE = {
   circleRadius: [
@@ -724,25 +735,156 @@ export default function MapScreen() {
     };
   }, [state.assets, state.status, networkPresentationOptions]);
 
-  // Completed-progress line + snapped rider marker (only while navigating).
+  // --- Adaptive smoothed rider puck + camera (Task 15) --------------------
+  // The raw GPS arrives ~1 Hz and jumps; we render ONE puck that glides between
+  // fixes. On-route it rides a smoothed along-route distance; approaching /
+  // off-route it sits at the (smoothed-heading) raw GPS fix. A single RAF loop
+  // tweens the position/heading and drives the camera from the SAME values.
   const navProgress = nav.state?.progress ?? null;
-  const traveledGeometry = useMemo(
+  const navGeometry = routeState.geometry;
+  const cameraIntent = nav.state?.cameraIntent ?? "follow";
+
+  // Cumulative arc length for the active route; null until there are >=2 points.
+  const arc = useMemo(
     () =>
-      navProgress
-        ? buildRouteGeometryFeatureCollection(
-            traveledCoordinates(
-              routeState.geometry,
-              navProgress.snappedIndex,
-              navProgress.snappedPoint,
-            ),
-          )
-        : EMPTY_FEATURE_COLLECTION,
-    [navProgress, routeState.geometry],
+      Array.isArray(navGeometry) && navGeometry.length >= 2
+        ? precomputeArcLength(navGeometry)
+        : null,
+    [navGeometry],
   );
-  const riderMarker = useMemo(
-    () => buildSnappedRiderFeatureCollection(navProgress?.snappedPoint),
-    [navProgress],
-  );
+
+  // Smoothed puck position/heading and the (throttled) traveled line, rendered
+  // from React state updated by the RAF loop.
+  const [riderPuck, setRiderPuck] = useState(null);
+  const [navTraveled, setNavTraveled] = useState(EMPTY_FEATURE_COLLECTION);
+
+  // Latest inputs mirrored into refs so the RAF loop reads current values
+  // without restarting on every render.
+  const progressRef = useRef(null);
+  const cameraIntentRef = useRef("follow");
+  const rawFixRef = useRef(null);
+  const arcRef = useRef(null);
+  const navGeometryRef = useRef([]);
+  const mapHeadingRef = useRef(0);
+  const smoothedMetersRef = useRef(0);
+  const smoothedBearingRef = useRef(0);
+  const travelIndexRef = useRef(-1);
+  const rafRef = useRef(0);
+  progressRef.current = navProgress;
+  cameraIntentRef.current = cameraIntent;
+  rawFixRef.current = locationState.point;
+  arcRef.current = arc;
+  navGeometryRef.current = navGeometry;
+
+  // RAF loop: runs only while navigating. Tweens smoothedMetersRef toward the
+  // reported along-route distance and smoothedBearingRef toward the target
+  // heading, then positions the puck, advances the traveled line, and (when the
+  // camera intent is "follow") drives the camera from the same smoothed values.
+  useEffect(() => {
+    if (!isNavigating) {
+      setRiderPuck(null);
+      setNavTraveled(EMPTY_FEATURE_COLLECTION);
+      travelIndexRef.current = -1;
+      return undefined;
+    }
+    const startProgress = progressRef.current;
+    smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
+    smoothedBearingRef.current =
+      startProgress?.bearingToNextDeg ?? startProgress?.courseDeg ?? 0;
+    let lastTs = 0;
+    const tick = (ts) => {
+      const dtMs = lastTs ? Math.max(0, ts - lastTs) : 16;
+      lastTs = ts;
+      const progress = progressRef.current;
+      const arcNow = arcRef.current;
+      const geom = navGeometryRef.current;
+      if (progress) {
+        const onRoute =
+          progress.hasAcquiredRoute &&
+          !progress.offRoute &&
+          arcNow &&
+          Array.isArray(geom) &&
+          geom.length >= 2;
+        let lng;
+        let lat;
+        let targetBearing;
+        if (onRoute) {
+          smoothedMetersRef.current = nextSmoothedMeters({
+            current: smoothedMetersRef.current,
+            target: progress.progressMeters ?? 0,
+            dtMs,
+          });
+          const { point, bearingDeg } = pointAndBearingAtDistance(
+            arcNow,
+            geom,
+            smoothedMetersRef.current,
+          );
+          lng = point.lng;
+          lat = point.lat;
+          targetBearing = progress.bearingToNextDeg ?? bearingDeg;
+          // Advance the traveled (muted) line up to the smoothed point, but only
+          // when the underlying segment index changes — keeps the per-frame cost
+          // bounded while the puck itself stays smooth.
+          const idx = arcIndexForMeters(arcNow.cumDist, smoothedMetersRef.current);
+          if (idx !== travelIndexRef.current) {
+            travelIndexRef.current = idx;
+            setNavTraveled(
+              buildRouteGeometryFeatureCollection(
+                traveledCoordinates(geom, idx, point),
+              ),
+            );
+          }
+        } else {
+          // Approaching / off-route: ride the latest raw GPS fix.
+          const raw =
+            rawFixRef.current ||
+            progress.snappedPoint ||
+            progress.guidanceTargetPoint ||
+            null;
+          if (raw && Number.isFinite(raw.lng) && Number.isFinite(raw.lat)) {
+            lng = raw.lng;
+            lat = raw.lat;
+          }
+          targetBearing =
+            progress.courseDeg ??
+            progress.bearingToNextDeg ??
+            smoothedBearingRef.current;
+        }
+        if (Number.isFinite(lng) && Number.isFinite(lat)) {
+          if (Number.isFinite(targetBearing)) {
+            smoothedBearingRef.current = shortestAngleLerp(
+              smoothedBearingRef.current,
+              targetBearing,
+              Math.min(1, dtMs / BEARING_SMOOTH_MS),
+            );
+          }
+          const heading = smoothedBearingRef.current;
+          // MarkerView is screen-aligned, so rotate the arrow by the puck's
+          // geographic heading minus the map's heading. While following, the
+          // camera heading == puck heading, so the arrow reads "up".
+          const rotation = ((heading - mapHeadingRef.current) % 360 + 360) % 360;
+          setRiderPuck({ lng, lat, rotation, muted: !onRoute });
+          if (cameraIntentRef.current === "follow") {
+            cameraRef.current?.setCamera?.({
+              centerCoordinate: [lng, lat],
+              heading,
+              zoomLevel: NAV_FOLLOW_ZOOM,
+              animationDuration: 0,
+            });
+          }
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNavigating]);
+
+  const handleCameraChanged = useCallback((mapState) => {
+    const heading = Number(mapState?.properties?.heading);
+    if (Number.isFinite(heading)) mapHeadingRef.current = heading;
+  }, []);
 
   // Discover -> Build: restore the catalog entry's encoded route token through
   // the same shared path used by deep links, record it in recents, and switch
@@ -872,24 +1014,26 @@ export default function MapScreen() {
         scrollEnabled={!pointGestureActive}
         onPress={handleMapPress}
         onMapIdle={handleMapIdle}
+        onCameraChanged={handleCameraChanged}
       >
         <Camera
           ref={cameraRef}
           defaultSettings={INITIAL_CAMERA_SETTINGS}
           animationDuration={0}
           animationMode="none"
-          followUserLocation={
-            locationState.following ||
-            (isNavigating &&
-              navStatus !== "paused" &&
-              nav.state?.cameraIntent === "follow")
-          }
+          // While navigating the camera is driven imperatively from the smoothed
+          // puck position via setCamera in the RAF loop; followUserLocation is
+          // only used in planning mode (it follows the raw GPS).
+          followUserLocation={locationState.following && !isNavigating}
           followUserMode={UserTrackingMode.FollowWithHeading}
-          followZoomLevel={isNavigating ? 16.5 : 14.5}
+          followZoomLevel={14.5}
         />
+        {/* Raw GPS puck: hidden while navigating (the custom adaptive puck takes
+            over) but kept mounted so onUpdate keeps feeding the latest raw fix
+            used to place the puck while approaching / off-route. */}
         {locationState.enabled || isNavigating ? (
           <UserLocation
-            visible
+            visible={!isNavigating}
             onUpdate={handleUserLocationUpdate}
             renderMode={UserLocationRenderMode.Native}
             showsUserHeadingIndicator
@@ -908,12 +1052,46 @@ export default function MapScreen() {
         </ShapeSource>
         {isNavigating ? (
           <>
-            <ShapeSource id="route-traveled" shape={traveledGeometry}>
+            <ShapeSource id="route-traveled" shape={navTraveled}>
               <LineLayer id="route-traveled-line" style={ROUTE_TRAVELED_LINE_STYLE} />
             </ShapeSource>
-            <ShapeSource id="rider-marker" shape={riderMarker}>
-              <CircleLayer id="rider-marker-circle" style={RIDER_MARKER_STYLE} />
-            </ShapeSource>
+            {riderPuck ? (
+              <MarkerView
+                coordinate={[riderPuck.lng, riderPuck.lat]}
+                anchor={{ x: 0.5, y: 0.5 }}
+                allowOverlap
+                allowOverlapWithPuck
+              >
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.riderPuck,
+                    { transform: [{ rotate: `${riderPuck.rotation}deg` }] },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.riderPuckArrow,
+                      {
+                        borderBottomColor: riderPuck.muted
+                          ? RIDER_PUCK_MUTED_COLOR
+                          : RIDER_PUCK_COLOR,
+                      },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.riderPuckDot,
+                      {
+                        backgroundColor: riderPuck.muted
+                          ? RIDER_PUCK_MUTED_COLOR
+                          : RIDER_PUCK_COLOR,
+                      },
+                    ]}
+                  />
+                </View>
+              </MarkerView>
+            ) : null}
           </>
         ) : null}
         <DataMarkerImages />
@@ -1455,22 +1633,17 @@ function buildRouteGeometryFeatureCollection(routeGeometry) {
   };
 }
 
-function buildSnappedRiderFeatureCollection(snappedPoint) {
-  const lng = Number(snappedPoint?.lng);
-  const lat = Number(snappedPoint?.lat);
-  if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
-    return EMPTY_FEATURE_COLLECTION;
+// Largest index i with cumDist[i] <= meters (the segment the smoothed distance
+// falls on), so the traveled line can be cut at the smoothed point.
+function arcIndexForMeters(cumDist, meters) {
+  let lo = 0;
+  let hi = cumDist.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (cumDist[mid] <= meters) lo = mid;
+    else hi = mid;
   }
-  return {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [lng, lat] },
-        properties: {},
-      },
-    ],
-  };
+  return lo;
 }
 
 function buildRoutePointFeatureCollection(points, selectedRoutePointIndex) {
@@ -1638,6 +1811,31 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   hint: { fontSize: 15, textAlign: "center", color: "#333" },
+  // Adaptive rider puck: a colored dot with a heading arrow. The whole view is
+  // rotated by the RAF loop; the arrow points "up" (north) at rotation 0.
+  riderPuck: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  riderPuckArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderBottomWidth: 10,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    marginBottom: -3,
+  },
+  riderPuckDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: "#ffffff",
+  },
   markerCardWrap: {
     position: "absolute",
     left: 12,
