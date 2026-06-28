@@ -1,4 +1,4 @@
-# Usable route-playback dock + web-parity animation
+# Usable route-playback panel (three-up: map + player + elevation) + web-parity animation
 
 **Date:** 2026-06-28
 **Topic:** `route-playback-dock`
@@ -39,48 +39,82 @@ two drawer surfaces (mobile web and the iPhone app):
 
 ## Decisions taken during brainstorming
 
-- **Layout:** a combined **playback dock** pinned as a map overlay just above the
-  collapsed drawer handle, on both mobile web and iOS.
+- **Layout:** during preview/play the bottom panel docks at a **partial
+  (medium) height** containing the player + the **full interactive elevation
+  graph**, with the map (and its route animation) staying visible above it.
+  POIs/actions live in a further-expanded snap. The map shrinks but is never
+  fully covered. (This supersedes an earlier "thin dock with a mini-sparkline"
+  idea — the requirement is to see all three views at once with a *usable*,
+  scrubbable elevation graph.)
+- **Three views at once:** map (with route animation) + player + interactive
+  elevation graph are all visible simultaneously during playback, on both
+  surfaces.
+- **Bidirectional sync (both surfaces, like web):** scrubbing the elevation
+  graph seeks the player and moves the route cursor; playing moves the elevation
+  cursor. One playback-engine cursor is the single source for the map pulse, the
+  player readout, and the elevation graph cursor.
 - **iOS animation:** *play-driven web pulse only* — remove the auto-firing
   direction-chevron on iOS; the only animation is play, using the same
   `progress-head-pulse` traveling marker as web.
-- **iOS direction animator:** disabled entirely on the native app; everything
-  (map pulse, mini-elevation cursor, full elevation graph cursor) is driven from
-  the single playback-engine cursor — the way web already works.
+- **iOS direction animator:** disabled entirely on the native app; everything is
+  driven from the single playback-engine cursor — the way web already works.
 - **Scope:** mobile web + iOS only. Desktop web is unchanged (its side panel
   already shows the map and elevation together).
 
 ## Design
 
-### A. Combined playback dock (mobile web + iOS)
+### A. Partial-height playback panel (mobile web + iOS)
 
-A compact dock pinned as a map overlay just above the collapsed drawer handle,
-visible whenever a route is ready — without opening the drawer:
+During preview/play the bottom panel docks at a partial (medium) height whose
+top section is the **playback area**: the player controls + the full interactive
+elevation graph. The map (with the route animation) stays visible above. The
+POIs/actions are below, reachable only by expanding the panel further.
 
 ```
 ┌─────────────────────────────────────┐
-│            (map + moving             │
-│             route pulse)             │
-│  ┌────────────────────────────────┐ │
-│  │ ▶  ▁▂▃▅▇▆▄▂▁  (cursor ●)  2.1/5km│ │  ← dock
-│  └────────────────────────────────┘ │
-│  ════════ drawer handle ════════     │
+│         (map + route pulse)          │   ← stays visible (shrinks)
+│                                      │
+│  ════════ panel handle ════════      │
+│  ▶  0:42 / 1:35      2.1 / 5.0 km     │   ← player row
+│   ╱╲      ╱╲___                       │
+│  ╱  ╲___╱      ╲___●___               │   ← full interactive elevation graph
+│ ───────────────────────────────      │     (scrub seeks player + route)
+│  (POIs / actions below — expand)      │
 └─────────────────────────────────────┘
 ```
 
-- Contents: play/pause button, a scrub track, a **mini elevation sparkline** with
-  the playback cursor riding it, and a distance readout (`current / total`).
-- Scrubbing the track seeks playback; the mini-elevation cursor and the map pulse
-  track it.
-- The full elevation graph still lives in the expanded drawer (unchanged) and
-  shares the same playback cursor.
-- **iOS:** move `PlaybackControls` out of the scrollable sheet body into a fixed
-  overlay dock above the sheet handle, extended with the mini-elevation strip.
-- **Web:** enhance the existing `planner-route-playback--map` overlay with the
-  mini-elevation strip so control + elevation are visible together without opening
-  the drawer. The `--panel` copy inside the drawer may remain (full graph context)
-  or be dropped if redundant — decided in the plan; the dock is the always-visible
-  surface.
+- The panel auto-snaps to the **partial** height when a route becomes playable /
+  on entering preview, so the playback area shows without covering the map.
+- **Player row:** play/pause + scrub track + `current / total` readout, pinned at
+  the top of the panel.
+- **Elevation graph:** the full, scrubbable graph (not a sparkline), directly
+  under the player row, sharing the playback cursor.
+- **POIs / actions:** remain in the panel below the playback area; visible only at
+  the larger (expanded) snap, so they never push the playback area out of view at
+  the partial height.
+- **iOS:** reorder the bottom-sheet content so the player + elevation graph are at
+  the **top** of the sheet body (above POIs), and auto-snap the sheet to its
+  middle snap point on play. `PlaybackControls` moves to the top of the sheet
+  (out from below the POIs).
+- **Web:** position the player + elevation at the top of the build panel and snap
+  the front-shell sheet to its partial state on play, so the same three-up view
+  appears. The redundant second control instance is consolidated (one player in
+  the playback area).
+
+### A2. Bidirectional elevation ⇄ player ⇄ route sync (both surfaces)
+
+- Scrubbing/dragging along the elevation graph calls `seekToFraction` on the
+  shared playback engine, which moves the route cursor (map pulse) and updates the
+  readout — matching web's `handlePlannerElevationHover` →
+  `plannerPlayback.seekToFraction`.
+- Playing (or scrubbing the player track) moves the elevation graph cursor via the
+  engine cursor fraction — matching web's `PanelElevationGraph`
+  `cursorFraction={plannerPlayback.cursor?.fraction}`.
+- **iOS change:** the elevation chart's scrub currently calls `setScrubPoint`
+  (moves a dot only) and its cursor is driven by the direction animator. Re-wire
+  scrub → `playback.seekToFraction`, and drive its cursor from
+  `playback.cursor?.fraction`. After this, the elevation graph, the map pulse, and
+  the player are one synchronized system on iOS, as on web.
 
 ### B. Web-parity animation on iOS
 
@@ -94,21 +128,22 @@ visible whenever a route is ready — without opening the drawer:
   created — `useCyclewaysApp.js:130-189`).
 - Re-point the iOS elevation chart cursor (currently synced to the direction
   animator's `elevation` channel) to the **playback cursor fraction**, exactly as
-  web's `PanelElevationGraph` consumes `plannerPlayback.cursor?.fraction`. After
-  this, one cursor source (the playback engine) drives the map pulse, the dock
-  mini-strip, and the full elevation graph.
+  web's `PanelElevationGraph` consumes `plannerPlayback.cursor?.fraction` (see
+  A2). After this, one cursor source (the playback engine) drives the map pulse,
+  the player readout, and the elevation graph.
 
 ### C. Shared vs per-surface
 
 - **Shared (core):** the playback engine + cursor (already shared); the elevation
   profile sample builder (already shared, `packages/core/src/ui/elevationProfile.js`);
-  the cursor variant constants (already shared). Add a small shared **dock
-  view-model** (`hasRoute`, `cursorFraction`, elevation samples, formatted
-  `current / total` readout) so both docks render from one source and cannot
-  drift.
-- **Per-surface view:** web dock = DOM (extend `RoutePlaybackControls` + a compact
-  sparkline component); iOS dock = a new RN overlay component + the new RN pulse
-  layer. View layers stay separate (consistent with the map-style-parity work).
+  the cursor variant constants (already shared). Add a small shared **playback
+  panel view-model** (`hasRoute`, `cursorFraction`, formatted `current / total`
+  readout, the partial-snap target) so both surfaces render the playback area from
+  one source and cannot drift.
+- **Per-surface view:** web = DOM (player + elevation positioned at the top of the
+  build panel; snap the front-shell sheet); iOS = the bottom-sheet content
+  reordered (player + elevation at top) + auto-snap, plus the new RN pulse layer.
+  View layers stay separate (consistent with the map-style-parity work).
 
 ## Scope boundary (YAGNI)
 
@@ -124,19 +159,24 @@ visible whenever a route is ready — without opening the drawer:
 ## Affected areas (anticipated)
 
 Shared (`packages/core`):
-- new shared dock view-model (e.g. `src/ui/playbackDock.js`).
+- new shared playback-panel view-model (e.g. `src/ui/playbackPanel.js`).
 
 Web (`src`):
-- `App.jsx` — dock placement (mini-elevation in the `--map` overlay).
-- `components/featured/RoutePlaybackControls.jsx` and/or a new compact sparkline
-  component; `react-app.css` dock styles.
+- `App.jsx` — position player + elevation at the top of the build panel; snap the
+  front-shell sheet to its partial state on play; consolidate the duplicate
+  control instance.
+- `components/frontPanel/BuildPanel.jsx` — playback area (player + elevation) at
+  the top; `react-app.css` partial-snap styles.
 
 Mobile (`apps/mobile/src`):
-- `MapScreen.jsx` — disable direction animator, add RN pulse cursor layer, render
-  the dock overlay (remove `PlaybackControls` from the sheet body), drive
-  elevation chart from the playback cursor.
-- new `planner/PlaybackDock.jsx` (dock) and a `MapCursorPulse` layer; possibly
-  fold the existing `PlaybackControls.jsx` into the dock.
+- `MapScreen.jsx` — disable direction animator, add the RN `progress-head-pulse`
+  cursor layer, reorder the bottom-sheet so player + elevation are at the top and
+  auto-snap to the middle snap on play, wire elevation scrub →
+  `playback.seekToFraction` and its cursor from `playback.cursor`.
+- `planner/PlannerSheet.jsx` — snap-point / content-order changes for the
+  playback area; `planner/PlaybackControls.jsx` relocated to the top of the sheet.
+- new RN `MapCursorPulse` layer for the progress-head-pulse marker.
 
 Tests:
-- shared dock view-model unit test; cursor-source wiring test as feasible.
+- shared playback-panel view-model unit test; cursor-source / seek-wiring test as
+  feasible.

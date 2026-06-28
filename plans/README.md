@@ -4,7 +4,7 @@ This directory contains planning documents for larger project changes before imp
 
 Current plans:
 
-- `route-playback-dock/` - design for a usable route-playback dock (play + scrub + mini-elevation pinned above the drawer, on mobile web and iOS) plus web-parity `progress-head-pulse` animation on iOS and removal of the iOS auto-firing direction animation.
+- `route-playback-dock/` - design for a usable three-up route-playback view (map + player + full interactive elevation graph at a partial panel height, with bidirectional elevation⇄player⇄route sync, on mobile web and iOS) plus web-parity `progress-head-pulse` animation on iOS and removal of the iOS auto-firing direction animation.
 
 - `rn-mobile-map-style-parity/` - design + implementation plan for aligning the iPhone app map and route-building UI with the more-polished mobile web by sharing presentation specs + a planner view-model + a clock-injected playback engine (network/route colors, build summary, playback controls).
 
