@@ -169,6 +169,9 @@ const fix = (lng, timestamp, extra = {}) => ({
   const session = navigatingSession();
   const off = (timestamp) => fix(35.605, timestamp, { lat: 33.101 }); // ~111 m north
 
+  // Acquire the route first with an on-route fix, then drift off.
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.605, 500) });
+
   const candidate = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(1000) });
   assert.equal(candidate.status, "navigating", "single far fix is not yet off-route");
 
@@ -179,6 +182,25 @@ const fix = (lng, timestamp, extra = {}) => ({
 
   const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
   assert.equal(stillOff.cueEvent, null, "off-route event not repeated while still off");
+}
+
+// --- approaching status ---
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  const far = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.105, lng: 35.6, accuracy: 8, speed: 4, timestamp: 1000 },
+  });
+  assert.equal(far.status, "approaching", "far fix -> approaching");
+  assert.equal(far.activeCue, null, "no cues while approaching");
+  assert.equal(far.cueEvent, null, "no cue events while approaching");
+  const near = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6, accuracy: 8, speed: 4, timestamp: 4000 },
+  });
+  assert.equal(near.status, "navigating", "reaching the route -> navigating");
 }
 
 console.log("navigation session lifecycle tests passed");

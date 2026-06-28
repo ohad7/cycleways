@@ -24,7 +24,7 @@ export const NAV_ACTIONS = {
   ERROR: "ERROR",
 };
 
-const ACTIVE = new Set(["navigating", "off-route"]);
+const ACTIVE = new Set(["navigating", "off-route", "approaching"]);
 
 export function createNavigationSession(navigationRoute, options = {}) {
   const tracker = createRouteProgressTracker(navigationRoute, options);
@@ -84,6 +84,17 @@ export function createNavigationSession(navigationRoute, options = {}) {
       case NAV_ACTIONS.LOCATION: {
         if (!ACTIVE.has(state.status)) return state;
         const progress = tracker.update(action.fix);
+
+        if (!progress.hasAcquiredRoute) {
+          return set({
+            status: "approaching",
+            progress,
+            activeCue: null,
+            offRoute: false,
+            cueEvent: null,
+          });
+        }
+
         const offRoute = progress.offRoute;
         const activeCue = selectActiveCue(cues, progress.progressMeters);
 
