@@ -37,4 +37,13 @@ import { createCueHapticPlanner } from "@cycleways/core/navigation/cueHaptics.js
   );
 }
 
+// --- enter-segment cues do not vibrate ---
+{
+  const planner = createCueHapticPlanner();
+  const out = planner.plan({ kind: "cue", cueType: "enter-segment", phase: "preview" }, 1000);
+  assert.equal(out.kind, null, "plain segment entry is visual-only");
+  const turn = planner.plan({ kind: "cue", cueType: "turn", phase: "final" }, 5000);
+  assert.equal(turn.kind, "medium", "turns still vibrate");
+}
+
 console.log("cue haptics planner tests passed");
