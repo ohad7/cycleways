@@ -25,11 +25,24 @@ export default function NavPanel({
   return (
     <View style={styles.root} pointerEvents="box-none">
       <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
-        {p.offRoute ? (
+        {p.wrongWay ? (
+          <View style={styles.wrongWayRow}>
+            <Icon name="warning-outline" color={palette.white} size={22} />
+            <Text style={[styles.cueText, styles.offText]} numberOfLines={1}>
+              {p.wrongWayText}
+            </Text>
+          </View>
+        ) : null}
+        {p.showGuidance ? (
           <View style={[styles.cueRow, styles.offRow]}>
-            <Icon name="warning-outline" color={palette.white} size={26} />
+            <Icon
+              name="navigate"
+              color={palette.white}
+              size={26}
+              style={{ transform: [{ rotate: `${p.guidanceArrowDeg ?? 0}deg` }] }}
+            />
             <Text style={[styles.cueText, styles.offText]} numberOfLines={2}>
-              {p.offRouteText}
+              {p.guidanceText}
             </Text>
           </View>
         ) : p.showCue ? (
@@ -51,6 +64,9 @@ export default function NavPanel({
         )}
         {p.remainingText ? (
           <Text style={styles.remaining}>{p.remainingText}</Text>
+        ) : null}
+        {p.showContext && p.contextText ? (
+          <Text style={styles.context} numberOfLines={1}>{p.contextText}</Text>
         ) : null}
       </View>
 
@@ -122,6 +138,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderRadius: radius.lg,
   },
+  wrongWayRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: space.md,
+    backgroundColor: palette.danger,
+    marginTop: -space.md,
+    marginHorizontal: -space.lg,
+    marginBottom: space.sm,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+  },
   cueTextWrap: { flex: 1 },
   cueText: {
     color: palette.ink,
@@ -152,6 +181,14 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: space.xs,
+  },
+  context: {
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: "600",
+    writingDirection: "rtl",
+    textAlign: "right",
+    marginTop: 2,
   },
   controls: {
     flexDirection: "row-reverse",
