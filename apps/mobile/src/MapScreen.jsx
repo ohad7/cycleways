@@ -1174,6 +1174,25 @@ function BuildPanelContent({
         {routeMessage}
       </Text>
 
+      {hasElevationProfile ? (
+        <View testID="playback-area">
+          <PlaybackControls
+            isPlaying={playback.isPlaying}
+            isReady={playback.isReady}
+            currentTime={playback.currentTime}
+            duration={playback.duration}
+            onTogglePlayback={playback.togglePlayback}
+            onSeekToFraction={onSeekToFraction}
+          />
+          <ElevationProfileChart
+            cursorFraction={playback.cursor?.fraction ?? null}
+            onSeekFraction={onSeekToFraction}
+            distance={routeState.distance}
+            geometry={routeState.geometry}
+          />
+        </View>
+      ) : null}
+
       {buildModel.hasRoute ? (
         <View testID="route-stats" style={styles.statGrid}>
           {buildModel.stats.map(([label, value]) => (
@@ -1199,27 +1218,10 @@ function BuildPanelContent({
         <Text style={styles.locationText}>{locationText}</Text>
       ) : null}
 
-      {hasElevationProfile ? (
-        <ElevationProfileChart
-          animator={animator}
-          distance={routeState.distance}
-          geometry={routeState.geometry}
-          onScrub={onScrub}
-        />
-      ) : null}
-
       <RoutePoiList activeDataPoints={routeState.activeDataPoints} />
 
       {canDownload ? (
         <>
-          <PlaybackControls
-            isPlaying={playback.isPlaying}
-            isReady={playback.isReady}
-            currentTime={playback.currentTime}
-            duration={playback.duration}
-            onTogglePlayback={playback.togglePlayback}
-            onSeekToFraction={onSeekToFraction}
-          />
           <View style={styles.buildActions}>
             <ChromeButton
               label="סיכום"
