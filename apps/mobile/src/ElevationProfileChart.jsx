@@ -14,38 +14,20 @@ import {
 } from "@cycleways/core/utils/grade.js";
 
 export default function ElevationProfileChart({
-  animator,
+  cursorFraction,
+  onSeekFraction,
   distance,
   geometry,
-  onScrub,
 }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
-  const animatorMarkerEnabledRef = useRef(true);
   const widthRef = useRef(0);
   const [hoverInfo, setHoverInfo] = useState(null);
-  const [animatorMarkerX, setAnimatorMarkerX] = useState(null);
+  const [hoverX, setHoverX] = useState(null);
 
   useEffect(() => {
-    if (!animator) return undefined;
-
-    const unsubscribe = animator.subscribe("elevation", (payload) => {
-      if (!animatorMarkerEnabledRef.current) return;
-      if (!payload) {
-        setAnimatorMarkerX(null);
-        return;
-      }
-      setAnimatorMarkerX(Math.max(0, Math.min(100, payload.t * 100)));
-    });
-
-    return unsubscribe;
-  }, [animator]);
-
-  useEffect(() => {
-    animatorMarkerEnabledRef.current = true;
+    setHoverX(null);
     setHoverInfo(null);
-    setAnimatorMarkerX(null);
-    onScrub?.(null);
-  }, [geometry, onScrub]);
+  }, [geometry]);
 
   const panResponder = useMemo(() => {
     function update(evt) {
@@ -55,21 +37,16 @@ export default function ElevationProfileChart({
         0,
         Math.min(100, (evt.nativeEvent.locationX / width) * 100),
       );
+      setHoverX(xPercent);
+      onSeekFraction?.(xPercent / 100);
       const point = findClosestElevationPoint(profile.elevationData, xPercent);
       const payload = buildElevationHoverPayload(point);
-      if (!payload) return;
-
-      if (animatorMarkerEnabledRef.current) {
-        animatorMarkerEnabledRef.current = false;
-        setAnimatorMarkerX(null);
-      }
-      setHoverInfo(payload);
-      onScrub?.(payload);
+      if (payload) setHoverInfo(payload);
     }
 
     function clear() {
+      setHoverX(null);
       setHoverInfo(null);
-      onScrub?.(null);
     }
 
     return PanResponder.create({
@@ -80,11 +57,14 @@ export default function ElevationProfileChart({
       onPanResponderRelease: clear,
       onPanResponderTerminate: clear,
     });
-  }, [profile, onScrub]);
+  }, [profile, onSeekFraction]);
 
   if (!profile) return null;
 
-  const markerX = hoverInfo ? hoverInfo.t * 100 : animatorMarkerX;
+  // While dragging, follow the finger (hoverX); otherwise follow playback cursor.
+  const markerX = hoverX != null
+    ? hoverX
+    : Number.isFinite(cursorFraction) ? cursorFraction * 100 : null;
 
   return (
     <View style={styles.container}>
