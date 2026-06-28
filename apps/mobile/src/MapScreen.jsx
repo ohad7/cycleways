@@ -31,12 +31,9 @@ import { navigationRouteFromRouteState } from "@cycleways/core/navigation/naviga
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import {
   DATA_MARKERS_STYLE,
-  ROUTE_DIRECTION_PULSE_CASING_STYLE,
-  ROUTE_DIRECTION_PULSE_CORE_STYLE,
   ROUTE_GEOMETRY_LINE_STYLE,
 } from "@cycleways/core/map/mapStyles.js";
 import { MAP_INITIAL_CAMERA } from "@cycleways/core/map/mapViewport.js";
-import { buildRouteDirectionPulseFeatureCollection } from "@cycleways/core/map/routeDirectionPulse.js";
 import { buildRoutePointDragPreviewFeatureCollection } from "@cycleways/core/map/routeDragPreview.js";
 import DataMarkerImages, {
   NATIVE_DATA_MARKER_ICON_NAMESPACE,
@@ -95,23 +92,6 @@ const RIDER_MARKER_STYLE = {
   circleColor: "#006699",
   circleStrokeColor: "#ffffff",
   circleStrokeWidth: 3,
-};
-
-const ROUTE_DIRECTION_PULSE_CASING_LINE_STYLE = {
-  lineColor: ROUTE_DIRECTION_PULSE_CASING_STYLE.paint["line-color"],
-  lineWidth: ROUTE_DIRECTION_PULSE_CASING_STYLE.paint["line-width"],
-  lineOpacity: ROUTE_DIRECTION_PULSE_CASING_STYLE.paint["line-opacity"],
-  lineBlur: ROUTE_DIRECTION_PULSE_CASING_STYLE.paint["line-blur"],
-  lineJoin: ROUTE_DIRECTION_PULSE_CASING_STYLE.layout["line-join"],
-  lineCap: ROUTE_DIRECTION_PULSE_CASING_STYLE.layout["line-cap"],
-};
-
-const ROUTE_DIRECTION_PULSE_CORE_LINE_STYLE = {
-  lineGradient: ROUTE_DIRECTION_PULSE_CORE_STYLE.paint["line-gradient"],
-  lineWidth: ROUTE_DIRECTION_PULSE_CORE_STYLE.paint["line-width"],
-  lineOpacity: ROUTE_DIRECTION_PULSE_CORE_STYLE.paint["line-opacity"],
-  lineJoin: ROUTE_DIRECTION_PULSE_CORE_STYLE.layout["line-join"],
-  lineCap: ROUTE_DIRECTION_PULSE_CORE_STYLE.layout["line-cap"],
 };
 
 const ROUTE_POINT_STYLE = {
@@ -253,7 +233,6 @@ export default function MapScreen() {
     canUndo,
     canRedo,
     canDownload,
-    directionAnimatorRef,
     activeDataPointIds,
     dataMarkerFeatures,
     shareInfo,
@@ -278,7 +257,7 @@ export default function MapScreen() {
     handleSelectedDataMarkerClear,
     handleAddDataMarkerToRoute,
     handleViewportIdle,
-  } = useCyclewaysApp();
+  } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
 
   const routeGeometry = useMemo(
     () => buildRouteGeometryFeatureCollection(routeState.geometry),
@@ -936,10 +915,6 @@ export default function MapScreen() {
             </ShapeSource>
           </>
         ) : null}
-        <RouteDirectionPulseLayer
-          animator={directionAnimatorRef.current}
-          routeGeometry={routeState.geometry}
-        />
         <DataMarkerImages />
         <ShapeSource id="search-highlight" shape={searchHighlight}>
           <CircleLayer
@@ -1052,7 +1027,6 @@ export default function MapScreen() {
           }
           build={
             <BuildPanelContent
-              animator={directionAnimatorRef.current}
               canDownload={canDownload}
               canRedo={canRedo}
               canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
@@ -1062,7 +1036,6 @@ export default function MapScreen() {
               onClear={handleClearRoute}
               onOpenSummary={handleOpenDownload}
               onRedo={handleRedo}
-              onScrub={setScrubPoint}
               onSeekToFraction={seekToFraction}
               onShare={shareRoute}
               onStartNavigation={nav.start}
@@ -1079,42 +1052,7 @@ export default function MapScreen() {
   );
 }
 
-function RouteDirectionPulseLayer({ animator, routeGeometry }) {
-  const [routePulse, setRoutePulse] = useState(EMPTY_FEATURE_COLLECTION);
-
-  useEffect(() => {
-    if (!animator) return undefined;
-
-    const unsubscribe = animator.subscribe("chevron", (payload) => {
-      setRoutePulse(
-        payload
-          ? buildRouteDirectionPulseFeatureCollection(routeGeometry, payload.t)
-          : EMPTY_FEATURE_COLLECTION,
-      );
-    });
-
-    return () => {
-      unsubscribe();
-      setRoutePulse(EMPTY_FEATURE_COLLECTION);
-    };
-  }, [animator, routeGeometry]);
-
-  return (
-    <ShapeSource id="route-direction-pulse" lineMetrics shape={routePulse}>
-      <LineLayer
-        id="route-direction-pulse-casing"
-        style={ROUTE_DIRECTION_PULSE_CASING_LINE_STYLE}
-      />
-      <LineLayer
-        id="route-direction-pulse-core"
-        style={ROUTE_DIRECTION_PULSE_CORE_LINE_STYLE}
-      />
-    </ShapeSource>
-  );
-}
-
 function BuildPanelContent({
-  animator,
   canDownload,
   canRedo,
   canShare,
@@ -1124,7 +1062,6 @@ function BuildPanelContent({
   onClear,
   onOpenSummary,
   onRedo,
-  onScrub,
   onSeekToFraction,
   onShare,
   onStartNavigation,
