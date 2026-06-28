@@ -305,6 +305,7 @@ class RouteManager {
         elevationLoss: routeInfo.downhillMeters,
         orderedCoordinates: routeInfo.orderedCoordinates,
         failure: routeInfo.failure || this.lastRouteFailure,
+        segmentSpans: buildSegmentSpans(routeInfo.traversals, this.segmentNamesById),
       };
     }
     const totalDistance = this._calculateTotalDistance();
@@ -317,6 +318,7 @@ class RouteManager {
       elevationGain: elevation.gain,
       elevationLoss: elevation.loss,
       orderedCoordinates: this._getOrderedCoordinates(),
+      segmentSpans: [],
     };
   }
 
@@ -3062,9 +3064,54 @@ class RouteManager {
   }
 }
 
+/**
+ * Build an ordered list of segment spans from a base-routing traversal list.
+ * Adjacent traversals sharing the same (name, onNetwork) tuple are merged into
+ * a single span. Off-network edges (no cwSegmentIds or id not in segmentNamesById)
+ * produce spans with name=null, cwSegmentId=null, onNetwork=false.
+ *
+ * @param {Array} traversals - ordered traversal objects from a computed route
+ * @param {Map} segmentNamesById - map from numeric segment id → display name
+ * @returns {Array<{startMeters,endMeters,name,cwSegmentId,onNetwork,routeClass}>}
+ */
+function buildSegmentSpans(traversals, segmentNamesById) {
+  const spans = [];
+  let cursor = 0;
+  for (const traversal of Array.isArray(traversals) ? traversals : []) {
+    const length = Math.abs(
+      (traversal.distanceMeters ??
+        (traversal.toDistance - traversal.fromDistance)) || 0,
+    );
+    if (length <= 0) continue;
+    const ids = traversal.edge?.cwSegmentIds ?? [];
+    const cwSegmentId = ids.length > 0 ? Number(ids[0]) : null;
+    const name = cwSegmentId != null ? segmentNamesById.get(cwSegmentId) ?? null : null;
+    const onNetwork = name != null;
+    const routeClass =
+      traversal.edge?.routeClass ?? traversal.edge?.highway ?? null;
+    const start = cursor;
+    cursor += length;
+    const prev = spans[spans.length - 1];
+    if (prev && prev.name === name && prev.onNetwork === onNetwork) {
+      prev.endMeters = cursor;
+      continue;
+    }
+    spans.push({
+      startMeters: start,
+      endMeters: cursor,
+      name,
+      cwSegmentId,
+      onNetwork,
+      routeClass,
+    });
+  }
+  return spans;
+}
+
 // CommonJS module: Node consumers (test suite, editor server, CLI scripts) load
 // this via require(). The web/RN bundlers import it as a default export — Vite
 // rewrites this line to `export default RouteManager` via routeManagerEsmPlugin;
 // Metro consumes CommonJS natively. No browser global (it is no longer loaded
 // via a <script> tag).
 module.exports = RouteManager;
+module.exports.buildSegmentSpans = buildSegmentSpans;
