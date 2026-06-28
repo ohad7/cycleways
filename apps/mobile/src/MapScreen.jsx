@@ -770,11 +770,14 @@ export default function MapScreen() {
   const smoothedBearingRef = useRef(0);
   const travelIndexRef = useRef(-1);
   const rafRef = useRef(0);
+  const navStatusRef = useRef("idle");
+  const lastPushedPuckRef = useRef(null);
   progressRef.current = navProgress;
   cameraIntentRef.current = cameraIntent;
   rawFixRef.current = locationState.point;
   arcRef.current = arc;
   navGeometryRef.current = navGeometry;
+  navStatusRef.current = navStatus;
 
   // RAF loop: runs only while navigating. Tweens smoothedMetersRef toward the
   // reported along-route distance and smoothedBearingRef toward the target
@@ -785,6 +788,7 @@ export default function MapScreen() {
       setRiderPuck(null);
       setNavTraveled(EMPTY_FEATURE_COLLECTION);
       travelIndexRef.current = -1;
+      lastPushedPuckRef.current = null;
       return undefined;
     }
     const startProgress = progressRef.current;
@@ -863,8 +867,35 @@ export default function MapScreen() {
           // geographic heading minus the map's heading. While following, the
           // camera heading == puck heading, so the arrow reads "up".
           const rotation = ((heading - mapHeadingRef.current) % 360 + 360) % 360;
-          setRiderPuck({ lng, lat, rotation, muted: !onRoute });
-          if (cameraIntentRef.current === "follow") {
+          const muted = !onRoute;
+          // Only push puck state when the *displayed* value actually changes:
+          // round lng/lat to ~6dp and rotation to whole degrees so identical
+          // frames (e.g. stationary) don't re-render MapScreen at ~60fps.
+          const last = lastPushedPuckRef.current;
+          const candidate = {
+            lng: Math.round(lng * 1e6) / 1e6,
+            lat: Math.round(lat * 1e6) / 1e6,
+            rotation: Math.round(rotation),
+            muted,
+          };
+          if (
+            !last ||
+            last.lng !== candidate.lng ||
+            last.lat !== candidate.lat ||
+            last.rotation !== candidate.rotation ||
+            last.muted !== candidate.muted
+          ) {
+            lastPushedPuckRef.current = candidate;
+            setRiderPuck({ lng, lat, rotation, muted });
+          }
+          // Camera re-centering is suppressed while paused (restores the prior
+          // followUserLocation behavior that excluded the paused state); the puck
+          // position above may still update. setCamera is off the React tree, so
+          // it is intentionally NOT gated on the puck-change check.
+          if (
+            cameraIntentRef.current === "follow" &&
+            navStatusRef.current !== "paused"
+          ) {
             cameraRef.current?.setCamera?.({
               centerCoordinate: [lng, lat],
               heading,
