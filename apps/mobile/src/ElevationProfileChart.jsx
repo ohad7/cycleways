@@ -16,6 +16,7 @@ import {
 export default function ElevationProfileChart({
   cursorFraction,
   onSeekFraction,
+  onScrubStart,
   distance,
   geometry,
 }) {
@@ -52,12 +53,15 @@ export default function ElevationProfileChart({
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: update,
+      onPanResponderGrant: (evt) => {
+        onScrubStart?.();
+        update(evt);
+      },
       onPanResponderMove: update,
       onPanResponderRelease: clear,
       onPanResponderTerminate: clear,
     });
-  }, [profile, onSeekFraction]);
+  }, [profile, onSeekFraction, onScrubStart]);
 
   if (!profile) return null;
 

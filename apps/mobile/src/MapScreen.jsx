@@ -1142,6 +1142,7 @@ function BuildPanelContent({
           <ElevationProfileChart
             cursorFraction={playback.cursor?.fraction ?? null}
             onSeekFraction={onSeekToFraction}
+            onScrubStart={playback.pause}
             distance={routeState.distance}
             geometry={routeState.geometry}
           />
