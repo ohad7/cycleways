@@ -21,3 +21,9 @@ The shared playback cursor (`playback.cursor` with `{lat, lng, fraction,
 bearing}`) is already the input it needs.
 
 **Status:** deferred (scope decision during planning, 2026-06-28).
+
+## From the final whole-branch review (deferred minors)
+
+- **#3 — iOS fit padding is keyed to build-mode, not the live sheet snap.** `mapPresentationActive` is true across the whole build panel, so a fit while the sheet is at 16%/92% frames the route imperfectly. Acceptable because the sheet defaults to and re-docks to 48%. Could react to a real sheet-index state for precision.
+- **#4 — web still creates and ticks the route-direction animator with zero subscribers.** Pre-existing (not a regression), but iOS dropping its last consumer makes the subsystem dead on the surfaces we touch. Consider disabling `enableRouteDirectionAnimation` on web too, or removing the subsystem.
+- **#6 — `RoutePlaybackControls.jsx` keeps a one-line `formatTime` wrapper** that just delegates to the shared `formatPlaybackTime`. Cosmetic; could call the shared fn directly.
