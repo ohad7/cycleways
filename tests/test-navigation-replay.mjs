@@ -56,4 +56,38 @@ import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
   assert.ok(distToStart > 0.001, "approach fixes start away from the route");
 }
 
+// --- realistic fixture milestones (EXPECTED TO FAIL until acquisition lands) ---
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+{
+  const path = fileURLToPath(new URL("./fixtures/nav-ride-realistic.json", import.meta.url));
+  const fx = JSON.parse(readFileSync(path, "utf8"));
+  const route = navigationRouteFromRouteState(fx.route, { param: "fixture" });
+  const { timeline, last } = replaySession(route, fx.fixes);
+
+  // Before acquisition the session must NOT report on-route progress.
+  for (let i = 0; i < fx.milestones.approachFixCount; i++) {
+    assert.equal(
+      timeline[i].progress.hasAcquiredRoute,
+      false,
+      `fix ${i} (approach) must not be acquired`,
+    );
+    assert.equal(
+      timeline[i].progress.progressMeters,
+      fx.milestones.minProgressBeforeAcquireM,
+      `fix ${i} (approach) must not advance progress`,
+    );
+    assert.equal(timeline[i].status, "approaching", `fix ${i} status is approaching`);
+  }
+  assert.equal(
+    timeline[fx.milestones.acquiredByFixIndex].progress.hasAcquiredRoute,
+    true,
+    "route acquired once the rider reaches it",
+  );
+  assert.ok(
+    last.progress.progressMeters >= fx.milestones.finalProgressAtLeastM,
+    "progress completes despite jitter, pause, and the GPS jump",
+  );
+}
+
 console.log("test-navigation-replay OK");
