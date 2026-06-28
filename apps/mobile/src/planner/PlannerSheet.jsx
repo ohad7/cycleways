@@ -11,8 +11,10 @@ export default function PlannerSheet({
   onPanelStateChange,
   discover,
   build,
+  sheetRef,
 }) {
-  const ref = useRef(null);
+  const innerRef = useRef(null);
+  const ref = sheetRef || innerRef;
   const snapPoints = useMemo(() => ["16%", "48%", "92%"], []);
 
   return (

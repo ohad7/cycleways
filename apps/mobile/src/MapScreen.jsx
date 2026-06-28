@@ -315,6 +315,7 @@ export default function MapScreen() {
   // handleRoutePointDrag* handlers as the finger moves; a quick tap selects the
   // point; anything else (no hold, or off-point) falls through to the map for
   // pan/zoom/add. Screen<->coord conversion goes through the MapView ref.
+  const plannerSheetRef = useRef(null);
   const mapViewRef = useRef(null);
   const pointScreenPositionsRef = useRef([]);
   const dragRef = useRef({ index: null, armed: false, startX: 0, startY: 0 });
@@ -683,6 +684,14 @@ export default function MapScreen() {
     if (!mapPresentationActive) setScrubPoint(null);
   }, [mapPresentationActive]);
 
+  // Dock the planner sheet to the partial snap (48%, index 1) when playback
+  // starts so the playback area is visible while the upper map stays uncovered.
+  useEffect(() => {
+    if (playback.isPlaying) {
+      plannerSheetRef.current?.snapToIndex?.(1);
+    }
+  }, [playback.isPlaying]);
+
   const networkPresentationOptions = useMemo(
     () => ({
       variant: mapPresentationActive ? "typed-cased" : "current",
@@ -1016,6 +1025,7 @@ export default function MapScreen() {
         />
       ) : (
         <PlannerSheet
+          sheetRef={plannerSheetRef}
           panelState={panelState}
           onPanelStateChange={setPanelState}
           discover={
