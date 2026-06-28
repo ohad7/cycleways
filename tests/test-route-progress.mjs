@@ -309,4 +309,20 @@ import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
   assert.ok(mid.progressMeters > 400, "progress advances after acquisition");
 }
 
+// --- segment context ---
+{
+  const base = straightRoute();
+  const route = { ...base, segmentSpans: [
+    { startMeters: 0, endMeters: 465, name: "First", cwSegmentId: 1, onNetwork: true, routeClass: "cycleway" },
+    { startMeters: 465, endMeters: base.geometry[base.geometry.length-1].distanceFromStartMeters, name: "Second", cwSegmentId: 2, onNetwork: true, routeClass: "cycleway" },
+  ]};
+  const tracker = createRouteProgressTracker(route);
+  tracker.update({ lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 1000 }); // acquire at start
+  const p = tracker.update({ lat: 33.1, lng: 35.602, accuracy: 5, speed: 4, timestamp: 4000 });
+  assert.equal(p.currentSegmentName, "First", "reports current segment");
+  assert.equal(p.currentOnNetwork, true);
+  assert.equal(p.nextSegmentName, "Second", "reports next named segment");
+  assert.ok(p.distanceToNextSegmentMeters > 0, "distance to next segment");
+}
+
 console.log("route progress tests passed");

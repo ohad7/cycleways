@@ -81,6 +81,36 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     geometry.length > 0
       ? geometry[geometry.length - 1].distanceFromStartMeters
       : 0;
+  const segmentSpans = Array.isArray(navigationRoute?.segmentSpans)
+    ? navigationRoute.segmentSpans
+    : [];
+
+  function segmentContext(progressMeters) {
+    if (segmentSpans.length === 0) {
+      return {
+        currentSpanIndex: null, currentSegmentName: null, currentOnNetwork: false,
+        currentRouteClass: null, nextSegmentName: null, distanceToNextSegmentMeters: null,
+      };
+    }
+    let idx = segmentSpans.findIndex(
+      (s) => progressMeters >= s.startMeters && progressMeters < s.endMeters,
+    );
+    if (idx < 0) idx = segmentSpans.length - 1;
+    const cur = segmentSpans[idx];
+    let nextName = null;
+    let nextStart = null;
+    for (let i = idx + 1; i < segmentSpans.length; i++) {
+      if (segmentSpans[i].name) { nextName = segmentSpans[i].name; nextStart = segmentSpans[i].startMeters; break; }
+    }
+    return {
+      currentSpanIndex: idx,
+      currentSegmentName: cur.name,
+      currentOnNetwork: cur.onNetwork,
+      currentRouteClass: cur.routeClass,
+      nextSegmentName: nextName,
+      distanceToNextSegmentMeters: nextStart === null ? null : Math.max(0, nextStart - progressMeters),
+    };
+  }
 
   // Off-route hysteresis: "on" -> "candidate" -> "off" -> (recover) -> "on".
   // Dwell timers use the injected fix timestamps; a single far/near spike never
@@ -238,6 +268,12 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
           guidanceBearingDeg: startBearing,
           snappedPoint: null,
           snappedIndex: null,
+          currentSpanIndex: null,
+          currentSegmentName: null,
+          currentOnNetwork: false,
+          currentRouteClass: null,
+          nextSegmentName: null,
+          distanceToNextSegmentMeters: null,
         };
       }
     }
@@ -284,6 +320,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       guidanceBearingDeg,
       snappedPoint: best ? best.snapped : null,
       snappedIndex: best ? best.index : null,
+      ...segmentContext(progressMeters),
     };
   }
 
