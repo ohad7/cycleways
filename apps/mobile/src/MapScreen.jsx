@@ -224,6 +224,9 @@ const LONG_PRESS_MAX_DRIFT = 12;
 // After touching a point, ignore the MapView onPress for this long so a tap that
 // landed on a point does not also add a new one.
 const ADD_GUARD_MS = 350;
+// Bottom camera padding used when the playback panel is docked at ~48% height,
+// so the route stays framed in the uncovered upper area during preview.
+const PLAYBACK_FIT_BOTTOM_PADDING = 340;
 
 export default function MapScreen() {
   const cameraRef = useRef(null);
@@ -802,14 +805,19 @@ export default function MapScreen() {
     fitCameraToPoints(
       cameraRef.current,
       routeState.geometry.length >= 2 ? routeState.geometry : routeState.points,
+      mapPresentationActive ? PLAYBACK_FIT_BOTTOM_PADDING : 84,
     );
-  }, [routeState.geometry, routeState.points, stopFollowingLocation]);
+  }, [mapPresentationActive, routeState.geometry, routeState.points, stopFollowingLocation]);
 
   useEffect(() => {
     if (!mapUi.routeFitRequest) return;
     stopFollowingLocation();
-    fitCameraToPoints(cameraRef.current, mapUi.routeFitRequest.geometry);
-  }, [mapUi.routeFitRequest, stopFollowingLocation]);
+    fitCameraToPoints(
+      cameraRef.current,
+      mapUi.routeFitRequest.geometry,
+      mapPresentationActive ? PLAYBACK_FIT_BOTTOM_PADDING : 84,
+    );
+  }, [mapPresentationActive, mapUi.routeFitRequest, stopFollowingLocation]);
 
   useEffect(() => {
     const point = pointFromSearchHighlight(mapUi.searchHighlight);
@@ -1655,7 +1663,7 @@ function boundsFromMapState(mapState) {
   return { west, south, east, north };
 }
 
-function fitCameraToPoints(camera, points) {
+function fitCameraToPoints(camera, points, bottomPadding = 84) {
   const normalizedPoints = Array.isArray(points)
     ? points
         .map((point) => ({
@@ -1683,7 +1691,7 @@ function fitCameraToPoints(camera, points) {
   const east = Math.max(...normalizedPoints.map((point) => point.lng));
   const south = Math.min(...normalizedPoints.map((point) => point.lat));
   const north = Math.max(...normalizedPoints.map((point) => point.lat));
-  camera.fitBounds?.([east, north], [west, south], [96, 42, 84, 42], 550);
+  camera.fitBounds?.([east, north], [west, south], [96, 42, bottomPadding, 42], 550);
 }
 
 const styles = StyleSheet.create({
