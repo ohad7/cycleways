@@ -140,4 +140,32 @@ const missingGeometry = navigationRouteFromRouteState(
 assert.equal(missingGeometry.canNavigate, false);
 assert.equal(missingGeometry.unavailableReason, "broken-route");
 
+// --- segmentSpans reconciled to the geometry distance frame ---
+{
+  const route = navigationRouteFromRouteState(
+    {
+      points: [{ id: "a", lat: 33.1, lng: 35.6 }, { id: "b", lat: 33.1, lng: 35.61 }],
+      selectedSegments: ["X"],
+      geometry: [
+        { lat: 33.1, lng: 35.6 },
+        { lat: 33.1, lng: 35.61 },
+      ],
+      // graph-edge spans total 1000, geometry haversine total ~931.5
+      segmentSpans: [
+        { startMeters: 0, endMeters: 600, name: "X", cwSegmentId: 1, onNetwork: true, routeClass: "cycleway" },
+        { startMeters: 600, endMeters: 1000, name: null, cwSegmentId: null, onNetwork: false, routeClass: "residential" },
+      ],
+      distance: 931.5,
+    },
+    { param: "spans" },
+  );
+  const geomTotal = route.geometry[route.geometry.length - 1].distanceFromStartMeters;
+  assert.equal(route.segmentSpans.length, 2);
+  assert.equal(route.segmentSpans[0].startMeters, 0);
+  // last span ends exactly at the geometry total (reconciled frame)
+  assert.ok(Math.abs(route.segmentSpans[1].endMeters - geomTotal) < 1e-6,
+    "spans rescaled to the geometry frame");
+  assert.equal(route.segmentSpans[0].name, "X", "metadata preserved");
+}
+
 console.log("navigation route view-model tests passed");

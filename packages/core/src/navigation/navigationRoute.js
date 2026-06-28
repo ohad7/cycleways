@@ -103,7 +103,21 @@ function createNavigationRoute({
     regionId: metadata?.regionId || "",
     startPlaceIds: arrayOfStrings(metadata?.startPlaceIds),
     passesNear: arrayOfStrings(metadata?.passesNear),
+    segmentSpans: reconcileSegmentSpans(routeState?.segmentSpans, computedDistance),
   };
+}
+
+function reconcileSegmentSpans(rawSpans, geometryTotalMeters) {
+  const spans = Array.isArray(rawSpans) ? rawSpans : [];
+  if (spans.length === 0 || geometryTotalMeters <= 0) return [];
+  const spansTotal = spans[spans.length - 1].endMeters;
+  const scale = spansTotal > 0 ? geometryTotalMeters / spansTotal : 1;
+  return spans.map((s, i) => ({
+    ...s,
+    startMeters: s.startMeters * scale,
+    endMeters:
+      i === spans.length - 1 ? geometryTotalMeters : s.endMeters * scale,
+  }));
 }
 
 function navigationRouteStatus({ points, geometry, routeFailure }) {
