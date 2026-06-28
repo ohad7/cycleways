@@ -85,7 +85,6 @@ export function getNavigationPresentation(state = {}) {
       ? `נותרו ${formatDistanceMeters(remainingMeters)}`
       : "";
 
-  const navigatingNow = navigating;
   return {
     mode: status,
     statusText: STATUS_TEXT[status] ?? "",
@@ -96,7 +95,7 @@ export function getNavigationPresentation(state = {}) {
     remainingText,
     offRoute,
     offRouteText: "חזרו למסלול",
-    showContext: navigatingNow && !offRoute && Boolean(state.progress?.hasAcquiredRoute),
+    showContext: navigating && !offRoute && Boolean(state.progress?.hasAcquiredRoute),
     contextText: buildContextText(state.progress),
     showGuidance: status === "approaching" || offRoute,
     guidanceText: Number.isFinite(state.progress?.guidanceDistanceMeters)

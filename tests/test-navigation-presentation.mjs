@@ -95,6 +95,7 @@ import { getNavigationPresentation } from "@cycleways/core/navigation/navigation
   });
   assert.equal(p.currentOnNetwork ?? false, false);
   assert.ok(p.contextText.length > 0, "off-network still shows context");
+  assert.match(p.contextText, /בדרך עפר/);
   assert.doesNotMatch(p.contextText, /local roads/);
 }
 // --- approach guidance ---
@@ -114,7 +115,7 @@ import { getNavigationPresentation } from "@cycleways/core/navigation/navigation
     progress: { hasAcquiredRoute: true, wrongWay: true, remainingMeters: 500 },
   });
   assert.equal(p.wrongWay, true);
-  assert.ok(p.wrongWayText.length > 0);
+  assert.match(p.wrongWayText, /כיוון הלא נכון/);
 }
 
 console.log("navigation presentation tests passed");
