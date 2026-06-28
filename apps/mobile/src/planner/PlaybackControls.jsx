@@ -1,12 +1,7 @@
 import { View, Pressable, Text, StyleSheet } from "react-native";
 import Slider from "@react-native-community/slider";
 import { palette, radius } from "./theme.js";
-
-function formatTime(seconds) {
-  const s = Math.max(0, Math.round(Number(seconds) || 0));
-  const m = Math.floor(s / 60);
-  return `${m}:${String(s % 60).padStart(2, "0")}`;
-}
+import { formatPlaybackTime as formatTime } from "@cycleways/core/ui/playbackReadout.js";
 
 // Native equivalent of the web RoutePlaybackControls: play/pause + scrub the
 // route-preview marker. Bound to the shared playback engine.

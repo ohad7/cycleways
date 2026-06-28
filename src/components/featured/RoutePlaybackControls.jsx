@@ -1,5 +1,6 @@
 import React from "react";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
+import { formatPlaybackTime } from "@cycleways/core/ui/playbackReadout.js";
 
 export default function RoutePlaybackControls({
   className = "",
@@ -91,11 +92,8 @@ export default function RoutePlaybackControls({
   );
 }
 
-function formatTime(seconds) {
-  const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0));
-  const minutes = Math.floor(totalSeconds / 60);
-  const remainingSeconds = totalSeconds % 60;
-  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+function formatTime(totalSeconds) {
+  return formatPlaybackTime(totalSeconds);
 }
 
 function formatDistance(meters) {
