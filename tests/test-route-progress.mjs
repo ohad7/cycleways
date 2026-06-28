@@ -128,6 +128,9 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
     timestamp,
   });
 
+  // Acquire the route first (acquisition gate must latch before off-route is meaningful).
+  tracker.update(nearFix(100));
+
   // Single far fix: candidate, not yet confirmed (no flap on a GPS spike).
   const candidate = tracker.update(farFix(1000));
   assert.ok(candidate.crossTrackMeters > 100, "far fix cross-track > 100 m");
@@ -282,6 +285,28 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
 
   // No progress yet -> empty (nothing to draw).
   assert.deepEqual(traveledCoordinates(geometry, null, null), []);
+}
+
+// --- acquisition gate ---
+import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
+{
+  const tracker = createRouteProgressTracker(straightRoute());
+  // First fix ~557 m north of the route: must NOT acquire or advance.
+  const far = tracker.update({ lat: 33.105, lng: 35.6, accuracy: 8, speed: 4, timestamp: 1000 });
+  assert.equal(far.hasAcquiredRoute, false, "far first fix is not acquired");
+  assert.equal(far.progressMeters, 0, "no progress before acquisition");
+  assert.equal(far.offRoute, false, "approaching is not off-route");
+  assert.ok(far.guidanceDistanceMeters > 500, "guidance distance to start is reported");
+  assert.ok(Number.isFinite(far.guidanceBearingDeg), "guidance bearing is reported");
+  assert.deepEqual(far.guidanceTargetPoint, { lat: 33.1, lng: 35.6 }, "targets route start");
+
+  // Arrive at the start: acquire and begin progress.
+  const near = tracker.update({ lat: 33.1, lng: 35.6, accuracy: 8, speed: 4, timestamp: 4000 });
+  assert.equal(near.hasAcquiredRoute, true, "acquired at the route");
+  // Move along: progress advances and stays acquired.
+  const mid = tracker.update({ lat: 33.1, lng: 35.605, accuracy: 8, speed: 4, timestamp: 7000 });
+  assert.equal(mid.hasAcquiredRoute, true, "acquisition latches");
+  assert.ok(mid.progressMeters > 400, "progress advances after acquisition");
 }
 
 console.log("route progress tests passed");

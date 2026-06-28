@@ -93,6 +93,9 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
   // progress backward across the overlap. Null until the first (acquisition) fix.
   let lastProgressMeters = null;
   let prevFix = null;
+  // Acquisition gate: latches true once the rider comes within the on-route
+  // threshold of the geometry; stays true for the rest of the session.
+  let acquired = false;
 
   function reset() {
     offRouteState = "on";
@@ -100,6 +103,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     recoverSince = null;
     lastProgressMeters = null;
     prevFix = null;
+    acquired = false;
   }
 
   // Nearest segment whose progress range intersects [rangeMin, rangeMax]
@@ -200,6 +204,44 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       }
     }
 
+    const distanceToRouteStart =
+      geometry.length > 0 ? getDistance(fix, geometry[0]) : 0;
+
+    if (!acquired) {
+      // Acquisition: latch true once within the on-route threshold of the line.
+      if (best && best.crossTrackMeters <= enterThreshold) {
+        acquired = true;
+        lastProgressMeters = best.progressMeters;
+      } else {
+        // Still approaching: do not advance progress or flag off-route.
+        prevFix = fix;
+        const startBearing =
+          geometry.length > 0 ? computeBearing(fix, geometry[0]) : null;
+        return {
+          onRoute: false,
+          offRoute: false,
+          hasAcquiredRoute: false,
+          crossTrackMeters: best ? best.crossTrackMeters : 0,
+          progressMeters: 0,
+          fraction: 0,
+          remainingMeters: totalMeters,
+          bearingToNextDeg: null,
+          courseDeg: riderCourse(fix),
+          headingAgreementDeg: null,
+          wrongWay: false,
+          distanceToRouteStart,
+          guidanceTargetPoint: geometry.length > 0
+            ? { lat: geometry[0].lat, lng: geometry[0].lng }
+            : null,
+          guidanceTargetProgressMeters: 0,
+          guidanceDistanceMeters: distanceToRouteStart,
+          guidanceBearingDeg: startBearing,
+          snappedPoint: null,
+          snappedIndex: null,
+        };
+      }
+    }
+
     const progressMeters = best ? best.progressMeters : 0;
     const crossTrackMeters = best ? best.crossTrackMeters : 0;
     if (best) lastProgressMeters = progressMeters;
@@ -219,14 +261,14 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     const wrongWay =
       headingAgreementDeg !== null && headingAgreementDeg > WRONG_WAY_DELTA_DEG;
 
-    const distanceToRouteStart =
-      geometry.length > 0 ? getDistance(fix, geometry[0]) : 0;
+    const guidanceBearingDeg = best ? computeBearing(fix, best.snapped) : null;
 
     prevFix = fix;
 
     return {
       onRoute: !offRoute,
       offRoute,
+      hasAcquiredRoute: true,
       crossTrackMeters,
       progressMeters,
       fraction: totalMeters > 0 ? progressMeters / totalMeters : 0,
@@ -236,6 +278,10 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       headingAgreementDeg,
       wrongWay,
       distanceToRouteStart,
+      guidanceTargetPoint: best ? { lat: best.snapped.lat, lng: best.snapped.lng } : null,
+      guidanceTargetProgressMeters: best ? best.progressMeters : null,
+      guidanceDistanceMeters: crossTrackMeters,
+      guidanceBearingDeg,
       snappedPoint: best ? best.snapped : null,
       snappedIndex: best ? best.index : null,
     };
