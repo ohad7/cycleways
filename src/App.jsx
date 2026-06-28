@@ -720,6 +720,12 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [plannerPlaybackEnded, routeState.geometry]);
 
+  useEffect(() => {
+    if (isMobileSheet && plannerPlayback.isPlaying) {
+      setSheetSnap("half");
+    }
+  }, [isMobileSheet, plannerPlayback.isPlaying]);
+
   const plannerPoiPreviewVisible =
     plannerRouteReady &&
     !mapUi.selectedDataMarker &&
