@@ -89,6 +89,29 @@ export function selectConnectorTarget(
   };
 }
 
+export const CONNECTOR_NEAR_RADIUS_M = 1000;
+export const JOIN_SKIP_PROMPT_M = 1500;
+
+export function approachTargetChoices(navigationRoute, fix) {
+  const geometry = Array.isArray(navigationRoute?.geometry) ? navigationRoute.geometry : [];
+  if (geometry.length < 2 || !fix) return null;
+  const startVertex = geometry[0];
+  const start = {
+    point: { lat: startVertex.lat, lng: startVertex.lng },
+    mainProgressMeters: 0,
+    distanceMeters: getDistance(fix, startVertex),
+  };
+  const projection = projectOntoRoute(geometry, fix);
+  if (!projection) return null;
+  const nearest = {
+    point: projection.point,
+    mainProgressMeters: projection.progressMeters,
+    distanceMeters: getDistance(fix, projection.point),
+  };
+  const skipMeters = Math.max(0, projection.progressMeters);
+  return { start, nearest, skipMeters, shouldPrompt: skipMeters >= JOIN_SKIP_PROMPT_M };
+}
+
 export function connectorWithinCap(distanceMeters) {
   const distance = Number(distanceMeters);
   return Number.isFinite(distance) && distance > 0 && distance <= CONNECTOR_MAX_DISTANCE_M;
