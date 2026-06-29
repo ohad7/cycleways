@@ -161,7 +161,7 @@ import { fileURLToPath } from "node:url";
   assert.ok(last.progress.fraction > 0.9, "synth: ride completes");
 }
 
-// --- connector replay records requesting, active, and handoff transitions ---
+// --- approach replay: suggestion offered, then physical acquisition --------
 {
   const route = straightRoute();
   const fixes = [
@@ -174,18 +174,24 @@ import { fileURLToPath } from "node:url";
     connectorRouter: (request) => ({ geometry: [request.from, request.to] }),
   });
   assert.ok(
-    timeline.some((entry) => entry.connector.status === "requesting"),
-    "timeline records the request transition",
+    timeline.some((entry) => entry.approach.suggestionStatus === "requesting"),
+    "timeline records the suggestion request",
   );
   assert.ok(
-    timeline.some((entry) => entry.status === "on-connector"),
-    "timeline records the active connector",
+    timeline.some((entry) => entry.approach.suggestionStatus === "ready"),
+    "timeline records a ready suggestion",
   );
+  assert.ok(
+    timeline.every((entry) => entry.status !== "on-connector"),
+    "no state ever enters on-connector",
+  );
+  // Acquisition is the only handoff: progress reflects the main route, not a seed.
   assert.equal(last.status, "navigating");
   assert.ok(last.progress.progressMeters > 300);
+  assert.ok(last.progress.hasAcquiredRoute, "reached the route physically");
 }
 
-// --- controlled mode permits deterministic stale-result ordering ---------
+// --- controlled mode: a stale suggestion result cannot overwrite a new one -
 {
   const firstFix = {
     lat: 33.105,
@@ -203,20 +209,26 @@ import { fileURLToPath } from "node:url";
     requestId: first.requestId,
     reason: "transient",
   });
+  // Re-target to reset the request gate, then a fresh fix issues a new request.
+  replay.session.dispatch({
+    type: NAV_ACTIONS.SET_APPROACH_TARGET,
+    choice: "nearest",
+  });
   replay.session.dispatch({
     type: NAV_ACTIONS.LOCATION,
     fix: { ...firstFix, timestamp: 5000 },
   });
   const second = replay.session.getState().routeRequest;
   assert.ok(second.requestId > first.requestId);
+  // A late result for the stale first request is ignored.
   replay.session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_READY,
     requestId: first.requestId,
     geometry: [first.from, first.to],
     distanceMeters: 500,
   });
-  assert.equal(replay.session.getState().connector.requestId, second.requestId);
-  assert.equal(replay.session.getState().connector.status, "requesting");
+  assert.equal(replay.session.getState().routeRequest.requestId, second.requestId);
+  assert.equal(replay.session.getState().approach.suggestionStatus, "requesting");
 }
 
 console.log("test-navigation-replay OK");

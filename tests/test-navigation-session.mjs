@@ -203,7 +203,7 @@ const fix = (lng, timestamp, extra = {}) => ({
   assert.equal(near.status, "navigating", "reaching the route -> navigating");
 }
 
-function approachConnectorSession({ lng = 35.6, timestamp = 1000 } = {}) {
+function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   const session = createNavigationSession(straightRoute());
   session.dispatch({ type: NAV_ACTIONS.START });
   session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
@@ -214,183 +214,200 @@ function approachConnectorSession({ lng = 35.6, timestamp = 1000 } = {}) {
   return { session, requested };
 }
 
-// --- connector request remains orthogonal to the approach status ---------
+// --- approach slot: suggestion is orthogonal to acquisition ----------------
 {
-  const { requested } = approachConnectorSession();
-  assert.equal(requested.status, "approaching");
-  assert.equal(requested.connector.status, "requesting");
-  assert.equal(requested.routeRequest.mode, "approach");
-  assert.equal(requested.latestFix.lat, 33.105);
-  assert.equal(
-    requested.routeRequest.toProgressMeters,
-    requested.connector.pendingTarget.mainProgressMeters,
-  );
+  const route = straightRoute();
+  const farFromStartFix = { lat: 33.105, lng: 35.6, accuracy: 8, speed: 4, timestamp: 1000 };
+  const onRouteFix = { lat: 33.1, lng: 35.605, accuracy: 5, speed: 4, timestamp: 4000 };
+  const connectorGeom = [
+    { lat: 33.105, lng: 35.6 },
+    { lat: 33.1, lng: 35.6 },
+  ];
+
+  const s = createNavigationSession(route);
+  s.dispatch({ type: NAV_ACTIONS.START });
+  s.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED });
+  s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: farFromStartFix });
+  let st = s.getState();
+  assert.equal(st.status, "approaching");
+  assert.ok(st.approach.choices);
+  assert.equal(st.approach.target.mode, "approach");
+  assert.equal(st.approach.suggestionStatus, "requesting");
+  assert.ok(st.routeRequest && st.routeRequest.to);
+  assert.ok(Number.isFinite(st.approach.distanceToRouteMeters));
+
+  s.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: st.routeRequest.requestId,
+    geometry: connectorGeom,
+    distanceMeters: 800,
+    snappedEndpoints: [],
+  });
+  st = s.getState();
+  assert.equal(st.status, "approaching", "READY never changes status");
+  assert.equal(st.approach.suggestionStatus, "ready");
+  assert.ok(st.approach.suggestionGeometry.length >= 2);
+
+  s.dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice: "nearest" });
+  st = s.getState();
+  assert.equal(st.approach.suggestionStatus, "idle");
+  assert.equal(st.approach.suggestionGeometry, null);
+
+  s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: onRouteFix });
+  st = s.getState();
+  assert.equal(st.status, "navigating", "physical acquisition is the only handoff");
+  assert.equal(st.approach.target, null, "acquisition clears the approach slot");
 }
 
-// --- ready, stale, cap rejection, and physical-proximity handoff ----------
+// --- a long / over-cap suggestion is allowed (no distance-cap rejection) ---
 {
-  const { session, requested } = approachConnectorSession({ lng: 35.61 });
-  const requestId = requested.routeRequest.requestId;
-  const target = requested.connector.pendingTarget.point;
-  const stale = session.dispatch({
-    type: NAV_ACTIONS.CONNECTOR_READY,
-    requestId: requestId + 1,
-    geometry: [requested.latestFix, target],
-    distanceMeters: 557,
-  });
-  assert.equal(stale.connector.status, "requesting", "stale result ignored");
-
+  const { session, requested } = approachingSession();
   const ready = session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_READY,
-    requestId,
-    geometry: [requested.latestFix, target],
-    distanceMeters: 557,
-    snappedEndpoints: [requested.latestFix, target],
-  });
-  assert.equal(ready.status, "on-connector");
-  assert.equal(ready.connector.status, "active");
-  assert.equal(
-    ready.progress.hasAcquiredRoute,
-    true,
-    "connector activation initializes progress from the latest fix",
-  );
-  assert.ok(ready.progress.progressMeters < 10, "connector starts near its own origin");
-
-  const farFromTarget = session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: target.lat, lng: target.lng + 0.001, accuracy: 200, speed: 4, timestamp: 2000 },
-  });
-  assert.equal(
-    farFromTarget.status,
-    "on-connector",
-    "completion projection and poor reported accuracy cannot hand off while physically far",
-  );
-
-  const handedOff = session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: target.lat, lng: target.lng, accuracy: 5, speed: 4, timestamp: 3000 },
-  });
-  assert.equal(handedOff.status, "navigating");
-  assert.equal(handedOff.connector.status, "idle");
-  assert.ok(
-    handedOff.progress.progressMeters > 700,
-    "handoff uses the route target seed instead of restarting at zero",
-  );
-}
-
-{
-  const { session, requested } = approachConnectorSession();
-  const rejected = session.dispatch({
-    type: NAV_ACTIONS.CONNECTOR_READY,
     requestId: requested.routeRequest.requestId,
-    geometry: [requested.latestFix, requested.connector.pendingTarget.point],
+    geometry: [{ lat: 33.105, lng: 35.6 }, { lat: 33.1, lng: 35.6 }],
     distanceMeters: 9000,
   });
-  assert.equal(rejected.status, "approaching");
-  assert.equal(rejected.connector.status, "failed");
+  assert.equal(ready.status, "approaching");
+  assert.equal(
+    ready.approach.suggestionStatus,
+    "ready",
+    "a long suggestion across a barrier is not cap-rejected",
+  );
 }
 
-// --- differentiated retry -------------------------------------------------
+// --- an invalid (single-point) suggestion geometry fails -------------------
 {
-  const { session, requested } = approachConnectorSession();
+  const { session, requested } = approachingSession();
+  const ready = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: requested.routeRequest.requestId,
+    geometry: [{ lat: 33.105, lng: 35.6 }],
+    distanceMeters: 100,
+  });
+  assert.equal(ready.status, "approaching");
+  assert.equal(ready.approach.suggestionStatus, "failed");
+  assert.equal(ready.approach.suggestionGeometry, null);
+}
+
+// --- CONNECTOR_FAILED keeps status approaching; direct line survives -------
+{
+  const { session, requested } = approachingSession();
+  const before = requested.approach.distanceToRouteMeters;
+  const failed = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_FAILED,
+    requestId: requested.routeRequest.requestId,
+    reason: "transient",
+  });
+  assert.equal(failed.status, "approaching");
+  assert.equal(failed.approach.suggestionStatus, "failed");
+  assert.equal(failed.approach.suggestionGeometry, null);
+  assert.equal(
+    failed.approach.distanceToRouteMeters,
+    before,
+    "the direct-line distance survives a failed suggestion",
+  );
+}
+
+// --- stale and paused suggestion results are ignored -----------------------
+{
+  const { session, requested } = approachingSession();
+  const requestId = requested.routeRequest.requestId;
+  const stale = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: requestId + 5,
+    geometry: [{ lat: 33.105, lng: 35.6 }, { lat: 33.1, lng: 35.6 }],
+    distanceMeters: 500,
+  });
+  assert.equal(stale.approach.suggestionStatus, "requesting", "stale result ignored");
+
+  assert.equal(session.dispatch({ type: NAV_ACTIONS.PAUSE }).status, "paused");
+  const whilePaused = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId,
+    geometry: [{ lat: 33.105, lng: 35.6 }, { lat: 33.1, lng: 35.6 }],
+    distanceMeters: 500,
+  });
+  assert.equal(whilePaused.approach.suggestionStatus, "requesting", "result ignored while paused");
+  assert.equal(
+    session.dispatch({ type: NAV_ACTIONS.RESUME }).status,
+    "approaching",
+    "RESUME restores the pre-pause status",
+  );
+  assert.ok(session.getState().approach.target, "approach slot persists across pause");
+}
+
+// --- SET_APPROACH_TARGET forces a fresh request next LOCATION --------------
+{
+  const { session, requested } = approachingSession();
   session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_FAILED,
     requestId: requested.routeRequest.requestId,
     reason: "transient",
   });
-  const retry = session.dispatch({
+  session.dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice: "nearest" });
+  let st = session.getState();
+  assert.equal(st.approach.suggestionStatus, "idle");
+  assert.equal(st.approach.suggestionGeometry, null);
+  const refetch = session.dispatch({
     type: NAV_ACTIONS.LOCATION,
     fix: { ...requested.latestFix, timestamp: 5000 },
   });
-  assert.equal(retry.connector.status, "requesting");
-  assert.ok(retry.routeRequest.requestId > requested.routeRequest.requestId);
+  assert.equal(refetch.approach.suggestionStatus, "requesting");
+  assert.ok(refetch.routeRequest.requestId > requested.routeRequest.requestId);
 }
 
+// --- STOP clears the approach slot and route request -----------------------
 {
-  const { session, requested } = approachConnectorSession();
-  session.dispatch({
-    type: NAV_ACTIONS.CONNECTOR_FAILED,
-    requestId: requested.routeRequest.requestId,
-    reason: "no-path",
-  });
-  const stationary = session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { ...requested.latestFix, timestamp: 10000 },
-  });
-  assert.equal(stationary.connector.status, "failed");
-  assert.equal(stationary.routeRequest, null);
+  const { session } = approachingSession();
+  const ended = session.dispatch({ type: NAV_ACTIONS.STOP });
+  assert.equal(ended.status, "ended");
+  assert.equal(ended.approach.target, null);
+  assert.equal(ended.routeRequest, null);
 }
 
-// --- pause/resume and stop invalidate connector work ----------------------
+// --- acquired then off-route: rejoin suggestion, no on-connector -----------
 {
-  const { session, requested } = approachConnectorSession();
-  session.dispatch({
-    type: NAV_ACTIONS.CONNECTOR_READY,
-    requestId: requested.routeRequest.requestId,
-    geometry: [requested.latestFix, requested.connector.pendingTarget.point],
-    distanceMeters: 557,
+  const session = createNavigationSession(straightRoute(), {
+    confirmMs: 4000,
+    recoverMs: 3000,
   });
-  assert.equal(session.dispatch({ type: NAV_ACTIONS.PAUSE }).status, "paused");
-  assert.equal(session.dispatch({ type: NAV_ACTIONS.RESUME }).status, "on-connector");
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  // Acquire the route.
+  session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.605, accuracy: 5, speed: 3, timestamp: 500 },
+  });
+  const off = (timestamp) => ({ lat: 33.101, lng: 35.605, accuracy: 5, speed: 3, timestamp });
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(1000) });
+  const confirmed = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(6000) });
+  assert.equal(confirmed.status, "off-route");
+  assert.ok(confirmed.cueEvent && confirmed.cueEvent.kind === "off-route", "off-route event on entry");
+  assert.equal(confirmed.approach.target.mode, "rejoin", "off-route drives a rejoin suggestion");
+  assert.equal(confirmed.approach.suggestionStatus, "requesting");
+  assert.ok(confirmed.routeRequest && confirmed.routeRequest.to);
+  const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
+  assert.equal(stillOff.status, "off-route");
+  assert.equal(stillOff.cueEvent, null, "off-route event not repeated while still off");
 }
 
+// --- no state is ever "on-connector" ---------------------------------------
 {
-  const { session, requested } = approachConnectorSession();
-  session.dispatch({ type: NAV_ACTIONS.STOP });
-  const late = session.dispatch({
-    type: NAV_ACTIONS.CONNECTOR_READY,
-    requestId: requested.routeRequest.requestId,
-    geometry: [requested.latestFix, requested.connector.pendingTarget.point],
-    distanceMeters: 557,
-  });
-  assert.equal(late.status, "ended");
-  assert.equal(late.connector.status, "idle");
-}
-
-// --- leaving a connector requests a replacement after dwell + throttle ----
-{
-  const { session, requested } = approachConnectorSession();
-  const requestId = requested.routeRequest.requestId;
-  const target = requested.connector.pendingTarget.point;
-  session.dispatch({
-    type: NAV_ACTIONS.CONNECTOR_READY,
-    requestId,
-    geometry: [requested.latestFix, target],
-    distanceMeters: 557,
-  });
-  session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: 33.1025, lng: 35.6, accuracy: 5, speed: 4, timestamp: 2000 },
-  });
-  session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: 33.1025, lng: 35.602, accuracy: 5, speed: 4, timestamp: 3000 },
-  });
-  const reroute = session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: 33.1025, lng: 35.602, accuracy: 5, speed: 4, timestamp: 8000 },
-  });
-  assert.equal(reroute.status, "approaching");
-  assert.equal(reroute.connector.status, "requesting");
-  assert.ok(reroute.connector.requestId > requestId);
-}
-
-// --- reaching the main route before the connector target abandons it ------
-{
-  const { session, requested } = approachConnectorSession();
-  session.dispatch({
-    type: NAV_ACTIONS.CONNECTOR_READY,
-    requestId: requested.routeRequest.requestId,
-    geometry: [requested.latestFix, requested.connector.pendingTarget.point],
-    distanceMeters: 557,
-  });
-  const early = session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: 33.1, lng: 35.605, accuracy: 5, speed: 4, timestamp: 3000 },
-  });
-  assert.equal(early.status, "navigating");
-  assert.equal(early.connector.status, "idle");
-  assert.ok(early.progress.progressMeters > 400);
+  const fixes = [
+    { lat: 33.105, lng: 35.6, accuracy: 8, speed: 4, timestamp: 1000 },
+    { lat: 33.1025, lng: 35.6, accuracy: 5, speed: 4, timestamp: 4000 },
+    { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 7000 },
+    { lat: 33.1, lng: 35.605, accuracy: 5, speed: 4, timestamp: 10000 },
+  ];
+  const s = createNavigationSession(straightRoute());
+  s.dispatch({ type: NAV_ACTIONS.START });
+  s.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED });
+  for (const fix of fixes) {
+    const st = s.dispatch({ type: NAV_ACTIONS.LOCATION, fix });
+    assert.notEqual(st.status, "on-connector", "no on-connector status anywhere");
+  }
+  assert.equal(s.getState().status, "navigating", "physically reaching the route navigates");
 }
 
 console.log("navigation session lifecycle tests passed");
