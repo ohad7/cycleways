@@ -293,7 +293,7 @@ class ShardedRouteSession {
       this.manager.lastRouteFailure = savedFailure;
     }
     if (!covered || !this.indexedNetwork()) return empty("no-coverage");
-    return this.manager.previewBaseRoute([from, to]);
+    return this.manager.previewBaseRoute([from, to], { costProfile: "connector" });
   }
 
   async restorePoints(points) {

@@ -55,6 +55,7 @@ class RouteManager {
     this.segmentNamesById = new Map();
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
+    this._connectorCostProfile = false;
   }
 
   /**
@@ -251,7 +252,7 @@ class RouteManager {
    * Compute a base-graph route preview from raw coordinates without committing
    * it as the planner's active route.
    */
-  previewBaseRoute(points) {
+  previewBaseRoute(points, { costProfile = "default" } = {}) {
     const snapped = this._snapRoutePoints(points);
     const snappedEndpoints =
       snapped.length >= 2 ? [snapped[0], snapped[snapped.length - 1]] : snapped;
@@ -271,8 +272,13 @@ class RouteManager {
         snappedEndpoints,
       };
     }
-
-    const route = this._calculateBaseRoute(snapped);
+    this._connectorCostProfile = costProfile === "connector";
+    let route;
+    try {
+      route = this._calculateBaseRoute(snapped);
+    } finally {
+      this._connectorCostProfile = false;
+    }
     if (
       route.failure ||
       !Array.isArray(route.orderedCoordinates) ||
@@ -286,10 +292,7 @@ class RouteManager {
       };
     }
     return {
-      geometry: route.orderedCoordinates.map((coordinate) => ({
-        lat: coordinate.lat,
-        lng: coordinate.lng,
-      })),
+      geometry: route.orderedCoordinates.map((c) => ({ lat: c.lat, lng: c.lng })),
       distanceMeters: route.distance || 0,
       failure: null,
       snappedEndpoints,
@@ -1040,7 +1043,19 @@ class RouteManager {
     });
   }
 
+  _connectorCostMultiplierFor(edge) {
+    // Connector = reliable public roads cheap; uncertain paths/tracks expensive.
+    if (edge.routeClass === "road" || edge.roadType === "road") return 1;
+    if (edge.routeClass === "local_road") return 1.1;
+    if (edge.routeClass === "cycle") return 1.3;
+    if (edge.cwSegmentIds.length > 0) return 1.4;
+    if (edge.routeClass === "path_track" || edge.routeClass === "manual") return 3;
+    if (edge.routeClass === "footway") return 3.5;
+    return 2.5;
+  }
+
   _baseRoutingCostMultiplier(edge) {
+    if (this._connectorCostProfile) return this._connectorCostMultiplierFor(edge);
     if (edge.cwSegmentIds.length > 0) return 1;
     if (edge.routeClass === "cycle") return 1.35;
     if (edge.routeClass === "path_track" || edge.routeClass === "manual") {

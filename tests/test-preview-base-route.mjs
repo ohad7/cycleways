@@ -56,4 +56,14 @@ const offGraph = manager.previewBaseRoute([
 ]);
 assert.ok(offGraph.failure);
 
+// Task 1: connector cost profile — minimum gate (fixture has only local_road edges,
+// no parallel road/path_track pair to assert preference ordering).
+const conn = manager.previewBaseRoute(
+  [{ lat: 33.00001, lng: 35.0002 }, { lat: 33.00001, lng: 35.0018 }],
+  { costProfile: "connector" },
+);
+assert.equal(conn.failure, null);
+assert.ok(conn.geometry.length >= 2);
+assert.equal(manager._connectorCostProfile, false); // transient flag cleared
+
 console.log("test-preview-base-route OK");
