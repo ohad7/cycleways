@@ -1,11 +1,74 @@
 # Turn-by-Turn Rejoin Routing (Phase B)
 
-**Date:** 2026-06-29
-**Status:** design approved; implementation plan next
+**Date:** 2026-06-29 (revised same day after a code review of the first plan)
+**Status:** design approved (revised); implementation plan next
 **Builds on:** `plans/turn-by-turn-improvements/` (Phase A shipped: acquisition
 state, segment context, smoothed puck/camera, off-route/approach **arrow +
 distance** guidance, and the node replay + in-app simulate-ride harnesses). This
 is the deferred **Phase B — routed rejoin** from that design.
+
+## Review revisions (2026-06-29) — binding
+
+A code review of the first plan surfaced correctness blockers, verified against
+the code. These override the original prose below where they conflict:
+
+1. **Router primitive:** compute connectors via a new non-mutating
+   `previewBaseRoute([from,to])` that reuses `previewRouteInfo`'s snapping
+   (`_snapRoutePoints` → `_calculateBaseRoute`) — NOT `_calculateBaseRoute`
+   directly (it needs already-snapped points carrying `baseEdgeId`; raw GPS
+   fails). Returns `{ geometry, distanceMeters, failure, snappedEndpoints }`.
+2. **No planner mutation:** `ensureCoverage` → `mergeBaseRoutingNetwork` nulls
+   `baseRouteInfo` (route-manager.js:877), which would silently recompute the
+   planner route. The connector capability MUST preserve `baseRouteInfo` +
+   `lastRouteFailure` across coverage extension. Exposed as a narrow
+   `computeConnector(from, to)` capability from `useCyclewaysApp` (MapScreen
+   can't reach the private session). A mutation-regression test asserts the
+   planner route snapshot is identical before/after a connector that loads a
+   shard.
+3. **Orthogonal state:** `status` ∈ `approaching | navigating | off-route |
+   on-connector | paused | …`; connector lifecycle is a SEPARATE field
+   `connector: { status: "idle"|"requesting"|"active"|"failed", requestId,
+   pendingTarget }`. While computing, `status` stays `approaching`/`off-route`
+   so the Phase A arrow keeps showing — there is NO top-level "routing" status.
+4. **Session is authoritative** for request ids, throttle, pending target, and
+   stale-result acceptance. The hook only runs the async compute and returns a
+   result. `CONNECTOR_READY { requestId, geometry, distanceMeters,
+   snappedEndpoints }` — the session already holds the pending target (no
+   round-trip).
+5. **Seeded handoff:** add `tracker.seed({ progressMeters, acquired })` +
+   windowed search; never `reset()`+global-reacquire (wrong branch on
+   loops/out-and-back). Hand off only on accuracy-aware physical proximity to
+   the main-route target OR genuine main-route reacquisition — never on connector
+   `remainingMeters` alone (a rider far laterally can project onto the final
+   segment and look "complete").
+6. **Continuous target projection:** project onto the polyline (reuse
+   `projectToSegment`) and return the interpolated point + progress, not the
+   nearest vertex. Mid-ride rejoin uses the **last confirmed on-route progress**
+   (the tracker keeps updating progress while off-route — routeProgress.js:281 —
+   and can jump branches on loops). Return null when there is no acceptable
+   forward candidate; never target behind the rider.
+7. **Detour acceptance, not ratio rejection:** a large straight-line ratio
+   usually means a barrier (river/highway) — exactly where routed guidance beats
+   an arrow across it. Accept by an **absolute distance/time cap** only; do not
+   reject a valid connector for routing around a barrier. (Multi-candidate
+   routing + cost comparison is a deferred future refinement, not v1.)
+8. **Differentiated retry:** transient I/O failure → time-based backoff (retries
+   even while stationary); off-graph/no-path → retry after meaningful movement;
+   rejected target → retry after movement. A time-AND-movement gate alone strands
+   a stationary rider after a transient load failure.
+9. **Lifecycle completeness:** off-connector recompute; early main-route
+   reacquisition; stop-while-requesting; pause/resume **restores the prior
+   phase** (RESUME currently hardcodes `navigating`, navigationSession.js:135);
+   connector cue dedupe namespaced by `requestId` and reset on handoff.
+10. **Single rider-position source:** store `latestFix` in session state and use
+    it as the sole rider position (the adaptive puck currently reads Mapbox
+    `UserLocation`, so simulated fixes don't move the off-route puck — a latent
+    Phase A coupling). On switching active geometry (main↔connector) reset
+    smoothed progress / traveled-line / bearing, keyed by `requestId`.
+11. **Acceptance gate:** a clean iOS bundle export is NOT sufficient to call this
+    implemented — a real simulator/device acceptance pass is required (approach
+    connector, off-route connector, failed route, recompute, early reacquire,
+    pause/stop, loop-route handoff).
 
 ## Motivation
 
