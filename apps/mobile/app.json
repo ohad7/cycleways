@@ -41,6 +41,15 @@
     },
     "plugins": [
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#ededed",
+          "imageWidth": 180,
+          "resizeMode": "contain"
+        }
+      ],
+      [
         "@rnmapbox/maps",
         {
           "RNMapboxMapsImpl": "mapbox"
