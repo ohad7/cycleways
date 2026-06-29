@@ -6,6 +6,7 @@
 
 const STATUS_TEXT = {
   "requesting-permission": "מבקש הרשאת מיקום…",
+  approaching: "מתקרב למסלול…",
   paused: "מושהה",
   ended: "הניווט הסתיים",
   error: "שגיאת ניווט",

@@ -108,6 +108,16 @@ import { getNavigationPresentation } from "@cycleways/core/navigation/navigation
   assert.equal(p.guidanceArrowDeg, 90, "arrow relative to course");
   assert.match(p.guidanceText, /420|0\.4/);
 }
+// --- approaching status text when guidance distance is absent ---
+{
+  const p = getNavigationPresentation({
+    status: "approaching",
+    progress: { hasAcquiredRoute: false, wrongWay: false },
+  });
+  assert.equal(p.showGuidance, true);
+  assert.equal(p.guidanceText, "", "no guidance text without finite distance");
+  assert.match(p.statusText, /מתקרב/, "approaching statusText is non-empty Hebrew fallback");
+}
 // --- wrong-way ---
 {
   const p = getNavigationPresentation({

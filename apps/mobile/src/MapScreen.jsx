@@ -670,6 +670,7 @@ export default function MapScreen() {
   const navStatus = nav.state?.status ?? "idle";
   const isNavigating =
     navStatus === "navigating" ||
+    navStatus === "approaching" ||
     navStatus === "off-route" ||
     navStatus === "paused" ||
     navStatus === "requesting-permission";
