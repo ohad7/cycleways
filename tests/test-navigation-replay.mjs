@@ -90,4 +90,56 @@ import { fileURLToPath } from "node:url";
   );
 }
 
+// --- synthetic multi-segment milestones (acquisition + segment context + completion) ---
+// Deterministic end-to-end coverage of the segment-context pipeline through the
+// real session. SYNTHETIC stand-in; a real on-device recording is a follow-up.
+{
+  const path = fileURLToPath(
+    new URL("./fixtures/nav-ride-synthetic-multiseg.json", import.meta.url),
+  );
+  const fx = JSON.parse(readFileSync(path, "utf8"));
+  const route = navigationRouteFromRouteState(fx.routeState, { param: "synth-multiseg" });
+  const fixes = generateTrack(route, {
+    speedMps: 5,
+    intervalMs: 1000,
+    jitterM: 5,
+    seed: 42,
+    approachFrom: { lat: 33.1, lng: 35.5989 }, // ~100 m before the route start
+  });
+  const { timeline, last } = replaySession(route, fixes);
+
+  // Early approach fixes are not yet acquired.
+  for (let i = 0; i < 5; i++) {
+    assert.equal(timeline[i].status, "approaching", `synth fix ${i} approaching`);
+    assert.equal(timeline[i].progress.hasAcquiredRoute, false, `synth fix ${i} not acquired`);
+  }
+  // The route is acquired later in the ride.
+  assert.ok(
+    timeline.some((s) => s.progress.hasAcquiredRoute === true),
+    "synth: route acquired once the rider reaches it",
+  );
+  // Progress is ~monotonic once acquired (jitter tolerance).
+  let prev = 0;
+  for (const s of timeline) {
+    if (!s.progress.hasAcquiredRoute) continue;
+    assert.ok(
+      s.progress.progressMeters >= prev - 12,
+      "synth: progress stays ~monotonic under jitter",
+    );
+    prev = Math.max(prev, s.progress.progressMeters);
+  }
+  // The named-segment context advances from the first span to the second.
+  const acquired = timeline.filter((s) => s.progress.hasAcquiredRoute);
+  assert.ok(
+    acquired.some((s) => s.progress.currentSegmentName === "שביל הראשון"),
+    "synth: rides the first named segment",
+  );
+  assert.ok(
+    acquired.some((s) => s.progress.currentSegmentName === "שביל השני"),
+    "synth: context advances to the second named segment",
+  );
+  // The ride completes.
+  assert.ok(last.progress.fraction > 0.9, "synth: ride completes");
+}
+
 console.log("test-navigation-replay OK");

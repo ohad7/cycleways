@@ -1,0 +1,20 @@
+{
+  "_comment": "SYNTHETIC multi-segment route for the replay harness (NOT a real recording). The fix stream is generated deterministically in the test via generateTrack, so only the route definition lives here. A real on-device ride captured through the Task 17 dev recorder should be added as a follow-up fixture.",
+  "routeState": {
+    "points": [
+      { "id": "a", "lat": 33.1, "lng": 35.6 },
+      { "id": "b", "lat": 33.1, "lng": 35.61 }
+    ],
+    "selectedSegments": ["שביל הראשון", "שביל השני"],
+    "geometry": [
+      { "lat": 33.1, "lng": 35.6 },
+      { "lat": 33.1, "lng": 35.605 },
+      { "lat": 33.1, "lng": 35.61 }
+    ],
+    "segmentSpans": [
+      { "startMeters": 0, "endMeters": 500, "name": "שביל הראשון", "cwSegmentId": 1, "onNetwork": true, "routeClass": "cycleway" },
+      { "startMeters": 500, "endMeters": 1000, "name": "שביל השני", "cwSegmentId": 2, "onNetwork": true, "routeClass": "cycleway" }
+    ],
+    "distance": 931.5
+  }
+}
