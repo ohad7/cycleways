@@ -1,7 +1,14 @@
 # Turn-by-Turn Navigation Improvements + Test Harnesses
 
 **Date:** 2026-06-28 (revised same day after a code review of the first draft)
-**Status:** design approved; implementation plan next
+**Status:** IMPLEMENTED 2026-06-29 (Tasks 1-18, all node-tested + reviewed; full
+`npm test` green, iOS bundle exports clean). **Two manual follow-ups remain:**
+(1) on-device/simulator visual + performance verification of the native changes
+(single smoothed puck + camera — Task 15, NavPanel guidance — Task 16, the
+in-app simulate-ride pipeline — Task 17); (2) capture a REAL on-device ride via
+the Task 17 dev recorder and lock it as a fixture (Task 18 shipped a synthetic
+multi-segment milestone fixture as the node-verifiable stand-in). Routed rejoin
+(Phase B) and junction-vs-bend classification remain separate future designs.
 **Builds on:** `plans/rn-turn-by-turn-navigation/` (first-pass slice now runs on
 device). This is the follow-up that addresses concrete issues seen while riding
 and establishes a way to test navigation properly.
