@@ -248,6 +248,55 @@ class RouteManager {
   }
 
   /**
+   * Compute a base-graph route preview from raw coordinates without committing
+   * it as the planner's active route.
+   */
+  previewBaseRoute(points) {
+    const snapped = this._snapRoutePoints(points);
+    const snappedEndpoints =
+      snapped.length >= 2 ? [snapped[0], snapped[snapped.length - 1]] : snapped;
+    if (snapped.length < 2 || snapped.some((point) => point.unsnapped)) {
+      return {
+        geometry: [],
+        distanceMeters: 0,
+        failure: "snap-failed",
+        snappedEndpoints,
+      };
+    }
+    if (!this.baseRoutingNetwork) {
+      return {
+        geometry: [],
+        distanceMeters: 0,
+        failure: "no-base-network",
+        snappedEndpoints,
+      };
+    }
+
+    const route = this._calculateBaseRoute(snapped);
+    if (
+      route.failure ||
+      !Array.isArray(route.orderedCoordinates) ||
+      route.orderedCoordinates.length < 2
+    ) {
+      return {
+        geometry: [],
+        distanceMeters: 0,
+        failure: route.failure || "no-path",
+        snappedEndpoints,
+      };
+    }
+    return {
+      geometry: route.orderedCoordinates.map((coordinate) => ({
+        lat: coordinate.lat,
+        lng: coordinate.lng,
+      })),
+      distanceMeters: route.distance || 0,
+      failure: null,
+      snappedEndpoints,
+    };
+  }
+
+  /**
    * Snap a point to the CycleWays network.
    * @param {Object} point - {lat, lng}
    * @param {number} thresholdMeters - Maximum allowed snap distance

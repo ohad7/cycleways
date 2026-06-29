@@ -42,6 +42,21 @@ function bearingAtMeters(geometry, meters) {
   return computeBearing(geometry[geometry.length - 2], geometry[geometry.length - 1]);
 }
 
+function offsetPoint(point, bearing, meters) {
+  if (!Number.isFinite(meters) || meters === 0) return point;
+  const radians = ((bearing + 90) * Math.PI) / 180;
+  const longitudeScale = Math.max(
+    0.01,
+    Math.abs(Math.cos((point.lat * Math.PI) / 180)),
+  );
+  return {
+    lat: point.lat + (Math.cos(radians) * meters) / METERS_PER_DEG_LAT,
+    lng:
+      point.lng +
+      (Math.sin(radians) * meters) / (METERS_PER_DEG_LAT * longitudeScale),
+  };
+}
+
 export function generateTrack(navigationRoute, options = {}) {
   const {
     speedMps = 4,
@@ -51,6 +66,7 @@ export function generateTrack(navigationRoute, options = {}) {
     startTimestamp = 0,
     approachFrom = null,
     stopAtMeters = null,
+    offRouteExcursion = null,
   } = options;
   const geometry = navigationRoute?.geometry ?? [];
   if (geometry.length < 2) return [];
@@ -90,7 +106,30 @@ export function generateTrack(navigationRoute, options = {}) {
   const stepMeters = speedMps * (intervalMs / 1000);
   for (let m = 0; m <= end + 1e-6; m += stepMeters) {
     const meters = Math.min(m, end);
-    const p = pointAtMeters(geometry, meters);
+    let p = pointAtMeters(geometry, meters);
+    if (offRouteExcursion) {
+      const startMeters = Number(offRouteExcursion.startMeters);
+      const lengthMeters = Number(offRouteExcursion.lengthMeters ?? 160);
+      const offsetMeters = Number(offRouteExcursion.offsetMeters ?? 120);
+      const phase = (meters - startMeters) / lengthMeters;
+      if (
+        Number.isFinite(startMeters) &&
+        Number.isFinite(lengthMeters) &&
+        lengthMeters > 0 &&
+        Number.isFinite(offsetMeters) &&
+        phase > 0 &&
+        phase < 1
+      ) {
+        // A smooth leave-and-return arc creates a sustained, moving deviation.
+        // This is more representative than teleporting fixes away from the route
+        // and gives the connector lifecycle enough time to become observable.
+        p = offsetPoint(
+          p,
+          bearingAtMeters(geometry, meters),
+          Math.sin(Math.PI * phase) * offsetMeters,
+        );
+      }
+    }
     const { dLat, dLng } = jitter(p.lat);
     fixes.push({
       lat: p.lat + dLat,

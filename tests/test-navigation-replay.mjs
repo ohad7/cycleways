@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
 import { replaySession } from "@cycleways/core/navigation/replayRunner.js";
+import { NAV_ACTIONS } from "@cycleways/core/navigation/navigationSession.js";
 
 function straightRoute() {
   return navigationRouteFromRouteState(
@@ -54,6 +55,24 @@ import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
   const first = withApproach[0];
   const distToStart = Math.hypot((first.lat - 33.1), (first.lng - 35.6));
   assert.ok(distToStart > 0.001, "approach fixes start away from the route");
+
+  const withExcursion = generateTrack(route, {
+    speedMps: 5,
+    intervalMs: 1000,
+    offRouteExcursion: {
+      startMeters: 250,
+      lengthMeters: 300,
+      offsetMeters: 120,
+    },
+  });
+  const maxLateralMeters = Math.max(
+    ...withExcursion.map((fix) => Math.abs(fix.lat - 33.1) * 111320),
+  );
+  assert.ok(maxLateralMeters > 110, "excursion moves the replay well away from the route");
+  assert.ok(
+    Math.abs(withExcursion.at(-1).lat - 33.1) * 111320 < 1,
+    "excursion returns to the main route",
+  );
 }
 
 // --- realistic fixture milestones (EXPECTED TO FAIL until acquisition lands) ---
@@ -140,6 +159,64 @@ import { fileURLToPath } from "node:url";
   );
   // The ride completes.
   assert.ok(last.progress.fraction > 0.9, "synth: ride completes");
+}
+
+// --- connector replay records requesting, active, and handoff transitions ---
+{
+  const route = straightRoute();
+  const fixes = [
+    { lat: 33.105, lng: 35.6, accuracy: 5, speed: 4, timestamp: 1000 },
+    { lat: 33.1025, lng: 35.6, accuracy: 5, speed: 4, timestamp: 4000 },
+    { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 7000 },
+    { lat: 33.1, lng: 35.604, accuracy: 5, speed: 4, timestamp: 10000 },
+  ];
+  const { timeline, last } = replaySession(route, fixes, {
+    connectorRouter: (request) => ({ geometry: [request.from, request.to] }),
+  });
+  assert.ok(
+    timeline.some((entry) => entry.connector.status === "requesting"),
+    "timeline records the request transition",
+  );
+  assert.ok(
+    timeline.some((entry) => entry.status === "on-connector"),
+    "timeline records the active connector",
+  );
+  assert.equal(last.status, "navigating");
+  assert.ok(last.progress.progressMeters > 300);
+}
+
+// --- controlled mode permits deterministic stale-result ordering ---------
+{
+  const firstFix = {
+    lat: 33.105,
+    lng: 35.6,
+    accuracy: 5,
+    speed: 4,
+    timestamp: 1000,
+  };
+  const replay = replaySession(straightRoute(), [firstFix], {
+    controlledConnector: true,
+  });
+  const first = replay.routeRequests[0];
+  replay.session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_FAILED,
+    requestId: first.requestId,
+    reason: "transient",
+  });
+  replay.session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { ...firstFix, timestamp: 5000 },
+  });
+  const second = replay.session.getState().routeRequest;
+  assert.ok(second.requestId > first.requestId);
+  replay.session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: first.requestId,
+    geometry: [first.from, first.to],
+    distanceMeters: 500,
+  });
+  assert.equal(replay.session.getState().connector.requestId, second.requestId);
+  assert.equal(replay.session.getState().connector.status, "requesting");
 }
 
 console.log("test-navigation-replay OK");

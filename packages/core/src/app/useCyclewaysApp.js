@@ -131,6 +131,19 @@ export function useCyclewaysApp({
     directionAnimatorRef.current = createRouteDirectionAnimator();
   }
 
+  const computeConnector = useCallback((from, to) => {
+    const session = shardedRouteSessionRef.current;
+    if (typeof session?.computeConnector === "function") {
+      return session.computeConnector(from, to);
+    }
+    return Promise.resolve({
+      geometry: [],
+      distanceMeters: 0,
+      failure: "no-router",
+      snappedEndpoints: [],
+    });
+  }, []);
+
   useEffect(() => () => {
     if (transientErrorTimerRef.current !== null) {
       clearTimeout(transientErrorTimerRef.current);
@@ -1270,6 +1283,7 @@ export function useCyclewaysApp({
     handleRestoreDraft,
     handleDismissDraft,
     handleAddRecentRoute,
+    computeConnector,
   };
 }
 

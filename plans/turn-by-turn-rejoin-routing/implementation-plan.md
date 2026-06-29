@@ -1,6 +1,7 @@
 # Turn-by-Turn Rejoin Routing (Phase B) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+**Status:** Tasks 1–12 implemented; automated validation complete. Task 13
+simulator/device acceptance remains open.
 
 **Goal:** Give the iPhone rider routed, turn-by-turn guidance to the route — a "connector" path (to the start when approaching, the nearest point ahead when rejoining mid-ride) with throttled auto-recompute, a seeded handoff back to the main route, and a guaranteed fallback to the existing Phase A arrow.
 
@@ -19,15 +20,14 @@
 - **Single rider-position source:** the session stores `latestFix`; the puck/off-route position derive from it (not Mapbox `UserLocation`).
 - **Distance frame:** geometry haversine (`distanceFromStartMeters`), as Phase A.
 - **Copy:** Hebrew/RTL. **Foreground-only.** **Dev-only code `__DEV__`-gated.**
-- **Commit trailer:** end every commit message with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` (standing convention).
 - **Acceptance:** a clean iOS bundle export is NOT "implemented" — a real device/simulator acceptance pass (Task 13) is required.
-- **Tuning constants** are named exported consts with the defaults below; tuned later in the simulate-ride harness: `APPROACH_NEAREST_MARGIN_M=300`, `REJOIN_FORWARD_WINDOW_M=1500`, `CONNECTOR_MAX_DISTANCE_M=8000`, `RECOMPUTE_MIN_MS=5000`, `RECOMPUTE_MIN_MOVE_M=30`, `TRANSIENT_RETRY_BASE_MS=4000`, `HANDOFF_RADIUS_M=25`, `HANDOFF_ACCURACY_FACTOR=1`.
+- **Tuning constants** are named exported consts with the defaults below; tuned later in the simulate-ride harness: `APPROACH_NEAREST_MARGIN_M=300`, `REJOIN_FORWARD_WINDOW_M=1500`, `CONNECTOR_MAX_DISTANCE_M=8000`, `RECOMPUTE_MIN_MS=5000`, `RECOMPUTE_MIN_MOVE_M=30`, `TRANSIENT_RETRY_BASE_MS=4000`, `HANDOFF_RADIUS_M=25`, `HANDOFF_ACCURACY_FACTOR=1`, with reported handoff accuracy capped at 30 m.
 
 ---
 
 ## File Structure
 
-New core: `packages/core/src/navigation/connectorTargeting.js` (projection target selection + cap); `packages/core/src/routing/computeConnectorRoute.js` (thin orchestrator over the session capability) — OR fold into the session capability (see Task 3).
+New core: `packages/core/src/navigation/connectorTargeting.js` (projection target selection + cap). The thin routing orchestrator is implemented directly as `ShardedRouteSession.computeConnector` rather than as a second module.
 Modified core: `route-manager.js` (`previewBaseRoute`), `shardedRouteSession.js` (`computeConnector`), `routeProgress.js` (`seed()` + export `projectToSegment`), `navigationSession.js` (connector phase), `replayRunner.js` (stub + transition recording), `navigationPresentation.js`, `useCyclewaysApp.js` (expose `computeConnector`).
 Modified native: `useNavigationSession.js` (async-only compute), `MapScreen.jsx` (latestFix source, dashed line, status consumers, geometry-switch resets, camera).
 Tests: `tests/test-connector-targeting.mjs`, `tests/test-preview-base-route.mjs`, `tests/test-compute-connector.mjs` (new); extend `tests/test-route-progress.mjs`, `tests/test-navigation-session.mjs`, `tests/test-navigation-replay.mjs`, `tests/test-navigation-presentation.mjs`.

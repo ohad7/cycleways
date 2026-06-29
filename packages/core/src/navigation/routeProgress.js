@@ -21,7 +21,7 @@ function metersPerDegLng(lat) {
 
 // Project point P onto segment a->b in a local equirectangular metric frame
 // centred at `a`. Returns { t, crossTrackMeters } where t is clamped to [0, 1].
-function projectToSegment(p, a, b) {
+export function projectToSegment(p, a, b) {
   const mLng = metersPerDegLng(a.lat);
   const bx = (b.lng - a.lng) * mLng;
   const by = (b.lat - a.lat) * METERS_PER_DEG_LAT;
@@ -123,6 +123,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
   // progress backward across the overlap. Null until the first (acquisition) fix.
   let lastProgressMeters = null;
   let prevFix = null;
+  let seededSearchPending = false;
   // Acquisition gate: latches true once the rider comes within the on-route
   // threshold of the geometry; stays true for the rest of the session.
   let acquired = false;
@@ -134,6 +135,20 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     lastProgressMeters = null;
     prevFix = null;
     acquired = false;
+    seededSearchPending = false;
+  }
+
+  function seed({ progressMeters, acquired: seedAcquired = true } = {}) {
+    const progress = Number(progressMeters);
+    lastProgressMeters = Number.isFinite(progress)
+      ? Math.max(0, Math.min(totalMeters, progress))
+      : null;
+    seededSearchPending = lastProgressMeters !== null;
+    acquired = seedAcquired === true;
+    offRouteState = "on";
+    candidateSince = null;
+    recoverSince = null;
+    prevFix = null;
   }
 
   // Nearest segment whose progress range intersects [rangeMin, rangeMax]
@@ -150,13 +165,33 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       ) {
         continue;
       }
-      const proj = projectToSegment(fix, a, b);
+      const legMeters = b.distanceFromStartMeters - a.distanceFromStartMeters;
+      let allowedStartMeters = a.distanceFromStartMeters;
+      let allowedEndMeters = b.distanceFromStartMeters;
+      let clippedA = a;
+      let clippedB = b;
+      if (rangeMin !== null && legMeters > 0) {
+        allowedStartMeters = Math.max(allowedStartMeters, rangeMin);
+        allowedEndMeters = Math.min(allowedEndMeters, rangeMax);
+        if (allowedEndMeters < allowedStartMeters) continue;
+        const startT = (allowedStartMeters - a.distanceFromStartMeters) / legMeters;
+        const endT = (allowedEndMeters - a.distanceFromStartMeters) / legMeters;
+        clippedA = {
+          lat: a.lat + startT * (b.lat - a.lat),
+          lng: a.lng + startT * (b.lng - a.lng),
+        };
+        clippedB = {
+          lat: a.lat + endT * (b.lat - a.lat),
+          lng: a.lng + endT * (b.lng - a.lng),
+        };
+      }
+      const proj = projectToSegment(fix, clippedA, clippedB);
       if (best === null || proj.crossTrackMeters < best.crossTrackMeters) {
-        const legMeters = b.distanceFromStartMeters - a.distanceFromStartMeters;
         best = {
           index: i,
           crossTrackMeters: proj.crossTrackMeters,
-          progressMeters: a.distanceFromStartMeters + proj.t * legMeters,
+          progressMeters:
+            allowedStartMeters + proj.t * (allowedEndMeters - allowedStartMeters),
           snapped: proj.snapped,
         };
       }
@@ -229,10 +264,14 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
         lastProgressMeters - w,
         lastProgressMeters + w,
       );
-      if (best === null || best.crossTrackMeters > enterThreshold) {
+      if (
+        !seededSearchPending &&
+        (best === null || best.crossTrackMeters > enterThreshold)
+      ) {
         best = findNearest(fix, null, null);
       }
     }
+    seededSearchPending = false;
 
     const distanceToRouteStart =
       geometry.length > 0 ? getDistance(fix, geometry[0]) : 0;
@@ -324,5 +363,5 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     };
   }
 
-  return { update, reset };
+  return { update, reset, seed };
 }

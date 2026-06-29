@@ -130,7 +130,7 @@ function navigationRouteStatus({ points, geometry, routeFailure }) {
   return { reason: null };
 }
 
-function buildNavigationGeometry(geometry) {
+export function buildNavigationGeometry(geometry) {
   const points = clonePointList(geometry);
   let distanceFromStartMeters = 0;
   return points.map((point, index) => {

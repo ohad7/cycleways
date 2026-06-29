@@ -67,9 +67,27 @@ import { getNavigationPresentation } from "@cycleways/core/navigation/navigation
   assert.equal(requesting.mode, "requesting-permission");
   assert.ok(requesting.statusText.length > 0, "permission status text present");
 
-  const paused = getNavigationPresentation({ status: "paused", activeCue: null });
+const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(paused.mode, "paused");
   assert.equal(paused.statusText, "מושהה");
+}
+
+// Connector mode uses the maneuver pipeline with a distinct context line.
+{
+  const p = getNavigationPresentation({
+    status: "on-connector",
+    activeCue: {
+      cue: { type: "turn", direction: "right" },
+      phase: "preview",
+      distanceToCueMeters: 80,
+    },
+    progress: { remainingMeters: 300, hasAcquiredRoute: true },
+  });
+  assert.equal(p.onConnector, true);
+  assert.equal(p.showCue, true);
+  assert.equal(p.showContext, true);
+  assert.match(p.connectorContextText, /חיבור/);
+  assert.equal(p.contextText, p.connectorContextText);
 }
 
 // --- context line ---

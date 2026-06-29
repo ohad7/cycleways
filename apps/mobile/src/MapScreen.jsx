@@ -99,6 +99,15 @@ const ROUTE_TRAVELED_LINE_STYLE = {
   lineCap: "round",
 };
 
+const CONNECTOR_LINE_STYLE = {
+  lineColor: "#1e668c",
+  lineWidth: 4,
+  lineOpacity: 0.9,
+  lineDasharray: [2, 1.5],
+  lineJoin: "round",
+  lineCap: "round",
+};
+
 // Adaptive rider puck colors: on-route uses the brand blue; approaching /
 // off-route is muted gray (matches the traveled line) to signal "not snapped".
 const RIDER_PUCK_COLOR = "#006699";
@@ -280,6 +289,7 @@ export default function MapScreen() {
     handleSelectedDataMarkerClear,
     handleAddDataMarkerToRoute,
     handleViewportIdle,
+    computeConnector,
   } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
 
   const routeGeometry = useMemo(
@@ -674,12 +684,14 @@ export default function MapScreen() {
 
   const nav = useNavigationSession(navigationRoute, {
     locationSource: __DEV__ ? devSourceProxy.current : undefined,
+    computeConnector,
   });
   const navStatus = nav.state?.status ?? "idle";
   const isNavigating =
     navStatus === "navigating" ||
     navStatus === "approaching" ||
     navStatus === "off-route" ||
+    navStatus === "on-connector" ||
     navStatus === "paused" ||
     navStatus === "requesting-permission";
 
@@ -697,12 +709,23 @@ export default function MapScreen() {
   // / startWatch call without any re-render or useEffect delay.
   const handleDevSimulate = useCallback(() => {
     if (!__DEV__) return;
+    const routeLengthMeters =
+      navigationRoute?.geometry?.[navigationRoute.geometry.length - 1]
+        ?.distanceFromStartMeters ?? 0;
     const fixes =
       navigationRoute?.geometry?.length >= 2
         ? generateTrack(navigationRoute, {
             approachFrom: locationState.point ?? null,
             jitterM: 8,
             intervalMs: 500,
+            offRouteExcursion:
+              routeLengthMeters >= 150
+                ? {
+                    startMeters: routeLengthMeters * 0.4,
+                    lengthMeters: Math.min(200, routeLengthMeters * 0.35),
+                    offsetMeters: 120,
+                  }
+                : null,
           })
         : [];
     devInnerSourceRef.current = createSimulateRideSource(fixes, { intervalMs: 500 });
@@ -827,7 +850,24 @@ export default function MapScreen() {
   // off-route it sits at the (smoothed-heading) raw GPS fix. A single RAF loop
   // tweens the position/heading and drives the camera from the SAME values.
   const navProgress = nav.state?.progress ?? null;
-  const navGeometry = routeState.geometry;
+  const onConnector =
+    navStatus === "on-connector" ||
+    (navStatus === "paused" && nav.state?.connector?.status === "active");
+  const connectorGeometry = nav.state?.connector?.geometry;
+  const navGeometry =
+    onConnector && Array.isArray(connectorGeometry) && connectorGeometry.length >= 2
+      ? connectorGeometry
+      : routeState.geometry;
+  const activeGeometryKey = onConnector
+    ? `connector:${nav.state?.connector?.requestId ?? 0}`
+    : "main";
+  const connectorRouteGeometry = useMemo(
+    () =>
+      Array.isArray(connectorGeometry) && connectorGeometry.length >= 2
+        ? buildRouteGeometryFeatureCollection(connectorGeometry)
+        : EMPTY_FEATURE_COLLECTION,
+    [connectorGeometry],
+  );
   const cameraIntent = nav.state?.cameraIntent ?? "follow";
 
   // Cumulative arc length for the active route; null until there are >=2 points.
@@ -865,11 +905,23 @@ export default function MapScreen() {
   const navUserPannedRef = useRef(null);
   progressRef.current = navProgress;
   cameraIntentRef.current = cameraIntent;
-  rawFixRef.current = locationState.point;
+  rawFixRef.current = nav.state?.latestFix ?? null;
   arcRef.current = arc;
   navGeometryRef.current = navGeometry;
   navStatusRef.current = navStatus;
   navUserPannedRef.current = nav.userPanned;
+
+  // Distances are local to the active geometry. Reset interpolation state when
+  // switching main route ↔ connector so metres from one path are never applied
+  // to the other.
+  useEffect(() => {
+    smoothedMetersRef.current = onConnector ? 0 : navProgress?.progressMeters ?? 0;
+    smoothedBearingRef.current = navProgress?.courseDeg ?? 0;
+    travelIndexRef.current = -1;
+    lastPushedPuckRef.current = null;
+    lastApproachFitRef.current = null;
+    setNavTraveled(EMPTY_FEATURE_COLLECTION);
+  }, [activeGeometryKey]);
 
   // RAF loop: runs only while navigating. Tweens smoothedMetersRef toward the
   // reported along-route distance and smoothedBearingRef toward the target
@@ -989,8 +1041,8 @@ export default function MapScreen() {
             cameraIntentRef.current === "follow" &&
             navStatusRef.current !== "paused"
           ) {
-            if (onRoute) {
-              // Acquired: tight heading-up follow on the rider.
+            if (onRoute || navStatusRef.current === "on-connector") {
+              // Main route or connector: tight heading-up follow on the rider.
               cameraRef.current?.setCamera?.({
                 centerCoordinate: [lng, lat],
                 heading,
@@ -1226,6 +1278,11 @@ export default function MapScreen() {
           ) : null}
           <LineLayer id="route-line" style={routeLineStyles.core} />
         </ShapeSource>
+        {nav.state?.connector?.status === "active" ? (
+          <ShapeSource id="connector-route" shape={connectorRouteGeometry}>
+            <LineLayer id="connector-route-line" style={CONNECTOR_LINE_STYLE} />
+          </ShapeSource>
+        ) : null}
         {isNavigating ? (
           <>
             <ShapeSource id="route-traveled" shape={navTraveled}>

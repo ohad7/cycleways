@@ -287,6 +287,38 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
   assert.deepEqual(traveledCoordinates(geometry, null, null), []);
 }
 
+// --- seeded cursor resumes on the intended branch --------------------------
+{
+  const tracker = createRouteProgressTracker(straightRoute());
+  tracker.seed({ progressMeters: 600, acquired: true });
+  const progress = tracker.update({
+    lat: 33.1002,
+    lng: 35.6068,
+    accuracy: 6,
+    speed: 4,
+    timestamp: 1000,
+  });
+  assert.equal(progress.hasAcquiredRoute, true, "seed marks the route acquired");
+  assert.ok(
+    Math.abs(progress.progressMeters - 600) < 120,
+    `seeded projection remains near 600 m (got ${progress.progressMeters})`,
+  );
+
+  const bounded = createRouteProgressTracker(straightRoute());
+  bounded.seed({ progressMeters: 600, acquired: true });
+  const atEnd = bounded.update({
+    lat: 33.1,
+    lng: 35.61,
+    accuracy: 6,
+    speed: 4,
+    timestamp: 1000,
+  });
+  assert.ok(
+    atEnd.progressMeters <= 850.1,
+    "the first seeded projection is clipped to the cursor search window",
+  );
+}
+
 // --- acquisition gate ---
 import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
 {

@@ -21,7 +21,13 @@ import { createDefaultLocationSource } from "./locationService.js";
 import { fireHaptic } from "./cueHapticsAdapter.js";
 
 export function useNavigationSession(navigationRoute, options = {}) {
-  const { background = false, haptics = true, locationSource, ...sessionOptions } = options;
+  const {
+    background = false,
+    haptics = true,
+    locationSource,
+    computeConnector,
+    ...sessionOptions
+  } = options;
 
   // Stable ref so start/beginWatch always read the current source at call time
   // without needing to be listed as a useCallback dependency. Updated each
@@ -30,6 +36,8 @@ export function useNavigationSession(navigationRoute, options = {}) {
   // picks it up on the very next start() invocation.
   const locationSourceRef = useRef(null);
   locationSourceRef.current = locationSource ?? createDefaultLocationSource();
+  const computeConnectorRef = useRef(computeConnector);
+  computeConnectorRef.current = computeConnector;
 
   const sessionRef = useRef(null);
   const watchRef = useRef(null);
@@ -88,6 +96,60 @@ export function useNavigationSession(navigationRoute, options = {}) {
     },
     [apply],
   );
+
+  // Request policy stays in the pure session. Native code only executes the
+  // current async request and reports its result.
+  useEffect(() => {
+    const request = state?.routeRequest;
+    if (
+      !request ||
+      state?.status === "paused" ||
+      state?.route?.id !== routeId
+    ) {
+      return undefined;
+    }
+    let cancelled = false;
+    const compute = computeConnectorRef.current;
+    if (typeof compute !== "function") {
+      dispatch({
+        type: NAV_ACTIONS.CONNECTOR_FAILED,
+        requestId: request.requestId,
+        reason: "no-router",
+      });
+      return undefined;
+    }
+    Promise.resolve(compute(request.from, request.to))
+      .then((result) => {
+        if (cancelled) return;
+        if (result?.failure) {
+          dispatch({
+            type: NAV_ACTIONS.CONNECTOR_FAILED,
+            requestId: request.requestId,
+            reason: result.failure,
+          });
+          return;
+        }
+        dispatch({
+          type: NAV_ACTIONS.CONNECTOR_READY,
+          requestId: request.requestId,
+          geometry: result?.geometry,
+          distanceMeters: result?.distanceMeters,
+          snappedEndpoints: result?.snappedEndpoints,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          dispatch({
+            type: NAV_ACTIONS.CONNECTOR_FAILED,
+            requestId: request.requestId,
+            reason: "transient",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, routeId, state?.routeRequest?.requestId, state?.status]);
 
   const beginWatch = useCallback(() => {
     watchActiveRef.current = true;

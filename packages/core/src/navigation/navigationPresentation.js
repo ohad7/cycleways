@@ -71,7 +71,8 @@ export function formatDistanceMeters(meters) {
 
 export function getNavigationPresentation(state = {}) {
   const status = state.status || "idle";
-  const navigating = status === "navigating" || status === "off-route";
+  const onConnector = status === "on-connector";
+  const navigating = status === "navigating" || status === "off-route" || onConnector;
   const offRoute = state.offRoute === true || status === "off-route";
 
   const active = state.activeCue || null;
@@ -96,8 +97,14 @@ export function getNavigationPresentation(state = {}) {
     remainingText,
     offRoute,
     offRouteText: "חזרו למסלול",
-    showContext: navigating && !offRoute && Boolean(state.progress?.hasAcquiredRoute),
-    contextText: buildContextText(state.progress),
+    showContext:
+      onConnector ||
+      (navigating && !offRoute && Boolean(state.progress?.hasAcquiredRoute)),
+    contextText: onConnector
+      ? "מסלול חיבור — לכיוון המסלול"
+      : buildContextText(state.progress),
+    onConnector,
+    connectorContextText: "מסלול חיבור — לכיוון המסלול",
     showGuidance: status === "approaching" || offRoute,
     guidanceText: Number.isFinite(state.progress?.guidanceDistanceMeters)
       ? `${status === "approaching" ? "לכיוון תחילת המסלול" : "חזרה למסלול"} · ${formatDistanceMeters(state.progress.guidanceDistanceMeters)}`
