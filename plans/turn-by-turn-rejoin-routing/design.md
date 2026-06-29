@@ -1,286 +1,245 @@
-# Turn-by-Turn Rejoin Routing (Phase B)
+# Approach-to-Route Guidance (Rejoin Routing, redesigned)
 
-**Date:** 2026-06-29 (revised same day after a code review of the first plan)
-**Status:** implementation in progress; automated core/native-source validation
-complete, simulator/device acceptance pending
+**Date:** 2026-06-30
+**Status:** design approved; supersedes the previously implemented Phase B
+turn-by-turn connector. No live behaviour is lost — Phase B device acceptance
+was still pending when this redesign was approved.
 **Builds on:** `plans/turn-by-turn-improvements/` (Phase A shipped: acquisition
-state, segment context, smoothed puck/camera, off-route/approach **arrow +
-distance** guidance, and the node replay + in-app simulate-ride harnesses). This
-is the deferred **Phase B — routed rejoin** from that design.
+state, segment context, smoothed puck/camera, off-route/approach arrow +
+distance, replay + simulate-ride harnesses).
 
-## Review revisions (2026-06-29) — binding
+## Why this redesign
 
-A code review of the first plan surfaced correctness blockers, verified against
-the code. These override the original prose below where they conflict:
+The previous Phase B added **turn-by-turn rejoin navigation**: an on-device
+connector route from the rider to the route, narrated with maneuver cues, voice,
+follow-camera, a seeded-progress handoff, and recompute-thrash protection (see
+"Superseded design" below).
 
-1. **Router primitive:** compute connectors via a new non-mutating
-   `previewBaseRoute([from,to])` that reuses `previewRouteInfo`'s snapping
-   (`_snapRoutePoints` → `_calculateBaseRoute`) — NOT `_calculateBaseRoute`
-   directly (it needs already-snapped points carrying `baseEdgeId`; raw GPS
-   fails). Returns `{ geometry, distanceMeters, failure, snappedEndpoints }`.
-2. **No planner mutation:** `ensureCoverage` → `mergeBaseRoutingNetwork` nulls
-   `baseRouteInfo` (route-manager.js:877), which would silently recompute the
-   planner route. The connector capability MUST preserve `baseRouteInfo` +
-   `lastRouteFailure` across coverage extension. Exposed as a narrow
-   `computeConnector(from, to)` capability from `useCyclewaysApp` (MapScreen
-   can't reach the private session). A mutation-regression test asserts the
-   planner route snapshot is identical before/after a connector that loads a
-   shard.
-3. **Orthogonal state:** `status` ∈ `approaching | navigating | off-route |
-   on-connector | paused | …`; connector lifecycle is a SEPARATE field
-   `connector: { status: "idle"|"requesting"|"active"|"failed", requestId,
-   pendingTarget }`. While computing, `status` stays `approaching`/`off-route`
-   so the Phase A arrow keeps showing — there is NO top-level "routing" status.
-4. **Session is authoritative** for request ids, throttle, pending target, and
-   stale-result acceptance. The hook only runs the async compute and returns a
-   result. `CONNECTOR_READY { requestId, geometry, distanceMeters,
-   snappedEndpoints }` — the session already holds the pending target (no
-   round-trip).
-5. **Seeded handoff:** add `tracker.seed({ progressMeters, acquired })` +
-   windowed search; never `reset()`+global-reacquire (wrong branch on
-   loops/out-and-back). Hand off only on accuracy-aware physical proximity to
-   the main-route target OR genuine main-route reacquisition — never on connector
-   `remainingMeters` alone (a rider far laterally can project onto the final
-   segment and look "complete").
-6. **Continuous target projection:** project onto the polyline (reuse
-   `projectToSegment`) and return the interpolated point + progress, not the
-   nearest vertex. Mid-ride rejoin uses the **last confirmed on-route progress**
-   (the tracker keeps updating progress while off-route — routeProgress.js:281 —
-   and can jump branches on loops). Return null when there is no acceptable
-   forward candidate; never target behind the rider.
-7. **Detour acceptance, not ratio rejection:** a large straight-line ratio
-   usually means a barrier (river/highway) — exactly where routed guidance beats
-   an arrow across it. Accept by an **absolute distance/time cap** only; do not
-   reject a valid connector for routing around a barrier. (Multi-candidate
-   routing + cost comparison is a deferred future refinement, not v1.)
-8. **Differentiated retry:** transient I/O failure → time-based backoff (retries
-   even while stationary); off-graph/no-path → retry after meaningful movement;
-   rejected target → retry after movement. A time-AND-movement gate alone strands
-   a stationary rider after a transient load failure.
-9. **Lifecycle completeness:** off-connector recompute; early main-route
-   reacquisition; stop-while-requesting; pause/resume **restores the prior
-   phase** (RESUME currently hardcodes `navigating`, navigationSession.js:135);
-   connector cue dedupe namespaced by `requestId` and reset on handoff.
-10. **Single rider-position source:** store `latestFix` in session state and use
-    it as the sole rider position (the adaptive puck currently reads Mapbox
-    `UserLocation`, so simulated fixes don't move the off-route puck — a latent
-    Phase A coupling). On switching active geometry (main↔connector) reset
-    smoothed progress / traveled-line / bearing, keyed by `requestId`.
-11. **Acceptance gate:** a clean iOS bundle export is NOT sufficient to call this
-    implemented — a real simulator/device acceptance pass is required (approach
-    connector, off-route connector, failed route, recompute, early reacquire,
-    pause/stop, loop-route handoff).
+On reflection this projected **navigation-grade confidence over an uncurated
+path**. CycleWays is a *discovery / planning* product; the native app's
+navigation role is *along* curated CycleWays routes, which we have vetted metre
+by metre. The connector that gets a rider *to* a route is improvised on the OSM
+base graph, which we have **not** vetted. Narrating authoritative "turn left"
+over that path is the worst quadrant: high projected confidence, low actual
+confidence.
 
-## Motivation
+The redesign keeps the value (help the rider reach the route) but matches
+**confidence to role**: narrate only the vetted route; for the approach, *show*
+a suggestion and offer a real navigation app, never *assert* it.
 
-After Phase A, the rider can *see* the route (the approach camera fits rider +
-route) and gets a direction arrow + distance, but must find their own way to the
-route — there is no routed, turn-by-turn guidance to it. Phase B adds an on-device
-**connector route**: actual turn-by-turn guidance from the rider's position to the
-route (the start when approaching, the nearest point ahead when rejoining
-mid-ride), with a clean handoff back to the main route, recompute-while-moving,
-and a guaranteed fallback to the Phase A arrow when routing isn't possible.
+## Core principle
 
-The CycleWays offline routing graph is already on-device (`ShardedRouteSession`),
-so the connector is computed locally — the same path-finding the planner uses.
+**Getting to a route is guidance, not navigation.** Turn-by-turn cues are
+reserved for vetted CycleWays geometry. The approach is a spatial picture (a
+line + distance + progress) plus an escape hatch to a dedicated navigation app.
 
-## Scope decisions (brainstorming, 2026-06-29)
+## Tiered ladder
 
-- **Both cases in scope:** approach-to-route (before reaching it) AND mid-ride
-  off-route rejoin.
-- **Mid-ride behavior: auto-reroute, throttled** — reroute on *confirmed*
-  off-route (existing dwell, not a single GPS blip), then recompute at most once
-  per time-and-movement gate. Hands-free; the throttle prevents instruction
-  thrash (the risk D5 of the parent design flagged).
-- **Approach target: scored start-vs-nearest** — bias to the route start; join
-  the nearest point on the route only if it saves a meaningful detour margin.
-- **Mid-ride target: nearest projected point ahead** of the last confirmed
-  on-route progress (never backtrack), accepted under an absolute distance cap.
-- **Architecture: pure connector-compute in core + a connector phase in the nav
-  session.** No second routing session (no duplicate graph); the route-manager
-  computes a path without committing it as the active route. The session's
-  connector logic is pure and node-testable; the native hook only executes the
-  async routing request emitted by the session.
-- **Always falls back to Phase A** (arrow + distance) when routing fails / is
-  unavailable / in flight.
+One coherent affordance with three presentations, selected by distance to the
+target and shard coverage:
 
-## Architecture
+1. **On / at route** — turn-by-turn over CycleWays geometry (unchanged Phase A
+   navigation).
+2. **≤ 1 km from the target, within shard coverage** — the *approach view*:
+   - a **direct line** from the current location to the target (thin/faint) —
+     the persistent spatial anchor: "the route is over *there*";
+   - a **dashed suggested connector** (heavier) computed on the base graph,
+     weighted to **prefer high-class public roads** — "a way you might take";
+   - **distance + live progress** ("X m to route, getting closer");
+   - a **disclaimer**: navigating outside the CycleWays network;
+   - a one-tap **"Open in Waze / Google Maps"** button.
+3. **> 1 km, or off shard coverage** — same view with the suggested connector
+   **suppressed** and the external-app button promoted to the primary action.
+   The direct line + distance + disclaimer remain.
 
-### Components
+Tier 3 is tier 2 with the connector hidden and the external button emphasized —
+not a separate code path. `CONNECTOR_NEAR_RADIUS_M = 1000` is an exported,
+tunable constant.
 
-**`ShardedRouteSession.computeConnector(from, to)` — core routing capability
-(non-mutating).** It:
-1. ensures shard coverage for both `from` and `to` (`ensureCoverage`),
-2. restores the planner's cached `baseRouteInfo` and `lastRouteFailure` after
-   coverage extension,
-3. calls `previewBaseRoute([from, to])`, which snaps raw coordinates before
-   invoking the base-graph path-finder, and
-4. returns `{ geometry, distanceMeters, failure, snappedEndpoints }`.
+## Target selection — ask the rider
 
-`useCyclewaysApp` exposes this as a narrow bound capability. Connector routing
-does not commit or replace the planner's active route.
+Replaces the previous silent start-vs-nearest scoring with an explicit choice,
+consistent with "give the rider the picture and let them decide."
 
-**Navigation session — connector phase (pure).** `navigationSession.js` owns the
-request sequence, target, throttle, retry policy, stale-result acceptance,
-connector tracker, and connector cues. Connector lifecycle is orthogonal state:
-`connector.status` is `idle|requesting|active|failed`. While a request is in
-flight the top-level status remains `approaching` or `off-route`; `on-connector`
-is entered only after a route is accepted. The emitted `routeRequest` contains
-`{ requestId, from, to, toProgressMeters, mode }`.
+- **Target candidates:** the route **start**, and the **nearest point along the
+  route** (the nearest continuous projection onto the route polyline — *not* the
+  geographic midpoint; the rider joins wherever they are closest, skipping the
+  earlier portion).
+- **Prompt only when meaningful.** On starting navigation while away from the
+  route, if joining at the nearest point would skip more than
+  `JOIN_SKIP_PROMPT_M` of route, prompt:
+  - *"Start from the beginning"* (target = start), or
+  - *"Join the route here (skip ~X km)"* (target = nearest point).
+  Each option shows its own approach distance so the choice is concrete.
+- If skipping is trivial (nearest point ≈ start), **don't prompt** — target the
+  start.
+- **Mid-ride rejoin** (already navigating, confirmed off-route) is not prompted:
+  target the nearest projected point **ahead** of last-confirmed on-route
+  progress (never backtrack), as before.
 
-**Native hook (`useNavigationSession`).** Watches for `routeRequest`, calls the
-injected `computeConnector` capability, and dispatches the tagged result. It does
-not own throttling, target selection, ids, or stale-result policy.
+The chosen target drives everything downstream: the direct line, the suggested
+connector, the external-app destination, and the progress readout.
 
-### Data flow
+## Suggested connector
 
-GPS fix → session decides whether a connector is needed (approaching, or
-confirmed off-route, or drifted off the active connector) → emits
-`routeRequest{requestId,from,to}` → hook computes (async) → tagged
-`CONNECTOR_READY` → session enters `on-connector`, advances the connector tracker
-+ cues per fix → on physical target arrival or genuine main-route recovery →
-**handoff**: drop connector, seed the main tracker's cursor at the intended main
-progress, status → `navigating`.
+Reuses the connector-compute core already built in the superseded Phase B,
+because that part is sound and non-mutating:
 
-## Target selection
+- `ShardedRouteSession.computeConnector(from, to)` → `previewBaseRoute([from,
+  to])` (snaps raw GPS before path-finding) → `{ geometry, distanceMeters,
+  failure, snappedEndpoints }`.
+- Non-mutating: preserves the planner's `baseRouteInfo` / `lastRouteFailure`
+  across `ensureCoverage`; never commits or replaces the planner's active route.
+- Exposed as a narrow bound capability from `useCyclewaysApp`.
 
-**Approach (not yet acquired).** Scored choice:
-- `dStart` = distance(rider, route start); `dNearest` = cross-track distance to
-  the nearest continuous projection on the route polyline.
-- Choose **nearest** iff `dNearest < dStart − APPROACH_NEAREST_MARGIN_M`
-  (≈ a few hundred metres, tunable); otherwise the **start**.
-- `target.mainProgressMeters` = that point's progress along the main route (0 for
-  the start), so the handoff resumes the main route there; any skipped portion is
-  simply behind the rider.
+**High-fidelity weighting (new).** Weight the base-graph edge cost to **strongly
+prefer high-class public roads** (`highway`, `accessStatus`, `routeClass`),
+falling back to paths/tracks only when no road option exists — rather than a
+strict car-roads-only filter, which can fail to reach a path-only trailhead or
+shove a cyclist onto an unsuitable highway. The disclaimer covers residual
+uncertainty. A pure straight-line distance cap is not used to *reject* a
+connector (a long detour usually means a real barrier).
 
-**Mid-ride rejoin (already acquired, confirmed off-route).** Nearest projected
-point **ahead** of `lastConfirmedProgressMeters` within a forward search window;
-never a point behind and never based on progress that drifted while off-route.
+The connector is a **suggestion only**: drawn dashed, never narrated. There are
+no maneuver cues, no voice, no follow-camera, and no navigation-grade handoff —
+"handoff" is simply: when the rider physically reaches the route, normal Phase A
+turn-by-turn begins at that point.
 
-**Distance cap (both).** Accept a valid connector up to
-`CONNECTOR_MAX_DISTANCE_M`. Do not use a straight-line ratio: a large ratio often
-means a river, highway, or other barrier where routed guidance is most valuable.
+## External-app handoff
 
-Thresholds (`APPROACH_NEAREST_MARGIN_M`, the forward window, and
-`CONNECTOR_MAX_DISTANCE_M`) are exported constants tuned in the simulate-ride
-harness.
+Offer **both** apps so we need not decide ride-from-home vs drive-to-trailhead;
+the rider picks the app matching their mode:
 
-## Recompute-while-moving & handoff
+- **Google Maps** defaulting to **cycling** mode.
+- **Waze** as the **car** option.
 
-**(Re)compute triggers:**
-- Approach: once when navigation starts while not acquired; again only if the
-  rider strays far from the active connector.
-- Mid-ride: on **confirmed** off-route (existing hysteresis/dwell).
-- While `on-connector`: only when the rider drifts off the connector beyond a
-  threshold, **double-gated** — at most once per `RECOMPUTE_MIN_MS` (≈5 s) **and**
-  after moving `RECOMPUTE_MIN_MOVE_M` (≈30 m). The AND-gate is what prevents
-  instruction thrash on GPS jitter.
+Use universal `https` deep links so the OS opens the installed app and falls back
+to web / App Store otherwise. The destination is the selected target point
+(start or nearest join point). This is the primary action in tier 3 and an
+always-available secondary action in tier 2.
 
-**Stale-request safety.** Each `routeRequest` carries a monotonic `requestId`.
-The hook returns that id unchanged; the session accepts a result only when it
-matches the currently requesting connector. Slow superseded results are dropped.
+## What is cut vs. kept
 
-**Handoff (connector → main).** The connector tracker runs while `on-connector`.
-When the rider is within the accuracy-aware handoff radius of `target.point`,
-drop the connector, seed the main tracker's cursor at
-`target.mainProgressMeters`, and enter `navigating`. Reported accuracy is capped
-at 30 m for this test. Connector remaining distance alone never triggers a
-handoff. If the rider reaches the main route elsewhere, genuine main-tracker
-recovery abandons the connector early.
+**Cut from the implemented Phase B** (the navigation-grade connector):
+- connector maneuver cue pipeline + haptics/voice-ready cues;
+- follow-camera on the connector;
+- seeded-progress handoff (`tracker.seed`, windowed search, accuracy-aware
+  handoff radius);
+- recompute-while-moving throttle/hysteresis and `requestId` cancellation churn
+  for connectors (a single best-effort compute per target is enough for a
+  suggestion);
+- the orthogonal `on-connector` navigation status and connector tracker.
 
-**Pause/stop.** Pause freezes connector computation + timers; stop clears the
-connector slot. Recenter behaves as on the main route.
+**Kept / reused:**
+- `computeConnector`, `previewBaseRoute`, coverage preservation (non-mutating);
+- target selection helpers (start vs nearest projection; nearest-ahead mid-ride);
+- shard-coverage detection (drives the ≤1 km vs >1 km tier and tier-3 fallback);
+- the Phase A direction sense (now expressed as the direct line + distance).
 
-## Failure & offline fallback
+## Fallback
 
-The connector is best-effort and never strands the rider. Fall back to the
-**Phase A arrow + distance** (already implemented, never fails) when:
-- `computeConnector` returns `failure` (no connected path / off-graph spot),
-- the shard for the rider's current location isn't bundled (`ensureCoverage`
-  can't load it),
-- the absolute connector cap rejects the result, or
-- a compute is still in flight — the top-level `approaching`/`off-route` status
-  keeps the arrow visible, so guidance is never blank.
+The approach view never strands the rider. If `computeConnector` fails (no path,
+off-graph) or the rider is off shard coverage, that **is** tier 3: the suggested
+connector is simply absent and the external-app handoff is primary. The direct
+line + distance + disclaimer always render. A failure is logged once, not
+spammed; the connector is retried best-effort as the rider moves into covered
+area.
 
-In fallback the session exposes the Phase A `guidanceBearingDeg` /
-`guidanceDistanceMeters` and retries compute on the normal throttle (transient
-coverage gaps self-heal as the rider moves into covered area). A failure is logged
-once, not spammed.
+## UI summary
 
-## UI
-
-- **Connector line:** rendered as a **dashed** line, visually distinct from the
-  solid main route and the muted traveled portion — reads as "the way to the
-  route," not part of it.
-- **Cues:** while `on-connector`, connector maneuvers reuse the existing
-  cue/haptic/voice-ready pipeline; the NavPanel cue banner shows connector turns +
-  distance like main-route cues, with a context line indicating it leads to the
-  route (Hebrew/RTL, e.g. "מסלול חיבור — לכיוון המסלול").
-- **Camera:** `on-connector` uses the same tight heading-up follow as main-route
-  riding; the approach fit-to-(route+rider) view applies while no connector is
-  active. Gestures disengage follow; recenter re-engages
-  (unchanged from Phase A).
-- **Fallback:** the Phase A rotating arrow + distance (unchanged).
+- **Direct line:** thin/faint current-location → target.
+- **Suggested connector:** dashed, heavier, road-preferring; tier 2 only.
+- **Readout:** distance to target + live progress; disclaimer line ("outside the
+  CycleWays network").
+- **Buttons:** "Open in Waze" / "Open in Google Maps" (primary in tier 3).
+- **Start-vs-join prompt:** shown once at navigation start when joining partway
+  skips a meaningful distance.
+- If the two lines read as cluttered in device testing, fall back to the direct
+  line alone; start with both.
 
 ## Testing
 
-**Node replay harness (primary).** The connector state machine is pure and driven
-through the existing `replaySession` with a synchronous **stub connector router**
-(no shard I/O in tests). Controlled mode exposes the session and requests so
-tests can deliver results out of order.
-Assertions:
-- approach → `routeRequest` with the scored target (start vs nearest) →
-  `on-connector` progress + cues → handoff resumes the main route at the offset;
-- confirmed mid-ride off-route → rejoin to nearest-ahead → handoff;
-- absolute-cap rejection → Phase A fallback;
-- routing `failure` → Phase A fallback + retry on the throttle;
-- stale `CONNECTOR_READY` (superseded request id) ignored;
-- normal recompute observes time AND movement; transient retry is time-only and
-  route failures retry after movement.
-Plus pure unit tests for **target selection** (scored approach; nearest-ahead
-window; absolute cap), non-mutating route preview, coverage preservation, and
-seeded handoff behavior.
+Node-tested pure logic:
+- tier selection (distance + coverage → tier 1/2/3);
+- target selection (start vs nearest projection; the skip-distance prompt
+  threshold; nearest-ahead mid-ride window; never-backtrack);
+- road-preference edge weighting (prefers high-class public roads; falls back to
+  paths when no road path exists);
+- non-mutating route preview + coverage preservation (planner snapshot identical
+  before/after a connector that loads a shard);
+- external-link construction (correct destination + per-app travel mode).
 
-**In-app simulate-ride (tuning loop).** The dev simulate-ride source feeds tracks
-that start far from the route and deliberately diverge mid-route, so the developer
-watches the dashed connector appear, cues fire, recompute behave (no thrash), and
-the handoff feel — where `APPROACH_NEAREST_MARGIN_M`, the recompute gates,
-`CONNECTOR_MAX_DISTANCE_M`, and `HANDOFF_RADIUS_M` get tuned. The real
-`computeConnector` capability runs here against bundled shards.
-
-**Boundary.** Pure logic (connector phase, target selection, handoff, fallback,
-request-id cancellation, and recompute policy) is node-tested. The native async
-routing call and dashed-line render are verified in the simulator/device.
-
-## Data / code boundaries
-
-Shared/core (`@cycleways/core`, node-tested):
-- `previewBaseRoute` + `ShardedRouteSession.computeConnector` (the only shard-I/O
-  path; thin, async, planner-state preserving).
-- connector phase in `navigationSession.js` (orthogonal state, `routeRequest`,
-  `CONNECTOR_READY`/`CONNECTOR_FAILED`, connector tracker + cues, handoff).
-- target-selection + absolute-cap helpers (pure).
-- replay-harness stub support.
-
-Native app:
-- hook wiring: react to `routeRequest`, call `computeConnector`, dispatch tagged
-  results.
-- dashed connector line render; connector cue/camera reuse.
-
-Web: unchanged (no navigation).
+Device-verified:
+- dashed suggested connector + direct line render and differentiate;
+- the start-vs-join prompt and the chosen target;
+- "Open in Waze / Google Maps" launches the right app at the right destination;
+- tier transitions as the rider approaches/crosses 1 km and coverage edges;
+- reaching the route begins Phase A turn-by-turn cleanly.
 
 ## Out of scope
 
-- Voice/TTS (still deferred; the connector cues are voice-ready behind the same
-  interface).
+- Voice/TTS for the approach (the connector is never narrated by design).
+- Multi-candidate connector cost comparison (single from→to suggestion).
 - Background/lock-screen location; Android.
-- Junction-vs-bend maneuver classification (separate future work).
-- Multi-waypoint connector optimization — a connector is always a single
-  from→to path.
+- A second routing session / duplicate graph (the planner graph computes the
+  connector without committing it).
 
 ## Open questions
 
-- Final production tuning for the exported targeting, retry, and handoff
-  constants after the required simulator/device acceptance pass.
-- Whether to surface delayed-compute text while `connector.status` is
-  `requesting`; the Phase A arrow remains the default feedback.
+- Final tuning of `CONNECTOR_NEAR_RADIUS_M` (≈1 km), `JOIN_SKIP_PROMPT_M`, and
+  the road-preference weights, in the simulate-ride harness and on device.
+- Whether both lines (direct + dashed) stay, or the direct line alone, after
+  device readability testing.
+
+---
+
+## Superseded design (historical — implemented Phase B turn-by-turn connector)
+
+The text below is the prior Phase B design (turn-by-turn rejoin navigation). It
+is retained for context and to guide which already-written code is reused vs.
+removed. It is **not** the current direction.
+
+### Review revisions (2026-06-29) — Phase B
+
+A code review of the first Phase B plan surfaced correctness blockers, verified
+against the code:
+
+1. **Router primitive:** compute connectors via a non-mutating
+   `previewBaseRoute([from,to])` reusing `previewRouteInfo`'s snapping
+   (`_snapRoutePoints` → `_calculateBaseRoute`) — NOT `_calculateBaseRoute`
+   directly. Returns `{ geometry, distanceMeters, failure, snappedEndpoints }`.
+   **(Reused.)**
+2. **No planner mutation:** `ensureCoverage` → `mergeBaseRoutingNetwork` nulls
+   `baseRouteInfo`; the connector capability preserves `baseRouteInfo` +
+   `lastRouteFailure` across coverage extension. **(Reused.)**
+3. **Orthogonal state:** `connector: { status, requestId, pendingTarget }`
+   separate from `status`. **(Cut — no `on-connector` navigation state now.)**
+4. **Session authoritative** for request ids, throttle, pending target, stale
+   results. **(Cut — a suggestion needs a single best-effort compute.)**
+5. **Seeded handoff:** `tracker.seed({ progressMeters, acquired })` + windowed
+   search; hand off on accuracy-aware physical proximity. **(Cut — handoff is
+   just physical arrival → Phase A.)**
+6. **Continuous target projection** onto the polyline (reuse `projectToSegment`);
+   mid-ride uses last-confirmed on-route progress; never target behind the rider.
+   **(Reused for target selection.)**
+7. **Detour acceptance, not ratio rejection:** accept by an absolute distance/time
+   cap; do not reject a connector for routing around a barrier. **(Reused as the
+   road-preference + no straight-line-ratio rejection rule.)**
+8. **Differentiated retry** (transient I/O vs off-graph vs rejected target).
+   **(Cut — best-effort retry on movement only.)**
+9. **Lifecycle completeness** (off-connector recompute, early reacquire,
+   stop-while-requesting, pause/resume restores prior phase, cue dedupe).
+   **(Cut with the connector navigation phase.)**
+10. **Single rider-position source** (`latestFix` in session state). **(Kept as a
+    Phase A correctness fix regardless.)**
+11. **Acceptance gate:** real simulator/device acceptance required. **(Still true
+    for the redesigned approach view.)**
+
+### Phase B motivation (historical)
+
+After Phase A the rider could *see* the route and got an arrow + distance but had
+to find their own way. Phase B added an on-device connector route with
+turn-by-turn guidance to the route, a clean handoff back to the main route,
+recompute-while-moving, and an arrow fallback. The redesign above retains the
+connector *computation* but removes the turn-by-turn narration, recompute
+machinery, and seeded handoff in favour of a suggestion + external-app handoff.
