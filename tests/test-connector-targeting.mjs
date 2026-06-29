@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
 import {
   APPROACH_NEAREST_MARGIN_M,
+  JOIN_SKIP_PROMPT_M,
   REJOIN_FORWARD_WINDOW_M,
+  approachTargetChoices,
   connectorWithinCap,
   projectOntoRoute,
   selectConnectorTarget,
@@ -47,11 +49,6 @@ assert.ok(rejoin.mainProgressMeters <= 600 + REJOIN_FORWARD_WINDOW_M);
 assert.equal(connectorWithinCap(500), true);
 assert.equal(connectorWithinCap(8001), false);
 assert.equal(connectorWithinCap(0), false);
-
-import {
-  approachTargetChoices,
-  JOIN_SKIP_PROMPT_M,
-} from "@cycleways/core/navigation/connectorTargeting.js";
 
 const route2 = { geometry: [
   { lat: 32.0, lng: 35.000, distanceFromStartMeters: 0 },
