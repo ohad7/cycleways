@@ -311,6 +311,11 @@ export function createNavigationSession(navigationRoute, options = {}) {
           action.choice === "nearest" ? choices.nearest : choices.start;
         if (!picked) return state;
         // Reset the request gate so the next LOCATION issues a fresh request.
+        // Note: we intentionally leave the stale `routeRequest` in place here.
+        // It is harmless because CONNECTOR_READY/CONNECTOR_FAILED also require
+        // `suggestionStatus === "requesting"`, which we reset to "idle" below —
+        // so a late result for the superseded request is rejected. Keep that
+        // guard if you ever change this path.
         lastRequestPos = null;
         return set({
           approach: {
