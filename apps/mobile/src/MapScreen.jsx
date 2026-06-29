@@ -105,6 +105,14 @@ const RIDER_PUCK_COLOR = "#006699";
 const RIDER_PUCK_MUTED_COLOR = "#9aa6ab";
 // Camera zoom while following the rider during navigation.
 const NAV_FOLLOW_ZOOM = 16.5;
+// Approach phase (before reaching the route): instead of tight-following the
+// rider, periodically fit the map to show BOTH the rider and the route so they
+// can see where to go. Re-fit is throttled by time + movement to avoid thrash.
+const APPROACH_REFIT_MS = 4000;
+const APPROACH_REFIT_MOVE_M = 40;
+// fitBounds padding [top, right, bottom, left]: keep the route clear of the
+// NavPanel cue banner (top) and the control row (bottom).
+const APPROACH_FIT_PADDING = [130, 48, 170, 48];
 // Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
 // is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
 const BEARING_SMOOTH_MS = 260;
@@ -850,12 +858,18 @@ export default function MapScreen() {
   const rafRef = useRef(0);
   const navStatusRef = useRef("idle");
   const lastPushedPuckRef = useRef(null);
+  // Approach-phase fit throttle ({ ts, lng, lat } of the last fitBounds) and a
+  // stable handle to userPanned() so the (deps-[]) camera-change handler can
+  // disengage follow on a user gesture without re-subscribing every render.
+  const lastApproachFitRef = useRef(null);
+  const navUserPannedRef = useRef(null);
   progressRef.current = navProgress;
   cameraIntentRef.current = cameraIntent;
   rawFixRef.current = locationState.point;
   arcRef.current = arc;
   navGeometryRef.current = navGeometry;
   navStatusRef.current = navStatus;
+  navUserPannedRef.current = nav.userPanned;
 
   // RAF loop: runs only while navigating. Tweens smoothedMetersRef toward the
   // reported along-route distance and smoothedBearingRef toward the target
@@ -867,6 +881,7 @@ export default function MapScreen() {
       setNavTraveled(EMPTY_FEATURE_COLLECTION);
       travelIndexRef.current = -1;
       lastPushedPuckRef.current = null;
+      lastApproachFitRef.current = null;
       return undefined;
     }
     const startProgress = progressRef.current;
@@ -966,20 +981,55 @@ export default function MapScreen() {
             lastPushedPuckRef.current = candidate;
             setRiderPuck({ lng, lat, rotation, muted });
           }
-          // Camera re-centering is suppressed while paused (restores the prior
-          // followUserLocation behavior that excluded the paused state); the puck
-          // position above may still update. setCamera is off the React tree, so
-          // it is intentionally NOT gated on the puck-change check.
+          // Camera (suppressed while paused, and disengaged when the rider pans —
+          // cameraIntent flips to "free" on a user gesture, re-engaged by the
+          // recenter button). setCamera/fitBounds are off the React tree, so this
+          // is intentionally NOT gated on the puck-change check.
           if (
             cameraIntentRef.current === "follow" &&
             navStatusRef.current !== "paused"
           ) {
-            cameraRef.current?.setCamera?.({
-              centerCoordinate: [lng, lat],
-              heading,
-              zoomLevel: NAV_FOLLOW_ZOOM,
-              animationDuration: 0,
-            });
+            if (onRoute) {
+              // Acquired: tight heading-up follow on the rider.
+              cameraRef.current?.setCamera?.({
+                centerCoordinate: [lng, lat],
+                heading,
+                zoomLevel: NAV_FOLLOW_ZOOM,
+                animationDuration: 0,
+              });
+            } else {
+              // Approaching: periodically frame the rider + the whole route so
+              // they can see where to go. Throttled by time AND movement so it
+              // doesn't refit (and animate) every frame.
+              const last = lastApproachFitRef.current;
+              const dLat = last ? (lat - last.lat) * 111320 : Infinity;
+              const dLng = last
+                ? (lng - last.lng) * 111320 * Math.cos((lat * Math.PI) / 180)
+                : Infinity;
+              const movedM = Math.hypot(dLat, dLng);
+              const due =
+                !last ||
+                (ts - last.ts > APPROACH_REFIT_MS && movedM > APPROACH_REFIT_MOVE_M);
+              if (due && Array.isArray(geom) && geom.length >= 2) {
+                let minLng = lng;
+                let maxLng = lng;
+                let minLat = lat;
+                let maxLat = lat;
+                for (const p of geom) {
+                  if (p.lng < minLng) minLng = p.lng;
+                  if (p.lng > maxLng) maxLng = p.lng;
+                  if (p.lat < minLat) minLat = p.lat;
+                  if (p.lat > maxLat) maxLat = p.lat;
+                }
+                cameraRef.current?.fitBounds?.(
+                  [maxLng, maxLat],
+                  [minLng, minLat],
+                  APPROACH_FIT_PADDING,
+                  600,
+                );
+                lastApproachFitRef.current = { ts, lng, lat };
+              }
+            }
           }
         }
       }
@@ -993,7 +1043,24 @@ export default function MapScreen() {
   const handleCameraChanged = useCallback((mapState) => {
     const heading = Number(mapState?.properties?.heading);
     if (Number.isFinite(heading)) mapHeadingRef.current = heading;
+    // A user pan/zoom while navigating disengages camera follow so the rider can
+    // look around / zoom out (the RAF stops driving the camera). Only fire on the
+    // follow→free transition; the recenter button re-engages.
+    if (
+      isNavigatingRef.current &&
+      mapState?.gestures?.isGestureActive &&
+      cameraIntentRef.current === "follow"
+    ) {
+      navUserPannedRef.current?.();
+    }
   }, []);
+
+  // Recenter button: re-engage camera follow and force an immediate approach
+  // re-fit (clear the throttle) so tapping it reframes the route right away.
+  const handleRecenter = useCallback(() => {
+    lastApproachFitRef.current = null;
+    nav.recenter();
+  }, [nav]);
 
   // Discover -> Build: restore the catalog entry's encoded route token through
   // the same shared path used by deep links, record it in recents, and switch
@@ -1308,7 +1375,7 @@ export default function MapScreen() {
           sessionState={nav.state}
           hapticsEnabled={nav.hapticsEnabled}
           onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
-          onRecenter={nav.recenter}
+          onRecenter={handleRecenter}
           onPauseResume={() =>
             navStatus === "paused" ? nav.resume() : nav.pause()
           }
