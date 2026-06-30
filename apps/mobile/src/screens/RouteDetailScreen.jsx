@@ -10,8 +10,14 @@ import {
   snapshotToRouteState,
 } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import { resetNativeLocationHref } from "@cycleways/core/platform/location.native.js";
+import {
+  loadRouteVideoIndex,
+  loadRouteVideoKeyframes,
+} from "@cycleways/core/featured/routeVideoIndex.js";
+import { createVideoSync } from "@cycleways/core/featured/videoSync.js";
 import { routeDetailModel } from "./routeDetailModel.js";
 import RouteMapPreview from "./RouteMapPreview.jsx";
+import SyncedRouteStage from "./SyncedRouteStage.jsx";
 import RoutePoiList from "../planner/RoutePoiList.jsx";
 import ElevationProfileChart from "../ElevationProfileChart.jsx";
 import { palette } from "../planner/theme.js";
@@ -22,6 +28,8 @@ export default function RouteDetailScreen({ navigation, route }) {
   const [entry, setEntry] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
   const [status, setStatus] = useState("loading");
+  const [videoData, setVideoData] = useState(null);
+  const [cursorFraction, setCursorFraction] = useState(null);
 
   useEffect(() => {
     if (!slug) {
@@ -52,6 +60,29 @@ export default function RouteDetailScreen({ navigation, route }) {
     };
   }, [slug]);
 
+  // Load the route's synced-video data (keyframes + youtubeId) when it has one.
+  // Routes without a video simply leave videoData null and show the map alone.
+  useEffect(() => {
+    setVideoData(null);
+    setCursorFraction(null);
+    if (!slug) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const index = await loadRouteVideoIndex();
+        const file = index?.routes?.[slug];
+        if (!file) return;
+        const data = await loadRouteVideoKeyframes(file);
+        if (!cancelled) setVideoData(data);
+      } catch (error) {
+        if (!cancelled) console.warn("Route video load failed:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   const routeState = useMemo(
     () => (snapshot ? snapshotToRouteState(snapshot) : null),
     [snapshot],
@@ -60,6 +91,23 @@ export default function RouteDetailScreen({ navigation, route }) {
     () => (entry ? routeDetailModel(entry, snapshot) : null),
     [entry, snapshot],
   );
+
+  // Build the time↔route sync from the video keyframes + the route geometry.
+  // createVideoSync throws on invalid input (e.g. < 2 keyframes); fall back to
+  // no sync (map-only) in that case.
+  const videoSync = useMemo(() => {
+    if (!videoData || !routeState || routeState.geometry.length < 2) return null;
+    try {
+      return createVideoSync({
+        keyframes: videoData.keyframes,
+        videoDuration: videoData.videoDuration,
+        routeGeometry: routeState.geometry,
+      });
+    } catch (error) {
+      console.warn("createVideoSync failed:", error);
+      return null;
+    }
+  }, [videoData, routeState]);
 
   const openEditor = () => {
     if (!entry?.route) return;
@@ -99,10 +147,20 @@ export default function RouteDetailScreen({ navigation, route }) {
         </View>
 
         <View style={styles.section}>
-          <RouteMapPreview
-            geometry={routeState.geometry}
-            activeDataPoints={routeState.activeDataPoints}
-          />
+          {videoData && videoSync ? (
+            <SyncedRouteStage
+              youtubeId={videoData.youtubeId}
+              sync={videoSync}
+              geometry={routeState.geometry}
+              activeDataPoints={routeState.activeDataPoints}
+              onCursorChange={(c) => setCursorFraction(c.fraction)}
+            />
+          ) : (
+            <RouteMapPreview
+              geometry={routeState.geometry}
+              activeDataPoints={routeState.activeDataPoints}
+            />
+          )}
         </View>
 
         {model.description ? (
@@ -118,7 +176,10 @@ export default function RouteDetailScreen({ navigation, route }) {
 
         {routeState.geometry.length >= 2 ? (
           <View style={styles.section}>
-            <ElevationProfileChart geometry={routeState.geometry} />
+            <ElevationProfileChart
+              geometry={routeState.geometry}
+              cursorFraction={cursorFraction}
+            />
           </View>
         ) : null}
       </ScrollView>

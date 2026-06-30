@@ -25,6 +25,31 @@ const POI_STYLE = {
   circleStrokeColor: "#ffffff",
   circleStrokeWidth: 2,
 };
+// The video-synced cursor: a brand-blue dot that rides the route as the video
+// plays.
+const CURSOR_STYLE = {
+  circleRadius: 7,
+  circleColor: "#006699",
+  circleStrokeColor: "#ffffff",
+  circleStrokeWidth: 3,
+};
+const EMPTY_FC = { type: "FeatureCollection", features: [] };
+
+function cursorFeature(cursor) {
+  const lng = Number(cursor?.lng);
+  const lat = Number(cursor?.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return EMPTY_FC;
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: { type: "Point", coordinates: [lng, lat] },
+      },
+    ],
+  };
+}
 
 function lineFeature(geometry) {
   const coords = (geometry || [])
@@ -83,11 +108,17 @@ function bounds(geometry) {
   return { ne: [maxLng, maxLat], sw: [minLng, minLat] };
 }
 
-export default function RouteMapPreview({ geometry, activeDataPoints, height = 220 }) {
+export default function RouteMapPreview({
+  geometry,
+  activeDataPoints,
+  cursor = null,
+  height = 220,
+}) {
   const cameraRef = useRef(null);
   const line = useMemo(() => lineFeature(geometry), [geometry]);
   const pois = useMemo(() => poiFeatures(activeDataPoints), [activeDataPoints]);
   const fit = useMemo(() => bounds(geometry), [geometry]);
+  const cursorFc = useMemo(() => cursorFeature(cursor), [cursor]);
 
   return (
     <View style={[styles.wrap, { height }]}>
@@ -121,6 +152,9 @@ export default function RouteMapPreview({ geometry, activeDataPoints, height = 2
         </ShapeSource>
         <ShapeSource id="detail-pois" shape={pois}>
           <CircleLayer id="detail-pois-circle" style={POI_STYLE} />
+        </ShapeSource>
+        <ShapeSource id="detail-cursor" shape={cursorFc}>
+          <CircleLayer id="detail-cursor-circle" style={CURSOR_STYLE} />
         </ShapeSource>
       </MapView>
     </View>
