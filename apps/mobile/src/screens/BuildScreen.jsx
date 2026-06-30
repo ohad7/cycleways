@@ -57,6 +57,7 @@ import RichText from "../RichText.jsx";
 import PlannerSheet from "../planner/PlannerSheet.jsx";
 import TopSearch from "../planner/TopSearch.jsx";
 import MapControls from "../planner/MapControls.jsx";
+import BackButton from "./BackButton.jsx";
 import RoutePoiList from "../planner/RoutePoiList.jsx";
 import NavPanel from "../planner/NavPanel.jsx";
 import DestinationSheet from "../planner/DestinationSheet.jsx";
@@ -1453,6 +1454,7 @@ export default function BuildScreen({ navigation, route }) {
       </MapView>
       {!isNavigating ? (
         <>
+          <BackButton onPress={() => navigation?.goBack?.()} />
           <TopSearch
             query={mapUi.searchQuery}
             onChange={handleSearchQueryChange}

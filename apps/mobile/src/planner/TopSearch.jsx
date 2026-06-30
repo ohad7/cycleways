@@ -51,8 +51,9 @@ export default function TopSearch({ query, onChange, onSubmit, busy, error }) {
 const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
-    left: 14,
-    // Leave room on the right for the top-pinned map-control column.
+    // Leave room on the left for the back button and on the right for the
+    // top-pinned map-control column.
+    left: 64,
     right: 66,
     gap: 6,
   },

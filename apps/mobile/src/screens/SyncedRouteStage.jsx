@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   pip: {
     position: "absolute",
     top: 10,
-    left: 10,
+    right: 10,
     width: PIP_WIDTH,
     height: PIP_HEIGHT,
     borderRadius: 8,

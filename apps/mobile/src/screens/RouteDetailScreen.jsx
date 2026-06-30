@@ -16,6 +16,7 @@ import {
 } from "@cycleways/core/featured/routeVideoIndex.js";
 import { createVideoSync } from "@cycleways/core/featured/videoSync.js";
 import { routeDetailModel } from "./routeDetailModel.js";
+import BackButton from "./BackButton.jsx";
 import RouteMapPreview from "./RouteMapPreview.jsx";
 import SyncedRouteStage from "./SyncedRouteStage.jsx";
 import RoutePoiList from "../planner/RoutePoiList.jsx";
@@ -119,15 +120,20 @@ export default function RouteDetailScreen({ navigation, route }) {
     });
   };
 
+  const goBack = () => navigation.goBack();
+
   if (status === "loading") {
-    return <Centered insets={insets} text="טוען מסלול…" />;
+    return <Centered insets={insets} text="טוען מסלול…" onBack={goBack} />;
   }
   if (status === "error" || !model || !routeState) {
-    return <Centered insets={insets} text="לא הצלחנו לטעון את המסלול." />;
+    return (
+      <Centered insets={insets} text="לא הצלחנו לטעון את המסלול." onBack={goBack} />
+    );
   }
 
   return (
     <View style={[styles.fill, { paddingTop: insets.top }]}>
+      <BackButton onPress={goBack} />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 96 }]}
       >
@@ -200,9 +206,10 @@ export default function RouteDetailScreen({ navigation, route }) {
   );
 }
 
-function Centered({ insets, text }) {
+function Centered({ insets, text, onBack }) {
   return (
     <View style={[styles.fill, styles.center, { paddingTop: insets.top }]}>
+      {onBack ? <BackButton onPress={onBack} /> : null}
       <Text style={styles.body}>{text}</Text>
     </View>
   );
