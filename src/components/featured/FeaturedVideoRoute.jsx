@@ -3,6 +3,7 @@ import { generateGPX } from "@cycleways/core/utils/gpx-generator.js";
 import { executeDownloadGPX } from "@cycleways/core/platform/download.js";
 import Icon from "../Icon.jsx";
 import RichText from "../RichText.jsx";
+import { isAppEmbedded, appEmbedConfig, postToApp } from "../../appEmbed.js";
 import FeaturedRoute from "./FeaturedRoute.jsx";
 import FeaturedRouteStats from "./FeaturedRouteStats.jsx";
 import FeaturedElevation from "./FeaturedElevation.jsx";
@@ -138,6 +139,8 @@ function FeaturedRouteActions({ media = "video" }) {
   const editHref = meta?.route ? `/?route=${encodeURIComponent(meta.route)}` : null;
   const isMapStage = media === "map";
   const primaryLabel = "נגן מסלול";
+  const embedded = isAppEmbedded();
+  const embedConfig = appEmbedConfig();
 
   const handleDownload = useCallback(() => {
     if (!hasRouteGeometry) return;
@@ -185,7 +188,36 @@ function FeaturedRouteActions({ media = "video" }) {
         <Icon name="play-circle-outline" />
         <span className="fv-route-action-label">{primaryLabel}</span>
       </button>
-      {editHref ? (
+      {embedded ? (
+        <>
+          {embedConfig.showNavigate ? (
+            <button
+              type="button"
+              className="fv-route-action fv-route-action--primary"
+              onClick={() =>
+                postToApp({ type: "navigate", route: meta?.route, slug: meta?.slug })
+              }
+              aria-label="נווט במסלול"
+            >
+              <Icon name="trail-sign-outline" />
+              <span className="fv-route-action-label">נווט</span>
+            </button>
+          ) : null}
+          {embedConfig.showEdit ? (
+            <button
+              type="button"
+              className="fv-route-action"
+              onClick={() =>
+                postToApp({ type: "edit", route: meta?.route, slug: meta?.slug })
+              }
+              aria-label="פתח לעריכה"
+            >
+              <Icon name="create-outline" />
+              <span className="fv-route-action-label">פתח לעריכה</span>
+            </button>
+          ) : null}
+        </>
+      ) : editHref ? (
         <a
           className="fv-route-action"
           href={editHref}

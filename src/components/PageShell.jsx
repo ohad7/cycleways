@@ -1,19 +1,11 @@
 import React, { useState } from "react";
 import Breadcrumbs from "./Breadcrumbs.jsx";
 import TopBar from "./TopBar.jsx";
+import { isAppEmbedded } from "../appEmbed.js";
 
-// When embedded in the native app's WebView (the URL carries ?app=1), drop the
-// site chrome (top nav + breadcrumbs) so only the page content shows — the app
-// provides its own back button and navigation.
-function isAppEmbedded() {
-  if (typeof window === "undefined") return false;
-  try {
-    return new URLSearchParams(window.location.search).get("app") === "1";
-  } catch {
-    return false;
-  }
-}
-
+// When embedded in the native app's WebView, drop the site chrome (top nav +
+// breadcrumbs) so only the page content shows — the app provides its own back
+// button and navigation. See appEmbed.js for the embed contract.
 export default function PageShell({
   breadcrumbs,
   children,
