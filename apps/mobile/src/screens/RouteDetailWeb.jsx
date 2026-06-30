@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import BackButton from "./BackButton.jsx";
+import { startWebServer } from "../webServer.js";
 import { palette } from "../planner/theme.js";
 
 // Renders the real mobile-web route page (`/routes/<slug>?app=1`, chrome hidden)
@@ -33,14 +34,38 @@ function editTokenFromUrl(url, base) {
 
 export default function RouteDetailWeb({
   slug,
-  baseUrl = DEFAULT_SITE,
+  baseUrl,
   onBack,
   onOpenEditor,
   onNavigate,
   onError,
 }) {
   const [loading, setLoading] = useState(true);
-  const uri = `${baseUrl}/routes/${encodeURIComponent(slug)}?app=1`;
+  // Prefer the bundled local static server (fully offline); fall back to the
+  // production site if it can't start. An explicit baseUrl prop overrides both.
+  const [resolvedBase, setResolvedBase] = useState(baseUrl || null);
+
+  useEffect(() => {
+    if (baseUrl) return undefined;
+    let mounted = true;
+    startWebServer()
+      .then((origin) => mounted && setResolvedBase(origin))
+      .catch(() => mounted && setResolvedBase(DEFAULT_SITE));
+    return () => {
+      mounted = false;
+    };
+  }, [baseUrl]);
+
+  if (!resolvedBase) {
+    return (
+      <View style={[styles.fill, styles.loading]}>
+        <ActivityIndicator size="large" color={palette.forest} />
+        <BackButton onPress={onBack} />
+      </View>
+    );
+  }
+
+  const uri = `${resolvedBase}/routes/${encodeURIComponent(slug)}?app=1`;
 
   const handleMessage = (event) => {
     let msg = null;
@@ -71,7 +96,7 @@ export default function RouteDetailWeb({
         }}
         onShouldStartLoadWithRequest={(req) => {
           // Fallback for the non-embedded edit link; embedded uses postMessage.
-          const token = editTokenFromUrl(req.url, baseUrl);
+          const token = editTokenFromUrl(req.url, resolvedBase);
           if (token) {
             onOpenEditor?.(token);
             return false;
