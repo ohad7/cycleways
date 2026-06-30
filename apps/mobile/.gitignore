@@ -40,3 +40,6 @@ yarn-error.*
 /ios
 /android
 .env
+
+# Generated web bundle served by the local static server (npm run bundle:web)
+webroot/
