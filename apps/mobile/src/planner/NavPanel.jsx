@@ -1,8 +1,15 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
+import { buildExternalNavLinks } from "@cycleways/core/navigation/externalNav.js";
 import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
+
+function openExternal(point, app) {
+  const links = buildExternalNavLinks(point);
+  if (!links) return;
+  Linking.openURL(links[app]).catch(() => {});
+}
 
 // Active turn-by-turn overlay (turn-by-turn Phase 8). Replaces the planner sheet
 // while a navigation session is active: a top cue banner (or off-route warning)
@@ -17,6 +24,7 @@ export default function NavPanel({
   onRecenter,
   onPauseResume,
   onStop,
+  onSetApproachTarget,
 }) {
   const insets = useSafeAreaInsets();
   const p = getNavigationPresentation(sessionState);
@@ -67,6 +75,74 @@ export default function NavPanel({
         ) : null}
         {p.showContext && p.contextText ? (
           <Text style={styles.context} numberOfLines={1}>{p.contextText}</Text>
+        ) : null}
+        {p.showApproach ? (
+          <View style={styles.approach}>
+            {p.approachDistanceText ? (
+              <Text style={styles.approachDistance}>
+                {p.approachDistanceText}
+              </Text>
+            ) : null}
+            <Text style={styles.disclaimer} numberOfLines={2}>
+              {p.disclaimerText}
+            </Text>
+            {p.showJoinPrompt ? (
+              <View style={styles.promptRow}>
+                <Pressable
+                  style={styles.promptBtn}
+                  onPress={() => onSetApproachTarget?.("start")}
+                >
+                  <Text style={styles.promptText} numberOfLines={2}>
+                    {p.joinPrompt.startText}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={styles.promptBtn}
+                  onPress={() => onSetApproachTarget?.("nearest")}
+                >
+                  <Text style={styles.promptText} numberOfLines={2}>
+                    {p.joinPrompt.nearestText}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {p.showExternalNav && p.externalNavTarget ? (
+              <View style={styles.extRow}>
+                <Pressable
+                  style={[
+                    styles.extBtn,
+                    p.externalNavPrimary ? styles.extPrimary : null,
+                  ]}
+                  onPress={() => openExternal(p.externalNavTarget, "waze")}
+                >
+                  <Text
+                    style={[
+                      styles.extText,
+                      p.externalNavPrimary ? styles.extTextPrimary : null,
+                    ]}
+                  >
+                    Waze
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.extBtn,
+                    p.externalNavPrimary ? styles.extPrimary : null,
+                  ]}
+                  onPress={() => openExternal(p.externalNavTarget, "googleMaps")}
+                >
+                  <Text
+                    style={[
+                      styles.extText,
+                      p.externalNavPrimary ? styles.extTextPrimary : null,
+                    ]}
+                  >
+                    Google Maps
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
         ) : null}
       </View>
 
@@ -189,6 +265,71 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: 2,
+  },
+  approach: {
+    marginTop: space.sm,
+    gap: space.sm,
+  },
+  approachDistance: {
+    color: palette.ink,
+    fontSize: 16,
+    fontWeight: "800",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  disclaimer: {
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: "600",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  promptRow: {
+    flexDirection: "row-reverse",
+    gap: space.sm,
+  },
+  promptBtn: {
+    flex: 1,
+    backgroundColor: palette.white,
+    borderRadius: radius.md,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderWidth: 1,
+    borderColor: palette.forest,
+  },
+  promptText: {
+    color: palette.forest,
+    fontSize: 13,
+    fontWeight: "700",
+    writingDirection: "rtl",
+    textAlign: "center",
+  },
+  extRow: {
+    flexDirection: "row-reverse",
+    gap: space.sm,
+  },
+  extBtn: {
+    flex: 1,
+    backgroundColor: palette.white,
+    borderRadius: radius.md,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderWidth: 1,
+    borderColor: palette.muted,
+    alignItems: "center",
+  },
+  extPrimary: {
+    backgroundColor: palette.forest,
+    borderColor: palette.forest,
+  },
+  extText: {
+    color: palette.ink,
+    fontSize: 14,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  extTextPrimary: {
+    color: palette.white,
   },
   controls: {
     flexDirection: "row-reverse",
