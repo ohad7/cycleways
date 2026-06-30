@@ -45,7 +45,10 @@ async function main() {
   await fs.rm(targetRoot, { recursive: true, force: true });
   await fs.mkdir(targetRoot, { recursive: true });
 
-  for (const asset of jsonAssets) {
+  const snapshotAssets = await featuredRouteSnapshotAssets();
+  const allJsonAssets = [...jsonAssets, ...snapshotAssets];
+
+  for (const asset of allJsonAssets) {
     await copyLogicalAsset(asset.logicalPath, asset.targetPath);
   }
 
@@ -54,13 +57,15 @@ async function main() {
   }
 
   // Catalog hero thumbnails (Discover cards) + on-route POI thumbnails (the
-  // "נקודות עניין בדרך" panel). Source images are webp, which React Native's
-  // core <Image> can't decode on iOS, so transcode each to JPG (via sharp, the
-  // same image lib the editor uses) at the same logical key. JPG keeps photo
-  // thumbnails small (~10x smaller than PNG). Deduped by source path.
+  // "נקודות עניין בדרך" panel) + per-route snapshot POI thumbnails. Source
+  // images are webp, which React Native's core <Image> can't decode on iOS, so
+  // transcode each to JPG (via sharp, the same image lib the editor uses) at
+  // the same logical key. JPG keeps photo thumbnails small (~10x smaller than
+  // PNG). Deduped by source path.
   const imagePaths = dedupeBySource([
     ...(await collectCatalogThumbnailPaths()),
     ...(await collectPoiThumbnailPaths()),
+    ...(await collectSnapshotImagePaths()),
   ]);
   for (const image of imagePaths) {
     await convertWebpToJpg(image.sourceLogical, image.targetLogical);
@@ -78,7 +83,7 @@ async function main() {
 
   await fs.writeFile(
     generatedFile,
-    generateBundledAssetModule(shardNames),
+    generateBundledAssetModule(allJsonAssets, shardNames),
     "utf8",
   );
 
@@ -88,8 +93,47 @@ async function main() {
   await fs.writeFile(appImageModuleFile, generateAppImageModule(imagePaths), "utf8");
 
   console.log(
-    `[mobile-assets] copied ${jsonAssets.length + extraJsonAssets.length} JSON assets, ${imagePaths.length} images, and ${shardNames.length} routing shards`,
+    `[mobile-assets] copied ${allJsonAssets.length + extraJsonAssets.length} JSON assets, ${imagePaths.length} images, and ${shardNames.length} routing shards`,
   );
+}
+
+// One { logicalPath } entry per catalog slug for public-data/featured-routes/<slug>.json.
+async function featuredRouteSnapshotAssets() {
+  const catalogPath = path.join(sourceRoot, "route-catalog.json");
+  const catalog = JSON.parse(await fs.readFile(catalogPath, "utf8"));
+  const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
+  return entries
+    .map((e) => e.slug)
+    .filter(Boolean)
+    .map((slug) => ({ logicalPath: `public-data/featured-routes/${slug}.json` }));
+}
+
+// POI image paths referenced by per-route snapshot files, so ROUTE_IMAGES
+// covers detail-screen thumbnails too.
+async function collectSnapshotImagePaths() {
+  const sources = new Set();
+  const dir = path.join(sourceRoot, "featured-routes");
+  let files = [];
+  try {
+    files = (await fs.readdir(dir)).filter((f) => f.endsWith(".json"));
+  } catch {
+    return [];
+  }
+  for (const file of files) {
+    const snap = JSON.parse(await fs.readFile(path.join(dir, file), "utf8"));
+    const points = snap?.pois?.activeDataPoints || [];
+    for (const p of points) {
+      const imgs = Array.isArray(p?.images) ? p.images : [];
+      for (const img of imgs) {
+        const t = (img?.thumbnail || img?.photo || "").trim();
+        if (t.startsWith("public-data/")) sources.add(t);
+      }
+    }
+  }
+  return [...sources].sort().map((sourceLogical) => ({
+    sourceLogical,
+    targetLogical: sourceLogical.replace(/\.webp$/i, ".jpg"),
+  }));
 }
 
 // Returns [{ sourceLogical (webp), targetLogical (jpg) }] for each catalog
@@ -171,9 +215,9 @@ async function copyAbsoluteAsset(sourceAbsolute, targetLogicalPath) {
   await fs.copyFile(sourceAbsolute, targetPath);
 }
 
-function generateBundledAssetModule(shardNames) {
+function generateBundledAssetModule(jsonList, shardNames) {
   const jsonEntries = [
-    ...jsonAssets.map((asset) =>
+    ...jsonList.map((asset) =>
       assetMapEntry(asset.logicalPath, asset.targetPath),
     ),
     ...extraJsonAssets.map((asset) => assetMapEntry(asset.logicalPath)),
