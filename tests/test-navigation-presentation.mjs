@@ -72,36 +72,48 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(paused.statusText, "מושהה");
 }
 
-// Approach (near tier): suggestion + disclaimer + external nav + join prompt.
+// Approach: banner label + distance, disclaimer, external target, join-nearest.
 {
   const near = getNavigationPresentation({
     status: "approaching",
     latestFix: { lat: 31.99, lng: 35 },
     approach: {
-      target: { point: { lat: 32, lng: 35 } },
+      target: { point: { lat: 32, lng: 35 }, mode: "start" },
       distanceToRouteMeters: 600,
-      choices: { skipMeters: 1500, shouldPrompt: true },
+      choices: { nearest: { point: {} }, skipMeters: 1500 },
     },
     progress: { guidanceDistanceMeters: 600, remainingMeters: 14000 },
   });
   assert.equal(near.showApproach, true);
   assert.equal(near.tier, "near");
-  assert.equal(near.externalNavPrimary, false);
-  assert.match(near.approachDistanceText, /למסלול/);
+  assert.equal(near.destinationLabel, "תחילת המסלול");
+  assert.match(near.approachDistanceShort, /מ׳/);
   assert.equal(near.disclaimerText, "ניווט מחוץ לרשת CycleWays");
-  assert.equal(near.showExternalNav, true);
   assert.deepEqual(near.externalNavTarget, { lat: 32, lng: 35 });
-  assert.equal(near.showJoinPrompt, true);
-  assert.ok(near.joinPrompt.nearestText.includes("דילוג"));
-  assert.equal(near.joinPrompt.startText, "התחל מתחילת המסלול");
+  assert.equal(near.canJoinNearest, true);
+  assert.ok(near.nearestSkipText.includes("דילוג"));
   // Target is due north of the rider → bearing ≈ 0.
   assert.ok(Number.isFinite(near.approachBearingDeg));
   assert.ok(near.approachBearingDeg < 1 || near.approachBearingDeg > 359);
   // "Remaining route distance" is suppressed while approaching.
   assert.equal(near.remainingText, "");
-  // No leftover connector presentation fields.
+  // No leftover connector / old inline-button fields.
   assert.equal(near.onConnector, undefined);
-  assert.equal(near.connectorContextText, undefined);
+  assert.equal(near.showJoinPrompt, undefined);
+}
+
+// Destination labels reflect the target mode.
+{
+  const custom = getNavigationPresentation({
+    status: "approaching",
+    approach: { target: { point: { lat: 1, lng: 1 }, mode: "custom" }, distanceToRouteMeters: 300 },
+  });
+  assert.equal(custom.destinationLabel, "נקודה שנבחרה");
+  const nearest = getNavigationPresentation({
+    status: "approaching",
+    approach: { target: { point: { lat: 1, lng: 1 }, mode: "nearest" }, distanceToRouteMeters: 300 },
+  });
+  assert.equal(nearest.destinationLabel, "נקודה קרובה במסלול");
 }
 
 // On-route: remaining distance shows; no approach block.
@@ -114,20 +126,18 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.match(onRoute.remainingText, /נותרו/);
 }
 
-// Approach (far tier): external nav promoted to primary, no join prompt.
+// Approach (far tier): no nearest-join option when there are no choices.
 {
   const far = getNavigationPresentation({
     status: "approaching",
     approach: {
-      target: { point: { lat: 32, lng: 35 } },
+      target: { point: { lat: 32, lng: 35 }, mode: "start" },
       distanceToRouteMeters: 4000,
       choices: null,
     },
   });
   assert.equal(far.tier, "far");
-  assert.equal(far.externalNavPrimary, true);
-  assert.equal(far.showJoinPrompt, false);
-  assert.equal(far.joinPrompt, null);
+  assert.equal(far.canJoinNearest, false);
 }
 
 // --- context line ---

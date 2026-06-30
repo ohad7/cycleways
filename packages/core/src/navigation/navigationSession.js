@@ -7,6 +7,7 @@
 import { getDistance } from "../utils/distance.js";
 import {
   approachTargetChoices,
+  projectOntoRoute,
   selectConnectorTarget,
 } from "./connectorTargeting.js";
 import { buildRouteCues, selectActiveCue } from "./navigationCues.js";
@@ -21,6 +22,7 @@ export const NAV_ACTIONS = {
   CONNECTOR_READY: "CONNECTOR_READY",
   CONNECTOR_FAILED: "CONNECTOR_FAILED",
   SET_APPROACH_TARGET: "SET_APPROACH_TARGET",
+  SET_APPROACH_CUSTOM_TARGET: "SET_APPROACH_CUSTOM_TARGET",
   PAUSE: "PAUSE",
   RESUME: "RESUME",
   RECENTER: "RECENTER",
@@ -95,6 +97,23 @@ export function createNavigationSession(navigationRoute, options = {}) {
     };
   }
 
+  // Build the approach patch for an explicit target change (start / nearest /
+  // custom). Re-arms the request gate so the next LOCATION recomputes, but KEEPS
+  // the current suggestion visible until the replacement is ready (no blink).
+  // The stale routeRequest is harmless: CONNECTOR_READY/CONNECTOR_FAILED require
+  // suggestionStatus === "requesting", which we reset to "idle" here.
+  function retargetApproach(picked, mode) {
+    lastRequestPos = null;
+    return {
+      ...state.approach,
+      target: { ...picked, mode },
+      suggestionStatus: "idle",
+      distanceToRouteMeters: state.latestFix
+        ? getDistance(state.latestFix, picked.point)
+        : state.approach.distanceToRouteMeters,
+    };
+  }
+
   function cueFor(activeCue) {
     const key = activeCue
       ? `main:${activeCue.cue.type}:${activeCue.cue.distanceMeters}:${activeCue.phase}`
@@ -154,7 +173,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           const choices = approachTargetChoices(navigationRoute, action.fix);
           let target = state.approach.target;
           if (!target && choices) {
-            target = { ...choices.start, mode: "approach" };
+            target = { ...choices.start, mode: "start" };
           }
           const distanceToRouteMeters = target
             ? getDistance(action.fix, target.point)
@@ -179,7 +198,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
               approach: {
                 ...approach,
                 suggestionStatus: "requesting",
-                suggestionGeometry: null,
+                // Keep the prior suggestion visible until the new one is ready.
               },
               routeRequest: suggestionRequest(action.fix, target),
             });
@@ -222,7 +241,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
                   target,
                   distanceToRouteMeters: getDistance(action.fix, target.point),
                   suggestionStatus: "requesting",
-                  suggestionGeometry: null,
+                  // Keep the prior suggestion visible until the new one is ready.
                 },
                 routeRequest: suggestionRequest(action.fix, target),
               });
@@ -310,23 +329,22 @@ export function createNavigationSession(navigationRoute, options = {}) {
         const picked =
           action.choice === "nearest" ? choices.nearest : choices.start;
         if (!picked) return state;
-        // Reset the request gate so the next LOCATION issues a fresh request.
-        // Note: we intentionally leave the stale `routeRequest` in place here.
-        // It is harmless because CONNECTOR_READY/CONNECTOR_FAILED also require
-        // `suggestionStatus === "requesting"`, which we reset to "idle" below —
-        // so a late result for the superseded request is rejected. Keep that
-        // guard if you ever change this path.
-        lastRequestPos = null;
         return set({
-          approach: {
-            ...state.approach,
-            target: { ...picked, mode: "approach" },
-            suggestionStatus: "idle",
-            suggestionGeometry: null,
-            distanceToRouteMeters: state.latestFix
-              ? getDistance(state.latestFix, picked.point)
-              : state.approach.distanceToRouteMeters,
-          },
+          approach: retargetApproach(picked, action.choice === "nearest" ? "nearest" : "start"),
+        });
+      }
+
+      case NAV_ACTIONS.SET_APPROACH_CUSTOM_TARGET: {
+        const geometry = Array.isArray(navigationRoute?.geometry)
+          ? navigationRoute.geometry
+          : [];
+        const projection = projectOntoRoute(geometry, action.point);
+        if (!projection) return state;
+        return set({
+          approach: retargetApproach(
+            { point: projection.point, mainProgressMeters: projection.progressMeters },
+            "custom",
+          ),
         });
       }
 

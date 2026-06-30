@@ -1,15 +1,49 @@
 import assert from "node:assert/strict";
-import { buildExternalNavLinks } from "@cycleways/core/navigation/externalNav.js";
+import {
+  EXTERNAL_NAV_APPS,
+  buildAppUrl,
+} from "@cycleways/core/navigation/externalNav.js";
 
-assert.equal(buildExternalNavLinks(null), null);
-assert.equal(buildExternalNavLinks({ lat: NaN, lng: 1 }), null);
+const byId = Object.fromEntries(EXTERNAL_NAV_APPS.map((a) => [a.id, a]));
+const point = { lat: 32.123456, lng: 35.654321 };
 
-const links = buildExternalNavLinks({ lat: 32.123456, lng: 35.654321 });
-assert.match(links.googleMaps, /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&/);
-assert.match(links.googleMaps, /destination=32\.123456%2C35\.654321/);
-assert.match(links.googleMaps, /travelmode=bicycling/);
-assert.match(links.waze, /^https:\/\/waze\.com\/ul\?/);
-assert.match(links.waze, /ll=32\.123456%2C35\.654321/);
-assert.match(links.waze, /navigate=yes/);
+// Registry shape: each app has an id, label, probeUrl, and a buildUrl fn.
+for (const app of EXTERNAL_NAV_APPS) {
+  assert.ok(app.id && app.label && app.probeUrl);
+  assert.equal(typeof app.buildUrl, "function");
+}
+
+// Apple Maps is always available (built-in) and routes (walking) to the point.
+assert.equal(byId["apple-maps"].alwaysAvailable, true);
+assert.match(
+  buildAppUrl(byId["apple-maps"], point),
+  /^https:\/\/maps\.apple\.com\/\?daddr=32\.123456,35\.654321/,
+);
+assert.match(buildAppUrl(byId["apple-maps"], point), /dirflg=w/);
+
+// Google Maps: app scheme + bicycling mode; probed via comgooglemaps://.
+assert.equal(byId["google-maps"].probeUrl, "comgooglemaps://");
+assert.match(
+  buildAppUrl(byId["google-maps"], point),
+  /^comgooglemaps:\/\/\?daddr=32\.123456,35\.654321/,
+);
+assert.match(buildAppUrl(byId["google-maps"], point), /directionsmode=bicycling/);
+
+// Waze (car) + Moovit (transit).
+assert.equal(byId["waze"].probeUrl, "waze://");
+assert.match(
+  buildAppUrl(byId["waze"], point),
+  /^https:\/\/waze\.com\/ul\?ll=32\.123456,35\.654321&navigate=yes/,
+);
+assert.equal(byId["moovit"].probeUrl, "moovit://");
+assert.match(
+  buildAppUrl(byId["moovit"], point),
+  /^moovit:\/\/directions\?dest_lat=32\.123456&dest_lon=35\.654321/,
+);
+
+// Invalid point / app → null.
+assert.equal(buildAppUrl(byId["waze"], null), null);
+assert.equal(buildAppUrl(byId["waze"], { lat: NaN, lng: 1 }), null);
+assert.equal(buildAppUrl(null, point), null);
 
 console.log("external-nav ok");

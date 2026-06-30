@@ -231,7 +231,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   let st = s.getState();
   assert.equal(st.status, "approaching");
   assert.ok(st.approach.choices);
-  assert.equal(st.approach.target.mode, "approach");
+  assert.equal(st.approach.target.mode, "start", "defaults to the route start");
   assert.equal(st.approach.suggestionStatus, "requesting");
   assert.ok(st.routeRequest && st.routeRequest.to);
   assert.ok(Number.isFinite(st.approach.distanceToRouteMeters));
@@ -250,8 +250,10 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
 
   s.dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice: "nearest" });
   st = s.getState();
+  assert.equal(st.approach.target.mode, "nearest");
   assert.equal(st.approach.suggestionStatus, "idle");
-  assert.equal(st.approach.suggestionGeometry, null);
+  // The prior suggestion stays visible across the target change (no blink).
+  assert.ok(st.approach.suggestionGeometry.length >= 2);
 
   s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: onRouteFix });
   st = s.getState();
@@ -355,6 +357,20 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   });
   assert.equal(refetch.approach.suggestionStatus, "requesting");
   assert.ok(refetch.routeRequest.requestId > requested.routeRequest.requestId);
+}
+
+// --- SET_APPROACH_CUSTOM_TARGET snaps a tapped point onto the route ---------
+{
+  const { session } = approachingSession();
+  // A point off to the side of the route snaps onto the nearest route vertex.
+  const target = session.getState().route.geometry[1];
+  const st = session.dispatch({
+    type: NAV_ACTIONS.SET_APPROACH_CUSTOM_TARGET,
+    point: { lat: target.lat + 0.0005, lng: target.lng },
+  });
+  assert.equal(st.approach.target.mode, "custom");
+  assert.ok(Number.isFinite(st.approach.target.mainProgressMeters));
+  assert.equal(st.approach.suggestionStatus, "idle");
 }
 
 // --- STOP clears the approach slot and route request -----------------------

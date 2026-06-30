@@ -81,6 +81,19 @@ export function bearingDeg(from, to) {
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
+function destinationLabelFor(mode) {
+  switch (mode) {
+    case "nearest":
+      return "נקודה קרובה במסלול";
+    case "custom":
+      return "נקודה שנבחרה";
+    case "rejoin":
+      return "חזרה למסלול";
+    default:
+      return "תחילת המסלול";
+  }
+}
+
 // Round to a friendly precision: nearest 10 m below 1 km, else 0.1 km.
 export function formatDistanceMeters(meters) {
   const m = Number(meters);
@@ -140,20 +153,18 @@ export function getNavigationPresentation(state = {}) {
     showApproach,
     tier,
     approachBearingDeg,
-    approachDistanceText: Number.isFinite(distanceToRoute)
-      ? `${formatDistanceMeters(distanceToRoute)} למסלול`
+    // Banner: "<destination> · <distance>" (e.g. "תחילת המסלול · 600 מ׳").
+    destinationLabel: destinationLabelFor(approach?.target?.mode),
+    approachDistanceShort: Number.isFinite(distanceToRoute)
+      ? formatDistanceMeters(distanceToRoute)
       : "",
     disclaimerText: "ניווט מחוץ לרשת CycleWays",
-    showExternalNav: showApproach,
-    externalNavPrimary: tier === "far",
     externalNavTarget: approach?.target?.point ?? null,
-    showJoinPrompt: status === "approaching" && choices?.shouldPrompt === true,
-    joinPrompt: choices?.shouldPrompt
-      ? {
-          startText: "התחל מתחילת המסלול",
-          nearestText: `הצטרף כאן (דילוג ~${formatDistanceMeters(choices.skipMeters)})`,
-        }
-      : null,
+    // Options sheet: offer "join nearest" only when it skips a meaningful span.
+    canJoinNearest: Boolean(choices?.nearest && choices.skipMeters > 50),
+    nearestSkipText: choices?.nearest
+      ? `דילוג ~${formatDistanceMeters(choices.skipMeters)}`
+      : "",
     showGuidance: status === "approaching" || offRoute,
     guidanceText: Number.isFinite(state.progress?.guidanceDistanceMeters)
       ? `${status === "approaching" ? "לכיוון תחילת המסלול" : "חזרה למסלול"} · ${formatDistanceMeters(state.progress.guidanceDistanceMeters)}`
