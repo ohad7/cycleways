@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { getJsonAsset } from "@cycleways/core/platform/assets.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
 import {
@@ -7,6 +7,7 @@ import {
   emptyFilters,
   selectDiscoverRoutes,
 } from "@cycleways/core/data/discoverFilters.js";
+import { filterCatalogBySearch } from "@cycleways/core/data/catalogSearch.js";
 import RouteCard from "./RouteCard.jsx";
 import { palette, radius, space } from "./theme.js";
 
@@ -14,10 +15,11 @@ import { palette, radius, space } from "./theme.js";
 // difficulty / surface / distance chip filters + a "near me" toggle + a result
 // count, then the catalog as branded route cards. Filtering + ordering reuse the
 // shared @cycleways/core helpers; only the chip rendering is native.
-export default function DiscoverPanel({ entries, onSelect, fix }) {
+export default function DiscoverPanel({ entries, onSelect, fix, query, onQueryChange }) {
   const [places, setPlaces] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [nearMeSort, setNearMeSort] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,9 +49,20 @@ export default function DiscoverPanel({ entries, onSelect, fix }) {
       return { ...prev, [axis]: next.size > 1 ? new Set([value]) : next };
     });
 
+  const activeFilterCount = useMemo(
+    () =>
+      FILTER_GROUPS.reduce((sum, g) => sum + filters[g.axis].size, 0) +
+      (nearMeSort ? 1 : 0),
+    [filters, nearMeSort],
+  );
+
+  const searched = useMemo(
+    () => filterCatalogBySearch(entries, query, placeById),
+    [entries, query, placeById],
+  );
   const filtered = useMemo(
-    () => selectDiscoverRoutes(entries, filters).routes,
-    [entries, filters],
+    () => selectDiscoverRoutes(searched, filters).routes,
+    [searched, filters],
   );
   const ordered = useMemo(
     () =>
@@ -69,31 +82,55 @@ export default function DiscoverPanel({ entries, onSelect, fix }) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.filters}>
-        {FILTER_GROUPS.map((group) => (
-          <View key={group.axis} style={styles.group}>
-            <Text style={styles.groupLabel}>{group.label}</Text>
-            <View style={styles.chipRow}>
-              {group.options.map((opt) => (
-                <Chip
-                  key={opt.value}
-                  label={opt.label}
-                  active={filters[group.axis].has(opt.value)}
-                  onPress={() => toggleAxis(group.axis, opt.value)}
-                />
-              ))}
+      <TextInput
+        style={styles.search}
+        placeholder="חפש מסלול..."
+        placeholderTextColor={palette.muted}
+        value={query}
+        onChangeText={onQueryChange}
+        textAlign="right"
+        accessibilityLabel="חיפוש מסלול"
+      />
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="סינון"
+        onPress={() => setFiltersOpen((v) => !v)}
+        style={styles.filterToggle}
+      >
+        <Text style={styles.filterToggleText}>
+          {`סינון${activeFilterCount ? ` (${activeFilterCount})` : ""}`}
+        </Text>
+        <Text style={styles.filterChevron}>{filtersOpen ? "▴" : "▾"}</Text>
+      </Pressable>
+
+      {filtersOpen ? (
+        <View style={styles.filters}>
+          {FILTER_GROUPS.map((group) => (
+            <View key={group.axis} style={styles.group}>
+              <Text style={styles.groupLabel}>{group.label}</Text>
+              <View style={styles.chipRow}>
+                {group.options.map((opt) => (
+                  <Chip
+                    key={opt.value}
+                    label={opt.label}
+                    active={filters[group.axis].has(opt.value)}
+                    onPress={() => toggleAxis(group.axis, opt.value)}
+                  />
+                ))}
+              </View>
             </View>
-          </View>
-        ))}
-        {fix ? (
-          <Chip
-            label="קרוב אליי"
-            icon
-            active={nearMeSort}
-            onPress={() => setNearMeSort((v) => !v)}
-          />
-        ) : null}
-      </View>
+          ))}
+          {fix ? (
+            <Chip
+              label="קרוב אליי"
+              icon
+              active={nearMeSort}
+              onPress={() => setNearMeSort((v) => !v)}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       <Text style={styles.count}>{`${ordered.length} מסלולים`}</Text>
 
@@ -136,6 +173,35 @@ function Chip({ label, active, onPress, icon = false }) {
 
 const styles = StyleSheet.create({
   root: { gap: space.sm },
+  search: {
+    marginHorizontal: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: radius.md,
+    backgroundColor: palette.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.line,
+    color: palette.ink,
+    fontSize: 14,
+    writingDirection: "rtl",
+  },
+  filterToggle: {
+    marginHorizontal: 12,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    backgroundColor: palette.cream,
+  },
+  filterToggleText: {
+    color: palette.ink,
+    fontSize: 13,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  filterChevron: { color: palette.muted, fontSize: 12 },
   filters: { paddingHorizontal: 12, gap: space.sm },
   group: { gap: 5 },
   groupLabel: {
