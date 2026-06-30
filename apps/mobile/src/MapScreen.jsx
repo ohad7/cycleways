@@ -5,6 +5,7 @@ import PlaybackControls from "./planner/PlaybackControls.jsx";
 import {
   Dimensions,
   Keyboard,
+  Linking,
   Modal,
   PanResponder,
   Pressable,
@@ -33,6 +34,7 @@ import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
+import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import {
   precomputeArcLength,
   pointAndBearingAtDistance,
@@ -58,6 +60,7 @@ import MapControls from "./planner/MapControls.jsx";
 import DiscoverPanel from "./planner/DiscoverPanel.jsx";
 import RoutePoiList from "./planner/RoutePoiList.jsx";
 import NavPanel from "./planner/NavPanel.jsx";
+import DestinationSheet from "./planner/DestinationSheet.jsx";
 import { useNavigationSession } from "./navigation/useNavigationSession.js";
 import { createDefaultLocationSource } from "./navigation/locationService.js";
 import { createSimulateRideSource } from "./navigation/simulateRideSource.js";
@@ -545,6 +548,14 @@ export default function MapScreen() {
   const handleMapPress = useCallback(
     (feature) => {
       if (state.status !== "ready") return;
+      // "Pick a point on the route" mode: snap the tapped point onto the route
+      // as the approach target, then exit the mode (route edits stay locked).
+      if (pickOnMapModeRef.current) {
+        const tapped = pointFromFeature(feature);
+        if (tapped) navSetCustomTargetRef.current?.(tapped);
+        setPickOnMapMode(false);
+        return;
+      }
       if (isNavigatingRef.current) return; // route edits are locked while navigating
       if (Date.now() - routePointPressGuardRef.current < ADD_GUARD_MS) return;
       const point = pointFromFeature(feature);
@@ -946,11 +957,17 @@ export default function MapScreen() {
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
+  const navSetCustomTargetRef = useRef(null);
   // Live device-compass heading (deg). Drives the heading-up camera and the
   // to-route arrow so the view is adaptive to the phone's facing direction even
   // when stationary (GPS course is unreliable below walking speed).
   const deviceHeadingRef = useRef(null);
   const [compassHeading, setCompassHeading] = useState(null);
+  // Approach destination sheet + "tap a point on the route" mode.
+  const [destSheetVisible, setDestSheetVisible] = useState(false);
+  const [pickOnMapMode, setPickOnMapMode] = useState(false);
+  const pickOnMapModeRef = useRef(false);
+  pickOnMapModeRef.current = pickOnMapMode;
   progressRef.current = navProgress;
   cameraIntentRef.current = cameraIntent;
   rawFixRef.current = nav.state?.latestFix ?? null;
@@ -958,6 +975,7 @@ export default function MapScreen() {
   navGeometryRef.current = navGeometry;
   navStatusRef.current = navStatus;
   navUserPannedRef.current = nav.userPanned;
+  navSetCustomTargetRef.current = nav.setApproachCustomTarget;
 
   // Distances are local to the active geometry. Reset interpolation state when
   // switching main route ↔ connector so metres from one path are never applied
@@ -1487,18 +1505,61 @@ export default function MapScreen() {
         </View>
       ) : null}
       {isNavigating ? (
-        <NavPanel
-          sessionState={nav.state}
-          hapticsEnabled={nav.hapticsEnabled}
-          onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
-          onRecenter={handleRecenter}
-          onPauseResume={() =>
-            navStatus === "paused" ? nav.resume() : nav.pause()
-          }
-          onStop={nav.stop}
-          onSetApproachTarget={nav.setApproachTarget}
-          compassHeading={compassHeading}
-        />
+        <>
+          <NavPanel
+            sessionState={nav.state}
+            hapticsEnabled={nav.hapticsEnabled}
+            onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
+            onRecenter={handleRecenter}
+            onPauseResume={() =>
+              navStatus === "paused" ? nav.resume() : nav.pause()
+            }
+            onStop={nav.stop}
+            onOpenDestinations={() => setDestSheetVisible(true)}
+            compassHeading={compassHeading}
+          />
+          <DestinationSheet
+            visible={destSheetVisible}
+            currentMode={nav.state?.approach?.target?.mode ?? "start"}
+            canJoinNearest={navPresentation.canJoinNearest}
+            nearestSkipText={navPresentation.nearestSkipText}
+            disclaimerText={navPresentation.disclaimerText}
+            onPickStart={() => {
+              nav.setApproachTarget("start");
+              setDestSheetVisible(false);
+            }}
+            onPickNearest={() => {
+              nav.setApproachTarget("nearest");
+              setDestSheetVisible(false);
+            }}
+            onPickOnMap={() => {
+              setDestSheetVisible(false);
+              setPickOnMapMode(true);
+            }}
+            onOpenApp={(app) => {
+              const url = buildAppUrl(app, navPresentation.externalNavTarget);
+              if (url) Linking.openURL(url).catch(() => {});
+              setDestSheetVisible(false);
+            }}
+            onClose={() => setDestSheetVisible(false)}
+          />
+          {pickOnMapMode ? (
+            <View style={styles.pickHint} pointerEvents="box-none">
+              <View style={styles.pickHintCard}>
+                <Text style={styles.pickHintText} numberOfLines={2}>
+                  הקש על המסלול כדי לבחור נקודת חיבור
+                </Text>
+                <Pressable
+                  onPress={() => setPickOnMapMode(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="ביטול"
+                >
+                  <Text style={styles.pickHintCancel}>ביטול</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+        </>
       ) : (
         <PlannerSheet
           sheetRef={plannerSheetRef}
@@ -2125,6 +2186,37 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   hint: { fontSize: 15, textAlign: "center", color: "#333" },
+  pickHint: {
+    position: "absolute",
+    top: 120,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  pickHintCard: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 16,
+    backgroundColor: "#172026",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    maxWidth: "90%",
+  },
+  pickHintText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+    writingDirection: "rtl",
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  pickHintCancel: {
+    color: "#9ec6a6",
+    fontSize: 14,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
   // Adaptive rider puck: a colored dot with a heading arrow. The whole view is
   // rotated by the RAF loop; the arrow points "up" (north) at rotation 0.
   riderPuck: {

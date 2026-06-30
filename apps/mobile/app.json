@@ -17,6 +17,11 @@
         "UIBackgroundModes": [
           "location"
         ],
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps",
+          "waze",
+          "moovit"
+        ],
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [

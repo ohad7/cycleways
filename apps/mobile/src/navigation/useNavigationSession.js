@@ -209,6 +209,10 @@ export function useNavigationSession(navigationRoute, options = {}) {
     (choice) => dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice }),
     [dispatch],
   );
+  const setApproachCustomTarget = useCallback(
+    (point) => dispatch({ type: NAV_ACTIONS.SET_APPROACH_CUSTOM_TARGET, point }),
+    [dispatch],
+  );
 
   return {
     state,
@@ -219,6 +223,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
     recenter,
     userPanned,
     setApproachTarget,
+    setApproachCustomTarget,
     hapticsEnabled,
     setHapticsEnabled,
   };
