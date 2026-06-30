@@ -50,6 +50,20 @@ Run with the dev simulate-ride source on a simulator/device:
   (`CONNECTOR_NEAR_RADIUS_M`, `JOIN_SKIP_PROMPT_M`, road-preference multipliers,
   the 200 m suggestion-request gate).
 
+### Post-device-feedback follow-ups (2026-06-30)
+
+- [x] **Road preference actually applied** — fixed: connector cost was baked at
+  graph-build time, so the profile flag was inert; now both costs are baked per
+  adjacency edge and the search selects by profile. Covered by a real
+  path-vs-road fixture in `test-preview-base-route.mjs`.
+- [ ] **Pitched compass-follow camera** — verify the ~50° tilt reads well and
+  the map heading follows the phone (device compass) smoothly during approach
+  and on-route; tune `NAV_FOLLOW_PITCH` / heading smoothing.
+- [ ] **Compass arrow** — the to-route arrow points correctly relative to the
+  phone facing when stationary; confirm `trueHeading`/`magHeading` fallback.
+- [ ] **Approach readout** — only the distance-to-route + arrow show before the
+  route (no "נותרו N ק״מ"); remaining appears once on-route.
+
 ## Results
 
 Pending simulator/device execution.
