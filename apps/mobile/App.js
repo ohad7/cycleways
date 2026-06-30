@@ -1,13 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import {
-  Linking,
-  LogBox,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Linking, LogBox, Pressable, StyleSheet, Text, View } from "react-native";
+import { createNavigationContainerRef } from "@react-navigation/native";
 import {
   createNativeRouteHref,
   getNativeRoutePath,
@@ -20,32 +14,42 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import MapScreen from "./src/MapScreen.jsx";
+import RootNavigator from "./src/navigation/RootNavigator.jsx";
+import { launchTargetFromHref } from "./src/navigation/launchTarget.js";
 
 LogBox.ignoreLogs([
   "SafeAreaView has been deprecated",
   "Invalid size is used for setting the map view",
 ]);
 
-// Phase 2.4: render the native iPhone map from the shared app controller.
+const navigationRef = createNavigationContainerRef();
+
 export default function App() {
-  const [locationReady, setLocationReady] = useState(false);
+  const [ready, setReady] = useState(false);
   const [launchError, setLaunchError] = useState(null);
-  const [screenKey, setScreenKey] = useState(0);
+  const initialTargetRef = useRef({ screen: "Discover", params: undefined });
 
   useEffect(() => {
     let mounted = true;
     let launchRequestId = 0;
 
-    async function applyLaunchUrl(url, { remount = false } = {}) {
+    async function applyLaunchUrl(url, { warm = false } = {}) {
       const requestId = ++launchRequestId;
       const result = await resolveNativeLaunchUrl(url);
       if (!mounted || requestId !== launchRequestId) return;
       setLaunchError(result.error);
-      setLocationReady(true);
-      if (remount && !result.error) {
-        setScreenKey((key) => key + 1);
+      if (!result.error) {
+        const target = launchTargetFromHref(url);
+        if (warm) {
+          // App already running: navigate imperatively.
+          if (navigationRef.isReady() && target.screen === "Build") {
+            navigationRef.navigate("Build", target.params);
+          }
+        } else {
+          initialTargetRef.current = target;
+        }
       }
+      setReady(true);
     }
 
     Linking.getInitialURL()
@@ -53,13 +57,11 @@ export default function App() {
       .catch((error) => {
         setNativeLocationHref(null);
         console.warn("Native initial route link failed:", error);
-        if (mounted) {
-          setLocationReady(true);
-        }
+        if (mounted) setReady(true);
       });
 
     const subscription = Linking.addEventListener("url", ({ url }) => {
-      void applyLaunchUrl(url, { remount: true });
+      void applyLaunchUrl(url, { warm: true });
     });
 
     return () => {
@@ -72,10 +74,14 @@ export default function App() {
     <GestureHandlerRootView style={styles.fill}>
       <SafeAreaProvider>
         <BottomSheetModalProvider>
-          {/* Full-bleed: the map fills the screen under the status bar; overlays
-              (search pill, map controls, sheet) apply their own safe-area insets. */}
           <View style={styles.fill}>
-            {locationReady ? <MapScreen key={screenKey} /> : null}
+            {ready ? (
+              <RootNavigator
+                initialRouteName={initialTargetRef.current.screen}
+                initialParams={initialTargetRef.current.params}
+                navigationRef={navigationRef}
+              />
+            ) : null}
             {launchError ? (
               <LaunchErrorOverlay
                 message={launchError.message}
@@ -90,22 +96,21 @@ export default function App() {
   );
 }
 
+// Validates a launch URL: a catalog route link is looked up and its encoded
+// route token seeded into the native href so the controller cold-loads it; a
+// non-route link is passed through. Returns a launch error when the slug is
+// unknown.
 async function resolveNativeLaunchUrl(url) {
   const routePath = getNativeRoutePath(url);
   if (!routePath) {
     setNativeLocationHref(url);
     return { error: null };
   }
-
   try {
     const entries = await loadRouteCatalogEntries();
     const entry = findRouteCatalogEntryBySlug({ entries }, routePath.slug);
     if (!entry?.route) {
-      return {
-        error: {
-          message: `לא נמצא מסלול בשם ${routePath.slug}`,
-        },
-      };
+      return { error: { message: `לא נמצא מסלול בשם ${routePath.slug}` } };
     }
     setNativeLocationHref(
       createNativeRouteHref(entry.route, {
@@ -118,11 +123,7 @@ async function resolveNativeLaunchUrl(url) {
     return { error: null };
   } catch (error) {
     console.warn("Native route catalog link failed:", error);
-    return {
-      error: {
-        message: "לא הצלחנו לפתוח את המסלול מהקטלוג",
-      },
-    };
+    return { error: { message: "לא הצלחנו לפתוח את המסלול מהקטלוג" } };
   }
 }
 
@@ -134,14 +135,14 @@ function LaunchErrorOverlay({ message, onDismiss }) {
         <Text style={styles.errorText}>{message}</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="חזרה למפה"
+          accessibilityLabel="סגור"
           onPress={onDismiss}
           style={({ pressed }) => [
             styles.errorButton,
             pressed ? styles.errorButtonPressed : null,
           ]}
         >
-          <Text style={styles.errorButtonText}>חזרה למפה</Text>
+          <Text style={styles.errorButtonText}>סגור</Text>
         </Pressable>
       </View>
     </View>
@@ -191,12 +192,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
-  errorButtonPressed: {
-    opacity: 0.75,
-  },
-  errorButtonText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
+  errorButtonPressed: { opacity: 0.75 },
+  errorButtonText: { color: "#ffffff", fontSize: 14, fontWeight: "700" },
 });
