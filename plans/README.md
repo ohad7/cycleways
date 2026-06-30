@@ -18,6 +18,7 @@ Current plans:
 - `map-asset-size/` - design and implementation plan for low-risk generated GeoJSON size reduction.
 - `react-migration/` - design and implementation plan for incrementally moving the public app to React.
 - `featured-routes/` - design and implementation plan for curated featured-route landing pages with maps, POIs, photos, and video.
+- `app-discovery-detail-flow/` - design for reshaping the iPhone app around route discovery: a map-free discovery front page (collapsible filters, rich swipeable-gallery cards, "plan a route" FAB), a native route-detail page mirroring the mobile-web featured layout (swappable video/map PiP, synced playback, POI stories), and a `react-navigation` screen stack (Discover → RouteDetail → Build).
 - `video-sync-overlay/` - design and implementation plan for the editor's dedicated side-by-side video-sync overlay: precise transport controls, keyboard shortcuts, a shared-interpolator ghost marker, and a larger video.
 - `route-point-editing/` - design and implementation plan for clearer route point drag/edit feedback, route-line insert-and-drag, and preserving points outside the routing network.
 - `elevation-graph-redesign/` - design and implementation plan for the elevation profile redesign (slope-grade coloring, legend, and hover tooltip).
