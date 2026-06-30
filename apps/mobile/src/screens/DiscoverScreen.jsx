@@ -46,13 +46,8 @@ export default function DiscoverScreen({ navigation }) {
   }, []);
 
   const openRoute = (entry) => {
-    if (!entry?.route) return;
-    resetNativeLocationHref();
-    navigation.navigate("Build", {
-      routeToken: entry.route,
-      slug: entry.slug ?? null,
-      name: entry.name ?? null,
-    });
+    if (!entry?.slug) return;
+    navigation.navigate("RouteDetail", { slug: entry.slug });
   };
 
   const planFromScratch = () => {

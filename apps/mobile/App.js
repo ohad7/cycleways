@@ -41,23 +41,16 @@ export default function App() {
       setLaunchError(result.error);
       if (!result.error) {
         if (warm) {
-          // Warm catalog-route link: drive Build via params (not the href). Reset the
-          // href that resolveNativeLaunchUrl just seeded so a freshly-mounted Build
-          // controller does not ALSO load it (double-load), then navigate with the
-          // routeToken so the params loader fires even when Build is already focused.
+          // Warm catalog-route link: open the detail screen by slug. RouteDetail
+          // loads from the bundled snapshot, so the seeded href is not used here
+          // (the editor is reached later via the detail CTA, which passes the
+          // route token explicitly and resets the href first).
           if (navigationRef.isReady() && result.resolved) {
-            resetNativeLocationHref();
-            navigationRef.navigate("Build", {
-              routeToken: result.resolved.routeToken,
-              slug: result.resolved.slug,
-              name: result.resolved.name,
-            });
+            navigationRef.navigate("RouteDetail", { slug: result.resolved.slug });
           }
         } else {
-          // Cold start: Build loads via the seeded href (params carry slug only, NO
-          // routeToken) so the controller init effect reads the href and the params
-          // loader does not double-fire. Keep this asymmetry — do not add routeToken
-          // here.
+          // Cold start: launchTargetFromHref maps a catalog-route link to the
+          // RouteDetail screen with its slug.
           initialTargetRef.current = launchTargetFromHref(url);
         }
       }

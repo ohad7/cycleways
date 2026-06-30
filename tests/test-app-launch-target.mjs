@@ -11,16 +11,16 @@ assert.deepEqual(launchTargetFromHref(null), {
   params: undefined,
 });
 
-// A routes/<slug> deep link opens Build with the slug.
+// A routes/<slug> deep link opens RouteDetail with the slug.
 assert.deepEqual(
   launchTargetFromHref("cycleways:///routes/sovev-beit-hillel"),
-  { screen: "Build", params: { slug: "sovev-beit-hillel" } },
+  { screen: "RouteDetail", params: { slug: "sovev-beit-hillel" } },
 );
 
-// A featured/<slug> deep link also opens Build with the slug.
+// A featured/<slug> deep link also opens RouteDetail with the slug.
 assert.deepEqual(
   launchTargetFromHref("cycleways:///featured/banias-gan-hatsafon"),
-  { screen: "Build", params: { slug: "banias-gan-hatsafon" } },
+  { screen: "RouteDetail", params: { slug: "banias-gan-hatsafon" } },
 );
 
 console.log("test-app-launch-target: ok");
