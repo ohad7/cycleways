@@ -76,12 +76,13 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
 {
   const near = getNavigationPresentation({
     status: "approaching",
+    latestFix: { lat: 31.99, lng: 35 },
     approach: {
       target: { point: { lat: 32, lng: 35 } },
       distanceToRouteMeters: 600,
       choices: { skipMeters: 1500, shouldPrompt: true },
     },
-    progress: { guidanceDistanceMeters: 600 },
+    progress: { guidanceDistanceMeters: 600, remainingMeters: 14000 },
   });
   assert.equal(near.showApproach, true);
   assert.equal(near.tier, "near");
@@ -93,9 +94,24 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(near.showJoinPrompt, true);
   assert.ok(near.joinPrompt.nearestText.includes("דילוג"));
   assert.equal(near.joinPrompt.startText, "התחל מתחילת המסלול");
+  // Target is due north of the rider → bearing ≈ 0.
+  assert.ok(Number.isFinite(near.approachBearingDeg));
+  assert.ok(near.approachBearingDeg < 1 || near.approachBearingDeg > 359);
+  // "Remaining route distance" is suppressed while approaching.
+  assert.equal(near.remainingText, "");
   // No leftover connector presentation fields.
   assert.equal(near.onConnector, undefined);
   assert.equal(near.connectorContextText, undefined);
+}
+
+// On-route: remaining distance shows; no approach block.
+{
+  const onRoute = getNavigationPresentation({
+    status: "navigating",
+    progress: { hasAcquiredRoute: true, remainingMeters: 14000 },
+  });
+  assert.equal(onRoute.showApproach, false);
+  assert.match(onRoute.remainingText, /נותרו/);
 }
 
 // Approach (far tier): external nav promoted to primary, no join prompt.

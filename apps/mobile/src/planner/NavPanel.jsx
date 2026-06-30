@@ -25,10 +25,18 @@ export default function NavPanel({
   onPauseResume,
   onStop,
   onSetApproachTarget,
+  compassHeading = null,
 }) {
   const insets = useSafeAreaInsets();
   const p = getNavigationPresentation(sessionState);
   const paused = sessionState?.status === "paused";
+
+  // Direction-to-route arrow: phone-relative when the compass is available
+  // (bearing-to-target minus device heading), else the movement-course arrow.
+  const approachArrowDeg =
+    Number.isFinite(p.approachBearingDeg) && Number.isFinite(compassHeading)
+      ? ((p.approachBearingDeg - compassHeading) % 360 + 360) % 360
+      : p.guidanceArrowDeg ?? 0;
 
   return (
     <View style={styles.root} pointerEvents="box-none">
@@ -41,16 +49,19 @@ export default function NavPanel({
             </Text>
           </View>
         ) : null}
-        {p.showGuidance ? (
-          <View style={[styles.cueRow, styles.offRow]}>
+        {p.showApproach ? (
+          <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
             <Icon
               name="navigate"
-              color={palette.white}
+              color={p.offRoute ? palette.white : palette.forest}
               size={26}
-              style={{ transform: [{ rotate: `${p.guidanceArrowDeg ?? 0}deg` }] }}
+              style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}
             />
-            <Text style={[styles.cueText, styles.offText]} numberOfLines={2}>
-              {p.guidanceText}
+            <Text
+              style={[styles.cueText, p.offRoute ? styles.offText : null]}
+              numberOfLines={1}
+            >
+              {p.approachDistanceText || p.statusText}
             </Text>
           </View>
         ) : p.showCue ? (
@@ -78,11 +89,6 @@ export default function NavPanel({
         ) : null}
         {p.showApproach ? (
           <View style={styles.approach}>
-            {p.approachDistanceText ? (
-              <Text style={styles.approachDistance}>
-                {p.approachDistanceText}
-              </Text>
-            ) : null}
             <Text style={styles.disclaimer} numberOfLines={2}>
               {p.disclaimerText}
             </Text>
@@ -269,13 +275,6 @@ const styles = StyleSheet.create({
   approach: {
     marginTop: space.sm,
     gap: space.sm,
-  },
-  approachDistance: {
-    color: palette.ink,
-    fontSize: 16,
-    fontWeight: "800",
-    writingDirection: "rtl",
-    textAlign: "right",
   },
   disclaimer: {
     color: palette.muted,

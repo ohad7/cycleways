@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as Location from "expo-location";
 import { useSyntheticRoutePlaybackEngine } from "@cycleways/core/ui/routePlaybackEngine.js";
 import PlaybackControls from "./planner/PlaybackControls.jsx";
 import {
@@ -126,14 +127,9 @@ const RIDER_PUCK_COLOR = "#006699";
 const RIDER_PUCK_MUTED_COLOR = "#9aa6ab";
 // Camera zoom while following the rider during navigation.
 const NAV_FOLLOW_ZOOM = 16.5;
-// Approach phase (before reaching the route): instead of tight-following the
-// rider, periodically fit the map to show BOTH the rider and the route so they
-// can see where to go. Re-fit is throttled by time + movement to avoid thrash.
-const APPROACH_REFIT_MS = 4000;
-const APPROACH_REFIT_MOVE_M = 40;
-// fitBounds padding [top, right, bottom, left]: keep the route clear of the
-// NavPanel cue banner (top) and the control row (bottom).
-const APPROACH_FIT_PADDING = [130, 48, 170, 48];
+// Tilt for the heading-up follow camera so the rider sees the route ahead from
+// near ground level (also makes the view read as adaptive to the phone facing).
+const NAV_FOLLOW_PITCH = 50;
 // Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
 // is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
 const BEARING_SMOOTH_MS = 260;
@@ -947,11 +943,14 @@ export default function MapScreen() {
   const rafRef = useRef(0);
   const navStatusRef = useRef("idle");
   const lastPushedPuckRef = useRef(null);
-  // Approach-phase fit throttle ({ ts, lng, lat } of the last fitBounds) and a
-  // stable handle to userPanned() so the (deps-[]) camera-change handler can
+  // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
-  const lastApproachFitRef = useRef(null);
   const navUserPannedRef = useRef(null);
+  // Live device-compass heading (deg). Drives the heading-up camera and the
+  // to-route arrow so the view is adaptive to the phone's facing direction even
+  // when stationary (GPS course is unreliable below walking speed).
+  const deviceHeadingRef = useRef(null);
+  const [compassHeading, setCompassHeading] = useState(null);
   progressRef.current = navProgress;
   cameraIntentRef.current = cameraIntent;
   rawFixRef.current = nav.state?.latestFix ?? null;
@@ -968,7 +967,6 @@ export default function MapScreen() {
     smoothedBearingRef.current = navProgress?.courseDeg ?? 0;
     travelIndexRef.current = -1;
     lastPushedPuckRef.current = null;
-    lastApproachFitRef.current = null;
     setNavTraveled(EMPTY_FEATURE_COLLECTION);
   }, [activeGeometryKey]);
 
@@ -982,7 +980,6 @@ export default function MapScreen() {
       setNavTraveled(EMPTY_FEATURE_COLLECTION);
       travelIndexRef.current = -1;
       lastPushedPuckRef.current = null;
-      lastApproachFitRef.current = null;
       return undefined;
     }
     const startProgress = progressRef.current;
@@ -1048,6 +1045,11 @@ export default function MapScreen() {
             progress.bearingToNextDeg ??
             smoothedBearingRef.current;
         }
+        // Prefer the live device compass so the view follows where the phone
+        // points (adaptive even when stationary); fall back to GPS course.
+        if (Number.isFinite(deviceHeadingRef.current)) {
+          targetBearing = deviceHeadingRef.current;
+        }
         if (Number.isFinite(lng) && Number.isFinite(lat)) {
           if (Number.isFinite(targetBearing)) {
             smoothedBearingRef.current = shortestAngleLerp(
@@ -1090,47 +1092,17 @@ export default function MapScreen() {
             cameraIntentRef.current === "follow" &&
             navStatusRef.current !== "paused"
           ) {
-            if (onRoute) {
-              // On the main route: tight heading-up follow on the rider.
-              cameraRef.current?.setCamera?.({
-                centerCoordinate: [lng, lat],
-                heading,
-                zoomLevel: NAV_FOLLOW_ZOOM,
-                animationDuration: 0,
-              });
-            } else {
-              // Approaching: periodically frame the rider + the whole route so
-              // they can see where to go. Throttled by time AND movement so it
-              // doesn't refit (and animate) every frame.
-              const last = lastApproachFitRef.current;
-              const dLat = last ? (lat - last.lat) * 111320 : Infinity;
-              const dLng = last
-                ? (lng - last.lng) * 111320 * Math.cos((lat * Math.PI) / 180)
-                : Infinity;
-              const movedM = Math.hypot(dLat, dLng);
-              const due =
-                !last ||
-                (ts - last.ts > APPROACH_REFIT_MS && movedM > APPROACH_REFIT_MOVE_M);
-              if (due && Array.isArray(geom) && geom.length >= 2) {
-                let minLng = lng;
-                let maxLng = lng;
-                let minLat = lat;
-                let maxLat = lat;
-                for (const p of geom) {
-                  if (p.lng < minLng) minLng = p.lng;
-                  if (p.lng > maxLng) maxLng = p.lng;
-                  if (p.lat < minLat) minLat = p.lat;
-                  if (p.lat > maxLat) maxLat = p.lat;
-                }
-                cameraRef.current?.fitBounds?.(
-                  [maxLng, maxLat],
-                  [minLng, minLat],
-                  APPROACH_FIT_PADDING,
-                  600,
-                );
-                lastApproachFitRef.current = { ts, lng, lat };
-              }
-            }
+            // Heading-up follow on the rider, tilted to a near-ground
+            // perspective. Used both on-route and while approaching so the view
+            // stays first-person and adaptive to the phone's facing direction;
+            // the direct line + dashed suggestion lead the eye to the route.
+            cameraRef.current?.setCamera?.({
+              centerCoordinate: [lng, lat],
+              heading,
+              pitch: NAV_FOLLOW_PITCH,
+              zoomLevel: NAV_FOLLOW_ZOOM,
+              animationDuration: 0,
+            });
           }
         }
       }
@@ -1139,6 +1111,35 @@ export default function MapScreen() {
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNavigating]);
+
+  // Device-compass heading watch (active only while navigating). Updates a ref
+  // (read by the RAF camera each frame) and a throttled state (the to-route
+  // arrow in NavPanel) so a small phone rotation doesn't re-render at sensor
+  // rate. Best-effort: if the sensor/permission is unavailable we silently fall
+  // back to GPS course.
+  useEffect(() => {
+    if (!isNavigating) return undefined;
+    let subscription = null;
+    let cancelled = false;
+    Location.watchHeadingAsync((reading) => {
+      const next = reading?.trueHeading >= 0 ? reading.trueHeading : reading?.magHeading;
+      if (!Number.isFinite(next)) return;
+      deviceHeadingRef.current = next;
+      setCompassHeading((prev) =>
+        prev === null || Math.abs(((next - prev + 540) % 360) - 180) >= 2 ? next : prev,
+      );
+    })
+      .then((sub) => {
+        if (cancelled) sub.remove();
+        else subscription = sub;
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (subscription) subscription.remove();
+      deviceHeadingRef.current = null;
+    };
   }, [isNavigating]);
 
   const handleCameraChanged = useCallback((mapState) => {
@@ -1156,10 +1157,8 @@ export default function MapScreen() {
     }
   }, []);
 
-  // Recenter button: re-engage camera follow and force an immediate approach
-  // re-fit (clear the throttle) so tapping it reframes the route right away.
+  // Recenter button: re-engage camera follow on the rider.
   const handleRecenter = useCallback(() => {
-    lastApproachFitRef.current = null;
     nav.recenter();
   }, [nav]);
 
@@ -1498,6 +1497,7 @@ export default function MapScreen() {
           }
           onStop={nav.stop}
           onSetApproachTarget={nav.setApproachTarget}
+          compassHeading={compassHeading}
         />
       ) : (
         <PlannerSheet
