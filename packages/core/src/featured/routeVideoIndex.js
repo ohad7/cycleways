@@ -1,12 +1,15 @@
+import { getJsonAsset } from "../platform/assets.js";
+
+// Platform-agnostic route-video index loader. Resolves the index + per-route
+// keyframe files through the shared asset adapter, so the same code works on
+// the web (fetched from the deployed site) and in the native app (bundled
+// offline assets). Web and native each provide their own getJsonAsset.
+
 let routeVideoIndexPromise = null;
 
 export function loadRouteVideoIndex() {
   if (!routeVideoIndexPromise) {
-    const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
-    routeVideoIndexPromise = fetch(`${base}public-data/route-videos/index.json`, {
-      cache: "no-store",
-    })
-      .then((r) => (r.ok ? r.json() : { routes: {} }))
+    routeVideoIndexPromise = getJsonAsset("public-data/route-videos/index.json")
       .catch(() => ({ routes: {} }));
   }
   return routeVideoIndexPromise;
@@ -18,10 +21,5 @@ export async function hasRouteVideo(slug) {
 }
 
 export async function loadRouteVideoKeyframes(filename) {
-  const base = (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
-  const response = await fetch(`${base}public-data/route-videos/${filename}`, {
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error(`keyframes ${filename}: HTTP ${response.status}`);
-  return response.json();
+  return getJsonAsset(`public-data/route-videos/${filename}`);
 }

@@ -2,7 +2,7 @@ import {
   buildCumulativeDistances,
   nearestPointOnPolyline,
   pointAtFraction,
-} from "./routeGeometry.js";
+} from "../domain/routeGeometryMath.js";
 
 function assertValid({ keyframes, videoDuration, routeGeometry }) {
   if (!Array.isArray(keyframes) || keyframes.length < 2) {

@@ -46,7 +46,8 @@ async function main() {
   await fs.mkdir(targetRoot, { recursive: true });
 
   const snapshotAssets = await featuredRouteSnapshotAssets();
-  const allJsonAssets = [...jsonAssets, ...snapshotAssets];
+  const videoAssets = await featuredVideoAssets();
+  const allJsonAssets = [...jsonAssets, ...snapshotAssets, ...videoAssets];
 
   for (const asset of allJsonAssets) {
     await copyLogicalAsset(asset.logicalPath, asset.targetPath);
@@ -106,6 +107,22 @@ async function featuredRouteSnapshotAssets() {
     .map((e) => e.slug)
     .filter(Boolean)
     .map((slug) => ({ logicalPath: `public-data/featured-routes/${slug}.json` }));
+}
+
+// The route-video index + per-route keyframe files, so the native synced-video
+// player can load them offline via getJsonAsset.
+async function featuredVideoAssets() {
+  const indexPath = path.join(sourceRoot, "route-videos/index.json");
+  let index;
+  try {
+    index = JSON.parse(await fs.readFile(indexPath, "utf8"));
+  } catch {
+    return [];
+  }
+  const files = new Set(["index.json", ...Object.values(index?.routes || {})]);
+  return [...files]
+    .filter(Boolean)
+    .map((file) => ({ logicalPath: `public-data/route-videos/${file}` }));
 }
 
 // POI image paths referenced by per-route snapshot files, so ROUTE_IMAGES
