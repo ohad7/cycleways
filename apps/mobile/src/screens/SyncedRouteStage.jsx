@@ -12,8 +12,8 @@ import RouteMapPreview from "./RouteMapPreview.jsx";
 const FULL_WIDTH = Dimensions.get("window").width - 32; // inside 16px padding
 const STAGE_WIDTH = FULL_WIDTH;
 const STAGE_HEIGHT = Math.round(FULL_WIDTH * 1.25); // 4:5 portrait-ish frame
-const PIP_WIDTH = 120;
-const PIP_HEIGHT = 84;
+const PIP_WIDTH = 168;
+const PIP_HEIGHT = 124;
 
 export default function SyncedRouteStage({
   youtubeId,

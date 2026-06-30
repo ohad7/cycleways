@@ -71,10 +71,11 @@ export default function SyncedVideoPlayer({
   }, [playing, onTime]);
 
   const onChangeState = useCallback((state) => {
+    // Only mirror real play/pause transitions. "unstarted"/"buffering"/"cued"
+    // are transient — treating "unstarted" as a pause would immediately undo the
+    // play we just requested (the video would never start).
     if (state === "playing") setPlaying(true);
-    else if (state === "paused" || state === "ended" || state === "unstarted") {
-      setPlaying(false);
-    }
+    else if (state === "paused" || state === "ended") setPlaying(false);
   }, []);
 
   const seekTo = useCallback(
@@ -105,7 +106,13 @@ export default function SyncedVideoPlayer({
           videoId={youtubeId}
           onChangeState={onChangeState}
           initialPlayerParams={HIDE_YT_CHROME}
-          webViewProps={{ pointerEvents: "none" }}
+          // iOS blocks programmatic play unless the WebView is allowed to play
+          // media without an in-WebView user gesture. Our play button lives in
+          // RN, so this is required for the custom controls to start playback.
+          webViewProps={{
+            allowsInlineMediaPlayback: true,
+            mediaPlaybackRequiresUserAction: false,
+          }}
         />
       </View>
 
