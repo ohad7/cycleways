@@ -5,6 +5,7 @@ import { createNavigationContainerRef } from "@react-navigation/native";
 import {
   createNativeRouteHref,
   getNativeRoutePath,
+  resetNativeLocationHref,
   setNativeLocationHref,
 } from "@cycleways/core/platform/location.native.js";
 import {
@@ -39,14 +40,25 @@ export default function App() {
       if (!mounted || requestId !== launchRequestId) return;
       setLaunchError(result.error);
       if (!result.error) {
-        const target = launchTargetFromHref(url);
         if (warm) {
-          // App already running: navigate imperatively.
-          if (navigationRef.isReady() && target.screen === "Build") {
-            navigationRef.navigate("Build", target.params);
+          // Warm catalog-route link: drive Build via params (not the href). Reset the
+          // href that resolveNativeLaunchUrl just seeded so a freshly-mounted Build
+          // controller does not ALSO load it (double-load), then navigate with the
+          // routeToken so the params loader fires even when Build is already focused.
+          if (navigationRef.isReady() && result.resolved) {
+            resetNativeLocationHref();
+            navigationRef.navigate("Build", {
+              routeToken: result.resolved.routeToken,
+              slug: result.resolved.slug,
+              name: result.resolved.name,
+            });
           }
         } else {
-          initialTargetRef.current = target;
+          // Cold start: Build loads via the seeded href (params carry slug only, NO
+          // routeToken) so the controller init effect reads the href and the params
+          // loader does not double-fire. Keep this asymmetry — do not add routeToken
+          // here.
+          initialTargetRef.current = launchTargetFromHref(url);
         }
       }
       setReady(true);
@@ -104,13 +116,13 @@ async function resolveNativeLaunchUrl(url) {
   const routePath = getNativeRoutePath(url);
   if (!routePath) {
     setNativeLocationHref(url);
-    return { error: null };
+    return { error: null, resolved: null };
   }
   try {
     const entries = await loadRouteCatalogEntries();
     const entry = findRouteCatalogEntryBySlug({ entries }, routePath.slug);
     if (!entry?.route) {
-      return { error: { message: `לא נמצא מסלול בשם ${routePath.slug}` } };
+      return { error: { message: `לא נמצא מסלול בשם ${routePath.slug}` }, resolved: null };
     }
     setNativeLocationHref(
       createNativeRouteHref(entry.route, {
@@ -120,10 +132,10 @@ async function resolveNativeLaunchUrl(url) {
         name: entry.name,
       }),
     );
-    return { error: null };
+    return { error: null, resolved: { routeToken: entry.route, slug: entry.slug, name: entry.name } };
   } catch (error) {
     console.warn("Native route catalog link failed:", error);
-    return { error: { message: "לא הצלחנו לפתוח את המסלול מהקטלוג" } };
+    return { error: { message: "לא הצלחנו לפתוח את המסלול מהקטלוג" }, resolved: null };
   }
 }
 
