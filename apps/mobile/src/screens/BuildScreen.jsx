@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Location from "expo-location";
 import { useSyntheticRoutePlaybackEngine } from "@cycleways/core/ui/routePlaybackEngine.js";
-import PlaybackControls from "./planner/PlaybackControls.jsx";
+import PlaybackControls from "../planner/PlaybackControls.jsx";
 import {
   Dimensions,
   Keyboard,
@@ -51,22 +51,21 @@ import { MAP_INITIAL_CAMERA } from "@cycleways/core/map/mapViewport.js";
 import { buildRoutePointDragPreviewFeatureCollection } from "@cycleways/core/map/routeDragPreview.js";
 import DataMarkerImages, {
   NATIVE_DATA_MARKER_ICON_NAMESPACE,
-} from "./DataMarkerImages.jsx";
-import ElevationProfileChart from "./ElevationProfileChart.jsx";
-import RichText from "./RichText.jsx";
-import PlannerSheet from "./planner/PlannerSheet.jsx";
-import TopSearch from "./planner/TopSearch.jsx";
-import MapControls from "./planner/MapControls.jsx";
-import DiscoverPanel from "./planner/DiscoverPanel.jsx";
-import RoutePoiList from "./planner/RoutePoiList.jsx";
-import NavPanel from "./planner/NavPanel.jsx";
-import DestinationSheet from "./planner/DestinationSheet.jsx";
-import { useNavigationSession } from "./navigation/useNavigationSession.js";
-import { createDefaultLocationSource } from "./navigation/locationService.js";
-import { createSimulateRideSource } from "./navigation/simulateRideSource.js";
+} from "../DataMarkerImages.jsx";
+import ElevationProfileChart from "../ElevationProfileChart.jsx";
+import RichText from "../RichText.jsx";
+import PlannerSheet from "../planner/PlannerSheet.jsx";
+import TopSearch from "../planner/TopSearch.jsx";
+import MapControls from "../planner/MapControls.jsx";
+import RoutePoiList from "../planner/RoutePoiList.jsx";
+import NavPanel from "../planner/NavPanel.jsx";
+import DestinationSheet from "../planner/DestinationSheet.jsx";
+import { useNavigationSession } from "../navigation/useNavigationSession.js";
+import { createDefaultLocationSource } from "../navigation/locationService.js";
+import { createSimulateRideSource } from "../navigation/simulateRideSource.js";
 import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
-import Icon from "./planner/Icon.jsx";
-import { palette } from "./planner/theme.js";
+import Icon from "../planner/Icon.jsx";
+import { palette } from "../planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
 import {
   getPlannerBuildModel,
@@ -251,7 +250,7 @@ const ADD_GUARD_MS = 350;
 // so the route stays framed in the uncovered upper area during preview.
 const PLAYBACK_FIT_BOTTOM_PADDING = Math.round(Dimensions.get("window").height * 0.48) + 24;
 
-export default function MapScreen() {
+export default function BuildScreen({ navigation, route }) {
   const cameraRef = useRef(null);
   const routePointPressGuardRef = useRef(0);
   const [locationState, setLocationState] = useState({
@@ -260,10 +259,6 @@ export default function MapScreen() {
     point: null,
     status: "idle",
   });
-  // Front-panel mode (mirrors the web FrontPanel / PanelStateToggle): "discover"
-  // browses the bundled route catalog, "build" is the planner. The app opens in
-  // discovery (the primary navigation entry point) with the drawer already open.
-  const [panelState, setPanelState] = useState("discover");
   const [catalogEntries, setCatalogEntries] = useState([]);
   // Slug of the catalog route currently loaded in the planner; drives the Build
   // panel's "מסלול מומלץ" eyebrow. Cleared once the rider edits the route.
@@ -782,7 +777,7 @@ export default function MapScreen() {
   }, [nav]);
 
   // Derive build-panel presentation options (matches the web's typed-cased variant).
-  const mapPresentationActive = panelState === "build" && !isNavigating;
+  const mapPresentationActive = !isNavigating;
 
   // Route playback engine: drives the scrub marker along the route while
   // the build sheet is open and the user presses play / scrubs.
@@ -1084,7 +1079,7 @@ export default function MapScreen() {
           const muted = !onRoute;
           // Only push puck state when the *displayed* value actually changes:
           // round lng/lat to ~6dp and rotation to whole degrees so identical
-          // frames (e.g. stationary) don't re-render MapScreen at ~60fps.
+          // frames (e.g. stationary) don't re-render the screen at ~60fps.
           const last = lastPushedPuckRef.current;
           const candidate = {
             lng: Math.round(lng * 1e6) / 1e6,
@@ -1180,31 +1175,37 @@ export default function MapScreen() {
     nav.recenter();
   }, [nav]);
 
-  // Discover -> Build: restore the catalog entry's encoded route token through
-  // the same shared path used by deep links, record it in recents, and switch
-  // to the planner. The map auto-fits via the routeFitRequest effect.
-  const handleSelectCatalogRoute = useCallback(
-    async (entry) => {
-      if (!entry?.route) return;
-      const loaded = await handleLoadRouteParam(entry.route);
-      if (!loaded) return;
-      setSelectedCatalogSlug(entry.slug ?? null);
-      setPanelState("build");
-      handleAddRecentRoute?.({
-        name: entry.name,
-        slug: entry.slug,
-        param: entry.route,
-        source: "catalog",
-      });
-    },
-    [handleAddRecentRoute, handleLoadRouteParam],
-  );
-
   // Any hand edit detaches the route from the catalog entry it was loaded from.
   const handleClearRoute = useCallback(() => {
     setSelectedCatalogSlug(null);
     handleRouteClear();
   }, [handleRouteClear]);
+
+  // In-app selection: Discover navigates here with the chosen route's encoded
+  // token. Load it through the same shared path used by deep links and record
+  // it as a recent. Cold-start deep links instead seed the native href (read by
+  // the controller on init), so this only runs for explicit in-app picks.
+  const routeTokenParam = route?.params?.routeToken ?? null;
+  const routeSlugParam = route?.params?.slug ?? null;
+  const routeNameParam = route?.params?.name ?? null;
+  useEffect(() => {
+    if (!routeTokenParam) return;
+    let cancelled = false;
+    (async () => {
+      const loaded = await handleLoadRouteParam(routeTokenParam);
+      if (cancelled || !loaded) return;
+      setSelectedCatalogSlug(routeSlugParam);
+      handleAddRecentRoute?.({
+        name: routeNameParam,
+        slug: routeSlugParam,
+        param: routeTokenParam,
+        source: "catalog",
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [routeTokenParam, routeSlugParam, routeNameParam, handleLoadRouteParam, handleAddRecentRoute]);
 
   const handleMapIdle = useCallback(
     (mapState) => {
@@ -1561,46 +1562,27 @@ export default function MapScreen() {
           ) : null}
         </>
       ) : (
-        <PlannerSheet
-          sheetRef={plannerSheetRef}
-          panelState={panelState}
-          onPanelStateChange={setPanelState}
-          discover={
-            <DiscoverPanel
-              entries={catalogEntries}
-              onSelect={handleSelectCatalogRoute}
-              fix={
-                locationState.enabled && locationState.point
-                  ? {
-                      lat: locationState.point.lat,
-                      lng: locationState.point.lng,
-                    }
-                  : null
-              }
-            />
-          }
-          build={
-            <BuildPanelContent
-              canDownload={canDownload}
-              canRedo={canRedo}
-              canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
-              canUndo={canUndo}
-              catalogEntry={selectedCatalogEntry}
-              locationState={locationState}
-              onClear={handleClearRoute}
-              onOpenSummary={handleOpenDownload}
-              onRedo={handleRedo}
-              onSeekToFraction={seekToFraction}
-              onShare={shareRoute}
-              onStartNavigation={nav.start}
-              onUndo={handleUndo}
-              playback={playback}
-              presentation={routePresentation}
-              routePoints={displayedRoutePoints}
-              routeState={routeState}
-            />
-          }
-        />
+        <PlannerSheet sheetRef={plannerSheetRef}>
+          <BuildPanelContent
+            canDownload={canDownload}
+            canRedo={canRedo}
+            canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
+            canUndo={canUndo}
+            catalogEntry={selectedCatalogEntry}
+            locationState={locationState}
+            onClear={handleClearRoute}
+            onOpenSummary={handleOpenDownload}
+            onRedo={handleRedo}
+            onSeekToFraction={seekToFraction}
+            onShare={shareRoute}
+            onStartNavigation={nav.start}
+            onUndo={handleUndo}
+            playback={playback}
+            presentation={routePresentation}
+            routePoints={displayedRoutePoints}
+            routeState={routeState}
+          />
+        </PlannerSheet>
       )}
     </View>
   );
@@ -1761,8 +1743,7 @@ function BuildPanelContent({
   );
 }
 
-// Native equivalent of the web DiscoverPanel: a scrollable list of bundled
-// catalog routes. Selecting a card loads the route into the planner.
+// Data-marker info card (shown when the user taps a map marker).
 function DataMarkerCard({ marker, onAddToRoute, onClose }) {
   if (!marker) return null;
   const label = POI_LABELS[marker.type] || marker.type || "מידע";

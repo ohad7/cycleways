@@ -6,9 +6,9 @@
 //
 // Replays a pre-built array of fix objects (e.g. from generateTrack) through
 // onFix on a timer. Always grants permission — no native dialog required. Use
-// this from the __DEV__-gated MapScreen sim harness, never in production.
+// this from the __DEV__-gated BuildScreen sim harness, never in production.
 //
-// To produce fix arrays for use as test fixtures, pair with the MapScreen
+// To produce fix arrays for use as test fixtures, pair with the BuildScreen
 // recorder (Task 17) which captures real GPS fixes and logs them as JSON.
 
 export function createSimulateRideSource(fixes, { intervalMs = 1000 } = {}) {

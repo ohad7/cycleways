@@ -1,12 +1,11 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import BuildScreen from "../screens/BuildScreen.jsx";
 
 const Stack = createNativeStackNavigator();
 
-// Temporary placeholders — replaced by DiscoverScreen (Task 6) and
-// BuildScreen (Task 5). They exist so the stack, deep links, and back
-// navigation can be verified now.
+// Temporary placeholder — replaced by DiscoverScreen (Task 6).
 function DiscoverPlaceholder({ navigation }) {
   return (
     <View style={styles.center}>
@@ -17,16 +16,6 @@ function DiscoverPlaceholder({ navigation }) {
       >
         <Text style={styles.btnText}>תכנן מסלול</Text>
       </Pressable>
-    </View>
-  );
-}
-
-function BuildPlaceholder({ route }) {
-  return (
-    <View style={styles.center}>
-      <Text style={styles.text}>
-        Build (placeholder){"\n"}slug: {route?.params?.slug ?? "—"}
-      </Text>
     </View>
   );
 }
@@ -45,7 +34,7 @@ export default function RootNavigator({
         <Stack.Screen name="Discover" component={DiscoverPlaceholder} />
         <Stack.Screen
           name="Build"
-          component={BuildPlaceholder}
+          component={BuildScreen}
           initialParams={initialRouteName === "Build" ? initialParams : undefined}
         />
       </Stack.Navigator>
