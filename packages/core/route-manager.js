@@ -1030,15 +1030,23 @@ class RouteManager {
     if (!this.baseRoutingAdjacency.has(fromNodeId)) {
       this.baseRoutingAdjacency.set(fromNodeId, []);
     }
+    const fromDistance = direction === "reverse" ? edge.lengthMeters : 0;
+    const toDistance = direction === "reverse" ? 0 : edge.lengthMeters;
+    // Bake BOTH the default (cycling-preference) and connector (road-preference)
+    // costs so the connector profile actually influences the graph search. The
+    // search picks the field by the active profile; without this, the baked
+    // cycling cost would win regardless of profile.
     this.baseRoutingAdjacency.get(fromNodeId).push({
       to: toNodeId,
       edgeId: edge.id,
       direction,
       distanceMeters: edge.lengthMeters,
-      cost: this._baseRoutingTraversalCost(
+      cost: this._baseRoutingTraversalCost(edge, fromDistance, toDistance, false),
+      connectorCost: this._baseRoutingTraversalCost(
         edge,
-        direction === "reverse" ? edge.lengthMeters : 0,
-        direction === "reverse" ? 0 : edge.lengthMeters,
+        fromDistance,
+        toDistance,
+        true,
       ),
     });
   }
@@ -1054,8 +1062,8 @@ class RouteManager {
     return 2.5;
   }
 
-  _baseRoutingCostMultiplier(edge) {
-    if (this._connectorCostProfile) return this._connectorCostMultiplierFor(edge);
+  _baseRoutingCostMultiplier(edge, connector = this._connectorCostProfile) {
+    if (connector) return this._connectorCostMultiplierFor(edge);
     if (edge.cwSegmentIds.length > 0) return 1;
     if (edge.routeClass === "cycle") return 1.35;
     if (edge.routeClass === "path_track" || edge.routeClass === "manual") {
@@ -1090,9 +1098,14 @@ class RouteManager {
     );
   }
 
-  _baseRoutingTraversalCostParts(edge, fromDistance, toDistance) {
+  _baseRoutingTraversalCostParts(
+    edge,
+    fromDistance,
+    toDistance,
+    connector = this._connectorCostProfile,
+  ) {
     const distanceMeters = Math.abs(toDistance - fromDistance);
-    const costMultiplier = this._baseRoutingCostMultiplier(edge);
+    const costMultiplier = this._baseRoutingCostMultiplier(edge, connector);
     const distanceCost = distanceMeters * costMultiplier;
     const uphillMeters = this._baseRoutingUphillMeters(
       edge,
@@ -1112,11 +1125,17 @@ class RouteManager {
     };
   }
 
-  _baseRoutingTraversalCost(edge, fromDistance, toDistance) {
+  _baseRoutingTraversalCost(
+    edge,
+    fromDistance,
+    toDistance,
+    connector = this._connectorCostProfile,
+  ) {
     return this._baseRoutingTraversalCostParts(
       edge,
       fromDistance,
       toDistance,
+      connector,
     ).cost;
   }
 
@@ -1667,7 +1686,10 @@ class RouteManager {
       }
 
       for (const edge of this.baseRoutingAdjacency.get(current.nodeId) || []) {
-        const nextCost = current.cost + edge.cost;
+        const stepCost = this._connectorCostProfile
+          ? edge.connectorCost
+          : edge.cost;
+        const nextCost = current.cost + stepCost;
         if (nextCost >= (distances.get(edge.to) ?? Infinity)) continue;
         distances.set(edge.to, nextCost);
         previous.set(edge.to, {
