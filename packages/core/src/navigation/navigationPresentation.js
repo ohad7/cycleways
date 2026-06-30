@@ -4,6 +4,8 @@
 //
 // Copy is Hebrew/RTL to match the rest of the native planner chrome.
 
+import { CONNECTOR_NEAR_RADIUS_M } from "./connectorTargeting.js";
+
 const STATUS_TEXT = {
   "requesting-permission": "מבקש הרשאת מיקום…",
   approaching: "מתקרב למסלול…",
@@ -71,9 +73,17 @@ export function formatDistanceMeters(meters) {
 
 export function getNavigationPresentation(state = {}) {
   const status = state.status || "idle";
-  const onConnector = status === "on-connector";
-  const navigating = status === "navigating" || status === "off-route" || onConnector;
+  const navigating = status === "navigating" || status === "off-route";
   const offRoute = state.offRoute === true || status === "off-route";
+
+  const approach = state.approach || null;
+  const showApproach = status === "approaching" || offRoute;
+  const distanceToRoute = Number(approach?.distanceToRouteMeters);
+  const tier =
+    Number.isFinite(distanceToRoute) && distanceToRoute <= CONNECTOR_NEAR_RADIUS_M
+      ? "near"
+      : "far";
+  const choices = approach?.choices || null;
 
   const active = state.activeCue || null;
   const cue = cueDisplay(active?.cue || null);
@@ -98,13 +108,24 @@ export function getNavigationPresentation(state = {}) {
     offRoute,
     offRouteText: "חזרו למסלול",
     showContext:
-      onConnector ||
-      (navigating && !offRoute && Boolean(state.progress?.hasAcquiredRoute)),
-    contextText: onConnector
-      ? "מסלול חיבור — לכיוון המסלול"
-      : buildContextText(state.progress),
-    onConnector,
-    connectorContextText: "מסלול חיבור — לכיוון המסלול",
+      navigating && !offRoute && Boolean(state.progress?.hasAcquiredRoute),
+    contextText: buildContextText(state.progress),
+    showApproach,
+    tier,
+    approachDistanceText: Number.isFinite(distanceToRoute)
+      ? `${formatDistanceMeters(distanceToRoute)} למסלול`
+      : "",
+    disclaimerText: "ניווט מחוץ לרשת CycleWays",
+    showExternalNav: showApproach,
+    externalNavPrimary: tier === "far",
+    externalNavTarget: approach?.target?.point ?? null,
+    showJoinPrompt: status === "approaching" && choices?.shouldPrompt === true,
+    joinPrompt: choices?.shouldPrompt
+      ? {
+          startText: "התחל מתחילת המסלול",
+          nearestText: `הצטרף כאן (דילוג ~${formatDistanceMeters(choices.skipMeters)})`,
+        }
+      : null,
     showGuidance: status === "approaching" || offRoute,
     guidanceText: Number.isFinite(state.progress?.guidanceDistanceMeters)
       ? `${status === "approaching" ? "לכיוון תחילת המסלול" : "חזרה למסלול"} · ${formatDistanceMeters(state.progress.guidanceDistanceMeters)}`

@@ -72,22 +72,46 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(paused.statusText, "מושהה");
 }
 
-// Connector mode uses the maneuver pipeline with a distinct context line.
+// Approach (near tier): suggestion + disclaimer + external nav + join prompt.
 {
-  const p = getNavigationPresentation({
-    status: "on-connector",
-    activeCue: {
-      cue: { type: "turn", direction: "right" },
-      phase: "preview",
-      distanceToCueMeters: 80,
+  const near = getNavigationPresentation({
+    status: "approaching",
+    approach: {
+      target: { point: { lat: 32, lng: 35 } },
+      distanceToRouteMeters: 600,
+      choices: { skipMeters: 1500, shouldPrompt: true },
     },
-    progress: { remainingMeters: 300, hasAcquiredRoute: true },
+    progress: { guidanceDistanceMeters: 600 },
   });
-  assert.equal(p.onConnector, true);
-  assert.equal(p.showCue, true);
-  assert.equal(p.showContext, true);
-  assert.match(p.connectorContextText, /חיבור/);
-  assert.equal(p.contextText, p.connectorContextText);
+  assert.equal(near.showApproach, true);
+  assert.equal(near.tier, "near");
+  assert.equal(near.externalNavPrimary, false);
+  assert.match(near.approachDistanceText, /למסלול/);
+  assert.equal(near.disclaimerText, "ניווט מחוץ לרשת CycleWays");
+  assert.equal(near.showExternalNav, true);
+  assert.deepEqual(near.externalNavTarget, { lat: 32, lng: 35 });
+  assert.equal(near.showJoinPrompt, true);
+  assert.ok(near.joinPrompt.nearestText.includes("דילוג"));
+  assert.equal(near.joinPrompt.startText, "התחל מתחילת המסלול");
+  // No leftover connector presentation fields.
+  assert.equal(near.onConnector, undefined);
+  assert.equal(near.connectorContextText, undefined);
+}
+
+// Approach (far tier): external nav promoted to primary, no join prompt.
+{
+  const far = getNavigationPresentation({
+    status: "approaching",
+    approach: {
+      target: { point: { lat: 32, lng: 35 } },
+      distanceToRouteMeters: 4000,
+      choices: null,
+    },
+  });
+  assert.equal(far.tier, "far");
+  assert.equal(far.externalNavPrimary, true);
+  assert.equal(far.showJoinPrompt, false);
+  assert.equal(far.joinPrompt, null);
 }
 
 // --- context line ---
