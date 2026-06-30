@@ -156,6 +156,7 @@ export default function RouteDetailScreen({ navigation, route }) {
           {videoData && videoSync ? (
             <SyncedRouteStage
               youtubeId={videoData.youtubeId}
+              duration={videoData.videoDuration}
               sync={videoSync}
               geometry={routeState.geometry}
               activeDataPoints={routeState.activeDataPoints}

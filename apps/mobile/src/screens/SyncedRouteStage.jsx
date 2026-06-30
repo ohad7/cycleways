@@ -4,18 +4,20 @@ import SyncedVideoPlayer from "./SyncedVideoPlayer.jsx";
 import RouteMapPreview from "./RouteMapPreview.jsx";
 
 // The featured stage: a primary media surface (video by default) with the other
-// surface (the route map) as a small swappable picture-in-picture in the corner.
-// As the video plays, its time drives a cursor along the route map + elevation
-// via the supplied videoSync. Both surfaces stay mounted across a swap so the
-// video keeps playing. Mirrors the mobile-web video-first composition.
-const STAGE_HEIGHT = 230;
+// surface (the route map) as a small swappable picture-in-picture in the top
+// corner. As the video plays, its time drives a cursor along the route map +
+// elevation via the supplied videoSync. Both surfaces stay mounted across a swap
+// so the video keeps playing. Mirrors the mobile-web video-first composition: a
+// taller (4:5) cropped video with our own controls.
+const FULL_WIDTH = Dimensions.get("window").width - 32; // inside 16px padding
+const STAGE_WIDTH = FULL_WIDTH;
+const STAGE_HEIGHT = Math.round(FULL_WIDTH * 1.25); // 4:5 portrait-ish frame
 const PIP_WIDTH = 120;
 const PIP_HEIGHT = 84;
-// Content width inside the detail screen's 16px horizontal padding.
-const FULL_WIDTH = Dimensions.get("window").width - 32;
 
 export default function SyncedRouteStage({
   youtubeId,
+  duration,
   sync,
   geometry,
   activeDataPoints,
@@ -43,12 +45,14 @@ export default function SyncedRouteStage({
 
   const videoPrimary = primary === "video";
 
-  // Both surfaces are always rendered; only their size/position changes on swap.
+  // Both surfaces are always rendered; only their size/variant changes on swap.
   const video = (
     <SyncedVideoPlayer
       youtubeId={youtubeId}
-      height={videoPrimary ? STAGE_HEIGHT : PIP_HEIGHT}
-      width={videoPrimary ? FULL_WIDTH : PIP_WIDTH}
+      duration={duration}
+      variant={videoPrimary ? "primary" : "pip"}
+      frameWidth={videoPrimary ? STAGE_WIDTH : PIP_WIDTH}
+      frameHeight={videoPrimary ? STAGE_HEIGHT : PIP_HEIGHT}
       onTime={handleTime}
     />
   );
