@@ -1,15 +1,7 @@
 import { getDistance } from "../utils/distance.js";
 import { projectToSegment } from "./routeProgress.js";
 
-export const APPROACH_NEAREST_MARGIN_M = 300;
 export const REJOIN_FORWARD_WINDOW_M = 1500;
-export const CONNECTOR_MAX_DISTANCE_M = 8000;
-export const RECOMPUTE_MIN_MS = 5000;
-export const RECOMPUTE_MIN_MOVE_M = 30;
-export const TRANSIENT_RETRY_BASE_MS = 4000;
-export const HANDOFF_RADIUS_M = 25;
-export const HANDOFF_ACCURACY_FACTOR = 1;
-export const HANDOFF_MAX_ACCURACY_M = 30;
 
 function pointAtFraction(a, b, fraction) {
   return {
@@ -55,6 +47,10 @@ export function projectOntoRoute(
   return best;
 }
 
+// Mid-ride rejoin target: the nearest projection ahead of the last confirmed
+// on-route progress (never backtrack). The approach case is handled separately
+// by approachTargetChoices (explicit start-vs-join prompt), so this is
+// rejoin-only.
 export function selectConnectorTarget(
   navigationRoute,
   fix,
@@ -63,30 +59,16 @@ export function selectConnectorTarget(
   const geometry = Array.isArray(navigationRoute?.geometry)
     ? navigationRoute.geometry
     : [];
-  if (geometry.length < 2 || !fix) return null;
+  if (geometry.length < 2 || !fix || mode !== "rejoin") return null;
 
-  if (mode === "rejoin") {
-    const min = Math.max(0, Number(lastConfirmedProgressMeters) || 0);
-    const projection = projectOntoRoute(geometry, fix, {
-      minProgressMeters: min,
-      maxProgressMeters: min + REJOIN_FORWARD_WINDOW_M,
-    });
-    return projection
-      ? { point: projection.point, mainProgressMeters: projection.progressMeters }
-      : null;
-  }
-
-  const start = geometry[0];
-  const nearest = projectOntoRoute(geometry, fix);
-  if (!nearest) return null;
-  const distanceToStart = getDistance(fix, start);
-  if (nearest.crossTrackMeters < distanceToStart - APPROACH_NEAREST_MARGIN_M) {
-    return { point: nearest.point, mainProgressMeters: nearest.progressMeters };
-  }
-  return {
-    point: { lat: start.lat, lng: start.lng },
-    mainProgressMeters: 0,
-  };
+  const min = Math.max(0, Number(lastConfirmedProgressMeters) || 0);
+  const projection = projectOntoRoute(geometry, fix, {
+    minProgressMeters: min,
+    maxProgressMeters: min + REJOIN_FORWARD_WINDOW_M,
+  });
+  return projection
+    ? { point: projection.point, mainProgressMeters: projection.progressMeters }
+    : null;
 }
 
 export const CONNECTOR_NEAR_RADIUS_M = 1000;
@@ -110,9 +92,4 @@ export function approachTargetChoices(navigationRoute, fix) {
   };
   const skipMeters = Math.max(0, projection.progressMeters);
   return { start, nearest, skipMeters, shouldPrompt: skipMeters >= JOIN_SKIP_PROMPT_M };
-}
-
-export function connectorWithinCap(distanceMeters) {
-  const distance = Number(distanceMeters);
-  return Number.isFinite(distance) && distance > 0 && distance <= CONNECTOR_MAX_DISTANCE_M;
 }
