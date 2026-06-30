@@ -1,0 +1,231 @@
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  findRouteCatalogEntryBySlug,
+  loadRouteCatalogEntries,
+} from "@cycleways/core/data/catalog.js";
+import {
+  loadFeaturedRouteSnapshot,
+  snapshotToRouteState,
+} from "@cycleways/core/data/featuredRouteSnapshots.js";
+import { resetNativeLocationHref } from "@cycleways/core/platform/location.native.js";
+import { routeDetailModel } from "./routeDetailModel.js";
+import BackButton from "./BackButton.jsx";
+import RouteMapPreview from "./RouteMapPreview.jsx";
+import RoutePoiList from "../planner/RoutePoiList.jsx";
+import ElevationProfileChart from "../ElevationProfileChart.jsx";
+import { palette } from "../planner/theme.js";
+
+// Offline / fallback route-detail screen (used when the WebView can't load the
+// real web page). Native, built from the bundled snapshot: header/stats, route
+// map + POI markers, "על המסלול", POI stories, elevation, and the editor CTA.
+// No video here — the rich synced video lives on the web page (RouteDetailWeb).
+export default function RouteDetailNative({ navigation, route }) {
+  const insets = useSafeAreaInsets();
+  const slug = route?.params?.slug ?? null;
+  const [entry, setEntry] = useState(null);
+  const [snapshot, setSnapshot] = useState(null);
+  const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    if (!slug) {
+      setStatus("error");
+      return undefined;
+    }
+    let cancelled = false;
+    setStatus("loading");
+    (async () => {
+      try {
+        const [entries, snap] = await Promise.all([
+          loadRouteCatalogEntries(),
+          loadFeaturedRouteSnapshot(slug),
+        ]);
+        if (cancelled) return;
+        setEntry(findRouteCatalogEntryBySlug({ entries }, slug));
+        setSnapshot(snap);
+        setStatus("ready");
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("Route detail (native) load failed:", error);
+          setStatus("error");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  const routeState = useMemo(
+    () => (snapshot ? snapshotToRouteState(snapshot) : null),
+    [snapshot],
+  );
+  const model = useMemo(
+    () => (entry ? routeDetailModel(entry, snapshot) : null),
+    [entry, snapshot],
+  );
+
+  const goBack = () => navigation.goBack();
+  const openEditor = () => {
+    if (!entry?.route) return;
+    resetNativeLocationHref();
+    navigation.navigate("Build", {
+      routeToken: entry.route,
+      slug: entry.slug ?? null,
+      name: entry.name ?? null,
+    });
+  };
+
+  if (status === "loading") {
+    return <Centered insets={insets} text="טוען מסלול…" onBack={goBack} />;
+  }
+  if (status === "error" || !model || !routeState) {
+    return (
+      <Centered insets={insets} text="לא הצלחנו לטעון את המסלול." onBack={goBack} />
+    );
+  }
+
+  return (
+    <View style={[styles.fill, { paddingTop: insets.top }]}>
+      <BackButton onPress={goBack} />
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 96 }]}
+      >
+        <View style={styles.header}>
+          {model.kicker ? <Text style={styles.kicker}>{model.kicker}</Text> : null}
+          <Text style={styles.title}>{model.title}</Text>
+          {model.stats.length ? (
+            <View style={styles.statsRow}>
+              {model.stats.map((s) => (
+                <View key={s.label} style={styles.stat}>
+                  <Text style={styles.statValue}>{s.value}</Text>
+                  <Text style={styles.statLabel}>{s.label}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
+          <RouteMapPreview
+            geometry={routeState.geometry}
+            activeDataPoints={routeState.activeDataPoints}
+          />
+        </View>
+
+        {model.description ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionHeading}>על המסלול</Text>
+            <Text style={styles.body}>{model.description}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <RoutePoiList activeDataPoints={routeState.activeDataPoints} />
+        </View>
+
+        {routeState.geometry.length >= 2 ? (
+          <View style={styles.section}>
+            <ElevationProfileChart geometry={routeState.geometry} />
+          </View>
+        ) : null}
+      </ScrollView>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="פתח לעריכה"
+        onPress={openEditor}
+        style={({ pressed }) => [
+          styles.cta,
+          { bottom: insets.bottom + 16 },
+          pressed ? styles.ctaPressed : null,
+        ]}
+      >
+        <Text style={styles.ctaText}>פתח לעריכה</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function Centered({ insets, text, onBack }) {
+  return (
+    <View style={[styles.fill, styles.center, { paddingTop: insets.top }]}>
+      {onBack ? <BackButton onPress={onBack} /> : null}
+      <Text style={styles.body}>{text}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  fill: { flex: 1, backgroundColor: palette.paper },
+  center: { alignItems: "center", justifyContent: "center" },
+  scroll: { padding: 16, gap: 16 },
+  header: { gap: 6 },
+  kicker: {
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  title: {
+    color: palette.ink,
+    fontSize: 24,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  statsRow: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: 16,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.line,
+    marginTop: 4,
+  },
+  stat: { alignItems: "center" },
+  statValue: { color: palette.ink, fontSize: 15, fontWeight: "800" },
+  statLabel: {
+    color: palette.muted,
+    fontSize: 11,
+    fontWeight: "700",
+    writingDirection: "rtl",
+  },
+  section: { gap: 8 },
+  sectionHeading: {
+    color: palette.ink,
+    fontSize: 17,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  body: {
+    color: palette.ink,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  cta: {
+    position: "absolute",
+    alignSelf: "center",
+    backgroundColor: palette.forest,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 28,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  ctaPressed: { opacity: 0.85 },
+  ctaText: {
+    color: palette.white,
+    fontSize: 16,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+});
