@@ -10,7 +10,7 @@ export default function RouteDetailScreen({ navigation, route }) {
   const slug = route?.params?.slug ?? null;
   const [webFailed, setWebFailed] = useState(false);
 
-  const openEditor = (token) => {
+  const openInBuild = (token) => {
     if (!token) return;
     resetNativeLocationHref();
     navigation.navigate("Build", { routeToken: token, slug, name: null });
@@ -24,7 +24,10 @@ export default function RouteDetailScreen({ navigation, route }) {
     <RouteDetailWeb
       slug={slug}
       onBack={() => navigation.goBack()}
-      onOpenEditor={openEditor}
+      onOpenEditor={openInBuild}
+      // Navigate currently routes into Build (where native turn-by-turn lives);
+      // swap for a dedicated navigation entry when that exists.
+      onNavigate={openInBuild}
       onError={() => setWebFailed(true)}
     />
   );
