@@ -31,6 +31,7 @@ import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
 import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
+import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import {
   precomputeArcLength,
   pointAndBearingAtDistance,
@@ -99,8 +100,19 @@ const ROUTE_TRAVELED_LINE_STYLE = {
   lineCap: "round",
 };
 
-const CONNECTOR_LINE_STYLE = {
-  lineColor: "#1e668c",
+// Thin/faint straight line rider→target: the persistent "the route is there"
+// anchor. Heavier dashed line: the road-preferring suggested connector (the
+// way you might take). Differentiated so they read as two different answers.
+const APPROACH_DIRECT_LINE_STYLE = {
+  lineColor: "#6b7280",
+  lineWidth: 2,
+  lineOpacity: 0.6,
+  lineDasharray: [1, 2],
+  lineJoin: "round",
+  lineCap: "round",
+};
+const APPROACH_SUGGESTION_LINE_STYLE = {
+  lineColor: "#2563eb",
   lineWidth: 4,
   lineOpacity: 0.9,
   lineDasharray: [2, 1.5],
@@ -691,7 +703,6 @@ export default function MapScreen() {
     navStatus === "navigating" ||
     navStatus === "approaching" ||
     navStatus === "off-route" ||
-    navStatus === "on-connector" ||
     navStatus === "paused" ||
     navStatus === "requesting-permission";
 
@@ -850,23 +861,61 @@ export default function MapScreen() {
   // off-route it sits at the (smoothed-heading) raw GPS fix. A single RAF loop
   // tweens the position/heading and drives the camera from the SAME values.
   const navProgress = nav.state?.progress ?? null;
-  const onConnector =
-    navStatus === "on-connector" ||
-    (navStatus === "paused" && nav.state?.connector?.status === "active");
-  const connectorGeometry = nav.state?.connector?.geometry;
-  const navGeometry =
-    onConnector && Array.isArray(connectorGeometry) && connectorGeometry.length >= 2
-      ? connectorGeometry
-      : routeState.geometry;
-  const activeGeometryKey = onConnector
-    ? `connector:${nav.state?.connector?.requestId ?? 0}`
-    : "main";
-  const connectorRouteGeometry = useMemo(
+  const navPresentation = useMemo(
+    () => getNavigationPresentation(nav.state ?? {}),
+    [nav.state],
+  );
+  // The puck/camera always ride the main route now; the connector is only a
+  // static suggestion overlay, never a navigated phase.
+  const navGeometry = routeState.geometry;
+  const activeGeometryKey = "main";
+
+  // Approach overlays (while approaching / off-route): a thin direct line
+  // rider→target plus, in the near tier, a dashed road-preferring suggestion.
+  const approach = nav.state?.approach ?? null;
+  const latestFix = nav.state?.latestFix ?? null;
+  const approachTargetPoint = approach?.target?.point ?? null;
+  const showApproachLines =
+    navStatus === "approaching" || navStatus === "off-route";
+  const directLineGeometry = useMemo(() => {
+    if (!showApproachLines || !latestFix || !approachTargetPoint) {
+      return EMPTY_FEATURE_COLLECTION;
+    }
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [latestFix.lng, latestFix.lat],
+              [approachTargetPoint.lng, approachTargetPoint.lat],
+            ],
+          },
+        },
+      ],
+    };
+  }, [
+    showApproachLines,
+    latestFix?.lat,
+    latestFix?.lng,
+    approachTargetPoint?.lat,
+    approachTargetPoint?.lng,
+  ]);
+  const suggestionGeometry = approach?.suggestionGeometry;
+  const showSuggestion =
+    showApproachLines &&
+    navPresentation.tier === "near" &&
+    Array.isArray(suggestionGeometry) &&
+    suggestionGeometry.length >= 2;
+  const suggestionFeature = useMemo(
     () =>
-      Array.isArray(connectorGeometry) && connectorGeometry.length >= 2
-        ? buildRouteGeometryFeatureCollection(connectorGeometry)
+      Array.isArray(suggestionGeometry) && suggestionGeometry.length >= 2
+        ? buildRouteGeometryFeatureCollection(suggestionGeometry)
         : EMPTY_FEATURE_COLLECTION,
-    [connectorGeometry],
+    [suggestionGeometry],
   );
   const cameraIntent = nav.state?.cameraIntent ?? "follow";
 
@@ -915,7 +964,7 @@ export default function MapScreen() {
   // switching main route ↔ connector so metres from one path are never applied
   // to the other.
   useEffect(() => {
-    smoothedMetersRef.current = onConnector ? 0 : navProgress?.progressMeters ?? 0;
+    smoothedMetersRef.current = navProgress?.progressMeters ?? 0;
     smoothedBearingRef.current = navProgress?.courseDeg ?? 0;
     travelIndexRef.current = -1;
     lastPushedPuckRef.current = null;
@@ -1041,8 +1090,8 @@ export default function MapScreen() {
             cameraIntentRef.current === "follow" &&
             navStatusRef.current !== "paused"
           ) {
-            if (onRoute || navStatusRef.current === "on-connector") {
-              // Main route or connector: tight heading-up follow on the rider.
+            if (onRoute) {
+              // On the main route: tight heading-up follow on the rider.
               cameraRef.current?.setCamera?.({
                 centerCoordinate: [lng, lat],
                 heading,
@@ -1278,9 +1327,20 @@ export default function MapScreen() {
           ) : null}
           <LineLayer id="route-line" style={routeLineStyles.core} />
         </ShapeSource>
-        {nav.state?.connector?.status === "active" ? (
-          <ShapeSource id="connector-route" shape={connectorRouteGeometry}>
-            <LineLayer id="connector-route-line" style={CONNECTOR_LINE_STYLE} />
+        {showApproachLines ? (
+          <ShapeSource id="approach-direct" shape={directLineGeometry}>
+            <LineLayer
+              id="approach-direct-line"
+              style={APPROACH_DIRECT_LINE_STYLE}
+            />
+          </ShapeSource>
+        ) : null}
+        {showSuggestion ? (
+          <ShapeSource id="approach-suggestion" shape={suggestionFeature}>
+            <LineLayer
+              id="approach-suggestion-line"
+              style={APPROACH_SUGGESTION_LINE_STYLE}
+            />
           </ShapeSource>
         ) : null}
         {isNavigating ? (
@@ -1437,6 +1497,7 @@ export default function MapScreen() {
             navStatus === "paused" ? nav.resume() : nav.pause()
           }
           onStop={nav.stop}
+          onSetApproachTarget={nav.setApproachTarget}
         />
       ) : (
         <PlannerSheet
