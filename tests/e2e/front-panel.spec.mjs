@@ -19,6 +19,10 @@ test("front panel shows discover by default and toggles to build", async ({ page
     await expect(page.locator(".map-container")).toHaveCount(0);
 
     await home.getByRole("button", { name: "+ תכנן מסלול" }).click();
+    const sheet = page.locator(".front-sheet");
+    await expect(sheet).toHaveAttribute("data-snap", "peek");
+    await expect(sheet.locator(".front-sheet__build-peek")).toContainText("מסלול חדש");
+    await sheet.getByRole("button", { name: "שנה גודל פאנל" }).click();
     const panel = page.getByTestId("front-panel");
     await expect(panel).toBeVisible();
     await expect(panel.getByRole("tab", { name: "בניית מסלול" })).toHaveAttribute("aria-selected", "true");
