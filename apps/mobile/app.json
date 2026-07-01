@@ -67,7 +67,8 @@
           "locationAlwaysAndWhenInUsePermission": "Keep following turn-by-turn navigation while your screen is locked during a ride.",
           "isIosBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "./plugins/withWebroot.js"
     ]
   }
 }

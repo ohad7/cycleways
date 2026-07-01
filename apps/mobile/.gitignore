@@ -43,3 +43,4 @@ yarn-error.*
 
 # Generated web bundle served by the local static server (npm run bundle:web)
 webroot/
+ios/webroot/
