@@ -16,6 +16,35 @@
 import * as Location from "expo-location";
 import { toNavigationFix } from "@cycleways/core/navigation/locationFix.js";
 
+// One bounded location lookup for ride setup. This is deliberately separate
+// from the high-accuracy navigation watch: opening setup must not leave a GPS
+// subscription running.
+export async function getRideSetupLocation() {
+  try {
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (permission.status !== "granted") {
+      return { status: "denied", fix: null };
+    }
+
+    const cached = await Location.getLastKnownPositionAsync({
+      maxAge: 30_000,
+      requiredAccuracy: 100,
+    });
+    const cachedFix = toNavigationFix(cached);
+    if (cachedFix) return { status: "ready", fix: cachedFix };
+
+    const current = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+    const fix = toNavigationFix(current);
+    return fix
+      ? { status: "ready", fix }
+      : { status: "unavailable", fix: null };
+  } catch (error) {
+    return { status: "unavailable", fix: null, error };
+  }
+}
+
 // Request the permissions navigation needs. Foreground is always required;
 // background is requested only when asked AND after foreground is granted.
 export async function requestNavigationPermissions({ background = false } = {}) {

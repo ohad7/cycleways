@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import ElevationProfile from "../ElevationProfile.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 
-export default function FeaturedElevation() {
+export default function FeaturedElevation({ chartId = "elevation-chart" }) {
   const {
     routeState,
     videoCursor,
@@ -31,6 +31,7 @@ export default function FeaturedElevation() {
 
   return (
     <ElevationProfile
+      chartId={chartId}
       geometry={routeState.geometry}
       distance={routeState.distance}
       cursorFraction={Number.isFinite(videoCursor?.fraction) ? videoCursor.fraction : null}

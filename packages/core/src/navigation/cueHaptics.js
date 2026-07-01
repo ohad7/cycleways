@@ -12,6 +12,7 @@ export function createCueHapticPlanner({ cooldownMs = DEFAULT_COOLDOWN_MS } = {}
 
   function intensity(cueEvent) {
     if (cueEvent.kind === "off-route") return "heavy";
+    if (cueEvent.kind === "acquired") return "medium";
     if (cueEvent.kind === "cue") {
       if (cueEvent.cueType === "enter-segment") return null; // visual-only
       return cueEvent.phase === "final" ? "medium" : "light";

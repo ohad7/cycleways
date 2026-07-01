@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="he" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ציר גובה מסונכרן + CTA דביק</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 26px;
+      background: #e8ece8;
+      color: #24313a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+    .sheet { width: 430px; margin: 0 auto; direction: rtl; }
+    .label { margin: 0 0 4px; color: #9a5a30; font-size: 12px; font-weight: 900; text-align: right; }
+    h1 { margin: 0 0 5px; font-size: 24px; text-align: right; }
+    .sub { margin: 0 0 14px; color: #63716b; font-size: 13px; line-height: 1.45; text-align: right; }
+    .phone {
+      position: relative;
+      width: 390px;
+      height: 780px;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 8px solid #172026;
+      border-radius: 38px;
+      background: #fdfcf8;
+      box-shadow: 0 24px 60px rgba(23,32,38,.22);
+    }
+    .notch {
+      position: absolute;
+      z-index: 30;
+      top: 8px;
+      left: 50%;
+      width: 104px;
+      height: 24px;
+      transform: translateX(-50%);
+      border-radius: 20px;
+      background: #172026;
+    }
+    .screen { height: 100%; overflow: hidden; padding-bottom: 88px; }
+    .route-head { padding: 40px 16px 12px; text-align: right; background: #fdfcf8; }
+    .route-head h2 { margin: 0; font-size: 22px; }
+    .route-head p { margin: 4px 0 10px; color: #53616a; font-size: 12px; }
+    .metrics { display: flex; gap: 15px; justify-content: flex-start; padding-top: 8px; border-top: 1px solid rgba(36,49,58,.12); font-size: 12px; font-weight: 850; }
+    .stage { position: relative; height: 306px; overflow: hidden; background: #26332f; }
+    .stage > img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.82) contrast(.97); }
+    .stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,18,16,.03), rgba(10,18,16,.09) 55%, rgba(10,18,16,.42)); }
+    .map-pip { position: absolute; z-index: 3; top: 12px; right: 12px; width: 110px; height: 90px; overflow: hidden; border: 2px solid rgba(255,255,255,.92); border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.28); }
+    .map-pip img { width: 100%; height: 100%; object-fit: cover; }
+    .poi-pill { position: absolute; z-index: 4; top: 14px; left: 12px; padding: 8px 12px; border-radius: 999px; background: rgba(253,252,248,.94); font-size: 11px; font-weight: 850; }
+    .video-play {
+      position: absolute;
+      z-index: 5;
+      top: 50%;
+      left: 50%;
+      display: grid;
+      width: 54px;
+      height: 54px;
+      place-items: center;
+      transform: translate(-50%,-50%);
+      border-radius: 50%;
+      background: rgba(227,46,37,.95);
+      color: #fff;
+      font-size: 23px;
+      box-shadow: 0 9px 25px rgba(0,0,0,.3);
+    }
+    .video-controls {
+      position: absolute;
+      z-index: 5;
+      right: 14px;
+      bottom: 12px;
+      left: 14px;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: rgba(18, 25, 28, .76);
+      color: rgba(255,255,255,.92);
+      box-shadow: 0 8px 20px rgba(0,0,0,.24);
+      backdrop-filter: blur(8px);
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .video-pause {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(255,255,255,.15);
+      font-size: 12px;
+    }
+    .video-scrub {
+      position: relative;
+      height: 5px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255,255,255,.24);
+    }
+    .video-scrub::before {
+      content: "";
+      position: absolute;
+      inset: 0 42% 0 0;
+      border-radius: inherit;
+      background: #fff;
+    }
+    .video-scrub::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 58%;
+      width: 11px;
+      height: 11px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: #fff;
+    }
+    .timeline {
+      position: relative;
+      min-height: 92px;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid rgba(36,49,58,.12);
+      background: #fdfcf8;
+      box-shadow: 0 -5px 16px rgba(23,32,38,.08);
+    }
+    .chart-wrap { min-width: 0; }
+    .chart-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; color: #52615c; font-size: 10px; font-weight: 800; direction: rtl; }
+    .chart { position: relative; height: 54px; overflow: hidden; border-radius: 9px; background: #f3f5f1; }
+    .chart svg { width: 100%; height: 100%; display: block; }
+    .cursor { position: absolute; top: 4px; bottom: 4px; left: 42%; width: 2px; background: #d97520; box-shadow: 0 0 0 1px rgba(255,255,255,.8); }
+    .cursor::before { content: ""; position: absolute; top: -1px; left: 50%; width: 10px; height: 10px; transform: translate(-50%,-50%); border: 2px solid #fff; border-radius: 50%; background: #d97520; }
+    .timeline-hint { margin-top: 4px; color: #77817c; font-size: 9px; }
+    .copy { padding: 18px 16px 110px; background: #fff; text-align: right; }
+    .eyebrow { color: #9a5a30; font-size: 10px; font-weight: 900; }
+    .copy h3 { margin: 5px 0 7px; font-size: 20px; }
+    .copy p { margin: 0; color: #53616a; font-size: 12px; line-height: 1.58; }
+    .details { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-top: 14px; }
+    .detail { padding: 9px 5px; border-radius: 10px; background: #f5f6f2; text-align: center; font-size: 10px; font-weight: 850; }
+    .sticky-actions {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 20;
+      padding: 11px 13px 17px;
+      border-top: 1px solid rgba(36,49,58,.12);
+      background: rgba(253,252,248,.96);
+      box-shadow: 0 -10px 26px rgba(23,32,38,.16);
+      backdrop-filter: blur(12px);
+    }
+    .action-row { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 8px; }
+    .action {
+      display: grid;
+      min-height: 43px;
+      place-items: center;
+      border: 1px solid #d5dfd7;
+      border-radius: 12px;
+      color: #31483a;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .action.primary { border-color: #3f5d33; background: #3f5d33; color: #fff; }
+    .safe-hint { margin-top: 6px; color: #7b8580; font-size: 9px; text-align: center; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <p class="label">Featured route · recommended refinement</p>
+    <h1>ציר גובה מסונכרן + CTA דביק</h1>
+    <p class="sub">השליטה נשארת בפס הנגן הקיים בתחתית הווידאו. ציר הגובה נמתח לכל הרוחב ומסונכרן איתו.</p>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <header class="route-head">
+          <h2>סובב בית הלל</h2>
+          <p>מסלול קצר ונעים מסביב לבית הלל, בלב הגליל העליון</p>
+          <div class="metrics"><span>6.5 ק״מ</span><span>↥ 13 מ׳</span><span>↧ 12 מ׳</span></div>
+        </header>
+        <section class="stage">
+          <img src="/public-data/poi-images/sovev-beit-hillel-start-88a84776.webp" alt="">
+          <div class="poi-pill">חוף קולומביה · 1.4 ק״מ</div>
+          <div class="map-pip"><img src="/public-data/route-map-images/sovev-beit-hillel-map-43357d52.webp" alt=""></div>
+          <div class="video-play">▶</div>
+          <div class="video-controls">
+            <div class="video-pause">Ⅱ</div>
+            <div class="video-scrub"></div>
+            <div>2:14</div>
+          </div>
+        </section>
+        <section class="timeline">
+          <div class="chart-wrap">
+            <div class="chart-top"><span>2.7 / 6.5 ק״מ</span><span>מסונכרן לנגן · 90 מ׳ · ירידה 1%</span></div>
+            <div class="chart">
+              <svg viewBox="0 0 280 64" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M0 17 C28 18 42 23 67 27 C92 31 105 34 130 31 C154 29 168 35 192 31 C217 28 231 16 251 18 C265 19 273 21 280 22 L280 64 L0 64Z" fill="#b7d3ba"/>
+                <path d="M0 17 C28 18 42 23 67 27 C92 31 105 34 130 31 C154 29 168 35 192 31 C217 28 231 16 251 18 C265 19 273 21 280 22" fill="none" stroke="#3f5d33" stroke-width="2"/>
+              </svg>
+              <div class="cursor"></div>
+            </div>
+            <div class="timeline-hint">גרירה כאן או בפס הנגן מעדכנת יחד את הסרטון, המפה והגובה</div>
+          </div>
+        </section>
+        <section class="copy">
+          <div class="eyebrow">רכיבה רגועה בגליל העליון</div>
+          <h3>מה מחכה בדרך</h3>
+          <p>חופי נחל שניר, שדות, מטעים ונוף לחרמון. רוב המסלול עובר בדרכים שקטות ומתאים גם למשפחות.</p>
+          <div class="details">
+            <div class="detail">משפחות</div>
+            <div class="detail">מעגלי</div>
+            <div class="detail">ליד מים</div>
+          </div>
+        </section>
+      </div>
+      <nav class="sticky-actions" aria-label="פעולות מסלול">
+        <div class="action-row">
+          <div class="action primary">נווט</div>
+          <div class="action">עריכה</div>
+          <div class="action">GPX</div>
+        </div>
+        <div class="safe-hint">פעולות דביקות · נשארות זמינות גם אחרי גלילה</div>
+      </nav>
+    </div>
+  </main>
+</body>
+</html>

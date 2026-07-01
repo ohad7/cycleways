@@ -1,9 +1,14 @@
 # Plans
 
+- `featured-mobile-elevation-timeline/` — mobile featured-route elevation timeline design comparison.
+- `mobile-home-engagement/` — native mobile homepage engagement design comparison.
+
 This directory contains planning documents for larger project changes before implementation.
 
 Current plans:
 
+- `navigation-ride-setup/` - design and implementation plan for an explicit pre-ride setup flow (direction, start point, and consequences), clear near/far approach states, preservation of the nearby suggested connector, alternate-start handling for linear and circular routes, and reverse-route navigation without mutating the saved route.
+- `ios-featured-web-embed/` - design and implementation plan for warming the iOS featured-route local server and making embedded web pages use native loading feedback without website splash, analytics, navigation, or breadcrumbs.
 - `route-playback-dock/` - design for a usable three-up route-playback view (map + player + full interactive elevation graph at a partial panel height, with bidirectional elevation⇄player⇄route sync, on mobile web and iOS) plus web-parity `progress-head-pulse` animation on iOS and removal of the iOS auto-firing direction animation.
 
 - `rn-mobile-map-style-parity/` - design + implementation plan for aligning the iPhone app map and route-building UI with the more-polished mobile web by sharing presentation specs + a planner view-model + a clock-injected playback engine (network/route colors, build summary, playback controls).

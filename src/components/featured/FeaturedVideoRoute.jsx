@@ -84,6 +84,10 @@ export default function FeaturedVideoRoute({
           </div>
         </div>
 
+        <div className="fv-mobile-elevation-strip" aria-label="ציר גובה מסונכרן">
+          <FeaturedElevation chartId="fv-mobile-elevation-chart" />
+        </div>
+
         <aside className="fv-side-rail" aria-label="תיאור ומפת המסלול">
           <section className="fv-route-panel" aria-label="תקציר המסלול">
             {intro.kicker && <span className="fv-route-panel-kicker">{intro.kicker}</span>}
@@ -145,8 +149,14 @@ function FeaturedRouteActions({ media = "video" }) {
   const handleDownload = useCallback(() => {
     if (!hasRouteGeometry) return;
     const filename = meta?.slug ? `${meta.slug}.gpx` : "featured_route.gpx";
-    executeDownloadGPX(generateGPX(routeState.geometry), filename);
-  }, [hasRouteGeometry, meta?.slug, routeState.geometry]);
+    if (
+      embedded &&
+      postToApp({ type: "download", slug: meta?.slug, filename })
+    ) {
+      return;
+    }
+    void executeDownloadGPX(generateGPX(routeState.geometry), filename);
+  }, [embedded, hasRouteGeometry, meta?.slug, routeState.geometry]);
 
   const scrollStageIntoView = useCallback(() => {
     const isMobile = window.matchMedia?.("(max-width: 767px)").matches
@@ -179,15 +189,17 @@ function FeaturedRouteActions({ media = "video" }) {
 
   return (
     <div className="fv-route-actions" aria-label="פעולות מסלול">
-      <button
-        type="button"
-        className="fv-route-action fv-route-action--primary"
-        onClick={handlePrimaryAction}
-        aria-label={primaryLabel}
-      >
-        <Icon name="play-circle-outline" />
-        <span className="fv-route-action-label">{primaryLabel}</span>
-      </button>
+      {!embedded ? (
+        <button
+          type="button"
+          className="fv-route-action fv-route-action--primary"
+          onClick={handlePrimaryAction}
+          aria-label={primaryLabel}
+        >
+          <Icon name="play-circle-outline" />
+          <span className="fv-route-action-label">{primaryLabel}</span>
+        </button>
+      ) : null}
       {embedded ? (
         <>
           {embedConfig.showNavigate ? (
@@ -213,7 +225,7 @@ function FeaturedRouteActions({ media = "video" }) {
               aria-label="פתח לעריכה"
             >
               <Icon name="create-outline" />
-              <span className="fv-route-action-label">פתח לעריכה</span>
+              <span className="fv-route-action-label">עריכה</span>
             </button>
           ) : null}
         </>
@@ -247,7 +259,9 @@ function FeaturedRouteActions({ media = "video" }) {
         aria-label="Download GPX - הורד קובץ ניווט"
       >
         <Icon name="download-outline" />
-        <span className="fv-route-action-label">הורד קובץ ניווט</span>
+        <span className="fv-route-action-label">
+          {embedded ? "GPX" : "הורד קובץ ניווט"}
+        </span>
       </button>
     </div>
   );

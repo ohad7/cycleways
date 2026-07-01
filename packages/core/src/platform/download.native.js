@@ -2,9 +2,12 @@ import { Share } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 
 export function executeDownloadGPX(gpxContent, filename = "bike_route.gpx") {
-  void shareGpxFile(gpxContent, filename).catch((error) => {
-    console.warn("Native GPX share failed:", error);
-  });
+  return shareGpxFile(gpxContent, filename)
+    .then(() => true)
+    .catch((error) => {
+      console.warn("Native GPX share failed:", error);
+      return false;
+    });
 }
 
 async function shareGpxFile(gpxContent, filename) {

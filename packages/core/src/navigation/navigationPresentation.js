@@ -8,7 +8,7 @@ import { CONNECTOR_NEAR_RADIUS_M } from "./connectorTargeting.js";
 
 const STATUS_TEXT = {
   "requesting-permission": "מבקש הרשאת מיקום…",
-  approaching: "מתקרב למסלול…",
+  approaching: "בדרך למסלול",
   paused: "מושהה",
   ended: "הניווט הסתיים",
   error: "שגיאת ניווט",
@@ -139,6 +139,10 @@ export function getNavigationPresentation(state = {}) {
 
   return {
     mode: status,
+    justAcquired: state.justAcquired === true,
+    acquisitionText: state.justAcquired === true
+      ? "הגעת למסלול · הניווט התחיל"
+      : "",
     statusText: STATUS_TEXT[status] ?? "",
     showCue: navigating && !offRoute,
     cueText: cue.text,
@@ -159,6 +163,9 @@ export function getNavigationPresentation(state = {}) {
       ? formatDistanceMeters(distanceToRoute)
       : "",
     disclaimerText: "ניווט מחוץ לרשת CycleWays",
+    approachHeading: status === "approaching" ? "בדרך למסלול" : "חזרה למסלול",
+    approachSupportText:
+      status === "approaching" ? "הניווט במסלול יתחיל כשתגיע" : "",
     externalNavTarget: approach?.target?.point ?? null,
     // Options sheet: offer "join nearest" only when it skips a meaningful span.
     canJoinNearest: Boolean(choices?.nearest && choices.skipMeters > 50),

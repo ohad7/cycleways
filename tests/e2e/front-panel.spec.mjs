@@ -6,15 +6,38 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-test("front panel shows discover by default and toggles to build", async ({ page }) => {
+test("front panel shows discover by default and toggles to build", async ({ page, isMobile }) => {
   await page.goto("/");
+  if (isMobile) {
+    const home = page.getByTestId("mobile-discover-home");
+    await expect(home).toBeVisible();
+    await expect(home.getByText("גליל עליון על אופניים")).toBeVisible();
+    await expect(home.getByText("לאן רוכבים היום?")).toBeVisible();
+    await expect(home.locator(".panel-route-hero")).toBeVisible();
+    await expect(home.locator(".panel-route-card").first()).toBeVisible();
+    await expect(page.locator(".front-sheet")).toHaveCount(0);
+    await expect(page.locator(".map-container")).toHaveCount(0);
+
+    await home.getByRole("button", { name: "+ תכנן מסלול" }).click();
+    const panel = page.getByTestId("front-panel");
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole("tab", { name: "בניית מסלול" })).toHaveAttribute("aria-selected", "true");
+    return;
+  }
+
   const panel = page.getByTestId("front-panel");
-  // On mobile the panel is in a bottom sheet — open it before interacting.
   await ensurePanelOpen(page);
   await expect(panel).toBeVisible();
   // Discover by default.
   await expect(panel.getByRole("tab", { name: "חפש מסלול" })).toHaveAttribute("aria-selected", "true");
-  await expect(panel.getByText("מצאו את הרכיבה הבאה")).toBeVisible();
+  await expect(panel.getByText("לאן רוכבים היום?")).toBeVisible();
+  await expect(panel.locator(".panel-route-hero")).toBeVisible();
+  await expect(panel.locator(".panel-route-hero__summary")).toBeVisible();
+  await expect(panel.locator(".panel-route-card").first()).toBeVisible();
+  await expect(panel.locator(".panel-route-card__summary").first()).toBeVisible();
+  const heroTitle = (await panel.locator(".panel-route-hero__title").innerText()).trim();
+  const secondaryTitles = await panel.locator(".panel-route-card__title").allInnerTexts();
+  expect(secondaryTitles.map((title) => title.trim())).not.toContain(heroTitle);
   // Toggle to build.
   await panel.getByRole("tab", { name: "בניית מסלול" }).click();
   await expect(panel.getByRole("tab", { name: "בניית מסלול" })).toHaveAttribute("aria-selected", "true");

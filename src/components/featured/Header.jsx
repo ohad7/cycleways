@@ -1,24 +1,28 @@
 import React from "react";
 import Breadcrumbs from "../Breadcrumbs.jsx";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
+import { isAppEmbedded } from "../../appEmbed.js";
 
 export default function FeaturedRouteHeader() {
   const { meta, routeState, status } = useFeaturedRoute();
+  const embedded = isAppEmbedded();
   return (
     <header className="featured-route-header">
       {meta.hero && (
         <img className="featured-route-hero" src={meta.hero} alt={meta.name} />
       )}
       <div className="featured-route-header-body">
-        <div className="featured-route-kicker">
-          <Breadcrumbs
-            items={[
-              { label: "מפה", to: "/" },
-              { label: "מסלולים", to: "/routes/" },
-              { label: meta.name },
-            ]}
-          />
-        </div>
+        {!embedded ? (
+          <div className="featured-route-kicker">
+            <Breadcrumbs
+              items={[
+                { label: "מפה", to: "/" },
+                { label: "מסלולים", to: "/routes/" },
+                { label: meta.name },
+              ]}
+            />
+          </div>
+        ) : null}
         <h1>{meta.name}</h1>
         {meta.summary && <p className="featured-route-summary">{meta.summary}</p>}
         {status === "ready" && (

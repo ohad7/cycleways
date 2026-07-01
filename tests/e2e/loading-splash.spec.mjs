@@ -80,3 +80,19 @@ test("splash is removed once the app is ready", async ({ page }) => {
   // Splash has been removed (not just hidden)
   await expect(page.locator("#splash")).toHaveCount(0);
 });
+
+test("app embed never paints the website splash", async ({ page }) => {
+  // Keep React from removing the node so this test verifies the early HTML/CSS
+  // embed bootstrap, not the normal post-mount splash teardown.
+  await page.route(/\/src\/main\.jsx/, (route) => route.abort());
+  await page.goto("/?app=1", { waitUntil: "commit" });
+
+  await expect(page.locator("html")).toHaveClass(/app-embed-bootstrap/);
+  const splash = page.locator("#splash");
+  await expect(splash).toHaveCount(1);
+  await expect(splash).toBeHidden();
+
+  await page.waitForFunction(() => typeof window.__splash?.done === "function");
+  await page.evaluate(() => window.__splash.done());
+  await expect(splash).toHaveCount(0);
+});

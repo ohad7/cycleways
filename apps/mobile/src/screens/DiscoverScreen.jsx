@@ -12,6 +12,7 @@ export default function DiscoverScreen({ navigation }) {
   const [entries, setEntries] = useState([]);
   const [query, setQuery] = useState("");
   const [fix, setFix] = useState(null);
+  const [locationError, setLocationError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -54,12 +55,30 @@ export default function DiscoverScreen({ navigation }) {
     resetNativeLocationHref();
     navigation.navigate("Build", {});
   };
+  const requestLocation = async () => {
+    try {
+      setLocationError("");
+      let permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== "granted") {
+        permission = await Location.requestForegroundPermissionsAsync();
+      }
+      if (permission.status !== "granted") {
+        setLocationError("לא הצלחנו לאתר את המיקום שלך. אפשר להמשיך לבחור מסלול מהרשימה.");
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      if (pos?.coords) {
+        setFix({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      }
+    } catch {
+      setLocationError("לא הצלחנו לאתר את המיקום שלך. אפשר להמשיך לבחור מסלול מהרשימה.");
+    }
+  };
 
   return (
     <View style={[styles.fill, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>גלה מסלול</Text>
-      </View>
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -70,6 +89,8 @@ export default function DiscoverScreen({ navigation }) {
           fix={fix}
           query={query}
           onQueryChange={setQuery}
+          onRequestLocation={requestLocation}
+          locationError={locationError}
         />
       </ScrollView>
       <Pressable
@@ -90,15 +111,7 @@ export default function DiscoverScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: palette.paper },
-  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  title: {
-    color: palette.ink,
-    fontSize: 22,
-    fontWeight: "900",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  scroll: { paddingTop: 8, paddingBottom: 120 },
+  scroll: { paddingTop: 18, paddingBottom: 120 },
   fab: {
     position: "absolute",
     alignSelf: "center",

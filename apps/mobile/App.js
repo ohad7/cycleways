@@ -1,6 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { Linking, LogBox, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  LogBox,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { createNavigationContainerRef } from "@react-navigation/native";
 import {
   createNativeRouteHref,
@@ -17,6 +25,17 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import RootNavigator from "./src/navigation/RootNavigator.jsx";
 import { launchTargetFromHref } from "./src/navigation/launchTarget.js";
+import { startWebServer } from "./src/webServer.js";
+import { loadPendingRideIntent } from "./src/navigation/pendingRidePlanStore.js";
+import AnimatedLaunchSplash from "./src/splash/AnimatedLaunchSplash.jsx";
+import {
+  SERVER_PRELOAD_BUDGET_MS,
+  settleWithin,
+  waitForLaunchSplashMinimum,
+} from "./src/splash/bootstrapTiming.js";
+
+const APP_BOOTSTRAP_STARTED_AT = Date.now();
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 LogBox.ignoreLogs([
   "SafeAreaView has been deprecated",
@@ -27,8 +46,29 @@ const navigationRef = createNavigationContainerRef();
 
 export default function App() {
   const [ready, setReady] = useState(false);
+  const [showLaunchSplash, setShowLaunchSplash] = useState(true);
+  const [splashMilestone, setSplashMilestone] = useState({
+    progress: 0.12,
+    status: "מכינים את האפליקציה…",
+  });
   const [launchError, setLaunchError] = useState(null);
   const initialTargetRef = useRef({ screen: "Discover", params: undefined });
+  const nativeSplashHiddenRef = useRef(false);
+
+  const advanceSplash = useCallback((progress, status) => {
+    setSplashMilestone((current) =>
+      progress > current.progress ? { progress, status } : current,
+    );
+  }, []);
+
+  const handleSplashLayout = useCallback(() => {
+    if (nativeSplashHiddenRef.current) return;
+    nativeSplashHiddenRef.current = true;
+    void SplashScreen.hideAsync().catch(() => {});
+  }, []);
+  const finishLaunchSplash = useCallback(() => {
+    setShowLaunchSplash(false);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -36,6 +76,27 @@ export default function App() {
 
     async function applyLaunchUrl(url, { warm = false } = {}) {
       const requestId = ++launchRequestId;
+      if (!url && !warm) {
+        const pendingRide = await loadPendingRideIntent();
+        if (!mounted || requestId !== launchRequestId) return;
+        if (pendingRide) {
+          initialTargetRef.current = {
+            screen: "Build",
+            params: {
+              routeToken: pendingRide.routeToken,
+              slug: pendingRide.slug,
+              name: pendingRide.name,
+              openRideSetup: true,
+              rideSetupSelection: {
+                direction: pendingRide.direction,
+                startMode: pendingRide.startMode,
+                selectedPoint: pendingRide.selectedPoint,
+              },
+            },
+          };
+          return { error: null, resolved: pendingRide };
+        }
+      }
       const result = await resolveNativeLaunchUrl(url);
       if (!mounted || requestId !== launchRequestId) return;
       setLaunchError(result.error);
@@ -54,16 +115,52 @@ export default function App() {
           initialTargetRef.current = launchTargetFromHref(url);
         }
       }
-      setReady(true);
+      return result;
     }
 
-    Linking.getInitialURL()
-      .then((url) => applyLaunchUrl(url))
+    const catalogPreload = loadRouteCatalogEntries()
+      .then((entries) => {
+        if (mounted) advanceSplash(0.42, "טוענים את המסלולים…");
+        return entries;
+      })
+      .catch((error) => {
+        console.warn("Route catalog preload failed:", error);
+        return [];
+      });
+
+    const serverPreload = settleWithin(
+      startWebServer(),
+      SERVER_PRELOAD_BUDGET_MS,
+    ).then((result) => {
+      if (result.status === "rejected") {
+        console.warn("Featured route server warm-up failed:", result.reason);
+      }
+      if (mounted) advanceSplash(0.68, "מכינים את סיפורי המסלול…");
+      return result;
+    });
+
+    const initialLaunch = Linking.getInitialURL()
+      .then(async (url) => {
+        const result = await applyLaunchUrl(url);
+        if (mounted) advanceSplash(0.88, "מסדרים את נקודת הפתיחה…");
+        return result;
+      })
       .catch((error) => {
         setNativeLocationHref(null);
         console.warn("Native initial route link failed:", error);
-        if (mounted) setReady(true);
+        return { error: null, resolved: null };
       });
+
+    Promise.all([
+      catalogPreload,
+      serverPreload,
+      initialLaunch,
+      waitForLaunchSplashMinimum(APP_BOOTSTRAP_STARTED_AT),
+    ]).then(() => {
+      if (!mounted) return;
+      advanceSplash(1, "יוצאים לדרך");
+      setReady(true);
+    });
 
     const subscription = Linking.addEventListener("url", ({ url }) => {
       void applyLaunchUrl(url, { warm: true });
@@ -73,7 +170,7 @@ export default function App() {
       mounted = false;
       subscription?.remove?.();
     };
-  }, []);
+  }, [advanceSplash]);
 
   return (
     <GestureHandlerRootView style={styles.fill}>
@@ -93,7 +190,16 @@ export default function App() {
                 onDismiss={() => setLaunchError(null)}
               />
             ) : null}
-            <StatusBar style="auto" />
+            {showLaunchSplash ? (
+              <AnimatedLaunchSplash
+                progress={splashMilestone.progress}
+                ready={ready}
+                status={splashMilestone.status}
+                onFirstLayout={handleSplashLayout}
+                onFinished={finishLaunchSplash}
+              />
+            ) : null}
+            <StatusBar style="auto" hidden={showLaunchSplash} />
           </View>
         </BottomSheetModalProvider>
       </SafeAreaProvider>

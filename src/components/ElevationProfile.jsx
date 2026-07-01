@@ -12,6 +12,7 @@ export default function ElevationProfile({
   animator,
   distance,
   geometry,
+  chartId = "elevation-chart",
   onElevationHover,
   onElevationSelect = null,
   cursorFraction = null,
@@ -105,7 +106,7 @@ export default function ElevationProfile({
   return (
     <div className="elevation-profile">
       <h4>גרף גובה (Elevation Profile)</h4>
-      <div className="elevation-chart" id="elevation-chart">
+      <div className="elevation-chart" id={chartId}>
         {displayedInfo && (
           <div className="react-elevation-hover-info">
             <span>

@@ -70,6 +70,7 @@ const DEFAULTS = {
   confirmMs: 4000, // dwell beyond the enter threshold before confirming off-route
   recoverMs: 3000, // dwell back inside the exit threshold before recovering
   searchWindowMeters: 250, // forward/back cursor window for nearest-segment search
+  startAcquisitionWindowMeters: 150,
 };
 
 export function createRouteProgressTracker(navigationRoute, options = {}) {
@@ -255,7 +256,12 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     // acquisition, when the window finds nothing, or when the windowed match is
     // beyond the on-route threshold (lost / re-acquiring).
     let best;
-    if (lastProgressMeters === null) {
+    const requireStartAcquisition = navigationRoute?.requiresStartAcquisition === true;
+    const distanceToRouteStart =
+      geometry.length > 0 ? getDistance(fix, geometry[0]) : 0;
+    if (!acquired && requireStartAcquisition) {
+      best = findNearest(fix, 0, opts.startAcquisitionWindowMeters);
+    } else if (lastProgressMeters === null) {
       best = findNearest(fix, null, null);
     } else {
       const w = opts.searchWindowMeters;
@@ -273,12 +279,11 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     }
     seededSearchPending = false;
 
-    const distanceToRouteStart =
-      geometry.length > 0 ? getDistance(fix, geometry[0]) : 0;
-
     if (!acquired) {
       // Acquisition: latch true once within the on-route threshold of the line.
-      if (best && best.crossTrackMeters <= enterThreshold) {
+      const withinSelectedStart =
+        !requireStartAcquisition || distanceToRouteStart <= enterThreshold;
+      if (best && best.crossTrackMeters <= enterThreshold && withinSelectedStart) {
         acquired = true;
         lastProgressMeters = best.progressMeters;
       } else {

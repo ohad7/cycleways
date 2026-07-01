@@ -201,6 +201,8 @@ const fix = (lng, timestamp, extra = {}) => ({
     fix: { lat: 33.1, lng: 35.6, accuracy: 8, speed: 4, timestamp: 4000 },
   });
   assert.equal(near.status, "navigating", "reaching the route -> navigating");
+  assert.equal(near.justAcquired, true, "approach handoff is explicit for one render");
+  assert.equal(near.cueEvent?.kind, "acquired");
 }
 
 function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {

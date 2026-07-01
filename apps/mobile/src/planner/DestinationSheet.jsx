@@ -21,6 +21,7 @@ import { palette, radius, space } from "./theme.js";
 // NOTE: native UI — verified visually in the simulator, not by the node suite.
 export default function DestinationSheet({
   visible,
+  appsOnly = false,
   currentMode = "start",
   canJoinNearest = false,
   nearestSkipText = "",
@@ -68,31 +69,35 @@ export default function DestinationSheet({
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + space.md }]}>
         <View style={styles.handle} />
-        <Text style={styles.title}>לאן לנווט?</Text>
+        <Text style={styles.title}>{appsOnly ? "פתיחה באפליקציית ניווט" : "לאן לנווט?"}</Text>
 
-        <DestRow
-          icon="flag-outline"
-          label="תחילת המסלול"
-          selected={currentMode === "start"}
-          onPress={onPickStart}
-        />
-        {canJoinNearest ? (
-          <DestRow
-            icon="enter-outline"
-            label="הצטרף לנקודה הקרובה"
-            sub={nearestSkipText}
-            selected={currentMode === "nearest"}
-            onPress={onPickNearest}
-          />
+        {!appsOnly ? (
+          <>
+            <DestRow
+              icon="flag-outline"
+              label="תחילת המסלול"
+              selected={currentMode === "start"}
+              onPress={onPickStart}
+            />
+            {canJoinNearest ? (
+              <DestRow
+                icon="enter-outline"
+                label="הצטרף לנקודה הקרובה"
+                sub={nearestSkipText}
+                selected={currentMode === "nearest"}
+                onPress={onPickNearest}
+              />
+            ) : null}
+            <DestRow
+              icon="location-outline"
+              label="בחר נקודה על המסלול"
+              selected={currentMode === "custom"}
+              onPress={onPickOnMap}
+            />
+          </>
         ) : null}
-        <DestRow
-          icon="location-outline"
-          label="בחר נקודה על המסלול"
-          selected={currentMode === "custom"}
-          onPress={onPickOnMap}
-        />
 
-        <Text style={styles.section}>נווט באפליקציה אחרת</Text>
+        <Text style={styles.section}>{appsOnly ? "בחרו אפליקציה" : "נווט באפליקציה אחרת"}</Text>
         <ScrollView style={styles.apps}>
           {apps.map((app) => (
             <DestRow

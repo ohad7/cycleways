@@ -3,6 +3,9 @@ import * as Location from "expo-location";
 import { useSyntheticRoutePlaybackEngine } from "@cycleways/core/ui/routePlaybackEngine.js";
 import PlaybackControls from "../planner/PlaybackControls.jsx";
 import {
+  ActivityIndicator,
+  Alert,
+  AppState,
   Dimensions,
   Keyboard,
   Linking,
@@ -30,8 +33,12 @@ import Mapbox, {
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
-import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
+import {
+  loadRouteCatalogEntries,
+  routeShapeType,
+} from "@cycleways/core/data/catalog.js";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
+import { createRidePlan } from "@cycleways/core/navigation/ridePlan.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
@@ -61,9 +68,19 @@ import BackButton from "./BackButton.jsx";
 import RoutePoiList from "../planner/RoutePoiList.jsx";
 import NavPanel from "../planner/NavPanel.jsx";
 import DestinationSheet from "../planner/DestinationSheet.jsx";
+import RideSetupSheet from "../planner/RideSetupSheet.jsx";
 import { useNavigationSession } from "../navigation/useNavigationSession.js";
-import { createDefaultLocationSource } from "../navigation/locationService.js";
+import {
+  createDefaultLocationSource,
+  getRideSetupLocation,
+} from "../navigation/locationService.js";
 import { createSimulateRideSource } from "../navigation/simulateRideSource.js";
+import {
+  clearPendingRideIntent,
+  savePendingRideIntent,
+} from "../navigation/pendingRidePlanStore.js";
+import { trackNavigationEvent } from "../navigation/navigationTelemetry.js";
+import { routeRestoreDecision } from "../navigation/routeRestorePolicy.js";
 import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
 import Icon from "../planner/Icon.jsx";
 import { palette } from "../planner/theme.js";
@@ -120,6 +137,13 @@ const APPROACH_SUGGESTION_LINE_STYLE = {
   lineWidth: 4,
   lineOpacity: 0.9,
   lineDasharray: [2, 1.5],
+  lineJoin: "round",
+  lineCap: "round",
+};
+const SETUP_PREVIEW_LINE_STYLE = {
+  lineColor: "#2f6b3c",
+  lineWidth: 7,
+  lineOpacity: 0.92,
   lineJoin: "round",
   lineCap: "round",
 };
@@ -261,6 +285,16 @@ export default function BuildScreen({ navigation, route }) {
     status: "idle",
   });
   const [catalogEntries, setCatalogEntries] = useState([]);
+  const [pendingRideSetupToken, setPendingRideSetupToken] = useState(null);
+  const routeTokenParam = route?.params?.routeToken ?? null;
+  const routeSlugParam = route?.params?.slug ?? null;
+  const routeNameParam = route?.params?.name ?? null;
+  const openRideSetupParam = route?.params?.openRideSetup === true;
+  const rideSetupSelectionParam = route?.params?.rideSetupSelection ?? null;
+  const [routeRestoreAttempt, setRouteRestoreAttempt] = useState(0);
+  const [routeRestoreStatus, setRouteRestoreStatus] = useState(
+    routeTokenParam ? "waiting" : "idle",
+  );
   // Slug of the catalog route currently loaded in the planner; drives the Build
   // panel's "מסלול מומלץ" eyebrow. Cleared once the rider edits the route.
   const [selectedCatalogSlug, setSelectedCatalogSlug] = useState(null);
@@ -399,6 +433,7 @@ export default function BuildScreen({ navigation, route }) {
         // claimed so they pass straight through to Mapbox.
         onStartShouldSetPanResponder: (evt) =>
           !isNavigatingRef.current &&
+          !pickOnMapModeRef.current &&
           evt.nativeEvent.touches.length <= 1 &&
           hitTestRoutePoint(
             evt.nativeEvent.locationX,
@@ -548,7 +583,7 @@ export default function BuildScreen({ navigation, route }) {
       // as the approach target, then exit the mode (route edits stay locked).
       if (pickOnMapModeRef.current) {
         const tapped = pointFromFeature(feature);
-        if (tapped) navSetCustomTargetRef.current?.(tapped);
+        if (tapped) mapPickHandlerRef.current?.(tapped);
         setPickOnMapMode(false);
         return;
       }
@@ -664,15 +699,79 @@ export default function BuildScreen({ navigation, route }) {
   // Normalize the loaded route (built or catalog) into the shared NavigationRoute
   // the session consumes. Memoized on the route geometry + share token so its id
   // stays stable while navigating (edits are locked, so it will not churn).
-  const navigationRoute = useMemo(
+  const sourceNavigationRoute = useMemo(
     () =>
       navigationRouteFromRouteState(routeState, shareInfo, {
         source: selectedCatalogEntry ? "catalog" : "built",
         slug: selectedCatalogEntry?.slug || "",
         name: selectedCatalogEntry?.name || "המסלול שלי",
+        summary: selectedCatalogEntry?.summary || "",
+        routeShape: selectedCatalogEntry
+          ? { type: routeShapeType(selectedCatalogEntry) }
+          : null,
+        start: selectedCatalogEntry?.start || null,
+        end: selectedCatalogEntry?.end || null,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [routeState.geometry, shareInfo.param, selectedCatalogSlug],
+    [routeState.geometry, shareInfo.param, selectedCatalogSlug, selectedCatalogEntry],
+  );
+
+  const [rideSetupVisible, setRideSetupVisible] = useState(false);
+  const [rideSetupSelection, setRideSetupSelection] = useState({
+    direction: "forward",
+    startMode: "official",
+    selectedPoint: null,
+  });
+  const [rideSetupFix, setRideSetupFix] = useState(null);
+  const [rideSetupNow, setRideSetupNow] = useState(Date.now());
+  const [rideSetupLocationStatus, setRideSetupLocationStatus] = useState("idle");
+  const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
+  const [pendingNavigationRouteId, setPendingNavigationRouteId] = useState(null);
+  const [pendingExternalPlan, setPendingExternalPlan] = useState(null);
+  const setupRequestRef = useRef(0);
+
+  const ridePlan = useMemo(
+    () =>
+      createRidePlan(
+        sourceNavigationRoute,
+        rideSetupSelection,
+        rideSetupFix,
+        rideSetupNow,
+      ),
+    [sourceNavigationRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
+  );
+
+  const navigationRoute = confirmedRidePlan?.effectiveRoute || sourceNavigationRoute;
+
+  const refreshRideSetupLocation = useCallback(async () => {
+    const requestId = setupRequestRef.current + 1;
+    setupRequestRef.current = requestId;
+    setRideSetupLocationStatus("loading");
+    const result = await getRideSetupLocation();
+    if (setupRequestRef.current !== requestId) return;
+    setRideSetupNow(Date.now());
+    setRideSetupFix(result.fix || null);
+    setRideSetupLocationStatus(result.status);
+  }, []);
+
+  const openRideSetup = useCallback(
+    (options = {}) => {
+      const preserveSelection = options?.preserveSelection === true;
+      if (!preserveSelection) {
+        setRideSetupSelection({
+          direction: "forward",
+          startMode: "official",
+          selectedPoint: null,
+        });
+      }
+      setPendingExternalPlan(null);
+      setRideSetupVisible(true);
+      trackNavigationEvent("ride_setup_opened", {
+        restored: preserveSelection,
+      });
+      void refreshRideSetupLocation();
+    },
+    [refreshRideSetupLocation],
   );
 
   // --- Dev-only simulate-ride harness + GPS recorder (Task 17) ---------------
@@ -708,6 +807,63 @@ export default function BuildScreen({ navigation, route }) {
     navStatus === "off-route" ||
     navStatus === "paused" ||
     navStatus === "requesting-permission";
+
+  const activeRouteGeometry = useMemo(
+    () => buildRouteGeometryFeatureCollection(navigationRoute?.geometry),
+    [navigationRoute?.geometry],
+  );
+  const setupPreviewGeometry = useMemo(
+    () => buildRouteGeometryFeatureCollection(ridePlan?.effectiveRoute?.geometry),
+    [ridePlan?.effectiveRoute?.geometry],
+  );
+  const displayedRouteGeometry = isNavigating ? activeRouteGeometry : routeGeometry;
+
+  const handleRideSetupConfirm = useCallback(() => {
+    if (!ridePlan?.effectiveRoute?.canNavigate) return;
+    setConfirmedRidePlan(ridePlan);
+    trackNavigationEvent("ride_setup_confirmed", {
+      direction: ridePlan.direction,
+      startMode: ridePlan.startMode,
+      approachTier: ridePlan.approachTier,
+    });
+    setRideSetupVisible(false);
+    if (ridePlan.approachTier === "far" || ridePlan.approachTier === "unknown") {
+      setPendingExternalPlan(ridePlan);
+      setDestSheetVisible(true);
+      return;
+    }
+    void clearPendingRideIntent();
+    setPendingNavigationRouteId(ridePlan.effectiveRoute.id);
+  }, [ridePlan]);
+
+  const handleChangeRideSettings = useCallback(() => {
+    const reopen = () => {
+      nav.stop();
+      setConfirmedRidePlan(null);
+      setPendingNavigationRouteId(null);
+      openRideSetup({ preserveSelection: true });
+    };
+    if (nav.state?.progress?.hasAcquiredRoute) {
+      Alert.alert(
+        "שינוי הגדרות הרכיבה",
+        "כדי לשנות כיוון או נקודת התחלה צריך לסיים את הניווט הנוכחי.",
+        [
+          { text: "ביטול", style: "cancel" },
+          { text: "סיום ושינוי", style: "destructive", onPress: reopen },
+        ],
+      );
+      return;
+    }
+    reopen();
+  }, [nav.state?.progress?.hasAcquiredRoute, nav.stop, openRideSetup]);
+
+  useEffect(() => {
+    if (!pendingNavigationRouteId) return;
+    if (nav.state?.route?.id !== pendingNavigationRouteId) return;
+    if (!new Set(["idle", "ended", "error"]).has(navStatus)) return;
+    setPendingNavigationRouteId(null);
+    void nav.start();
+  }, [nav.start, nav.state?.route?.id, navStatus, pendingNavigationRouteId]);
 
   // Ref mirror so the earlier-defined map-press / point-drag gesture handlers can
   // lock out route edits while navigating without a declaration-order dependency.
@@ -868,9 +1024,38 @@ export default function BuildScreen({ navigation, route }) {
     () => getNavigationPresentation(nav.state ?? {}),
     [nav.state],
   );
+  const telemetryStateRef = useRef({ status: null, suggestionStatus: null });
+  useEffect(() => {
+    const previous = telemetryStateRef.current;
+    const suggestionStatus = nav.state?.approach?.suggestionStatus ?? null;
+    if (
+      suggestionStatus !== previous.suggestionStatus &&
+      (suggestionStatus === "ready" || suggestionStatus === "failed")
+    ) {
+      trackNavigationEvent("approach_connector_result", {
+        result: suggestionStatus,
+      });
+    }
+    if (nav.state?.justAcquired && previous.status !== "navigating") {
+      trackNavigationEvent("route_acquired", {
+        direction: confirmedRidePlan?.direction || "forward",
+        startMode: confirmedRidePlan?.startMode || "official",
+      });
+    }
+    telemetryStateRef.current = {
+      status: navStatus,
+      suggestionStatus,
+    };
+  }, [
+    confirmedRidePlan?.direction,
+    confirmedRidePlan?.startMode,
+    nav.state?.approach?.suggestionStatus,
+    nav.state?.justAcquired,
+    navStatus,
+  ]);
   // The puck/camera always ride the main route now; the connector is only a
   // static suggestion overlay, never a navigated phase.
-  const navGeometry = routeState.geometry;
+  const navGeometry = navigationRoute?.geometry || [];
   const activeGeometryKey = "main";
 
   // Approach overlays (while approaching / off-route): a thin direct line
@@ -907,6 +1092,68 @@ export default function BuildScreen({ navigation, route }) {
     approachTargetPoint?.lat,
     approachTargetPoint?.lng,
   ]);
+
+  const externalBackgroundedRef = useRef(false);
+  useEffect(() => {
+    if (!pendingExternalPlan) {
+      externalBackgroundedRef.current = false;
+      return undefined;
+    }
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "background" || nextState === "inactive") {
+        externalBackgroundedRef.current = true;
+        return;
+      }
+      if (nextState === "active" && externalBackgroundedRef.current) {
+        externalBackgroundedRef.current = false;
+        setConfirmedRidePlan(null);
+        openRideSetup({ preserveSelection: true });
+      }
+    });
+    return () => subscription.remove();
+  }, [openRideSetup, pendingExternalPlan]);
+
+  const handleOpenExternalApp = useCallback(
+    async (app) => {
+      const target =
+        pendingExternalPlan?.selectedPoint ||
+        confirmedRidePlan?.selectedPoint ||
+        navPresentation.externalNavTarget;
+      const url = buildAppUrl(app, target);
+      if (!url) return;
+      const routeToken = routeTokenParam || shareInfo.param;
+      if (routeToken) {
+        await savePendingRideIntent({
+          routeToken,
+          slug: routeSlugParam || selectedCatalogSlug,
+          name: routeNameParam || selectedCatalogEntry?.name || null,
+          direction: confirmedRidePlan?.direction || rideSetupSelection.direction,
+          startMode: confirmedRidePlan?.startMode || rideSetupSelection.startMode,
+          selectedPoint: target,
+        });
+      }
+      trackNavigationEvent("approach_external_handoff", {
+        app: app?.id || "unknown",
+        approachTier: pendingExternalPlan?.approachTier || "near",
+      });
+      setDestSheetVisible(false);
+      Linking.openURL(url).catch(() => {
+        setDestSheetVisible(true);
+      });
+    },
+    [
+      confirmedRidePlan,
+      navPresentation.externalNavTarget,
+      pendingExternalPlan,
+      rideSetupSelection,
+      routeNameParam,
+      routeSlugParam,
+      routeTokenParam,
+      selectedCatalogEntry?.name,
+      selectedCatalogSlug,
+      shareInfo.param,
+    ],
+  );
   const suggestionGeometry = approach?.suggestionGeometry;
   const showSuggestion =
     showApproachLines &&
@@ -953,13 +1200,13 @@ export default function BuildScreen({ navigation, route }) {
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
-  const navSetCustomTargetRef = useRef(null);
+  const mapPickHandlerRef = useRef(null);
   // Live device-compass heading (deg). Drives the heading-up camera and the
   // to-route arrow so the view is adaptive to the phone's facing direction even
   // when stationary (GPS course is unreliable below walking speed).
   const deviceHeadingRef = useRef(null);
   const [compassHeading, setCompassHeading] = useState(null);
-  // Approach destination sheet + "tap a point on the route" mode.
+  // External navigation chooser + ride-setup "tap a point" mode.
   const [destSheetVisible, setDestSheetVisible] = useState(false);
   const [pickOnMapMode, setPickOnMapMode] = useState(false);
   const pickOnMapModeRef = useRef(false);
@@ -971,7 +1218,14 @@ export default function BuildScreen({ navigation, route }) {
   navGeometryRef.current = navGeometry;
   navStatusRef.current = navStatus;
   navUserPannedRef.current = nav.userPanned;
-  navSetCustomTargetRef.current = nav.setApproachCustomTarget;
+  mapPickHandlerRef.current = (point) => {
+    setRideSetupSelection((current) => ({
+      ...current,
+      startMode: "custom",
+      selectedPoint: point,
+    }));
+    setRideSetupVisible(true);
+  };
 
   // Distances are local to the active geometry. Reset interpolation state when
   // switching main route ↔ connector so metres from one path are never applied
@@ -1186,16 +1440,50 @@ export default function BuildScreen({ navigation, route }) {
   // token. Load it through the same shared path used by deep links and record
   // it as a recent. Cold-start deep links instead seed the native href (read by
   // the controller on init), so this only runs for explicit in-app picks.
-  const routeTokenParam = route?.params?.routeToken ?? null;
-  const routeSlugParam = route?.params?.slug ?? null;
-  const routeNameParam = route?.params?.name ?? null;
   useEffect(() => {
-    if (!routeTokenParam) return;
+    const restoreDecision = routeRestoreDecision(
+      routeTokenParam,
+      routeState.status,
+    );
+    if (restoreDecision === "idle") {
+      setRouteRestoreStatus("idle");
+      return undefined;
+    }
+    // Asset loading and routing-manager initialization are separate async
+    // phases. Waiting for the route reducer's managerReady state prevents a
+    // one-shot load from racing the manager and silently leaving an empty map.
+    if (restoreDecision === "wait") {
+      setRouteRestoreStatus("waiting");
+      return undefined;
+    }
     let cancelled = false;
+    setRouteRestoreStatus("loading");
+    setPendingRideSetupToken(null);
+    setConfirmedRidePlan(null);
     (async () => {
       const loaded = await handleLoadRouteParam(routeTokenParam);
-      if (cancelled || !loaded) return;
+      if (cancelled) return;
+      if (!loaded) {
+        setRouteRestoreStatus("error");
+        return;
+      }
+      setRouteRestoreStatus("ready");
       setSelectedCatalogSlug(routeSlugParam);
+      if (rideSetupSelectionParam) {
+        setRideSetupSelection({
+          direction:
+            rideSetupSelectionParam.direction === "reverse" ? "reverse" : "forward",
+          startMode: ["official", "nearest", "custom"].includes(
+            rideSetupSelectionParam.startMode,
+          )
+            ? rideSetupSelectionParam.startMode
+            : "official",
+          selectedPoint: rideSetupSelectionParam.selectedPoint || null,
+        });
+      }
+      if (openRideSetupParam) {
+        setPendingRideSetupToken(routeTokenParam);
+      }
       handleAddRecentRoute?.({
         name: routeNameParam,
         slug: routeSlugParam,
@@ -1206,7 +1494,33 @@ export default function BuildScreen({ navigation, route }) {
     return () => {
       cancelled = true;
     };
-  }, [routeTokenParam, routeSlugParam, routeNameParam, handleLoadRouteParam, handleAddRecentRoute]);
+  }, [
+    openRideSetupParam,
+    routeTokenParam,
+    routeSlugParam,
+    routeNameParam,
+    rideSetupSelectionParam,
+    handleLoadRouteParam,
+    handleAddRecentRoute,
+    routeRestoreAttempt,
+    routeState.status,
+  ]);
+
+  // A featured-page Navigate action opens ride setup after its encoded route is
+  // loaded. It never starts a continuous GPS navigation session implicitly.
+  useEffect(() => {
+    if (!pendingRideSetupToken || pendingRideSetupToken !== routeTokenParam) return;
+    if (state.status !== "ready" || !sourceNavigationRoute?.canNavigate) return;
+    setPendingRideSetupToken(null);
+    openRideSetup({ preserveSelection: Boolean(rideSetupSelectionParam) });
+  }, [
+    openRideSetup,
+    pendingRideSetupToken,
+    routeTokenParam,
+    rideSetupSelectionParam,
+    sourceNavigationRoute,
+    state.status,
+  ]);
 
   const handleMapIdle = useCallback(
     (mapState) => {
@@ -1340,12 +1654,28 @@ export default function BuildScreen({ navigation, route }) {
           <LineLayer id="network-casing" style={networkLayerStyles.casing} />
           <LineLayer id="network-line" style={networkLayerStyles.core} />
         </ShapeSource>
-        <ShapeSource id="route-geometry" shape={routeGeometry}>
+        <ShapeSource id="route-geometry" shape={displayedRouteGeometry}>
           {routeLineStyles.casing ? (
             <LineLayer id="route-casing" style={routeLineStyles.casing} />
           ) : null}
           <LineLayer id="route-line" style={routeLineStyles.core} />
         </ShapeSource>
+        {(rideSetupVisible || pickOnMapMode) && ridePlan?.effectiveRoute ? (
+          <ShapeSource id="ride-setup-preview" shape={setupPreviewGeometry}>
+            <LineLayer id="ride-setup-preview-line" style={SETUP_PREVIEW_LINE_STYLE} />
+          </ShapeSource>
+        ) : null}
+        {(rideSetupVisible || pickOnMapMode) && ridePlan?.selectedPoint ? (
+          <MarkerView
+            coordinate={[ridePlan.selectedPoint.lng, ridePlan.selectedPoint.lat]}
+            anchor={{ x: 0.5, y: 1 }}
+            allowOverlap
+          >
+            <View style={styles.setupStartMarker}>
+              <Icon name="flag" size={18} color={palette.white} />
+            </View>
+          </MarkerView>
+        ) : null}
         {showApproachLines ? (
           <ShapeSource id="approach-direct" shape={directLineGeometry}>
             <LineLayer
@@ -1474,6 +1804,36 @@ export default function BuildScreen({ navigation, route }) {
         onAddToRoute={handleAddDataMarkerToRoute}
         onClose={handleSelectedDataMarkerClear}
       />
+      {routeTokenParam &&
+      (routeRestoreStatus === "waiting" || routeRestoreStatus === "loading") ? (
+        <View style={styles.routeRestoreOverlay} pointerEvents="auto">
+          <View style={styles.routeRestoreCard}>
+            <ActivityIndicator color={palette.forest} size="small" />
+            <Text style={styles.routeRestoreText}>טוען מסלול לעריכה…</Text>
+          </View>
+        </View>
+      ) : null}
+      {routeTokenParam && routeRestoreStatus === "error" ? (
+        <View style={styles.routeRestoreOverlay} pointerEvents="auto">
+          <View style={styles.routeRestoreCard}>
+            <Text style={styles.routeRestoreTitle}>המסלול לא נטען</Text>
+            <Text style={styles.routeRestoreText}>
+              לא הצלחנו לשחזר את המסלול לעריכה.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="נסה לטעון שוב"
+              onPress={() => setRouteRestoreAttempt((attempt) => attempt + 1)}
+              style={({ pressed }) => [
+                styles.routeRestoreRetry,
+                pressed ? styles.routeRestoreRetryPressed : null,
+              ]}
+            >
+              <Text style={styles.routeRestoreRetryText}>נסה שוב</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       <RouteSummaryModal
         activeDataPoints={routeState.activeDataPoints}
         canDownload={canDownload}
@@ -1518,50 +1878,10 @@ export default function BuildScreen({ navigation, route }) {
               navStatus === "paused" ? nav.resume() : nav.pause()
             }
             onStop={nav.stop}
-            onOpenDestinations={() => setDestSheetVisible(true)}
+            onOpenExternal={() => setDestSheetVisible(true)}
+            onChangeRideSettings={handleChangeRideSettings}
             compassHeading={compassHeading}
           />
-          <DestinationSheet
-            visible={destSheetVisible}
-            currentMode={nav.state?.approach?.target?.mode ?? "start"}
-            canJoinNearest={navPresentation.canJoinNearest}
-            nearestSkipText={navPresentation.nearestSkipText}
-            disclaimerText={navPresentation.disclaimerText}
-            onPickStart={() => {
-              nav.setApproachTarget("start");
-              setDestSheetVisible(false);
-            }}
-            onPickNearest={() => {
-              nav.setApproachTarget("nearest");
-              setDestSheetVisible(false);
-            }}
-            onPickOnMap={() => {
-              setDestSheetVisible(false);
-              setPickOnMapMode(true);
-            }}
-            onOpenApp={(app) => {
-              const url = buildAppUrl(app, navPresentation.externalNavTarget);
-              if (url) Linking.openURL(url).catch(() => {});
-              setDestSheetVisible(false);
-            }}
-            onClose={() => setDestSheetVisible(false)}
-          />
-          {pickOnMapMode ? (
-            <View style={styles.pickHint} pointerEvents="box-none">
-              <View style={styles.pickHintCard}>
-                <Text style={styles.pickHintText} numberOfLines={2}>
-                  הקש על המסלול כדי לבחור נקודת חיבור
-                </Text>
-                <Pressable
-                  onPress={() => setPickOnMapMode(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="ביטול"
-                >
-                  <Text style={styles.pickHintCancel}>ביטול</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : null}
         </>
       ) : (
         <PlannerSheet sheetRef={plannerSheetRef}>
@@ -1577,7 +1897,7 @@ export default function BuildScreen({ navigation, route }) {
             onRedo={handleRedo}
             onSeekToFraction={seekToFraction}
             onShare={shareRoute}
-            onStartNavigation={nav.start}
+            onStartNavigation={openRideSetup}
             onUndo={handleUndo}
             playback={playback}
             presentation={routePresentation}
@@ -1586,6 +1906,59 @@ export default function BuildScreen({ navigation, route }) {
           />
         </PlannerSheet>
       )}
+      <RideSetupSheet
+        visible={rideSetupVisible}
+        plan={ridePlan}
+        selection={rideSetupSelection}
+        locationStatus={rideSetupLocationStatus}
+        reverseAllowed={sourceNavigationRoute?.routeShape?.type !== "one_way"}
+        onDirectionChange={(direction) =>
+          setRideSetupSelection((current) => ({ ...current, direction }))
+        }
+        onStartModeChange={(startMode) =>
+          setRideSetupSelection((current) => ({ ...current, startMode }))
+        }
+        onPickCustom={() => {
+          setRideSetupVisible(false);
+          setPickOnMapMode(true);
+        }}
+        onRefreshLocation={refreshRideSetupLocation}
+        onConfirm={handleRideSetupConfirm}
+        onClose={() => {
+          setRideSetupVisible(false);
+          trackNavigationEvent("ride_setup_cancelled");
+          void clearPendingRideIntent();
+        }}
+      />
+      <DestinationSheet
+        visible={destSheetVisible}
+        appsOnly
+        disclaimerText={navPresentation.disclaimerText}
+        onOpenApp={handleOpenExternalApp}
+        onClose={() => {
+          setDestSheetVisible(false);
+          if (pendingExternalPlan) setRideSetupVisible(true);
+        }}
+      />
+      {pickOnMapMode ? (
+        <View style={styles.pickHint} pointerEvents="box-none">
+          <View style={styles.pickHintCard}>
+            <Text style={styles.pickHintText} numberOfLines={2}>
+              הקש על המסלול כדי לבחור נקודת התחלה
+            </Text>
+            <Pressable
+              onPress={() => {
+                setPickOnMapMode(false);
+                setRideSetupVisible(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="ביטול"
+            >
+              <Text style={styles.pickHintCancel}>ביטול</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -2196,6 +2569,71 @@ const styles = StyleSheet.create({
   },
   pickHintCancel: {
     color: "#9ec6a6",
+    fontSize: 14,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  setupStartMarker: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.forest,
+    borderWidth: 3,
+    borderColor: palette.white,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
+  },
+  routeRestoreOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "rgba(237, 237, 237, 0.72)",
+  },
+  routeRestoreCard: {
+    width: "100%",
+    maxWidth: 320,
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  routeRestoreTitle: {
+    color: palette.ink,
+    fontSize: 17,
+    fontWeight: "900",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  routeRestoreText: {
+    color: palette.muted,
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  routeRestoreRetry: {
+    marginTop: 2,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: palette.forest,
+  },
+  routeRestoreRetryPressed: { opacity: 0.78 },
+  routeRestoreRetryText: {
+    color: palette.white,
     fontSize: 14,
     fontWeight: "800",
     writingDirection: "rtl",

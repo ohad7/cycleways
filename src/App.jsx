@@ -290,6 +290,11 @@ function App() {
     () => discoverPeekRoutes.map((route) => route.slug),
     [discoverPeekRoutes],
   );
+  const isMobileDiscoverHome =
+    state.status === "ready" &&
+    isMobileSheet &&
+    panel.state === "discover" &&
+    routePointCount === 0;
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -605,6 +610,7 @@ function App() {
   }, [mapUi.routeFitRequest, requestFit]);
 
   const recommendedRoutes = useMemo(() => {
+    if (isMobileDiscoverHome) return null;
     if (panel.state !== "discover") return null;
     const peekMode = isMobileSheet && sheetSnap === "peek";
     const bright = new Set(discoverViewport.visibleSlugs);
@@ -639,17 +645,19 @@ function App() {
     recommendedGeoms,
     hoveredRouteSlug,
     isMobileSheet,
+    isMobileDiscoverHome,
     sheetSnap,
   ]);
 
   // Fit only the bright (in-viewport) routes — ghosts are drawn but excluded so
   // the camera frames what the user is actually reading.
   const discoverFitRoutes = useMemo(() => {
+    if (isMobileDiscoverHome) return null;
     if (panel.state !== "discover" || (isMobileSheet && sheetSnap === "peek")) return null;
     return discoverViewport.visibleSlugs
       .map((slug) => ({ geometry: recommendedGeoms[slug] }))
       .filter((r) => Array.isArray(r.geometry) && r.geometry.length >= 2);
-  }, [isMobileSheet, panel.state, sheetSnap, discoverViewport.visibleSlugs, recommendedGeoms]);
+  }, [isMobileSheet, isMobileDiscoverHome, panel.state, sheetSnap, discoverViewport.visibleSlugs, recommendedGeoms]);
 
   // Fit the map to all relevant Discover routes; re-fit when the filtered list
   // (or its loaded geometries) changes. Debounced so streaming loads converge.
@@ -864,6 +872,35 @@ function App() {
     ) : null
   );
 
+  const discoverPanel = (
+    <DiscoverPanel
+      catalog={catalog}
+      places={places}
+      onSelectRoute={handleSelectRecommended}
+      onBuild={handlePeekBuild}
+      onSlugsChange={setDiscoverSlugs}
+      onRouteViewport={setDiscoverViewport}
+      onHoverRoute={setHoveredRouteSlug}
+      viewportKey={`${isMobileSheet ? "mobile" : "desktop"}:${sheetSnap}:${panel.state}`}
+      locationFix={mapUi.locationFix}
+      locationError={mapUi.searchError}
+      filters={discoverFilters}
+      onFiltersChange={setDiscoverFilters}
+      nearMeSort={nearMeSort}
+      onNearMeSortChange={setNearMeSort}
+      onRequestLocation={handleLocateMe}
+      recentRoutes={recentRoutes}
+      onSelectRecent={(entry) =>
+        handleSelectRecommended({
+          route: entry.param,
+          name: entry.name,
+          distanceKm: entry.distanceKm,
+          slug: entry.slug,
+        })
+      }
+    />
+  );
+
   return (
     <>
       <PageShell>
@@ -877,14 +914,24 @@ function App() {
           ) : null}
         </div>
 
-        <div className="container">
-          <div
-            className={[
-              "front-shell",
-              `front-shell--sheet-${sheetSnap}`,
-              panelCollapsed ? "front-shell--collapsed" : "",
-            ].filter(Boolean).join(" ")}
-          >
+        <div
+          className={[
+            "container",
+            isMobileDiscoverHome ? "container--mobile-discover-home" : "",
+          ].filter(Boolean).join(" ")}
+        >
+          {isMobileDiscoverHome ? (
+            <div className="mobile-discover-home" data-testid="mobile-discover-home">
+              {discoverPanel}
+            </div>
+          ) : (
+            <div
+              className={[
+                "front-shell",
+                `front-shell--sheet-${sheetSnap}`,
+                panelCollapsed ? "front-shell--collapsed" : "",
+              ].filter(Boolean).join(" ")}
+            >
             <div
               ref={mapContainerRef}
               className={[
@@ -1141,32 +1188,7 @@ function App() {
                   routeStatus={routeState.status}
                   collapsed={panelCollapsed}
                   onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
-                  discover={
-                    <DiscoverPanel
-                      catalog={catalog}
-                      places={places}
-                      onSelectRoute={handleSelectRecommended}
-                      onBuild={handlePeekBuild}
-                      onSlugsChange={setDiscoverSlugs}
-                      onRouteViewport={setDiscoverViewport}
-                      onHoverRoute={setHoveredRouteSlug}
-                      viewportKey={`${isMobileSheet ? "mobile" : "desktop"}:${sheetSnap}:${panel.state}`}
-                      locationFix={mapUi.locationFix}
-                      filters={discoverFilters}
-                      onFiltersChange={setDiscoverFilters}
-                      nearMeSort={nearMeSort}
-                      onNearMeSortChange={setNearMeSort}
-                      recentRoutes={recentRoutes}
-                      onSelectRecent={(entry) =>
-                        handleSelectRecommended({
-                          route: entry.param,
-                          name: entry.name,
-                          distanceKm: entry.distanceKm,
-                          slug: entry.slug,
-                        })
-                      }
-                    />
-                  }
+                  discover={discoverPanel}
                   build={
                     <BuildPanel
                       routeState={routeState}
@@ -1224,9 +1246,10 @@ function App() {
               </button>
             )}
           </div>
+          )}
         </div>
 
-        <ContentSections />
+        {!isMobileDiscoverHome && <ContentSections />}
       </PageShell>
 
       {state.status === "ready" && mapUi.downloadModalOpen && (

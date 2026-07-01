@@ -1,12 +1,13 @@
 # iOS Splash Screen — Design
 
-Date: 2026-06-29
+Date: 2026-06-29 (updated 2026-07-02)
 
 ## Goal
 
 Replace the iPhone app's default Expo placeholder launch screen with the
-CycleWays brand badge, and match the iPhone home-screen app icon to the same
-badge — done the proper Expo-config way so both survive `expo prebuild`.
+CycleWays brand badge, match the iPhone home-screen app icon to the same badge,
+and bridge cold startup with a short animated progress state that performs
+useful preload work.
 
 ## Background / current state
 
@@ -33,12 +34,21 @@ gradient (`#ededed → #d2d2d2 → #a8a8a8`).
 
 ## Decisions
 
-- **Composition:** the CycleWays brand badge logo (from the website), centered.
+- **Composition:** on iOS, a portrait brand composition with the CycleWays badge
+  as the dominant element, the tagline "גליל עליון על אופניים", and a restrained
+  Upper Galilee route/elevation line beneath it. Android retains the centered
+  badge treatment.
 - **Background:** solid `#ededed` (iOS launch screens can't use gradients; this
   is the lightest stop of the web gradient and keeps the badge's white sticker
   outline visible).
-- **Behavior:** static native launch screen only — Expo auto-hides it on the
-  first rendered frame. No JS `preventAutoHide`/fade logic.
+- **Behavior:** keep the native launch screen visible until the matching React
+  overlay has laid out, then animate that overlay for at least 1.2 seconds.
+  Route-catalog loading, bundled featured-route server warmup, and initial URL
+  resolution run during that interval. The server warmup has a 900 ms startup
+  budget so it cannot unnecessarily hold the first screen.
+- **Feedback:** show a restrained progress line and truthful Hebrew milestone
+  labels. Use subtle logo scale and activity-dot motion, respect reduced-motion,
+  and fade the overlay only after bootstrap completes.
 - **Appearance:** light only (the app is `userInterfaceStyle: "light"`); no dark
   variant.
 - **Home-screen app icon:** also the CycleWays badge, replacing the current blue
@@ -67,6 +77,8 @@ by prebuild.
    - `image`: `./assets/splash-icon.png`
    - `backgroundColor`: `#ededed`
    - `imageWidth`: ~180 (display width in pt; logo centered, `contain` resize)
+   - iOS override: `./assets/splash-screen-ios.png`, rendered as a full-screen
+     contained portrait image so the composition scales across iPhone sizes.
 
 3. **Brand app icon.** Generate an opaque 1024×1024 icon: composite the badge
    (scaled to ~88% with a margin) onto a solid `#ededed` square, flattened to
@@ -78,21 +90,31 @@ by prebuild.
    `SplashScreen` imageset (@1x/@2x/@3x) in `Images.xcassets` from the new
    splash asset, and regenerates the `AppIcon` asset catalog from the new icon.
 
+5. **Animated launch overlay.** Render the same portrait asset from React,
+   explicitly hide the native splash after the overlay's first layout, perform
+   bootstrap tasks concurrently, enforce the 1.2-second minimum, and fade into
+   the navigator.
+
 ## Verification
 
 Build/run on the iOS simulator (`npm run ios` in `apps/mobile`) and confirm:
 - the badge appears centered on an `#ededed` background at launch,
 - it is reasonably crisp,
 - there is no blank flash before the badge appears,
+- the native-to-React transition is visually continuous,
+- useful startup tasks run during the 1.2-second minimum,
+- reduced-motion keeps the progress feedback without decorative motion,
 - the home-screen app icon is the badge on `#ededed` (not the blue chevron), with
   no transparent corners.
 
 ## Tradeoffs / notes
 
-- The only brand master is 320×320. Upscaling to ~1024 px does not add true
-  detail, so at large sizes the badge can look slightly soft. Mitigated by a
-  moderate `imageWidth` (~180 pt). If a true high-resolution / vector badge
-  becomes available later, drop it in as `splash-icon.png` and re-prebuild.
+- The only brand master is 320×320. Upscaling does not add true detail, so the
+  badge can look slightly soft in the larger iOS composition. A true
+  high-resolution/vector badge should eventually replace both splash assets.
+- The Expo full-screen-image switch used for the portrait iOS composition is a
+  legacy compatibility option. If Expo removes it, replace it with a small
+  config plugin that generates the same edge-pinned aspect-fit storyboard.
 - Android uses the same placeholder today. This design targets iOS only; Android
   can adopt the same config later by widening the plugin config. (The
   `expo-splash-screen` plugin's root props apply to both platforms, so Android's
@@ -100,3 +122,6 @@ Build/run on the iOS simulator (`npm run ios` in `apps/mobile`) and confirm:
 - The badge includes the "CYCLEWAYS.APP" wordmark, which is small and may be hard
   to read at home-screen app-icon size. This is accepted to keep the icon and
   splash visually identical; a simplified icon-only mark could replace it later.
+- The 1.2-second floor is intentionally short: it removes erratic flashes while
+  still letting a genuinely slow bootstrap remain on-screen with honest status
+  feedback instead of hiding work behind a fixed timer.

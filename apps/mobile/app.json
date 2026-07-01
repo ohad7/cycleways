@@ -51,7 +51,13 @@
           "image": "./assets/splash-icon.png",
           "backgroundColor": "#ededed",
           "imageWidth": 180,
-          "resizeMode": "contain"
+          "resizeMode": "contain",
+          "ios": {
+            "image": "./assets/splash-screen-ios.png",
+            "backgroundColor": "#ededed",
+            "resizeMode": "contain",
+            "enableFullScreenImage_legacy": true
+          }
         }
       ],
       [

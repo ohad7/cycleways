@@ -17,7 +17,8 @@ export default function NavPanel({
   onRecenter,
   onPauseResume,
   onStop,
-  onOpenDestinations,
+  onOpenExternal,
+  onChangeRideSettings,
   compassHeading = null,
 }) {
   const insets = useSafeAreaInsets();
@@ -34,6 +35,12 @@ export default function NavPanel({
   return (
     <View style={styles.root} pointerEvents="box-none">
       <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
+        {p.justAcquired ? (
+          <View style={styles.acquiredRow}>
+            <Icon name="checkmark-circle" color={palette.white} size={22} />
+            <Text style={styles.acquiredText}>{p.acquisitionText}</Text>
+          </View>
+        ) : null}
         {p.wrongWay ? (
           <View style={styles.wrongWayRow}>
             <Icon name="warning-outline" color={palette.white} size={22} />
@@ -43,21 +50,30 @@ export default function NavPanel({
           </View>
         ) : null}
         {p.showApproach ? (
-          <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
-            <Icon
-              name="navigate"
-              color={p.offRoute ? palette.white : palette.forest}
-              size={26}
-              style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}
-            />
-            <Text
-              style={[styles.cueText, p.offRoute ? styles.offText : null]}
-              numberOfLines={1}
-            >
-              {p.destinationLabel}
-              {p.approachDistanceShort ? ` · ${p.approachDistanceShort}` : ""}
+          <>
+            <Text style={[styles.approachHeading, p.offRoute ? styles.offText : null]}>
+              {p.approachHeading}
             </Text>
-          </View>
+            <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
+              <View style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}>
+                <Icon
+                  name="navigate"
+                  color={p.offRoute ? palette.white : palette.forest}
+                  size={26}
+                />
+              </View>
+              <Text
+                style={[styles.cueText, p.offRoute ? styles.offText : null]}
+                numberOfLines={1}
+              >
+                {p.destinationLabel}
+                {p.approachDistanceShort ? ` · ${p.approachDistanceShort}` : ""}
+              </Text>
+            </View>
+            {p.approachSupportText ? (
+              <Text style={styles.approachSupport}>{p.approachSupportText}</Text>
+            ) : null}
+          </>
         ) : p.showCue ? (
           <View style={styles.cueRow}>
             <Icon name={p.cueIcon} color={palette.forest} size={28} />
@@ -82,17 +98,36 @@ export default function NavPanel({
           <Text style={styles.context} numberOfLines={1}>{p.contextText}</Text>
         ) : null}
         {p.showApproach ? (
+          <View style={styles.approachActions}>
+            <Pressable
+              style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
+              onPress={onOpenExternal}
+              accessibilityRole="button"
+              accessibilityLabel="פתיחה באפליקציית ניווט"
+            >
+              <Icon name="open-outline" color={palette.forest} size={18} />
+              <Text style={styles.destBtnText}>אפליקציית ניווט</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
+              onPress={onChangeRideSettings}
+              accessibilityRole="button"
+              accessibilityLabel="שינוי הגדרות רכיבה"
+            >
+              <Icon name="options-outline" color={palette.forest} size={18} />
+              <Text style={styles.destBtnText}>הגדרות רכיבה</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {!p.showApproach && sessionState?.status === "navigating" ? (
           <Pressable
-            style={({ pressed }) => [
-              styles.destBtn,
-              pressed ? styles.destBtnPressed : null,
-            ]}
-            onPress={onOpenDestinations}
+            style={({ pressed }) => [styles.routeSettingsBtn, pressed ? styles.destBtnPressed : null]}
+            onPress={onChangeRideSettings}
             accessibilityRole="button"
-            accessibilityLabel="אפשרויות יעד"
+            accessibilityLabel="שינוי כיוון או נקודת התחלה"
           >
-            <Icon name="options-outline" color={palette.forest} size={18} />
-            <Text style={styles.destBtnText}>יעד</Text>
+            <Icon name="options-outline" color={palette.forest} size={16} />
+            <Text style={styles.routeSettingsText}>הגדרות רכיבה</Text>
           </Pressable>
         ) : null}
       </View>
@@ -178,6 +213,27 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
   },
+  acquiredRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: space.sm,
+    backgroundColor: palette.forest,
+    marginTop: -space.md,
+    marginHorizontal: -space.lg,
+    marginBottom: space.sm,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+  },
+  acquiredText: {
+    color: palette.white,
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "900",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   cueTextWrap: { flex: 1 },
   cueText: {
     color: palette.ink,
@@ -187,6 +243,22 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   offText: { color: palette.white, flex: 1 },
+  approachHeading: {
+    color: palette.ink,
+    fontSize: 14,
+    fontWeight: "900",
+    writingDirection: "rtl",
+    textAlign: "right",
+    marginBottom: space.xs,
+  },
+  approachSupport: {
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    writingDirection: "rtl",
+    textAlign: "right",
+    marginTop: space.xs,
+  },
   cueDistance: {
     color: palette.muted,
     fontSize: 14,
@@ -231,6 +303,27 @@ const styles = StyleSheet.create({
     backgroundColor: palette.white,
   },
   destBtnPressed: { opacity: 0.7 },
+  approachActions: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: space.sm,
+    marginTop: space.sm,
+  },
+  routeSettingsBtn: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    alignSelf: "flex-end",
+    gap: space.xs,
+    marginTop: space.sm,
+    paddingVertical: 4,
+    paddingHorizontal: space.sm,
+  },
+  routeSettingsText: {
+    color: palette.forest,
+    fontSize: 12,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
   destBtnText: {
     color: palette.forest,
     fontSize: 14,

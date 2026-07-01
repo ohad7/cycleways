@@ -8,17 +8,21 @@ test.beforeEach(async ({ page }) => {
 
 // Loads the first Discover card's route into the planner and returns the
 // card's /routes/<slug> href and title for comparison with the Build CTA.
-async function selectFirstDiscoverRoute(page) {
+async function selectFirstDiscoverRoute(page, isMobile = false) {
   await page.goto("/");
-  const panel = page.getByTestId("front-panel");
-  await ensurePanelOpen(page);
-  await expect(panel).toBeVisible();
-  // Wait for the routing engine; a click before readiness falls back to a
-  // full-page load by design.
-  await expect(panel).toHaveAttribute("data-route-status", "ready", {
-    timeout: 30_000,
-  });
-  const card = panel.locator(".panel-route-card-wrap").first();
+  const discoverScope = isMobile
+    ? page.getByTestId("mobile-discover-home")
+    : page.getByTestId("front-panel");
+  if (!isMobile) {
+    await ensurePanelOpen(page);
+    // Wait for the routing engine; a click before readiness falls back to a
+    // full-page load by design.
+    await expect(discoverScope).toHaveAttribute("data-route-status", "ready", {
+      timeout: 30_000,
+    });
+  }
+  await expect(discoverScope).toBeVisible();
+  const card = discoverScope.locator(".panel-route-card-wrap").first();
   await expect(card).toBeVisible();
   const storyLink = card.locator(".panel-route-card__story-link");
   await expect(storyLink).toBeVisible();
@@ -32,8 +36,8 @@ async function selectFirstDiscoverRoute(page) {
   return { storyHref, title };
 }
 
-test("selecting a Discover card shows the route-page CTA in Build", async ({ page }) => {
-  const { storyHref, title } = await selectFirstDiscoverRoute(page);
+test("selecting a Discover card shows the route-page CTA in Build", async ({ page, isMobile }) => {
+  const { storyHref, title } = await selectFirstDiscoverRoute(page, isMobile);
   await ensurePanelOpen(page);
   const cta = page.locator(".build-panel__story-cta");
   await expect(cta).toBeVisible();
@@ -43,7 +47,7 @@ test("selecting a Discover card shows the route-page CTA in Build", async ({ pag
 
 test("mobile: build peek shows the route name and a route-page link", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mobile-only");
-  const { storyHref, title } = await selectFirstDiscoverRoute(page);
+  const { storyHref, title } = await selectFirstDiscoverRoute(page, isMobile);
   // Do NOT call ensurePanelOpen here — the peek strip is only visible at
   // data-snap="peek"; opening the sheet would replace it with panel content.
   const sheet = page.locator(".front-sheet");
@@ -57,8 +61,8 @@ test("mobile: build peek shows the route name and a route-page link", async ({ p
   await expect(link).toHaveAttribute("href", storyHref);
 });
 
-test("editing the route (map click) hides the CTA", async ({ page }) => {
-  await selectFirstDiscoverRoute(page);
+test("editing the route (map click) hides the CTA", async ({ page, isMobile }) => {
+  await selectFirstDiscoverRoute(page, isMobile);
   await ensurePanelOpen(page);
   await expect(page.locator(".build-panel__story-cta")).toBeVisible();
   // A map click always adds a route point — the loaded route diverges from
@@ -73,8 +77,8 @@ test("editing the route (map click) hides the CTA", async ({ page }) => {
   await expect(page.locator(".build-panel__title")).toHaveText("מסלול חדש");
 });
 
-test("clearing the route hides the CTA", async ({ page }) => {
-  await selectFirstDiscoverRoute(page);
+test("clearing the route hides the CTA", async ({ page, isMobile }) => {
+  await selectFirstDiscoverRoute(page, isMobile);
   await ensurePanelOpen(page);
   const panel = page.getByTestId("front-panel");
   await expect(page.locator(".build-panel__story-cta")).toBeVisible();
@@ -82,8 +86,8 @@ test("clearing the route hides the CTA", async ({ page }) => {
   await expect(page.locator(".build-panel__story-cta")).toHaveCount(0);
 });
 
-test("the Build CTA navigates to the route page", async ({ page }) => {
-  const { storyHref } = await selectFirstDiscoverRoute(page);
+test("the Build CTA navigates to the route page", async ({ page, isMobile }) => {
+  const { storyHref } = await selectFirstDiscoverRoute(page, isMobile);
   await ensurePanelOpen(page);
   await page.locator(".build-panel__story-cta").click();
   const escapedHref = storyHref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -37,6 +37,12 @@ import { createCueHapticPlanner } from "@cycleways/core/navigation/cueHaptics.js
   );
 }
 
+// Acquiring the selected route start gets one affirmative haptic.
+{
+  const planner = createCueHapticPlanner();
+  assert.equal(planner.plan({ kind: "acquired" }, 1000).kind, "medium");
+}
+
 // --- enter-segment cues do not vibrate ---
 {
   const planner = createCueHapticPlanner();

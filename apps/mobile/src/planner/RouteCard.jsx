@@ -42,13 +42,23 @@ function tintFor(hex) {
 
 // Rich Discover card: a full-width horizontally swipeable photo gallery (route +
 // POI thumbnails; a play badge on the first frame when the route has a synced
-// video), then the title, difficulty chip, and "distance · shape · via" meta.
-export default function RouteCard({ entry, index = 0, placeById, fix, onSelect }) {
+// video), then the title, difficulty chip, route summary, and
+// "distance · shape · via" meta.
+export default function RouteCard({
+  entry,
+  index = 0,
+  placeById,
+  fix,
+  onSelect,
+  variant = "compact",
+}) {
   const [page, setPage] = useState(0);
   const difficultyLabel = routeDifficultyLabel(entry?.difficulty);
   const chipColor = DIFFICULTY_COLOR[entry?.difficulty] || palette.muted;
   const swatchColor = discoverRouteColor(index);
   const hasVideo = ROUTE_VIDEO_SLUGS.has(entry?.slug);
+  const summary =
+    typeof entry?.summary === "string" ? entry.summary.trim() : "";
 
   const images = useMemo(() => {
     const paths = ROUTE_GALLERIES[entry?.slug] || [];
@@ -67,11 +77,112 @@ export default function RouteCard({ entry, index = 0, placeById, fix, onSelect }
 
   const nearMeters = fix ? distanceToRouteStartMeters(entry, placeById, fix) : null;
   const nearLabel = formatDistanceFromUser(nearMeters);
+  const firstImage = images[0] || null;
 
   const onScrollEnd = (e) => {
     const x = e.nativeEvent.contentOffset.x;
     setPage(Math.round(x / IMAGE_WIDTH));
   };
+
+  if (variant === "hero") {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`פתח את ${entry.name}`}
+        onPress={() => onSelect?.(entry)}
+        style={({ pressed }) => [
+          styles.heroCard,
+          pressed ? styles.cardPressed : null,
+        ]}
+        testID={`route-hero-${entry.slug || entry.name}`}
+      >
+        <View style={styles.heroMedia}>
+          {firstImage ? (
+            <Image source={firstImage} style={styles.heroImage} resizeMode="cover" />
+          ) : (
+            <View style={[styles.heroImage, styles.fallback, { backgroundColor: tintFor(chipColor) }]}>
+              <Icon name="bicycle-outline" size={42} color={chipColor} />
+            </View>
+          )}
+        </View>
+        <View style={styles.heroOverlay} pointerEvents="none">
+          <View style={styles.heroKicker}>
+            <View style={[styles.heroSwatch, { backgroundColor: swatchColor }]} />
+            <Text style={styles.heroKickerText}>מסלול מומלץ</Text>
+          </View>
+          <Text style={styles.heroTitle} numberOfLines={2}>
+            {entry.name}
+          </Text>
+          {summary ? (
+            <Text style={styles.heroSummary} numberOfLines={2}>
+              {summary}
+            </Text>
+          ) : null}
+          {meta.length ? (
+            <Text style={styles.heroMeta} numberOfLines={1}>
+              {meta.join(" · ")}
+            </Text>
+          ) : null}
+          <View style={styles.heroFooter}>
+            {difficultyLabel ? (
+              <View style={[styles.heroChip, { backgroundColor: chipColor }]}>
+                <Text style={styles.heroChipText}>{difficultyLabel}</Text>
+              </View>
+            ) : null}
+            {nearLabel ? <Text style={styles.heroNear}>{nearLabel}</Text> : null}
+            <Text style={styles.heroCta}>פתח מסלול</Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  }
+
+  if (variant === "compact") {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`פתח את ${entry.name}`}
+        onPress={() => onSelect?.(entry)}
+        style={({ pressed }) => [
+          styles.compactCard,
+          pressed ? styles.cardPressed : null,
+        ]}
+        testID={`route-card-${entry.slug || entry.name}`}
+      >
+        <View style={[styles.compactThumb, { backgroundColor: tintFor(chipColor) }]}>
+          {firstImage ? (
+            <Image source={firstImage} style={styles.compactImage} resizeMode="cover" />
+          ) : (
+            <Icon name="bicycle-outline" size={28} color={chipColor} />
+          )}
+        </View>
+        <View style={styles.compactBody}>
+          <View style={styles.titleRow}>
+            <View style={[styles.swatch, { backgroundColor: swatchColor }]} />
+            <Text style={styles.title} numberOfLines={1}>
+              {entry.name}
+            </Text>
+            {difficultyLabel ? (
+              <View style={[styles.chip, { backgroundColor: chipColor }]}>
+                <Text style={styles.chipText}>{difficultyLabel}</Text>
+              </View>
+            ) : null}
+          </View>
+          {summary ? (
+            <Text style={styles.summary} numberOfLines={2}>
+              {summary}
+            </Text>
+          ) : null}
+          {meta.length ? (
+            <Text style={styles.meta} numberOfLines={1}>
+              {meta.join(" · ")}
+            </Text>
+          ) : null}
+          {nearLabel ? <Text style={styles.near}>{nearLabel}</Text> : null}
+        </View>
+      </Pressable>
+    );
+  }
 
   return (
     <View
@@ -141,6 +252,7 @@ export default function RouteCard({ entry, index = 0, placeById, fix, onSelect }
             </View>
           ) : null}
         </View>
+        {summary ? <Text style={styles.summary}>{summary}</Text> : null}
         {meta.length ? (
           <Text style={styles.meta} numberOfLines={1}>
             {meta.join(" · ")}
@@ -153,6 +265,155 @@ export default function RouteCard({ entry, index = 0, placeById, fix, onSelect }
 }
 
 const styles = StyleSheet.create({
+  heroCard: {
+    position: "relative",
+    height: 250,
+    marginHorizontal: 12,
+    borderRadius: radius.lg || radius.md,
+    backgroundColor: palette.cream,
+    overflow: "hidden",
+    borderColor: "#dfe8e2",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  heroMedia: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: palette.cream,
+  },
+  heroImage: { width: "100%", height: "100%" },
+  heroPlayBadge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(0,0,0,0.48)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 14,
+    backgroundColor: "rgba(17, 25, 20, 0.42)",
+  },
+  heroKicker: {
+    alignSelf: "flex-end",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(255,255,255,0.16)",
+  },
+  heroSwatch: { width: 8, height: 8, borderRadius: 4 },
+  heroKickerText: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 11,
+    fontWeight: "900",
+    writingDirection: "rtl",
+  },
+  heroTitle: {
+    color: palette.white,
+    fontSize: 22,
+    fontWeight: "900",
+    lineHeight: 27,
+    textAlign: "right",
+    writingDirection: "rtl",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  heroSummary: {
+    marginTop: 6,
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "700",
+    textAlign: "right",
+    writingDirection: "rtl",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  heroMeta: {
+    marginTop: 7,
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  heroFooter: {
+    marginTop: 10,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  heroChip: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
+  heroChipText: { color: palette.white, fontSize: 10, fontWeight: "900" },
+  heroNear: {
+    flexShrink: 1,
+    color: "rgba(255,255,255,0.84)",
+    fontSize: 11,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  heroCta: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: palette.white,
+    color: palette.forest,
+    fontSize: 12,
+    fontWeight: "900",
+    overflow: "hidden",
+    writingDirection: "rtl",
+  },
+  compactCard: {
+    flexDirection: "row-reverse",
+    alignItems: "stretch",
+    gap: 10,
+    padding: 9,
+    borderRadius: radius.md,
+    backgroundColor: palette.white,
+    borderColor: "#e6ece7",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  compactThumb: {
+    position: "relative",
+    width: 106,
+    height: 92,
+    borderRadius: radius.sm || 10,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  compactImage: { width: "100%", height: "100%" },
+  compactPlayBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  compactBody: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    gap: 3,
+  },
+  cardPressed: { opacity: 0.86 },
   card: {
     borderRadius: radius.md,
     backgroundColor: palette.white,
@@ -203,6 +464,13 @@ const styles = StyleSheet.create({
   },
   chip: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
   chipText: { color: palette.white, fontSize: 10, fontWeight: "800" },
+  summary: {
+    color: "#52615c",
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   meta: {
     color: palette.muted,
     fontSize: 12,

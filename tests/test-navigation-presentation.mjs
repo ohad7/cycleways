@@ -184,7 +184,17 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   });
   assert.equal(p.showGuidance, true);
   assert.equal(p.guidanceText, "", "no guidance text without finite distance");
-  assert.match(p.statusText, /מתקרב/, "approaching statusText is non-empty Hebrew fallback");
+  assert.match(p.statusText, /בדרך למסלול/, "approaching statusText is non-empty Hebrew fallback");
+}
+// --- explicit acquisition transition ---
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    justAcquired: true,
+    progress: { hasAcquiredRoute: true, remainingMeters: 5000 },
+  });
+  assert.equal(p.justAcquired, true);
+  assert.match(p.acquisitionText, /הגעת למסלול/);
 }
 // --- wrong-way ---
 {

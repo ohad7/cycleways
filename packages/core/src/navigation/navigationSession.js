@@ -73,6 +73,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
     approach: emptyApproach(),
     routeRequest: null,
     error: null,
+    justAcquired: false,
   };
 
   function set(patch) {
@@ -159,6 +160,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           approach: emptyApproach(),
           routeRequest: null,
           error: null,
+          justAcquired: false,
         });
 
       case NAV_ACTIONS.LOCATION: {
@@ -195,6 +197,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
               activeCue: null,
               offRoute: false,
               cueEvent: null,
+              justAcquired: false,
               approach: {
                 ...approach,
                 suggestionStatus: "requesting",
@@ -209,6 +212,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
             activeCue: null,
             offRoute: false,
             cueEvent: null,
+            justAcquired: false,
             approach,
           });
         }
@@ -236,6 +240,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
                 activeCue: null,
                 offRoute: true,
                 cueEvent: firstOffRoute ? { kind: "off-route" } : null,
+                justAcquired: false,
                 approach: {
                   ...state.approach,
                   target,
@@ -256,6 +261,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
             activeCue: null,
             offRoute: true,
             cueEvent: firstOffRoute ? { kind: "off-route" } : null,
+            justAcquired: false,
             approach: { ...state.approach, distanceToRouteMeters },
           });
         }
@@ -265,9 +271,16 @@ export function createNavigationSession(navigationRoute, options = {}) {
         lastConfirmedProgressMeters = mainProgress.progressMeters;
         const acquiredApproach =
           state.approach.target || state.approach.suggestionStatus !== "idle";
+        const enteredEffectiveRoute = Boolean(
+          acquiredApproach ||
+            (navigationRoute?.requiresStartAcquisition === true &&
+              state.progress?.hasAcquiredRoute !== true),
+        );
         if (acquiredApproach) lastRequestPos = null;
         const activeCue = selectActiveCue(mainCues, mainProgress.progressMeters);
-        const cueEvent = cueFor(activeCue);
+        const cueEvent = enteredEffectiveRoute
+          ? { kind: "acquired" }
+          : cueFor(activeCue);
         wasOffRoute = false;
         return set({
           status: "navigating",
@@ -275,6 +288,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           activeCue,
           offRoute: false,
           cueEvent,
+          justAcquired: enteredEffectiveRoute,
           approach: acquiredApproach ? emptyApproach() : state.approach,
           routeRequest: null,
         });
@@ -349,7 +363,11 @@ export function createNavigationSession(navigationRoute, options = {}) {
       }
 
       case NAV_ACTIONS.PERMISSION_DENIED:
-        return set({ status: "error", error: "location-permission-denied" });
+        return set({
+          status: "error",
+          error: "location-permission-denied",
+          justAcquired: false,
+        });
 
       case NAV_ACTIONS.PAUSE:
         if (!ACTIVE.has(state.status)) return state;
@@ -372,6 +390,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           status: "ended",
           approach: emptyApproach(),
           routeRequest: null,
+          justAcquired: false,
         });
 
       case NAV_ACTIONS.ERROR:
@@ -382,6 +401,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           approach: emptyApproach(),
           routeRequest: null,
           error: action.message || "navigation-error",
+          justAcquired: false,
         });
 
       default:

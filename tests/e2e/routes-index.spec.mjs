@@ -131,7 +131,7 @@ test("/routes filters by goes-through location", async ({ page, isMobile }) => {
   await expect(routeCardByTitle(page, "הירדן ההיסטורי")).toBeVisible();
 });
 
-test("/routes card opens planner and detail actions", async ({ page }) => {
+test("/routes card opens planner and detail actions", async ({ page, isMobile }) => {
   await page.goto("/routes");
   const historic = routeCardByTitle(page, "הירדן ההיסטורי");
   await expect(historic.getByRole("link", { name: "פתח במפה" })).toHaveAttribute("href", /route=/);
@@ -148,7 +148,13 @@ test("/routes card opens planner and detail actions", async ({ page }) => {
   await expect(page.locator(".fv-route-stage-map")).toBeVisible();
   await expect(page.locator(".fv-video-controls")).toBeVisible();
   await expect(page.locator(".fv-route-stats")).toBeVisible();
-  await expect(page.locator(".elevation-profile")).toBeVisible();
+  if (isMobile) {
+    await expect(page.locator(".fv-mobile-elevation-strip .elevation-profile")).toBeVisible();
+    await expect(page.locator(".fv-side-elevation-wrap .elevation-profile")).toBeHidden();
+  } else {
+    await expect(page.locator(".fv-side-elevation-wrap .elevation-profile")).toBeVisible();
+    await expect(page.locator(".fv-mobile-elevation-strip")).toBeHidden();
+  }
   await expect(page.locator(".nav-links .nav-link")).toHaveText([
     "על המסלול",
     "נקודות במסלול",

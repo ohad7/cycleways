@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import BackButton from "./BackButton.jsx";
 import { startWebServer } from "../webServer.js";
@@ -12,6 +13,7 @@ import { palette } from "../planner/theme.js";
 // back to native. `baseUrl` lets a caller point at a local static server later;
 // it defaults to production.
 const DEFAULT_SITE = "https://www.cycleways.app";
+const READY_FALLBACK_MS = 2000;
 
 // Runs before the page scripts: declares this is an app embed + which actions to
 // show. The web reads this via appEmbed.js (appEmbedConfig).
@@ -36,14 +38,36 @@ export default function RouteDetailWeb({
   slug,
   baseUrl,
   onBack,
+  onDownload,
   onOpenEditor,
   onNavigate,
   onError,
 }) {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
+  const readyFallbackRef = useRef(null);
   // Prefer the bundled local static server (fully offline); fall back to the
   // production site if it can't start. An explicit baseUrl prop overrides both.
   const [resolvedBase, setResolvedBase] = useState(baseUrl || null);
+
+  const clearReadyFallback = useCallback(() => {
+    if (readyFallbackRef.current) {
+      clearTimeout(readyFallbackRef.current);
+      readyFallbackRef.current = null;
+    }
+  }, []);
+
+  const finishLoading = useCallback(() => {
+    clearReadyFallback();
+    setLoading(false);
+  }, [clearReadyFallback]);
+
+  useEffect(() => clearReadyFallback, [clearReadyFallback]);
+
+  useEffect(() => {
+    clearReadyFallback();
+    setLoading(true);
+  }, [clearReadyFallback, resolvedBase, slug]);
 
   useEffect(() => {
     if (baseUrl) return undefined;
@@ -75,18 +99,25 @@ export default function RouteDetailWeb({
       return;
     }
     const token = msg?.route || null;
-    if (msg?.type === "navigate") onNavigate?.(token, msg?.slug);
+    if (msg?.type === "ready") finishLoading();
+    else if (msg?.type === "navigate") onNavigate?.(token, msg?.slug);
     else if (msg?.type === "edit") onOpenEditor?.(token, msg?.slug);
+    else if (msg?.type === "download") onDownload?.(msg?.slug);
     else if (msg?.type === "back") onBack?.();
   };
 
   return (
-    <View style={styles.fill}>
+    <View style={[styles.fill, { paddingTop: insets.top }]}>
       <WebView
         source={{ uri }}
         injectedJavaScriptBeforeContentLoaded={EMBED_BOOTSTRAP}
         onMessage={handleMessage}
-        onLoadEnd={() => setLoading(false)}
+        onLoadEnd={() => {
+          // The explicit bridge event normally wins. This bounded fallback
+          // prevents a web regression from trapping the user behind the loader.
+          clearReadyFallback();
+          readyFallbackRef.current = setTimeout(finishLoading, READY_FALLBACK_MS);
+        }}
         onError={() => onError?.()}
         onHttpError={(e) => {
           // Only treat hard failures (the page itself 4xx/5xx) as fatal; ignore
@@ -105,7 +136,6 @@ export default function RouteDetailWeb({
         }}
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
-        startInLoadingState
       />
       {loading ? (
         <View style={styles.loading} pointerEvents="none">
