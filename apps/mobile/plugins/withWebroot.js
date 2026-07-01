@@ -1,16 +1,37 @@
-const { withXcodeProject } = require("@expo/config-plugins");
+const { withXcodeProject, IOSConfig } = require("@expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
 
 // Bundles the built web app (apps/mobile/webroot, produced by `npm run
-// bundle:web`) into the iOS app as a folder-reference resource, so the local
-// static server serves it from MainBundlePath/webroot
-// (resolveAssetsPath("webroot")). Run `npm run bundle:web` before prebuild/build.
-//
-// NOTE: first-pass native config — verify on device. If the folder doesn't end
-// up in the built app bundle, the likely culprit is the folder-reference add
-// below (Xcode blue-folder vs group); iterate from the real build output.
+// bundle:web`) into the iOS app as a FOLDER REFERENCE, so the local static
+// server serves it from MainBundlePath/webroot (resolveAssetsPath("webroot")).
+// Run `npm run bundle:web` before prebuild/build.
 const WEBROOT = "webroot";
+
+function alreadyReferenced(project) {
+  const section = project.pbxFileReferenceSection();
+  return Object.keys(section).some((key) => {
+    const ref = section[key];
+    const p = ref && typeof ref === "object" ? String(ref.path || "") : "";
+    return p === WEBROOT || p === `"${WEBROOT}"`;
+  });
+}
+
+// Force the webroot file reference to a folder reference (blue folder) so Xcode
+// copies the whole tree into the bundle preserving its structure.
+function forceFolderReference(project) {
+  const section = project.pbxFileReferenceSection();
+  for (const key of Object.keys(section)) {
+    const ref = section[key];
+    if (!ref || typeof ref !== "object") continue;
+    const p = String(ref.path || "");
+    if (p === WEBROOT || p === `"${WEBROOT}"`) {
+      ref.lastKnownFileType = '"folder"';
+      delete ref.explicitFileType;
+      ref.sourceTree = '"<group>"';
+    }
+  }
+}
 
 function withWebroot(config) {
   return withXcodeProject(config, (config) => {
@@ -27,21 +48,23 @@ function withWebroot(config) {
       return config;
     }
 
-    // Copy the bundle into the iOS project (git-ignored) so it's an in-project
+    // Copy the bundle into the iOS project (git-ignored) as an in-project
     // resource with a stable relative path.
     fs.rmSync(dest, { recursive: true, force: true });
     fs.cpSync(src, dest, { recursive: true });
 
-    // Add as a folder reference (the whole tree ships as MainBundlePath/webroot).
-    if (!project.hasFile(WEBROOT)) {
-      const target = project.getFirstTarget().uuid;
-      const mainGroup = project.getFirstProject().firstProject.mainGroup;
-      project.addResourceFile(
-        WEBROOT,
-        { target, lastKnownFileType: "folder" },
-        mainGroup,
-      );
+    if (!alreadyReferenced(project)) {
+      IOSConfig.XcodeUtils.addResourceFileToGroup({
+        filepath: WEBROOT, // relative to the iOS project (ios/webroot)
+        groupName: WEBROOT,
+        isBuildFile: true,
+        project,
+        verbose: true,
+      });
     }
+    // Whether just added or pre-existing, make sure it's a folder reference.
+    forceFolderReference(project);
+    console.log("[withWebroot] bundled webroot as a folder reference.");
     return config;
   });
 }
