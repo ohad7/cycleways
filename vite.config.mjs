@@ -25,11 +25,20 @@ function routeManagerEsmPlugin() {
           "route-manager-esm: `module.exports = RouteManager;` marker not found",
         );
       }
-      return {
-        code: code.replace(
+      // Convert the default export, then any `module.exports.NAME = VALUE;`
+      // named exports (e.g. `buildSegmentSpans`). Without this the named-export
+      // lines reference the undefined `module` global at runtime in the browser.
+      const esm = code
+        .replace(
           /module\.exports\s*=\s*RouteManager;/,
           "export default RouteManager;",
-        ),
+        )
+        .replace(
+          /module\.exports\.(\w+)\s*=\s*(\w+);/g,
+          "export { $2 as $1 };",
+        );
+      return {
+        code: esm,
         map: null,
       };
     },
