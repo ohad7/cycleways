@@ -3,6 +3,10 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { getJsonAsset } from "@cycleways/core/platform/assets.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
 import {
+  routePassesThroughPlaceIds,
+  routeStartPlaceIds,
+} from "@cycleways/core/data/catalog.js";
+import {
   DISCOVER_INTENT_FILTERS,
   FILTER_GROUPS,
   emptyFilters,
@@ -16,9 +20,10 @@ import RouteCard from "./RouteCard.jsx";
 import { palette, radius, space } from "./theme.js";
 
 // Native Discover list with feature parity to the mobile-web Discover panel:
-// difficulty / surface / distance chip filters + a "near me" toggle + a result
-// count, then the catalog as branded route cards. Filtering + ordering reuse the
-// shared @cycleways/core helpers; only the chip rendering is native.
+// start-point / passes-through place filters + difficulty / surface / distance
+// chip filters + a "near me" toggle + a result count, then the catalog as
+// branded route cards. Filtering + ordering reuse the shared @cycleways/core
+// helpers; only the chip + autocomplete rendering is native.
 export default function DiscoverPanel({
   entries,
   onSelect,
@@ -56,6 +61,15 @@ export default function DiscoverPanel({
     return map;
   }, [places]);
 
+  const startOptions = useMemo(
+    () => placeOptions(entries, placeById, routeStartPlaceIds),
+    [entries, placeById],
+  );
+  const throughOptions = useMemo(
+    () => placeOptions(entries, placeById, routePassesThroughPlaceIds),
+    [entries, placeById],
+  );
+
   // Single-select per chip group (mirrors the web toggleAxis behavior).
   const toggleAxis = (axis, value) =>
     setFilters((prev) => {
@@ -63,6 +77,20 @@ export default function DiscoverPanel({
       if (next.has(value)) next.delete(value);
       else next.add(value);
       return { ...prev, [axis]: next.size > 1 ? new Set([value]) : next };
+    });
+  // Place filters are multi-select (mirrors the web add/removeFilterValue).
+  const addFilterValue = (axis, value) =>
+    setFilters((prev) =>
+      prev[axis].has(value)
+        ? prev
+        : { ...prev, [axis]: new Set(prev[axis]).add(value) },
+    );
+  const removeFilterValue = (axis, value) =>
+    setFilters((prev) => {
+      if (!prev[axis].has(value)) return prev;
+      const next = new Set(prev[axis]);
+      next.delete(value);
+      return { ...prev, [axis]: next };
     });
   const toggleIntent = (value) =>
     setIntentFilters((prev) => {
@@ -85,7 +113,10 @@ export default function DiscoverPanel({
 
   const activeFilterCount = useMemo(
     () =>
-      FILTER_GROUPS.reduce((sum, g) => sum + filters[g.axis].size, 0),
+      Object.values(filters).reduce(
+        (sum, value) => sum + (value instanceof Set ? value.size : 0),
+        0,
+      ),
     [filters],
   );
 
@@ -163,6 +194,27 @@ export default function DiscoverPanel({
       >
         <Text style={styles.intentTitle}>מה מתאים לכם?</Text>
         <View style={styles.intentChips}>
+          {/* First child renders rightmost in this row-reverse row, so "סינון"
+              sits at the right edge — the natural start of the row in Hebrew. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="סינון"
+            accessibilityState={{ expanded: filtersOpen }}
+            onPress={toggleFiltersOpen}
+            style={({ pressed }) => [
+              styles.filterToggle,
+              filtersOpen || activeFilterCount > 0 ? styles.filterToggleActive : null,
+              pressed ? styles.chipPressed : null,
+            ]}
+          >
+            <Text style={styles.filterToggleText}>סינון</Text>
+            {activeFilterCount > 0 ? (
+              <View style={styles.filterCountBadge}>
+                <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
+              </View>
+            ) : null}
+            <Text style={styles.filterChevron}>{filtersOpen ? "▴" : "▾"}</Text>
+          </Pressable>
           {DISCOVER_INTENT_FILTERS.map((intent) => (
             <Chip
               key={intent.value}
@@ -178,22 +230,6 @@ export default function DiscoverPanel({
             onPress={toggleNearMe}
             variant="intent"
           />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="סינון"
-            accessibilityState={{ expanded: filtersOpen }}
-            onPress={toggleFiltersOpen}
-            style={({ pressed }) => [
-              styles.filterToggle,
-              filtersOpen || activeFilterCount > 0 ? styles.filterToggleActive : null,
-              pressed ? styles.chipPressed : null,
-            ]}
-          >
-            <Text style={styles.filterToggleText}>
-              {`סינון${activeFilterCount ? ` ${activeFilterCount}` : ""}`}
-            </Text>
-            <Text style={styles.filterChevron}>{filtersOpen ? "▴" : "▾"}</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -205,6 +241,24 @@ export default function DiscoverPanel({
 
       {filtersOpen ? (
         <View style={styles.filters}>
+          <PlaceAutocompleteFilter
+            label="נקודת התחלה"
+            placeholder="בחרו ישוב התחלה"
+            icon="📍"
+            options={startOptions}
+            selected={filters.startLocation}
+            onSelect={(value) => addFilterValue("startLocation", value)}
+            onRemove={(value) => removeFilterValue("startLocation", value)}
+          />
+          <PlaceAutocompleteFilter
+            label="עובר דרך"
+            placeholder="בחרו מקום לאורך המסלול"
+            icon="🛤️"
+            options={throughOptions}
+            selected={filters.throughLocation}
+            onSelect={(value) => addFilterValue("throughLocation", value)}
+            onRemove={(value) => removeFilterValue("throughLocation", value)}
+          />
           {FILTER_GROUPS.map((group) => (
             <View key={group.axis} style={styles.group}>
               <Text style={styles.groupLabel}>{group.label}</Text>
@@ -267,6 +321,126 @@ function Chip({ label, active, onPress, icon = false, variant = "default" }) {
   );
 }
 
+// Native multi-select place autocomplete: mirrors the web PlaceAutocompleteFilter
+// (selected pills + a filtered suggestion list). The suggestion list renders
+// inline below the input so it can't be clipped inside the Discover ScrollView.
+function PlaceAutocompleteFilter({
+  label,
+  placeholder,
+  icon,
+  options,
+  selected,
+  onSelect,
+  onRemove,
+}) {
+  const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
+  const selectedValues = Array.from(selected || []);
+  const optionByValue = useMemo(
+    () => new Map((options || []).map((option) => [option.value, option])),
+    [options],
+  );
+  const normalizedQuery = normalizePlaceQuery(query);
+  const matches = useMemo(
+    () =>
+      (options || [])
+        .filter((option) => !selected?.has(option.value))
+        .filter((option) => {
+          if (!normalizedQuery) return true;
+          return normalizePlaceQuery(`${option.label} ${option.value}`).includes(
+            normalizedQuery,
+          );
+        })
+        .slice(0, 8),
+    [normalizedQuery, options, selected],
+  );
+  const showDropdown = focused && matches.length > 0;
+
+  const selectOption = (value) => {
+    onSelect(value);
+    setQuery("");
+  };
+
+  return (
+    <View style={styles.combo}>
+      <Text style={styles.comboLabel}>{label}</Text>
+      <View style={styles.comboBox}>
+        {icon ? <Text style={styles.comboIcon}>{icon}</Text> : null}
+        {selectedValues.map((value) => {
+          const option = optionByValue.get(value);
+          return (
+            <View style={styles.comboSelected} key={value}>
+              <Text style={styles.comboSelectedText}>{option?.label || value}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`הסר ${option?.label || value}`}
+                onPress={() => onRemove(value)}
+                hitSlop={8}
+              >
+                <Text style={styles.comboSelectedRemove}>×</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+        <TextInput
+          style={styles.comboInput}
+          value={query}
+          placeholder={selectedValues.length > 0 ? "הוספה..." : placeholder}
+          placeholderTextColor={palette.muted}
+          onChangeText={setQuery}
+          onFocus={() => setFocused(true)}
+          // Delay so a suggestion press registers before the list hides.
+          onBlur={() => setTimeout(() => setFocused(false), 120)}
+          textAlign="right"
+          accessibilityLabel={label}
+        />
+      </View>
+      {showDropdown ? (
+        <View style={styles.comboMenu}>
+          {matches.map((option, index) => (
+            <Pressable
+              key={option.value}
+              accessibilityRole="button"
+              accessibilityLabel={option.label}
+              onPress={() => selectOption(option.value)}
+              style={({ pressed }) => [
+                styles.comboMenuItem,
+                index > 0 ? styles.comboMenuItemDivider : null,
+                pressed ? styles.comboMenuItemPressed : null,
+              ]}
+            >
+              <Text style={styles.comboMenuLabel}>{option.label}</Text>
+              {option.count > 0 ? (
+                <Text style={styles.comboMenuCount}>{option.count}</Text>
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function placeOptions(entries, placeById, placeIdsForEntry) {
+  const counts = new Map();
+  for (const entry of entries || []) {
+    for (const id of placeIdsForEntry(entry)) {
+      counts.set(id, (counts.get(id) || 0) + 1);
+    }
+  }
+  return Array.from(counts.keys())
+    .map((id) => ({
+      value: id,
+      label: placeById.get(id)?.name || id,
+      count: counts.get(id) || 0,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "he"));
+}
+
+function normalizePlaceQuery(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 const styles = StyleSheet.create({
   root: { gap: space.md },
   intro: { paddingHorizontal: 12, gap: 4 },
@@ -305,16 +479,18 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
+  // Tightened so the intent chips + "near me" + "סינון" fit on one line on
+  // most phone widths (see plans discussion — shrink-to-fit over wrapping).
   intentChips: {
     flexDirection: "row-reverse",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 6,
   },
   intentChip: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -322,16 +498,16 @@ const styles = StyleSheet.create({
   },
   intentChipText: {
     color: palette.ink,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     writingDirection: "rtl",
   },
   filterToggle: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -343,11 +519,26 @@ const styles = StyleSheet.create({
   },
   filterToggleText: {
     color: palette.ink,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     writingDirection: "rtl",
   },
-  filterChevron: { color: palette.muted, fontSize: 12 },
+  filterChevron: { color: palette.muted, fontSize: 11 },
+  filterCountBadge: {
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: radius.pill,
+    backgroundColor: palette.forest,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterCountBadgeText: {
+    color: palette.white,
+    fontSize: 11,
+    fontWeight: "900",
+    lineHeight: 14,
+  },
   error: {
     marginHorizontal: 12,
     paddingHorizontal: 12,
@@ -361,7 +552,85 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  filters: { paddingHorizontal: 12, gap: space.sm },
+  filters: { paddingHorizontal: 12, gap: space.md },
+  combo: { gap: 5 },
+  comboLabel: {
+    color: palette.muted,
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  comboBox: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: palette.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.line,
+  },
+  comboIcon: { fontSize: 13 },
+  comboInput: {
+    flexGrow: 1,
+    minWidth: 120,
+    color: palette.ink,
+    fontSize: 14,
+    paddingVertical: 2,
+    writingDirection: "rtl",
+  },
+  comboSelected: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: palette.cream,
+  },
+  comboSelectedText: {
+    color: palette.ink,
+    fontSize: 12,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  comboSelectedRemove: {
+    color: palette.muted,
+    fontSize: 15,
+    fontWeight: "900",
+    lineHeight: 16,
+  },
+  comboMenu: {
+    marginTop: 4,
+    borderRadius: 12,
+    backgroundColor: palette.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.line,
+    overflow: "hidden",
+  },
+  comboMenuItem: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  comboMenuItemDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.line,
+  },
+  comboMenuItemPressed: { backgroundColor: palette.paper },
+  comboMenuLabel: {
+    color: palette.ink,
+    fontSize: 14,
+    fontWeight: "700",
+    writingDirection: "rtl",
+  },
+  comboMenuCount: { color: palette.muted, fontSize: 12, fontWeight: "700" },
   group: { gap: 5 },
   groupLabel: {
     color: palette.muted,
