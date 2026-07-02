@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="he" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>השוואת מסך בית במובייל</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 34px;
+      direction: ltr;
+      background: #e8ece8;
+      color: #24313a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+    .sheet { max-width: 980px; margin: 0 auto; direction: ltr; }
+    .sheet > h1 { margin: 0 0 6px; direction: rtl; text-align: right; font-size: 28px; }
+    .sheet > p { margin: 0 0 26px; direction: rtl; text-align: right; color: #5d6a72; }
+    .options { display: flex; direction: ltr; gap: 34px; align-items: flex-start; justify-content: center; }
+    .option { width: 390px; direction: rtl; }
+    .option-head { min-height: 74px; margin-bottom: 12px; }
+    .option-label { color: #9a5a30; font-size: 12px; font-weight: 900; letter-spacing: .05em; }
+    .option h2 { margin: 4px 0; font-size: 20px; }
+    .option-head p { margin: 0; color: #5d6a72; font-size: 13px; line-height: 1.45; }
+    .phone { position: relative; width: 390px; height: 780px; overflow: hidden; border: 8px solid #172026; border-radius: 38px; background: #f6f7f3; box-shadow: 0 24px 60px rgba(23,32,38,.22); }
+    .notch { position: absolute; z-index: 20; top: 8px; left: 50%; width: 104px; height: 24px; transform: translateX(-50%); border-radius: 20px; background: #172026; }
+    .screen { height: 100%; overflow: hidden; padding: 38px 14px 28px; }
+    .topline { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+    .brand-kicker { color: #9a5a30; font-size: 10px; font-weight: 900; }
+    .topline h3 { margin: 3px 0 0; font-size: 24px; line-height: 1.05; }
+    .avatar { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 50%; background: #3f5d33; color: #fff; font-size: 19px; }
+    .search { display: flex; align-items: center; justify-content: space-between; height: 43px; padding: 0 13px; border: 1px solid #dce4df; border-radius: 13px; background: #fff; color: #7a8580; font-size: 12px; box-shadow: 0 3px 10px rgba(36,49,58,.05); }
+    .hero { position: relative; height: 286px; margin-top: 13px; overflow: hidden; border-radius: 20px; color: #fff; box-shadow: 0 15px 30px rgba(26,45,34,.2); }
+    .hero img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.92); }
+    .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(13,23,18,.05) 25%, rgba(13,23,18,.82) 100%); }
+    .hero-tag { position: absolute; z-index: 2; top: 13px; right: 13px; padding: 6px 10px; border-radius: 999px; background: rgba(253,252,248,.92); color: #6f4428; font-size: 10px; font-weight: 900; }
+    .video-badge { position: absolute; z-index: 2; top: 13px; left: 13px; display: grid; width: 36px; height: 36px; place-items: center; border-radius: 50%; background: rgba(15,22,28,.7); color: #fff; font-size: 14px; }
+    .hero-copy { position: absolute; z-index: 2; right: 16px; bottom: 16px; left: 16px; }
+    .hero-copy h4 { margin: 0 0 5px; font-size: 27px; }
+    .hero-copy p { max-width: 300px; margin: 0 0 11px; color: rgba(255,255,255,.86); font-size: 12px; line-height: 1.45; }
+    .hero-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .hero-metrics { display: flex; gap: 12px; font-size: 11px; font-weight: 850; }
+    .cta { padding: 9px 14px; border-radius: 10px; background: #fff; color: #2f5936; font-size: 11px; font-weight: 900; }
+    .quick-title { margin: 17px 1px 8px; font-size: 13px; font-weight: 900; }
+    .chips { display: flex; gap: 7px; overflow: hidden; }
+    .chip { flex: 0 0 auto; padding: 8px 12px; border: 1px solid #d8e0da; border-radius: 999px; background: #fff; color: #34483c; font-size: 11px; font-weight: 800; }
+    .chip.on { border-color: #3f5d33; background: #e7efe5; color: #2e5a37; }
+    .section-head { display: flex; justify-content: space-between; margin: 17px 1px 9px; font-size: 13px; font-weight: 900; }
+    .section-head span:last-child { color: #64736a; font-size: 10px; font-weight: 800; }
+    .ideas { display: flex; direction: rtl; gap: 9px; }
+    .idea { display: grid; grid-template-columns: 92px 1fr; width: 250px; min-width: 250px; overflow: hidden; border: 1px solid #e0e7e1; border-radius: 14px; background: #fff; box-shadow: 0 5px 14px rgba(36,49,58,.06); }
+    .idea img { width: 92px; height: 80px; object-fit: cover; }
+    .idea-copy { padding: 10px; }
+    .idea-copy strong { display: block; margin-bottom: 5px; font-size: 13px; }
+    .idea-copy span { color: #68766f; font-size: 10px; line-height: 1.35; }
+    .map-home .screen { padding-inline: 0; padding-bottom: 0; }
+    .map-home .topline, .map-home .search { margin-inline: 14px; }
+    .map-stage { position: relative; height: 368px; margin-top: 12px; overflow: hidden; border-radius: 22px 22px 0 0; }
+    .map-stage > img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.82) contrast(.96); }
+    .map-stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(31,53,40,.12)); }
+    .near-pill { position: absolute; z-index: 2; top: 14px; right: 14px; padding: 8px 11px; border-radius: 999px; background: rgba(255,255,255,.94); color: #2f5d39; font-size: 11px; font-weight: 900; box-shadow: 0 5px 14px rgba(23,32,38,.15); }
+    .pin { position: absolute; z-index: 3; display: grid; width: 34px; height: 34px; place-items: center; border: 3px solid #fff; border-radius: 50% 50% 50% 6px; background: #c76c3c; color: #fff; transform: rotate(-45deg); box-shadow: 0 5px 12px rgba(0,0,0,.22); }
+    .pin span { transform: rotate(45deg); font-size: 10px; font-weight: 900; }
+    .pin.one { top: 96px; right: 105px; }
+    .pin.two { top: 190px; left: 70px; background: #3f5d33; }
+    .pin.three { top: 245px; right: 64px; background: #1e668c; }
+    .map-sheet { position: absolute; z-index: 5; right: 0; bottom: 0; left: 0; min-height: 310px; padding: 10px 14px 24px; border-radius: 22px 22px 0 0; background: #f8f9f6; box-shadow: 0 -12px 30px rgba(23,32,38,.17); }
+    .grip { width: 42px; height: 5px; margin: 0 auto 12px; border-radius: 999px; background: #ccd5cf; }
+    .map-sheet h4 { margin: 0 0 3px; font-size: 20px; }
+    .map-sheet > p { margin: 0 0 12px; color: #65726b; font-size: 11px; }
+    .near-card { display: grid; grid-template-columns: 108px 1fr; overflow: hidden; border-radius: 15px; background: #fff; box-shadow: 0 7px 18px rgba(36,49,58,.08); }
+    .near-card img { width: 108px; height: 118px; object-fit: cover; }
+    .near-card div { padding: 12px; }
+    .near-card b { display: block; margin-bottom: 6px; font-size: 16px; }
+    .near-card span { display: block; color: #69766f; font-size: 10px; line-height: 1.45; }
+    .near-card em { display: inline-block; margin-top: 9px; color: #2f5d39; font-size: 10px; font-style: normal; font-weight: 900; }
+    .map-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
+    .map-actions span { padding: 11px; border: 1px solid #d5dfd7; border-radius: 11px; background: #fff; text-align: center; color: #31483a; font-size: 11px; font-weight: 900; }
+    .map-actions span:first-child { border-color: #3f5d33; background: #3f5d33; color: #fff; }
+    body.capture { padding: 12px; }
+    body.capture .sheet { max-width: 980px; margin: 0 0 0 490px; zoom: .5; }
+    body.capture .sheet > h1,
+    body.capture .sheet > p { display: none; }
+    @media (max-width: 880px) {
+      body { padding: 12px; }
+      .sheet { zoom: .5; }
+      .options { flex-direction: row; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <h1>מסך בית שמזמין לבחור רכיבה</h1>
+    <p>שתי היררכיות אפשריות. אפשרות A היא ההמלצה למסך הבית של iOS.</p>
+    <div class="options">
+      <section class="option">
+        <div class="option-head">
+          <div class="option-label">אפשרות A · מומלצת</div>
+          <h2>גילוי עריכתי</h2>
+          <p>סיפור אחד מוביל, בחירה מהירה ורשימה קומפקטית בהמשך.</p>
+        </div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="topline">
+              <div><div class="brand-kicker">גליל עליון על אופניים</div><h3>לאן רוכבים היום?</h3></div>
+              <div class="avatar">⌁</div>
+            </div>
+            <div class="search"><span>חפשו מסלול או מקום</span><b>⌕</b></div>
+            <article class="hero">
+              <img src="/public-data/poi-images/poi-38b469d3-eadbb56a.webp" alt="">
+              <div class="hero-tag">בחירת השבוע</div>
+              <div class="video-badge">▶</div>
+              <div class="hero-copy">
+                <h4>בניאס וגן הצפון</h4>
+                <p>שבילי אופניים, מים זורמים ופינות עצירה לאורך אחד המסלולים היפים בצפון.</p>
+                <div class="hero-bottom">
+                  <div class="hero-metrics"><span>14.8 ק״מ</span><span>קל</span><span>מעגלי</span></div>
+                  <div class="cta">למסלול ←</div>
+                </div>
+              </div>
+            </article>
+            <div class="quick-title">מה מתאים לכם?</div>
+            <div class="chips"><div class="chip on">קליל</div><div class="chip">משפחות</div><div class="chip">ליד מים</div><div class="chip">קרוב אליי</div></div>
+            <div class="section-head"><span>עוד רעיונות</span><span>כל 8 המסלולים</span></div>
+            <div class="ideas">
+              <article class="idea">
+                <img src="/public-data/poi-images/poi-1821461d-91d526fa.webp" alt="">
+                <div class="idea-copy"><strong>סובב דפנה</strong><span>7 ק״מ · קל<br>נחל דן ושבילי הקיבוץ</span></div>
+              </article>
+              <article class="idea">
+                <img src="/public-data/poi-images/poi-5b6da297-fd491b50.webp" alt="">
+                <div class="idea-copy"><strong>הירדן ההיסטורי</strong><span>23.6 ק״מ · בינוני<br>נחלים ותעלות</span></div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="option">
+        <div class="option-head">
+          <div class="option-label">אפשרות B</div>
+          <h2>גילוי מבוסס מפה</h2>
+          <p>מיקום והקשר גאוגרפי בראש, עם מסלולים קרובים בגיליון תחתון.</p>
+        </div>
+        <div class="phone map-home">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="topline">
+              <div><div class="brand-kicker">גליל עליון על אופניים</div><h3>מסלולים סביבכם</h3></div>
+              <div class="avatar">⌁</div>
+            </div>
+            <div class="search"><span>חפשו מסלול או מקום</span><b>⌕</b></div>
+            <div class="map-stage">
+              <img src="/public-data/route-map-images/banias-gan-hatsafon-map-8ab7be6f.webp" alt="">
+              <div class="near-pill">📍 לפי המיקום שלכם</div>
+              <div class="pin one"><span>1</span></div>
+              <div class="pin two"><span>2</span></div>
+              <div class="pin three"><span>3</span></div>
+            </div>
+            <section class="map-sheet">
+              <div class="grip"></div>
+              <h4>קרוב וטוב</h4>
+              <p>מסלולים מומלצים לפי האזור שמופיע במפה</p>
+              <article class="near-card">
+                <img src="/public-data/poi-images/sovev-beit-hillel-start-88a84776.webp" alt="">
+                <div><b>סובב בית הלל</b><span>מסלול קצר ונעים ליד נחל שניר</span><em>6.5 ק״מ · קל · 2.4 ק״מ ממכם</em></div>
+              </article>
+              <div class="map-actions"><span>פתח מסלול</span><span>סינון</span></div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    if (new URLSearchParams(location.search).has("capture")) {
+      document.body.classList.add("capture");
+    }
+  </script>
+</body>
+</html>

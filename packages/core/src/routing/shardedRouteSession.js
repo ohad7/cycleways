@@ -267,6 +267,35 @@ class ShardedRouteSession {
     return recalculatePoints(this.manager, points, this.segmentsData);
   }
 
+  async computeConnector(from, to) {
+    const empty = (failure) => ({
+      geometry: [],
+      distanceMeters: 0,
+      failure,
+      snappedEndpoints: [],
+    });
+    if (!this.manager || typeof this.manager.previewBaseRoute !== "function") {
+      return empty("no-router");
+    }
+
+    const savedRouteInfo = this.manager.baseRouteInfo;
+    const savedFailure = this.manager.lastRouteFailure;
+    let covered = false;
+    try {
+      covered = await this.ensureCoverage([from, to]);
+    } catch {
+      return empty("transient");
+    } finally {
+      // Extending the graph invalidates this cache by default. Navigation uses
+      // the immutable route snapshot, and connector previews must not change
+      // the planner's active route behind it.
+      this.manager.baseRouteInfo = savedRouteInfo;
+      this.manager.lastRouteFailure = savedFailure;
+    }
+    if (!covered || !this.indexedNetwork()) return empty("no-coverage");
+    return this.manager.previewBaseRoute([from, to], { costProfile: "connector" });
+  }
+
   async restorePoints(points) {
     const covered = await this.ensureCoverage(points);
     if (!covered || !this.indexedNetwork()) {

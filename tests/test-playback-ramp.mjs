@@ -7,7 +7,7 @@ import {
   RAMP_STEP_1_M,
   RAMP_STEP_2_M,
   POI_PLAYBACK_RATE,
-} from "../src/components/featured/playbackRamp.js";
+} from "../packages/core/src/featured/playbackRamp.js";
 
 const ALLOWED = new Set([0.25, 0.5, 1]);
 const rate = (distanceFromStartM, nearPoi = false, rampDone = false) =>

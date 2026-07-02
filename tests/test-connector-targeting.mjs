@@ -1,0 +1,53 @@
+import assert from "node:assert/strict";
+import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
+import {
+  JOIN_SKIP_PROMPT_M,
+  REJOIN_FORWARD_WINDOW_M,
+  approachTargetChoices,
+  projectOntoRoute,
+  selectConnectorTarget,
+} from "@cycleways/core/navigation/connectorTargeting.js";
+
+const route = navigationRouteFromRouteState({
+  points: [{ lat: 33.1, lng: 35.6 }, { lat: 33.1, lng: 35.62 }],
+  geometry: [
+    { lat: 33.1, lng: 35.6 },
+    { lat: 33.1, lng: 35.61 },
+    { lat: 33.1, lng: 35.62 },
+  ],
+  distance: 1863,
+}, { param: "targeting" });
+
+const projected = projectOntoRoute(route.geometry, { lat: 33.101, lng: 35.605 });
+assert.ok(projected.progressMeters > 400 && projected.progressMeters < 550);
+assert.ok(Math.abs(projected.point.lng - 35.605) < 0.0001);
+
+// selectConnectorTarget is rejoin-only now; the approach case is covered by
+// approachTargetChoices below.
+assert.equal(
+  selectConnectorTarget(route, { lat: 33.1, lng: 35.594 }, { mode: "approach" }),
+  null,
+);
+
+const rejoin = selectConnectorTarget(
+  route,
+  { lat: 33.105, lng: 35.615 },
+  { mode: "rejoin", lastConfirmedProgressMeters: 600 },
+);
+assert.ok(rejoin.mainProgressMeters >= 600);
+assert.ok(rejoin.mainProgressMeters <= 600 + REJOIN_FORWARD_WINDOW_M);
+
+const route2 = { geometry: [
+  { lat: 32.0, lng: 35.000, distanceFromStartMeters: 0 },
+  { lat: 32.0, lng: 35.020, distanceFromStartMeters: 2000 },
+] };
+
+const far = approachTargetChoices(route2, { lat: 32.001, lng: 35.019 });
+assert.equal(far.start.mainProgressMeters, 0);
+assert.ok(far.nearest.mainProgressMeters > JOIN_SKIP_PROMPT_M);
+assert.equal(far.shouldPrompt, true);
+
+const near = approachTargetChoices(route2, { lat: 32.001, lng: 35.001 });
+assert.equal(near.shouldPrompt, false);
+
+console.log("test-connector-targeting OK");

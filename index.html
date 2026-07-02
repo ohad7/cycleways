@@ -84,6 +84,21 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2387CEEB'/%3E%3Cpolygon points='4,48 14,26 24,48' fill='%23E0E0E0'/%3E%3Cpolygon points='20,48 30,24 40,48' fill='%23D8D8D8'/%3E%3Cpolygon points='38,48 48,26 58,48' fill='%23D0D0D0'/%3E%3Cpolygon points='0,48 12,22 28,48' fill='%23D3D3D3'/%3E%3Cpolygon points='28,48 46,16 64,48' fill='%23D3D3D3'/%3E%3Cpolygon points='42,24 46,16 50,24 48,22 46,23 44,22' fill='white'/%3E%3Crect y='48' width='64' height='16' fill='%2332CD32'/%3E%3Ccircle cx='44' cy='50' r='6' stroke='black' stroke-width='1.8' fill='none'/%3E%3Ccircle cx='20' cy='50' r='6' stroke='black' stroke-width='1.8' fill='none'/%3E%3Cline x1='44' y1='50' x2='36' y2='40' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='40' x2='20' y2='50' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='40' x2='36' y2='33' stroke='black' stroke-width='1.5'/%3E%3Cline x1='36' y1='33' x2='40' y2='33' stroke='black' stroke-width='1.2'/%3E%3Cline x1='36' y1='33' x2='29' y2='30' stroke='black' stroke-width='1.5'/%3E%3Cline x1='29' y1='30' x2='20' y2='50' stroke='black' stroke-width='1.5'/%3E%3Cline x1='29' y1='30' x2='29' y2='27' stroke='black' stroke-width='1.5'/%3E%3Cline x1='27' y1='27' x2='31' y2='27' stroke='black' stroke-width='1.2'/%3E%3Ccircle cx='36' cy='40' r='1.2' fill='black'/%3E%3Cline x1='36.5' y1='39.5' x2='38.5' y2='37.5' stroke='black' stroke-width='1'/%3E%3Cline x1='35.5' y1='40.5' x2='33.5' y2='42.5' stroke='black' stroke-width='1'/%3E%3Ccircle cx='36' cy='40' r='2.5' stroke='black' stroke-width='1' fill='none'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="/images/background.png">
   
+  <!-- The native app owns loading feedback and navigation chrome. Mark app
+       embeds before body parsing so the website splash can never paint. -->
+  <script>
+    (function () {
+      try {
+        if (
+          window.__CW_EMBED__ ||
+          new URLSearchParams(window.location.search).get("app") === "1"
+        ) {
+          document.documentElement.classList.add("app-embed-bootstrap");
+        }
+      } catch (_) {}
+    })();
+  </script>
+
   <!-- Performance and Resource Hints -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -95,6 +110,9 @@
   <link href="/styles.css" rel="stylesheet">
   <!-- Loading splash (inline so it paints before the JS bundle) -->
   <style>
+    html.app-embed-bootstrap #splash {
+      display: none !important;
+    }
     #splash {
       --splash-progress: 0.08;
       position: fixed;
@@ -146,6 +164,16 @@
   </style>
   <script>
     (function () {
+      if (document.documentElement.classList.contains("app-embed-bootstrap")) {
+        window.__splash = {
+          set: function () {},
+          done: function () {
+            var splash = document.getElementById("splash");
+            if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+          },
+        };
+        return;
+      }
       var el = null;
       function splashEl() {
         if (!el) el = document.getElementById("splash");
@@ -218,7 +246,7 @@
 <!-- Google tag (gtag.js) — skipped on local hosts and automated browsers (Playwright) -->
 <script>
   var host = window.location.hostname;
-  if(host != "localhost" && host != "127.0.0.1" && !host.startsWith("10.0.") && !navigator.webdriver)
+  if(!document.documentElement.classList.contains("app-embed-bootstrap") && host != "localhost" && host != "127.0.0.1" && !host.startsWith("10.0.") && !navigator.webdriver)
   {
       var gaScript = document.createElement('script');
       gaScript.async = true;

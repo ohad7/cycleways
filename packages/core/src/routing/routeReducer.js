@@ -8,6 +8,7 @@ export const initialRouteState = {
   elevationLoss: 0,
   activeDataPoints: [],
   routeFailure: null,
+  segmentSpans: [],
   pendingPoints: [],
   routingPhase: "idle",
   hoveredSegment: null,
@@ -36,6 +37,7 @@ export function routeReducer(state, action) {
         elevationLoss: action.snapshot.elevationLoss,
         activeDataPoints: action.snapshot.activeDataPoints,
         routeFailure: action.snapshot.routeFailure || null,
+        segmentSpans: action.snapshot.segmentSpans || [],
         pendingPoints: action.preservePending ? state.pendingPoints : [],
         routingPhase:
           action.preservePending && state.pendingPoints.length > 0
@@ -57,6 +59,7 @@ export function routeReducer(state, action) {
         elevationLoss: 0,
         activeDataPoints: [],
         routeFailure: null,
+        segmentSpans: [],
         pendingPoints: [],
         routingPhase: "idle",
         error: null,

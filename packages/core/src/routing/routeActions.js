@@ -159,6 +159,7 @@ export function snapshotRouteManager(manager, segmentsData) {
     elevationGain: info.elevationGain || 0,
     elevationLoss: info.elevationLoss || 0,
     routeFailure: info.failure || null,
+    segmentSpans: info.segmentSpans || [],
     activeDataPoints: getActiveRouteDataPoints(
       info.segments,
       geometry,
@@ -182,6 +183,7 @@ export function routeStateSnapshot(routeState) {
       ...dataPoint,
     })),
     routeFailure: routeState.routeFailure || null,
+    segmentSpans: (routeState.segmentSpans || []).map((s) => ({ ...s })),
   };
 }
 

@@ -37,6 +37,6 @@ test("mobile adapted layout remains usable", async ({ page }, testInfo) => {
   // GPX button is a direct download (no modal) in the new panel.
   await expect(page.getByRole("button", { name: "GPX" })).toBeEnabled();
 
-  await page.locator("#contact").scrollIntoViewIfNeeded();
-  await expect(page.getByText("רכיבה מהנה ובטוחה!")).toBeVisible();
+  await expect(page.locator(".front-shell")).toBeVisible();
+  await expect(page.locator(".front-sheet")).toBeVisible();
 });

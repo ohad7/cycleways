@@ -1,5 +1,18 @@
 import { expect } from "@playwright/test";
 
+// On mobile the app lands on the discover-home screen, which has no map — the
+// map and the front-sheet only mount once the user engages a route. Call this
+// right after goto("/") when a test needs the map/planner on mobile; it taps
+// "+ תכנן מסלול" to enter Build (revealing the map). No-op on desktop, where
+// the map is always mounted.
+export async function revealMapOnMobile(page, isMobile) {
+  if (!isMobile) return;
+  const home = page.getByTestId("mobile-discover-home");
+  await expect(home).toBeVisible();
+  await home.getByRole("button", { name: "+ תכנן מסלול" }).click();
+  await expect(page.locator(".front-sheet")).toBeVisible();
+}
+
 // On mobile the front panel lives in a bottom sheet that defaults to peek
 // (content hidden). Call this before interacting with panel content; it is a
 // no-op on desktop, where the sheet wrapper is inert.

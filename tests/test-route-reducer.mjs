@@ -64,3 +64,22 @@ assert.equal(clearedPending.pendingPoints.length, 0);
 assert.equal(clearedPending.routingPhase, "idle");
 
 console.log("Route reducer hover tests passed");
+
+// --- segmentSpans propagation through the reducer ---
+{
+  const spans = [{ startMeters: 0, endMeters: 100, name: "X", cwSegmentId: 1, onNetwork: true, routeClass: "cycleway" }];
+  const updated = routeReducer(initialRouteState, {
+    type: "route/update",
+    snapshot: {
+      points: [], selectedSegments: [], geometry: [], distance: 0,
+      elevationGain: 0, elevationLoss: 0, activeDataPoints: [],
+      routeFailure: null, segmentSpans: spans,
+    },
+  });
+  assert.deepEqual(updated.segmentSpans, spans, "update copies segmentSpans");
+  const cleared = routeReducer(updated, { type: "route/clear" });
+  assert.deepEqual(cleared.segmentSpans, [], "clear resets segmentSpans");
+  assert.deepEqual(initialRouteState.segmentSpans, [], "initial state has empty spans");
+}
+
+console.log("Route reducer segmentSpans tests passed");

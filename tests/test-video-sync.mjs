@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { createVideoSync } from "../src/components/featured/videoSync.js";
+import { createVideoSync } from "../packages/core/src/featured/videoSync.js";
 import {
   buildCumulativeDistances,
   pointAtFraction,
-} from "../src/components/featured/routeGeometry.js";
+} from "../packages/core/src/domain/routeGeometryMath.js";
 
 const simpleRoute = [
   { lat: 33.0, lng: 35.0 },

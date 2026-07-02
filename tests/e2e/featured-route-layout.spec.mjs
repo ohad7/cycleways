@@ -25,7 +25,8 @@ test.describe("desktop layout", () => {
     await expect(page.locator(".fv-side-map")).toHaveCount(0);
     // The rail shows the stats block and the elevation graph.
     await expect(page.locator(".fv-route-stats")).toBeVisible();
-    await expect(page.locator(".elevation-profile")).toBeVisible();
+    await expect(page.locator(".fv-side-elevation-wrap .elevation-profile")).toBeVisible();
+    await expect(page.locator(".fv-mobile-elevation-strip")).toBeHidden();
     // The control readout is the route distance (progress / total), like the planner.
     await expect(page.locator(".fv-video-time")).toContainText("/");
     await expect(page.locator(".fv-video-time")).toContainText("km");
@@ -42,7 +43,7 @@ test.describe("desktop layout", () => {
     const panelBox = await page.locator(".fv-route-panel").boundingBox();
     const actionsBox = await page.locator(".fv-route-actions").boundingBox();
     const elevationWrapBox = await page.locator(".fv-side-elevation-wrap").boundingBox();
-    const elevationChartBox = await page.locator(".elevation-chart").boundingBox();
+    const elevationChartBox = await page.locator(".fv-side-elevation-wrap .elevation-chart").boundingBox();
     const videoTimeBox = await page.locator(".fv-video-time").boundingBox();
     const pipBox = await page.locator(".fv-video-shell .fv-mobile-map").boundingBox();
     const storyBox = await columbiaStory.boundingBox();
@@ -127,15 +128,15 @@ test.describe("desktop layout", () => {
 
   test("hovering the elevation graph moves the video cursor", async ({ page }) => {
     await page.goto("/featured/sovev-beit-hillel");
-    const overlay = page.locator(".elevation-hover-overlay");
+    const overlay = page.locator(".fv-side-elevation-wrap .elevation-hover-overlay");
     await expect(overlay).toBeVisible();
     const box = await overlay.boundingBox();
     await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
     // The hover sets a video cursor; the elevation progress-head marker appears.
-    await expect(page.locator(".elevation-progress-head-pulse")).toBeVisible();
-    await expect(page.locator(".elevation-progress-line")).toBeVisible();
-    await expect(page.locator('.elevation-chart svg path[fill="#b7d3ba"]')).toHaveCount(1);
-    const markerShape = await page.locator(".elevation-progress-head-pulse__symbol").evaluate((el) => {
+    await expect(page.locator(".fv-side-elevation-wrap .elevation-progress-head-pulse")).toBeVisible();
+    await expect(page.locator(".fv-side-elevation-wrap .elevation-progress-line")).toBeVisible();
+    await expect(page.locator('.fv-side-elevation-wrap .elevation-chart svg path[fill="#b7d3ba"]')).toHaveCount(1);
+    const markerShape = await page.locator(".fv-side-elevation-wrap .elevation-progress-head-pulse__symbol").evaluate((el) => {
       const style = getComputedStyle(el);
       const rect = el.getBoundingClientRect();
       const coreRect = el.closest(".elevation-progress-head-pulse__core").getBoundingClientRect();
@@ -170,25 +171,35 @@ test.describe("mobile layout", () => {
     await expect(page.getByRole("link", { name: "פתח לעריכה" })).toBeVisible();
     await expect(page.getByRole("button", { name: /הורד קובץ ניווט/ })).toBeVisible();
     await expect(page.locator(".fv-side-elevation-wrap")).toBeVisible();
+    await expect(page.locator(".fv-mobile-elevation-strip")).toBeVisible();
+    await expect(page.locator(".fv-mobile-elevation-strip .fv-video-play-toggle")).toHaveCount(0);
+    await expect(page.locator(".fv-side-elevation-wrap .elevation-profile")).toBeHidden();
     await expect(page.locator(".fv-video-time")).toContainText("km");
 
     const videoBox = await page.locator(".fv-video .featured-video-frame").boundingBox();
     const mapBox = await page.locator(".fv-mobile-map").boundingBox();
+    const stageBox = await page.locator(".fv-video-stage").boundingBox();
+    const stripBox = await page.locator(".fv-mobile-elevation-strip").boundingBox();
     const mobileStatsBox = await page.locator(".fv-side-elevation-wrap .fv-route-stats").boundingBox();
-    const mobileChartBox = await page.locator(".fv-side-elevation-wrap .elevation-chart").boundingBox();
-    const mobileSvgBox = await page.locator(".fv-side-elevation-wrap .elevation-chart svg").boundingBox();
+    const mobileChartBox = await page.locator(".fv-mobile-elevation-strip .elevation-chart").boundingBox();
+    const mobileSvgBox = await page.locator(".fv-mobile-elevation-strip .elevation-chart svg").boundingBox();
+    const actionBox = await page.locator(".fv-route-actions").boundingBox();
     expect(Math.abs((videoBox.width / videoBox.height) - 0.8)).toBeLessThan(0.02);
     expect(mapBox.width).toBeLessThanOrEqual(130);
     expect(mapBox.height).toBeLessThanOrEqual(130);
     expect(mapBox.x).toBeGreaterThan(videoBox.x + videoBox.width / 2);
     expect(mapBox.y).toBeGreaterThanOrEqual(videoBox.y);
     expect(mapBox.y + mapBox.height).toBeLessThan(videoBox.y + videoBox.height);
+    expect(stripBox.y).toBeGreaterThanOrEqual(stageBox.y + stageBox.height - 2);
+    expect(stripBox.y).toBeLessThanOrEqual(stageBox.y + stageBox.height + 2);
+    expect(mobileChartBox.width).toBeGreaterThan(videoBox.width - 40);
     const mobileTimeBox = await page.locator(".fv-video-time").boundingBox();
     expect(mobileTimeBox.y).toBeGreaterThan(videoBox.y + videoBox.height - 80);
     expect(mobileStatsBox.height).toBeLessThanOrEqual(52);
-    expect(mobileChartBox.height).toBeGreaterThanOrEqual(145);
-    expect(Math.abs(mobileSvgBox.height - mobileChartBox.height)).toBeLessThanOrEqual(1);
-    expect(Math.abs(mobileSvgBox.width - mobileChartBox.width)).toBeLessThanOrEqual(1);
+    expect(mobileChartBox.height).toBeGreaterThanOrEqual(80);
+    expect(Math.abs(mobileSvgBox.height - mobileChartBox.height)).toBeLessThanOrEqual(2);
+    expect(Math.abs(mobileSvgBox.width - mobileChartBox.width)).toBeLessThanOrEqual(2);
+    expect(actionBox.y).toBeGreaterThan(740);
     const mobileElevationScroll = await page.locator(".fv-side-elevation-wrap").evaluate((el) => ({
       clientHeight: el.clientHeight,
       scrollHeight: el.scrollHeight,

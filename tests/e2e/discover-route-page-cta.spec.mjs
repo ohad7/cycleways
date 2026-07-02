@@ -6,86 +6,42 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-// Loads the first Discover card's route into the planner and returns the
-// card's /routes/<slug> href and title for comparison with the Build CTA.
-async function selectFirstDiscoverRoute(page) {
+async function openFirstDiscoverRoutePage(page, isMobile = false) {
   await page.goto("/");
-  const panel = page.getByTestId("front-panel");
-  await ensurePanelOpen(page);
-  await expect(panel).toBeVisible();
-  // Wait for the routing engine; a click before readiness falls back to a
-  // full-page load by design.
-  await expect(panel).toHaveAttribute("data-route-status", "ready", {
-    timeout: 30_000,
-  });
-  const card = panel.locator(".panel-route-card-wrap").first();
+  const discoverScope = isMobile
+    ? page.getByTestId("mobile-discover-home")
+    : page.getByTestId("front-panel");
+  if (!isMobile) await ensurePanelOpen(page);
+  await expect(discoverScope).toBeVisible();
+  const card = discoverScope.locator(".panel-route-card-wrap").first();
   await expect(card).toBeVisible();
-  const storyLink = card.locator(".panel-route-card__story-link");
-  await expect(storyLink).toBeVisible();
-  const storyHref = await storyLink.getAttribute("href");
-  expect(storyHref).toBeTruthy();
-  const title = (
-    await card.locator(".panel-route-card__title").innerText()
-  ).trim();
-  await card.locator(".panel-route-card").click();
-  await expect(page).toHaveURL(/[?&]route=/, { timeout: 20_000 });
-  return { storyHref, title };
+  const href = await card.getAttribute("href");
+  expect(href).toMatch(/^\/routes\/[a-z0-9-]+$/);
+  const title = (await card.locator(".panel-route-card__title").innerText()).trim();
+  await card.click();
+  await expect(page).toHaveURL(new RegExp(`${href}$`), { timeout: 20_000 });
+  return { href, title };
 }
 
-test("selecting a Discover card shows the route-page CTA in Build", async ({ page }) => {
-  const { storyHref, title } = await selectFirstDiscoverRoute(page);
-  await ensurePanelOpen(page);
-  const cta = page.locator(".build-panel__story-cta");
-  await expect(cta).toBeVisible();
-  await expect(cta).toHaveAttribute("href", storyHref);
-  await expect(page.locator(".build-panel__title")).toContainText(title);
+test("Discover card opens the dedicated route page", async ({ page, isMobile }) => {
+  const { title } = await openFirstDiscoverRoutePage(page, isMobile);
+  await expect(page.locator(".featured-route-header h1")).toContainText(title);
+  await expect(page.locator(".front-sheet")).toHaveCount(0);
 });
 
-test("mobile: build peek shows the route name and a route-page link", async ({ page, isMobile }) => {
-  test.skip(!isMobile, "mobile-only");
-  const { storyHref, title } = await selectFirstDiscoverRoute(page);
-  // Do NOT call ensurePanelOpen here — the peek strip is only visible at
-  // data-snap="peek"; opening the sheet would replace it with panel content.
-  const sheet = page.locator(".front-sheet");
-  // Route selection snaps the sheet back to peek.
-  await expect(sheet).toHaveAttribute("data-snap", "peek");
-  await expect(
-    sheet.locator(".front-sheet__build-peek span:first-child"),
-  ).toContainText(title);
-  const link = sheet.locator(".front-sheet__build-peek-link");
-  await expect(link).toBeVisible();
-  await expect(link).toHaveAttribute("href", storyHref);
-});
-
-test("editing the route (map click) hides the CTA", async ({ page }) => {
-  await selectFirstDiscoverRoute(page);
-  await ensurePanelOpen(page);
-  await expect(page.locator(".build-panel__story-cta")).toBeVisible();
-  // A map click always adds a route point — the loaded route diverges from
-  // the catalog route, so the CTA must disappear.
-  await page.evaluate(() => {
-    window.__mockMapboxCurrentMap._emit("click", {
-      lngLat: { lng: 35.6, lat: 33.05 },
-      point: { x: 300, y: 200 },
-    });
-  });
-  await expect(page.locator(".build-panel__story-cta")).toHaveCount(0);
-  await expect(page.locator(".build-panel__title")).toHaveText("מסלול חדש");
-});
-
-test("clearing the route hides the CTA", async ({ page }) => {
-  await selectFirstDiscoverRoute(page);
-  await ensurePanelOpen(page);
-  const panel = page.getByTestId("front-panel");
-  await expect(page.locator(".build-panel__story-cta")).toBeVisible();
-  await panel.getByRole("button", { name: "נקה" }).click();
-  await expect(page.locator(".build-panel__story-cta")).toHaveCount(0);
-});
-
-test("the Build CTA navigates to the route page", async ({ page }) => {
-  const { storyHref } = await selectFirstDiscoverRoute(page);
-  await ensurePanelOpen(page);
-  await page.locator(".build-panel__story-cta").click();
-  const escapedHref = storyHref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  await expect(page).toHaveURL(new RegExp(`${escapedHref}$`));
+test("route page exposes the planner CTA", async ({ page, isMobile }) => {
+  await openFirstDiscoverRoutePage(page, isMobile);
+  const plannerLink = page.locator('a[href*="?route="]').first();
+  await expect(plannerLink).toBeVisible();
+  const popupPromise = page.waitForEvent("popup");
+  await plannerLink.click();
+  const plannerPage = await popupPromise;
+  await plannerPage.waitForLoadState("domcontentloaded");
+  await expect(plannerPage).toHaveURL(/[?&]route=/, { timeout: 20_000 });
+  if (isMobile) {
+    await expect(plannerPage.locator(".front-sheet")).toHaveAttribute("data-snap", "half");
+  } else {
+    await ensurePanelOpen(plannerPage);
+  }
+  await expect(plannerPage.locator(".build-panel")).toBeVisible();
 });

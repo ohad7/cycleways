@@ -1,9 +1,7 @@
 import React from "react";
 import Icon from "../Icon.jsx";
-import { formatLegacyDistance } from "../ElevationProfile.jsx";
 import PanelPoiCard from "./PanelPoiCard.jsx";
-import { routeDisplayImage } from "@cycleways/core/data/catalog.js";
-import { routeImageSrc } from "../routes/routeImageSrc.js";
+import { getPlannerBuildModel } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 export default function BuildPanel({
   routeState,
@@ -19,13 +17,16 @@ export default function BuildPanel({
   onShare,
   shareCopied,
   onSendToPhone,
+  showSendToPhone = true,
   pois = [],
   onPoiClick,
   elevation,
   playback,
   error,
+  emptyState,
 }) {
-  const hasRoute = routeState.geometry.length >= 2;
+  const buildModel = getPlannerBuildModel(routeState);
+  const hasRoute = buildModel.hasRoute;
 
   return (
     <div className="build-panel">
@@ -40,6 +41,15 @@ export default function BuildPanel({
           <div className="build-panel__title">
             {catalogEntry?.name || "מסלול חדש"}
           </div>
+          {catalogEntry?.slug ? (
+            <a
+              className="build-panel__route-link"
+              href={`/routes/${catalogEntry.slug}`}
+              aria-label={`לעמוד המסלול ${catalogEntry.name}`}
+            >
+              לעמוד המסלול
+            </a>
+          ) : null}
         </div>
         <div className="build-panel__tools">
           <button type="button" disabled={!canUndo} onClick={onUndo} title="בטל" aria-label="בטל">
@@ -53,14 +63,14 @@ export default function BuildPanel({
           </button>
         </div>
       </div>
-      {catalogEntry && <RoutePageCta entry={catalogEntry} />}
-
       {hasRoute ? (
         <div className="build-panel__stats">
-          <Stat k="אורך" v={formatLegacyDistance(routeState.distance)} />
-          <Stat k="טיפוס" v={`${Math.round(routeState.elevationGain || 0)} מ׳`} />
-          <Stat k="ירידה" v={`${Math.round(routeState.elevationLoss || 0)} מ׳`} />
+          {buildModel.stats.map(([k, v]) => (
+            <Stat key={k} k={k} v={v} />
+          ))}
         </div>
+      ) : routeState.points.length === 0 && emptyState ? (
+        emptyState
       ) : (
         <p className="build-panel__empty">סמנו נקודות על המפה כדי לבנות מסלול.</p>
       )}
@@ -76,9 +86,11 @@ export default function BuildPanel({
           <button type="button" className="btn-ghost" disabled={!canShare} onClick={onShare}>
             {shareCopied ? "✓ הועתק" : "שיתוף"}
           </button>
-          <button type="button" className="btn-ghost" disabled={!canShare} onClick={onSendToPhone}>
-            שלחו לטלפון
-          </button>
+          {showSendToPhone && (
+            <button type="button" className="btn-ghost" disabled={!canShare} onClick={onSendToPhone}>
+              שלחו לטלפון
+            </button>
+          )}
         </div>
       )}
 
@@ -100,23 +112,5 @@ function Stat({ k, v }) {
       <div className="build-stat__k">{k}</div>
       <div className="build-stat__v">{v}</div>
     </div>
-  );
-}
-
-// Photo-strip CTA to the route's dedicated page, shown while the planner
-// holds an unedited catalog route (the moment of highest intent).
-function RoutePageCta({ entry }) {
-  const photo = routeDisplayImage(entry);
-  return (
-    <a className="build-panel__story-cta" href={`/routes/${entry.slug}`}>
-      {photo ? (
-        <img
-          src={routeImageSrc(photo.thumbnail || photo.photo)}
-          alt=""
-          loading="lazy"
-        />
-      ) : null}
-      <span>לעמוד המסלול המלא ←</span>
-    </a>
   );
 }

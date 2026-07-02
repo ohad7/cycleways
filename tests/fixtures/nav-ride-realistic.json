@@ -1,0 +1,65 @@
+{
+  "route": {
+    "points": [
+      { "id": "a", "lat": 33.1000, "lng": 35.6000 },
+      { "id": "b", "lat": 33.1000, "lng": 35.6100 }
+    ],
+    "selectedSegments": [],
+    "geometry": [
+      { "lat": 33.1000, "lng": 35.6000 },
+      { "lat": 33.1003, "lng": 35.6035 },
+      { "lat": 33.0997, "lng": 35.6070 },
+      { "lat": 33.1000, "lng": 35.6100 }
+    ],
+    "distance": 941.9
+  },
+  "fixes": [
+    {
+      "_comment": "--- approach (fixes 0-5): west of route start, clearly off-route (≥80 m cross-track) ---",
+      "lat": 33.0998, "lng": 35.5940, "accuracy": 15, "speed": 5, "heading": 90, "timestamp": 0
+    },
+    { "lat": 33.0999, "lng": 35.5953, "accuracy": 13, "speed": 5, "heading": 90, "timestamp": 2200 },
+    { "lat": 33.1001, "lng": 35.5965, "accuracy": 18, "speed": 5, "heading": 90, "timestamp": 4100 },
+    { "lat": 33.0999, "lng": 35.5974, "accuracy": 16, "speed": 5, "heading": 90, "timestamp": 6500 },
+    { "lat": 33.1002, "lng": 35.5983, "accuracy": 12, "speed": 5, "heading": 90, "timestamp": 8800 },
+    { "lat": 33.0999, "lng": 35.5991, "accuracy": 11, "speed": 5, "heading": 90, "timestamp": 11400 },
+    {
+      "_comment": "--- fix 6: first on-route fix at route start (acquiredByFixIndex=6) ---",
+      "lat": 33.1000, "lng": 35.6000, "accuracy": 8, "speed": 4, "heading": 90, "timestamp": 14000
+    },
+    { "lat": 33.1001, "lng": 35.6008, "accuracy": 12, "speed": 4, "heading": 90, "timestamp": 16200 },
+    {
+      "_comment": "--- pause: fixes 8-10 are near-identical (rider stopped briefly) ---",
+      "lat": 33.1001, "lng": 35.6014, "accuracy": 9, "speed": 0, "heading": 90, "timestamp": 18300
+    },
+    { "lat": 33.1001, "lng": 35.6014, "accuracy": 10, "speed": 0, "heading": 90, "timestamp": 19800 },
+    { "lat": 33.1001, "lng": 35.6015, "accuracy": 9,  "speed": 0, "heading": 90, "timestamp": 21300 },
+    {
+      "_comment": "--- resumed ---",
+      "lat": 33.1002, "lng": 35.6022, "accuracy": 14, "speed": 4, "heading": 88, "timestamp": 23400
+    },
+    { "lat": 33.1002, "lng": 35.6030, "accuracy": 11, "speed": 4, "heading": 88, "timestamp": 25600 },
+    { "lat": 33.1003, "lng": 35.6035, "accuracy": 8,  "speed": 4, "heading": 85, "timestamp": 27900 },
+    {
+      "_comment": "--- fix 14: single implausible GPS jump ~86 m north; next fix is back on route so off-route never confirms ---",
+      "lat": 33.1010, "lng": 35.6040, "accuracy": 22, "speed": 4, "heading": 90, "timestamp": 29200
+    },
+    { "lat": 33.1002, "lng": 35.6045, "accuracy": 14, "speed": 4, "heading": 88, "timestamp": 30700 },
+    { "lat": 33.1001, "lng": 35.6050, "accuracy": 11, "speed": 4, "heading": 87, "timestamp": 32900 },
+    { "lat": 33.1000, "lng": 35.6058, "accuracy": 8,  "speed": 4, "heading": 86, "timestamp": 35200 },
+    { "lat": 33.0998, "lng": 35.6065, "accuracy": 16, "speed": 4, "heading": 85, "timestamp": 37400 },
+    { "lat": 33.0997, "lng": 35.6070, "accuracy": 9,  "speed": 4, "heading": 85, "timestamp": 39700 },
+    { "lat": 33.0998, "lng": 35.6078, "accuracy": 17, "speed": 4, "heading": 87, "timestamp": 41900 },
+    { "lat": 33.0999, "lng": 35.6085, "accuracy": 12, "speed": 4, "heading": 88, "timestamp": 44200 },
+    { "lat": 33.1000, "lng": 35.6090, "accuracy": 7,  "speed": 4, "heading": 89, "timestamp": 46400 },
+    { "lat": 33.1000, "lng": 35.6095, "accuracy": 11, "speed": 4, "heading": 90, "timestamp": 48700 },
+    { "lat": 33.1000, "lng": 35.6100, "accuracy": 9,  "speed": 4, "heading": 90, "timestamp": 51000 }
+  ],
+  "milestones": {
+    "_comment": "approachFixCount: indices 0-5 are approach (each ≥85 m cross-track from route). acquiredByFixIndex=6 is the first fix AT the route start (cross-track=0). minProgressBeforeAcquireM=0 because approach fixes all project to the route start (t=0 clamped), giving progressMeters=0. finalProgressAtLeastM=800 is well below the route total (941.9 m); fix 24 is at the route end.",
+    "approachFixCount": 6,
+    "acquiredByFixIndex": 6,
+    "minProgressBeforeAcquireM": 0,
+    "finalProgressAtLeastM": 800
+  }
+}

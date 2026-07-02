@@ -1,8 +1,17 @@
 # Plans
 
+- `featured-mobile-elevation-timeline/` — mobile featured-route elevation timeline design comparison.
+- `mobile-home-engagement/` — native mobile homepage engagement design comparison.
+
 This directory contains planning documents for larger project changes before implementation.
 
 Current plans:
+
+- `navigation-ride-setup/` - design and implementation plan for an explicit pre-ride setup flow (direction, start point, and consequences), clear near/far approach states, preservation of the nearby suggested connector, alternate-start handling for linear and circular routes, and reverse-route navigation without mutating the saved route.
+- `ios-featured-web-embed/` - design and implementation plan for warming the iOS featured-route local server and making embedded web pages use native loading feedback without website splash, analytics, navigation, or breadcrumbs.
+- `route-playback-dock/` - design for a usable three-up route-playback view (map + player + full interactive elevation graph at a partial panel height, with bidirectional elevation⇄player⇄route sync, on mobile web and iOS) plus web-parity `progress-head-pulse` animation on iOS and removal of the iOS auto-firing direction animation.
+
+- `rn-mobile-map-style-parity/` - design + implementation plan for aligning the iPhone app map and route-building UI with the more-polished mobile web by sharing presentation specs + a planner view-model + a clock-injected playback engine (network/route colors, build summary, playback controls).
 
 - `map-editor-workflow/` - design and implementation plan for the map editor and source-data processing workflow.
 - `editor-name-release/` - design and implementation plan for freeing names held by deprecated map records.
@@ -14,6 +23,7 @@ Current plans:
 - `map-asset-size/` - design and implementation plan for low-risk generated GeoJSON size reduction.
 - `react-migration/` - design and implementation plan for incrementally moving the public app to React.
 - `featured-routes/` - design and implementation plan for curated featured-route landing pages with maps, POIs, photos, and video.
+- `app-discovery-detail-flow/` - design for reshaping the iPhone app around route discovery: a map-free discovery front page (collapsible filters, rich swipeable-gallery cards, "plan a route" FAB), a native route-detail page mirroring the mobile-web featured layout (swappable video/map PiP, synced playback, POI stories), and a `react-navigation` screen stack (Discover → RouteDetail → Build).
 - `video-sync-overlay/` - design and implementation plan for the editor's dedicated side-by-side video-sync overlay: precise transport controls, keyboard shortcuts, a shared-interpolator ghost marker, and a larger video.
 - `route-point-editing/` - design and implementation plan for clearer route point drag/edit feedback, route-line insert-and-drag, and preserving points outside the routing network.
 - `elevation-graph-redesign/` - design and implementation plan for the elevation profile redesign (slope-grade coloring, legend, and hover tooltip).
@@ -65,5 +75,13 @@ Current plans:
 - `planning-surface/` - design for the desktop-first planning objective: localStorage draft autosave + "my routes" recents, contextual onboarding replacing the tutorial modal, a send-to-phone QR output, and a minimal touch repair for mobile Build (point removal, drag intent).
 - `navigation-handoff/` - design for the navigation objective: navigation/recording are app-only, the `?route=` encoding is the universal hand-off currency, universal/app links open shared routes in the app with automatic web fallback, and app entry points are additive (never dead-end redirects).
 - `rn-turn-by-turn-navigation/` - design and implementation plan for native iPhone turn-by-turn navigation for built and featured/recommended routes, using CycleWays route geometry as the route authority.
+- `turn-by-turn-rejoin-routing/` - design (redesigned 2026-06-30, supersedes the implemented Phase B turn-by-turn connector) for approach-to-route **guidance** (not navigation): a tiered ladder — turn-by-turn only on vetted CycleWays geometry; within ~1 km a non-narrated suggestion view (direct line + road-preferring dashed connector + distance/progress + "outside the network" disclaimer + Open-in-Waze/Google-Maps); beyond ~1 km or off coverage, external-app handoff promoted. Adds an explicit start-vs-join-here target prompt and reuses the non-mutating `computeConnector` core while cutting the connector cue/voice/follow-camera/seeded-handoff/recompute machinery.
+- `turn-by-turn-improvements/` - design (and plan) for the post-ride follow-up to native turn-by-turn: an explicit route-acquisition state, a route-distance segment-span index feeding a network-aware context line + better maneuver cues, a single adaptive smoothed rider puck with a smoothed camera, off-route/approach + wrong-way guidance (arrow+distance now, routed rejoin deferred), and two test harnesses (node GPS-track replay with a real-ride fixture + an in-app simulate-ride dev mode via injected location source).
 - `discover-route-page-cta/` - design for keeping the Discover card tap as an in-place map preview while promoting the dedicated route page as the next step: a photo-strip CTA in the Build panel and mobile peek strip (cleared once the route is edited), a stronger per-card page chip, and slugs on recents.
 - `route-network-visual-emphasis/` - design and implementation plan for feature-flagged, zoom-aware route-network styling variants, preserving typed segment colors while testing cased lines and adaptive base-map color schemes.
+- `rn-mobile-native-ui/` - design + implementation (DONE 2026-06-27) for Phase 2.8c: a CycleWays-branded native-feel reskin of the iPhone planner (real draggable bottom sheet, full-bleed map, top-pinned search pill + map controls, Ionicons, branded Discover cards with photo thumbnails) without changing planner behavior.
+- `ios-splash-screen/` - design + plan for replacing the iPhone app's default Expo placeholder launch screen with the CycleWays brand badge via the `expo-splash-screen` config plugin (upscaled brand logo, `#ededed` background, static native splash) and matching the home-screen app icon to the same badge (composited on an opaque `#ededed` square), so both survive `expo prebuild`.
+- `mobile-planner-drawer-ux/` - design and implementation plan for fixing the mobile web planner's bottom-sheet UX: snap policy (peek while tapping, half when a route arrives), a single viewport-fixed playback transport, full-viewport planner layout with content-sized peek height and a richer peek row, bottom-toast hints, and small RTL/copy/touch fixes.
+- `build-empty-guide-vignette/` - design (alternative A of two — pick one) for filling the empty Build panel with a guidance-only animated SVG/CSS vignette (tap → tap → route draws itself) plus three Hebrew how-to steps; competes with `build-empty-actions/`.
+- `build-empty-actions/` - design (alternative B of two — pick one) for an action-oriented Build panel empty state: compact static how-to steps plus starting shortcuts (in-panel place search + locate-me, resume-draft row with floating-banner de-duplication); competes with `build-empty-guide-vignette/`.
+- `approach-destination-picker/` - design + plan refining the approach-to-route UX: a decluttered banner that defaults navigation to the route start, an options sheet (start / nearest-join / tap-to-snap a point on the route), a WhatsApp-style list of the navigation apps actually installed (Apple Maps/Google Maps/Waze/Moovit via `canOpenURL` + iOS `LSApplicationQueriesSchemes`), and a fix so the on-map suggestion line no longer blinks out when the target changes.

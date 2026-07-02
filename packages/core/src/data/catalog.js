@@ -174,3 +174,15 @@ export function routeCardImage(entry, snapshot = null) {
 export function routeMapImage(entry) {
   return normalizedCatalogImage(entry?.routeMapImage);
 }
+
+// Logical asset path of a catalog entry's display thumbnail (preferring the
+// small -thumb variant), or null. Mirrors the web Discover card's
+// routeDisplayImage fallback chain (heroImage -> start/end POI photo -> ...) so
+// routes without an explicit heroImage (e.g. סובב בית הלל) still get a photo.
+// Used by the native Discover cards AND the offline asset-sync bundler to agree
+// on which image to ship/look up (apps/mobile ROUTE_IMAGES map).
+export function routeThumbnailPath(entry) {
+  const image = routeDisplayImage(entry);
+  const t = image?.thumbnail || image?.photo;
+  return typeof t === "string" && t.length > 0 ? t : null;
+}

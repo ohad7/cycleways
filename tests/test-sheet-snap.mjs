@@ -14,6 +14,7 @@ import {
   assert.equal(o.half, 400);
   assert.equal(o.full, 12);
   assert.equal(offsetsForHeight(0).peek, 0, "degenerate height clamps to 0");
+  assert.equal(offsetsForHeight(800, 96).peek, 704, "measured peek height is honored");
 }
 
 // resolveSnap projects the fling and picks the nearest snap offset.

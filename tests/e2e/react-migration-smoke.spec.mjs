@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installMapboxMock } from "./mapbox-mock.mjs";
-import { ensurePanelOpen } from "./sheet-helpers.mjs";
+import { ensurePanelOpen, revealMapOnMobile } from "./sheet-helpers.mjs";
 
 const COMPACT_ROUTE = "Bjjy1nRHHDArrNAoctqGv4RHL3un";
 const ROUTE_NETWORK_HIT_LAYER_ID = "cycleways-network-hit";
@@ -19,9 +19,12 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-test("current public app loads with route controls", async ({ page }) => {
+test("current public app loads with route controls", async ({ page, isMobile }) => {
   await page.goto("/");
 
+  // On mobile the landing is the discover-home screen; the map mounts once the
+  // user engages Build. On desktop the map is always mounted.
+  await revealMapOnMobile(page, isMobile);
   await expect(page.locator("#map")).toBeVisible();
   // Route controls now live in the right-side panel (no on-map control buttons).
   await ensurePanelOpen(page);
@@ -91,8 +94,11 @@ test("production shows outside-network warning in the route panel", async ({ pag
   );
 });
 
-test("production supports segment hover, segment clicks, and sharing", async ({ page }) => {
+test("production supports segment hover, segment clicks, and sharing", async ({ page, isMobile }) => {
   await page.goto("/");
+  // On mobile, reveal the map (discover-home has none) before exercising the
+  // network/segment interactions.
+  await revealMapOnMobile(page, isMobile);
   await page.waitForFunction(
     (layerId) => window.__mockMapboxCurrentMap?.layers?.has(layerId),
     ROUTE_NETWORK_HIT_LAYER_ID,

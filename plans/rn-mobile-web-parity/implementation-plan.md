@@ -315,10 +315,101 @@
   uses `waitForAnimationToEnd`) or they land off-map. Run only one Maestro
   instance at a time — concurrent runners crash the shared XCTest driver.
 
+## Phase 2.8b — Web-Drift Re-Alignment (2026-06-26 re-audit)
+
+Slices 1-11 above are **done** and reached parity with the 2026-06-03 mobile web
+planner. The mobile web planner has since been rebuilt into a bottom-sheet
+front panel (`src/components/frontPanel/`: `FrontPanel`, `PanelStateToggle`,
+`BuildPanel`, `DiscoverPanel`, `RecentRoutesStrip`, `PanelElevationGraph`), so
+the app drifted out of parity again. This phase re-aligns the native planner to
+the current web shape. Scope per the design re-audit: **Build panel parity + a
+Discover/catalog entry; defer website chrome.** This is the active work and
+**must land before turn-by-turn phases 4+** (see
+`plans/rn-turn-by-turn-navigation/implementation-plan.md`).
+
+### Phase 2.8b.0: Re-Audit
+
+- [x] Capture the current mobile web planner (Build + Discover) at an
+  iPhone-sized viewport. (Code-level audit of `src/components/frontPanel/`.)
+- [x] Capture the current native screen on the iPhone simulator. (Code-level
+  audit of `apps/mobile/src/MapScreen.jsx` — old top-search + right-rail +
+  fixed bottom route sheet; 0 references to Discover/recents/catalog.)
+- [x] Diff against the new web panel structure and confirm the gap list below.
+
+### Phase 2.8b.1: Bottom-Sheet Front-Panel Shell ✅
+
+- [x] Replace the fixed bottom route sheet in `MapScreen.jsx` with a
+  front-panel sheet that has a Discover/Build mode toggle (native equivalent of
+  `FrontPanel` + `PanelStateToggle`), collapsible like the web sheet. New
+  `PanelStateToggle` (`חפש מסלול` / `בניית מסלול`) + collapse chevron.
+- [x] Keep the map as the primary surface; the sheet expands/collapses over it.
+- [x] Move pure panel view-model bits into `@cycleways/core` only where they
+  remove real duplication (reused `getRoutePlannerPresentation.stats`; no new
+  forks of `BuildPanel` DOM).
+
+### Phase 2.8b.2: Build Panel Parity ✅ (POI cards deferred)
+
+- [x] Restyle the native planner content to the `BuildPanel` model: eyebrow
+  context (`מסלול מומלץ` / `המסלול שלי · טיוטה`), icon undo/redo/clear tools,
+  stats block, elevation graph, share, and the recommended-route context header
+  (`selectedCatalogEntry`) when a catalog entry is loaded. GPX stays in the
+  summary modal; `PanelPoiCard`-style POI cards in the build panel are
+  **deferred**.
+- [x] Reconcile the right-side rail with the new in-panel tool row: removed the
+  old top control rail; undo/redo/clear now live in the Build panel head (web
+  parity).
+- [x] Preserve all shared `useCyclewaysApp` handlers; this is a re-skin, not a
+  behavior change.
+
+### Phase 2.8b.3: Native Discover / Catalog Entry ✅ (thumbnails/near-me deferred)
+
+- [x] Add a native Discover mode that lists bundled `route-catalog.json`
+  entries via `loadRouteCatalogEntries()` (already native-loadable).
+- [x] Render route cards (native `PanelRouteCardNative`: name + distance ·
+  difficulty · shape); selecting a card restores the entry's `route` token via
+  `handleLoadRouteParam`, records a recent, and switches to Build.
+- [ ] Basic near-me sort using `@cycleways/core/data/nearMe.js` — **deferred**:
+  needs `places.json` bundled on native (route start coords come from
+  `placeById`). Cards currently render in catalog order.
+- [x] This Discover list is also the route picker that feeds turn-by-turn
+  navigation (catalog source in `navigationRoute.js`).
+
+### Phase 2.8b Verification
+
+- [x] `npm test` (9/9 route-manager + core suites pass).
+- [ ] `npm run build` (web unchanged by this slice; not re-run).
+- [x] iOS export from `apps/mobile`
+  (`/tmp/isravelo-mobile-export-parity-2-8b-clean`, bundle compiles).
+- [x] iPhone simulator/Maestro smoke: `apps/mobile/.maestro/discover-build-smoke.yaml`
+  passed end-to-end on the iOS 17.5 iPhone 15 sim — chrome + both toggle tabs,
+  Discover lists the bundled catalog, selecting `בניאס וגן הצפון` loads it and
+  switches to Build (eyebrow `מסלול מומלץ`, title, 5-tile stats grid,
+  9-warning notice, elevation chart), clear returns to `המסלול שלי · טיוטה`.
+  Screenshots: `/tmp/maestro-2-8b-discover.png`,
+  `/tmp/build-loaded-now.png`, `/tmp/maestro-2-8b-after-clear.png`.
+  (Note: Pressable inner-Text collapses into the parent a11y node — target card
+  `accessibilityLabel`s, per the Slice 10 note.)
+- [x] Visual comparison against the current mobile web Build + Discover panel:
+  native Build panel matches the web `BuildPanel` (eyebrow/title/tool-row/stats/
+  elevation) and Discover matches the `PanelRouteCard` list (name + distance ·
+  difficulty · shape).
+- [x] Update `plans/HANDOFF.md` and `design.md` Status with remaining gaps.
+
+### Phase 2.8b Deferred Follow-Ups
+
+- Bundle `public-data/places.json` (and hero thumbnails) into native assets to
+  unlock route-card thumbnails, the "via …" place line, and near-me sort.
+- `PanelPoiCard`-style POI cards inside the native Build panel.
+- Re-wire the orphaned `handleLocatePress` / `fitRoute` as floating native map
+  controls (currently defined but unrendered).
+- Recents strip + draft-restore + send-to-phone (intentionally deferred chrome).
+
 ## Implementation Notes
 
 - The current Phase 2.4-2.7 native overlay should be treated as a functional
   proof, not the final UI target.
-- Avoid route-following/navigation work until this parity pass is complete.
+- Slices 1-11 are done; Phase 2.8b is the active re-alignment to the rebuilt
+  mobile web planner. Finish 2.8b before turn-by-turn phases 4+ so navigation
+  chrome is built on the current panel, not the stale 2026-06-03 chrome.
 - Avoid broad refactors of `useCyclewaysApp`; introduce shared view-model
   helpers only when they remove actual renderer duplication.

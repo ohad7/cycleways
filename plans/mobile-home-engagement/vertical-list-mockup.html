@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="he" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>בית · הירו ורשימה אנכית</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 26px;
+      background: #e8ece8;
+      color: #24313a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+    .sheet { width: 430px; margin: 0 auto; direction: rtl; }
+    .label { margin: 0 0 4px; color: #9a5a30; font-size: 12px; font-weight: 900; text-align: right; }
+    h1 { margin: 0 0 5px; font-size: 24px; text-align: right; }
+    .sub { margin: 0 0 14px; color: #63716b; font-size: 13px; line-height: 1.45; text-align: right; }
+    .phone {
+      position: relative;
+      width: 390px;
+      height: 780px;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 8px solid #172026;
+      border-radius: 38px;
+      background: #f6f7f3;
+      box-shadow: 0 24px 60px rgba(23,32,38,.22);
+    }
+    .notch {
+      position: absolute;
+      z-index: 20;
+      top: 8px;
+      left: 50%;
+      width: 104px;
+      height: 24px;
+      transform: translateX(-50%);
+      border-radius: 20px;
+      background: #172026;
+    }
+    .screen { height: 100%; overflow: hidden; padding: 40px 14px 28px; }
+    .topline { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .brand-kicker { color: #9a5a30; font-size: 10px; font-weight: 900; }
+    .topline h2 { margin: 3px 0 0; font-size: 24px; line-height: 1.05; }
+    .avatar { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 50%; background: #3f5d33; color: #fff; font-size: 19px; }
+    .search { display: flex; align-items: center; justify-content: space-between; height: 42px; padding: 0 13px; border: 1px solid #dce4df; border-radius: 13px; background: #fff; color: #7a8580; font-size: 12px; box-shadow: 0 3px 10px rgba(36,49,58,.05); }
+    .hero {
+      position: relative;
+      height: 254px;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 20px;
+      color: #fff;
+      box-shadow: 0 15px 30px rgba(26,45,34,.2);
+    }
+    .hero img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.92); }
+    .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(13,23,18,.05) 22%, rgba(13,23,18,.84) 100%); }
+    .hero-tag { position: absolute; z-index: 2; top: 13px; right: 13px; padding: 6px 10px; border-radius: 999px; background: rgba(253,252,248,.92); color: #6f4428; font-size: 10px; font-weight: 900; }
+    .hero-copy { position: absolute; z-index: 2; right: 16px; bottom: 15px; left: 16px; }
+    .hero-copy h3 { margin: 0 0 5px; font-size: 26px; }
+    .hero-copy p { max-width: 295px; margin: 0 0 10px; color: rgba(255,255,255,.86); font-size: 12px; line-height: 1.45; }
+    .hero-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .hero-metrics { display: flex; gap: 12px; font-size: 11px; font-weight: 850; }
+    .cta { padding: 9px 14px; border-radius: 10px; background: #fff; color: #2f5936; font-size: 11px; font-weight: 900; }
+    .quick-title { margin: 15px 1px 8px; font-size: 13px; font-weight: 900; }
+    .chips { display: flex; gap: 7px; overflow: hidden; }
+    .chip { flex: 0 0 auto; padding: 8px 12px; border: 1px solid #d8e0da; border-radius: 999px; background: #fff; color: #34483c; font-size: 11px; font-weight: 800; }
+    .chip.on { border-color: #3f5d33; background: #e7efe5; color: #2e5a37; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 16px 1px 8px; }
+    .section-head strong { font-size: 14px; }
+    .section-head span { color: #64736a; font-size: 10px; font-weight: 800; }
+    .route-list { display: grid; gap: 9px; }
+    .route-card {
+      display: grid;
+      grid-template-columns: 98px 1fr;
+      min-height: 92px;
+      overflow: hidden;
+      border: 1px solid #e0e7e1;
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 6px 16px rgba(36,49,58,.07);
+    }
+    .route-card img { width: 98px; height: 100%; object-fit: cover; }
+    .route-copy { position: relative; padding: 10px 12px 10px 8px; text-align: right; }
+    .route-copy b { display: block; margin-bottom: 4px; font-size: 15px; }
+    .route-copy p { margin: 0; color: #68766f; font-size: 10.5px; line-height: 1.35; }
+    .route-meta { display: flex; gap: 8px; margin-top: 7px; color: #2f5d39; font-size: 10px; font-weight: 900; }
+    .chev { position: absolute; left: 10px; bottom: 9px; color: #9aa59f; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <main class="sheet">
+    <p class="label">Home · recommended refinement</p>
+    <h1>הירו מתחלף + רשימת מסלולים אנכית</h1>
+    <p class="sub">המסלול הראשי נשאר גדול ומזמין. שאר המסלולים קטנים יותר, אבל עדיין קריאים ומשווים ביניהם בקלות.</p>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="topline">
+          <div><div class="brand-kicker">גליל עליון על אופניים</div><h2>לאן רוכבים היום?</h2></div>
+          <div class="avatar">⌁</div>
+        </div>
+        <div class="search"><span>חפשו מסלול או מקום</span><b>⌕</b></div>
+        <article class="hero">
+          <img src="/public-data/poi-images/poi-38b469d3-eadbb56a.webp" alt="">
+          <div class="hero-tag">בחירת היום · מתחלף</div>
+          <div class="hero-copy">
+            <h3>בניאס וגן הצפון</h3>
+            <p>שבילי אופניים, מים זורמים ופינות עצירה לאורך אחד המסלולים היפים בצפון.</p>
+            <div class="hero-bottom">
+              <div class="hero-metrics"><span>14.8 ק״מ</span><span>קל</span><span>מעגלי</span></div>
+              <div class="cta">למסלול ←</div>
+            </div>
+          </div>
+        </article>
+        <div class="quick-title">מה מתאים לכם?</div>
+        <div class="chips"><div class="chip on">קליל</div><div class="chip">משפחות</div><div class="chip">ליד מים</div><div class="chip">קרוב אליי</div></div>
+        <div class="section-head"><strong>עוד מסלולים מומלצים</strong><span>כל 8 המסלולים</span></div>
+        <section class="route-list">
+          <article class="route-card">
+            <img src="/public-data/poi-images/sovev-beit-hillel-start-88a84776.webp" alt="">
+            <div class="route-copy">
+              <b>סובב בית הלל</b>
+              <p>מסלול קצר ונעים ליד נחל שניר, שדות ומטעים.</p>
+              <div class="route-meta"><span>6.5 ק״מ</span><span>קל</span><span>מעגלי</span></div>
+              <div class="chev">‹</div>
+            </div>
+          </article>
+          <article class="route-card">
+            <img src="/public-data/poi-images/poi-1821461d-91d526fa.webp" alt="">
+            <div class="route-copy">
+              <b>סובב דפנה</b>
+              <p>רכיבה רגועה בין שבילי הקיבוץ, נחל דן וצל.</p>
+              <div class="route-meta"><span>7 ק״מ</span><span>קל</span><span>מים</span></div>
+              <div class="chev">‹</div>
+            </div>
+          </article>
+          <article class="route-card">
+            <img src="/public-data/poi-images/poi-5b6da297-fd491b50.webp" alt="">
+            <div class="route-copy">
+              <b>הירדן ההיסטורי</b>
+              <p>מסלול ארוך יותר לצד נחלים, תעלות ושדות פתוחים.</p>
+              <div class="route-meta"><span>23.6 ק״מ</span><span>בינוני</span></div>
+              <div class="chev">‹</div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

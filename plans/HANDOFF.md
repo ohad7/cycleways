@@ -399,6 +399,55 @@ current parity pass:
   Follow-up fix (`efbf557`): a point drag is claimed only at touch-start —
   `onMoveShouldSetPanResponder` no longer re-hit-tests on move, so panning the
   map is never hijacked into a drag when the finger passes near a point.
+- **Phase 2.8b mobile-web drift re-align — DONE + VERIFIED**
+  (`plans/rn-mobile-web-parity/` Phase 2.8b): the mobile web planner was rebuilt
+  into the `src/components/frontPanel/` Discover/Build front panel after the
+  original 2.8 pass, so the app had drifted. `apps/mobile/src/MapScreen.jsx` now
+  renders a collapsible front-panel sheet with a `PanelStateToggle`
+  (`חפש מסלול` / `בניית מסלול`): **Build** mirrors the web `BuildPanel` (eyebrow
+  `מסלול מומלץ`/`המסלול שלי · טיוטה`, title, in-panel undo/redo/clear tool row,
+  shared `presentation.stats` grid, route status, warnings, elevation chart,
+  summary/share footer); **Discover** lists the bundled `route-catalog.json`
+  (`loadRouteCatalogEntries`) as `PanelRouteCardNative` cards (name · distance ·
+  difficulty · shape), and selecting one restores the entry's `route` token via
+  `handleLoadRouteParam`, records a recent, and switches to Build. The old top
+  control rail is gone (tools moved into the Build head, web parity). **Verified:**
+  `npm test` green; iOS export clean; `apps/mobile/.maestro/discover-build-smoke.yaml`
+  passes end-to-end on the iOS 17.5 iPhone 15 sim (`/tmp/maestro-2-8b-discover.png`,
+  `/tmp/build-loaded-now.png`, `/tmp/maestro-2-8b-after-clear.png`). **Deferred:**
+  bundle `places.json` (→ card thumbnails / "via" line / near-me sort), Build POI
+  cards, re-wiring orphaned locate/fit, recents/draft/send-to-phone chrome. This
+  is the route picker that feeds turn-by-turn (`rn-turn-by-turn-navigation`).
+- **Phase 2.8c native-UI reskin — DONE + VERIFIED**
+  (`plans/rn-mobile-native-ui/`): made the iPhone app read as a native iOS app
+  instead of web-on-a-phone. Added `@gorhom/bottom-sheet` (+ reanimated v4 /
+  worklets / gesture-handler), `react-native-safe-area-context`, and
+  `@expo/vector-icons` (Ionicons). `apps/mobile/src/MapScreen.jsx` is slimmed and
+  the chrome lives in `apps/mobile/src/planner/` (`PlannerSheet`, `TopSearch`,
+  `MapControls`, `DiscoverPanel`, `RouteCard`, `Icon`, `theme.js`):
+  full-bleed map; a real draggable sheet (peek/half/full) hosting the
+  Discover/Build toggle; a safe-area search pill; floating circular locate/fit/
+  layers buttons (wiring the previously-orphaned locate/fit) with a legend
+  popover (the old map-corner legend box is gone); Ionicons throughout; branded
+  Discover cards (difficulty-tinted icon tile + colored chip + distance/shape/via
+  meta + near-me). Forest/cream palette in `planner/theme.js`. **Verified:**
+  `npm test` green; iOS export clean; native rebuild boots; Maestro
+  `native-ui-smoke.yaml` (search pill + map controls + legend popover) and
+  `discover-build-smoke.yaml` (toggle → catalog select → Build) pass on the iOS
+  17.5 iPhone 15 sim (`/tmp/maestro-2-8c-chrome.png`,
+  `/tmp/maestro-2-8c-discover.png`, `/tmp/maestro-2-8c-build-loaded.png`).
+  **Gotchas hit:** gorhom groups the sheet body as one a11y node (drive in-sheet
+  via coordinate taps + screenshots; chrome outside the sheet stays
+  testID/label-matchable); `babel-preset-expo` SDK 56 auto-injects the worklets
+  plugin (don't add it manually). **Polish pass:** real photo thumbnails now
+  render — the image `require` map is generated INSIDE the app
+  (`apps/mobile/src/planner/routeImages.js`) because Metro won't serve images
+  `require`d from the symlinked `@cycleways/core` pkg (webp→png conversion kept;
+  dead `getImageAsset`/core `IMAGE_ASSETS` removed). Map controls moved to the
+  top-right under the search pill (per request, replacing the sheet-follow
+  behavior); circular tonal Build tool buttons + forest primary. **Deferred:**
+  optional `BuildPanel` file extraction (expo-image was tried for thumbnails and
+  backed out — ABI mismatch with expo-modules-core 56.0.14).
 - **Then:** route-following/navigation mode on top of the current-location puck,
   offline Mapbox tile-pack polish, release hardening, and optional splitting of
   `useCyclewaysApp` into focused hooks.

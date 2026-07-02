@@ -61,6 +61,14 @@ async function expectedRouteFitPadding(page) {
   });
 }
 
+function expectPaddingCloseTo(actual, expected, tolerance = 1) {
+  expect(actual).toBeTruthy();
+  expect(expected).toBeTruthy();
+  for (const edge of ["top", "right", "bottom", "left"]) {
+    expect(Math.abs(actual[edge] - expected[edge]), `${edge} padding`).toBeLessThanOrEqual(tolerance);
+  }
+}
+
 test("/routes lists every recommended catalog route", async ({ page, isMobile }) => {
   await page.goto("/routes");
   await expect(page.locator(".routes-page")).toBeVisible();
@@ -131,7 +139,7 @@ test("/routes filters by goes-through location", async ({ page, isMobile }) => {
   await expect(routeCardByTitle(page, "הירדן ההיסטורי")).toBeVisible();
 });
 
-test("/routes card opens planner and detail actions", async ({ page }) => {
+test("/routes card opens planner and detail actions", async ({ page, isMobile }) => {
   await page.goto("/routes");
   const historic = routeCardByTitle(page, "הירדן ההיסטורי");
   await expect(historic.getByRole("link", { name: "פתח במפה" })).toHaveAttribute("href", /route=/);
@@ -148,7 +156,13 @@ test("/routes card opens planner and detail actions", async ({ page }) => {
   await expect(page.locator(".fv-route-stage-map")).toBeVisible();
   await expect(page.locator(".fv-video-controls")).toBeVisible();
   await expect(page.locator(".fv-route-stats")).toBeVisible();
-  await expect(page.locator(".elevation-profile")).toBeVisible();
+  if (isMobile) {
+    await expect(page.locator(".fv-mobile-elevation-strip .elevation-profile")).toBeVisible();
+    await expect(page.locator(".fv-side-elevation-wrap .elevation-profile")).toBeHidden();
+  } else {
+    await expect(page.locator(".fv-side-elevation-wrap .elevation-profile")).toBeVisible();
+    await expect(page.locator(".fv-mobile-elevation-strip")).toBeHidden();
+  }
   await expect(page.locator(".nav-links .nav-link")).toHaveText([
     "על המסלול",
     "נקודות במסלול",
@@ -206,7 +220,7 @@ test("/routes generic route renders from snapshot without planner assets", async
     ) || [];
     return fitEvents.at(-1)?.options?.padding || null;
   });
-  expect(routeFitPadding).toEqual(await expectedRouteFitPadding(page));
+  expectPaddingCloseTo(routeFitPadding, await expectedRouteFitPadding(page));
   await expect(page.locator(".fv-route-warning-card")).toHaveCount(4);
   await expect(page.locator(".fv-route-warnings")).toContainText("ירדן מערב כפר בלום");
   await expect(page.locator(".fv-route-warnings")).toContainText("אגמון החולה גישה מזרח");

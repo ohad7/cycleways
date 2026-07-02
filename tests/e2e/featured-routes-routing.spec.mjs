@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { installMapboxMock } from "./mapbox-mock.mjs";
+import { revealMapOnMobile } from "./sheet-helpers.mjs";
 
 test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
@@ -26,7 +27,8 @@ test("/featured/:slug renders promoted catalog route without a source module", a
   await expect(page.locator(".fv-video .featured-video-frame")).toBeVisible();
 });
 
-test("existing planner at / still loads the map", async ({ page }) => {
+test("planner at / can load the map", async ({ page, isMobile }) => {
   await page.goto("/");
+  await revealMapOnMobile(page, isMobile);
   await expect(page.locator(".map-container")).toBeVisible();
 });

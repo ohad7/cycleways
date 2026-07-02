@@ -9,6 +9,20 @@ export const JSON_ASSETS = {
   "public-data/route-catalog.json": require("../../../../apps/mobile/assets/data/public-data/route-catalog.json"),
   "public-data/cw-base-index.json": require("../../../../apps/mobile/assets/data/public-data/cw-base-index.json"),
   "public-data/base-routing-shards/manifest.json": require("../../../../apps/mobile/assets/data/public-data/base-routing-shards/manifest.json"),
+  "public-data/featured-routes/banias-gan-hatsafon.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/banias-gan-hatsafon.json"),
+  "public-data/featured-routes/sovev-beit-hillel.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/sovev-beit-hillel.json"),
+  "public-data/featured-routes/historic-jordan.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/historic-jordan.json"),
+  "public-data/featured-routes/kovshey-hagolan.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/kovshey-hagolan.json"),
+  "public-data/featured-routes/sovev-dafna.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/sovev-dafna.json"),
+  "public-data/featured-routes/roman-roads.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/roman-roads.json"),
+  "public-data/featured-routes/sovev-shear-yeshuv.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/sovev-shear-yeshuv.json"),
+  "public-data/featured-routes/naftali-dishon-yosha.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/naftali-dishon-yosha.json"),
+  "public-data/route-videos/index.json": require("../../../../apps/mobile/assets/data/public-data/route-videos/index.json"),
+  "public-data/route-videos/sovev-beit-hillel.json": require("../../../../apps/mobile/assets/data/public-data/route-videos/sovev-beit-hillel.json"),
+  "public-data/route-videos/banias-gan-hatsafon.json": require("../../../../apps/mobile/assets/data/public-data/route-videos/banias-gan-hatsafon.json"),
+  "public-data/route-videos/sovev-dafna.json": require("../../../../apps/mobile/assets/data/public-data/route-videos/sovev-dafna.json"),
+  "public-data/route-videos/sovev-shear-yeshuv.json": require("../../../../apps/mobile/assets/data/public-data/route-videos/sovev-shear-yeshuv.json"),
+  "public-data/places.json": require("../../../../apps/mobile/assets/data/public-data/places.json"),
 };
 
 export const BINARY_ASSETS = {

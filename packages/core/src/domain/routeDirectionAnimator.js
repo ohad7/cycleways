@@ -1,19 +1,9 @@
-import { getDistance } from "../utils/distance.js";
+import { computeBearing, precomputeArcLength, pointAndBearingAtDistance } from "../utils/geometry.js";
+
+export { computeBearing, precomputeArcLength, pointAndBearingAtDistance };
 
 const CHANNELS = new Set(["chevron", "litPoint", "elevation"]);
 const GAP_DURATION_MS = 1200;
-
-export function precomputeArcLength(geometry) {
-  const n = geometry.length;
-  const cumDist = new Float64Array(n);
-  let acc = 0;
-  for (let i = 1; i < n; i++) {
-    const segment = getDistance(geometry[i - 1], geometry[i]);
-    acc += Number.isFinite(segment) && segment > 0 ? segment : 0;
-    cumDist[i] = acc;
-  }
-  return { cumDist, totalDistMeters: acc };
-}
 
 export function computeCycleDuration(totalDistanceMeters) {
   const distanceKm = (totalDistanceMeters || 0) / 1000;
@@ -234,29 +224,13 @@ export function createRouteDirectionAnimator(options = {}) {
 function computeChevronPayload(state, t) {
   const { arc, geometry } = state;
   const target = t * arc.totalDistMeters;
-  const i = findSegmentIndex(arc.cumDist, target);
-  const segLen = arc.cumDist[i + 1] - arc.cumDist[i];
-  const localFrac = segLen > 0 ? (target - arc.cumDist[i]) / segLen : 0;
-  const a = geometry[i];
-  const b = geometry[i + 1];
+  const { point, bearingDeg } = pointAndBearingAtDistance(arc, geometry, target);
   return {
-    lng: a.lng + (b.lng - a.lng) * localFrac,
-    lat: a.lat + (b.lat - a.lat) * localFrac,
-    bearing: computeBearing(a, b),
+    lng: point.lng,
+    lat: point.lat,
+    bearing: bearingDeg,
     t,
   };
-}
-
-function findSegmentIndex(cumDist, target) {
-  // Binary search for the largest i such that cumDist[i] <= target.
-  let lo = 0;
-  let hi = cumDist.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >>> 1;
-    if (cumDist[mid] <= target) lo = mid;
-    else hi = mid - 1;
-  }
-  return Math.min(lo, cumDist.length - 2);
 }
 
 function detectLitIndex(state, t) {
@@ -279,18 +253,6 @@ function buildLitPayload(state, k) {
   const geomIndex = state.routePointIndices[k];
   const coord = state.geometry[geomIndex];
   return { index: k, lng: coord.lng, lat: coord.lat };
-}
-
-export function computeBearing(from, to) {
-  const φ1 = (from.lat * Math.PI) / 180;
-  const φ2 = (to.lat * Math.PI) / 180;
-  const Δλ = ((to.lng - from.lng) * Math.PI) / 180;
-  const y = Math.sin(Δλ) * Math.cos(φ2);
-  const x =
-    Math.cos(φ1) * Math.sin(φ2) -
-    Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-  const θ = Math.atan2(y, x);
-  return ((θ * 180) / Math.PI + 360) % 360;
 }
 
 function defaultClock() {

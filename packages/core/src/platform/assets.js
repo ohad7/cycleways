@@ -21,8 +21,26 @@ function siteBase() {
   return (import.meta.env?.BASE_URL || "/").replace(/\/?$/, "/");
 }
 
+// JSON assets injected by a host (the native app's WebView) keyed by logical
+// path. When present, getJsonAsset returns the injected value without a network
+// fetch — this is how the bundled, offline-embedded featured page gets its data.
+export function getInjectedJsonAsset(filePath) {
+  const injected =
+    typeof globalThis !== "undefined" ? globalThis.__CW_ASSETS__ : null;
+  if (
+    injected &&
+    typeof filePath === "string" &&
+    Object.prototype.hasOwnProperty.call(injected, filePath)
+  ) {
+    return injected[filePath];
+  }
+  return undefined;
+}
+
 // JSON asset resolved relative to a manifest base (segments, network, manifests).
 export async function getJsonAsset(filePath, { basePath = null, ...fetchOptions } = {}) {
+  const injected = getInjectedJsonAsset(filePath);
+  if (injected !== undefined) return injected;
   const assetPath = resolveAssetPath(filePath, basePath);
   const requestPath =
     assetPath.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(assetPath)

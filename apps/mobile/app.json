@@ -13,6 +13,15 @@
       "bundleIdentifier": "app.cycleways.mobile",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Show your current location on the map while planning and following rides.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Keep following turn-by-turn navigation while your screen is locked during a ride.",
+        "UIBackgroundModes": [
+          "location"
+        ],
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps",
+          "waze",
+          "moovit"
+        ],
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
@@ -37,11 +46,35 @@
     },
     "plugins": [
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#ededed",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "ios": {
+            "image": "./assets/splash-screen-ios.png",
+            "backgroundColor": "#ededed",
+            "resizeMode": "contain",
+            "enableFullScreenImage_legacy": true
+          }
+        }
+      ],
+      [
         "@rnmapbox/maps",
         {
           "RNMapboxMapsImpl": "mapbox"
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Show your current location on the map while planning and following rides.",
+          "locationAlwaysAndWhenInUsePermission": "Keep following turn-by-turn navigation while your screen is locked during a ride.",
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      "./plugins/withWebroot.js"
     ]
   }
 }

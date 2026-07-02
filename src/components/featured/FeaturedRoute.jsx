@@ -21,6 +21,7 @@ import RoutePoiVideoPreview from "./RoutePoiVideoPreview.jsx";
 import RouteMapPlayback from "./RouteMapPlayback.jsx";
 import RouteProgressDistance from "./RouteProgressDistance.jsx";
 import { findRouteMeta } from "../../featured/index.js";
+import { isAppEmbedded, postToApp } from "../../appEmbed.js";
 
 function FeaturedRoute({ slug, children, layout = "article", desktopMap = "sticky", kicker = null }) {
   const isMobile = useIsMobile();
@@ -126,6 +127,26 @@ function FeaturedRoute({ slug, children, layout = "article", desktopMap = "stick
     if (!meta || status !== "ready" || routeState.geometry.length < 2) return;
     requestRouteFit("featured");
   }, [status, meta, routeState.geometry, requestRouteFit]);
+
+  // The native host owns loading feedback in embed mode. Signal only after the
+  // route data is resolved and React has had two frames to commit and paint the
+  // visible route shell. Errors also release the native loader so the web error
+  // surface is never hidden behind an indefinite spinner.
+  useEffect(() => {
+    if (!isAppEmbedded() || (status !== "ready" && status !== "error")) {
+      return undefined;
+    }
+    let secondFrame = null;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        postToApp({ type: "ready", slug: meta?.slug || slug, status });
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame !== null) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [meta?.slug, slug, status]);
 
   useEffect(() => {
     if (!videoPlaying) {

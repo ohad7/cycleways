@@ -6,12 +6,13 @@ const TOP_GAP_PX = 12;
 // How far (ms) a fling is projected forward before picking the nearest snap.
 const FLING_LOOKAHEAD_MS = 300;
 
-export function offsetsForHeight(shellHeight) {
+export function offsetsForHeight(shellHeight, peekHeight = PEEK_PX) {
   const h = Math.max(shellHeight, 0);
+  const visiblePeek = Math.max(Number(peekHeight) || PEEK_PX, 0);
   return {
     full: Math.min(TOP_GAP_PX, h),
     half: Math.round(h * 0.5),
-    peek: Math.max(h - PEEK_PX, 0),
+    peek: Math.max(h - visiblePeek, 0),
   };
 }
 

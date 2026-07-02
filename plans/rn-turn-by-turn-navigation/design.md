@@ -1,7 +1,45 @@
 # React Native Turn-by-Turn Navigation Design
 
 **Date:** 2026-06-26
-**Status:** design
+**Status:** in progress — foundation landed (catalog bundling, native link
+routing, `NavigationRoute` model + tests; Phases 1-3) and the **route-progress
+engine (Phase 4) is DONE** (2026-06-27): `routeProgress.js`
+(`createRouteProgressTracker`) with metric-frame projection, a windowed forward
+cursor (loop/out-and-back safe), accuracy-aware off-route hysteresis, wrong-way
+detection, and start-approach output. The **cue layer (Phase 5) is also DONE**
+(2026-06-27): `navigationCues.js` with a static `buildRouteCues` (start/turn/
+hazard/arrive, deterministic, dedup-gated) and a per-fix `selectActiveCue`
+(preview/final scheduling). The **session state machine (Phase 7 core) is also
+DONE** (2026-06-27): `navigationSession.js` (`createNavigationSession`) owns the
+tracker + cues and exposes idle/permission/navigating/off-route/paused/ended/
+error states with deduped cue events, never mutating the loaded route. **Both UI
+prerequisites are also DONE** (2026-06-27): the mobile-web parity re-align
+(`rn-mobile-web-parity` Phase 2.8b) and the native-UI reskin
+(`rn-mobile-native-ui` Phase 2.8c), so the navigation chrome (Phase 8) has a
+current native planner to build on. All node-testable navigation logic is now in
+place. **Phases 6 (native location service) and 8 (navigation UI) are
+scaffolded** (2026-06-27): the `expo-location` service + `useNavigationSession`
+hook + `app.json` permissions (foreground-only for v1; background config-ready
+but runtime-disabled), and a `NavPanel` overlay with a "Start navigation" entry
+in the Build panel that locks edits, follows the rider, and shows cue/remaining/
+off-route — **not yet verified on a simulator/device**. **Next: build + verify
+the slice in the simulator**, then Phase 9 (haptics) and Phase 10 (app links).
+
+### Current native UI the nav mode builds on (read before Phase 8)
+`apps/mobile/src/MapScreen.jsx` renders a full-bleed `@rnmapbox/maps` map with
+the shared `useCyclewaysApp` state, plus chrome in `apps/mobile/src/planner/`:
+`PlannerSheet` (`@gorhom/bottom-sheet`, snap points peek/half/full, hosts a
+Discover/Build segmented toggle), `TopSearch` (top-pinned search pill),
+`MapControls` (top-right circular locate/fit/layers + legend popover),
+`DiscoverPanel`/`RouteCard` (catalog browser → loads a route via
+`handleSelectCatalogRoute`), `Icon` (Ionicons), `theme.js` (forest/cream
+palette). The map is full-bleed (no `SafeAreaView` wrapper — overlays use
+`useSafeAreaInsets`). Navigation mode should be a new sheet/overlay state in this
+structure (e.g. a `NavPanel` in `planner/`), reusing `theme.js`/`Icon`, and a
+"Start navigation" entry from the Build panel + a catalog route's context.
+Note: `@gorhom/bottom-sheet` groups its body as one a11y node — Maestro can only
+see the sheet header + non-sheet chrome; drive in-sheet content via coordinate
+taps + screenshots.
 
 ## Goal
 
@@ -99,6 +137,23 @@ Minimum route-progress model:
 - remaining distance
 - passed/upcoming cue index
 - off-route status with hysteresis
+- `onRoute` + `distanceToRouteStart` for the start-approach state
+
+Engine implementation constraints (see implementation-plan Phase 4):
+
+- Project to segments in a local **metric frame** (scale lng by `cos(lat)`),
+  not raw lat/lng degrees — the along-segment fraction drives cumulative
+  progress and must be unbiased. Do not reuse `utils/distance.js`
+  `distanceToLineSegment` for progress.
+- Nearest-point search uses a **windowed forward cursor**, not a global min, so
+  loop / out-and-back / circular routes that pass near themselves keep progress
+  monotonic and never snap back across the start/end overlap.
+- The engine is a **pure stateful updater** (`createRouteProgressTracker`) with
+  timestamps fed in — no wall clock / RAF — reusing the shared arc-length +
+  bearing helpers (extracted from `routeDirectionAnimator.js`).
+- Off-route is **accuracy-aware** with two thresholds + dwell (enter
+  `30 m + k·accuracy`, exit `15 m`); heading degrades gracefully at low speed
+  (use displacement course above ~1 m/s, never flag wrong-way while stopped).
 
 Instruction quality should start conservative. Segment-boundary and sharp-turn
 cues are acceptable; false precision is not. If a route has weak cue data, the
@@ -210,13 +265,20 @@ Minimum permission UX:
 
 ## Open Questions
 
-- Should the first release support voice cues, or ship visual+haptic first?
-- What off-route threshold is appropriate for Hula Valley paths with GPS noise:
-  25 m, 35 m, or adaptive by speed/accuracy?
+Resolved (2026-06-27):
+
+- **Voice cues in v1?** No — ship visual + haptic first; voice/TTS is a
+  follow-up behind the same cue-event interface.
+- **Off-route threshold?** Accuracy-aware: enter `30 m + k·accuracy`, exit
+  `15 m`, with dwell. Speed-adaptive tuning deferred.
+- **Route-start approach cue?** Yes, minimal — the progress engine exposes
+  `onRoute` + `distanceToRouteStart` so the UI can prompt "head to route start".
+
+Still open:
+
 - Should catalog routes expose a preferred start direction for circular routes?
-- Do we need a route-start approach cue when the rider starts away from the
-  route?
 - Is Android in scope for the first navigation implementation, or iPhone only?
+  (Does not gate Phase 4; revisit before Phase 6 location work.)
 
 ## References Checked
 

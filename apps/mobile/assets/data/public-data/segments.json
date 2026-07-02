@@ -17,8 +17,8 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל אופניים 918 דפנה": {
-    "id": 88,
+  "כביש 918 פלג הדן": {
+    "id": 338,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -26,10 +26,55 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-dbc2c016",
+        "type": "warning",
+        "information": "מעבר הכרחי בצד הכביש, שוליים רחבים",
+        "location": [
+          33.216903846623694,
+          35.64192395978628
+        ],
+        "name": "גשר הבניאס",
+        "description": "המעבר מעל הבניאס באיזור הזה עובר בשוליים של כביש. השוליים עצמם די רחבים, רק צריך לרכב בזהירות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-dbc2c016-6f9ee817.webp",
+            "thumbnail": "public-data/poi-images/poi-dbc2c016-6f9ee817-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-dbc2c016-4bb5f9df.webp",
+            "thumbnail": "public-data/poi-images/poi-dbc2c016-4bb5f9df-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "splitFrom": 88,
+    "splitFromName": "שביל אופניים 918 דפנה",
     "middle": {
-      "longitude": 35.63706,
-      "latitude": 33.220031,
-      "elevation": 109.0
+      "longitude": 35.641163,
+      "latitude": 33.217692,
+      "elevation": 99.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 918 דפנה": {
+    "id": 339,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 88,
+    "splitFromName": "שביל אופניים 918 דפנה",
+    "middle": {
+      "longitude": 35.6352,
+      "latitude": 33.221095,
+      "elevation": 115.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -63,9 +108,9 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.632072,
-      "latitude": 33.228832,
-      "elevation": 134.0
+      "longitude": 35.632326,
+      "latitude": 33.22921,
+      "elevation": 136.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -83,9 +128,9 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.635469,
-      "latitude": 33.233579,
-      "elevation": 154.0
+      "longitude": 35.635902,
+      "latitude": 33.233622,
+      "elevation": 155.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -102,6 +147,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-86a4607d",
+        "type": "tree",
+        "information": "מטעי אבוקדו של קיבוץ דפנה",
+        "location": [
+          33.23353107025309,
+          35.63836313971484
+        ],
+        "name": "מטעי אבוקדו",
+        "description": "מטעי אבוקדו של קיבוץ דפנה. נא לא לקטוף!",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-86a4607d-aeab1967.webp",
+            "thumbnail": "public-data/poi-images/poi-86a4607d-aeab1967-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.638865,
       "latitude": 33.233614,
@@ -160,6 +224,23 @@
           33.163004,
           35.595931
         ]
+      },
+      {
+        "id": "poi-5b6da297",
+        "type": "flora",
+        "information": "בריכות נופרים יפהפהיות לקראת סוף החורף",
+        "location": [
+          33.12008325,
+          35.594871999999995
+        ],
+        "name": "בריכות נופרים",
+        "description": "בריכות נופרים יפהפהיות לקראת סוף החורף",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-5b6da297-fd491b50.webp",
+            "thumbnail": "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp"
+          }
+        ]
       }
     ],
     "quality": {
@@ -204,6 +285,40 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-015cc38e",
+        "type": "gate",
+        "information": "שער להולכי רגל, פתוח כל היום כתלות במצב בטחוני",
+        "location": [
+          33.218812,
+          35.614327
+        ],
+        "name": "שער להולכי רגל",
+        "description": "שער להולכי רגל, פתוח כל היום כתלות במצב בטחוני"
+      },
+      {
+        "id": "poi-23d6dbf0",
+        "type": "landmark",
+        "information": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+        "location": [
+          33.2127877,
+          35.6199385
+        ],
+        "name": "מושב נחלים",
+        "description": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-23d6dbf0-325f9ead.webp",
+            "thumbnail": "public-data/poi-images/poi-23d6dbf0-325f9ead-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-23d6dbf0-07580bf2.webp",
+            "thumbnail": "public-data/poi-images/poi-23d6dbf0-07580bf2-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.618767,
       "latitude": 33.206169,
@@ -222,10 +337,33 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-77f69a67",
+        "type": "cafe",
+        "information": "מתחם מסעדות, בתי קפה וחנויות",
+        "location": [
+          33.223701,
+          35.61561
+        ],
+        "name": "גן הצפון",
+        "description": "מתחם מסעדות, בתי קפה וחנויות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-77f69a67-3c7b3936.webp",
+            "thumbnail": "public-data/poi-images/poi-77f69a67-3c7b3936-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-77f69a67-c4064b12.webp",
+            "thumbnail": "public-data/poi-images/poi-77f69a67-c4064b12-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
-      "longitude": 35.615304,
-      "latitude": 33.222154,
-      "elevation": 96.0
+      "longitude": 35.615782,
+      "latitude": 33.222532,
+      "elevation": 97.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -276,6 +414,28 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-03007424",
+        "type": "tree",
+        "information": "ניתן לצפות מכאן בלהקות גדולות של חסידות בסוף האביב",
+        "location": [
+          33.172261,
+          35.556551
+        ],
+        "name": "חסידות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-03007424-8e53f5c4.webp",
+            "thumbnail": "public-data/poi-images/poi-03007424-8e53f5c4-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-03007424-0a04ce34.webp",
+            "thumbnail": "public-data/poi-images/poi-03007424-0a04ce34-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.556086,
       "latitude": 33.165232,
@@ -294,6 +454,28 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-11102fea",
+        "type": "viewpoint",
+        "information": "כניסה לכביש גישה לקרן נפתלי: תצפית לעמק החולה ולחרמון",
+        "location": [
+          33.091983,
+          35.550171
+        ],
+        "name": "קרן נפתלי",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-11102fea-572cdcba.webp",
+            "thumbnail": "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-11102fea-10303cb8.webp",
+            "thumbnail": "public-data/poi-images/poi-11102fea-10303cb8-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.549372,
       "latitude": 33.112833,
@@ -542,6 +724,29 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-b0a7c0c7",
+        "type": "nature",
+        "information": "גשר ביילי מעל הבניאס, מתחתיו גישה למים ופינה נהדרת למנוחה",
+        "location": [
+          33.22552974040883,
+          35.65442162844337
+        ],
+        "name": "גשר שאר ישוב",
+        "description": "גשר ביילי מעל הבניאס, מתחתיו גישה למים ופינה נהדרת למנוחה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-b0a7c0c7-d717983c.webp",
+            "thumbnail": "public-data/poi-images/poi-b0a7c0c7-d717983c-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-b0a7c0c7-69ed2ce2.webp",
+            "thumbnail": "public-data/poi-images/poi-b0a7c0c7-69ed2ce2-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.653047,
       "latitude": 33.227179,
@@ -579,6 +784,29 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-8e08b582",
+        "type": "landmark",
+        "information": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳",
+        "location": [
+          33.20986655083472,
+          35.658273167456514
+        ],
+        "name": "גבעת האם",
+        "description": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳. בגבעה יש תצפית לעמק החולה ולעבר הגולן, היא שמשה כנקודת הזינוק לכיבוש הגולן ביוני 1967",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-8e08b582-107f7255.webp",
+            "thumbnail": "public-data/poi-images/poi-8e08b582-107f7255-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-8e08b582-2da6d1e0.webp",
+            "thumbnail": "public-data/poi-images/poi-8e08b582-2da6d1e0-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.65587,
       "latitude": 33.208668,
@@ -968,6 +1196,24 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-1eb44fd0",
+        "type": "viewpoint",
+        "information": "",
+        "location": [
+          33.2129776,
+          35.6428954
+        ],
+        "name": "תצפית לחרמון",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1eb44fd0-4dd46f81.webp",
+            "thumbnail": "public-data/poi-images/poi-1eb44fd0-4dd46f81-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.642743,
       "latitude": 33.21059,
@@ -986,6 +1232,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-38b469d3",
+        "type": "rest_stop",
+        "information": "השביל כולו מלא פינות מנוחה ליד הבניאס",
+        "location": [
+          33.203704,
+          35.636825
+        ],
+        "name": "חניון הדקל",
+        "description": "השביל כולו מלא פינות מנוחה ליד הבניאס, יש המון פינות מוצלות והמים זורמים כל השנה בטמפרטורות נמוכות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-38b469d3-eadbb56a.webp",
+            "thumbnail": "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.633899,
       "latitude": 33.201474,
@@ -1356,6 +1621,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-a96860fc",
+        "type": "viewpoint",
+        "information": "אחת התצפיות לחרמון היפות ביותר בארץ",
+        "location": [
+          33.156947,
+          35.627448
+        ],
+        "name": "תצפית לחרמון",
+        "description": "תצפית לחרמון על רק השדות של קיבוץ עמיר וכפר בלום. מומלץ להגיע בחורף כשהחרמון מושלג והשדות ירוקים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-a96860fc-71a8e561.webp",
+            "thumbnail": "public-data/poi-images/poi-a96860fc-71a8e561-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.627258,
       "latitude": 33.158297,
@@ -1735,10 +2019,19 @@
       },
       {
         "type": "warning",
-        "information": "הכניסה אסורה למעיין",
+        "information": "אפשר להנות מהנוף, הכניסה למים אסורה",
         "location": [
           33.133896,
           35.56918
+        ],
+        "name": "עין תאו",
+        "description": "שמרו על הטבע, בעין תאו אפשר להנות מהנוף אולם אסור להכנס לשמורה או למים, על מנת לשמור על ערכי הטבע שם.",
+        "id": "poi-a77bbe8c",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-a77bbe8c-13ec0055.webp",
+            "thumbnail": "public-data/poi-images/poi-a77bbe8c-13ec0055-thumb.webp"
+          }
         ]
       }
     ],
@@ -1947,9 +2240,9 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.626033,
-      "latitude": 33.224142,
-      "elevation": 118.0
+      "longitude": 35.625713,
+      "latitude": 33.224289,
+      "elevation": 119.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -1973,8 +2266,8 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל אופניים 99 קיאקי הגושרים": {
-    "id": 98,
+  "שביל אופניים 99 מעיין ברוך": {
+    "id": 326,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -1982,10 +2275,32 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 98,
+    "splitFromName": "שביל אופניים 99 קיאקי הגושרים",
     "middle": {
-      "longitude": 35.610319,
-      "latitude": 33.225301,
-      "elevation": 107.0
+      "longitude": 35.609525,
+      "latitude": 33.225288,
+      "elevation": 109.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 קיאקי הגושרים": {
+    "id": 327,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 98,
+    "splitFromName": "שביל אופניים 99 קיאקי הגושרים",
+    "middle": {
+      "longitude": 35.613901,
+      "latitude": 33.224848,
+      "elevation": 101.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -2018,14 +2333,65 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-e144a450",
+        "type": "nature",
+        "information": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+        "location": [
+          33.224716,
+          35.621684
+        ],
+        "name": "יער מאכל קורן",
+        "description": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-e144a450-8d7e7468.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-8d7e7468-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-e144a450-193d6660.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-193d6660-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-e144a450-bed713bd.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-bed713bd-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-7442a920",
+        "type": "viewpoint",
+        "information": "מצפה קורן, לזכרו של ניר פופקו",
+        "location": [
+          33.22658505087399,
+          35.62202280888957
+        ],
+        "name": "מצפה קורן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7442a920-eaed8fae.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-eaed8fae-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7442a920-68ca9d3e.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-68ca9d3e-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7442a920-6dcff0f6.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-6dcff0f6-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
-      "longitude": 35.620091,
-      "latitude": 33.224176,
+      "longitude": 35.620547,
+      "latitude": 33.224286,
       "elevation": 109.0
     },
-    "elevation_gain_m": 4.0,
+    "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
-    "net_elevation_change_m": 4.0
+    "net_elevation_change_m": 0.0
   },
   "כביש 9888 בית הלל": {
     "id": 55,
@@ -2159,7 +2525,7 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל אופניים חצבאני חוף ישראלי": {
+  "שביל אופניים חצבאני חופים צפוני": {
     "id": 101,
     "status": "active",
     "quality": {
@@ -2168,6 +2534,50 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-1a4c1f16",
+        "type": "beach",
+        "information": "חוף רחצה על נחל שניר, עם כניסה דרך שער 1.",
+        "location": [
+          33.21628,
+          35.609092
+        ],
+        "name": "חוף קולומביה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1a4c1f16-b96c2372.webp",
+            "thumbnail": "public-data/poi-images/poi-1a4c1f16-b96c2372-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-1a4c1f16-fae02a20.webp",
+            "thumbnail": "public-data/poi-images/poi-1a4c1f16-fae02a20-thumb.webp"
+          }
+        ],
+        "description": "חוף קטן וקצת יותר פראי עם כניסה דרך שער 1. משום מה הוא נקרא חוף קולומביה, נשמח לדעת למה ביום מן הימים"
+      },
+      {
+        "id": "poi-857aa85d",
+        "type": "beach",
+        "information": "חוף נהדר, מרווח, גישה נוחה למים, מלא עצי תות",
+        "location": [
+          33.214461,
+          35.610436
+        ],
+        "name": "חוף בורגר",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-857aa85d-088f1532.webp",
+            "thumbnail": "public-data/poi-images/poi-857aa85d-088f1532-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-857aa85d-f6c5e9be.webp",
+            "thumbnail": "public-data/poi-images/poi-857aa85d-f6c5e9be-thumb.webp"
+          }
+        ],
+        "description": "דרך שער 2, חוף רחב ומרווח על נחל שניר, עם גישה נוחה למים שמתאימה גם למשפחות, ועצי תות שמטילים צל  על הגדה (ובעונה — גם פינוק מתוק היישר מהענף). מקום מצוין לפרוס מגבת ולשכשך רגלים."
+      }
+    ],
     "middle": {
       "longitude": 35.61001,
       "latitude": 33.214726,
@@ -2222,6 +2632,54 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-d2081ac2",
+        "type": "beach",
+        "information": "בכניסה משער 5, חוף קטן תחת עצי דולב בעיקול הנחל",
+        "location": [
+          33.205265,
+          35.610959
+        ],
+        "name": "חוף ללא שם בעיקול הנחל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-000a5417.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-000a5417-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-2e6d4024.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-2e6d4024-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-4f4272c3.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-4f4272c3-thumb.webp"
+          }
+        ],
+        "description": "בשער 5 הנחל מתעקל בחדות, לצד העיקול שוכנת בריכת דגים שקטה, לחוף הזה אין שם אבל יש שם עץ דולב ענקי וירידה חביבה לחצבאני"
+      },
+      {
+        "id": "poi-f5fd1f27",
+        "type": "beach",
+        "information": "חוף מגניב ומרוחק, מרחק שתי דקות הליכה משער 8",
+        "location": [
+          33.201237,
+          35.609947
+        ],
+        "name": "חוף האקליפטוס",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-f5fd1f27-34405fc1.webp",
+            "thumbnail": "public-data/poi-images/poi-f5fd1f27-34405fc1-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-f5fd1f27-8267032a.webp",
+            "thumbnail": "public-data/poi-images/poi-f5fd1f27-8267032a-thumb.webp"
+          }
+        ],
+        "description": "אקליפטוס ענק מסמן את הנקודה, וממנו שביל קצר של כשתי דקות מוביל אל גדת הנחל. הטרחה הקטנה משתלמת — המים כאן שקטים יותר, הצל נדיב, והתחושה היא של פינה פרטית."
+      }
+    ],
     "middle": {
       "longitude": 35.610844,
       "latitude": 33.205494,
@@ -2314,6 +2772,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-7004abaf",
+        "type": "cafe",
+        "information": "דג על הדן המסעדה המיתולוגית על נחל שניר",
+        "location": [
+          33.231024,
+          35.625048
+        ],
+        "name": "כניסה לקפה על הדן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7004abaf-b3f48c12.webp",
+            "thumbnail": "public-data/poi-images/poi-7004abaf-b3f48c12-thumb.webp"
+          }
+        ],
+        "description": "דג על הדן הוקמה בשנת 1979, לאחרונה נפתח במקום קפה על הדן."
+      }
+    ],
     "middle": {
       "longitude": 35.62748,
       "latitude": 33.232639,
@@ -2393,9 +2870,9 @@
       "scenery": 3
     },
     "middle": {
-      "longitude": 35.623501,
-      "latitude": 33.228749,
-      "elevation": 121.0
+      "longitude": 35.623795,
+      "latitude": 33.229185,
+      "elevation": 123.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -2666,6 +3143,29 @@
     },
     "splitFrom": 258,
     "splitFromName": "ציר הנפט בניאס שמיר - 2",
+    "data": [
+      {
+        "id": "poi-521bbc87",
+        "type": "landmark",
+        "information": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני",
+        "location": [
+          33.22471482716924,
+          35.69313022319281
+        ],
+        "name": "מצפה גולני - תל פאחר",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-521bbc87-9fdd2f58.webp",
+            "thumbnail": "public-data/poi-images/poi-521bbc87-9fdd2f58-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-521bbc87-f68ae011.webp",
+            "thumbnail": "public-data/poi-images/poi-521bbc87-f68ae011-thumb.webp"
+          }
+        ],
+        "description": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני"
+      }
+    ],
     "middle": {
       "longitude": 35.694377,
       "latitude": 33.222118,
@@ -2777,8 +3277,8 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל אופניים 99 דפנה": {
-    "id": 95,
+  "כביש 99 דפנה": {
+    "id": 331,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -2786,10 +3286,52 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 95,
+    "splitFromName": "שביל אופניים 99 דפנה",
     "middle": {
-      "longitude": 35.638296,
-      "latitude": 33.226184,
+      "longitude": 35.64248,
+      "latitude": 33.228513,
+      "elevation": 138.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 דפנה": {
+    "id": 336,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 332,
+    "splitFromName": "שביל אופניים 99 דפנה",
+    "middle": {
+      "longitude": 35.639322,
+      "latitude": 33.226567,
       "elevation": 129.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים אנדרטת אסון המסוקים": {
+    "id": 337,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 332,
+    "splitFromName": "שביל אופניים 99 דפנה",
+    "middle": {
+      "longitude": 35.634655,
+      "latitude": 33.224945,
+      "elevation": 125.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -3024,6 +3566,67 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-95010070",
+        "type": "cafe",
+        "information": "עצירה טובה לקפה",
+        "location": [
+          33.200456,
+          35.601372
+        ],
+        "name": "פרישטיק",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-95010070-e9f669c1.webp",
+            "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
+          }
+        ],
+        "description": "[פרישטיק](https://www.vitrage-resort.co.il/%D7%A4%D7%A8%D7%99%D7%A9%D7%98%D7%99%D7%A7/) הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג.\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג."
+      },
+      {
+        "id": "poi-c723c695",
+        "type": "tree",
+        "information": "בסוף האביב פריחה של חוטמית זיפנית בשלל צבעים",
+        "location": [
+          33.198283,
+          35.603713
+        ],
+        "name": "חוטמית זיפנית",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-c723c695-dc902444.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-dc902444-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-c723c695-5408f7d0.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-5408f7d0-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-c723c695-03220773.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-03220773-thumb.webp"
+          }
+        ],
+        "description": "בשלהי האביב החוטמית הזיפנית מתנשאת בקנים גבוהים ופורחת בגוונים של ורוד, סגול ולבן, נדיר לראות את כל הצבעים פורחים יחד בטבע. בשאר השנה זו פינת בר ירוקה ושקטה."
+      },
+      {
+        "id": "poi-75f40178",
+        "type": "tree",
+        "information": "בית הלל מלא במטעי פקאן שלווים ומרשימים",
+        "location": [
+          33.205539,
+          35.599154
+        ],
+        "name": "מטעי פקאן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-75f40178-b465e980.webp",
+            "thumbnail": "public-data/poi-images/poi-75f40178-b465e980-thumb.webp"
+          }
+        ],
+        "description": "מטעי פקאן רחבי ידיים, שבהם שורות העצים הגבוהים יוצרות מסדרון מוצל ונעים.  האור חודר בין העלים והשקט כמעט מוחלט — פינה ירוקה ורגועה לעצור ולהנות מהיופי והצל. המטעים הם רכוש המושב ופרנסת החקלאים, אנא כבדו את המקום, וכמובן לא לקטוף"
+      }
+    ],
     "middle": {
       "longitude": 35.6005,
       "latitude": 33.202278,
@@ -3063,13 +3666,13 @@
     "splitFrom": 142,
     "splitFromName": "גבעת שחומית",
     "middle": {
-      "longitude": 35.578102,
-      "latitude": 33.200801,
-      "elevation": 94.0
+      "longitude": 35.578304,
+      "latitude": 33.203473,
+      "elevation": 122.0
     },
-    "elevation_gain_m": 20.8,
-    "elevation_loss_m": 26.4,
-    "net_elevation_change_m": -5.6
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.4,
+    "net_elevation_change_m": -2.4
   },
   "גבעת שחומית שביל גישה": {
     "id": 299,
@@ -3222,6 +3825,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-c6c5fae3",
+        "type": "tree",
+        "information": "תצפית לעגורים",
+        "location": [
+          33.1097855,
+          35.6109355
+        ],
+        "name": "עגורים",
+        "description": "שימו לב: אין להיכנס לאגמון החולה בלי לשלם, הרכיבה מותרת בשביל החיצוני מחוץ לאגמון לכיוון הירדן או לירדן ההיסטורי",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-c6c5fae3-e663e2e7.webp",
+            "thumbnail": "public-data/poi-images/poi-c6c5fae3-e663e2e7-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.610657,
       "latitude": 33.109787,
@@ -4057,8 +4679,8 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 6.2
   },
-  "נחל מכברם": {
-    "id": 76,
+  "צומת איילת השחר": {
+    "id": 343,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -4066,14 +4688,56 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 341,
+    "splitFromName": "נחל מכברם",
     "middle": {
-      "longitude": 35.584908,
-      "latitude": 33.039456,
-      "elevation": 124.0
+      "longitude": 35.572548,
+      "latitude": 33.030324,
+      "elevation": 143.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל מכברם": {
+    "id": 344,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 341,
+    "splitFromName": "נחל מכברם",
+    "middle": {
+      "longitude": 35.583817,
+      "latitude": 33.037748,
+      "elevation": 126.0
     },
     "elevation_gain_m": 10.8,
     "elevation_loss_m": 18.2,
     "net_elevation_change_m": -7.4
+  },
+  "אחוזת הירדן": {
+    "id": 342,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 76,
+    "splitFromName": "נחל מכברם",
+    "middle": {
+      "longitude": 35.57212,
+      "latitude": 33.044213,
+      "elevation": 143.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
   },
   "כביש 9118 תל חצור": {
     "id": 192,
@@ -4724,6 +5388,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-3af86b92",
+        "type": "landmark",
+        "information": "המקום בו נפל אחד מהמסוקים באסון ב 1997. אין גישה לאתר הנצחה",
+        "location": [
+          33.221945,
+          35.64153
+        ],
+        "name": "אתר אסון המסוקים",
+        "description": "המקום בו נפל אחד מהמסוקים באסון ב 1997. אין גישה לאתר הנצחה, יש להגיע דרך הצומת שמול קיבוץ דפנה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-3af86b92-04323504.webp",
+            "thumbnail": "public-data/poi-images/poi-3af86b92-04323504-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.643157,
       "latitude": 33.224347,
@@ -4760,6 +5443,29 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-7f0a3972",
+        "type": "river",
+        "information": "גשר מעל נחל דן, מים ישר מהחרמון",
+        "location": [
+          33.23739073146143,
+          35.63907383219774
+        ],
+        "name": "גשר מעל נחל דן",
+        "description": "נחל דן הוא הנחל עם ספיקת המים הגדולה ביותר בארץ, והוא מהווה את ספק המים העיקרי לירדן. הוא ניזון ממי שלגים ואגן ההיקוות של החרמון",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7f0a3972-1973492b.webp",
+            "thumbnail": "public-data/poi-images/poi-7f0a3972-1973492b-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7f0a3972-55fe7ce9.webp",
+            "thumbnail": "public-data/poi-images/poi-7f0a3972-55fe7ce9-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.638964,
       "latitude": 33.237529,
@@ -4774,12 +5480,21 @@
     "status": "active",
     "data": [
       {
-        "type": "warning",
+        "type": "river",
         "information": "שביל גישה נסתר למחלק",
         "location": [
-          33.235869,
+          33.235867,
           35.636375
-        ]
+        ],
+        "name": "המחלק",
+        "id": "poi-df4652b4",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-df4652b4-3f8a59d2.webp",
+            "thumbnail": "public-data/poi-images/poi-df4652b4-3f8a59d2-thumb.webp"
+          }
+        ],
+        "description": "שביל גישה נסתר מעט שמוביל למחלק של דפנה. מקום יפה ושקט. המחלק הוא סכר קטן שמחלק את מי נחל הדן בין קיבוץ דפנה והשדות החקלאיים"
       }
     ],
     "quality": {
@@ -4803,10 +5518,56 @@
     "data": [
       {
         "type": "warning",
-        "information": "שביל דורש תחזוקה, מעבר קוצני וצר",
+        "information": "ענפי תאנה ושיחי פטל קוצניים מפריעים למעבר",
         "location": [
-          33.236529,
-          35.630683
+          33.236979,
+          35.632165
+        ],
+        "id": "poi-1ed71e4f",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1ed71e4f-85f43b3d.webp",
+            "thumbnail": "public-data/poi-images/poi-1ed71e4f-85f43b3d-thumb.webp"
+          }
+        ],
+        "name": "עצי תאנה ושיחי פטל"
+      },
+      {
+        "id": "poi-a76cdd1b",
+        "type": "river",
+        "information": "שביל גישה קצר למחלק של דפנה",
+        "location": [
+          33.23625831990057,
+          35.63572481429375
+        ],
+        "name": "המחלק",
+        "description": "שביל גישה נסתר מעט שמוביל למחלק של דפנה. מקום יפה ושקט. המחלק הוא סכר קטן שמחלק את מי נחל הדן בין קיבוץ דפנה והשדות החקלאיים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-a76cdd1b-3f8a59d2.webp",
+            "thumbnail": "public-data/poi-images/poi-a76cdd1b-3f8a59d2-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-0d152fab",
+        "type": "rest_stop",
+        "information": "על השביל יש פינות מנוחה רבות וחופים קטנים",
+        "location": [
+          33.236782,
+          35.634031
+        ],
+        "name": "פינות רבות לנוח",
+        "description": "על השביל יש פינות מנוחה רבות וחופים קטנים שאפשר לרדת הם למים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-0d152fab-255f43bc.webp",
+            "thumbnail": "public-data/poi-images/poi-0d152fab-255f43bc-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-0d152fab-9a6dc0c0.webp",
+            "thumbnail": "public-data/poi-images/poi-0d152fab-9a6dc0c0-thumb.webp"
+          }
         ]
       }
     ],
@@ -4870,6 +5631,33 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-53d4e045",
+        "type": "river",
+        "information": "גשר להולכי רגל מעל החצבאני",
+        "location": [
+          33.224609,
+          35.614702
+        ],
+        "name": "גשר מעל החצבאני",
+        "description": "גשר להולכי רגל מעל החצבאני. פינות ישיבה נחמדות וגישה לגשר קטן מעל שלושה נחלים: נחל עיון, נחל דן והחצבאני",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-24f5d79e.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-24f5d79e-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-bf53a6bc.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-bf53a6bc-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-67debd43.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-67debd43-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.614773,
       "latitude": 33.224558,
@@ -4879,7 +5667,7 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "שביל אופניים 99 צל תמרים": {
+  "שביל אופניים 99 מפגש שלושה נחלים": {
     "id": 281,
     "status": "active",
     "quality": {
@@ -4934,7 +5722,7 @@
     "net_elevation_change_m": 3.0
   },
   "צומת חורשת טל": {
-    "id": 300,
+    "id": 328,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -4942,9 +5730,31 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 300,
+    "splitFromName": "צומת חורשת טל",
     "middle": {
-      "longitude": 35.631412,
-      "latitude": 33.224106,
+      "longitude": 35.631495,
+      "latitude": 33.223929,
+      "elevation": 125.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "רחבת כניסה מטעי דפנה": {
+    "id": 329,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 300,
+    "splitFromName": "צומת חורשת טל",
+    "middle": {
+      "longitude": 35.631234,
+      "latitude": 33.224176,
       "elevation": 125.0
     },
     "elevation_gain_m": 0.0,
@@ -4996,6 +5806,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-972b4305",
+        "type": "landmark",
+        "information": "שרידי כלים צהליים שנפגעו בקרב על תל פאחר",
+        "location": [
+          33.224442,
+          35.685621
+        ],
+        "name": "שרידי זחלמ״ים",
+        "description": "בקרב על תל כיבוש תל פאחר נהרגו חיילים רבים, רובם חיילי שריון וגולני. במקום יש כלים צהליים שנפגעו תוך כדי העלייה הקשה למוצב שנשלטת מלמעלה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-972b4305-7eba303a.webp",
+            "thumbnail": "public-data/poi-images/poi-972b4305-7eba303a-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.682367,
       "latitude": 33.215836,
@@ -5014,6 +5843,25 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-482e2483",
+        "type": "landmark",
+        "information": "פרוייקט הנדסי סורי להטיית מי הבניאס והדן לכיוון הירמוך",
+        "location": [
+          33.226536,
+          35.69118
+        ],
+        "name": "תוואי ההטיה",
+        "description": "קטע מתוך תוואי ההטיה בעזרתה ביקשו הסורים בשנים 1962-6 להפנות ולהוביל את מי הבניאס הדן והחצבני ולהובילם באמצעות תעלה פתוחה וסיפונים (בחלקו העיקרי של התואי) ומנהרה (בחלקו הדרומי)ולהזרימם לירמוך.",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-482e2483-83028d1d.webp",
+            "thumbnail": "public-data/poi-images/poi-482e2483-83028d1d-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.689048,
       "latitude": 33.225426,
@@ -5032,6 +5880,29 @@
       "comfort": 3,
       "scenery": 3
     },
+    "data": [
+      {
+        "id": "poi-f844255d",
+        "type": "landmark",
+        "information": "כפר סורי הרוס עם מעיין שנובע כל השנה",
+        "location": [
+          33.22439700072273,
+          35.705025987337734
+        ],
+        "name": "עין פית",
+        "description": "כפר סורי עלאווי עתיק שרובו נהרס לאחר מלחמת ששת הימים. במקום יש מעיין שממנו מתחילה הזרימה על נחל פרע. המעיין נמצא במרכז הכפר, מכוסה במבנה מקומר ומוקף בעצי תאנה ופטל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-f844255d-9beeb979.webp",
+            "thumbnail": "public-data/poi-images/poi-f844255d-9beeb979-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-f844255d-46ad3cad.webp",
+            "thumbnail": "public-data/poi-images/poi-f844255d-46ad3cad-thumb.webp"
+          }
+        ]
+      }
+    ],
     "middle": {
       "longitude": 35.705269,
       "latitude": 33.224765,
@@ -5310,6 +6181,175 @@
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 2.0,
     "net_elevation_change_m": -2.0
+  },
+  "שביל אופניים דפנה": {
+    "id": 330,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.635792,
+      "latitude": 33.225813,
+      "elevation": 126.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כניסה לקיבוץ דפנה": {
+    "id": 333,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.640571,
+      "latitude": 33.22741,
+      "elevation": 132.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "קיבוץ דפנה שביל המייסדים": {
+    "id": 334,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.640025,
+      "latitude": 33.230545,
+      "elevation": 145.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל היקפי דפנה צפון": {
+    "id": 335,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-2392c619",
+        "type": "gate",
+        "information": "שער לא נעול ליציאה מדפנה לכיוון נחל דן",
+        "location": [
+          33.23347,
+          35.635129
+        ],
+        "name": "שער יציאה מדפנה למטעים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-2392c619-0ee99404.webp",
+            "thumbnail": "public-data/poi-images/poi-2392c619-0ee99404-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-1821461d",
+        "type": "river",
+        "information": "נחל דן זורם בחלקו בתוך קיבוץ דפנה. במקום יש מדשאות וירידה כיפית למים",
+        "location": [
+          33.2334903,
+          35.6363802
+        ],
+        "name": "נחל דן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1821461d-91d526fa.webp",
+            "thumbnail": "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-1821461d-f0069811.webp",
+            "thumbnail": "public-data/poi-images/poi-1821461d-f0069811-thumb.webp"
+          }
+        ],
+        "description": "נחל דן זורם בחלקו בתוך קיבוץ דפנה. במקום יש מדשאות וירידה כיפית למים"
+      }
+    ],
+    "middle": {
+      "longitude": 35.637502,
+      "latitude": 33.233276,
+      "elevation": 153.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "פלג הדן": {
+    "id": 340,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.639164,
+      "latitude": 33.222699,
+      "elevation": 117.0
+    },
+    "elevation_gain_m": 2.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 2.0
+  },
+  "איילת השחר שדות צפוניים": {
+    "id": 345,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.57301,
+      "latitude": 33.036188,
+      "elevation": 150.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 918 דפנה [split archive 88]": {
+    "id": 88,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל אופניים 918 דפנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.641096,
+        33.217738
+      ],
+      [
+        35.635319,
+        33.22102
+      ]
+    ]
   },
   "סובב דפנה": {
     "id": 81,
@@ -5673,6 +6713,28 @@
       ]
     ]
   },
+  "שביל אופניים 99 קיאקי הגושרים [split archive 98]": {
+    "id": 98,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל אופניים 99 קיאקי הגושרים",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.609908,
+        33.225301
+      ],
+      [
+        35.614168,
+        33.224786
+      ]
+    ]
+  },
   "כביש 9888 סדנה [split archive 57]": {
     "id": 57,
     "status": "deprecated",
@@ -5971,6 +7033,56 @@
       ]
     ]
   },
+  "שביל אופניים 99 דפנה [split archive 95]": {
+    "id": 95,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל אופניים 99 דפנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.642534,
+        33.228553
+      ],
+      [
+        35.638995,
+        33.226436
+      ],
+      [
+        35.634151,
+        33.224867
+      ]
+    ]
+  },
+  "שביל אופניים 99 דפנה [split archive 332]": {
+    "id": 332,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 95,
+    "splitFromName": "שביל אופניים 99 דפנה",
+    "originalName": "שביל אופניים 99 דפנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.639397,
+        33.226595
+      ],
+      [
+        35.634569,
+        33.224971
+      ]
+    ]
+  },
   "רחוב הדולב בית הלל [split archive 141]": {
     "id": 141,
     "status": "deprecated",
@@ -6196,6 +7308,76 @@
       [
         35.579914,
         33.211613
+      ]
+    ]
+  },
+  "נחל מכברם [split archive 76]": {
+    "id": 76,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "נחל מכברם",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.576607,
+        33.031017
+      ],
+      [
+        35.583957,
+        33.033561
+      ],
+      [
+        35.585642,
+        33.04138
+      ],
+      [
+        35.576873,
+        33.042851
+      ],
+      [
+        35.572122,
+        33.044247
+      ]
+    ]
+  },
+  "נחל מכברם [split archive 341]": {
+    "id": 341,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 76,
+    "splitFromName": "נחל מכברם",
+    "originalName": "נחל מכברם",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.572685,
+        33.030355
+      ],
+      [
+        35.576759,
+        33.030959
+      ],
+      [
+        35.583969,
+        33.033674
+      ],
+      [
+        35.585679,
+        33.041461
+      ],
+      [
+        35.576802,
+        33.042855
       ]
     ]
   },
@@ -6576,6 +7758,28 @@
       [
         35.657132,
         33.19338
+      ]
+    ]
+  },
+  "צומת חורשת טל [split archive 300]": {
+    "id": 300,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "צומת חורשת טל",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.631527,
+        33.223927
+      ],
+      [
+        35.631184,
+        33.224135
       ]
     ]
   }

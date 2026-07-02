@@ -55,6 +55,7 @@ class RouteManager {
     this.segmentNamesById = new Map();
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
+    this._connectorCostProfile = false;
   }
 
   /**
@@ -248,6 +249,57 @@ class RouteManager {
   }
 
   /**
+   * Compute a base-graph route preview from raw coordinates without committing
+   * it as the planner's active route.
+   */
+  previewBaseRoute(points, { costProfile = "default" } = {}) {
+    const snapped = this._snapRoutePoints(points);
+    const snappedEndpoints =
+      snapped.length >= 2 ? [snapped[0], snapped[snapped.length - 1]] : snapped;
+    if (snapped.length < 2 || snapped.some((point) => point.unsnapped)) {
+      return {
+        geometry: [],
+        distanceMeters: 0,
+        failure: "snap-failed",
+        snappedEndpoints,
+      };
+    }
+    if (!this.baseRoutingNetwork) {
+      return {
+        geometry: [],
+        distanceMeters: 0,
+        failure: "no-base-network",
+        snappedEndpoints,
+      };
+    }
+    this._connectorCostProfile = costProfile === "connector";
+    let route;
+    try {
+      route = this._calculateBaseRoute(snapped);
+    } finally {
+      this._connectorCostProfile = false;
+    }
+    if (
+      route.failure ||
+      !Array.isArray(route.orderedCoordinates) ||
+      route.orderedCoordinates.length < 2
+    ) {
+      return {
+        geometry: [],
+        distanceMeters: 0,
+        failure: route.failure || "no-path",
+        snappedEndpoints,
+      };
+    }
+    return {
+      geometry: route.orderedCoordinates.map((c) => ({ lat: c.lat, lng: c.lng })),
+      distanceMeters: route.distance || 0,
+      failure: null,
+      snappedEndpoints,
+    };
+  }
+
+  /**
    * Snap a point to the CycleWays network.
    * @param {Object} point - {lat, lng}
    * @param {number} thresholdMeters - Maximum allowed snap distance
@@ -305,6 +357,7 @@ class RouteManager {
         elevationLoss: routeInfo.downhillMeters,
         orderedCoordinates: routeInfo.orderedCoordinates,
         failure: routeInfo.failure || this.lastRouteFailure,
+        segmentSpans: buildSegmentSpans(routeInfo.traversals, this.segmentNamesById),
       };
     }
     const totalDistance = this._calculateTotalDistance();
@@ -317,6 +370,7 @@ class RouteManager {
       elevationGain: elevation.gain,
       elevationLoss: elevation.loss,
       orderedCoordinates: this._getOrderedCoordinates(),
+      segmentSpans: [],
     };
   }
 
@@ -976,20 +1030,40 @@ class RouteManager {
     if (!this.baseRoutingAdjacency.has(fromNodeId)) {
       this.baseRoutingAdjacency.set(fromNodeId, []);
     }
+    const fromDistance = direction === "reverse" ? edge.lengthMeters : 0;
+    const toDistance = direction === "reverse" ? 0 : edge.lengthMeters;
+    // Bake BOTH the default (cycling-preference) and connector (road-preference)
+    // costs so the connector profile actually influences the graph search. The
+    // search picks the field by the active profile; without this, the baked
+    // cycling cost would win regardless of profile.
     this.baseRoutingAdjacency.get(fromNodeId).push({
       to: toNodeId,
       edgeId: edge.id,
       direction,
       distanceMeters: edge.lengthMeters,
-      cost: this._baseRoutingTraversalCost(
+      cost: this._baseRoutingTraversalCost(edge, fromDistance, toDistance, false),
+      connectorCost: this._baseRoutingTraversalCost(
         edge,
-        direction === "reverse" ? edge.lengthMeters : 0,
-        direction === "reverse" ? 0 : edge.lengthMeters,
+        fromDistance,
+        toDistance,
+        true,
       ),
     });
   }
 
-  _baseRoutingCostMultiplier(edge) {
+  _connectorCostMultiplierFor(edge) {
+    // Connector = reliable public roads cheap; uncertain paths/tracks expensive.
+    if (edge.routeClass === "road" || edge.roadType === "road") return 1;
+    if (edge.routeClass === "local_road") return 1.1;
+    if (edge.routeClass === "cycle") return 1.3;
+    if (edge.cwSegmentIds.length > 0) return 1.4;
+    if (edge.routeClass === "path_track" || edge.routeClass === "manual") return 3;
+    if (edge.routeClass === "footway") return 3.5;
+    return 2.5;
+  }
+
+  _baseRoutingCostMultiplier(edge, connector = this._connectorCostProfile) {
+    if (connector) return this._connectorCostMultiplierFor(edge);
     if (edge.cwSegmentIds.length > 0) return 1;
     if (edge.routeClass === "cycle") return 1.35;
     if (edge.routeClass === "path_track" || edge.routeClass === "manual") {
@@ -1024,9 +1098,14 @@ class RouteManager {
     );
   }
 
-  _baseRoutingTraversalCostParts(edge, fromDistance, toDistance) {
+  _baseRoutingTraversalCostParts(
+    edge,
+    fromDistance,
+    toDistance,
+    connector = this._connectorCostProfile,
+  ) {
     const distanceMeters = Math.abs(toDistance - fromDistance);
-    const costMultiplier = this._baseRoutingCostMultiplier(edge);
+    const costMultiplier = this._baseRoutingCostMultiplier(edge, connector);
     const distanceCost = distanceMeters * costMultiplier;
     const uphillMeters = this._baseRoutingUphillMeters(
       edge,
@@ -1046,11 +1125,17 @@ class RouteManager {
     };
   }
 
-  _baseRoutingTraversalCost(edge, fromDistance, toDistance) {
+  _baseRoutingTraversalCost(
+    edge,
+    fromDistance,
+    toDistance,
+    connector = this._connectorCostProfile,
+  ) {
     return this._baseRoutingTraversalCostParts(
       edge,
       fromDistance,
       toDistance,
+      connector,
     ).cost;
   }
 
@@ -1601,7 +1686,10 @@ class RouteManager {
       }
 
       for (const edge of this.baseRoutingAdjacency.get(current.nodeId) || []) {
-        const nextCost = current.cost + edge.cost;
+        const stepCost = this._connectorCostProfile
+          ? edge.connectorCost
+          : edge.cost;
+        const nextCost = current.cost + stepCost;
         if (nextCost >= (distances.get(edge.to) ?? Infinity)) continue;
         distances.set(edge.to, nextCost);
         previous.set(edge.to, {
@@ -3062,9 +3150,54 @@ class RouteManager {
   }
 }
 
+/**
+ * Build an ordered list of segment spans from a base-routing traversal list.
+ * Adjacent traversals sharing the same (name, onNetwork) tuple are merged into
+ * a single span. Off-network edges (no cwSegmentIds or id not in segmentNamesById)
+ * produce spans with name=null, cwSegmentId=null, onNetwork=false.
+ *
+ * @param {Array} traversals - ordered traversal objects from a computed route
+ * @param {Map} segmentNamesById - map from numeric segment id → display name
+ * @returns {Array<{startMeters,endMeters,name,cwSegmentId,onNetwork,routeClass}>}
+ */
+function buildSegmentSpans(traversals, segmentNamesById) {
+  const spans = [];
+  let cursor = 0;
+  for (const traversal of Array.isArray(traversals) ? traversals : []) {
+    const length = Math.abs(
+      (traversal.distanceMeters ??
+        (traversal.toDistance - traversal.fromDistance)) || 0,
+    );
+    if (length <= 0) continue;
+    const ids = traversal.edge?.cwSegmentIds ?? [];
+    const cwSegmentId = ids.length > 0 ? Number(ids[0]) : null;
+    const name = cwSegmentId != null ? segmentNamesById.get(cwSegmentId) ?? null : null;
+    const onNetwork = name != null;
+    const routeClass =
+      traversal.edge?.routeClass ?? traversal.edge?.highway ?? null;
+    const start = cursor;
+    cursor += length;
+    const prev = spans[spans.length - 1];
+    if (prev && prev.name === name && prev.onNetwork === onNetwork) {
+      prev.endMeters = cursor;
+      continue;
+    }
+    spans.push({
+      startMeters: start,
+      endMeters: cursor,
+      name,
+      cwSegmentId,
+      onNetwork,
+      routeClass,
+    });
+  }
+  return spans;
+}
+
 // CommonJS module: Node consumers (test suite, editor server, CLI scripts) load
 // this via require(). The web/RN bundlers import it as a default export — Vite
 // rewrites this line to `export default RouteManager` via routeManagerEsmPlugin;
 // Metro consumes CommonJS natively. No browser global (it is no longer loaded
 // via a <script> tag).
 module.exports = RouteManager;
+module.exports.buildSegmentSpans = buildSegmentSpans;

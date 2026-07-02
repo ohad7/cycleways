@@ -72,6 +72,48 @@ const ICONS = {
       />
     </>
   ),
+  "share-social-outline": (
+    <>
+      <circle
+        cx="128"
+        cy="256"
+        r="48"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+      <circle
+        cx="384"
+        cy="112"
+        r="48"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+      <circle
+        cx="384"
+        cy="400"
+        r="48"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+      <path
+        d="M169.83 232.59l172.34-97.18M169.83 279.41l172.34 97.18"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="32"
+      />
+    </>
+  ),
   "create-outline": (
     <>
       <path

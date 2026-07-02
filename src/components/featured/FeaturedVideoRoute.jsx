@@ -3,6 +3,7 @@ import { generateGPX } from "@cycleways/core/utils/gpx-generator.js";
 import { executeDownloadGPX } from "@cycleways/core/platform/download.js";
 import Icon from "../Icon.jsx";
 import RichText from "../RichText.jsx";
+import { isAppEmbedded, appEmbedConfig, postToApp } from "../../appEmbed.js";
 import FeaturedRoute from "./FeaturedRoute.jsx";
 import FeaturedRouteStats from "./FeaturedRouteStats.jsx";
 import FeaturedElevation from "./FeaturedElevation.jsx";
@@ -83,6 +84,10 @@ export default function FeaturedVideoRoute({
           </div>
         </div>
 
+        <div className="fv-mobile-elevation-strip" aria-label="ציר גובה מסונכרן">
+          <FeaturedElevation chartId="fv-mobile-elevation-chart" />
+        </div>
+
         <aside className="fv-side-rail" aria-label="תיאור ומפת המסלול">
           <section className="fv-route-panel" aria-label="תקציר המסלול">
             {intro.kicker && <span className="fv-route-panel-kicker">{intro.kicker}</span>}
@@ -138,12 +143,20 @@ function FeaturedRouteActions({ media = "video" }) {
   const editHref = meta?.route ? `/?route=${encodeURIComponent(meta.route)}` : null;
   const isMapStage = media === "map";
   const primaryLabel = "נגן מסלול";
+  const embedded = isAppEmbedded();
+  const embedConfig = appEmbedConfig();
 
   const handleDownload = useCallback(() => {
     if (!hasRouteGeometry) return;
     const filename = meta?.slug ? `${meta.slug}.gpx` : "featured_route.gpx";
-    executeDownloadGPX(generateGPX(routeState.geometry), filename);
-  }, [hasRouteGeometry, meta?.slug, routeState.geometry]);
+    if (
+      embedded &&
+      postToApp({ type: "download", slug: meta?.slug, filename })
+    ) {
+      return;
+    }
+    void executeDownloadGPX(generateGPX(routeState.geometry), filename);
+  }, [embedded, hasRouteGeometry, meta?.slug, routeState.geometry]);
 
   const scrollStageIntoView = useCallback(() => {
     const isMobile = window.matchMedia?.("(max-width: 767px)").matches
@@ -176,16 +189,47 @@ function FeaturedRouteActions({ media = "video" }) {
 
   return (
     <div className="fv-route-actions" aria-label="פעולות מסלול">
-      <button
-        type="button"
-        className="fv-route-action fv-route-action--primary"
-        onClick={handlePrimaryAction}
-        aria-label={primaryLabel}
-      >
-        <Icon name="play-circle-outline" />
-        <span className="fv-route-action-label">{primaryLabel}</span>
-      </button>
-      {editHref ? (
+      {!embedded ? (
+        <button
+          type="button"
+          className="fv-route-action fv-route-action--primary"
+          onClick={handlePrimaryAction}
+          aria-label={primaryLabel}
+        >
+          <Icon name="play-circle-outline" />
+          <span className="fv-route-action-label">{primaryLabel}</span>
+        </button>
+      ) : null}
+      {embedded ? (
+        <>
+          {embedConfig.showNavigate ? (
+            <button
+              type="button"
+              className="fv-route-action fv-route-action--primary"
+              onClick={() =>
+                postToApp({ type: "navigate", route: meta?.route, slug: meta?.slug })
+              }
+              aria-label="נווט במסלול"
+            >
+              <Icon name="trail-sign-outline" />
+              <span className="fv-route-action-label">נווט</span>
+            </button>
+          ) : null}
+          {embedConfig.showEdit ? (
+            <button
+              type="button"
+              className="fv-route-action"
+              onClick={() =>
+                postToApp({ type: "edit", route: meta?.route, slug: meta?.slug })
+              }
+              aria-label="פתח לעריכה"
+            >
+              <Icon name="create-outline" />
+              <span className="fv-route-action-label">עריכה</span>
+            </button>
+          ) : null}
+        </>
+      ) : editHref ? (
         <a
           className="fv-route-action"
           href={editHref}
@@ -215,7 +259,9 @@ function FeaturedRouteActions({ media = "video" }) {
         aria-label="Download GPX - הורד קובץ ניווט"
       >
         <Icon name="download-outline" />
-        <span className="fv-route-action-label">הורד קובץ ניווט</span>
+        <span className="fv-route-action-label">
+          {embedded ? "GPX" : "הורד קובץ ניווט"}
+        </span>
       </button>
     </div>
   );
