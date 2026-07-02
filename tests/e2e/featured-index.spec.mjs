@@ -128,7 +128,8 @@ test("front page routes nav opens /routes without blank client transition", asyn
   await expect(routeCardByTitle(page, "סובב בית הלל")).toBeVisible();
 });
 
-test("front page contact hash then routes nav still opens /routes", async ({ page }) => {
+test("front page contact hash then routes nav still opens /routes", async ({ page, isMobile }) => {
+  test.skip(isMobile, "mobile root is the standalone Discover home, not the marketing front page");
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -146,7 +147,8 @@ test("front page contact hash then routes nav still opens /routes", async ({ pag
   expect(pageErrors).toEqual([]);
 });
 
-test("front page hash links scroll after route transitions", async ({ page }) => {
+test("front page hash links scroll after route transitions", async ({ page, isMobile }) => {
+  test.skip(isMobile, "mobile root is the standalone Discover home, not the marketing front page");
   await page.goto("/#contact");
   await expect(page.locator("#contact")).toBeVisible();
   await expectSectionScrolledIntoView(page, "#contact");

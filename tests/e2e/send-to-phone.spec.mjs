@@ -8,7 +8,8 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-test("build panel offers a QR that encodes the share URL", async ({ page }) => {
+test("build panel offers a QR that encodes the share URL", async ({ page, isMobile }) => {
+  test.skip(isMobile, "send-to-phone is a desktop Build-panel action");
   await page.goto(`/?route=${COMPACT_ROUTE}`);
   const panel = page.getByTestId("front-panel");
   await expect(panel).toHaveAttribute("data-route-status", "ready", { timeout: 30_000 });

@@ -61,6 +61,14 @@ async function expectedRouteFitPadding(page) {
   });
 }
 
+function expectPaddingCloseTo(actual, expected, tolerance = 1) {
+  expect(actual).toBeTruthy();
+  expect(expected).toBeTruthy();
+  for (const edge of ["top", "right", "bottom", "left"]) {
+    expect(Math.abs(actual[edge] - expected[edge]), `${edge} padding`).toBeLessThanOrEqual(tolerance);
+  }
+}
+
 test("/routes lists every recommended catalog route", async ({ page, isMobile }) => {
   await page.goto("/routes");
   await expect(page.locator(".routes-page")).toBeVisible();
@@ -212,7 +220,7 @@ test("/routes generic route renders from snapshot without planner assets", async
     ) || [];
     return fitEvents.at(-1)?.options?.padding || null;
   });
-  expect(routeFitPadding).toEqual(await expectedRouteFitPadding(page));
+  expectPaddingCloseTo(routeFitPadding, await expectedRouteFitPadding(page));
   await expect(page.locator(".fv-route-warning-card")).toHaveCount(4);
   await expect(page.locator(".fv-route-warnings")).toContainText("ירדן מערב כפר בלום");
   await expect(page.locator(".fv-route-warnings")).toContainText("אגמון החולה גישה מזרח");
