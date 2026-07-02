@@ -269,8 +269,7 @@ function App() {
   const isMobileDiscoverHome =
     state.status === "ready" &&
     isMobileSheet &&
-    panel.state === "discover" &&
-    routePointCount === 0;
+    panel.state === "discover";
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -738,6 +737,11 @@ function App() {
   ]);
 
   const pausePlannerPlayback = plannerPlayback.pause;
+  const handleMobileBuildBack = useCallback(() => {
+    pausePlannerPlayback();
+    handlePanelStateChange("discover");
+    setSheetSnap("peek");
+  }, [handlePanelStateChange, pausePlannerPlayback]);
   const handlePlannerElevationHover = useCallback((payload) => {
     handleElevationHover(payload);
     if (!payload || !Number.isFinite(payload.t)) return;
@@ -866,6 +870,123 @@ function App() {
       onRequestLocation={handleLocateMe}
       recentRoutes={recentRoutes}
     />
+  );
+  const buildPanel = (
+    <>
+      {isMobileSheet ? (
+        <div className="mobile-build-topbar">
+          <button
+            type="button"
+            className="mobile-build-topbar__back"
+            onClick={handleMobileBuildBack}
+          >
+            <Icon name="chevron-forward-outline" />
+            <span>מסלולים</span>
+          </button>
+          <div className="mobile-build-topbar__title">בניית מסלול</div>
+        </div>
+      ) : null}
+      <BuildPanel
+        routeState={routeState}
+        catalogEntry={selectedCatalogEntry}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={handlePlaybackAwareUndo}
+        onRedo={handlePlaybackAwareRedo}
+        onClear={handlePlaybackAwareRouteClear}
+        canDownload={canDownload}
+        onDownloadGpx={handleDownloadGpx}
+        canShare={Boolean(shareUrl)}
+        onShare={handlePanelShare}
+        shareCopied={shareCopied}
+        onSendToPhone={() => setSendToPhoneOpen(true)}
+        error={routeState.error}
+        pois={buildPois}
+        onPoiClick={(poi) => handleDataPointFocus(poi)}
+        playback={renderPlannerPlaybackControls(
+          "planner-route-playback planner-route-playback--panel",
+        )}
+        elevation={
+          <PanelElevationGraph
+            geometry={routeState.geometry}
+            distance={routeState.distance}
+            cursorFraction={plannerPlayback.cursor?.fraction ?? null}
+            cursorPlaying={plannerPlayback.isPlaying}
+            cursorInfoVisible={plannerPlayback.hasCursor}
+            externalCursorActive={Boolean(
+              plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
+            )}
+            onElevationHover={handlePlannerElevationHover}
+            onElevationSelect={handlePlannerElevationSelect}
+            onBandHover={setHoveredBand}
+            onBandSelect={(band) => {
+              const start = band.startPercent ?? 0;
+              const end = band.endPercent ?? 0;
+              plannerPlayback.seekToFraction(((start + end) / 2) / 100);
+            }}
+          />
+        }
+      />
+    </>
+  );
+  const buildPeekSummary = (
+    <div className="front-sheet__build-peek-row">
+      <button
+        type="button"
+        className="front-sheet__build-peek"
+        onClick={handlePeekBuild}
+      >
+        <span>{selectedCatalogEntry?.name || "מסלול חדש"}</span>
+        <span>
+          {routePointCount > 0
+            ? `${routePointCount} נקודות · ${formatLegacyDistance(routeState.distance)}`
+            : "0 נקודות"}
+        </span>
+      </button>
+      {selectedCatalogEntry && (
+        <a
+          className="front-sheet__build-peek-link"
+          href={`/routes/${selectedCatalogEntry.slug}`}
+          aria-label="לעמוד המסלול"
+        >
+          לעמוד המסלול ←
+        </a>
+      )}
+    </div>
+  );
+  const sheetPeekContent = isMobileSheet ? (
+    <div className="front-sheet__peek-stack">{buildPeekSummary}</div>
+  ) : (
+    <div className="front-sheet__peek-stack">
+      <div className="front-sheet__mode-switch" role="tablist" aria-label="מצב עבודה">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={panel.state === "discover"}
+          className={panel.state === "discover" ? "is-active" : ""}
+          onClick={handlePeekDiscover}
+        >
+          חפש מסלול
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={panel.state === "build"}
+          className={panel.state === "build" ? "is-active" : ""}
+          onClick={handlePeekBuild}
+        >
+          בניית מסלול
+        </button>
+      </div>
+      {panel.state === "discover" ? (
+        <DiscoverPeekPreview
+          routes={discoverPeekRoutes}
+          onOpen={handlePeekDiscover}
+        />
+      ) : (
+        buildPeekSummary
+      )}
+    </div>
   );
 
   return (
@@ -1094,60 +1215,7 @@ function App() {
               <BottomSheet
                 snap={sheetSnap}
                 onSnapChange={setSheetSnap}
-                peekContent={
-                  <div className="front-sheet__peek-stack">
-                    <div className="front-sheet__mode-switch" role="tablist" aria-label="מצב עבודה">
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={panel.state === "discover"}
-                        className={panel.state === "discover" ? "is-active" : ""}
-                        onClick={handlePeekDiscover}
-                      >
-                        חפש מסלול
-                      </button>
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={panel.state === "build"}
-                        className={panel.state === "build" ? "is-active" : ""}
-                        onClick={handlePeekBuild}
-                      >
-                        בניית מסלול
-                      </button>
-                    </div>
-                    {panel.state === "discover" ? (
-                      <DiscoverPeekPreview
-                        routes={discoverPeekRoutes}
-                        onOpen={handlePeekDiscover}
-                      />
-                    ) : (
-                      <div className="front-sheet__build-peek-row">
-                        <button
-                          type="button"
-                          className="front-sheet__build-peek"
-                          onClick={handlePeekBuild}
-                        >
-                          <span>{selectedCatalogEntry?.name || "מסלול חדש"}</span>
-                          <span>
-                            {routePointCount > 0
-                              ? `${routePointCount} נקודות · ${formatLegacyDistance(routeState.distance)}`
-                              : "0 נקודות"}
-                          </span>
-                        </button>
-                        {selectedCatalogEntry && (
-                          <a
-                            className="front-sheet__build-peek-link"
-                            href={`/routes/${selectedCatalogEntry.slug}`}
-                            aria-label="לעמוד המסלול"
-                          >
-                            לעמוד המסלול ←
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                }
+                peekContent={sheetPeekContent}
               >
                 <FrontPanel
                   panelState={panel.state}
@@ -1155,50 +1223,9 @@ function App() {
                   routeStatus={routeState.status}
                   collapsed={panelCollapsed}
                   onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
+                  showModeToggle={!isMobileSheet}
                   discover={discoverPanel}
-                  build={
-                    <BuildPanel
-                      routeState={routeState}
-                      catalogEntry={selectedCatalogEntry}
-                      canUndo={canUndo}
-                      canRedo={canRedo}
-                      onUndo={handlePlaybackAwareUndo}
-                      onRedo={handlePlaybackAwareRedo}
-                      onClear={handlePlaybackAwareRouteClear}
-                      canDownload={canDownload}
-                      onDownloadGpx={handleDownloadGpx}
-                      canShare={Boolean(shareUrl)}
-                      onShare={handlePanelShare}
-                      shareCopied={shareCopied}
-                      onSendToPhone={() => setSendToPhoneOpen(true)}
-                      error={routeState.error}
-                      pois={buildPois}
-                      onPoiClick={(poi) => handleDataPointFocus(poi)}
-                      playback={renderPlannerPlaybackControls(
-                        "planner-route-playback planner-route-playback--panel",
-                      )}
-                      elevation={
-                        <PanelElevationGraph
-                          geometry={routeState.geometry}
-                          distance={routeState.distance}
-                          cursorFraction={plannerPlayback.cursor?.fraction ?? null}
-                          cursorPlaying={plannerPlayback.isPlaying}
-                          cursorInfoVisible={plannerPlayback.hasCursor}
-                          externalCursorActive={Boolean(
-                            plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
-                          )}
-                          onElevationHover={handlePlannerElevationHover}
-                          onElevationSelect={handlePlannerElevationSelect}
-                          onBandHover={setHoveredBand}
-                          onBandSelect={(band) => {
-                            const start = band.startPercent ?? 0;
-                            const end = band.endPercent ?? 0;
-                            plannerPlayback.seekToFraction(((start + end) / 2) / 100);
-                          }}
-                        />
-                      }
-                    />
-                  }
+                  build={buildPanel}
                 />
               </BottomSheet>
             )}

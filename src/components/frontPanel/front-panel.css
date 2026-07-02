@@ -349,6 +349,45 @@
   padding: 0 12px;
   cursor: pointer;
 }
+.mobile-build-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -16px -16px 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e7dfca;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+}
+.mobile-build-topbar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #dce4df;
+  border-radius: 999px;
+  background: #f6f8f4;
+  color: #2f6b3c;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+.mobile-build-topbar__back .app-icon,
+.mobile-build-topbar__back svg {
+  width: 16px;
+  height: 16px;
+}
+.mobile-build-topbar__title {
+  color: #172026;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
 /* Reopen tab stays on the physical right edge, where the panel was. */
 .front-shell__reopen {
   position: absolute;

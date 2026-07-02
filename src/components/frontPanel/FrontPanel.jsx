@@ -8,6 +8,7 @@ export default function FrontPanel({
   onPanelStateChange,
   collapsed,
   onToggleCollapsed,
+  showModeToggle = true,
   discover,
   build,
   routeStatus,
@@ -25,17 +26,19 @@ export default function FrontPanel({
       data-testid="front-panel"
       data-route-status={routeStatus}
     >
-      <div className="front-panel__head">
-        <PanelStateToggle state={panelState} onChange={onPanelStateChange} />
-        <button
-          type="button"
-          className="front-panel__collapse"
-          aria-label={collapsed ? "הצג פאנל" : "הסתר פאנל"}
-          onClick={onToggleCollapsed}
-        >
-          <Icon name={collapsed ? "chevron-back-outline" : "chevron-forward-outline"} />
-        </button>
-      </div>
+      {showModeToggle ? (
+        <div className="front-panel__head">
+          <PanelStateToggle state={panelState} onChange={onPanelStateChange} />
+          <button
+            type="button"
+            className="front-panel__collapse"
+            aria-label={collapsed ? "הצג פאנל" : "הסתר פאנל"}
+            onClick={onToggleCollapsed}
+          >
+            <Icon name={collapsed ? "chevron-back-outline" : "chevron-forward-outline"} />
+          </button>
+        </div>
+      ) : null}
       <div className="front-panel__body" ref={bodyRef}>
         {panelState === "discover" ? discover : build}
       </div>

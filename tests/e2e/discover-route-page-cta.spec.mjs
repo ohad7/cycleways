@@ -7,7 +7,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 // Loads the first Discover card's route into the planner and returns the
-// card's /routes/<slug> href and title for comparison with the Build CTA.
+// card's /routes/<slug> href and title. The whole card is a single link to the
+// route page (`.panel-route-card-wrap` is the anchor; `.panel-route-card__story-link`
+// is the decorative "לעמוד המסלול" label inside it), so the href lives on the wrap.
 async function selectFirstDiscoverRoute(page, isMobile = false) {
   await page.goto("/");
   const discoverScope = isMobile
@@ -24,9 +26,8 @@ async function selectFirstDiscoverRoute(page, isMobile = false) {
   await expect(discoverScope).toBeVisible();
   const card = discoverScope.locator(".panel-route-card-wrap").first();
   await expect(card).toBeVisible();
-  const storyLink = card.locator(".panel-route-card__story-link");
-  await expect(storyLink).toBeVisible();
-  const storyHref = await storyLink.getAttribute("href");
+  await expect(card.locator(".panel-route-card__story-link")).toBeVisible();
+  const storyHref = await card.getAttribute("href");
   expect(storyHref).toBeTruthy();
   const title = (
     await card.locator(".panel-route-card__title").innerText()
@@ -36,12 +37,9 @@ async function selectFirstDiscoverRoute(page, isMobile = false) {
   return { storyHref, title };
 }
 
-test("selecting a Discover card shows the route-page CTA in Build", async ({ page, isMobile }) => {
-  const { storyHref, title } = await selectFirstDiscoverRoute(page, isMobile);
+test("selecting a Discover card loads the route into Build", async ({ page, isMobile }) => {
+  const { title } = await selectFirstDiscoverRoute(page, isMobile);
   await ensurePanelOpen(page);
-  const cta = page.locator(".build-panel__story-cta");
-  await expect(cta).toBeVisible();
-  await expect(cta).toHaveAttribute("href", storyHref);
   await expect(page.locator(".build-panel__title")).toContainText(title);
 });
 
@@ -61,35 +59,25 @@ test("mobile: build peek shows the route name and a route-page link", async ({ p
   await expect(link).toHaveAttribute("href", storyHref);
 });
 
-test("editing the route (map click) hides the CTA", async ({ page, isMobile }) => {
-  await selectFirstDiscoverRoute(page, isMobile);
+test("editing the route (map click) resets the Build title", async ({ page, isMobile }) => {
+  const { title } = await selectFirstDiscoverRoute(page, isMobile);
   await ensurePanelOpen(page);
-  await expect(page.locator(".build-panel__story-cta")).toBeVisible();
-  // A map click always adds a route point — the loaded route diverges from
-  // the catalog route, so the CTA must disappear.
+  await expect(page.locator(".build-panel__title")).toContainText(title);
+  // A map click always adds a route point — the loaded route diverges from the
+  // catalog route, so the "recommended route" name gives way to the draft name.
   await page.evaluate(() => {
     window.__mockMapboxCurrentMap._emit("click", {
       lngLat: { lng: 35.6, lat: 33.05 },
       point: { x: 300, y: 200 },
     });
   });
-  await expect(page.locator(".build-panel__story-cta")).toHaveCount(0);
   await expect(page.locator(".build-panel__title")).toHaveText("מסלול חדש");
 });
 
-test("clearing the route hides the CTA", async ({ page, isMobile }) => {
-  await selectFirstDiscoverRoute(page, isMobile);
+test("clearing the route resets the Build title", async ({ page, isMobile }) => {
+  const { title } = await selectFirstDiscoverRoute(page, isMobile);
   await ensurePanelOpen(page);
-  const panel = page.getByTestId("front-panel");
-  await expect(page.locator(".build-panel__story-cta")).toBeVisible();
-  await panel.getByRole("button", { name: "נקה" }).click();
-  await expect(page.locator(".build-panel__story-cta")).toHaveCount(0);
-});
-
-test("the Build CTA navigates to the route page", async ({ page, isMobile }) => {
-  const { storyHref } = await selectFirstDiscoverRoute(page, isMobile);
-  await ensurePanelOpen(page);
-  await page.locator(".build-panel__story-cta").click();
-  const escapedHref = storyHref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  await expect(page).toHaveURL(new RegExp(`${escapedHref}$`));
+  await expect(page.locator(".build-panel__title")).toContainText(title);
+  await page.getByTestId("front-panel").getByRole("button", { name: "נקה" }).click();
+  await expect(page.locator(".build-panel__title")).toHaveText("מסלול חדש");
 });

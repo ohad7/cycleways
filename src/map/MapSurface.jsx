@@ -1079,24 +1079,112 @@ function MapSurface({
 }
 
 function fitMapToCoordinates(map, coordinates, options = {}) {
+  const validPoints = normalizeFitCoordinates(coordinates);
+  if (validPoints.length === 0) return;
+
   const mapboxgl = getMapboxGl();
   const bounds = new mapboxgl.LngLatBounds();
 
-  coordinates.forEach((point) => {
-    const lng = Number(point.lng);
-    const lat = Number(point.lat);
-    if (Number.isFinite(lng) && Number.isFinite(lat)) {
-      bounds.extend([lng, lat]);
-    }
+  validPoints.forEach((point) => {
+    bounds.extend([point.lng, point.lat]);
   });
 
-  if (!bounds.isEmpty()) {
+  if (bounds.isEmpty()) return;
+  if (!hasUsableFitViewport(map)) return;
+
+  const padding = normalizeFitPadding(map, options.padding || 48);
+  const maxZoom = Number.isFinite(Number(options.maxZoom))
+    ? Number(options.maxZoom)
+    : 14;
+
+  if (isDegenerateFitBounds(validPoints)) {
+    const point = validPoints[0];
+    map.flyTo(withCameraPadding({
+      center: [point.lng, point.lat],
+      zoom: maxZoom,
+      duration: prefersReducedMotion() ? 0 : 600,
+    }, padding));
+    return;
+  }
+
+  try {
     map.fitBounds(bounds, {
       duration: prefersReducedMotion() ? 0 : 600,
-      maxZoom: options.maxZoom || 14,
-      padding: options.padding || 48,
+      maxZoom,
+      padding,
     });
+  } catch (error) {
+    console.warn("Map route fit skipped", error);
   }
+}
+
+function normalizeFitCoordinates(coordinates) {
+  if (!Array.isArray(coordinates)) return [];
+  const points = [];
+  for (const point of coordinates) {
+    const lng = Number(point?.lng);
+    const lat = Number(point?.lat);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+    points.push({ lng, lat });
+  }
+  return points;
+}
+
+function hasUsableFitViewport(map) {
+  const container = map.getContainer?.();
+  if (!container?.getBoundingClientRect) return true;
+  const rect = container.getBoundingClientRect();
+  return Number.isFinite(rect.width) && rect.width > 0 &&
+    Number.isFinite(rect.height) && rect.height > 0;
+}
+
+function isDegenerateFitBounds(points) {
+  if (points.length < 2) return true;
+  const first = points[0];
+  return points.every((point) => point.lng === first.lng && point.lat === first.lat);
+}
+
+function normalizeFitPadding(map, padding) {
+  const fallback = 48;
+  if (!padding || typeof padding !== "object") {
+    const value = finiteNonNegativeNumber(padding, fallback);
+    return { top: value, right: value, bottom: value, left: value };
+  }
+
+  const rect = map.getContainer?.()?.getBoundingClientRect?.();
+  const width = finitePositiveNumber(rect?.width, 0);
+  const height = finitePositiveNumber(rect?.height, 0);
+  const result = {
+    top: finiteNonNegativeNumber(padding.top, fallback),
+    right: finiteNonNegativeNumber(padding.right, fallback),
+    bottom: finiteNonNegativeNumber(padding.bottom, fallback),
+    left: finiteNonNegativeNumber(padding.left, fallback),
+  };
+  clampPaddingPair(result, "top", "bottom", height);
+  clampPaddingPair(result, "left", "right", width);
+  return result;
+}
+
+function finiteNonNegativeNumber(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+function finitePositiveNumber(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function clampPaddingPair(padding, a, b, dimension) {
+  if (!(dimension > 0)) return;
+  const max = dimension * 0.8;
+  padding[a] = Math.min(padding[a], max);
+  padding[b] = Math.min(padding[b], max);
+  const sum = padding[a] + padding[b];
+  if (sum < dimension) return;
+  const scale = max / sum;
+  padding[a] *= scale;
+  padding[b] *= scale;
 }
 
 function withCameraPadding(options, cameraPadding) {
