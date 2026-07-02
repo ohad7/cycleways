@@ -86,19 +86,21 @@
 
 @media (max-width: 860px) {
   body.body--mobile-planner {
+    --mobile-planner-header-height: 52px;
     background: #eef3f0;
     overflow: hidden;
     overscroll-behavior: none;
   }
 
   body.body--mobile-planner .header {
-    display: none;
+    display: flex;
+    min-height: var(--mobile-planner-header-height);
   }
 
   body.body--mobile-planner .react-main-container {
-    height: 100dvh;
-    min-height: 100dvh;
-    max-height: 100dvh;
+    height: calc(100dvh - var(--mobile-planner-header-height));
+    min-height: calc(100dvh - var(--mobile-planner-header-height));
+    max-height: calc(100dvh - var(--mobile-planner-header-height));
     margin-top: 0;
     padding: 0;
     overflow: hidden;
@@ -110,7 +112,7 @@
   }
 
   body.body--mobile-planner .container {
-    height: 100dvh !important;
+    height: 100% !important;
     min-height: 0;
     margin: 0;
     gap: 0;
@@ -1769,7 +1771,7 @@ input {
   }
 
   .front-shell--sheet-half .planner-route-playback--map.fv-video-controls {
-    bottom: calc(50dvh + 10px + env(safe-area-inset-bottom, 0px));
+    bottom: calc((100dvh - var(--mobile-planner-header-height, 0px)) / 2 + 4px);
   }
 
   .front-shell--sheet-full .planner-route-playback--map.fv-video-controls,

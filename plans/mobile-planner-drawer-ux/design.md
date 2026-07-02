@@ -84,8 +84,9 @@ yet, so app-specific promotion remains out of the web UI for this slice.
   (`src/components/frontPanel/PanelElevationGraph.jsx:48`) — no touch
   equivalent, so band→map highlighting silently doesn't exist on mobile
   (tap-to-seek does work).
-- At `half`, the mobile Build sheet keeps a compact top header so users can
-  return to route discovery and keep orientation while building.
+- At `half`, redundant mobile sheet chrome can hide the useful route content.
+  The mobile Build sheet should start directly with route content; no
+  "מסלולים" back pill or "בניית מסלול" header is shown inside the drawer.
 
 ## Design
 
@@ -126,10 +127,11 @@ the measured top edge of the drawer:
 
 - In planner mode (map shown; **not** the mobile Discover home), the shell is
   full dynamic viewport height (`100dvh` minus the site header); body scroll is
-  locked; `ContentSections` are not rendered under the planner on mobile.
-  (Discover home keeps its current scrolling page.)
-- Mobile Build renders a compact in-sheet topbar with a "מסלולים" back control
-  and "בניית מסלול" title above the Build panel.
+  locked; the site top header/nav remains visible above the map; `ContentSections`
+  are not rendered under the planner on mobile. (Discover home keeps its
+  current scrolling page.)
+- Mobile Build does not render the redundant in-sheet "מסלולים" back pill or
+  "בניית מסלול" header; the first visible content is the Build panel itself.
 - The peek snap offset derives from the **measured** peek-content height
   (mode-switch + row(s) + handle), not the fixed `PEEK_PX = 164`. Build-mode
   peek is short; Discover-mode peek is taller; both should hug the bottom edge

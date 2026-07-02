@@ -35,21 +35,25 @@ test("mobile: Discover homepage is standalone, build opens the map sheet", async
   await expect(sheet.locator(".front-sheet__build-peek")).toContainText("מסלול חדש");
   await expect(sheet.locator(".front-sheet__mode-switch")).toHaveCount(0);
   await expect(page.getByTestId("front-panel").getByRole("tab")).toHaveCount(0);
-  await expect(page.locator(".mobile-build-topbar")).toBeVisible();
-  await expect(page.locator(".header")).toBeHidden();
+  await expect(page.locator(".mobile-build-topbar")).toHaveCount(0);
+  await expect(page.locator(".header")).toBeVisible();
+  await expect(page.getByRole("link", { name: /מפת שבילי אופניים/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "פתיחת תפריט" })).toBeVisible();
   const viewportFit = await page.locator(".front-shell").evaluate((shell) => {
     const rect = shell.getBoundingClientRect();
+    const headerRect = document.querySelector(".header")?.getBoundingClientRect();
     const styles = window.getComputedStyle(document.body);
     return {
       top: Math.round(rect.top),
       bottom: Math.round(rect.bottom),
+      headerBottom: Math.round(headerRect?.bottom ?? 0),
       viewportHeight: window.innerHeight,
       bodyBackground: styles.backgroundImage,
       bodyBackgroundColor: styles.backgroundColor,
       documentOverflow: document.documentElement.scrollHeight - window.innerHeight,
     };
   });
-  expect(viewportFit.top).toBe(0);
+  expect(Math.abs(viewportFit.top - viewportFit.headerBottom)).toBeLessThanOrEqual(1);
   expect(Math.abs(viewportFit.bottom - viewportFit.viewportHeight)).toBeLessThanOrEqual(1);
   expect(viewportFit.bodyBackground).toBe("none");
   expect(viewportFit.documentOverflow).toBeLessThanOrEqual(1);
@@ -131,7 +135,8 @@ test("mobile: clearing route removes playback shadow", async ({ page, isMobile }
     const sheetBox = await sheet.boundingBox();
     const playbackBox = await playback.boundingBox();
     if (!sheetBox || !playbackBox) return false;
-    return playbackBox.y + playbackBox.height <= sheetBox.y - 4;
+    const gap = sheetBox.y - (playbackBox.y + playbackBox.height);
+    return gap >= 2 && gap <= 10;
   }).toBe(true);
   await page.getByRole("button", { name: "נגן מסלול על המפה" }).click();
   await expect(page.locator(".front-sheet")).toHaveAttribute("data-snap", "half");
@@ -151,10 +156,7 @@ test("mobile: בניית מסלול opens a build-only sheet", async ({ page, is
   await expect(sheet).toHaveAttribute("data-snap", "half");
   await expect(sheet.locator(".front-sheet__build-peek")).toContainText("מסלול חדש");
   await expect(page.getByTestId("front-panel").getByRole("tab")).toHaveCount(0);
-  const topbar = page.locator(".mobile-build-topbar");
-  await expect(topbar).toBeVisible();
-  await expect(topbar.getByRole("heading", { name: "בניית מסלול" })).toBeVisible();
-  await expect(topbar.getByRole("button", { name: "מסלולים" })).toBeVisible();
+  await expect(page.locator(".mobile-build-topbar")).toHaveCount(0);
 });
 
 test("mobile: full drawer hides the map playback control", async ({ page, isMobile }) => {

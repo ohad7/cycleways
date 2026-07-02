@@ -57,10 +57,11 @@ the QR-based "שלחו לטלפון" action.
 
 5. **Mobile planner viewport**
    - Hide `ContentSections` while the mobile planner map/sheet is mounted.
+   - Keep the site top header/nav visible above the mobile planner map.
    - Lock body scrolling for the mobile planner view; Discover home keeps its
      existing scrolling page.
-   - Keep the compact mobile Build topbar ("מסלולים" back control and
-     "בניית מסלול" header) above the route content.
+   - Remove the redundant mobile Build topbar ("מסלולים" back pill and
+     "בניית מסלול" header) so `half` starts with route content.
 
 6. **Peek summary and actions**
    - Fix point-count Hebrew singular.
