@@ -90,6 +90,7 @@ over `window.CYCLEWAYS_FEATURE_FLAGS`.
 | Prop | Meaning |
 |---|---|
 | `routeFitRequest` | a token object; when its identity changes, the surface fits the viewport to the route. The "command-as-prop" pattern is portable (RN does the same with a changing prop). |
+| `orientRequest` | a counter token; when it increments, the surface orients to the nearby network by keeping the current center and stepping the zoom out one level (see `buildOrientCamera.js`). Used when entering Build from Discover with an empty planner. `0` is the idle value. |
 
 ## Outputs — callbacks (all in geographic terms)
 

@@ -142,31 +142,6 @@ function writeMapPresentationQueryValue(key, value) {
   window.history.replaceState(null, "", url.toString());
 }
 
-function cyclewaysNetworkFitGeometry(geoJsonData) {
-  const geometry = [];
-  for (const feature of geoJsonData?.features || []) {
-    const rawCoordinates = feature?.geometry?.coordinates;
-    if (feature?.geometry?.type === "LineString") {
-      appendFitCoordinates(geometry, rawCoordinates);
-    } else if (feature?.geometry?.type === "MultiLineString") {
-      for (const line of rawCoordinates || []) {
-        appendFitCoordinates(geometry, line);
-      }
-    }
-  }
-  return geometry;
-}
-
-function appendFitCoordinates(target, coordinates) {
-  for (const coord of coordinates || []) {
-    const lng = Number(coord?.[0]);
-    const lat = Number(coord?.[1]);
-    if (Number.isFinite(lng) && Number.isFinite(lat)) {
-      target.push({ lng, lat });
-    }
-  }
-}
-
 function App() {
   const {
     state,
@@ -231,7 +206,8 @@ function App() {
   const [baseMapProfileIndex, setBaseMapProfileIndex] = useState(() =>
     optionIndexForValue(BASE_MAP_PROFILE_OPTIONS, featureFlags.routeNetworkBaseMapProfile),
   );
-  const fitNetworkOnBuildRef = useRef(false);
+  const orientOnBuildRef = useRef(false);
+  const [orientRequest, setOrientRequest] = useState(0);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sheetSnap, setSheetSnap] = useState("peek");
   const [isMobileSheet, setIsMobileSheet] = useState(() =>
@@ -395,7 +371,7 @@ function App() {
   const handlePeekBuild = useCallback(() => {
     const openBuildDetails = panel.state === "build" || routePointCount > 0;
     if (panel.state !== "build") {
-      fitNetworkOnBuildRef.current = true;
+      orientOnBuildRef.current = true;
     }
     handlePanelStateChange("build");
     setSheetSnap(openBuildDetails ? "half" : "peek");
@@ -569,26 +545,26 @@ function App() {
     });
     if (req) setFitRequest(req);
   }, [getMapOverlayScope, plannerFitRegistry]);
-  const networkFitGeometry = useMemo(
-    () => cyclewaysNetworkFitGeometry(state.assets?.geoJsonData),
-    [state.assets?.geoJsonData],
-  );
   const handleFrontPanelStateChange = useCallback((to) => {
     if (to === "build" && panel.state !== "build") {
-      fitNetworkOnBuildRef.current = true;
+      orientOnBuildRef.current = true;
     }
     handlePanelStateChange(to);
   }, [handlePanelStateChange, panel.state]);
 
+  // Entering Build from Discover: orient to the nearby network (gentle zoom-out
+  // from the current view) rather than fitting the whole country. Skipped when a
+  // route is already loaded — the route fit frames that instead. Deferred so the
+  // planner panel has rendered and cameraPadding is re-measured before the move.
   useEffect(() => {
-    if (panel.state !== "build" || !fitNetworkOnBuildRef.current) {
+    if (panel.state !== "build" || !orientOnBuildRef.current) {
       return undefined;
     }
-    fitNetworkOnBuildRef.current = false;
-    if (networkFitGeometry.length < 2) return undefined;
-    const timer = window.setTimeout(() => requestFit(networkFitGeometry), 80);
+    orientOnBuildRef.current = false;
+    if (routePointCount > 0) return undefined;
+    const timer = window.setTimeout(() => setOrientRequest((n) => n + 1), 80);
     return () => window.clearTimeout(timer);
-  }, [networkFitGeometry, panel.state, requestFit]);
+  }, [panel.state, routePointCount]);
 
   useFitRouteOnPlay({
     isPlaying: plannerPlayback.isPlaying,
@@ -1057,6 +1033,7 @@ function App() {
                   onSegmentFocus={handleSegmentFocus}
                   onSegmentHover={handleSegmentHover}
                   onViewportIdle={handleViewportIdle}
+                  orientRequest={orientRequest}
                   routeFitRequest={fitRequest ?? mapUi.routeFitRequest}
                   routeGeometry={routeState.geometry}
                   routePointDragPreview={routePointDragPreview}

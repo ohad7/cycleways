@@ -50,6 +50,7 @@ import {
   VIDEO_CURSOR_DEFAULT_VARIANT,
 } from "@cycleways/core/map/mapStyles.js";
 import { capabilitiesForMode, MAP_MODE_PLANNER } from "./mapCapabilities.js";
+import { buildOrientZoom } from "./buildOrientCamera.js";
 import { circlePolygon } from "@cycleways/core/utils/geoCircle.js";
 
 const ROUTE_CIRCULAR_ENDPOINT_MAX_METERS = 80;
@@ -101,6 +102,7 @@ function MapSurface({
   onSegmentHover,
   onUserViewportChange,
   onViewportIdle,
+  orientRequest = 0,
   routeFitRequest,
   routeFitPadding = 72,
   routeGeometry = [],
@@ -133,6 +135,7 @@ function MapSurface({
   const hoverPreviewMarkerRef = useRef(null);
   const routeEndpointMarkerRefs = useRef([]);
   const lastRouteClickRef = useRef(null);
+  const lastOrientTokenRef = useRef(0);
   const callbacksRef = useRef({});
   const dataMarkerFeaturesRef = useRef([]);
   const routeGeometryRef = useRef(routeGeometry);
@@ -955,6 +958,27 @@ function MapSurface({
       padding: routeFitRequest.padding ?? routeFitPadding,
     });
   }, [routeFitPadding, routeFitRequest, status, caps.routeFit]);
+
+  // Orient-to-network on entering Build (from Discover, empty planner): keep the
+  // current center and step the zoom out one level so the surrounding network
+  // comes into view. Guarded by a token ref so a later cameraPadding change
+  // (which re-runs this effect) doesn't compound into a second zoom-out.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !caps.routeFit) return;
+    if (!orientRequest || orientRequest === lastOrientTokenRef.current) return;
+    lastOrientTokenRef.current = orientRequest;
+    const currentZoom = typeof map.getZoom === "function" ? map.getZoom() : MAP_INITIAL_ZOOM;
+    const zoom = buildOrientZoom(currentZoom);
+    if (zoom === null) return;
+    // No `center`: easeTo keeps the current center, so this is a pure zoom-out
+    // around where the user already is. cameraPadding keeps it clear of the
+    // planner panel overlay.
+    map.easeTo(withCameraPadding({
+      zoom,
+      duration: 600,
+    }, cameraPadding));
+  }, [orientRequest, cameraPadding, status, caps.routeFit]);
 
   useEffect(() => {
     const map = mapRef.current;
