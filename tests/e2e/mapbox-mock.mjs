@@ -56,6 +56,7 @@ const MAPBOX_MOCK_SCRIPT = `
         enable() {},
       };
       this.canvas = document.createElement("canvas");
+      this.canvas.className = "mapboxgl-canvas";
       this.canvas.width = 960;
       this.canvas.height = 520;
       this.canvas.style.width = "100%";

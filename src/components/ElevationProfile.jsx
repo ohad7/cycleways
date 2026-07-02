@@ -110,8 +110,8 @@ export default function ElevationProfile({
         {displayedInfo && (
           <div className="react-elevation-hover-info">
             <span>
-              📍 מרחק: {(displayedInfo.distance / 1000).toFixed(1)} km • גובה:{" "}
-              {Math.round(displayedInfo.elevation)} m
+              📍 מרחק: <bdi dir="ltr">{(displayedInfo.distance / 1000).toFixed(1)} km</bdi> • גובה:{" "}
+              <bdi dir="ltr">{Math.round(displayedInfo.elevation)} m</bdi>
             </span>
             {displayedInfo.gradeClass && Number.isFinite(displayedInfo.grade) && (
               <span
@@ -122,7 +122,7 @@ export default function ElevationProfile({
                   borderColor: `${GRADE_COLORS[displayedInfo.gradeClass]}66`,
                 }}
               >
-                {GRADE_LABELS_HE[displayedInfo.gradeClass]} · {displayedInfo.grade.toFixed(1)}%
+                {GRADE_LABELS_HE[displayedInfo.gradeClass]} · <bdi dir="ltr">{displayedInfo.grade.toFixed(1)}%</bdi>
               </span>
             )}
           </div>

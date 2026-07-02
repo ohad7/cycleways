@@ -9,7 +9,7 @@ import { discoverRouteColor } from "@cycleways/core/map/discoverRouteColors.js";
 
 // Minimal horizontal route card for the narrow Discover panel: thumbnail +
 // title + a compact meta line (distance · level · via). The whole card opens
-// the dedicated route page. The richer RouteCard is for the wide /routes page.
+// the dedicated route page; the route page owns the explicit planner CTA.
 export default function PanelRouteCard({ entry, places, onHover, index = 0, cardRef, distanceFromUserLabel = "" }) {
   const photo = routeDisplayImage(entry);
   const placeNames = routePlaceNames(entry, places, 2);

@@ -17,6 +17,7 @@ export default function BuildPanel({
   onShare,
   shareCopied,
   onSendToPhone,
+  showSendToPhone = true,
   pois = [],
   onPoiClick,
   elevation,
@@ -39,6 +40,15 @@ export default function BuildPanel({
           <div className="build-panel__title">
             {catalogEntry?.name || "מסלול חדש"}
           </div>
+          {catalogEntry?.slug ? (
+            <a
+              className="build-panel__route-link"
+              href={`/routes/${catalogEntry.slug}`}
+              aria-label={`לעמוד המסלול ${catalogEntry.name}`}
+            >
+              לעמוד המסלול
+            </a>
+          ) : null}
         </div>
         <div className="build-panel__tools">
           <button type="button" disabled={!canUndo} onClick={onUndo} title="בטל" aria-label="בטל">
@@ -73,9 +83,11 @@ export default function BuildPanel({
           <button type="button" className="btn-ghost" disabled={!canShare} onClick={onShare}>
             {shareCopied ? "✓ הועתק" : "שיתוף"}
           </button>
-          <button type="button" className="btn-ghost" disabled={!canShare} onClick={onSendToPhone}>
-            שלחו לטלפון
-          </button>
+          {showSendToPhone && (
+            <button type="button" className="btn-ghost" disabled={!canShare} onClick={onSendToPhone}>
+              שלחו לטלפון
+            </button>
+          )}
         </div>
       )}
 

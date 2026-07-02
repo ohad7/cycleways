@@ -38,6 +38,18 @@ export default function FrontPanel({
             <Icon name={collapsed ? "chevron-back-outline" : "chevron-forward-outline"} />
           </button>
         </div>
+      ) : panelState === "build" ? (
+        <div className="mobile-build-topbar">
+          <button
+            type="button"
+            className="mobile-build-topbar__back"
+            onClick={() => onPanelStateChange("discover")}
+          >
+            <Icon name="chevron-forward-outline" />
+            <span>מסלולים</span>
+          </button>
+          <h2>בניית מסלול</h2>
+        </div>
       ) : null}
       <div className="front-panel__body" ref={bodyRef}>
         {panelState === "discover" ? discover : build}

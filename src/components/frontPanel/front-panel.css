@@ -76,7 +76,7 @@
   }
   .front-sheet {
     position: absolute;
-    inset: 0 0 auto 0;
+    inset: 0 var(--planner-mobile-edge-inset, 0px) auto var(--planner-mobile-edge-inset, 0px);
     height: var(--sheet-visible-height, 100%);
     z-index: 20;
     flex: none;
@@ -106,11 +106,21 @@
     cursor: pointer;
   }
   .front-sheet__peek {
-    display: none;
+    position: absolute;
+    inset: 0 0 auto 0;
+    display: block;
+    width: 100%;
+    padding: 4px 12px 10px;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-200vh);
   }
   .front-sheet--peek .front-sheet__peek {
-    display: block;
+    position: static;
     padding: 4px 12px 10px;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
   }
   /* At peek only the handle + actions are useful; hide the panel beneath. */
   .front-sheet--peek .front-panel {
@@ -129,6 +139,45 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     padding-bottom: 22px;
+  }
+  .mobile-build-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 4px 12px 8px;
+    border-bottom: 1px solid #e7dfca;
+    background: #fff;
+    position: relative;
+    flex: 0 0 auto;
+  }
+  .mobile-build-topbar__back {
+    position: absolute;
+    inset-inline-start: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 36px;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #2f6b3c;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .mobile-build-topbar__back svg {
+    width: 18px;
+    height: 18px;
+  }
+  .mobile-build-topbar h2 {
+    margin: 0;
+    color: #283026;
+    font-size: 16px;
+    font-weight: 850;
+    line-height: 1.2;
   }
   /* The desktop collapse affordance is replaced by the sheet. */
   .front-panel__collapse,
@@ -275,15 +324,27 @@
     font: inherit;
     box-shadow: 0 1px 4px rgb(40 48 38 / 10%);
   }
-  .front-sheet__build-peek span:first-child {
+  .front-sheet__build-peek-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 0.95rem;
     font-weight: 850;
   }
-  .front-sheet__build-peek span:last-child {
+  .front-sheet__build-peek-meta {
+    flex: 0 0 auto;
     color: #5f6b62;
     font-size: 0.82rem;
     font-weight: 750;
     white-space: nowrap;
+  }
+  .front-sheet__build-peek .app-icon,
+  .front-sheet__build-peek svg {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    color: #6a766d;
   }
   .front-sheet__build-peek-row {
     display: flex;
@@ -306,6 +367,29 @@
     font-weight: 800;
     text-decoration: none;
     white-space: nowrap;
+  }
+  .front-sheet__build-peek-share {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 48px;
+    padding: 0 10px;
+    border: 1px solid #dce4df;
+    border-radius: 12px;
+    background: #fff;
+    color: #2f6b3c;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+  .front-sheet__build-peek-share .app-icon,
+  .front-sheet__build-peek-share svg {
+    width: 16px;
+    height: 16px;
   }
   .front-sheet__build-peek-link:focus-visible {
     background: #e6efe6;
@@ -349,44 +433,21 @@
   padding: 0 12px;
   cursor: pointer;
 }
-.mobile-build-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: -16px -16px 12px;
-  padding: 10px 12px;
-  border-bottom: 1px solid #e7dfca;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(10px);
-}
-.mobile-build-topbar__back {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 34px;
-  padding: 6px 10px;
-  border: 1px solid #dce4df;
-  border-radius: 999px;
-  background: #f6f8f4;
-  color: #2f6b3c;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 850;
-}
-.mobile-build-topbar__back .app-icon,
-.mobile-build-topbar__back svg {
-  width: 16px;
-  height: 16px;
-}
-.mobile-build-topbar__title {
-  color: #172026;
-  font-size: 0.95rem;
-  font-weight: 900;
+@media (max-width: 860px) {
+  .build-panel__head {
+    align-items: center;
+    gap: 10px;
+  }
+  .build-panel__head .eyebrow {
+    display: none;
+  }
+  .build-panel__title {
+    font-size: 16px;
+  }
+  .build-panel__tools button {
+    width: 28px;
+    height: 28px;
+  }
 }
 /* Reopen tab stays on the physical right edge, where the panel was. */
 .front-shell__reopen {
@@ -773,6 +834,19 @@
   color: #283026;
   line-height: 1.2;
   margin: 0;
+}
+.build-panel__route-link {
+  display: inline-flex;
+  margin-top: 5px;
+  color: #2f6b3c;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-decoration: none;
+}
+.build-panel__route-link:hover,
+.build-panel__route-link:focus-visible {
+  text-decoration: underline;
 }
 .build-panel__tools {
   display: flex;
@@ -1209,6 +1283,8 @@
   align-items: stretch;
   width: 100%;
   text-align: start;
+  color: inherit;
+  font: inherit;
   padding: 9px 9px 30px;
   border: 1px solid #efe8d7;
   border-radius: 12px;

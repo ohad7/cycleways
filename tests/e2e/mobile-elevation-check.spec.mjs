@@ -19,9 +19,10 @@ test("mobile: elevation slope legend renders within the panel", async ({
 
   await page.goto(`/?route=${COMPACT_ROUTE}`);
 
-  // Wait for the restored route (its first-point transition drops the
-  // sheet to peek) before opening the panel.
+  // Wait for the restored route. Mobile route-param loads now open the sheet
+  // directly to half so stats/elevation are immediately visible.
   await page.waitForSelector(".map-container--route-ready", { timeout: 30000 });
+  await expect(page.locator(".front-sheet")).toHaveAttribute("data-snap", "half");
 
   await ensurePanelOpen(page);
   await expect(page.getByTestId("front-panel")).toBeVisible();
@@ -55,11 +56,14 @@ test("mobile: elevation progress head remains visible during route playback", as
 
   await page.goto(`/?route=${COMPACT_ROUTE}`);
   await page.waitForSelector(".map-container--route-ready", { timeout: 30000 });
+  await expect(page.locator(".front-sheet")).toHaveAttribute("data-snap", "half");
   await ensurePanelOpen(page);
 
-  const panelPlayback = page.locator(".planner-route-playback--panel");
-  await expect(panelPlayback).toBeVisible();
-  await panelPlayback.getByRole("button", { name: "נגן מסלול על המפה" }).click();
+  const mapPlayback = page.locator(".planner-route-playback--map");
+  await expect(mapPlayback).toBeVisible();
+  await expect(page.locator(".planner-route-playback--panel")).toHaveCount(0);
+  await mapPlayback.getByRole("button", { name: "נגן מסלול על המפה" }).click();
+  await expect(page.locator(".front-sheet")).toHaveAttribute("data-snap", "half");
 
   const marker = page.locator(".panel-elev .elevation-progress-head-pulse");
   const cursorInfo = page.locator(".panel-elev .react-elevation-hover-info");
@@ -70,9 +74,9 @@ test("mobile: elevation progress head remains visible during route playback", as
   await expect(cursorInfo).toContainText("גובה:");
   await expect(cursorInfo.locator(".react-grade-chip")).toBeVisible();
 
-  await panelPlayback.getByRole("button", { name: "השהה מסלול על המפה" }).click();
+  await mapPlayback.getByRole("button", { name: "השהה מסלול על המפה" }).click();
   await expect(cursorInfo).toBeVisible();
-  await panelPlayback.locator(".fv-video-scrubber").evaluate((input) => {
+  await mapPlayback.locator(".fv-video-scrubber").evaluate((input) => {
     input.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     input.value = String(Number(input.max) / 2);
     input.dispatchEvent(new Event("input", { bubbles: true }));

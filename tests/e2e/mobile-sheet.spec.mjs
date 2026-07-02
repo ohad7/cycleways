@@ -31,13 +31,44 @@ test("mobile: Discover homepage is standalone, build opens the map sheet", async
 
   await home.getByRole("button", { name: "+ תכנן מסלול" }).click();
   const sheet = page.locator(".front-sheet");
-  await expect(sheet).toHaveAttribute("data-snap", "peek");
+  await expect(sheet).toHaveAttribute("data-snap", "half");
   await expect(sheet.locator(".front-sheet__build-peek")).toContainText("מסלול חדש");
   await expect(sheet.locator(".front-sheet__mode-switch")).toHaveCount(0);
-  await sheet.getByRole("button", { name: "שנה גודל פאנל" }).click();
-  await expect(sheet).toHaveAttribute("data-snap", "half");
   await expect(page.getByTestId("front-panel").getByRole("tab")).toHaveCount(0);
-  await expect(page.locator(".mobile-build-topbar")).toContainText("בניית מסלול");
+  await expect(page.locator(".mobile-build-topbar")).toBeVisible();
+  await expect(page.locator(".header")).toBeHidden();
+  const viewportFit = await page.locator(".front-shell").evaluate((shell) => {
+    const rect = shell.getBoundingClientRect();
+    const styles = window.getComputedStyle(document.body);
+    return {
+      top: Math.round(rect.top),
+      bottom: Math.round(rect.bottom),
+      viewportHeight: window.innerHeight,
+      bodyBackground: styles.backgroundImage,
+      bodyBackgroundColor: styles.backgroundColor,
+      documentOverflow: document.documentElement.scrollHeight - window.innerHeight,
+    };
+  });
+  expect(viewportFit.top).toBe(0);
+  expect(Math.abs(viewportFit.bottom - viewportFit.viewportHeight)).toBeLessThanOrEqual(1);
+  expect(viewportFit.bodyBackground).toBe("none");
+  expect(viewportFit.documentOverflow).toBeLessThanOrEqual(1);
+  const horizontalFit = await page.locator(".front-shell").evaluate((shell) => {
+    const sheet = shell.querySelector(".front-sheet");
+    const canvas = shell.querySelector(".mapboxgl-canvas");
+    if (!sheet || !canvas) return null;
+    const sheetRect = sheet.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    return {
+      sheetLeft: Math.round(sheetRect.left),
+      sheetRight: Math.round(sheetRect.right),
+      canvasLeft: Math.round(canvasRect.left),
+      canvasRight: Math.round(canvasRect.right),
+    };
+  });
+  expect(horizontalFit).toBeTruthy();
+  expect(Math.abs(horizontalFit.sheetLeft - horizontalFit.canvasLeft)).toBeLessThanOrEqual(1);
+  expect(Math.abs(horizontalFit.sheetRight - horizontalFit.canvasRight)).toBeLessThanOrEqual(1);
 });
 
 test("mobile: Discover homepage does not mount the map route overlay", async ({ page, isMobile }) => {
@@ -54,7 +85,9 @@ test("mobile: selecting a route opens the dedicated route page", async ({ page, 
   await page.goto("/");
   const home = page.getByTestId("mobile-discover-home");
   await expect(home).toBeVisible();
-  await home.locator(".panel-route-card-wrap").first().click();
+  const card = home.locator(".panel-route-card-wrap").first();
+  await expect(card).toHaveAttribute("href", /\/routes\/[a-z0-9-]+/);
+  await card.click();
   await expect(page).toHaveURL(/\/routes\/[a-z0-9-]+$/, { timeout: 20_000 });
   await expect(page.locator(".front-sheet")).toHaveCount(0);
 });
@@ -62,6 +95,7 @@ test("mobile: selecting a route opens the dedicated route page", async ({ page, 
 test("mobile: build drawer scroll area reaches route controls", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mobile-only");
   await page.goto(`/?route=${COMPACT_ROUTE}`);
+  await expect(page.locator(".front-sheet")).toHaveAttribute("data-snap", "half");
   await ensurePanelOpen(page);
   await expect(page.locator(".build-panel")).toContainText("4.5");
   const metrics = await page.locator(".front-shell").evaluate((shell) => {
@@ -89,8 +123,18 @@ test("mobile: build drawer scroll area reaches route controls", async ({ page, i
 test("mobile: clearing route removes playback shadow", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mobile-only");
   await page.goto(`/?route=${COMPACT_ROUTE}`);
-  await expect(page.locator(".planner-route-playback--map")).toBeVisible();
+  await expect(page.locator(".front-sheet")).toHaveAttribute("data-snap", "half");
+  const sheet = page.locator(".front-sheet");
+  const playback = page.locator(".planner-route-playback--map");
+  await expect(playback).toBeVisible();
+  await expect.poll(async () => {
+    const sheetBox = await sheet.boundingBox();
+    const playbackBox = await playback.boundingBox();
+    if (!sheetBox || !playbackBox) return false;
+    return playbackBox.y + playbackBox.height <= sheetBox.y - 4;
+  }).toBe(true);
   await page.getByRole("button", { name: "נגן מסלול על המפה" }).click();
+  await expect(page.locator(".front-sheet")).toHaveAttribute("data-snap", "half");
   await expect.poll(() => hasVideoCursorLayer(page)).toBe(true);
   await ensurePanelOpen(page);
   await page.getByRole("button", { name: "נקה" }).click();
@@ -104,15 +148,24 @@ test("mobile: בניית מסלול opens a build-only sheet", async ({ page, is
   await expect(home).toBeVisible();
   await home.getByRole("button", { name: "+ תכנן מסלול" }).click();
   const sheet = page.locator(".front-sheet");
-  await expect(sheet).toHaveAttribute("data-snap", "peek");
-  await expect(sheet.locator(".front-sheet__build-peek")).toContainText("מסלול חדש");
-  await sheet.getByRole("button", { name: "שנה גודל פאנל" }).click();
   await expect(sheet).toHaveAttribute("data-snap", "half");
+  await expect(sheet.locator(".front-sheet__build-peek")).toContainText("מסלול חדש");
   await expect(page.getByTestId("front-panel").getByRole("tab")).toHaveCount(0);
-  await expect(page.locator(".mobile-build-topbar")).toContainText("בניית מסלול");
-  await page.getByRole("button", { name: "מסלולים" }).click();
-  await expect(page.getByTestId("mobile-discover-home")).toBeVisible();
-  await expect(page.locator(".front-sheet")).toHaveCount(0);
+  const topbar = page.locator(".mobile-build-topbar");
+  await expect(topbar).toBeVisible();
+  await expect(topbar.getByRole("heading", { name: "בניית מסלול" })).toBeVisible();
+  await expect(topbar.getByRole("button", { name: "מסלולים" })).toBeVisible();
+});
+
+test("mobile: full drawer hides the map playback control", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "mobile-only");
+  await page.goto(`/?route=${COMPACT_ROUTE}`);
+  const sheet = page.locator(".front-sheet");
+  await expect(sheet).toHaveAttribute("data-snap", "half");
+  await expect(page.locator(".planner-route-playback--map")).toBeVisible();
+  await sheet.getByRole("button", { name: "שנה גודל פאנל" }).click();
+  await expect(sheet).toHaveAttribute("data-snap", "full");
+  await expect(page.locator(".planner-route-playback--map")).toHaveCount(0);
 });
 
 test("desktop: no sheet affordances, side panel as before", async ({ page, isMobile }) => {
@@ -141,7 +194,7 @@ test("Discover filters survive a toggle to Build and back", async ({ page, isMob
   ).toHaveAttribute("aria-pressed", "true");
 });
 
-test("Discover cards link to the route page without hijacking card selection", async ({ page, isMobile }) => {
+test("Discover cards link to the route page", async ({ page, isMobile }) => {
   await page.goto("/");
   const scope = isMobile ? page.getByTestId("mobile-discover-home") : page.getByTestId("front-panel");
   if (!isMobile) await ensurePanelOpen(page);

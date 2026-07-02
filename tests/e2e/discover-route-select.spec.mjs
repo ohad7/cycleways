@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await installMapboxMock(page);
 });
 
-test("selecting a Discover route loads it in place without a full reload", async ({ page, isMobile }) => {
+test("selecting a Discover route opens its route page", async ({ page, isMobile }) => {
   await page.goto("/");
   const discoverScope = isMobile
     ? page.getByTestId("mobile-discover-home")
@@ -22,24 +22,11 @@ test("selecting a Discover route loads it in place without a full reload", async
   await page.evaluate(() => {
     window.__sameDocument = true;
   });
-  const card = discoverScope.locator(".panel-route-card").first();
+  const card = discoverScope.locator(".panel-route-card-wrap").first();
   await expect(card).toBeVisible();
+  await expect(card).toHaveAttribute("href", /\/routes\/[a-z0-9-]+/);
   await card.click();
-  // The encoded route lands on the URL and the panel switches to Build.
-  await expect(page).toHaveURL(/[?&]route=/, { timeout: 20_000 });
-  // On mobile the sheet snaps back to peek after route selection — open it to assert panel state.
-  await ensurePanelOpen(page);
-  const panel = page.getByTestId("front-panel");
-  await expect(
-    panel.getByRole("tab", { name: "בניית מסלול" }),
-  ).toHaveAttribute("aria-selected", "true");
-  // Still the same document — no reload happened.
-  expect(await page.evaluate(() => window.__sameDocument)).toBe(true);
-  // NOTE: We do not assert that the built-route layer is visible (not hidden)
-  // after the card click. The hideBuiltRoute bug is fixed declaratively in
-  // App.jsx: `hideBuiltRoute={panel.state === "discover" && Boolean(hoveredRouteSlug)}`.
-  // That guard makes hoveredRouteSlug irrelevant once the panel leaves "discover",
-  // so the route is always shown in Build. Asserting it here would require either
-  // recording setLayoutProperty calls in the Mapbox mock (a new seam) or inspecting
-  // internal React state — neither is worth the coupling. Skipped.
+  await expect(page).toHaveURL(/\/routes\/[a-z0-9-]+$/, { timeout: 20_000 });
+  await expect(page.locator(".front-sheet")).toHaveCount(0);
+  expect(await page.evaluate(() => window.__sameDocument)).not.toBe(true);
 });

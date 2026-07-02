@@ -24,6 +24,12 @@ const HINTS = [
 
 export default function PlannerHints({ panelState, pointCount, routeReady }) {
   const [, forceRender] = useState(0);
+  const [sessionHiddenKeys, setSessionHiddenKeys] = useState(() => new Set());
+  const [isMobileHint, setIsMobileHint] = useState(() =>
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 860px)").matches,
+  );
   const progress = { panelState, pointCount, routeReady };
 
   // Progressing past a hint marks it seen even without an explicit dismiss,
@@ -37,7 +43,35 @@ export default function PlannerHints({ panelState, pointCount, routeReady }) {
     });
   }, [panelState, pointCount, routeReady]);
 
-  const hint = HINTS.find((h) => h.active(progress) && !getStoredItem(h.key));
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+    const query = window.matchMedia("(max-width: 860px)");
+    const update = () => setIsMobileHint(query.matches);
+    update();
+    if (typeof query.addEventListener === "function") {
+      query.addEventListener("change", update);
+      return () => query.removeEventListener("change", update);
+    }
+    query.addListener?.(update);
+    return () => query.removeListener?.(update);
+  }, []);
+
+  const hint = HINTS.find((h) =>
+    h.active(progress) &&
+    !getStoredItem(h.key) &&
+    !sessionHiddenKeys.has(h.key)
+  );
+
+  useEffect(() => {
+    if (!hint || !isMobileHint) return undefined;
+    const timer = window.setTimeout(() => {
+      setSessionHiddenKeys((prev) => new Set(prev).add(hint.key));
+    }, 4500);
+    return () => window.clearTimeout(timer);
+  }, [hint, isMobileHint]);
+
   if (!hint) return null;
   return (
     <div className="planner-hint" role="status">
@@ -46,6 +80,7 @@ export default function PlannerHints({ panelState, pointCount, routeReady }) {
         type="button"
         onClick={() => {
           setStoredItem(hint.key, "seen");
+          setSessionHiddenKeys((prev) => new Set(prev).add(hint.key));
           forceRender((n) => n + 1);
         }}
       >

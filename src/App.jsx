@@ -190,7 +190,6 @@ function App() {
     recentRoutes,
     handleRestoreDraft,
     handleDismissDraft,
-    handleAddRecentRoute,
   } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
 
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
@@ -210,6 +209,8 @@ function App() {
   const [orientRequest, setOrientRequest] = useState(0);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sheetSnap, setSheetSnap] = useState("peek");
+  const manualSheetSnapRef = useRef(false);
+  const appliedRouteLoadFitIdRef = useRef(null);
   const [isMobileSheet, setIsMobileSheet] = useState(() =>
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
@@ -238,8 +239,9 @@ function App() {
     [catalog],
   );
   // The catalog route currently loaded in the planner, tracked by slug. Set
-  // when a Discover card / recent is selected; cleared on any route edit so
-  // the route-page CTA only shows while the map matches the catalog route.
+  // when a catalog route is opened through a planner CTA or shared route param;
+  // cleared on any route edit so the route-page CTA only shows while the map
+  // matches the catalog route.
   const [selectedCatalogSlug, setSelectedCatalogSlug] = useState(null);
   const selectedCatalogEntry = useMemo(
     () =>
@@ -270,6 +272,20 @@ function App() {
     state.status === "ready" &&
     isMobileSheet &&
     panel.state === "discover";
+  const isMobilePlannerShell =
+    state.status === "ready" &&
+    isMobileSheet &&
+    !isMobileDiscoverHome;
+
+  const setAutoSheetSnap = useCallback((snap, { resetManual = false } = {}) => {
+    if (resetManual) manualSheetSnapRef.current = false;
+    if (!manualSheetSnapRef.current) setSheetSnap(snap);
+  }, []);
+
+  const handleSheetSnapChange = useCallback((snap) => {
+    manualSheetSnapRef.current = true;
+    setSheetSnap(snap);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -287,11 +303,21 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    if (panel.lastPointCount === 0 && routePointCount > 0) setSheetSnap("peek");
+    if (panel.lastPointCount === 0 && routePointCount > 0) setAutoSheetSnap("half");
     setPanel((prev) =>
       resolvePanelState(prev, { type: "route-points-changed", pointCount: routePointCount }),
     );
-  }, [routePointCount, panel.lastPointCount]);
+  }, [routePointCount, panel.lastPointCount, setAutoSheetSnap]);
+
+  useEffect(() => {
+    const className = "body--mobile-planner";
+    if (isMobilePlannerShell) {
+      document.body.classList.add(className);
+    } else {
+      document.body.classList.remove(className);
+    }
+    return () => document.body.classList.remove(className);
+  }, [isMobilePlannerShell]);
 
   useEffect(() => {
     const prefetch = [
@@ -344,15 +370,16 @@ function App() {
 
   // Back/forward re-syncs the planner with the ?route= URL state: a route
   // param loads that route (without pushing again); no param returns to an
-  // empty planner with Discover open. This makes a Discover selection
-  // back-button-friendly (the select pushes a history entry).
+  // empty planner with Discover open.
   useEffect(() => {
     const onPopState = async () => {
       const param = getQueryParam("route");
       setSelectedCatalogSlug(null);
       if (param) {
+        manualSheetSnapRef.current = false;
         await handleLoadRouteParam(param);
       } else {
+        manualSheetSnapRef.current = false;
         handleRouteClear();
         handlePanelStateChange("discover");
         setSheetSnap("half");
@@ -363,51 +390,42 @@ function App() {
   }, [handleLoadRouteParam, handleRouteClear, handlePanelStateChange]);
 
   const handlePeekDiscover = useCallback(() => {
+    manualSheetSnapRef.current = false;
     handlePanelStateChange("discover");
     setSheetSnap("half");
   }, [handlePanelStateChange]);
 
   const handlePeekBuild = useCallback(() => {
-    const openBuildDetails = panel.state === "build" || routePointCount > 0;
     if (panel.state !== "build") {
       orientOnBuildRef.current = true;
     }
+    manualSheetSnapRef.current = false;
     handlePanelStateChange("build");
-    setSheetSnap(openBuildDetails ? "half" : "peek");
-  }, [handlePanelStateChange, panel.state, routePointCount]);
-
-  // Loads a recommended route into the live planner (no reload) and shows it
-  // in the Build panel. Falls back to the full-page ?route= restore when the
-  // routing session isn't ready yet or the param fails to decode.
-  const handleSelectRecommended = useCallback(
-    async (entry) => {
-      if (!entry?.route) return;
-      const loaded = await handleLoadRouteParam(entry.route, { pushHistory: true });
-      if (loaded) {
-        handlePanelStateChange("build");
-        setSheetSnap("peek");
-        setSelectedCatalogSlug(entry.slug ?? null);
-        handleAddRecentRoute({
-          param: entry.route,
-          name: entry.name || "מסלול",
-          distanceKm: Number(entry.distanceKm) || undefined,
-          slug: entry.slug ?? undefined,
-        });
-      } else {
-        window.location.assign(`/?route=${encodeURIComponent(entry.route)}`);
-      }
-    },
-    [handleLoadRouteParam, handlePanelStateChange, handleAddRecentRoute],
-  );
+    setSheetSnap("half");
+  }, [handlePanelStateChange, panel.state]);
 
   const handlePanelShare = useCallback(async () => {
     if (!shareUrl) return;
+    if (
+      isMobileSheet &&
+      typeof navigator.share === "function"
+    ) {
+      try {
+        await navigator.share({
+          title: selectedCatalogEntry?.name || "מסלול CycleWays",
+          url: shareUrl,
+        });
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
     try {
       await navigator.clipboard.writeText(shareUrl);
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 1800);
     } catch {}
-  }, [shareUrl]);
+  }, [isMobileSheet, selectedCatalogEntry?.name, shareUrl]);
 
   // Fly to a focused data point (warning click). Memoised on the focus request
   // so MapSurface only flies when the token changes, not on every render.
@@ -428,6 +446,23 @@ function App() {
     routePointCount > 0 ||
     (routeState.pendingPoints || []).length > 0 ||
     Boolean(routePointDragPreview);
+
+  useEffect(() => {
+    if (!isMobileSheet || !plannerRouteReady) return;
+    const fitId = mapUi.routeFitRequest?.id;
+    if (!fitId || appliedRouteLoadFitIdRef.current === fitId) return;
+    appliedRouteLoadFitIdRef.current = fitId;
+    if (fitId.startsWith("restore-") || fitId.startsWith("select-")) {
+      handlePanelStateChange("build");
+      setAutoSheetSnap("half", { resetManual: true });
+    }
+  }, [
+    handlePanelStateChange,
+    isMobileSheet,
+    mapUi.routeFitRequest?.id,
+    plannerRouteReady,
+    setAutoSheetSnap,
+  ]);
   const selectedNetworkStyle =
     NETWORK_STYLE_OPTIONS[networkStyleIndex]?.value ||
     NETWORK_STYLE_OPTIONS[0].value;
@@ -703,12 +738,6 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [plannerPlaybackEnded, routeState.geometry]);
 
-  useEffect(() => {
-    if (isMobileSheet && plannerPlayback.isPlaying) {
-      setSheetSnap("half");
-    }
-  }, [isMobileSheet, plannerPlayback.isPlaying]);
-
   const plannerPoiPreviewVisible =
     plannerRouteReady &&
     !mapUi.selectedDataMarker &&
@@ -737,11 +766,6 @@ function App() {
   ]);
 
   const pausePlannerPlayback = plannerPlayback.pause;
-  const handleMobileBuildBack = useCallback(() => {
-    pausePlannerPlayback();
-    handlePanelStateChange("discover");
-    setSheetSnap("peek");
-  }, [handlePanelStateChange, pausePlannerPlayback]);
   const handlePlannerElevationHover = useCallback((payload) => {
     handleElevationHover(payload);
     if (!payload || !Number.isFinite(payload.t)) return;
@@ -872,62 +896,52 @@ function App() {
     />
   );
   const buildPanel = (
-    <>
-      {isMobileSheet ? (
-        <div className="mobile-build-topbar">
-          <button
-            type="button"
-            className="mobile-build-topbar__back"
-            onClick={handleMobileBuildBack}
-          >
-            <Icon name="chevron-forward-outline" />
-            <span>מסלולים</span>
-          </button>
-          <div className="mobile-build-topbar__title">בניית מסלול</div>
-        </div>
-      ) : null}
-      <BuildPanel
-        routeState={routeState}
-        catalogEntry={selectedCatalogEntry}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={handlePlaybackAwareUndo}
-        onRedo={handlePlaybackAwareRedo}
-        onClear={handlePlaybackAwareRouteClear}
-        canDownload={canDownload}
-        onDownloadGpx={handleDownloadGpx}
-        canShare={Boolean(shareUrl)}
-        onShare={handlePanelShare}
-        shareCopied={shareCopied}
-        onSendToPhone={() => setSendToPhoneOpen(true)}
-        error={routeState.error}
-        pois={buildPois}
-        onPoiClick={(poi) => handleDataPointFocus(poi)}
-        playback={renderPlannerPlaybackControls(
-          "planner-route-playback planner-route-playback--panel",
-        )}
-        elevation={
-          <PanelElevationGraph
-            geometry={routeState.geometry}
-            distance={routeState.distance}
-            cursorFraction={plannerPlayback.cursor?.fraction ?? null}
-            cursorPlaying={plannerPlayback.isPlaying}
-            cursorInfoVisible={plannerPlayback.hasCursor}
-            externalCursorActive={Boolean(
-              plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
-            )}
-            onElevationHover={handlePlannerElevationHover}
-            onElevationSelect={handlePlannerElevationSelect}
-            onBandHover={setHoveredBand}
-            onBandSelect={(band) => {
-              const start = band.startPercent ?? 0;
-              const end = band.endPercent ?? 0;
-              plannerPlayback.seekToFraction(((start + end) / 2) / 100);
-            }}
-          />
-        }
-      />
-    </>
+    <BuildPanel
+      routeState={routeState}
+      catalogEntry={selectedCatalogEntry}
+      canUndo={canUndo}
+      canRedo={canRedo}
+      onUndo={handlePlaybackAwareUndo}
+      onRedo={handlePlaybackAwareRedo}
+      onClear={handlePlaybackAwareRouteClear}
+      canDownload={canDownload}
+      onDownloadGpx={handleDownloadGpx}
+      canShare={Boolean(shareUrl)}
+      onShare={handlePanelShare}
+      shareCopied={shareCopied}
+      onSendToPhone={() => setSendToPhoneOpen(true)}
+      error={routeState.error}
+      pois={buildPois}
+      onPoiClick={(poi) => handleDataPointFocus(poi)}
+      showSendToPhone={!isMobileSheet}
+      playback={
+        isMobileSheet
+          ? null
+          : renderPlannerPlaybackControls(
+              "planner-route-playback planner-route-playback--panel",
+            )
+      }
+      elevation={
+        <PanelElevationGraph
+          geometry={routeState.geometry}
+          distance={routeState.distance}
+          cursorFraction={plannerPlayback.cursor?.fraction ?? null}
+          cursorPlaying={plannerPlayback.isPlaying}
+          cursorInfoVisible={plannerPlayback.hasCursor}
+          externalCursorActive={Boolean(
+            plannerPlayback.hasCursor || plannerPlayback.isPlaying || plannerPlayback.isScrubbing,
+          )}
+          onElevationHover={handlePlannerElevationHover}
+          onElevationSelect={handlePlannerElevationSelect}
+          onBandHover={setHoveredBand}
+          onBandSelect={(band) => {
+            const start = band.startPercent ?? 0;
+            const end = band.endPercent ?? 0;
+            plannerPlayback.seekToFraction(((start + end) / 2) / 100);
+          }}
+        />
+      }
+    />
   );
   const buildPeekSummary = (
     <div className="front-sheet__build-peek-row">
@@ -936,13 +950,29 @@ function App() {
         className="front-sheet__build-peek"
         onClick={handlePeekBuild}
       >
-        <span>{selectedCatalogEntry?.name || "מסלול חדש"}</span>
-        <span>
-          {routePointCount > 0
-            ? `${routePointCount} נקודות · ${formatLegacyDistance(routeState.distance)}`
-            : "0 נקודות"}
+        <span className="front-sheet__build-peek-title">
+          {selectedCatalogEntry?.name || "מסלול חדש"}
         </span>
+        <span className="front-sheet__build-peek-meta">
+          {plannerRouteReady
+            ? `${formatLegacyDistance(routeState.distance)} · ↑ ${Math.round(routeState.elevationGain || 0)} מ׳`
+            : routePointCount > 0
+              ? `${formatPointCountHebrew(routePointCount)} · ${formatLegacyDistance(routeState.distance)}`
+              : "0 נקודות"}
+        </span>
+        <Icon name="chevron-back-outline" />
       </button>
+      {isMobileSheet && plannerRouteReady && shareUrl && (
+        <button
+          type="button"
+          className="front-sheet__build-peek-share"
+          onClick={handlePanelShare}
+          aria-label="שיתוף המסלול"
+        >
+          <Icon name="share-social-outline" />
+          <span>{shareCopied ? "הועתק" : "שיתוף"}</span>
+        </button>
+      )}
       {selectedCatalogEntry && (
         <a
           className="front-sheet__build-peek-link"
@@ -1017,6 +1047,7 @@ function App() {
               className={[
                 "front-shell",
                 `front-shell--sheet-${sheetSnap}`,
+                plannerRouteReady ? "front-shell--route-ready" : "",
                 panelCollapsed ? "front-shell--collapsed" : "",
               ].filter(Boolean).join(" ")}
             >
@@ -1174,7 +1205,8 @@ function App() {
                   recommendedRoutes={recommendedRoutes}
                 />
 
-                {renderPlannerPlaybackControls("planner-route-playback planner-route-playback--map")}
+                {!isMobileSheet &&
+                  renderPlannerPlaybackControls("planner-route-playback planner-route-playback--map")}
 
                 {plannerPoiPreviewVisible && (
                   <RoutePoiPlaybackPreview
@@ -1211,10 +1243,12 @@ function App() {
               </>
             )}
             </div>
+            {state.status === "ready" && isMobileSheet && sheetSnap !== "full" &&
+              renderPlannerPlaybackControls("planner-route-playback planner-route-playback--map")}
             {state.status === "ready" && (
               <BottomSheet
                 snap={sheetSnap}
-                onSnapChange={setSheetSnap}
+                onSnapChange={handleSheetSnapChange}
                 peekContent={sheetPeekContent}
               >
                 <FrontPanel
@@ -1243,7 +1277,7 @@ function App() {
           )}
         </div>
 
-        {!isMobileDiscoverHome && <ContentSections />}
+        {!isMobileDiscoverHome && !isMobilePlannerShell && <ContentSections />}
       </PageShell>
 
       {state.status === "ready" && mapUi.downloadModalOpen && (
@@ -1448,6 +1482,11 @@ function cumulativeMeters(points) {
     cum[i] = cum[i - 1] + getDistance(points[i - 1], points[i]);
   }
   return cum;
+}
+
+function formatPointCountHebrew(count) {
+  if (count === 1) return "נקודה אחת";
+  return `${count} נקודות`;
 }
 
 export default App;

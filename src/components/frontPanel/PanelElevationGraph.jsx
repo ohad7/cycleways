@@ -47,6 +47,7 @@ export default function PanelElevationGraph({
               title={band.gradeClass}
               onMouseEnter={() => onBandHover?.(band)}
               onMouseLeave={() => onBandHover?.(null)}
+              onTouchStart={() => onBandHover?.(band)}
               onClick={() => onBandSelect?.(band)}
             />
           );
