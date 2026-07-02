@@ -93,6 +93,9 @@ echo "==> Signing configured (manual, fastlane-managed profile)."
 
 # --- optional build + install ------------------------------------------------
 if [ "$BUILD" -eq 1 ]; then
+  echo "==> Building web bundle + syncing offline assets (expo run:ios bypasses npm pre-hooks)..."
+  ( cd "$MOBILE_DIR" && node scripts/sync-web-bundle.mjs && node scripts/sync-offline-assets.mjs )
+
   echo "==> Building & installing onto the device (expo run:ios --device)..."
   if ! ( cd "$MOBILE_DIR" && npx expo run:ios --device "$UDID" ); then
     cat <<'MSG'

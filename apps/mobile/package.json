@@ -32,7 +32,7 @@
   "scripts": {
     "assets:sync": "node scripts/sync-offline-assets.mjs",
     "prestart": "npm run assets:sync",
-    "preios": "npm run assets:sync",
+    "preios": "npm run bundle:web && npm run assets:sync",
     "preandroid": "npm run assets:sync",
     "start": "expo start",
     "android": "expo run:android",
