@@ -1,8 +1,6 @@
 import React from "react";
 import Icon from "../Icon.jsx";
 import PanelPoiCard from "./PanelPoiCard.jsx";
-import { routeDisplayImage } from "@cycleways/core/data/catalog.js";
-import { routeImageSrc } from "../routes/routeImageSrc.js";
 import { getPlannerBuildModel } from "@cycleways/core/ui/routePlannerPresentation.js";
 
 export default function BuildPanel({
@@ -54,8 +52,6 @@ export default function BuildPanel({
           </button>
         </div>
       </div>
-      {catalogEntry && <RoutePageCta entry={catalogEntry} />}
-
       {hasRoute ? (
         <div className="build-panel__stats">
           {buildModel.stats.map(([k, v]) => (
@@ -101,23 +97,5 @@ function Stat({ k, v }) {
       <div className="build-stat__k">{k}</div>
       <div className="build-stat__v">{v}</div>
     </div>
-  );
-}
-
-// Photo-strip CTA to the route's dedicated page, shown while the planner
-// holds an unedited catalog route (the moment of highest intent).
-function RoutePageCta({ entry }) {
-  const photo = routeDisplayImage(entry);
-  return (
-    <a className="build-panel__story-cta" href={`/routes/${entry.slug}`}>
-      {photo ? (
-        <img
-          src={routeImageSrc(photo.thumbnail || photo.photo)}
-          alt=""
-          loading="lazy"
-        />
-      ) : null}
-      <span>לעמוד המסלול המלא ←</span>
-    </a>
   );
 }

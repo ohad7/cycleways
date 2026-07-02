@@ -27,11 +27,13 @@ export default function DiscoverPanel({
   onQueryChange,
   onRequestLocation,
   locationError = "",
+  onRevealFilters,
 }) {
   const [places, setPlaces] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [nearMeSort, setNearMeSort] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterRevealY, setFilterRevealY] = useState(0);
   const [heroSeed] = useState(() => Math.random());
   const [intentFilters, setIntentFilters] = useState(() => new Set());
 
@@ -64,13 +66,21 @@ export default function DiscoverPanel({
     });
   const toggleIntent = (value) =>
     setIntentFilters((prev) => {
-      const next = new Set(prev);
-      next.has(value) ? next.delete(value) : next.add(value);
-      return next;
+      if (prev.has(value)) return new Set();
+      return new Set([value]);
     });
   const toggleNearMe = () => {
     if (!fix) onRequestLocation?.();
     setNearMeSort((v) => !v);
+  };
+  const toggleFiltersOpen = () => {
+    setFiltersOpen((open) => {
+      const next = !open;
+      if (next) {
+        setTimeout(() => onRevealFilters?.(filterRevealY), 0);
+      }
+      return next;
+    });
   };
 
   const activeFilterCount = useMemo(
@@ -147,7 +157,10 @@ export default function DiscoverPanel({
         />
       ) : null}
 
-      <View style={styles.intent}>
+      <View
+        onLayout={(event) => setFilterRevealY(event.nativeEvent.layout.y)}
+        style={styles.intent}
+      >
         <Text style={styles.intentTitle}>מה מתאים לכם?</Text>
         <View style={styles.intentChips}>
           {DISCOVER_INTENT_FILTERS.map((intent) => (
@@ -165,6 +178,22 @@ export default function DiscoverPanel({
             onPress={toggleNearMe}
             variant="intent"
           />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="סינון"
+            accessibilityState={{ expanded: filtersOpen }}
+            onPress={toggleFiltersOpen}
+            style={({ pressed }) => [
+              styles.filterToggle,
+              filtersOpen || activeFilterCount > 0 ? styles.filterToggleActive : null,
+              pressed ? styles.chipPressed : null,
+            ]}
+          >
+            <Text style={styles.filterToggleText}>
+              {`סינון${activeFilterCount ? ` ${activeFilterCount}` : ""}`}
+            </Text>
+            <Text style={styles.filterChevron}>{filtersOpen ? "▴" : "▾"}</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -173,18 +202,6 @@ export default function DiscoverPanel({
           {locationError}
         </Text>
       ) : null}
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="סינון"
-        onPress={() => setFiltersOpen((v) => !v)}
-        style={styles.filterToggle}
-      >
-        <Text style={styles.filterToggleText}>
-          {`סינון${activeFilterCount ? ` (${activeFilterCount})` : ""}`}
-        </Text>
-        <Text style={styles.filterChevron}>{filtersOpen ? "▴" : "▾"}</Text>
-      </Pressable>
 
       {filtersOpen ? (
         <View style={styles.filters}>
@@ -310,19 +327,24 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   filterToggle: {
-    marginHorizontal: 12,
     flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: palette.cream,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: palette.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.line,
+  },
+  filterToggleActive: {
+    backgroundColor: "#f3f7f1",
+    borderColor: palette.forest,
   },
   filterToggleText: {
     color: palette.ink,
-    fontSize: 17,
-    fontWeight: "900",
+    fontSize: 13,
+    fontWeight: "800",
     writingDirection: "rtl",
   },
   filterChevron: { color: palette.muted, fontSize: 12 },

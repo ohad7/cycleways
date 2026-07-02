@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import PanelRouteCard, { PanelRouteHeroCard } from "./PanelRouteCard.jsx";
 import RecentRoutesStrip from "./RecentRoutesStrip.jsx";
 import "../welcome-wizard.css";
@@ -31,7 +31,6 @@ const SHOW_RECENT_ROUTES_STRIP = false;
 export default function DiscoverPanel({
   catalog,
   places,
-  onSelectRoute,
   onBuild,
   onSlugsChange,
   onRouteViewport,
@@ -44,13 +43,14 @@ export default function DiscoverPanel({
   onNearMeSortChange,
   onRequestLocation,
   recentRoutes,
-  onSelectRecent,
   viewportKey = "",
 }) {
   const [heroSeed] = useState(() => Math.random());
   const [query, setQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [intentFilters, setIntentFilters] = useState(() => new Set());
+  const intentRef = useRef(null);
+  const revealFiltersOnOpenRef = useRef(false);
   const entries = useMemo(
     () => (Array.isArray(catalog?.entries) ? catalog.entries : []),
     [catalog],
@@ -88,19 +88,32 @@ export default function DiscoverPanel({
     });
   const toggleIntent = (value) => {
     setIntentFilters((prev) => {
-      const next = new Set(prev);
-      next.has(value) ? next.delete(value) : next.add(value);
-      return next;
+      if (prev.has(value)) return new Set();
+      return new Set([value]);
     });
   };
   const handleNearMeClick = () => {
     if (!locationFix) onRequestLocation?.();
     onNearMeSortChange((v) => !v);
   };
+  const handleAdvancedToggle = () => {
+    setFiltersOpen((open) => {
+      if (!open) revealFiltersOnOpenRef.current = true;
+      return !open;
+    });
+  };
 
   const searchedRoutes = useMemo(
     () => filterCatalogBySearch(entries, query, placeById),
     [entries, query, placeById],
+  );
+  const advancedFilterCount = useMemo(
+    () =>
+      Object.values(filters || {}).reduce(
+        (sum, value) => sum + (value instanceof Set ? value.size : 0),
+        0,
+      ),
+    [filters],
   );
   const { routes: advancedFilteredRoutes } = useMemo(
     () => selectDiscoverRoutes(searchedRoutes, filters),
@@ -151,11 +164,19 @@ export default function DiscoverPanel({
   useEffect(() => {
     onRouteViewport?.(sets);
   }, [sets, onRouteViewport]);
+  useEffect(() => {
+    if (!filtersOpen || !revealFiltersOnOpenRef.current) return undefined;
+    revealFiltersOnOpenRef.current = false;
+    const frame = window.requestAnimationFrame(() => {
+      revealElement(intentRef.current, 12);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [filtersOpen]);
 
   return (
     <div className="discover-panel" ref={containerRef}>
       {SHOW_RECENT_ROUTES_STRIP && (
-        <RecentRoutesStrip recents={recentRoutes} onSelect={onSelectRecent} />
+        <RecentRoutesStrip recents={recentRoutes} />
       )}
       <div className="discover-panel__intro">
         <div className="eyebrow">גליל עליון על אופניים</div>
@@ -177,7 +198,6 @@ export default function DiscoverPanel({
             index={0}
             entry={heroRoute}
             places={places}
-            onSelect={onSelectRoute}
             onHover={onHoverRoute}
             cardRef={registerCard(heroRoute.slug)}
             distanceFromUserLabel={distanceFromUserLabelFor(heroRoute)}
@@ -185,7 +205,7 @@ export default function DiscoverPanel({
         </div>
       ) : null}
 
-      <div className="discover-panel__intent">
+      <div className="discover-panel__intent" ref={intentRef}>
         <div className="discover-panel__intent-head">מה מתאים לכם?</div>
         <div className="discover-panel__intent-chips" aria-label="סינון מהיר">
           {DISCOVER_INTENT_FILTERS.map((intent) => (
@@ -200,6 +220,27 @@ export default function DiscoverPanel({
           <FilterChip active={nearMeSort} onClick={handleNearMeClick}>
             קרוב אליי
           </FilterChip>
+          <button
+            type="button"
+            className={`discover-panel__advanced-toggle${
+              filtersOpen || advancedFilterCount > 0
+                ? " discover-panel__advanced-toggle--active"
+                : ""
+            }`}
+            aria-label="סינון"
+            aria-expanded={filtersOpen}
+            onClick={handleAdvancedToggle}
+          >
+            <span>
+              סינון
+              {advancedFilterCount > 0 ? (
+                <span className="discover-panel__advanced-count">
+                  {advancedFilterCount}
+                </span>
+              ) : null}
+            </span>
+            <span aria-hidden="true">{filtersOpen ? "▴" : "▾"}</span>
+          </button>
         </div>
       </div>
 
@@ -210,15 +251,6 @@ export default function DiscoverPanel({
       ) : null}
 
       <div className="discover-panel__advanced">
-        <button
-          type="button"
-          className="discover-panel__advanced-toggle"
-          aria-expanded={filtersOpen}
-          onClick={() => setFiltersOpen((v) => !v)}
-        >
-          <span>סינון</span>
-          <span aria-hidden="true">{filtersOpen ? "▴" : "▾"}</span>
-        </button>
         {filtersOpen ? (
           <div className="discover-panel__advanced-body">
             <div className="discover-panel__places discover-panel__places--row">
@@ -277,7 +309,6 @@ export default function DiscoverPanel({
                 index={heroRoute ? index + 1 : index}
                 entry={entry}
                 places={places}
-                onSelect={onSelectRoute}
                 onHover={onHoverRoute}
                 cardRef={registerCard(entry.slug)}
                 distanceFromUserLabel={distanceFromUserLabelFor(entry)}
@@ -306,4 +337,45 @@ function placeOptions(entries, placeById, placeIdsForEntry) {
   return Array.from(counts.keys())
     .map((id) => ({ value: id, label: placeById.get(id)?.name || id, count: counts.get(id) || 0 }))
     .sort((a, b) => a.label.localeCompare(b.label, "he"));
+}
+
+function revealElement(element, offset = 0) {
+  if (!element || typeof window === "undefined") return;
+  const scroller = element.closest(".front-panel__body") || window;
+  const usesWindow = scroller === window;
+  const scrollTop = usesWindow ? window.scrollY : scroller.scrollTop;
+  const scrollerTop = usesWindow ? 0 : scroller.getBoundingClientRect().top;
+  const targetY = Math.max(
+    0,
+    scrollTop + element.getBoundingClientRect().top - scrollerTop - offset,
+  );
+  const startY = scrollTop;
+  const distance = targetY - startY;
+  if (Math.abs(distance) < 4) return;
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  if (reduceMotion) {
+    scrollToY(scroller, targetY);
+    return;
+  }
+  const duration = 700;
+  const startTime = window.performance?.now?.() ?? Date.now();
+  const ease = (t) =>
+    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+  const step = (now) => {
+    const elapsed = now - startTime;
+    const progress = Math.min(1, elapsed / duration);
+    scrollToY(scroller, startY + distance * ease(progress));
+    if (progress < 1) window.requestAnimationFrame(step);
+  };
+
+  window.requestAnimationFrame(step);
+}
+
+function scrollToY(scroller, y) {
+  if (scroller === window) {
+    window.scrollTo(0, y);
+    return;
+  }
+  scroller.scrollTop = y;
 }

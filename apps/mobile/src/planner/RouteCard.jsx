@@ -73,7 +73,7 @@ export default function RouteCard({
     Number.isFinite(entry?.distanceKm) ? `${entry.distanceKm} ק״מ` : null,
     routeShapeLabel(entry),
     viaNames.length ? viaNames.join(" · ") : null,
-  ].filter(Boolean);
+  ].filter(Boolean).slice(0, 3);
 
   const nearMeters = fix ? distanceToRouteStartMeters(entry, placeById, fix) : null;
   const nearLabel = formatDistanceFromUser(nearMeters);
@@ -104,17 +104,21 @@ export default function RouteCard({
               <Icon name="bicycle-outline" size={42} color={chipColor} />
             </View>
           )}
-        </View>
-        <View style={styles.heroOverlay} pointerEvents="none">
-          <View style={styles.heroKicker}>
-            <View style={[styles.heroSwatch, { backgroundColor: swatchColor }]} />
-            <Text style={styles.heroKickerText}>מסלול מומלץ</Text>
+          <View style={styles.heroOverlay} pointerEvents="none">
+            <View style={styles.heroKicker}>
+              <View style={[styles.heroSwatch, { backgroundColor: swatchColor }]} />
+              <Text style={styles.heroKickerText}>מסלול מומלץ</Text>
+            </View>
+            <View style={styles.heroCopy}>
+              <Text style={styles.heroTitle} numberOfLines={2}>
+                {entry.name}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.heroTitle} numberOfLines={2}>
-            {entry.name}
-          </Text>
+        </View>
+        <View style={styles.heroDetails} pointerEvents="none">
           {summary ? (
-            <Text style={styles.heroSummary} numberOfLines={2}>
+            <Text style={styles.heroSummary} numberOfLines={1}>
               {summary}
             </Text>
           ) : null}
@@ -124,13 +128,7 @@ export default function RouteCard({
             </Text>
           ) : null}
           <View style={styles.heroFooter}>
-            {difficultyLabel ? (
-              <View style={[styles.heroChip, { backgroundColor: chipColor }]}>
-                <Text style={styles.heroChipText}>{difficultyLabel}</Text>
-              </View>
-            ) : null}
-            {nearLabel ? <Text style={styles.heroNear}>{nearLabel}</Text> : null}
-            <Text style={styles.heroCta}>פתח מסלול</Text>
+            <Text style={styles.heroCta}>לעמוד המסלול</Text>
           </View>
         </View>
       </Pressable>
@@ -266,17 +264,16 @@ export default function RouteCard({
 
 const styles = StyleSheet.create({
   heroCard: {
-    position: "relative",
-    height: 250,
     marginHorizontal: 12,
     borderRadius: radius.lg || radius.md,
-    backgroundColor: palette.cream,
+    backgroundColor: palette.white,
     overflow: "hidden",
     borderColor: "#dfe8e2",
     borderWidth: StyleSheet.hairlineWidth,
   },
   heroMedia: {
-    ...StyleSheet.absoluteFillObject,
+    position: "relative",
+    height: 228,
     backgroundColor: palette.cream,
   },
   heroImage: { width: "100%", height: "100%" },
@@ -295,22 +292,33 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
+    top: 0,
     bottom: 0,
+    justifyContent: "space-between",
     paddingHorizontal: 14,
-    paddingTop: 14,
+    paddingTop: 12,
     paddingBottom: 14,
-    backgroundColor: "rgba(17, 25, 20, 0.42)",
+    backgroundColor: "rgba(17, 25, 20, 0.18)",
+  },
+  heroDetails: {
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    rowGap: 6,
+    columnGap: 8,
   },
   heroKicker: {
     alignSelf: "flex-end",
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
-    marginBottom: 7,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: radius.pill,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.2)",
   },
   heroSwatch: { width: 8, height: 8, borderRadius: 4 },
   heroKickerText: {
@@ -318,6 +326,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "900",
     writingDirection: "rtl",
+  },
+  heroCopy: {
+    gap: 5,
   },
   heroTitle: {
     color: palette.white,
@@ -331,48 +342,46 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   heroSummary: {
-    marginTop: 6,
-    color: "rgba(255,255,255,0.9)",
+    width: "100%",
+    color: palette.forestDk,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
-    textShadowColor: "rgba(0,0,0,0.3)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   heroMeta: {
-    marginTop: 7,
-    color: "rgba(255,255,255,0.82)",
+    flexShrink: 1,
+    color: palette.muted,
     fontSize: 12,
     fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   heroFooter: {
-    marginTop: 10,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "flex-start",
   },
   heroChip: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
   heroChipText: { color: palette.white, fontSize: 10, fontWeight: "900" },
   heroNear: {
     flexShrink: 1,
-    color: "rgba(255,255,255,0.84)",
+    color: palette.muted,
     fontSize: 11,
     fontWeight: "800",
     writingDirection: "rtl",
   },
   heroCta: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#cfe0d2",
     borderRadius: radius.pill,
-    backgroundColor: palette.white,
+    backgroundColor: "#f3f7f1",
     color: palette.forest,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "800",
     overflow: "hidden",
     writingDirection: "rtl",
   },

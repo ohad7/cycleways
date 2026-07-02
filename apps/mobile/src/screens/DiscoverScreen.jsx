@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from "expo-location";
@@ -13,6 +13,9 @@ export default function DiscoverScreen({ navigation }) {
   const [query, setQuery] = useState("");
   const [fix, setFix] = useState(null);
   const [locationError, setLocationError] = useState("");
+  const scrollRef = useRef(null);
+  const scrollYRef = useRef(0);
+  const scrollAnimationRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,6 +28,15 @@ export default function DiscoverScreen({ navigation }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(
+    () => () => {
+      if (scrollAnimationRef.current) {
+        cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    },
+    [],
+  );
 
   // Best-effort last-known location for the "near me" sort; no prompt here.
   useEffect(() => {
@@ -55,6 +67,32 @@ export default function DiscoverScreen({ navigation }) {
     resetNativeLocationHref();
     navigation.navigate("Build", {});
   };
+  const revealFilters = (y = 0) => {
+    const startY = scrollYRef.current;
+    const targetY = Math.max(0, y - 12);
+    const distance = targetY - startY;
+    if (Math.abs(distance) < 4) return;
+    if (scrollAnimationRef.current) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+    }
+    const duration = 700;
+    const startTime = Date.now();
+    const ease = (t) =>
+      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const step = () => {
+      const progress = Math.min(1, (Date.now() - startTime) / duration);
+      const nextY = startY + distance * ease(progress);
+      scrollYRef.current = nextY;
+      scrollRef.current?.scrollTo({ y: nextY, animated: false });
+      if (progress < 1) {
+        scrollAnimationRef.current = requestAnimationFrame(step);
+      } else {
+        scrollAnimationRef.current = null;
+        scrollYRef.current = targetY;
+      }
+    };
+    scrollAnimationRef.current = requestAnimationFrame(step);
+  };
   const requestLocation = async () => {
     try {
       setLocationError("");
@@ -80,8 +118,13 @@ export default function DiscoverScreen({ navigation }) {
   return (
     <View style={[styles.fill, { paddingTop: insets.top }]}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        onScroll={(event) => {
+          scrollYRef.current = event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
       >
         <DiscoverPanel
           entries={entries}
@@ -91,6 +134,7 @@ export default function DiscoverScreen({ navigation }) {
           onQueryChange={setQuery}
           onRequestLocation={requestLocation}
           locationError={locationError}
+          onRevealFilters={revealFilters}
         />
       </ScrollView>
       <Pressable

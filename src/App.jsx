@@ -876,7 +876,6 @@ function App() {
     <DiscoverPanel
       catalog={catalog}
       places={places}
-      onSelectRoute={handleSelectRecommended}
       onBuild={handlePeekBuild}
       onSlugsChange={setDiscoverSlugs}
       onRouteViewport={setDiscoverViewport}
@@ -890,14 +889,6 @@ function App() {
       onNearMeSortChange={setNearMeSort}
       onRequestLocation={handleLocateMe}
       recentRoutes={recentRoutes}
-      onSelectRecent={(entry) =>
-        handleSelectRecommended({
-          route: entry.param,
-          name: entry.name,
-          distanceKm: entry.distanceKm,
-          slug: entry.slug,
-        })
-      }
     />
   );
 
@@ -1152,7 +1143,6 @@ function App() {
                       <DiscoverPeekPreview
                         routes={discoverPeekRoutes}
                         onOpen={handlePeekDiscover}
-                        onSelect={handleSelectRecommended}
                       />
                     ) : (
                       <div className="front-sheet__build-peek-row">
