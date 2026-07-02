@@ -873,6 +873,117 @@
   color: #7a8c76;
   line-height: 1.4;
 }
+.build-empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.build-empty-actions__steps {
+  margin: 0;
+  padding-inline-start: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: #283026;
+  line-height: 1.5;
+}
+.build-empty-actions__where {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.build-empty-actions__search {
+  display: flex;
+  gap: 6px;
+}
+.build-empty-actions__search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #cdd7c8;
+  border-radius: 10px;
+  font-size: 13px;
+  background: #fff;
+  color: #283026;
+}
+.build-empty-actions__search button[type="submit"] {
+  min-width: 38px;
+  border: 1px solid #cdd7c8;
+  border-radius: 10px;
+  background: #fff;
+  color: #355e3b;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.build-empty-actions__search button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.build-empty-actions__locate {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 10px;
+  background: #355e3b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.build-empty-actions__locate:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.build-empty-actions__error {
+  margin: 0;
+  font-size: 12px;
+  color: #a33a2a;
+}
+.build-empty-actions__draft {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #f3efe2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #283026;
+}
+.build-empty-actions__draft span {
+  min-width: 0;
+}
+.build-empty-actions__draft button {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 8px;
+  background: #355e3b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+@media (max-width: 860px) {
+  .build-empty-actions {
+    gap: 10px;
+  }
+  .build-empty-actions__steps {
+    gap: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .build-empty-actions__where {
+    gap: 6px;
+  }
+  .build-empty-actions__draft {
+    padding: 9px 10px;
+  }
+}
 .build-panel__actions {
   display: flex;
   flex-direction: row;

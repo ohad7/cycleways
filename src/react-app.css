@@ -1909,6 +1909,10 @@ input {
     line-height: 1.25;
   }
 
+  .front-shell--sheet-half .planner-hint {
+    bottom: calc(50dvh + 8px);
+  }
+
   .planner-hint span {
     min-width: 0;
   }

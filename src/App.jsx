@@ -34,6 +34,7 @@ import DiscoverPanel from "./components/frontPanel/DiscoverPanel.jsx";
 import DiscoverPeekPreview from "./components/frontPanel/DiscoverPeekPreview.jsx";
 import { selectDiscoverRoutes } from "./components/frontPanel/discoverRouteList.js";
 import BuildPanel from "./components/frontPanel/BuildPanel.jsx";
+import BuildEmptyActions from "./components/frontPanel/BuildEmptyActions.jsx";
 import PanelElevationGraph from "./components/frontPanel/PanelElevationGraph.jsx";
 import { useCatalogData } from "./components/frontPanel/useCatalogData.js";
 import { formatLegacyDistance } from "./components/ElevationProfile.jsx";
@@ -41,6 +42,8 @@ import MapView from "./map/MapView.jsx";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { getQueryParam, hasQueryParam } from "@cycleways/core/platform/location.js";
+import { shouldShowFloatingDraftBanner } from "@cycleways/core/ui/draftBannerVisibility.js";
+import { ROUTE_SEARCH_PLACEHOLDER } from "@cycleways/core/ui/routePlannerPresentation.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
 import { dataPointId } from "@cycleways/core/data/dataMarkers.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
@@ -403,6 +406,12 @@ function App() {
     handlePanelStateChange("build");
     setSheetSnap("half");
   }, [handlePanelStateChange, panel.state]);
+
+  const handleDraftRestore = useCallback(async () => {
+    setSelectedCatalogSlug(null);
+    const ok = await handleRestoreDraft();
+    if (ok) handlePeekBuild();
+  }, [handleRestoreDraft, handlePeekBuild]);
 
   const handlePanelShare = useCallback(async () => {
     if (!shareUrl) return;
@@ -911,6 +920,19 @@ function App() {
       shareCopied={shareCopied}
       onSendToPhone={() => setSendToPhoneOpen(true)}
       error={routeState.error}
+      emptyState={
+        <BuildEmptyActions
+          searchQuery={mapUi.searchQuery}
+          searchStatus={mapUi.searchStatus}
+          searchError={mapUi.searchError}
+          onSearchQueryChange={handleSearchQueryChange}
+          onSearchSubmit={handleSearchSubmit}
+          locateStatus={mapUi.locateStatus}
+          onLocateMe={handleLocateMe}
+          draft={plannerDraft && !hasQueryParam("route") ? plannerDraft : null}
+          onRestoreDraft={handleDraftRestore}
+        />
+      }
       pois={buildPois}
       onPoiClick={(poi) => handleDataPointFocus(poi)}
       showSendToPhone={!isMobileSheet}
@@ -1080,7 +1102,7 @@ function App() {
                     <input
                       id="location-search"
                       type="text"
-                      placeholder="ישוב/עיר, לדוגמא: דפנה"
+                      placeholder={ROUTE_SEARCH_PLACEHOLDER}
                       value={mapUi.searchQuery}
                       onChange={(event) =>
                         handleSearchQueryChange(event.target.value)
@@ -1099,17 +1121,21 @@ function App() {
                   </button>
                 </div>
 
-                {SHOW_DRAFT_RESTORE_BANNER && plannerDraft && !hasQueryParam("route") && routePointCount === 0 && (
-                  <DraftRestoreBanner
-                    draft={plannerDraft}
-                    onRestore={async () => {
-                      setSelectedCatalogSlug(null);
-                      const ok = await handleRestoreDraft();
-                      if (ok) handlePanelStateChange("build");
-                    }}
-                    onDismiss={handleDismissDraft}
-                  />
-                )}
+                {SHOW_DRAFT_RESTORE_BANNER &&
+                  shouldShowFloatingDraftBanner({
+                    hasDraft: Boolean(plannerDraft),
+                    hasRouteParam: hasQueryParam("route"),
+                    pointCount: routePointCount,
+                    panelState: panel.state,
+                    isMobileSheet,
+                    sheetSnap,
+                  }) && (
+                    <DraftRestoreBanner
+                      draft={plannerDraft}
+                      onRestore={handleDraftRestore}
+                      onDismiss={handleDismissDraft}
+                    />
+                  )}
 
                 <MapLegend
                   hasBrokenRoute={hasBrokenRoute}

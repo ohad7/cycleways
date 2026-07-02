@@ -23,6 +23,7 @@ export default function BuildPanel({
   elevation,
   playback,
   error,
+  emptyState,
 }) {
   const buildModel = getPlannerBuildModel(routeState);
   const hasRoute = buildModel.hasRoute;
@@ -68,6 +69,8 @@ export default function BuildPanel({
             <Stat key={k} k={k} v={v} />
           ))}
         </div>
+      ) : routeState.points.length === 0 && emptyState ? (
+        emptyState
       ) : (
         <p className="build-panel__empty">סמנו נקודות על המפה כדי לבנות מסלול.</p>
       )}
