@@ -45,6 +45,8 @@ import {
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
+import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
+import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js";
 import {
   precomputeArcLength,
   pointAndBearingAtDistance,
@@ -84,7 +86,7 @@ import {
 } from "../navigation/pendingRidePlanStore.js";
 import { trackNavigationEvent } from "../navigation/navigationTelemetry.js";
 import { routeRestoreDecision } from "../navigation/routeRestorePolicy.js";
-import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
+import DevScenarioPicker from "../planner/DevScenarioPicker.jsx";
 import Icon from "../planner/Icon.jsx";
 import { palette } from "../planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
@@ -733,6 +735,9 @@ export default function BuildScreen({ navigation, route }) {
   const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
   const [pendingNavigationRouteId, setPendingNavigationRouteId] = useState(null);
   const [pendingExternalPlan, setPendingExternalPlan] = useState(null);
+  const [devPickerVisible, setDevPickerVisible] = useState(false);
+  const [devSpeed, setDevSpeed] = useState(4);
+  const [devScenarioRoute, setDevScenarioRoute] = useState(null);
   const setupRequestRef = useRef(0);
 
   const ridePlan = useMemo(
@@ -746,7 +751,10 @@ export default function BuildScreen({ navigation, route }) {
     [sourceNavigationRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
   );
 
-  const navigationRoute = confirmedRidePlan?.effectiveRoute || sourceNavigationRoute;
+  const navigationRoute =
+    (__DEV__ && devScenarioRoute) ||
+    confirmedRidePlan?.effectiveRoute ||
+    sourceNavigationRoute;
 
   const refreshRideSetupLocation = useCallback(async () => {
     const requestId = setupRequestRef.current + 1;
@@ -906,35 +914,41 @@ export default function BuildScreen({ navigation, route }) {
     isNavigatingRef.current = isNavigating;
   }, [isNavigating]);
 
-  // Dev-only: handlers for the simulate and record buttons. Each installs a new
-  // inner source on devInnerSourceRef synchronously then calls nav.start().
-  // The proxy (devSourceProxy) is already pointing at the hook's locationSource,
-  // so the hook picks up the new inner source on the very next requestPermissions
-  // / startWatch call without any re-render or useEffect delay.
   const handleDevSimulate = useCallback(() => {
     if (!__DEV__) return;
-    const routeLengthMeters =
-      navigationRoute?.geometry?.[navigationRoute.geometry.length - 1]
-        ?.distanceFromStartMeters ?? 0;
-    const fixes =
-      navigationRoute?.geometry?.length >= 2
-        ? generateTrack(navigationRoute, {
-            approachFrom: locationState.point ?? null,
-            jitterM: 8,
-            intervalMs: 500,
-            offRouteExcursion:
-              routeLengthMeters >= 150
-                ? {
-                    startMeters: routeLengthMeters * 0.4,
-                    lengthMeters: Math.min(200, routeLengthMeters * 0.35),
-                    offsetMeters: 120,
-                  }
-                : null,
-          })
-        : [];
-    devInnerSourceRef.current = createSimulateRideSource(fixes, { intervalMs: 500 });
-    nav.start();
-  }, [locationState.point, nav, navigationRoute]);
+    setDevPickerVisible(true);
+  }, []);
+
+  // Resolve the picked scenario through the same resolver the headless suite
+  // uses (identical fixes for the same seed), install the simulated source on
+  // the dev proxy, and start. Scenarios that carry their own route go through
+  // the pendingNavigationRouteId effect so nav.start() runs only after the
+  // session has re-bound to the scenario route.
+  const handleDevScenarioSelect = useCallback(
+    (scenario) => {
+      if (!__DEV__) return;
+      let resolved;
+      try {
+        resolved = resolveScenario(scenario, {
+          currentNavigationRoute: navigationRoute,
+        });
+      } catch (error) {
+        Alert.alert("Scenario error", String(error?.message || error));
+        return;
+      }
+      setDevPickerVisible(false);
+      devInnerSourceRef.current = createSimulateRideSource(resolved.fixes, {
+        intervalMs: Math.max(60, Math.round(1000 / devSpeed)),
+      });
+      if (resolved.navigationRoute.id !== navigationRoute?.id) {
+        setDevScenarioRoute(resolved.navigationRoute);
+        setPendingNavigationRouteId(resolved.navigationRoute.id);
+      } else {
+        void nav.start();
+      }
+    },
+    [devSpeed, nav, navigationRoute],
+  );
 
   const handleDevRecord = useCallback(() => {
     if (!__DEV__) return;
@@ -966,6 +980,17 @@ export default function BuildScreen({ navigation, route }) {
     };
     nav.start();
   }, [nav]);
+
+  // When a dev session ends, drop the scenario route override and the injected
+  // source so the next navigation uses the real route and real GPS. (Also
+  // fixes the pre-existing leak where a SIM source survived into later rides.)
+  useEffect(() => {
+    if (!__DEV__) return;
+    if (pendingNavigationRouteId) return;
+    if (navStatus !== "ended" && navStatus !== "error") return;
+    if (devScenarioRoute) setDevScenarioRoute(null);
+    devInnerSourceRef.current = null;
+  }, [devScenarioRoute, navStatus, pendingNavigationRouteId]);
 
   // Derive build-panel presentation options (matches the web's typed-cased variant).
   const mapPresentationActive = !isNavigating;
@@ -1934,7 +1959,7 @@ export default function BuildScreen({ navigation, route }) {
       />
       {/* Dev-only simulate + record controls. __DEV__ is false in production
           builds so this entire block is dead-code-eliminated by Metro. */}
-      {__DEV__ && !isNavigating && navigationRoute?.geometry?.length >= 2 ? (
+      {__DEV__ && !isNavigating ? (
         <View pointerEvents="box-none" style={styles.devControls}>
           <Pressable
             accessibilityLabel="Dev: simulate ride"
@@ -1943,14 +1968,26 @@ export default function BuildScreen({ navigation, route }) {
           >
             <Text style={styles.devButtonText}>SIM</Text>
           </Pressable>
-          <Pressable
-            accessibilityLabel="Dev: record GPS fixes"
-            onPress={handleDevRecord}
-            style={styles.devButton}
-          >
-            <Text style={styles.devButtonText}>REC</Text>
-          </Pressable>
+          {navigationRoute?.geometry?.length >= 2 ? (
+            <Pressable
+              accessibilityLabel="Dev: record GPS fixes"
+              onPress={handleDevRecord}
+              style={styles.devButton}
+            >
+              <Text style={styles.devButtonText}>REC</Text>
+            </Pressable>
+          ) : null}
         </View>
+      ) : null}
+      {__DEV__ ? (
+        <DevScenarioPicker
+          visible={devPickerVisible}
+          scenarios={devScenarios}
+          speed={devSpeed}
+          onSelectSpeed={setDevSpeed}
+          onSelect={handleDevScenarioSelect}
+          onClose={() => setDevPickerVisible(false)}
+        />
       ) : null}
       {isNavigating ? (
         <>
