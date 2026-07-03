@@ -3,6 +3,14 @@
 Date: 2026-07-03
 Status: approved design, pre-implementation
 
+> **Refinement (2026-07-03, planning):** scenario routes are **routeState
+> modules**, not runtime slugs. Catalog routes enter the library via
+> `scripts/nav-scenario-route-snapshot.mjs` (slug resolved at snapshot time
+> using the editor's node decode path), so both runners share one fast,
+> dependency-free route resolution. The separate `arrival` seed scenario is
+> folded into the other scenarios' `arrived` milestones. See
+> `implementation-plan.md`.
+
 ## Problem
 
 Field-testing turn-by-turn navigation is slow and unrepeatable: each change
