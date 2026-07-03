@@ -175,3 +175,17 @@ Roughly the field checklist, plus one recorded real ride:
   the same primitives.
 - Visual runner is dev-only UI; verified manually on the simulator (it shares
   scenario resolution and track generation with the tested headless path).
+
+## 8. Implementation notes
+
+Date: 2026-07-03
+
+- The shipped v1 registry folds arrival into other scenarios and does not include
+  a standalone `arrival` module.
+- A real catalog route scenario is included via
+  `scripts/nav-scenario-route-snapshot.mjs` and the committed
+  `sovev-beit-hillel` routeState snapshot. The script reads `public-data/`
+  but only writes scenario route modules.
+- The BuildScreen picker is `__DEV__`-gated at render/use time, but the scenario
+  registry is a static import and therefore still contributes to the production
+  bundle until a dev-only entry point is introduced.
