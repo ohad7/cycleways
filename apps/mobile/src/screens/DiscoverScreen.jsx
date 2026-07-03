@@ -60,7 +60,7 @@ export default function DiscoverScreen({ navigation }) {
 
   const openRoute = (entry) => {
     if (!entry?.slug) return;
-    navigation.navigate("RouteDetail", { slug: entry.slug });
+    navigation.navigate("RouteDetail", { slug: entry.slug, openId: Date.now() });
   };
 
   const planFromScratch = () => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
 import { executeDownloadGPX } from "@cycleways/core/platform/download.js";
@@ -12,7 +12,21 @@ import RouteDetailNative from "./RouteDetailNative.jsx";
 // map, POIs, elevation) when the web page can't load — e.g. offline.
 export default function RouteDetailScreen({ navigation, route }) {
   const slug = route?.params?.slug ?? null;
+  const openId = route?.params?.openId ?? "initial";
   const [webFailed, setWebFailed] = useState(false);
+  const [webGestureLocked, setWebGestureLocked] = useState(false);
+
+  useEffect(() => {
+    setWebFailed(false);
+    setWebGestureLocked(false);
+  }, [slug, openId]);
+
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !webGestureLocked });
+    return () => {
+      navigation.setOptions({ gestureEnabled: true });
+    };
+  }, [navigation, webGestureLocked]);
 
   const openInBuild = (token, { openRideSetup = false } = {}) => {
     if (!token) return;
@@ -53,11 +67,13 @@ export default function RouteDetailScreen({ navigation, route }) {
   return (
     <RouteDetailWeb
       slug={slug}
+      openId={openId}
       onBack={() => navigation.goBack()}
       onDownload={downloadGpx}
       onOpenEditor={openEditor}
       onNavigate={startNavigation}
       onError={() => setWebFailed(true)}
+      onGestureLockChange={setWebGestureLocked}
     />
   );
 }

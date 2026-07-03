@@ -107,7 +107,10 @@ export default function App() {
           // (the editor is reached later via the detail CTA, which passes the
           // route token explicitly and resets the href first).
           if (navigationRef.isReady() && result.resolved) {
-            navigationRef.navigate("RouteDetail", { slug: result.resolved.slug });
+            navigationRef.navigate("RouteDetail", {
+              slug: result.resolved.slug,
+              openId: Date.now(),
+            });
           }
         } else {
           // Cold start: launchTargetFromHref maps a catalog-route link to the

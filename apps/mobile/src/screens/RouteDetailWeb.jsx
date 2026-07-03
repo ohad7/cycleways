@@ -36,12 +36,14 @@ function editTokenFromUrl(url, base) {
 
 export default function RouteDetailWeb({
   slug,
+  openId,
   baseUrl,
   onBack,
   onDownload,
   onOpenEditor,
   onNavigate,
   onError,
+  onGestureLockChange,
 }) {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
@@ -64,10 +66,18 @@ export default function RouteDetailWeb({
 
   useEffect(() => clearReadyFallback, [clearReadyFallback]);
 
+  useEffect(
+    () => () => {
+      onGestureLockChange?.(false);
+    },
+    [onGestureLockChange],
+  );
+
   useEffect(() => {
     clearReadyFallback();
     setLoading(true);
-  }, [clearReadyFallback, resolvedBase, slug]);
+    onGestureLockChange?.(false);
+  }, [clearReadyFallback, onGestureLockChange, openId, resolvedBase, slug]);
 
   useEffect(() => {
     if (baseUrl) return undefined;
@@ -90,6 +100,7 @@ export default function RouteDetailWeb({
   }
 
   const uri = `${resolvedBase}/routes/${encodeURIComponent(slug)}?app=1`;
+  const webViewKey = `${slug}:${resolvedBase}:${openId ?? "initial"}`;
 
   const handleMessage = (event) => {
     let msg = null;
@@ -100,6 +111,9 @@ export default function RouteDetailWeb({
     }
     const token = msg?.route || null;
     if (msg?.type === "ready") finishLoading();
+    else if (msg?.type === "gesture-lock") {
+      onGestureLockChange?.(Boolean(msg?.locked));
+    }
     else if (msg?.type === "navigate") onNavigate?.(token, msg?.slug);
     else if (msg?.type === "edit") onOpenEditor?.(token, msg?.slug);
     else if (msg?.type === "download") onDownload?.(msg?.slug);
@@ -109,6 +123,7 @@ export default function RouteDetailWeb({
   return (
     <View style={[styles.fill, { paddingTop: insets.top }]}>
       <WebView
+        key={webViewKey}
         source={{ uri }}
         injectedJavaScriptBeforeContentLoaded={EMBED_BOOTSTRAP}
         onMessage={handleMessage}
