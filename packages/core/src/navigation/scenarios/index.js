@@ -10,6 +10,7 @@ import onRouteHappyPath from "./on-route-happy-path.js";
 import recordedRealRide from "./recorded-real-ride.js";
 import rerouteFailure from "./reroute-failure.js";
 import stopAndStand from "./stop-and-stand.js";
+import sovevBeitHillelRide from "./sovev-beit-hillel-ride.js";
 
 export const scenarios = [
   onRouteHappyPath,
@@ -19,6 +20,7 @@ export const scenarios = [
   gpsGap,
   stopAndStand,
   recordedRealRide,
+  sovevBeitHillelRide,
   currentRouteGeneric,
 ];
 
