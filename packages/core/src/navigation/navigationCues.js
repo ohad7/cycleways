@@ -15,6 +15,15 @@ const TURN_THRESHOLD_DEG = 40; // min heading change to emit a turn cue
 const MIN_TURN_SPACING_M = 20; // suppress turns closer than this (geometry noise)
 const PREVIEW_MAX_M = 120; // upper bound of the preview window before a cue
 const FINAL_MAX_M = 35; // within this, the cue is "final"
+const SELECTION_PRIORITY = {
+  turn: 0,
+  arrive: 0,
+  caution: 1,
+  hazard: 1,
+  poi: 1,
+  viewpoint: 1,
+  "enter-segment": 2,
+};
 
 // Signed turn angle in (-180, 180]: positive = right (clockwise), negative = left.
 function signedTurn(bearingIn, bearingOut) {
@@ -97,21 +106,28 @@ export function buildRouteCues(navigationRoute) {
 // still beyond the preview window.
 export function selectActiveCue(cues, progressMeters) {
   if (!Array.isArray(cues)) return null;
-  let nearest = null;
-  let nearestDistance = Infinity;
+  let selected = null;
+  let selectedDistance = Infinity;
+  let selectedPriority = Infinity;
   for (const cue of cues) {
     if (cue.type === "start") continue; // start is informational, not a maneuver
     const d = cue.distanceMeters - progressMeters;
     if (d < 0) continue; // already passed
-    if (d < nearestDistance) {
-      nearestDistance = d;
-      nearest = cue;
+    if (d > PREVIEW_MAX_M) continue;
+    const priority = SELECTION_PRIORITY[cue.type] ?? 1;
+    if (
+      priority < selectedPriority ||
+      (priority === selectedPriority && d < selectedDistance)
+    ) {
+      selectedPriority = priority;
+      selectedDistance = d;
+      selected = cue;
     }
   }
-  if (nearest === null || nearestDistance > PREVIEW_MAX_M) return null;
+  if (selected === null) return null;
   return {
-    cue: nearest,
-    distanceToCueMeters: nearestDistance,
-    phase: nearestDistance <= FINAL_MAX_M ? "final" : "preview",
+    cue: selected,
+    distanceToCueMeters: selectedDistance,
+    phase: selectedDistance <= FINAL_MAX_M ? "final" : "preview",
   };
 }

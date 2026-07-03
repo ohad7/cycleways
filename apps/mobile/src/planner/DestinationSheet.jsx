@@ -13,22 +13,14 @@ import { EXTERNAL_NAV_APPS } from "@cycleways/core/navigation/externalNav.js";
 import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
 
-// Approach destination chooser. A simple bottom sheet: pick the in-app target
-// (route start / nearest point / a point you tap on the map), or hand off to one
-// of the navigation apps actually installed on the phone (WhatsApp-style list,
-// detected via Linking.canOpenURL — iOS has no system nav-chooser).
+// External navigation chooser. Lists the navigation apps actually installed on
+// the phone (WhatsApp-style list, detected via Linking.canOpenURL — iOS has no
+// system nav-chooser).
 //
 // NOTE: native UI — verified visually in the simulator, not by the node suite.
 export default function DestinationSheet({
   visible,
-  appsOnly = false,
-  currentMode = "start",
-  canJoinNearest = false,
-  nearestSkipText = "",
   disclaimerText = "",
-  onPickStart,
-  onPickNearest,
-  onPickOnMap,
   onOpenApp,
   onClose,
 }) {
@@ -69,35 +61,8 @@ export default function DestinationSheet({
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + space.md }]}>
         <View style={styles.handle} />
-        <Text style={styles.title}>{appsOnly ? "פתיחה באפליקציית ניווט" : "לאן לנווט?"}</Text>
-
-        {!appsOnly ? (
-          <>
-            <DestRow
-              icon="flag-outline"
-              label="תחילת המסלול"
-              selected={currentMode === "start"}
-              onPress={onPickStart}
-            />
-            {canJoinNearest ? (
-              <DestRow
-                icon="enter-outline"
-                label="הצטרף לנקודה הקרובה"
-                sub={nearestSkipText}
-                selected={currentMode === "nearest"}
-                onPress={onPickNearest}
-              />
-            ) : null}
-            <DestRow
-              icon="location-outline"
-              label="בחר נקודה על המסלול"
-              selected={currentMode === "custom"}
-              onPress={onPickOnMap}
-            />
-          </>
-        ) : null}
-
-        <Text style={styles.section}>{appsOnly ? "בחרו אפליקציה" : "נווט באפליקציה אחרת"}</Text>
+        <Text style={styles.title}>פתיחה באפליקציית ניווט</Text>
+        <Text style={styles.section}>בחרו אפליקציה</Text>
         <ScrollView style={styles.apps}>
           {apps.map((app) => (
             <DestRow
@@ -117,7 +82,7 @@ export default function DestinationSheet({
   );
 }
 
-function DestRow({ icon, label, sub, selected = false, onPress }) {
+function DestRow({ icon, label, onPress }) {
   return (
     <Pressable
       style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]}
@@ -128,11 +93,7 @@ function DestRow({ icon, label, sub, selected = false, onPress }) {
       <Icon name={icon} color={palette.forest} size={22} />
       <View style={styles.rowText}>
         <Text style={styles.rowLabel}>{label}</Text>
-        {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
       </View>
-      {selected ? (
-        <Icon name="checkmark" color={palette.forest} size={20} />
-      ) : null}
     </Pressable>
   );
 }
@@ -192,12 +153,6 @@ const styles = StyleSheet.create({
     color: palette.ink,
     fontSize: 16,
     fontWeight: "700",
-    writingDirection: "rtl",
-    textAlign: "right",
-  },
-  rowSub: {
-    color: palette.muted,
-    fontSize: 13,
     writingDirection: "rtl",
     textAlign: "right",
   },

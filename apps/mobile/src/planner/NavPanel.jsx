@@ -30,7 +30,8 @@ export default function NavPanel({
   const approachArrowDeg =
     Number.isFinite(p.approachBearingDeg) && Number.isFinite(compassHeading)
       ? ((p.approachBearingDeg - compassHeading) % 360 + 360) % 360
-      : p.guidanceArrowDeg ?? 0;
+      : p.guidanceArrowDeg;
+  const showApproachArrow = Number.isFinite(approachArrowDeg);
 
   return (
     <View style={styles.root} pointerEvents="box-none">
@@ -55,13 +56,15 @@ export default function NavPanel({
               {p.approachHeading}
             </Text>
             <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
-              <View style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}>
-                <Icon
-                  name="navigate"
-                  color={p.offRoute ? palette.white : palette.forest}
-                  size={26}
-                />
-              </View>
+              {showApproachArrow ? (
+                <View style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}>
+                  <Icon
+                    name="navigate"
+                    color={p.offRoute ? palette.white : palette.forest}
+                    size={26}
+                  />
+                </View>
+              ) : null}
               <Text
                 style={[styles.cueText, p.offRoute ? styles.offText : null]}
                 numberOfLines={1}

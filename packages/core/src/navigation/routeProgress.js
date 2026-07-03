@@ -274,7 +274,14 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
         !seededSearchPending &&
         (best === null || best.crossTrackMeters > enterThreshold)
       ) {
-        best = findNearest(fix, null, null);
+        const globalBest = findNearest(fix, null, null);
+        const jumpMeters =
+          globalBest && Number.isFinite(lastProgressMeters)
+            ? Math.abs(globalBest.progressMeters - lastProgressMeters)
+            : 0;
+        if (!acquired || jumpMeters <= w * 4) {
+          best = globalBest;
+        }
       }
     }
     seededSearchPending = false;

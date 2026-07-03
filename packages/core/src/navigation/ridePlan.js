@@ -129,3 +129,15 @@ export function createRidePlan(sourceRoute, selection = {}, fix = null, now = Da
     effectiveRoute,
   };
 }
+
+export function canFastStartRidePlan(plan, selection = {}) {
+  if (!plan?.effectiveRoute?.canNavigate) return false;
+  if (plan.locationQuality !== "fresh") return false;
+  if (plan.approachTier !== "at") return false;
+  const direction = selection.direction || plan.direction;
+  const startMode = selection.startMode || plan.startMode;
+  if (direction !== "forward" || plan.direction !== "forward") return false;
+  if (startMode !== "official" || plan.startMode !== "official") return false;
+  if (selection.selectedPoint || plan.startProgressMeters !== 0) return false;
+  return true;
+}

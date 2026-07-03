@@ -109,12 +109,14 @@ export function useNavigationSession(navigationRoute, options = {}) {
       return undefined;
     }
     let cancelled = false;
+    const startedAt = Date.now();
     const compute = computeConnectorRef.current;
     if (typeof compute !== "function") {
       dispatch({
         type: NAV_ACTIONS.CONNECTOR_FAILED,
         requestId: request.requestId,
         reason: "no-router",
+        durationMs: Date.now() - startedAt,
       });
       return undefined;
     }
@@ -126,6 +128,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
             type: NAV_ACTIONS.CONNECTOR_FAILED,
             requestId: request.requestId,
             reason: result.failure,
+            durationMs: Date.now() - startedAt,
           });
           return;
         }
@@ -135,6 +138,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
           geometry: result?.geometry,
           distanceMeters: result?.distanceMeters,
           snappedEndpoints: result?.snappedEndpoints,
+          durationMs: Date.now() - startedAt,
         });
       })
       .catch(() => {
@@ -143,6 +147,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
             type: NAV_ACTIONS.CONNECTOR_FAILED,
             requestId: request.requestId,
             reason: "transient",
+            durationMs: Date.now() - startedAt,
           });
         }
       });
@@ -195,8 +200,22 @@ export function useNavigationSession(navigationRoute, options = {}) {
     dispatch({ type: NAV_ACTIONS.STOP });
   }, [dispatch, stopWatch]);
 
-  const pause = useCallback(() => dispatch({ type: NAV_ACTIONS.PAUSE }), [dispatch]);
-  const resume = useCallback(() => dispatch({ type: NAV_ACTIONS.RESUME }), [dispatch]);
+  const pause = useCallback(() => {
+    stopWatch();
+    return dispatch({ type: NAV_ACTIONS.PAUSE });
+  }, [dispatch, stopWatch]);
+  const resume = useCallback(() => {
+    const wasPaused = sessionRef.current?.getState()?.status === "paused";
+    const next = dispatch({ type: NAV_ACTIONS.RESUME });
+    if (
+      wasPaused &&
+      next &&
+      ["navigating", "approaching", "off-route"].includes(next.status)
+    ) {
+      beginWatch();
+    }
+    return next;
+  }, [beginWatch, dispatch]);
   const recenter = useCallback(
     () => dispatch({ type: NAV_ACTIONS.RECENTER }),
     [dispatch],
@@ -205,15 +224,6 @@ export function useNavigationSession(navigationRoute, options = {}) {
     () => dispatch({ type: NAV_ACTIONS.USER_PANNED }),
     [dispatch],
   );
-  const setApproachTarget = useCallback(
-    (choice) => dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice }),
-    [dispatch],
-  );
-  const setApproachCustomTarget = useCallback(
-    (point) => dispatch({ type: NAV_ACTIONS.SET_APPROACH_CUSTOM_TARGET, point }),
-    [dispatch],
-  );
-
   return {
     state,
     start,
@@ -222,8 +232,6 @@ export function useNavigationSession(navigationRoute, options = {}) {
     resume,
     recenter,
     userPanned,
-    setApproachTarget,
-    setApproachCustomTarget,
     hapticsEnabled,
     setHapticsEnabled,
   };

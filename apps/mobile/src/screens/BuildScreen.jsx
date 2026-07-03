@@ -38,7 +38,10 @@ import {
   routeShapeType,
 } from "@cycleways/core/data/catalog.js";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
-import { createRidePlan } from "@cycleways/core/navigation/ridePlan.js";
+import {
+  canFastStartRidePlan,
+  createRidePlan,
+} from "@cycleways/core/navigation/ridePlan.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
@@ -274,6 +277,12 @@ const ADD_GUARD_MS = 350;
 // Bottom camera padding used when the playback panel is docked at ~48% height,
 // so the route stays framed in the uncovered upper area during preview.
 const PLAYBACK_FIT_BOTTOM_PADDING = Math.round(Dimensions.get("window").height * 0.48) + 24;
+const DEFAULT_RIDE_SETUP_SELECTION = {
+  direction: "forward",
+  startMode: "official",
+  selectedPoint: null,
+};
+const ACQUIRED_BANNER_MS = 4000;
 
 export default function BuildScreen({ navigation, route }) {
   const cameraRef = useRef(null);
@@ -717,11 +726,7 @@ export default function BuildScreen({ navigation, route }) {
   );
 
   const [rideSetupVisible, setRideSetupVisible] = useState(false);
-  const [rideSetupSelection, setRideSetupSelection] = useState({
-    direction: "forward",
-    startMode: "official",
-    selectedPoint: null,
-  });
+  const [rideSetupSelection, setRideSetupSelection] = useState(DEFAULT_RIDE_SETUP_SELECTION);
   const [rideSetupFix, setRideSetupFix] = useState(null);
   const [rideSetupNow, setRideSetupNow] = useState(Date.now());
   const [rideSetupLocationStatus, setRideSetupLocationStatus] = useState("idle");
@@ -758,11 +763,7 @@ export default function BuildScreen({ navigation, route }) {
     (options = {}) => {
       const preserveSelection = options?.preserveSelection === true;
       if (!preserveSelection) {
-        setRideSetupSelection({
-          direction: "forward",
-          startMode: "official",
-          selectedPoint: null,
-        });
+        setRideSetupSelection(DEFAULT_RIDE_SETUP_SELECTION);
       }
       setPendingExternalPlan(null);
       setRideSetupVisible(true);
@@ -818,23 +819,56 @@ export default function BuildScreen({ navigation, route }) {
   );
   const displayedRouteGeometry = isNavigating ? activeRouteGeometry : routeGeometry;
 
-  const handleRideSetupConfirm = useCallback(() => {
-    if (!ridePlan?.effectiveRoute?.canNavigate) return;
-    setConfirmedRidePlan(ridePlan);
-    trackNavigationEvent("ride_setup_confirmed", {
-      direction: ridePlan.direction,
-      startMode: ridePlan.startMode,
-      approachTier: ridePlan.approachTier,
-    });
+  const confirmRidePlan = useCallback((plan, options = {}) => {
+    if (!plan?.effectiveRoute?.canNavigate) return;
+    setConfirmedRidePlan(plan);
+    trackNavigationEvent(
+      options.fastStart ? "ride_setup_fast_started" : "ride_setup_confirmed",
+      {
+        direction: plan.direction,
+        startMode: plan.startMode,
+        approachTier: plan.approachTier,
+      },
+    );
     setRideSetupVisible(false);
-    if (ridePlan.approachTier === "far" || ridePlan.approachTier === "unknown") {
-      setPendingExternalPlan(ridePlan);
+    if (plan.approachTier === "far" || plan.approachTier === "unknown") {
+      setPendingExternalPlan(plan);
       setDestSheetVisible(true);
       return;
     }
     void clearPendingRideIntent();
-    setPendingNavigationRouteId(ridePlan.effectiveRoute.id);
-  }, [ridePlan]);
+    setPendingNavigationRouteId(plan.effectiveRoute.id);
+  }, []);
+
+  const handleRideSetupConfirm = useCallback(() => {
+    confirmRidePlan(ridePlan);
+  }, [confirmRidePlan, ridePlan]);
+
+  const handleStartNavigation = useCallback(async () => {
+    const selection = DEFAULT_RIDE_SETUP_SELECTION;
+    const requestId = setupRequestRef.current + 1;
+    setupRequestRef.current = requestId;
+    setRideSetupSelection(selection);
+    setPendingExternalPlan(null);
+    setRideSetupLocationStatus("loading");
+    const result = await getRideSetupLocation();
+    if (setupRequestRef.current !== requestId) return;
+    const now = Date.now();
+    const fix = result.fix || null;
+    const plan = createRidePlan(sourceNavigationRoute, selection, fix, now);
+    setRideSetupNow(now);
+    setRideSetupFix(fix);
+    setRideSetupLocationStatus(result.status);
+    if (canFastStartRidePlan(plan, selection)) {
+      confirmRidePlan(plan, { fastStart: true });
+      return;
+    }
+    setRideSetupVisible(true);
+    trackNavigationEvent("ride_setup_opened", {
+      restored: false,
+      fastStartEligible: false,
+    });
+  }, [confirmRidePlan, sourceNavigationRoute]);
 
   const handleChangeRideSettings = useCallback(() => {
     const reopen = () => {
@@ -1024,16 +1058,58 @@ export default function BuildScreen({ navigation, route }) {
     () => getNavigationPresentation(nav.state ?? {}),
     [nav.state],
   );
-  const telemetryStateRef = useRef({ status: null, suggestionStatus: null });
+  const [showAcquiredBanner, setShowAcquiredBanner] = useState(false);
+  const acquiredBannerTimerRef = useRef(null);
+  useEffect(() => {
+    if (!nav.state?.justAcquired) return undefined;
+    setShowAcquiredBanner(true);
+    if (acquiredBannerTimerRef.current !== null) {
+      clearTimeout(acquiredBannerTimerRef.current);
+    }
+    acquiredBannerTimerRef.current = setTimeout(() => {
+      acquiredBannerTimerRef.current = null;
+      setShowAcquiredBanner(false);
+    }, ACQUIRED_BANNER_MS);
+    return undefined;
+  }, [nav.state?.justAcquired]);
+  useEffect(() => () => {
+    if (acquiredBannerTimerRef.current !== null) {
+      clearTimeout(acquiredBannerTimerRef.current);
+    }
+  }, []);
+  useEffect(() => {
+    if (["idle", "ended", "error"].includes(navStatus)) {
+      setShowAcquiredBanner(false);
+    }
+  }, [navStatus]);
+  const navPanelState = useMemo(
+    () =>
+      showAcquiredBanner && nav.state
+        ? { ...nav.state, justAcquired: true }
+        : nav.state,
+    [nav.state, showAcquiredBanner],
+  );
+  const telemetryStateRef = useRef({ status: null, connectorResultRequestId: null });
   useEffect(() => {
     const previous = telemetryStateRef.current;
-    const suggestionStatus = nav.state?.approach?.suggestionStatus ?? null;
+    const connectorResult = nav.state?.connectorResult ?? null;
     if (
-      suggestionStatus !== previous.suggestionStatus &&
-      (suggestionStatus === "ready" || suggestionStatus === "failed")
+      connectorResult?.requestId &&
+      connectorResult.requestId !== previous.connectorResultRequestId
     ) {
+      const durationMs = Number(connectorResult.durationMs);
       trackNavigationEvent("approach_connector_result", {
-        result: suggestionStatus,
+        result: connectorResult.result,
+        reason: connectorResult.reason || null,
+        targetMode: connectorResult.targetMode || null,
+        isRetry: connectorResult.isRetry === true,
+        attempt: Number.isFinite(Number(connectorResult.attempt))
+          ? Number(connectorResult.attempt)
+          : null,
+        durationMs: Number.isFinite(durationMs)
+          ? Math.round(durationMs / 250) * 250
+          : null,
+        distanceSource: navPresentation.approachDistanceSource,
       });
     }
     if (nav.state?.justAcquired && previous.status !== "navigating") {
@@ -1044,13 +1120,14 @@ export default function BuildScreen({ navigation, route }) {
     }
     telemetryStateRef.current = {
       status: navStatus,
-      suggestionStatus,
+      connectorResultRequestId: connectorResult?.requestId ?? null,
     };
   }, [
     confirmedRidePlan?.direction,
     confirmedRidePlan?.startMode,
-    nav.state?.approach?.suggestionStatus,
+    nav.state?.connectorResult,
     nav.state?.justAcquired,
+    navPresentation.approachDistanceSource,
     navStatus,
   ]);
   // The puck/camera always ride the main route now; the connector is only a
@@ -1094,9 +1171,11 @@ export default function BuildScreen({ navigation, route }) {
   ]);
 
   const externalBackgroundedRef = useRef(false);
+  const externalHandoffOpenedAtRef = useRef(null);
   useEffect(() => {
     if (!pendingExternalPlan) {
       externalBackgroundedRef.current = false;
+      externalHandoffOpenedAtRef.current = null;
       return undefined;
     }
     const subscription = AppState.addEventListener("change", (nextState) => {
@@ -1104,8 +1183,12 @@ export default function BuildScreen({ navigation, route }) {
         externalBackgroundedRef.current = true;
         return;
       }
+      const openedAt = externalHandoffOpenedAtRef.current;
       if (nextState === "active" && externalBackgroundedRef.current) {
         externalBackgroundedRef.current = false;
+        const shouldReopen = openedAt !== null && Date.now() - openedAt >= 1000;
+        externalHandoffOpenedAtRef.current = null;
+        if (!shouldReopen) return;
         setConfirmedRidePlan(null);
         openRideSetup({ preserveSelection: true });
       }
@@ -1137,7 +1220,9 @@ export default function BuildScreen({ navigation, route }) {
         approachTier: pendingExternalPlan?.approachTier || "near",
       });
       setDestSheetVisible(false);
+      externalHandoffOpenedAtRef.current = Date.now();
       Linking.openURL(url).catch(() => {
+        externalHandoffOpenedAtRef.current = null;
         setDestSheetVisible(true);
       });
     },
@@ -1870,7 +1955,7 @@ export default function BuildScreen({ navigation, route }) {
       {isNavigating ? (
         <>
           <NavPanel
-            sessionState={nav.state}
+            sessionState={navPanelState}
             hapticsEnabled={nav.hapticsEnabled}
             onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
             onRecenter={handleRecenter}
@@ -1897,7 +1982,7 @@ export default function BuildScreen({ navigation, route }) {
             onRedo={handleRedo}
             onSeekToFraction={seekToFraction}
             onShare={shareRoute}
-            onStartNavigation={openRideSetup}
+            onStartNavigation={handleStartNavigation}
             onUndo={handleUndo}
             playback={playback}
             presentation={routePresentation}
@@ -1932,7 +2017,6 @@ export default function BuildScreen({ navigation, route }) {
       />
       <DestinationSheet
         visible={destSheetVisible}
-        appsOnly
         disclaimerText={navPresentation.disclaimerText}
         onOpenApp={handleOpenExternalApp}
         onClose={() => {

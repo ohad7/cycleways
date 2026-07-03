@@ -59,7 +59,8 @@ function buildContextText(progress) {
 
 function relativeArrowDeg(progress) {
   if (!Number.isFinite(progress?.guidanceBearingDeg)) return null;
-  const course = Number.isFinite(progress?.courseDeg) ? progress.courseDeg : 0;
+  if (!Number.isFinite(progress?.courseDeg)) return null;
+  const course = progress.courseDeg;
   return ((progress.guidanceBearingDeg - course) % 360 + 360) % 360;
 }
 
@@ -83,10 +84,6 @@ export function bearingDeg(from, to) {
 
 function destinationLabelFor(mode) {
   switch (mode) {
-    case "nearest":
-      return "נקודה קרובה במסלול";
-    case "custom":
-      return "נקודה שנבחרה";
     case "rejoin":
       return "חזרה למסלול";
     default:
@@ -110,11 +107,18 @@ export function getNavigationPresentation(state = {}) {
   const approach = state.approach || null;
   const showApproach = status === "approaching" || offRoute;
   const distanceToRoute = Number(approach?.distanceToRouteMeters);
+  const suggestionDistance = Number(approach?.suggestionDistanceMeters);
+  const hasSuggestionGeometry =
+    Array.isArray(approach?.suggestionGeometry) &&
+    approach.suggestionGeometry.length >= 2;
+  const approachDisplayDistance =
+    hasSuggestionGeometry && Number.isFinite(suggestionDistance) && suggestionDistance > 0
+      ? suggestionDistance
+      : distanceToRoute;
   const tier =
     Number.isFinite(distanceToRoute) && distanceToRoute <= CONNECTOR_NEAR_RADIUS_M
       ? "near"
       : "far";
-  const choices = approach?.choices || null;
   const approachBearingDeg =
     showApproach && state.latestFix && approach?.target?.point
       ? bearingDeg(state.latestFix, approach.target.point)
@@ -159,19 +163,18 @@ export function getNavigationPresentation(state = {}) {
     approachBearingDeg,
     // Banner: "<destination> · <distance>" (e.g. "תחילת המסלול · 600 מ׳").
     destinationLabel: destinationLabelFor(approach?.target?.mode),
-    approachDistanceShort: Number.isFinite(distanceToRoute)
-      ? formatDistanceMeters(distanceToRoute)
+    approachDistanceShort: Number.isFinite(approachDisplayDistance)
+      ? formatDistanceMeters(approachDisplayDistance)
       : "",
+    approachDistanceSource:
+      hasSuggestionGeometry && Number.isFinite(suggestionDistance) && suggestionDistance > 0
+        ? "connector"
+        : "beeline",
     disclaimerText: "ניווט מחוץ לרשת CycleWays",
     approachHeading: status === "approaching" ? "בדרך למסלול" : "חזרה למסלול",
     approachSupportText:
       status === "approaching" ? "הניווט במסלול יתחיל כשתגיע" : "",
     externalNavTarget: approach?.target?.point ?? null,
-    // Options sheet: offer "join nearest" only when it skips a meaningful span.
-    canJoinNearest: Boolean(choices?.nearest && choices.skipMeters > 50),
-    nearestSkipText: choices?.nearest
-      ? `דילוג ~${formatDistanceMeters(choices.skipMeters)}`
-      : "",
     showGuidance: status === "approaching" || offRoute,
     guidanceText: Number.isFinite(state.progress?.guidanceDistanceMeters)
       ? `${status === "approaching" ? "לכיוון תחילת המסלול" : "חזרה למסלול"} · ${formatDistanceMeters(state.progress.guidanceDistanceMeters)}`

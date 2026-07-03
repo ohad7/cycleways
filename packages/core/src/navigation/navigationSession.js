@@ -7,7 +7,6 @@
 import { getDistance } from "../utils/distance.js";
 import {
   approachTargetChoices,
-  projectOntoRoute,
   selectConnectorTarget,
 } from "./connectorTargeting.js";
 import { buildRouteCues, selectActiveCue } from "./navigationCues.js";
@@ -21,8 +20,6 @@ export const NAV_ACTIONS = {
   LOCATION: "LOCATION",
   CONNECTOR_READY: "CONNECTOR_READY",
   CONNECTOR_FAILED: "CONNECTOR_FAILED",
-  SET_APPROACH_TARGET: "SET_APPROACH_TARGET",
-  SET_APPROACH_CUSTOM_TARGET: "SET_APPROACH_CUSTOM_TARGET",
   PAUSE: "PAUSE",
   RESUME: "RESUME",
   RECENTER: "RECENTER",
@@ -40,6 +37,7 @@ function emptyApproach() {
     choices: null,
     suggestionGeometry: null,
     suggestionStatus: "idle",
+    suggestionDistanceMeters: null,
     distanceToRouteMeters: null,
   };
 }
@@ -56,6 +54,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
   let wasOffRoute = false;
   let lastConfirmedProgressMeters = 0;
   let lastRequestPos = null;
+  let connectorRequestAttempt = 0;
   let requestSeq = 0;
   let prePauseStatus = "navigating";
 
@@ -72,6 +71,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
     latestFix: null,
     approach: emptyApproach(),
     routeRequest: null,
+    connectorResult: null,
     error: null,
     justAcquired: false,
   };
@@ -90,28 +90,36 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
   function suggestionRequest(fix, target) {
     requestSeq += 1;
+    connectorRequestAttempt += 1;
     lastRequestPos = fixPoint(fix);
     return {
       requestId: requestSeq,
       from: fixPoint(fix),
       to: target.point,
+      targetMode: target.mode || null,
+      attempt: connectorRequestAttempt,
+      isRetry: connectorRequestAttempt > 1,
     };
   }
 
-  // Build the approach patch for an explicit target change (start / nearest /
-  // custom). Re-arms the request gate so the next LOCATION recomputes, but KEEPS
-  // the current suggestion visible until the replacement is ready (no blink).
-  // The stale routeRequest is harmless: CONNECTOR_READY/CONNECTOR_FAILED require
-  // suggestionStatus === "requesting", which we reset to "idle" here.
-  function retargetApproach(picked, mode) {
-    lastRequestPos = null;
+  function canRequestSuggestion(fix, { allowReadyRefresh = false } = {}) {
+    const status = state.approach.suggestionStatus;
+    if (status === "requesting") return false;
+    if (status === "ready" && !allowReadyRefresh) return false;
+    return shouldRequest(fix);
+  }
+
+  function failedSuggestionPatch() {
+    const keepGeometry =
+      Array.isArray(state.approach.suggestionGeometry) &&
+      state.approach.suggestionGeometry.length >= 2;
     return {
       ...state.approach,
-      target: { ...picked, mode },
-      suggestionStatus: "idle",
-      distanceToRouteMeters: state.latestFix
-        ? getDistance(state.latestFix, picked.point)
-        : state.approach.distanceToRouteMeters,
+      suggestionStatus: "failed",
+      suggestionGeometry: keepGeometry ? state.approach.suggestionGeometry : null,
+      suggestionDistanceMeters: keepGeometry
+        ? state.approach.suggestionDistanceMeters
+        : null,
     };
   }
 
@@ -153,12 +161,14 @@ export function createNavigationSession(navigationRoute, options = {}) {
         wasOffRoute = false;
         lastConfirmedProgressMeters = 0;
         lastRequestPos = null;
+        connectorRequestAttempt = 0;
         return set({
           status: "navigating",
           backgroundLocation: action.background === true,
           foregroundOnly: action.background !== true,
           approach: emptyApproach(),
           routeRequest: null,
+          connectorResult: null,
           error: null,
           justAcquired: false,
         });
@@ -188,8 +198,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           };
           if (
             target &&
-            state.approach.suggestionStatus === "idle" &&
-            shouldRequest(action.fix)
+            canRequestSuggestion(action.fix)
           ) {
             return set({
               status: "approaching",
@@ -204,6 +213,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
                 // Keep the prior suggestion visible until the new one is ready.
               },
               routeRequest: suggestionRequest(action.fix, target),
+              connectorResult: null,
             });
           }
           return set({
@@ -225,8 +235,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           const firstOffRoute = !wasOffRoute;
           wasOffRoute = true;
           if (
-            state.approach.suggestionStatus === "idle" &&
-            shouldRequest(action.fix)
+            canRequestSuggestion(action.fix, { allowReadyRefresh: true })
           ) {
             const rejoin = selectConnectorTarget(navigationRoute, action.fix, {
               mode: "rejoin",
@@ -249,6 +258,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
                   // Keep the prior suggestion visible until the new one is ready.
                 },
                 routeRequest: suggestionRequest(action.fix, target),
+                connectorResult: null,
               });
             }
           }
@@ -277,6 +287,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
               state.progress?.hasAcquiredRoute !== true),
         );
         if (acquiredApproach) lastRequestPos = null;
+        if (acquiredApproach) connectorRequestAttempt = 0;
         const activeCue = selectActiveCue(mainCues, mainProgress.progressMeters);
         const cueEvent = enteredEffectiveRoute
           ? { kind: "acquired" }
@@ -291,6 +302,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           justAcquired: enteredEffectiveRoute,
           approach: acquiredApproach ? emptyApproach() : state.approach,
           routeRequest: null,
+          connectorResult: null,
         });
       }
 
@@ -305,18 +317,47 @@ export function createNavigationSession(navigationRoute, options = {}) {
         const geometry = buildNavigationGeometry(action.geometry);
         if (geometry.length < 2) {
           return set({
-            approach: {
-              ...state.approach,
-              suggestionStatus: "failed",
-              suggestionGeometry: null,
+            approach: failedSuggestionPatch(),
+            routeRequest: null,
+            connectorResult: {
+              requestId: action.requestId,
+              result: "failed",
+              reason: "invalid-geometry",
+              attempt: state.routeRequest?.attempt ?? null,
+              isRetry: state.routeRequest?.isRetry === true,
+              targetMode: state.routeRequest?.targetMode ?? null,
+              durationMs: Number.isFinite(Number(action.durationMs))
+                ? Number(action.durationMs)
+                : null,
             },
           });
         }
+        const distanceMeters = Number(action.distanceMeters);
         return set({
           approach: {
             ...state.approach,
             suggestionStatus: "ready",
             suggestionGeometry: geometry,
+            suggestionDistanceMeters:
+              Number.isFinite(distanceMeters) && distanceMeters > 0
+                ? distanceMeters
+                : null,
+          },
+          routeRequest: null,
+          connectorResult: {
+            requestId: action.requestId,
+            result: "ready",
+            reason: null,
+            attempt: state.routeRequest?.attempt ?? null,
+            isRetry: state.routeRequest?.isRetry === true,
+            targetMode: state.routeRequest?.targetMode ?? null,
+            durationMs: Number.isFinite(Number(action.durationMs))
+              ? Number(action.durationMs)
+              : null,
+            distanceMeters:
+              Number.isFinite(distanceMeters) && distanceMeters > 0
+                ? distanceMeters
+                : null,
           },
         });
       }
@@ -330,37 +371,20 @@ export function createNavigationSession(navigationRoute, options = {}) {
           return state;
         }
         return set({
-          approach: {
-            ...state.approach,
-            suggestionStatus: "failed",
-            suggestionGeometry: null,
+          approach: failedSuggestionPatch(),
+          routeRequest: null,
+          connectorResult: {
+            requestId: action.requestId,
+            result: "failed",
+            reason: action.reason || "unknown",
+            attempt: state.routeRequest?.attempt ?? null,
+            isRetry: state.routeRequest?.isRetry === true,
+            targetMode: state.routeRequest?.targetMode ?? null,
+            durationMs: Number.isFinite(Number(action.durationMs))
+              ? Number(action.durationMs)
+              : null,
           },
         });
-
-      case NAV_ACTIONS.SET_APPROACH_TARGET: {
-        const choices = state.approach.choices;
-        if (!choices) return state;
-        const picked =
-          action.choice === "nearest" ? choices.nearest : choices.start;
-        if (!picked) return state;
-        return set({
-          approach: retargetApproach(picked, action.choice === "nearest" ? "nearest" : "start"),
-        });
-      }
-
-      case NAV_ACTIONS.SET_APPROACH_CUSTOM_TARGET: {
-        const geometry = Array.isArray(navigationRoute?.geometry)
-          ? navigationRoute.geometry
-          : [];
-        const projection = projectOntoRoute(geometry, action.point);
-        if (!projection) return state;
-        return set({
-          approach: retargetApproach(
-            { point: projection.point, mainProgressMeters: projection.progressMeters },
-            "custom",
-          ),
-        });
-      }
 
       case NAV_ACTIONS.PERMISSION_DENIED:
         return set({
@@ -386,20 +410,24 @@ export function createNavigationSession(navigationRoute, options = {}) {
       case NAV_ACTIONS.STOP:
         requestSeq += 1;
         lastRequestPos = null;
+        connectorRequestAttempt = 0;
         return set({
           status: "ended",
           approach: emptyApproach(),
           routeRequest: null,
+          connectorResult: null,
           justAcquired: false,
         });
 
       case NAV_ACTIONS.ERROR:
         requestSeq += 1;
         lastRequestPos = null;
+        connectorRequestAttempt = 0;
         return set({
           status: "error",
           approach: emptyApproach(),
           routeRequest: null,
+          connectorResult: null,
           error: action.message || "navigation-error",
           justAcquired: false,
         });

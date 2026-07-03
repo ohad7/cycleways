@@ -122,6 +122,20 @@ function routeFrom(geometry, extra = {}) {
   assert.equal(selectActiveCue(cues, 0), null, "start cue is not an active maneuver");
 }
 
+// --- selectActiveCue: maneuvers outrank informational cues -----------------
+{
+  const cues = [
+    { type: "caution", distanceMeters: 450, dataPointId: "hazard" },
+    { type: "turn", distanceMeters: 470, direction: "left" },
+  ];
+  const active = selectActiveCue(cues, 400);
+  assert.equal(active.cue.type, "turn", "upcoming maneuver masks nearer info cue");
+  assert.equal(active.distanceToCueMeters, 70);
+
+  const hazardOnly = selectActiveCue([cues[0]], 400);
+  assert.equal(hazardOnly.cue.type, "caution", "hazard-only case still selects hazard");
+}
+
 // --- Short-segment suppression: close turns do not spam -------------------
 {
   // Two ~90 deg turns ~11 m apart (below the min-spacing) -> only one cue.

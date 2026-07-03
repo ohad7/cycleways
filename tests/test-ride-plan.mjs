@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { buildNavigationGeometry } from "../packages/core/src/navigation/navigationRoute.js";
 import {
   buildRidePlanCandidates,
+  canFastStartRidePlan,
   classifyApproach,
   createRidePlan,
   setupLocationQuality,
@@ -69,5 +70,34 @@ const oneWay = createRidePlan(
 );
 assert.equal(oneWay.reverseAllowed, false);
 assert.equal(oneWay.direction, "forward");
+
+const atStartFix = { lat: 32, lng: 35, accuracy: 5, timestamp: now };
+const atStart = createRidePlan(
+  route,
+  { direction: "forward", startMode: "official", selectedPoint: null },
+  atStartFix,
+  now,
+);
+assert.equal(atStart.approachTier, "at");
+assert.equal(
+  canFastStartRidePlan(atStart, { direction: "forward", startMode: "official", selectedPoint: null }),
+  true,
+  "fresh at-route default plan can fast-start",
+);
+assert.equal(
+  canFastStartRidePlan(nearest, { direction: "forward", startMode: "nearest", selectedPoint: null }),
+  false,
+  "alternate start does not fast-start",
+);
+assert.equal(
+  canFastStartRidePlan(reverse, { direction: "reverse", startMode: "official", selectedPoint: null }),
+  false,
+  "reverse selection does not fast-start",
+);
+assert.equal(
+  canFastStartRidePlan(staleNearest, { direction: "forward", startMode: "official", selectedPoint: null }),
+  false,
+  "stale location does not fast-start",
+);
 
 console.log("test-ride-plan: OK");

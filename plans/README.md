@@ -7,7 +7,7 @@ This directory contains planning documents for larger project changes before imp
 
 Current plans:
 
-- `turn-by-turn-navigation-review/` - review findings and prioritized improvement proposals for the iOS turn-by-turn navigation feature (approach UX friction, connector-retry bug, cue quality, and a small-fixes batch), written for other agents to verify and pick up.
+- `turn-by-turn-navigation-review/` - review findings and implementation plan for iOS turn-by-turn navigation improvements (connector retry, approach fast path, cue quality, native lifecycle polish, and progress-jump follow-ups), written for other agents to verify and pick up.
 - `navigation-ride-setup/` - design and implementation plan for an explicit pre-ride setup flow (direction, start point, and consequences), clear near/far approach states, preservation of the nearby suggested connector, alternate-start handling for linear and circular routes, and reverse-route navigation without mutating the saved route.
 - `ios-featured-web-embed/` - design and implementation plan for warming the iOS featured-route local server and making embedded web pages use native loading feedback without website splash, analytics, navigation, or breadcrumbs.
 - `route-playback-dock/` - design for a usable three-up route-playback view (map + player + full interactive elevation graph at a partial panel height, with bidirectional elevation⇄player⇄route sync, on mobile web and iOS) plus web-parity `progress-head-pulse` animation on iOS and removal of the iOS auto-firing direction animation.

@@ -205,6 +205,51 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
   );
 }
 
+// --- Out-and-back: off-route drift near another leg must not jump progress ---
+{
+  const outAndBack = navigationRouteFromRouteState(
+    {
+      points: [
+        { id: "start", lat: 33.1, lng: 35.6 },
+        { id: "end", lat: 33.101, lng: 35.6 },
+      ],
+      selectedSegments: [],
+      geometry: [
+        { lat: 33.1, lng: 35.6 },
+        { lat: 33.1, lng: 35.61 },
+        { lat: 33.101, lng: 35.61 },
+        { lat: 33.101, lng: 35.6 },
+      ],
+      distance: 1975,
+    },
+    { param: "wide-out-and-back-token" },
+  );
+
+  const tracker = createRouteProgressTracker(outAndBack);
+  const f = (lat, lng, timestamp) => ({
+    lat,
+    lng,
+    accuracy: 5,
+    speed: 3,
+    timestamp,
+  });
+
+  tracker.update(f(33.1, 35.6, 1000));
+  tracker.update(f(33.1, 35.61, 2000));
+  tracker.update(f(33.101, 35.61, 3000));
+  const beforeDrift = tracker.update(f(33.101, 35.602, 4000));
+  assert.ok(beforeDrift.progressMeters > 1700, "cursor is on the return leg");
+
+  // This fix is near the outbound leg but far from the return leg window. A
+  // global nearest search would snap progress back near the start.
+  const drift = tracker.update(f(33.1001, 35.601, 5000));
+  assert.ok(
+    drift.progressMeters > 1600,
+    `off-route drift stays near return-leg progress (got ${drift.progressMeters.toFixed(0)} m)`,
+  );
+  assert.ok(drift.crossTrackMeters > 80, "drift is measured against the local return leg");
+}
+
 // --- Next-geometry bearing + distance to route start ----------------------
 {
   const tracker = createRouteProgressTracker(straightRoute());

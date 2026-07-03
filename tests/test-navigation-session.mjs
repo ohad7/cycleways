@@ -249,13 +249,8 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(st.status, "approaching", "READY never changes status");
   assert.equal(st.approach.suggestionStatus, "ready");
   assert.ok(st.approach.suggestionGeometry.length >= 2);
-
-  s.dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice: "nearest" });
-  st = s.getState();
-  assert.equal(st.approach.target.mode, "nearest");
-  assert.equal(st.approach.suggestionStatus, "idle");
-  // The prior suggestion stays visible across the target change (no blink).
-  assert.ok(st.approach.suggestionGeometry.length >= 2);
+  assert.equal(st.approach.suggestionDistanceMeters, 800);
+  assert.equal(st.routeRequest, null, "completed connector request is cleared");
 
   s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: onRouteFix });
   st = s.getState();
@@ -292,6 +287,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(ready.status, "approaching");
   assert.equal(ready.approach.suggestionStatus, "failed");
   assert.equal(ready.approach.suggestionGeometry, null);
+  assert.equal(ready.routeRequest, null);
 }
 
 // --- CONNECTOR_FAILED keeps status approaching; direct line survives -------
@@ -306,6 +302,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(failed.status, "approaching");
   assert.equal(failed.approach.suggestionStatus, "failed");
   assert.equal(failed.approach.suggestionGeometry, null);
+  assert.equal(failed.routeRequest, null);
   assert.equal(
     failed.approach.distanceToRouteMeters,
     before,
@@ -341,7 +338,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.ok(session.getState().approach.target, "approach slot persists across pause");
 }
 
-// --- SET_APPROACH_TARGET forces a fresh request next LOCATION --------------
+// --- CONNECTOR_FAILED retries only after meaningful movement ---------------
 {
   const { session, requested } = approachingSession();
   session.dispatch({
@@ -349,30 +346,21 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
     requestId: requested.routeRequest.requestId,
     reason: "transient",
   });
-  session.dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice: "nearest" });
   let st = session.getState();
-  assert.equal(st.approach.suggestionStatus, "idle");
+  assert.equal(st.approach.suggestionStatus, "failed");
   assert.equal(st.approach.suggestionGeometry, null);
+  const belowGate = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { ...requested.latestFix, lat: 33.104, timestamp: 5000 },
+  });
+  assert.equal(belowGate.approach.suggestionStatus, "failed");
+  assert.equal(belowGate.routeRequest, null);
   const refetch = session.dispatch({
     type: NAV_ACTIONS.LOCATION,
-    fix: { ...requested.latestFix, timestamp: 5000 },
+    fix: { ...requested.latestFix, lat: 33.103, timestamp: 8000 },
   });
   assert.equal(refetch.approach.suggestionStatus, "requesting");
   assert.ok(refetch.routeRequest.requestId > requested.routeRequest.requestId);
-}
-
-// --- SET_APPROACH_CUSTOM_TARGET snaps a tapped point onto the route ---------
-{
-  const { session } = approachingSession();
-  // A point off to the side of the route snaps onto the nearest route vertex.
-  const target = session.getState().route.geometry[1];
-  const st = session.dispatch({
-    type: NAV_ACTIONS.SET_APPROACH_CUSTOM_TARGET,
-    point: { lat: target.lat + 0.0005, lng: target.lng },
-  });
-  assert.equal(st.approach.target.mode, "custom");
-  assert.ok(Number.isFinite(st.approach.target.mainProgressMeters));
-  assert.equal(st.approach.suggestionStatus, "idle");
 }
 
 // --- STOP clears the approach slot and route request -----------------------
@@ -405,9 +393,31 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(confirmed.approach.target.mode, "rejoin", "off-route drives a rejoin suggestion");
   assert.equal(confirmed.approach.suggestionStatus, "requesting");
   assert.ok(confirmed.routeRequest && confirmed.routeRequest.to);
+  const firstRequest = confirmed.routeRequest;
+  const ready = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: firstRequest.requestId,
+    geometry: [firstRequest.from, firstRequest.to],
+    distanceMeters: 350,
+  });
+  assert.equal(ready.approach.suggestionStatus, "ready");
+  assert.ok(ready.approach.suggestionGeometry.length >= 2);
+  assert.equal(ready.routeRequest, null);
   const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
   assert.equal(stillOff.status, "off-route");
   assert.equal(stillOff.cueEvent, null, "off-route event not repeated while still off");
+  assert.equal(stillOff.routeRequest, null);
+  const movedOff = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.103, lng: 35.605, accuracy: 5, speed: 3, timestamp: 11000 },
+  });
+  assert.equal(movedOff.status, "off-route");
+  assert.equal(movedOff.approach.suggestionStatus, "requesting");
+  assert.ok(movedOff.routeRequest.requestId > firstRequest.requestId);
+  assert.ok(
+    movedOff.approach.suggestionGeometry.length >= 2,
+    "old rejoin suggestion stays visible while refreshing",
+  );
 }
 
 // --- no state is ever "on-connector" ---------------------------------------

@@ -209,14 +209,10 @@ import { fileURLToPath } from "node:url";
     requestId: first.requestId,
     reason: "transient",
   });
-  // Re-target to reset the request gate, then a fresh fix issues a new request.
-  replay.session.dispatch({
-    type: NAV_ACTIONS.SET_APPROACH_TARGET,
-    choice: "nearest",
-  });
+  // Move far enough to satisfy the retry gate, then a fresh fix issues a new request.
   replay.session.dispatch({
     type: NAV_ACTIONS.LOCATION,
-    fix: { ...firstFix, timestamp: 5000 },
+    fix: { ...firstFix, lat: 33.103, timestamp: 5000 },
   });
   const second = replay.session.getState().routeRequest;
   assert.ok(second.requestId > first.requestId);

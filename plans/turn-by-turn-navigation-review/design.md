@@ -1,7 +1,7 @@
 # iOS Turn-by-Turn Navigation — Review Findings and Improvement Proposals
 
 **Date:** 2026-07-03
-**Status:** review complete; proposals awaiting discussion/prioritization
+**Status:** review complete; feedback incorporated; implementation plan ready
 **Reviews:** `plans/rn-turn-by-turn-navigation/`, `plans/turn-by-turn-improvements/`,
 `plans/turn-by-turn-rejoin-routing/`, `plans/approach-destination-picker/`,
 `plans/navigation-ride-setup/`, and the shipped implementation in
@@ -14,6 +14,9 @@ A full design + implementation review of the iPhone turn-by-turn navigation
 feature, written so other agents can verify the findings, challenge the
 assessments, and pick up the proposed work items. Each finding cites the file
 and mechanism so it can be re-verified against the code.
+
+The ordered implementation sequence and validation expectations live in
+`implementation-plan.md`.
 
 ## Overall assessment
 
@@ -40,6 +43,35 @@ The two weakest areas:
    trails produce decision-free "turn" cues; junction-vs-bend classification is
    deferred in both design docs but is now the highest-value guidance
    improvement.
+
+## Accepted reviewer amendments
+
+Follow-up review on 2026-07-03 agreed with the findings and accepted these
+modifications to the proposed work:
+
+- **Junction-vs-bend is a data-contract change, not just cue logic.**
+  `segmentSpans` carry useful `cwSegmentId`/`routeClass` metadata but do not
+  currently carry graph-node degree, competing branch bearings, or incoming /
+  outgoing edge identity. The route manager has topology and traversal context,
+  but `NavigationRoute` only receives merged spans. P3 therefore needs a short
+  dedicated design pass before implementation.
+- **The at-route fast path must be conservative.** One-tap start should only
+  apply when the setup location is fresh, `approachTier === "at"`, the route is
+  navigable, and the current/default selection is unambiguous. Direction,
+  custom-start, or stale-location cases keep the full setup sheet.
+- **The polish batch should be split by test surface.** Core/presentation fixes
+  (cue priority, stopped arrow, connector distance, legacy target-label cleanup)
+  are separate from native lifecycle/device fixes (acquired banner timer, GPS
+  watch pause/resume, external-handoff background heuristic).
+- **Connector retry should add observability.** Current telemetry records only
+  final `ready`/`failed` connector result, and the sink is optional/no-op by
+  default. Retry count, failure reason, latency, and beeline-vs-connector
+  distance quality should be emitted as privacy-safe coarse fields.
+- **F10 is legacy cleanup.** The non-app target picker remains in
+  `DestinationSheet`, but `BuildScreen` now opens it with `appsOnly`; the
+  session retarget actions are exposed by the hook but appear dormant in
+  production UI. Treat this as cleanup unless a new mid-approach retargeting UX
+  is explicitly designed.
 
 ## Findings
 
@@ -87,8 +119,11 @@ split across small deltas emits nothing. Riders quickly learn the cues carry no
 information, which poisons trust at real junctions. Both
 `rn-turn-by-turn-navigation` (D4) and `turn-by-turn-improvements` explicitly
 deferred junction-vs-bend classification; the segment spans already retain
-`cwSegmentId`/`routeClass` to enable it, and the network graph can supply
-vertex degree.
+`cwSegmentId`/`routeClass` to enable part of it, and the network graph can
+supply vertex degree. However, that topology is not currently propagated onto
+`NavigationRoute`; merged spans are necessary but not sufficient. A proper fix
+should define maneuver metadata at the route-manager / snapshot boundary before
+changing `navigationCues.js`.
 
 ### F4. Cue selection is nearest-first, so informational cues mask maneuvers
 
@@ -154,11 +189,13 @@ more honest number to display.
 Effective routes make the chosen start progress-zero, so during `approaching`
 the tracker's guidance always points at `geometry[0]` and `guidanceText`
 hardcodes "לכיוון תחילת המסלול". Yet `destinationLabelFor` still supports
-`nearest`/`custom` labels from the superseded pre-ride destination-picker flow
-(`SET_APPROACH_TARGET`/`SET_APPROACH_CUSTOM_TARGET` are still dispatchable
-while approaching). Either these session actions are still a supported mid-
-approach affordance (then `guidanceText` is wrong for them) or they are dead
-weight to remove. Decide and align.
+`nearest`/`custom` labels from the superseded pre-ride destination-picker flow,
+and `SET_APPROACH_TARGET`/`SET_APPROACH_CUSTOM_TARGET` are still dispatchable
+while approaching. The non-app target picker also remains in `DestinationSheet`,
+but `BuildScreen` now opens that sheet with `appsOnly`, so the production UI
+appears to have moved target selection into `RideSetupSheet`. Either restore a
+designed mid-approach retargeting affordance and align the guidance copy, or
+remove the dormant session/hook/presentation surface.
 
 ### F11. `BuildScreen.jsx` is 3,000 lines (structure)
 
@@ -203,27 +240,31 @@ significant-location-change guard is the likely fix.
 
 | # | Item | Findings | Size | Kind |
 |---|------|----------|------|------|
-| P1 | Connector retry: `failed` (and stale `ready` rejoin targets) become eligible for recompute behind the existing 200 m movement gate | F1 | S | Bug fix, node-testable |
-| P2 | One-tap start when `approachTier === "at"`: confirm-first sheet demoted to a "change settings" affordance; device-ride the flow (device acceptance is still pending anyway) | F2, F12 | M | UX, native + device |
-| P3 | Junction-vs-bend cue classification using segment-graph degree / span metadata; develop against replay fixtures | F3 | L | Guidance quality, core |
-| P4 | Small-fixes batch: maneuver-priority cue selection; 3–5 s acquired banner; hide arrow when stopped w/o compass; stop watch on pause; connector distance in readout; presentation target-label cleanup | F4–F6, F8–F10 | S–M | Polish, mostly core |
-| P5 | Out-and-back replay fixture pinning the off-route global-search progress jump; then decide fix (e.g., clamp fallback search to a widened window while off-route) | F7 | M | Correctness, core |
-| P6 | Voice cues (TTS) behind the existing cue-event interface — the step from "glanceable route follower" to hands-free navigation; pairs with the deferred background-location decision | — | L | Feature, separate design |
-| P7 | Extract `useRideSetup` / smoothing / handoff hooks from `BuildScreen.jsx` | F11 | M | Hygiene |
+| P1 | Connector retry + connector distance + telemetry: `failed` and stale `ready` rejoin targets become eligible for recompute behind the existing 200 m movement gate; preserve old suggestion until replacement; record privacy-safe retry/result fields | F1, F9 | S | Bug fix, node-testable |
+| P2 | Core/presentation polish: maneuver-priority cue selection, hide approach arrow when stopped without compass/course, and remove or align dormant mid-approach target-label surface | F4, F5, F10 | S | Core/UI polish, mostly node-testable |
+| P3 | Native lifecycle polish: 3–5 s acquired banner, stop/restart GPS watch on pause/resume, and device-check the external-handoff background heuristic | F6, F8, F12 | M | Native + device |
+| P4 | Conservative one-tap start when `approachTier === "at"` with fresh location and unambiguous default selection; full setup remains behind "change settings" and for all ambiguous cases | F2 | M | UX, native + device |
+| P5 | Junction cue data-contract design: define route-level maneuver metadata from traversal topology before changing cue generation | F3 | M | Design + routing contract |
+| P6 | Junction-vs-bend cue implementation using the new maneuver metadata; develop against replay fixtures | F3 | L | Guidance quality, core |
+| P7 | Out-and-back replay fixture pinning the off-route global-search progress jump; then decide fix (e.g., clamp fallback search to a widened window while off-route) | F7 | M | Correctness, core |
+| P8 | Voice cues (TTS) behind the existing cue-event interface — the step from "glanceable route follower" to hands-free navigation; pairs with the deferred background-location decision | — | L | Feature, separate design |
+| P9 | Extract `useRideSetup` / smoothing / handoff hooks from `BuildScreen.jsx` | F11 | M | Hygiene |
 
-P1 and P4 are safe immediate wins with existing test harnesses. P2 needs a
-product decision (how much of the setup sheet survives for the at-route case).
-P3 and P6 each deserve their own design doc under `plans/`.
+P1 and P2 are the safest immediate wins with existing test harnesses. P3 and
+P4 need simulator/device acceptance. P5 should happen before any P6 code.
+P8 remains intentionally deferred until cue trust improves.
 
 ## Open questions for reviewers
 
-1. For P2: is the direction choice (רגיל/הפוך) important enough to keep on the
-   fast path, or does it move behind "change settings" with everything else?
-2. For P3: is network-graph vertex degree available to the mobile bundle at
-   cue-build time, or does junction data need to be precomputed into
-   `segmentSpans` during promote?
+1. For P4: should direction choice (רגיל/הפוך) ever block one-tap start, or is
+   the fast path strictly "current default selection only" with all changes
+   behind the full setup sheet?
+2. For P5: what exact maneuver metadata should cross the route-manager /
+   snapshot / `NavigationRoute` boundary: graph node id, node degree, incoming
+   and outgoing edge ids, incoming/outgoing bearings, competing branch bearings,
+   or a precomputed "decision point" flag?
 3. F10: are mid-approach retargeting actions (`SET_APPROACH_TARGET`,
    `SET_APPROACH_CUSTOM_TARGET`) still a supported affordance after the ride-
-   setup redesign, or should they be removed from the session?
-4. Should P5's fix wait for a real recorded off-route ride fixture (the Task 18
+   setup redesign, or should they be removed from the session/hook tests?
+4. Should P7's fix wait for a real recorded off-route ride fixture (the Task 18
    follow-up from `turn-by-turn-improvements` is still open)?
