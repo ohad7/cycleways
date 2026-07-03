@@ -16,6 +16,11 @@ function mulberry32(seed) {
   };
 }
 
+// Shared deterministic RNG for track tooling (same generator the fixes use).
+export function createSeededRandom(seed) {
+  return mulberry32(seed);
+}
+
 // Linear interpolate a lat/lng along the geometry at a target distance (m).
 function pointAtMeters(geometry, meters) {
   if (meters <= 0) return { ...geometry[0] };
