@@ -12,7 +12,7 @@ export default function RootNavigator({
   navigationRef,
 }) {
   return (
-    <NavigationContainer ref={navigationRef} direction="rtl">
+    <NavigationContainer ref={navigationRef} direction="ltr">
       <Stack.Navigator
         initialRouteName={initialRouteName}
         screenOptions={{ headerShown: false }}
@@ -25,8 +25,9 @@ export default function RootNavigator({
             initialRouteName === "RouteDetail" ? initialParams : undefined
           }
           options={{
-            animation: "ios_from_left",
+            animation: "slide_from_left",
             animationMatchesGesture: true,
+            fullScreenGestureEnabled: true,
             gestureDirection: "horizontal",
           }}
         />

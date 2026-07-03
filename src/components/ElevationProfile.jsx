@@ -26,7 +26,9 @@ export default function ElevationProfile({
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
   const animatorMarkerEnabledRef = useRef(true);
   const scrubbingRef = useRef(false);
+  const pendingScrubRef = useRef(false);
   const activePointerIdRef = useRef(null);
+  const pointerStartRef = useRef({ x: null, y: null });
   const [hoverInfo, setHoverInfo] = useState(null);
   const [markerPoint, setMarkerPoint] = useState(null);
   const usesExternalCursor = externalCursorActive || !animator;
@@ -105,39 +107,74 @@ export default function ElevationProfile({
     onElevationHover?.(null);
   };
 
-  const handleScrubStart = (event) => {
-    if (!onElevationScrub) return;
-    if (event.pointerType === "mouse" && event.button !== 0) return;
+  const beginScrub = (event, payload) => {
     event.preventDefault();
     scrubbingRef.current = true;
-    activePointerIdRef.current = event.pointerId;
+    pendingScrubRef.current = false;
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    const payload = payloadFromEvent(event);
     showPayload(payload);
     onElevationScrubStart?.(payload);
     onElevationScrub(payload);
   };
 
+  const resetScrubState = () => {
+    scrubbingRef.current = false;
+    pendingScrubRef.current = false;
+    activePointerIdRef.current = null;
+    pointerStartRef.current = { x: null, y: null };
+  };
+
+  const handleScrubStart = (event) => {
+    if (!onElevationScrub) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const payload = payloadFromEvent(event);
+    activePointerIdRef.current = event.pointerId;
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+    showPayload(payload);
+    if (event.pointerType === "mouse") {
+      beginScrub(event, payload);
+      return;
+    }
+    pendingScrubRef.current = true;
+  };
+
   const handlePointerMove = (event) => {
     const payload = payloadFromEvent(event);
     showPayload(payload);
-    if (!scrubbingRef.current) return;
     if (activePointerIdRef.current !== event.pointerId) return;
+
+    if (pendingScrubRef.current) {
+      const dx = event.clientX - pointerStartRef.current.x;
+      const dy = event.clientY - pointerStartRef.current.y;
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      if (absY > 6 && absY > absX) {
+        resetScrubState();
+        return;
+      }
+      if (absX <= 6 || absX <= absY * 1.15) return;
+      beginScrub(event, payload);
+      return;
+    }
+
+    if (!scrubbingRef.current) return;
     event.preventDefault();
     onElevationScrub?.(payload);
   };
 
   const handleScrubEnd = (event) => {
-    if (!scrubbingRef.current) return;
     if (activePointerIdRef.current !== event.pointerId) return;
+    if (!scrubbingRef.current) {
+      resetScrubState();
+      return;
+    }
     event.preventDefault();
     const payload = payloadFromEvent(event);
     showPayload(payload);
-    scrubbingRef.current = false;
-    activePointerIdRef.current = null;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     onElevationScrub?.(payload);
     onElevationScrubEnd?.(payload);
+    resetScrubState();
   };
 
   const handleSelect = (event) => {
@@ -247,7 +284,10 @@ export default function ElevationProfile({
           onPointerUp={handleScrubEnd}
           onPointerCancel={handleScrubEnd}
           onPointerLeave={() => {
-            if (!scrubbingRef.current) clearHover();
+            if (!scrubbingRef.current) {
+              resetScrubState();
+              clearHover();
+            }
           }}
           onClick={handleSelect}
         />

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { getJsonAsset } from "@cycleways/core/platform/assets.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
 import {
@@ -193,12 +193,7 @@ export default function DiscoverPanel({
         style={styles.intent}
       >
         <Text style={styles.intentTitle}>מה מתאים לכם?</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.intentChips}
-          style={styles.intentChipsScroller}
-        >
+        <View style={styles.intentChips}>
           {/* First child renders rightmost in this row-reverse row, so "סינון"
               sits at the right edge — the natural start of the row in Hebrew. */}
           <Pressable
@@ -241,7 +236,7 @@ export default function DiscoverPanel({
             onPress={toggleNearMe}
             variant="intent"
           />
-        </ScrollView>
+        </View>
       </View>
 
       {locationError ? (
@@ -494,20 +489,17 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  intentChipsScroller: {
-    marginHorizontal: -12,
-  },
   intentChips: {
     flexDirection: "row-reverse",
-    gap: 6,
-    minWidth: "100%",
-    paddingHorizontal: 12,
+    flexWrap: "nowrap",
+    gap: 4,
   },
   intentChip: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    flexShrink: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -515,16 +507,17 @@ const styles = StyleSheet.create({
   },
   intentChipText: {
     color: palette.ink,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     writingDirection: "rtl",
   },
   filterToggle: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    flexShrink: 0,
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -536,15 +529,15 @@ const styles = StyleSheet.create({
   },
   filterToggleText: {
     color: palette.ink,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     writingDirection: "rtl",
   },
-  filterChevron: { color: palette.muted, fontSize: 11 },
+  filterChevron: { color: palette.muted, fontSize: 10 },
   filterCountBadge: {
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 5,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
     borderRadius: radius.pill,
     backgroundColor: palette.forest,
     alignItems: "center",

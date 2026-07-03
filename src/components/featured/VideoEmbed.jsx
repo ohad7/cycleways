@@ -42,6 +42,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const iframeContainerRef = useRef(null);
   const playerRef = useRef(null);
+  const playbackScrollRef = useRef(0);
   const tickerRef = useRef(null);
   const manualScrubSamplerRef = useRef(null);
   const settleTimeoutsRef = useRef([]);
@@ -64,6 +65,24 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   mapPrimaryRef.current = mapPrimary;
   const routeFractionRef = useRef(0);
   const videoSyncObjRef = useRef(null);
+
+  const scrollStageForPlayback = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const isMobile = window.matchMedia?.("(max-width: 767px)").matches
+      ?? window.innerWidth < 768;
+    if (!isMobile) return;
+    const now = Date.now();
+    if (now - playbackScrollRef.current < 1200) return;
+    const target = document.querySelector("[data-route-stage]");
+    if (!target) return;
+    playbackScrollRef.current = now;
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const rect = target.getBoundingClientRect();
+    window.scrollTo({
+      top: Math.max(0, window.scrollY + rect.top - 6),
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, []);
 
   const cueSlides = useMemo(
     () => routeVideoCueSlides(meta, routeState),
@@ -154,6 +173,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
     if (playingRef.current) {
       player.pauseVideo?.();
     } else {
+      scrollStageForPlayback();
       player.playVideo?.();
     }
   };
@@ -352,6 +372,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
             }
             // YT.PlayerState.PLAYING === 1
             if (isPlaying) {
+              scrollStageForPlayback();
               setVideoPlaying(true);
               const pos = emitCurrentPosition(playerRef.current, { force: true });
               if (pos) {
@@ -519,7 +540,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
       setVideoPlaying(false);
       setVideoCursor(null);
     };
-  }, [data, emitCursorForTime, playerPauseRef, playerPlayRef, playerSeekRef, seekToTime, setVideoCursor, setVideoPlaying, videoSyncRef]);
+  }, [data, emitCursorForTime, playerPauseRef, playerPlayRef, playerSeekRef, scrollStageForPlayback, seekToTime, setVideoCursor, setVideoPlaying, videoSyncRef]);
 
   if (status !== "ready" || !data) return null;
 
