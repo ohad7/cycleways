@@ -354,6 +354,25 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
     const stopped = tracker.update(eastFix(5, 2000, { speed: 0.2 }));
     assert.equal(stopped.courseDeg, null, "no course when stopped");
     assert.equal(stopped.wrongWay, false, "stopped is never wrong-way");
+    assert.equal(stopped.smoothedCourseDeg, null, "no smoothed course when stopped");
+  }
+
+  // smoothedCourseDeg: the general direction of travel, exposed for consumers
+  // that must not chase per-fix noise (e.g. the off-route camera). Under the
+  // same along-track jitter that flips courseDeg backwards, it stays ~east.
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    for (let i = 0; i < 30; i++) {
+      const jitter = i % 2 === 0 ? 8 : -8;
+      const result = tracker.update(eastFix(i * 5 + jitter, 1000 + i * 1000));
+      if (i >= 8) {
+        assert.ok(
+          Number.isFinite(result.smoothedCourseDeg) &&
+            near(result.smoothedCourseDeg, 90, 25),
+          `smoothed course stays ~east under jitter (fix ${i}: ${result.smoothedCourseDeg})`,
+        );
+      }
+    }
   }
 }
 

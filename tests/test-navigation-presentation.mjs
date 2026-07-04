@@ -179,6 +179,21 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   });
   assert.equal(p.guidanceArrowDeg, null);
 }
+// --- guidance arrow prefers the smoothed course over the noisy per-fix one ---
+{
+  const p = getNavigationPresentation({
+    status: "approaching",
+    progress: {
+      hasAcquiredRoute: false,
+      guidanceDistanceMeters: 420,
+      guidanceBearingDeg: 90,
+      courseDeg: 250, // one jittery fix pointing the wrong way
+      smoothedCourseDeg: 60, // actual direction of travel
+      wrongWay: false,
+    },
+  });
+  assert.equal(p.guidanceArrowDeg, 30, "arrow relative to the smoothed course");
+}
 // --- approaching status text when guidance distance is absent ---
 {
   const p = getNavigationPresentation({

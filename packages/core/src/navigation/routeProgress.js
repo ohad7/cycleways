@@ -250,8 +250,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
   // more than WRONG_WAY_DELTA_DEG, sustained for WRONG_WAY_CONFIRM_MS, before
   // the rider is warned. Parallel paths and jitter never qualify; an actual
   // turn-around does within a few seconds.
-  function updateWrongWay(fix, bearingToNextDeg) {
-    const course = smoothedCourse(fix);
+  function updateWrongWay(fix, bearingToNextDeg, course) {
     const delta =
       course !== null && bearingToNextDeg !== null
         ? bearingDelta(course, bearingToNextDeg)
@@ -343,6 +342,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
         lastProgressMeters = best.progressMeters;
       } else {
         // Still approaching: do not advance progress or flag off-route.
+        const approachSmoothedCourse = smoothedCourse(fix);
         prevFix = fix;
         recordCourseFix(fix);
         const startBearing =
@@ -357,6 +357,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
           remainingMeters: totalMeters,
           bearingToNextDeg: null,
           courseDeg: riderCourse(fix),
+          smoothedCourseDeg: approachSmoothedCourse,
           headingAgreementDeg: null,
           wrongWay: false,
           distanceToRouteStart,
@@ -394,7 +395,8 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       courseDeg !== null && bearingToNextDeg !== null
         ? bearingDelta(courseDeg, bearingToNextDeg)
         : null;
-    const wrongWay = updateWrongWay(fix, bearingToNextDeg);
+    const smoothedCourseDeg = smoothedCourse(fix);
+    const wrongWay = updateWrongWay(fix, bearingToNextDeg, smoothedCourseDeg);
 
     const guidanceBearingDeg = best ? computeBearing(fix, best.snapped) : null;
 
@@ -411,6 +413,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       remainingMeters: Math.max(0, totalMeters - progressMeters),
       bearingToNextDeg,
       courseDeg,
+      smoothedCourseDeg,
       headingAgreementDeg,
       wrongWay,
       distanceToRouteStart,

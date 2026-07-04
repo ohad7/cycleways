@@ -1350,7 +1350,8 @@ export default function BuildScreen({ navigation, route }) {
   // to the other.
   useEffect(() => {
     smoothedMetersRef.current = navProgress?.progressMeters ?? 0;
-    smoothedBearingRef.current = navProgress?.courseDeg ?? 0;
+    smoothedBearingRef.current =
+      navProgress?.smoothedCourseDeg ?? navProgress?.courseDeg ?? 0;
     travelIndexRef.current = -1;
     lastPushedPuckRef.current = null;
     setNavTraveled(EMPTY_FEATURE_COLLECTION);
@@ -1375,7 +1376,7 @@ export default function BuildScreen({ navigation, route }) {
     const startProgress = progressRef.current;
     smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
     smoothedBearingRef.current =
-      startProgress?.bearingToNextDeg ?? startProgress?.courseDeg ?? 0;
+      startProgress?.bearingToNextDeg ?? startProgress?.smoothedCourseDeg ?? 0;
     let lastTs = 0;
     const tick = (ts) => {
       const dtMs = lastTs ? Math.max(0, ts - lastTs) : 16;
@@ -1460,10 +1461,11 @@ export default function BuildScreen({ navigation, route }) {
             // back to the line instead of teleporting.
             puckGlideRef.current = { lat: raw.lat, lng: raw.lng };
           }
+          // Steer by the rider's general direction of travel — the per-fix
+          // GPS course is too noisy for the camera. Hold the current heading
+          // while it is unknown (stopped / not enough movement yet).
           targetBearing =
-            progress.courseDeg ??
-            progress.bearingToNextDeg ??
-            smoothedBearingRef.current;
+            progress.smoothedCourseDeg ?? smoothedBearingRef.current;
         }
         // Prefer the live device compass so the view follows where the phone
         // points (adaptive even when stationary); fall back to GPS course.

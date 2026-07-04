@@ -59,8 +59,11 @@ function buildContextText(progress) {
 
 function relativeArrowDeg(progress) {
   if (!Number.isFinite(progress?.guidanceBearingDeg)) return null;
-  if (!Number.isFinite(progress?.courseDeg)) return null;
-  const course = progress.courseDeg;
+  // Prefer the general direction of travel; the per-fix course jitters.
+  const course = Number.isFinite(progress?.smoothedCourseDeg)
+    ? progress.smoothedCourseDeg
+    : progress?.courseDeg;
+  if (!Number.isFinite(course)) return null;
   return ((progress.guidanceBearingDeg - course) % 360 + 360) % 360;
 }
 
