@@ -192,6 +192,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     },
   });
   assert.equal(p.showContext, true);
+  assert.equal(p.currentRoadText, "שביל הירקון");
   assert.match(p.contextText, /שביל הירקון/);
   assert.match(p.contextText, /גשר איילון/);
 }
@@ -202,6 +203,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: true, currentSegmentName: null, currentOnNetwork: false, currentRouteClass: "track", nextSegmentName: "גשר איילון", distanceToNextSegmentMeters: 1200, wrongWay: false },
   });
   assert.equal(p.currentOnNetwork ?? false, false);
+  assert.equal(p.currentRoadText, "דרך עפר");
   assert.ok(p.contextText.length > 0, "off-network still shows context");
   assert.match(p.contextText, /בדרך עפר/);
   assert.doesNotMatch(p.contextText, /local roads/);

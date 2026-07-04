@@ -7,6 +7,7 @@ This directory contains planning documents for larger project changes before imp
 
 Current plans:
 
+- `background-location-voice-guidance/` - design and implementation plan for iOS lock-screen ride guidance using background location updates, persisted navigation runtime state, and spoken cue prompts without voice commands.
 - `ios-app-store-release/` - design and implementation plan for preparing the iOS app, App Store Connect record, signing, privacy, TestFlight, review metadata, and launch operations for a professional App Store release.
 - `turn-by-turn-navigation-review/` - review findings and implementation plan for iOS turn-by-turn navigation improvements (connector retry, approach fast path, cue quality, native lifecycle polish, and progress-jump follow-ups), written for other agents to verify and pick up.
 - `navigation-ride-setup/` - design and implementation plan for an explicit pre-ride setup flow (direction, start point, and consequences), clear near/far approach states, preservation of the nearby suggested connector, alternate-start handling for linear and circular routes, and reverse-route navigation without mutating the saved route.

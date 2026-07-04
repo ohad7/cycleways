@@ -1910,7 +1910,7 @@ export default function BuildScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.fill} {...routePointPanResponder.panHandlers}>
+    <View style={styles.screen} {...routePointPanResponder.panHandlers}>
       <MapView
         ref={mapViewRef}
         style={styles.fill}
@@ -2887,6 +2887,7 @@ function fitCameraToPoints(camera, points, bottomPadding = 84) {
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, position: "relative", backgroundColor: "#fff" },
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   hint: { fontSize: 15, textAlign: "center", color: "#333" },

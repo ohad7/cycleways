@@ -21,6 +21,13 @@ export default function NavPanel({
   const paused = sessionState?.status === "paused";
   const arrived = p.cardMode === "arrived";
   const showRecenter = sessionState?.cameraIntent === "free";
+  const showCurrentRoadPill =
+    p.cardMode === "status" &&
+    sessionState?.status === "navigating" &&
+    Boolean(p.currentRoadText) &&
+    !p.justAcquired &&
+    !p.wrongWay;
+  const showTopCard = !arrived && !showCurrentRoadPill;
 
   // Direction-to-route arrow: phone-relative when the compass is available
   // (bearing-to-target minus device heading), else the movement-course arrow.
@@ -32,7 +39,7 @@ export default function NavPanel({
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      {arrived ? (
+      {!showTopCard ? (
         <View />
       ) : (
         <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
@@ -119,7 +126,7 @@ export default function NavPanel({
             </View>
           ) : (
             <Text style={styles.statusText} numberOfLines={1}>
-              {p.contextText || p.statusText || p.cueText}
+              {p.statusText || p.cueText}
             </Text>
           )}
         </View>
@@ -149,21 +156,30 @@ export default function NavPanel({
           </Pressable>
         </View>
       ) : (
-        <View style={[styles.controls, { marginBottom: insets.bottom + space.md }]}>
-          <View style={styles.dataPill}>
-            <Text style={styles.dataPillMain} numberOfLines={1}>
-              {p.remainingText || ""}
-            </Text>
-            {p.speedText ? (
-              <Text style={styles.dataPillSub}>{p.speedText}</Text>
-            ) : null}
+        <View style={[styles.bottomStack, { marginBottom: insets.bottom + space.md }]}>
+          {showCurrentRoadPill ? (
+            <View style={styles.roadPill}>
+              <Text style={styles.roadPillText} numberOfLines={1}>
+                {p.currentRoadText}
+              </Text>
+            </View>
+          ) : null}
+          <View style={styles.controls}>
+            <View style={styles.dataPill}>
+              <Text style={styles.dataPillMain} numberOfLines={1}>
+                {p.remainingText || ""}
+              </Text>
+              {p.speedText ? (
+                <Text style={styles.dataPillSub}>{p.speedText}</Text>
+              ) : null}
+            </View>
+            <RoundButton
+              icon={paused ? "play" : "pause"}
+              label={paused ? "המשך" : "השהה"}
+              onPress={onPauseResume}
+            />
+            <RoundButton icon="stop" label="סיום" danger onPress={onStop} />
           </View>
-          <RoundButton
-            icon={paused ? "play" : "pause"}
-            label={paused ? "המשך" : "השהה"}
-            onPress={onPauseResume}
-          />
-          <RoundButton icon="stop" label="סיום" danger onPress={onStop} />
         </View>
       )}
     </View>
@@ -218,7 +234,13 @@ function ArrivalStat({ value, label }) {
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 20,
+    elevation: 20,
     justifyContent: "space-between",
     paddingHorizontal: space.md,
   },
@@ -350,6 +372,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     writingDirection: "rtl",
+  },
+  bottomStack: {
+    gap: space.sm,
+  },
+  roadPill: {
+    alignSelf: "stretch",
+    backgroundColor: palette.white,
+    borderRadius: radius.pill,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  roadPillText: {
+    color: palette.ink,
+    fontSize: 17,
+    fontWeight: "900",
+    writingDirection: "rtl",
+    textAlign: "center",
   },
   controls: {
     flexDirection: "row-reverse",

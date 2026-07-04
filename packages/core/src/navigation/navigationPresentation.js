@@ -78,6 +78,12 @@ function buildContextText(progress) {
   return here ? `${here}${next}` : "";
 }
 
+function buildCurrentRoadText(progress) {
+  if (!progress?.hasAcquiredRoute) return "";
+  if (progress.currentSegmentName) return progress.currentSegmentName;
+  return roadClassChipLabel(progress.currentRouteClass) || routeClassLabel(progress.currentRouteClass);
+}
+
 function relativeArrowDeg(progress) {
   if (!Number.isFinite(progress?.guidanceBearingDeg)) return null;
   // Prefer the general direction of travel; the per-fix course jitters.
@@ -269,6 +275,7 @@ export function getNavigationPresentation(state = {}) {
     offRouteText: "חזרו למסלול",
     showContext:
       navigating && !offRoute && Boolean(progress?.hasAcquiredRoute),
+    currentRoadText: buildCurrentRoadText(progress),
     contextText: buildContextText(progress),
     showApproach,
     tier,
