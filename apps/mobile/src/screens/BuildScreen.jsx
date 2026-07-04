@@ -1430,10 +1430,10 @@ export default function BuildScreen({ navigation, route }) {
             lng = glide.lng;
             lat = glide.lat;
           }
-          targetBearing =
-            glideTarget === point
-              ? progress.bearingToNextDeg ?? bearingDeg
-              : progress.courseDeg ?? progress.bearingToNextDeg ?? bearingDeg;
+          // Orientation stays locked to the route even while the puck is
+          // detached: a parallel path runs in the route's direction, and the
+          // instantaneous GPS course is far too noisy to steer the camera.
+          targetBearing = progress.bearingToNextDeg ?? bearingDeg;
           // Advance the traveled (muted) line up to the smoothed point, but only
           // when the underlying segment index changes — keeps the per-frame cost
           // bounded while the puck itself stays smooth.
