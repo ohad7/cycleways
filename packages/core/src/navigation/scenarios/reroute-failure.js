@@ -19,6 +19,7 @@ export default {
   expect: [
     { type: "status", value: "off-route", betweenMeters: [230, 420] },
     { type: "suggestionFailed" },
+    { type: "camera-rotations", atMost: 0, during: "off-route" },
     { type: "arrived" },
   ],
 };

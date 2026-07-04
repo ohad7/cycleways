@@ -44,7 +44,10 @@ import {
 } from "@cycleways/core/navigation/ridePlan.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import { createPuckAnchor } from "@cycleways/core/navigation/puckAnchor.js";
-import { createCameraHeadingGovernor } from "@cycleways/core/navigation/cameraHeading.js";
+import {
+  cameraHeadingTarget,
+  createCameraHeadingGovernor,
+} from "@cycleways/core/navigation/cameraHeading.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
@@ -1494,11 +1497,16 @@ export default function BuildScreen({ navigation, route }) {
             );
           }
           // The puck arrow tracks the rider's direction in real time; the
-          // camera heading is governed (rotates only for persistent or sharp
-          // changes) and eased slower, so the map frame stays calm.
+          // camera aims where cameraHeadingTarget says (route-up on route,
+          // toward the start while approaching, held still off-route), with
+          // the governor gating adoption and a slower ease. The compass, when
+          // live, keeps steering the view to the phone's facing direction.
           const heading = smoothedBearingRef.current;
+          const cameraTarget = Number.isFinite(deviceHeadingRef.current)
+            ? deviceHeadingRef.current
+            : cameraHeadingTarget(progress);
           const governedHeading =
-            cameraGovernorRef.current?.update(targetBearing, ts) ??
+            cameraGovernorRef.current?.update(cameraTarget, ts) ??
             cameraBearingRef.current;
           if (Number.isFinite(governedHeading)) {
             cameraBearingRef.current = shortestAngleLerp(

@@ -111,6 +111,31 @@ export function evaluateExpectations(expectations, timeline) {
         break;
       }
 
+      case "camera-rotations": {
+        // Consecutive finite camera headings that differ = one rotation.
+        // `during` restricts counting to entries in that status.
+        let rotations = 0;
+        let prevHeading = null;
+        for (const e of entries) {
+          const heading = e.cameraHeadingDeg;
+          if (!Number.isFinite(heading)) continue;
+          if (
+            prevHeading !== null &&
+            heading !== prevHeading &&
+            (exp.during === undefined || e.status === exp.during)
+          ) {
+            rotations += 1;
+          }
+          prevHeading = heading;
+        }
+        if (rotations > exp.atMost) {
+          fail(
+            `${rotations} camera rotation(s)${exp.during ? ` during ${exp.during}` : ""}, allowed ${exp.atMost}`,
+          );
+        }
+        break;
+      }
+
       case "wrong-way": {
         const first = entries.find((e) => e.wrongWay === true);
         if (exp.never === true) {

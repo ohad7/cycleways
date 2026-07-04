@@ -60,6 +60,21 @@ function straightRoute() {
     timeline.every((e) => typeof e.wrongWay === "boolean"),
     "every entry exposes the wrong-way flag",
   );
+  assert.ok(
+    timeline.some((e) => Number.isFinite(e.cameraHeadingDeg)),
+    "the governed camera heading is carried on the timeline",
+  );
+  const rotations = timeline.filter(
+    (e, i) =>
+      i > 0 &&
+      Number.isFinite(e.cameraHeadingDeg) &&
+      Number.isFinite(timeline[i - 1].cameraHeadingDeg) &&
+      e.cameraHeadingDeg !== timeline[i - 1].cameraHeadingDeg,
+  );
+  assert.ok(
+    rotations.length <= 1,
+    `straight route: camera re-orients at most once, got ${rotations.length}`,
+  );
 }
 
 // Approach ride, per connector mode: straight-line -> suggestion ready;

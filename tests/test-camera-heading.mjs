@@ -5,7 +5,10 @@
 // seconds (so it re-orients at most that often), sharp turns rotate it
 // immediately.
 import assert from "node:assert/strict";
-import { createCameraHeadingGovernor } from "@cycleways/core/navigation/cameraHeading.js";
+import {
+  cameraHeadingTarget,
+  createCameraHeadingGovernor,
+} from "@cycleways/core/navigation/cameraHeading.js";
 
 // Defaults: hold under 15°, adopt 15-45° only after persisting 3 s, snap
 // beyond 45°.
@@ -93,5 +96,45 @@ assert.throws(
   () => createCameraHeadingGovernor({ minDeltaDeg: 50, snapDeltaDeg: 45 }),
   /minDeltaDeg must be below snapDeltaDeg/,
 );
+
+// --- cameraHeadingTarget: which bearing the camera should aim at per state --
+// On-route: the route's own bearing (stable). Approaching: toward the route
+// start (quasi-static). Off-route: null — the rider is maneuvering, the map
+// must hold still; the puck arrow carries the live direction.
+{
+  assert.equal(
+    cameraHeadingTarget({
+      hasAcquiredRoute: true,
+      offRoute: false,
+      bearingToNextDeg: 87,
+      smoothedCourseDeg: 140,
+    }),
+    87,
+    "on-route aims along the route",
+  );
+  assert.equal(
+    cameraHeadingTarget({
+      hasAcquiredRoute: false,
+      offRoute: false,
+      bearingToNextDeg: null,
+      guidanceBearingDeg: 42,
+      smoothedCourseDeg: 140,
+    }),
+    42,
+    "approaching aims toward the route start",
+  );
+  assert.equal(
+    cameraHeadingTarget({
+      hasAcquiredRoute: true,
+      offRoute: true,
+      bearingToNextDeg: 87,
+      smoothedCourseDeg: 140,
+      guidanceBearingDeg: 42,
+    }),
+    null,
+    "off-route holds the map still",
+  );
+  assert.equal(cameraHeadingTarget(null), null, "no progress, no target");
+}
 
 console.log("camera heading governor tests passed");

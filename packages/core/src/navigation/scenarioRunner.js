@@ -4,6 +4,10 @@
 // timeline": what the NavPanel showed and buzzed, per fix. This timeline is
 // the contract the expectation evaluator (scenarioExpectations.js) checks and
 // the JSON artifact agents read when a scenario fails.
+import {
+  cameraHeadingTarget,
+  createCameraHeadingGovernor,
+} from "./cameraHeading.js";
 import { createCueHapticPlanner } from "./cueHaptics.js";
 import { getNavigationPresentation } from "./navigationPresentation.js";
 import { replaySession } from "./replayRunner.js";
@@ -20,12 +24,18 @@ export function connectorRouterForMode(mode) {
 
 export function buildUserTimeline(replayTimeline) {
   const haptics = createCueHapticPlanner();
+  // Same camera policy the app runs: target per state, governed adoption.
+  const cameraGovernor = createCameraHeadingGovernor();
   return (Array.isArray(replayTimeline) ? replayTimeline : []).map(
     (state, index) => {
       const presentation = getNavigationPresentation(state);
       const hapticPlan = state.cueEvent
         ? haptics.plan(state.cueEvent, state.latestFix?.timestamp ?? 0)
         : { kind: null };
+      const cameraHeadingDeg = cameraGovernor.update(
+        cameraHeadingTarget(state.progress),
+        state.latestFix?.timestamp ?? 0,
+      );
       return {
         index,
         timestamp: state.latestFix?.timestamp ?? null,
@@ -41,6 +51,7 @@ export function buildUserTimeline(replayTimeline) {
         suggestionStatus: state.approach?.suggestionStatus ?? "idle",
         connectorResult: state.connectorResult?.result ?? null,
         haptic: hapticPlan.kind ?? null,
+        cameraHeadingDeg,
         presentation: {
           statusText: presentation.statusText,
           acquisitionText: presentation.acquisitionText,

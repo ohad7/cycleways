@@ -7,6 +7,26 @@
 // module only decides WHEN the heading target is allowed to move.
 import { bearingDelta } from "../utils/geometry.js";
 
+// Which bearing the follow camera should aim at, per navigation state. The
+// map frame is route-up whenever the route is trusted, aims at the route
+// start while approaching, and returns null off-route: the rider is
+// maneuvering to get back, so the map must hold perfectly still (the puck
+// arrow and the rejoin guidance carry the live direction). Any direction
+// signal followed while off-route — even a smoothed one — rotates the frame
+// exactly when the rider most needs a stable reference.
+export function cameraHeadingTarget(progress) {
+  if (!progress) return null;
+  if (progress.offRoute === true) return null;
+  if (progress.hasAcquiredRoute !== true) {
+    return Number.isFinite(progress.guidanceBearingDeg)
+      ? progress.guidanceBearingDeg
+      : null;
+  }
+  return Number.isFinite(progress.bearingToNextDeg)
+    ? progress.bearingToNextDeg
+    : null;
+}
+
 const DEFAULTS = {
   persistMs: 3000, // a moderate deviation must hold this long before adoption
   minDeltaDeg: 15, // below this the map never rotates

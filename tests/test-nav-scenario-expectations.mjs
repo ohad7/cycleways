@@ -81,6 +81,47 @@ const timeline = [
   );
 }
 
+// camera-rotations: bounds how often the governed map heading may change,
+// optionally only while in a given status (0 while off-route = stable frame).
+{
+  const ride = [
+    entry({ cameraHeadingDeg: 90 }),
+    entry({ cameraHeadingDeg: 90 }),
+    entry({ status: "off-route", cameraHeadingDeg: 90 }),
+    entry({ status: "off-route", cameraHeadingDeg: 120 }), // rotation while off-route
+    entry({ cameraHeadingDeg: 120 }),
+    entry({ cameraHeadingDeg: 0 }), // rotation while navigating (the corner)
+  ];
+  assert.equal(
+    evaluateExpectations([{ type: "camera-rotations", atMost: 2 }], ride).passed,
+    true,
+    "two rotations within a budget of two",
+  );
+  const over = evaluateExpectations([{ type: "camera-rotations", atMost: 1 }], ride);
+  assert.equal(over.passed, false);
+  assert.match(over.failures[0], /2 camera rotation/);
+  const offRoute = evaluateExpectations(
+    [{ type: "camera-rotations", atMost: 0, during: "off-route" }],
+    ride,
+  );
+  assert.equal(offRoute.passed, false, "the off-route rotation is counted");
+  assert.equal(
+    evaluateExpectations(
+      [{ type: "camera-rotations", atMost: 1, during: "off-route" }],
+      ride,
+    ).passed,
+    true,
+  );
+  // Entries without a finite camera heading are ignored, not rotations.
+  assert.equal(
+    evaluateExpectations(
+      [{ type: "camera-rotations", atMost: 0 }],
+      [entry({ cameraHeadingDeg: null }), entry({ cameraHeadingDeg: 90 }), entry({ cameraHeadingDeg: 90 })],
+    ).passed,
+    true,
+  );
+}
+
 // rerouted without any off-route entry fails cleanly.
 {
   const result = evaluateExpectations([{ type: "rerouted" }], [entry()]);

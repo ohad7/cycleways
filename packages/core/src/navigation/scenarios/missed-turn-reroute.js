@@ -21,6 +21,9 @@ export default {
     { type: "haptic", kind: "heavy" },
     { type: "rerouted", withinFixesOfOffRoute: 10 },
     { type: "banner", match: "פנה שמאלה", afterMeters: 430 },
+    // The map frame must hold perfectly still while the rider is off-route.
+    { type: "camera-rotations", atMost: 0, during: "off-route" },
+    { type: "camera-rotations", atMost: 3 },
     { type: "arrived" },
   ],
 };

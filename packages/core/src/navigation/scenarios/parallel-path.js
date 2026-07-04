@@ -20,6 +20,7 @@ export default {
   expect: [
     { type: "status", value: "off-route", never: true },
     { type: "wrong-way", never: true },
+    { type: "camera-rotations", atMost: 2 },
     { type: "arrived" },
   ],
 };
