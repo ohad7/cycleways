@@ -55,6 +55,19 @@ export function buildUserTimeline(replayTimeline) {
         activeCueType: state.activeCue?.cue?.type ?? null,
         cueEventKind: state.cueEvent?.kind ?? null,
         suggestionStatus: state.approach?.suggestionStatus ?? "idle",
+        rejoinTargetProgressMeters:
+          state.approach?.target?.mode === "rejoin"
+            ? (state.approach.target.mainProgressMeters ?? null)
+            : null,
+        rejoinDistanceToRouteMeters:
+          state.approach?.target?.mode === "rejoin"
+            ? (state.approach.distanceToRouteMeters ?? null)
+            : null,
+        routeRequestId: state.routeRequest?.requestId ?? null,
+        routeRequestTargetProgressMeters:
+          state.routeRequest?.targetMode === "rejoin"
+            ? (state.routeRequest.targetProgressMeters ?? null)
+            : null,
         connectorResult: state.connectorResult?.result ?? null,
         haptic: hapticPlan.kind ?? null,
         cameraHeadingDeg,

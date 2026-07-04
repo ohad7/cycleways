@@ -183,6 +183,11 @@ const NAV_FOLLOW_PITCH = 50;
 // Approach/rejoin fit shots include a small slice of the main route after the
 // join point so a straight-line connector still frames "where this ride goes".
 const APPROACH_ROUTE_LOOKAHEAD_M = 180;
+// Off-route rejoin fit shots include the live rider point, so raw GPS movement
+// would otherwise restart a bounds animation on every fix.
+const REJOIN_CAMERA_FIT_MIN_INTERVAL_MS = 1500;
+const REJOIN_CAMERA_FIT_KEY_DECIMALS = 4;
+const DEFAULT_CAMERA_FIT_KEY_DECIMALS = 5;
 // Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
 // is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
 const BEARING_SMOOTH_MS = 260;
@@ -1358,6 +1363,7 @@ export default function BuildScreen({ navigation, route }) {
   const cameraZoomRef = useRef(16.5);
   const sessionStateRef = useRef(null);
   const cameraFitKeyRef = useRef(null);
+  const cameraFitAtRef = useRef(0);
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
@@ -1416,6 +1422,7 @@ export default function BuildScreen({ navigation, route }) {
       cameraGovernorRef.current = null;
       cameraDirectorRef.current = null;
       cameraFitKeyRef.current = null;
+      cameraFitAtRef.current = 0;
       return undefined;
     }
     puckAnchorRef.current = createPuckAnchor();
@@ -1425,6 +1432,7 @@ export default function BuildScreen({ navigation, route }) {
     cameraPitchRef.current = NAV_FOLLOW_PITCH;
     cameraZoomRef.current = NAV_FOLLOW_ZOOM;
     cameraFitKeyRef.current = null;
+    cameraFitAtRef.current = 0;
     const startProgress = progressRef.current;
     smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
     smoothedBearingRef.current =
@@ -1520,8 +1528,8 @@ export default function BuildScreen({ navigation, route }) {
           targetBearing =
             progress.smoothedCourseDeg ?? smoothedBearingRef.current;
         }
-        // Prefer the live device compass so the view follows where the phone
-        // points (adaptive even when stationary); fall back to GPS course.
+        // Prefer the live device compass for the puck arrow so it follows where
+        // the phone points; the map camera may still reject it below.
         if (Number.isFinite(deviceHeadingRef.current)) {
           targetBearing = deviceHeadingRef.current;
         }
@@ -1536,10 +1544,13 @@ export default function BuildScreen({ navigation, route }) {
           // The puck arrow tracks the rider's direction in real time; the
           // camera aims where cameraHeadingTarget says (route-up on route,
           // toward the start while approaching, held still off-route), with
-          // the governor gating adoption and a slower ease. The compass, when
-          // live, keeps steering the view to the phone's facing direction.
+          // the governor gating adoption and a slower ease. While off-route the
+          // compass is deliberately ignored by the camera so the map frame stays
+          // stable; the puck arrow still carries the live direction.
           const heading = smoothedBearingRef.current;
-          const cameraTarget = Number.isFinite(deviceHeadingRef.current)
+          const deviceHeadingCanSteerCamera =
+            progress.offRoute !== true && Number.isFinite(deviceHeadingRef.current);
+          const cameraTarget = deviceHeadingCanSteerCamera
             ? deviceHeadingRef.current
             : cameraHeadingTarget(progress);
           const governedHeading =
@@ -1625,8 +1636,12 @@ export default function BuildScreen({ navigation, route }) {
                   ? governedHeading
                   : cameraBearingRef.current;
             const fitPitch = Number.isFinite(shot.pitch) ? shot.pitch : null;
+            const fitKeyDecimals =
+              shot.fitKind === "rejoin"
+                ? REJOIN_CAMERA_FIT_KEY_DECIMALS
+                : DEFAULT_CAMERA_FIT_KEY_DECIMALS;
             const fitPointKey = fitPoints
-              .map((point) => `${Number(point.lng).toFixed(5)},${Number(point.lat).toFixed(5)}`)
+              .map((point) => cameraPointKey(point, fitKeyDecimals))
               .join("|");
             const fitKey = [
               shot.fitKind,
@@ -1640,18 +1655,28 @@ export default function BuildScreen({ navigation, route }) {
               fitPoints.length >= 1 &&
               cameraFitKeyRef.current !== fitKey
             ) {
-              cameraFitKeyRef.current = fitKey;
-              fitCameraToPoints(
-                cameraRef.current,
-                fitPoints,
-                shot.fitKind === "route" ? 84 : 150,
-                { heading: fitHeading, pitch: fitPitch },
-              );
+              const minFitIntervalMs =
+                shot.fitKind === "rejoin" ? REJOIN_CAMERA_FIT_MIN_INTERVAL_MS : 0;
+              const canFitNow =
+                cameraFitKeyRef.current === null ||
+                minFitIntervalMs === 0 ||
+                ts - cameraFitAtRef.current >= minFitIntervalMs;
+              if (canFitNow) {
+                cameraFitKeyRef.current = fitKey;
+                cameraFitAtRef.current = ts;
+                fitCameraToPoints(
+                  cameraRef.current,
+                  fitPoints,
+                  shot.fitKind === "route" ? 84 : 150,
+                  { heading: fitHeading, pitch: fitPitch },
+                );
+              }
             }
             rafRef.current = requestAnimationFrame(tick);
             return;
           }
           cameraFitKeyRef.current = null;
+          cameraFitAtRef.current = 0;
 
           // Focus point per stage; center = lerp(rider, focus, centerBias).
           let focus = null;
@@ -2896,6 +2921,10 @@ function routeLookaheadPoint(arc, geometry, target) {
 
 function cameraKeyNumber(value) {
   return Number.isFinite(value) ? String(Math.round(value)) : "na";
+}
+
+function cameraPointKey(point, decimals = DEFAULT_CAMERA_FIT_KEY_DECIMALS) {
+  return `${Number(point.lng).toFixed(decimals)},${Number(point.lat).toFixed(decimals)}`;
 }
 
 function fitCameraToPoints(camera, points, bottomPadding = 84, options = {}) {

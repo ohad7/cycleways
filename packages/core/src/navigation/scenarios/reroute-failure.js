@@ -1,6 +1,6 @@
 import lTurn from "./routes/l-turn.js";
 
-// Same excursion as missed-turn-reroute, but every connector request fails —
+// Same lateral excursion as off-route-excursion, but every connector request fails —
 // exercises the failure UX (rider still finds their own way back).
 export default {
   name: "reroute-failure",

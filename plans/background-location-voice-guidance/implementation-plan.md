@@ -54,7 +54,9 @@ wrong Expo adapter.
    - speaks one short prompt on a background location update
 3. Build a development client or Release-like local build. Do not rely on Expo
    Go for this validation.
-4. Test on at least two physical iPhones:
+4. Test on at least two physical iPhones, at least one of which has only the
+   default (non-enhanced) `he-IL` voice installed, and verify how the voice
+   reads numbers and units ("בעוד 200 מטר") rather than assuming:
    - unlocked foreground
    - screen locked
    - app switcher background
@@ -244,7 +246,9 @@ Acceptance:
    packaged-audio prompt adapter.
 6. Keep the speech adapter side-effect-only. Do not put cue selection,
    dedupe, or phrasing in native code.
-7. Add local diagnostic counters for prompt attempts, prompt completions, and
+7. Expose a sample-prompt entry point on the adapter so ride setup can offer
+   a "test voice" affordance without going through the planner.
+8. Add local diagnostic counters for prompt attempts, prompt completions, and
    prompt errors without storing coordinates.
 
 Acceptance:
@@ -256,11 +260,21 @@ Acceptance:
 
 ## Phase 6 - Ride Setup And Navigation UI
 
-1. Add voice guidance and lock-screen guidance controls to the ride setup flow.
-2. Make permission requests contextual:
+1. Add voice guidance and lock-screen guidance controls to the ride setup
+   flow, named by rider benefit ("Keep guiding when the screen is locked",
+   "Spoken directions"), presented as one hands-free guidance concept with
+   voice as the primary switch.
+2. Add a "test voice" affordance to ride setup that speaks one sample prompt
+   on demand (or automatically on first enable), so silent-switch, Bluetooth
+   routing, and volume problems surface before departure.
+3. Make permission requests contextual:
    - foreground permission for normal ride guidance
    - background permission only when lock-screen guidance is enabled
-3. Add denied/restricted states:
+   - show the app's own explainer card immediately before triggering the iOS
+     Always dialog, at the moment the user first enables the feature — never
+     at app launch; the one-shot upgrade dialog makes this pre-prompt the only
+     chance to win the grant
+4. Add denied/restricted states:
    - foreground denied -> cannot start CycleWays navigation
    - background denied -> start foreground-only with clear messaging, or keep
      the user in setup depending on final UX
@@ -269,23 +283,38 @@ Acceptance:
      Settings", and deep-link to Settings for the second case
    - re-check background permission at every ride start; iOS provisional
      Always grants can be downgraded later without the app being told
-4. Show active ride mode in navigation UI:
+5. Activate keep-awake (`expo-keep-awake`) for the duration of any
+   foreground-only ride, and release it when navigation ends. Without this the
+   display sleeps within seconds and the fallback mode is broken on arrival —
+   this is a requirement of foreground-only mode, not polish.
+6. Show active ride mode in navigation UI:
    - foreground-only
    - lock-screen guidance active
    - voice muted/active
-5. Add a settings affordance when the user needs to enable Always location in
+7. Make mute a control, not just a status: a large, glove-friendly tap target
+   on the navigation screen that toggles voice mid-ride. ("Repeat last
+   instruction" can be deferred past v1.)
+8. Add a settings affordance when the user needs to enable Always location in
    iOS Settings.
-6. Ensure pause/stop UI calls the runtime and stops background updates.
-7. Rehydrate UI state on foreground from the runtime snapshot.
-8. Keep existing haptics behavior, but do not rely on haptics for locked-screen
-   guidance.
+9. Ensure pause/stop UI calls the runtime and stops background updates.
+10. Rehydrate UI state on foreground from the runtime snapshot, rendering
+    current state directly: no flash of pre-lock state, and no replaying of
+    cues that fired while locked.
+11. Add a one-time reassurance after the first successful locked-screen ride
+    ("guidance kept running while your screen was locked").
+12. Keep existing haptics behavior, but do not rely on haptics for
+    locked-screen guidance.
 
 Acceptance:
 
 - The user understands why Always permission is requested.
 - The UI never shows lock-screen guidance as active when Always permission is
   unavailable.
-- Returning from lock screen shows current navigation state.
+- Foreground-only rides keep the screen awake until navigation ends.
+- Voice can be muted mid-ride with one tap.
+- Ride setup can play a sample voice prompt.
+- Returning from lock screen shows current navigation state with no stale
+  flash and no replayed cues.
 
 ## Phase 7 - iOS Configuration And Apple Systems
 
@@ -353,6 +382,8 @@ Run this matrix on TestFlight or a Release-like build, not just the simulator.
    - permission revoked from Settings mid-ride
 2. App lifecycle:
    - foreground ride
+   - foreground-only ride (background denied): screen stays awake for the
+     whole ride and keep-awake releases when navigation ends
    - lock screen for 10 minutes
    - app switcher background
    - unlock and return
@@ -366,6 +397,9 @@ Run this matrix on TestFlight or a Release-like build, not just the simulator.
    - music/podcast playing
    - phone call/interruption
    - volume zero/muted
+   - device with only the default (non-enhanced) `he-IL` voice
+   - "test voice" in ride setup routes and sounds like real ride prompts
+   - mute/unmute mid-ride from the navigation screen
 4. Ride behavior:
    - on-route happy path
    - missed turn/off-route

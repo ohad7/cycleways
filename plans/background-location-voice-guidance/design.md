@@ -69,7 +69,8 @@ guidance, not conversational control.
 - `packages/core/src/navigation/navigationPresentation.js` already converts
   session state into Hebrew visual guidance copy for `NavPanel`.
 - The mobile app has `expo-location` and `expo-haptics`, but does not currently
-  depend on `expo-task-manager`, `expo-speech`, or `expo-audio`.
+  depend on `expo-task-manager`, `expo-speech`, `expo-audio`, or
+  `expo-keep-awake`.
 
 The important architectural advantage is that most navigation logic is already
 pure and testable. The missing work is the native runtime boundary: background

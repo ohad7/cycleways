@@ -134,6 +134,28 @@ assert.throws(
     null,
     "off-route holds the map still",
   );
+  assert.equal(
+    cameraHeadingTarget({
+      hasAcquiredRoute: true,
+      offRoute: false,
+      crossTrackMeters: 25,
+      bearingToNextDeg: 0,
+      smoothedCourseDeg: 90,
+    }),
+    null,
+    "missed-turn candidate holds before off-route confirmation",
+  );
+  assert.equal(
+    cameraHeadingTarget({
+      hasAcquiredRoute: true,
+      offRoute: false,
+      crossTrackMeters: 25,
+      bearingToNextDeg: 0,
+      smoothedCourseDeg: 5,
+    }),
+    0,
+    "actual turn still adopts the route bearing",
+  );
   assert.equal(cameraHeadingTarget(null), null, "no progress, no target");
 }
 

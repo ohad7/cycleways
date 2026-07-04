@@ -7,6 +7,8 @@ import approachFromDistance from "./approach-from-distance.js";
 import currentRouteGeneric from "./current-route-generic.js";
 import gpsGap from "./gps-gap.js";
 import missedTurnReroute from "./missed-turn-reroute.js";
+import missedTurnRejoinLater from "./missed-turn-rejoin-later.js";
+import offRouteExcursion from "./off-route-excursion.js";
 import onRouteHappyPath from "./on-route-happy-path.js";
 import parallelPath from "./parallel-path.js";
 import recordedRealRide from "./recorded-real-ride.js";
@@ -19,7 +21,9 @@ export const scenarios = [
   onRouteHappyPath,
   approachFromDistance,
   approachCalculatedRoute,
+  offRouteExcursion,
   missedTurnReroute,
+  missedTurnRejoinLater,
   rerouteFailure,
   gpsGap,
   stopAndStand,

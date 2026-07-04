@@ -7,6 +7,9 @@
 // module only decides WHEN the heading target is allowed to move.
 import { bearingDelta } from "../utils/geometry.js";
 
+const ROUTE_BEARING_CONFIDENCE_CROSS_TRACK_M = 3;
+const ROUTE_BEARING_DISAGREE_DEG = 60;
+
 // Which bearing the follow camera should aim at, per navigation state. The
 // map frame is route-up whenever the route is trusted, aims at the route
 // start while approaching, and returns null off-route: the rider is
@@ -22,9 +25,21 @@ export function cameraHeadingTarget(progress) {
       ? progress.guidanceBearingDeg
       : null;
   }
-  return Number.isFinite(progress.bearingToNextDeg)
+  const routeBearing = Number.isFinite(progress.bearingToNextDeg)
     ? progress.bearingToNextDeg
     : null;
+  const riderCourse = Number.isFinite(progress.smoothedCourseDeg)
+    ? progress.smoothedCourseDeg
+    : progress.courseDeg;
+  if (
+    routeBearing !== null &&
+    Number.isFinite(riderCourse) &&
+    Number(progress.crossTrackMeters) > ROUTE_BEARING_CONFIDENCE_CROSS_TRACK_M &&
+    bearingDelta(riderCourse, routeBearing) > ROUTE_BEARING_DISAGREE_DEG
+  ) {
+    return null;
+  }
+  return routeBearing;
 }
 
 const DEFAULTS = {

@@ -10,6 +10,8 @@ function entry(overrides = {}) {
     progressMeters: 0,
     activeCueType: null,
     suggestionStatus: "idle",
+    rejoinTargetProgressMeters: null,
+    rejoinDistanceToRouteMeters: null,
     connectorResult: null,
     haptic: null,
     wrongWay: false,
@@ -25,8 +27,22 @@ const timeline = [
   entry({ status: "approaching", progressMeters: 0, presentation: { cueText: "", statusText: "בדרך למסלול", guidanceText: "" } }),
   entry({ justAcquired: true, progressMeters: 10 }),
   entry({ progressMeters: 200 }),
-  entry({ status: "off-route", offRoute: true, progressMeters: 300, haptic: "heavy" }),
-  entry({ status: "off-route", offRoute: true, progressMeters: 300, suggestionStatus: "ready" }),
+  entry({
+    status: "off-route",
+    offRoute: true,
+    progressMeters: 300,
+    rejoinTargetProgressMeters: 300,
+    rejoinDistanceToRouteMeters: 75,
+    haptic: "heavy",
+  }),
+  entry({
+    status: "off-route",
+    offRoute: true,
+    progressMeters: 300,
+    rejoinTargetProgressMeters: 520,
+    rejoinDistanceToRouteMeters: 50,
+    suggestionStatus: "ready",
+  }),
   entry({ progressMeters: 400, wrongWay: true }),
   entry({ progressMeters: 450, wrongWay: false }),
   entry({ progressMeters: 500, presentation: { cueText: "פנה שמאלה אל שביל הצפון", statusText: "", guidanceText: "" } }),
@@ -43,6 +59,9 @@ const timeline = [
       { type: "banner", match: "פנה שמאלה", afterMeters: 400, beforeMeters: 600 },
       { type: "banner", match: "בדרך למסלול", field: "statusText" },
       { type: "rerouted", withinFixesOfOffRoute: 2 },
+      { type: "rejoin-target", position: "first", betweenMeters: [250, 350] },
+      { type: "rejoin-target", position: "last", betweenMeters: [500, 550] },
+      { type: "rejoin-target-advances", byMeters: 200 },
       { type: "arrived" },
       { type: "haptic", kind: "heavy" },
       { type: "progress-at-least", meters: 800 },
@@ -66,6 +85,8 @@ const timeline = [
       { type: "banner", match: "פנה שמאלה", beforeMeters: 400 }, // too late
       { type: "haptic", kind: "medium" }, // never fired
       { type: "suggestionFailed" }, // connector never failed
+      { type: "rejoin-target", position: "last", betweenMeters: [250, 350] }, // target advanced past this
+      { type: "rejoin-target-advances", byMeters: 300 }, // not far enough
       { type: "progress-at-least", meters: 2000 },
       { type: "wrong-way", never: true }, // did fire at 400 m
       { type: "wrong-way-resolved", final: true }, // did resolve, so this one passes
@@ -74,7 +95,7 @@ const timeline = [
     timeline,
   );
   assert.equal(result.passed, false);
-  assert.equal(result.failures.length, 10, JSON.stringify(result.failures, null, 1));
+  assert.equal(result.failures.length, 12, JSON.stringify(result.failures, null, 1));
 }
 
 // wrong-way that never fired: bare expectation fails, never-form passes.
@@ -162,6 +183,26 @@ const timeline = [
   const result = evaluateExpectations([{ type: "rerouted" }], [entry()]);
   assert.equal(result.passed, false);
   assert.match(result.failures[0], /never went off-route/);
+}
+
+// Rejoin target expectations fail clearly when no target or no advance exists.
+{
+  const noTarget = [entry(), entry({ status: "off-route", offRoute: true })];
+  assert.equal(evaluateExpectations([{ type: "rejoin-target" }], noTarget).passed, false);
+  assert.equal(
+    evaluateExpectations([{ type: "rejoin-target-advances", byMeters: 10 }], noTarget)
+      .passed,
+    false,
+  );
+  const pinned = [
+    entry({ status: "off-route", rejoinTargetProgressMeters: 300 }),
+    entry({ status: "off-route", rejoinTargetProgressMeters: 300 }),
+  ];
+  assert.equal(
+    evaluateExpectations([{ type: "rejoin-target-advances", byMeters: 10 }], pinned)
+      .passed,
+    false,
+  );
 }
 
 // suggestionFailed passes when a connector failure surfaced.

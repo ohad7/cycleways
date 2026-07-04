@@ -12,6 +12,13 @@ function textOf(entry, field) {
   return String(entry?.presentation?.[field] ?? "");
 }
 
+function rejoinTargetProgressOf(entry) {
+  const raw = entry?.rejoinTargetProgressMeters;
+  if (raw === null || raw === undefined) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 export function evaluateExpectations(expectations, timeline) {
   const failures = [];
   const entries = Array.isArray(timeline) ? timeline : [];
@@ -85,6 +92,54 @@ export function evaluateExpectations(expectations, timeline) {
           fail(
             `suggestion ready ${readyIndex - firstOffRouteIndex} entries after off-route (limit ${exp.withinFixesOfOffRoute})`,
           );
+        }
+        break;
+      }
+
+      case "rejoin-target": {
+        const candidates = entries.filter((e) => rejoinTargetProgressOf(e) !== null);
+        if (candidates.length === 0) {
+          fail("no rejoin target was shown");
+          break;
+        }
+        const selected =
+          exp.position === "last"
+            ? candidates[candidates.length - 1]
+            : exp.position === "first"
+              ? candidates[0]
+              : candidates.find((e) => {
+                  if (!Array.isArray(exp.betweenMeters)) return true;
+                  const p = rejoinTargetProgressOf(e);
+                  const [min, max] = exp.betweenMeters;
+                  return p !== null && p >= min && p <= max;
+                });
+        if (!selected) {
+          fail("no rejoin target matched the requested position/window");
+          break;
+        }
+        if (Array.isArray(exp.betweenMeters)) {
+          const p = rejoinTargetProgressOf(selected);
+          const [min, max] = exp.betweenMeters;
+          if (p === null || p < min || p > max) {
+            fail(`rejoin target at ${p}m, expected within [${min}, ${max}]`);
+          }
+        }
+        break;
+      }
+
+      case "rejoin-target-advances": {
+        const values = entries
+          .map(rejoinTargetProgressOf)
+          .filter((value) => value !== null);
+        if (values.length < 2) {
+          fail("fewer than two rejoin target samples");
+          break;
+        }
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const required = Number(exp.byMeters ?? 1);
+        if (max - min < required) {
+          fail(`rejoin target advanced ${max - min}m, expected at least ${required}m`);
         }
         break;
       }
