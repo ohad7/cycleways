@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
-import { executeDownloadGPX } from "@cycleways/core/platform/download.js";
+// Import the native download impl explicitly: this app-level file lives outside
+// packages/core/src, so Metro's core-only platform remap (metro.config.js) does
+// not swap download.js → download.native.js here, and the web version's
+// document/URL APIs throw on device. Matches the location.native.js import below.
+import { executeDownloadGPX } from "@cycleways/core/platform/download.native.js";
 import { resetNativeLocationHref } from "@cycleways/core/platform/location.native.js";
 import { generateGPX } from "@cycleways/core/utils/gpx-generator.js";
 import RouteDetailWeb from "./RouteDetailWeb.jsx";

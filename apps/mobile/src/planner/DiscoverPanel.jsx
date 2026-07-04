@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { getJsonAsset } from "@cycleways/core/platform/assets.js";
+// Explicit .native import: this app-level file lives outside packages/core/src,
+// so Metro's core-only platform remap (metro.config.js) does not swap assets.js
+// → assets.native.js here. The web version fetches over the network instead of
+// reading the bundled asset, so places.json silently fails to load offline.
+import { getJsonAsset } from "@cycleways/core/platform/assets.native.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
 import {
   routePassesThroughPlaceIds,

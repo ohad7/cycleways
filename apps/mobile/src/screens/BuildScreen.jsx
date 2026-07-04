@@ -30,6 +30,7 @@ import Mapbox, {
   UserLocationRenderMode,
   UserTrackingMode,
 } from "@rnmapbox/maps";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
@@ -2404,20 +2405,31 @@ export default function BuildScreen({ navigation, route }) {
           />
         </>
       ) : (
-        <PlannerSheet sheetRef={plannerSheetRef}>
+        <PlannerSheet
+          sheetRef={plannerSheetRef}
+          renderFooter={
+            canDownload
+              ? () => (
+                  <BuildPanelFooter
+                    canShare={
+                      Boolean(shareUrl) && shareInfo.status !== "too_long"
+                    }
+                    onDownloadGpx={handleDownloadGpx}
+                    onShare={shareRoute}
+                    onStartNavigation={handleStartNavigation}
+                  />
+                )
+              : undefined
+          }
+        >
           <BuildPanelContent
-            canDownload={canDownload}
             canRedo={canRedo}
-            canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
             canUndo={canUndo}
             catalogEntry={selectedCatalogEntry}
             locationState={locationState}
             onClear={handleClearRoute}
-            onOpenSummary={handleOpenDownload}
             onRedo={handleRedo}
             onSeekToFraction={seekToFraction}
-            onShare={shareRoute}
-            onStartNavigation={handleStartNavigation}
             onUndo={handleUndo}
             playback={playback}
             presentation={routePresentation}
@@ -2492,18 +2504,13 @@ export default function BuildScreen({ navigation, route }) {
 }
 
 function BuildPanelContent({
-  canDownload,
   canRedo,
-  canShare,
   canUndo,
   catalogEntry,
   locationState,
   onClear,
-  onOpenSummary,
   onRedo,
   onSeekToFraction,
-  onShare,
-  onStartNavigation,
   onUndo,
   playback,
   presentation,
@@ -2519,10 +2526,7 @@ function BuildPanelContent({
     : presentation.message;
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.buildBody}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.buildBody}>
       <View style={styles.buildHead}>
         <View style={styles.buildHeadText}>
           <Text style={styles.buildEyebrow}>
@@ -2615,34 +2619,57 @@ function BuildPanelContent({
       ) : null}
 
       <RoutePoiList activeDataPoints={routeState.activeDataPoints} />
+    </View>
+  );
+}
 
-      {canDownload ? (
-        <>
-          <View style={styles.buildActions}>
-            <ChromeButton
-              label="סיכום"
-              onPress={onOpenSummary}
-              accessibilityLabel="סיכום ושיתוף המסלול"
-              testID="action-summary"
-            />
-            <ChromeButton
-              disabled={!canShare}
-              label="שיתוף"
-              onPress={onShare}
-              accessibilityLabel="שיתוף המסלול"
-            />
-          </View>
-          <ChromeButton
-            icon="navigate"
-            label="התחל ניווט"
-            onPress={onStartNavigation}
-            primary
-            accessibilityLabel="התחל ניווט מונחה במסלול"
-            testID="action-start-navigation"
-          />
-        </>
-      ) : null}
-    </ScrollView>
+// Primary route actions, pinned to the bottom of the planner sheet so they stay
+// visible however far the body above is scrolled. Mirrors the featured route's
+// embedded action strip: one row of three equal buttons, navigation rightmost
+// and forest-green, the two secondaries iconed. Keep these in sync so the app
+// reads as one design language across the planner and route-story pages.
+function BuildPanelFooter({
+  canShare,
+  onDownloadGpx,
+  onShare,
+  onStartNavigation,
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={[
+        styles.buildFooter,
+        { paddingBottom: 12 + Math.max(insets.bottom - 6, 0) },
+      ]}
+    >
+      <View style={styles.footerActions}>
+        <ChromeButton
+          icon="trail-sign-outline"
+          label="ניווט"
+          onPress={onStartNavigation}
+          primary
+          buttonStyle={[styles.footerAction, styles.footerActionPrimary]}
+          accessibilityLabel="התחל ניווט מונחה במסלול"
+          testID="action-start-navigation"
+        />
+        <ChromeButton
+          icon="share-outline"
+          label="שיתוף"
+          onPress={onShare}
+          disabled={!canShare}
+          buttonStyle={styles.footerAction}
+          accessibilityLabel="שיתוף המסלול"
+        />
+        <ChromeButton
+          icon="download-outline"
+          label="GPX"
+          onPress={onDownloadGpx}
+          buttonStyle={styles.footerAction}
+          accessibilityLabel="הורדת קובץ GPX למסלול"
+          testID="action-download-gpx"
+        />
+      </View>
+    </View>
   );
 }
 
@@ -3489,6 +3516,8 @@ const styles = StyleSheet.create({
   chromeButton: {
     minWidth: 50,
     minHeight: 40,
+    flexDirection: "row-reverse",
+    gap: 7,
     paddingHorizontal: 10,
     borderRadius: 4,
     alignItems: "center",
@@ -3528,6 +3557,7 @@ const styles = StyleSheet.create({
     color: "#333333",
     fontSize: 13,
     fontWeight: "700",
+    flexShrink: 1,
   },
   chromeButtonTextSymbol: {
     fontSize: 21,
@@ -3601,11 +3631,35 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     writingDirection: "rtl",
   },
-  buildActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  buildFooter: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    backgroundColor: palette.paper,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.line,
+  },
+  // One row of equal-width actions; row-reverse puts navigation (first child) at
+  // the right, matching the featured route's embedded action strip.
+  footerActions: {
+    flexDirection: "row-reverse",
     gap: 8,
-    marginTop: 2,
+  },
+  footerAction: {
+    flex: 1,
+    minHeight: 48,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: palette.paper,
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  footerActionPrimary: {
+    borderColor: palette.forest,
+    backgroundColor: palette.forest,
   },
   // Dev-only simulate/record overlay — dead code in production builds.
   devControls: {
