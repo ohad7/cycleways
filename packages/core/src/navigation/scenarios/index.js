@@ -2,6 +2,7 @@
 // tests/test-nav-scenarios.mjs (visualOnly entries are skipped there) and
 // appears in the dev scenario picker on the Build screen. Adding a scenario =
 // one module + one line here.
+import approachCalculatedRoute from "./approach-calculated-route.js";
 import approachFromDistance from "./approach-from-distance.js";
 import currentRouteGeneric from "./current-route-generic.js";
 import gpsGap from "./gps-gap.js";
@@ -16,6 +17,7 @@ import sovevBeitHillelRide from "./sovev-beit-hillel-ride.js";
 export const scenarios = [
   onRouteHappyPath,
   approachFromDistance,
+  approachCalculatedRoute,
   missedTurnReroute,
   rerouteFailure,
   gpsGap,
