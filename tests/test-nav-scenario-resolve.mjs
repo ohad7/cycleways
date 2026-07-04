@@ -18,6 +18,12 @@ const base = {
   assert.deepEqual(resolved.expect, [], "expect defaults to []");
   assert.equal(resolved.visualOnly, false);
   assert.ok(resolved.navigationRoute.canNavigate, "route is navigable");
+  assert.equal(
+    resolved.navigationRoute.requiresStartAcquisition,
+    true,
+    "scenario rides start at the route start, like a ride-setup effective route" +
+      " — without this, loop routes (start == end) can acquire at the end",
+  );
   assert.ok(
     resolved.navigationRoute.distanceMeters > 1100 &&
       resolved.navigationRoute.distanceMeters < 1300,

@@ -357,6 +357,68 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
     assert.equal(stopped.smoothedCourseDeg, null, "no smoothed course when stopped");
   }
 
+  // Acquisition resets direction judgment: the approach leg's course says
+  // nothing about on-route direction (it regularly points against the route's
+  // first meters), so the course history restarts at acquisition — no
+  // smoothed course, and no wrong-way, until the rider has covered a course
+  // window ON the route.
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    const northFix = (offsetMeters, timestamp) => ({
+      lat: 33.1 + offsetMeters / 111320,
+      lng: 35.6,
+      accuracy: 5,
+      speed: 5,
+      timestamp,
+    });
+    // Ride south toward the route start from 98 m north; acquisition latches
+    // at 33 m offset (inside the 35 m threshold).
+    let t = 1000;
+    let acquisitionSeen = false;
+    for (let offset = 98; offset >= 33; offset -= 5) {
+      const result = tracker.update(northFix(offset, (t += 1000)));
+      acquisitionSeen = result.hasAcquiredRoute;
+    }
+    assert.equal(acquisitionSeen, true, "acquired near the start");
+    // The next fixes are still within one course window of the acquisition
+    // point: direction judgment must not yet exist, whatever the approach
+    // course was.
+    for (const offset of [28, 23, 18]) {
+      const result = tracker.update(northFix(offset, (t += 1000)));
+      assert.equal(
+        result.smoothedCourseDeg,
+        null,
+        `course history restarted at acquisition (offset ${offset})`,
+      );
+      assert.equal(result.wrongWay, false, "no wrong-way while settling");
+    }
+  }
+
+  // Post-acquisition grace: proximity acquisition can latch while the rider
+  // is still physically finishing the approach (moving toward the start,
+  // against the route's local bearing). Wrong-way stays quiet for a grace
+  // window after acquisition; a genuine backward start is still warned, just
+  // calmly (~15 s in).
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    let t = 1000;
+    const results = [];
+    // Acquire mid-route at 400 m and immediately ride west, against the route.
+    for (let k = 0; k <= 20; k++) {
+      results.push(tracker.update(eastFix(400 - k * 5, (t += 1000))));
+    }
+    assert.equal(results[0].hasAcquiredRoute, true, "acquired mid-route");
+    assert.ok(
+      results.slice(0, 11).every((r) => r.wrongWay === false),
+      "no wrong-way warning inside the post-acquisition grace window",
+    );
+    assert.equal(
+      results[results.length - 1].wrongWay,
+      true,
+      "a genuine backward start is still warned after the grace window",
+    );
+  }
+
   // smoothedCourseDeg: the general direction of travel, exposed for consumers
   // that must not chase per-fix noise (e.g. the off-route camera). Under the
   // same along-track jitter that flips courseDeg backwards, it stays ~east.

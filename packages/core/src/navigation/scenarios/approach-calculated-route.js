@@ -24,6 +24,10 @@ export default {
     { type: "status", value: "approaching" },
     { type: "banner", match: "בדרך למסלול", field: "statusText" },
     { type: "acquired" },
+    // Loop route (start == end): navigation must begin at the START vertex,
+    // never acquire at the shared end and read the ride as backwards.
+    { type: "status", value: "navigating", betweenMeters: [0, 100] },
+    { type: "wrong-way", never: true },
     { type: "progress-at-least", meters: 700 },
   ],
 };

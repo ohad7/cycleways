@@ -29,6 +29,11 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     if (!navigationRoute.canNavigate) {
       throw err(`routeState is not navigable (${navigationRoute.unavailableReason})`);
     }
+    // Scenario rides run from the route start, like the effective route the
+    // ride-setup flow always produces. Without this, a loop route (start and
+    // end on the same vertex) can acquire at the END, so riding forward reads
+    // as riding backwards — progress counts down and wrong-way fires.
+    navigationRoute = { ...navigationRoute, requiresStartAcquisition: true };
   } else {
     throw err('route must be "current" or { routeState }');
   }

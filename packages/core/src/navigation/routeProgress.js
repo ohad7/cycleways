@@ -16,6 +16,11 @@ const MIN_COURSE_SPEED_MPS = 1; // below this, GPS course/heading is unreliable
 const WRONG_WAY_DELTA_DEG = 120; // course vs route bearing beyond this = wrong-way
 const COURSE_WINDOW_METERS = 20; // displacement window for the smoothed course
 const WRONG_WAY_CONFIRM_MS = 4000; // sustained disagreement before warning
+// Quiet window after acquisition: the proximity latch can fire while the
+// rider is still physically finishing the approach (moving toward the start,
+// against the route's local bearing). No wrong-way judgment until this
+// settles; a genuine backward start is still warned right afterwards.
+const WRONG_WAY_ACQUISITION_GRACE_MS = 12000;
 const COURSE_HISTORY_LIMIT = 240; // ~4 min at 1 Hz
 
 function metersPerDegLng(lat) {
@@ -131,10 +136,12 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
   // Acquisition gate: latches true once the rider comes within the on-route
   // threshold of the geometry; stays true for the rest of the session.
   let acquired = false;
-  // Wrong-way state: recent raw fixes (for the smoothed course) plus the
-  // timestamp the sustained-disagreement dwell started.
+  // Wrong-way state: recent raw fixes (for the smoothed course), the
+  // timestamp the sustained-disagreement dwell started, and when the route
+  // was acquired (for the post-acquisition grace window).
   let courseHistory = [];
   let wrongWaySince = null;
+  let acquiredAtMs = null;
 
   function reset() {
     offRouteState = "on";
@@ -146,6 +153,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     seededSearchPending = false;
     courseHistory = [];
     wrongWaySince = null;
+    acquiredAtMs = null;
   }
 
   function seed({ progressMeters, acquired: seedAcquired = true } = {}) {
@@ -251,6 +259,13 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
   // the rider is warned. Parallel paths and jitter never qualify; an actual
   // turn-around does within a few seconds.
   function updateWrongWay(fix, bearingToNextDeg, course) {
+    if (
+      acquiredAtMs !== null &&
+      fix.timestamp - acquiredAtMs < WRONG_WAY_ACQUISITION_GRACE_MS
+    ) {
+      wrongWaySince = null;
+      return false;
+    }
     const delta =
       course !== null && bearingToNextDeg !== null
         ? bearingDelta(course, bearingToNextDeg)
@@ -340,6 +355,12 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       if (best && best.crossTrackMeters <= enterThreshold && withinSelectedStart) {
         acquired = true;
         lastProgressMeters = best.progressMeters;
+        // The approach leg's course says nothing about on-route direction —
+        // it regularly points against the route's first meters. Restart
+        // direction judgment from the acquisition point.
+        courseHistory = [];
+        wrongWaySince = null;
+        acquiredAtMs = fix.timestamp;
       } else {
         // Still approaching: do not advance progress or flag off-route.
         const approachSmoothedCourse = smoothedCourse(fix);
