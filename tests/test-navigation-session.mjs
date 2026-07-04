@@ -182,6 +182,17 @@ const fix = (lng, timestamp, extra = {}) => ({
 
   const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
   assert.equal(stillOff.cueEvent, null, "off-route event not repeated while still off");
+
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.605, 8000) });
+  const recovered = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.6051, 12000) });
+  assert.equal(recovered.status, "navigating", "sustained on-route fixes recover");
+  assert.equal(recovered.cueEvent?.kind, "acquired", "recovery emits acquired event");
+  assert.equal(recovered.cueEvent?.acquisition, "reacquired");
+
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(13000) });
+  const secondOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(18000) });
+  assert.equal(secondOff.status, "off-route", "can enter off-route again after recovery");
+  assert.equal(secondOff.cueEvent?.kind, "off-route", "second off-route transition emits");
 }
 
 // --- approaching status ---
@@ -203,6 +214,7 @@ const fix = (lng, timestamp, extra = {}) => ({
   assert.equal(near.status, "navigating", "reaching the route -> navigating");
   assert.equal(near.justAcquired, true, "approach handoff is explicit for one render");
   assert.equal(near.cueEvent?.kind, "acquired");
+  assert.equal(near.cueEvent?.acquisition, "initial");
 }
 
 function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
@@ -470,6 +482,61 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
     fix: { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 12000 },
   });
   assert.equal(state.rideStartTimestamp, 12000, "second ride gets its own start");
+}
+
+// --- snapshot / restore preserves cue and off-route transition memory -----
+{
+  const route = straightRoute();
+  const uninterrupted = createNavigationSession(route, {
+    confirmMs: 4000,
+    recoverMs: 3000,
+  });
+  uninterrupted.dispatch({ type: NAV_ACTIONS.START });
+  uninterrupted.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: true });
+  const previewFix = fix(35.609, 1000);
+  const samePreviewFix = fix(35.6091, 2000);
+  const finalFix = fix(35.6098, 3000);
+  uninterrupted.dispatch({ type: NAV_ACTIONS.LOCATION, fix: previewFix });
+  const snapshot = uninterrupted.snapshot();
+
+  const restored = createNavigationSession(route, {
+    confirmMs: 4000,
+    recoverMs: 3000,
+    snapshot,
+  });
+  const samePreview = restored.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: samePreviewFix,
+  });
+  assert.equal(
+    samePreview.cueEvent,
+    null,
+    "restored session does not repeat already-emitted preview cue",
+  );
+  const restoredFinal = restored.dispatch({ type: NAV_ACTIONS.LOCATION, fix: finalFix });
+  assert.equal(restoredFinal.cueEvent?.phase, "final", "phase change still emits");
+  assert.equal(restoredFinal.rideStartTimestamp, 1000, "ride start survives restore");
+
+  const offRoute = createNavigationSession(route, { confirmMs: 4000, recoverMs: 3000 });
+  offRoute.dispatch({ type: NAV_ACTIONS.START });
+  offRoute.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: true });
+  offRoute.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.605, 500) });
+  const offFix = { lat: 33.101, lng: 35.605, accuracy: 5, speed: 3, timestamp: 1000 };
+  offRoute.dispatch({ type: NAV_ACTIONS.LOCATION, fix: offFix });
+  const confirmedOffFix = { ...offFix, timestamp: 6000 };
+  const firstOff = offRoute.dispatch({ type: NAV_ACTIONS.LOCATION, fix: confirmedOffFix });
+  assert.equal(firstOff.cueEvent?.kind, "off-route");
+  const restoredOff = createNavigationSession(route, {
+    confirmMs: 4000,
+    recoverMs: 3000,
+    snapshot: offRoute.snapshot(),
+  });
+  const stillOff = restoredOff.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { ...confirmedOffFix, timestamp: 7000 },
+  });
+  assert.equal(stillOff.status, "off-route");
+  assert.equal(stillOff.cueEvent, null, "off-route event is not re-fired after restore");
 }
 
 console.log("navigation session lifecycle tests passed");

@@ -11,6 +11,7 @@ import {
 import { createCameraDirector } from "./cameraDirector.js";
 import { createCueHapticPlanner } from "./cueHaptics.js";
 import { getNavigationPresentation } from "./navigationPresentation.js";
+import { createNavigationVoicePlanner } from "./navigationVoice.js";
 import { replaySession } from "./replayRunner.js";
 
 // Connector behavior per scenario. "straight-line" answers every rejoin/
@@ -25,6 +26,7 @@ export function connectorRouterForMode(mode) {
 
 export function buildUserTimeline(replayTimeline) {
   const haptics = createCueHapticPlanner();
+  const voice = createNavigationVoicePlanner();
   // Same camera policy the app runs: target per state, governed adoption.
   const cameraGovernor = createCameraHeadingGovernor();
   const cameraDirector = createCameraDirector();
@@ -34,6 +36,9 @@ export function buildUserTimeline(replayTimeline) {
       const hapticPlan = state.cueEvent
         ? haptics.plan(state.cueEvent, state.latestFix?.timestamp ?? 0)
         : { kind: null };
+      const voicePlan = state.cueEvent
+        ? voice.plan(state.cueEvent, state, state.latestFix?.timestamp ?? 0)
+        : { utterance: null };
       const cameraHeadingDeg = cameraGovernor.update(
         cameraHeadingTarget(state.progress),
         state.latestFix?.timestamp ?? 0,
@@ -70,6 +75,8 @@ export function buildUserTimeline(replayTimeline) {
             : null,
         connectorResult: state.connectorResult?.result ?? null,
         haptic: hapticPlan.kind ?? null,
+        voice: voicePlan.utterance,
+        voiceText: voicePlan.utterance?.text ?? null,
         cameraHeadingDeg,
         cameraStage: cameraShot.stage,
         cardMode: presentation.cardMode,

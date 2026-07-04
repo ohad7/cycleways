@@ -53,6 +53,10 @@ function straightRoute() {
     "at least one haptic event planned",
   );
   assert.ok(
+    timeline.some((e) => e.voiceText !== null),
+    "at least one voice event planned",
+  );
+  assert.ok(
     Number(last.progressMeters) > 800,
     `progress completes, got ${last.progressMeters}`,
   );
@@ -69,6 +73,10 @@ function straightRoute() {
     "every entry carries the card mode",
   );
   assert.equal(timeline[timeline.length - 1].cameraStage, "arrived");
+  assert.ok(
+    timeline.some((e) => /הגעת ליעד/.test(e.voiceText || "")),
+    "arrival voice text is present",
+  );
   assert.ok(
     timeline.some((e) => Number.isFinite(e.cameraHeadingDeg)),
     "the governed camera heading is carried on the timeline",

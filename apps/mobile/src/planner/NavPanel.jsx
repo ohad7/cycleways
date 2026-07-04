@@ -15,6 +15,9 @@ export default function NavPanel({
   onOpenExternal,
   onChangeRideSettings,
   compassHeading = null,
+  voiceEnabled = true,
+  onToggleVoice,
+  lockScreenGuidanceActive = false,
 }) {
   const insets = useSafeAreaInsets();
   const p = getNavigationPresentation(sessionState);
@@ -165,19 +168,48 @@ export default function NavPanel({
             </View>
           ) : null}
           <View style={styles.controls}>
-            <View style={styles.dataPill}>
-              <Text style={styles.dataPillMain} numberOfLines={1}>
-                {p.remainingText || ""}
-              </Text>
-              {p.speedText ? (
-                <Text style={styles.dataPillSub}>{p.speedText}</Text>
-              ) : null}
+            <View
+              style={styles.dataPill}
+              accessible
+              accessibilityLabel={`${p.remainingText || ""}. ${
+                lockScreenGuidanceActive ? "ממשיך כשהמסך נעול" : "מסך ער"
+              }. ${voiceEnabled ? "קול פעיל" : "קול כבוי"}`}
+            >
+              <View style={styles.dataPillCopy}>
+                <Text style={styles.dataPillMain} numberOfLines={1}>
+                  {p.remainingText || ""}
+                </Text>
+                {p.speedText ? (
+                  <Text style={styles.dataPillSub} numberOfLines={1}>
+                    {p.speedText}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={styles.modeIcons}>
+                <Icon
+                  name={lockScreenGuidanceActive ? "lock-closed-outline" : "phone-portrait-outline"}
+                  color={lockScreenGuidanceActive ? palette.forest : palette.muted}
+                  size={16}
+                />
+                <Icon
+                  name={voiceEnabled ? "volume-high-outline" : "volume-mute-outline"}
+                  color={voiceEnabled ? palette.forest : palette.muted}
+                  size={16}
+                />
+              </View>
             </View>
             <RoundButton
               icon={paused ? "play" : "pause"}
               label={paused ? "המשך" : "השהה"}
               onPress={onPauseResume}
             />
+            {onToggleVoice ? (
+              <RoundButton
+                icon={voiceEnabled ? "volume-high-outline" : "volume-mute-outline"}
+                label={voiceEnabled ? "השתק" : "קול"}
+                onPress={onToggleVoice}
+              />
+            ) : null}
             <RoundButton icon="stop" label="סיום" danger onPress={onStop} />
           </View>
         </View>
@@ -414,6 +446,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 6,
     elevation: 3,
+  },
+  dataPillCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  modeIcons: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    marginStart: space.sm,
   },
   dataPillMain: {
     color: palette.ink,

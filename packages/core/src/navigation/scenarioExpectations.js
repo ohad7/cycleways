@@ -141,6 +141,13 @@ export function evaluateExpectations(expectations, timeline) {
         if (max - min < required) {
           fail(`rejoin target advanced ${max - min}m, expected at least ${required}m`);
         }
+        for (let i = 1; i < values.length; i++) {
+          const tolerance = Number(exp.toleranceMeters ?? 1);
+          if (values[i] + tolerance < values[i - 1]) {
+            fail(`rejoin target regressed from ${values[i - 1]}m to ${values[i]}m`);
+            break;
+          }
+        }
         break;
       }
 

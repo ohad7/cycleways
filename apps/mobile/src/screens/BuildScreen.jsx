@@ -83,6 +83,7 @@ import RideSetupSheet from "../planner/RideSetupSheet.jsx";
 import { useNavigationSession } from "../navigation/useNavigationSession.js";
 import {
   createDefaultLocationSource,
+  getNavigationPermissionStatus,
   getRideSetupLocation,
 } from "../navigation/locationService.js";
 import { createSimulateRideSource } from "../navigation/simulateRideSource.js";
@@ -94,6 +95,7 @@ import {
   setNavigationTelemetrySink,
   trackNavigationEvent,
 } from "../navigation/navigationTelemetry.js";
+import { speakSampleNavigationPrompt } from "../navigation/speechAdapter.js";
 
 // Dev builds surface navigation telemetry (connector results, ride setup…) in
 // the Metro console — the only way to see WHY an approach suggestion failed
@@ -765,6 +767,10 @@ export default function BuildScreen({ navigation, route }) {
   const [rideSetupFix, setRideSetupFix] = useState(null);
   const [rideSetupNow, setRideSetupNow] = useState(Date.now());
   const [rideSetupLocationStatus, setRideSetupLocationStatus] = useState("idle");
+  const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
+  const [lockScreenGuidanceEnabled, setLockScreenGuidanceEnabled] = useState(true);
+  const [lockScreenGuidanceNeedsSettings, setLockScreenGuidanceNeedsSettings] =
+    useState(false);
   const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
   const [pendingNavigationRouteId, setPendingNavigationRouteId] = useState(null);
   const [pendingExternalPlan, setPendingExternalPlan] = useState(null);
@@ -772,6 +778,7 @@ export default function BuildScreen({ navigation, route }) {
   const [devSpeed, setDevSpeed] = useState(4);
   const [devScenarioRoute, setDevScenarioRoute] = useState(null);
   const setupRequestRef = useRef(0);
+  const lockScreenPermissionExplainerShownRef = useRef(false);
 
   const ridePlan = useMemo(
     () =>
@@ -800,6 +807,22 @@ export default function BuildScreen({ navigation, route }) {
     setRideSetupLocationStatus(result.status);
   }, []);
 
+  const refreshNavigationPermissionStatus = useCallback(async () => {
+    try {
+      const status = await getNavigationPermissionStatus();
+      const foregroundGranted = status?.foreground?.status === "granted";
+      const backgroundStatus = status?.background?.status;
+      const backgroundCanAskAgain = status?.background?.canAskAgain;
+      const needsSettings =
+        foregroundGranted &&
+        !status?.canUseBackground &&
+        (backgroundStatus === "denied" || backgroundCanAskAgain === false);
+      setLockScreenGuidanceNeedsSettings(Boolean(needsSettings));
+    } catch {
+      setLockScreenGuidanceNeedsSettings(false);
+    }
+  }, []);
+
   const openRideSetup = useCallback(
     (options = {}) => {
       const preserveSelection = options?.preserveSelection === true;
@@ -812,8 +835,9 @@ export default function BuildScreen({ navigation, route }) {
         restored: preserveSelection,
       });
       void refreshRideSetupLocation();
+      void refreshNavigationPermissionStatus();
     },
-    [refreshRideSetupLocation],
+    [refreshNavigationPermissionStatus, refreshRideSetupLocation],
   );
 
   // --- Dev-only simulate-ride harness + GPS recorder (Task 17) ---------------
@@ -839,6 +863,8 @@ export default function BuildScreen({ navigation, route }) {
   }
 
   const nav = useNavigationSession(navigationRoute, {
+    background: lockScreenGuidanceEnabled,
+    voice: voiceGuidanceEnabled,
     locationSource: __DEV__ ? devSourceProxy.current : undefined,
     computeConnector,
   });
@@ -850,6 +876,79 @@ export default function BuildScreen({ navigation, route }) {
     navStatus === "paused" ||
     navStatus === "requesting-permission";
 
+  useEffect(() => {
+    if (
+      isNavigating &&
+      lockScreenGuidanceEnabled &&
+      nav.state?.foregroundOnly &&
+      !nav.lockScreenGuidanceActive
+    ) {
+      setLockScreenGuidanceEnabled(false);
+      void refreshNavigationPermissionStatus();
+      trackNavigationEvent("lock_screen_guidance_fallback", {
+        reason: "foreground-only",
+      });
+    }
+  }, [
+    isNavigating,
+    lockScreenGuidanceEnabled,
+    nav.lockScreenGuidanceActive,
+    nav.state?.foregroundOnly,
+    refreshNavigationPermissionStatus,
+  ]);
+
+  useEffect(() => {
+    void refreshNavigationPermissionStatus();
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        void refreshNavigationPermissionStatus();
+      }
+    });
+    return () => subscription.remove();
+  }, [refreshNavigationPermissionStatus]);
+
+  const handleToggleVoiceGuidance = useCallback(() => {
+    setVoiceGuidanceEnabled((current) => {
+      const next = !current;
+      nav.setVoiceEnabled(next);
+      trackNavigationEvent("voice_guidance_toggled", { enabled: next });
+      return next;
+    });
+  }, [nav]);
+
+  const handleOpenLocationSettings = useCallback(() => {
+    trackNavigationEvent("lock_screen_guidance_settings_opened");
+    const settingsRequest =
+      typeof Linking.openSettings === "function"
+        ? Linking.openSettings()
+        : Linking.openURL("app-settings:");
+    Promise.resolve(settingsRequest).catch(() => {
+      Alert.alert(
+        "לא הצלחנו לפתוח הגדרות",
+        "פתחו ידנית: הגדרות > CycleWays > מיקום > תמיד.",
+      );
+    });
+  }, []);
+
+  const handleToggleLockScreenGuidance = useCallback(() => {
+    if (!lockScreenGuidanceEnabled && lockScreenGuidanceNeedsSettings) {
+      handleOpenLocationSettings();
+      return;
+    }
+    const next = !lockScreenGuidanceEnabled;
+    setLockScreenGuidanceEnabled(next);
+    trackNavigationEvent("lock_screen_guidance_toggled", { enabled: next });
+  }, [
+    handleOpenLocationSettings,
+    lockScreenGuidanceEnabled,
+    lockScreenGuidanceNeedsSettings,
+  ]);
+
+  const handleTestVoiceGuidance = useCallback(() => {
+    trackNavigationEvent("voice_guidance_tested");
+    void speakSampleNavigationPrompt();
+  }, []);
+
   const activeRouteGeometry = useMemo(
     () => buildRouteGeometryFeatureCollection(navigationRoute?.geometry),
     [navigationRoute?.geometry],
@@ -860,26 +959,59 @@ export default function BuildScreen({ navigation, route }) {
   );
   const displayedRouteGeometry = isNavigating ? activeRouteGeometry : routeGeometry;
 
-  const confirmRidePlan = useCallback((plan, options = {}) => {
-    if (!plan?.effectiveRoute?.canNavigate) return;
-    setConfirmedRidePlan(plan);
-    trackNavigationEvent(
-      options.fastStart ? "ride_setup_fast_started" : "ride_setup_confirmed",
-      {
-        direction: plan.direction,
-        startMode: plan.startMode,
-        approachTier: plan.approachTier,
-      },
-    );
-    setRideSetupVisible(false);
-    if (plan.approachTier === "far" || plan.approachTier === "unknown") {
-      setPendingExternalPlan(plan);
-      setDestSheetVisible(true);
-      return;
-    }
-    void clearPendingRideIntent();
-    setPendingNavigationRouteId(plan.effectiveRoute.id);
-  }, []);
+  const confirmRidePlan = useCallback(
+    (plan, options = {}) => {
+      if (!plan?.effectiveRoute?.canNavigate) return;
+      const willStartCycleWays =
+        plan.approachTier !== "far" && plan.approachTier !== "unknown";
+      const completeConfirmation = () => {
+        setConfirmedRidePlan(plan);
+        trackNavigationEvent(
+          options.fastStart ? "ride_setup_fast_started" : "ride_setup_confirmed",
+          {
+            direction: plan.direction,
+            startMode: plan.startMode,
+            approachTier: plan.approachTier,
+            voiceGuidance: voiceGuidanceEnabled,
+            lockScreenGuidance: lockScreenGuidanceEnabled,
+          },
+        );
+        setRideSetupVisible(false);
+        if (plan.approachTier === "far" || plan.approachTier === "unknown") {
+          setPendingExternalPlan(plan);
+          setDestSheetVisible(true);
+          return;
+        }
+        void clearPendingRideIntent();
+        setPendingNavigationRouteId(plan.effectiveRoute.id);
+      };
+
+      if (
+        willStartCycleWays &&
+        lockScreenGuidanceEnabled &&
+        !lockScreenPermissionExplainerShownRef.current
+      ) {
+        Alert.alert(
+          "הכוונה כשהמסך נעול",
+          "CycleWays יבקש הרשאת מיקום תמיד כדי להמשיך לעקוב אחרי הרכיבה ולהשמיע הנחיות כשהמסך נעול.",
+          [
+            { text: "ביטול", style: "cancel" },
+            {
+              text: "המשך",
+              onPress: () => {
+                lockScreenPermissionExplainerShownRef.current = true;
+                completeConfirmation();
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      completeConfirmation();
+    },
+    [lockScreenGuidanceEnabled, voiceGuidanceEnabled],
+  );
 
   const handleRideSetupConfirm = useCallback(() => {
     confirmRidePlan(ridePlan);
@@ -2266,6 +2398,9 @@ export default function BuildScreen({ navigation, route }) {
             onOpenExternal={() => setDestSheetVisible(true)}
             onChangeRideSettings={handleChangeRideSettings}
             compassHeading={compassHeading}
+            voiceEnabled={nav.voiceEnabled}
+            onToggleVoice={handleToggleVoiceGuidance}
+            lockScreenGuidanceActive={nav.lockScreenGuidanceActive}
           />
         </>
       ) : (
@@ -2299,6 +2434,13 @@ export default function BuildScreen({ navigation, route }) {
         reverseAllowed={sourceNavigationRoute?.routeShape?.type !== "one_way"}
         hapticsEnabled={nav.hapticsEnabled}
         onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
+        voiceEnabled={voiceGuidanceEnabled}
+        onToggleVoice={handleToggleVoiceGuidance}
+        lockScreenGuidanceEnabled={lockScreenGuidanceEnabled}
+        lockScreenGuidanceNeedsSettings={lockScreenGuidanceNeedsSettings}
+        onToggleLockScreenGuidance={handleToggleLockScreenGuidance}
+        onOpenLocationSettings={handleOpenLocationSettings}
+        onTestVoice={handleTestVoiceGuidance}
         onDirectionChange={(direction) =>
           setRideSetupSelection((current) => ({ ...current, direction }))
         }

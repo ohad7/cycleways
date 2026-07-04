@@ -50,14 +50,27 @@ function fixPoint(fix) {
 export function createNavigationSession(navigationRoute, options = {}) {
   const mainTracker = createRouteProgressTracker(navigationRoute, options);
   const mainCues = buildRouteCues(navigationRoute);
+  const restored = options.snapshot && options.snapshot.version === 1
+    ? options.snapshot
+    : null;
 
-  let mainCueKey = null;
-  let wasOffRoute = false;
-  let lastConfirmedProgressMeters = 0;
-  let lastRequestPos = null;
-  let connectorRequestAttempt = 0;
-  let requestSeq = 0;
-  let prePauseStatus = "navigating";
+  let mainCueKey = restored?.mainCueKey ?? null;
+  let wasOffRoute = restored?.wasOffRoute === true;
+  let lastConfirmedProgressMeters = Number.isFinite(
+    Number(restored?.lastConfirmedProgressMeters),
+  )
+    ? Number(restored.lastConfirmedProgressMeters)
+    : 0;
+  let lastRequestPos = restored?.lastRequestPos ?? null;
+  let connectorRequestAttempt = Number.isFinite(
+    Number(restored?.connectorRequestAttempt),
+  )
+    ? Number(restored.connectorRequestAttempt)
+    : 0;
+  let requestSeq = Number.isFinite(Number(restored?.requestSeq))
+    ? Number(restored.requestSeq)
+    : 0;
+  let prePauseStatus = restored?.prePauseStatus || "navigating";
 
   let state = {
     status: "idle",
@@ -76,7 +89,14 @@ export function createNavigationSession(navigationRoute, options = {}) {
     error: null,
     justAcquired: false,
     rideStartTimestamp: null,
+    ...(restored?.state || {}),
+    route: navigationRoute,
+    cueEvent: null,
   };
+
+  if (restored?.tracker) {
+    mainTracker.restore(restored.tracker);
+  }
 
   function set(patch) {
     state = { ...state, ...patch };
@@ -282,7 +302,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           const target =
             state.approach.suggestionStatus === "requesting"
               ? state.approach.target || nextTarget
-              : nextTarget || state.approach.target;
+              : state.approach.target || nextTarget;
           const distanceToRouteMeters = target
             ? getDistance(action.fix, target.point)
             : state.approach.distanceToRouteMeters;
@@ -299,6 +319,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
         // Acquired and on-route: the only handoff into `navigating`. Clear the
         // approach slot and behave exactly as Phase A.
+        const recoveredFromOffRoute = wasOffRoute;
         lastConfirmedProgressMeters = mainProgress.progressMeters;
         const acquiredApproach =
           state.approach.target || state.approach.suggestionStatus !== "idle";
@@ -310,8 +331,10 @@ export function createNavigationSession(navigationRoute, options = {}) {
         if (acquiredApproach) lastRequestPos = null;
         if (acquiredApproach) connectorRequestAttempt = 0;
         const activeCue = selectActiveCue(mainCues, mainProgress.progressMeters);
-        const cueEvent = enteredEffectiveRoute
-          ? { kind: "acquired" }
+        const cueEvent = recoveredFromOffRoute
+          ? { kind: "acquired", acquisition: "reacquired" }
+          : enteredEffectiveRoute
+          ? { kind: "acquired", acquisition: "initial" }
           : cueFor(activeCue);
         wasOffRoute = false;
         return set({
@@ -320,7 +343,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           activeCue,
           offRoute: false,
           cueEvent,
-          justAcquired: enteredEffectiveRoute,
+          justAcquired: enteredEffectiveRoute || recoveredFromOffRoute,
           approach: acquiredApproach ? emptyApproach() : state.approach,
           routeRequest: null,
           connectorResult: null,
@@ -460,6 +483,18 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
   return {
     getState: () => state,
+    snapshot: () => ({
+      version: 1,
+      state: { ...state, cueEvent: null },
+      tracker: mainTracker.snapshot(),
+      mainCueKey,
+      wasOffRoute,
+      lastConfirmedProgressMeters,
+      lastRequestPos,
+      connectorRequestAttempt,
+      requestSeq,
+      prePauseStatus,
+    }),
     dispatch,
   };
 }

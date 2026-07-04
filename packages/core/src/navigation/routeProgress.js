@@ -172,6 +172,69 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     wrongWaySince = null;
   }
 
+  function snapshot() {
+    return {
+      version: 1,
+      offRouteState,
+      candidateSince,
+      recoverSince,
+      lastProgressMeters,
+      prevFix,
+      seededSearchPending,
+      acquired,
+      courseHistory,
+      wrongWaySince,
+      acquiredAtMs,
+    };
+  }
+
+  function restore(snapshotState = {}) {
+    if (!snapshotState || snapshotState.version !== 1) return false;
+    offRouteState =
+      snapshotState.offRouteState === "candidate" ||
+      snapshotState.offRouteState === "off"
+        ? snapshotState.offRouteState
+        : "on";
+    candidateSince = Number.isFinite(Number(snapshotState.candidateSince))
+      ? Number(snapshotState.candidateSince)
+      : null;
+    recoverSince = Number.isFinite(Number(snapshotState.recoverSince))
+      ? Number(snapshotState.recoverSince)
+      : null;
+    lastProgressMeters = Number.isFinite(Number(snapshotState.lastProgressMeters))
+      ? Math.max(0, Math.min(totalMeters, Number(snapshotState.lastProgressMeters)))
+      : null;
+    prevFix = snapshotState.prevFix && Number.isFinite(Number(snapshotState.prevFix.lat)) &&
+      Number.isFinite(Number(snapshotState.prevFix.lng))
+      ? { ...snapshotState.prevFix }
+      : null;
+    seededSearchPending = snapshotState.seededSearchPending === true;
+    acquired = snapshotState.acquired === true;
+    courseHistory = Array.isArray(snapshotState.courseHistory)
+      ? snapshotState.courseHistory
+          .filter(
+            (entry) =>
+              Number.isFinite(Number(entry?.lat)) &&
+              Number.isFinite(Number(entry?.lng)) &&
+              Number.isFinite(Number(entry?.timestamp)),
+          )
+          .slice(-COURSE_HISTORY_LIMIT)
+          .map((entry) => ({
+            lat: Number(entry.lat),
+            lng: Number(entry.lng),
+            timestamp: Number(entry.timestamp),
+            speed: Number.isFinite(Number(entry.speed)) ? Number(entry.speed) : null,
+          }))
+      : [];
+    wrongWaySince = Number.isFinite(Number(snapshotState.wrongWaySince))
+      ? Number(snapshotState.wrongWaySince)
+      : null;
+    acquiredAtMs = Number.isFinite(Number(snapshotState.acquiredAtMs))
+      ? Number(snapshotState.acquiredAtMs)
+      : null;
+    return true;
+  }
+
   // Nearest segment whose progress range intersects [rangeMin, rangeMax]
   // (rangeMin === null means search the whole route).
   function findNearest(fix, rangeMin, rangeMax) {
@@ -471,5 +534,5 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     };
   }
 
-  return { update, reset, seed };
+  return { update, reset, seed, snapshot, restore };
 }

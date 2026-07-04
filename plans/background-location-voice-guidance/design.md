@@ -151,7 +151,9 @@ Two iOS-specific behaviors the permission UX must handle explicitly:
   user declines it once, later `requestBackgroundPermissionsAsync` calls return
   denied silently with no dialog. The denied state must therefore distinguish
   "prompt shown and declined" from "prompt suppressed — Always can only be
-  enabled in iOS Settings", and route the second case to a Settings deep link.
+  enabled in iOS Settings", and route the second case to the app's Settings
+  page with explicit instructions to choose Location > Always. iOS does not
+  provide a stable direct link into the nested Location permission page.
 - iOS can grant provisional Always authorization: the API reports granted while
   the real confirmation prompt is deferred and shown later, and the grant may
   be downgraded afterwards. The app must re-check background permission at ride
@@ -200,12 +202,13 @@ phone leaves background GPS running until they next open the app.
 
 V1 should be deliberately conservative:
 
-- Route acquired: "You are on the route. Navigation started."
+- Initial route acquired: "הכל מוכן, יוצאים לדרך. רכבו בזהירות".
+- Route reacquired after leaving the route: "חזרנו למסלול, ממשיכים בניווט".
 - Turn preview: spoken once when a maneuver enters the preview window.
 - Turn final: spoken once when the rider is near the maneuver.
 - Bend final: optional short heads-up only for sharp bends.
-- Off route: spoken once on transition into off-route.
-- Route reacquired: spoken when the rider returns to the route.
+- Off route: "יצאת מהמסלול", spoken once when the tracker confirms the
+  transition into off-route.
 - Arrival: spoken once.
 
 Do not speak every POI, segment entry, or repeated distance update in v1. Chatty

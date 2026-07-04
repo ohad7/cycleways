@@ -1,20 +1,27 @@
-// Native location service for turn-by-turn navigation (turn-by-turn Phase 6).
+// Native location service for turn-by-turn navigation.
 //
 // Wraps expo-location so the navigation session controls accuracy, cadence,
 // permissions, and teardown — instead of relying on the RNMapbox `UserLocation`
 // puck (which stays only for visual display). Emits the route-progress fix shape
 // via the shared, unit-tested `toNavigationFix` mapper.
 //
-// First release is FOREGROUND-ONLY (see useNavigationSession `background`
-// default). Background/lock-screen updates need `UIBackgroundModes: location`
-// (configured in app.json) plus `expo-task-manager`, and must be verified on a
-// physical device before being enabled.
-//
 // NOTE: native module — not covered by the node test suite. The pure mapping it
 // depends on is tested in tests/test-location-fix.mjs.
 
 import * as Location from "expo-location";
+import * as TaskManager from "expo-task-manager";
+import { Platform } from "react-native";
 import { toNavigationFix } from "@cycleways/core/navigation/locationFix.js";
+import { NAVIGATION_LOCATION_TASK } from "./backgroundTaskName.js";
+
+export const NAVIGATION_BACKGROUND_LOCATION_OPTIONS = {
+  accuracy: Location.Accuracy.BestForNavigation,
+  timeInterval: 1000,
+  distanceInterval: 5,
+  activityType: Location.ActivityType.Fitness,
+  pausesUpdatesAutomatically: false,
+  showsBackgroundLocationIndicator: true,
+};
 
 // One bounded location lookup for ride setup. This is deliberately separate
 // from the high-accuracy navigation watch: opening setup must not leave a GPS
@@ -52,7 +59,7 @@ export async function requestNavigationPermissions({ background = false } = {}) 
   if (foreground.status !== "granted") {
     return { granted: false, background: false, status: foreground.status };
   }
-  if (!background) {
+  if (!background || Platform.OS !== "ios") {
     return { granted: true, background: false, status: foreground.status };
   }
   const bg = await Location.requestBackgroundPermissionsAsync();
@@ -60,6 +67,18 @@ export async function requestNavigationPermissions({ background = false } = {}) 
     granted: true,
     background: bg.status === "granted",
     status: foreground.status,
+  };
+}
+
+export async function getNavigationPermissionStatus() {
+  const foreground = await Location.getForegroundPermissionsAsync();
+  const background = Platform.OS === "ios"
+    ? await Location.getBackgroundPermissionsAsync()
+    : { status: "undetermined", granted: false };
+  return {
+    foreground,
+    background,
+    canUseBackground: foreground.status === "granted" && background.status === "granted",
   };
 }
 
@@ -95,6 +114,43 @@ export async function startNavigationWatch({ onFix, onError } = {}) {
       }
     },
   };
+}
+
+export async function isNavigationBackgroundUpdatesActive() {
+  try {
+    return await Location.hasStartedLocationUpdatesAsync(NAVIGATION_LOCATION_TASK);
+  } catch {
+    return false;
+  }
+}
+
+export async function startNavigationBackgroundUpdates(options = {}) {
+  if (Platform.OS !== "ios") return false;
+  if (!TaskManager.isTaskDefined(NAVIGATION_LOCATION_TASK)) return false;
+  try {
+    const available = await TaskManager.isAvailableAsync();
+    if (!available) return false;
+    const alreadyStarted = await isNavigationBackgroundUpdatesActive();
+    if (!alreadyStarted) {
+      await Location.startLocationUpdatesAsync(NAVIGATION_LOCATION_TASK, {
+        ...NAVIGATION_BACKGROUND_LOCATION_OPTIONS,
+        ...options,
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function stopNavigationBackgroundUpdates() {
+  try {
+    if (await isNavigationBackgroundUpdatesActive()) {
+      await Location.stopLocationUpdatesAsync(NAVIGATION_LOCATION_TASK);
+    }
+  } catch {
+    // Best-effort cleanup; the next start/check path revalidates task state.
+  }
 }
 
 // Default real-GPS location source implementing the injectable locationSource

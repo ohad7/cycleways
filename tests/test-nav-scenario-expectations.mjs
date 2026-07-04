@@ -203,6 +203,17 @@ const timeline = [
       .passed,
     false,
   );
+  const regressed = [
+    entry({ status: "off-route", rejoinTargetProgressMeters: 300 }),
+    entry({ status: "off-route", rejoinTargetProgressMeters: 550 }),
+    entry({ status: "off-route", rejoinTargetProgressMeters: 320 }),
+  ];
+  assert.equal(
+    evaluateExpectations([{ type: "rejoin-target-advances", byMeters: 100 }], regressed)
+      .passed,
+    false,
+    "target advance expectation rejects regressions",
+  );
 }
 
 // suggestionFailed passes when a connector failure surfaced.

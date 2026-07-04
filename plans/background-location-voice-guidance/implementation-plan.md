@@ -280,7 +280,8 @@ Acceptance:
      the user in setup depending on final UX
    - distinguish "Always prompt shown and declined" from "prompt suppressed by
      iOS (one-shot upgrade dialog already used) — Always can only be enabled in
-     Settings", and deep-link to Settings for the second case
+     Settings", and open the app's Settings page for the second case with
+     explicit instructions to choose Location > Always
    - re-check background permission at every ride start; iOS provisional
      Always grants can be downgraded later without the app being told
 5. Activate keep-awake (`expo-keep-awake`) for the duration of any
