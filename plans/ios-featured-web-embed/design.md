@@ -1,6 +1,6 @@
 # iOS Featured Route Web Embed — Design
 
-Date: 2026-07-01 (updated 2026-07-02)
+Date: 2026-07-01 (updated 2026-07-05)
 
 ## Goal
 
@@ -11,6 +11,12 @@ website loading inside the iOS application.
 ## Decisions
 
 - Warm the bundled static server after the initial native interaction settles.
+- Load featured route detail pages only from the bundled local static server,
+  not from the production website. This keeps app behavior tied to the shipped
+  bundle and avoids mixing native app versions with newer public web code.
+- Do not silently fall back to the old native route detail page when the WebView
+  cannot load. Restart the local server and retry once; if that still fails,
+  show an explicit retry/back error state.
 - Keep `?app=1` as the explicit embed contract.
 - Never paint the website loading splash in embed mode; the native screen owns
   loading feedback.
