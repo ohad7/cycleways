@@ -89,7 +89,19 @@ import {
   clearPendingRideIntent,
   savePendingRideIntent,
 } from "../navigation/pendingRidePlanStore.js";
-import { trackNavigationEvent } from "../navigation/navigationTelemetry.js";
+import {
+  setNavigationTelemetrySink,
+  trackNavigationEvent,
+} from "../navigation/navigationTelemetry.js";
+
+// Dev builds surface navigation telemetry (connector results, ride setup…) in
+// the Metro console — the only way to see WHY an approach suggestion failed
+// on a device (reason: no-router / snap-failed / transient, plus durationMs).
+if (__DEV__) {
+  setNavigationTelemetrySink((name, fields) => {
+    console.log(`[nav] ${name} ${JSON.stringify(fields)}`);
+  });
+}
 import { routeRestoreDecision } from "../navigation/routeRestorePolicy.js";
 import DevScenarioPicker from "../planner/DevScenarioPicker.jsx";
 import Icon from "../planner/Icon.jsx";
