@@ -43,6 +43,7 @@ import {
   createRidePlan,
 } from "@cycleways/core/navigation/ridePlan.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
+import { createPuckAnchor } from "@cycleways/core/navigation/puckAnchor.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
@@ -165,6 +166,9 @@ const NAV_FOLLOW_PITCH = 50;
 // Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
 // is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
 const BEARING_SMOOTH_MS = 260;
+// Time constant (ms) for the puck position lerp used when the puck detaches
+// from the route line (parallel path) or glides back onto it.
+const PUCK_GLIDE_MS = 450;
 
 const ROUTE_POINT_STYLE = {
   circleRadius: [
@@ -1307,6 +1311,10 @@ export default function BuildScreen({ navigation, route }) {
   const rafRef = useRef(0);
   const navStatusRef = useRef("idle");
   const lastPushedPuckRef = useRef(null);
+  // Snap-vs-detected puck anchoring (hysteresis lives in @cycleways/core) and
+  // the lerped position used while the puck is away from the route line.
+  const puckAnchorRef = useRef(null);
+  const puckGlideRef = useRef(null);
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
@@ -1358,8 +1366,12 @@ export default function BuildScreen({ navigation, route }) {
       setNavTraveled(EMPTY_FEATURE_COLLECTION);
       travelIndexRef.current = -1;
       lastPushedPuckRef.current = null;
+      puckAnchorRef.current = null;
+      puckGlideRef.current = null;
       return undefined;
     }
+    puckAnchorRef.current = createPuckAnchor();
+    puckGlideRef.current = null;
     const startProgress = progressRef.current;
     smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
     smoothedBearingRef.current =
@@ -1392,9 +1404,36 @@ export default function BuildScreen({ navigation, route }) {
             geom,
             smoothedMetersRef.current,
           );
-          lng = point.lng;
-          lat = point.lat;
-          targetBearing = progress.bearingToNextDeg ?? bearingDeg;
+          // Snap to the line only while the cross-track error is within GPS
+          // noise; on a parallel path (detached) show the detected location,
+          // lerping so both leaving and rejoining the line read as a glide.
+          const anchorMode =
+            puckAnchorRef.current?.update(progress.crossTrackMeters) ?? "route";
+          const rawFix = anchorMode === "detected" ? rawFixRef.current : null;
+          const glideTarget =
+            rawFix && Number.isFinite(rawFix.lat) && Number.isFinite(rawFix.lng)
+              ? rawFix
+              : point;
+          if (glideTarget === point && !puckGlideRef.current) {
+            lng = point.lng;
+            lat = point.lat;
+          } else {
+            const glide = puckGlideRef.current ?? { lat: point.lat, lng: point.lng };
+            const fraction = Math.min(1, dtMs / PUCK_GLIDE_MS);
+            glide.lat += (glideTarget.lat - glide.lat) * fraction;
+            glide.lng += (glideTarget.lng - glide.lng) * fraction;
+            const converged =
+              glideTarget === point &&
+              Math.abs(glide.lat - point.lat) < 1e-5 &&
+              Math.abs(glide.lng - point.lng) < 1e-5;
+            puckGlideRef.current = converged ? null : glide;
+            lng = glide.lng;
+            lat = glide.lat;
+          }
+          targetBearing =
+            glideTarget === point
+              ? progress.bearingToNextDeg ?? bearingDeg
+              : progress.courseDeg ?? progress.bearingToNextDeg ?? bearingDeg;
           // Advance the traveled (muted) line up to the smoothed point, but only
           // when the underlying segment index changes — keeps the per-frame cost
           // bounded while the puck itself stays smooth.
@@ -1417,6 +1456,9 @@ export default function BuildScreen({ navigation, route }) {
           if (raw && Number.isFinite(raw.lng) && Number.isFinite(raw.lat)) {
             lng = raw.lng;
             lat = raw.lat;
+            // Remember where the puck is so recovering onto the route glides
+            // back to the line instead of teleporting.
+            puckGlideRef.current = { lat: raw.lat, lng: raw.lng };
           }
           targetBearing =
             progress.courseDeg ??
