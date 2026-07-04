@@ -25,7 +25,8 @@ export function createPuckAnchor(options = {}) {
     // crossTrackMeters -> "route" | "detected"; non-finite input (no
     // projection this fix) keeps the current mode.
     update(crossTrackMeters) {
-      const meters = Number(crossTrackMeters);
+      // No coercion: Number.isFinite(null) is false (Number(null) would be 0).
+      const meters = crossTrackMeters;
       if (Number.isFinite(meters)) {
         if (mode === "route" && meters > opts.detachMeters) mode = "detected";
         else if (mode === "detected" && meters < opts.reattachMeters) mode = "route";

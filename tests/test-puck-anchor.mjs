@@ -36,6 +36,7 @@ import { createPuckAnchor } from "@cycleways/core/navigation/puckAnchor.js";
   anchor.update(20);
   assert.equal(anchor.update(undefined), "detected");
   assert.equal(anchor.update(NaN), "detected");
+  assert.equal(anchor.update(null), "detected", "null must not coerce to 0 m");
 }
 
 // reset() returns to the snapped state.

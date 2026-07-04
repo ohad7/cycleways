@@ -44,6 +44,7 @@ import {
 } from "@cycleways/core/navigation/ridePlan.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import { createPuckAnchor } from "@cycleways/core/navigation/puckAnchor.js";
+import { createCameraHeadingGovernor } from "@cycleways/core/navigation/cameraHeading.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
@@ -169,6 +170,10 @@ const BEARING_SMOOTH_MS = 260;
 // Time constant (ms) for the puck position lerp used when the puck detaches
 // from the route line (parallel path) or glides back onto it.
 const PUCK_GLIDE_MS = 450;
+// Time constant (ms) for rotating the camera to a heading the governor
+// adopted — deliberately slower than the puck arrow so map re-orientations
+// read as calm, occasional pans.
+const CAMERA_ROTATE_MS = 800;
 
 const ROUTE_POINT_STYLE = {
   circleRadius: [
@@ -1315,6 +1320,11 @@ export default function BuildScreen({ navigation, route }) {
   // the lerped position used while the puck is away from the route line.
   const puckAnchorRef = useRef(null);
   const puckGlideRef = useRef(null);
+  // Camera heading is governed separately from the puck arrow: the arrow
+  // tracks the rider's direction in real time, the map frame re-orients only
+  // for persistent or sharp direction changes.
+  const cameraGovernorRef = useRef(null);
+  const cameraBearingRef = useRef(0);
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
@@ -1369,14 +1379,17 @@ export default function BuildScreen({ navigation, route }) {
       lastPushedPuckRef.current = null;
       puckAnchorRef.current = null;
       puckGlideRef.current = null;
+      cameraGovernorRef.current = null;
       return undefined;
     }
     puckAnchorRef.current = createPuckAnchor();
     puckGlideRef.current = null;
+    cameraGovernorRef.current = createCameraHeadingGovernor();
     const startProgress = progressRef.current;
     smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
     smoothedBearingRef.current =
       startProgress?.bearingToNextDeg ?? startProgress?.smoothedCourseDeg ?? 0;
+    cameraBearingRef.current = smoothedBearingRef.current;
     let lastTs = 0;
     const tick = (ts) => {
       const dtMs = lastTs ? Math.max(0, ts - lastTs) : 16;
@@ -1480,10 +1493,23 @@ export default function BuildScreen({ navigation, route }) {
               Math.min(1, dtMs / BEARING_SMOOTH_MS),
             );
           }
+          // The puck arrow tracks the rider's direction in real time; the
+          // camera heading is governed (rotates only for persistent or sharp
+          // changes) and eased slower, so the map frame stays calm.
           const heading = smoothedBearingRef.current;
+          const governedHeading =
+            cameraGovernorRef.current?.update(targetBearing, ts) ??
+            cameraBearingRef.current;
+          if (Number.isFinite(governedHeading)) {
+            cameraBearingRef.current = shortestAngleLerp(
+              cameraBearingRef.current,
+              governedHeading,
+              Math.min(1, dtMs / CAMERA_ROTATE_MS),
+            );
+          }
           // MarkerView is screen-aligned, so rotate the arrow by the puck's
-          // geographic heading minus the map's heading. While following, the
-          // camera heading == puck heading, so the arrow reads "up".
+          // geographic heading minus the map's heading (the live map heading,
+          // so the arrow stays true while the camera holds still).
           const rotation = ((heading - mapHeadingRef.current) % 360 + 360) % 360;
           const muted = !onRoute;
           // Only push puck state when the *displayed* value actually changes:
@@ -1520,7 +1546,7 @@ export default function BuildScreen({ navigation, route }) {
             // the direct line + dashed suggestion lead the eye to the route.
             cameraRef.current?.setCamera?.({
               centerCoordinate: [lng, lat],
-              heading,
+              heading: cameraBearingRef.current,
               pitch: NAV_FOLLOW_PITCH,
               zoomLevel: NAV_FOLLOW_ZOOM,
               animationDuration: 0,
