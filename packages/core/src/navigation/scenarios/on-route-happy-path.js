@@ -10,6 +10,7 @@ export default {
   expect: [
     { type: "status", value: "navigating" },
     { type: "status", value: "off-route", never: true },
+    { type: "wrong-way", never: true },
     { type: "banner", match: "פנה שמאלה", afterMeters: 430, beforeMeters: 600 },
     { type: "banner", match: "שביל הצפון" },
     { type: "arrived" },

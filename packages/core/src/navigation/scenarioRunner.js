@@ -31,6 +31,7 @@ export function buildUserTimeline(replayTimeline) {
         timestamp: state.latestFix?.timestamp ?? null,
         status: state.status,
         offRoute: state.offRoute === true,
+        wrongWay: state.progress?.wrongWay === true,
         hasAcquiredRoute: state.progress?.hasAcquiredRoute === true,
         justAcquired: state.justAcquired === true,
         progressMeters: state.progress?.progressMeters ?? null,

@@ -12,6 +12,7 @@ function entry(overrides = {}) {
     suggestionStatus: "idle",
     connectorResult: null,
     haptic: null,
+    wrongWay: false,
     presentation: { cueText: "המשך במסלול", statusText: "", guidanceText: "" },
     ...overrides,
   };
@@ -23,6 +24,7 @@ const timeline = [
   entry({ progressMeters: 200 }),
   entry({ status: "off-route", offRoute: true, progressMeters: 300, haptic: "heavy" }),
   entry({ status: "off-route", offRoute: true, progressMeters: 300, suggestionStatus: "ready" }),
+  entry({ progressMeters: 400, wrongWay: true }),
   entry({ progressMeters: 500, presentation: { cueText: "פנה שמאלה אל שביל הצפון", statusText: "", guidanceText: "" } }),
   entry({ progressMeters: 900, activeCueType: "arrive", presentation: { cueText: "הגעת ליעד", statusText: "", guidanceText: "" } }),
 ];
@@ -40,6 +42,7 @@ const timeline = [
       { type: "arrived" },
       { type: "haptic", kind: "heavy" },
       { type: "progress-at-least", meters: 800 },
+      { type: "wrong-way" },
     ],
     timeline,
   );
@@ -59,12 +62,23 @@ const timeline = [
       { type: "haptic", kind: "medium" }, // never fired
       { type: "suggestionFailed" }, // connector never failed
       { type: "progress-at-least", meters: 2000 },
+      { type: "wrong-way", never: true }, // did fire at 400 m
       { type: "bogus-type" },
     ],
     timeline,
   );
   assert.equal(result.passed, false);
-  assert.equal(result.failures.length, 9, JSON.stringify(result.failures, null, 1));
+  assert.equal(result.failures.length, 10, JSON.stringify(result.failures, null, 1));
+}
+
+// wrong-way that never fired: bare expectation fails, never-form passes.
+{
+  const clean = [entry(), entry({ progressMeters: 100 })];
+  assert.equal(evaluateExpectations([{ type: "wrong-way" }], clean).passed, false);
+  assert.equal(
+    evaluateExpectations([{ type: "wrong-way", never: true }], clean).passed,
+    true,
+  );
 }
 
 // rerouted without any off-route entry fails cleanly.

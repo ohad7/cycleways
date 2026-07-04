@@ -111,6 +111,18 @@ export function evaluateExpectations(expectations, timeline) {
         break;
       }
 
+      case "wrong-way": {
+        const first = entries.find((e) => e.wrongWay === true);
+        if (exp.never === true) {
+          if (first) {
+            fail(`wrong-way warning shown at ${progressOf(first)}m`);
+          }
+        } else if (!first) {
+          fail("wrong-way warning never shown");
+        }
+        break;
+      }
+
       case "progress-at-least": {
         const last = entries[entries.length - 1];
         const p = last ? progressOf(last) : null;

@@ -276,41 +276,85 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
   );
 }
 
-// --- Wrong-way detection, low-speed safe ----------------------------------
+// --- Wrong-way detection: smoothed course + confirmation dwell ------------
+// wrongWay compares the rider's general direction (displacement over the last
+// >=20 m, immune to per-fix jitter) against the route bearing, and only warns
+// after the disagreement is sustained ~4 s. courseDeg stays instantaneous.
 {
-  const tracker = createRouteProgressTracker(straightRoute());
-  // Heading east along the route: not wrong-way.
-  tracker.update({ lat: 33.1, lng: 35.604, accuracy: 5, speed: 3, timestamp: 1000 });
-  const forward = tracker.update({
+  const mPerDegLng = 111320 * Math.cos((33.1 * Math.PI) / 180);
+  const eastFix = (meters, timestamp, overrides = {}) => ({
     lat: 33.1,
-    lng: 35.605,
+    lng: 35.6 + meters / mPerDegLng,
     accuracy: 5,
-    speed: 3,
-    timestamp: 2000,
+    speed: 5,
+    timestamp,
+    ...overrides,
   });
-  assert.equal(forward.wrongWay, false, "moving east along route is not wrong-way");
 
-  // Now moving west (against the route): wrong-way.
-  const backward = tracker.update({
-    lat: 33.1,
-    lng: 35.604,
-    accuracy: 5,
-    speed: 3,
-    timestamp: 3000,
-  });
-  assert.ok(near(backward.courseDeg, 270, 5), "course is ~west (270)");
-  assert.equal(backward.wrongWay, true, "moving west against route is wrong-way");
+  // Jittery forward ride: along-track jitter of ±8 m makes consecutive-fix
+  // displacement point backwards on alternate fixes, but the general direction
+  // is east the whole time — never wrong-way.
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    for (let i = 0; i < 40; i++) {
+      const jitter = i % 2 === 0 ? 8 : -8;
+      const result = tracker.update(eastFix(i * 5 + jitter, 1000 + i * 1000));
+      assert.equal(
+        result.wrongWay,
+        false,
+        `jittery forward ride is never wrong-way (fix ${i})`,
+      );
+    }
+  }
+
+  // Turn-around: ride 200 m east, then reverse. A single backward fix must not
+  // warn; sustained backward riding must warn within ~10 fixes; riding forward
+  // again clears the warning.
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    let t = 1000;
+    for (let i = 0; i <= 40; i++) {
+      tracker.update(eastFix(i * 5, (t = 1000 + i * 1000)));
+    }
+
+    const single = tracker.update(eastFix(195, (t += 1000)));
+    assert.ok(near(single.courseDeg, 270, 5), "instantaneous course is ~west");
+    assert.equal(single.wrongWay, false, "a single backward fix does not warn");
+
+    const westResults = [];
+    for (let k = 2; k <= 12; k++) {
+      westResults.push(tracker.update(eastFix(200 - k * 5, (t += 1000))));
+    }
+    assert.ok(
+      westResults.slice(0, 3).every((r) => r.wrongWay === false),
+      "no warning while the turn-around is still ambiguous (first ~20 m)",
+    );
+    assert.equal(
+      westResults[westResults.length - 1].wrongWay,
+      true,
+      "sustained riding against the route warns",
+    );
+
+    const backPos = 200 - 12 * 5;
+    const eastAgain = [];
+    for (let j = 1; j <= 10; j++) {
+      eastAgain.push(tracker.update(eastFix(backPos + j * 5, (t += 1000))));
+    }
+    assert.equal(
+      eastAgain[eastAgain.length - 1].wrongWay,
+      false,
+      "riding forward again clears the warning",
+    );
+  }
 
   // Stationary jitter (speed < 1 m/s): course unknown, never flag wrong-way.
-  const stopped = tracker.update({
-    lat: 33.1,
-    lng: 35.604,
-    accuracy: 5,
-    speed: 0.2,
-    timestamp: 4000,
-  });
-  assert.equal(stopped.courseDeg, null, "no course when stopped");
-  assert.equal(stopped.wrongWay, false, "stopped is never wrong-way");
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    tracker.update(eastFix(0, 1000));
+    const stopped = tracker.update(eastFix(5, 2000, { speed: 0.2 }));
+    assert.equal(stopped.courseDeg, null, "no course when stopped");
+    assert.equal(stopped.wrongWay, false, "stopped is never wrong-way");
+  }
 }
 
 // --- traveledCoordinates: completed path for the progress line ------------

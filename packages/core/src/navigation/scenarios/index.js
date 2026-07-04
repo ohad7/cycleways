@@ -7,6 +7,7 @@ import currentRouteGeneric from "./current-route-generic.js";
 import gpsGap from "./gps-gap.js";
 import missedTurnReroute from "./missed-turn-reroute.js";
 import onRouteHappyPath from "./on-route-happy-path.js";
+import parallelPath from "./parallel-path.js";
 import recordedRealRide from "./recorded-real-ride.js";
 import rerouteFailure from "./reroute-failure.js";
 import stopAndStand from "./stop-and-stand.js";
@@ -19,6 +20,7 @@ export const scenarios = [
   rerouteFailure,
   gpsGap,
   stopAndStand,
+  parallelPath,
   recordedRealRide,
   sovevBeitHillelRide,
   currentRouteGeneric,

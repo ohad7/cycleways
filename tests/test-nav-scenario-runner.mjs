@@ -56,6 +56,10 @@ function straightRoute() {
     Number(last.progressMeters) > 800,
     `progress completes, got ${last.progressMeters}`,
   );
+  assert.ok(
+    timeline.every((e) => typeof e.wrongWay === "boolean"),
+    "every entry exposes the wrong-way flag",
+  );
 }
 
 // Approach ride, per connector mode: straight-line -> suggestion ready;
