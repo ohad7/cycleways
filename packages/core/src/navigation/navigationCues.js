@@ -9,15 +9,22 @@
 // hazards/POIs that already carry `routeProgressMeters`. Where cue data is weak
 // the UI falls back to "continue on route".
 
+import { getDistance } from "../utils/distance.js";
 import { computeBearing } from "../utils/geometry.js";
 
 const TURN_THRESHOLD_DEG = 40; // min heading change to emit a turn cue
+// With junction data on the route, sharp corners away from any junction are
+// "bends" (עיקול) — the road curving, not a decision — and need to be sharper
+// than a turn to be worth announcing. Moderate open-road curves cue nothing.
+const BEND_THRESHOLD_DEG = 75;
+const JUNCTION_GATE_M = 30; // corner within this of a junction node = a turn
 const MIN_TURN_SPACING_M = 20; // suppress turns closer than this (geometry noise)
 const PREVIEW_MAX_M = 120; // upper bound of the preview window before a cue
 const FINAL_MAX_M = 35; // within this, the cue is "final"
 const SELECTION_PRIORITY = {
   turn: 0,
   arrive: 0,
+  bend: 1,
   caution: 1,
   hazard: 1,
   poi: 1,
@@ -39,7 +46,14 @@ export function buildRouteCues(navigationRoute) {
   const totalMeters = geometry[geometry.length - 1].distanceFromStartMeters;
   const cues = [{ type: "start", distanceMeters: 0 }];
 
-  // Turn cues from sharp heading deltas, distance-gated to avoid spam.
+  // Turn/bend cues from sharp heading deltas, distance-gated to avoid spam.
+  // With junction data (network nodes with 3+ edges, baked onto the route at
+  // build/decode time): a corner at a junction is a turn, a sharp corner in
+  // open road is a bend, a moderate open-road curve is nothing. Without
+  // junction data every sharp corner stays a turn (legacy behavior).
+  const junctions = Array.isArray(navigationRoute?.junctions)
+    ? navigationRoute.junctions
+    : null;
   let lastTurnDistance = -Infinity;
   for (let i = 1; i < geometry.length - 1; i++) {
     const bearingIn = computeBearing(geometry[i - 1], geometry[i]);
@@ -47,11 +61,21 @@ export function buildRouteCues(navigationRoute) {
     const turn = signedTurn(bearingIn, bearingOut);
     const angle = Math.abs(turn);
     if (angle < TURN_THRESHOLD_DEG) continue;
+    let type = "turn";
+    if (junctions) {
+      const atJunction = junctions.some(
+        (j) => getDistance(geometry[i], j) <= JUNCTION_GATE_M,
+      );
+      if (!atJunction) {
+        if (angle < BEND_THRESHOLD_DEG) continue;
+        type = "bend";
+      }
+    }
     const distanceMeters = geometry[i].distanceFromStartMeters;
     if (distanceMeters - lastTurnDistance < MIN_TURN_SPACING_M) continue;
     lastTurnDistance = distanceMeters;
     cues.push({
-      type: "turn",
+      type,
       distanceMeters,
       direction: turn > 0 ? "right" : "left",
       turnAngleDeg: angle,
@@ -94,7 +118,7 @@ export function buildRouteCues(navigationRoute) {
   }
 
   // Sort by distance; when distances tie, turn/arrive before enter-segment.
-  const PRIORITY = { start: 0, turn: 1, arrive: 1, "enter-segment": 2 };
+  const PRIORITY = { start: 0, turn: 1, arrive: 1, bend: 1, "enter-segment": 2 };
   cues.sort((a, b) =>
     a.distanceMeters - b.distanceMeters ||
     (PRIORITY[a.type] ?? 3) - (PRIORITY[b.type] ?? 3),

@@ -26,6 +26,11 @@ function cueDisplay(cue) {
         : { text: "פנה שמאלה", icon: "arrow-back-outline" };
       return cue.ontoSegmentName ? { ...base, text: `${base.text} אל ${cue.ontoSegmentName}` } : base;
     }
+    case "bend":
+      // Sharp curve of the road itself (no junction) — heads-up, not a turn.
+      return cue.direction === "right"
+        ? { text: "עיקול ימינה", icon: "arrow-forward-outline" }
+        : { text: "עיקול שמאלה", icon: "arrow-back-outline" };
     case "enter-segment":
       return { text: cue.segmentName ? `כניסה אל ${cue.segmentName}` : "המשך במסלול", icon: "navigate-outline" };
     case "arrive":

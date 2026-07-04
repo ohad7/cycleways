@@ -43,6 +43,21 @@ import { createCueHapticPlanner } from "@cycleways/core/navigation/cueHaptics.js
   assert.equal(planner.plan({ kind: "acquired" }, 1000).kind, "medium");
 }
 
+// --- bend cues are heads-up only: light at final, silent in preview ---
+{
+  const planner = createCueHapticPlanner();
+  assert.equal(
+    planner.plan({ kind: "cue", cueType: "bend", phase: "preview" }, 1000).kind,
+    null,
+    "bend preview is visual-only",
+  );
+  assert.equal(
+    planner.plan({ kind: "cue", cueType: "bend", phase: "final" }, 2000).kind,
+    "light",
+    "bend final -> light (a turn would be medium)",
+  );
+}
+
 // --- enter-segment cues do not vibrate ---
 {
   const planner = createCueHapticPlanner();

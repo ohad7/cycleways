@@ -33,6 +33,33 @@ import { getNavigationPresentation } from "@cycleways/core/navigation/navigation
   assert.equal(p.cueIcon, "arrow-back-outline");
 }
 
+// Bend cue (sharp curve, no junction): עיקול, not פנה.
+{
+  const right = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "bend", direction: "right" },
+      phase: "preview",
+      distanceToCueMeters: 90,
+    },
+    progress: { remainingMeters: 700 },
+  });
+  assert.equal(right.cueText, "עיקול ימינה");
+  assert.equal(right.cueIcon, "arrow-forward-outline");
+  const left = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "bend", direction: "left" },
+      phase: "final",
+      distanceToCueMeters: 25,
+    },
+    progress: { remainingMeters: 700 },
+  });
+  assert.equal(left.cueText, "עיקול שמאלה");
+}
+
 // Arrival cue.
 {
   const p = getNavigationPresentation({
