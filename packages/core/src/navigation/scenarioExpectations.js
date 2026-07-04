@@ -148,6 +148,58 @@ export function evaluateExpectations(expectations, timeline) {
         break;
       }
 
+      case "camera-stage": {
+        const first = entries.find((e) => e.cameraStage === exp.value);
+        if (exp.never === true) {
+          if (first) fail(`camera stage "${exp.value}" occurred at ${progressOf(first)}m`);
+          break;
+        }
+        if (!first) {
+          fail(`camera stage "${exp.value}" never occurred`);
+          break;
+        }
+        if (Array.isArray(exp.betweenMeters)) {
+          const p = progressOf(first);
+          const [min, max] = exp.betweenMeters;
+          if (p === null || p < min || p > max) {
+            fail(`first "${exp.value}" at ${p}m, expected within [${min}, ${max}]`);
+          }
+        }
+        break;
+      }
+
+      case "card-mode": {
+        const first = entries.find((e) => e.cardMode === exp.value);
+        if (exp.never === true) {
+          if (first) fail(`card mode "${exp.value}" occurred at ${progressOf(first)}m`);
+          break;
+        }
+        if (!first) {
+          fail(`card mode "${exp.value}" never occurred`);
+          break;
+        }
+        if (Array.isArray(exp.betweenMeters)) {
+          const p = progressOf(first);
+          const [min, max] = exp.betweenMeters;
+          if (p === null || p < min || p > max) {
+            fail(`first card mode "${exp.value}" at ${p}m, expected within [${min}, ${max}]`);
+          }
+        }
+        break;
+      }
+
+      case "chip": {
+        const first = entries.find(
+          (e) => typeof e.chipText === "string" && e.chipText.includes(exp.match),
+        );
+        if (exp.never === true) {
+          if (first) fail(`chip "${exp.match}" appeared at ${progressOf(first)}m`);
+        } else if (!first) {
+          fail(`chip "${exp.match}" never appeared`);
+        }
+        break;
+      }
+
       case "progress-at-least": {
         const last = entries[entries.length - 1];
         const p = last ? progressOf(last) : null;

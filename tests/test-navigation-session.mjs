@@ -438,5 +438,39 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(s.getState().status, "navigating", "physically reaching the route navigates");
 }
 
+// --- rideStartTimestamp: first fix of the session -------------------------
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  let state = session.dispatch({
+    type: NAV_ACTIONS.PERMISSION_GRANTED,
+    background: false,
+  });
+  assert.equal(state.rideStartTimestamp, null, "null before the first fix");
+  state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 7000 },
+  });
+  assert.equal(state.rideStartTimestamp, 7000, "set from the first fix");
+  state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6005, accuracy: 5, speed: 4, timestamp: 9000 },
+  });
+  assert.equal(state.rideStartTimestamp, 7000, "unchanged by later fixes");
+
+  session.dispatch({ type: NAV_ACTIONS.STOP });
+  session.dispatch({ type: NAV_ACTIONS.START });
+  state = session.dispatch({
+    type: NAV_ACTIONS.PERMISSION_GRANTED,
+    background: false,
+  });
+  assert.equal(state.rideStartTimestamp, null, "reset before the next ride");
+  state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 12000 },
+  });
+  assert.equal(state.rideStartTimestamp, 12000, "second ride gets its own start");
+}
+
 console.log("navigation session lifecycle tests passed");
 console.log("navigation session location tests passed");

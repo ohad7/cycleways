@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Active navigation becomes its own visual mode — one top cue card with collapse-to-pill, on-map segment/approach/rejoin chips, a minimal control row (data pill + pause/stop, contextual recenter), an arrival summary card, and a five-stage camera director — per `plans/nav-ui-redesign/design.md`.
+**Goal:** Active navigation becomes its own visual mode — full-screen pre-ride setup, one top cue card with collapse-to-pill, on-map segment/approach/rejoin chips, a minimal control row (data pill + pause/stop, contextual recenter), an arrival summary card, and a five-stage camera director — per `plans/nav-ui-redesign/design.md`.
 
-**Architecture:** All decision logic goes into `@cycleways/core` (progress gains a smoothed speed, the session gains a ride-start timestamp, the presentation gains `cardMode`/`chip`/`speedText`/`arrivalSummary`, and a new pure `cameraDirector` decides stage/pitch/zoom/framing per fix). The scenario-harness timeline exposes the new fields so scenarios assert them in CI. `NavPanel.jsx` and `BuildScreen.jsx` become renderers of those models.
+**Architecture:** All decision logic goes into `@cycleways/core` (progress gains a smoothed speed, the session gains a resettable ride-start timestamp, the presentation gains `cardMode`/`chip`/`speedText`/`cuePrimaryText`/`cueSecondaryText`/`arrivalSummary`, and a new pure `cameraDirector` decides declarative follow-vs-fit shots per fix). The scenario-harness timeline exposes the new fields so scenarios assert them in CI. `NavPanel.jsx`, `RideSetupSheet.jsx`, and `BuildScreen.jsx` become renderers of those models.
 
 **Tech Stack:** plain ESM JS in `packages/core/src` (no node-only APIs), node `assert/strict` tests chained in the root `package.json` `test` script, React Native (Expo) for the app side. No new dependencies.
 
@@ -16,8 +16,36 @@
 - New test files are inserted into the root `package.json` `test` chain at the location each task states.
 - App-side (`apps/mobile`) changes are `__DEV__`-agnostic product UI; verify each app task compiles with `node_modules/.bin/esbuild --loader:.jsx=jsx apps/mobile/src/screens/BuildScreen.jsx --outfile=/dev/null` (and the same for any other `.jsx` file touched) and visually via the dev scenario picker.
 - Camera-director numbers come from the design table: approach pitch 20°, ride pitch 50° + zoom 16.8↔15.8 by speed, pre-turn pitch 35° zoom 17.2, off-route pitch 20°, arrival pitch 35° zoom 17.2, arrived pitch 0 + whole-route fit.
-- Design deviation (already agreed in spirit): the pre-turn stage begins when a turn/bend cue becomes active (the existing 120 m preview window in `navigationCues.js`), not at 200 m. Task 9 records this in the design doc.
+- Pre-turn begins when a turn/bend cue becomes active (the existing 120 m preview window in `navigationCues.js`).
 - Snapshot scenario routes (`sovev-beit-hillel`, `banias-gan-hatsafon`) have no `segmentSpans`, so segment-chip scenario assertions use the synthetic l-turn scenarios (whose spans carry `דרך הפרדס` / `שביל הצפון`); Task 9 records this too.
+
+## Review Updates To Preserve During Implementation
+
+- Smoothed speed must not double-count the current fix. Compute it after
+  `recordCourseFix(fix)` from the recorded history, or compute it before
+  recording and include the current fix exactly once.
+- `rideStartTimestamp` resets to `null` whenever `PERMISSION_GRANTED` resets a
+  session; otherwise a second ride inherits elapsed time from the previous one.
+- Off-route state wins over arrival. `cardMode === "arrived"` and camera stage
+  `"arrived"` require acquired route, `remainingMeters <= 15`, and
+  `offRoute !== true`.
+- The presentation model exposes `cuePrimaryText` and `cueSecondaryText`.
+  `cueText` may remain for backward compatibility, but `NavPanel` must render
+  the split fields instead of parsing or reusing route context text.
+- `roadClassChipLabel()` must cover route classes seen in existing navigation
+  spans: `cycleway`, `path`, `track`, `path_track`, `footway`, `local_road`,
+  `road`, and `residential`, with a conservative fallback.
+- Camera director hysteresis tracks a candidate stage and candidate start time.
+  A stage that appears briefly long after the previous accepted stage must not
+  switch immediately. `off-route` and `arrived` remain immediate.
+- Approach/off-route/arrived camera shots are declarative fit shots, not only
+  zoom approximations. BuildScreen resolves fit points and calls its existing
+  fit helper / array-padding convention.
+- `RideSetupSheet.jsx` is part of this redesign: `הכנת הרכיבה` becomes a
+  full-screen opaque pre-ride setup gate. The map should not peek underneath
+  except during the explicit map-pick mode.
+- Scenario timeline assertions should validate `cardMode` in addition to
+  `cameraStage` and chips.
 
 ---
 
@@ -102,12 +130,11 @@ const SPEED_WINDOW_MS = 3000; // smoothed rider speed = mean fix speed over this
 ```js
   // Mean of finite fix speeds over the last SPEED_WINDOW_MS (including the
   // current fix): steady enough for a readout, responsive enough to feel live.
-  function smoothedSpeed(fix) {
+  function smoothedSpeed(nowMs) {
     const speeds = [];
-    if (Number.isFinite(fix.speed)) speeds.push(fix.speed);
     for (let i = courseHistory.length - 1; i >= 0; i--) {
       const entry = courseHistory[i];
-      if (fix.timestamp - entry.timestamp > SPEED_WINDOW_MS) break;
+      if (nowMs - entry.timestamp > SPEED_WINDOW_MS) break;
       if (Number.isFinite(entry.speed)) speeds.push(entry.speed);
     }
     if (speeds.length === 0) return null;
@@ -115,7 +142,30 @@ const SPEED_WINDOW_MS = 3000; // smoothed rider speed = mean fix speed over this
   }
 ```
 
-(d) Add `smoothedSpeedMps: smoothedSpeed(fix),` to BOTH result objects of `update()` — the early "still approaching" return (next to `smoothedCourseDeg: approachSmoothedCourse,`) and the main return (next to `smoothedCourseDeg,`). In the approach branch compute it before `recordCourseFix(fix)` is called, e.g. `const approachSmoothedSpeed = smoothedSpeed(fix);` alongside `approachSmoothedCourse`, and return `smoothedSpeedMps: approachSmoothedSpeed`.
+(d) Add `smoothedSpeedMps` to BOTH result objects of `update()` — the early
+"still approaching" return (next to `smoothedCourseDeg:
+approachSmoothedCourse,`) and the main return (next to `smoothedCourseDeg,`).
+Compute it after `recordCourseFix(fix)` so the current fix is included exactly
+once:
+
+```js
+        const approachSmoothedCourse = smoothedCourse(fix);
+        prevFix = fix;
+        recordCourseFix(fix);
+        const approachSmoothedSpeed = smoothedSpeed(fix.timestamp);
+```
+
+and in the main path:
+
+```js
+    prevFix = fix;
+    recordCourseFix(fix);
+    const smoothedSpeedMps = smoothedSpeed(fix.timestamp);
+```
+
+Then return `smoothedSpeedMps: approachSmoothedSpeed` in the approaching object
+and `smoothedSpeedMps` in the main object. Do not also push `fix.speed` inside
+`smoothedSpeed()`; the test above catches that double-counting bug.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -201,7 +251,15 @@ In `packages/core/src/navigation/navigationSession.js`:
     rideStartTimestamp: null,
 ```
 
-(b) In the `LOCATION` action handler, immediately before `const mainProgress = mainTracker.update(action.fix);` add:
+(b) In the `PERMISSION_GRANTED` return patch, add:
+
+```js
+          rideStartTimestamp: null,
+```
+
+This reset is required for the second and later rides in the same app session.
+
+(c) In the `LOCATION` action handler, immediately before `const mainProgress = mainTracker.update(action.fix);` add:
 
 ```js
         if (state.rideStartTimestamp === null) {
@@ -235,13 +293,21 @@ git commit -m "feat(nav): record the ride start timestamp on the session"
   - `cardMode`: `"arrived" | "off-route" | "approach" | "cue" | "status"`.
   - `chip`: `{ kind: "segment" | "approach" | "rejoin", text: string } | null`.
   - `speedText`: `"17.5 קמ״ש"` style string, `""` when speed is null or `< 1 m/s`.
+  - `cuePrimaryText` / `cueSecondaryText`: split cue-card lines (`פנה שמאלה`
+    / `אל שביל הצפון`) so the UI does not parse `cueText` or misuse route
+    context as the secondary cue line.
   - `arrivalSummary`: `{ distanceText, elapsedText, avgSpeedText } | null` (non-null only when `cardMode === "arrived"`).
   - Exported helper `roadClassChipLabel(routeClass)` (bare-noun labels).
 
 **Decision rules (implement exactly):**
-- `cardMode`: `"arrived"` when `progress.hasAcquiredRoute && progress.remainingMeters <= 15`; else `"off-route"` when `offRoute`; else `"approach"` when `status === "approaching"`; else `"cue"` when an `activeCue` exists (any type except `start`); else `"status"`.
+- `cardMode`: `"off-route"` when `offRoute`; else `"arrived"` when `progress.hasAcquiredRoute && progress.remainingMeters <= 15`; else `"approach"` when `status === "approaching"`; else `"cue"` when an `activeCue` exists (any type except `start`); else `"status"`.
 - `chip`: off-route → `{ kind: "rejoin", text: "חזרה למסלול" }`; approaching with `suggestionGeometry.length >= 2` → `{ kind: "approach", text: "המסלול המוצע" }`; approaching without → `null`; `cardMode === "cue"` or `"arrived"` → segment chip: `name && label` → `` `${name} · ${label}` ``, else `name || label || null` mapped into `{ kind: "segment", text }` (null text → chip null); `cardMode === "status"` → `null` (the collapsed pill already shows the name).
-- `roadClassChipLabel`: `track → "דרך עפר"`, `path → "שביל"`, `footway → "מדרכה"`, anything else → `null`.
+- `roadClassChipLabel`: `cycleway → "שביל אופניים"`, `track`/`path_track → "דרך עפר"`, `path → "שביל"`, `footway → "מדרכה"`, `local_road`/`road`/`residential → "כביש"`, anything else → `null`.
+- `cuePrimaryText` / `cueSecondaryText`: turns with `ontoSegmentName` split the
+  current `cueDisplay` text into primary direction text and `אל ...`;
+  `enter-segment` uses primary `המשך במסלול` and secondary `אל ...` when a
+  segment name exists; bends and hazards generally have an empty secondary
+  unless next-segment context is within the design window.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -271,6 +337,8 @@ Append to `tests/test-navigation-presentation.mjs` before its final `console.log
     },
   });
   assert.equal(riding.cardMode, "cue");
+  assert.equal(riding.cuePrimaryText, "פנה שמאלה");
+  assert.equal(riding.cueSecondaryText, "אל שביל הצפון");
   assert.deepEqual(riding.chip, { kind: "segment", text: "דרך נוף הירדן · דרך עפר" });
   assert.equal(riding.speedText, "17.5 קמ״ש");
   assert.equal(riding.arrivalSummary, null);
@@ -296,7 +364,7 @@ Append to `tests/test-navigation-presentation.mjs` before its final `console.log
   const offRoute = getNavigationPresentation({
     status: "off-route",
     offRoute: true,
-    progress: { hasAcquiredRoute: true, remainingMeters: 800, wrongWay: false },
+    progress: { hasAcquiredRoute: true, remainingMeters: 8, wrongWay: false },
   });
   assert.equal(offRoute.cardMode, "off-route");
   assert.deepEqual(offRoute.chip, { kind: "rejoin", text: "חזרה למסלול" });
@@ -337,9 +405,14 @@ Append to `tests/test-navigation-presentation.mjs` before its final `console.log
   const { roadClassChipLabel } = await import(
     "@cycleways/core/navigation/navigationPresentation.js"
   );
+  assert.equal(roadClassChipLabel("cycleway"), "שביל אופניים");
   assert.equal(roadClassChipLabel("track"), "דרך עפר");
+  assert.equal(roadClassChipLabel("path_track"), "דרך עפר");
   assert.equal(roadClassChipLabel("path"), "שביל");
   assert.equal(roadClassChipLabel("footway"), "מדרכה");
+  assert.equal(roadClassChipLabel("local_road"), "כביש");
+  assert.equal(roadClassChipLabel("road"), "כביש");
+  assert.equal(roadClassChipLabel("residential"), "כביש");
   assert.equal(roadClassChipLabel("anything-else"), null);
 }
 ```
@@ -360,9 +433,14 @@ In `packages/core/src/navigation/navigationPresentation.js`:
 // prefixed form ("בדרך עפר") used in sentence context.
 export function roadClassChipLabel(routeClass) {
   switch (routeClass) {
+    case "cycleway": return "שביל אופניים";
     case "track": return "דרך עפר";
+    case "path_track": return "דרך עפר";
     case "path": return "שביל";
     case "footway": return "מדרכה";
+    case "local_road":
+    case "road":
+    case "residential": return "כביש";
     default: return null;
   }
 }
@@ -373,6 +451,7 @@ export function roadClassChipLabel(routeClass) {
 ```js
   const progress = state.progress || null;
   const arrived =
+    !offRoute &&
     progress?.hasAcquiredRoute === true &&
     Number.isFinite(progress?.remainingMeters) &&
     progress.remainingMeters <= 15;
@@ -432,9 +511,36 @@ export function roadClassChipLabel(routeClass) {
   }
 ```
 
-Note: `hasSuggestionGeometry`, `active`, `offRoute`, `status`, `formatDistanceMeters` already exist in this scope — place the block after they are defined.
+Add cue-line derivation beside the model block:
 
-(c) Add to the returned object: `cardMode,`, `chip,`, `speedText,`, `arrivalSummary,`.
+```js
+  const cuePrimaryText = (() => {
+    const c = active?.cue || null;
+    if (!c) return cue.text;
+    if (c.type === "turn") return c.direction === "right" ? "פנה ימינה" : "פנה שמאלה";
+    if (c.type === "enter-segment") return "המשך במסלול";
+    return cue.text;
+  })();
+  const cueSecondaryText = (() => {
+    const c = active?.cue || null;
+    if (!c) return "";
+    if (c.type === "turn" && c.ontoSegmentName) return `אל ${c.ontoSegmentName}`;
+    if (c.type === "enter-segment" && c.segmentName) return `אל ${c.segmentName}`;
+    if (
+      progress?.nextSegmentName &&
+      Number.isFinite(progress?.distanceToNextSegmentMeters) &&
+      progress.distanceToNextSegmentMeters <= 300
+    ) {
+      return `אל ${progress.nextSegmentName}`;
+    }
+    return "";
+  })();
+```
+
+Note: `hasSuggestionGeometry`, `active`, `offRoute`, `status`, `cue`, and `formatDistanceMeters` already exist in this scope — place the block after they are defined.
+
+(c) Add to the returned object: `cardMode,`, `chip,`, `speedText,`,
+`cuePrimaryText,`, `cueSecondaryText,`, `arrivalSummary,`.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -460,14 +566,15 @@ git commit -m "feat(nav): presentation models for cue card, chips, speed, arriva
 **Interfaces:**
 - Consumes: session-state shape `{ status, offRoute, activeCue, approach, progress: { hasAcquiredRoute, remainingMeters, guidanceDistanceMeters, smoothedSpeedMps } }`.
 - Produces:
-  - `createCameraDirector() -> { update(state, nowMs) -> shot, reset() }` where `shot = { stage, pitch, zoom, centerBias, fitRoute }`.
+  - `createCameraDirector() -> { update(state, nowMs) -> shot, reset() }` where `shot = { stage, mode, pitch, zoom?, centerBias?, focusKind?, fitKind? }`.
   - `stage`: `"approach" | "ride" | "pre-turn" | "off-route" | "arrival" | "arrived"`.
-  - `centerBias`: 0..1 — how far from the rider toward the stage focus point to center (BuildScreen resolves the focus point per stage).
-  - `zoom`: number; `fitRoute`: boolean (true only for `"arrived"`, where zoom is ignored and the app fits the whole route once).
+  - `mode`: `"follow"` for normal rider-centered shots; `"fit"` for overview shots where BuildScreen resolves fit points and calls the existing fit helper.
+  - `centerBias`: 0..1 — for follow shots, how far from the rider toward the stage focus point to center (BuildScreen resolves the focus point per `focusKind`).
+  - `fitKind`: `"approach" | "rejoin" | "route"` for fit shots.
   - `zoomForSpanMeters(spanMeters)` exported for tests: `clamp(12, 17.5, 17.5 - log2(max(50, span) / 100))`.
-- Stage decision order (first match): `arrived` (acquired && remaining ≤ 15) → `off-route` (offRoute true) → `approach` (status approaching) → `arrival` (activeCue arrive && distanceToCueMeters ≤ 150) → `pre-turn` (activeCue turn|bend) → `ride`.
-- Hysteresis: a stage change is adopted only ≥2000 ms after the previous change, EXCEPT changes into `off-route` or `arrived`, which are immediate. Until adopted, `update` keeps returning the previous stage's shot (recomputed with current inputs).
-- Shots: approach `{ pitch 20, zoom zoomForSpanMeters(approach.distanceToRouteMeters ?? 500), centerBias 0.35 }`; ride `{ pitch 50, zoom = 16.8 + (15.8 − 16.8) · clamp01((speed − 2) / 6), centerBias 0 }` (speed = `smoothedSpeedMps ?? 3`); pre-turn `{ pitch 35, zoom 17.2, centerBias 0.5 }`; off-route `{ pitch 20, zoom zoomForSpanMeters((progress.guidanceDistanceMeters ?? 200) * 2), centerBias 0.3 }`; arrival `{ pitch 35, zoom 17.2, centerBias 0.4 }`; arrived `{ pitch 0, zoom 16, centerBias 0, fitRoute true }`.
+- Stage decision order (first match): `off-route` (offRoute true) → `arrived` (acquired && remaining ≤ 15) → `approach` (status approaching) → `arrival` (activeCue arrive && distanceToCueMeters ≤ 150) → `pre-turn` (activeCue turn|bend) → `ride`.
+- Hysteresis: a stage change is adopted only after the candidate stage has been continuously wanted for ≥2000 ms, EXCEPT changes into `off-route` or `arrived`, which are immediate. Until adopted, `update` keeps returning the previous stage's shot (recomputed with current inputs). Do not implement this as "time since previous accepted stage"; that incorrectly switches on a transient cue that appears long after the last accepted stage.
+- Shots: approach `{ mode: "fit", pitch 20, fitKind: "approach" }`; ride `{ mode: "follow", pitch 50, zoom = 16.8 + (15.8 − 16.8) · clamp01((speed − 2) / 6), centerBias 0 }` (speed = `smoothedSpeedMps ?? 3`); pre-turn `{ mode: "follow", pitch 35, zoom 17.2, centerBias 0.5, focusKind: "cue" }`; off-route `{ mode: "fit", pitch 20, fitKind: "rejoin" }`; arrival `{ mode: "follow", pitch 35, zoom 17.2, centerBias 0.4, focusKind: "cue" }`; arrived `{ mode: "fit", pitch 0, fitKind: "route" }`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -533,9 +640,9 @@ const riding = (over = {}) => ({
     0,
   );
   assert.equal(approach.stage, "approach");
+  assert.equal(approach.mode, "fit");
   assert.equal(approach.pitch, 20);
-  assert.ok(Math.abs(approach.zoom - zoomForSpanMeters(400)) < 0.01);
-  assert.equal(approach.centerBias, 0.35);
+  assert.equal(approach.fitKind, "approach");
 
   const off = director.update(
     riding({
@@ -546,10 +653,11 @@ const riding = (over = {}) => ({
     100, // within the dwell window — off-route must still win immediately
   );
   assert.equal(off.stage, "off-route", "off-route adopts immediately");
-  assert.ok(Math.abs(off.zoom - zoomForSpanMeters(300)) < 0.01);
+  assert.equal(off.mode, "fit");
+  assert.equal(off.fitKind, "rejoin");
 }
 
-// Pre-turn waits for the dwell; a turn cue seen only briefly does not switch.
+// Pre-turn waits for the candidate dwell; a turn cue seen only briefly does not switch.
 {
   const director = createCameraDirector();
   director.update(riding(), 0);
@@ -558,14 +666,23 @@ const riding = (over = {}) => ({
     1000,
   );
   assert.equal(early.stage, "ride", "pre-turn waits out the 2 s dwell");
+  const gone = director.update(riding(), 1500);
+  assert.equal(gone.stage, "ride", "transient cue does not leave a stale candidate");
+  const candidateAgain = director.update(
+    riding({ activeCue: { cue: { type: "turn" }, distanceToCueMeters: 95 } }),
+    1700,
+  );
+  assert.equal(candidateAgain.stage, "ride", "candidate dwell restarts after disappearing");
   const adopted = director.update(
     riding({ activeCue: { cue: { type: "turn" }, distanceToCueMeters: 90 } }),
-    2100,
+    3800,
   );
   assert.equal(adopted.stage, "pre-turn");
+  assert.equal(adopted.mode, "follow");
   assert.equal(adopted.pitch, 35);
   assert.equal(adopted.zoom, 17.2);
   assert.equal(adopted.centerBias, 0.5);
+  assert.equal(adopted.focusKind, "cue");
   // Bends get the same treatment.
   const bend = createCameraDirector();
   bend.update(riding(), 0);
@@ -593,8 +710,24 @@ const riding = (over = {}) => ({
     3200, // inside the dwell — arrived is immediate anyway
   );
   assert.equal(done.stage, "arrived");
+  assert.equal(done.mode, "fit");
   assert.equal(done.pitch, 0);
-  assert.equal(done.fitRoute, true);
+  assert.equal(done.fitKind, "route");
+}
+
+// Off-route wins over arrived when both conditions are true.
+{
+  const director = createCameraDirector();
+  const shot = director.update(
+    riding({
+      status: "off-route",
+      offRoute: true,
+      progress: { ...riding().progress, remainingMeters: 8 },
+    }),
+    0,
+  );
+  assert.equal(shot.stage, "off-route");
+  assert.equal(shot.fitKind, "rejoin");
 }
 
 // reset() forgets the stage.
@@ -619,10 +752,9 @@ Create `packages/core/src/navigation/cameraDirector.js`:
 
 ```js
 // Stage-aware navigation camera (nav-ui-redesign). Decides per fix WHAT the
-// camera should look at — stage, pitch, zoom, and how far to bias the center
-// from the rider toward the stage's focus point. The heading governor
-// (cameraHeading.js) keeps deciding orientation; the app resolves the focus
-// point per stage and eases toward the returned values.
+// camera should do: a follow shot (pitch/zoom/center bias) or a declarative fit
+// shot (approach/rejoin/whole-route). The heading governor (cameraHeading.js)
+// keeps deciding orientation; BuildScreen resolves focus/fit points.
 
 const MIN_STAGE_DWELL_MS = 2000; // stage changes settle; off-route/arrived skip it
 const ARRIVED_REMAINING_M = 15;
@@ -640,6 +772,7 @@ export function zoomForSpanMeters(spanMeters) {
 
 function stageFor(state) {
   const progress = state?.progress || null;
+  if (state?.offRoute === true) return "off-route";
   if (
     progress?.hasAcquiredRoute === true &&
     Number.isFinite(progress?.remainingMeters) &&
@@ -647,7 +780,6 @@ function stageFor(state) {
   ) {
     return "arrived";
   }
-  if (state?.offRoute === true) return "off-route";
   if (state?.status === "approaching") return "approach";
   const cueType = state?.activeCue?.cue?.type ?? null;
   if (
@@ -664,27 +796,29 @@ function shotFor(stage, state) {
   const progress = state?.progress || null;
   switch (stage) {
     case "approach":
-      return {
-        stage,
-        pitch: 20,
-        zoom: zoomForSpanMeters(state?.approach?.distanceToRouteMeters ?? 500),
-        centerBias: 0.35,
-        fitRoute: false,
-      };
+      return { stage, mode: "fit", pitch: 20, fitKind: "approach" };
     case "off-route":
+      return { stage, mode: "fit", pitch: 20, fitKind: "rejoin" };
+    case "pre-turn":
       return {
         stage,
-        pitch: 20,
-        zoom: zoomForSpanMeters((progress?.guidanceDistanceMeters ?? 200) * 2),
-        centerBias: 0.3,
-        fitRoute: false,
+        mode: "follow",
+        pitch: 35,
+        zoom: 17.2,
+        centerBias: 0.5,
+        focusKind: "cue",
       };
-    case "pre-turn":
-      return { stage, pitch: 35, zoom: 17.2, centerBias: 0.5, fitRoute: false };
     case "arrival":
-      return { stage, pitch: 35, zoom: 17.2, centerBias: 0.4, fitRoute: false };
+      return {
+        stage,
+        mode: "follow",
+        pitch: 35,
+        zoom: 17.2,
+        centerBias: 0.4,
+        focusKind: "cue",
+      };
     case "arrived":
-      return { stage, pitch: 0, zoom: 16, centerBias: 0, fitRoute: true };
+      return { stage, mode: "fit", pitch: 0, fitKind: "route" };
     default: {
       // ride: zoom breathes with speed — see far when fast.
       const speed = Number.isFinite(progress?.smoothedSpeedMps)
@@ -693,10 +827,10 @@ function shotFor(stage, state) {
       const t = clamp(0, 1, (speed - 2) / 6);
       return {
         stage: "ride",
+        mode: "follow",
         pitch: 50,
         zoom: 16.8 + (15.8 - 16.8) * t,
         centerBias: 0,
-        fitRoute: false,
       };
     }
   }
@@ -704,26 +838,43 @@ function shotFor(stage, state) {
 
 export function createCameraDirector() {
   let stage = null;
-  let stageSinceMs = null;
+  let candidateStage = null;
+  let candidateSinceMs = null;
 
   return {
     update(state, nowMs) {
       const wanted = stageFor(state);
       if (stage === null) {
         stage = wanted;
-        stageSinceMs = nowMs;
+        candidateStage = null;
+        candidateSinceMs = null;
       } else if (wanted !== stage) {
         const immediate = wanted === "off-route" || wanted === "arrived";
-        if (immediate || nowMs - stageSinceMs >= MIN_STAGE_DWELL_MS) {
+        if (immediate) {
           stage = wanted;
-          stageSinceMs = nowMs;
+          candidateStage = null;
+          candidateSinceMs = null;
+        } else {
+          if (candidateStage !== wanted) {
+            candidateStage = wanted;
+            candidateSinceMs = nowMs;
+          }
+          if (nowMs - candidateSinceMs >= MIN_STAGE_DWELL_MS) {
+            stage = wanted;
+            candidateStage = null;
+            candidateSinceMs = null;
+          }
         }
+      } else {
+        candidateStage = null;
+        candidateSinceMs = null;
       }
       return shotFor(stage, state);
     },
     reset() {
       stage = null;
-      stageSinceMs = null;
+      candidateStage = null;
+      candidateSinceMs = null;
     },
   };
 }
@@ -764,6 +915,7 @@ git commit -m "feat(nav): stage-aware camera director"
 - Consumes: `createCameraDirector` (Task 4), presentation `cardMode`/`chip` (Task 3).
 - Produces: timeline entries gain `cameraStage` (string), `cardMode` (string), `chipText` (string|null). New expectation types:
   - `{ type: "camera-stage", value, betweenMeters?, never? }` — first entry whose `cameraStage === value` (window checked like `status`).
+  - `{ type: "card-mode", value, betweenMeters?, never? }` — first entry whose `cardMode === value` (window checked like `status`).
   - `{ type: "chip", match, never? }` — substring match over `chipText`.
 
 - [ ] **Step 1: Write the failing runner test**
@@ -850,6 +1002,9 @@ In `tests/test-nav-scenario-expectations.mjs`:
       { type: "camera-stage", value: "pre-turn", betweenMeters: [450, 550] },
       { type: "camera-stage", value: "arrived" },
       { type: "camera-stage", value: "off-route", never: true },
+      { type: "card-mode", value: "approach" },
+      { type: "card-mode", value: "cue", betweenMeters: [450, 550] },
+      { type: "card-mode", value: "arrived" },
       { type: "chip", match: "דרך הפרדס" },
       { type: "chip", match: "חזרה למסלול", never: true },
     ],
@@ -860,17 +1015,19 @@ In `tests/test-nav-scenario-expectations.mjs`:
     [
       { type: "camera-stage", value: "off-route" },
       { type: "camera-stage", value: "pre-turn", betweenMeters: [0, 100] },
+      { type: "card-mode", value: "off-route" },
       { type: "chip", match: "לא קיים" },
       { type: "chip", match: "המסלול המוצע", never: true },
     ],
     ride,
   );
-  assert.equal(fail.failures.length, 4, JSON.stringify(fail.failures, null, 1));
+  assert.equal(fail.failures.length, 5, JSON.stringify(fail.failures, null, 1));
 }
 ```
 
 Run: `node tests/test-nav-scenario-expectations.mjs`
-Expected: FAIL with `unknown expectation type "camera-stage"` among failures.
+Expected: FAIL with `unknown expectation type "camera-stage"` and
+`unknown expectation type "card-mode"` among failures.
 
 - [ ] **Step 4: Implement the expectation types**
 
@@ -910,6 +1067,30 @@ In `packages/core/src/navigation/scenarioExpectations.js`, add two cases beside 
       }
 ```
 
+Add the `card-mode` case beside `camera-stage`:
+
+```js
+      case "card-mode": {
+        const first = entries.find((e) => e.cardMode === exp.value);
+        if (exp.never === true) {
+          if (first) fail(`card mode "${exp.value}" occurred at ${progressOf(first)}m`);
+          break;
+        }
+        if (!first) {
+          fail(`card mode "${exp.value}" never occurred`);
+          break;
+        }
+        if (Array.isArray(exp.betweenMeters)) {
+          const p = progressOf(first);
+          const [min, max] = exp.betweenMeters;
+          if (p === null || p < min || p > max) {
+            fail(`first card mode "${exp.value}" at ${p}m, expected within [${min}, ${max}]`);
+          }
+        }
+        break;
+      }
+```
+
 Run: `node tests/test-nav-scenario-expectations.mjs`
 Expected: passes.
 
@@ -921,6 +1102,9 @@ Expected: passes.
     { type: "camera-stage", value: "pre-turn", betweenMeters: [430, 600] },
     { type: "camera-stage", value: "arrived" },
     { type: "camera-stage", value: "off-route", never: true },
+    { type: "card-mode", value: "status" },
+    { type: "card-mode", value: "cue", betweenMeters: [430, 600] },
+    { type: "card-mode", value: "arrived" },
     { type: "chip", match: "דרך הפרדס" },
 ```
 
@@ -929,6 +1113,8 @@ Expected: passes.
 ```js
     { type: "camera-stage", value: "approach" },
     { type: "camera-stage", value: "ride" },
+    { type: "card-mode", value: "approach" },
+    { type: "card-mode", value: "status" },
     { type: "chip", match: "המסלול המוצע" },
 ```
 
@@ -936,6 +1122,7 @@ Expected: passes.
 
 ```js
     { type: "camera-stage", value: "off-route", betweenMeters: [230, 420] },
+    { type: "card-mode", value: "off-route", betweenMeters: [230, 420] },
     { type: "chip", match: "חזרה למסלול" },
 ```
 
@@ -953,16 +1140,16 @@ git commit -m "feat(nav-scenarios): camera stage, card mode and chip on the time
 
 ---
 
-### Task 6: NavPanel restructure (cue card, pill, controls, arrival card)
+### Task 6: NavPanel restructure + full-screen ride setup
 
 **Files:**
 - Modify: `apps/mobile/src/planner/NavPanel.jsx` (restructure)
-- Modify: `apps/mobile/src/planner/RideSetupSheet.jsx` (haptics row)
+- Modify: `apps/mobile/src/planner/RideSetupSheet.jsx` (full-screen setup + haptics row)
 - Modify: `apps/mobile/src/screens/BuildScreen.jsx` (prop threading only)
 
 **Interfaces:**
 - Consumes: presentation `cardMode`, `speedText`, `arrivalSummary` (Task 3) plus all existing presentation fields; `sessionState.cameraIntent` for the contextual recenter.
-- Produces: no exports consumed elsewhere. NavPanel keeps its existing props and gains none; `RideSetupSheet` gains `hapticsEnabled` / `onToggleHaptics` props.
+- Produces: no exports consumed elsewhere. NavPanel keeps its existing props and gains none; `RideSetupSheet` gains `hapticsEnabled` / `onToggleHaptics` props and changes from a bottom sheet to an opaque full-screen setup surface.
 
 No node tests cover these files (native UI); the gate is the esbuild parse plus the dev-scenario visual checklist in Task 9.
 
@@ -1048,10 +1235,10 @@ Replace the body of `NavPanel` and the relevant styles in `apps/mobile/src/plann
             <Icon name={p.cueIcon} color={palette.forest} size={30} />
             <View style={styles.cueTextWrap}>
               <Text style={styles.cueText} numberOfLines={1}>
-                {p.cueText}
+                {p.cuePrimaryText || p.cueText}
               </Text>
-              {p.contextText ? (
-                <Text style={styles.context} numberOfLines={1}>{p.contextText}</Text>
+              {p.cueSecondaryText ? (
+                <Text style={styles.context} numberOfLines={1}>{p.cueSecondaryText}</Text>
               ) : null}
             </View>
             {p.cueDistanceText ? (
@@ -1211,9 +1398,23 @@ Style changes (add; keep existing ones that are still referenced, delete `remain
 
 Note the cue card no longer renders `remainingText` (it moved to the data pill) and the "הגדרות רכיבה" quick link renders only in approach mode (it already does above).
 
-- [ ] **Step 2: Move the haptics toggle into RideSetupSheet**
+- [ ] **Step 2: Make RideSetupSheet full-screen and move haptics into it**
 
-(a) In `apps/mobile/src/planner/RideSetupSheet.jsx`, add the two props to the component signature (`hapticsEnabled = true, onToggleHaptics`), and inside the `ScrollView` after the start-point section add:
+(a) In `apps/mobile/src/planner/RideSetupSheet.jsx`, keep the existing `Modal`
+but make the visible surface full-screen/opaque:
+
+- Remove the translucent map-peek backdrop behavior for normal setup.
+- Make `styles.sheet` fill the viewport (`top: 0`, `left: 0`, `right: 0`,
+  `bottom: 0`, no `maxHeight`), use `paddingTop: insets.top + space.md`, and
+  keep `paddingBottom: insets.bottom + space.md`.
+- Remove the bottom-sheet handle, or hide it in this mode.
+- Keep the primary button pinned below the scroll content.
+- Keep map-pick mode unchanged: tapping `בחירת נקודה על המפה` closes setup,
+  lets the user pick on the map, then returns to the setup surface.
+
+(b) Add the two props to the component signature (`hapticsEnabled = true,
+onToggleHaptics`), and inside the `ScrollView` after the start-point section
+add:
 
 ```jsx
           {onToggleHaptics ? (
@@ -1229,14 +1430,14 @@ Note the cue card no longer renders `remainingText` (it moved to the data pill) 
           ) : null}
 ```
 
-(b) In `apps/mobile/src/screens/BuildScreen.jsx`, find the `<RideSetupSheet` element and add:
+(c) In `apps/mobile/src/screens/BuildScreen.jsx`, find the `<RideSetupSheet` element and add:
 
 ```jsx
             hapticsEnabled={nav.hapticsEnabled}
             onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
 ```
 
-(c) In the `<NavPanel` element in BuildScreen, delete the `hapticsEnabled` and `onToggleHaptics` props, and delete those two props from NavPanel's signature.
+(d) In the `<NavPanel` element in BuildScreen, delete the `hapticsEnabled` and `onToggleHaptics` props, and delete those two props from NavPanel's signature.
 
 - [ ] **Step 3: Parse-check**
 
@@ -1247,6 +1448,19 @@ node_modules/.bin/esbuild --loader:.jsx=jsx apps/mobile/src/planner/RideSetupShe
 node_modules/.bin/esbuild --loader:.jsx=jsx apps/mobile/src/screens/BuildScreen.jsx --outfile=/dev/null
 ```
 Expected: all clean.
+
+- [ ] **Step 3b: Visual setup checks**
+
+In the simulator, open `הכנת הרכיבה` from the planner and from mid-approach
+ride settings:
+
+1. The setup surface is opaque and occupies the full screen; no map peeks from
+   below.
+2. Direction, start-point, haptics, summary, and primary action are reachable
+   on a small phone viewport.
+3. `בחירת נקודה על המפה` still exits to map-pick mode and returns after the
+   point is chosen.
+4. For far/unknown approach, the primary action routes to external app handoff.
 
 - [ ] **Step 4: Run the node suite (must be unaffected)**
 
@@ -1370,8 +1584,8 @@ git commit -m "feat(nav-ui): current-segment and suggestion chips on the map"
 - Modify: `apps/mobile/src/screens/BuildScreen.jsx`
 
 **Interfaces:**
-- Consumes: `createCameraDirector` (Task 4); existing refs (`progressRef`, `rawFixRef`, `cameraBearingRef`, `smoothedMetersRef`, `arcRef`, `navGeometryRef`, `cameraIntentRef`, `navStatusRef`); `pointAndBearingAtDistance` (existing helper in the file); `cameraRef.fitBounds` (existing camera API used elsewhere in the file).
-- Produces: the RAF loop's `setCamera` uses director pitch/zoom/center instead of the fixed `NAV_FOLLOW_ZOOM`/`NAV_FOLLOW_PITCH`.
+- Consumes: `createCameraDirector` (Task 4); existing refs (`progressRef`, `rawFixRef`, `cameraBearingRef`, `smoothedMetersRef`, `arcRef`, `navGeometryRef`, `cameraIntentRef`, `navStatusRef`); `pointAndBearingAtDistance` and `fitCameraToPoints` (existing helpers in the file).
+- Produces: the RAF loop uses director follow shots for pitch/zoom/center and director fit shots for approach/rejoin/route overview, replacing the fixed `NAV_FOLLOW_ZOOM`/`NAV_FOLLOW_PITCH`.
 
 - [ ] **Step 1: Refs and setup**
 
@@ -1388,7 +1602,7 @@ import { createCameraDirector } from "@cycleways/core/navigation/cameraDirector.
   const cameraPitchRef = useRef(50);
   const cameraZoomRef = useRef(16.5);
   const sessionStateRef = useRef(null);
-  const arrivedFitDoneRef = useRef(false);
+  const cameraFitKeyRef = useRef(null);
 ```
 
 (c) Next to the other per-render ref mirrors (`progressRef.current = navProgress;` etc.) add:
@@ -1403,31 +1617,77 @@ import { createCameraDirector } from "@cycleways/core/navigation/cameraDirector.
     cameraDirectorRef.current = createCameraDirector();
     cameraPitchRef.current = NAV_FOLLOW_PITCH;
     cameraZoomRef.current = NAV_FOLLOW_ZOOM;
-    arrivedFitDoneRef.current = false;
+    cameraFitKeyRef.current = null;
 ```
 
-and in the cleanup branch add `cameraDirectorRef.current = null;`.
+and in the cleanup branch add:
+
+```js
+      cameraDirectorRef.current = null;
+      cameraFitKeyRef.current = null;
+```
 
 - [ ] **Step 2: Use the director in the RAF tick**
 
 Inside the tick, in the camera block (where `setCamera` is called), replace the fixed-value call. Before the `if (cameraIntentRef.current === "follow" ...)` guard add:
 
 ```js
-          // Stage-aware shot: pitch/zoom/center from the camera director,
-          // eased like the heading so stage changes read as camera moves.
+          // Stage-aware shot from the camera director. Fit shots use the same
+          // helper/padding convention as the rest of this file; follow shots
+          // ease pitch/zoom like heading changes.
           const shot =
             cameraDirectorRef.current?.update(sessionStateRef.current ?? {}, ts) ??
-            { stage: "ride", pitch: NAV_FOLLOW_PITCH, zoom: NAV_FOLLOW_ZOOM, centerBias: 0, fitRoute: false };
+            { stage: "ride", mode: "follow", pitch: NAV_FOLLOW_PITCH, zoom: NAV_FOLLOW_ZOOM, centerBias: 0 };
           const ease = Math.min(1, dtMs / CAMERA_ROTATE_MS);
           cameraPitchRef.current += (shot.pitch - cameraPitchRef.current) * ease;
-          cameraZoomRef.current += (shot.zoom - cameraZoomRef.current) * ease;
+          if (Number.isFinite(shot.zoom)) {
+            cameraZoomRef.current += (shot.zoom - cameraZoomRef.current) * ease;
+          }
+
+          if (shot.mode === "fit") {
+            const raw = rawFixRef.current;
+            const suggestion = sessionStateRef.current?.approach?.suggestionGeometry;
+            const target = sessionStateRef.current?.approach?.target?.point;
+            const fitPoints =
+              shot.fitKind === "route"
+                ? geom
+                : [
+                    raw && Number.isFinite(raw.lat) && Number.isFinite(raw.lng) ? raw : null,
+                    target || progress.guidanceTargetPoint || null,
+                    ...(Array.isArray(suggestion) ? suggestion : []),
+                  ].filter(Boolean);
+            const fitKey = `${shot.fitKind}:${fitPoints
+              .map((p) => `${Number(p.lng).toFixed(5)},${Number(p.lat).toFixed(5)}`)
+              .join("|")}`;
+            if (
+              cameraIntentRef.current === "follow" &&
+              navStatusRef.current !== "paused" &&
+              fitPoints.length >= 1 &&
+              cameraFitKeyRef.current !== fitKey
+            ) {
+              cameraFitKeyRef.current = fitKey;
+              if (shot.fitKind === "route") {
+                cameraRef.current?.setCamera?.({
+                  pitch: 0,
+                  heading: 0,
+                  animationDuration: 250,
+                  animationMode: "easeTo",
+                });
+              }
+              fitCameraToPoints(
+                cameraRef.current,
+                fitPoints,
+                shot.fitKind === "route" ? 84 : 150,
+              );
+            }
+            rafRef.current = requestAnimationFrame(tick);
+            return;
+          }
+          cameraFitKeyRef.current = null;
+
           // Focus point per stage; center = lerp(rider, focus, centerBias).
           let focus = null;
-          if (shot.stage === "approach") {
-            focus = sessionStateRef.current?.approach?.target?.point ?? null;
-          } else if (shot.stage === "off-route") {
-            focus = progress.guidanceTargetPoint ?? null;
-          } else if (shot.stage === "pre-turn" || shot.stage === "arrival") {
+          if (shot.focusKind === "cue") {
             const cueMeters = sessionStateRef.current?.activeCue?.cue?.distanceMeters;
             if (Number.isFinite(cueMeters) && arcNow && geom.length >= 2) {
               focus = pointAndBearingAtDistance(arcNow, geom, cueMeters).point;
@@ -1453,29 +1713,13 @@ Then change the `setCamera` call to:
             });
 ```
 
-- [ ] **Step 3: Arrived — one-time whole-route fit**
+- [ ] **Step 3: Fit-shot guardrails**
 
-Immediately after the `shot` computation add:
-
-```js
-          if (shot.fitRoute && !arrivedFitDoneRef.current) {
-            arrivedFitDoneRef.current = true;
-            const lngs = geom.map((p) => p.lng);
-            const lats = geom.map((p) => p.lat);
-            cameraRef.current?.fitBounds?.(
-              [Math.max(...lngs), Math.max(...lats)],
-              [Math.min(...lngs), Math.min(...lats)],
-              60,
-              600,
-            );
-          }
-          if (shot.fitRoute) {
-            rafRef.current = requestAnimationFrame(tick);
-            return; // arrived: the fit owns the camera; skip follow this frame
-          }
-```
-
-(Match the `fitBounds` argument order already used elsewhere in this file — check the existing calls around the route-fit handlers and use the same convention.)
+Do not call `cameraRef.fitBounds` directly with scalar padding. Use the existing
+`fitCameraToPoints(cameraRef.current, points, bottomPadding)` helper so argument
+order and four-value padding stay consistent with the rest of BuildScreen.
+Throttle fit calls with `cameraFitKeyRef` (rounded coordinates are fine) so the
+RAF loop does not issue an expensive fit every frame.
 
 - [ ] **Step 4: Parse-check and full suite**
 
@@ -1511,13 +1755,16 @@ Run the app (`cd apps/mobile && npx expo run:ios` or the existing dev build) and
 4. `parallel-path` (8×): no warnings, chip/pill behavior stable, camera calm.
 5. Pan the map mid-ride: recenter button appears; tap: it disappears and follow resumes.
 6. Open ride settings mid-ride: haptics toggle present and functional.
+7. Open `הכנת הרכיבה` before starting: it is full-screen/opaque, no map peeks
+   below, content is reachable on small phones, and map-pick mode exits/returns
+   correctly.
 
 - [ ] **Step 3: Reconcile the design doc**
 
 Append an "Implementation notes" section to `plans/nav-ui-redesign/design.md` recording:
-- Pre-turn stage triggers at the cue preview window (120 m), not 200 m.
+- Any camera/setup window or padding value tuned during Task 5/8/9.
 - Segment-chip scenario assertions run on the synthetic l-turn scenarios because snapshot catalog routes carry no `segmentSpans`.
-- Any window/value tuned during Task 5/9.
+- Any route-class label fallback chosen beyond the classes listed in the design.
 
 - [ ] **Step 4: Commit**
 

@@ -13,6 +13,9 @@ function entry(overrides = {}) {
     connectorResult: null,
     haptic: null,
     wrongWay: false,
+    cameraStage: "ride",
+    cardMode: "status",
+    chipText: null,
     presentation: { cueText: "המשך במסלול", statusText: "", guidanceText: "" },
     ...overrides,
   };
@@ -140,5 +143,41 @@ const timeline = [
 
 // Empty expectation list passes (smoke-only scenario).
 assert.equal(evaluateExpectations([], timeline).passed, true);
+
+// camera-stage, card-mode and chip expectations.
+{
+  const ride = [
+    entry({ cameraStage: "approach", cardMode: "approach", chipText: "המסלול המוצע", progressMeters: 0 }),
+    entry({ progressMeters: 100 }),
+    entry({ cameraStage: "pre-turn", cardMode: "cue", chipText: "דרך הפרדס · דרך עפר", progressMeters: 500 }),
+    entry({ cameraStage: "arrived", cardMode: "arrived", progressMeters: 900 }),
+  ];
+  const pass = evaluateExpectations(
+    [
+      { type: "camera-stage", value: "approach" },
+      { type: "camera-stage", value: "pre-turn", betweenMeters: [450, 550] },
+      { type: "camera-stage", value: "arrived" },
+      { type: "camera-stage", value: "off-route", never: true },
+      { type: "card-mode", value: "approach" },
+      { type: "card-mode", value: "cue", betweenMeters: [450, 550] },
+      { type: "card-mode", value: "arrived" },
+      { type: "chip", match: "דרך הפרדס" },
+      { type: "chip", match: "חזרה למסלול", never: true },
+    ],
+    ride,
+  );
+  assert.deepEqual(pass.failures, []);
+  const fail = evaluateExpectations(
+    [
+      { type: "camera-stage", value: "off-route" },
+      { type: "camera-stage", value: "pre-turn", betweenMeters: [0, 100] },
+      { type: "card-mode", value: "off-route" },
+      { type: "chip", match: "לא קיים" },
+      { type: "chip", match: "המסלול המוצע", never: true },
+    ],
+    ride,
+  );
+  assert.equal(fail.failures.length, 5, JSON.stringify(fail.failures, null, 1));
+}
 
 console.log("nav scenario expectations tests passed");

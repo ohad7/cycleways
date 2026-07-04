@@ -48,6 +48,7 @@ import {
   cameraHeadingTarget,
   createCameraHeadingGovernor,
 } from "@cycleways/core/navigation/cameraHeading.js";
+import { createCameraDirector } from "@cycleways/core/navigation/cameraDirector.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
@@ -1301,6 +1302,15 @@ export default function BuildScreen({ navigation, route }) {
         : EMPTY_FEATURE_COLLECTION,
     [suggestionGeometry],
   );
+  // Midpoint of the dashed suggestion line — anchor for the approach/rejoin chip.
+  const suggestionMidpoint = useMemo(() => {
+    if (!Array.isArray(suggestionGeometry) || suggestionGeometry.length < 2) {
+      return null;
+    }
+    const mid = suggestionGeometry[Math.floor(suggestionGeometry.length / 2)];
+    return Number.isFinite(mid?.lat) && Number.isFinite(mid?.lng) ? mid : null;
+  }, [suggestionGeometry]);
+  const navChip = navPresentation.chip ?? null;
   const cameraIntent = nav.state?.cameraIntent ?? "follow";
 
   // Cumulative arc length for the active route; null until there are >=2 points.
@@ -1339,7 +1349,12 @@ export default function BuildScreen({ navigation, route }) {
   // tracks the rider's direction in real time, the map frame re-orients only
   // for persistent or sharp direction changes.
   const cameraGovernorRef = useRef(null);
+  const cameraDirectorRef = useRef(null);
   const cameraBearingRef = useRef(0);
+  const cameraPitchRef = useRef(50);
+  const cameraZoomRef = useRef(16.5);
+  const sessionStateRef = useRef(null);
+  const cameraFitKeyRef = useRef(null);
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
@@ -1357,6 +1372,7 @@ export default function BuildScreen({ navigation, route }) {
   progressRef.current = navProgress;
   cameraIntentRef.current = cameraIntent;
   rawFixRef.current = nav.state?.latestFix ?? null;
+  sessionStateRef.current = nav.state;
   arcRef.current = arc;
   navGeometryRef.current = navGeometry;
   navStatusRef.current = navStatus;
@@ -1395,11 +1411,17 @@ export default function BuildScreen({ navigation, route }) {
       puckAnchorRef.current = null;
       puckGlideRef.current = null;
       cameraGovernorRef.current = null;
+      cameraDirectorRef.current = null;
+      cameraFitKeyRef.current = null;
       return undefined;
     }
     puckAnchorRef.current = createPuckAnchor();
     puckGlideRef.current = null;
     cameraGovernorRef.current = createCameraHeadingGovernor();
+    cameraDirectorRef.current = createCameraDirector();
+    cameraPitchRef.current = NAV_FOLLOW_PITCH;
+    cameraZoomRef.current = NAV_FOLLOW_ZOOM;
+    cameraFitKeyRef.current = null;
     const startProgress = progressRef.current;
     smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
     smoothedBearingRef.current =
@@ -1556,19 +1578,91 @@ export default function BuildScreen({ navigation, route }) {
           // cameraIntent flips to "free" on a user gesture, re-engaged by the
           // recenter button). setCamera/fitBounds are off the React tree, so this
           // is intentionally NOT gated on the puck-change check.
+          // Stage-aware shot from the camera director. Fit shots use the same
+          // helper/padding convention as the rest of this file; follow shots
+          // ease pitch/zoom like heading changes.
+          const shot =
+            cameraDirectorRef.current?.update(sessionStateRef.current ?? {}, ts) ??
+            {
+              stage: "ride",
+              mode: "follow",
+              pitch: NAV_FOLLOW_PITCH,
+              zoom: NAV_FOLLOW_ZOOM,
+              centerBias: 0,
+            };
+          const cameraEase = Math.min(1, dtMs / CAMERA_ROTATE_MS);
+          cameraPitchRef.current += (shot.pitch - cameraPitchRef.current) * cameraEase;
+          if (Number.isFinite(shot.zoom)) {
+            cameraZoomRef.current += (shot.zoom - cameraZoomRef.current) * cameraEase;
+          }
+
+          if (shot.mode === "fit") {
+            const raw = rawFixRef.current;
+            const suggestion = sessionStateRef.current?.approach?.suggestionGeometry;
+            const target = sessionStateRef.current?.approach?.target?.point;
+            const validPoint = (point) =>
+              point && Number.isFinite(point.lat) && Number.isFinite(point.lng);
+            const fitPoints = (
+              shot.fitKind === "route"
+                ? geom
+                : [
+                    validPoint(raw) ? raw : null,
+                    target || progress.guidanceTargetPoint || null,
+                    ...(Array.isArray(suggestion) ? suggestion : []),
+                  ]
+            ).filter(validPoint);
+            const fitKey = `${shot.fitKind}:${fitPoints
+              .map((point) => `${Number(point.lng).toFixed(5)},${Number(point.lat).toFixed(5)}`)
+              .join("|")}`;
+            if (
+              cameraIntentRef.current === "follow" &&
+              navStatusRef.current !== "paused" &&
+              fitPoints.length >= 1 &&
+              cameraFitKeyRef.current !== fitKey
+            ) {
+              cameraFitKeyRef.current = fitKey;
+              if (shot.fitKind === "route") {
+                cameraRef.current?.setCamera?.({
+                  pitch: 0,
+                  heading: 0,
+                  animationDuration: 250,
+                  animationMode: "easeTo",
+                });
+              }
+              fitCameraToPoints(
+                cameraRef.current,
+                fitPoints,
+                shot.fitKind === "route" ? 84 : 150,
+              );
+            }
+            rafRef.current = requestAnimationFrame(tick);
+            return;
+          }
+          cameraFitKeyRef.current = null;
+
+          // Focus point per stage; center = lerp(rider, focus, centerBias).
+          let focus = null;
+          if (shot.focusKind === "cue") {
+            const cueMeters = sessionStateRef.current?.activeCue?.cue?.distanceMeters;
+            if (Number.isFinite(cueMeters) && arcNow && geom.length >= 2) {
+              focus = pointAndBearingAtDistance(arcNow, geom, cueMeters).point;
+            }
+          }
+          let centerLng = lng;
+          let centerLat = lat;
+          if (focus && shot.centerBias > 0) {
+            centerLng = lng + (focus.lng - lng) * shot.centerBias;
+            centerLat = lat + (focus.lat - lat) * shot.centerBias;
+          }
           if (
             cameraIntentRef.current === "follow" &&
             navStatusRef.current !== "paused"
           ) {
-            // Heading-up follow on the rider, tilted to a near-ground
-            // perspective. Used both on-route and while approaching so the view
-            // stays first-person and adaptive to the phone's facing direction;
-            // the direct line + dashed suggestion lead the eye to the route.
             cameraRef.current?.setCamera?.({
-              centerCoordinate: [lng, lat],
+              centerCoordinate: [centerLng, centerLat],
               heading: cameraBearingRef.current,
-              pitch: NAV_FOLLOW_PITCH,
-              zoomLevel: NAV_FOLLOW_ZOOM,
+              pitch: cameraPitchRef.current,
+              zoomLevel: cameraZoomRef.current,
               animationDuration: 0,
             });
           }
@@ -1892,6 +1986,49 @@ export default function BuildScreen({ navigation, route }) {
             />
           </ShapeSource>
         ) : null}
+        {isNavigating && navChip?.kind === "segment" && riderPuck ? (
+          <MarkerView
+            coordinate={[riderPuck.lng, riderPuck.lat]}
+            anchor={{ x: 0.5, y: -0.9 }}
+            allowOverlap
+          >
+            <View style={styles.navChip}>
+              <Text style={styles.navChipText} numberOfLines={1}>
+                {navChip.text}
+              </Text>
+            </View>
+          </MarkerView>
+        ) : null}
+        {isNavigating &&
+        (navChip?.kind === "approach" || navChip?.kind === "rejoin") &&
+        suggestionMidpoint ? (
+          <MarkerView
+            coordinate={[suggestionMidpoint.lng, suggestionMidpoint.lat]}
+            anchor={{ x: 0.5, y: 0.5 }}
+            allowOverlap
+          >
+            <View
+              style={[
+                styles.navChip,
+                navChip.kind === "rejoin"
+                  ? styles.navChipRejoin
+                  : styles.navChipApproach,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.navChipText,
+                  navChip.kind === "rejoin"
+                    ? styles.navChipRejoinText
+                    : styles.navChipApproachText,
+                ]}
+                numberOfLines={1}
+              >
+                {navChip.text}
+              </Text>
+            </View>
+          </MarkerView>
+        ) : null}
         {isNavigating ? (
           <>
             <ShapeSource id="route-traveled" shape={navTraveled}>
@@ -2083,8 +2220,6 @@ export default function BuildScreen({ navigation, route }) {
         <>
           <NavPanel
             sessionState={navPanelState}
-            hapticsEnabled={nav.hapticsEnabled}
-            onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
             onRecenter={handleRecenter}
             onPauseResume={() =>
               navStatus === "paused" ? nav.resume() : nav.pause()
@@ -2124,6 +2259,8 @@ export default function BuildScreen({ navigation, route }) {
         selection={rideSetupSelection}
         locationStatus={rideSetupLocationStatus}
         reverseAllowed={sourceNavigationRoute?.routeShape?.type !== "one_way"}
+        hapticsEnabled={nav.hapticsEnabled}
+        onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
         onDirectionChange={(direction) =>
           setRideSetupSelection((current) => ({ ...current, direction }))
         }
@@ -2798,6 +2935,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 4,
   },
+  navChip: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+    maxWidth: 220,
+  },
+  navChipText: {
+    color: "#1a2b1e",
+    fontSize: 12,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  navChipApproach: {
+    backgroundColor: "#eef4ff",
+    borderWidth: 1,
+    borderColor: "#b9ccf5",
+  },
+  navChipApproachText: { color: "#1c4fd6" },
+  navChipRejoin: {
+    backgroundColor: "#fff0ee",
+    borderWidth: 1,
+    borderColor: "#f2c4be",
+  },
+  navChipRejoinText: { color: "#c9372c" },
   routeRestoreOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 30,

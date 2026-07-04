@@ -61,6 +61,15 @@ function straightRoute() {
     "every entry exposes the wrong-way flag",
   );
   assert.ok(
+    timeline.every((e) => typeof e.cameraStage === "string"),
+    "every entry carries the camera stage",
+  );
+  assert.ok(
+    timeline.every((e) => typeof e.cardMode === "string"),
+    "every entry carries the card mode",
+  );
+  assert.equal(timeline[timeline.length - 1].cameraStage, "arrived");
+  assert.ok(
     timeline.some((e) => Number.isFinite(e.cameraHeadingDeg)),
     "the governed camera heading is carried on the timeline",
   );

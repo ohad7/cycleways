@@ -74,6 +74,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
     connectorResult: null,
     error: null,
     justAcquired: false,
+    rideStartTimestamp: null,
   };
 
   function set(patch) {
@@ -171,12 +172,16 @@ export function createNavigationSession(navigationRoute, options = {}) {
           connectorResult: null,
           error: null,
           justAcquired: false,
+          rideStartTimestamp: null,
         });
 
       case NAV_ACTIONS.LOCATION: {
         if (!ACTIVE.has(state.status)) return state;
         const latestFix = { ...action.fix };
         state = { ...state, latestFix };
+        if (state.rideStartTimestamp === null) {
+          state = { ...state, rideStartTimestamp: action.fix.timestamp };
+        }
         const mainProgress = mainTracker.update(action.fix);
 
         // Not yet on the route: stay in `approaching`, keep a live straight-line

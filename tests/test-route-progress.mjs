@@ -563,4 +563,38 @@ import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
   assert.equal(p.distanceToNextSegmentMeters, null, "empty spans: distanceToNextSegmentMeters null");
 }
 
+// --- smoothedSpeedMps: 3 s average of fix speeds --------------------------
+{
+  const mPerDegLng = 111320 * Math.cos((33.1 * Math.PI) / 180);
+  const fix = (meters, timestamp, speed) => ({
+    lat: 33.1,
+    lng: 35.6 + meters / mPerDegLng,
+    accuracy: 5,
+    speed,
+    timestamp,
+  });
+  const tracker = createRouteProgressTracker(straightRoute());
+  tracker.update(fix(0, 1000, 4));
+  tracker.update(fix(5, 2000, 5));
+  const third = tracker.update(fix(10, 3000, 6));
+  assert.ok(
+    Math.abs(third.smoothedSpeedMps - 5) < 0.01,
+    `average of 4,5,6 over 3 s is 5, got ${third.smoothedSpeedMps}`,
+  );
+  // Older fixes fall out of the window.
+  const fourth = tracker.update(fix(15, 5500, 8));
+  assert.ok(
+    Math.abs(fourth.smoothedSpeedMps - 7) < 0.01,
+    `only the 6 (t=3000) and 8 (t=5500) are within 3 s, got ${fourth.smoothedSpeedMps}`,
+  );
+  // No finite speeds in the window -> null.
+  const noSpeed = tracker.update({
+    lat: 33.1,
+    lng: 35.6 + 20 / mPerDegLng,
+    accuracy: 5,
+    timestamp: 20000,
+  });
+  assert.equal(noSpeed.smoothedSpeedMps, null, "no finite speed -> null");
+}
+
 console.log("route progress tests passed");

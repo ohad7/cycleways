@@ -87,6 +87,8 @@ export default function RideSetupSheet({
   onRefreshLocation,
   onConfirm,
   onClose,
+  hapticsEnabled = true,
+  onToggleHaptics,
 }) {
   const insets = useSafeAreaInsets();
   const candidates = plan?.candidates;
@@ -102,9 +104,15 @@ export default function RideSetupSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + space.md }]}>
-        <View style={styles.handle} />
+      <View
+        style={[
+          styles.sheet,
+          {
+            paddingTop: insets.top + space.md,
+            paddingBottom: insets.bottom + space.md,
+          },
+        ]}
+      >
         <View style={styles.header}>
           <Pressable accessibilityRole="button" accessibilityLabel="סגירה" onPress={onClose}>
             <Icon name="close" size={24} color={palette.ink} />
@@ -115,7 +123,10 @@ export default function RideSetupSheet({
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           <Text style={styles.sectionTitle}>כיוון המסלול</Text>
           <View accessibilityRole="radiogroup" style={styles.directionRow}>
             <DirectionButton
@@ -159,6 +170,18 @@ export default function RideSetupSheet({
               onPress={onPickCustom}
             />
           </View>
+
+          {onToggleHaptics ? (
+            <>
+              <Text style={styles.sectionTitle}>התראות רטט</Text>
+              <Choice
+                label={hapticsEnabled ? "רטט פעיל" : "רטט כבוי"}
+                sub="רטט קצר לפני פניות והתראות"
+                selected={hapticsEnabled}
+                onPress={onToggleHaptics}
+              />
+            </>
+          ) : null}
 
           {message ? (
             <View style={styles.notice}>
@@ -213,20 +236,16 @@ export default function RideSetupSheet({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.34)" },
   sheet: {
     position: "absolute",
+    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    maxHeight: "88%",
     backgroundColor: palette.paper,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
     paddingHorizontal: space.lg,
-    paddingTop: space.sm,
   },
-  handle: { alignSelf: "center", width: 42, height: 4, borderRadius: 2, backgroundColor: palette.line, marginBottom: space.md },
+  scrollContent: { paddingBottom: space.md },
   header: { flexDirection: "row", alignItems: "flex-start", gap: space.md, marginBottom: space.md },
   headerText: { flex: 1 },
   title: { color: palette.ink, fontSize: 21, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },

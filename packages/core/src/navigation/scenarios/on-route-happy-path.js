@@ -14,6 +14,13 @@ export default {
     { type: "banner", match: "פנה שמאלה", afterMeters: 430, beforeMeters: 600 },
     { type: "banner", match: "שביל הצפון" },
     { type: "camera-rotations", atMost: 2 },
+    { type: "camera-stage", value: "pre-turn", betweenMeters: [430, 600] },
+    { type: "camera-stage", value: "arrived" },
+    { type: "camera-stage", value: "off-route", never: true },
+    { type: "card-mode", value: "status" },
+    { type: "card-mode", value: "cue", betweenMeters: [430, 600] },
+    { type: "card-mode", value: "arrived" },
+    { type: "chip", match: "דרך הפרדס" },
     { type: "arrived" },
   ],
 };

@@ -8,6 +8,7 @@ import {
   cameraHeadingTarget,
   createCameraHeadingGovernor,
 } from "./cameraHeading.js";
+import { createCameraDirector } from "./cameraDirector.js";
 import { createCueHapticPlanner } from "./cueHaptics.js";
 import { getNavigationPresentation } from "./navigationPresentation.js";
 import { replaySession } from "./replayRunner.js";
@@ -26,6 +27,7 @@ export function buildUserTimeline(replayTimeline) {
   const haptics = createCueHapticPlanner();
   // Same camera policy the app runs: target per state, governed adoption.
   const cameraGovernor = createCameraHeadingGovernor();
+  const cameraDirector = createCameraDirector();
   return (Array.isArray(replayTimeline) ? replayTimeline : []).map(
     (state, index) => {
       const presentation = getNavigationPresentation(state);
@@ -34,6 +36,10 @@ export function buildUserTimeline(replayTimeline) {
         : { kind: null };
       const cameraHeadingDeg = cameraGovernor.update(
         cameraHeadingTarget(state.progress),
+        state.latestFix?.timestamp ?? 0,
+      );
+      const cameraShot = cameraDirector.update(
+        state,
         state.latestFix?.timestamp ?? 0,
       );
       return {
@@ -52,6 +58,9 @@ export function buildUserTimeline(replayTimeline) {
         connectorResult: state.connectorResult?.result ?? null,
         haptic: hapticPlan.kind ?? null,
         cameraHeadingDeg,
+        cameraStage: cameraShot.stage,
+        cardMode: presentation.cardMode,
+        chipText: presentation.chip?.text ?? null,
         presentation: {
           statusText: presentation.statusText,
           acquisitionText: presentation.acquisitionText,

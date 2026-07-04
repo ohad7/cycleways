@@ -4,16 +4,11 @@ import { getNavigationPresentation } from "@cycleways/core/navigation/navigation
 import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
 
-// Active turn-by-turn overlay (turn-by-turn Phase 8). Replaces the planner sheet
-// while a navigation session is active: a top cue banner (or off-route warning)
-// plus a bottom control row (recenter / pause-resume / stop). Pure renderer over
-// the session state via getNavigationPresentation.
-//
-// NOTE: native UI — verified visually in the simulator, not by the node suite.
+// Active turn-by-turn overlay. Decision logic lives in navigationPresentation;
+// this component renders the cue card/status pill, contextual controls, and
+// arrival summary for the active navigation session.
 export default function NavPanel({
   sessionState,
-  hapticsEnabled = true,
-  onToggleHaptics,
   onRecenter,
   onPauseResume,
   onStop,
@@ -24,6 +19,8 @@ export default function NavPanel({
   const insets = useSafeAreaInsets();
   const p = getNavigationPresentation(sessionState);
   const paused = sessionState?.status === "paused";
+  const arrived = p.cardMode === "arrived";
+  const showRecenter = sessionState?.cameraIntent === "free";
 
   // Direction-to-route arrow: phone-relative when the compass is available
   // (bearing-to-target minus device heading), else the movement-course arrow.
@@ -35,120 +32,140 @@ export default function NavPanel({
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
-        {p.justAcquired ? (
-          <View style={styles.acquiredRow}>
-            <Icon name="checkmark-circle" color={palette.white} size={22} />
-            <Text style={styles.acquiredText}>{p.acquisitionText}</Text>
-          </View>
-        ) : null}
-        {p.wrongWay ? (
-          <View style={styles.wrongWayRow}>
-            <Icon name="warning-outline" color={palette.white} size={22} />
-            <Text style={[styles.cueText, styles.offText]} numberOfLines={1}>
-              {p.wrongWayText}
-            </Text>
-          </View>
-        ) : null}
-        {p.showApproach ? (
-          <>
-            <Text style={[styles.approachHeading, p.offRoute ? styles.offText : null]}>
-              {p.approachHeading}
-            </Text>
-            <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
-              {showApproachArrow ? (
-                <View style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}>
-                  <Icon
-                    name="navigate"
-                    color={p.offRoute ? palette.white : palette.forest}
-                    size={26}
-                  />
+      {arrived ? (
+        <View />
+      ) : (
+        <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
+          {p.justAcquired ? (
+            <View style={styles.acquiredRow}>
+              <Icon name="checkmark-circle" color={palette.white} size={22} />
+              <Text style={styles.acquiredText}>{p.acquisitionText}</Text>
+            </View>
+          ) : null}
+          {p.wrongWay ? (
+            <View style={styles.wrongWayRow}>
+              <Icon name="warning-outline" color={palette.white} size={22} />
+              <Text style={[styles.cueText, styles.offText]} numberOfLines={1}>
+                {p.wrongWayText}
+              </Text>
+            </View>
+          ) : null}
+
+          {p.cardMode === "approach" || p.cardMode === "off-route" ? (
+            <>
+              <Text style={[styles.approachHeading, p.offRoute ? styles.offText : null]}>
+                {p.approachHeading}
+              </Text>
+              <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
+                {showApproachArrow ? (
+                  <View style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}>
+                    <Icon
+                      name="navigate"
+                      color={p.offRoute ? palette.white : palette.forest}
+                      size={26}
+                    />
+                  </View>
+                ) : null}
+                <Text
+                  style={[styles.cueText, p.offRoute ? styles.offText : null]}
+                  numberOfLines={1}
+                >
+                  {p.destinationLabel}
+                  {p.approachDistanceShort ? ` · ${p.approachDistanceShort}` : ""}
+                </Text>
+              </View>
+              {p.approachSupportText ? (
+                <Text style={styles.approachSupport}>{p.approachSupportText}</Text>
+              ) : null}
+              {p.cardMode === "approach" ? (
+                <View style={styles.approachActions}>
+                  <Pressable
+                    style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
+                    onPress={onOpenExternal}
+                    accessibilityRole="button"
+                    accessibilityLabel="פתיחה באפליקציית ניווט"
+                  >
+                    <Icon name="open-outline" color={palette.forest} size={18} />
+                    <Text style={styles.destBtnText}>אפליקציית ניווט</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
+                    onPress={onChangeRideSettings}
+                    accessibilityRole="button"
+                    accessibilityLabel="שינוי הגדרות רכיבה"
+                  >
+                    <Icon name="options-outline" color={palette.forest} size={18} />
+                    <Text style={styles.destBtnText}>הגדרות רכיבה</Text>
+                  </Pressable>
                 </View>
               ) : null}
-              <Text
-                style={[styles.cueText, p.offRoute ? styles.offText : null]}
-                numberOfLines={1}
-              >
-                {p.destinationLabel}
-                {p.approachDistanceShort ? ` · ${p.approachDistanceShort}` : ""}
-              </Text>
-            </View>
-            {p.approachSupportText ? (
-              <Text style={styles.approachSupport}>{p.approachSupportText}</Text>
-            ) : null}
-          </>
-        ) : p.showCue ? (
-          <View style={styles.cueRow}>
-            <Icon name={p.cueIcon} color={palette.forest} size={28} />
-            <View style={styles.cueTextWrap}>
-              <Text style={styles.cueText} numberOfLines={1}>
-                {p.cueText}
-              </Text>
+            </>
+          ) : p.cardMode === "cue" ? (
+            <View style={styles.cueRow}>
+              <Icon name={p.cueIcon} color={palette.forest} size={30} />
+              <View style={styles.cueTextWrap}>
+                <Text style={styles.cueText} numberOfLines={1}>
+                  {p.cuePrimaryText || p.cueText}
+                </Text>
+                {p.cueSecondaryText ? (
+                  <Text style={styles.context} numberOfLines={1}>
+                    {p.cueSecondaryText}
+                  </Text>
+                ) : null}
+              </View>
               {p.cueDistanceText ? (
-                <Text style={styles.cueDistance}>{p.cueDistanceText}</Text>
+                <Text style={styles.cueBigDistance}>{p.cueDistanceText}</Text>
               ) : null}
             </View>
-          </View>
-        ) : (
-          <Text style={styles.statusText} numberOfLines={1}>
-            {p.statusText || p.cueText}
-          </Text>
-        )}
-        {p.remainingText ? (
-          <Text style={styles.remaining}>{p.remainingText}</Text>
-        ) : null}
-        {p.showContext && p.contextText ? (
-          <Text style={styles.context} numberOfLines={1}>{p.contextText}</Text>
-        ) : null}
-        {p.showApproach ? (
-          <View style={styles.approachActions}>
-            <Pressable
-              style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
-              onPress={onOpenExternal}
-              accessibilityRole="button"
-              accessibilityLabel="פתיחה באפליקציית ניווט"
-            >
-              <Icon name="open-outline" color={palette.forest} size={18} />
-              <Text style={styles.destBtnText}>אפליקציית ניווט</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
-              onPress={onChangeRideSettings}
-              accessibilityRole="button"
-              accessibilityLabel="שינוי הגדרות רכיבה"
-            >
-              <Icon name="options-outline" color={palette.forest} size={18} />
-              <Text style={styles.destBtnText}>הגדרות רכיבה</Text>
-            </Pressable>
-          </View>
-        ) : null}
-        {!p.showApproach && sessionState?.status === "navigating" ? (
-          <Pressable
-            style={({ pressed }) => [styles.routeSettingsBtn, pressed ? styles.destBtnPressed : null]}
-            onPress={onChangeRideSettings}
-            accessibilityRole="button"
-            accessibilityLabel="שינוי כיוון או נקודת התחלה"
-          >
-            <Icon name="options-outline" color={palette.forest} size={16} />
-            <Text style={styles.routeSettingsText}>הגדרות רכיבה</Text>
-          </Pressable>
-        ) : null}
-      </View>
+          ) : (
+            <Text style={styles.statusText} numberOfLines={1}>
+              {p.contextText || p.statusText || p.cueText}
+            </Text>
+          )}
+        </View>
+      )}
 
-      <View style={[styles.controls, { marginBottom: insets.bottom + space.md }]}>
-        <NavButton icon="locate-outline" label="מרכוז" onPress={onRecenter} />
-        <NavButton
-          icon={paused ? "play" : "pause"}
-          label={paused ? "המשך" : "השהה"}
-          onPress={onPauseResume}
-        />
-        <NavButton
-          icon={hapticsEnabled ? "notifications-outline" : "notifications-off-outline"}
-          label={hapticsEnabled ? "רטט" : "מושתק"}
-          onPress={onToggleHaptics}
-        />
-        <NavButton icon="stop" label="סיום" danger onPress={onStop} />
-      </View>
+      {showRecenter && !arrived ? (
+        <View style={[styles.recenterWrap, { bottom: insets.bottom + 84 }]}>
+          <NavButton icon="locate-outline" label="מרכוז" onPress={onRecenter} />
+        </View>
+      ) : null}
+
+      {arrived && p.arrivalSummary ? (
+        <View style={[styles.arrivalCard, { marginBottom: insets.bottom + space.md }]}>
+          <Text style={styles.arrivalTitle}>הגעת ליעד 🎉</Text>
+          <View style={styles.arrivalStats}>
+            <ArrivalStat value={p.arrivalSummary.distanceText} label="מרחק" />
+            <ArrivalStat value={p.arrivalSummary.elapsedText} label="זמן" />
+            <ArrivalStat value={p.arrivalSummary.avgSpeedText} label="ממוצע" />
+          </View>
+          <Pressable
+            style={({ pressed }) => [styles.arrivalDone, pressed ? styles.destBtnPressed : null]}
+            onPress={onStop}
+            accessibilityRole="button"
+            accessibilityLabel="סיום הניווט"
+          >
+            <Text style={styles.arrivalDoneText}>סיום</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={[styles.controls, { marginBottom: insets.bottom + space.md }]}>
+          <View style={styles.dataPill}>
+            <Text style={styles.dataPillMain} numberOfLines={1}>
+              {p.remainingText || ""}
+            </Text>
+            {p.speedText ? (
+              <Text style={styles.dataPillSub}>{p.speedText}</Text>
+            ) : null}
+          </View>
+          <RoundButton
+            icon={paused ? "play" : "pause"}
+            label={paused ? "המשך" : "השהה"}
+            onPress={onPauseResume}
+          />
+          <RoundButton icon="stop" label="סיום" danger onPress={onStop} />
+        </View>
+      )}
     </View>
   );
 }
@@ -169,6 +186,32 @@ function NavButton({ icon, label, onPress, danger = false }) {
         <Icon name={icon} color={danger ? palette.white : palette.ink} size={22} />
       </Pressable>
       <Text style={styles.navBtnLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function RoundButton({ icon, label, onPress, danger = false }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.navBtn,
+        danger ? styles.navBtnDanger : null,
+        pressed ? styles.navBtnPressed : null,
+      ]}
+    >
+      <Icon name={icon} color={danger ? palette.white : palette.ink} size={22} />
+    </Pressable>
+  );
+}
+
+function ArrivalStat({ value, label }) {
+  return (
+    <View style={styles.arrivalStat}>
+      <Text style={styles.arrivalStatValue}>{value}</Text>
+      <Text style={styles.arrivalStatLabel}>{label}</Text>
     </View>
   );
 }
@@ -262,12 +305,10 @@ const styles = StyleSheet.create({
     textAlign: "right",
     marginTop: space.xs,
   },
-  cueDistance: {
-    color: palette.muted,
-    fontSize: 14,
-    fontWeight: "700",
-    writingDirection: "rtl",
-    textAlign: "right",
+  cueBigDistance: {
+    color: "#1c4fd6",
+    fontSize: 22,
+    fontWeight: "900",
   },
   statusText: {
     color: palette.ink,
@@ -276,18 +317,10 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
     textAlign: "right",
   },
-  remaining: {
+  context: {
     color: palette.muted,
     fontSize: 13,
     fontWeight: "700",
-    writingDirection: "rtl",
-    textAlign: "right",
-    marginTop: space.xs,
-  },
-  context: {
-    color: palette.muted,
-    fontSize: 12,
-    fontWeight: "600",
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: 2,
@@ -312,21 +345,6 @@ const styles = StyleSheet.create({
     gap: space.sm,
     marginTop: space.sm,
   },
-  routeSettingsBtn: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    alignSelf: "flex-end",
-    gap: space.xs,
-    marginTop: space.sm,
-    paddingVertical: 4,
-    paddingHorizontal: space.sm,
-  },
-  routeSettingsText: {
-    color: palette.forest,
-    fontSize: 12,
-    fontWeight: "800",
-    writingDirection: "rtl",
-  },
   destBtnText: {
     color: palette.forest,
     fontSize: 14,
@@ -335,8 +353,74 @@ const styles = StyleSheet.create({
   },
   controls: {
     flexDirection: "row-reverse",
-    justifyContent: "center",
-    gap: space.lg,
+    alignItems: "center",
+    gap: space.sm,
+  },
+  dataPill: {
+    flex: 1,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: palette.white,
+    borderRadius: radius.pill,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  dataPillMain: {
+    color: palette.ink,
+    fontSize: 14,
+    fontWeight: "900",
+    writingDirection: "rtl",
+  },
+  dataPillSub: {
+    color: palette.muted,
+    fontSize: 13,
+    fontWeight: "700",
+    writingDirection: "rtl",
+  },
+  recenterWrap: { position: "absolute", left: space.md },
+  arrivalCard: {
+    backgroundColor: palette.paper,
+    borderRadius: radius.lg,
+    padding: space.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  arrivalTitle: {
+    color: palette.ink,
+    fontSize: 20,
+    fontWeight: "900",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  arrivalStats: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-around",
+    marginTop: space.md,
+  },
+  arrivalStat: { alignItems: "center" },
+  arrivalStatValue: { color: palette.ink, fontSize: 18, fontWeight: "900" },
+  arrivalStatLabel: { color: palette.muted, fontSize: 11, fontWeight: "700" },
+  arrivalDone: {
+    marginTop: space.md,
+    backgroundColor: palette.forest,
+    borderRadius: radius.pill,
+    paddingVertical: space.sm,
+    alignItems: "center",
+  },
+  arrivalDoneText: {
+    color: palette.white,
+    fontSize: 15,
+    fontWeight: "900",
+    writingDirection: "rtl",
   },
   navBtnWrap: { alignItems: "center", gap: 4 },
   navBtn: {

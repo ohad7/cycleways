@@ -15,6 +15,7 @@ const METERS_PER_DEG_LAT = 111320;
 const MIN_COURSE_SPEED_MPS = 1; // below this, GPS course/heading is unreliable
 const WRONG_WAY_DELTA_DEG = 120; // course vs route bearing beyond this = wrong-way
 const COURSE_WINDOW_METERS = 20; // displacement window for the smoothed course
+const SPEED_WINDOW_MS = 3000; // smoothed rider speed = mean fix speed over this
 const WRONG_WAY_CONFIRM_MS = 4000; // sustained disagreement before warning
 // Quiet window after acquisition: the proximity latch can fire while the
 // rider is still physically finishing the approach (moving toward the start,
@@ -249,8 +250,26 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     return null;
   }
 
+  // Mean of finite fix speeds over the last SPEED_WINDOW_MS (including the
+  // current fix): steady enough for a readout, responsive enough to feel live.
+  function smoothedSpeed(nowMs) {
+    const speeds = [];
+    for (let i = courseHistory.length - 1; i >= 0; i--) {
+      const entry = courseHistory[i];
+      if (nowMs - entry.timestamp > SPEED_WINDOW_MS) break;
+      if (Number.isFinite(entry.speed)) speeds.push(entry.speed);
+    }
+    if (speeds.length === 0) return null;
+    return speeds.reduce((sum, s) => sum + s, 0) / speeds.length;
+  }
+
   function recordCourseFix(fix) {
-    courseHistory.push({ lat: fix.lat, lng: fix.lng, timestamp: fix.timestamp });
+    courseHistory.push({
+      lat: fix.lat,
+      lng: fix.lng,
+      timestamp: fix.timestamp,
+      speed: Number.isFinite(fix.speed) ? fix.speed : null,
+    });
     if (courseHistory.length > COURSE_HISTORY_LIMIT) courseHistory.shift();
   }
 
@@ -366,6 +385,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
         const approachSmoothedCourse = smoothedCourse(fix);
         prevFix = fix;
         recordCourseFix(fix);
+        const approachSmoothedSpeed = smoothedSpeed(fix.timestamp);
         const startBearing =
           geometry.length > 0 ? computeBearing(fix, geometry[0]) : null;
         return {
@@ -379,6 +399,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
           bearingToNextDeg: null,
           courseDeg: riderCourse(fix),
           smoothedCourseDeg: approachSmoothedCourse,
+          smoothedSpeedMps: approachSmoothedSpeed,
           headingAgreementDeg: null,
           wrongWay: false,
           distanceToRouteStart,
@@ -423,6 +444,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
 
     prevFix = fix;
     recordCourseFix(fix);
+    const smoothedSpeedMps = smoothedSpeed(fix.timestamp);
 
     return {
       onRoute: !offRoute,
@@ -435,6 +457,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       bearingToNextDeg,
       courseDeg,
       smoothedCourseDeg,
+      smoothedSpeedMps,
       headingAgreementDeg,
       wrongWay,
       distanceToRouteStart,

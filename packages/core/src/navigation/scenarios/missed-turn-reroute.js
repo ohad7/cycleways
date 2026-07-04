@@ -18,6 +18,9 @@ export default {
   },
   expect: [
     { type: "status", value: "off-route", betweenMeters: [230, 420] },
+    { type: "camera-stage", value: "off-route", betweenMeters: [230, 420] },
+    { type: "card-mode", value: "off-route", betweenMeters: [230, 420] },
+    { type: "chip", match: "חזרה למסלול" },
     { type: "haptic", kind: "heavy" },
     { type: "rerouted", withinFixesOfOffRoute: 10 },
     { type: "banner", match: "פנה שמאלה", afterMeters: 430 },

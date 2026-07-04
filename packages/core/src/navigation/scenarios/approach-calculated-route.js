@@ -23,10 +23,15 @@ export default {
   expect: [
     { type: "status", value: "approaching" },
     { type: "banner", match: "בדרך למסלול", field: "statusText" },
+    { type: "camera-stage", value: "approach" },
+    { type: "card-mode", value: "approach" },
+    { type: "chip", match: "המסלול המוצע" },
     { type: "acquired" },
     // Loop route (start == end): navigation must begin at the START vertex,
     // never acquire at the shared end and read the ride as backwards.
     { type: "status", value: "navigating", betweenMeters: [0, 100] },
+    { type: "camera-stage", value: "ride" },
+    { type: "card-mode", value: "status" },
     { type: "wrong-way", never: true },
     { type: "progress-at-least", meters: 700 },
   ],
