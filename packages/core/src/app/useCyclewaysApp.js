@@ -1300,6 +1300,7 @@ function routeStateFromSnapshot(current, snapshot, options = {}) {
     elevationLoss: snapshot.elevationLoss,
     activeDataPoints: snapshot.activeDataPoints,
     routeFailure: snapshot.routeFailure || null,
+    segmentSpans: snapshot.segmentSpans || [],
     pendingPoints: preservePending ? current.pendingPoints : [],
     routingPhase:
       preservePending && current.pendingPoints.length > 0
@@ -1321,6 +1322,7 @@ function clearRouteStateFields() {
     elevationLoss: 0,
     activeDataPoints: [],
     routeFailure: null,
+    segmentSpans: [],
     pendingPoints: [],
     routingPhase: "idle",
     error: null,

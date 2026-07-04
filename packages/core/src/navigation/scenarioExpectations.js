@@ -148,6 +148,25 @@ export function evaluateExpectations(expectations, timeline) {
         break;
       }
 
+      case "wrong-way-resolved": {
+        const firstWrongIndex = entries.findIndex((e) => e.wrongWay === true);
+        if (firstWrongIndex === -1) {
+          fail("wrong-way warning never shown before resolution");
+          break;
+        }
+        const firstResolved = entries.find(
+          (e, i) => i > firstWrongIndex && e.wrongWay === false,
+        );
+        if (!firstResolved) {
+          fail("wrong-way warning never resolved");
+          break;
+        }
+        if (exp.final === true && entries[entries.length - 1]?.wrongWay !== false) {
+          fail("final entry is not resolved from wrong-way warning");
+        }
+        break;
+      }
+
       case "camera-stage": {
         const first = entries.find((e) => e.cameraStage === exp.value);
         if (exp.never === true) {
@@ -196,6 +215,18 @@ export function evaluateExpectations(expectations, timeline) {
           if (first) fail(`chip "${exp.match}" appeared at ${progressOf(first)}m`);
         } else if (!first) {
           fail(`chip "${exp.match}" never appeared`);
+        }
+        break;
+      }
+
+      case "current-road": {
+        const first = entries.find(
+          (e) => textOf(e, "currentRoadText").includes(exp.match),
+        );
+        if (exp.never === true) {
+          if (first) fail(`current road "${exp.match}" appeared at ${progressOf(first)}m`);
+        } else if (!first) {
+          fail(`current road "${exp.match}" never appeared`);
         }
         break;
       }

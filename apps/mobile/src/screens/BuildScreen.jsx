@@ -180,6 +180,9 @@ const NAV_FOLLOW_ZOOM = 16.5;
 // Tilt for the heading-up follow camera so the rider sees the route ahead from
 // near ground level (also makes the view read as adaptive to the phone facing).
 const NAV_FOLLOW_PITCH = 50;
+// Approach/rejoin fit shots include a small slice of the main route after the
+// join point so a straight-line connector still frames "where this ride goes".
+const APPROACH_ROUTE_LOOKAHEAD_M = 180;
 // Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
 // is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
 const BEARING_SMOOTH_MS = 260;
@@ -1599,21 +1602,38 @@ export default function BuildScreen({ navigation, route }) {
           if (shot.mode === "fit") {
             const raw = rawFixRef.current;
             const suggestion = sessionStateRef.current?.approach?.suggestionGeometry;
-            const target = sessionStateRef.current?.approach?.target?.point;
-            const validPoint = (point) =>
-              point && Number.isFinite(point.lat) && Number.isFinite(point.lng);
+            const target = sessionStateRef.current?.approach?.target;
+            const targetPoint = target?.point || progress.guidanceTargetPoint || null;
+            const routeLookahead =
+              shot.fitKind === "approach" || shot.fitKind === "rejoin"
+                ? routeLookaheadPoint(arcNow, geom, target)
+                : null;
             const fitPoints = (
               shot.fitKind === "route"
                 ? geom
                 : [
-                    validPoint(raw) ? raw : null,
-                    target || progress.guidanceTargetPoint || null,
+                    validMapPoint(raw) ? raw : null,
+                    targetPoint,
+                    routeLookahead,
                     ...(Array.isArray(suggestion) ? suggestion : []),
                   ]
-            ).filter(validPoint);
-            const fitKey = `${shot.fitKind}:${fitPoints
+            ).filter(validMapPoint);
+            const fitHeading =
+              shot.fitKind === "route"
+                ? 0
+                : Number.isFinite(governedHeading)
+                  ? governedHeading
+                  : cameraBearingRef.current;
+            const fitPitch = Number.isFinite(shot.pitch) ? shot.pitch : null;
+            const fitPointKey = fitPoints
               .map((point) => `${Number(point.lng).toFixed(5)},${Number(point.lat).toFixed(5)}`)
-              .join("|")}`;
+              .join("|");
+            const fitKey = [
+              shot.fitKind,
+              cameraKeyNumber(fitHeading),
+              cameraKeyNumber(fitPitch),
+              fitPointKey,
+            ].join(":");
             if (
               cameraIntentRef.current === "follow" &&
               navStatusRef.current !== "paused" &&
@@ -1621,18 +1641,11 @@ export default function BuildScreen({ navigation, route }) {
               cameraFitKeyRef.current !== fitKey
             ) {
               cameraFitKeyRef.current = fitKey;
-              if (shot.fitKind === "route") {
-                cameraRef.current?.setCamera?.({
-                  pitch: 0,
-                  heading: 0,
-                  animationDuration: 250,
-                  animationMode: "easeTo",
-                });
-              }
               fitCameraToPoints(
                 cameraRef.current,
                 fitPoints,
                 shot.fitKind === "route" ? 84 : 150,
+                { heading: fitHeading, pitch: fitPitch },
               );
             }
             rafRef.current = requestAnimationFrame(tick);
@@ -2855,7 +2868,37 @@ function boundsFromMapState(mapState) {
   return { west, south, east, north };
 }
 
-function fitCameraToPoints(camera, points, bottomPadding = 84) {
+function validMapPoint(point) {
+  return (
+    point &&
+    Number.isFinite(Number(point.lat)) &&
+    Number.isFinite(Number(point.lng))
+  );
+}
+
+function routeLookaheadPoint(arc, geometry, target) {
+  const progressMeters = Number(target?.mainProgressMeters);
+  if (
+    !arc ||
+    !Array.isArray(geometry) ||
+    geometry.length < 2 ||
+    !Number.isFinite(progressMeters)
+  ) {
+    return null;
+  }
+  const lookaheadMeters = Math.min(
+    arc.totalDistMeters,
+    Math.max(0, progressMeters) + APPROACH_ROUTE_LOOKAHEAD_M,
+  );
+  if (lookaheadMeters <= progressMeters + 1) return null;
+  return pointAndBearingAtDistance(arc, geometry, lookaheadMeters).point;
+}
+
+function cameraKeyNumber(value) {
+  return Number.isFinite(value) ? String(Math.round(value)) : "na";
+}
+
+function fitCameraToPoints(camera, points, bottomPadding = 84, options = {}) {
   const normalizedPoints = Array.isArray(points)
     ? points
         .map((point) => ({
@@ -2867,12 +2910,17 @@ function fitCameraToPoints(camera, points, bottomPadding = 84) {
 
   if (!camera || normalizedPoints.length === 0) return;
 
+  const cameraStopExtras = {};
+  if (Number.isFinite(options.heading)) cameraStopExtras.heading = options.heading;
+  if (Number.isFinite(options.pitch)) cameraStopExtras.pitch = options.pitch;
+
   if (normalizedPoints.length === 1) {
     const [point] = normalizedPoints;
     camera.setCamera?.({
       type: "CameraStop",
       centerCoordinate: [point.lng, point.lat],
       zoomLevel: 13.5,
+      ...cameraStopExtras,
       animationDuration: 450,
       animationMode: "easeTo",
     });
@@ -2883,6 +2931,22 @@ function fitCameraToPoints(camera, points, bottomPadding = 84) {
   const east = Math.max(...normalizedPoints.map((point) => point.lng));
   const south = Math.min(...normalizedPoints.map((point) => point.lat));
   const north = Math.max(...normalizedPoints.map((point) => point.lat));
+  if (typeof camera.setCamera === "function") {
+    camera.setCamera({
+      type: "CameraStop",
+      bounds: { ne: [east, north], sw: [west, south] },
+      padding: {
+        paddingTop: 96,
+        paddingRight: 42,
+        paddingBottom: bottomPadding,
+        paddingLeft: 42,
+      },
+      ...cameraStopExtras,
+      animationDuration: 550,
+      animationMode: "easeTo",
+    });
+    return;
+  }
   camera.fitBounds?.([east, north], [west, south], [96, 42, bottomPadding, 42], 550);
 }
 

@@ -13,6 +13,7 @@ import recordedRealRide from "./recorded-real-ride.js";
 import rerouteFailure from "./reroute-failure.js";
 import stopAndStand from "./stop-and-stand.js";
 import sovevBeitHillelRide from "./sovev-beit-hillel-ride.js";
+import wrongWay from "./wrong-way.js";
 
 export const scenarios = [
   onRouteHappyPath,
@@ -25,6 +26,7 @@ export const scenarios = [
   parallelPath,
   recordedRealRide,
   sovevBeitHillelRide,
+  wrongWay,
   currentRouteGeneric,
 ];
 

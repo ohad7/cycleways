@@ -300,7 +300,7 @@ export function getNavigationPresentation(state = {}) {
       : "",
     guidanceArrowDeg: relativeArrowDeg(progress),
     wrongWay: progress?.wrongWay === true,
-    wrongWayText: "אתה נוסע בכיוון הלא נכון — סובב",
+    wrongWayText: "המסלול בכיוון ההפוך - הסתובבו",
     currentOnNetwork: progress?.currentOnNetwork ?? false,
   };
 }

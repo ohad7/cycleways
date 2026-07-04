@@ -12,6 +12,10 @@ This design covers the product behavior, iOS permission posture, background
 runtime shape, voice guidance architecture, and App Store implications. It is a
 focused follow-up to `plans/ios-app-store-release/`.
 
+Scope note: this plan is iOS-only. Android background location is a different
+platform problem (foreground service, persistent notification, separate
+permission model) and is explicitly out of scope here.
+
 ## Product Position
 
 For a professional cycling navigation v1, background location plus voice
@@ -72,14 +76,38 @@ pure and testable. The missing work is the native runtime boundary: background
 task registration, persisted active-session state, foreground/background
 synchronization, and an audio adapter.
 
+One core gap must be closed first: `createNavigationSession` and
+`createRouteProgressTracker` keep behavioral state in closure variables that
+are not part of the returned state — the cue dedupe key (`mainCueKey`), the
+off-route transition flag (`wasOffRoute`), `lastConfirmedProgressMeters`,
+`prePauseStatus`, and the tracker's acquisition/progress state. Neither module
+has a serialize/restore API today. Rebuilding a "fresh" session from just the
+route after a relaunch would silently re-fire the "acquired" cue, reset
+`rideStartTimestamp`, forget the off-route transition, and re-speak prompts.
+See "Core Session Snapshot And Restore" below.
+
 ## User Experience
 
 ### Ride Setup
 
-The ride setup sheet should expose two separate controls:
+The ride setup sheet should expose two separate controls, named by rider
+benefit, not by mechanism ("lock-screen guidance" is engineering language):
 
-- Lock-screen guidance: enables background location for this ride.
-- Voice guidance: enables spoken prompts for this ride.
+- Keep guiding when the screen is locked: enables background location for this
+  ride.
+- Spoken directions: enables voice prompts for this ride.
+
+The two combinations are asymmetric, and the UI should reflect that:
+
+- Voice without background is genuinely useful: handlebar mount, screen awake,
+  spoken prompts.
+- Background without voice buys almost nothing the rider can perceive: haptics
+  do not fire from a locked phone in a pocket, so its only benefit is accurate
+  state on unlock.
+
+Because of this, present the pair as one "hands-free guidance" concept with
+voice as the primary switch, and request Always permission only when the
+locked-screen half is enabled.
 
 Recommended default for a professional navigation release:
 
@@ -88,20 +116,56 @@ Recommended default for a professional navigation release:
 - Haptics remain a separate setting, useful when the screen is awake but not a
   substitute for locked-screen prompts.
 
+When voice guidance is enabled, ride setup should offer a "test voice"
+affordance that plays one sample prompt on demand (or automatically on first
+enable). It surfaces silent-switch, Bluetooth routing, and volume problems
+before departure instead of at the first missed turn — otherwise "voice
+guidance doesn't work" becomes the most likely support complaint.
+
 The app should request foreground location first. It should request Always
 location only when the user starts or enables lock-screen guidance, with
 in-product copy that explains the direct benefit:
 
 - Keep navigation and spoken ride prompts working when the screen is locked.
 
+The priming sequence matters and must be pinned down: show the app's own
+explainer card immediately before triggering the iOS Always dialog, at the
+moment the user first enables the feature — never at app launch. Because the
+While Using -> Always upgrade dialog is one-shot, this pre-prompt is
+effectively the only chance to win the grant.
+
 If Always permission is denied, restricted, or silently unavailable because the
 user chose "Allow Once", the app should fall back to foreground-only navigation
 and show a clear state. It should not keep promising lock-screen guidance.
+
+Foreground-only rides must activate keep-awake (`expo-keep-awake`) for the
+duration of navigation. Without it, iOS sleeps the display within seconds and
+guidance dies exactly the way this feature is meant to prevent — the fallback
+mode the permission flow routes people into would be broken on arrival. This
+is a requirement of foreground-only mode, not polish.
+
+Two iOS-specific behaviors the permission UX must handle explicitly:
+
+- The While Using -> Always upgrade dialog is effectively one-shot. After the
+  user declines it once, later `requestBackgroundPermissionsAsync` calls return
+  denied silently with no dialog. The denied state must therefore distinguish
+  "prompt shown and declined" from "prompt suppressed — Always can only be
+  enabled in iOS Settings", and route the second case to a Settings deep link.
+- iOS can grant provisional Always authorization: the API reports granted while
+  the real confirmation prompt is deferred and shown later, and the grant may
+  be downgraded afterwards. The app must re-check background permission at ride
+  start rather than caching a past grant.
 
 ### During Navigation
 
 When the screen is awake, the existing map, banner, haptics, pause, stop,
 recenter, and route approach UI remain the primary interface.
+
+When voice guidance is on, mute must be a control, not just a status: a large,
+glove-friendly tap target on the navigation screen. Muting mid-ride is the
+most common voice interaction there is. A "tap to repeat last instruction"
+gesture is the natural companion and a common navigation pattern, but can be
+deferred past v1.
 
 When the phone is locked or the app is backgrounded:
 
@@ -112,9 +176,24 @@ When the phone is locked or the app is backgrounded:
 - When the app returns to the foreground, the visual UI rehydrates from the
   latest persisted runtime state rather than pretending no time passed.
 
-Pause and stop must stop background location updates. Arrival should announce
-arrival once and then stop or move the app into an ended state after the user
-returns, depending on final UX choice.
+The return-from-lock moment should render current state directly: no flash of
+pre-lock state, no loading spinner where avoidable, and no replaying of cues
+that fired while locked — current state only. On the first successful
+locked-screen ride, a small one-time reassurance ("guidance kept running while
+your screen was locked") is worth adding, because users do not trust
+background behavior until they have seen it work.
+
+Pause and stop must stop background location updates.
+
+Arrival must not depend on the user returning to the app. The session's states
+today are idle/requesting-permission/approaching/navigating/off-route/paused/
+ended/error — arrival is only a cue, not a state transition, so a cleanup rule
+keyed on "session ended" will never fire from arrival alone. The decided
+behavior: the runtime announces arrival once, then stops background location
+updates on its own after a short confirmation window (for example, the rider
+remains within the arrival radius for 1-2 minutes, or immediately if a stricter
+policy tests well). Without this, a rider who arrives and pockets a locked
+phone leaves background GPS running until they next open the app.
 
 ### Spoken Prompt Set
 
@@ -133,6 +212,20 @@ guidance is worse than sparse reliable guidance during a ride.
 
 The initial voice language should match the app chrome, Hebrew (`he-IL`), with
 the prompt planner designed so English or other locales can be added later.
+
+Hebrew TTS specifics to settle early:
+
+- Voice quality for `he-IL` varies a lot by device depending on whether the
+  enhanced Siri voice is installed; the device spike matrix must include a
+  device with only the default voice.
+- Phrasing needs a deliberate register decision made once, up front:
+  imperative "פנה ימינה" is standard navigation Hebrew but is gendered —
+  decide masculine-imperative vs. neutral phrasing before writing the prompt
+  set.
+- Test how the chosen voice actually reads numbers and units
+  ("בעוד 200 מטר") rather than assuming.
+- Keeping street names out of v1 sidesteps the worst TTS problems; keep it
+  that way.
 
 ## Architecture
 
@@ -187,6 +280,26 @@ The planner should be deterministic and independently tested. It should own:
 The existing `cueHaptics` planner is a good local pattern: keep decision logic
 in core, keep native side effects in a thin adapter.
 
+### Core Session Snapshot And Restore
+
+Prerequisite core work, to land before the mobile runtime is built:
+
+- Add `serialize()` / restore-from-snapshot support to
+  `createNavigationSession`, covering the closure state that is not in the
+  returned state object: cue dedupe key, off-route transition flag,
+  `lastConfirmedProgressMeters`, `prePauseStatus`, and connector request
+  bookkeeping.
+- Add the same to `createRouteProgressTracker` (acquisition state, progress
+  position, any hysteresis state).
+- Include voice planner memory (spoken utterance ids, cooldown timestamps) in
+  the same snapshot envelope.
+- Test that a session restored mid-ride does not re-fire the "acquired" cue,
+  preserves `rideStartTimestamp`, preserves the off-route flag, and does not
+  repeat already-spoken prompts.
+
+This is the piece that makes "resume guidance after a relaunch" honest; without
+it the background task can only rebuild an amnesiac session.
+
 ### Navigation Runtime Service
 
 Introduce a mobile runtime layer that becomes the single owner of an active
@@ -219,13 +332,25 @@ Add a top-level task module, likely under
 The task must not depend on React hooks, mounted screens, refs, or context. Expo
 TaskManager can run the task by spinning up JavaScript without mounting views.
 
+Runtime model: on iOS, `UIBackgroundModes: location` keeps the JS process alive
+while updates are flowing, so the task handler fires into the same runtime
+where the navigation runtime singleton already lives. The normal path is
+therefore cheap: the task forwards fixes to the in-memory runtime. Loading and
+restoring the persisted snapshot is the exceptional recovery path (process was
+killed and relaunched), not the per-invocation path. Rebuilding cues and the
+progress tracker from disk on every 1-3 second location batch would be wasteful
+and would turn snapshot fidelity into a per-fix correctness problem.
+
 Task flow:
 
 1. Receive one or more raw locations from Expo Location.
 2. Convert each raw location through the existing `toNavigationFix(...)` mapper.
-3. Load the persisted active navigation session.
-4. Recreate or resume the pure core session from persisted route/session data.
-5. Dispatch each fix in timestamp order.
+3. If the runtime singleton holds the active session (normal path), forward the
+   fixes to it.
+4. Otherwise (fresh JS launch), load the persisted active session snapshot and
+   restore the pure core session via the core restore API.
+5. Dispatch each fix in timestamp order. `cueEvent` is one-shot per dispatch —
+   collect cue events per dispatched fix, not from the final state only.
 6. Run the voice planner and audio adapter for new cue events.
 7. Persist the updated snapshot.
 8. If no active session exists, stop the background location task defensively.
@@ -257,6 +382,10 @@ posture and should be a separate recording feature decision.
 Use the existing file-system persistence style where it is sufficient, but keep
 the store schema explicit and versioned. Corrupt or stale snapshots should fail
 closed: stop background location and show a recoverable error on next launch.
+"Stale" must be a concrete, testable rule — for example: schema version
+mismatch, route material that no longer loads, or last processed fix older
+than 6 hours. A stale snapshot is discarded, the background task is stopped,
+and the app returns to a clean non-navigating state.
 
 ### Location Strategy
 
@@ -273,6 +402,11 @@ Recommended initial iOS options for physical-device testing:
 - high accuracy while actively navigating
 - distance interval around 3-10 meters
 - time interval around 1-3 seconds where supported
+- `activityType` set for cycling (Fitness or OtherNavigation)
+- `pausesUpdatesAutomatically: false` — with the default auto-pause, iOS can
+  stop delivering updates after the rider is stationary for a few minutes
+  (coffee stop, long light) and may not resume them until the app is
+  foregrounded, which presents exactly like "background guidance silently died"
 - background location indicator visible during TestFlight
 - deferred updates disabled for the first correctness pass
 
@@ -298,6 +432,13 @@ However, Expo documents that `expo-speech` does not produce sound on iOS
 physical devices when silent mode is enabled. For a professional navigation app,
 silent-switch behavior is a release blocker unless the product deliberately
 documents that voice guidance requires silent mode off.
+
+The silent-mode failure is really an `AVAudioSession` category problem, and the
+audio session is app-global. The cheapest possible fix — and the first thing
+the device spike should test — is configuring the session via expo-audio's
+`setAudioModeAsync` (`playsInSilentMode: true`, duck-others interruption mode)
+and then speaking through `expo-speech`. If that combination passes the device
+matrix, the native adapter branch below is avoided entirely.
 
 The implementation should therefore plan for two adapters:
 
@@ -353,6 +494,15 @@ decision is made. Local diagnostic state is still useful:
 Any future crash or analytics provider must scrub coordinates, route tokens, and
 user-entered locations unless the privacy policy and labels are updated.
 
+## Future Direction: Lock-Screen Visual Guidance
+
+A Live Activity / Dynamic Island turn card is the canonical iOS lock-screen
+navigation pattern. It is deliberately out of scope for v1, but it is the
+intended follow-on: it changes what "lock-screen guidance" means long-term
+(visual next-turn state plus voice, and pause/stop without unlocking). Nothing
+in this design should preclude adding it later; the runtime-owned session and
+persisted snapshot are exactly the state a Live Activity would render.
+
 ## Risks
 
 - Expo Speech may be insufficient for locked-screen/silent-mode navigation.
@@ -377,8 +527,17 @@ user-entered locations unless the privacy policy and labels are updated.
 - Returning to the app shows current progress and cue state, not stale pre-lock
   state.
 - Stopping or pausing navigation stops background location updates.
+- Confirmed arrival stops background location updates on its own, without
+  requiring the user to return to the app.
+- A session restored after a process relaunch mid-ride does not re-announce
+  route acquisition, does not reset the ride start timestamp, and does not
+  repeat already-spoken prompts.
 - Denying Always permission produces a foreground-only ride with no false
   lock-screen promise.
+- Foreground-only rides keep the screen awake for the duration of navigation.
+- Voice can be muted mid-ride from the navigation screen with one tap.
+- Ride setup can play a sample voice prompt so audio problems surface before
+  departure.
 - The app does not request microphone permission.
 - The app does not persist or upload a raw ride track as part of this feature.
 - App Store metadata, permission strings, privacy policy, and review notes match

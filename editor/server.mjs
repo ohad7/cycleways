@@ -901,6 +901,9 @@ function catalogDecodedRouteFromState(routeState, segmentsData, segmentFeatureLo
     selectedSegments: Array.isArray(routeState.selectedSegments)
       ? routeState.selectedSegments
       : [],
+    segmentSpans: Array.isArray(routeState.segmentSpans)
+      ? routeState.segmentSpans.map((span) => ({ ...span }))
+      : [],
     roadTypeFractions,
     qualityScore,
   };

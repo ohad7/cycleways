@@ -745,6 +745,80 @@ export default {
       "lng": 35.60925
     }
   ],
+  "segmentSpans": [
+    {
+      "startMeters": 0,
+      "endMeters": 133.04,
+      "name": "שביל אופניים חצבאני חופים צפוני",
+      "cwSegmentId": 101,
+      "onNetwork": true,
+      "routeClass": "path_track"
+    },
+    {
+      "startMeters": 133.04,
+      "endMeters": 153.02,
+      "name": null,
+      "cwSegmentId": null,
+      "onNetwork": false,
+      "routeClass": "path_track"
+    },
+    {
+      "startMeters": 153.02,
+      "endMeters": 796.92,
+      "name": "שביל אופניים חצבאני חופים צפוני",
+      "cwSegmentId": 101,
+      "onNetwork": true,
+      "routeClass": "path_track"
+    },
+    {
+      "startMeters": 796.92,
+      "endMeters": 2392.42,
+      "name": "שביל אופניים חצבאני בית הלל",
+      "cwSegmentId": 100,
+      "onNetwork": true,
+      "routeClass": "path_track"
+    },
+    {
+      "startMeters": 2392.42,
+      "endMeters": 5242.12,
+      "name": "גדר המערכת בית הלל",
+      "cwSegmentId": 139,
+      "onNetwork": true,
+      "routeClass": "local_road"
+    },
+    {
+      "startMeters": 5242.12,
+      "endMeters": 5303.22,
+      "name": "רחוב הדולב בית הלל מערב",
+      "cwSegmentId": 303,
+      "onNetwork": true,
+      "routeClass": "local_road"
+    },
+    {
+      "startMeters": 5303.22,
+      "endMeters": 6358.72,
+      "name": "גדר מערכת בית הלל צפון",
+      "cwSegmentId": 301,
+      "onNetwork": true,
+      "routeClass": "manual"
+    },
+    {
+      "startMeters": 6358.72,
+      "endMeters": 6455.32,
+      "name": "כביש 9888 סדנה",
+      "cwSegmentId": 304,
+      "onNetwork": true,
+      "routeClass": "road"
+    },
+    {
+      "startMeters": 6455.32,
+      "endMeters": 6498.19,
+      "name": "שביל אופניים חצבאני חופים צפוני",
+      "cwSegmentId": 101,
+      "onNetwork": true,
+      "routeClass": "path_track"
+    }
+  ],
   "junctions": [
     {
       "lat": 33.20896,

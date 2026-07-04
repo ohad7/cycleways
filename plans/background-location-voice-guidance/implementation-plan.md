@@ -8,13 +8,23 @@ Date: 2026-07-04
    guidance.
 2. Confirm that v1 scope is voice guidance, not voice commands.
 3. Confirm initial language. Recommendation: Hebrew first, matching the current
-   native navigation UI.
+   native navigation UI. Decide the Hebrew phrasing register once, up front:
+   imperative "פנה ימינה" is standard navigation Hebrew but is gendered —
+   choose masculine-imperative vs. neutral phrasing before the prompt set is
+   written.
 4. Confirm the accepted behavior when iOS silent mode is on:
    - Preferred: voice prompts still work when the user explicitly enabled
      voice guidance.
    - Fallback only if accepted by product: voice guidance requires silent mode
      off.
 5. Confirm that this feature does not record rides or upload ride tracks.
+6. Confirm the scope is iOS-only; Android background location (foreground
+   service, notification, separate permission model) is a separate future
+   effort.
+7. Until the decision is made, block App Store submission of any build with
+   the current `app.json` configuration: it already declares Always location
+   and `UIBackgroundModes: location` while the code is foreground-only, which
+   overpromises to both users and App Review.
 
 Acceptance:
 
@@ -23,6 +33,7 @@ Acceptance:
   removed".
 - Voice commands are explicitly deferred.
 - Privacy posture remains on-device unless a separate feature changes it.
+- No binary ships while permission declarations and shipped behavior disagree.
 
 ## Phase 1 - Physical-Device Spike
 
@@ -36,7 +47,9 @@ wrong Expo adapter.
 2. Create a throwaway top-level background task that:
    - requests foreground permission
    - requests background permission
-   - starts `Location.startLocationUpdatesAsync(...)`
+   - starts `Location.startLocationUpdatesAsync(...)` with cycling-appropriate
+     options: `activityType` Fitness/OtherNavigation and
+     `pausesUpdatesAutomatically: false`
    - logs task invocations locally
    - speaks one short prompt on a background location update
 3. Build a development client or Release-like local build. Do not rely on Expo
@@ -47,9 +60,16 @@ wrong Expo adapter.
    - app switcher background
    - silent switch on
    - silent switch off
+   - silent switch on, after configuring the audio session via expo-audio
+     `setAudioModeAsync` (`playsInSilentMode: true`, duck-others) and speaking
+     through `expo-speech` — the cheapest fix for the documented expo-speech
+     silent-mode limitation; if this passes, the native adapter branch in
+     Phase 5 is avoided
    - Bluetooth/headphones
    - music or podcast playing
    - Low Power Mode
+   - stationary for 5+ minutes mid-"ride" while locked, to verify update
+     delivery resumes (auto-pause behavior)
 5. Decide the final audio adapter path:
    - keep `expo-speech` only if it passes the accepted matrix
    - otherwise plan a native `AVSpeechSynthesizer`/`AVAudioSession` adapter or
@@ -61,7 +81,7 @@ Acceptance:
 - A prompt can be heard in the accepted lock-screen audio conditions.
 - Known limitations are written down before full implementation starts.
 
-## Phase 2 - Core Voice Planner
+## Phase 2 - Core Voice Planner And Session Snapshot/Restore
 
 1. Add a pure voice planner module under `packages/core/src/navigation/`.
 2. Convert session `cueEvent` values into voice utterance plans:
@@ -90,10 +110,23 @@ Acceptance:
    - arrival prompt
    - no voice when disabled
    - no duplicate speech for duplicate fixes
+9. Add snapshot/restore to `createNavigationSession`: serialize and restore the
+   closure state that is not part of the returned state object — cue dedupe
+   key, off-route transition flag, `lastConfirmedProgressMeters`,
+   `prePauseStatus`, connector request bookkeeping.
+10. Add snapshot/restore to `createRouteProgressTracker` (acquisition state,
+    progress position, hysteresis state).
+11. Include voice planner memory (spoken utterance ids, cooldown timestamps)
+    in the same snapshot envelope.
+12. Add restore tests: a session restored mid-ride does not re-fire the
+    "acquired" cue, preserves `rideStartTimestamp`, preserves the off-route
+    flag, and does not repeat already-spoken prompts.
 
 Acceptance:
 
 - Voice decision logic is testable without iOS.
+- A mid-ride session can round-trip through serialize/restore with identical
+  subsequent behavior to an uninterrupted session.
 - Existing navigation tests still pass.
 - Scenario artifacts can show expected spoken prompts without running the app.
 
@@ -127,13 +160,22 @@ Acceptance:
 7. On app launch/foreground, load any active session and reconcile it with
    registered background task state.
 8. Handle corrupt or stale session snapshots by stopping background updates and
-   surfacing a recoverable navigation error.
+   surfacing a recoverable navigation error. Define "stale" as a concrete rule
+   (schema version mismatch, route material that no longer loads, or last
+   processed fix older than 6 hours) so it is testable.
+9. Keep the runtime a long-lived in-process singleton: restoring from the
+   persisted snapshot (via the Phase 2 core restore API) is the recovery path
+   after a process relaunch, never the per-fix path. When collecting session
+   output, read `cueEvent` per dispatched fix — it is one-shot per dispatch,
+   not accumulated in the final state.
 
 Acceptance:
 
 - React UI is no longer the only owner of an active navigation session.
 - A background task can process a fix from persisted session data without
   mounted screens.
+- Restoring a persisted mid-ride session yields no duplicate or lost cue
+  events versus an uninterrupted session.
 - Stop/pause reliably tears down both foreground and background location paths.
 
 ## Phase 4 - Background Location Integration
@@ -150,7 +192,8 @@ Acceptance:
    - stop background location updates
    - check whether the task is registered/running
 4. Use `Location.startLocationUpdatesAsync(...)` only when lock-screen guidance
-   is enabled for an active ride.
+   is enabled for an active ride, with `activityType` set for cycling and
+   `pausesUpdatesAutomatically: false` (see Phase 1 spike findings).
 5. Use the existing `watchPositionAsync(...)` foreground watch for smooth UI
    while active; dedupe against background task fixes in the runtime.
 6. Disable background connector/rejoin route computation for v1. If the pure
@@ -160,13 +203,21 @@ Acceptance:
    - no active session -> stop task
    - session ended -> stop task
    - permission revoked -> stop task and mark foreground-only/error state
+   - arrival confirmed -> stop task after a short confirmation window. Arrival
+     is a cue, not a session state, so "session ended" alone never fires from
+     arrival; the runtime must stop background updates itself without waiting
+     for the user to return to the app.
 8. Add a dev-only status screen or log panel for background task status during
    TestFlight/internal validation.
+9. In the task handler, forward fixes to the in-memory runtime singleton when
+   it holds the active session (the normal iOS path); only restore from the
+   persisted snapshot on a fresh JS launch.
 
 Acceptance:
 
 - Background updates start only after explicit active-ride intent.
-- Background updates stop on pause/stop/end/error cleanup.
+- Background updates stop on pause/stop/end/error cleanup and after confirmed
+  arrival, without requiring the app to be reopened.
 - The app cannot leave a stale background location task running after the ride.
 
 ## Phase 5 - Speech And Audio Adapter
@@ -182,11 +233,15 @@ Acceptance:
    - explicit rate/volume defaults
    - callback/error reporting
    - queue clearing for high-priority interrupts
-4. Configure audio behavior with `expo-audio` if needed for mixing/ducking and
-   background behavior.
-5. If the spike shows `expo-speech` cannot satisfy the accepted device matrix,
-   implement a native iOS adapter around `AVSpeechSynthesizer` and
-   `AVAudioSession`, or a packaged-audio prompt adapter.
+4. Configure the app-global audio session with `expo-audio`'s
+   `setAudioModeAsync` (`playsInSilentMode: true`, duck-others interruption
+   mode) before falling back to a native adapter — the expo-speech silent-mode
+   limitation is an `AVAudioSession` category problem, and this combination is
+   the cheapest fix if the Phase 1 spike validated it.
+5. If the spike shows `expo-speech` cannot satisfy the accepted device matrix
+   even with the expo-audio session configuration, implement a native iOS
+   adapter around `AVSpeechSynthesizer` and `AVAudioSession`, or a
+   packaged-audio prompt adapter.
 6. Keep the speech adapter side-effect-only. Do not put cue selection,
    dedupe, or phrasing in native code.
 7. Add local diagnostic counters for prompt attempts, prompt completions, and
@@ -209,6 +264,11 @@ Acceptance:
    - foreground denied -> cannot start CycleWays navigation
    - background denied -> start foreground-only with clear messaging, or keep
      the user in setup depending on final UX
+   - distinguish "Always prompt shown and declined" from "prompt suppressed by
+     iOS (one-shot upgrade dialog already used) — Always can only be enabled in
+     Settings", and deep-link to Settings for the second case
+   - re-check background permission at every ride start; iOS provisional
+     Always grants can be downgraded later without the app being told
 4. Show active ride mode in navigation UI:
    - foreground-only
    - lock-screen guidance active
@@ -287,6 +347,8 @@ Run this matrix on TestFlight or a Release-like build, not just the simulator.
    - Allow While Using
    - Always granted
    - Always denied
+   - Always upgrade prompt suppressed (second request after a decline)
+   - provisional Always grant later downgraded by iOS
    - Allow Once
    - permission revoked from Settings mid-ride
 2. App lifecycle:
@@ -308,7 +370,9 @@ Run this matrix on TestFlight or a Release-like build, not just the simulator.
    - on-route happy path
    - missed turn/off-route
    - route reacquired
-   - arrival
+   - arrival, including background location stopping on its own after the
+     confirmation window with the phone still locked
+   - stationary 5+ minutes mid-ride while locked, then riding again
    - long straight section with no cue
    - dense cue area with multiple nearby turns
 5. Environment:
@@ -355,6 +419,11 @@ Acceptance:
 - Production-grade polish and release validation: 3-5 weeks, mostly due to
   physical-device QA, audio edge cases, battery tuning, and App Store/privacy
   hardening.
+
+These numbers assume `expo-speech` (with the expo-audio session configuration)
+passes the device matrix. If the native `AVSpeechSynthesizer`/`AVAudioSession`
+adapter is required, add at least a week for the native module or config
+plugin work plus a full re-run of the audio device matrix.
 
 Voice commands would be a separate project and should not be added to this
 estimate.

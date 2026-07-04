@@ -268,7 +268,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: true, wrongWay: true, remainingMeters: 500 },
   });
   assert.equal(p.wrongWay, true);
-  assert.match(p.wrongWayText, /כיוון הלא נכון/);
+  assert.equal(p.wrongWayText, "המסלול בכיוון ההפוך - הסתובבו");
 }
 
 // --- cardMode / chip / speedText / arrivalSummary ------------------------

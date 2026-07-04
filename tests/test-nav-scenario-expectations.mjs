@@ -28,6 +28,7 @@ const timeline = [
   entry({ status: "off-route", offRoute: true, progressMeters: 300, haptic: "heavy" }),
   entry({ status: "off-route", offRoute: true, progressMeters: 300, suggestionStatus: "ready" }),
   entry({ progressMeters: 400, wrongWay: true }),
+  entry({ progressMeters: 450, wrongWay: false }),
   entry({ progressMeters: 500, presentation: { cueText: "פנה שמאלה אל שביל הצפון", statusText: "", guidanceText: "" } }),
   entry({ progressMeters: 900, activeCueType: "arrive", presentation: { cueText: "הגעת ליעד", statusText: "", guidanceText: "" } }),
 ];
@@ -46,6 +47,7 @@ const timeline = [
       { type: "haptic", kind: "heavy" },
       { type: "progress-at-least", meters: 800 },
       { type: "wrong-way" },
+      { type: "wrong-way-resolved", final: true },
     ],
     timeline,
   );
@@ -66,6 +68,7 @@ const timeline = [
       { type: "suggestionFailed" }, // connector never failed
       { type: "progress-at-least", meters: 2000 },
       { type: "wrong-way", never: true }, // did fire at 400 m
+      { type: "wrong-way-resolved", final: true }, // did resolve, so this one passes
       { type: "bogus-type" },
     ],
     timeline,
@@ -78,9 +81,38 @@ const timeline = [
 {
   const clean = [entry(), entry({ progressMeters: 100 })];
   assert.equal(evaluateExpectations([{ type: "wrong-way" }], clean).passed, false);
+  assert.equal(evaluateExpectations([{ type: "wrong-way-resolved" }], clean).passed, false);
   assert.equal(
     evaluateExpectations([{ type: "wrong-way", never: true }], clean).passed,
     true,
+  );
+}
+
+// wrong-way without recovery: resolution expectation fails.
+{
+  const unresolved = [entry(), entry({ progressMeters: 100, wrongWay: true })];
+  assert.equal(
+    evaluateExpectations([{ type: "wrong-way-resolved" }], unresolved).passed,
+    false,
+  );
+}
+
+// wrong-way that briefly resolves and then returns can be required to end clean.
+{
+  const reappeared = [
+    entry(),
+    entry({ progressMeters: 100, wrongWay: true }),
+    entry({ progressMeters: 105, wrongWay: false }),
+    entry({ progressMeters: 110, wrongWay: true }),
+  ];
+  assert.equal(
+    evaluateExpectations([{ type: "wrong-way-resolved" }], reappeared).passed,
+    true,
+  );
+  assert.equal(
+    evaluateExpectations([{ type: "wrong-way-resolved", final: true }], reappeared)
+      .passed,
+    false,
   );
 }
 

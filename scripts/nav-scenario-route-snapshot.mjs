@@ -93,6 +93,13 @@ const routeState = {
   ],
   selectedSegments: decoded.selectedSegments ?? [],
   geometry,
+  segmentSpans: Array.isArray(decoded.segmentSpans)
+    ? decoded.segmentSpans.map((span) => ({
+        ...span,
+        startMeters: Math.round(Number(span.startMeters) * 100) / 100,
+        endMeters: Math.round(Number(span.endMeters) * 100) / 100,
+      }))
+    : [],
   junctions,
 };
 const header =
