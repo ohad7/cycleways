@@ -1,7 +1,7 @@
-import sovevBeitHillel from "./routes/sovev-beit-hillel.js";
+import baniasGanHatsafon from "./routes/banias-gan-hatsafon.js";
 
-// Approach over the REAL routing network: the rider starts ~500 m west of the
-// sovev-beit-hillel start, on a road the base network covers, so the app's
+// Approach over the REAL routing network: the rider starts ~570 m east of the
+// banias-gan-hatsafon start, on a road the base network covers, so the app's
 // connector computes an actual routed path (dashed suggestion line) instead
 // of the beeline fallback the synthetic l-turn scenarios are limited to.
 // tests/test-nav-approach-connector.mjs pins that this point really routes.
@@ -9,14 +9,14 @@ import sovevBeitHillel from "./routes/sovev-beit-hillel.js";
 export default {
   name: "approach-calculated-route",
   description: "התקרבות למסלול אמיתי — הצעת הגעה מחושבת על רשת הניתוב",
-  route: { routeState: sovevBeitHillel },
+  route: { routeState: baniasGanHatsafon },
   track: {
     generate: {
       speedMps: 5,
       intervalMs: 1000,
       jitterM: 6,
       seed: 17,
-      approachFrom: { lat: 33.2175, lng: 35.6039 },
+      approachFrom: { lat: 33.188144, lng: 35.622791 },
       stopAtMeters: 800,
     },
   },
