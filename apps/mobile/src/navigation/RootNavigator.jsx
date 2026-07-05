@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import DiscoverScreen from "../screens/DiscoverScreen.jsx";
 import RouteDetailScreen from "../screens/RouteDetailScreen.jsx";
 import BuildScreen from "../screens/BuildScreen.jsx";
+import AboutScreen from "../screens/AboutScreen.jsx";
 
 const Stack = createNativeStackNavigator();
 
@@ -36,6 +37,7 @@ export default function RootNavigator({
           component={BuildScreen}
           initialParams={initialRouteName === "Build" ? initialParams : undefined}
         />
+        <Stack.Screen name="About" component={AboutScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

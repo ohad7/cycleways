@@ -136,6 +136,17 @@ export default function DiscoverScreen({ navigation }) {
           locationError={locationError}
           onRevealFilters={revealFilters}
         />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="אודות, פרטיות ותנאי שימוש"
+          onPress={() => navigation.navigate("About")}
+          style={({ pressed }) => [
+            styles.aboutLink,
+            pressed ? { opacity: 0.7 } : null,
+          ]}
+        >
+          <Text style={styles.aboutLinkText}>אודות CycleWays · פרטיות ותנאים</Text>
+        </Pressable>
       </ScrollView>
       <Pressable
         accessibilityRole="button"
@@ -173,4 +184,16 @@ const styles = StyleSheet.create({
   },
   fabPressed: { opacity: 0.85 },
   fabText: { color: palette.white, fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
+  aboutLink: {
+    alignSelf: "center",
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  aboutLinkText: {
+    color: palette.muted,
+    fontSize: 13,
+    textDecorationLine: "underline",
+    writingDirection: "rtl",
+  },
 });
