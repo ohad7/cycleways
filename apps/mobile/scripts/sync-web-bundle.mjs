@@ -13,6 +13,7 @@ import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { pruneWebroot } from "./prune-webroot.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const mobileRoot = path.resolve(scriptDir, "..");
@@ -21,6 +22,8 @@ const distDir = path.join(repoRoot, "dist");
 const webrootDir = path.join(mobileRoot, "webroot");
 const iosWebrootDir = path.join(mobileRoot, "ios/webroot");
 const rootTokenFile = path.join(repoRoot, "mapbox-token.js");
+const skipPrune =
+  process.argv.includes("--no-prune") || process.env.SKIP_WEBROOT_PRUNE === "1";
 
 const skipBuild =
   process.argv.includes("--skip-build") || process.env.SKIP_WEB_BUILD === "1";
@@ -58,6 +61,20 @@ async function main() {
   await rm(webrootDir, { recursive: true, force: true });
   await cp(distDir, webrootDir, { recursive: true });
 
+  // Strip website-only content the route-detail web pages never request.
+  // This is the key app-size lever for iOS: full-size images, planner-only shards,
+  // and deploy-only files are removed from the bundled webroot.
+  if (skipPrune) {
+    console.log(
+      "[web-bundle] skipping webroot prune (--no-prune/SKIP_WEBROOT_PRUNE).",
+    );
+  } else {
+    const { removed, bytes } = await pruneWebroot(webrootDir);
+    console.log(
+      `[web-bundle] pruned ${removed.length} website-only paths, ${(bytes / 1e6).toFixed(1)} MB`,
+    );
+  }
+
   // Sanity: the SPA entry + per-route fallbacks + data must be present.
   const checks = ["index.html", "public-data", "routes"];
   const missing = checks.filter((p) => !existsSync(path.join(webrootDir, p)));
@@ -72,6 +89,7 @@ async function main() {
   // webroot has none and every WebView map (route detail + featured PiP map)
   // fails to init. Emit it here, mirroring the Vite plugin's token precedence.
   await writeMapboxToken(webrootDir);
+  await appendRemoteAssetBase(webrootDir);
 
   const routeDirs = (await readdir(path.join(webrootDir, "routes"))).length;
   const bytes = await dirSize(webrootDir);
@@ -132,6 +150,26 @@ async function dirSize(dir) {
     else total += (await stat(full)).size;
   }
   return total;
+}
+
+// Future/off-by-default: lets the served pages load pruned full-size images
+// from the production site (fullImageSrc reads this global). Enable per-build:
+//   WEBROOT_REMOTE_ASSET_BASE=https://www.cycleways.app npm run bundle:web -w @cycleways/mobile
+// Appended to mapbox-token.js because every built page already loads that file
+// as its runtime config script.
+async function appendRemoteAssetBase(targetDir) {
+  const base = (process.env.WEBROOT_REMOTE_ASSET_BASE || "")
+    .trim()
+    .replace(/\/+$/, "");
+  if (!base) return;
+
+  const dest = path.join(targetDir, "mapbox-token.js");
+  await writeFile(
+    dest,
+    `\nwindow.CYCLEWAYS_REMOTE_ASSET_BASE = ${JSON.stringify(base)};\n`,
+    { flag: "a" },
+  );
+  console.log(`[web-bundle] remote asset base enabled: ${base}`);
 }
 
 main().catch((error) => {
