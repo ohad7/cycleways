@@ -27,6 +27,9 @@ webroot is the only meaningful lever — and most of it is unreachable.
 - The native app's WebView loads **only** `/routes/<slug>?app=1` route-detail
   pages (`RouteDetailWeb.jsx`). The planner SPA, deploy artifacts, and
   website-only downloads in the webroot are never requested.
+- `src/main.jsx` lazy-loads `RouteDetailPage` separately from the planner `App`
+  chunk, so visiting `/routes/<slug>` does not load the planner code path that
+  consumes `public-data/base-routing-shards`.
 - `public-data/poi-images` = 32 MB: 74 full-size webp (29.8 MB) + 74 thumbs
   (2.8 MB). **Every** image renderer, web and native, resolves
   `thumbnail || photo` (`RoutePoiGallery`, `POICard`, `RouteCard`, `Warnings`,
@@ -92,9 +95,10 @@ Two dormant pieces, connected by one browser global:
 1. **Helper** `src/components/routes/fullImageSrc.js` —
    `fullImageSrc({ photo, thumbnail })` returns
    `<window.CYCLEWAYS_REMOTE_ASSET_BASE>/<photo>` when the global is set,
-   otherwise the local `thumbnail || photo` resolution (matching existing
-   helpers). Thumbnail-first fallback is deliberate: inside the app the
-   full-size file no longer exists locally.
+   returns already-absolute `photo` URLs unchanged, and otherwise delegates the
+   local `thumbnail || photo` resolution to `routeImageSrc`. Thumbnail-first
+   fallback is deliberate: inside the app the full-size file no longer exists
+   locally.
 2. **Config write** in `sync-web-bundle.mjs` — only when
    `WEBROOT_REMOTE_ASSET_BASE` is set at bundle time, append
    `window.CYCLEWAYS_REMOTE_ASSET_BASE = "<base>";` to the webroot's

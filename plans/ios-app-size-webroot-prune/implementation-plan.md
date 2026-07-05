@@ -1,6 +1,6 @@
 # iOS App Size — Webroot Prune Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** Implement this plan exactly in order. If your environment has `superpowers:executing-plans`, use it; otherwise follow this file literally and check off each `- [ ]` step as it is completed. Do not skip the failing-test steps, and do not touch pipeline-owned data.
 
 **Date:** 2026-07-05
 
@@ -28,7 +28,7 @@
 - Remote full-image loading ships **disabled**: no behavior change unless `WEBROOT_REMOTE_ASSET_BASE` is set at bundle time.
 - Production origin for remote assets: `https://www.cycleways.app` (from `CNAME`).
 - Tests are plain node scripts using `node:assert/strict`, wired into the root `package.json` `test` chain.
-- Commit messages end with `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
+- If you commit, use the commit commands shown in the tasks. Do not add unrelated files.
 
 ## File Structure
 
@@ -40,6 +40,15 @@
 - Modify: `package.json` (root) — add the two tests to the `test` chain.
 
 ---
+
+## Preflight
+
+- Run `git status --short` first. Do not revert or overwrite unrelated changes.
+- Work from the repo root: `/Users/ohad/projects/isravelo`.
+- If any command fails differently from the expected failure in a "failing test" step, stop and report the command plus its output. Do not improvise a different implementation.
+- Do not commit a task until that task's test/verification steps pass.
+- This plan assumes the current repo shape where `src/main.jsx` lazy-loads route-detail pages separately from the planner. That keeps the planner's base-routing code out of the `/routes/:slug` page chunk and supports pruning `public-data/base-routing-shards` from the app webroot.
+- Current source data count is 74 non-thumb files in `public-data/poi-images` and 9 non-thumb files in `public-data/route-map-images`; the expected prune count is based on those numbers.
 
 ### Task 1: Prune module with tests
 
@@ -246,9 +255,7 @@ Run: `node tests/test-prune-webroot.mjs` once more to confirm, then verify the J
 
 ```bash
 git add apps/mobile/scripts/prune-webroot.mjs tests/test-prune-webroot.mjs package.json
-git commit -m "feat(mobile): add webroot prune module for app-size reduction
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(mobile): add webroot prune module for app-size reduction"
 ```
 
 ---
@@ -310,6 +317,8 @@ The existing sanity checks (`index.html`, `public-data`, `routes`) and the `ios/
 
 Run: `npm run bundle:web -w @cycleways/mobile -- --skip-build`
 
+If this fails because `dist/` is missing, run `npm run build` at the repo root once, then rerun the command above.
+
 Expected output includes:
 - `[web-bundle] pruned N website-only paths, ~36.x MB` (N ≈ 89: 74 poi-images + 9 route-map-images full-size files + 6 website-only paths; exact count depends on current dist)
 - `[web-bundle] webroot ready: 9 route pages, ~5.x MB ...` (was ~44 MB)
@@ -318,12 +327,14 @@ Expected output includes:
 Then verify by hand:
 
 ```bash
-ls apps/mobile/webroot/public-data/poi-images | grep -vc thumb   # expected: 0
-ls apps/mobile/webroot/public-data/poi-images | grep -c thumb    # expected: 74 (all thumbs kept)
-ls apps/mobile/webroot/public-data | grep -E "base-routing-shards|exports"  # expected: no output
-ls apps/mobile/webroot/routes | wc -l                            # expected: 10 (9 slugs + index.html)
-du -sh apps/mobile/webroot apps/mobile/ios/webroot               # expected: ~5 MB each
+find apps/mobile/webroot/public-data/poi-images -maxdepth 1 -type f ! -name '*-thumb.*' -print
+find apps/mobile/webroot/public-data/poi-images -maxdepth 1 -type f -name '*-thumb.*' | wc -l
+test ! -e apps/mobile/webroot/public-data/base-routing-shards && test ! -e apps/mobile/webroot/public-data/exports && echo "website-only dirs removed"
+find apps/mobile/webroot/routes -mindepth 1 -maxdepth 1 | wc -l
+du -sh apps/mobile/webroot apps/mobile/ios/webroot
 ```
+
+Expected: first command prints no files; thumb count is 74; website-only dirs are removed; route count is 10 (9 slugs + `index.html`); both webroot copies are about 5 MB.
 
 - [ ] **Step 3: Verify the escape hatch**
 
@@ -334,9 +345,7 @@ Expected: `[web-bundle] skipping webroot prune`, and `ls apps/mobile/webroot/pub
 
 ```bash
 git add apps/mobile/scripts/sync-web-bundle.mjs
-git commit -m "feat(mobile): prune website-only content from bundled webroot
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(mobile): prune website-only content from bundled webroot"
 ```
 
 ---
@@ -349,13 +358,14 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - Modify: `package.json` (root, `test` script)
 
 **Interfaces:**
-- Consumes: nothing (self-contained; mirrors the URL rules of `src/components/routes/routeImageSrc.js` and `imageSrc` in `src/components/featured/routePoiStoryData.js`).
+- Consumes: `routeImageSrc` from `src/components/routes/routeImageSrc.js` for local URL/base-path handling.
 - Produces: `fullImageSrc(item) -> string` and `remoteAssetBase() -> string`, for a future lightbox/full-photo viewer. **No production code calls these yet** — that is intentional; this task only establishes the contract and tests.
 
 Contract for `fullImageSrc({ photo, thumbnail })`:
 1. If `window.CYCLEWAYS_REMOTE_ASSET_BASE` is set (app webroot with remote images enabled) and `photo` is a relative logical path (e.g. `public-data/poi-images/x.webp`), return `<base>/<photo>` — the full-size image served by the production site.
-2. Otherwise return the local resolution of `thumbnail || photo` (same rules as the existing helpers: absolute URLs and `/`-prefixed paths pass through, bare logical paths get a leading `/`). Thumbnail-first is deliberate: in the app the full-size file is pruned from the webroot, so the thumb is the best locally-available image.
-3. On the public website (no global set) a future lightbox that wants the true full-size local file should call it with `{ photo, thumbnail: "" }`.
+2. If the remote base is set and `photo` is already an absolute URL, return `photo` unchanged, even if a thumbnail is present.
+3. Otherwise return the local resolution of `thumbnail || photo` by delegating to `routeImageSrc`. Thumbnail-first is deliberate: in the app the full-size file is pruned from the webroot, so the thumb is the best locally-available image. Do not duplicate the local URL/base-path logic from `routeImageSrc`.
+4. On the public website (no global set) a future lightbox that wants the true full-size local file should call it with `{ photo, thumbnail: "" }`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -391,9 +401,13 @@ assert.equal(
   "https://www.cycleways.app/public-data/poi-images/poi-aaa.webp",
 );
 
-// Absolute photo URLs pass through untouched even with a remote base.
+// Absolute photo URLs pass through untouched even with a remote base, even when
+// a thumbnail exists.
 assert.equal(
-  fullImageSrc({ photo: "https://example.com/x.jpg", thumbnail: "" }),
+  fullImageSrc({
+    photo: "https://example.com/x.jpg",
+    thumbnail: "public-data/poi-images/poi-aaa-thumb.webp",
+  }),
   "https://example.com/x.jpg",
 );
 
@@ -430,6 +444,8 @@ Create `src/components/routes/fullImageSrc.js`:
 // resolve against the production site; otherwise fall back to the local
 // thumbnail-or-photo like every existing renderer does. Currently dormant —
 // no caller ships the remote flag.
+import { routeImageSrc } from "./routeImageSrc.js";
+
 const ABSOLUTE_URL_RE = /^[a-z][a-z0-9+.-]*:/i;
 
 export function remoteAssetBase() {
@@ -443,16 +459,13 @@ export function fullImageSrc(item) {
   const photo = String(item?.photo || "").trim();
   const thumbnail = String(item?.thumbnail || "").trim();
   const base = remoteAssetBase();
-  if (photo && base && !ABSOLUTE_URL_RE.test(photo) && !photo.startsWith("/")) {
-    return `${base}/${photo.replace(/^\.?\//, "")}`;
+  if (photo && base) {
+    if (ABSOLUTE_URL_RE.test(photo) || photo.startsWith("//")) return photo;
+    if (!photo.startsWith("/")) {
+      return `${base}/${photo.replace(/^\.?\//, "")}`;
+    }
   }
-  return localSrc(thumbnail || photo);
-}
-
-function localSrc(src) {
-  if (!src) return "";
-  if (ABSOLUTE_URL_RE.test(src) || src.startsWith("/")) return src;
-  return `/${src.replace(/^\.?\//, "")}`;
+  return routeImageSrc(thumbnail || photo);
 }
 ```
 
@@ -475,9 +488,7 @@ Verify: `node -e "require('./package.json')"`
 
 ```bash
 git add src/components/routes/fullImageSrc.js tests/test-full-image-src.mjs package.json
-git commit -m "feat(web): add dormant fullImageSrc helper for remote full-size images
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(web): add dormant fullImageSrc helper for remote full-size images"
 ```
 
 ---
@@ -517,7 +528,7 @@ async function appendRemoteAssetBase(targetDir) {
   const dest = path.join(targetDir, "mapbox-token.js");
   await appendFile(
     dest,
-    `window.CYCLEWAYS_REMOTE_ASSET_BASE = ${JSON.stringify(base)};\n`,
+    `\nwindow.CYCLEWAYS_REMOTE_ASSET_BASE = ${JSON.stringify(base)};\n`,
   );
   console.log(`[web-bundle] remote asset base enabled: ${base}`);
 }
@@ -538,6 +549,7 @@ Flag ON:
 ```bash
 WEBROOT_REMOTE_ASSET_BASE=https://www.cycleways.app npm run bundle:web -w @cycleways/mobile -- --skip-build
 grep CYCLEWAYS_REMOTE_ASSET_BASE apps/mobile/webroot/mapbox-token.js
+grep CYCLEWAYS_REMOTE_ASSET_BASE apps/mobile/ios/webroot/mapbox-token.js
 ```
 
 Expected: `window.CYCLEWAYS_REMOTE_ASSET_BASE = "https://www.cycleways.app";` present (and the mirrored `apps/mobile/ios/webroot/mapbox-token.js` matches).
@@ -546,18 +558,17 @@ Flag OFF (the shipping default) — rerun to leave a clean state:
 
 ```bash
 npm run bundle:web -w @cycleways/mobile -- --skip-build
-grep -c CYCLEWAYS_REMOTE_ASSET_BASE apps/mobile/webroot/mapbox-token.js
+grep CYCLEWAYS_REMOTE_ASSET_BASE apps/mobile/webroot/mapbox-token.js || true
+grep CYCLEWAYS_REMOTE_ASSET_BASE apps/mobile/ios/webroot/mapbox-token.js || true
 ```
 
-Expected: `0` (grep exits non-zero, no match).
+Expected: no output from either `grep`.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/scripts/sync-web-bundle.mjs
-git commit -m "feat(mobile): env-gated remote asset base for webroot bundle
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+git commit -m "feat(mobile): env-gated remote asset base for webroot bundle"
 ```
 
 ---
