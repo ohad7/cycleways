@@ -104,7 +104,18 @@ function createNavigationRoute({
     startPlaceIds: arrayOfStrings(metadata?.startPlaceIds),
     passesNear: arrayOfStrings(metadata?.passesNear),
     segmentSpans: reconcileSegmentSpans(routeState?.segmentSpans, computedDistance),
+    junctions: cloneJunctionList(routeState?.junctions),
   };
+}
+
+// Network junction nodes (3+ edges) near the route, baked in at route
+// build/decode/snapshot time. null (not []) when the data is absent, so cue
+// generation can tell "no junctions nearby" from "no junction data".
+function cloneJunctionList(rawJunctions) {
+  if (!Array.isArray(rawJunctions)) return null;
+  return rawJunctions
+    .filter((j) => Number.isFinite(j?.lat) && Number.isFinite(j?.lng))
+    .map((j) => ({ lat: j.lat, lng: j.lng }));
 }
 
 function reconcileSegmentSpans(rawSpans, geometryTotalMeters) {

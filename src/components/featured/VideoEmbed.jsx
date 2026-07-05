@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { galleryImageSlides } from "@cycleways/core/data/poiTypes.js";
+import { isAppEmbedded } from "../../appEmbed.js";
 import { useFeaturedRoute } from "./FeaturedRouteContext.js";
 import { previewSlideForCursor, routeVideoCueSlides } from "./routePoiStoryData.js";
 import RoutePlaybackControls from "./RoutePlaybackControls.jsx";
@@ -15,6 +16,15 @@ import {
   loadRouteVideoIndex,
   loadRouteVideoKeyframes,
 } from "./routeVideoIndex.js";
+
+// Headroom left above the route stage when playback auto-scrolls it into view.
+// On the web a 6px sliver reads as "flush to the top". In the native app a
+// floating back button occupies the top-left corner (~52px tall over the web
+// viewport) and the video's POI preview is pinned to that same corner, so scroll
+// the stage below it — matching the scroll-margin-top used for jump targets —
+// instead of tucking the POIs under the button.
+const PLAYBACK_SCROLL_TOP_GAP_PX = 6;
+const PLAYBACK_SCROLL_TOP_GAP_EMBED_PX = 72;
 
 const MANUAL_SCRUB_SAMPLE_MS = 300;
 const SEEK_SETTLE_MS = 4000;
@@ -42,6 +52,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const iframeContainerRef = useRef(null);
   const playerRef = useRef(null);
+  const playbackScrollRef = useRef(0);
   const tickerRef = useRef(null);
   const manualScrubSamplerRef = useRef(null);
   const settleTimeoutsRef = useRef([]);
@@ -64,6 +75,27 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
   mapPrimaryRef.current = mapPrimary;
   const routeFractionRef = useRef(0);
   const videoSyncObjRef = useRef(null);
+
+  const scrollStageForPlayback = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const isMobile = window.matchMedia?.("(max-width: 767px)").matches
+      ?? window.innerWidth < 768;
+    if (!isMobile) return;
+    const now = Date.now();
+    if (now - playbackScrollRef.current < 1200) return;
+    const target = document.querySelector("[data-route-stage]");
+    if (!target) return;
+    playbackScrollRef.current = now;
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const topGap = isAppEmbedded()
+      ? PLAYBACK_SCROLL_TOP_GAP_EMBED_PX
+      : PLAYBACK_SCROLL_TOP_GAP_PX;
+    const rect = target.getBoundingClientRect();
+    window.scrollTo({
+      top: Math.max(0, window.scrollY + rect.top - topGap),
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, []);
 
   const cueSlides = useMemo(
     () => routeVideoCueSlides(meta, routeState),
@@ -154,6 +186,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
     if (playingRef.current) {
       player.pauseVideo?.();
     } else {
+      scrollStageForPlayback();
       player.playVideo?.();
     }
   };
@@ -352,6 +385,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
             }
             // YT.PlayerState.PLAYING === 1
             if (isPlaying) {
+              scrollStageForPlayback();
               setVideoPlaying(true);
               const pos = emitCurrentPosition(playerRef.current, { force: true });
               if (pos) {
@@ -519,7 +553,7 @@ export default function VideoEmbed({ title = "סרטון", className = "" }) {
       setVideoPlaying(false);
       setVideoCursor(null);
     };
-  }, [data, emitCursorForTime, playerPauseRef, playerPlayRef, playerSeekRef, seekToTime, setVideoCursor, setVideoPlaying, videoSyncRef]);
+  }, [data, emitCursorForTime, playerPauseRef, playerPlayRef, playerSeekRef, scrollStageForPlayback, seekToTime, setVideoCursor, setVideoPlaying, videoSyncRef]);
 
   if (status !== "ready" || !data) return null;
 

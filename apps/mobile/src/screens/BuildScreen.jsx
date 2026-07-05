@@ -30,6 +30,8 @@ import Mapbox, {
   UserLocationRenderMode,
   UserTrackingMode,
 } from "@rnmapbox/maps";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSharedValue } from "react-native-reanimated";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
@@ -38,10 +40,21 @@ import {
   routeShapeType,
 } from "@cycleways/core/data/catalog.js";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
-import { createRidePlan } from "@cycleways/core/navigation/ridePlan.js";
+import {
+  canFastStartRidePlan,
+  createRidePlan,
+} from "@cycleways/core/navigation/ridePlan.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
+import { createPuckAnchor } from "@cycleways/core/navigation/puckAnchor.js";
+import {
+  cameraHeadingTarget,
+  createCameraHeadingGovernor,
+} from "@cycleways/core/navigation/cameraHeading.js";
+import { createCameraDirector } from "@cycleways/core/navigation/cameraDirector.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
+import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
+import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js";
 import {
   precomputeArcLength,
   pointAndBearingAtDistance,
@@ -62,8 +75,9 @@ import DataMarkerImages, {
 import ElevationProfileChart from "../ElevationProfileChart.jsx";
 import RichText from "../RichText.jsx";
 import PlannerSheet from "../planner/PlannerSheet.jsx";
-import TopSearch from "../planner/TopSearch.jsx";
 import MapControls from "../planner/MapControls.jsx";
+import MapLegend from "../planner/MapLegend.jsx";
+import BuildEmptyActions from "../planner/BuildEmptyActions.jsx";
 import BackButton from "./BackButton.jsx";
 import RoutePoiList from "../planner/RoutePoiList.jsx";
 import NavPanel from "../planner/NavPanel.jsx";
@@ -72,6 +86,7 @@ import RideSetupSheet from "../planner/RideSetupSheet.jsx";
 import { useNavigationSession } from "../navigation/useNavigationSession.js";
 import {
   createDefaultLocationSource,
+  getNavigationPermissionStatus,
   getRideSetupLocation,
 } from "../navigation/locationService.js";
 import { createSimulateRideSource } from "../navigation/simulateRideSource.js";
@@ -79,9 +94,22 @@ import {
   clearPendingRideIntent,
   savePendingRideIntent,
 } from "../navigation/pendingRidePlanStore.js";
-import { trackNavigationEvent } from "../navigation/navigationTelemetry.js";
+import {
+  setNavigationTelemetrySink,
+  trackNavigationEvent,
+} from "../navigation/navigationTelemetry.js";
+import { speakSampleNavigationPrompt } from "../navigation/speechAdapter.js";
+
+// Dev builds surface navigation telemetry (connector results, ride setup…) in
+// the Metro console — the only way to see WHY an approach suggestion failed
+// on a device (reason: no-router / snap-failed / transient, plus durationMs).
+if (__DEV__) {
+  setNavigationTelemetrySink((name, fields) => {
+    console.log(`[nav] ${name} ${JSON.stringify(fields)}`);
+  });
+}
 import { routeRestoreDecision } from "../navigation/routeRestorePolicy.js";
-import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
+import DevScenarioPicker from "../planner/DevScenarioPicker.jsx";
 import Icon from "../planner/Icon.jsx";
 import { palette } from "../planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
@@ -110,6 +138,9 @@ const CHROME_IONICON = {
 // Publishable token, inlined by Expo at build from EXPO_PUBLIC_MAPBOX_TOKEN.
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "";
 Mapbox.setAccessToken(MAPBOX_TOKEN);
+// Telemetry stays off: PrivacyInfo.xcprivacy and the App Store privacy labels
+// declare that the app collects no data. Re-enabling requires updating both.
+Mapbox.setTelemetryEnabled(false);
 
 // Completed portion of the route during navigation: muted, drawn over the route
 // line so the remaining route reads as the emphasized one.
@@ -157,9 +188,24 @@ const NAV_FOLLOW_ZOOM = 16.5;
 // Tilt for the heading-up follow camera so the rider sees the route ahead from
 // near ground level (also makes the view read as adaptive to the phone facing).
 const NAV_FOLLOW_PITCH = 50;
+// Approach/rejoin fit shots include a small slice of the main route after the
+// join point so a straight-line connector still frames "where this ride goes".
+const APPROACH_ROUTE_LOOKAHEAD_M = 180;
+// Off-route rejoin fit shots include the live rider point, so raw GPS movement
+// would otherwise restart a bounds animation on every fix.
+const REJOIN_CAMERA_FIT_MIN_INTERVAL_MS = 1500;
+const REJOIN_CAMERA_FIT_KEY_DECIMALS = 4;
+const DEFAULT_CAMERA_FIT_KEY_DECIMALS = 5;
 // Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
 // is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
 const BEARING_SMOOTH_MS = 260;
+// Time constant (ms) for the puck position lerp used when the puck detaches
+// from the route line (parallel path) or glides back onto it.
+const PUCK_GLIDE_MS = 450;
+// Time constant (ms) for rotating the camera to a heading the governor
+// adopted — deliberately slower than the puck arrow so map re-orientations
+// read as calm, occasional pans.
+const CAMERA_ROTATE_MS = 800;
 
 const ROUTE_POINT_STYLE = {
   circleRadius: [
@@ -274,6 +320,12 @@ const ADD_GUARD_MS = 350;
 // Bottom camera padding used when the playback panel is docked at ~48% height,
 // so the route stays framed in the uncovered upper area during preview.
 const PLAYBACK_FIT_BOTTOM_PADDING = Math.round(Dimensions.get("window").height * 0.48) + 24;
+const DEFAULT_RIDE_SETUP_SELECTION = {
+  direction: "forward",
+  startMode: "official",
+  selectedPoint: null,
+};
+const ACQUIRED_BANNER_MS = 4000;
 
 export default function BuildScreen({ navigation, route }) {
   const cameraRef = useRef(null);
@@ -331,6 +383,8 @@ export default function BuildScreen({ navigation, route }) {
     handleAddDataMarkerToRoute,
     handleViewportIdle,
     computeConnector,
+    plannerDraft,
+    handleRestoreDraft,
   } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
 
   const routeGeometry = useMemo(
@@ -372,6 +426,10 @@ export default function BuildScreen({ navigation, route }) {
   // point; anything else (no hold, or off-point) falls through to the map for
   // pan/zoom/add. Screen<->coord conversion goes through the MapView ref.
   const plannerSheetRef = useRef(null);
+  // Legend open/close (closed by default) + the planner sheet's live top-edge Y,
+  // so the bottom-left MapLegend can ride just above the drawer as it's dragged.
+  const [legendOpen, setLegendOpen] = useState(false);
+  const sheetTop = useSharedValue(Dimensions.get("window").height * 0.52);
   const mapViewRef = useRef(null);
   const pointScreenPositionsRef = useRef([]);
   const dragRef = useRef({ index: null, armed: false, startX: 0, startY: 0 });
@@ -717,18 +775,24 @@ export default function BuildScreen({ navigation, route }) {
   );
 
   const [rideSetupVisible, setRideSetupVisible] = useState(false);
-  const [rideSetupSelection, setRideSetupSelection] = useState({
-    direction: "forward",
-    startMode: "official",
-    selectedPoint: null,
-  });
+  const [rideSetupSelection, setRideSetupSelection] = useState(DEFAULT_RIDE_SETUP_SELECTION);
   const [rideSetupFix, setRideSetupFix] = useState(null);
   const [rideSetupNow, setRideSetupNow] = useState(Date.now());
   const [rideSetupLocationStatus, setRideSetupLocationStatus] = useState("idle");
+  const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
+  const [lockScreenGuidanceEnabled, setLockScreenGuidanceEnabled] = useState(true);
+  const [lockScreenGuidanceHasAlwaysPermission, setLockScreenGuidanceHasAlwaysPermission] =
+    useState(false);
+  const [lockScreenGuidanceNeedsSettings, setLockScreenGuidanceNeedsSettings] =
+    useState(false);
   const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
   const [pendingNavigationRouteId, setPendingNavigationRouteId] = useState(null);
   const [pendingExternalPlan, setPendingExternalPlan] = useState(null);
+  const [devPickerVisible, setDevPickerVisible] = useState(false);
+  const [devSpeed, setDevSpeed] = useState(4);
+  const [devScenarioRoute, setDevScenarioRoute] = useState(null);
   const setupRequestRef = useRef(0);
+  const lockScreenPermissionExplainerShownRef = useRef(false);
 
   const ridePlan = useMemo(
     () =>
@@ -741,7 +805,10 @@ export default function BuildScreen({ navigation, route }) {
     [sourceNavigationRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
   );
 
-  const navigationRoute = confirmedRidePlan?.effectiveRoute || sourceNavigationRoute;
+  const navigationRoute =
+    (__DEV__ && devScenarioRoute) ||
+    confirmedRidePlan?.effectiveRoute ||
+    sourceNavigationRoute;
 
   const refreshRideSetupLocation = useCallback(async () => {
     const requestId = setupRequestRef.current + 1;
@@ -754,15 +821,30 @@ export default function BuildScreen({ navigation, route }) {
     setRideSetupLocationStatus(result.status);
   }, []);
 
+  const refreshNavigationPermissionStatus = useCallback(async () => {
+    try {
+      const status = await getNavigationPermissionStatus();
+      const foregroundGranted = status?.foreground?.status === "granted";
+      const backgroundStatus = status?.background?.status;
+      const backgroundCanAskAgain = status?.background?.canAskAgain;
+      const canUseBackground = status?.canUseBackground === true;
+      const needsSettings =
+        foregroundGranted &&
+        !canUseBackground &&
+        (backgroundStatus === "denied" || backgroundCanAskAgain === false);
+      setLockScreenGuidanceHasAlwaysPermission(canUseBackground);
+      setLockScreenGuidanceNeedsSettings(Boolean(needsSettings));
+    } catch {
+      setLockScreenGuidanceHasAlwaysPermission(false);
+      setLockScreenGuidanceNeedsSettings(false);
+    }
+  }, []);
+
   const openRideSetup = useCallback(
     (options = {}) => {
       const preserveSelection = options?.preserveSelection === true;
       if (!preserveSelection) {
-        setRideSetupSelection({
-          direction: "forward",
-          startMode: "official",
-          selectedPoint: null,
-        });
+        setRideSetupSelection(DEFAULT_RIDE_SETUP_SELECTION);
       }
       setPendingExternalPlan(null);
       setRideSetupVisible(true);
@@ -770,8 +852,9 @@ export default function BuildScreen({ navigation, route }) {
         restored: preserveSelection,
       });
       void refreshRideSetupLocation();
+      void refreshNavigationPermissionStatus();
     },
-    [refreshRideSetupLocation],
+    [refreshNavigationPermissionStatus, refreshRideSetupLocation],
   );
 
   // --- Dev-only simulate-ride harness + GPS recorder (Task 17) ---------------
@@ -797,6 +880,8 @@ export default function BuildScreen({ navigation, route }) {
   }
 
   const nav = useNavigationSession(navigationRoute, {
+    background: lockScreenGuidanceEnabled,
+    voice: voiceGuidanceEnabled,
     locationSource: __DEV__ ? devSourceProxy.current : undefined,
     computeConnector,
   });
@@ -808,6 +893,79 @@ export default function BuildScreen({ navigation, route }) {
     navStatus === "paused" ||
     navStatus === "requesting-permission";
 
+  useEffect(() => {
+    if (
+      isNavigating &&
+      lockScreenGuidanceEnabled &&
+      nav.state?.foregroundOnly &&
+      !nav.lockScreenGuidanceActive
+    ) {
+      setLockScreenGuidanceEnabled(false);
+      void refreshNavigationPermissionStatus();
+      trackNavigationEvent("lock_screen_guidance_fallback", {
+        reason: "foreground-only",
+      });
+    }
+  }, [
+    isNavigating,
+    lockScreenGuidanceEnabled,
+    nav.lockScreenGuidanceActive,
+    nav.state?.foregroundOnly,
+    refreshNavigationPermissionStatus,
+  ]);
+
+  useEffect(() => {
+    void refreshNavigationPermissionStatus();
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        void refreshNavigationPermissionStatus();
+      }
+    });
+    return () => subscription.remove();
+  }, [refreshNavigationPermissionStatus]);
+
+  const handleToggleVoiceGuidance = useCallback(() => {
+    setVoiceGuidanceEnabled((current) => {
+      const next = !current;
+      nav.setVoiceEnabled(next);
+      trackNavigationEvent("voice_guidance_toggled", { enabled: next });
+      return next;
+    });
+  }, [nav]);
+
+  const handleOpenLocationSettings = useCallback(() => {
+    trackNavigationEvent("lock_screen_guidance_settings_opened");
+    const settingsRequest =
+      typeof Linking.openSettings === "function"
+        ? Linking.openSettings()
+        : Linking.openURL("app-settings:");
+    Promise.resolve(settingsRequest).catch(() => {
+      Alert.alert(
+        "לא הצלחנו לפתוח הגדרות",
+        "פתחו ידנית: הגדרות > CycleWays > מיקום > תמיד.",
+      );
+    });
+  }, []);
+
+  const handleToggleLockScreenGuidance = useCallback(() => {
+    if (!lockScreenGuidanceEnabled && lockScreenGuidanceNeedsSettings) {
+      handleOpenLocationSettings();
+      return;
+    }
+    const next = !lockScreenGuidanceEnabled;
+    setLockScreenGuidanceEnabled(next);
+    trackNavigationEvent("lock_screen_guidance_toggled", { enabled: next });
+  }, [
+    handleOpenLocationSettings,
+    lockScreenGuidanceEnabled,
+    lockScreenGuidanceNeedsSettings,
+  ]);
+
+  const handleTestVoiceGuidance = useCallback(() => {
+    trackNavigationEvent("voice_guidance_tested");
+    void speakSampleNavigationPrompt();
+  }, []);
+
   const activeRouteGeometry = useMemo(
     () => buildRouteGeometryFeatureCollection(navigationRoute?.geometry),
     [navigationRoute?.geometry],
@@ -818,23 +976,119 @@ export default function BuildScreen({ navigation, route }) {
   );
   const displayedRouteGeometry = isNavigating ? activeRouteGeometry : routeGeometry;
 
+  const confirmRidePlan = useCallback(
+    (plan, options = {}) => {
+      if (!plan?.effectiveRoute?.canNavigate) return;
+      const willStartCycleWays =
+        plan.approachTier !== "far" && plan.approachTier !== "unknown";
+      const completeConfirmation = () => {
+        setConfirmedRidePlan(plan);
+        trackNavigationEvent(
+          options.fastStart ? "ride_setup_fast_started" : "ride_setup_confirmed",
+          {
+            direction: plan.direction,
+            startMode: plan.startMode,
+            approachTier: plan.approachTier,
+            voiceGuidance: voiceGuidanceEnabled,
+            lockScreenGuidance: lockScreenGuidanceEnabled,
+          },
+        );
+        setRideSetupVisible(false);
+        if (plan.approachTier === "far" || plan.approachTier === "unknown") {
+          setPendingExternalPlan(plan);
+          setDestSheetVisible(true);
+          return;
+        }
+        void clearPendingRideIntent();
+        setPendingNavigationRouteId(plan.effectiveRoute.id);
+      };
+
+      const confirmWithCurrentPermission = async () => {
+        let hasAlwaysPermission = lockScreenGuidanceHasAlwaysPermission;
+        if (lockScreenGuidanceEnabled && !hasAlwaysPermission) {
+          try {
+            const status = await getNavigationPermissionStatus();
+            hasAlwaysPermission = status?.canUseBackground === true;
+            setLockScreenGuidanceHasAlwaysPermission(hasAlwaysPermission);
+            const foregroundGranted = status?.foreground?.status === "granted";
+            const backgroundStatus = status?.background?.status;
+            const backgroundCanAskAgain = status?.background?.canAskAgain;
+            setLockScreenGuidanceNeedsSettings(
+              Boolean(
+                foregroundGranted &&
+                  !hasAlwaysPermission &&
+                  (backgroundStatus === "denied" || backgroundCanAskAgain === false),
+              ),
+            );
+          } catch {
+            hasAlwaysPermission = false;
+          }
+        }
+
+        if (
+          willStartCycleWays &&
+          lockScreenGuidanceEnabled &&
+          !hasAlwaysPermission &&
+          !lockScreenPermissionExplainerShownRef.current
+        ) {
+          Alert.alert(
+            "הכוונה כשהמסך נעול",
+            "CycleWays יבקש הרשאת מיקום תמיד כדי להמשיך לעקוב אחרי הרכיבה ולהשמיע הנחיות כשהמסך נעול.",
+            [
+              { text: "ביטול", style: "cancel" },
+              {
+                text: "המשך",
+                onPress: () => {
+                  lockScreenPermissionExplainerShownRef.current = true;
+                  completeConfirmation();
+                },
+              },
+            ],
+          );
+          return;
+        }
+
+        completeConfirmation();
+      };
+
+      void confirmWithCurrentPermission();
+    },
+    [
+      lockScreenGuidanceEnabled,
+      lockScreenGuidanceHasAlwaysPermission,
+      voiceGuidanceEnabled,
+    ],
+  );
+
   const handleRideSetupConfirm = useCallback(() => {
-    if (!ridePlan?.effectiveRoute?.canNavigate) return;
-    setConfirmedRidePlan(ridePlan);
-    trackNavigationEvent("ride_setup_confirmed", {
-      direction: ridePlan.direction,
-      startMode: ridePlan.startMode,
-      approachTier: ridePlan.approachTier,
-    });
-    setRideSetupVisible(false);
-    if (ridePlan.approachTier === "far" || ridePlan.approachTier === "unknown") {
-      setPendingExternalPlan(ridePlan);
-      setDestSheetVisible(true);
+    confirmRidePlan(ridePlan);
+  }, [confirmRidePlan, ridePlan]);
+
+  const handleStartNavigation = useCallback(async () => {
+    const selection = DEFAULT_RIDE_SETUP_SELECTION;
+    const requestId = setupRequestRef.current + 1;
+    setupRequestRef.current = requestId;
+    setRideSetupSelection(selection);
+    setPendingExternalPlan(null);
+    setRideSetupLocationStatus("loading");
+    const result = await getRideSetupLocation();
+    if (setupRequestRef.current !== requestId) return;
+    const now = Date.now();
+    const fix = result.fix || null;
+    const plan = createRidePlan(sourceNavigationRoute, selection, fix, now);
+    setRideSetupNow(now);
+    setRideSetupFix(fix);
+    setRideSetupLocationStatus(result.status);
+    if (canFastStartRidePlan(plan, selection)) {
+      confirmRidePlan(plan, { fastStart: true });
       return;
     }
-    void clearPendingRideIntent();
-    setPendingNavigationRouteId(ridePlan.effectiveRoute.id);
-  }, [ridePlan]);
+    setRideSetupVisible(true);
+    trackNavigationEvent("ride_setup_opened", {
+      restored: false,
+      fastStartEligible: false,
+    });
+  }, [confirmRidePlan, sourceNavigationRoute]);
 
   const handleChangeRideSettings = useCallback(() => {
     const reopen = () => {
@@ -872,35 +1126,41 @@ export default function BuildScreen({ navigation, route }) {
     isNavigatingRef.current = isNavigating;
   }, [isNavigating]);
 
-  // Dev-only: handlers for the simulate and record buttons. Each installs a new
-  // inner source on devInnerSourceRef synchronously then calls nav.start().
-  // The proxy (devSourceProxy) is already pointing at the hook's locationSource,
-  // so the hook picks up the new inner source on the very next requestPermissions
-  // / startWatch call without any re-render or useEffect delay.
   const handleDevSimulate = useCallback(() => {
     if (!__DEV__) return;
-    const routeLengthMeters =
-      navigationRoute?.geometry?.[navigationRoute.geometry.length - 1]
-        ?.distanceFromStartMeters ?? 0;
-    const fixes =
-      navigationRoute?.geometry?.length >= 2
-        ? generateTrack(navigationRoute, {
-            approachFrom: locationState.point ?? null,
-            jitterM: 8,
-            intervalMs: 500,
-            offRouteExcursion:
-              routeLengthMeters >= 150
-                ? {
-                    startMeters: routeLengthMeters * 0.4,
-                    lengthMeters: Math.min(200, routeLengthMeters * 0.35),
-                    offsetMeters: 120,
-                  }
-                : null,
-          })
-        : [];
-    devInnerSourceRef.current = createSimulateRideSource(fixes, { intervalMs: 500 });
-    nav.start();
-  }, [locationState.point, nav, navigationRoute]);
+    setDevPickerVisible(true);
+  }, []);
+
+  // Resolve the picked scenario through the same resolver the headless suite
+  // uses (identical fixes for the same seed), install the simulated source on
+  // the dev proxy, and start. Scenarios that carry their own route go through
+  // the pendingNavigationRouteId effect so nav.start() runs only after the
+  // session has re-bound to the scenario route.
+  const handleDevScenarioSelect = useCallback(
+    (scenario) => {
+      if (!__DEV__) return;
+      let resolved;
+      try {
+        resolved = resolveScenario(scenario, {
+          currentNavigationRoute: navigationRoute,
+        });
+      } catch (error) {
+        Alert.alert("Scenario error", String(error?.message || error));
+        return;
+      }
+      setDevPickerVisible(false);
+      devInnerSourceRef.current = createSimulateRideSource(resolved.fixes, {
+        intervalMs: Math.max(60, Math.round(1000 / devSpeed)),
+      });
+      if (resolved.navigationRoute.id !== navigationRoute?.id) {
+        setDevScenarioRoute(resolved.navigationRoute);
+        setPendingNavigationRouteId(resolved.navigationRoute.id);
+      } else {
+        void nav.start();
+      }
+    },
+    [devSpeed, nav, navigationRoute],
+  );
 
   const handleDevRecord = useCallback(() => {
     if (!__DEV__) return;
@@ -932,6 +1192,17 @@ export default function BuildScreen({ navigation, route }) {
     };
     nav.start();
   }, [nav]);
+
+  // When a dev session ends, drop the scenario route override and the injected
+  // source so the next navigation uses the real route and real GPS. (Also
+  // fixes the pre-existing leak where a SIM source survived into later rides.)
+  useEffect(() => {
+    if (!__DEV__) return;
+    if (pendingNavigationRouteId) return;
+    if (navStatus !== "ended" && navStatus !== "error") return;
+    if (devScenarioRoute) setDevScenarioRoute(null);
+    devInnerSourceRef.current = null;
+  }, [devScenarioRoute, navStatus, pendingNavigationRouteId]);
 
   // Derive build-panel presentation options (matches the web's typed-cased variant).
   const mapPresentationActive = !isNavigating;
@@ -1024,16 +1295,58 @@ export default function BuildScreen({ navigation, route }) {
     () => getNavigationPresentation(nav.state ?? {}),
     [nav.state],
   );
-  const telemetryStateRef = useRef({ status: null, suggestionStatus: null });
+  const [showAcquiredBanner, setShowAcquiredBanner] = useState(false);
+  const acquiredBannerTimerRef = useRef(null);
+  useEffect(() => {
+    if (!nav.state?.justAcquired) return undefined;
+    setShowAcquiredBanner(true);
+    if (acquiredBannerTimerRef.current !== null) {
+      clearTimeout(acquiredBannerTimerRef.current);
+    }
+    acquiredBannerTimerRef.current = setTimeout(() => {
+      acquiredBannerTimerRef.current = null;
+      setShowAcquiredBanner(false);
+    }, ACQUIRED_BANNER_MS);
+    return undefined;
+  }, [nav.state?.justAcquired]);
+  useEffect(() => () => {
+    if (acquiredBannerTimerRef.current !== null) {
+      clearTimeout(acquiredBannerTimerRef.current);
+    }
+  }, []);
+  useEffect(() => {
+    if (["idle", "ended", "error"].includes(navStatus)) {
+      setShowAcquiredBanner(false);
+    }
+  }, [navStatus]);
+  const navPanelState = useMemo(
+    () =>
+      showAcquiredBanner && nav.state
+        ? { ...nav.state, justAcquired: true }
+        : nav.state,
+    [nav.state, showAcquiredBanner],
+  );
+  const telemetryStateRef = useRef({ status: null, connectorResultRequestId: null });
   useEffect(() => {
     const previous = telemetryStateRef.current;
-    const suggestionStatus = nav.state?.approach?.suggestionStatus ?? null;
+    const connectorResult = nav.state?.connectorResult ?? null;
     if (
-      suggestionStatus !== previous.suggestionStatus &&
-      (suggestionStatus === "ready" || suggestionStatus === "failed")
+      connectorResult?.requestId &&
+      connectorResult.requestId !== previous.connectorResultRequestId
     ) {
+      const durationMs = Number(connectorResult.durationMs);
       trackNavigationEvent("approach_connector_result", {
-        result: suggestionStatus,
+        result: connectorResult.result,
+        reason: connectorResult.reason || null,
+        targetMode: connectorResult.targetMode || null,
+        isRetry: connectorResult.isRetry === true,
+        attempt: Number.isFinite(Number(connectorResult.attempt))
+          ? Number(connectorResult.attempt)
+          : null,
+        durationMs: Number.isFinite(durationMs)
+          ? Math.round(durationMs / 250) * 250
+          : null,
+        distanceSource: navPresentation.approachDistanceSource,
       });
     }
     if (nav.state?.justAcquired && previous.status !== "navigating") {
@@ -1044,13 +1357,14 @@ export default function BuildScreen({ navigation, route }) {
     }
     telemetryStateRef.current = {
       status: navStatus,
-      suggestionStatus,
+      connectorResultRequestId: connectorResult?.requestId ?? null,
     };
   }, [
     confirmedRidePlan?.direction,
     confirmedRidePlan?.startMode,
-    nav.state?.approach?.suggestionStatus,
+    nav.state?.connectorResult,
     nav.state?.justAcquired,
+    navPresentation.approachDistanceSource,
     navStatus,
   ]);
   // The puck/camera always ride the main route now; the connector is only a
@@ -1094,9 +1408,11 @@ export default function BuildScreen({ navigation, route }) {
   ]);
 
   const externalBackgroundedRef = useRef(false);
+  const externalHandoffOpenedAtRef = useRef(null);
   useEffect(() => {
     if (!pendingExternalPlan) {
       externalBackgroundedRef.current = false;
+      externalHandoffOpenedAtRef.current = null;
       return undefined;
     }
     const subscription = AppState.addEventListener("change", (nextState) => {
@@ -1104,8 +1420,12 @@ export default function BuildScreen({ navigation, route }) {
         externalBackgroundedRef.current = true;
         return;
       }
+      const openedAt = externalHandoffOpenedAtRef.current;
       if (nextState === "active" && externalBackgroundedRef.current) {
         externalBackgroundedRef.current = false;
+        const shouldReopen = openedAt !== null && Date.now() - openedAt >= 1000;
+        externalHandoffOpenedAtRef.current = null;
+        if (!shouldReopen) return;
         setConfirmedRidePlan(null);
         openRideSetup({ preserveSelection: true });
       }
@@ -1137,7 +1457,9 @@ export default function BuildScreen({ navigation, route }) {
         approachTier: pendingExternalPlan?.approachTier || "near",
       });
       setDestSheetVisible(false);
+      externalHandoffOpenedAtRef.current = Date.now();
       Linking.openURL(url).catch(() => {
+        externalHandoffOpenedAtRef.current = null;
         setDestSheetVisible(true);
       });
     },
@@ -1167,6 +1489,15 @@ export default function BuildScreen({ navigation, route }) {
         : EMPTY_FEATURE_COLLECTION,
     [suggestionGeometry],
   );
+  // Midpoint of the dashed suggestion line — anchor for the approach/rejoin chip.
+  const suggestionMidpoint = useMemo(() => {
+    if (!Array.isArray(suggestionGeometry) || suggestionGeometry.length < 2) {
+      return null;
+    }
+    const mid = suggestionGeometry[Math.floor(suggestionGeometry.length / 2)];
+    return Number.isFinite(mid?.lat) && Number.isFinite(mid?.lng) ? mid : null;
+  }, [suggestionGeometry]);
+  const navChip = navPresentation.chip ?? null;
   const cameraIntent = nav.state?.cameraIntent ?? "follow";
 
   // Cumulative arc length for the active route; null until there are >=2 points.
@@ -1197,6 +1528,21 @@ export default function BuildScreen({ navigation, route }) {
   const rafRef = useRef(0);
   const navStatusRef = useRef("idle");
   const lastPushedPuckRef = useRef(null);
+  // Snap-vs-detected puck anchoring (hysteresis lives in @cycleways/core) and
+  // the lerped position used while the puck is away from the route line.
+  const puckAnchorRef = useRef(null);
+  const puckGlideRef = useRef(null);
+  // Camera heading is governed separately from the puck arrow: the arrow
+  // tracks the rider's direction in real time, the map frame re-orients only
+  // for persistent or sharp direction changes.
+  const cameraGovernorRef = useRef(null);
+  const cameraDirectorRef = useRef(null);
+  const cameraBearingRef = useRef(0);
+  const cameraPitchRef = useRef(50);
+  const cameraZoomRef = useRef(16.5);
+  const sessionStateRef = useRef(null);
+  const cameraFitKeyRef = useRef(null);
+  const cameraFitAtRef = useRef(0);
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
@@ -1214,6 +1560,7 @@ export default function BuildScreen({ navigation, route }) {
   progressRef.current = navProgress;
   cameraIntentRef.current = cameraIntent;
   rawFixRef.current = nav.state?.latestFix ?? null;
+  sessionStateRef.current = nav.state;
   arcRef.current = arc;
   navGeometryRef.current = navGeometry;
   navStatusRef.current = navStatus;
@@ -1232,7 +1579,8 @@ export default function BuildScreen({ navigation, route }) {
   // to the other.
   useEffect(() => {
     smoothedMetersRef.current = navProgress?.progressMeters ?? 0;
-    smoothedBearingRef.current = navProgress?.courseDeg ?? 0;
+    smoothedBearingRef.current =
+      navProgress?.smoothedCourseDeg ?? navProgress?.courseDeg ?? 0;
     travelIndexRef.current = -1;
     lastPushedPuckRef.current = null;
     setNavTraveled(EMPTY_FEATURE_COLLECTION);
@@ -1248,12 +1596,27 @@ export default function BuildScreen({ navigation, route }) {
       setNavTraveled(EMPTY_FEATURE_COLLECTION);
       travelIndexRef.current = -1;
       lastPushedPuckRef.current = null;
+      puckAnchorRef.current = null;
+      puckGlideRef.current = null;
+      cameraGovernorRef.current = null;
+      cameraDirectorRef.current = null;
+      cameraFitKeyRef.current = null;
+      cameraFitAtRef.current = 0;
       return undefined;
     }
+    puckAnchorRef.current = createPuckAnchor();
+    puckGlideRef.current = null;
+    cameraGovernorRef.current = createCameraHeadingGovernor();
+    cameraDirectorRef.current = createCameraDirector();
+    cameraPitchRef.current = NAV_FOLLOW_PITCH;
+    cameraZoomRef.current = NAV_FOLLOW_ZOOM;
+    cameraFitKeyRef.current = null;
+    cameraFitAtRef.current = 0;
     const startProgress = progressRef.current;
     smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
     smoothedBearingRef.current =
-      startProgress?.bearingToNextDeg ?? startProgress?.courseDeg ?? 0;
+      startProgress?.bearingToNextDeg ?? startProgress?.smoothedCourseDeg ?? 0;
+    cameraBearingRef.current = smoothedBearingRef.current;
     let lastTs = 0;
     const tick = (ts) => {
       const dtMs = lastTs ? Math.max(0, ts - lastTs) : 16;
@@ -1282,8 +1645,35 @@ export default function BuildScreen({ navigation, route }) {
             geom,
             smoothedMetersRef.current,
           );
-          lng = point.lng;
-          lat = point.lat;
+          // Snap to the line only while the cross-track error is within GPS
+          // noise; on a parallel path (detached) show the detected location,
+          // lerping so both leaving and rejoining the line read as a glide.
+          const anchorMode =
+            puckAnchorRef.current?.update(progress.crossTrackMeters) ?? "route";
+          const rawFix = anchorMode === "detected" ? rawFixRef.current : null;
+          const glideTarget =
+            rawFix && Number.isFinite(rawFix.lat) && Number.isFinite(rawFix.lng)
+              ? rawFix
+              : point;
+          if (glideTarget === point && !puckGlideRef.current) {
+            lng = point.lng;
+            lat = point.lat;
+          } else {
+            const glide = puckGlideRef.current ?? { lat: point.lat, lng: point.lng };
+            const fraction = Math.min(1, dtMs / PUCK_GLIDE_MS);
+            glide.lat += (glideTarget.lat - glide.lat) * fraction;
+            glide.lng += (glideTarget.lng - glide.lng) * fraction;
+            const converged =
+              glideTarget === point &&
+              Math.abs(glide.lat - point.lat) < 1e-5 &&
+              Math.abs(glide.lng - point.lng) < 1e-5;
+            puckGlideRef.current = converged ? null : glide;
+            lng = glide.lng;
+            lat = glide.lat;
+          }
+          // Orientation stays locked to the route even while the puck is
+          // detached: a parallel path runs in the route's direction, and the
+          // instantaneous GPS course is far too noisy to steer the camera.
           targetBearing = progress.bearingToNextDeg ?? bearingDeg;
           // Advance the traveled (muted) line up to the smoothed point, but only
           // when the underlying segment index changes — keeps the per-frame cost
@@ -1307,14 +1697,18 @@ export default function BuildScreen({ navigation, route }) {
           if (raw && Number.isFinite(raw.lng) && Number.isFinite(raw.lat)) {
             lng = raw.lng;
             lat = raw.lat;
+            // Remember where the puck is so recovering onto the route glides
+            // back to the line instead of teleporting.
+            puckGlideRef.current = { lat: raw.lat, lng: raw.lng };
           }
+          // Steer by the rider's general direction of travel — the per-fix
+          // GPS course is too noisy for the camera. Hold the current heading
+          // while it is unknown (stopped / not enough movement yet).
           targetBearing =
-            progress.courseDeg ??
-            progress.bearingToNextDeg ??
-            smoothedBearingRef.current;
+            progress.smoothedCourseDeg ?? smoothedBearingRef.current;
         }
-        // Prefer the live device compass so the view follows where the phone
-        // points (adaptive even when stationary); fall back to GPS course.
+        // Prefer the live device compass for the puck arrow so it follows where
+        // the phone points; the map camera may still reject it below.
         if (Number.isFinite(deviceHeadingRef.current)) {
           targetBearing = deviceHeadingRef.current;
         }
@@ -1326,10 +1720,31 @@ export default function BuildScreen({ navigation, route }) {
               Math.min(1, dtMs / BEARING_SMOOTH_MS),
             );
           }
+          // The puck arrow tracks the rider's direction in real time; the
+          // camera aims where cameraHeadingTarget says (route-up on route,
+          // toward the start while approaching, held still off-route), with
+          // the governor gating adoption and a slower ease. While off-route the
+          // compass is deliberately ignored by the camera so the map frame stays
+          // stable; the puck arrow still carries the live direction.
           const heading = smoothedBearingRef.current;
+          const deviceHeadingCanSteerCamera =
+            progress.offRoute !== true && Number.isFinite(deviceHeadingRef.current);
+          const cameraTarget = deviceHeadingCanSteerCamera
+            ? deviceHeadingRef.current
+            : cameraHeadingTarget(progress);
+          const governedHeading =
+            cameraGovernorRef.current?.update(cameraTarget, ts) ??
+            cameraBearingRef.current;
+          if (Number.isFinite(governedHeading)) {
+            cameraBearingRef.current = shortestAngleLerp(
+              cameraBearingRef.current,
+              governedHeading,
+              Math.min(1, dtMs / CAMERA_ROTATE_MS),
+            );
+          }
           // MarkerView is screen-aligned, so rotate the arrow by the puck's
-          // geographic heading minus the map's heading. While following, the
-          // camera heading == puck heading, so the arrow reads "up".
+          // geographic heading minus the map's heading (the live map heading,
+          // so the arrow stays true while the camera holds still).
           const rotation = ((heading - mapHeadingRef.current) % 360 + 360) % 360;
           const muted = !onRoute;
           // Only push puck state when the *displayed* value actually changes:
@@ -1356,19 +1771,115 @@ export default function BuildScreen({ navigation, route }) {
           // cameraIntent flips to "free" on a user gesture, re-engaged by the
           // recenter button). setCamera/fitBounds are off the React tree, so this
           // is intentionally NOT gated on the puck-change check.
+          // Stage-aware shot from the camera director. Fit shots use the same
+          // helper/padding convention as the rest of this file; follow shots
+          // ease pitch/zoom like heading changes.
+          const shot =
+            cameraDirectorRef.current?.update(sessionStateRef.current ?? {}, ts) ??
+            {
+              stage: "ride",
+              mode: "follow",
+              pitch: NAV_FOLLOW_PITCH,
+              zoom: NAV_FOLLOW_ZOOM,
+              centerBias: 0,
+            };
+          const cameraEase = Math.min(1, dtMs / CAMERA_ROTATE_MS);
+          cameraPitchRef.current += (shot.pitch - cameraPitchRef.current) * cameraEase;
+          if (Number.isFinite(shot.zoom)) {
+            cameraZoomRef.current += (shot.zoom - cameraZoomRef.current) * cameraEase;
+          }
+
+          if (shot.mode === "fit") {
+            const raw = rawFixRef.current;
+            const suggestion = sessionStateRef.current?.approach?.suggestionGeometry;
+            const target = sessionStateRef.current?.approach?.target;
+            const targetPoint = target?.point || progress.guidanceTargetPoint || null;
+            const routeLookahead =
+              shot.fitKind === "approach" || shot.fitKind === "rejoin"
+                ? routeLookaheadPoint(arcNow, geom, target)
+                : null;
+            const fitPoints = (
+              shot.fitKind === "route"
+                ? geom
+                : [
+                    validMapPoint(raw) ? raw : null,
+                    targetPoint,
+                    routeLookahead,
+                    ...(Array.isArray(suggestion) ? suggestion : []),
+                  ]
+            ).filter(validMapPoint);
+            const fitHeading =
+              shot.fitKind === "route"
+                ? 0
+                : Number.isFinite(governedHeading)
+                  ? governedHeading
+                  : cameraBearingRef.current;
+            const fitPitch = Number.isFinite(shot.pitch) ? shot.pitch : null;
+            const fitKeyDecimals =
+              shot.fitKind === "rejoin"
+                ? REJOIN_CAMERA_FIT_KEY_DECIMALS
+                : DEFAULT_CAMERA_FIT_KEY_DECIMALS;
+            const fitPointKey = fitPoints
+              .map((point) => cameraPointKey(point, fitKeyDecimals))
+              .join("|");
+            const fitKey = [
+              shot.fitKind,
+              cameraKeyNumber(fitHeading),
+              cameraKeyNumber(fitPitch),
+              fitPointKey,
+            ].join(":");
+            if (
+              cameraIntentRef.current === "follow" &&
+              navStatusRef.current !== "paused" &&
+              fitPoints.length >= 1 &&
+              cameraFitKeyRef.current !== fitKey
+            ) {
+              const minFitIntervalMs =
+                shot.fitKind === "rejoin" ? REJOIN_CAMERA_FIT_MIN_INTERVAL_MS : 0;
+              const canFitNow =
+                cameraFitKeyRef.current === null ||
+                minFitIntervalMs === 0 ||
+                ts - cameraFitAtRef.current >= minFitIntervalMs;
+              if (canFitNow) {
+                cameraFitKeyRef.current = fitKey;
+                cameraFitAtRef.current = ts;
+                fitCameraToPoints(
+                  cameraRef.current,
+                  fitPoints,
+                  shot.fitKind === "route" ? 84 : 150,
+                  { heading: fitHeading, pitch: fitPitch },
+                );
+              }
+            }
+            rafRef.current = requestAnimationFrame(tick);
+            return;
+          }
+          cameraFitKeyRef.current = null;
+          cameraFitAtRef.current = 0;
+
+          // Focus point per stage; center = lerp(rider, focus, centerBias).
+          let focus = null;
+          if (shot.focusKind === "cue") {
+            const cueMeters = sessionStateRef.current?.activeCue?.cue?.distanceMeters;
+            if (Number.isFinite(cueMeters) && arcNow && geom.length >= 2) {
+              focus = pointAndBearingAtDistance(arcNow, geom, cueMeters).point;
+            }
+          }
+          let centerLng = lng;
+          let centerLat = lat;
+          if (focus && shot.centerBias > 0) {
+            centerLng = lng + (focus.lng - lng) * shot.centerBias;
+            centerLat = lat + (focus.lat - lat) * shot.centerBias;
+          }
           if (
             cameraIntentRef.current === "follow" &&
             navStatusRef.current !== "paused"
           ) {
-            // Heading-up follow on the rider, tilted to a near-ground
-            // perspective. Used both on-route and while approaching so the view
-            // stays first-person and adaptive to the phone's facing direction;
-            // the direct line + dashed suggestion lead the eye to the route.
             cameraRef.current?.setCamera?.({
-              centerCoordinate: [lng, lat],
-              heading,
-              pitch: NAV_FOLLOW_PITCH,
-              zoomLevel: NAV_FOLLOW_ZOOM,
+              centerCoordinate: [centerLng, centerLat],
+              heading: cameraBearingRef.current,
+              pitch: cameraPitchRef.current,
+              zoomLevel: cameraZoomRef.current,
               animationDuration: 0,
             });
           }
@@ -1615,8 +2126,24 @@ export default function BuildScreen({ navigation, route }) {
     );
   }
 
+  const directRideSetupRequested = Boolean(routeTokenParam && openRideSetupParam);
+  const directRideSetupPending = Boolean(
+    directRideSetupRequested &&
+      !rideSetupVisible &&
+      !isNavigating &&
+      (routeRestoreStatus === "waiting" ||
+        routeRestoreStatus === "loading" ||
+        pendingRideSetupToken === routeTokenParam),
+  );
+  const showRouteRestoreOverlay = Boolean(
+    routeTokenParam &&
+      (routeRestoreStatus === "waiting" ||
+        routeRestoreStatus === "loading" ||
+        directRideSetupPending),
+  );
+
   return (
-    <View style={styles.fill} {...routePointPanResponder.panHandlers}>
+    <View style={styles.screen} {...routePointPanResponder.panHandlers}>
       <MapView
         ref={mapViewRef}
         style={styles.fill}
@@ -1691,6 +2218,49 @@ export default function BuildScreen({ navigation, route }) {
               style={APPROACH_SUGGESTION_LINE_STYLE}
             />
           </ShapeSource>
+        ) : null}
+        {isNavigating && navChip?.kind === "segment" && riderPuck ? (
+          <MarkerView
+            coordinate={[riderPuck.lng, riderPuck.lat]}
+            anchor={{ x: 0.5, y: -0.9 }}
+            allowOverlap
+          >
+            <View style={styles.navChip}>
+              <Text style={styles.navChipText} numberOfLines={1}>
+                {navChip.text}
+              </Text>
+            </View>
+          </MarkerView>
+        ) : null}
+        {isNavigating &&
+        (navChip?.kind === "approach" || navChip?.kind === "rejoin") &&
+        suggestionMidpoint ? (
+          <MarkerView
+            coordinate={[suggestionMidpoint.lng, suggestionMidpoint.lat]}
+            anchor={{ x: 0.5, y: 0.5 }}
+            allowOverlap
+          >
+            <View
+              style={[
+                styles.navChip,
+                navChip.kind === "rejoin"
+                  ? styles.navChipRejoin
+                  : styles.navChipApproach,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.navChipText,
+                  navChip.kind === "rejoin"
+                    ? styles.navChipRejoinText
+                    : styles.navChipApproachText,
+                ]}
+                numberOfLines={1}
+              >
+                {navChip.text}
+              </Text>
+            </View>
+          </MarkerView>
         ) : null}
         {isNavigating ? (
           <>
@@ -1782,21 +2352,16 @@ export default function BuildScreen({ navigation, route }) {
           <CircleLayer id="route-points-circle" style={ROUTE_POINT_STYLE} />
         </ShapeSource>
       </MapView>
-      {!isNavigating ? (
+      {!isNavigating && !directRideSetupPending ? (
         <>
           <BackButton onPress={() => navigation?.goBack?.()} />
-          <TopSearch
-            query={mapUi.searchQuery}
-            onChange={handleSearchQueryChange}
-            onSubmit={submitSearch}
-            busy={mapUi.searchStatus === "searching"}
-            error={mapUi.searchError}
-          />
           <MapControls
             onLocate={handleLocatePress}
-            onFit={fitRoute}
             following={locationState.following}
+            legendOpen={legendOpen}
+            onToggleLegend={() => setLegendOpen((open) => !open)}
           />
+          <MapLegend open={legendOpen} sheetTop={sheetTop} />
         </>
       ) : null}
       <DataMarkerCard
@@ -1804,12 +2369,15 @@ export default function BuildScreen({ navigation, route }) {
         onAddToRoute={handleAddDataMarkerToRoute}
         onClose={handleSelectedDataMarkerClear}
       />
-      {routeTokenParam &&
-      (routeRestoreStatus === "waiting" || routeRestoreStatus === "loading") ? (
+      {showRouteRestoreOverlay ? (
         <View style={styles.routeRestoreOverlay} pointerEvents="auto">
           <View style={styles.routeRestoreCard}>
             <ActivityIndicator color={palette.forest} size="small" />
-            <Text style={styles.routeRestoreText}>טוען מסלול לעריכה…</Text>
+            <Text style={styles.routeRestoreText}>
+              {directRideSetupRequested
+                ? "מכין ניווט למסלול…"
+                : "טוען מסלול לעריכה…"}
+            </Text>
           </View>
         </View>
       ) : null}
@@ -1849,7 +2417,7 @@ export default function BuildScreen({ navigation, route }) {
       />
       {/* Dev-only simulate + record controls. __DEV__ is false in production
           builds so this entire block is dead-code-eliminated by Metro. */}
-      {__DEV__ && !isNavigating && navigationRoute?.geometry?.length >= 2 ? (
+      {__DEV__ && !isNavigating ? (
         <View pointerEvents="box-none" style={styles.devControls}>
           <Pressable
             accessibilityLabel="Dev: simulate ride"
@@ -1858,21 +2426,31 @@ export default function BuildScreen({ navigation, route }) {
           >
             <Text style={styles.devButtonText}>SIM</Text>
           </Pressable>
-          <Pressable
-            accessibilityLabel="Dev: record GPS fixes"
-            onPress={handleDevRecord}
-            style={styles.devButton}
-          >
-            <Text style={styles.devButtonText}>REC</Text>
-          </Pressable>
+          {navigationRoute?.geometry?.length >= 2 ? (
+            <Pressable
+              accessibilityLabel="Dev: record GPS fixes"
+              onPress={handleDevRecord}
+              style={styles.devButton}
+            >
+              <Text style={styles.devButtonText}>REC</Text>
+            </Pressable>
+          ) : null}
         </View>
+      ) : null}
+      {__DEV__ ? (
+        <DevScenarioPicker
+          visible={devPickerVisible}
+          scenarios={devScenarios}
+          speed={devSpeed}
+          onSelectSpeed={setDevSpeed}
+          onSelect={handleDevScenarioSelect}
+          onClose={() => setDevPickerVisible(false)}
+        />
       ) : null}
       {isNavigating ? (
         <>
           <NavPanel
-            sessionState={nav.state}
-            hapticsEnabled={nav.hapticsEnabled}
-            onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
+            sessionState={navPanelState}
             onRecenter={handleRecenter}
             onPauseResume={() =>
               navStatus === "paused" ? nav.resume() : nav.pause()
@@ -1881,28 +2459,58 @@ export default function BuildScreen({ navigation, route }) {
             onOpenExternal={() => setDestSheetVisible(true)}
             onChangeRideSettings={handleChangeRideSettings}
             compassHeading={compassHeading}
+            voiceEnabled={nav.voiceEnabled}
+            onToggleVoice={handleToggleVoiceGuidance}
+            lockScreenGuidanceActive={nav.lockScreenGuidanceActive}
           />
         </>
-      ) : (
-        <PlannerSheet sheetRef={plannerSheetRef}>
+      ) : directRideSetupPending ? null : (
+        <PlannerSheet
+          sheetRef={plannerSheetRef}
+          animatedPosition={sheetTop}
+          renderFooter={
+            canDownload
+              ? () => (
+                  <BuildPanelFooter
+                    canShare={
+                      Boolean(shareUrl) && shareInfo.status !== "too_long"
+                    }
+                    onDownloadGpx={handleDownloadGpx}
+                    onShare={shareRoute}
+                    onStartNavigation={handleStartNavigation}
+                  />
+                )
+              : undefined
+          }
+        >
           <BuildPanelContent
-            canDownload={canDownload}
             canRedo={canRedo}
-            canShare={Boolean(shareUrl) && shareInfo.status !== "too_long"}
             canUndo={canUndo}
             catalogEntry={selectedCatalogEntry}
             locationState={locationState}
             onClear={handleClearRoute}
-            onOpenSummary={handleOpenDownload}
             onRedo={handleRedo}
             onSeekToFraction={seekToFraction}
-            onShare={shareRoute}
-            onStartNavigation={openRideSetup}
             onUndo={handleUndo}
             playback={playback}
             presentation={routePresentation}
             routePoints={displayedRoutePoints}
             routeState={routeState}
+            emptyState={
+              <BuildEmptyActions
+                searchQuery={mapUi.searchQuery}
+                searchStatus={mapUi.searchStatus}
+                searchError={mapUi.searchError}
+                onSearchQueryChange={handleSearchQueryChange}
+                onSearchSubmit={submitSearch}
+                locateBusy={locationState.status === "locating"}
+                onLocateMe={handleLocatePress}
+                draft={
+                  plannerDraft && !routeTokenParam ? plannerDraft : null
+                }
+                onRestoreDraft={handleRestoreDraft}
+              />
+            }
           />
         </PlannerSheet>
       )}
@@ -1912,6 +2520,16 @@ export default function BuildScreen({ navigation, route }) {
         selection={rideSetupSelection}
         locationStatus={rideSetupLocationStatus}
         reverseAllowed={sourceNavigationRoute?.routeShape?.type !== "one_way"}
+        hapticsEnabled={nav.hapticsEnabled}
+        onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
+        voiceEnabled={voiceGuidanceEnabled}
+        onToggleVoice={handleToggleVoiceGuidance}
+        lockScreenGuidanceEnabled={lockScreenGuidanceEnabled}
+        lockScreenGuidanceHasAlwaysPermission={lockScreenGuidanceHasAlwaysPermission}
+        lockScreenGuidanceNeedsSettings={lockScreenGuidanceNeedsSettings}
+        onToggleLockScreenGuidance={handleToggleLockScreenGuidance}
+        onOpenLocationSettings={handleOpenLocationSettings}
+        onTestVoice={handleTestVoiceGuidance}
         onDirectionChange={(direction) =>
           setRideSetupSelection((current) => ({ ...current, direction }))
         }
@@ -1932,7 +2550,6 @@ export default function BuildScreen({ navigation, route }) {
       />
       <DestinationSheet
         visible={destSheetVisible}
-        appsOnly
         disclaimerText={navPresentation.disclaimerText}
         onOpenApp={handleOpenExternalApp}
         onClose={() => {
@@ -1964,18 +2581,14 @@ export default function BuildScreen({ navigation, route }) {
 }
 
 function BuildPanelContent({
-  canDownload,
   canRedo,
-  canShare,
   canUndo,
   catalogEntry,
+  emptyState,
   locationState,
   onClear,
-  onOpenSummary,
   onRedo,
   onSeekToFraction,
-  onShare,
-  onStartNavigation,
   onUndo,
   playback,
   presentation,
@@ -1984,6 +2597,7 @@ function BuildPanelContent({
 }) {
   const buildModel = getPlannerBuildModel(routeState);
   const hasPoints = routePoints.length > 0;
+  const isEmpty = routeState.points.length === 0;
   const hasElevationProfile = routeState.geometry.length >= 2;
   const locationText = locationStatusText(locationState);
   const routeMessage = routeState.error
@@ -1991,10 +2605,7 @@ function BuildPanelContent({
     : presentation.message;
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.buildBody}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.buildBody}>
       <View style={styles.buildHead}>
         <View style={styles.buildHeadText}>
           <Text style={styles.buildEyebrow}>
@@ -2036,85 +2647,119 @@ function BuildPanelContent({
         </View>
       </View>
 
-      <Text style={routeState.error ? styles.errorText : styles.routeMessage}>
-        {routeMessage}
-      </Text>
-
-      {hasElevationProfile ? (
-        <View testID="playback-area">
-          <PlaybackControls
-            isPlaying={playback.isPlaying}
-            isReady={playback.isReady}
-            currentTime={playback.currentTime}
-            duration={playback.duration}
-            onTogglePlayback={playback.togglePlayback}
-            onSeekToFraction={onSeekToFraction}
-            onScrubStart={playback.pause}
-          />
-          <ElevationProfileChart
-            cursorFraction={playback.cursor?.fraction ?? null}
-            onSeekFraction={onSeekToFraction}
-            onScrubStart={playback.pause}
-            distance={routeState.distance}
-            geometry={routeState.geometry}
-          />
-        </View>
-      ) : null}
-
-      {buildModel.hasRoute ? (
-        <View testID="route-stats" style={styles.statGrid}>
-          {buildModel.stats.map(([label, value]) => (
-            <View key={label} style={styles.statTile}>
-              <Text style={styles.statValue}>{value}</Text>
-              <Text style={styles.statLabel}>{label}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {presentation.warnings.length > 0 ? (
-        <View style={styles.warningList}>
-          {presentation.warnings.map((warning) => (
-            <Text key={warning} style={styles.warningText}>
-              {warning}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-
-      {locationText ? (
-        <Text style={styles.locationText}>{locationText}</Text>
-      ) : null}
-
-      <RoutePoiList activeDataPoints={routeState.activeDataPoints} />
-
-      {canDownload ? (
+      {isEmpty && emptyState ? (
         <>
-          <View style={styles.buildActions}>
-            <ChromeButton
-              label="סיכום"
-              onPress={onOpenSummary}
-              accessibilityLabel="סיכום ושיתוף המסלול"
-              testID="action-summary"
-            />
-            <ChromeButton
-              disabled={!canShare}
-              label="שיתוף"
-              onPress={onShare}
-              accessibilityLabel="שיתוף המסלול"
-            />
-          </View>
-          <ChromeButton
-            icon="navigate"
-            label="התחל ניווט"
-            onPress={onStartNavigation}
-            primary
-            accessibilityLabel="התחל ניווט מונחה במסלול"
-            testID="action-start-navigation"
-          />
+          {routeState.error ? (
+            <Text style={styles.errorText}>{routeMessage}</Text>
+          ) : null}
+          {emptyState}
         </>
-      ) : null}
-    </ScrollView>
+      ) : (
+        <>
+          <Text style={routeState.error ? styles.errorText : styles.routeMessage}>
+            {routeMessage}
+          </Text>
+
+          {hasElevationProfile ? (
+            <View testID="playback-area">
+              <PlaybackControls
+                isPlaying={playback.isPlaying}
+                isReady={playback.isReady}
+                currentTime={playback.currentTime}
+                duration={playback.duration}
+                onTogglePlayback={playback.togglePlayback}
+                onSeekToFraction={onSeekToFraction}
+                onScrubStart={playback.pause}
+              />
+              <ElevationProfileChart
+                cursorFraction={playback.cursor?.fraction ?? null}
+                onSeekFraction={onSeekToFraction}
+                onScrubStart={playback.pause}
+                distance={routeState.distance}
+                geometry={routeState.geometry}
+              />
+            </View>
+          ) : null}
+
+          {buildModel.hasRoute ? (
+            <View testID="route-stats" style={styles.statGrid}>
+              {buildModel.stats.map(([label, value]) => (
+                <View key={label} style={styles.statTile}>
+                  <Text style={styles.statValue}>{value}</Text>
+                  <Text style={styles.statLabel}>{label}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {presentation.warnings.length > 0 ? (
+            <View style={styles.warningList}>
+              {presentation.warnings.map((warning) => (
+                <Text key={warning} style={styles.warningText}>
+                  {warning}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          {locationText ? (
+            <Text style={styles.locationText}>{locationText}</Text>
+          ) : null}
+
+          <RoutePoiList activeDataPoints={routeState.activeDataPoints} />
+        </>
+      )}
+    </View>
+  );
+}
+
+// Primary route actions, pinned to the bottom of the planner sheet so they stay
+// visible however far the body above is scrolled. Mirrors the featured route's
+// embedded action strip: one row of three equal buttons, navigation rightmost
+// and forest-green, the two secondaries iconed. Keep these in sync so the app
+// reads as one design language across the planner and route-story pages.
+function BuildPanelFooter({
+  canShare,
+  onDownloadGpx,
+  onShare,
+  onStartNavigation,
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={[
+        styles.buildFooter,
+        { paddingBottom: 12 + Math.max(insets.bottom - 6, 0) },
+      ]}
+    >
+      <View style={styles.footerActions}>
+        <ChromeButton
+          icon="trail-sign-outline"
+          label="ניווט"
+          onPress={onStartNavigation}
+          primary
+          buttonStyle={[styles.footerAction, styles.footerActionPrimary]}
+          accessibilityLabel="התחל ניווט מונחה במסלול"
+          testID="action-start-navigation"
+        />
+        <ChromeButton
+          icon="share-outline"
+          label="שיתוף"
+          onPress={onShare}
+          disabled={!canShare}
+          buttonStyle={styles.footerAction}
+          accessibilityLabel="שיתוף המסלול"
+        />
+        <ChromeButton
+          icon="download-outline"
+          label="GPX"
+          onPress={onDownloadGpx}
+          buttonStyle={styles.footerAction}
+          accessibilityLabel="הורדת קובץ GPX למסלול"
+          testID="action-download-gpx"
+        />
+      </View>
+    </View>
   );
 }
 
@@ -2507,7 +3152,41 @@ function boundsFromMapState(mapState) {
   return { west, south, east, north };
 }
 
-function fitCameraToPoints(camera, points, bottomPadding = 84) {
+function validMapPoint(point) {
+  return (
+    point &&
+    Number.isFinite(Number(point.lat)) &&
+    Number.isFinite(Number(point.lng))
+  );
+}
+
+function routeLookaheadPoint(arc, geometry, target) {
+  const progressMeters = Number(target?.mainProgressMeters);
+  if (
+    !arc ||
+    !Array.isArray(geometry) ||
+    geometry.length < 2 ||
+    !Number.isFinite(progressMeters)
+  ) {
+    return null;
+  }
+  const lookaheadMeters = Math.min(
+    arc.totalDistMeters,
+    Math.max(0, progressMeters) + APPROACH_ROUTE_LOOKAHEAD_M,
+  );
+  if (lookaheadMeters <= progressMeters + 1) return null;
+  return pointAndBearingAtDistance(arc, geometry, lookaheadMeters).point;
+}
+
+function cameraKeyNumber(value) {
+  return Number.isFinite(value) ? String(Math.round(value)) : "na";
+}
+
+function cameraPointKey(point, decimals = DEFAULT_CAMERA_FIT_KEY_DECIMALS) {
+  return `${Number(point.lng).toFixed(decimals)},${Number(point.lat).toFixed(decimals)}`;
+}
+
+function fitCameraToPoints(camera, points, bottomPadding = 84, options = {}) {
   const normalizedPoints = Array.isArray(points)
     ? points
         .map((point) => ({
@@ -2519,12 +3198,17 @@ function fitCameraToPoints(camera, points, bottomPadding = 84) {
 
   if (!camera || normalizedPoints.length === 0) return;
 
+  const cameraStopExtras = {};
+  if (Number.isFinite(options.heading)) cameraStopExtras.heading = options.heading;
+  if (Number.isFinite(options.pitch)) cameraStopExtras.pitch = options.pitch;
+
   if (normalizedPoints.length === 1) {
     const [point] = normalizedPoints;
     camera.setCamera?.({
       type: "CameraStop",
       centerCoordinate: [point.lng, point.lat],
       zoomLevel: 13.5,
+      ...cameraStopExtras,
       animationDuration: 450,
       animationMode: "easeTo",
     });
@@ -2535,10 +3219,27 @@ function fitCameraToPoints(camera, points, bottomPadding = 84) {
   const east = Math.max(...normalizedPoints.map((point) => point.lng));
   const south = Math.min(...normalizedPoints.map((point) => point.lat));
   const north = Math.max(...normalizedPoints.map((point) => point.lat));
+  if (typeof camera.setCamera === "function") {
+    camera.setCamera({
+      type: "CameraStop",
+      bounds: { ne: [east, north], sw: [west, south] },
+      padding: {
+        paddingTop: 96,
+        paddingRight: 42,
+        paddingBottom: bottomPadding,
+        paddingLeft: 42,
+      },
+      ...cameraStopExtras,
+      animationDuration: 550,
+      animationMode: "easeTo",
+    });
+    return;
+  }
   camera.fitBounds?.([east, north], [west, south], [96, 42, bottomPadding, 42], 550);
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, position: "relative", backgroundColor: "#fff" },
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   hint: { fontSize: 15, textAlign: "center", color: "#333" },
@@ -2587,6 +3288,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 4,
   },
+  navChip: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+    maxWidth: 220,
+  },
+  navChipText: {
+    color: "#1a2b1e",
+    fontSize: 12,
+    fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  navChipApproach: {
+    backgroundColor: "#eef4ff",
+    borderWidth: 1,
+    borderColor: "#b9ccf5",
+  },
+  navChipApproachText: { color: "#1c4fd6" },
+  navChipRejoin: {
+    backgroundColor: "#fff0ee",
+    borderWidth: 1,
+    borderColor: "#f2c4be",
+  },
+  navChipRejoinText: { color: "#c9372c" },
   routeRestoreOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 30,
@@ -2875,6 +3606,8 @@ const styles = StyleSheet.create({
   chromeButton: {
     minWidth: 50,
     minHeight: 40,
+    flexDirection: "row-reverse",
+    gap: 7,
     paddingHorizontal: 10,
     borderRadius: 4,
     alignItems: "center",
@@ -2914,6 +3647,7 @@ const styles = StyleSheet.create({
     color: "#333333",
     fontSize: 13,
     fontWeight: "700",
+    flexShrink: 1,
   },
   chromeButtonTextSymbol: {
     fontSize: 21,
@@ -2987,11 +3721,35 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     writingDirection: "rtl",
   },
-  buildActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  buildFooter: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    backgroundColor: palette.paper,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.line,
+  },
+  // One row of equal-width actions; row-reverse puts navigation (first child) at
+  // the right, matching the featured route's embedded action strip.
+  footerActions: {
+    flexDirection: "row-reverse",
     gap: 8,
-    marginTop: 2,
+  },
+  footerAction: {
+    flex: 1,
+    minHeight: 48,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: palette.paper,
+    shadowColor: "#101820",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  footerActionPrimary: {
+    borderColor: palette.forest,
+    backgroundColor: palette.forest,
   },
   // Dev-only simulate/record overlay — dead code in production builds.
   devControls: {

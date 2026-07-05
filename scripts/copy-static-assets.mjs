@@ -73,7 +73,13 @@ if (existsSync(builtIndex)) {
   await copyFile(builtIndex, resolve(distDir, "404.html"));
   console.log("Copied built index.html to 404.html");
 
-  const spaShellDirectories = new Set(["featured", "routes"]);
+  const spaShellDirectories = new Set([
+    "featured",
+    "routes",
+    "privacy",
+    "terms",
+    "support",
+  ]);
   try {
     const catalog = JSON.parse(
       await readFile(resolve(repoRoot, "public-data/route-catalog.json"), "utf8"),

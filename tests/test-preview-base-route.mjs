@@ -103,4 +103,66 @@ assert.equal(connectorRoute.failure, null);
 assert.ok(maxLat(connectorRoute.geometry) > 33.0005, "connector route takes the road detour");
 assert.equal(prefManager._connectorCostProfile, false); // transient flag cleared
 
+// Connector routes must not use private/restricted roads, even when they are
+// shorter than a public detour.
+const accessNetwork = {
+  schemaVersion: 2,
+  nodes: [
+    { id: "a", coord: [35.0, 33] },
+    { id: "b", coord: [35.001, 33] },
+    { id: "c", coord: [35.002, 33] },
+    { id: "d", coord: [35.001, 33.0007] },
+  ],
+  edges: [
+    { id: "restricted_ab", from: "a", to: "b", distanceMeters: 93,
+      coordinates: [[35.0, 33], [35.001, 33]], routeClass: "road", accessStatus: "restricted", cwSegmentIds: [] },
+    { id: "restricted_bc", from: "b", to: "c", distanceMeters: 93,
+      coordinates: [[35.001, 33], [35.002, 33]], routeClass: "road", accessStatus: "restricted", cwSegmentIds: [] },
+    { id: "public_ad", from: "a", to: "d", distanceMeters: 121,
+      coordinates: [[35.0, 33], [35.001, 33.0007]], routeClass: "road", accessStatus: "unspecified", cwSegmentIds: [] },
+    { id: "public_dc", from: "d", to: "c", distanceMeters: 121,
+      coordinates: [[35.001, 33.0007], [35.002, 33]], routeClass: "road", accessStatus: "unspecified", cwSegmentIds: [] },
+  ],
+};
+const accessManager = new RouteManager();
+await accessManager.load({ type: "FeatureCollection", features: [] }, {}, accessNetwork);
+const accessConnectorRoute = accessManager.previewBaseRoute(
+  [{ lat: 33, lng: 35.0001 }, { lat: 33, lng: 35.0019 }],
+  { costProfile: "connector" },
+);
+assert.equal(accessConnectorRoute.failure, null);
+assert.ok(
+  maxLat(accessConnectorRoute.geometry) > 33.0005,
+  "connector route avoids restricted road and takes the public detour",
+);
+
+// A connector with only non-car-road edges should fail instead of showing an
+// unsafe blue suggestion.
+const pathOnlyManager = new RouteManager();
+await pathOnlyManager.load(
+  { type: "FeatureCollection", features: [] },
+  {},
+  {
+    schemaVersion: 2,
+    nodes: [
+      { id: "a", coord: [35.0, 33] },
+      { id: "b", coord: [35.001, 33] },
+    ],
+    edges: [
+      { id: "path", from: "a", to: "b", distanceMeters: 93,
+        coordinates: [[35.0, 33], [35.001, 33]], routeClass: "path_track", accessStatus: "unspecified", cwSegmentIds: [] },
+    ],
+  },
+);
+const pathDefaultRoute = pathOnlyManager.previewBaseRoute([
+  { lat: 33, lng: 35.0001 },
+  { lat: 33, lng: 35.0009 },
+]);
+assert.equal(pathDefaultRoute.failure, null);
+const pathConnectorRoute = pathOnlyManager.previewBaseRoute(
+  [{ lat: 33, lng: 35.0001 }, { lat: 33, lng: 35.0009 }],
+  { costProfile: "connector" },
+);
+assert.ok(pathConnectorRoute.failure, "connector route rejects non-road-only graph");
+
 console.log("test-preview-base-route OK");

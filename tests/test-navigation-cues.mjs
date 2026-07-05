@@ -69,6 +69,69 @@ function routeFrom(geometry, extra = {}) {
   assert.ok(near(turns[0].turnAngleDeg, 90, 5), "turn angle ~90");
 }
 
+// --- Junction-aware classification: turns at junctions, bends elsewhere ----
+// With routeState.junctions provided (network nodes where 3+ edges meet):
+// a sharp corner at a junction is a "turn"; a sharp corner in open road is a
+// "bend" (only >= 75° — the road curving, no decision to make); a moderate
+// road curve (40-75°, previously a false "turn") produces nothing.
+{
+  const geometry = [
+    { lat: 33.1, lng: 35.6 },
+    { lat: 33.1, lng: 35.605 }, // corner A (~466 m): 90° left, AT a junction
+    { lat: 33.105, lng: 35.605 }, // corner B (~1022 m): 90° right, open road
+    { lat: 33.105, lng: 35.61 },
+    { lat: 33.105, lng: 35.612 }, // curve C (~1675 m): ~50°, open road
+    { lat: 33.107, lng: 35.614 },
+  ];
+  const junctions = [{ lat: 33.1, lng: 35.605 }];
+
+  const gated = buildRouteCues(routeFrom(geometry, { junctions }));
+  const turns = findType(gated, "turn");
+  const bends = findType(gated, "bend");
+  assert.equal(turns.length, 1, "only the junction corner is a turn");
+  assert.ok(near(turns[0].distanceMeters, 465.8, 3), "turn at corner A");
+  assert.equal(turns[0].direction, "left");
+  assert.equal(bends.length, 1, "the sharp open-road corner is a bend");
+  assert.ok(near(bends[0].distanceMeters, 1022, 4), "bend at corner B");
+  assert.equal(bends[0].direction, "right");
+  assert.ok(near(bends[0].turnAngleDeg, 90, 5), "bend keeps its angle");
+
+  // Without junction data the route keeps today's geometry-only behavior.
+  const ungated = buildRouteCues(routeFrom(geometry));
+  assert.equal(findType(ungated, "turn").length, 3, "fallback: all three cue as turns");
+  assert.equal(findType(ungated, "bend").length, 0, "fallback: no bends");
+
+  // A junction slightly off the corner (GPS/network offset) still gates in.
+  const offset = buildRouteCues(
+    routeFrom(geometry, { junctions: [{ lat: 33.10015, lng: 35.605 }] }), // ~17 m north
+  );
+  assert.equal(findType(offset, "turn").length, 1, "junction within 30 m still counts");
+
+  // Span boundaries merge onto turns only — a bend never gets ontoSegmentName.
+  const total = routeFrom(geometry).distanceMeters;
+  const withSpans = buildRouteCues(
+    routeFrom(geometry, {
+      junctions,
+      segmentSpans: [
+        { startMeters: 0, endMeters: 1022, name: "דרך הפרדס" },
+        { startMeters: 1022, endMeters: total, name: "שביל הצפון" },
+      ],
+    }),
+  );
+  const bendWithSpan = findType(withSpans, "bend")[0];
+  assert.equal(bendWithSpan.ontoSegmentName, undefined, "no segment merge onto a bend");
+  assert.equal(
+    findType(withSpans, "enter-segment").length,
+    1,
+    "the span boundary at the bend stays its own enter-segment cue",
+  );
+
+  // A bend is selectable like any maneuver cue.
+  const active = selectActiveCue(gated, 950);
+  assert.equal(active.cue.type, "bend");
+  assert.equal(active.phase, "preview");
+}
+
 // --- Hazard/POI cues from active data points ------------------------------
 {
   const withHazard = routeFrom(
@@ -120,6 +183,20 @@ function routeFrom(geometry, extra = {}) {
 
   // The start cue is informational and never selected as a maneuver.
   assert.equal(selectActiveCue(cues, 0), null, "start cue is not an active maneuver");
+}
+
+// --- selectActiveCue: maneuvers outrank informational cues -----------------
+{
+  const cues = [
+    { type: "caution", distanceMeters: 450, dataPointId: "hazard" },
+    { type: "turn", distanceMeters: 470, direction: "left" },
+  ];
+  const active = selectActiveCue(cues, 400);
+  assert.equal(active.cue.type, "turn", "upcoming maneuver masks nearer info cue");
+  assert.equal(active.distanceToCueMeters, 70);
+
+  const hazardOnly = selectActiveCue([cues[0]], 400);
+  assert.equal(hazardOnly.cue.type, "caution", "hazard-only case still selects hazard");
 }
 
 // --- Short-segment suppression: close turns do not spam -------------------
@@ -178,6 +255,46 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   const cues = _brc(route);
   assert.ok(cues.some((c) => c.type === "enter-segment" && c.segmentName === "B"),
     "standalone enter-segment cue for B");
+}
+
+// --- Real catalog route: junction data is baked in and gates the cues -----
+// sovev-beit-hillel used to produce 16 "turn" cues, 9 of them at plain road
+// curves (no junction within 30 m+). With junctions in the snapshot, every
+// remaining turn is at a junction and the curve noise is gone.
+{
+  const { default: sovev } = await import(
+    "@cycleways/core/navigation/scenarios/routes/sovev-beit-hillel.js"
+  );
+  const { getDistance } = await import("@cycleways/core/utils/distance.js");
+  assert.ok(
+    Array.isArray(sovev.junctions) && sovev.junctions.length > 0,
+    "snapshot carries network junctions",
+  );
+  const route = navigationRouteFromRouteState(sovev, { param: "sovev" });
+  const cues = buildRouteCues(route);
+  const turns = findType(cues, "turn");
+  assert.ok(
+    turns.length > 0 && turns.length <= 10,
+    `curve noise is gone (was 16 turns, got ${turns.length})`,
+  );
+  function pointAt(meters) {
+    const g = route.geometry;
+    for (let i = 1; i < g.length; i++) {
+      if (g[i].distanceFromStartMeters >= meters) return g[i];
+    }
+    return g[g.length - 1];
+  }
+  for (const t of turns) {
+    const p = pointAt(t.distanceMeters);
+    const nearest = Math.min(...sovev.junctions.map((j) => getDistance(p, j)));
+    assert.ok(
+      nearest <= 30,
+      `turn at ${Math.round(t.distanceMeters)}m sits at a junction (nearest ${Math.round(nearest)}m)`,
+    );
+  }
+  for (const b of findType(cues, "bend")) {
+    assert.ok(b.turnAngleDeg >= 75, "bends are only genuinely sharp curves");
+  }
 }
 
 console.log("navigation cue tests passed");

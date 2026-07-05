@@ -14,6 +14,15 @@ import { bearingDelta, computeBearing } from "../utils/geometry.js";
 const METERS_PER_DEG_LAT = 111320;
 const MIN_COURSE_SPEED_MPS = 1; // below this, GPS course/heading is unreliable
 const WRONG_WAY_DELTA_DEG = 120; // course vs route bearing beyond this = wrong-way
+const COURSE_WINDOW_METERS = 20; // displacement window for the smoothed course
+const SPEED_WINDOW_MS = 3000; // smoothed rider speed = mean fix speed over this
+const WRONG_WAY_CONFIRM_MS = 4000; // sustained disagreement before warning
+// Quiet window after acquisition: the proximity latch can fire while the
+// rider is still physically finishing the approach (moving toward the start,
+// against the route's local bearing). No wrong-way judgment until this
+// settles; a genuine backward start is still warned right afterwards.
+const WRONG_WAY_ACQUISITION_GRACE_MS = 12000;
+const COURSE_HISTORY_LIMIT = 240; // ~4 min at 1 Hz
 
 function metersPerDegLng(lat) {
   return METERS_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180);
@@ -128,6 +137,12 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
   // Acquisition gate: latches true once the rider comes within the on-route
   // threshold of the geometry; stays true for the rest of the session.
   let acquired = false;
+  // Wrong-way state: recent raw fixes (for the smoothed course), the
+  // timestamp the sustained-disagreement dwell started, and when the route
+  // was acquired (for the post-acquisition grace window).
+  let courseHistory = [];
+  let wrongWaySince = null;
+  let acquiredAtMs = null;
 
   function reset() {
     offRouteState = "on";
@@ -137,6 +152,9 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     prevFix = null;
     acquired = false;
     seededSearchPending = false;
+    courseHistory = [];
+    wrongWaySince = null;
+    acquiredAtMs = null;
   }
 
   function seed({ progressMeters, acquired: seedAcquired = true } = {}) {
@@ -150,6 +168,71 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     candidateSince = null;
     recoverSince = null;
     prevFix = null;
+    courseHistory = [];
+    wrongWaySince = null;
+  }
+
+  function snapshot() {
+    return {
+      version: 1,
+      offRouteState,
+      candidateSince,
+      recoverSince,
+      lastProgressMeters,
+      prevFix,
+      seededSearchPending,
+      acquired,
+      courseHistory,
+      wrongWaySince,
+      acquiredAtMs,
+    };
+  }
+
+  function restore(snapshotState = {}) {
+    if (!snapshotState || snapshotState.version !== 1) return false;
+    offRouteState =
+      snapshotState.offRouteState === "candidate" ||
+      snapshotState.offRouteState === "off"
+        ? snapshotState.offRouteState
+        : "on";
+    candidateSince = Number.isFinite(Number(snapshotState.candidateSince))
+      ? Number(snapshotState.candidateSince)
+      : null;
+    recoverSince = Number.isFinite(Number(snapshotState.recoverSince))
+      ? Number(snapshotState.recoverSince)
+      : null;
+    lastProgressMeters = Number.isFinite(Number(snapshotState.lastProgressMeters))
+      ? Math.max(0, Math.min(totalMeters, Number(snapshotState.lastProgressMeters)))
+      : null;
+    prevFix = snapshotState.prevFix && Number.isFinite(Number(snapshotState.prevFix.lat)) &&
+      Number.isFinite(Number(snapshotState.prevFix.lng))
+      ? { ...snapshotState.prevFix }
+      : null;
+    seededSearchPending = snapshotState.seededSearchPending === true;
+    acquired = snapshotState.acquired === true;
+    courseHistory = Array.isArray(snapshotState.courseHistory)
+      ? snapshotState.courseHistory
+          .filter(
+            (entry) =>
+              Number.isFinite(Number(entry?.lat)) &&
+              Number.isFinite(Number(entry?.lng)) &&
+              Number.isFinite(Number(entry?.timestamp)),
+          )
+          .slice(-COURSE_HISTORY_LIMIT)
+          .map((entry) => ({
+            lat: Number(entry.lat),
+            lng: Number(entry.lng),
+            timestamp: Number(entry.timestamp),
+            speed: Number.isFinite(Number(entry.speed)) ? Number(entry.speed) : null,
+          }))
+      : [];
+    wrongWaySince = Number.isFinite(Number(snapshotState.wrongWaySince))
+      ? Number(snapshotState.wrongWaySince)
+      : null;
+    acquiredAtMs = Number.isFinite(Number(snapshotState.acquiredAtMs))
+      ? Number(snapshotState.acquiredAtMs)
+      : null;
+    return true;
   }
 
   // Nearest segment whose progress range intersects [rangeMin, rangeMax]
@@ -216,6 +299,67 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     return null;
   }
 
+  // General direction of travel: bearing from the most recent fix at least
+  // COURSE_WINDOW_METERS away. Consecutive-fix displacement (courseDeg) is
+  // jitter-dominated at riding speed — GPS error per fix rivals the distance
+  // covered between fixes — so the wrong-way check needs this longer baseline.
+  function smoothedCourse(fix) {
+    if ((fix.speed ?? Infinity) < MIN_COURSE_SPEED_MPS) return null;
+    for (let i = courseHistory.length - 1; i >= 0; i--) {
+      if (getDistance(courseHistory[i], fix) >= COURSE_WINDOW_METERS) {
+        return computeBearing(courseHistory[i], fix);
+      }
+    }
+    return null;
+  }
+
+  // Mean of finite fix speeds over the last SPEED_WINDOW_MS (including the
+  // current fix): steady enough for a readout, responsive enough to feel live.
+  function smoothedSpeed(nowMs) {
+    const speeds = [];
+    for (let i = courseHistory.length - 1; i >= 0; i--) {
+      const entry = courseHistory[i];
+      if (nowMs - entry.timestamp > SPEED_WINDOW_MS) break;
+      if (Number.isFinite(entry.speed)) speeds.push(entry.speed);
+    }
+    if (speeds.length === 0) return null;
+    return speeds.reduce((sum, s) => sum + s, 0) / speeds.length;
+  }
+
+  function recordCourseFix(fix) {
+    courseHistory.push({
+      lat: fix.lat,
+      lng: fix.lng,
+      timestamp: fix.timestamp,
+      speed: Number.isFinite(fix.speed) ? fix.speed : null,
+    });
+    if (courseHistory.length > COURSE_HISTORY_LIMIT) courseHistory.shift();
+  }
+
+  // Wrong-way: the general direction must disagree with the route bearing by
+  // more than WRONG_WAY_DELTA_DEG, sustained for WRONG_WAY_CONFIRM_MS, before
+  // the rider is warned. Parallel paths and jitter never qualify; an actual
+  // turn-around does within a few seconds.
+  function updateWrongWay(fix, bearingToNextDeg, course) {
+    if (
+      acquiredAtMs !== null &&
+      fix.timestamp - acquiredAtMs < WRONG_WAY_ACQUISITION_GRACE_MS
+    ) {
+      wrongWaySince = null;
+      return false;
+    }
+    const delta =
+      course !== null && bearingToNextDeg !== null
+        ? bearingDelta(course, bearingToNextDeg)
+        : null;
+    if (delta === null || delta <= WRONG_WAY_DELTA_DEG) {
+      wrongWaySince = null;
+      return false;
+    }
+    if (wrongWaySince === null) wrongWaySince = fix.timestamp;
+    return fix.timestamp - wrongWaySince >= WRONG_WAY_CONFIRM_MS;
+  }
+
   function updateOffRoute(crossTrackMeters, enterThreshold, timestamp) {
     const exitThreshold = opts.offRouteExitMeters;
     if (offRouteState === "off") {
@@ -274,7 +418,14 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
         !seededSearchPending &&
         (best === null || best.crossTrackMeters > enterThreshold)
       ) {
-        best = findNearest(fix, null, null);
+        const globalBest = findNearest(fix, null, null);
+        const jumpMeters =
+          globalBest && Number.isFinite(lastProgressMeters)
+            ? Math.abs(globalBest.progressMeters - lastProgressMeters)
+            : 0;
+        if (!acquired || jumpMeters <= w * 4) {
+          best = globalBest;
+        }
       }
     }
     seededSearchPending = false;
@@ -286,9 +437,18 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       if (best && best.crossTrackMeters <= enterThreshold && withinSelectedStart) {
         acquired = true;
         lastProgressMeters = best.progressMeters;
+        // The approach leg's course says nothing about on-route direction —
+        // it regularly points against the route's first meters. Restart
+        // direction judgment from the acquisition point.
+        courseHistory = [];
+        wrongWaySince = null;
+        acquiredAtMs = fix.timestamp;
       } else {
         // Still approaching: do not advance progress or flag off-route.
+        const approachSmoothedCourse = smoothedCourse(fix);
         prevFix = fix;
+        recordCourseFix(fix);
+        const approachSmoothedSpeed = smoothedSpeed(fix.timestamp);
         const startBearing =
           geometry.length > 0 ? computeBearing(fix, geometry[0]) : null;
         return {
@@ -301,6 +461,8 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
           remainingMeters: totalMeters,
           bearingToNextDeg: null,
           courseDeg: riderCourse(fix),
+          smoothedCourseDeg: approachSmoothedCourse,
+          smoothedSpeedMps: approachSmoothedSpeed,
           headingAgreementDeg: null,
           wrongWay: false,
           distanceToRouteStart,
@@ -338,12 +500,14 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       courseDeg !== null && bearingToNextDeg !== null
         ? bearingDelta(courseDeg, bearingToNextDeg)
         : null;
-    const wrongWay =
-      headingAgreementDeg !== null && headingAgreementDeg > WRONG_WAY_DELTA_DEG;
+    const smoothedCourseDeg = smoothedCourse(fix);
+    const wrongWay = updateWrongWay(fix, bearingToNextDeg, smoothedCourseDeg);
 
     const guidanceBearingDeg = best ? computeBearing(fix, best.snapped) : null;
 
     prevFix = fix;
+    recordCourseFix(fix);
+    const smoothedSpeedMps = smoothedSpeed(fix.timestamp);
 
     return {
       onRoute: !offRoute,
@@ -355,6 +519,8 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       remainingMeters: Math.max(0, totalMeters - progressMeters),
       bearingToNextDeg,
       courseDeg,
+      smoothedCourseDeg,
+      smoothedSpeedMps,
       headingAgreementDeg,
       wrongWay,
       distanceToRouteStart,
@@ -368,5 +534,5 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     };
   }
 
-  return { update, reset, seed };
+  return { update, reset, seed, snapshot, restore };
 }

@@ -3,7 +3,7 @@ import {
   haversineMeters,
   pointAtFraction,
   projectPointToRouteCandidates,
-} from "./routeGeometry.js";
+} from "../../../packages/core/src/domain/routeGeometryMath.js";
 
 const DEFAULT_INITIAL_TIE_METERS = 15;
 const DEFAULT_MAX_FORWARD_JUMP_SLACK_METERS = 120;

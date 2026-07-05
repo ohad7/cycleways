@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
+import {
+  getNavigationPresentation,
+  roadClassChipLabel,
+} from "@cycleways/core/navigation/navigationPresentation.js";
 
 // Navigating, no active maneuver cue -> "continue on route".
 {
@@ -31,6 +34,33 @@ import { getNavigationPresentation } from "@cycleways/core/navigation/navigation
   assert.equal(p.cueText, "פנה שמאלה");
   assert.equal(p.cueDistanceText, "120 מ׳");
   assert.equal(p.cueIcon, "arrow-back-outline");
+}
+
+// Bend cue (sharp curve, no junction): עיקול, not פנה.
+{
+  const right = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "bend", direction: "right" },
+      phase: "preview",
+      distanceToCueMeters: 90,
+    },
+    progress: { remainingMeters: 700 },
+  });
+  assert.equal(right.cueText, "עיקול ימינה");
+  assert.equal(right.cueIcon, "arrow-forward-outline");
+  const left = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "bend", direction: "left" },
+      phase: "final",
+      distanceToCueMeters: 25,
+    },
+    progress: { remainingMeters: 700 },
+  });
+  assert.equal(left.cueText, "עיקול שמאלה");
 }
 
 // Arrival cue.
@@ -72,6 +102,21 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(paused.statusText, "מושהה");
 }
 
+// Paused sessions can retain an old activeCue; status mode must win.
+{
+  const paused = getNavigationPresentation({
+    status: "paused",
+    activeCue: {
+      cue: { type: "turn", direction: "left" },
+      phase: "preview",
+      distanceToCueMeters: 90,
+    },
+    progress: { hasAcquiredRoute: true, remainingMeters: 500 },
+  });
+  assert.equal(paused.cardMode, "status");
+  assert.equal(paused.statusText, "מושהה");
+}
+
 // Approach: banner label + distance, disclaimer, external target, join-nearest.
 {
   const near = getNavigationPresentation({
@@ -80,18 +125,18 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     approach: {
       target: { point: { lat: 32, lng: 35 }, mode: "start" },
       distanceToRouteMeters: 600,
-      choices: { nearest: { point: {} }, skipMeters: 1500 },
+      suggestionGeometry: [{ lat: 31.99, lng: 35 }, { lat: 32, lng: 35 }],
+      suggestionDistanceMeters: 900,
     },
     progress: { guidanceDistanceMeters: 600, remainingMeters: 14000 },
   });
   assert.equal(near.showApproach, true);
   assert.equal(near.tier, "near");
   assert.equal(near.destinationLabel, "תחילת המסלול");
-  assert.match(near.approachDistanceShort, /מ׳/);
+  assert.equal(near.approachDistanceShort, "900 מ׳");
+  assert.equal(near.approachDistanceSource, "connector");
   assert.equal(near.disclaimerText, "ניווט מחוץ לרשת CycleWays");
   assert.deepEqual(near.externalNavTarget, { lat: 32, lng: 35 });
-  assert.equal(near.canJoinNearest, true);
-  assert.ok(near.nearestSkipText.includes("דילוג"));
   // Target is due north of the rider → bearing ≈ 0.
   assert.ok(Number.isFinite(near.approachBearingDeg));
   assert.ok(near.approachBearingDeg < 1 || near.approachBearingDeg > 359);
@@ -102,18 +147,13 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(near.showJoinPrompt, undefined);
 }
 
-// Destination labels reflect the target mode.
+// Destination labels reflect supported target modes.
 {
-  const custom = getNavigationPresentation({
+  const rejoin = getNavigationPresentation({
     status: "approaching",
-    approach: { target: { point: { lat: 1, lng: 1 }, mode: "custom" }, distanceToRouteMeters: 300 },
+    approach: { target: { point: { lat: 1, lng: 1 }, mode: "rejoin" }, distanceToRouteMeters: 300 },
   });
-  assert.equal(custom.destinationLabel, "נקודה שנבחרה");
-  const nearest = getNavigationPresentation({
-    status: "approaching",
-    approach: { target: { point: { lat: 1, lng: 1 }, mode: "nearest" }, distanceToRouteMeters: 300 },
-  });
-  assert.equal(nearest.destinationLabel, "נקודה קרובה במסלול");
+  assert.equal(rejoin.destinationLabel, "חזרה למסלול");
 }
 
 // On-route: remaining distance shows; no approach block.
@@ -137,7 +177,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     },
   });
   assert.equal(far.tier, "far");
-  assert.equal(far.canJoinNearest, false);
+  assert.equal(far.approachDistanceSource, "beeline");
 }
 
 // --- context line ---
@@ -152,6 +192,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     },
   });
   assert.equal(p.showContext, true);
+  assert.equal(p.currentRoadText, "שביל הירקון");
   assert.match(p.contextText, /שביל הירקון/);
   assert.match(p.contextText, /גשר איילון/);
 }
@@ -162,6 +203,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: true, currentSegmentName: null, currentOnNetwork: false, currentRouteClass: "track", nextSegmentName: "גשר איילון", distanceToNextSegmentMeters: 1200, wrongWay: false },
   });
   assert.equal(p.currentOnNetwork ?? false, false);
+  assert.equal(p.currentRoadText, "דרך עפר");
   assert.ok(p.contextText.length > 0, "off-network still shows context");
   assert.match(p.contextText, /בדרך עפר/);
   assert.doesNotMatch(p.contextText, /local roads/);
@@ -175,6 +217,29 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(p.showGuidance, true);
   assert.equal(p.guidanceArrowDeg, 90, "arrow relative to course");
   assert.match(p.guidanceText, /420|0\.4/);
+}
+// --- stopped approach: no movement-course arrow without a course ---
+{
+  const p = getNavigationPresentation({
+    status: "approaching",
+    progress: { hasAcquiredRoute: false, guidanceDistanceMeters: 420, guidanceBearingDeg: 90, courseDeg: null, wrongWay: false },
+  });
+  assert.equal(p.guidanceArrowDeg, null);
+}
+// --- guidance arrow prefers the smoothed course over the noisy per-fix one ---
+{
+  const p = getNavigationPresentation({
+    status: "approaching",
+    progress: {
+      hasAcquiredRoute: false,
+      guidanceDistanceMeters: 420,
+      guidanceBearingDeg: 90,
+      courseDeg: 250, // one jittery fix pointing the wrong way
+      smoothedCourseDeg: 60, // actual direction of travel
+      wrongWay: false,
+    },
+  });
+  assert.equal(p.guidanceArrowDeg, 30, "arrow relative to the smoothed course");
 }
 // --- approaching status text when guidance distance is absent ---
 {
@@ -203,7 +268,106 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: true, wrongWay: true, remainingMeters: 500 },
   });
   assert.equal(p.wrongWay, true);
-  assert.match(p.wrongWayText, /כיוון הלא נכון/);
+  assert.equal(p.wrongWayText, "המסלול בכיוון ההפוך - הסתובבו");
+}
+
+// --- cardMode / chip / speedText / arrivalSummary ------------------------
+{
+  const riding = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "turn", direction: "left", ontoSegmentName: "שביל הצפון" },
+      phase: "preview",
+      distanceToCueMeters: 100,
+    },
+    latestFix: { timestamp: 600000 },
+    rideStartTimestamp: 0,
+    progress: {
+      hasAcquiredRoute: true,
+      remainingMeters: 800,
+      progressMeters: 400,
+      currentSegmentName: "דרך נוף הירדן",
+      currentRouteClass: "track",
+      smoothedSpeedMps: 4.87,
+      wrongWay: false,
+    },
+  });
+  assert.equal(riding.cardMode, "cue");
+  assert.equal(riding.cuePrimaryText, "פנה שמאלה");
+  assert.equal(riding.cueSecondaryText, "אל שביל הצפון");
+  assert.deepEqual(riding.chip, { kind: "segment", text: "דרך נוף הירדן · דרך עפר" });
+  assert.equal(riding.speedText, "17.5 קמ״ש");
+  assert.equal(riding.arrivalSummary, null);
+
+  const cruising = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: null,
+    progress: {
+      hasAcquiredRoute: true,
+      remainingMeters: 800,
+      progressMeters: 400,
+      currentSegmentName: "דרך נוף הירדן",
+      currentRouteClass: "track",
+      smoothedSpeedMps: 0.4,
+      wrongWay: false,
+    },
+  });
+  assert.equal(cruising.cardMode, "status");
+  assert.equal(cruising.chip, null, "status pill shows the name; no duplicate chip");
+  assert.equal(cruising.speedText, "", "standing still shows no speed");
+
+  const offRoute = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    progress: { hasAcquiredRoute: true, remainingMeters: 8, wrongWay: false },
+  });
+  assert.equal(offRoute.cardMode, "off-route");
+  assert.deepEqual(offRoute.chip, { kind: "rejoin", text: "חזרה למסלול" });
+
+  const approaching = getNavigationPresentation({
+    status: "approaching",
+    approach: {
+      suggestionGeometry: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }],
+      suggestionStatus: "ready",
+      distanceToRouteMeters: 500,
+    },
+    progress: { hasAcquiredRoute: false, wrongWay: false },
+  });
+  assert.equal(approaching.cardMode, "approach");
+  assert.deepEqual(approaching.chip, { kind: "approach", text: "המסלול המוצע" });
+
+  const arrived = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    latestFix: { timestamp: 4320000 }, // 72 min after start
+    rideStartTimestamp: 0,
+    progress: {
+      hasAcquiredRoute: true,
+      remainingMeters: 8,
+      progressMeters: 14800,
+      smoothedSpeedMps: 3,
+      wrongWay: false,
+    },
+  });
+  assert.equal(arrived.cardMode, "arrived");
+  assert.equal(arrived.arrivalSummary.distanceText, "14.8 ק״מ");
+  assert.equal(arrived.arrivalSummary.elapsedText, "1:12");
+  assert.equal(arrived.arrivalSummary.avgSpeedText, "12.3 קמ״ש");
+}
+
+// --- roadClassChipLabel: bare noun form ----------------------------------
+{
+  assert.equal(roadClassChipLabel("cycleway"), "שביל אופניים");
+  assert.equal(roadClassChipLabel("track"), "דרך עפר");
+  assert.equal(roadClassChipLabel("path_track"), "דרך עפר");
+  assert.equal(roadClassChipLabel("path"), "שביל");
+  assert.equal(roadClassChipLabel("footway"), "מדרכה");
+  assert.equal(roadClassChipLabel("local_road"), "כביש");
+  assert.equal(roadClassChipLabel("road"), "כביש");
+  assert.equal(roadClassChipLabel("residential"), "כביש");
+  assert.equal(roadClassChipLabel("anything-else"), null);
 }
 
 console.log("navigation presentation tests passed");

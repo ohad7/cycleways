@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import BackButton from "./BackButton.jsx";
-import { startWebServer } from "../webServer.js";
+import { restartWebServer, startWebServer } from "../webServer.js";
 import { palette } from "../planner/theme.js";
 
 // Renders the real mobile-web route page (`/routes/<slug>?app=1`, chrome hidden)
 // inside a WebView so the rich synced-video experience is exactly the web's.
 // Injects the app-embed config (window.__CW_EMBED__) and bridges the page's
 // app actions (Navigate / open-to-edit, posted via window.ReactNativeWebView)
-// back to native. `baseUrl` lets a caller point at a local static server later;
-// it defaults to production.
-const DEFAULT_SITE = "https://www.cycleways.app";
+// back to native. `baseUrl` lets tests/dev harnesses point at a custom local
+// server, but production always uses the bundled static server.
 const READY_FALLBACK_MS = 2000;
 
 // Runs before the page scripts: declares this is an app embed + which actions to
@@ -36,18 +41,24 @@ function editTokenFromUrl(url, base) {
 
 export default function RouteDetailWeb({
   slug,
+  openId,
   baseUrl,
   onBack,
   onDownload,
   onOpenEditor,
   onNavigate,
   onError,
+  onGestureLockChange,
 }) {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [webViewRevision, setWebViewRevision] = useState(0);
   const readyFallbackRef = useRef(null);
-  // Prefer the bundled local static server (fully offline); fall back to the
-  // production site if it can't start. An explicit baseUrl prop overrides both.
+  const retryingRef = useRef(false);
+  const autoRetriedRef = useRef(false);
+  // Prefer the bundled local static server (fully offline). An explicit baseUrl
+  // prop overrides it for tests/dev harnesses only.
   const [resolvedBase, setResolvedBase] = useState(baseUrl || null);
 
   const clearReadyFallback = useCallback(() => {
@@ -60,27 +71,81 @@ export default function RouteDetailWeb({
   const finishLoading = useCallback(() => {
     clearReadyFallback();
     setLoading(false);
+    setLoadError(null);
   }, [clearReadyFallback]);
 
   useEffect(() => clearReadyFallback, [clearReadyFallback]);
 
+  useEffect(
+    () => () => {
+      onGestureLockChange?.(false);
+    },
+    [onGestureLockChange],
+  );
+
   useEffect(() => {
     clearReadyFallback();
     setLoading(true);
-  }, [clearReadyFallback, resolvedBase, slug]);
+    setLoadError(null);
+    autoRetriedRef.current = false;
+    onGestureLockChange?.(false);
+  }, [clearReadyFallback, onGestureLockChange, openId, slug]);
 
   useEffect(() => {
-    if (baseUrl) return undefined;
+    if (baseUrl) {
+      setResolvedBase(baseUrl);
+      return undefined;
+    }
     let mounted = true;
     startWebServer()
       .then((origin) => mounted && setResolvedBase(origin))
-      .catch(() => mounted && setResolvedBase(DEFAULT_SITE));
+      .catch((error) => {
+        if (!mounted) return;
+        setLoadError(error);
+        onError?.(error);
+      });
     return () => {
       mounted = false;
     };
-  }, [baseUrl]);
+  }, [baseUrl, onError, openId, slug]);
 
-  if (!resolvedBase) {
+  const retryLocalServer = useCallback(async () => {
+    if (retryingRef.current) return;
+    retryingRef.current = true;
+    clearReadyFallback();
+    setLoading(true);
+    setLoadError(null);
+    onGestureLockChange?.(false);
+    try {
+      const origin = baseUrl ? baseUrl : await restartWebServer();
+      setResolvedBase(origin);
+      setWebViewRevision((revision) => revision + 1);
+    } catch (error) {
+      setLoadError(error);
+      onError?.(error);
+    } finally {
+      retryingRef.current = false;
+    }
+  }, [baseUrl, clearReadyFallback, onError, onGestureLockChange]);
+
+  const handlePageLoadFailure = useCallback(
+    (error) => {
+      if (!baseUrl && !autoRetriedRef.current) {
+        autoRetriedRef.current = true;
+        void retryLocalServer();
+        return;
+      }
+      clearReadyFallback();
+      setLoading(false);
+      const nextError =
+        error instanceof Error ? error : new Error("Route WebView failed to load");
+      setLoadError(nextError);
+      onError?.(nextError);
+    },
+    [baseUrl, clearReadyFallback, onError, retryLocalServer],
+  );
+
+  if (!resolvedBase && !loadError) {
     return (
       <View style={[styles.fill, styles.loading]}>
         <ActivityIndicator size="large" color={palette.forest} />
@@ -89,7 +154,33 @@ export default function RouteDetailWeb({
     );
   }
 
+  if (loadError) {
+    return (
+      <View style={[styles.fill, styles.error, { paddingTop: insets.top }]}>
+        <BackButton onPress={onBack} />
+        <View style={styles.errorPanel}>
+          <Text style={styles.errorTitle}>לא הצלחנו לטעון את סיפור המסלול.</Text>
+          <Text style={styles.errorBody}>
+            אפשר לנסות להפעיל מחדש את עמוד המסלול המקומי.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="נסה שוב"
+            onPress={retryLocalServer}
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed ? styles.retryButtonPressed : null,
+            ]}
+          >
+            <Text style={styles.retryText}>נסה שוב</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   const uri = `${resolvedBase}/routes/${encodeURIComponent(slug)}?app=1`;
+  const webViewKey = `${slug}:${resolvedBase}:${openId ?? "initial"}:${webViewRevision}`;
 
   const handleMessage = (event) => {
     let msg = null;
@@ -100,6 +191,9 @@ export default function RouteDetailWeb({
     }
     const token = msg?.route || null;
     if (msg?.type === "ready") finishLoading();
+    else if (msg?.type === "gesture-lock") {
+      onGestureLockChange?.(Boolean(msg?.locked));
+    }
     else if (msg?.type === "navigate") onNavigate?.(token, msg?.slug);
     else if (msg?.type === "edit") onOpenEditor?.(token, msg?.slug);
     else if (msg?.type === "download") onDownload?.(msg?.slug);
@@ -109,6 +203,7 @@ export default function RouteDetailWeb({
   return (
     <View style={[styles.fill, { paddingTop: insets.top }]}>
       <WebView
+        key={webViewKey}
         source={{ uri }}
         injectedJavaScriptBeforeContentLoaded={EMBED_BOOTSTRAP}
         onMessage={handleMessage}
@@ -118,12 +213,12 @@ export default function RouteDetailWeb({
           clearReadyFallback();
           readyFallbackRef.current = setTimeout(finishLoading, READY_FALLBACK_MS);
         }}
-        onError={() => onError?.()}
+        onError={(e) => handlePageLoadFailure(e?.nativeEvent)}
         onHttpError={(e) => {
           // Only treat hard failures (the page itself 4xx/5xx) as fatal; ignore
           // sub-resource errors.
           const ev = e?.nativeEvent;
-          if (ev?.url === uri && ev?.statusCode >= 400) onError?.();
+          if (ev?.url === uri && ev?.statusCode >= 400) handlePageLoadFailure(ev);
         }}
         onShouldStartLoadWithRequest={(req) => {
           // Fallback for the non-embedded edit link; embedded uses postMessage.
@@ -149,6 +244,45 @@ export default function RouteDetailWeb({
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: palette.paper },
+  error: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  errorPanel: {
+    alignItems: "center",
+    gap: 12,
+    maxWidth: 360,
+  },
+  errorTitle: {
+    color: palette.ink,
+    fontSize: 20,
+    fontWeight: "900",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  errorBody: {
+    color: palette.muted,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  retryButton: {
+    backgroundColor: palette.forest,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  retryButtonPressed: {
+    opacity: 0.82,
+  },
+  retryText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "900",
+    writingDirection: "rtl",
+  },
   loading: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",

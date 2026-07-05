@@ -7,7 +7,6 @@
 import { getDistance } from "../utils/distance.js";
 import {
   approachTargetChoices,
-  projectOntoRoute,
   selectConnectorTarget,
 } from "./connectorTargeting.js";
 import { buildRouteCues, selectActiveCue } from "./navigationCues.js";
@@ -21,8 +20,6 @@ export const NAV_ACTIONS = {
   LOCATION: "LOCATION",
   CONNECTOR_READY: "CONNECTOR_READY",
   CONNECTOR_FAILED: "CONNECTOR_FAILED",
-  SET_APPROACH_TARGET: "SET_APPROACH_TARGET",
-  SET_APPROACH_CUSTOM_TARGET: "SET_APPROACH_CUSTOM_TARGET",
   PAUSE: "PAUSE",
   RESUME: "RESUME",
   RECENTER: "RECENTER",
@@ -33,6 +30,7 @@ export const NAV_ACTIONS = {
 
 const ACTIVE = new Set(["navigating", "off-route", "approaching"]);
 const REQUEST_MIN_MOVE_M = 200;
+const REJOIN_REQUEST_MIN_MOVE_M = 50;
 
 function emptyApproach() {
   return {
@@ -40,6 +38,7 @@ function emptyApproach() {
     choices: null,
     suggestionGeometry: null,
     suggestionStatus: "idle",
+    suggestionDistanceMeters: null,
     distanceToRouteMeters: null,
   };
 }
@@ -51,13 +50,27 @@ function fixPoint(fix) {
 export function createNavigationSession(navigationRoute, options = {}) {
   const mainTracker = createRouteProgressTracker(navigationRoute, options);
   const mainCues = buildRouteCues(navigationRoute);
+  const restored = options.snapshot && options.snapshot.version === 1
+    ? options.snapshot
+    : null;
 
-  let mainCueKey = null;
-  let wasOffRoute = false;
-  let lastConfirmedProgressMeters = 0;
-  let lastRequestPos = null;
-  let requestSeq = 0;
-  let prePauseStatus = "navigating";
+  let mainCueKey = restored?.mainCueKey ?? null;
+  let wasOffRoute = restored?.wasOffRoute === true;
+  let lastConfirmedProgressMeters = Number.isFinite(
+    Number(restored?.lastConfirmedProgressMeters),
+  )
+    ? Number(restored.lastConfirmedProgressMeters)
+    : 0;
+  let lastRequestPos = restored?.lastRequestPos ?? null;
+  let connectorRequestAttempt = Number.isFinite(
+    Number(restored?.connectorRequestAttempt),
+  )
+    ? Number(restored.connectorRequestAttempt)
+    : 0;
+  let requestSeq = Number.isFinite(Number(restored?.requestSeq))
+    ? Number(restored.requestSeq)
+    : 0;
+  let prePauseStatus = restored?.prePauseStatus || "navigating";
 
   let state = {
     status: "idle",
@@ -72,9 +85,18 @@ export function createNavigationSession(navigationRoute, options = {}) {
     latestFix: null,
     approach: emptyApproach(),
     routeRequest: null,
+    connectorResult: null,
     error: null,
     justAcquired: false,
+    rideStartTimestamp: null,
+    ...(restored?.state || {}),
+    route: navigationRoute,
+    cueEvent: null,
   };
+
+  if (restored?.tracker) {
+    mainTracker.restore(restored.tracker);
+  }
 
   function set(patch) {
     state = { ...state, ...patch };
@@ -83,35 +105,52 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
   // Single best-effort request gate: fire the first request freely, then only
   // again once the rider has moved a meaningful distance since the last one.
-  function shouldRequest(fix) {
+  function shouldRequest(fix, minMoveMeters = REQUEST_MIN_MOVE_M) {
     if (lastRequestPos === null) return true;
-    return getDistance(lastRequestPos, fix) >= REQUEST_MIN_MOVE_M;
+    return getDistance(lastRequestPos, fix) >= minMoveMeters;
   }
 
   function suggestionRequest(fix, target) {
     requestSeq += 1;
+    connectorRequestAttempt += 1;
     lastRequestPos = fixPoint(fix);
     return {
       requestId: requestSeq,
       from: fixPoint(fix),
       to: target.point,
+      targetMode: target.mode || null,
+      targetProgressMeters: Number.isFinite(Number(target.mainProgressMeters))
+        ? Number(target.mainProgressMeters)
+        : null,
+      attempt: connectorRequestAttempt,
+      isRetry: connectorRequestAttempt > 1,
     };
   }
 
-  // Build the approach patch for an explicit target change (start / nearest /
-  // custom). Re-arms the request gate so the next LOCATION recomputes, but KEEPS
-  // the current suggestion visible until the replacement is ready (no blink).
-  // The stale routeRequest is harmless: CONNECTOR_READY/CONNECTOR_FAILED require
-  // suggestionStatus === "requesting", which we reset to "idle" here.
-  function retargetApproach(picked, mode) {
-    lastRequestPos = null;
+  function canRequestSuggestion(
+    fix,
+    {
+      allowReadyRefresh = false,
+      minMoveMeters = REQUEST_MIN_MOVE_M,
+    } = {},
+  ) {
+    const status = state.approach.suggestionStatus;
+    if (status === "requesting") return false;
+    if (status === "ready" && !allowReadyRefresh) return false;
+    return shouldRequest(fix, minMoveMeters);
+  }
+
+  function failedSuggestionPatch() {
+    const keepGeometry =
+      Array.isArray(state.approach.suggestionGeometry) &&
+      state.approach.suggestionGeometry.length >= 2;
     return {
       ...state.approach,
-      target: { ...picked, mode },
-      suggestionStatus: "idle",
-      distanceToRouteMeters: state.latestFix
-        ? getDistance(state.latestFix, picked.point)
-        : state.approach.distanceToRouteMeters,
+      suggestionStatus: "failed",
+      suggestionGeometry: keepGeometry ? state.approach.suggestionGeometry : null,
+      suggestionDistanceMeters: keepGeometry
+        ? state.approach.suggestionDistanceMeters
+        : null,
     };
   }
 
@@ -153,20 +192,26 @@ export function createNavigationSession(navigationRoute, options = {}) {
         wasOffRoute = false;
         lastConfirmedProgressMeters = 0;
         lastRequestPos = null;
+        connectorRequestAttempt = 0;
         return set({
           status: "navigating",
           backgroundLocation: action.background === true,
           foregroundOnly: action.background !== true,
           approach: emptyApproach(),
           routeRequest: null,
+          connectorResult: null,
           error: null,
           justAcquired: false,
+          rideStartTimestamp: null,
         });
 
       case NAV_ACTIONS.LOCATION: {
         if (!ACTIVE.has(state.status)) return state;
         const latestFix = { ...action.fix };
         state = { ...state, latestFix };
+        if (state.rideStartTimestamp === null) {
+          state = { ...state, rideStartTimestamp: action.fix.timestamp };
+        }
         const mainProgress = mainTracker.update(action.fix);
 
         // Not yet on the route: stay in `approaching`, keep a live straight-line
@@ -188,8 +233,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           };
           if (
             target &&
-            state.approach.suggestionStatus === "idle" &&
-            shouldRequest(action.fix)
+            canRequestSuggestion(action.fix)
           ) {
             return set({
               status: "approaching",
@@ -204,6 +248,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
                 // Keep the prior suggestion visible until the new one is ready.
               },
               routeRequest: suggestionRequest(action.fix, target),
+              connectorResult: null,
             });
           }
           return set({
@@ -224,36 +269,42 @@ export function createNavigationSession(navigationRoute, options = {}) {
         if (offRoute) {
           const firstOffRoute = !wasOffRoute;
           wasOffRoute = true;
+          const rejoin = selectConnectorTarget(navigationRoute, action.fix, {
+            mode: "rejoin",
+            lastConfirmedProgressMeters,
+          });
+          const nextTarget = rejoin ? { ...rejoin, mode: "rejoin" } : null;
           if (
-            state.approach.suggestionStatus === "idle" &&
-            shouldRequest(action.fix)
+            nextTarget &&
+            canRequestSuggestion(action.fix, {
+              allowReadyRefresh: true,
+              minMoveMeters: REJOIN_REQUEST_MIN_MOVE_M,
+            })
           ) {
-            const rejoin = selectConnectorTarget(navigationRoute, action.fix, {
-              mode: "rejoin",
-              lastConfirmedProgressMeters,
+            return set({
+              status: "off-route",
+              progress: mainProgress,
+              activeCue: null,
+              offRoute: true,
+              cueEvent: firstOffRoute ? { kind: "off-route" } : null,
+              justAcquired: false,
+              approach: {
+                ...state.approach,
+                target: nextTarget,
+                distanceToRouteMeters: getDistance(action.fix, nextTarget.point),
+                suggestionStatus: "requesting",
+                // Keep the prior suggestion visible until the new one is ready.
+              },
+              routeRequest: suggestionRequest(action.fix, nextTarget),
+              connectorResult: null,
             });
-            if (rejoin) {
-              const target = { ...rejoin, mode: "rejoin" };
-              return set({
-                status: "off-route",
-                progress: mainProgress,
-                activeCue: null,
-                offRoute: true,
-                cueEvent: firstOffRoute ? { kind: "off-route" } : null,
-                justAcquired: false,
-                approach: {
-                  ...state.approach,
-                  target,
-                  distanceToRouteMeters: getDistance(action.fix, target.point),
-                  suggestionStatus: "requesting",
-                  // Keep the prior suggestion visible until the new one is ready.
-                },
-                routeRequest: suggestionRequest(action.fix, target),
-              });
-            }
           }
-          const distanceToRouteMeters = state.approach.target
-            ? getDistance(action.fix, state.approach.target.point)
+          const target =
+            state.approach.suggestionStatus === "requesting"
+              ? state.approach.target || nextTarget
+              : state.approach.target || nextTarget;
+          const distanceToRouteMeters = target
+            ? getDistance(action.fix, target.point)
             : state.approach.distanceToRouteMeters;
           return set({
             status: "off-route",
@@ -262,12 +313,13 @@ export function createNavigationSession(navigationRoute, options = {}) {
             offRoute: true,
             cueEvent: firstOffRoute ? { kind: "off-route" } : null,
             justAcquired: false,
-            approach: { ...state.approach, distanceToRouteMeters },
+            approach: { ...state.approach, target, distanceToRouteMeters },
           });
         }
 
         // Acquired and on-route: the only handoff into `navigating`. Clear the
         // approach slot and behave exactly as Phase A.
+        const recoveredFromOffRoute = wasOffRoute;
         lastConfirmedProgressMeters = mainProgress.progressMeters;
         const acquiredApproach =
           state.approach.target || state.approach.suggestionStatus !== "idle";
@@ -277,9 +329,12 @@ export function createNavigationSession(navigationRoute, options = {}) {
               state.progress?.hasAcquiredRoute !== true),
         );
         if (acquiredApproach) lastRequestPos = null;
+        if (acquiredApproach) connectorRequestAttempt = 0;
         const activeCue = selectActiveCue(mainCues, mainProgress.progressMeters);
-        const cueEvent = enteredEffectiveRoute
-          ? { kind: "acquired" }
+        const cueEvent = recoveredFromOffRoute
+          ? { kind: "acquired", acquisition: "reacquired" }
+          : enteredEffectiveRoute
+          ? { kind: "acquired", acquisition: "initial" }
           : cueFor(activeCue);
         wasOffRoute = false;
         return set({
@@ -288,9 +343,10 @@ export function createNavigationSession(navigationRoute, options = {}) {
           activeCue,
           offRoute: false,
           cueEvent,
-          justAcquired: enteredEffectiveRoute,
+          justAcquired: enteredEffectiveRoute || recoveredFromOffRoute,
           approach: acquiredApproach ? emptyApproach() : state.approach,
           routeRequest: null,
+          connectorResult: null,
         });
       }
 
@@ -305,18 +361,47 @@ export function createNavigationSession(navigationRoute, options = {}) {
         const geometry = buildNavigationGeometry(action.geometry);
         if (geometry.length < 2) {
           return set({
-            approach: {
-              ...state.approach,
-              suggestionStatus: "failed",
-              suggestionGeometry: null,
+            approach: failedSuggestionPatch(),
+            routeRequest: null,
+            connectorResult: {
+              requestId: action.requestId,
+              result: "failed",
+              reason: "invalid-geometry",
+              attempt: state.routeRequest?.attempt ?? null,
+              isRetry: state.routeRequest?.isRetry === true,
+              targetMode: state.routeRequest?.targetMode ?? null,
+              durationMs: Number.isFinite(Number(action.durationMs))
+                ? Number(action.durationMs)
+                : null,
             },
           });
         }
+        const distanceMeters = Number(action.distanceMeters);
         return set({
           approach: {
             ...state.approach,
             suggestionStatus: "ready",
             suggestionGeometry: geometry,
+            suggestionDistanceMeters:
+              Number.isFinite(distanceMeters) && distanceMeters > 0
+                ? distanceMeters
+                : null,
+          },
+          routeRequest: null,
+          connectorResult: {
+            requestId: action.requestId,
+            result: "ready",
+            reason: null,
+            attempt: state.routeRequest?.attempt ?? null,
+            isRetry: state.routeRequest?.isRetry === true,
+            targetMode: state.routeRequest?.targetMode ?? null,
+            durationMs: Number.isFinite(Number(action.durationMs))
+              ? Number(action.durationMs)
+              : null,
+            distanceMeters:
+              Number.isFinite(distanceMeters) && distanceMeters > 0
+                ? distanceMeters
+                : null,
           },
         });
       }
@@ -330,37 +415,20 @@ export function createNavigationSession(navigationRoute, options = {}) {
           return state;
         }
         return set({
-          approach: {
-            ...state.approach,
-            suggestionStatus: "failed",
-            suggestionGeometry: null,
+          approach: failedSuggestionPatch(),
+          routeRequest: null,
+          connectorResult: {
+            requestId: action.requestId,
+            result: "failed",
+            reason: action.reason || "unknown",
+            attempt: state.routeRequest?.attempt ?? null,
+            isRetry: state.routeRequest?.isRetry === true,
+            targetMode: state.routeRequest?.targetMode ?? null,
+            durationMs: Number.isFinite(Number(action.durationMs))
+              ? Number(action.durationMs)
+              : null,
           },
         });
-
-      case NAV_ACTIONS.SET_APPROACH_TARGET: {
-        const choices = state.approach.choices;
-        if (!choices) return state;
-        const picked =
-          action.choice === "nearest" ? choices.nearest : choices.start;
-        if (!picked) return state;
-        return set({
-          approach: retargetApproach(picked, action.choice === "nearest" ? "nearest" : "start"),
-        });
-      }
-
-      case NAV_ACTIONS.SET_APPROACH_CUSTOM_TARGET: {
-        const geometry = Array.isArray(navigationRoute?.geometry)
-          ? navigationRoute.geometry
-          : [];
-        const projection = projectOntoRoute(geometry, action.point);
-        if (!projection) return state;
-        return set({
-          approach: retargetApproach(
-            { point: projection.point, mainProgressMeters: projection.progressMeters },
-            "custom",
-          ),
-        });
-      }
 
       case NAV_ACTIONS.PERMISSION_DENIED:
         return set({
@@ -386,20 +454,24 @@ export function createNavigationSession(navigationRoute, options = {}) {
       case NAV_ACTIONS.STOP:
         requestSeq += 1;
         lastRequestPos = null;
+        connectorRequestAttempt = 0;
         return set({
           status: "ended",
           approach: emptyApproach(),
           routeRequest: null,
+          connectorResult: null,
           justAcquired: false,
         });
 
       case NAV_ACTIONS.ERROR:
         requestSeq += 1;
         lastRequestPos = null;
+        connectorRequestAttempt = 0;
         return set({
           status: "error",
           approach: emptyApproach(),
           routeRequest: null,
+          connectorResult: null,
           error: action.message || "navigation-error",
           justAcquired: false,
         });
@@ -411,6 +483,18 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
   return {
     getState: () => state,
+    snapshot: () => ({
+      version: 1,
+      state: { ...state, cueEvent: null },
+      tracker: mainTracker.snapshot(),
+      mainCueKey,
+      wasOffRoute,
+      lastConfirmedProgressMeters,
+      lastRequestPos,
+      connectorRequestAttempt,
+      requestSeq,
+      prePauseStatus,
+    }),
     dispatch,
   };
 }

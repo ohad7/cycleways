@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { getJsonAsset } from "@cycleways/core/platform/assets.js";
+// Explicit .native import: this app-level file lives outside packages/core/src,
+// so Metro's core-only platform remap (metro.config.js) does not swap assets.js
+// → assets.native.js here. The web version fetches over the network instead of
+// reading the bundled asset, so places.json silently fails to load offline.
+import { getJsonAsset } from "@cycleways/core/platform/assets.native.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
 import {
   routePassesThroughPlaceIds,
@@ -207,7 +211,13 @@ export default function DiscoverPanel({
               pressed ? styles.chipPressed : null,
             ]}
           >
-            <Text style={styles.filterToggleText}>סינון</Text>
+            <Text
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.1}
+              style={styles.filterToggleText}
+            >
+              סינון
+            </Text>
             {activeFilterCount > 0 ? (
               <View style={styles.filterCountBadge}>
                 <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
@@ -314,7 +324,11 @@ function Chip({ label, active, onPress, icon = false, variant = "default" }) {
       ]}
     >
       {icon ? <Text style={styles.chipIcon}>📍</Text> : null}
-      <Text style={[intent ? styles.intentChipText : styles.chipText, active ? styles.chipTextActive : null]}>
+      <Text
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.1}
+        style={[intent ? styles.intentChipText : styles.chipText, active ? styles.chipTextActive : null]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -479,18 +493,17 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  // Tightened so the intent chips + "near me" + "סינון" fit on one line on
-  // most phone widths (see plans discussion — shrink-to-fit over wrapping).
   intentChips: {
     flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: 6,
+    flexWrap: "nowrap",
+    gap: 4,
   },
   intentChip: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    flexShrink: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -498,16 +511,17 @@ const styles = StyleSheet.create({
   },
   intentChipText: {
     color: palette.ink,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     writingDirection: "rtl",
   },
   filterToggle: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    flexShrink: 0,
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -519,15 +533,15 @@ const styles = StyleSheet.create({
   },
   filterToggleText: {
     color: palette.ink,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     writingDirection: "rtl",
   },
-  filterChevron: { color: palette.muted, fontSize: 11 },
+  filterChevron: { color: palette.muted, fontSize: 10 },
   filterCountBadge: {
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 5,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
     borderRadius: radius.pill,
     backgroundColor: palette.forest,
     alignItems: "center",

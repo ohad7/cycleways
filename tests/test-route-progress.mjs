@@ -205,6 +205,51 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
   );
 }
 
+// --- Out-and-back: off-route drift near another leg must not jump progress ---
+{
+  const outAndBack = navigationRouteFromRouteState(
+    {
+      points: [
+        { id: "start", lat: 33.1, lng: 35.6 },
+        { id: "end", lat: 33.101, lng: 35.6 },
+      ],
+      selectedSegments: [],
+      geometry: [
+        { lat: 33.1, lng: 35.6 },
+        { lat: 33.1, lng: 35.61 },
+        { lat: 33.101, lng: 35.61 },
+        { lat: 33.101, lng: 35.6 },
+      ],
+      distance: 1975,
+    },
+    { param: "wide-out-and-back-token" },
+  );
+
+  const tracker = createRouteProgressTracker(outAndBack);
+  const f = (lat, lng, timestamp) => ({
+    lat,
+    lng,
+    accuracy: 5,
+    speed: 3,
+    timestamp,
+  });
+
+  tracker.update(f(33.1, 35.6, 1000));
+  tracker.update(f(33.1, 35.61, 2000));
+  tracker.update(f(33.101, 35.61, 3000));
+  const beforeDrift = tracker.update(f(33.101, 35.602, 4000));
+  assert.ok(beforeDrift.progressMeters > 1700, "cursor is on the return leg");
+
+  // This fix is near the outbound leg but far from the return leg window. A
+  // global nearest search would snap progress back near the start.
+  const drift = tracker.update(f(33.1001, 35.601, 5000));
+  assert.ok(
+    drift.progressMeters > 1600,
+    `off-route drift stays near return-leg progress (got ${drift.progressMeters.toFixed(0)} m)`,
+  );
+  assert.ok(drift.crossTrackMeters > 80, "drift is measured against the local return leg");
+}
+
 // --- Next-geometry bearing + distance to route start ----------------------
 {
   const tracker = createRouteProgressTracker(straightRoute());
@@ -231,41 +276,166 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
   );
 }
 
-// --- Wrong-way detection, low-speed safe ----------------------------------
+// --- Wrong-way detection: smoothed course + confirmation dwell ------------
+// wrongWay compares the rider's general direction (displacement over the last
+// >=20 m, immune to per-fix jitter) against the route bearing, and only warns
+// after the disagreement is sustained ~4 s. courseDeg stays instantaneous.
 {
-  const tracker = createRouteProgressTracker(straightRoute());
-  // Heading east along the route: not wrong-way.
-  tracker.update({ lat: 33.1, lng: 35.604, accuracy: 5, speed: 3, timestamp: 1000 });
-  const forward = tracker.update({
+  const mPerDegLng = 111320 * Math.cos((33.1 * Math.PI) / 180);
+  const eastFix = (meters, timestamp, overrides = {}) => ({
     lat: 33.1,
-    lng: 35.605,
+    lng: 35.6 + meters / mPerDegLng,
     accuracy: 5,
-    speed: 3,
-    timestamp: 2000,
+    speed: 5,
+    timestamp,
+    ...overrides,
   });
-  assert.equal(forward.wrongWay, false, "moving east along route is not wrong-way");
 
-  // Now moving west (against the route): wrong-way.
-  const backward = tracker.update({
-    lat: 33.1,
-    lng: 35.604,
-    accuracy: 5,
-    speed: 3,
-    timestamp: 3000,
-  });
-  assert.ok(near(backward.courseDeg, 270, 5), "course is ~west (270)");
-  assert.equal(backward.wrongWay, true, "moving west against route is wrong-way");
+  // Jittery forward ride: along-track jitter of ±8 m makes consecutive-fix
+  // displacement point backwards on alternate fixes, but the general direction
+  // is east the whole time — never wrong-way.
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    for (let i = 0; i < 40; i++) {
+      const jitter = i % 2 === 0 ? 8 : -8;
+      const result = tracker.update(eastFix(i * 5 + jitter, 1000 + i * 1000));
+      assert.equal(
+        result.wrongWay,
+        false,
+        `jittery forward ride is never wrong-way (fix ${i})`,
+      );
+    }
+  }
+
+  // Turn-around: ride 200 m east, then reverse. A single backward fix must not
+  // warn; sustained backward riding must warn within ~10 fixes; riding forward
+  // again clears the warning.
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    let t = 1000;
+    for (let i = 0; i <= 40; i++) {
+      tracker.update(eastFix(i * 5, (t = 1000 + i * 1000)));
+    }
+
+    const single = tracker.update(eastFix(195, (t += 1000)));
+    assert.ok(near(single.courseDeg, 270, 5), "instantaneous course is ~west");
+    assert.equal(single.wrongWay, false, "a single backward fix does not warn");
+
+    const westResults = [];
+    for (let k = 2; k <= 12; k++) {
+      westResults.push(tracker.update(eastFix(200 - k * 5, (t += 1000))));
+    }
+    assert.ok(
+      westResults.slice(0, 3).every((r) => r.wrongWay === false),
+      "no warning while the turn-around is still ambiguous (first ~20 m)",
+    );
+    assert.equal(
+      westResults[westResults.length - 1].wrongWay,
+      true,
+      "sustained riding against the route warns",
+    );
+
+    const backPos = 200 - 12 * 5;
+    const eastAgain = [];
+    for (let j = 1; j <= 10; j++) {
+      eastAgain.push(tracker.update(eastFix(backPos + j * 5, (t += 1000))));
+    }
+    assert.equal(
+      eastAgain[eastAgain.length - 1].wrongWay,
+      false,
+      "riding forward again clears the warning",
+    );
+  }
 
   // Stationary jitter (speed < 1 m/s): course unknown, never flag wrong-way.
-  const stopped = tracker.update({
-    lat: 33.1,
-    lng: 35.604,
-    accuracy: 5,
-    speed: 0.2,
-    timestamp: 4000,
-  });
-  assert.equal(stopped.courseDeg, null, "no course when stopped");
-  assert.equal(stopped.wrongWay, false, "stopped is never wrong-way");
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    tracker.update(eastFix(0, 1000));
+    const stopped = tracker.update(eastFix(5, 2000, { speed: 0.2 }));
+    assert.equal(stopped.courseDeg, null, "no course when stopped");
+    assert.equal(stopped.wrongWay, false, "stopped is never wrong-way");
+    assert.equal(stopped.smoothedCourseDeg, null, "no smoothed course when stopped");
+  }
+
+  // Acquisition resets direction judgment: the approach leg's course says
+  // nothing about on-route direction (it regularly points against the route's
+  // first meters), so the course history restarts at acquisition — no
+  // smoothed course, and no wrong-way, until the rider has covered a course
+  // window ON the route.
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    const northFix = (offsetMeters, timestamp) => ({
+      lat: 33.1 + offsetMeters / 111320,
+      lng: 35.6,
+      accuracy: 5,
+      speed: 5,
+      timestamp,
+    });
+    // Ride south toward the route start from 98 m north; acquisition latches
+    // at 33 m offset (inside the 35 m threshold).
+    let t = 1000;
+    let acquisitionSeen = false;
+    for (let offset = 98; offset >= 33; offset -= 5) {
+      const result = tracker.update(northFix(offset, (t += 1000)));
+      acquisitionSeen = result.hasAcquiredRoute;
+    }
+    assert.equal(acquisitionSeen, true, "acquired near the start");
+    // The next fixes are still within one course window of the acquisition
+    // point: direction judgment must not yet exist, whatever the approach
+    // course was.
+    for (const offset of [28, 23, 18]) {
+      const result = tracker.update(northFix(offset, (t += 1000)));
+      assert.equal(
+        result.smoothedCourseDeg,
+        null,
+        `course history restarted at acquisition (offset ${offset})`,
+      );
+      assert.equal(result.wrongWay, false, "no wrong-way while settling");
+    }
+  }
+
+  // Post-acquisition grace: proximity acquisition can latch while the rider
+  // is still physically finishing the approach (moving toward the start,
+  // against the route's local bearing). Wrong-way stays quiet for a grace
+  // window after acquisition; a genuine backward start is still warned, just
+  // calmly (~15 s in).
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    let t = 1000;
+    const results = [];
+    // Acquire mid-route at 400 m and immediately ride west, against the route.
+    for (let k = 0; k <= 20; k++) {
+      results.push(tracker.update(eastFix(400 - k * 5, (t += 1000))));
+    }
+    assert.equal(results[0].hasAcquiredRoute, true, "acquired mid-route");
+    assert.ok(
+      results.slice(0, 11).every((r) => r.wrongWay === false),
+      "no wrong-way warning inside the post-acquisition grace window",
+    );
+    assert.equal(
+      results[results.length - 1].wrongWay,
+      true,
+      "a genuine backward start is still warned after the grace window",
+    );
+  }
+
+  // smoothedCourseDeg: the general direction of travel, exposed for consumers
+  // that must not chase per-fix noise (e.g. the off-route camera). Under the
+  // same along-track jitter that flips courseDeg backwards, it stays ~east.
+  {
+    const tracker = createRouteProgressTracker(straightRoute());
+    for (let i = 0; i < 30; i++) {
+      const jitter = i % 2 === 0 ? 8 : -8;
+      const result = tracker.update(eastFix(i * 5 + jitter, 1000 + i * 1000));
+      if (i >= 8) {
+        assert.ok(
+          Number.isFinite(result.smoothedCourseDeg) &&
+            near(result.smoothedCourseDeg, 90, 25),
+          `smoothed course stays ~east under jitter (fix ${i}: ${result.smoothedCourseDeg})`,
+        );
+      }
+    }
+  }
 }
 
 // --- traveledCoordinates: completed path for the progress line ------------
@@ -391,6 +561,40 @@ import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
   assert.equal(p.currentRouteClass, null, "empty spans: currentRouteClass null");
   assert.equal(p.nextSegmentName, null, "empty spans: nextSegmentName null");
   assert.equal(p.distanceToNextSegmentMeters, null, "empty spans: distanceToNextSegmentMeters null");
+}
+
+// --- smoothedSpeedMps: 3 s average of fix speeds --------------------------
+{
+  const mPerDegLng = 111320 * Math.cos((33.1 * Math.PI) / 180);
+  const fix = (meters, timestamp, speed) => ({
+    lat: 33.1,
+    lng: 35.6 + meters / mPerDegLng,
+    accuracy: 5,
+    speed,
+    timestamp,
+  });
+  const tracker = createRouteProgressTracker(straightRoute());
+  tracker.update(fix(0, 1000, 4));
+  tracker.update(fix(5, 2000, 5));
+  const third = tracker.update(fix(10, 3000, 6));
+  assert.ok(
+    Math.abs(third.smoothedSpeedMps - 5) < 0.01,
+    `average of 4,5,6 over 3 s is 5, got ${third.smoothedSpeedMps}`,
+  );
+  // Older fixes fall out of the window.
+  const fourth = tracker.update(fix(15, 5500, 8));
+  assert.ok(
+    Math.abs(fourth.smoothedSpeedMps - 7) < 0.01,
+    `only the 6 (t=3000) and 8 (t=5500) are within 3 s, got ${fourth.smoothedSpeedMps}`,
+  );
+  // No finite speeds in the window -> null.
+  const noSpeed = tracker.update({
+    lat: 33.1,
+    lng: 35.6 + 20 / mPerDegLng,
+    accuracy: 5,
+    timestamp: 20000,
+  });
+  assert.equal(noSpeed.smoothedSpeedMps, null, "no finite speed -> null");
 }
 
 console.log("route progress tests passed");

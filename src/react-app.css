@@ -1659,11 +1659,25 @@ input {
     max-width: min(300px, calc(100% - 30px));
   }
 
-  .map-container--planner-playing .legend-container {
-    display: none;
+  /* Legend is React-gated on mobile (closed by default). When shown it rides
+     just above the planner drawer via the live sheet-height variable, easing on
+     snap (matching the sheet's transform transition) and following instantly
+     while the drawer is dragged. */
+  .map-container .legend-container {
+    bottom: calc(var(--front-sheet-visible-height, 0px) + 10px);
+    transition: bottom 0.25s ease;
   }
 
   .map-container--route-ready .legend-container {
+    display: block;
+    bottom: calc(var(--front-sheet-visible-height, 0px) + 10px);
+  }
+
+  .front-shell--sheet-dragging .legend-container {
+    transition: none;
+  }
+
+  .map-container--planner-playing .legend-container {
     display: none;
   }
 

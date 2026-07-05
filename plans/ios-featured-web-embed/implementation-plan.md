@@ -1,6 +1,6 @@
 # iOS Featured Route Web Embed — Implementation Plan
 
-Date: 2026-07-01 (updated 2026-07-02)
+Date: 2026-07-01 (updated 2026-07-05)
 
 1. Add an early embed bootstrap to the static HTML and suppress the web splash
    and analytics for `?app=1`.
@@ -21,6 +21,11 @@ Date: 2026-07-01 (updated 2026-07-02)
     preserving browser download behavior outside the app.
 12. Gate Build route restoration on routing-manager readiness, with visible
     loading/error/retry states and unit coverage for the restore policy.
+13. Keep featured route detail WebViews local-only: remove production fallback,
+    restart the bundled static server on a main-frame load failure, retry once,
+    and show an explicit retry/back error state instead of the old native route
+    detail fallback.
 
 Expected tests: targeted Playwright embed/splash tests, `git diff --check`, web
-production build, Expo config/prebuild, and Expo iOS export.
+production build, Expo config/prebuild, Expo iOS export, and a mobile route
+detail smoke pass covering the local-server retry/error path.

@@ -1,4 +1,4 @@
-export const MIN_LAUNCH_SPLASH_MS = 1200;
+export const MIN_LAUNCH_SPLASH_MS = 2000;
 export const SERVER_PRELOAD_BUDGET_MS = 900;
 
 export function remainingLaunchSplashMs(

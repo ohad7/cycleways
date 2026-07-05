@@ -1,18 +1,35 @@
-import { useState } from "react";
-import { Alert } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
-import { executeDownloadGPX } from "@cycleways/core/platform/download.js";
+// Import the native download impl explicitly: this app-level file lives outside
+// packages/core/src, so Metro's core-only platform remap (metro.config.js) does
+// not swap download.js → download.native.js here, and the web version's
+// document/URL APIs throw on device. Matches the location.native.js import below.
+import { executeDownloadGPX } from "@cycleways/core/platform/download.native.js";
 import { resetNativeLocationHref } from "@cycleways/core/platform/location.native.js";
 import { generateGPX } from "@cycleways/core/utils/gpx-generator.js";
 import RouteDetailWeb from "./RouteDetailWeb.jsx";
-import RouteDetailNative from "./RouteDetailNative.jsx";
+import BackButton from "./BackButton.jsx";
+import { palette } from "../planner/theme.js";
 
 // Route detail = the real mobile-web page in a WebView (exactly the web's rich
-// synced-video experience). Falls back to the native shell (bundled snapshot:
-// map, POIs, elevation) when the web page can't load — e.g. offline.
+// synced-video experience). When it can't load, RouteDetailWeb retries the
+// bundled local server and then shows an explicit error state.
 export default function RouteDetailScreen({ navigation, route }) {
   const slug = route?.params?.slug ?? null;
-  const [webFailed, setWebFailed] = useState(false);
+  const openId = route?.params?.openId ?? "initial";
+  const [webGestureLocked, setWebGestureLocked] = useState(false);
+
+  useEffect(() => {
+    setWebGestureLocked(false);
+  }, [slug, openId]);
+
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !webGestureLocked });
+    return () => {
+      navigation.setOptions({ gestureEnabled: true });
+    };
+  }, [navigation, webGestureLocked]);
 
   const openInBuild = (token, { openRideSetup = false } = {}) => {
     if (!token) return;
@@ -28,6 +45,9 @@ export default function RouteDetailScreen({ navigation, route }) {
   const openEditor = (token) => openInBuild(token);
   const startNavigation = (token) =>
     openInBuild(token, { openRideSetup: true });
+  const handleWebError = useCallback((error) => {
+    console.warn("Featured route web load failed:", error);
+  }, []);
   const downloadGpx = async () => {
     if (!slug) return;
     try {
@@ -46,18 +66,45 @@ export default function RouteDetailScreen({ navigation, route }) {
     }
   };
 
-  if (!slug || webFailed) {
-    return <RouteDetailNative navigation={navigation} route={route} />;
+  if (!slug) {
+    return <MissingRouteDetail onBack={() => navigation.goBack()} />;
   }
 
   return (
     <RouteDetailWeb
       slug={slug}
+      openId={openId}
       onBack={() => navigation.goBack()}
       onDownload={downloadGpx}
       onOpenEditor={openEditor}
       onNavigate={startNavigation}
-      onError={() => setWebFailed(true)}
+      onError={handleWebError}
+      onGestureLockChange={setWebGestureLocked}
     />
   );
 }
+
+function MissingRouteDetail({ onBack }) {
+  return (
+    <View style={[styles.fill, styles.center]}>
+      <BackButton onPress={onBack} />
+      <Text style={styles.errorText}>לא נמצא מסלול לפתיחה.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  fill: { flex: 1, backgroundColor: palette.paper },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  errorText: {
+    color: palette.ink,
+    fontSize: 17,
+    fontWeight: "800",
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+});

@@ -5,20 +5,47 @@ import {
   Easing,
   Image,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 
 const SPLASH_IMAGE = require("../../assets/splash-screen-ios.png");
 
+// Playful "getting ready to ride" flavor shown while the app boots, in place of
+// literal loading milestones. A random phrase is picked per launch (so each cold
+// start differs) and they rotate while the splash is up.
+const LAUNCH_PHRASES = [
+  "מחמם מנועים",
+  "בודק אוויר בצמיגים",
+  "משמן את השרשרת",
+  "מהדק את הקסדה",
+  "בודק בלמים",
+  "מותח שרירים",
+  "מודד רוח גבית",
+];
+// The splash floor is short (MIN_LAUNCH_SPLASH_MS ≈ 1.2s), so a fast launch
+// shows one phrase — the per-launch random start is what gives variety. 1.5s
+// reads comfortably while still rotating a second/third phrase on slow cold
+// starts. Tune here.
+const PHRASE_INTERVAL_MS = 750;
+
+function randomPhraseIndex(exclude = -1) {
+  if (LAUNCH_PHRASES.length <= 1) return 0;
+  let next = exclude;
+  while (next === exclude) {
+    next = Math.floor(Math.random() * LAUNCH_PHRASES.length);
+  }
+  return next;
+}
+
 export default function AnimatedLaunchSplash({
   progress = 0.1,
   ready = false,
-  status = "מכינים את האפליקציה…",
   onFirstLayout,
   onFinished,
 }) {
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [phraseIndex, setPhraseIndex] = useState(() => randomPhraseIndex());
+  const phraseOpacity = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(1)).current;
   const imageScale = useRef(new Animated.Value(0.995)).current;
   const progressValue = useRef(new Animated.Value(progress)).current;
@@ -106,9 +133,39 @@ export default function AnimatedLaunchSplash({
     });
   }, [onFinished, opacity, ready, reduceMotion]);
 
+  // Rotate the flavor phrase while the splash is up. Once `ready` fires the
+  // whole view fades out, so stop cycling to avoid a flicker mid-dismiss.
+  useEffect(() => {
+    if (ready) return undefined;
+    const id = setInterval(() => {
+      if (reduceMotion) {
+        setPhraseIndex((current) => randomPhraseIndex(current));
+        return;
+      }
+      Animated.timing(phraseOpacity, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (!finished) return;
+        setPhraseIndex((current) => randomPhraseIndex(current));
+        Animated.timing(phraseOpacity, {
+          toValue: 1,
+          duration: 240,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }).start();
+      });
+    }, PHRASE_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [phraseOpacity, ready, reduceMotion]);
+
+  const phrase = LAUNCH_PHRASES[phraseIndex];
+
   return (
     <Animated.View
-      accessibilityLabel={status}
+      accessibilityLabel={phrase}
       accessibilityLiveRegion="polite"
       accessibilityRole="progressbar"
       onLayout={onFirstLayout}
@@ -124,7 +181,9 @@ export default function AnimatedLaunchSplash({
       <View style={styles.loading}>
         <View style={styles.statusRow}>
           <Animated.View style={[styles.pulse, { opacity: pulseOpacity }]} />
-          <Text style={styles.status}>{status}</Text>
+          <Animated.Text style={[styles.status, { opacity: phraseOpacity }]}>
+            {phrase}
+          </Animated.Text>
         </View>
         <View style={styles.progressTrack}>
           <Animated.View

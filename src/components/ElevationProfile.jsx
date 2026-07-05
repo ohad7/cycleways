@@ -15,6 +15,9 @@ export default function ElevationProfile({
   chartId = "elevation-chart",
   onElevationHover,
   onElevationSelect = null,
+  onElevationScrubStart = null,
+  onElevationScrub = null,
+  onElevationScrubEnd = null,
   cursorFraction = null,
   cursorPlaying = false,
   cursorInfoVisible = false,
@@ -22,6 +25,10 @@ export default function ElevationProfile({
 }) {
   const profile = useMemo(() => buildElevationProfile(geometry), [geometry]);
   const animatorMarkerEnabledRef = useRef(true);
+  const scrubbingRef = useRef(false);
+  const pendingScrubRef = useRef(false);
+  const activePointerIdRef = useRef(null);
+  const pointerStartRef = useRef({ x: null, y: null });
   const [hoverInfo, setHoverInfo] = useState(null);
   const [markerPoint, setMarkerPoint] = useState(null);
   const usesExternalCursor = externalCursorActive || !animator;
@@ -69,16 +76,24 @@ export default function ElevationProfile({
 
   if (!profile) return null;
 
-  const handleInteraction = (event) => {
-    const clientX = event.touches?.[0]?.clientX ?? event.clientX;
+  const payloadFromClientX = (target, clientX) => {
     if (!Number.isFinite(clientX)) return;
 
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
     const xPercent = ((clientX - rect.left) / rect.width) * 100;
     const closestPoint = findClosestElevationPoint(profile.elevationData, xPercent);
     if (!closestPoint) return;
 
-    const payload = buildElevationHoverPayload(closestPoint);
+    return buildElevationHoverPayload(closestPoint);
+  };
+
+  const payloadFromEvent = (event) => {
+    const clientX = event.changedTouches?.[0]?.clientX ?? event.touches?.[0]?.clientX ?? event.clientX;
+    return payloadFromClientX(event.currentTarget, clientX);
+  };
+
+  const showPayload = (payload) => {
+    if (!payload) return;
     if (animator && animatorMarkerEnabledRef.current) {
       animatorMarkerEnabledRef.current = false;
       setMarkerPoint(null);
@@ -90,6 +105,76 @@ export default function ElevationProfile({
   const clearHover = () => {
     setHoverInfo(null);
     onElevationHover?.(null);
+  };
+
+  const beginScrub = (event, payload) => {
+    event.preventDefault();
+    scrubbingRef.current = true;
+    pendingScrubRef.current = false;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    showPayload(payload);
+    onElevationScrubStart?.(payload);
+    onElevationScrub(payload);
+  };
+
+  const resetScrubState = () => {
+    scrubbingRef.current = false;
+    pendingScrubRef.current = false;
+    activePointerIdRef.current = null;
+    pointerStartRef.current = { x: null, y: null };
+  };
+
+  const handleScrubStart = (event) => {
+    if (!onElevationScrub) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const payload = payloadFromEvent(event);
+    activePointerIdRef.current = event.pointerId;
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+    showPayload(payload);
+    if (event.pointerType === "mouse") {
+      beginScrub(event, payload);
+      return;
+    }
+    pendingScrubRef.current = true;
+  };
+
+  const handlePointerMove = (event) => {
+    const payload = payloadFromEvent(event);
+    showPayload(payload);
+    if (activePointerIdRef.current !== event.pointerId) return;
+
+    if (pendingScrubRef.current) {
+      const dx = event.clientX - pointerStartRef.current.x;
+      const dy = event.clientY - pointerStartRef.current.y;
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      if (absY > 6 && absY > absX) {
+        resetScrubState();
+        return;
+      }
+      if (absX <= 6 || absX <= absY * 1.15) return;
+      beginScrub(event, payload);
+      return;
+    }
+
+    if (!scrubbingRef.current) return;
+    event.preventDefault();
+    onElevationScrub?.(payload);
+  };
+
+  const handleScrubEnd = (event) => {
+    if (activePointerIdRef.current !== event.pointerId) return;
+    if (!scrubbingRef.current) {
+      resetScrubState();
+      return;
+    }
+    event.preventDefault();
+    const payload = payloadFromEvent(event);
+    showPayload(payload);
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    onElevationScrub?.(payload);
+    onElevationScrubEnd?.(payload);
+    resetScrubState();
   };
 
   const handleSelect = (event) => {
@@ -194,11 +279,16 @@ export default function ElevationProfile({
         )}
         <div
           className="elevation-hover-overlay"
-          onMouseMove={handleInteraction}
-          onMouseLeave={clearHover}
-          onTouchStart={handleInteraction}
-          onTouchMove={handleInteraction}
-          onTouchEnd={clearHover}
+          onPointerDown={handleScrubStart}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handleScrubEnd}
+          onPointerCancel={handleScrubEnd}
+          onPointerLeave={() => {
+            if (!scrubbingRef.current) {
+              resetScrubState();
+              clearHover();
+            }
+          }}
           onClick={handleSelect}
         />
       </div>

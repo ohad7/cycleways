@@ -253,7 +253,12 @@ class RouteManager {
    * it as the planner's active route.
    */
   previewBaseRoute(points, { costProfile = "default" } = {}) {
-    const snapped = this._snapRoutePoints(points);
+    const connectorProfile = costProfile === "connector";
+    const snapped = this._snapRoutePoints(points, {
+      edgeFilter: connectorProfile
+        ? (edge) => this._connectorEdgeAllowed(edge)
+        : null,
+    });
     const snappedEndpoints =
       snapped.length >= 2 ? [snapped[0], snapped[snapped.length - 1]] : snapped;
     if (snapped.length < 2 || snapped.some((point) => point.unsnapped)) {
@@ -272,7 +277,7 @@ class RouteManager {
         snappedEndpoints,
       };
     }
-    this._connectorCostProfile = costProfile === "connector";
+    this._connectorCostProfile = connectorProfile;
     let route;
     try {
       route = this._calculateBaseRoute(snapped);
@@ -305,9 +310,9 @@ class RouteManager {
    * @param {number} thresholdMeters - Maximum allowed snap distance
    * @returns {Object|null} Snapped point with segmentName and distanceMeters
    */
-  snapToNetwork(point, thresholdMeters = null) {
+  snapToNetwork(point, thresholdMeters = null, options = {}) {
     if (this.baseRoutingNetwork) {
-      return this._snapToBaseRoutingNetwork(point, thresholdMeters);
+      return this._snapToBaseRoutingNetwork(point, thresholdMeters, options);
     }
     return this._snapToNearestSegment(point, thresholdMeters);
   }
@@ -1052,14 +1057,25 @@ class RouteManager {
   }
 
   _connectorCostMultiplierFor(edge) {
-    // Connector = reliable public roads cheap; uncertain paths/tracks expensive.
+    // Connector = reliable public car-accessible roads only. It is used to
+    // suggest how to reach the route start/rejoin point, so restricted/private
+    // or non-road edges are worse than useless: they can send riders into gates
+    // or blocked tracks. Return Infinity so graph search treats them as closed.
+    if (!this._connectorEdgeAllowed(edge)) return Infinity;
     if (edge.routeClass === "road" || edge.roadType === "road") return 1;
-    if (edge.routeClass === "local_road") return 1.1;
-    if (edge.routeClass === "cycle") return 1.3;
-    if (edge.cwSegmentIds.length > 0) return 1.4;
-    if (edge.routeClass === "path_track" || edge.routeClass === "manual") return 3;
-    if (edge.routeClass === "footway") return 3.5;
-    return 2.5;
+    return 1.1;
+  }
+
+  _connectorEdgeAllowed(edge) {
+    if (!edge) return false;
+    if (edge.accessStatus === "restricted" || edge.accessStatus === "conditional") {
+      return false;
+    }
+    return (
+      edge.routeClass === "road" ||
+      edge.routeClass === "local_road" ||
+      edge.roadType === "road"
+    );
   }
 
   _baseRoutingCostMultiplier(edge, connector = this._connectorCostProfile) {
@@ -1219,7 +1235,7 @@ class RouteManager {
     return candidates;
   }
 
-  _snapToBaseRoutingNetwork(point, thresholdMeters = null) {
+  _snapToBaseRoutingNetwork(point, thresholdMeters = null, options = {}) {
     if (!this._isValidPoint(point)) return null;
     const normalizedPoint = {
       lat: Number(point.lat),
@@ -1245,10 +1261,13 @@ class RouteManager {
       : CW_SNAP_PREFERENCE_MARGIN_METERS;
     let best = null;
     let bestCw = null;
+    const edgeFilter =
+      typeof options.edgeFilter === "function" ? options.edgeFilter : null;
 
     for (const candidate of this._baseRoutingCandidates(normalizedPoint)) {
       const edge = this.baseRoutingEdges.get(candidate.edgeId);
       if (!edge) continue;
+      if (edgeFilter && !edgeFilter(edge)) continue;
       const snapped = this._getClosestPointOnLineSegment(
         normalizedPoint,
         candidate.start,
@@ -1460,6 +1479,7 @@ class RouteManager {
     let best = null;
     for (const candidate of candidates) {
       const leg = this._baseLegFromTraversals(candidate.traversals);
+      if (!Number.isFinite(leg.cost)) continue;
       if (!best || leg.cost < best.cost) {
         best = leg;
       }
@@ -1641,6 +1661,7 @@ class RouteManager {
     const targetOptions = this._baseEndpointOptions(endEdge, endDistance, "target");
     const targetOptionsByNode = new Map();
     for (const targetOption of targetOptions) {
+      if (!Number.isFinite(targetOption.cost)) continue;
       if (
         !targetOptionsByNode.has(targetOption.nodeId) ||
         targetOption.cost < targetOptionsByNode.get(targetOption.nodeId).cost
@@ -1654,6 +1675,7 @@ class RouteManager {
     const chosenStart = new Map();
     const heap = [];
     for (const startOption of startOptions) {
+      if (!Number.isFinite(startOption.cost)) continue;
       if (
         !distances.has(startOption.nodeId) ||
         startOption.cost < distances.get(startOption.nodeId)
@@ -1689,6 +1711,7 @@ class RouteManager {
         const stepCost = this._connectorCostProfile
           ? edge.connectorCost
           : edge.cost;
+        if (!Number.isFinite(stepCost)) continue;
         const nextCost = current.cost + stepCost;
         if (nextCost >= (distances.get(edge.to) ?? Infinity)) continue;
         distances.set(edge.to, nextCost);
@@ -2396,7 +2419,7 @@ class RouteManager {
     return routeCoords;
   }
 
-  _snapRoutePoints(points) {
+  _snapRoutePoints(points, options = {}) {
     if (!Array.isArray(points)) return [];
 
     return points
@@ -2418,7 +2441,7 @@ class RouteManager {
         const snappedPoint = this.snapToNetwork({
           lat,
           lng,
-        });
+        }, null, options);
 
         if (snappedPoint) {
           return {

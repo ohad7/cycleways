@@ -87,6 +87,16 @@ export default function RideSetupSheet({
   onRefreshLocation,
   onConfirm,
   onClose,
+  hapticsEnabled = true,
+  onToggleHaptics,
+  voiceEnabled = true,
+  onToggleVoice,
+  lockScreenGuidanceEnabled = true,
+  lockScreenGuidanceHasAlwaysPermission = false,
+  lockScreenGuidanceNeedsSettings = false,
+  onToggleLockScreenGuidance,
+  onOpenLocationSettings,
+  onTestVoice,
 }) {
   const insets = useSafeAreaInsets();
   const candidates = plan?.candidates;
@@ -102,9 +112,15 @@ export default function RideSetupSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + space.md }]}>
-        <View style={styles.handle} />
+      <View
+        style={[
+          styles.sheet,
+          {
+            paddingTop: insets.top + space.md,
+            paddingBottom: insets.bottom + space.md,
+          },
+        ]}
+      >
         <View style={styles.header}>
           <Pressable accessibilityRole="button" accessibilityLabel="סגירה" onPress={onClose}>
             <Icon name="close" size={24} color={palette.ink} />
@@ -115,7 +131,10 @@ export default function RideSetupSheet({
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           <Text style={styles.sectionTitle}>כיוון המסלול</Text>
           <View accessibilityRole="radiogroup" style={styles.directionRow}>
             <DirectionButton
@@ -160,6 +179,87 @@ export default function RideSetupSheet({
             />
           </View>
 
+          {onToggleHaptics ? (
+            <>
+              <Text style={styles.sectionTitle}>התראות רטט</Text>
+              <Choice
+                label={hapticsEnabled ? "רטט פעיל" : "רטט כבוי"}
+                sub="רטט קצר לפני פניות והתראות"
+                selected={hapticsEnabled}
+                onPress={onToggleHaptics}
+              />
+            </>
+          ) : null}
+
+          {onToggleVoice || onToggleLockScreenGuidance ? (
+            <>
+              <Text style={styles.sectionTitle}>הכוונה קולית</Text>
+              {onToggleVoice ? (
+                <Choice
+                  label={voiceEnabled ? "הנחיות קוליות פעילות" : "הנחיות קוליות כבויות"}
+                  sub="פניות, סטייה מהמסלול והגעה ליעד"
+                  selected={voiceEnabled}
+                  onPress={onToggleVoice}
+                />
+              ) : null}
+              {onToggleLockScreenGuidance ? (
+                <Choice
+                  label={
+                    lockScreenGuidanceEnabled
+                      ? "ממשיך להנחות כשהמסך נעול"
+                      : "רק כשהמסך ער"
+                  }
+                  sub={
+                    lockScreenGuidanceHasAlwaysPermission
+                      ? "הרשאת מיקום תמיד כבר פעילה"
+                      : lockScreenGuidanceNeedsSettings
+                      ? "צריך לאפשר מיקום תמיד בהגדרות"
+                      : "מבקש הרשאת מיקום תמיד רק בזמן התחלת רכיבה"
+                  }
+                  selected={lockScreenGuidanceEnabled}
+                  onPress={onToggleLockScreenGuidance}
+                />
+              ) : null}
+              {lockScreenGuidanceEnabled &&
+              lockScreenGuidanceNeedsSettings &&
+              onOpenLocationSettings ? (
+                <View style={styles.settingsNotice}>
+                  <View style={styles.settingsNoticeText}>
+                    <Text style={styles.settingsNoticeTitle}>צריך לאפשר מיקום תמיד</Text>
+                    <Text style={styles.settingsNoticeSub}>
+                      פתחו את הגדרות האפליקציה ובחרו מיקום &gt; תמיד.
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="פתיחת הגדרות מיקום"
+                    onPress={onOpenLocationSettings}
+                    style={({ pressed }) => [
+                      styles.settingsButton,
+                      pressed ? styles.pressed : null,
+                    ]}
+                  >
+                    <Text style={styles.settingsButtonText}>הגדרות</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+              {voiceEnabled && onTestVoice ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="בדיקת קול"
+                  onPress={onTestVoice}
+                  style={({ pressed }) => [
+                    styles.testVoice,
+                    pressed ? styles.pressed : null,
+                  ]}
+                >
+                  <Icon name="volume-high-outline" color={palette.forest} size={19} />
+                  <Text style={styles.testVoiceText}>בדיקת קול</Text>
+                </Pressable>
+              ) : null}
+            </>
+          ) : null}
+
           {message ? (
             <View style={styles.notice}>
               <Text style={styles.noticeText}>{message}</Text>
@@ -193,6 +293,14 @@ export default function RideSetupSheet({
               ) : null}
             </View>
           ) : null}
+
+          <View style={styles.safetyNote}>
+            <Icon name="alert-circle-outline" color={palette.muted} size={17} />
+            <Text style={styles.safetyNoteText}>
+              ההנחיות הן עזר לתכנון בלבד. רכבו בזהירות וצייתו לתמרורים ולתנאי
+              הדרך — הם קודמים לכל הנחיה מהאפליקציה.
+            </Text>
+          </View>
         </ScrollView>
 
         <Pressable
@@ -213,20 +321,16 @@ export default function RideSetupSheet({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.34)" },
   sheet: {
     position: "absolute",
+    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    maxHeight: "88%",
     backgroundColor: palette.paper,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
     paddingHorizontal: space.lg,
-    paddingTop: space.sm,
   },
-  handle: { alignSelf: "center", width: 42, height: 4, borderRadius: 2, backgroundColor: palette.line, marginBottom: space.md },
+  scrollContent: { paddingBottom: space.md },
   header: { flexDirection: "row", alignItems: "flex-start", gap: space.md, marginBottom: space.md },
   headerText: { flex: 1 },
   title: { color: palette.ink, fontSize: 21, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
@@ -244,6 +348,14 @@ const styles = StyleSheet.create({
   choiceText: { flex: 1 },
   choiceLabel: { color: palette.ink, fontSize: 15, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
   choiceSub: { color: palette.muted, fontSize: 12, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  testVoice: { minHeight: 42, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: space.xs, borderRadius: radius.md, borderWidth: 1, borderColor: palette.forest, backgroundColor: palette.white, marginBottom: space.sm },
+  testVoiceText: { color: palette.forest, fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
+  settingsNotice: { flexDirection: "row-reverse", alignItems: "center", gap: space.sm, backgroundColor: palette.cream, borderRadius: radius.md, padding: space.md, marginBottom: space.sm },
+  settingsNoticeText: { flex: 1 },
+  settingsNoticeTitle: { color: palette.ink, fontSize: 13, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
+  settingsNoticeSub: { color: palette.muted, fontSize: 12, lineHeight: 17, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  settingsButton: { minHeight: 34, justifyContent: "center", borderRadius: radius.md, borderWidth: 1, borderColor: palette.forest, paddingHorizontal: space.md, backgroundColor: palette.white },
+  settingsButtonText: { color: palette.forest, fontSize: 13, fontWeight: "900", writingDirection: "rtl" },
   notice: { flexDirection: "row-reverse", gap: space.sm, alignItems: "center", backgroundColor: palette.cream, borderRadius: radius.md, padding: space.md, marginTop: space.sm },
   noticeText: { color: palette.ink, flex: 1, fontSize: 12, textAlign: "right", writingDirection: "rtl" },
   retry: { color: palette.forest, fontSize: 13, fontWeight: "900" },
@@ -252,6 +364,21 @@ const styles = StyleSheet.create({
   summaryLine: { color: palette.muted, fontSize: 13, textAlign: "right", writingDirection: "rtl" },
   warning: { color: "#92400e", fontSize: 13, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
   farText: { color: palette.ink, fontSize: 13, lineHeight: 18, fontWeight: "700", marginTop: space.xs, textAlign: "right", writingDirection: "rtl" },
+  safetyNote: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    alignItems: "flex-start",
+    marginTop: 14,
+    paddingHorizontal: 4,
+  },
+  safetyNoteText: {
+    flex: 1,
+    color: palette.muted,
+    fontSize: 12.5,
+    lineHeight: 18,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   primary: { minHeight: 50, borderRadius: radius.md, backgroundColor: palette.forest, alignItems: "center", justifyContent: "center", marginTop: space.sm },
   primaryDisabled: { opacity: 0.45 },
   primaryText: { color: palette.white, fontSize: 16, fontWeight: "900", writingDirection: "rtl" },

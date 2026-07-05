@@ -15,6 +15,10 @@ export function createCueHapticPlanner({ cooldownMs = DEFAULT_COOLDOWN_MS } = {}
     if (cueEvent.kind === "acquired") return "medium";
     if (cueEvent.kind === "cue") {
       if (cueEvent.cueType === "enter-segment") return null; // visual-only
+      if (cueEvent.cueType === "bend") {
+        // Heads-up, not a maneuver: one light tap when the bend is imminent.
+        return cueEvent.phase === "final" ? "light" : null;
+      }
       return cueEvent.phase === "final" ? "medium" : "light";
     }
     return null;

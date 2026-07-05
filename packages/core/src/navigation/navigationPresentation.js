@@ -26,6 +26,11 @@ function cueDisplay(cue) {
         : { text: "פנה שמאלה", icon: "arrow-back-outline" };
       return cue.ontoSegmentName ? { ...base, text: `${base.text} אל ${cue.ontoSegmentName}` } : base;
     }
+    case "bend":
+      // Sharp curve of the road itself (no junction) — heads-up, not a turn.
+      return cue.direction === "right"
+        ? { text: "עיקול ימינה", icon: "arrow-forward-outline" }
+        : { text: "עיקול שמאלה", icon: "arrow-back-outline" };
     case "enter-segment":
       return { text: cue.segmentName ? `כניסה אל ${cue.segmentName}` : "המשך במסלול", icon: "navigate-outline" };
     case "arrive":
@@ -46,6 +51,22 @@ function routeClassLabel(routeClass) {
   }
 }
 
+// Bare noun for the on-map chip ("דרך עפר"); routeClassLabel keeps the
+// prefixed form ("בדרך עפר") used in sentence context.
+export function roadClassChipLabel(routeClass) {
+  switch (routeClass) {
+    case "cycleway": return "שביל אופניים";
+    case "track": return "דרך עפר";
+    case "path_track": return "דרך עפר";
+    case "path": return "שביל";
+    case "footway": return "מדרכה";
+    case "local_road":
+    case "road":
+    case "residential": return "כביש";
+    default: return null;
+  }
+}
+
 function buildContextText(progress) {
   if (!progress?.hasAcquiredRoute) return "";
   const here = progress.currentOnNetwork && progress.currentSegmentName
@@ -57,9 +78,19 @@ function buildContextText(progress) {
   return here ? `${here}${next}` : "";
 }
 
+function buildCurrentRoadText(progress) {
+  if (!progress?.hasAcquiredRoute) return "";
+  if (progress.currentSegmentName) return progress.currentSegmentName;
+  return roadClassChipLabel(progress.currentRouteClass) || routeClassLabel(progress.currentRouteClass);
+}
+
 function relativeArrowDeg(progress) {
   if (!Number.isFinite(progress?.guidanceBearingDeg)) return null;
-  const course = Number.isFinite(progress?.courseDeg) ? progress.courseDeg : 0;
+  // Prefer the general direction of travel; the per-fix course jitters.
+  const course = Number.isFinite(progress?.smoothedCourseDeg)
+    ? progress.smoothedCourseDeg
+    : progress?.courseDeg;
+  if (!Number.isFinite(course)) return null;
   return ((progress.guidanceBearingDeg - course) % 360 + 360) % 360;
 }
 
@@ -83,10 +114,6 @@ export function bearingDeg(from, to) {
 
 function destinationLabelFor(mode) {
   switch (mode) {
-    case "nearest":
-      return "נקודה קרובה במסלול";
-    case "custom":
-      return "נקודה שנבחרה";
     case "rejoin":
       return "חזרה למסלול";
     default:
@@ -106,15 +133,23 @@ export function getNavigationPresentation(state = {}) {
   const status = state.status || "idle";
   const navigating = status === "navigating" || status === "off-route";
   const offRoute = state.offRoute === true || status === "off-route";
+  const progress = state.progress || null;
 
   const approach = state.approach || null;
   const showApproach = status === "approaching" || offRoute;
   const distanceToRoute = Number(approach?.distanceToRouteMeters);
+  const suggestionDistance = Number(approach?.suggestionDistanceMeters);
+  const hasSuggestionGeometry =
+    Array.isArray(approach?.suggestionGeometry) &&
+    approach.suggestionGeometry.length >= 2;
+  const approachDisplayDistance =
+    hasSuggestionGeometry && Number.isFinite(suggestionDistance) && suggestionDistance > 0
+      ? suggestionDistance
+      : distanceToRoute;
   const tier =
     Number.isFinite(distanceToRoute) && distanceToRoute <= CONNECTOR_NEAR_RADIUS_M
       ? "near"
       : "far";
-  const choices = approach?.choices || null;
   const approachBearingDeg =
     showApproach && state.latestFix && approach?.target?.point
       ? bearingDeg(state.latestFix, approach.target.point)
@@ -125,10 +160,91 @@ export function getNavigationPresentation(state = {}) {
   const cueDistanceText = active
     ? formatDistanceMeters(active.distanceToCueMeters)
     : "";
+  const arrived =
+    !offRoute &&
+    progress?.hasAcquiredRoute === true &&
+    Number.isFinite(progress?.remainingMeters) &&
+    progress.remainingMeters <= 15;
+  const cardMode = offRoute
+    ? "off-route"
+    : arrived
+      ? "arrived"
+      : status === "approaching"
+        ? "approach"
+        : navigating && active && active.cue?.type !== "start"
+          ? "cue"
+          : "status";
+
+  const segmentChipText = (() => {
+    const name = progress?.currentSegmentName || null;
+    const label = roadClassChipLabel(progress?.currentRouteClass);
+    if (name && label) return `${name} · ${label}`;
+    return name || label || null;
+  })();
+  const chip = offRoute
+    ? { kind: "rejoin", text: "חזרה למסלול" }
+    : status === "approaching"
+      ? (hasSuggestionGeometry ? { kind: "approach", text: "המסלול המוצע" } : null)
+      : (cardMode === "cue" || cardMode === "arrived") && segmentChipText
+        ? { kind: "segment", text: segmentChipText }
+        : null;
+
+  const speedMps = progress?.smoothedSpeedMps;
+  const speedText =
+    Number.isFinite(speedMps) && speedMps >= 1
+      ? `${(speedMps * 3.6).toFixed(1)} קמ״ש`
+      : "";
+
+  const cuePrimaryText = (() => {
+    const c = active?.cue || null;
+    if (!c) return cue.text;
+    if (c.type === "turn") return c.direction === "right" ? "פנה ימינה" : "פנה שמאלה";
+    if (c.type === "enter-segment") return "המשך במסלול";
+    return cue.text;
+  })();
+  const cueSecondaryText = (() => {
+    const c = active?.cue || null;
+    if (!c) return "";
+    if (c.type === "turn" && c.ontoSegmentName) return `אל ${c.ontoSegmentName}`;
+    if (c.type === "enter-segment" && c.segmentName) return `אל ${c.segmentName}`;
+    if (
+      progress?.nextSegmentName &&
+      Number.isFinite(progress?.distanceToNextSegmentMeters) &&
+      progress.distanceToNextSegmentMeters <= 300
+    ) {
+      return `אל ${progress.nextSegmentName}`;
+    }
+    return "";
+  })();
+
+  let arrivalSummary = null;
+  if (cardMode === "arrived") {
+    const elapsedMs =
+      Number.isFinite(state.latestFix?.timestamp) &&
+      Number.isFinite(state.rideStartTimestamp)
+        ? state.latestFix.timestamp - state.rideStartTimestamp
+        : null;
+    const minutes = elapsedMs !== null ? Math.round(elapsedMs / 60000) : null;
+    const elapsedText =
+      minutes === null
+        ? ""
+        : minutes >= 60
+          ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`
+          : `${minutes} דק׳`;
+    const avgMps =
+      elapsedMs > 0 && Number.isFinite(progress?.progressMeters)
+        ? progress.progressMeters / (elapsedMs / 1000)
+        : null;
+    arrivalSummary = {
+      distanceText: formatDistanceMeters(progress?.progressMeters),
+      elapsedText,
+      avgSpeedText: Number.isFinite(avgMps) ? `${(avgMps * 3.6).toFixed(1)} קמ״ש` : "",
+    };
+  }
 
   // "Remaining route distance" is meaningful only once on the route; before
   // that (approaching / off-route) we show the distance-to-route instead.
-  const remainingMeters = state.progress?.remainingMeters;
+  const remainingMeters = progress?.remainingMeters;
   const remainingText =
     navigating &&
     !offRoute &&
@@ -139,6 +255,12 @@ export function getNavigationPresentation(state = {}) {
 
   return {
     mode: status,
+    cardMode,
+    chip,
+    speedText,
+    cuePrimaryText,
+    cueSecondaryText,
+    arrivalSummary,
     justAcquired: state.justAcquired === true,
     acquisitionText: state.justAcquired === true
       ? "הגעת למסלול · הניווט התחיל"
@@ -152,33 +274,33 @@ export function getNavigationPresentation(state = {}) {
     offRoute,
     offRouteText: "חזרו למסלול",
     showContext:
-      navigating && !offRoute && Boolean(state.progress?.hasAcquiredRoute),
-    contextText: buildContextText(state.progress),
+      navigating && !offRoute && Boolean(progress?.hasAcquiredRoute),
+    currentRoadText: buildCurrentRoadText(progress),
+    contextText: buildContextText(progress),
     showApproach,
     tier,
     approachBearingDeg,
     // Banner: "<destination> · <distance>" (e.g. "תחילת המסלול · 600 מ׳").
     destinationLabel: destinationLabelFor(approach?.target?.mode),
-    approachDistanceShort: Number.isFinite(distanceToRoute)
-      ? formatDistanceMeters(distanceToRoute)
+    approachDistanceShort: Number.isFinite(approachDisplayDistance)
+      ? formatDistanceMeters(approachDisplayDistance)
       : "",
+    approachDistanceSource:
+      hasSuggestionGeometry && Number.isFinite(suggestionDistance) && suggestionDistance > 0
+        ? "connector"
+        : "beeline",
     disclaimerText: "ניווט מחוץ לרשת CycleWays",
     approachHeading: status === "approaching" ? "בדרך למסלול" : "חזרה למסלול",
     approachSupportText:
       status === "approaching" ? "הניווט במסלול יתחיל כשתגיע" : "",
     externalNavTarget: approach?.target?.point ?? null,
-    // Options sheet: offer "join nearest" only when it skips a meaningful span.
-    canJoinNearest: Boolean(choices?.nearest && choices.skipMeters > 50),
-    nearestSkipText: choices?.nearest
-      ? `דילוג ~${formatDistanceMeters(choices.skipMeters)}`
-      : "",
     showGuidance: status === "approaching" || offRoute,
-    guidanceText: Number.isFinite(state.progress?.guidanceDistanceMeters)
-      ? `${status === "approaching" ? "לכיוון תחילת המסלול" : "חזרה למסלול"} · ${formatDistanceMeters(state.progress.guidanceDistanceMeters)}`
+    guidanceText: Number.isFinite(progress?.guidanceDistanceMeters)
+      ? `${status === "approaching" ? "לכיוון תחילת המסלול" : "חזרה למסלול"} · ${formatDistanceMeters(progress.guidanceDistanceMeters)}`
       : "",
-    guidanceArrowDeg: relativeArrowDeg(state.progress),
-    wrongWay: state.progress?.wrongWay === true,
-    wrongWayText: "אתה נוסע בכיוון הלא נכון — סובב",
-    currentOnNetwork: state.progress?.currentOnNetwork ?? false,
+    guidanceArrowDeg: relativeArrowDeg(progress),
+    wrongWay: progress?.wrongWay === true,
+    wrongWayText: "המסלול בכיוון ההפוך - הסתובבו",
+    currentOnNetwork: progress?.currentOnNetwork ?? false,
   };
 }

@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import DiscoverScreen from "../screens/DiscoverScreen.jsx";
 import RouteDetailScreen from "../screens/RouteDetailScreen.jsx";
 import BuildScreen from "../screens/BuildScreen.jsx";
+import AboutScreen from "../screens/AboutScreen.jsx";
 
 const Stack = createNativeStackNavigator();
 
@@ -12,7 +13,7 @@ export default function RootNavigator({
   navigationRef,
 }) {
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} direction="ltr">
       <Stack.Navigator
         initialRouteName={initialRouteName}
         screenOptions={{ headerShown: false }}
@@ -24,12 +25,19 @@ export default function RootNavigator({
           initialParams={
             initialRouteName === "RouteDetail" ? initialParams : undefined
           }
+          options={{
+            animation: "slide_from_left",
+            animationMatchesGesture: true,
+            fullScreenGestureEnabled: true,
+            gestureDirection: "horizontal",
+          }}
         />
         <Stack.Screen
           name="Build"
           component={BuildScreen}
           initialParams={initialRouteName === "Build" ? initialParams : undefined}
         />
+        <Stack.Screen name="About" component={AboutScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

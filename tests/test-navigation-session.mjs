@@ -182,6 +182,17 @@ const fix = (lng, timestamp, extra = {}) => ({
 
   const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
   assert.equal(stillOff.cueEvent, null, "off-route event not repeated while still off");
+
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.605, 8000) });
+  const recovered = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.6051, 12000) });
+  assert.equal(recovered.status, "navigating", "sustained on-route fixes recover");
+  assert.equal(recovered.cueEvent?.kind, "acquired", "recovery emits acquired event");
+  assert.equal(recovered.cueEvent?.acquisition, "reacquired");
+
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(13000) });
+  const secondOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(18000) });
+  assert.equal(secondOff.status, "off-route", "can enter off-route again after recovery");
+  assert.equal(secondOff.cueEvent?.kind, "off-route", "second off-route transition emits");
 }
 
 // --- approaching status ---
@@ -203,6 +214,7 @@ const fix = (lng, timestamp, extra = {}) => ({
   assert.equal(near.status, "navigating", "reaching the route -> navigating");
   assert.equal(near.justAcquired, true, "approach handoff is explicit for one render");
   assert.equal(near.cueEvent?.kind, "acquired");
+  assert.equal(near.cueEvent?.acquisition, "initial");
 }
 
 function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
@@ -249,13 +261,8 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(st.status, "approaching", "READY never changes status");
   assert.equal(st.approach.suggestionStatus, "ready");
   assert.ok(st.approach.suggestionGeometry.length >= 2);
-
-  s.dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice: "nearest" });
-  st = s.getState();
-  assert.equal(st.approach.target.mode, "nearest");
-  assert.equal(st.approach.suggestionStatus, "idle");
-  // The prior suggestion stays visible across the target change (no blink).
-  assert.ok(st.approach.suggestionGeometry.length >= 2);
+  assert.equal(st.approach.suggestionDistanceMeters, 800);
+  assert.equal(st.routeRequest, null, "completed connector request is cleared");
 
   s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: onRouteFix });
   st = s.getState();
@@ -292,6 +299,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(ready.status, "approaching");
   assert.equal(ready.approach.suggestionStatus, "failed");
   assert.equal(ready.approach.suggestionGeometry, null);
+  assert.equal(ready.routeRequest, null);
 }
 
 // --- CONNECTOR_FAILED keeps status approaching; direct line survives -------
@@ -306,6 +314,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(failed.status, "approaching");
   assert.equal(failed.approach.suggestionStatus, "failed");
   assert.equal(failed.approach.suggestionGeometry, null);
+  assert.equal(failed.routeRequest, null);
   assert.equal(
     failed.approach.distanceToRouteMeters,
     before,
@@ -341,7 +350,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.ok(session.getState().approach.target, "approach slot persists across pause");
 }
 
-// --- SET_APPROACH_TARGET forces a fresh request next LOCATION --------------
+// --- CONNECTOR_FAILED retries only after meaningful movement ---------------
 {
   const { session, requested } = approachingSession();
   session.dispatch({
@@ -349,30 +358,21 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
     requestId: requested.routeRequest.requestId,
     reason: "transient",
   });
-  session.dispatch({ type: NAV_ACTIONS.SET_APPROACH_TARGET, choice: "nearest" });
   let st = session.getState();
-  assert.equal(st.approach.suggestionStatus, "idle");
+  assert.equal(st.approach.suggestionStatus, "failed");
   assert.equal(st.approach.suggestionGeometry, null);
+  const belowGate = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { ...requested.latestFix, lat: 33.104, timestamp: 5000 },
+  });
+  assert.equal(belowGate.approach.suggestionStatus, "failed");
+  assert.equal(belowGate.routeRequest, null);
   const refetch = session.dispatch({
     type: NAV_ACTIONS.LOCATION,
-    fix: { ...requested.latestFix, timestamp: 5000 },
+    fix: { ...requested.latestFix, lat: 33.103, timestamp: 8000 },
   });
   assert.equal(refetch.approach.suggestionStatus, "requesting");
   assert.ok(refetch.routeRequest.requestId > requested.routeRequest.requestId);
-}
-
-// --- SET_APPROACH_CUSTOM_TARGET snaps a tapped point onto the route ---------
-{
-  const { session } = approachingSession();
-  // A point off to the side of the route snaps onto the nearest route vertex.
-  const target = session.getState().route.geometry[1];
-  const st = session.dispatch({
-    type: NAV_ACTIONS.SET_APPROACH_CUSTOM_TARGET,
-    point: { lat: target.lat + 0.0005, lng: target.lng },
-  });
-  assert.equal(st.approach.target.mode, "custom");
-  assert.ok(Number.isFinite(st.approach.target.mainProgressMeters));
-  assert.equal(st.approach.suggestionStatus, "idle");
 }
 
 // --- STOP clears the approach slot and route request -----------------------
@@ -405,9 +405,31 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(confirmed.approach.target.mode, "rejoin", "off-route drives a rejoin suggestion");
   assert.equal(confirmed.approach.suggestionStatus, "requesting");
   assert.ok(confirmed.routeRequest && confirmed.routeRequest.to);
+  const firstRequest = confirmed.routeRequest;
+  const ready = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: firstRequest.requestId,
+    geometry: [firstRequest.from, firstRequest.to],
+    distanceMeters: 350,
+  });
+  assert.equal(ready.approach.suggestionStatus, "ready");
+  assert.ok(ready.approach.suggestionGeometry.length >= 2);
+  assert.equal(ready.routeRequest, null);
   const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
   assert.equal(stillOff.status, "off-route");
   assert.equal(stillOff.cueEvent, null, "off-route event not repeated while still off");
+  assert.equal(stillOff.routeRequest, null);
+  const movedOff = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.103, lng: 35.605, accuracy: 5, speed: 3, timestamp: 11000 },
+  });
+  assert.equal(movedOff.status, "off-route");
+  assert.equal(movedOff.approach.suggestionStatus, "requesting");
+  assert.ok(movedOff.routeRequest.requestId > firstRequest.requestId);
+  assert.ok(
+    movedOff.approach.suggestionGeometry.length >= 2,
+    "old rejoin suggestion stays visible while refreshing",
+  );
 }
 
 // --- no state is ever "on-connector" ---------------------------------------
@@ -426,6 +448,95 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
     assert.notEqual(st.status, "on-connector", "no on-connector status anywhere");
   }
   assert.equal(s.getState().status, "navigating", "physically reaching the route navigates");
+}
+
+// --- rideStartTimestamp: first fix of the session -------------------------
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  let state = session.dispatch({
+    type: NAV_ACTIONS.PERMISSION_GRANTED,
+    background: false,
+  });
+  assert.equal(state.rideStartTimestamp, null, "null before the first fix");
+  state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 7000 },
+  });
+  assert.equal(state.rideStartTimestamp, 7000, "set from the first fix");
+  state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6005, accuracy: 5, speed: 4, timestamp: 9000 },
+  });
+  assert.equal(state.rideStartTimestamp, 7000, "unchanged by later fixes");
+
+  session.dispatch({ type: NAV_ACTIONS.STOP });
+  session.dispatch({ type: NAV_ACTIONS.START });
+  state = session.dispatch({
+    type: NAV_ACTIONS.PERMISSION_GRANTED,
+    background: false,
+  });
+  assert.equal(state.rideStartTimestamp, null, "reset before the next ride");
+  state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 12000 },
+  });
+  assert.equal(state.rideStartTimestamp, 12000, "second ride gets its own start");
+}
+
+// --- snapshot / restore preserves cue and off-route transition memory -----
+{
+  const route = straightRoute();
+  const uninterrupted = createNavigationSession(route, {
+    confirmMs: 4000,
+    recoverMs: 3000,
+  });
+  uninterrupted.dispatch({ type: NAV_ACTIONS.START });
+  uninterrupted.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: true });
+  const previewFix = fix(35.609, 1000);
+  const samePreviewFix = fix(35.6091, 2000);
+  const finalFix = fix(35.6098, 3000);
+  uninterrupted.dispatch({ type: NAV_ACTIONS.LOCATION, fix: previewFix });
+  const snapshot = uninterrupted.snapshot();
+
+  const restored = createNavigationSession(route, {
+    confirmMs: 4000,
+    recoverMs: 3000,
+    snapshot,
+  });
+  const samePreview = restored.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: samePreviewFix,
+  });
+  assert.equal(
+    samePreview.cueEvent,
+    null,
+    "restored session does not repeat already-emitted preview cue",
+  );
+  const restoredFinal = restored.dispatch({ type: NAV_ACTIONS.LOCATION, fix: finalFix });
+  assert.equal(restoredFinal.cueEvent?.phase, "final", "phase change still emits");
+  assert.equal(restoredFinal.rideStartTimestamp, 1000, "ride start survives restore");
+
+  const offRoute = createNavigationSession(route, { confirmMs: 4000, recoverMs: 3000 });
+  offRoute.dispatch({ type: NAV_ACTIONS.START });
+  offRoute.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: true });
+  offRoute.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.605, 500) });
+  const offFix = { lat: 33.101, lng: 35.605, accuracy: 5, speed: 3, timestamp: 1000 };
+  offRoute.dispatch({ type: NAV_ACTIONS.LOCATION, fix: offFix });
+  const confirmedOffFix = { ...offFix, timestamp: 6000 };
+  const firstOff = offRoute.dispatch({ type: NAV_ACTIONS.LOCATION, fix: confirmedOffFix });
+  assert.equal(firstOff.cueEvent?.kind, "off-route");
+  const restoredOff = createNavigationSession(route, {
+    confirmMs: 4000,
+    recoverMs: 3000,
+    snapshot: offRoute.snapshot(),
+  });
+  const stillOff = restoredOff.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { ...confirmedOffFix, timestamp: 7000 },
+  });
+  assert.equal(stillOff.status, "off-route");
+  assert.equal(stillOff.cueEvent, null, "off-route event is not re-fired after restore");
 }
 
 console.log("navigation session lifecycle tests passed");

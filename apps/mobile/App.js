@@ -47,18 +47,15 @@ const navigationRef = createNavigationContainerRef();
 export default function App() {
   const [ready, setReady] = useState(false);
   const [showLaunchSplash, setShowLaunchSplash] = useState(true);
-  const [splashMilestone, setSplashMilestone] = useState({
-    progress: 0.12,
-    status: "מכינים את האפליקציה…",
-  });
+  // The splash shows a rotating set of flavor phrases (AnimatedLaunchSplash), so
+  // it only needs monotonic progress for the bar — not per-milestone status text.
+  const [splashProgress, setSplashProgress] = useState(0.12);
   const [launchError, setLaunchError] = useState(null);
   const initialTargetRef = useRef({ screen: "Discover", params: undefined });
   const nativeSplashHiddenRef = useRef(false);
 
-  const advanceSplash = useCallback((progress, status) => {
-    setSplashMilestone((current) =>
-      progress > current.progress ? { progress, status } : current,
-    );
+  const advanceSplash = useCallback((progress) => {
+    setSplashProgress((current) => (progress > current ? progress : current));
   }, []);
 
   const handleSplashLayout = useCallback(() => {
@@ -107,7 +104,10 @@ export default function App() {
           // (the editor is reached later via the detail CTA, which passes the
           // route token explicitly and resets the href first).
           if (navigationRef.isReady() && result.resolved) {
-            navigationRef.navigate("RouteDetail", { slug: result.resolved.slug });
+            navigationRef.navigate("RouteDetail", {
+              slug: result.resolved.slug,
+              openId: Date.now(),
+            });
           }
         } else {
           // Cold start: launchTargetFromHref maps a catalog-route link to the
@@ -120,7 +120,7 @@ export default function App() {
 
     const catalogPreload = loadRouteCatalogEntries()
       .then((entries) => {
-        if (mounted) advanceSplash(0.42, "טוענים את המסלולים…");
+        if (mounted) advanceSplash(0.42);
         return entries;
       })
       .catch((error) => {
@@ -135,14 +135,14 @@ export default function App() {
       if (result.status === "rejected") {
         console.warn("Featured route server warm-up failed:", result.reason);
       }
-      if (mounted) advanceSplash(0.68, "מכינים את סיפורי המסלול…");
+      if (mounted) advanceSplash(0.68);
       return result;
     });
 
     const initialLaunch = Linking.getInitialURL()
       .then(async (url) => {
         const result = await applyLaunchUrl(url);
-        if (mounted) advanceSplash(0.88, "מסדרים את נקודת הפתיחה…");
+        if (mounted) advanceSplash(0.88);
         return result;
       })
       .catch((error) => {
@@ -158,7 +158,7 @@ export default function App() {
       waitForLaunchSplashMinimum(APP_BOOTSTRAP_STARTED_AT),
     ]).then(() => {
       if (!mounted) return;
-      advanceSplash(1, "יוצאים לדרך");
+      advanceSplash(1);
       setReady(true);
     });
 
@@ -192,9 +192,8 @@ export default function App() {
             ) : null}
             {showLaunchSplash ? (
               <AnimatedLaunchSplash
-                progress={splashMilestone.progress}
+                progress={splashProgress}
                 ready={ready}
-                status={splashMilestone.status}
                 onFirstLayout={handleSplashLayout}
                 onFinished={finishLaunchSplash}
               />
