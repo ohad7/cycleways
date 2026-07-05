@@ -293,6 +293,14 @@ export default function RideSetupSheet({
               ) : null}
             </View>
           ) : null}
+
+          <View style={styles.safetyNote}>
+            <Icon name="alert-circle-outline" color={palette.muted} size={17} />
+            <Text style={styles.safetyNoteText}>
+              ההנחיות הן עזר לתכנון בלבד. רכבו בזהירות וצייתו לתמרורים ולתנאי
+              הדרך — הם קודמים לכל הנחיה מהאפליקציה.
+            </Text>
+          </View>
         </ScrollView>
 
         <Pressable
@@ -356,6 +364,21 @@ const styles = StyleSheet.create({
   summaryLine: { color: palette.muted, fontSize: 13, textAlign: "right", writingDirection: "rtl" },
   warning: { color: "#92400e", fontSize: 13, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
   farText: { color: palette.ink, fontSize: 13, lineHeight: 18, fontWeight: "700", marginTop: space.xs, textAlign: "right", writingDirection: "rtl" },
+  safetyNote: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    alignItems: "flex-start",
+    marginTop: 14,
+    paddingHorizontal: 4,
+  },
+  safetyNoteText: {
+    flex: 1,
+    color: palette.muted,
+    fontSize: 12.5,
+    lineHeight: 18,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   primary: { minHeight: 50, borderRadius: radius.md, backgroundColor: palette.forest, alignItems: "center", justifyContent: "center", marginTop: space.sm },
   primaryDisabled: { opacity: 0.45 },
   primaryText: { color: palette.white, fontSize: 16, fontWeight: "900", writingDirection: "rtl" },
