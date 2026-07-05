@@ -4,6 +4,9 @@ APP_IDENTIFIER = "app.cycleways.mobile"
 # The native iOS project is a generated (gitignored) folder one level up from
 # this fastlane dir. Resolve it absolutely so lanes work from any cwd.
 XCODEPROJ = File.expand_path("../ios/CycleWays.xcodeproj", __dir__)
+# CocoaPods workspace (what release archives build) and archive output dir.
+XCWORKSPACE = File.expand_path("../ios/CycleWays.xcworkspace", __dir__)
+BUILD_OUTPUT_DIR = File.expand_path("../build", __dir__)
 # Secrets live OUTSIDE the repo so they are never committed.
 ASC_ENV = File.expand_path("~/.appstoreconnect/cycleways-asc.env")
 SECRETS_DIR = File.expand_path("~/.appstoreconnect")
@@ -114,4 +117,88 @@ platform :ios do
       targets: ["CycleWays"]
     )
   end
+
+  desc "Create/download the Apple Distribution certificate"
+  lane :release_cert do
+    cert(
+      development: false,
+      api_key: asc_key,
+      output_path: File.join(SECRETS_DIR, "certs"),
+      keychain_password: ENV["KEYCHAIN_PASSWORD"]
+    )
+  end
+
+  desc "Ensure the App Store provisioning profile exists and is installed"
+  lane :release_profile do
+    get_provisioning_profile(
+      app_identifier: APP_IDENTIFIER,
+      api_key: asc_key,
+      output_path: File.join(SECRETS_DIR, "profiles"),
+      readonly: false
+    )
+
+    name, uuid, = read_profile(app_store_profile_path)
+    require "fileutils"
+    install_dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
+    FileUtils.mkdir_p(install_dir)
+    FileUtils.cp(app_store_profile_path, File.join(install_dir, "#{uuid}.mobileprovision"))
+    UI.success("Installed App Store profile '#{name}' (#{uuid}).")
+  end
+
+  desc "Archive a Release build with App Store signing (run `npm run preios` + `npx expo prebuild -p ios` first)"
+  lane :archive do
+    UI.user_error!("ios/ project missing — run `npx expo prebuild -p ios` first") unless File.exist?(XCODEPROJ)
+    name, _uuid, team_id = read_profile(app_store_profile_path)
+
+    # Point the Release configuration at App Store signing. The generated
+    # project is gitignored, so this patch is local and repeatable.
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: XCODEPROJ,
+      team_id: team_id,
+      code_sign_identity: "Apple Distribution",
+      profile_name: name,
+      build_configurations: ["Release"],
+      targets: ["CycleWays"]
+    )
+
+    build_app(
+      workspace: XCWORKSPACE,
+      scheme: "CycleWays",
+      configuration: "Release",
+      output_directory: BUILD_OUTPUT_DIR,
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: { APP_IDENTIFIER => name }
+      }
+    )
+  end
+
+  desc "Upload the archived build to TestFlight"
+  lane :beta do
+    ipa = File.join(BUILD_OUTPUT_DIR, "CycleWays.ipa")
+    UI.user_error!("No IPA at #{ipa} — run `fastlane ios archive` first") unless File.exist?(ipa)
+    upload_to_testflight(
+      api_key: asc_key,
+      ipa: ipa,
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
+
+# Path of the downloaded App Store profile (written by release_profile).
+def app_store_profile_path
+  File.expand_path(File.join(SECRETS_DIR, "profiles", "AppStore_#{APP_IDENTIFIER}.mobileprovision"))
+end
+
+# Read Name, UUID and Team ID straight from a .mobileprovision file so lanes
+# don't depend on env-var names that vary between fastlane versions.
+def read_profile(profile_path)
+  raise "Profile not found at #{profile_path} — run `fastlane ios release_profile` first" unless File.exist?(profile_path)
+  decoded = `security cms -D -i "#{profile_path}" 2>/dev/null`
+  name = decoded[%r{<key>Name</key>\s*<string>(.*?)</string>}m, 1]
+  uuid = decoded[%r{<key>UUID</key>\s*<string>(.*?)</string>}m, 1]
+  team_id = decoded[%r{<key>TeamIdentifier</key>\s*<array>\s*<string>(.*?)</string>}m, 1]
+  raise "Could not parse profile at #{profile_path}" unless name && uuid && team_id
+  [name, uuid, team_id]
 end
