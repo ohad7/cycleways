@@ -1,6 +1,7 @@
 # iOS App Store Release Readiness - Design
 
-Date: 2026-07-04
+Date: 2026-07-04 (reconciled 2026-07-05 with the implemented
+background-location-voice-guidance work and a repo audit)
 
 ## Goal
 
@@ -29,24 +30,57 @@ operations.
   Store submission lanes.
 - Release signing in the generated Xcode project is still configured with an
   Apple Development identity/profile.
-- Native comments state that first release navigation is foreground-only, while
-  the iOS config currently declares Always/background location. This mismatch is
-  the highest App Review risk.
+- Background / lock-screen navigation IS implemented (see
+  `plans/background-location-voice-guidance/`): `useNavigationSession` takes a
+  `background` option, `BuildScreen` wires it to a user-facing lock-screen
+  guidance toggle in the ride setup sheet (default on), a background location
+  task is registered via `expo-task-manager`, and voice cues play through
+  `expo-speech`. Permission flow is correct: foreground first, Always requested
+  only when the toggle asks. The Always/background declarations in
+  `apps/mobile/app.json` are therefore justified — the release risk is now
+  proving the feature works (physical rides, battery, locked-screen voice), not
+  removing it.
 - There is useful automated coverage: shared Node/Python tests, Playwright web
   tests, and Maestro native smoke flows. The release process still needs
   release-build, physical-device, TestFlight, privacy, accessibility, and App
   Store metadata gates.
+- Repo audit (2026-07-05) found these product gaps, all owned by
+  `implementation-plan.md`:
+  - No privacy policy, terms of use, or support page exists anywhere — the
+    website (`www.cycleways.app`) has only route pages plus a Google-Form
+    contact link, and the app has no legal or about surface.
+  - No in-app About screen: no visible app version/build, no privacy/terms
+    links, no OSM/Mapbox data attribution for the OSM-derived routing graph
+    (ODbL), no support contact.
+  - iOS permission strings are English while the entire app UI and voice
+    guidance are Hebrew.
+  - Mapbox SDK telemetry is on by default, which contradicts the
+    "no collected data" declaration in `PrivacyInfo.xcprivacy`.
+  - `ITSAppUsesNonExemptEncryption` is not declared, and `app.json` has no
+    `ios.buildNumber`.
+  - No user-visible cycling safety language exists in the ride flow.
 
 ## Release Posture
 
-For v1, ship foreground route discovery, planning, route detail, GPX sharing,
-deep-link restore, external navigation handoff, and foreground ride guidance.
+For v1, ship route discovery, planning, route detail, GPX sharing, deep-link
+restore, external navigation handoff, and turn-by-turn ride guidance
+**including lock-screen (background) guidance with voice cues** — this is
+implemented and user-facing.
 
-Do not ship background / lock-screen navigation in v1 unless it is implemented
-end to end with the correct native task model and tested on physical rides.
-If v1 remains foreground-only, remove Always/background location declarations
-before submission. App Review should only see permissions the app actually
-needs and exercises.
+The background feature carries release obligations instead of removal:
+
+- Physical-ride validation on real routes: locked screen, voice cues, battery
+  drain, permission upgrade flow (When-In-Use → Always), and revocation
+  mid-ride.
+- Verify voice playback while locked on a release build. `UIBackgroundModes`
+  declares only `location` (no `audio`); speech is expected to work because
+  the location task keeps the app alive, but this exact combination must be a
+  named physical-device test gate.
+- App Review notes must explain when Always permission is requested (only at
+  ride start, only if the lock-screen toggle is on) and what the user gets for
+  it. The current usage strings already match this behavior.
+- App Store description may claim turn-by-turn and lock-screen guidance only
+  as validated.
 
 ## Product Decisions
 
@@ -68,8 +102,16 @@ needs and exercises.
 ## Permission And Privacy Decisions
 
 - Location: foreground location is justified for "near me", route setup, and
-  foreground ride guidance. Background location is not justified unless the
-  shipped product keeps guidance active while locked/backgrounded.
+  ride guidance. Background (Always) location is justified because the shipped
+  product keeps guidance and voice cues active while the screen is locked; it
+  is requested only at ride start and only when the user keeps the lock-screen
+  guidance toggle on.
+- Mapbox telemetry: disable it in the app (`Mapbox.setTelemetryEnabled(false)`
+  next to the existing `setAccessToken` call) so the "no collected data"
+  posture in `PrivacyInfo.xcprivacy` and the App Store privacy labels stays
+  true. If it is ever re-enabled, privacy labels and policy must change first.
+- Permission strings: localize the iOS usage strings to Hebrew (the app's
+  actual language) via Expo `locales`, keeping English as the base fallback.
 - Motion: if `NSMotionUsageDescription` is not backed by a shipped feature,
   remove it; if Mapbox or another dependency requires it, document why it
   appears and verify whether the prompt can surface.
@@ -84,6 +126,25 @@ needs and exercises.
 - Tracking: the target posture is no cross-app tracking and no IDFA. If any SDK
   changes this, it becomes a release blocker until ATT, labels, and policy are
   updated.
+
+## Work Split
+
+The release work is split into two tracks:
+
+1. **Agent-executable repository work** — everything a coding agent can build
+   and verify inside this repo: legal/support pages on the website, the in-app
+   About screen, permission-string localization, compliance config, telemetry
+   opt-out, and the safety notice. This is fully specified, task by task, in
+   `implementation-plan.md`.
+2. **Owner + assistant work (Apple side)** — everything requiring the Apple
+   Developer account or human judgment: account/agreements/DSA checks,
+   reserving the app name by creating the App Store Connect record (do this
+   EARLY — the name "CycleWays" may be contested), distribution signing and
+   Fastlane release/TestFlight lanes (the current Fastfile has development
+   lanes only), privacy labels, metadata/screenshots, TestFlight rollout,
+   physical-ride validation of lock-screen guidance, and submission. The
+   checklists for this track are the sections below and the External Apple
+   Checklist Summary at the end of `implementation-plan.md`.
 
 ## External Apple Systems To Prepare
 
