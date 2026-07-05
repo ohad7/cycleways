@@ -1,22 +1,19 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "./Icon.jsx";
-import { palette, radius } from "./theme.js";
+import { palette } from "./theme.js";
 
-// Road-type legend (same labels/colors as the old map-corner legend box).
-const LEGEND = [
-  { color: "rgb(101, 170, 162)", label: "שביל סלול" },
-  { color: "rgb(174, 144, 103)", label: "שביל עפר" },
-  { color: "rgb(138, 147, 158)", label: "כביש" },
-];
-
-// Native floating map controls, clustered at the top-right just under the search
-// pill: a vertical stack of circular buttons (layers, fit-to-route, locate). The
-// layers button toggles a compact road-type legend popover below the stack.
-export default function MapControls({ onLocate, onFit, following }) {
+// Native floating map controls: two circular buttons at the top-right — my
+// location and the legend open/close toggle. Same pair (and icons) as the web
+// mobile map. The legend itself renders bottom-left (see MapLegend), riding
+// above the planner drawer.
+export default function MapControls({
+  onLocate,
+  following,
+  legendOpen,
+  onToggleLegend,
+}) {
   const insets = useSafeAreaInsets();
-  const [legendOpen, setLegendOpen] = useState(false);
   return (
     <View
       pointerEvents="box-none"
@@ -26,30 +23,14 @@ export default function MapControls({ onLocate, onFit, following }) {
         accessibilityLabel="סוגי דרכים"
         icon="layers-outline"
         active={legendOpen}
-        onPress={() => setLegendOpen((v) => !v)}
-      />
-      <CircleButton
-        accessibilityLabel="התאם מסלול"
-        icon="scan-outline"
-        onPress={onFit}
+        onPress={onToggleLegend}
       />
       <CircleButton
         accessibilityLabel="מיקום נוכחי"
-        icon={following ? "navigate" : "navigate-outline"}
+        icon="locate-outline"
         active={following}
         onPress={onLocate}
       />
-      {legendOpen ? (
-        <View style={styles.legend}>
-          <Text style={styles.legendTitle}>סוגי דרכים</Text>
-          {LEGEND.map((item) => (
-            <View key={item.label} style={styles.legendRow}>
-              <View style={[styles.swatch, { backgroundColor: item.color }]} />
-              <Text style={styles.legendLabel}>{item.label}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -99,35 +80,5 @@ const styles = StyleSheet.create({
   },
   btnPressed: {
     opacity: 0.85,
-  },
-  legend: {
-    backgroundColor: "rgba(255,255,255,0.97)",
-    borderRadius: radius.md,
-    padding: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-  },
-  legendTitle: {
-    color: palette.ink,
-    fontSize: 11,
-    fontWeight: "800",
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginBottom: 6,
-  },
-  legendRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-  },
-  swatch: { width: 16, height: 4, borderRadius: 2 },
-  legendLabel: {
-    color: palette.ink,
-    fontSize: 11,
-    fontWeight: "600",
-    writingDirection: "rtl",
   },
 });

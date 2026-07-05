@@ -110,6 +110,26 @@ export default function BottomSheet({ snap, onSnapChange, peekContent, children 
   const offset = dragging ? dragOffset : offsets[snap] ?? 0;
   const visibleHeight = Math.max(shellHeight - offset, 0);
 
+  // Publish the sheet's live visible height on the shell (a common ancestor of
+  // the map overlays) so the bottom-left legend can ride just above the drawer
+  // as it is dragged. Updates every drag frame via the visibleHeight dep.
+  useLayoutEffect(() => {
+    const shell = sheetRef.current?.parentElement;
+    if (!shell) return undefined;
+    shell.style.setProperty("--front-sheet-visible-height", `${visibleHeight}px`);
+    return () => shell.style.removeProperty("--front-sheet-visible-height");
+  }, [visibleHeight]);
+
+  // Flag active dragging on the shell so overlays that track the sheet (the
+  // bottom-left legend) can follow instantly while dragging and only ease on
+  // snap — mirroring the sheet's own transform transition.
+  useLayoutEffect(() => {
+    const shell = sheetRef.current?.parentElement;
+    if (!shell) return undefined;
+    shell.classList.toggle("front-shell--sheet-dragging", dragging);
+    return () => shell.classList.remove("front-shell--sheet-dragging");
+  }, [dragging]);
+
   return (
     <div
       ref={sheetRef}

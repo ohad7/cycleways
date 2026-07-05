@@ -31,6 +31,7 @@ import Mapbox, {
   UserTrackingMode,
 } from "@rnmapbox/maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSharedValue } from "react-native-reanimated";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
@@ -74,8 +75,9 @@ import DataMarkerImages, {
 import ElevationProfileChart from "../ElevationProfileChart.jsx";
 import RichText from "../RichText.jsx";
 import PlannerSheet from "../planner/PlannerSheet.jsx";
-import TopSearch from "../planner/TopSearch.jsx";
 import MapControls from "../planner/MapControls.jsx";
+import MapLegend from "../planner/MapLegend.jsx";
+import BuildEmptyActions from "../planner/BuildEmptyActions.jsx";
 import BackButton from "./BackButton.jsx";
 import RoutePoiList from "../planner/RoutePoiList.jsx";
 import NavPanel from "../planner/NavPanel.jsx";
@@ -378,6 +380,8 @@ export default function BuildScreen({ navigation, route }) {
     handleAddDataMarkerToRoute,
     handleViewportIdle,
     computeConnector,
+    plannerDraft,
+    handleRestoreDraft,
   } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
 
   const routeGeometry = useMemo(
@@ -419,6 +423,10 @@ export default function BuildScreen({ navigation, route }) {
   // point; anything else (no hold, or off-point) falls through to the map for
   // pan/zoom/add. Screen<->coord conversion goes through the MapView ref.
   const plannerSheetRef = useRef(null);
+  // Legend open/close (closed by default) + the planner sheet's live top-edge Y,
+  // so the bottom-left MapLegend can ride just above the drawer as it's dragged.
+  const [legendOpen, setLegendOpen] = useState(false);
+  const sheetTop = useSharedValue(Dimensions.get("window").height * 0.52);
   const mapViewRef = useRef(null);
   const pointScreenPositionsRef = useRef([]);
   const dragRef = useRef({ index: null, armed: false, startX: 0, startY: 0 });
@@ -770,6 +778,8 @@ export default function BuildScreen({ navigation, route }) {
   const [rideSetupLocationStatus, setRideSetupLocationStatus] = useState("idle");
   const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
   const [lockScreenGuidanceEnabled, setLockScreenGuidanceEnabled] = useState(true);
+  const [lockScreenGuidanceHasAlwaysPermission, setLockScreenGuidanceHasAlwaysPermission] =
+    useState(false);
   const [lockScreenGuidanceNeedsSettings, setLockScreenGuidanceNeedsSettings] =
     useState(false);
   const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
@@ -814,12 +824,15 @@ export default function BuildScreen({ navigation, route }) {
       const foregroundGranted = status?.foreground?.status === "granted";
       const backgroundStatus = status?.background?.status;
       const backgroundCanAskAgain = status?.background?.canAskAgain;
+      const canUseBackground = status?.canUseBackground === true;
       const needsSettings =
         foregroundGranted &&
-        !status?.canUseBackground &&
+        !canUseBackground &&
         (backgroundStatus === "denied" || backgroundCanAskAgain === false);
+      setLockScreenGuidanceHasAlwaysPermission(canUseBackground);
       setLockScreenGuidanceNeedsSettings(Boolean(needsSettings));
     } catch {
+      setLockScreenGuidanceHasAlwaysPermission(false);
       setLockScreenGuidanceNeedsSettings(false);
     }
   }, []);
@@ -987,31 +1000,61 @@ export default function BuildScreen({ navigation, route }) {
         setPendingNavigationRouteId(plan.effectiveRoute.id);
       };
 
-      if (
-        willStartCycleWays &&
-        lockScreenGuidanceEnabled &&
-        !lockScreenPermissionExplainerShownRef.current
-      ) {
-        Alert.alert(
-          "הכוונה כשהמסך נעול",
-          "CycleWays יבקש הרשאת מיקום תמיד כדי להמשיך לעקוב אחרי הרכיבה ולהשמיע הנחיות כשהמסך נעול.",
-          [
-            { text: "ביטול", style: "cancel" },
-            {
-              text: "המשך",
-              onPress: () => {
-                lockScreenPermissionExplainerShownRef.current = true;
-                completeConfirmation();
-              },
-            },
-          ],
-        );
-        return;
-      }
+      const confirmWithCurrentPermission = async () => {
+        let hasAlwaysPermission = lockScreenGuidanceHasAlwaysPermission;
+        if (lockScreenGuidanceEnabled && !hasAlwaysPermission) {
+          try {
+            const status = await getNavigationPermissionStatus();
+            hasAlwaysPermission = status?.canUseBackground === true;
+            setLockScreenGuidanceHasAlwaysPermission(hasAlwaysPermission);
+            const foregroundGranted = status?.foreground?.status === "granted";
+            const backgroundStatus = status?.background?.status;
+            const backgroundCanAskAgain = status?.background?.canAskAgain;
+            setLockScreenGuidanceNeedsSettings(
+              Boolean(
+                foregroundGranted &&
+                  !hasAlwaysPermission &&
+                  (backgroundStatus === "denied" || backgroundCanAskAgain === false),
+              ),
+            );
+          } catch {
+            hasAlwaysPermission = false;
+          }
+        }
 
-      completeConfirmation();
+        if (
+          willStartCycleWays &&
+          lockScreenGuidanceEnabled &&
+          !hasAlwaysPermission &&
+          !lockScreenPermissionExplainerShownRef.current
+        ) {
+          Alert.alert(
+            "הכוונה כשהמסך נעול",
+            "CycleWays יבקש הרשאת מיקום תמיד כדי להמשיך לעקוב אחרי הרכיבה ולהשמיע הנחיות כשהמסך נעול.",
+            [
+              { text: "ביטול", style: "cancel" },
+              {
+                text: "המשך",
+                onPress: () => {
+                  lockScreenPermissionExplainerShownRef.current = true;
+                  completeConfirmation();
+                },
+              },
+            ],
+          );
+          return;
+        }
+
+        completeConfirmation();
+      };
+
+      void confirmWithCurrentPermission();
     },
-    [lockScreenGuidanceEnabled, voiceGuidanceEnabled],
+    [
+      lockScreenGuidanceEnabled,
+      lockScreenGuidanceHasAlwaysPermission,
+      voiceGuidanceEnabled,
+    ],
   );
 
   const handleRideSetupConfirm = useCallback(() => {
@@ -2080,6 +2123,22 @@ export default function BuildScreen({ navigation, route }) {
     );
   }
 
+  const directRideSetupRequested = Boolean(routeTokenParam && openRideSetupParam);
+  const directRideSetupPending = Boolean(
+    directRideSetupRequested &&
+      !rideSetupVisible &&
+      !isNavigating &&
+      (routeRestoreStatus === "waiting" ||
+        routeRestoreStatus === "loading" ||
+        pendingRideSetupToken === routeTokenParam),
+  );
+  const showRouteRestoreOverlay = Boolean(
+    routeTokenParam &&
+      (routeRestoreStatus === "waiting" ||
+        routeRestoreStatus === "loading" ||
+        directRideSetupPending),
+  );
+
   return (
     <View style={styles.screen} {...routePointPanResponder.panHandlers}>
       <MapView
@@ -2290,21 +2349,16 @@ export default function BuildScreen({ navigation, route }) {
           <CircleLayer id="route-points-circle" style={ROUTE_POINT_STYLE} />
         </ShapeSource>
       </MapView>
-      {!isNavigating ? (
+      {!isNavigating && !directRideSetupPending ? (
         <>
           <BackButton onPress={() => navigation?.goBack?.()} />
-          <TopSearch
-            query={mapUi.searchQuery}
-            onChange={handleSearchQueryChange}
-            onSubmit={submitSearch}
-            busy={mapUi.searchStatus === "searching"}
-            error={mapUi.searchError}
-          />
           <MapControls
             onLocate={handleLocatePress}
-            onFit={fitRoute}
             following={locationState.following}
+            legendOpen={legendOpen}
+            onToggleLegend={() => setLegendOpen((open) => !open)}
           />
+          <MapLegend open={legendOpen} sheetTop={sheetTop} />
         </>
       ) : null}
       <DataMarkerCard
@@ -2312,12 +2366,15 @@ export default function BuildScreen({ navigation, route }) {
         onAddToRoute={handleAddDataMarkerToRoute}
         onClose={handleSelectedDataMarkerClear}
       />
-      {routeTokenParam &&
-      (routeRestoreStatus === "waiting" || routeRestoreStatus === "loading") ? (
+      {showRouteRestoreOverlay ? (
         <View style={styles.routeRestoreOverlay} pointerEvents="auto">
           <View style={styles.routeRestoreCard}>
             <ActivityIndicator color={palette.forest} size="small" />
-            <Text style={styles.routeRestoreText}>טוען מסלול לעריכה…</Text>
+            <Text style={styles.routeRestoreText}>
+              {directRideSetupRequested
+                ? "מכין ניווט למסלול…"
+                : "טוען מסלול לעריכה…"}
+            </Text>
           </View>
         </View>
       ) : null}
@@ -2404,9 +2461,10 @@ export default function BuildScreen({ navigation, route }) {
             lockScreenGuidanceActive={nav.lockScreenGuidanceActive}
           />
         </>
-      ) : (
+      ) : directRideSetupPending ? null : (
         <PlannerSheet
           sheetRef={plannerSheetRef}
+          animatedPosition={sheetTop}
           renderFooter={
             canDownload
               ? () => (
@@ -2435,6 +2493,21 @@ export default function BuildScreen({ navigation, route }) {
             presentation={routePresentation}
             routePoints={displayedRoutePoints}
             routeState={routeState}
+            emptyState={
+              <BuildEmptyActions
+                searchQuery={mapUi.searchQuery}
+                searchStatus={mapUi.searchStatus}
+                searchError={mapUi.searchError}
+                onSearchQueryChange={handleSearchQueryChange}
+                onSearchSubmit={submitSearch}
+                locateBusy={locationState.status === "locating"}
+                onLocateMe={handleLocatePress}
+                draft={
+                  plannerDraft && !routeTokenParam ? plannerDraft : null
+                }
+                onRestoreDraft={handleRestoreDraft}
+              />
+            }
           />
         </PlannerSheet>
       )}
@@ -2449,6 +2522,7 @@ export default function BuildScreen({ navigation, route }) {
         voiceEnabled={voiceGuidanceEnabled}
         onToggleVoice={handleToggleVoiceGuidance}
         lockScreenGuidanceEnabled={lockScreenGuidanceEnabled}
+        lockScreenGuidanceHasAlwaysPermission={lockScreenGuidanceHasAlwaysPermission}
         lockScreenGuidanceNeedsSettings={lockScreenGuidanceNeedsSettings}
         onToggleLockScreenGuidance={handleToggleLockScreenGuidance}
         onOpenLocationSettings={handleOpenLocationSettings}
@@ -2507,6 +2581,7 @@ function BuildPanelContent({
   canRedo,
   canUndo,
   catalogEntry,
+  emptyState,
   locationState,
   onClear,
   onRedo,
@@ -2519,6 +2594,7 @@ function BuildPanelContent({
 }) {
   const buildModel = getPlannerBuildModel(routeState);
   const hasPoints = routePoints.length > 0;
+  const isEmpty = routeState.points.length === 0;
   const hasElevationProfile = routeState.geometry.length >= 2;
   const locationText = locationStatusText(locationState);
   const routeMessage = routeState.error
@@ -2568,57 +2644,68 @@ function BuildPanelContent({
         </View>
       </View>
 
-      <Text style={routeState.error ? styles.errorText : styles.routeMessage}>
-        {routeMessage}
-      </Text>
+      {isEmpty && emptyState ? (
+        <>
+          {routeState.error ? (
+            <Text style={styles.errorText}>{routeMessage}</Text>
+          ) : null}
+          {emptyState}
+        </>
+      ) : (
+        <>
+          <Text style={routeState.error ? styles.errorText : styles.routeMessage}>
+            {routeMessage}
+          </Text>
 
-      {hasElevationProfile ? (
-        <View testID="playback-area">
-          <PlaybackControls
-            isPlaying={playback.isPlaying}
-            isReady={playback.isReady}
-            currentTime={playback.currentTime}
-            duration={playback.duration}
-            onTogglePlayback={playback.togglePlayback}
-            onSeekToFraction={onSeekToFraction}
-            onScrubStart={playback.pause}
-          />
-          <ElevationProfileChart
-            cursorFraction={playback.cursor?.fraction ?? null}
-            onSeekFraction={onSeekToFraction}
-            onScrubStart={playback.pause}
-            distance={routeState.distance}
-            geometry={routeState.geometry}
-          />
-        </View>
-      ) : null}
-
-      {buildModel.hasRoute ? (
-        <View testID="route-stats" style={styles.statGrid}>
-          {buildModel.stats.map(([label, value]) => (
-            <View key={label} style={styles.statTile}>
-              <Text style={styles.statValue}>{value}</Text>
-              <Text style={styles.statLabel}>{label}</Text>
+          {hasElevationProfile ? (
+            <View testID="playback-area">
+              <PlaybackControls
+                isPlaying={playback.isPlaying}
+                isReady={playback.isReady}
+                currentTime={playback.currentTime}
+                duration={playback.duration}
+                onTogglePlayback={playback.togglePlayback}
+                onSeekToFraction={onSeekToFraction}
+                onScrubStart={playback.pause}
+              />
+              <ElevationProfileChart
+                cursorFraction={playback.cursor?.fraction ?? null}
+                onSeekFraction={onSeekToFraction}
+                onScrubStart={playback.pause}
+                distance={routeState.distance}
+                geometry={routeState.geometry}
+              />
             </View>
-          ))}
-        </View>
-      ) : null}
+          ) : null}
 
-      {presentation.warnings.length > 0 ? (
-        <View style={styles.warningList}>
-          {presentation.warnings.map((warning) => (
-            <Text key={warning} style={styles.warningText}>
-              {warning}
-            </Text>
-          ))}
-        </View>
-      ) : null}
+          {buildModel.hasRoute ? (
+            <View testID="route-stats" style={styles.statGrid}>
+              {buildModel.stats.map(([label, value]) => (
+                <View key={label} style={styles.statTile}>
+                  <Text style={styles.statValue}>{value}</Text>
+                  <Text style={styles.statLabel}>{label}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
-      {locationText ? (
-        <Text style={styles.locationText}>{locationText}</Text>
-      ) : null}
+          {presentation.warnings.length > 0 ? (
+            <View style={styles.warningList}>
+              {presentation.warnings.map((warning) => (
+                <Text key={warning} style={styles.warningText}>
+                  {warning}
+                </Text>
+              ))}
+            </View>
+          ) : null}
 
-      <RoutePoiList activeDataPoints={routeState.activeDataPoints} />
+          {locationText ? (
+            <Text style={styles.locationText}>{locationText}</Text>
+          ) : null}
+
+          <RoutePoiList activeDataPoints={routeState.activeDataPoints} />
+        </>
+      )}
     </View>
   );
 }

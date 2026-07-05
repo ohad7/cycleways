@@ -31,6 +31,14 @@ export default function NavPanel({
     !p.justAcquired &&
     !p.wrongWay;
   const showTopCard = !arrived && !showCurrentRoadPill;
+  const dataPillMainText =
+    p.remainingText ||
+    (p.cardMode === "approach"
+      ? "בדרך למסלול"
+      : p.cardMode === "off-route"
+        ? "חזרה למסלול"
+        : "");
+  const showSpeedInDataPill = Boolean(p.remainingText && p.speedText);
 
   // Direction-to-route arrow: phone-relative when the compass is available
   // (bearing-to-target minus device heading), else the movement-course arrow.
@@ -171,15 +179,15 @@ export default function NavPanel({
             <View
               style={styles.dataPill}
               accessible
-              accessibilityLabel={`${p.remainingText || ""}. ${
+              accessibilityLabel={`${dataPillMainText}. ${
                 lockScreenGuidanceActive ? "ממשיך כשהמסך נעול" : "מסך ער"
               }. ${voiceEnabled ? "קול פעיל" : "קול כבוי"}`}
             >
               <View style={styles.dataPillCopy}>
                 <Text style={styles.dataPillMain} numberOfLines={1}>
-                  {p.remainingText || ""}
+                  {dataPillMainText}
                 </Text>
-                {p.speedText ? (
+                {showSpeedInDataPill ? (
                   <Text style={styles.dataPillSub} numberOfLines={1}>
                     {p.speedText}
                   </Text>

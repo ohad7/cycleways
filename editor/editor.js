@@ -13,13 +13,13 @@ import {
 import { registerPoiEmojiImages } from "../packages/core/src/map/emojiMarkerImage.js";
 import { parseRichText } from "../packages/core/src/utils/richText.js";
 import { bootstrapKeyframesFromGps } from "../src/components/featured/gpsBootstrap.js";
-import { createVideoSync } from "../src/components/featured/videoSync.js";
+import { createVideoSync } from "../packages/core/src/featured/videoSync.js";
 import {
   buildCumulativeDistances,
   nearestPointOnPolyline,
   pointAtFraction,
   snapPointToRouteWithinWindow,
-} from "../src/components/featured/routeGeometry.js";
+} from "../packages/core/src/domain/routeGeometryMath.js";
 import { vsFormatTime, vsParseTime } from "./lib/vs-time.mjs";
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
@@ -1287,6 +1287,73 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+const BASE_EDGE_PROPERTY_PRIORITY = [
+  "edgeId",
+  "manualEdgeId",
+  "id",
+  "source",
+  "copiedFromEdgeId",
+  "osmType",
+  "osmId",
+  "osmWayId",
+  "sliceIndex",
+  "name",
+  "highway",
+  "osmRouteClass",
+  "roadType",
+  "accessStatus",
+  "oneway",
+  "distanceMeters",
+  "fromNodeId",
+  "toNodeId",
+];
+
+function baseEdgePropertySortRank(key) {
+  const index = BASE_EDGE_PROPERTY_PRIORITY.indexOf(key);
+  return index >= 0 ? index : BASE_EDGE_PROPERTY_PRIORITY.length;
+}
+
+function formatBaseEdgePropertyValue(value) {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
+  }
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "string") return value || "''";
+  return JSON.stringify(value);
+}
+
+function renderBaseEdgeAttributes(feature) {
+  if (!feature) {
+    return `<section class="base-edge-data"><h3>Data</h3><div class="empty-state">Select a base graph edge to see its attributes.</div></section>`;
+  }
+
+  const properties = feature.properties || {};
+  const rows = Object.keys(properties)
+    .sort((a, b) => (baseEdgePropertySortRank(a) - baseEdgePropertySortRank(b)) || a.localeCompare(b))
+    .map((key) => {
+      const formattedValue = formatBaseEdgePropertyValue(properties[key]);
+      return `<div><dt>${escapeHtml(key)}</dt><dd>${escapeHtml(formattedValue)}</dd></div>`;
+    });
+
+  const geometry = feature.geometry || {};
+  const coordinates = Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
+  const geometryRows = [
+    `<div><dt>geometry.type</dt><dd>${escapeHtml(geometry.type || "unknown")}</dd></div>`,
+    `<div><dt>geometry.vertices</dt><dd>${coordinates.length}</dd></div>`,
+  ];
+
+  return `
+    <section class="base-edge-data">
+      <h3>Data</h3>
+      <dl class="base-edge-attributes">
+        ${[...geometryRows, ...rows].join("") || `<div><dt>properties</dt><dd>No attributes</dd></div>`}
+      </dl>
+    </section>
+  `;
 }
 
 function updateSelectedQuality(key, value) {
@@ -3148,6 +3215,7 @@ function renderBaseGraphPanel() {
   const selected = selectedManualBaseEdge();
   const selectedId = selectedManualBaseEdgeId();
   const selectedGraphEdge = selectedBaseGraphEdge();
+  const selectedBaseFeature = selected || selectedGraphEdge;
   const selectedGraphProperties = selectedGraphEdge?.properties || {};
   const selectedGraphId = graphEdgeFeatureId(selectedGraphEdge);
   const selectedVertex = state.baseOverlay.selectedManualVertexIndex;
@@ -3193,6 +3261,7 @@ function renderBaseGraphPanel() {
       <div><dt>Manual edges</dt><dd>${manualCount} staged · ${graphManualCount} in graph</dd></div>
       <div><dt>Selected</dt><dd>${escapeHtml(selectedLine)}</dd></div>
     </dl>
+    ${renderBaseEdgeAttributes(selectedBaseFeature)}
   `;
   els.baseGraphHelp.textContent = selected
     ? "Drag vertices to reshape. Use Insert near the selected line to add a vertex, or Split on an internal vertex."

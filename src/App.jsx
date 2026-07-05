@@ -212,6 +212,9 @@ function App() {
   const [orientRequest, setOrientRequest] = useState(0);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [sheetSnap, setSheetSnap] = useState("peek");
+  // Mobile map legend open/close (closed by default). On desktop the legend is
+  // always shown, so this only gates the mobile bottom-left legend.
+  const [legendOpen, setLegendOpen] = useState(false);
   const manualSheetSnapRef = useRef(false);
   const appliedRouteLoadFitIdRef = useRef(null);
   const [isMobileSheet, setIsMobileSheet] = useState(() =>
@@ -1086,29 +1089,45 @@ function App() {
             {state.status === "ready" && (
               <>
                 <div className="search-container">
-                  <form
-                    className="search-input-group"
-                    onSubmit={handleSearchSubmit}
-                  >
-                    <button
-                      id="search-btn"
-                      type="submit"
-                      disabled={mapUi.searchStatus === "searching"}
-                      title="חיפוש מיקום"
-                      aria-label="חיפוש"
+                  {/* Search moved into the sheet (BuildEmptyActions) on mobile;
+                      the map keeps only two controls there — locate + legend. */}
+                  {!isMobileSheet && (
+                    <form
+                      className="search-input-group"
+                      onSubmit={handleSearchSubmit}
                     >
-                      <Icon name="search-outline" />
+                      <button
+                        id="search-btn"
+                        type="submit"
+                        disabled={mapUi.searchStatus === "searching"}
+                        title="חיפוש מיקום"
+                        aria-label="חיפוש"
+                      >
+                        <Icon name="search-outline" />
+                      </button>
+                      <input
+                        id="location-search"
+                        type="text"
+                        placeholder={ROUTE_SEARCH_PLACEHOLDER}
+                        value={mapUi.searchQuery}
+                        onChange={(event) =>
+                          handleSearchQueryChange(event.target.value)
+                        }
+                      />
+                    </form>
+                  )}
+                  {isMobileSheet && (
+                    <button
+                      type="button"
+                      className={`locate-btn${legendOpen ? " is-active" : ""}`}
+                      title="מקרא סוגי דרכים"
+                      aria-label="מקרא סוגי דרכים"
+                      aria-pressed={legendOpen}
+                      onClick={() => setLegendOpen((open) => !open)}
+                    >
+                      <Icon name="layers-outline" />
                     </button>
-                    <input
-                      id="location-search"
-                      type="text"
-                      placeholder={ROUTE_SEARCH_PLACEHOLDER}
-                      value={mapUi.searchQuery}
-                      onChange={(event) =>
-                        handleSearchQueryChange(event.target.value)
-                      }
-                    />
-                  </form>
+                  )}
                   <button
                     type="button"
                     className="locate-btn"
@@ -1137,10 +1156,12 @@ function App() {
                     />
                   )}
 
-                <MapLegend
-                  hasBrokenRoute={hasBrokenRoute}
-                  presentation={legendPresentation}
-                />
+                {(!isMobileSheet || legendOpen) && (
+                  <MapLegend
+                    hasBrokenRoute={hasBrokenRoute}
+                    presentation={legendPresentation}
+                  />
+                )}
                 {SHOW_MAP_PRESENTATION_EXPERIMENT_CONTROL && (
                   <MapPresentationExperimentControl
                     active={mapPresentationActive}

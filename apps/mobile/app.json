@@ -74,6 +74,7 @@
           "isIosBackgroundLocationEnabled": true
         }
       ],
+      "./plugins/withMetroBundleURLFallback.js",
       "./plugins/withWebroot.js"
     ]
   }

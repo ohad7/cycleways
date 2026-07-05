@@ -77,6 +77,18 @@ export default function DestinationSheet({
         {disclaimerText ? (
           <Text style={styles.disclaimer}>{disclaimerText}</Text>
         ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="ביטול"
+          onPress={onClose}
+          style={({ pressed }) => [
+            styles.cancel,
+            pressed ? styles.cancelPressed : null,
+          ]}
+        >
+          <Text style={styles.cancelText}>ביטול</Text>
+        </Pressable>
       </View>
     </Modal>
   );
@@ -163,5 +175,22 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: space.md,
+  },
+  cancel: {
+    marginTop: space.md,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: space.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: palette.paper,
+  },
+  cancelPressed: { opacity: 0.6 },
+  cancelText: {
+    color: palette.ink,
+    fontSize: 16,
+    fontWeight: "800",
+    writingDirection: "rtl",
   },
 });

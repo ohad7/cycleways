@@ -92,6 +92,7 @@ export default function RideSetupSheet({
   voiceEnabled = true,
   onToggleVoice,
   lockScreenGuidanceEnabled = true,
+  lockScreenGuidanceHasAlwaysPermission = false,
   lockScreenGuidanceNeedsSettings = false,
   onToggleLockScreenGuidance,
   onOpenLocationSettings,
@@ -209,7 +210,9 @@ export default function RideSetupSheet({
                       : "רק כשהמסך ער"
                   }
                   sub={
-                    lockScreenGuidanceNeedsSettings
+                    lockScreenGuidanceHasAlwaysPermission
+                      ? "הרשאת מיקום תמיד כבר פעילה"
+                      : lockScreenGuidanceNeedsSettings
                       ? "צריך לאפשר מיקום תמיד בהגדרות"
                       : "מבקש הרשאת מיקום תמיד רק בזמן התחלת רכיבה"
                   }

@@ -190,7 +190,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
   );
 
   const processLocationFix = useCallback(
-    (fix, source = "foreground") => {
+    (fix) => {
       const key = fixKey(fix);
       if (key && key === lastProcessedFixKeyRef.current) {
         return sessionRef.current?.getState?.() || null;
@@ -198,15 +198,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
       if (key) lastProcessedFixKeyRef.current = key;
       latestFixRef.current = fix;
 
-      let next = dispatch({ type: NAV_ACTIONS.LOCATION, fix });
-      if (source === "background" && next?.routeRequest?.requestId) {
-        next = dispatch({
-          type: NAV_ACTIONS.CONNECTOR_FAILED,
-          requestId: next.routeRequest.requestId,
-          reason: "background-no-router",
-        });
-      }
-      return next;
+      return dispatch({ type: NAV_ACTIONS.LOCATION, fix });
     },
     [dispatch],
   );
@@ -280,7 +272,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
   useEffect(
     () =>
       registerForegroundNavigationProcessor(async (fixes = []) => {
-        for (const fix of fixes) processLocationFix(fix, "background");
+        for (const fix of fixes) processLocationFix(fix);
       }),
     [processLocationFix],
   );
@@ -290,9 +282,9 @@ export function useNavigationSession(navigationRoute, options = {}) {
   }, [hapticsEnabled, lockScreenGuidanceActive, persistCurrent, voiceEnabled]);
 
   // Request policy stays in the pure session. Native code only executes the
-  // current async request and reports its result. Background task fixes
-  // deliberately fail connector requests for v1, so this effect represents the
-  // mounted foreground UI path.
+  // current async request and reports its result. Background task fixes that
+  // arrive while this foreground hook is mounted still use this path, because
+  // the app has access to the route manager and shard-backed connector here.
   useEffect(() => {
     const request = state?.routeRequest;
     if (
@@ -354,7 +346,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
     watchActiveRef.current = true;
     locationSourceRef.current
       .startWatch({
-        onFix: (fix) => processLocationFix(fix, "foreground"),
+        onFix: (fix) => processLocationFix(fix),
         onError: (error) =>
           dispatch({
             type: NAV_ACTIONS.ERROR,

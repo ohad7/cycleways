@@ -28,7 +28,11 @@ export const NAVIGATION_BACKGROUND_LOCATION_OPTIONS = {
 // subscription running.
 export async function getRideSetupLocation() {
   try {
-    const permission = await Location.requestForegroundPermissionsAsync();
+    const existingPermission = await Location.getForegroundPermissionsAsync();
+    const permission =
+      existingPermission.status === "granted"
+        ? existingPermission
+        : await Location.requestForegroundPermissionsAsync();
     if (permission.status !== "granted") {
       return { status: "denied", fix: null };
     }
@@ -40,15 +44,37 @@ export async function getRideSetupLocation() {
     const cachedFix = toNavigationFix(cached);
     if (cachedFix) return { status: "ready", fix: cachedFix };
 
-    const current = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
-    const fix = toNavigationFix(current);
-    return fix
-      ? { status: "ready", fix }
+    try {
+      const current = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const fix = toNavigationFix(current);
+      if (fix) return { status: "ready", fix };
+    } catch (error) {
+      const fallbackFix = await getFallbackRideSetupLocation();
+      if (fallbackFix) {
+        return { status: "ready", fix: fallbackFix, stale: true, error };
+      }
+      return { status: "unavailable", fix: null, error };
+    }
+
+    const fallbackFix = await getFallbackRideSetupLocation();
+    return fallbackFix
+      ? { status: "ready", fix: fallbackFix, stale: true }
       : { status: "unavailable", fix: null };
   } catch (error) {
     return { status: "unavailable", fix: null, error };
+  }
+}
+
+async function getFallbackRideSetupLocation() {
+  try {
+    const cached = await Location.getLastKnownPositionAsync({
+      maxAge: 10 * 60_000,
+    });
+    return toNavigationFix(cached);
+  } catch {
+    return null;
   }
 }
 

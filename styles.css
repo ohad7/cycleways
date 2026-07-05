@@ -1714,6 +1714,12 @@ html {
   cursor: progress;
 }
 
+.locate-btn.is-active {
+  background: #2f6b3c;
+  border-color: #2f6b3c;
+  color: #fff;
+}
+
 @media (max-width: 768px) {
   .locate-btn {
     width: 36px;

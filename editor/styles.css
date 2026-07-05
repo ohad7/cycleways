@@ -591,6 +591,60 @@ button:disabled {
   white-space: nowrap;
 }
 
+.base-edge-data {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.base-edge-data h3 {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.base-edge-attributes {
+  display: grid;
+  gap: 0;
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.base-edge-attributes div {
+  display: grid;
+  grid-template-columns: minmax(96px, 38%) minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.base-edge-attributes div:last-child {
+  border-bottom: 0;
+}
+
+.base-edge-attributes dt,
+.base-edge-attributes dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.base-edge-attributes dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.base-edge-attributes dd {
+  color: var(--ink);
+}
+
 .base-overlay-actions {
   flex-wrap: wrap;
   margin-top: 10px;
