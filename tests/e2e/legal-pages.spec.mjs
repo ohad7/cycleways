@@ -21,3 +21,12 @@ test("terms of use page renders with safety language", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByText("בטיחות ואחריות").first()).toBeVisible();
 });
+
+test("support page renders with contact channels and credits", async ({ page }) => {
+  await page.goto("/support");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "תמיכה ויצירת קשר" }),
+  ).toBeVisible();
+  await expect(page.getByText("ohad.serfaty@gmail.com").first()).toBeVisible();
+  await expect(page.getByText("OpenStreetMap").first()).toBeVisible();
+});
