@@ -5,5 +5,5 @@ export const SITE_ORIGIN = "https://www.cycleways.app";
 export const PRIVACY_URL = `${SITE_ORIGIN}/privacy`;
 export const TERMS_URL = `${SITE_ORIGIN}/terms`;
 export const SUPPORT_URL = `${SITE_ORIGIN}/support`;
-export const SUPPORT_EMAIL = "ohad.serfaty@gmail.com";
+export const SUPPORT_EMAIL = "cycleways.app@gmail.com";
 export const FEEDBACK_FORM_URL = "https://forms.gle/k1k432YKW1Tw16TE7";
