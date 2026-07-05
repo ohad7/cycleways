@@ -30,3 +30,14 @@ test("support page renders with contact channels and credits", async ({ page }) 
   await expect(page.getByText("ohad.serfaty@gmail.com").first()).toBeVisible();
   await expect(page.getByText("OpenStreetMap").first()).toBeVisible();
 });
+
+test("home page footer links to the legal pages", async ({ page, isMobile }) => {
+  // The mobile home layout is the full-screen discover list without the
+  // content sections + footer, so this check is desktop-only.
+  test.skip(isMobile, "footer only renders on the desktop home page");
+  await page.goto("/");
+  const footer = page.locator("footer");
+  await expect(footer.getByRole("link", { name: "מדיניות פרטיות" })).toHaveAttribute("href", "/privacy");
+  await expect(footer.getByRole("link", { name: "תנאי שימוש" })).toHaveAttribute("href", "/terms");
+  await expect(footer.getByRole("link", { name: "תמיכה" })).toHaveAttribute("href", "/support");
+});

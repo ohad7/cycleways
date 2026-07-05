@@ -102,6 +102,13 @@ function ContentSections() {
         <div className="footer-content">
           <p>&copy; 2025 CycleWays.app - מפת שבילי אופניים.</p>
           <p>פותח לקהילת רוכבי האופניים בישראל</p>
+          <p>
+            <a href="/privacy">מדיניות פרטיות</a>
+            {" · "}
+            <a href="/terms">תנאי שימוש</a>
+            {" · "}
+            <a href="/support">תמיכה</a>
+          </p>
         </div>
       </footer>
     </>
