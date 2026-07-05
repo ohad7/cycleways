@@ -10,6 +10,7 @@ import "./route-boundary.css";
 const App = lazyRoute("App", () => import("./App.jsx"));
 const RoutesIndexPage = lazyRoute("RoutesIndexPage", () => import("./pages/RoutesIndexPage.jsx"));
 const RouteDetailPage = lazyRoute("RouteDetailPage", () => import("./pages/RouteDetailPage.jsx"));
+const PrivacyPage = lazyRoute("PrivacyPage", () => import("./pages/PrivacyPage.jsx"));
 
 // Splash milestone: the main bundle has parsed and is executing.
 window.__splash?.set(0.75);
@@ -206,6 +207,14 @@ createRoot(document.getElementById("root")).render(
               element={
                 <RouteReady>
                   <RouteDetailPage />
+                </RouteReady>
+              }
+            />
+            <Route
+              path="/privacy"
+              element={
+                <RouteReady>
+                  <PrivacyPage />
                 </RouteReady>
               }
             />
