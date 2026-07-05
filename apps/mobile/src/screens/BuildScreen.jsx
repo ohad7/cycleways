@@ -138,6 +138,9 @@ const CHROME_IONICON = {
 // Publishable token, inlined by Expo at build from EXPO_PUBLIC_MAPBOX_TOKEN.
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? "";
 Mapbox.setAccessToken(MAPBOX_TOKEN);
+// Telemetry stays off: PrivacyInfo.xcprivacy and the App Store privacy labels
+// declare that the app collects no data. Re-enabling requires updating both.
+Mapbox.setTelemetryEnabled(false);
 
 // Completed portion of the route during navigation: muted, drawn over the route
 // line so the remaining route reads as the emphasized one.

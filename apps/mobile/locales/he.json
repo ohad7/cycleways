@@ -1,0 +1,5 @@
+{
+  "NSLocationWhenInUseUsageDescription": "המיקום משמש להצגתך על המפה בזמן תכנון רכיבה וניווט במסלול.",
+  "NSLocationAlwaysAndWhenInUseUsageDescription": "הרשאת מיקום תמיד מאפשרת להמשיך את הנחיות הניווט גם כשהמסך נעול בזמן הרכיבה.",
+  "NSMotionUsageDescription": "נתוני תנועה משפרים את דיוק המיקום והכיוון בזמן ניווט."
+}
