@@ -79,33 +79,41 @@ size — never stacking extra-bold.
 | `captionStrong` | 13 / 600 | 1.4 | chips, small labels |
 | `label` | 11 / 600 | 1.3 | overlines, tiny labels |
 
-**Navigation tier:** riding/navigation screens may use `display` plus three
-dedicated aliases that bump the standard variant one weight step:
-`navTitle` = 20/800, `navBody` = 15/700, `navCaption` = 13/700. If a nav alias
-turns out unused during migration it is dropped; no new weights or sizes may be
-added. The rule: heavy weights appear only through named `nav*`/`display`
-variants, never ad-hoc.
+**Navigation tier and `display` placement (one rule):** three dedicated
+aliases bump the standard variant one weight step: `navTitle` = 20/800,
+`navBody` = 15/700, `navCaption` = 13/700. The `nav*` aliases may be used
+**only** in the native navigation panel
+(`apps/mobile/src/planner/NavPanel.jsx`). The `display` variant is for
+hero-scale text: natively only NavPanel stat readouts; on web only the
+front-page hero and featured-page hero titles/stats, each use marked with a
+`/* display: hero */` comment. If a nav alias turns out unused during
+migration it is dropped; no new weights or sizes may be added. Heavy weights
+appear only through the named `nav*`/`display` variants, never ad-hoc.
 
 ## Architecture
 
 ```
-packages/core/src/typography.js      ← single source of truth (plain JS, no deps)
+packages/core/src/ui/typography.js   ← single source of truth (plain JS, no deps)
   exports: fontSizes, fontWeights, lineHeights, textVariants (incl. nav*),
            webFontStack
 
 apps/mobile/src/theme/typography.js  ← thin RN adapter
   maps variants to ready style objects:
   { fontSize, fontWeight: '700', lineHeight: <absolute px> }
-  screens use spreads: style={{ ...typography.heading }}
+  screens use spreads: style={{ ...text.heading }}
 
 scripts/generate-typography-css.mjs  ← codegen for web
-  reads core tokens, writes checked-in src/typography.css with :root custom
-  properties (--font-size-md, --font-weight-semibold, --text-heading-size, …)
+  reads core tokens, writes checked-in typography.css (repo root, next to
+  styles.css) with :root custom properties (--font-size-md,
+  --font-weight-semibold, --text-heading-size, …)
   supports --check (exit non-zero when stale) for CI/test wiring
 ```
 
-- `src/typography.css` is linked from both the React app and the classic pages
-  that use `styles.css`.
+- `typography.css` is pulled in via `@import "./typography.css";` as the first
+  line of the root `styles.css`, which the single Vite entry (`index.html`)
+  links — this covers the React app and the classic page chrome in one place.
+  The internal editor uses its own separate `editor/styles.css` and is
+  unaffected.
 - npm script (`npm run tokens`) plus pre-hooks on dev/build keep the generated
   file fresh; the `--check` mode guards against staleness in tests.
 - No new component layer: web CSS rules reference `var(...)` directly; native
@@ -116,8 +124,14 @@ scripts/generate-typography-css.mjs  ← codegen for web
 **Web scope:** `src/react-app.css`, `src/route-boundary.css`,
 `src/components/frontPanel/front-panel.css`, `src/components/welcome-wizard.css`,
 `src/components/featured/featured.css`, `src/components/routes/routes.css`,
-root `styles.css`, and any inline JSX font styles in `src/`.
-The internal `editor/` directory is **out of scope**.
+`src/pages/legal/legal.css`, root `styles.css`, and any inline JSX font styles
+in `src/`. The internal `editor/` directory is **out of scope**.
+
+**Behavioral exception:** the `input, select, textarea { font-size: 16px; }`
+rule in `styles.css` exists to prevent iOS Safari's zoom-on-focus (it fires
+when an input's font-size is below 16px). It migrates to
+`var(--font-size-lg)` (17px — still ≥16px, behavior preserved) and keeps a
+comment stating the ≥16px constraint.
 
 **Native scope:** all screens/components under `apps/mobile/src/` and
 `apps/mobile/App.js`.

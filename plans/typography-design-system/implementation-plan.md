@@ -1,27 +1,30 @@
 # Typography Design System Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** Execute the tasks in order, one at a time, checking off steps (`- [ ]`) as you go. The plan is self-contained — every step says exactly what to do. If your harness provides the superpowers skills, `superpowers:subagent-driven-development` or `superpowers:executing-plans` are recommended wrappers, but they are optional.
 
-**Date:** 2026-07-06
+**Date:** 2026-07-06 (revised same day after plan review)
 **Spec:** `plans/typography-design-system/design.md` (read it first — it defines the scale, variants, and decisions)
 
 **Goal:** Replace ~260 ad-hoc font-size/font-weight declarations on both surfaces (React Native app + web app) with a token-driven typography system sourced from `@cycleways/core`.
 
-**Architecture:** A single plain-JS token module in `packages/core/src/ui/typography.js` is consumed two ways: a thin RN adapter (`apps/mobile/src/theme/typography.js`) turns variants into ready style objects, and a codegen script (`scripts/generate-typography-css.mjs`) emits a checked-in `typography.css` of CSS custom properties that all web CSS references via `var()`. Guard tests make regressions impossible.
+**Architecture:** A single plain-JS token module in `packages/core/src/ui/typography.js` is consumed two ways: a thin RN adapter (`apps/mobile/src/theme/typography.js`) turns variants into ready style objects, and a codegen script (`scripts/generate-typography-css.mjs`) emits a checked-in root `typography.css` of CSS custom properties that all web CSS references via `var()`. A guard test makes regressions impossible.
 
-**Tech Stack:** Plain ES modules, node:test-style assert scripts (this repo's convention: standalone `node tests/test-*.mjs` files chained in the root `test` npm script), React Native (Expo), Vite.
+**Tech Stack:** Plain ES modules, standalone `node tests/test-*.mjs` assert scripts (this repo's convention), React Native (Expo), Vite.
 
 ## Global Constraints
 
 - Size scale (pt native / px web): xs=11, sm=13, md=15, lg=17, xl=20, 2xl=24, 3xl=30. No other font sizes anywhere.
-- Weights: regular=400, semibold=600, bold=700, heavy=800. Heavy (800) appears ONLY in the `display` and `navTitle` variants. Weights 500, 650, 750, 850, 900 are eliminated.
+- Weights: regular=400, semibold=600, bold=700, heavy=800. Heavy (800) appears ONLY inside the `display` and `navTitle` variants. Weights 500, 650, 750, 850, 900 are eliminated.
 - Variants: display 30/800/1.1, heading 24/700/1.2, subheading 17/600/1.3, body 15/400/1.45, bodyStrong 15/600/1.45, caption 13/400/1.4, captionStrong 13/600/1.4, label 11/600/1.3, navTitle 20/800/1.2, navBody 15/700/1.45, navCaption 13/700/1.4.
-- Native keeps the platform system font (no fontFamily). Web standardizes on the Assistant stack.
+- **Placement rule (single source: the spec):** `nav*` variants only in `apps/mobile/src/planner/NavPanel.jsx`. `display` only for hero-scale text: NavPanel stat readouts natively; on web only the front-page hero and featured-page hero titles/stats, each web use marked `/* display: hero */`.
+- Native keeps the platform system font (no fontFamily anywhere). Web standardizes on the Assistant stack via `--font-family-base`.
 - `editor/` is out of scope (it uses its own `editor/styles.css`, not the root one).
-- Every changed file: font values must come from tokens (spread variants natively, `var(--...)` on web) — never literal numbers.
-- Commit after each task. Do not run `git add -A` (repo rule: build regenerates public-data).
+- **Behavioral exception:** the `input, select, textarea { font-size: 16px; }` rule in `styles.css` prevents iOS Safari zoom-on-focus, which triggers below 16px. It becomes `var(--font-size-lg)` (17px — still ≥16, behavior preserved) with a comment stating the ≥16px constraint. Never map it below 16px.
+- Every migrated file: font values must come from tokens (spread variants natively, `var(--...)` on web) — never literal numbers, quoted or not.
+- All typography tests live in one short npm script, `test:typography`, spliced ONCE into the main `"test"` chain (Task 1). Later tasks append to `test:typography` only — never edit the long `"test"` string again.
+- Commit after each task. Do not run `git add -A` (repo rule: builds regenerate `public-data/`).
 
-## Migration mapping rules (used by Tasks 4–7)
+## Migration mapping rules (used by Tasks 5–11)
 
 Pick the **semantic variant by role first** — the variant then dictates size AND weight (do not preserve the old size if the role says otherwise):
 
@@ -34,25 +37,26 @@ Pick the **semantic variant by role first** — the variant then dictates size A
 | Secondary/meta text, timestamps, hints (was 11–13px) | `caption` |
 | Chips, badges, stat labels (was 11–13px, 700–800) | `captionStrong` |
 | Overlines, tiny uppercase-ish labels (was 10–11px) | `label` |
-| Riding stat readouts / big numbers (NavPanel) | `display` |
-| Navigation cue titles (NavPanel, was 20–22px 800–900) | `navTitle` |
-| Navigation body/secondary text (NavPanel) | `navBody` / `navCaption` |
+| Riding stat readouts / big numbers (NavPanel only) | `display` |
+| Navigation cue titles (NavPanel only, was 20–22px 800–900) | `navTitle` |
+| Navigation body/secondary text (NavPanel only) | `navBody` / `navCaption` |
+| Web hero title/stats on front & featured pages (incl. the `clamp(2rem, 4vw, 3.5rem)` rule at `src/react-app.css:183`) | `display` with `/* display: hero */` comment — fluid `clamp()` sizing is removed; heroes snap to 30px like everything else |
 
-For pure-size cases with no text role (icon glyphs like the `×` close button, chart tick labels): snap to the nearest scale step, ties round **up** (10→11, 12→13, 14→15, 16→17, 22→24, 26→24, 28→30). For rem values convert at 16px base first (0.75rem=12→13, 0.82rem≈13→13, 0.9rem≈14.4→15, 1rem=16→17).
+For pure-size cases with no text role (icon glyphs like the `×` close button, chart tick labels): snap to the nearest scale step, ties round **up** (10→11, 12→13, 14→15, 16→17, 22→24, 26→24, 28→30). For rem values convert at 16px base first (0.75rem=12→13, 0.82rem≈13→13, 0.9rem≈14.4→15, 1rem=16→17, 1.2rem≈19→20, 1.9rem≈30→30).
 
-`nav*`/`display` variants are allowed only in `apps/mobile/src/planner/NavPanel.jsx` (the riding surface). If another file seems to need them, stop and flag it in the task report instead of using them.
+If a file outside NavPanel seems to need `nav*`, or a non-hero web element seems to need `display`, STOP and flag it in your task report instead of using it.
 
 ---
 
-### Task 1: Core typography tokens
+### Task 1: Core typography tokens + `test:typography` script
 
 **Files:**
 - Create: `packages/core/src/ui/typography.js`
 - Test: `tests/test-typography-tokens.mjs`
-- Modify: `package.json` (append test to the `test` script chain)
+- Modify: `package.json` (add `test:typography`; splice it once into `"test"`)
 
 **Interfaces:**
-- Produces: `fontSizes` (`{xs,sm,md,lg,xl,"2xl","3xl"}` → numbers), `fontWeights` (`{regular:400,semibold:600,bold:700,heavy:800}`), `lineHeights` (`{tight:1.1,heading:1.2,snug:1.3,caption:1.4,body:1.45}`), `webFontStack` (string), `textVariants` (map of the 11 variants, each `{fontSize:number, fontWeight:number, lineHeight:number-ratio}`). Consumed by Tasks 2 and 3 via `@cycleways/core/ui/typography.js`.
+- Produces: `fontSizes` (`{xs,sm,md,lg,xl,"2xl","3xl"}` → numbers), `fontWeights` (`{regular:400,semibold:600,bold:700,heavy:800}`), `lineHeights` (`{tight:1.1,heading:1.2,snug:1.3,caption:1.4,body:1.45}`), `webFontStack` (string), `textVariants` (map of the 11 variants, each `{fontSize:number, fontWeight:number, lineHeight:number-ratio}`). Consumed by Tasks 2 and 3 via the import path `@cycleways/core/ui/typography.js` (the workspace package maps `./*` to `./src/*`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -147,9 +151,18 @@ export const textVariants = {
 Run: `node tests/test-typography-tokens.mjs`
 Expected: `test-typography-tokens: OK`
 
-- [ ] **Step 5: Register the test**
+- [ ] **Step 5: Register the test — create `test:typography`**
 
-In root `package.json`, in the `"test"` script, insert `node tests/test-typography-tokens.mjs && ` immediately before the final `cd tests && node test-route-manager.js` segment.
+In root `package.json` scripts, add this new script:
+
+```json
+"test:typography": "node tests/test-typography-tokens.mjs",
+```
+
+Then in the long `"test"` script, insert `npm run test:typography && ` immediately before the final `cd tests && node test-route-manager.js` segment. This is the ONLY edit the whole plan makes to the `"test"` string; Tasks 2, 3, and 12 append to `test:typography` instead.
+
+Run: `npm run test:typography`
+Expected: `test-typography-tokens: OK`
 
 - [ ] **Step 6: Commit**
 
@@ -160,18 +173,18 @@ git commit -m "feat: typography tokens in @cycleways/core (7-step scale, 4 weigh
 
 ---
 
-### Task 2: Web CSS codegen → `typography.css`
+### Task 2: Web CSS codegen → root `typography.css`
 
 **Files:**
 - Create: `scripts/generate-typography-css.mjs`
 - Create (generated, checked in): `typography.css` (repo root, next to `styles.css`)
 - Modify: `styles.css` (add `@import "./typography.css";` as the very first line)
-- Modify: `package.json` (add `tokens` script + `predev`/`prebuild` hooks; register test)
+- Modify: `package.json` (add `tokens` script + `predev`/`prebuild` hooks; append to `test:typography`)
 - Test: `tests/test-typography-css.mjs`
 
 **Interfaces:**
 - Consumes: everything exported by `packages/core/src/ui/typography.js` (Task 1).
-- Produces: `typography.css` defining, on `:root`: `--font-family-base`, `--font-size-<step>` (px) for the 7 steps, `--font-weight-<name>` for the 4 weights, and per variant (camelCase → kebab-case, e.g. `bodyStrong` → `body-strong`): `--text-<variant>-size` (px), `--text-<variant>-weight`, `--text-<variant>-line` (unitless ratio). Tasks 6–7 reference these. The script exports `generateTypographyCss(): string` and supports `--check` (exit 1 when the file on disk is stale).
+- Produces: `typography.css` defining, on `:root`: `--font-family-base`, `--font-size-<step>` (px) for the 7 steps, `--font-weight-<name>` for the 4 weights, and per variant (camelCase → kebab-case, e.g. `bodyStrong` → `body-strong`): `--text-<variant>-size` (px), `--text-<variant>-weight`, `--text-<variant>-line` (unitless ratio). Tasks 10–11 reference these. The script exports `generateTypographyCss(): string` and supports `--check` (exit 1 when the file on disk is stale).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -281,13 +294,14 @@ Expected: `wrote .../typography.css` then `test-typography-css: OK`
 
 - [ ] **Step 5: Wire it into the page and the build**
 
-In `styles.css`, add as **line 1** (CSS `@import` must precede all rules; both the Vite build and the raw dev server resolve it):
+In `styles.css`, add as **line 1** (CSS `@import` must precede all rules; both the Vite build and the raw dev server resolve it — `styles.css` and `typography.css` sit side by side at the repo root):
 
 ```css
 @import "./typography.css";
 ```
 
-In root `package.json` scripts, add:
+In root `package.json`:
+- Add scripts:
 
 ```json
 "tokens": "node scripts/generate-typography-css.mjs",
@@ -295,7 +309,14 @@ In root `package.json` scripts, add:
 "prebuild": "npm run tokens",
 ```
 
-And insert `node tests/test-typography-css.mjs && ` into the `"test"` chain right after the `test-typography-tokens.mjs` entry.
+- Change `test:typography` to:
+
+```json
+"test:typography": "node tests/test-typography-tokens.mjs && node tests/test-typography-css.mjs",
+```
+
+Run: `npm run test:typography`
+Expected: both OK lines.
 
 - [ ] **Step 6: Verify the app still renders**
 
@@ -315,11 +336,11 @@ git commit -m "feat: generate web typography.css custom properties from core tok
 **Files:**
 - Create: `apps/mobile/src/theme/typography.js`
 - Test: `tests/test-mobile-typography.mjs`
-- Modify: `package.json` (register test)
+- Modify: `package.json` (append to `test:typography`)
 
 **Interfaces:**
 - Consumes: `textVariants`, `fontSizes`, `fontWeights` from `@cycleways/core/ui/typography.js` (Task 1; Metro already resolves the workspace package — see `apps/mobile/metro.config.js`).
-- Produces: `text` — map of variant name → ready RN style `{ fontSize: number, fontWeight: string, lineHeight: number /* absolute px */ }`; re-exports `fontSizes`, `fontWeights`. Tasks 4–5 use `import { text, fontSizes } from "../theme/typography.js"` (path adjusted per file) and spread: `style={{ ...text.subheading }}` or inside `StyleSheet.create` entries: `title: { ...text.subheading, color: "#172026" }`.
+- Produces: `text` — map of variant name → ready RN style `{ fontSize: number, fontWeight: string, lineHeight: number /* absolute px */ }`; re-exports `fontSizes`, `fontWeights`. Tasks 5–9 use `import { text, fontSizes, fontWeights } from "../theme/typography.js"` (relative path adjusted per file) and spread: `style={{ ...text.subheading }}` or inside `StyleSheet.create` entries: `title: { ...text.subheading, color: "#172026" }`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -342,7 +363,7 @@ for (const style of Object.values(text)) {
   assert.equal(style.lineHeight, Math.round(style.lineHeight), "integer px line height");
 }
 
-// Token re-exports for the rare size-only case (chart ticks).
+// Token re-exports for the rare size-only case (chart ticks, icon glyphs).
 assert.equal(fontSizes.sm, 13);
 assert.equal(fontWeights.bold, 700);
 
@@ -386,7 +407,13 @@ Expected: `test-mobile-typography: OK`
 
 - [ ] **Step 5: Register the test**
 
-Insert `node tests/test-mobile-typography.mjs && ` into the root `package.json` `"test"` chain after the `test-typography-css.mjs` entry.
+In root `package.json`, change `test:typography` to:
+
+```json
+"test:typography": "node tests/test-typography-tokens.mjs && node tests/test-typography-css.mjs && node tests/test-mobile-typography.mjs",
+```
+
+Run: `npm run test:typography` → three OK lines.
 
 - [ ] **Step 6: Commit**
 
@@ -397,80 +424,230 @@ git commit -m "feat: RN typography theme adapter over core tokens"
 
 ---
 
-### Task 4: Native migration — planner components
+### Task 4: Baseline screenshots (BEFORE any migration)
 
-**Files (modify; hit counts are `fontWeight|fontSize` grep matches):**
-`apps/mobile/src/planner/NavPanel.jsx` (30 — the riding surface, uses `nav*`/`display`), `BuildEmptyActions.jsx`, `DestinationSheet.jsx`, `DevScenarioPicker.jsx`, `DiscoverPanel.jsx`, `MapLegend.jsx`, `PlaybackControls.jsx`, `RideSetupSheet.jsx`, `RouteCard.jsx`, `RoutePoiList.jsx`, `TopSearch.jsx` — all under `apps/mobile/src/planner/`.
+The spec requires before/after visual review. Capture the "before" set now, while the UI is untouched.
 
-**Interfaces:**
-- Consumes: `text`, `fontSizes` from `apps/mobile/src/theme/typography.js` (Task 3), imported as `import { text } from "../theme/typography.js";`
+**Files:**
+- Create: `plans/typography-design-system/screenshots/before/*.png` — **do not commit these** (they exist for the review conversation only; leave them untracked).
 
-- [ ] **Step 1: Migrate every file using the mapping rules**
+- [ ] **Step 1: Start the dev server**
 
-For each file, replace every literal `fontSize:`/`fontWeight:` pair (or lone occurrence) with a variant spread per the mapping table at the top of this plan. The spread goes **first** so intentional non-typography properties (color, margins) survive:
+Run `npm run dev` in the background. Wait until it prints the local URL (`http://127.0.0.1:5173`).
 
-Before (from `RouteCard.jsx`-style code):
+- [ ] **Step 2: Capture the baseline set**
 
-```js
-title: { fontSize: 17, fontWeight: "800", color: "#172026" },
-meta: { fontSize: 12, fontWeight: "700", color: "#52616f" },
+```bash
+mkdir -p plans/typography-design-system/screenshots/before
+cd plans/typography-design-system/screenshots/before
+npx playwright screenshot --viewport-size="390,844"  "http://127.0.0.1:5173/"                            front-mobile.png
+npx playwright screenshot --viewport-size="1280,800" "http://127.0.0.1:5173/"                            front-desktop.png
+npx playwright screenshot --viewport-size="390,844"  "http://127.0.0.1:5173/routes/"                     routes-mobile.png
+npx playwright screenshot --viewport-size="1280,800" "http://127.0.0.1:5173/routes/"                     routes-desktop.png
+npx playwright screenshot --viewport-size="390,844"  "http://127.0.0.1:5173/featured/sovev-beit-hillel/" featured-mobile.png
+npx playwright screenshot --viewport-size="1280,800" "http://127.0.0.1:5173/featured/sovev-beit-hillel/" featured-desktop.png
+cd -
 ```
 
-After:
+If a URL 404s in dev, note it in your report and skip that pair — do not improvise other URLs.
+
+- [ ] **Step 3: Verify and stop**
+
+Confirm all captured PNGs are non-empty (`ls -la plans/typography-design-system/screenshots/before/`), then stop the dev server. Nothing to commit in this task.
+
+---
+
+### Task 5: Native migration — NavPanel (the riding surface)
+
+**Files:**
+- Modify: `apps/mobile/src/planner/NavPanel.jsx` (30 fontWeight/fontSize matches)
+
+**Interfaces:**
+- Consumes: `text` from `apps/mobile/src/theme/typography.js` (Task 3): `import { text } from "../theme/typography.js";`
+
+This is the ONLY file allowed to use `text.navTitle`, `text.navBody`, `text.navCaption`, and (natively) `text.display`.
+
+- [ ] **Step 1: Migrate**
+
+Replace every literal `fontSize`/`fontWeight` per the mapping rules. The spread goes **first** so intentional non-typography properties (color, margins) survive:
 
 ```js
+// BEFORE (pattern)
+cueTitle: { fontSize: 22, fontWeight: "900", color: "#fff" },
+statValue: { fontSize: 28, fontWeight: "900" },
+statLabel: { fontSize: 11, fontWeight: "800", color: "#9fb0bb" },
+secondary: { fontSize: 13, fontWeight: "700", color: "#c8d4dc" },
+
+// AFTER
+cueTitle: { ...text.navTitle, color: "#fff" },
+statValue: { ...text.display },
+statLabel: { ...text.label, color: "#9fb0bb" },
+secondary: { ...text.navCaption, color: "#c8d4dc" },
+```
+
+Cue titles → `navTitle`; big stat numbers → `display`; instruction body → `navBody`; secondary/meta lines → `navCaption`; tiny stat labels → `label`; anything that is not riding-glanceability text uses the standard variants (`subheading`, `body`, `caption`…).
+
+- [ ] **Step 2: Verify no literals remain in this file**
+
+Run: `grep -En "fontWeight:\s*[\"']?[0-9b]|fontSize:\s*[\"']?[0-9]" apps/mobile/src/planner/NavPanel.jsx`
+Expected: no output.
+
+- [ ] **Step 3: Run tests**
+
+Run: `npm test`
+Expected: PASS (the nav presentation/scenario tests exercise this module's imports).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/mobile/src/planner/NavPanel.jsx
+git commit -m "refactor: NavPanel on nav-tier typography variants"
+```
+
+---
+
+### Task 6: Native migration — planner discovery components
+
+**Files (modify, with match counts):**
+- `apps/mobile/src/planner/DiscoverPanel.jsx` (40)
+- `apps/mobile/src/planner/RouteCard.jsx` (21)
+- `apps/mobile/src/planner/RoutePoiList.jsx` (8)
+
+**Interfaces:**
+- Consumes: `text`, `fontSizes` from the theme adapter: `import { text } from "../theme/typography.js";`
+- Standard variants only — NO `nav*`/`display` here.
+
+- [ ] **Step 1: Migrate all three files**
+
+Apply the mapping rules; spread first, keep colors/margins:
+
+```js
+// BEFORE (RouteCard.jsx pattern)
+title: { fontSize: 17, fontWeight: "800", color: "#172026" },
+meta: { fontSize: 12, fontWeight: "700", color: "#52616f" },
+
+// AFTER
 title: { ...text.subheading, color: "#172026" },
 meta: { ...text.captionStrong, color: "#52616f" },
 ```
 
-NavPanel.jsx only: cue titles → `text.navTitle`, stat readouts/big numbers → `text.display`, instruction body → `text.navBody`, secondary lines → `text.navCaption`. Every other planner file uses only the standard 8 variants.
+Card titles → `subheading`; descriptions → `body`; stat chips/badges → `captionStrong`; hints/meta → `caption`; section headers in DiscoverPanel → `subheading`; buttons → `bodyStrong`.
 
-Where a bare `fontSize` has no text role (icon glyph boxes), use `fontSize: fontSizes.xl` etc. (nearest step, ties up) — never a number.
+- [ ] **Step 2: Verify no literals remain in these files**
+
+Run: `grep -En "fontWeight:\s*[\"']?[0-9b]|fontSize:\s*[\"']?[0-9]" apps/mobile/src/planner/DiscoverPanel.jsx apps/mobile/src/planner/RouteCard.jsx apps/mobile/src/planner/RoutePoiList.jsx`
+Expected: no output.
+
+- [ ] **Step 3: Run tests**
+
+Run: `npm test` → PASS.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/mobile/src/planner/DiscoverPanel.jsx apps/mobile/src/planner/RouteCard.jsx apps/mobile/src/planner/RoutePoiList.jsx
+git commit -m "refactor: planner discovery components on typography variants"
+```
+
+---
+
+### Task 7: Native migration — planner sheets & controls
+
+**Files (modify, with match counts):**
+- `apps/mobile/src/planner/RideSetupSheet.jsx` (19)
+- `apps/mobile/src/planner/BuildEmptyActions.jsx` (13)
+- `apps/mobile/src/planner/DestinationSheet.jsx` (10)
+- `apps/mobile/src/planner/DevScenarioPicker.jsx` (5)
+- `apps/mobile/src/planner/MapLegend.jsx` (4)
+- `apps/mobile/src/planner/TopSearch.jsx` (3)
+- `apps/mobile/src/planner/PlaybackControls.jsx` (2)
+
+**Interfaces:**
+- Consumes: same as Task 6 (`import { text } from "../theme/typography.js";`). Standard variants only.
+
+- [ ] **Step 1: Migrate all seven files**
+
+Same mechanics and mapping as Task 6. Sheet titles → `subheading`; body copy and the ride-setup safety notice → `body`; primary buttons → `bodyStrong`; legend/dev-picker labels → `caption`/`captionStrong`; search placeholder/input text → `body`.
 
 - [ ] **Step 2: Verify no literals remain in planner/**
 
-Run: `grep -rEn "fontWeight:\s*[\"']|fontSize:\s*[0-9]" apps/mobile/src/planner/`
-Expected: no output.
+Run: `grep -rEn "fontWeight:\s*[\"']?[0-9b]|fontSize:\s*[\"']?[0-9]" apps/mobile/src/planner/`
+Expected: no output (Tasks 5–7 have now covered the whole directory).
 
-- [ ] **Step 3: Run the test suite**
+- [ ] **Step 3: Run tests**
 
-Run: `npm test`
-Expected: PASS (planner model/nav tests exercise these modules' imports).
+Run: `npm test` → PASS.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add apps/mobile/src/planner
-git commit -m "refactor: planner components on typography variants (nav tier in NavPanel)"
+git commit -m "refactor: planner sheets and controls on typography variants"
 ```
 
 ---
 
-### Task 5: Native migration — screens and remaining components
+### Task 8: Native migration — BuildScreen
 
-**Files (modify):** `apps/mobile/App.js` (2), `apps/mobile/src/ElevationProfileChart.jsx`, `apps/mobile/src/RichText.jsx`, `apps/mobile/src/splash/AnimatedLaunchSplash.jsx`, and under `apps/mobile/src/screens/`: `AboutScreen.jsx`, `BuildScreen.jsx`, `DiscoverScreen.jsx`, `RouteDetailNative.jsx`, `RouteDetailScreen.jsx`, `RouteDetailWeb.jsx`.
+**Files:**
+- Modify: `apps/mobile/src/screens/BuildScreen.jsx` (54 matches — the largest single file; that is why it is its own task)
 
 **Interfaces:**
-- Consumes: same as Task 4 (`text`, `fontSizes` from the theme adapter; relative import path differs per directory, e.g. `"./theme/typography.js"` is wrong from `screens/` — use `"../theme/typography.js"`; from `App.js` use `"./src/theme/typography.js"`).
+- Consumes: `text`, `fontSizes` via `import { text } from "../theme/typography.js";` (note: from `screens/` the theme path is `../theme/typography.js`). Standard variants only.
 
-- [ ] **Step 1: Migrate every file using the mapping rules**
+- [ ] **Step 1: Migrate**
 
-Same mechanics as Task 4. Specific notes:
-- Screen titles (`DiscoverScreen`, `RouteDetailNative`, `AboutScreen`) → `text.heading`; card/section titles → `text.subheading`; descriptions → `text.body`; buttons → `text.bodyStrong`; chips/badges/stats → `text.captionStrong`; fine print → `text.caption` or `text.label`.
-- `ElevationProfileChart.jsx` axis/tick labels: size-only case → `fontSizes.xs`/`fontSizes.sm` with `fontWeights` tokens if a weight is set (max `semibold` — chart text is not a heading).
-- `RichText.jsx` bold spans → `fontWeight: String(fontWeights.bold)` via the adapter's re-export (or `...text.bodyStrong` if the size also matches `md`).
-- `AnimatedLaunchSplash.jsx` brand text → `text.heading` unless it is a size-only glyph.
-- No `nav*`/`display` variants in any of these files.
+Apply the mapping rules to all 54 occurrences. Screen title → `heading`; panel/sheet section titles → `subheading`; descriptions/body copy → `body`; buttons/CTAs → `bodyStrong`; chips, distance/elevation stat labels → `captionStrong`; hints and secondary meta → `caption`; tiny overlays → `label`. Icon glyph boxes with size-only styles → `fontSize: fontSizes.<nearest step>`.
+
+- [ ] **Step 2: Verify no literals remain**
+
+Run: `grep -En "fontWeight:\s*[\"']?[0-9b]|fontSize:\s*[\"']?[0-9]" apps/mobile/src/screens/BuildScreen.jsx`
+Expected: no output.
+
+- [ ] **Step 3: Run tests**
+
+Run: `npm test` → PASS.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/mobile/src/screens/BuildScreen.jsx
+git commit -m "refactor: BuildScreen on typography variants"
+```
+
+---
+
+### Task 9: Native migration — remaining screens & components
+
+**Files (modify, with match counts):**
+- `apps/mobile/src/screens/RouteDetailNative.jsx` (12)
+- `apps/mobile/src/screens/AboutScreen.jsx` (9)
+- `apps/mobile/src/screens/RouteDetailWeb.jsx` (5)
+- `apps/mobile/src/screens/DiscoverScreen.jsx` (2)
+- `apps/mobile/src/screens/RouteDetailScreen.jsx` (2)
+- `apps/mobile/src/ElevationProfileChart.jsx` (5)
+- `apps/mobile/App.js` (4)
+- `apps/mobile/src/splash/AnimatedLaunchSplash.jsx` (2)
+- `apps/mobile/src/RichText.jsx` (1)
+
+**Interfaces:**
+- Consumes: the theme adapter. Import paths by location: from `screens/` and `splash/` → `"../theme/typography.js"`; from `src/` root files (`ElevationProfileChart.jsx`, `RichText.jsx`) → `"./theme/typography.js"`; from `App.js` → `"./src/theme/typography.js"`. Standard variants only.
+
+- [ ] **Step 1: Migrate all nine files**
+
+- Screen titles (`RouteDetailNative`, `AboutScreen`, `DiscoverScreen`) → `text.heading`; card/section titles → `text.subheading`; descriptions → `text.body`; buttons → `text.bodyStrong`; chips/stats → `text.captionStrong`; fine print → `text.caption`/`text.label`.
+- `ElevationProfileChart.jsx` axis/tick labels: size-only case → `fontSize: fontSizes.xs` (or `sm`), and if a weight is set use `fontWeight: String(fontWeights.semibold)` at most — chart text is not a heading.
+- `RichText.jsx` bold spans → `fontWeight: String(fontWeights.bold)` (size inherited from surrounding text).
+- `AnimatedLaunchSplash.jsx` brand text → `text.heading` unless it is a size-only glyph (then nearest `fontSizes` step).
 
 - [ ] **Step 2: Verify no literals remain anywhere native**
 
-Run: `grep -rEn "fontWeight:\s*[\"']|fontSize:\s*[0-9]" apps/mobile/src apps/mobile/App.js | grep -v "src/theme/typography.js"`
+Run: `grep -rEn "fontWeight:\s*[\"']?[0-9b]|fontSize:\s*[\"']?[0-9]" apps/mobile/src apps/mobile/App.js | grep -v "src/theme/typography.js"`
 Expected: no output.
 
-- [ ] **Step 3: Run the test suite**
+- [ ] **Step 3: Run tests**
 
-Run: `npm test`
-Expected: PASS.
+Run: `npm test` → PASS.
 
 - [ ] **Step 4: Commit**
 
@@ -481,7 +658,7 @@ git commit -m "refactor: native screens and components on typography variants"
 
 ---
 
-### Task 6: Web migration — global stylesheets + font family
+### Task 10: Web migration — global stylesheets + font family
 
 **Files:**
 - Modify: `styles.css` (109 font declarations), `src/react-app.css` (98), `src/route-boundary.css` (3), `index.html` (Google Fonts link)
@@ -504,7 +681,7 @@ git commit -m "refactor: native screens and components on typography variants"
 
 - [ ] **Step 1: Fix the font-family inconsistency**
 
-In `src/react-app.css` `:root` (currently `Arial, "Segoe UI", sans-serif`) and in every `font-family` rule in `styles.css` that spells out a stack (except the `'Courier New', monospace` code block rule, which stays): replace with `font-family: var(--font-family-base);`.
+In `src/react-app.css` `:root` (currently `Arial, "Segoe UI", sans-serif`) and in every `font-family` rule in `styles.css` that spells out a stack (except the `'Courier New', monospace` code-block rule, which stays): replace with `font-family: var(--font-family-base);`.
 
 - [ ] **Step 2: Trim the Google Fonts link**
 
@@ -514,7 +691,32 @@ In `index.html`, change the Assistant link to load only the sanctioned weights:
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
 ```
 
-- [ ] **Step 3: Migrate the three stylesheets**
+- [ ] **Step 3: Preserve the iOS anti-zoom rule (behavioral, not aesthetic)**
+
+`styles.css` has (~line 15–19, inside a media query):
+
+```css
+/* Prevent zoom on input focus */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+```
+
+Replace with — and keep the constraint comment:
+
+```css
+/* Prevent iOS Safari zoom on input focus: font-size must stay >= 16px.
+   --font-size-lg is 17px, satisfying the constraint. */
+input,
+select,
+textarea {
+  font-size: var(--font-size-lg);
+}
+```
+
+- [ ] **Step 4: Migrate the three stylesheets**
 
 Apply the mapping rules to every `font-size`/`font-weight` in `styles.css`, `src/react-app.css`, `src/route-boundary.css`. Concrete examples from the current code:
 
@@ -534,18 +736,27 @@ Apply the mapping rules to every `font-size`/`font-weight` in `styles.css`, `src
 .data-marker-card__close { /* … */ font-size: var(--font-size-xl); line-height: 1; } /* glyph: size-only, line-height 1 intentional */
 ```
 
-`font-weight: 900/850/800` cases: real page titles → `--text-heading-*`; everything else per the mapping table. No `nav*`/`display` variables in web CSS (navigation is app-only; if a stat readout genuinely needs display treatment, flag it in the task report).
+The fluid hero rule at `src/react-app.css:183` (`font-size: clamp(2rem, 4vw, 3.5rem);`) is the front-page hero — per the placement rule it becomes:
 
-- [ ] **Step 4: Verify no literals remain in these files**
+```css
+/* display: hero */
+font-size: var(--text-display-size);
+font-weight: var(--text-display-weight);
+line-height: var(--text-display-line);
+```
 
-Run: `grep -En "font-size:\s*[0-9.]|font-weight:\s*[0-9]|font-weight:\s*bold" styles.css src/react-app.css src/route-boundary.css`
+All other `font-weight: 900/850/800` cases: real page titles → `--text-heading-*`; everything else per the mapping table. No `nav*` variables anywhere in web CSS.
+
+- [ ] **Step 5: Verify no literals remain in these files**
+
+Run: `grep -En "font-size:\s*[0-9.a-z(]|font-weight:\s*[0-9b]" styles.css src/react-app.css src/route-boundary.css | grep -v "var(--" | grep -v "inherit"`
 Expected: no output.
 
-- [ ] **Step 5: Visual smoke + tests**
+- [ ] **Step 6: Visual smoke + tests**
 
-Run: `npm test` → PASS. Then `npm run dev`, load the front page, confirm text renders (vars resolving — no uniformly 16px/regular text), stop the server.
+Run: `npm test` → PASS. Then `npm run dev`, load the front page, confirm text renders with the new hierarchy (not uniformly 16px/regular — that would mean unresolved variables), stop the server.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add styles.css src/react-app.css src/route-boundary.css index.html
@@ -554,21 +765,24 @@ git commit -m "refactor: global web styles on typography variables, unify Assist
 
 ---
 
-### Task 7: Web migration — component stylesheets
+### Task 11: Web migration — component & page stylesheets
 
 **Files:**
-- Modify: `src/components/frontPanel/front-panel.css` (106), `src/components/featured/featured.css` (124), `src/components/routes/routes.css` (28), `src/components/welcome-wizard.css` (21), `src/components/DownloadModal.jsx` (inline style objects)
+- Modify: `src/components/featured/featured.css` (124), `src/components/frontPanel/front-panel.css` (106), `src/components/routes/routes.css` (28), `src/components/welcome-wizard.css` (21), `src/pages/legal/legal.css` (3 rem sizes — mapped by role in Step 1), `src/components/DownloadModal.jsx` (inline style objects, incl. `fontSize: "12px"` at line ~174)
 
 **Interfaces:**
-- Consumes: same CSS variables and composite pattern as Task 6. For the JSX inline styles in `DownloadModal.jsx` use the same variables: `style={{ fontSize: "var(--text-caption-size)", fontWeight: "var(--text-caption-weight)" }}`.
+- Consumes: same CSS variables and composite pattern as Task 10. For the JSX inline styles in `DownloadModal.jsx` use the same variables as strings: `style={{ fontSize: "var(--text-caption-size)", fontWeight: "var(--text-caption-weight)" }}`.
 
-- [ ] **Step 1: Migrate the four stylesheets + DownloadModal**
+- [ ] **Step 1: Migrate the five stylesheets + DownloadModal**
 
-Apply the mapping rules exactly as in Task 6. Front-panel notes (the worst offender — 850/900 cluster): sheet titles → `--text-subheading-*`, panel headings → `--text-heading-*`, stat chips → `--text-caption-strong-*`, hint text → `--text-caption-*`, buttons → `--text-body-strong-*`. Featured-page hero titles → `--text-heading-*`; hero stat numbers are the one place `--text-display-*` **may** be used on web if the current style is ≥28px/800+ (document each use with a `/* display: hero stat */` comment).
+Apply the mapping rules exactly as in Task 10. Notes:
+- `front-panel.css` (the 850/900 cluster): sheet titles → `--text-subheading-*`, panel headings → `--text-heading-*`, stat chips → `--text-caption-strong-*`, hint text → `--text-caption-*`, buttons → `--text-body-strong-*`.
+- `featured.css`: hero title and hero stat numbers → `--text-display-*` with a `/* display: hero */` comment on each use; section titles → `--text-heading-*` or `--text-subheading-*` by level; story/body text → `--text-body-*`.
+- `legal.css`: page title (1.9rem) → `--text-heading-*`; section headings (1.2rem) → `--text-subheading-*`; body (0.9rem) → `--text-body-*`.
 
 - [ ] **Step 2: Verify no literals remain**
 
-Run: `grep -rEn "font-size:\s*[0-9.]|font-weight:\s*[0-9]|font-weight:\s*bold|fontWeight:\s*[\"']?[0-9b]|fontSize:\s*[0-9]" src/components/`
+Run: `grep -rEn "font-size:\s*[0-9.a-z(]|font-weight:\s*[0-9b]|fontWeight:\s*[\"']?[0-9b]|fontSize:\s*[\"']?[0-9]" src/components/ src/pages/ | grep -v "var(--" | grep -v "inherit"`
 Expected: no output.
 
 - [ ] **Step 3: Run tests**
@@ -578,27 +792,29 @@ Run: `npm test` → PASS. `npm run test:smoke` (Playwright) → PASS.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/components
-git commit -m "refactor: component stylesheets on typography variables"
+git add src/components src/pages
+git commit -m "refactor: component and page stylesheets on typography variables"
 ```
 
 ---
 
-### Task 8: Guard test + end-to-end verification
+### Task 12: Guard test + end-to-end verification + after screenshots
 
 **Files:**
 - Test: `tests/test-typography-guard.mjs`
-- Modify: `package.json` (register test)
+- Modify: `package.json` (append to `test:typography`)
+- Create: `plans/typography-design-system/screenshots/after/*.png` (untracked, like the baseline)
 
 **Interfaces:**
-- Consumes: nothing new — it greps the files migrated in Tasks 4–7 to keep them clean forever.
+- Consumes: nothing new — it scans the files migrated in Tasks 5–11 to keep them clean forever.
 
 - [ ] **Step 1: Write the guard test**
 
 ```js
 // tests/test-typography-guard.mjs
-// Keeps the typography sweep from regressing: no literal font sizes/weights
-// outside the token modules. Spec: plans/typography-design-system/design.md
+// Keeps the typography sweep from regressing: font sizes/weights must come
+// from tokens everywhere outside the token modules themselves.
+// Spec: plans/typography-design-system/design.md
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { readdirSync, statSync } from "node:fs";
@@ -607,7 +823,7 @@ import { resolve, dirname, join, relative } from "node:path";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-const webFiles = [
+const webCssFiles = [
   "styles.css",
   "src/react-app.css",
   "src/route-boundary.css",
@@ -615,6 +831,7 @@ const webFiles = [
   "src/components/featured/featured.css",
   "src/components/routes/routes.css",
   "src/components/welcome-wizard.css",
+  "src/pages/legal/legal.css",
 ];
 
 const walk = (dir) =>
@@ -624,38 +841,47 @@ const walk = (dir) =>
     return /\.(jsx?|tsx?)$/.test(name) ? [p] : [];
   });
 
-// JSX/JS on both surfaces: native app + web src (e.g. DownloadModal.jsx).
-// The theme adapter itself is the one legitimate holder of literals.
+// JS/JSX on both surfaces; the theme adapter is the one legitimate
+// holder of derived values.
 const jsFiles = [
   ...walk(resolve(repoRoot, "apps/mobile/src")),
   resolve(repoRoot, "apps/mobile/App.js"),
   ...walk(resolve(repoRoot, "src")),
-].filter((p) => !p.endsWith("src/theme/typography.js"));
+].filter((p) => !p.endsWith(join("theme", "typography.js")));
 
 const failures = [];
 
-for (const file of webFiles) {
+// CSS: any font-size/font-weight value that is not var() or inherit fails —
+// this catches px, rem, em, %, clamp(), calc(), and keywords like `bold`.
+// The `font:` shorthand is only allowed as `font: inherit` (button resets).
+// line-height is deliberately NOT guarded: `line-height: 1` on icon glyphs
+// is legitimate, and variant line-heights arrive via the same var() blocks.
+for (const file of webCssFiles) {
   const css = await readFile(resolve(repoRoot, file), "utf8");
   css.split("\n").forEach((line, i) => {
-    if (/font-size:\s*[0-9.]/.test(line) || /font-weight:\s*([0-9]|bold)/.test(line)) {
-      failures.push(`${file}:${i + 1}: ${line.trim()}`);
-    }
+    const bad =
+      (/font-size\s*:/.test(line) && !/font-size\s*:\s*(var\(|inherit)/.test(line)) ||
+      (/font-weight\s*:/.test(line) && !/font-weight\s*:\s*(var\(|inherit)/.test(line)) ||
+      (/(?<![-\w])font\s*:/.test(line) && !/(?<![-\w])font\s*:\s*inherit/.test(line));
+    if (bad) failures.push(`${file}:${i + 1}: ${line.trim()}`);
   });
 }
 
+// JS/JSX: literal sizes (quoted like "12px" or bare numbers) and literal
+// weights ("700", 700, "bold") are banned; token references pass:
+// fontSize: fontSizes.xl, fontWeight: String(fontWeights.bold),
+// fontSize: "var(--text-caption-size)".
 for (const file of jsFiles) {
   const src = await readFile(file, "utf8");
   src.split("\n").forEach((line, i) => {
-    // Literal weights ("700", 'bold') and numeric sizes are banned;
-    // fontWeight: "var(--...)" and fontSize: fontSizes.xl are fine.
-    if (/fontWeight:\s*["'](\d|bold)/.test(line) || /fontSize:\s*[0-9]/.test(line)) {
+    if (/fontSize:\s*["']?[\d.]/.test(line) || /fontWeight:\s*["']?(\d|bold)/.test(line)) {
       failures.push(`${relative(repoRoot, file)}:${i + 1}: ${line.trim()}`);
     }
   });
 }
 
 assert.deepEqual(failures, [], `literal font styles found:\n${failures.join("\n")}`);
-console.log(`test-typography-guard: OK (${webFiles.length} css + ${jsFiles.length} js files clean)`);
+console.log(`test-typography-guard: OK (${webCssFiles.length} css + ${jsFiles.length} js files clean)`);
 ```
 
 - [ ] **Step 2: Run it — fix any stragglers it finds**
@@ -665,15 +891,21 @@ Expected: PASS. If it fails, each reported line is a missed migration — map it
 
 - [ ] **Step 3: Register the test**
 
-Insert `node tests/test-typography-guard.mjs && ` into the `"test"` chain after the `test-mobile-typography.mjs` entry.
+In root `package.json`, change `test:typography` to its final form:
+
+```json
+"test:typography": "node tests/test-typography-tokens.mjs && node tests/test-typography-css.mjs && node tests/test-mobile-typography.mjs && node tests/test-typography-guard.mjs",
+```
+
+Run: `npm run test:typography` → four OK lines.
 
 - [ ] **Step 4: Full verification**
 
-Run: `npm test` → PASS. `npm run test:smoke` → PASS. `npm run build` → succeeds (prebuild regenerates typography.css; do NOT `git add` public-data changes the build makes).
+Run: `npm test` → PASS. `npm run test:smoke` → PASS. `npm run build` → succeeds (prebuild regenerates typography.css; do NOT `git add` the public-data changes the build makes).
 
-- [ ] **Step 5: Visual review evidence**
+- [ ] **Step 5: After screenshots + visual review evidence**
 
-With `npm run dev` running, capture desktop + mobile-viewport screenshots of: front page (planner + front panel), a route page (`/routes/...`), and a featured page, e.g. via `npx playwright screenshot --viewport-size=390,844 http://127.0.0.1:5173 front-mobile.png` (save under `$CLAUDE_JOB_DIR/tmp/` or the session scratchpad, NOT the repo). Present them to the user. Native screens (Discover, RouteDetail, NavPanel riding view) need the user to run the iOS simulator — flag this explicitly in the final report.
+Repeat Task 4's screenshot procedure exactly, saving into `plans/typography-design-system/screenshots/after/` (same six filenames, same viewports, same URLs, untracked). Present the before/after pairs to the user for review. Native screens (Discover, RouteDetail, BuildScreen, the NavPanel riding view) cannot be screenshotted this way — state explicitly in the final report that the user needs to review them in the iOS simulator (`npm run mobile:ios`).
 
 - [ ] **Step 6: Commit**
 
