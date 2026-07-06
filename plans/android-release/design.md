@@ -66,23 +66,37 @@ Gaps found (evidence in the review; carried into tasks below):
   **title** is not globally unique; true brand protection is a trademark, out
   of scope here.
 
-## Scope decision: foreground-first launch, background nav as fast-follow
+## Scope decision: background / locked-screen navigation ships in v1 (parity with iOS)
 
-Building the Android background-location layer (Phase 5) is a real
-sub-project comparable to the iOS `background-location-voice-guidance/` work.
-To avoid it blocking the 14-day clock:
+**Decision (2026-07-06):** Android launches with background / locked-screen
+turn-by-turn **included**, matching the iPhone experience — a rider starts a
+ride, locks the phone, and keeps getting location-based guidance (visual +
+spoken) until pause/stop/arrival/permission-revoke. It is a **release-quality
+requirement**, not a fast-follow.
 
-- **v1 (this plan, Phases 0–4, 6):** ship with **foreground navigation only**
-  (works today once built) plus a clear in-app note that Android locked-screen
-  guidance is coming. This is enough to capture the identity, start the tester
-  clock, and get to production.
-- **Phase 5 (background nav):** sequenced in parallel during/after the 14-day
-  window; may be promoted to its own spec + plan if it grows. Recommendation is
-  to land it before *wide* public promotion, since locked-screen guidance is
-  core to a cycling nav app — but it does not gate the initial release.
+This is affordable because the expensive part is already done and
+platform-neutral. The iOS `background-location-voice-guidance/` work left the
+whole navigation brain in `@cycleways/core` and shared adapters:
 
-If the user decides locked-screen nav must ship in v1, Phase 5 moves ahead of
-Phase 6's production submission.
+- Pure session/cues/haptics/presentation and **session snapshot + restore** live
+  in `packages/core/src/navigation/` — platform-agnostic.
+- The background task (`src/navigation/backgroundNavigationTask.js`) and runtime
+  (`src/navigation/navigationRuntime.js`) are already platform-neutral.
+- The **voice/TTS adapter** (`src/navigation/speechAdapter.js`, `expo-speech` +
+  `expo-audio`) is already cross-platform — Android gets spoken guidance for
+  free once the background updates flow runs.
+
+So the *only* Android-specific work is the **native boundary**: a
+foreground-service + persistent notification, the Android two-step background
+location permission, prominent disclosure, and removing the `Platform.OS !==
+"ios"` gates in `locationService.js`. That is Phases 5–5c below, and it sits on
+the critical path **before** the production submission (Phase 6), not after.
+
+**Sequencing implication:** the 14-day tester clock (Phase 3) still starts as
+early as possible on a foreground-capable build, but the build that goes to
+**production** (Phase 6) must already include background nav, and the
+data-safety form + background-location permissions declaration are filled out
+for background use from the start.
 
 ## Architecture — the code changes
 
@@ -98,24 +112,37 @@ directly in the native manifest/res; if the app is ever re-prebuilt from
 `app.json`, the same config is reproduced via an Expo config plugin
 (`plugins/withAndroidCleartextLocalhost.js`) so it is not lost.
 
-### Android background location (Phase 5)
+### Android background / locked-screen navigation (Phase 5, in v1)
 
-Mirror the iOS background nav design:
+Reuse the entire iOS navigation brain; build only the Android native boundary.
+Four Android-specific concerns that differ from iOS:
 
-- Extend `expo-location` plugin config in `app.json` with Android
-  foreground-service + background-permission options; add
-  `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE`,
-  `FOREGROUND_SERVICE_LOCATION` to the manifest.
-- Remove the `Platform.OS !== "ios"` early-returns in
-  `src/navigation/locationService.js` so `startNavigationBackgroundUpdates`,
-  `requestNavigationPermissions({ background: true })`, and
-  `getNavigationPermissionStatus` run the real path on Android, guarded by a
-  runtime capability check rather than a hard platform gate.
-- Reuse the existing `NAVIGATION_LOCATION_TASK` background task
-  (`src/navigation/backgroundNavigationTask.js`) — it is already
-  platform-neutral.
-- Add the Android **prominent-disclosure** permission-priming UI required by
-  Play before requesting background location.
+1. **Foreground service + persistent notification.** Android requires a
+   persistent notification while a background-location foreground service runs.
+   Enable it via the `expo-location` plugin (`isAndroidForegroundServiceEnabled`)
+   and pass a `foregroundService` block (localized title/body, color) into the
+   `startLocationUpdatesAsync` options. The current
+   `NAVIGATION_BACKGROUND_LOCATION_OPTIONS` in `locationService.js` is
+   iOS-shaped (`showsBackgroundLocationIndicator`, `activityType`,
+   `pausesUpdatesAutomatically`); merge Android-only `foregroundService` options
+   at call time so each platform gets what it needs without breaking the other.
+2. **Two-step background permission.** On Android 11+ the OS will not grant
+   "Allow all the time" from an in-app dialog; after foreground is granted, the
+   background request routes the user to Settings. The UI must handle the
+   "foreground granted, background still pending" state gracefully (navigation
+   still works foreground-only; a banner offers to enable background).
+3. **Prominent disclosure** shown *before* the system background-permission
+   dialog (Play policy), gated to Android.
+4. **Remove the `Platform.OS !== "ios"` gates** in `locationService.js`
+   (`startNavigationBackgroundUpdates`, `requestNavigationPermissions`,
+   `getNavigationPermissionStatus`) so Android runs the real path behind a
+   runtime capability check (`shouldUseBackgroundUpdates`).
+
+Everything else — the `NAVIGATION_LOCATION_TASK` task, runtime fix processing,
+session snapshot/restore across a background→foreground handoff, spoken cues,
+and haptics — is inherited unchanged from the iOS work. Parity is validated with
+the `nav-scenario-harness/` simulate-ride dev mode plus a real locked-screen
+device ride.
 
 ### Release build pipeline (Phase 4)
 
@@ -144,7 +171,10 @@ from `~/.gradle/gradle.properties` (or an out-of-repo file), never hardcoded.
 - **Mapbox download token** may block the first build (finding 5) — verified in
   Phase 1 before anything else is invested.
 - **Background-location Play review** (Phase 6) is the most common rejection
-  reason for nav apps; the prominent-disclosure flow + a demo video are
-  required. Only relevant once Phase 5 ships.
+  reason for nav apps and now applies to v1: the prominent-disclosure flow + a
+  demo video showing it are required at submission. Budget review round-trips.
+- **Foreground-service battery / Doze behavior** on diverse Android OEMs
+  (aggressive battery killers) can silently stop background updates; validate on
+  at least one non-Pixel device before production.
 - **14-day clock** is unavoidable; front-loading Phases 0–4 minimizes calendar
   time to production.

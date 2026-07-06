@@ -6,7 +6,7 @@
 
 **Goal:** Publish the existing Expo/RN app to Google Play under the Cycleways brand and close the Android-specific code gaps found in review.
 
-**Architecture:** The `apps/mobile/android/` native project is a committed Expo prebuild that is ~80% Android-ready. Capture the package id early to start the mandatory 14-day tester clock, ship a foreground-nav v1, then fast-follow the Android background-location layer. See `design.md` for findings and decisions.
+**Architecture:** The `apps/mobile/android/` native project is a committed Expo prebuild that is ~80% Android-ready. Capture the package id early to start the mandatory 14-day tester clock. **Background / locked-screen navigation ships in v1** (parity with iOS): the navigation brain, voice adapter, and session snapshot/restore are already platform-neutral in `@cycleways/core`, so only the Android native boundary (foreground service + notification, two-step background permission, prominent disclosure) is new. See `design.md` for findings and decisions.
 
 **Tech Stack:** Expo ~56 / React Native 0.85 (new arch, Hermes), `@rnmapbox/maps` (Mapbox v11), `@dr.pogodin/react-native-static-server`, `expo-location`/`expo-task-manager`, fastlane + `supply`, Google Play Console, Maestro.
 
@@ -320,9 +320,9 @@ git commit -m "build(android): add fastlane build_aab + upload_internal lanes"
 
 ---
 
-## Phase 5 — Android background / locked-screen navigation (CODE, deferrable)
+## Phase 5 — Android background / locked-screen navigation (CODE, in v1)
 
-> **Scope note:** This is a sub-project comparable to iOS `background-location-voice-guidance/`. Per design.md it does **not** gate the initial release (v1 ships foreground-only). If it grows, promote it to its own spec + plan. Land it before wide public promotion.
+> **Scope note:** Background nav ships in v1 (decision 2026-07-06), on the critical path **before** the Phase 6 production submission. The expensive parts — pure session/cues/haptics/presentation, session snapshot/restore, and the `expo-speech`/`expo-audio` voice adapter — are already built and platform-neutral from the iOS `background-location-voice-guidance/` work. Only the Android native boundary below is new. The 14-day tester clock (Phase 3) may still start on an earlier build, but the AAB promoted to production must include these tasks.
 
 ### Task 6: Add Android background-location permissions + foreground service
 
@@ -419,6 +419,22 @@ Then in `startNavigationBackgroundUpdates`, replace `if (Platform.OS !== "ios") 
 ```
 In `requestNavigationPermissions`, change `if (!background || Platform.OS !== "ios")` to `if (!background)` so Android also requests background permission.
 In `getNavigationPermissionStatus`, request background permission on all platforms (remove the `Platform.OS === "ios" ? ... : {undetermined}` branch).
+Also add the Android **foreground-service notification** options so the persistent notification has real copy (Android requires it while the location foreground service runs). Merge them only on Android when starting updates:
+```js
+const ANDROID_FOREGROUND_SERVICE = {
+  foregroundService: {
+    notificationTitle: "CycleWays ניווט פעיל",
+    notificationBody: "עוקב אחרי המסלול שלך",
+    notificationColor: "#1B5E20",
+  },
+};
+// ...in startNavigationBackgroundUpdates, when calling startLocationUpdatesAsync:
+await Location.startLocationUpdatesAsync(NAVIGATION_LOCATION_TASK, {
+  ...NAVIGATION_BACKGROUND_LOCATION_OPTIONS,
+  ...(Platform.OS === "android" ? ANDROID_FOREGROUND_SERVICE : {}),
+  ...options,
+});
+```
 
 - [ ] **Step 4: Run the test to confirm it passes.**
 
@@ -444,9 +460,10 @@ git commit -m "feat(android): enable background navigation updates on Android"
 - Test: extend a Maestro flow `.maestro/nav-background-permission.yaml`
 
 - [ ] **Step 1:** Before the first background-permission request on Android, show a prominent disclosure explaining that location is used in the background for turn-by-turn while the screen is locked, with explicit continue/deny. (Play policy requires this **before** the system dialog.) Gate it with `Platform.OS === "android"`.
-- [ ] **Step 2:** Add a Maestro flow that starts a ride, asserts the disclosure appears, accepts it, and asserts the system permission dialog follows.
-- [ ] **Step 3:** Device test with screen locked: start a ride, lock the screen, confirm position keeps updating and a foreground-service notification appears.
-- [ ] **Step 4: Commit.**
+- [ ] **Step 2: Handle the two-step Android grant.** On Android 11+ "Allow all the time" cannot be granted from the in-app dialog — after foreground is granted, `requestBackgroundPermissionsAsync` sends the user to system Settings. Handle the intermediate state cleanly: navigation must still run **foreground-only** when background is pending, and a non-blocking banner ("Enable all-the-time location for locked-screen guidance") offers to re-request / open Settings. Use the existing `getNavigationPermissionStatus().canUseBackground` to drive the banner.
+- [ ] **Step 3:** Add a Maestro flow that starts a ride, asserts the disclosure appears, accepts it, and asserts the system permission dialog follows.
+- [ ] **Step 4:** Device test with screen locked: start a ride, grant "all the time", lock the screen, confirm position keeps updating, spoken cues fire, and the foreground-service notification is present. Then background→foreground and confirm the session restored from snapshot (no re-fired "route acquired" cue).
+- [ ] **Step 5: Commit.**
 
 ```bash
 git add apps/mobile/src/planner/RideSetupSheet.jsx apps/mobile/.maestro/nav-background-permission.yaml
@@ -462,10 +479,10 @@ git commit -m "feat(android): prominent-disclosure priming before background loc
 **Files:** store assets under `apps/mobile/fastlane/metadata/android/` (optional, if managing via `supply`).
 
 - [ ] **Step 1:** Store listing: short description (≤80 chars), full description, app icon (512×512), **feature graphic (1024×500)**, phone screenshots (≥2), 7-inch/10-inch tablet screenshots if `supportsTablet`. **[human]**
-- [ ] **Step 2:** **Data safety** form — declare location collection/usage/sharing to match actual behavior (foreground location; background if Phase 5 shipped). **[human]**
+- [ ] **Step 2:** **Data safety** form — declare location collection/usage/sharing to match actual behavior: precise location, foreground **and background** (used for turn-by-turn while the screen is locked). **[human]**
 - [ ] **Step 3:** **Content rating** questionnaire. **[human]**
 - [ ] **Step 4:** Target audience, privacy policy URL (reuse the iOS one), ads declaration (none), news/COVID declarations as applicable. **[human]**
-- [ ] **Step 5 (only if Phase 5 shipped):** Background-location **permissions declaration** — prominent-disclosure description + a demo video showing the in-app disclosure and the feature. This is the most common nav-app rejection point. **[human]**
+- [ ] **Step 5 (required — background nav is in v1):** Background-location **permissions declaration** — the core-functionality justification, the prominent-disclosure description, and a **demo video** showing the in-app disclosure and locked-screen guidance. This is the most common nav-app rejection point; the production AAB must already contain the Phase 5 code. **[human]**
 
 **Definition of done:** Play Console "Dashboard" shows all release-readiness tasks green except the production track.
 
@@ -476,7 +493,7 @@ git commit -m "feat(android): prominent-disclosure priming before background loc
 - [ ] **Step 1:** Promote the internal build to a **Closed testing** track; add ≥20 testers (email list or Google Group) and get them to **opt in and install**. **[human]**
 - [ ] **Step 2:** Keep ≥20 testers opted in for **14 continuous days**. Track the start date here: `____-__-__`. **[human]**
 - [ ] **Step 3:** After 14 days, apply for **production access** (personal-account requirement). **[human]**
-- [ ] **Step 4:** Create the **Production** release (upload the signed AAB via `fastlane android upload_internal` retargeted to `production`, or in the console), submit for review. **[human]**
+- [ ] **Step 4:** Create the **Production** release using an AAB that **includes the Phase 5 background-nav code** (upload via `fastlane android upload_internal` retargeted to `production`, or in the console), submit for review. **[human]**
 
 **Definition of done:** app is live (or in review) on the Production track under `app.cycleways.mobile` / `Cycleways`.
 
@@ -485,6 +502,6 @@ git commit -m "feat(android): prominent-disclosure priming before background loc
 ## Self-review notes
 
 - **Spec coverage:** all five design findings map to tasks — toolchain→T0, Mapbox token→T1, cleartext→T2, keystore→T4, background location→T6–T8. Account/identity→T3, listing/compliance→T9–T10.
-- **Critical path:** T3 (identity capture) + one signed build (T4) start the 14-day clock; do them as early as possible. Phases 2/5 code work and Phase 6 listing run in parallel during the wait.
-- **Deferrable:** Phase 5 (background nav) is explicitly out of the launch critical path per design.md; v1 ships foreground-only. Revisit if locked-screen nav must ship in v1.
+- **Critical path:** T3 (identity capture) + one signed build (T4) start the 14-day clock; do them as early as possible. Phase 2 (cleartext), Phase 5 (background nav), and Phase 6 listing run in parallel during the 14-day wait — but the AAB promoted to **production** (T10) must already include Phase 5.
+- **Background nav in v1:** Phase 5 (T6–T8) is on the critical path before production submission. It reuses the platform-neutral iOS navigation brain + voice adapter + session snapshot/restore; only the Android native boundary is new. The data-safety form (T9.2) and background-location declaration (T9.5) are filled out for background use accordingly.
 - **Verify-first assumptions:** exact `compileSdkVersion`/`ndkVersion`/`android-XX` values in T0 must be read from the Expo pins at execution time (`android/build.gradle` ext or `./gradlew` output) rather than trusted from this plan; the Mapbox download-token need (T1 Step 3) is confirmed empirically on first build.
