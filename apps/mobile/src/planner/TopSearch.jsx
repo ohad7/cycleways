@@ -2,6 +2,7 @@ import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "./Icon.jsx";
 import { palette, radius } from "./theme.js";
+import { text } from "../theme/typography.js";
 
 const PLACEHOLDER = "חיפוש יישוב/עיר";
 
@@ -79,15 +80,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   input: {
+    ...text.body,
     flex: 1,
     minWidth: 0,
     height: 46,
     paddingHorizontal: 12,
     color: palette.ink,
-    fontSize: 15,
     writingDirection: "rtl",
   },
   error: {
+    ...text.captionStrong,
     alignSelf: "flex-end",
     maxWidth: "92%",
     paddingHorizontal: 12,
@@ -95,8 +97,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: "rgba(255,255,255,0.97)",
     color: palette.danger,
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },

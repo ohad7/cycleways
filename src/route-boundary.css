@@ -8,13 +8,13 @@
   padding: 32px;
   background: #f4f7f4;
   color: #172026;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-family-base);
   text-align: center;
 }
 
 .route-boundary--loading {
   gap: 10px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 
 .route-boundary__spinner {
@@ -33,7 +33,9 @@
 
 .route-boundary--error h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: var(--text-heading-size);
+  font-weight: var(--text-heading-weight);
+  line-height: var(--text-heading-line);
 }
 
 .route-boundary--error p {
@@ -63,7 +65,7 @@
   background: #2c5f7a;
   color: #fff;
   font: inherit;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
   cursor: pointer;
 }

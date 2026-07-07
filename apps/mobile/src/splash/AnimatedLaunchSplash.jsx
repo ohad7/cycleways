@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { text } from "../theme/typography.js";
 import {
   AccessibilityInfo,
   Animated,
@@ -232,9 +233,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#3f5d33",
   },
   status: {
+    ...text.captionStrong,
     color: "#46514b",
-    fontSize: 13,
-    fontWeight: "700",
     textAlign: "center",
     writingDirection: "rtl",
   },

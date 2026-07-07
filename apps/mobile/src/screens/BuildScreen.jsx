@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Location from "expo-location";
 import { useSyntheticRoutePlaybackEngine } from "@cycleways/core/ui/routePlaybackEngine.js";
 import PlaybackControls from "../planner/PlaybackControls.jsx";
+import { fontSizes, text } from "../theme/typography.js";
 import {
   ActivityIndicator,
   Alert,
@@ -3242,7 +3243,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, position: "relative", backgroundColor: "#fff" },
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  hint: { fontSize: 15, textAlign: "center", color: "#333" },
+  hint: { ...text.body, textAlign: "center", color: "#333" },
   pickHint: {
     position: "absolute",
     top: 120,
@@ -3261,17 +3262,15 @@ const styles = StyleSheet.create({
     maxWidth: "90%",
   },
   pickHintText: {
+    ...text.bodyStrong,
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
     flexShrink: 1,
   },
   pickHintCancel: {
+    ...text.bodyStrong,
     color: "#9ec6a6",
-    fontSize: 14,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   setupStartMarker: {
@@ -3301,9 +3300,8 @@ const styles = StyleSheet.create({
     maxWidth: 220,
   },
   navChipText: {
+    ...text.captionStrong,
     color: "#1a2b1e",
-    fontSize: 12,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   navChipApproach: {
@@ -3342,16 +3340,14 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   routeRestoreTitle: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 17,
-    fontWeight: "900",
     textAlign: "center",
     writingDirection: "rtl",
   },
   routeRestoreText: {
+    ...text.body,
     color: palette.muted,
-    fontSize: 14,
-    fontWeight: "700",
     textAlign: "center",
     writingDirection: "rtl",
   },
@@ -3364,9 +3360,8 @@ const styles = StyleSheet.create({
   },
   routeRestoreRetryPressed: { opacity: 0.78 },
   routeRestoreRetryText: {
+    ...text.bodyStrong,
     color: palette.white,
-    fontSize: 14,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   // Adaptive rider puck: a colored dot with a heading arrow. The whole view is
@@ -3425,11 +3420,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   markerCardEmoji: {
-    fontSize: 20,
+    fontSize: fontSizes.xl,
   },
   markerCardTitle: {
-    fontSize: 16,
-    fontWeight: "800",
+    ...text.subheading,
     textAlign: "right",
     writingDirection: "rtl",
     flexShrink: 1,
@@ -3444,21 +3438,19 @@ const styles = StyleSheet.create({
   },
   markerCardCloseText: {
     color: "#333333",
-    fontSize: 22,
+    // Glyph box (×): size-only, lineHeight centers it in the 30px button.
+    fontSize: fontSizes["2xl"],
     lineHeight: 24,
-    fontWeight: "700",
   },
   markerCardSegment: {
+    ...text.captionStrong,
     color: "#52616f",
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   markerCardInfo: {
+    ...text.body,
     color: "#333333",
-    fontSize: 13,
-    lineHeight: 19,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3468,10 +3460,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   routeMessage: {
+    ...text.caption,
     color: "#333333",
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 18,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3479,23 +3469,20 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   warningText: {
+    ...text.captionStrong,
     color: "#92400e",
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   locationText: {
+    ...text.caption,
     color: "#52616f",
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   errorText: {
+    ...text.captionStrong,
     color: "#991b1b",
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3528,10 +3515,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   summaryTitle: {
+    ...text.subheading,
     flex: 1,
     color: "#172026",
-    fontSize: 17,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3545,9 +3531,9 @@ const styles = StyleSheet.create({
   },
   summaryCloseText: {
     color: "#333333",
-    fontSize: 24,
+    // Glyph box (×): size-only, lineHeight centers it in the 34px button.
+    fontSize: fontSizes["2xl"],
     lineHeight: 26,
-    fontWeight: "700",
   },
   summaryBody: {
     gap: 14,
@@ -3558,38 +3544,34 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   summarySectionTitle: {
+    // One step below summaryTitle (subheading) to keep hierarchy inside the modal.
+    ...text.bodyStrong,
     color: "#172026",
-    fontSize: 14,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryText: {
+    ...text.caption,
     color: "#333333",
-    fontSize: 13,
-    lineHeight: 19,
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryMuted: {
+    ...text.caption,
     color: "#666666",
-    fontSize: 13,
     fontStyle: "italic",
     textAlign: "right",
     writingDirection: "rtl",
   },
   summarySegmentText: {
+    ...text.caption,
     color: "#333333",
-    fontSize: 13,
-    lineHeight: 19,
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryWarningText: {
+    ...text.captionStrong,
     color: "#92400e",
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3644,14 +3626,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   chromeButtonText: {
+    // Compact toolbar chips, not full CTAs — captionStrong keeps them tight.
+    ...text.captionStrong,
     color: "#333333",
-    fontSize: 13,
-    fontWeight: "700",
     flexShrink: 1,
   },
   chromeButtonTextSymbol: {
-    fontSize: 21,
-    fontWeight: "800",
+    // Glyph symbols (undo/redo/etc.): size-only, lineHeight centers in the row.
+    fontSize: fontSizes.xl,
     lineHeight: 24,
   },
   chromeButtonTextPrimary: {
@@ -3676,16 +3658,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   buildEyebrow: {
+    ...text.label,
     color: "#6b8f86",
-    fontSize: 11,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   buildTitle: {
+    ...text.subheading,
     color: "#172026",
-    fontSize: 16,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3710,15 +3690,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f6f4",
   },
   statValue: {
+    ...text.bodyStrong,
     color: "#172026",
-    fontSize: 14,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   statLabel: {
+    ...text.label,
     color: "#52616f",
-    fontSize: 10,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
   buildFooter: {
@@ -3767,9 +3745,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   devButtonText: {
+    ...text.label,
     color: "#ffe600",
-    fontSize: 11,
-    fontWeight: "800",
     letterSpacing: 0.5,
   },
 });

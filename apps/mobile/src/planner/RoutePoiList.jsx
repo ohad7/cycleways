@@ -4,6 +4,7 @@ import { POI_COLORS, POI_EMOJIS, POI_LABELS } from "@cycleways/core/data/poiType
 import RichText from "../RichText.jsx";
 import { ROUTE_IMAGES } from "./routeImages.js";
 import { palette, radius, space } from "./theme.js";
+import { fontSizes, text } from "../theme/typography.js";
 
 // "נקודות עניין בדרך" — the route's points of interest with photo + description,
 // matching the mobile-web POIList/POICard. Driven by the shared routePoiList
@@ -57,9 +58,8 @@ function PoiCard({ poi }) {
 const styles = StyleSheet.create({
   section: { gap: space.sm, marginTop: space.sm },
   heading: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 15,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -76,18 +76,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  emoji: { fontSize: 22 },
+  emoji: { fontSize: fontSizes["2xl"] },
   headerText: { flex: 1 },
   title: {
+    ...text.bodyStrong,
     color: palette.ink,
-    fontSize: 14,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   type: {
-    fontSize: 11,
-    fontWeight: "700",
+    ...text.label,
     textAlign: "right",
     writingDirection: "rtl",
     marginTop: 1,
@@ -99,8 +97,8 @@ const styles = StyleSheet.create({
     backgroundColor: palette.cream,
   },
   info: {
+    ...text.caption,
     color: palette.muted,
-    fontSize: 13,
     textAlign: "right",
     writingDirection: "rtl",
   },

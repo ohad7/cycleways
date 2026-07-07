@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { text } from "../theme/typography.js";
 import {
   Linking,
   Modal,
@@ -134,17 +135,15 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
   },
   title: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 18,
-    fontWeight: "800",
     writingDirection: "rtl",
     textAlign: "right",
     marginBottom: space.sm,
   },
   section: {
+    ...text.captionStrong,
     color: palette.muted,
-    fontSize: 13,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: space.md,
@@ -162,16 +161,14 @@ const styles = StyleSheet.create({
   rowPressed: { opacity: 0.6 },
   rowText: { flex: 1 },
   rowLabel: {
+    ...text.bodyStrong,
     color: palette.ink,
-    fontSize: 16,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
   },
   disclaimer: {
+    ...text.caption,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "600",
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: space.md,
@@ -188,9 +185,8 @@ const styles = StyleSheet.create({
   },
   cancelPressed: { opacity: 0.6 },
   cancelText: {
+    ...text.bodyStrong,
     color: palette.ink,
-    fontSize: 16,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
 });

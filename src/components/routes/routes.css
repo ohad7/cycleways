@@ -39,8 +39,9 @@
 
 .routes-page__eyebrow {
   color: #9a5a32;
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
   letter-spacing: 0;
 }
 
@@ -63,8 +64,9 @@
 
 .routes-page__header h1 {
   margin: 0;
-  font-size: 2.2rem;
-  line-height: 1.15;
+  font-size: var(--text-heading-size);
+  font-weight: var(--text-heading-weight);
+  line-height: var(--text-heading-line);
   color: #1f352e;
 }
 
@@ -90,13 +92,15 @@
 
 .routes-page__summary strong {
   color: #245943;
-  font-size: 2rem;
-  line-height: 1;
+  font-size: var(--text-heading-size);
+  font-weight: var(--text-heading-weight);
+  line-height: 1; /* stacked stat number; tight on purpose */
 }
 
 .routes-page__summary span {
   color: #6a766f;
-  font-size: 0.9rem;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
 }
 
 .routes-page__search-panel {
@@ -124,8 +128,9 @@
 
 .routes-page__combo-label {
   color: #5f6f67;
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
 }
 
 .routes-page__combo-box {
@@ -157,7 +162,7 @@
   background: transparent;
   color: #25302b;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: var(--text-body-size);
 }
 
 .routes-page__combo-box input::placeholder {
@@ -174,8 +179,9 @@
   border-radius: 999px;
   background: #245943;
   color: #ffffff;
-  font-size: 0.86rem;
-  line-height: 1;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: 1; /* pill chip; tight on purpose */
 }
 
 .routes-page__selected-place span {
@@ -249,8 +255,9 @@
   border-radius: 999px;
   background: #f2f6f3;
   color: #68766f;
-  font-size: 0.75rem;
-  line-height: 1;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: 1; /* count pill; tight on purpose */
   padding: 4px 6px;
   text-align: center;
 }
@@ -273,8 +280,9 @@
 
 .routes-page__quick-filter-label {
   color: #5f6f67;
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
   white-space: nowrap;
 }
 
@@ -285,7 +293,8 @@
   gap: 10px;
   min-height: 34px;
   color: #68766f;
-  font-size: 0.86rem;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
 }
 
 .routes-page__filters-reset {
@@ -295,8 +304,9 @@
   color: #245943;
   cursor: pointer;
   font: inherit;
-  font-size: 0.9rem;
-  line-height: 1;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: 1; /* compact button; tight on purpose */
   padding: 9px 11px;
 }
 
@@ -323,8 +333,9 @@
   color: #25302b;
   cursor: pointer;
   font: inherit;
-  font-size: 0.88rem;
-  line-height: 1;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: 1; /* filter chip; tight on purpose */
   padding: 7px 10px;
   transition:
     background-color 120ms ease,
@@ -463,8 +474,9 @@
 .route-card__header h3 {
   margin: 0;
   color: #1f352e;
-  font-size: 1.18rem;
-  line-height: 1.25;
+  font-size: var(--text-subheading-size);
+  font-weight: var(--text-subheading-weight);
+  line-height: var(--text-subheading-line);
 }
 
 .route-card__badges {
@@ -479,8 +491,9 @@
   border: 1px solid #cad8cf;
   border-radius: 999px;
   color: #315342;
-  font-size: 0.78rem;
-  line-height: 1;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: 1; /* badge pill; tight on purpose */
   padding: 5px 8px;
 }
 
@@ -488,15 +501,9 @@
 .route-card__places {
   margin: 0;
   color: #52615c;
-  line-height: 1.45;
-}
-
-.route-card__summary {
-  font-size: 0.95rem;
-}
-
-.route-card__places {
-  font-size: 0.88rem;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-line);
 }
 
 .route-card__map-thumb {
@@ -530,7 +537,8 @@
   background: #f2f6f3;
   border-radius: 6px;
   color: #30443c;
-  font-size: 0.86rem;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
   padding: 5px 8px;
 }
 
@@ -547,8 +555,9 @@
 .route-card__primary,
 .route-card__secondary {
   border-radius: 6px;
-  font-size: 0.95rem;
-  line-height: 1;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: 1; /* compact action button; tight on purpose */
   text-decoration: none;
   padding: 10px 14px;
 }
@@ -590,8 +599,9 @@
 .route-detail__copy h1 {
   margin: 0;
   color: #1f352e;
-  font-size: clamp(2rem, 3vw, 3rem);
-  line-height: 1.1;
+  font-size: var(--text-heading-size);
+  font-weight: var(--text-heading-weight);
+  line-height: var(--text-heading-line);
 }
 
 .route-detail__summary,
@@ -631,7 +641,9 @@
 .route-detail__section h2 {
   margin: 0 0 12px;
   color: #1f352e;
-  font-size: 1.3rem;
+  font-size: var(--text-subheading-size);
+  font-weight: var(--text-subheading-weight);
+  line-height: var(--text-subheading-line);
 }
 
 .route-detail__stats {
@@ -681,10 +693,6 @@
     padding: 18px;
   }
 
-  .routes-page__header h1 {
-    font-size: 2rem;
-  }
-
   .routes-page__summary {
     display: flex;
     align-items: baseline;
@@ -693,10 +701,6 @@
     min-width: 0;
     padding: 9px 11px;
     text-align: start;
-  }
-
-  .routes-page__summary strong {
-    font-size: 1.45rem;
   }
 
   .routes-page__search-panel {
@@ -759,8 +763,8 @@
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.96);
     font-family: inherit;
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: var(--text-body-strong-size);
+    font-weight: var(--text-body-strong-weight);
     color: #2f3e38;
     cursor: pointer;
   }
@@ -775,7 +779,8 @@
     border-radius: 999px;
     background: #2f6b3c;
     color: #fff;
-    font-size: 0.78rem;
+    font-size: var(--text-caption-strong-size);
+    font-weight: var(--text-caption-strong-weight);
   }
 
   .routes-page__search-panel {

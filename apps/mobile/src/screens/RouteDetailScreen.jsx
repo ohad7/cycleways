@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { loadFeaturedRouteSnapshot } from "@cycleways/core/data/featuredRouteSnapshots.js";
+import { text } from "../theme/typography.js";
 // Import the native download impl explicitly: this app-level file lives outside
 // packages/core/src, so Metro's core-only platform remap (metro.config.js) does
 // not swap download.js → download.native.js here, and the web version's
@@ -101,9 +102,8 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   errorText: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 17,
-    fontWeight: "800",
     textAlign: "center",
     writingDirection: "rtl",
   },

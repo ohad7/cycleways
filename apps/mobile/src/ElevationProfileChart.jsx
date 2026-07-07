@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, StyleSheet, Text, View } from "react-native";
 import Svg, { Line, Path } from "react-native-svg";
+import { fontSizes, fontWeights } from "./theme/typography.js";
 import {
   buildElevationHoverPayload,
   buildElevationProfile,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
   hoverInfoText: {
     flexShrink: 1,
     color: "#1f2933",
-    fontSize: 11,
+    fontSize: fontSizes.xs,
     lineHeight: 16,
     textAlign: "right",
     writingDirection: "rtl",
@@ -209,8 +210,8 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 999,
     borderWidth: 1,
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: fontSizes.xs,
+    fontWeight: String(fontWeights.semibold),
     lineHeight: 15,
     overflow: "hidden",
   },
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   distanceLabel: {
     flexShrink: 0,
     color: "#666666",
-    fontSize: 11,
+    fontSize: fontSizes.xs,
     textAlign: "center",
     writingDirection: "rtl",
   },
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
   },
   legendLabel: {
     color: "#666666",
-    fontSize: 11,
+    fontSize: fontSizes.xs,
     lineHeight: 12,
   },
 });

@@ -1,3 +1,4 @@
+import { text } from "../theme/typography.js";
 // Dev-only navigation scenario picker (nav-scenario-harness). Rendered only
 // under __DEV__ from BuildScreen; lists the shared scenario registry and a
 // playback-speed toggle. Deliberately unstyled relative to the app chrome —
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     maxHeight: "70%",
     padding: 16,
   },
-  title: { color: "#fff", fontSize: 16, fontWeight: "600", marginBottom: 10 },
+  title: { ...text.subheading, color: "#fff", marginBottom: 10 },
   speedRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
   speedChip: {
     borderColor: "#555",
@@ -74,11 +75,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   speedChipActive: { backgroundColor: "#3a6", borderColor: "#3a6" },
-  speedText: { color: "#fff", fontSize: 13 },
+  speedText: { ...text.captionStrong, color: "#fff" },
   list: { flexGrow: 0 },
   row: { borderTopColor: "#333", borderTopWidth: 1, paddingVertical: 10 },
-  rowName: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  rowDescription: { color: "#aaa", fontSize: 12, marginTop: 2 },
+  rowName: { ...text.bodyStrong, color: "#fff" },
+  rowDescription: { ...text.caption, color: "#aaa", marginTop: 2 },
   close: { alignItems: "center", paddingVertical: 12 },
-  closeText: { color: "#3a6", fontSize: 14, fontWeight: "600" },
+  closeText: { ...text.bodyStrong, color: "#3a6" },
 });

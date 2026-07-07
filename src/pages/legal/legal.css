@@ -7,12 +7,16 @@
 }
 
 .legal-page h1 {
-  font-size: 1.9rem;
+  font-size: var(--text-heading-size);
+  font-weight: var(--text-heading-weight);
+  line-height: var(--text-heading-line);
   margin-bottom: 4px;
 }
 
 .legal-page h2 {
-  font-size: 1.2rem;
+  font-size: var(--text-subheading-size);
+  font-weight: var(--text-subheading-weight);
+  line-height: var(--text-subheading-line);
   margin-top: 28px;
   margin-bottom: 8px;
 }
@@ -24,7 +28,8 @@
 
 .legal-page__updated {
   color: #6b7671;
-  font-size: 0.9rem;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
   margin-bottom: 20px;
 }
 

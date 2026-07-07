@@ -171,7 +171,8 @@ function RouteSegmentsList({
                 key={dataPoint.id}
                 style={{
                   color: "#ff9800",
-                  fontSize: "12px",
+                  fontSize: "var(--text-caption-size)",
+                  fontWeight: "var(--text-caption-weight)",
                   marginTop: "5px",
                   marginRight: "20px",
                 }}

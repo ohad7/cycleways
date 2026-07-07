@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { text } from "./src/theme/typography.js";
 import {
   Linking,
   LogBox,
@@ -280,17 +281,15 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   errorTitle: {
+    ...text.subheading,
     color: "#1c332b",
-    fontSize: 18,
-    fontWeight: "700",
     marginBottom: 8,
     textAlign: "right",
     writingDirection: "rtl",
   },
   errorText: {
+    ...text.body,
     color: "#3f514b",
-    fontSize: 15,
-    lineHeight: 21,
     marginBottom: 14,
     textAlign: "right",
     writingDirection: "rtl",
@@ -303,5 +302,5 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   errorButtonPressed: { opacity: 0.75 },
-  errorButtonText: { color: "#ffffff", fontSize: 14, fontWeight: "700" },
+  errorButtonText: { ...text.bodyStrong, color: "#ffffff" },
 });

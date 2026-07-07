@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
+import { text } from "../theme/typography.js";
 
 // Active turn-by-turn overlay. Decision logic lives in navigationPresentation;
 // this component renders the cue card/status pill, contextual controls, and
@@ -335,54 +336,47 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
   },
   acquiredText: {
+    ...text.navBody,
     color: palette.white,
     flex: 1,
-    fontSize: 14,
-    fontWeight: "900",
     textAlign: "right",
     writingDirection: "rtl",
   },
   cueTextWrap: { flex: 1 },
   cueText: {
+    ...text.navTitle,
     color: palette.ink,
-    fontSize: 20,
-    fontWeight: "800",
     writingDirection: "rtl",
     textAlign: "right",
   },
   offText: { color: palette.white, flex: 1 },
   approachHeading: {
+    ...text.navBody,
     color: palette.ink,
-    fontSize: 14,
-    fontWeight: "900",
     writingDirection: "rtl",
     textAlign: "right",
     marginBottom: space.xs,
   },
   approachSupport: {
+    ...text.navCaption,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: space.xs,
   },
   cueBigDistance: {
+    ...text.display,
     color: "#1c4fd6",
-    fontSize: 22,
-    fontWeight: "900",
   },
   statusText: {
+    ...text.navBody,
     color: palette.ink,
-    fontSize: 16,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
   },
   context: {
+    ...text.navCaption,
     color: palette.muted,
-    fontSize: 13,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: 2,
@@ -408,9 +402,8 @@ const styles = StyleSheet.create({
     marginTop: space.sm,
   },
   destBtnText: {
+    ...text.navBody,
     color: palette.forest,
-    fontSize: 14,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   bottomStack: {
@@ -429,9 +422,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   roadPillText: {
+    ...text.navTitle,
     color: palette.ink,
-    fontSize: 17,
-    fontWeight: "900",
     writingDirection: "rtl",
     textAlign: "center",
   },
@@ -466,15 +458,13 @@ const styles = StyleSheet.create({
     marginStart: space.sm,
   },
   dataPillMain: {
+    ...text.navBody,
     color: palette.ink,
-    fontSize: 14,
-    fontWeight: "900",
     writingDirection: "rtl",
   },
   dataPillSub: {
+    ...text.navCaption,
     color: palette.muted,
-    fontSize: 13,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
   recenterWrap: { position: "absolute", left: space.md },
@@ -489,9 +479,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   arrivalTitle: {
+    ...text.navTitle,
     color: palette.ink,
-    fontSize: 20,
-    fontWeight: "900",
     textAlign: "center",
     writingDirection: "rtl",
   },
@@ -501,8 +490,8 @@ const styles = StyleSheet.create({
     marginTop: space.md,
   },
   arrivalStat: { alignItems: "center" },
-  arrivalStatValue: { color: palette.ink, fontSize: 18, fontWeight: "900" },
-  arrivalStatLabel: { color: palette.muted, fontSize: 11, fontWeight: "700" },
+  arrivalStatValue: { ...text.navTitle, color: palette.ink },
+  arrivalStatLabel: { ...text.label, color: palette.muted },
   arrivalDone: {
     marginTop: space.md,
     backgroundColor: palette.forest,
@@ -511,9 +500,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   arrivalDoneText: {
+    ...text.navBody,
     color: palette.white,
-    fontSize: 15,
-    fontWeight: "900",
     writingDirection: "rtl",
   },
   navBtnWrap: { alignItems: "center", gap: 4 },
@@ -533,9 +521,8 @@ const styles = StyleSheet.create({
   navBtnDanger: { backgroundColor: palette.danger },
   navBtnPressed: { opacity: 0.85 },
   navBtnLabel: {
+    ...text.navCaption,
     color: palette.ink,
-    fontSize: 12,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
 });

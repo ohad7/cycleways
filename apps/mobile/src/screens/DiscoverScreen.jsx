@@ -6,6 +6,7 @@ import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
 import { resetNativeLocationHref } from "@cycleways/core/platform/location.native.js";
 import DiscoverPanel from "../planner/DiscoverPanel.jsx";
 import { palette } from "../planner/theme.js";
+import { text } from "../theme/typography.js";
 
 export default function DiscoverScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   fabPressed: { opacity: 0.85 },
-  fabText: { color: palette.white, fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
+  fabText: { ...text.bodyStrong, color: palette.white, writingDirection: "rtl" },
   aboutLink: {
     alignSelf: "center",
     marginTop: 8,
@@ -191,8 +192,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   aboutLinkText: {
+    ...text.caption,
     color: palette.muted,
-    fontSize: 13,
     textDecorationLine: "underline",
     writingDirection: "rtl",
   },

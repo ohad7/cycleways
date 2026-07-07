@@ -5,11 +5,11 @@ import {
   settleWithin,
 } from "../apps/mobile/src/splash/bootstrapTiming.js";
 
-assert.equal(MIN_LAUNCH_SPLASH_MS, 1200);
-assert.equal(remainingLaunchSplashMs(1000, 1000), 1200);
-assert.equal(remainingLaunchSplashMs(1000, 1600), 600);
-assert.equal(remainingLaunchSplashMs(1000, 2400), 0);
-assert.equal(remainingLaunchSplashMs(2000, 1500), 1200);
+assert.equal(MIN_LAUNCH_SPLASH_MS, 2000);
+assert.equal(remainingLaunchSplashMs(1000, 1000), 2000);
+assert.equal(remainingLaunchSplashMs(1000, 1600), 1400);
+assert.equal(remainingLaunchSplashMs(1000, 3400), 0);
+assert.equal(remainingLaunchSplashMs(2000, 1500), 2000);
 
 assert.deepEqual(await settleWithin(Promise.resolve("ready"), 50), {
   status: "fulfilled",

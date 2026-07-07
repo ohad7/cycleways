@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { text } from "../theme/typography.js";
 import {
   findRouteCatalogEntryBySlug,
   loadRouteCatalogEntries,
@@ -163,16 +164,14 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, gap: 16 },
   header: { gap: 6 },
   kicker: {
+    ...text.label,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   title: {
+    ...text.heading,
     color: palette.ink,
-    fontSize: 24,
-    fontWeight: "900",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -186,25 +185,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   stat: { alignItems: "center" },
-  statValue: { color: palette.ink, fontSize: 15, fontWeight: "800" },
+  statValue: { ...text.bodyStrong, color: palette.ink },
   statLabel: {
+    ...text.label,
     color: palette.muted,
-    fontSize: 11,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
   section: { gap: 8 },
   sectionHeading: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 17,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   body: {
+    ...text.body,
     color: palette.ink,
-    fontSize: 15,
-    lineHeight: 22,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -223,9 +219,8 @@ const styles = StyleSheet.create({
   },
   ctaPressed: { opacity: 0.85 },
   ctaText: {
+    ...text.bodyStrong,
     color: palette.white,
-    fontSize: 16,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
 });
