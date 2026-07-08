@@ -154,6 +154,114 @@
             <p id="base-graph-help" class="base-overlay-bulk-summary">Manual edges are stored separately from OSM.</p>
           </section>
 
+          <section id="connector-lens-panel" class="panel workspace-panel" hidden>
+            <header class="panel-header">
+              <h2>Connector Lens</h2>
+            </header>
+
+            <label class="field-label" for="connector-color-mode">Color mode</label>
+            <select id="connector-color-mode" class="text-input compact-select">
+              <option value="off">Off</option>
+              <option value="class">Class</option>
+              <option value="eligibility">Eligibility</option>
+              <option value="cost">Cost</option>
+            </select>
+            <div id="connector-legend" class="connector-legend"></div>
+
+            <h3 class="connector-section-title">Class multipliers</h3>
+            <div id="connector-class-rows" class="connector-strategy-rows">
+              <div class="connector-strategy-row" data-connector-class="road">
+                <span class="connector-strategy-row-label">road</span>
+                <input id="connector-class-road" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-class-road-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
+              <div class="connector-strategy-row" data-connector-class="local_road">
+                <span class="connector-strategy-row-label">local_road</span>
+                <input id="connector-class-local_road" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-class-local_road-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
+              <div class="connector-strategy-row" data-connector-class="cycle">
+                <span class="connector-strategy-row-label">cycle</span>
+                <input id="connector-class-cycle" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-class-cycle-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
+              <div class="connector-strategy-row" data-connector-class="path_track">
+                <span class="connector-strategy-row-label">path_track</span>
+                <input id="connector-class-path_track" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-class-path_track-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
+              <div class="connector-strategy-row" data-connector-class="manual">
+                <span class="connector-strategy-row-label">manual</span>
+                <input id="connector-class-manual" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-class-manual-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
+              <div class="connector-strategy-row" data-connector-class="other">
+                <span class="connector-strategy-row-label">other</span>
+                <input id="connector-class-other" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-class-other-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
+            </div>
+
+            <h3 class="connector-section-title">Access policy</h3>
+            <div id="connector-access-rows" class="connector-strategy-rows">
+              <div class="connector-strategy-row" data-connector-access="restricted">
+                <span class="connector-strategy-row-label">restricted</span>
+                <input id="connector-access-restricted" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-access-restricted-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
+              <div class="connector-strategy-row" data-connector-access="conditional">
+                <span class="connector-strategy-row-label">conditional</span>
+                <input id="connector-access-conditional" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-access-conditional-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
+            </div>
+
+            <label class="field-label" for="connector-uphill-weight">Uphill weight</label>
+            <input id="connector-uphill-weight" type="number" step="0.05" min="0" class="text-input" />
+
+            <label class="field-label" for="connector-snap">Snap</label>
+            <select id="connector-snap" class="text-input compact-select">
+              <option value="allowed-only">allowed-only</option>
+              <option value="any">any</option>
+            </select>
+
+            <div class="action-row connector-strategy-actions">
+              <button id="connector-reset-strategy" class="secondary-button" type="button">Reset to production</button>
+              <button id="connector-copy-strategy" class="secondary-button" type="button">Copy strategy JSON</button>
+            </div>
+
+            <h3 class="connector-section-title">Frequency run</h3>
+            <label class="field-label" for="connector-target-route">Route</label>
+            <select id="connector-target-route" class="text-input compact-select">
+              <option value="">Select a route…</option>
+            </select>
+            <button id="connector-pick-target" class="secondary-button connector-pick-target-button" type="button">
+              Pick target on map
+            </button>
+
+            <label class="field-label" for="connector-radius">Radius (m)</label>
+            <input id="connector-radius" type="number" step="50" min="0" value="2000" class="text-input" />
+
+            <button id="connector-run" class="primary-button connector-run-button" type="button">Run</button>
+            <div id="connector-run-status" class="connector-run-status"></div>
+          </section>
+
           <section id="cw-overlay-panel" class="panel workspace-panel" hidden>
             <header class="panel-header">
               <h2>Base Overlay</h2>

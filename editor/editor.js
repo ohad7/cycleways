@@ -28,7 +28,13 @@ import {
 import {
   connectorCostColor,
   connectorClassColor,
+  CONNECTOR_COST_LEGEND,
+  CONNECTOR_CLASS_LEGEND,
+  CONNECTOR_EXCLUDED_COLOR,
 } from "./lib/connectorColors.mjs";
+
+const CONNECTOR_CLASS_KEYS = ["road", "local_road", "cycle", "path_track", "manual", "other"];
+const CONNECTOR_ACCESS_KEYS = ["restricted", "conditional"];
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 
@@ -190,6 +196,11 @@ const state = {
     // "off" | "class" | "eligibility" | "cost"
     colorMode: "off",
     strategy: structuredClone(DEFAULT_CONNECTOR_STRATEGY),
+    targetStart: null,
+    targetRouteSlug: "",
+    pickingTarget: false,
+    routesLoaded: false,
+    lastFrequencyResult: null,
   },
 };
 
@@ -258,6 +269,18 @@ const els = {
   splitManualBaseEdge: document.getElementById("split-manual-base-edge"),
   recalculateOsmGraph: document.getElementById("recalculate-osm-graph"),
   baseGraphHelp: document.getElementById("base-graph-help"),
+  connectorLensPanel: document.getElementById("connector-lens-panel"),
+  connectorColorMode: document.getElementById("connector-color-mode"),
+  connectorLegend: document.getElementById("connector-legend"),
+  connectorUphillWeight: document.getElementById("connector-uphill-weight"),
+  connectorSnap: document.getElementById("connector-snap"),
+  connectorResetStrategy: document.getElementById("connector-reset-strategy"),
+  connectorCopyStrategy: document.getElementById("connector-copy-strategy"),
+  connectorTargetRoute: document.getElementById("connector-target-route"),
+  connectorPickTarget: document.getElementById("connector-pick-target"),
+  connectorRadius: document.getElementById("connector-radius"),
+  connectorRun: document.getElementById("connector-run"),
+  connectorRunStatus: document.getElementById("connector-run-status"),
   baseOverlayStatus: document.getElementById("base-overlay-status"),
   baseOverlaySummary: document.getElementById("base-overlay-summary"),
   acceptBaseOverlay: document.getElementById("accept-base-overlay"),
@@ -1220,6 +1243,9 @@ function updateWorkspaceLayerVisibility() {
     setLayerVisibility(layerId, showBaseGraphHit);
   }
   for (const layerId of ["selected-base-graph-edge-layer", "selected-manual-base-edge"]) {
+    setLayerVisibility(layerId, showBaseEdit);
+  }
+  for (const layerId of ["connector-usage-layer", "connector-origins-layer", "connector-single-path-layer"]) {
     setLayerVisibility(layerId, showBaseEdit);
   }
   for (const layerId of [
@@ -3228,6 +3254,7 @@ function renderWorkspaceChrome() {
   els.workspaceVideoSync.classList.toggle("active", state.workspaceMode === "video-sync");
   els.workspaceRouteCatalog.classList.toggle("active", state.workspaceMode === "route-catalog");
   els.baseGraphPanel.hidden = state.workspaceMode !== "base";
+  els.connectorLensPanel.hidden = state.workspaceMode !== "base";
   els.cwOverlayPanel.hidden = state.workspaceMode !== "overlay";
   els.routeCatalogPanel.hidden = state.workspaceMode !== "route-catalog";
   els.toggleBaseOverlay.classList.toggle("active", state.baseOverlay.enabled);
@@ -3301,6 +3328,308 @@ function renderBaseGraphPanel() {
     : selectedGraphEdge
       ? "OSM edges are generated and read-only. Use Copy Selected to create an editable manual edge from this geometry."
       : "Click any base graph edge to inspect it. Create a new manual edge, or copy a selected OSM edge to edit it.";
+}
+
+function renderConnectorLensLegend() {
+  const mode = state.connectorLens.colorMode;
+  let items = [];
+  if (mode === "class") {
+    items = CONNECTOR_CLASS_LEGEND;
+  } else if (mode === "eligibility") {
+    items = [
+      { label: "allowed", color: "#1b7837" },
+      { label: "excluded", color: CONNECTOR_EXCLUDED_COLOR },
+    ];
+  } else if (mode === "cost") {
+    items = CONNECTOR_COST_LEGEND;
+  }
+  els.connectorLegend.innerHTML = items
+    .map(
+      (item) =>
+        `<span class="connector-legend-item"><span class="connector-legend-swatch" style="background:${item.color}"></span>${escapeHtml(item.label)}</span>`,
+    )
+    .join("");
+}
+
+function renderConnectorLensPanel() {
+  const strategy = state.connectorLens.strategy;
+  els.connectorColorMode.value = state.connectorLens.colorMode;
+  for (const key of CONNECTOR_CLASS_KEYS) {
+    const value = strategy.classMultipliers?.[key];
+    const numInput = document.getElementById(`connector-class-${key}`);
+    const excludedInput = document.getElementById(`connector-class-${key}-excluded`);
+    const excluded = value === null || value === undefined;
+    excludedInput.checked = excluded;
+    numInput.value = excluded ? "" : value;
+    numInput.disabled = excluded;
+  }
+  for (const key of CONNECTOR_ACCESS_KEYS) {
+    const value = strategy.accessPolicy?.[key];
+    const numInput = document.getElementById(`connector-access-${key}`);
+    const excludedInput = document.getElementById(`connector-access-${key}-excluded`);
+    const excluded = value === null || value === undefined;
+    excludedInput.checked = excluded;
+    numInput.value = excluded ? "" : value;
+    numInput.disabled = excluded;
+  }
+  els.connectorUphillWeight.value = strategy.uphillWeight;
+  els.connectorSnap.value = strategy.snap;
+  renderConnectorLensLegend();
+  const target = state.connectorLens.targetStart;
+  els.connectorRun.disabled = !target;
+  els.connectorPickTarget.classList.toggle("active", state.connectorLens.pickingTarget);
+}
+
+// Every strategy edit must REASSIGN state.connectorLens.strategy to a new
+// object so the reference-equality cache in baseGraphCollection() detects
+// the change and recolors the base-graph-edges source.
+function applyConnectorStrategyChange(mutate) {
+  const next = structuredClone(state.connectorLens.strategy);
+  mutate(next);
+  state.connectorLens.strategy = next;
+  updateMapSources();
+  renderConnectorLensPanel();
+}
+
+function setConnectorColorMode(mode) {
+  state.connectorLens.colorMode = mode;
+  updateMapSources();
+  renderConnectorLensPanel();
+}
+
+function setConnectorClassMultiplier(key, rawValue) {
+  applyConnectorStrategyChange((strategy) => {
+    strategy.classMultipliers = { ...strategy.classMultipliers, [key]: Number(rawValue) };
+  });
+}
+
+function setConnectorClassExcluded(key, excluded, fallbackValue) {
+  applyConnectorStrategyChange((strategy) => {
+    strategy.classMultipliers = {
+      ...strategy.classMultipliers,
+      [key]: excluded ? null : Number(fallbackValue) || 1,
+    };
+  });
+}
+
+function setConnectorAccessValue(key, rawValue) {
+  applyConnectorStrategyChange((strategy) => {
+    strategy.accessPolicy = { ...strategy.accessPolicy, [key]: Number(rawValue) };
+  });
+}
+
+function setConnectorAccessExcluded(key, excluded, fallbackValue) {
+  applyConnectorStrategyChange((strategy) => {
+    strategy.accessPolicy = {
+      ...strategy.accessPolicy,
+      [key]: excluded ? null : Number(fallbackValue) || 1,
+    };
+  });
+}
+
+function setConnectorUphillWeight(rawValue) {
+  applyConnectorStrategyChange((strategy) => {
+    strategy.uphillWeight = Number(rawValue);
+  });
+}
+
+function setConnectorSnap(value) {
+  applyConnectorStrategyChange((strategy) => {
+    strategy.snap = value;
+  });
+}
+
+function resetConnectorStrategy() {
+  state.connectorLens.strategy = structuredClone(DEFAULT_CONNECTOR_STRATEGY);
+  updateMapSources();
+  renderConnectorLensPanel();
+  setStatus("Connector Lens strategy reset to production defaults.");
+}
+
+async function copyConnectorStrategyJson() {
+  const json = JSON.stringify(state.connectorLens.strategy, null, 2);
+  try {
+    await navigator.clipboard.writeText(json);
+    setStatus("Connector Lens strategy JSON copied to clipboard.");
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function activateConnectorLensMode() {
+  if (state.connectorLens.routesLoaded) return;
+  state.connectorLens.routesLoaded = true;
+  try {
+    const r = await fetch("/api/featured-slugs");
+    const slugs = r.ok ? await r.json() : [];
+    for (const slug of slugs) {
+      const opt = document.createElement("option");
+      opt.value = slug;
+      opt.textContent = slug;
+      els.connectorTargetRoute.appendChild(opt);
+    }
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function onConnectorTargetRouteChange() {
+  const slug = els.connectorTargetRoute.value;
+  state.connectorLens.targetRouteSlug = slug;
+  if (!slug) {
+    renderConnectorLensPanel();
+    return;
+  }
+  setStatus(`Loading route ${slug} for Connector Lens target…`);
+  try {
+    const r = await fetch(`/api/video-keyframes/${slug}/route-polyline`);
+    if (!r.ok) throw new Error(`Route load failed (${r.status})`);
+    const polyline = await r.json();
+    if (!Array.isArray(polyline) || polyline.length === 0) {
+      throw new Error("Route has no geometry.");
+    }
+    state.connectorLens.targetStart = { lat: polyline[0].lat, lng: polyline[0].lng };
+    setStatus(`Connector Lens target set to start of ${slug}.`);
+    renderConnectorLensPanel();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+function toggleConnectorPickTarget() {
+  state.connectorLens.pickingTarget = !state.connectorLens.pickingTarget;
+  if (state.connectorLens.pickingTarget) {
+    setStatus("Connector Lens: click the map to set the target point.");
+  }
+  renderConnectorLensPanel();
+}
+
+function handleConnectorPickTargetClick(event) {
+  state.connectorLens.pickingTarget = false;
+  state.connectorLens.targetRouteSlug = "";
+  els.connectorTargetRoute.value = "";
+  state.connectorLens.targetStart = { lat: event.lngLat.lat, lng: event.lngLat.lng };
+  setStatus("Connector Lens target set from map click.");
+  renderConnectorLensPanel();
+}
+
+function connectorUsageCollection(edgeUsage) {
+  const features = [];
+  for (const [edgeId, count] of Object.entries(edgeUsage || {})) {
+    const feature = graphFeatureForEdgeId(edgeId);
+    if (!feature || feature.geometry?.type !== "LineString") continue;
+    features.push({
+      ...feature,
+      properties: { ...(feature.properties || {}), count },
+    });
+  }
+  return { type: "FeatureCollection", features };
+}
+
+function connectorOriginsCollection(origins) {
+  const features = (origins || []).map((origin) => ({
+    type: "Feature",
+    properties: { status: origin.status, lat: origin.lat, lng: origin.lng },
+    geometry: { type: "Point", coordinates: [origin.lng, origin.lat] },
+  }));
+  return { type: "FeatureCollection", features };
+}
+
+function renderConnectorUsage(edgeUsage) {
+  setSourceData("connector-usage", connectorUsageCollection(edgeUsage));
+}
+
+function renderConnectorOrigins(origins) {
+  setSourceData("connector-origins", connectorOriginsCollection(origins));
+}
+
+function clearConnectorSinglePath() {
+  setSourceData("connector-single-path", EMPTY_FEATURE_COLLECTION);
+}
+
+async function runConnectorFrequency() {
+  const target = state.connectorLens.targetStart;
+  if (!target) {
+    setStatus("Pick a target route/point first", "error");
+    return;
+  }
+  clearConnectorSinglePath();
+  setStatus("Running connector frequency…");
+  els.connectorRun.disabled = true;
+  try {
+    const res = await fetch("/api/connector/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "frequency",
+        routeStart: target,
+        strategy: state.connectorLens.strategy,
+        radiusMeters: Number(els.connectorRadius.value) || 2000,
+        gridSpacingMeters: 150,
+        maxOrigins: 400,
+      }),
+    });
+    if (!res.ok) {
+      setStatus(`Connector run failed (${res.status})`, "error");
+      return;
+    }
+    const data = await res.json();
+    state.connectorLens.lastFrequencyResult = data;
+    renderConnectorUsage(data.edgeUsage);
+    renderConnectorOrigins(data.origins);
+    const s = data.stats;
+    els.connectorRunStatus.textContent =
+      `origins ${s.total} · ok ${s.ok} · failed ${s.failed}` +
+      (data.grid.capped ? ` · grid coarsened to ${Math.round(data.grid.spacingMeters)}m` : "");
+    setStatus("Connector frequency run complete.");
+  } catch (err) {
+    showError(err);
+  } finally {
+    els.connectorRun.disabled = !state.connectorLens.targetStart;
+  }
+}
+
+async function runConnectorSingle(origin) {
+  const target = state.connectorLens.targetStart;
+  if (!target) return;
+  try {
+    const res = await fetch("/api/connector/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "single",
+        routeStart: target,
+        origin: { lat: origin.lat, lng: origin.lng },
+        strategy: state.connectorLens.strategy,
+      }),
+    });
+    if (!res.ok) {
+      setStatus(`Connector single path failed (${res.status})`, "error");
+      return;
+    }
+    const data = await res.json();
+    if (data.failure || !Array.isArray(data.geometry) || data.geometry.length === 0) {
+      clearConnectorSinglePath();
+      setStatus(data.failure ? `No path: ${data.failure}` : "No path found for that origin.");
+      return;
+    }
+    setSourceData("connector-single-path", {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: data.geometry.map((p) => [p.lng, p.lat]),
+          },
+        },
+      ],
+    });
+    setStatus(`Connector single path: ${Math.round(data.distanceMeters)}m.`);
+  } catch (err) {
+    showError(err);
+  }
 }
 
 function renderBaseOverlayPanel() {
@@ -3570,6 +3899,7 @@ function renderAll() {
   renderDataList();
   renderBaseGraphPanel();
   renderBaseOverlayPanel();
+  renderConnectorLensPanel();
   renderComposeStatus();
   updateMapSources();
 }
@@ -3668,6 +3998,9 @@ async function setWorkspaceMode(mode) {
       await loadBaseOverlayData();
     }
     setStatus(mode === "base" ? "Base Graph mode: edit manual base edges." : "CW Overlay mode: select a segment, then choose graph edges.");
+    if (mode === "base") {
+      activateConnectorLensMode().catch(showError);
+    }
   } else if (mode === "video-sync") {
     state.baseOverlay.enabled = false;
     setStatus("Video Sync mode: pick a route, paste a YouTube URL, click on the map to add keyframes.");
@@ -6431,6 +6764,30 @@ function wireEvents() {
   els.deleteManualBaseEdge.addEventListener("click", () => deleteSelectedManualBaseEdge().catch(showError));
   els.splitManualBaseEdge.addEventListener("click", () => splitSelectedManualBaseEdge().catch(showError));
   els.recalculateOsmGraph.addEventListener("click", () => recalculateOsmGraph().catch(showError));
+  els.connectorColorMode.addEventListener("change", () => setConnectorColorMode(els.connectorColorMode.value));
+  for (const key of CONNECTOR_CLASS_KEYS) {
+    const numInput = document.getElementById(`connector-class-${key}`);
+    const excludedInput = document.getElementById(`connector-class-${key}-excluded`);
+    numInput.addEventListener("change", () => setConnectorClassMultiplier(key, numInput.value));
+    excludedInput.addEventListener("change", () =>
+      setConnectorClassExcluded(key, excludedInput.checked, numInput.value),
+    );
+  }
+  for (const key of CONNECTOR_ACCESS_KEYS) {
+    const numInput = document.getElementById(`connector-access-${key}`);
+    const excludedInput = document.getElementById(`connector-access-${key}-excluded`);
+    numInput.addEventListener("change", () => setConnectorAccessValue(key, numInput.value));
+    excludedInput.addEventListener("change", () =>
+      setConnectorAccessExcluded(key, excludedInput.checked, numInput.value),
+    );
+  }
+  els.connectorUphillWeight.addEventListener("change", () => setConnectorUphillWeight(els.connectorUphillWeight.value));
+  els.connectorSnap.addEventListener("change", () => setConnectorSnap(els.connectorSnap.value));
+  els.connectorResetStrategy.addEventListener("click", resetConnectorStrategy);
+  els.connectorCopyStrategy.addEventListener("click", () => copyConnectorStrategyJson().catch(showError));
+  els.connectorTargetRoute.addEventListener("change", () => onConnectorTargetRouteChange().catch(showError));
+  els.connectorPickTarget.addEventListener("click", toggleConnectorPickTarget);
+  els.connectorRun.addEventListener("click", () => runConnectorFrequency().catch(showError));
   els.addData.addEventListener("click", addDataMarker);
   els.mapStyle.addEventListener("change", () => switchMapStyle(els.mapStyle.value));
   els.toggleUnresolvedSegments.addEventListener("click", () => toggleUnresolvedSegments().catch(showError));
@@ -6499,6 +6856,20 @@ function wireEvents() {
     } else {
       toggleSelectedOverlayBaseEdge(event.features[0]).catch(showError);
     }
+  });
+
+  map.on("click", "connector-origins-layer", (event) => {
+    const feature = event.features?.[0];
+    if (!feature) return;
+    const { lat, lng } = feature.properties || {};
+    if (typeof lat !== "number" || typeof lng !== "number") return;
+    runConnectorSingle({ lat, lng }).catch(showError);
+  });
+  map.on("mouseenter", "connector-origins-layer", () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+  map.on("mouseleave", "connector-origins-layer", () => {
+    map.getCanvas().style.cursor = state.mode === "insert" || state.mode === "draw" ? "crosshair" : "";
   });
 
   map.on("click", "manual-base-edges-hit-layer", (event) => {
@@ -6604,6 +6975,10 @@ function wireEvents() {
   });
 
   map.on("click", (event) => {
+    if (state.connectorLens.pickingTarget) {
+      handleConnectorPickTargetClick(event);
+      return;
+    }
     if (state.workspaceMode === "video-sync") {
       handleVideoSyncMapClick(event);
       return;
@@ -6908,6 +7283,24 @@ async function addMapLayers() {
   }
   if (!map.getSource("compose-edge-pick")) {
     map.addSource("compose-edge-pick", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getSource("connector-usage")) {
+    map.addSource("connector-usage", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getSource("connector-origins")) {
+    map.addSource("connector-origins", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getSource("connector-single-path")) {
+    map.addSource("connector-single-path", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
     });
@@ -7398,6 +7791,65 @@ async function addMapLayers() {
       },
       paint: {
         "icon-opacity": ["case", ["get", "selected"], 1, 0.72],
+      },
+    });
+  }
+
+  if (!map.getLayer("connector-usage-layer")) {
+    map.addLayer({
+      id: "connector-usage-layer",
+      type: "line",
+      source: "connector-usage",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-width": ["interpolate", ["linear"], ["get", "count"], 1, 1, 20, 8],
+        "line-color": [
+          "interpolate",
+          ["linear"],
+          ["get", "count"],
+          1,
+          "#c7e9c0",
+          5,
+          "#74c476",
+          20,
+          "#238b45",
+        ],
+        "line-opacity": 0.85,
+      },
+    });
+  }
+
+  if (!map.getLayer("connector-single-path-layer")) {
+    map.addLayer({
+      id: "connector-single-path-layer",
+      type: "line",
+      source: "connector-single-path",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": "#2b6cb0",
+        "line-width": 4,
+        "line-opacity": 0.95,
+        "line-dasharray": [2, 1],
+      },
+    });
+  }
+
+  if (!map.getLayer("connector-origins-layer")) {
+    map.addLayer({
+      id: "connector-origins-layer",
+      type: "circle",
+      source: "connector-origins",
+      paint: {
+        "circle-radius": 5,
+        "circle-color": ["match", ["get", "status"], "ok", "#1b7837", "#dc2626"],
+        "circle-stroke-color": "#1f2a2e",
+        "circle-stroke-width": 1,
       },
     });
   }
