@@ -1,7 +1,12 @@
 # App-Owned Approach with Confidence-Gated Handoff — Design
 
 **Date:** 2026-07-09
-**Status:** Approved, pending implementation plan
+**Status:** Approved. Implementation plan is **partial** — `implementation-plan.md`
+currently covers **Phases 1–2 only** (Components 1, 2, 3). **Phase 3**
+(Components 4 & 5 — runtime approach ownership and external-handoff demotion)
+is intentionally **not yet planned** and must be planned later, after the
+Phase-2 labeling has produced data and the confidence thresholds have been
+calibrated.
 **Topic dir:** `plans/approach-ownership/`
 **Builds on:** [connector-nav-lens](../connector-nav-lens/design.md) (shared connector cost model, `cw_network` eligibility, the editor lens), [approach-destination-picker](../approach-destination-picker/design.md) (`externalNav.js`, approach target UX), [navigation-intro-rethink](../navigation-intro-rethink/design.md) (external handoff at every distance — this design supersedes that default).
 
@@ -194,6 +199,12 @@ Pure, node-tested modules carry the logic (`connectorFeatures`, `connectorConfid
 - **Phase 3:** Component 4 (runtime ownership, the large build) + Component 5 (handoff demotion).
 
 Threshold *values* are set from real labels between Phase 2 and Phase 3; the code ships with interpretable defaults so Phase 3 is not blocked on final numbers.
+
+**Planning status:** `implementation-plan.md` covers **Phases 1–2 only** at this
+point. Phase 3 (Components 4 & 5) is deliberately deferred and will be planned
+in a separate pass once Phase-2 labels exist and thresholds are calibrated. The
+plan document is therefore **incomplete by design** and must be extended with
+Phase 3 later.
 
 ## Open decisions resolved during brainstorming
 
