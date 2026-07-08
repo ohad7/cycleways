@@ -3360,7 +3360,10 @@ function renderConnectorLensPanel() {
     const excludedInput = document.getElementById(`connector-class-${key}-excluded`);
     const excluded = value === null || value === undefined;
     excludedInput.checked = excluded;
-    numInput.value = excluded ? "" : value;
+    // Only overwrite the number input when it holds a real value; leave it
+    // populated (just disabled) while excluded so the prior multiplier is
+    // preserved and can be restored on uncheck (see setConnectorClassExcluded).
+    if (!excluded) numInput.value = value;
     numInput.disabled = excluded;
   }
   for (const key of CONNECTOR_ACCESS_KEYS) {
@@ -3369,7 +3372,7 @@ function renderConnectorLensPanel() {
     const excludedInput = document.getElementById(`connector-access-${key}-excluded`);
     const excluded = value === null || value === undefined;
     excludedInput.checked = excluded;
-    numInput.value = excluded ? "" : value;
+    if (!excluded) numInput.value = value;
     numInput.disabled = excluded;
   }
   els.connectorUphillWeight.value = strategy.uphillWeight;
@@ -3461,7 +3464,8 @@ async function activateConnectorLensMode() {
   state.connectorLens.routesLoaded = true;
   try {
     const r = await fetch("/api/featured-slugs");
-    const slugs = r.ok ? await r.json() : [];
+    if (!r.ok) throw new Error(`Failed to load featured slugs (${r.status})`);
+    const slugs = await r.json();
     for (const slug of slugs) {
       const opt = document.createElement("option");
       opt.value = slug;
