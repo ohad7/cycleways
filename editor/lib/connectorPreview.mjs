@@ -30,6 +30,32 @@ function edgeIdsFromPreview(preview) {
   return (preview.edgeIds || []).map(String);
 }
 
+function endpointSnapped(preview, index) {
+  const endpoint = Array.isArray(preview?.snappedEndpoints)
+    ? preview.snappedEndpoints[index]
+    : null;
+  return endpoint && endpoint.unsnapped !== true;
+}
+
+function connectorStatusForFrequency(manager, origin, routeStart, strategy, preview) {
+  if (!preview.failure) return "ok";
+  if (preview.failure !== "snap-failed") return preview.failure;
+
+  let snapAnyPreview = null;
+  try {
+    snapAnyPreview = manager.previewBaseRoute([origin, routeStart], {
+      costProfile: "connector",
+      connectorStrategy: { ...strategy, snap: "any" },
+    });
+  } catch {
+    return "snap-failed";
+  }
+
+  return endpointSnapped(snapAnyPreview, 0) && endpointSnapped(snapAnyPreview, 1)
+    ? "snap-ineligible"
+    : "snap-failed";
+}
+
 function runSingle(manager, origin, routeStart, strategy) {
   const preview = manager.previewBaseRoute([origin, routeStart], {
     costProfile: "connector",
@@ -71,9 +97,15 @@ export function runConnectorPreview(manager, body = {}) {
         costProfile: "connector",
         connectorStrategy: strategy,
       });
-      const status = preview.failure || "ok";
+      const status = connectorStatusForFrequency(
+        manager,
+        origin,
+        routeStart,
+        strategy,
+        preview,
+      );
       outOrigins.push({ lat: origin.lat, lng: origin.lng, status });
-      if (preview.failure) {
+      if (status !== "ok") {
         byFailure[status] = (byFailure[status] || 0) + 1;
       } else {
         ok += 1;
@@ -86,7 +118,19 @@ export function runConnectorPreview(manager, body = {}) {
       mode: "frequency",
       edgeUsage,
       origins: outOrigins,
-      stats: { total: outOrigins.length, ok, failed: outOrigins.length - ok, byFailure },
+      stats: (() => {
+        const noPath = byFailure["no-path"] || 0;
+        const snapIneligible = byFailure["snap-ineligible"] || 0;
+        const reachable = ok + noPath + snapIneligible;
+        return {
+          total: outOrigins.length,
+          ok,
+          failed: outOrigins.length - ok,
+          byFailure,
+          reachable,
+          reachableQuality: reachable > 0 ? ok / reachable : null,
+        };
+      })(),
       grid: { spacingMeters, radiusMeters, capped },
     };
   }

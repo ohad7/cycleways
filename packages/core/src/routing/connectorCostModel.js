@@ -5,7 +5,26 @@
 // before base-map routeClass/access gates because accepted CycleWays ownership
 // is stronger evidence of connector usability than incomplete OSM tags.
 
+
 export const DEFAULT_CONNECTOR_STRATEGY = {
+  "classMultipliers": {
+    "cw_network": 0.8,
+    "road": 1,
+    "local_road": 4,
+    "cycle": null,
+    "path_track": null,
+    "manual": null,
+    "other": null
+  },
+  "accessPolicy": {
+    "restricted": null,
+    "conditional": null
+  },
+  "uphillWeight": 8,
+  "snap": "allowed-only"
+}
+
+export const DEFAULT_CONNECTOR_STRATEGY_PREVIOUS = {
   classMultipliers: {
     cw_network: 0.8,
     road: 1,

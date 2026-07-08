@@ -26,6 +26,11 @@ import {
   evaluateConnectorEdge,
   hasCyclewaysNetworkMembership,
 } from "../packages/core/src/routing/connectorCostModel.js";
+import { computeConnectorFeatures } from "../packages/core/src/routing/connectorFeatures.js";
+import {
+  DEFAULT_CONNECTOR_THRESHOLDS,
+} from "../packages/core/src/routing/connectorConfidence.js";
+import { evaluateThresholds } from "../packages/core/src/routing/connectorEvaluate.js";
 import {
   connectorCostColor,
   connectorClassColor,
@@ -38,6 +43,11 @@ import {
 
 const CONNECTOR_CLASS_KEYS = ["cw_network", "road", "local_road", "cycle", "path_track", "manual", "other"];
 const CONNECTOR_ACCESS_KEYS = ["restricted", "conditional"];
+const CONNECTOR_VERDICT_COLORS = {
+  valid: "#1b7837",
+  unacceptable: "#dc2626",
+  borderline: "#f59e0b",
+};
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 
@@ -204,6 +214,15 @@ const state = {
     pickingTarget: false,
     routesLoaded: false,
     lastFrequencyResult: null,
+    hideUnreachable: true,
+    labeling: {
+      active: false,
+      index: 0,
+      verdicts: new Map(),
+      busy: false,
+    },
+    thresholds: structuredClone(DEFAULT_CONNECTOR_THRESHOLDS),
+    labelsCache: [],
   },
 };
 
@@ -284,7 +303,17 @@ const els = {
   connectorRadius: document.getElementById("connector-radius"),
   connectorRun: document.getElementById("connector-run"),
   connectorClearRun: document.getElementById("connector-clear-run"),
+  connectorHideUnreachable: document.getElementById("connector-hide-unreachable"),
   connectorRunStatus: document.getElementById("connector-run-status"),
+  connectorLabelMode: document.getElementById("connector-label-mode"),
+  connectorLabelStatus: document.getElementById("connector-label-status"),
+  connectorCalibLoad: document.getElementById("connector-calib-load"),
+  connectorCalibReadout: document.getElementById("connector-calib-readout"),
+  connectorThresholdGuideRadius: document.getElementById("connector-threshold-guide-radius"),
+  connectorThresholdTooFarRadius: document.getElementById("connector-threshold-too-far-radius"),
+  connectorThresholdMaxDetour: document.getElementById("connector-threshold-max-detour"),
+  connectorThresholdMaxRouted: document.getElementById("connector-threshold-max-routed"),
+  connectorThresholdWorstClass: document.getElementById("connector-threshold-worst-class"),
   baseOverlayStatus: document.getElementById("base-overlay-status"),
   baseOverlaySummary: document.getElementById("base-overlay-summary"),
   acceptBaseOverlay: document.getElementById("accept-base-overlay"),
@@ -3445,11 +3474,248 @@ function renderConnectorLensPanel() {
   const target = state.connectorLens.targetStart;
   els.connectorRun.disabled = !target;
   els.connectorClearRun.disabled = !connectorLensRunActive();
+  els.connectorHideUnreachable.checked = state.connectorLens.hideUnreachable;
+  els.connectorLabelMode.checked = state.connectorLens.labeling.active;
   els.connectorPickTarget.classList.toggle("active", state.connectorLens.pickingTarget);
+  const thresholds = state.connectorLens.thresholds;
+  els.connectorThresholdGuideRadius.value = thresholds.guideRadiusMeters;
+  els.connectorThresholdTooFarRadius.value = thresholds.tooFarRadiusMeters;
+  els.connectorThresholdMaxDetour.value = thresholds.maxDetourRatio;
+  els.connectorThresholdMaxRouted.value = thresholds.maxRoutedMeters;
+  els.connectorThresholdWorstClass.value = thresholds.worstClassAllowed;
+  renderConnectorLabelStatus();
+  renderConnectorCalibration();
 }
 
 function connectorLensRunActive() {
   return Boolean(state.connectorLens.lastFrequencyResult);
+}
+
+function connectorOriginKey(origin) {
+  return `${Number(origin.lat).toFixed(6)},${Number(origin.lng).toFixed(6)}`;
+}
+
+function connectorLabelOrigins() {
+  return (state.connectorLens.lastFrequencyResult?.origins || []).filter(
+    (origin) => origin.status !== "snap-failed",
+  );
+}
+
+function connectorLabelCounts() {
+  const counts = { valid: 0, unacceptable: 0, borderline: 0 };
+  for (const verdict of state.connectorLens.labeling.verdicts.values()) {
+    if (verdict in counts) counts[verdict] += 1;
+  }
+  return counts;
+}
+
+function renderConnectorLabelStatus() {
+  if (!els.connectorLabelStatus) return;
+  const list = connectorLabelOrigins();
+  const labeling = state.connectorLens.labeling;
+  if (!labeling.active) {
+    els.connectorLabelStatus.textContent = list.length
+      ? `${list.length} labelable origins`
+      : "Run frequency first.";
+    return;
+  }
+  if (list.length === 0) {
+    els.connectorLabelStatus.textContent = "No labelable origins.";
+    return;
+  }
+  const clampedIndex = Math.max(0, Math.min(list.length - 1, labeling.index));
+  if (clampedIndex !== labeling.index) labeling.index = clampedIndex;
+  const counts = connectorLabelCounts();
+  const current = list[labeling.index];
+  const currentVerdict = state.connectorLens.labeling.verdicts.get(
+    connectorOriginKey(current),
+  );
+  els.connectorLabelStatus.textContent =
+    `origin ${labeling.index + 1}/${list.length}` +
+    (currentVerdict ? ` · ${currentVerdict}` : " · unlabeled") +
+    ` · valid ${counts.valid} · unacceptable ${counts.unacceptable} · borderline ${counts.borderline}`;
+}
+
+function setConnectorLabelMode(active) {
+  state.connectorLens.labeling.active = active;
+  if (active) {
+    state.connectorLens.labeling.index = Math.max(
+      0,
+      Math.min(state.connectorLens.labeling.index, connectorLabelOrigins().length - 1),
+    );
+    chooseRandomConnectorLabelOrigin()
+      .then((advanced) => {
+        if (!advanced) return stepConnectorLabel(0);
+        return null;
+      })
+      .catch(showError);
+  } else {
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+  }
+}
+
+function selectedConnectorLabelOrigin() {
+  const list = connectorLabelOrigins();
+  return list[state.connectorLens.labeling.index] || null;
+}
+
+function randomUnlabeledConnectorLabelIndex(list) {
+  const candidates = [];
+  for (let index = 0; index < list.length; index += 1) {
+    if (!state.connectorLens.labeling.verdicts.has(connectorOriginKey(list[index]))) {
+      candidates.push(index);
+    }
+  }
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+async function chooseRandomConnectorLabelOrigin() {
+  const list = connectorLabelOrigins();
+  if (list.length === 0) {
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+    return false;
+  }
+  const randomIndex = randomUnlabeledConnectorLabelIndex(list);
+  if (randomIndex === null) {
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+    return false;
+  }
+  state.connectorLens.labeling.index = randomIndex;
+  renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+  renderConnectorLabelStatus();
+  await runConnectorSingle(list[randomIndex]);
+  return true;
+}
+
+async function stepConnectorLabel(delta, { skipLabeled = false } = {}) {
+  const list = connectorLabelOrigins();
+  if (list.length === 0) {
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+    return;
+  }
+  const labeling = state.connectorLens.labeling;
+  let nextIndex = Math.max(0, Math.min(list.length - 1, labeling.index + delta));
+  if (skipLabeled) {
+    for (let offset = 1; offset <= list.length; offset += 1) {
+      const candidate = Math.min(
+        list.length - 1,
+        Math.max(0, labeling.index + Math.sign(delta || 1) * offset),
+      );
+      if (!labeling.verdicts.has(connectorOriginKey(list[candidate]))) {
+        nextIndex = candidate;
+        break;
+      }
+      if (candidate === 0 || candidate === list.length - 1) break;
+    }
+  }
+  labeling.index = nextIndex;
+  renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+  renderConnectorLabelStatus();
+  const origin = selectedConnectorLabelOrigin();
+  if (origin) await runConnectorSingle(origin);
+}
+
+function selectConnectorLabelOrigin(origin) {
+  const key = connectorOriginKey(origin);
+  const index = connectorLabelOrigins().findIndex(
+    (candidate) => connectorOriginKey(candidate) === key,
+  );
+  if (index >= 0) state.connectorLens.labeling.index = index;
+  renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+  renderConnectorLabelStatus();
+}
+
+function renderConnectorCalibration() {
+  if (!els.connectorCalibReadout) return;
+  const labels = state.connectorLens.labelsCache || [];
+  if (labels.length === 0) {
+    els.connectorCalibReadout.textContent = "No labels loaded.";
+    return;
+  }
+  const result = evaluateThresholds(labels, state.connectorLens.thresholds);
+  const pct = (value) =>
+    value == null ? "n/a" : `${Math.round(Number(value) * 100)}%`;
+  const valid = result.counts.valid;
+  const unacceptable = result.counts.unacceptable;
+  const borderline = result.counts.borderline;
+  els.connectorCalibReadout.textContent =
+    `labels ${result.counts.total} · would-guide valid ${pct(result.validGuideRate)} ` +
+    `· wrongly-guide unacceptable ${pct(result.invalidGuideRate)} ` +
+    `· valid g/s/t ${valid.guide}/${valid.showLeg}/${valid.tooFar} ` +
+    `· unacceptable g/s/t ${unacceptable.guide}/${unacceptable.showLeg}/${unacceptable.tooFar} ` +
+    `· borderline g/s/t ${borderline.guide}/${borderline.showLeg}/${borderline.tooFar}`;
+}
+
+function setConnectorThresholdNumber(key, rawValue, label) {
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value < 0) {
+    setStatus(`${label} must be a non-negative number.`, "error");
+    renderConnectorLensPanel();
+    return;
+  }
+  state.connectorLens.thresholds = {
+    ...state.connectorLens.thresholds,
+    [key]: value,
+  };
+  renderConnectorCalibration();
+}
+
+function setConnectorWorstClassAllowed(value) {
+  if (!CONNECTOR_CLASS_KEYS.includes(value)) return;
+  state.connectorLens.thresholds = {
+    ...state.connectorLens.thresholds,
+    worstClassAllowed: value,
+  };
+  renderConnectorCalibration();
+}
+
+async function loadConnectorLabels() {
+  const response = await fetch("/api/connector/labels");
+  if (!response.ok) {
+    setStatus(`Label load failed (${response.status})`, "error");
+    return;
+  }
+  const data = await response.json();
+  state.connectorLens.labelsCache = Array.isArray(data.labels) ? data.labels : [];
+  renderConnectorCalibration();
+  setStatus(`Loaded ${state.connectorLens.labelsCache.length} connector labels.`);
+}
+
+function handleConnectorLabelKey(event) {
+  if (!state.connectorLens.labeling.active || state.workspaceMode !== "base") return false;
+  if (event.altKey || event.ctrlKey || event.metaKey) return false;
+  const key = event.key.toLowerCase();
+  if (key === "v") {
+    event.preventDefault();
+    labelCurrentConnectorOrigin("valid").catch(showError);
+    return true;
+  }
+  if (key === "i") {
+    event.preventDefault();
+    labelCurrentConnectorOrigin("unacceptable").catch(showError);
+    return true;
+  }
+  if (key === "b") {
+    event.preventDefault();
+    labelCurrentConnectorOrigin("borderline").catch(showError);
+    return true;
+  }
+  if (event.key === "[") {
+    event.preventDefault();
+    stepConnectorLabel(-1).catch(showError);
+    return true;
+  }
+  if (event.key === "]") {
+    event.preventDefault();
+    stepConnectorLabel(1).catch(showError);
+    return true;
+  }
+  return false;
 }
 
 function clearBaseGraphSelectionForConnectorRun() {
@@ -3645,9 +3911,21 @@ function connectorUsageCollection(edgeUsage) {
 }
 
 function connectorOriginsCollection(origins) {
-  const features = (origins || []).map((origin) => ({
+  const shown = state.connectorLens.hideUnreachable
+    ? (origins || []).filter((origin) => origin.status !== "snap-failed")
+    : (origins || []);
+  const selected = selectedConnectorLabelOrigin();
+  const selectedKey = selected ? connectorOriginKey(selected) : null;
+  const features = shown.map((origin) => ({
     type: "Feature",
-    properties: { status: origin.status, lat: origin.lat, lng: origin.lng },
+    properties: {
+      status: origin.status,
+      lat: origin.lat,
+      lng: origin.lng,
+      verdict: state.connectorLens.labeling.verdicts.get(connectorOriginKey(origin)) || "",
+      selected: state.connectorLens.labeling.active &&
+        connectorOriginKey(origin) === selectedKey,
+    },
     geometry: { type: "Point", coordinates: [origin.lng, origin.lat] },
   }));
   return { type: "FeatureCollection", features };
@@ -3667,10 +3945,13 @@ function clearConnectorSinglePath() {
 
 function clearConnectorRun() {
   state.connectorLens.lastFrequencyResult = null;
+  state.connectorLens.labeling.index = 0;
+  state.connectorLens.labeling.verdicts = new Map();
   renderConnectorUsage({});
   renderConnectorOrigins([]);
   clearConnectorSinglePath();
   els.connectorRunStatus.textContent = "";
+  renderConnectorLabelStatus();
   renderConnectorLensPanel();
   setStatus("Connector run cleared.");
 }
@@ -3703,14 +3984,27 @@ async function runConnectorFrequency() {
     }
     const data = await res.json();
     state.connectorLens.lastFrequencyResult = data;
+    state.connectorLens.labeling.index = 0;
+    state.connectorLens.labeling.verdicts = new Map();
     clearBaseGraphSelectionForConnectorRun();
     renderConnectorUsage(data.edgeUsage);
     renderConnectorOrigins(data.origins);
     renderConnectorLensPanel();
     const s = data.stats;
+    const reachable = Number.isFinite(Number(s.reachable)) ? Number(s.reachable) : s.ok;
+    const quality = s.reachableQuality == null
+      ? "n/a"
+      : `${Math.round(Number(s.reachableQuality) * 100)}%`;
+    const failures = Object.entries(s.byFailure || {})
+      .map(([key, value]) => `${key} ${value}`)
+      .join(" · ") || "none";
     els.connectorRunStatus.textContent =
-      `origins ${s.total} · ok ${s.ok} · failed ${s.failed}` +
+      `reachable ${s.ok}/${reachable} (${quality}) · total origins ${s.total} · ${failures}` +
       (data.grid.capped ? ` · grid coarsened to ${Math.round(data.grid.spacingMeters)}m` : "");
+    if (state.connectorLens.labeling.active) {
+      const advanced = await chooseRandomConnectorLabelOrigin();
+      if (!advanced) await stepConnectorLabel(0);
+    }
     setStatus("Connector frequency run complete.");
   } catch (err) {
     showError(err);
@@ -3719,46 +4013,99 @@ async function runConnectorFrequency() {
   }
 }
 
+async function fetchConnectorSingle(origin, target = state.connectorLens.targetStart) {
+  if (!target) return null;
+  const res = await fetch("/api/connector/preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mode: "single",
+      routeStart: target,
+      origin: { lat: origin.lat, lng: origin.lng },
+      strategy: state.connectorLens.strategy,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Connector single path failed (${res.status})`);
+  }
+  return res.json();
+}
+
+function drawConnectorSinglePath(data) {
+  if (!data || data.failure || !Array.isArray(data.geometry) || data.geometry.length === 0) {
+    clearConnectorSinglePath();
+    return false;
+  }
+  setSourceData("connector-single-path", {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: data.geometry.map((p) => [p.lng, p.lat]),
+        },
+      },
+    ],
+  });
+  return true;
+}
+
 async function runConnectorSingle(origin) {
   const target = state.connectorLens.targetStart;
   if (!target) return;
   try {
-    const res = await fetch("/api/connector/preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mode: "single",
-        routeStart: target,
-        origin: { lat: origin.lat, lng: origin.lng },
-        strategy: state.connectorLens.strategy,
-      }),
-    });
-    if (!res.ok) {
-      setStatus(`Connector single path failed (${res.status})`, "error");
-      return;
-    }
-    const data = await res.json();
-    if (data.failure || !Array.isArray(data.geometry) || data.geometry.length === 0) {
-      clearConnectorSinglePath();
+    const data = await fetchConnectorSingle(origin, target);
+    if (!drawConnectorSinglePath(data)) {
       setStatus(data.failure ? `No path: ${data.failure}` : "No path found for that origin.");
       return;
     }
-    setSourceData("connector-single-path", {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates: data.geometry.map((p) => [p.lng, p.lat]),
-          },
-        },
-      ],
-    });
     setStatus(`Connector single path: ${Math.round(data.distanceMeters)}m.`);
   } catch (err) {
     showError(err);
+  }
+}
+
+async function labelCurrentConnectorOrigin(verdict) {
+  const labeling = state.connectorLens.labeling;
+  if (!labeling.active || labeling.busy) return;
+  const target = state.connectorLens.targetStart;
+  const origin = selectedConnectorLabelOrigin();
+  if (!target || !origin) return;
+
+  labeling.busy = true;
+  try {
+    const single = await fetchConnectorSingle(origin, target);
+    drawConnectorSinglePath(single);
+    const features = computeConnectorFeatures(single, { origin, routeStart: target });
+    const response = await fetch("/api/connector/label", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        routeSlug: state.connectorLens.targetRouteSlug || null,
+        routeStart: target,
+        origin: { lat: origin.lat, lng: origin.lng },
+        verdict,
+        features,
+        strategy: state.connectorLens.strategy,
+      }),
+    });
+    if (!response.ok) {
+      setStatus(`Label save failed (${response.status})`, "error");
+      return;
+    }
+    labeling.verdicts.set(connectorOriginKey(origin), verdict);
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+    const advanced = await chooseRandomConnectorLabelOrigin();
+    if (!advanced) {
+      setStatus("Label saved. All visible origins have labels.");
+    }
+  } catch (err) {
+    showError(err);
+  } finally {
+    labeling.busy = false;
   }
 }
 
@@ -6919,6 +7266,45 @@ function wireEvents() {
   els.connectorPickTarget.addEventListener("click", toggleConnectorPickTarget);
   els.connectorRun.addEventListener("click", () => runConnectorFrequency().catch(showError));
   els.connectorClearRun.addEventListener("click", clearConnectorRun);
+  els.connectorHideUnreachable.addEventListener("change", () => {
+    state.connectorLens.hideUnreachable = els.connectorHideUnreachable.checked;
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+  });
+  els.connectorLabelMode.addEventListener("change", () =>
+    setConnectorLabelMode(els.connectorLabelMode.checked),
+  );
+  els.connectorCalibLoad.addEventListener("click", () => loadConnectorLabels().catch(showError));
+  els.connectorThresholdGuideRadius.addEventListener("change", () =>
+    setConnectorThresholdNumber(
+      "guideRadiusMeters",
+      els.connectorThresholdGuideRadius.value,
+      "Guide radius",
+    ),
+  );
+  els.connectorThresholdTooFarRadius.addEventListener("change", () =>
+    setConnectorThresholdNumber(
+      "tooFarRadiusMeters",
+      els.connectorThresholdTooFarRadius.value,
+      "Too-far radius",
+    ),
+  );
+  els.connectorThresholdMaxDetour.addEventListener("change", () =>
+    setConnectorThresholdNumber(
+      "maxDetourRatio",
+      els.connectorThresholdMaxDetour.value,
+      "Max detour ratio",
+    ),
+  );
+  els.connectorThresholdMaxRouted.addEventListener("change", () =>
+    setConnectorThresholdNumber(
+      "maxRoutedMeters",
+      els.connectorThresholdMaxRouted.value,
+      "Max routed distance",
+    ),
+  );
+  els.connectorThresholdWorstClass.addEventListener("change", () =>
+    setConnectorWorstClassAllowed(els.connectorThresholdWorstClass.value),
+  );
   els.addData.addEventListener("click", addDataMarker);
   els.mapStyle.addEventListener("change", () => switchMapStyle(els.mapStyle.value));
   els.toggleUnresolvedSegments.addEventListener("click", () => toggleUnresolvedSegments().catch(showError));
@@ -7003,7 +7389,11 @@ function wireEvents() {
     if (!feature) return;
     const { lat, lng } = feature.properties || {};
     if (typeof lat !== "number" || typeof lng !== "number") return;
-    runConnectorSingle({ lat, lng }).catch(showError);
+    const origin = { lat, lng };
+    if (state.connectorLens.labeling.active) {
+      selectConnectorLabelOrigin(origin);
+    }
+    runConnectorSingle(origin).catch(showError);
   });
   map.on("mouseenter", "connector-origins-layer", () => {
     map.getCanvas().style.cursor = "pointer";
@@ -7300,6 +7690,8 @@ function wireEvents() {
     if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select")) {
       return;
     }
+
+    if (handleConnectorLabelKey(event)) return;
 
     if (state.workspaceMode === "video-sync") {
       if (handleVideoSyncKey(event)) return;
@@ -8011,10 +8403,35 @@ async function addMapLayers() {
       type: "circle",
       source: "connector-origins",
       paint: {
-        "circle-radius": 5,
-        "circle-color": ["match", ["get", "status"], "ok", "#1b7837", "#dc2626"],
-        "circle-stroke-color": "#1f2a2e",
-        "circle-stroke-width": 1,
+        "circle-radius": ["case", ["==", ["get", "selected"], true], 7, 5],
+        "circle-color": [
+          "match",
+          ["get", "status"],
+          "ok",
+          "#1b7837",
+          "snap-ineligible",
+          "#f59e0b",
+          "#dc2626",
+        ],
+        "circle-stroke-color": [
+          "match",
+          ["get", "verdict"],
+          "valid",
+          CONNECTOR_VERDICT_COLORS.valid,
+          "unacceptable",
+          CONNECTOR_VERDICT_COLORS.unacceptable,
+          "borderline",
+          CONNECTOR_VERDICT_COLORS.borderline,
+          ["case", ["==", ["get", "selected"], true], "#facc15", "#1f2a2e"],
+        ],
+        "circle-stroke-width": [
+          "case",
+          ["!=", ["get", "verdict"], ""],
+          3,
+          ["==", ["get", "selected"], true],
+          3,
+          1,
+        ],
       },
     });
   }

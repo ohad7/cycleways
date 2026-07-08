@@ -27,6 +27,12 @@ import {
   routeTokenHash,
 } from "../scripts/lib/featuredRouteSnapshotBuilder.mjs";
 import { runConnectorPreview } from "./lib/connectorPreview.mjs";
+import {
+  appendLabel,
+  latestLabels,
+  readLabels,
+  upsertStrategy,
+} from "./lib/connectorLabelStore.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -36,6 +42,9 @@ const sourcePath = resolve(repoRoot, "data/map-source.geojson");
 const tokenPath = resolve(repoRoot, "mapbox-token.js");
 const buildDir = resolve(repoRoot, "build");
 const dataDir = resolve(repoRoot, "data");
+const connectorEvalDir = process.env.CONNECTOR_EVAL_DIR
+  ? resolve(process.env.CONNECTOR_EVAL_DIR)
+  : resolve(dataDir, "connector-eval");
 const publicDataDir = resolve(repoRoot, "public-data");
 const buildPublicDataDir = resolve(buildDir, "public-data");
 const osmBuildDir = resolve(buildDir, "osm");
@@ -3054,6 +3063,56 @@ const server = createServer(async (request, response) => {
         const status = err && err.status === 400 ? 400 : 500;
         log("warn", `api#${requestId} POST /api/connector/preview failed`, message);
         sendJson(response, status, { error: message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/connector/label") {
+      logApi(requestId, "POST /api/connector/label started");
+      try {
+        const body = await readRequestJson(request);
+        const labelsPath = resolve(connectorEvalDir, "labels.jsonl");
+        const strategiesPath = resolve(connectorEvalDir, "strategies.json");
+        const strategyHash = await upsertStrategy(strategiesPath, body.strategy);
+        const record = await appendLabel(labelsPath, {
+          routeSlug: body.routeSlug ?? null,
+          routeStart: body.routeStart,
+          origin: body.origin,
+          verdict: body.verdict,
+          features: body.features,
+          strategyHash,
+        });
+        logApi(requestId, "POST /api/connector/label finished", {
+          durationMs: Date.now() - startedAt,
+          routeSlug: record.routeSlug,
+          verdict: record.verdict,
+        });
+        sendJson(response, 200, { ok: true, record });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const status = err && err.status === 400 ? 400 : 500;
+        log("warn", `api#${requestId} POST /api/connector/label failed`, message);
+        sendJson(response, status, { error: message });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/connector/labels") {
+      logApi(requestId, "GET /api/connector/labels started");
+      try {
+        const labelsPath = resolve(connectorEvalDir, "labels.jsonl");
+        const records = await readLabels(labelsPath);
+        const labels = latestLabels(records);
+        logApi(requestId, "GET /api/connector/labels finished", {
+          durationMs: Date.now() - startedAt,
+          raw: records.length,
+          latest: labels.length,
+        });
+        sendJson(response, 200, { labels, rawCount: records.length });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        log("warn", `api#${requestId} GET /api/connector/labels failed`, message);
+        sendJson(response, 500, { error: message });
       }
       return;
     }

@@ -95,4 +95,66 @@ assert.throws(
   (err) => err.status === 400 && /radiusMeters/.test(err.message),
 );
 
+// Honest metric: reachable excludes persistent snap-failed, but counts no-path
+// and snap-ineligible as reachable-but-failed.
+let primaryCalls = 0;
+let lastPrimaryKind = null;
+const scriptedManager = {
+  previewBaseRoute(_points, opts = {}) {
+    if (opts.connectorStrategy?.snap === "any") {
+      if (lastPrimaryKind === "snap-ineligible") {
+        return {
+          failure: "no-path",
+          snappedEndpoints: [{ unsnapped: false }, { unsnapped: false }],
+        };
+      }
+      return {
+        failure: "snap-failed",
+        snappedEndpoints: [{ unsnapped: true }, { unsnapped: false }],
+      };
+    }
+    const kind = ["ok", "no-path", "snap-ineligible", "snap-failed"][primaryCalls++];
+    lastPrimaryKind = kind;
+    if (kind === "ok") {
+      return {
+        failure: null,
+        geometry: [routeStart, routeStart],
+        distanceMeters: 1,
+        edgeIds: ["ok"],
+        edgeCosts: [],
+      };
+    }
+    if (kind === "no-path") {
+      return {
+        failure: "no-path",
+        snappedEndpoints: [{ unsnapped: false }, { unsnapped: false }],
+      };
+    }
+    return {
+      failure: "snap-failed",
+      snappedEndpoints: [{ unsnapped: true }, { unsnapped: false }],
+    };
+  },
+};
+const honest = runConnectorPreview(scriptedManager, {
+  mode: "frequency",
+  routeStart,
+  strategy: DEFAULT_CONNECTOR_STRATEGY,
+  radiusMeters: 100,
+  gridSpacingMeters: 100,
+  maxOrigins: 4,
+});
+assert.equal(honest.stats.total, 4);
+assert.equal(honest.stats.ok, 1);
+assert.equal(honest.stats.byFailure["no-path"], 1);
+assert.equal(honest.stats.byFailure["snap-ineligible"], 1);
+assert.equal(honest.stats.byFailure["snap-failed"], 1);
+assert.equal(honest.stats.reachable, 3);
+assert.equal(honest.stats.reachableQuality, 1 / 3);
+assert.deepEqual(
+  honest.origins.map((origin) => origin.status),
+  ["ok", "no-path", "snap-ineligible", "snap-failed"],
+);
+console.log("connector-preview honest-metric OK");
+
 console.log("connector-preview OK");
