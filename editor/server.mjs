@@ -26,6 +26,7 @@ import {
   snapshotMatchesRouteToken,
   routeTokenHash,
 } from "../scripts/lib/featuredRouteSnapshotBuilder.mjs";
+import { runConnectorPreview } from "./lib/connectorPreview.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -2978,6 +2979,34 @@ const server = createServer(async (request, response) => {
         dryRun: result.dryRun,
       });
       sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/connector/preview") {
+      logApi(requestId, "POST /api/connector/preview started");
+      try {
+        const body = await readRequestJson(request);
+        const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
+        const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+        const { baseRoutingNetwork } = await getBaseRoutingDecodeAssets({ log });
+        const manager = await createRouteManager(
+          RouteManagerClass,
+          geoJsonData,
+          segmentsData,
+          baseRoutingNetwork,
+        );
+        const result = runConnectorPreview(manager, body);
+        logApi(requestId, "POST /api/connector/preview finished", {
+          durationMs: Date.now() - startedAt,
+          mode: body?.mode,
+        });
+        sendJson(response, 200, result);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const status = err && err.status === 400 ? 400 : 500;
+        log("warn", `api#${requestId} POST /api/connector/preview failed`, message);
+        sendJson(response, status, { error: message });
+      }
       return;
     }
 
