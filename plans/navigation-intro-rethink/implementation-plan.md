@@ -4,7 +4,7 @@
 
 **Goal:** Replace the full-screen ride-setup sheet with a slim mini-confirm card over the visible map, give every distance the same live "getting to the route" state (beeline pointer only — no routed connector suggestion before the route is acquired), and demote the old setup sheet to an opt-in settings screen.
 
-**Architecture:** All decision logic stays in pure `@cycleways/core` modules tested with plain node scripts; the React Native components (`RideIntroCard`, `ApproachPanel`) are dumb renderers. `BuildScreen.jsx` rewires the flow: tap נווט → intro card → confirm always starts the foreground navigation session (status `approaching` until the effective start is physically acquired) → existing acquisition transition. Connector suggestions become rejoin-only inside `navigationSession.js`. External handoff (existing `DestinationSheet` + `pendingRidePlan` persistence) is reachable from the card and the approach state.
+**Architecture:** All decision logic stays in pure `@cycleways/core` modules tested with plain node scripts; the React Native components (`RideIntroCard`, `ApproachPanel`) are dumb renderers. `BuildScreen.jsx` rewires the flow: tap נווט → intro card → confirm starts the foreground navigation session when foreground location permission is available (status `approaching` until the effective start is physically acquired) → existing acquisition transition. If permission is denied, the app stays in the visible-map intro/settings flow with retry/settings affordances instead of showing navigation chrome. Connector suggestions become rejoin-only inside `navigationSession.js`. External handoff (existing `DestinationSheet` + `pendingRidePlan` persistence) is reachable from the card and the approach state, and both origins set the same pending handoff plan before launching an external app.
 
 **Tech Stack:** React Native (Expo) app in `apps/mobile`, pure JS core in `packages/core`, node `assert` test scripts in `tests/` chained in the root `package.json` `test` script.
 
@@ -19,6 +19,9 @@
 - Text styles come from `apps/mobile/src/theme/typography.js` (`text.*` tokens) and `apps/mobile/src/planner/theme.js` (`palette`, `radius`, `space`) — no raw `fontSize`/`fontWeight` (a guard test enforces this).
 - Tests run individually: `node tests/<file>.mjs` from the repo root. New test files must be added to the `test` script chain in `package.json`.
 - Off-route / rejoin behavior after route acquisition is out of scope and must not change (the dashed rejoin suggestion stays).
+- While the intro card or ride-settings screen is open, the map can remain visible and pannable/zoomable, but route editing, route-point dragging, and data-marker add-to-route actions are locked.
+- Persisted pending ride intents must include `startProgressMeters` so nearest/custom starts restore the same effective start after external handoff or app kill.
+- The on-route follow camera uses the same high-50s pitch as the intro shot, but every path that exits the intro/navigation flow without immediately returning to another pitched flow must reset pitch and heading to the normal top-down overhead map. This includes intro-card cancel, active-navigation stop, completed navigation, and closing ride settings after stopping from the approach state.
 - Commit after every task with the message given in the task.
 
 ---
@@ -33,7 +36,7 @@
 **Interfaces:**
 - Consumes: `formatDistanceMeters(meters)` from `packages/core/src/navigation/navigationPresentation.js` (existing; returns `"650 מ׳"` / `"3.4 ק״מ"`), the ride-plan object returned by `createRidePlan` in `packages/core/src/navigation/ridePlan.js` (fields used: `distanceToStartMeters`, `approachTier`, `locationQuality`, `startMode`, `direction`, `skippedMeters`, `guidedDistanceMeters`, `candidates.nearestIsMeaningful`).
 - Produces (used by Tasks 5, 6, 8):
-  - `getRideIntroPresentation(plan, locationStatus)` → `{ headline, expectationText, primaryLabel, primaryEnabled, atStart, showExternalNav, nearestHintText, noticeText, showRetry, rideLengthText, skipNoteText, directionNoteText }` (all strings, booleans as named).
+  - `getRideIntroPresentation(plan, locationStatus)` → `{ headline, expectationText, primaryLabel, primaryEnabled, atStart, showExternalNav, nearestHintText, noticeText, showRetry, rideLengthText, skipNoteText, directionNoteText }` (all strings, booleans as named). `primaryEnabled` is false while location is loading; it is true for denied/unavailable so the UI can route the rider into the permission retry/settings path instead of hiding the main action.
   - `confirmDistanceBucket(meters)` → `"at" | "1km" | "5km" | "20km" | "20km+" | "unknown"`.
   - `rideSetupLocationNotice(status, quality)` → notice string (moves the copy currently in `RideSetupSheet.jsx`'s local `locationMessage` into core).
 
@@ -462,7 +465,11 @@ In `packages/core/src/navigation/navigationSession.js`, replace the entire pre-a
               distanceToRouteMeters: target
                 ? getDistance(action.fix, target.point)
                 : null,
+              suggestionGeometry: null,
+              suggestionStatus: "idle",
+              suggestionDistanceMeters: null,
             },
+            routeRequest: null,
           });
         }
 ```
@@ -926,7 +933,7 @@ git commit -m "refactor(mobile): RideSetupSheet becomes the opt-in ride-settings
 **Interfaces:**
 - Consumes: `getNavigationPresentation` fields `approachHeading`, `destinationLabel`, `approachDistanceShort`, `approachSupportText`, `approachBearingDeg`, `guidanceArrowDeg`; `sessionState.cameraIntent`.
 - Produces (used by Task 9):
-  - `ApproachPanel({ sessionState, compassHeading, onOpenExternal, onOpenSettings, onStop, onRecenter })` — the waiting-state overlay rendered ONLY while `status === "approaching"`.
+  - `ApproachPanel({ sessionState, compassHeading, onOpenExternal, onOpenSettings, onStop, onRecenter })` — the waiting-state overlay rendered ONLY while `status === "approaching"`. `onOpenExternal` must set the same pending external plan used by the intro card before showing `DestinationSheet`; otherwise app-return/app-kill restoration cannot know what to resume.
   - `NavPanel` loses the `onOpenExternal` and `onChangeRideSettings` props and its `approach` card mode; `off-route`, `cue`, `status`, and `arrived` modes are unchanged.
 
 - [ ] **Step 1: Create ApproachPanel**
@@ -1262,13 +1269,21 @@ Immediately after `confirmRidePlan`, add:
     trackNavigationEvent("ride_settings_opened", { origin: "intro" });
   }, []);
 
+  const openExternalHandoff = useCallback(
+    (plan, origin = "intro") => {
+      if (!plan) return;
+      setPendingExternalPlan({ plan, origin });
+      if (origin === "intro") setRideIntroVisible(false);
+      setDestSheetVisible(true);
+    },
+    [],
+  );
+
   // External chooser from the intro card: remember the plan so the pending
   // ride intent is persisted and the card reopens on return.
   const handleIntroExternalNav = useCallback(() => {
-    setPendingExternalPlan(ridePlan);
-    setRideIntroVisible(false);
-    setDestSheetVisible(true);
-  }, [ridePlan]);
+    openExternalHandoff(ridePlan, "intro");
+  }, [openExternalHandoff, ridePlan]);
 
   const handleIntroClose = useCallback(() => {
     setRideIntroVisible(false);
@@ -1287,6 +1302,7 @@ Immediately after `confirmRidePlan`, add:
 
   const handleRideSettingsClose = useCallback(() => {
     setRideSettingsVisible(false);
+    if (rideSettingsOriginRef.current === "approach") return;
     setRideIntroVisible(true);
   }, []);
 ```
@@ -1317,6 +1333,7 @@ and update that callback's dependency array to `[nav.state?.progress?.hasAcquire
 - `directRideSetupPending` (~line 2133): `!rideSetupVisible` → `!rideIntroVisible`.
 - Setup preview overlays (~lines 2191 and 2196): change both conditions from `(rideSetupVisible || pickOnMapMode)` to `(rideIntroVisible || rideSettingsVisible || pickOnMapMode)` — the effective-route preview and flag marker now also show behind the intro card.
 - Hide the planner sheet behind the card: change `) : directRideSetupPending ? null : (` (~line 2468) to `) : directRideSetupPending || rideIntroVisible ? null : (`.
+- Add an `introFlowActiveRef` (or equivalent) that is true while `rideIntroVisible || rideSettingsVisible || pickOnMapMode`. Use it in `handleMapPress`, `handleDataMarkerPress`, and the route-point pan responder to lock route editing and marker add-to-route while the map remains visible behind the card/settings flow.
 
 After this step `grep -n "rideSetupVisible" apps/mobile/src/screens/BuildScreen.jsx` must return nothing.
 
@@ -1408,7 +1425,7 @@ Replace the `{isNavigating ? (<><NavPanel …/></>) : …}` opening (~lines 2451
           <ApproachPanel
             sessionState={navPanelState}
             compassHeading={compassHeading}
-            onOpenExternal={() => setDestSheetVisible(true)}
+        onOpenExternal={() => openExternalHandoff(confirmedRidePlan, "approach")}
             onOpenSettings={handleChangeRideSettings}
             onStop={nav.stop}
             onRecenter={handleRecenter}
@@ -1487,6 +1504,34 @@ and replace the flag-marker condition (~line 2196, as rewritten in Task 8) with:
         ) : null}
 ```
 
+Also derive a setup rider point from `rideSetupFix` while
+`rideIntroVisible || rideSettingsVisible || pickOnMapMode`, and render it as a
+custom `MarkerView` dot over the map. If `rideSetupFix.heading` is finite,
+rotate a small heading arrow by `heading - mapHeadingRef.current`; otherwise
+render only the dot. Do not rely on `UserLocation` for this setup marker,
+because the intro uses a bounded one-shot fix before the continuous watcher
+starts.
+
+`RideIntroCard` must report its rendered layout height to `BuildScreen`, and
+the intro camera fit must use `max(320, measuredCardHeight + markerClearance)`
+for bottom padding. This measured refit is what keeps both the setup rider
+marker and the effective start marker visible above the card when copy wraps,
+safe-area insets change, or notices/hints appear.
+
+When both `rideSetupFix` and the effective start are available and
+`distanceToStartMeters` is meaningfully above the acquisition/start threshold,
+pass camera options to the fit: `heading: computeBearing(fixPoint, start)` and
+`pitch` around the navigation follow pitch/high 50s. This makes the selected
+start read as ahead near the horizon. Do not rely on a pitched `bounds` fit for
+the intro shot; instead compute an explicit camera center along the rider-to-
+start line and a zoom from the desired pixel distance between the top-center
+start slot and bottom-center rider slot (`measuredCardHeight + riderCardGap`).
+Keep the flat fit when the rider is at the start or no fix is available, so the
+camera does not choose an arbitrary direction. The top-center start slot must
+include the device safe-area top inset (for example
+`max(baseTop, safeAreaTop + visualGap)`) so iOS system controls above the map do
+not overlap the route-start flag.
+
 - [ ] **Step 5: Camera frames rider + start when the card opens**
 
 Near the other fit constants (grep `PLAYBACK_FIT_BOTTOM_PADDING` for the constants area), add:
@@ -1530,11 +1575,11 @@ After the `fitRoute` callback definition (~line 2054), add:
 
 - [ ] **Step 6: External return re-opens the card (already wired) — verify**
 
-Task 8's rename means the AppState effect (~line 1431) now calls `openRideIntro({ preserveSelection: true })` after returning from the external app, and `openRideIntro` refreshes the fix so the card re-evaluates the distance. Confirm by reading the effect; also confirm `handleOpenExternalApp` (~line 1437) still persists the pending ride intent via `savePendingRideIntent` and update its analytics payload: replace `approachTier: pendingExternalPlan?.approachTier || "near",` with:
+Task 8's rename means the AppState effect (~line 1431) now handles `pendingExternalPlan` shaped as `{ plan, origin }`. On return from an intro-origin handoff, call `openRideIntro({ preserveSelection: true })`; on return from an approach-origin handoff, keep/restart the same confirmed plan and let the active approach state continue. In both cases refresh the setup fix so any visible card re-evaluates distance. Confirm by reading the effect; also confirm `handleOpenExternalApp` (~line 1437) still persists the pending ride intent via `savePendingRideIntent` with `startProgressMeters`, and update its analytics payload: replace `approachTier: pendingExternalPlan?.approachTier || "near",` with:
 
 ```js
         distanceBucket: confirmDistanceBucket(
-          pendingExternalPlan?.distanceToStartMeters ??
+          pendingExternalPlan?.plan?.distanceToStartMeters ??
             confirmedRidePlan?.distanceToStartMeters,
         ),
 ```
@@ -1553,7 +1598,39 @@ git commit -m "feat(mobile): single live approach state with ApproachPanel; sugg
 
 ---
 
-### Task 10: Remove the fast-start core helper
+### Task 10: Persist selected start progress in pending ride intents
+
+**Files:**
+- Modify: `packages/core/src/navigation/pendingRidePlan.js`
+- Modify: `apps/mobile/src/navigation/pendingRidePlanStore.js` only if the store needs pass-through changes
+- Modify: `apps/mobile/App.js` if route params need to carry the restored progress
+- Modify: `apps/mobile/src/screens/BuildScreen.jsx`
+- Test: `tests/test-pending-ride-plan.mjs`
+
+**Interfaces:**
+- `normalizePendingRideIntent` now accepts and returns `startProgressMeters` when it is a finite non-negative number.
+- `savePendingRideIntent` callers pass `startProgressMeters` from the pending/confirmed ride plan.
+- Restoring a pending ride intent preserves the selected effective start. For `custom`, the saved point remains required. For `nearest`, `startProgressMeters` prevents returning from an external app and silently picking a different nearest point.
+
+- [ ] **Step 1: Extend the normalizer and tests**
+
+Add assertions for finite `startProgressMeters`, invalid negative/non-finite values, and the existing custom-point requirement.
+
+- [ ] **Step 2: Persist from both external handoff origins**
+
+In `BuildScreen.jsx`, when saving the pending ride intent from `handleOpenExternalApp`, use the plan object from `pendingExternalPlan?.plan ?? confirmedRidePlan` and write its `startProgressMeters`.
+
+- [ ] **Step 3: Restore into route params and selection**
+
+When `App.js` builds `rideSetupSelection` from `loadPendingRideIntent()`, include `startProgressMeters`. In `BuildScreen.jsx`, preserve it in `rideSetupSelection` and teach `createRidePlan` to honor it for a restored nearest/custom start when it can be projected against the current route.
+
+- [ ] **Step 4: Verify**
+
+Run: `node tests/test-pending-ride-plan.mjs && node tests/test-ride-plan.mjs`
+
+---
+
+### Task 11: Remove the fast-start core helper
 
 `canFastStartRidePlan` has no callers after Task 8 (verify: `grep -rn "canFastStartRidePlan" apps src packages --include="*.js*" | grep -v test` returns only the definition).
 
@@ -1579,7 +1656,7 @@ git commit -m "chore(core): remove unused fast-start ride-plan helper"
 
 ---
 
-### Task 11: Full verification, docs, device acceptance
+### Task 12: Full verification, docs, device acceptance
 
 **Files:**
 - Modify: `plans/README.md` (the `navigation-intro-rethink/` line: "design for" → "design and implementation plan for")

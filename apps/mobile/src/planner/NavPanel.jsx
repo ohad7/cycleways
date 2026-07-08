@@ -13,8 +13,6 @@ export default function NavPanel({
   onRecenter,
   onPauseResume,
   onStop,
-  onOpenExternal,
-  onChangeRideSettings,
   compassHeading = null,
   voiceEnabled = true,
   onToggleVoice,
@@ -33,12 +31,7 @@ export default function NavPanel({
     !p.wrongWay;
   const showTopCard = !arrived && !showCurrentRoadPill;
   const dataPillMainText =
-    p.remainingText ||
-    (p.cardMode === "approach"
-      ? "בדרך למסלול"
-      : p.cardMode === "off-route"
-        ? "חזרה למסלול"
-        : "");
+    p.remainingText || (p.cardMode === "off-route" ? "חזרה למסלול" : "");
   const showSpeedInDataPill = Boolean(p.remainingText && p.speedText);
 
   // Direction-to-route arrow: phone-relative when the compass is available
@@ -70,7 +63,7 @@ export default function NavPanel({
             </View>
           ) : null}
 
-          {p.cardMode === "approach" || p.cardMode === "off-route" ? (
+          {p.cardMode === "off-route" ? (
             <>
               <Text style={[styles.approachHeading, p.offRoute ? styles.offText : null]}>
                 {p.approachHeading}
@@ -95,28 +88,6 @@ export default function NavPanel({
               </View>
               {p.approachSupportText ? (
                 <Text style={styles.approachSupport}>{p.approachSupportText}</Text>
-              ) : null}
-              {p.cardMode === "approach" ? (
-                <View style={styles.approachActions}>
-                  <Pressable
-                    style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
-                    onPress={onOpenExternal}
-                    accessibilityRole="button"
-                    accessibilityLabel="פתיחה באפליקציית ניווט"
-                  >
-                    <Icon name="open-outline" color={palette.forest} size={18} />
-                    <Text style={styles.destBtnText}>אפליקציית ניווט</Text>
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
-                    onPress={onChangeRideSettings}
-                    accessibilityRole="button"
-                    accessibilityLabel="שינוי הגדרות רכיבה"
-                  >
-                    <Icon name="options-outline" color={palette.forest} size={18} />
-                    <Text style={styles.destBtnText}>הגדרות רכיבה</Text>
-                  </Pressable>
-                </View>
               ) : null}
             </>
           ) : p.cardMode === "cue" ? (
@@ -381,31 +352,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     marginTop: 2,
   },
-  destBtn: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    alignSelf: "flex-end",
-    gap: space.xs,
-    marginTop: space.sm,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: palette.forest,
-    backgroundColor: palette.white,
-  },
   destBtnPressed: { opacity: 0.7 },
-  approachActions: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: space.sm,
-    marginTop: space.sm,
-  },
-  destBtnText: {
-    ...text.navBody,
-    color: palette.forest,
-    writingDirection: "rtl",
-  },
   bottomStack: {
     gap: space.sm,
   },

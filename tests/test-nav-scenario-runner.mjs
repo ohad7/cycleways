@@ -94,8 +94,8 @@ function straightRoute() {
   );
 }
 
-// Approach ride, per connector mode: straight-line -> suggestion ready;
-// fail -> connector failure surfaces; none -> request left pending.
+// Approach ride: pre-route approach is a beeline-only waiting state. Connector
+// requests are reserved for off-route rejoin after acquisition.
 {
   const route = straightRoute();
   const fixes = generateTrack(route, {
@@ -108,8 +108,12 @@ function straightRoute() {
   const ready = runScenario({ navigationRoute: route, fixes, connector: "straight-line" });
   assert.equal(ready.timeline[0].status, "approaching");
   assert.ok(
-    ready.timeline.some((e) => e.suggestionStatus === "ready"),
-    "straight-line connector produces a ready suggestion",
+    ready.routeRequests.length === 0,
+    "pre-route approach does not issue connector requests",
+  );
+  assert.ok(
+    ready.timeline.every((e) => e.suggestionStatus !== "ready"),
+    "pre-route approach never resolves a connector suggestion",
   );
   assert.ok(
     ready.timeline.some((e) => e.justAcquired === true),
@@ -118,12 +122,12 @@ function straightRoute() {
 
   const failed = runScenario({ navigationRoute: route, fixes, connector: "fail" });
   assert.ok(
-    failed.timeline.some((e) => e.connectorResult === "failed"),
-    "fail connector surfaces a failed connector result",
+    !failed.timeline.some((e) => e.connectorResult === "failed"),
+    "pre-route approach does not call the failing connector",
   );
 
   const none = runScenario({ navigationRoute: route, fixes, connector: "none" });
-  assert.ok(none.routeRequests.length >= 1, "request was issued");
+  assert.equal(none.routeRequests.length, 0, "no request is issued");
   assert.ok(
     !none.timeline.some((e) => e.suggestionStatus === "ready"),
     "no suggestion resolves in mode none",

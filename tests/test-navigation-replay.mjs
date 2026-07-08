@@ -161,7 +161,7 @@ import { fileURLToPath } from "node:url";
   assert.ok(last.progress.fraction > 0.9, "synth: ride completes");
 }
 
-// --- approach replay: suggestion offered, then physical acquisition --------
+// --- approach replay: beeline-only waiting, then physical acquisition ------
 {
   const route = straightRoute();
   const fixes = [
@@ -174,12 +174,12 @@ import { fileURLToPath } from "node:url";
     connectorRouter: (request) => ({ geometry: [request.from, request.to] }),
   });
   assert.ok(
-    timeline.some((entry) => entry.approach.suggestionStatus === "requesting"),
-    "timeline records the suggestion request",
+    timeline.every((entry) => entry.routeRequest === null),
+    "pre-route approach does not issue connector requests",
   );
   assert.ok(
-    timeline.some((entry) => entry.approach.suggestionStatus === "ready"),
-    "timeline records a ready suggestion",
+    timeline.every((entry) => entry.approach.suggestionStatus !== "ready"),
+    "pre-route approach never records a ready suggestion",
   );
   assert.ok(
     timeline.every((entry) => entry.status !== "on-connector"),
@@ -191,19 +191,18 @@ import { fileURLToPath } from "node:url";
   assert.ok(last.progress.hasAcquiredRoute, "reached the route physically");
 }
 
-// --- controlled mode: a stale suggestion result cannot overwrite a new one -
+// --- controlled rejoin: a stale suggestion result cannot overwrite a new one -
 {
-  const firstFix = {
-    lat: 33.105,
-    lng: 35.6,
-    accuracy: 5,
-    speed: 4,
-    timestamp: 1000,
-  };
-  const replay = replaySession(straightRoute(), [firstFix], {
+  const replay = replaySession(straightRoute(), [
+    { lat: 33.1, lng: 35.605, accuracy: 5, speed: 4, timestamp: 500 },
+    { lat: 33.101, lng: 35.605, accuracy: 5, speed: 4, timestamp: 1000 },
+    { lat: 33.101, lng: 35.605, accuracy: 5, speed: 4, timestamp: 6000 },
+  ], {
+    sessionOptions: { confirmMs: 4000, recoverMs: 3000 },
     controlledConnector: true,
   });
   const first = replay.routeRequests[0];
+  assert.ok(first, "off-route rejoin issued a connector request");
   replay.session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_FAILED,
     requestId: first.requestId,
@@ -212,7 +211,7 @@ import { fileURLToPath } from "node:url";
   // Move far enough to satisfy the retry gate, then a fresh fix issues a new request.
   replay.session.dispatch({
     type: NAV_ACTIONS.LOCATION,
-    fix: { ...firstFix, lat: 33.103, timestamp: 5000 },
+    fix: { lat: 33.102, lng: 35.605, accuracy: 5, speed: 4, timestamp: 9000 },
   });
   const second = replay.session.getState().routeRequest;
   assert.ok(second.requestId > first.requestId);

@@ -89,6 +89,7 @@ export default function App() {
                 direction: pendingRide.direction,
                 startMode: pendingRide.startMode,
                 selectedPoint: pendingRide.selectedPoint,
+                startProgressMeters: pendingRide.startProgressMeters,
               },
             },
           };

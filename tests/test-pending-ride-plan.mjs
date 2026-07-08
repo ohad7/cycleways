@@ -11,14 +11,41 @@ const valid = normalizePendingRideIntent({
   timestamp: now,
   direction: "reverse",
   startMode: "nearest",
+  startProgressMeters: 1234.5,
 }, now);
 assert.equal(valid.direction, "reverse");
 assert.equal(valid.startMode, "nearest");
 assert.equal(valid.slug, "route-a");
+assert.equal(valid.startProgressMeters, 1234.5);
 assert.equal(normalizePendingRideIntent({ routeToken: "", timestamp: now }, now), null);
+assert.equal(
+  normalizePendingRideIntent(
+    {
+      routeToken: "abc",
+      timestamp: now,
+      startMode: "nearest",
+      startProgressMeters: -1,
+    },
+    now,
+  ).startProgressMeters,
+  null,
+);
 assert.equal(
   normalizePendingRideIntent({ routeToken: "abc", timestamp: now, startMode: "custom" }, now),
   null,
+);
+assert.deepEqual(
+  normalizePendingRideIntent(
+    {
+      routeToken: "abc",
+      timestamp: now,
+      startMode: "custom",
+      selectedPoint: { lat: "32.1", lng: "35.2" },
+      startProgressMeters: 500,
+    },
+    now,
+  ).selectedPoint,
+  { lat: 32.1, lng: 35.2 },
 );
 assert.equal(
   normalizePendingRideIntent({ routeToken: "abc", timestamp: now - PENDING_RIDE_MAX_AGE_MS - 1 }, now),

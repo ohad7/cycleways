@@ -207,6 +207,13 @@ const fix = (lng, timestamp, extra = {}) => ({
   assert.equal(far.status, "approaching", "far fix -> approaching");
   assert.equal(far.activeCue, null, "no cues while approaching");
   assert.equal(far.cueEvent, null, "no cue events while approaching");
+  assert.equal(
+    far.approach.suggestionStatus,
+    "idle",
+    "pre-route approach never requests a connector suggestion",
+  );
+  assert.equal(far.approach.suggestionGeometry, null);
+  assert.equal(far.routeRequest, null, "no connector request while approaching");
   const near = session.dispatch({
     type: NAV_ACTIONS.LOCATION,
     fix: { lat: 33.1, lng: 35.6, accuracy: 8, speed: 4, timestamp: 4000 },
@@ -217,35 +224,21 @@ const fix = (lng, timestamp, extra = {}) => ({
   assert.equal(near.cueEvent?.acquisition, "initial");
 }
 
-function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
-  const session = createNavigationSession(straightRoute());
-  session.dispatch({ type: NAV_ACTIONS.START });
-  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
-  const requested = session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: 33.105, lng, accuracy: 8, speed: 4, timestamp },
-  });
+function offRouteRequestedSession() {
+  const session = navigatingSession();
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.605, 500) });
+  const off = (timestamp) => fix(35.605, timestamp, { lat: 33.101 });
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(1000) });
+  const requested = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(6000) });
   return { session, requested };
 }
 
-// --- approach slot: suggestion is orthogonal to acquisition ----------------
+// --- rejoin slot: suggestion is orthogonal to recovery --------------------
 {
-  const route = straightRoute();
-  const farFromStartFix = { lat: 33.105, lng: 35.6, accuracy: 8, speed: 4, timestamp: 1000 };
-  const onRouteFix = { lat: 33.1, lng: 35.605, accuracy: 5, speed: 4, timestamp: 4000 };
-  const connectorGeom = [
-    { lat: 33.105, lng: 35.6 },
-    { lat: 33.1, lng: 35.6 },
-  ];
-
-  const s = createNavigationSession(route);
-  s.dispatch({ type: NAV_ACTIONS.START });
-  s.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED });
-  s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: farFromStartFix });
+  const { session: s } = offRouteRequestedSession();
   let st = s.getState();
-  assert.equal(st.status, "approaching");
-  assert.ok(st.approach.choices);
-  assert.equal(st.approach.target.mode, "start", "defaults to the route start");
+  assert.equal(st.status, "off-route");
+  assert.equal(st.approach.target.mode, "rejoin");
   assert.equal(st.approach.suggestionStatus, "requesting");
   assert.ok(st.routeRequest && st.routeRequest.to);
   assert.ok(Number.isFinite(st.approach.distanceToRouteMeters));
@@ -253,33 +246,35 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   s.dispatch({
     type: NAV_ACTIONS.CONNECTOR_READY,
     requestId: st.routeRequest.requestId,
-    geometry: connectorGeom,
+    geometry: [
+      { lat: 33.101, lng: 35.605 },
+      { lat: 33.1, lng: 35.605 },
+    ],
     distanceMeters: 800,
     snappedEndpoints: [],
   });
   st = s.getState();
-  assert.equal(st.status, "approaching", "READY never changes status");
+  assert.equal(st.status, "off-route", "READY never changes status");
   assert.equal(st.approach.suggestionStatus, "ready");
   assert.ok(st.approach.suggestionGeometry.length >= 2);
   assert.equal(st.approach.suggestionDistanceMeters, 800);
   assert.equal(st.routeRequest, null, "completed connector request is cleared");
 
-  s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: onRouteFix });
-  st = s.getState();
-  assert.equal(st.status, "navigating", "physical acquisition is the only handoff");
-  assert.equal(st.approach.target, null, "acquisition clears the approach slot");
+  s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.605, 8000) });
+  st = s.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.6051, 12000) });
+  assert.equal(st.status, "navigating", "physical recovery is the only handoff");
 }
 
 // --- a long / over-cap suggestion is allowed (no distance-cap rejection) ---
 {
-  const { session, requested } = approachingSession();
+  const { session, requested } = offRouteRequestedSession();
   const ready = session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_READY,
     requestId: requested.routeRequest.requestId,
     geometry: [{ lat: 33.105, lng: 35.6 }, { lat: 33.1, lng: 35.6 }],
     distanceMeters: 9000,
   });
-  assert.equal(ready.status, "approaching");
+  assert.equal(ready.status, "off-route");
   assert.equal(
     ready.approach.suggestionStatus,
     "ready",
@@ -289,29 +284,29 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
 
 // --- an invalid (single-point) suggestion geometry fails -------------------
 {
-  const { session, requested } = approachingSession();
+  const { session, requested } = offRouteRequestedSession();
   const ready = session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_READY,
     requestId: requested.routeRequest.requestId,
     geometry: [{ lat: 33.105, lng: 35.6 }],
     distanceMeters: 100,
   });
-  assert.equal(ready.status, "approaching");
+  assert.equal(ready.status, "off-route");
   assert.equal(ready.approach.suggestionStatus, "failed");
   assert.equal(ready.approach.suggestionGeometry, null);
   assert.equal(ready.routeRequest, null);
 }
 
-// --- CONNECTOR_FAILED keeps status approaching; direct line survives -------
+// --- CONNECTOR_FAILED keeps status off-route; direct line survives ---------
 {
-  const { session, requested } = approachingSession();
+  const { session, requested } = offRouteRequestedSession();
   const before = requested.approach.distanceToRouteMeters;
   const failed = session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_FAILED,
     requestId: requested.routeRequest.requestId,
     reason: "transient",
   });
-  assert.equal(failed.status, "approaching");
+  assert.equal(failed.status, "off-route");
   assert.equal(failed.approach.suggestionStatus, "failed");
   assert.equal(failed.approach.suggestionGeometry, null);
   assert.equal(failed.routeRequest, null);
@@ -324,7 +319,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
 
 // --- stale and paused suggestion results are ignored -----------------------
 {
-  const { session, requested } = approachingSession();
+  const { session, requested } = offRouteRequestedSession();
   const requestId = requested.routeRequest.requestId;
   const stale = session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_READY,
@@ -344,7 +339,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(whilePaused.approach.suggestionStatus, "requesting", "result ignored while paused");
   assert.equal(
     session.dispatch({ type: NAV_ACTIONS.RESUME }).status,
-    "approaching",
+    "off-route",
     "RESUME restores the pre-pause status",
   );
   assert.ok(session.getState().approach.target, "approach slot persists across pause");
@@ -352,7 +347,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
 
 // --- CONNECTOR_FAILED retries only after meaningful movement ---------------
 {
-  const { session, requested } = approachingSession();
+  const { session, requested } = offRouteRequestedSession();
   session.dispatch({
     type: NAV_ACTIONS.CONNECTOR_FAILED,
     requestId: requested.routeRequest.requestId,
@@ -363,13 +358,13 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
   assert.equal(st.approach.suggestionGeometry, null);
   const belowGate = session.dispatch({
     type: NAV_ACTIONS.LOCATION,
-    fix: { ...requested.latestFix, lat: 33.104, timestamp: 5000 },
+    fix: { ...requested.latestFix, lat: 33.1012, timestamp: 7000 },
   });
   assert.equal(belowGate.approach.suggestionStatus, "failed");
   assert.equal(belowGate.routeRequest, null);
   const refetch = session.dispatch({
     type: NAV_ACTIONS.LOCATION,
-    fix: { ...requested.latestFix, lat: 33.103, timestamp: 8000 },
+    fix: { ...requested.latestFix, lat: 33.102, timestamp: 9000 },
   });
   assert.equal(refetch.approach.suggestionStatus, "requesting");
   assert.ok(refetch.routeRequest.requestId > requested.routeRequest.requestId);
@@ -377,7 +372,7 @@ function approachingSession({ lng = 35.6, timestamp = 1000 } = {}) {
 
 // --- STOP clears the approach slot and route request -----------------------
 {
-  const { session } = approachingSession();
+  const { session } = offRouteRequestedSession();
   const ended = session.dispatch({ type: NAV_ACTIONS.STOP });
   assert.equal(ended.status, "ended");
   assert.equal(ended.approach.target, null);

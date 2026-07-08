@@ -37,7 +37,7 @@ function directionText(direction, locale) {
 
 function cuePhrase(event, state, locale) {
   if (event.kind === "off-route") {
-    return locale === "he-IL" ? "יצאת מהמסלול" : "You left the route.";
+    return locale === "he-IL" ? "יָצָאתָ מֵהַמַּסְלוּל." : "You left the route.";
   }
   if (event.kind === "acquired") {
     if (event.acquisition === "reacquired") {
@@ -46,7 +46,7 @@ function cuePhrase(event, state, locale) {
         : "Back on route. Continuing navigation.";
     }
     return locale === "he-IL"
-      ? "הכל מוכן, יוצאים לדרך. רכבו בזהירות"
+      ? "הַכֹּל מוּכָן, יוֹצְאִים לַדֶּרֶךְ. רִכְבוּ בִּזְהִירוּת"
       : "All set. Let's ride. Ride safely.";
   }
   if (event.kind !== "cue") return null;
@@ -72,7 +72,7 @@ function cuePhrase(event, state, locale) {
         ? `עיקול ${directionText(cue.direction, locale)}`
         : `Bend ${directionText(cue.direction, locale)}`;
     case "arrive":
-      return locale === "he-IL" ? "הגעת ליעד." : "You have arrived.";
+      return locale === "he-IL" ? "הִגַּעְתָּ לַיַּעַד." : "You have arrived.";
     case "hazard":
     case "caution":
       return locale === "he-IL" ? `${prefix}שים לב.` : `${prefix}Caution.`;

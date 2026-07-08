@@ -24,16 +24,20 @@ export function normalizePendingRideIntent(value, now = Date.now()) {
     ? value.startMode
     : "official";
   if (startMode === "custom" && !validPoint(value.selectedPoint)) return null;
+  const startProgressMeters = Number(value.startProgressMeters);
   return {
     routeToken: value.routeToken,
     slug: typeof value.slug === "string" ? value.slug : null,
     name: typeof value.name === "string" ? value.name : null,
     direction,
     startMode,
+    startProgressMeters:
+      Number.isFinite(startProgressMeters) && startProgressMeters >= 0
+        ? startProgressMeters
+        : null,
     selectedPoint: validPoint(value.selectedPoint)
       ? { lat: Number(value.selectedPoint.lat), lng: Number(value.selectedPoint.lng) }
       : null,
     timestamp,
   };
 }
-

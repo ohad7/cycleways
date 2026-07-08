@@ -117,7 +117,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(paused.statusText, "מושהה");
 }
 
-// Approach: banner label + distance, disclaimer, external target, join-nearest.
+// Approach: banner label + beeline distance, disclaimer, external target.
 {
   const near = getNavigationPresentation({
     status: "approaching",
@@ -125,16 +125,14 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     approach: {
       target: { point: { lat: 32, lng: 35 }, mode: "start" },
       distanceToRouteMeters: 600,
-      suggestionGeometry: [{ lat: 31.99, lng: 35 }, { lat: 32, lng: 35 }],
-      suggestionDistanceMeters: 900,
     },
     progress: { guidanceDistanceMeters: 600, remainingMeters: 14000 },
   });
   assert.equal(near.showApproach, true);
   assert.equal(near.tier, "near");
   assert.equal(near.destinationLabel, "תחילת המסלול");
-  assert.equal(near.approachDistanceShort, "900 מ׳");
-  assert.equal(near.approachDistanceSource, "connector");
+  assert.equal(near.approachDistanceShort, "600 מ׳");
+  assert.equal(near.approachDistanceSource, "beeline");
   assert.equal(near.disclaimerText, "ניווט מחוץ לרשת CycleWays");
   assert.deepEqual(near.externalNavTarget, { lat: 32, lng: 35 });
   // Target is due north of the rider → bearing ≈ 0.
@@ -336,7 +334,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: false, wrongWay: false },
   });
   assert.equal(approaching.cardMode, "approach");
-  assert.deepEqual(approaching.chip, { kind: "approach", text: "המסלול המוצע" });
+  assert.equal(approaching.chip, null, "no suggestion chip while approaching");
 
   const arrived = getNavigationPresentation({
     status: "navigating",

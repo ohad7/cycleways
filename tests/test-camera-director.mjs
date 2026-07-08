@@ -28,7 +28,7 @@ const riding = (over = {}) => ({
   assert.equal(zoomForSpanMeters(10), 17.5, "clamped high (span floor 50)");
 }
 
-// Ride: pitch 50, speed-breathing zoom.
+// Ride: pitch 55, speed-breathing zoom.
 {
   const director = createCameraDirector();
   const slow = director.update(
@@ -36,7 +36,7 @@ const riding = (over = {}) => ({
     0,
   );
   assert.equal(slow.stage, "ride");
-  assert.equal(slow.pitch, 50);
+  assert.equal(slow.pitch, 55);
   assert.ok(Math.abs(slow.zoom - 16.8) < 0.01, "slow = zoomed in");
   const fast = director.update(
     riding({ progress: { ...riding().progress, smoothedSpeedMps: 8 } }),

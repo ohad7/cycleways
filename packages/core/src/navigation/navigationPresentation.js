@@ -183,9 +183,7 @@ export function getNavigationPresentation(state = {}) {
   })();
   const chip = offRoute
     ? { kind: "rejoin", text: "חזרה למסלול" }
-    : status === "approaching"
-      ? (hasSuggestionGeometry ? { kind: "approach", text: "המסלול המוצע" } : null)
-      : (cardMode === "cue" || cardMode === "arrived") && segmentChipText
+    : (cardMode === "cue" || cardMode === "arrived") && segmentChipText
         ? { kind: "segment", text: segmentChipText }
         : null;
 

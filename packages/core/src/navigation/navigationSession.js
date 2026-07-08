@@ -1,8 +1,8 @@
 // Pure navigation-session controller. Native code supplies location fixes and
 // performs best-effort connector route requests; the session keeps the main
 // route's acquisition logic and offers the connector only as a non-narrated
-// approach suggestion. Acquiring the main route is the only handoff into
-// `navigating` — there is no seeded jump.
+// off-route rejoin suggestion. Pre-route approach is a beeline pointer only.
+// Acquiring the main route is the only handoff into `navigating`.
 
 import { getDistance } from "../utils/distance.js";
 import {
@@ -214,42 +214,14 @@ export function createNavigationSession(navigationRoute, options = {}) {
         }
         const mainProgress = mainTracker.update(action.fix);
 
-        // Not yet on the route: stay in `approaching`, keep a live straight-line
-        // distance to the chosen target, and offer one best-effort suggestion.
+        // Not yet on the route: stay in `approaching` with a live straight-line
+        // distance to the chosen target. The pre-route approach is a beeline
+        // pointer only; connector suggestions are rejoin-only.
         if (!mainProgress.hasAcquiredRoute) {
           const choices = approachTargetChoices(navigationRoute, action.fix);
           let target = state.approach.target;
           if (!target && choices) {
             target = { ...choices.start, mode: "start" };
-          }
-          const distanceToRouteMeters = target
-            ? getDistance(action.fix, target.point)
-            : null;
-          const approach = {
-            ...state.approach,
-            choices,
-            target,
-            distanceToRouteMeters,
-          };
-          if (
-            target &&
-            canRequestSuggestion(action.fix)
-          ) {
-            return set({
-              status: "approaching",
-              progress: mainProgress,
-              activeCue: null,
-              offRoute: false,
-              cueEvent: null,
-              justAcquired: false,
-              approach: {
-                ...approach,
-                suggestionStatus: "requesting",
-                // Keep the prior suggestion visible until the new one is ready.
-              },
-              routeRequest: suggestionRequest(action.fix, target),
-              connectorResult: null,
-            });
           }
           return set({
             status: "approaching",
@@ -258,7 +230,18 @@ export function createNavigationSession(navigationRoute, options = {}) {
             offRoute: false,
             cueEvent: null,
             justAcquired: false,
-            approach,
+            approach: {
+              ...state.approach,
+              choices,
+              target,
+              distanceToRouteMeters: target
+                ? getDistance(action.fix, target.point)
+                : null,
+              suggestionGeometry: null,
+              suggestionStatus: "idle",
+              suggestionDistanceMeters: null,
+            },
+            routeRequest: null,
           });
         }
 

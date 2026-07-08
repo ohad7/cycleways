@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { buildNavigationGeometry } from "../packages/core/src/navigation/navigationRoute.js";
 import {
   buildRidePlanCandidates,
-  canFastStartRidePlan,
   classifyApproach,
   createRidePlan,
   setupLocationQuality,
@@ -50,6 +49,23 @@ assert.ok(nearest.skippedMeters > 1000);
 assert.ok(nearest.guidedDistanceMeters < route.distanceMeters);
 assert.equal(nearest.requiresSkipConfirmation, true);
 
+const restoredNearest = createRidePlan(
+  route,
+  {
+    direction: "forward",
+    startMode: "nearest",
+    startProgressMeters: nearest.startProgressMeters,
+  },
+  { lat: 32, lng: 35, accuracy: 5, timestamp: now },
+  now,
+);
+assert.equal(restoredNearest.startMode, "nearest");
+assert.equal(
+  Math.round(restoredNearest.startProgressMeters),
+  Math.round(nearest.startProgressMeters),
+  "restored nearest preserves the approved start progress instead of recomputing nearest",
+);
+
 const staleNearest = createRidePlan(
   route,
   { direction: "forward", startMode: "nearest" },
@@ -79,25 +95,5 @@ const atStart = createRidePlan(
   now,
 );
 assert.equal(atStart.approachTier, "at");
-assert.equal(
-  canFastStartRidePlan(atStart, { direction: "forward", startMode: "official", selectedPoint: null }),
-  true,
-  "fresh at-route default plan can fast-start",
-);
-assert.equal(
-  canFastStartRidePlan(nearest, { direction: "forward", startMode: "nearest", selectedPoint: null }),
-  false,
-  "alternate start does not fast-start",
-);
-assert.equal(
-  canFastStartRidePlan(reverse, { direction: "reverse", startMode: "official", selectedPoint: null }),
-  false,
-  "reverse selection does not fast-start",
-);
-assert.equal(
-  canFastStartRidePlan(staleNearest, { direction: "forward", startMode: "official", selectedPoint: null }),
-  false,
-  "stale location does not fast-start",
-);
 
 console.log("test-ride-plan: OK");

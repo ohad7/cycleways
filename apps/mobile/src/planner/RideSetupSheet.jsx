@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDistanceMeters } from "@cycleways/core/navigation/navigationPresentation.js";
+import { rideSetupLocationNotice } from "@cycleways/core/navigation/rideIntroPresentation.js";
 import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
 
@@ -60,22 +61,6 @@ function DirectionButton({ label, selected, disabled = false, onPress }) {
   );
 }
 
-function locationMessage(status, quality) {
-  if (status === "loading") return "מאתר את המיקום שלך…";
-  if (status === "denied") return "אין הרשאת מיקום. אפשר לבחור התחלה ידנית או לנסות שוב.";
-  if (status === "unavailable") return "לא הצלחנו לקבל מיקום עדכני.";
-  if (quality === "stale") return "המיקום הקיים אינו עדכני; ההמלצה לא נבחרה אוטומטית.";
-  if (quality === "inaccurate") return "דיוק המיקום נמוך; מומלץ לבחור נקודת התחלה ידנית.";
-  return "";
-}
-
-function primaryLabel(plan) {
-  if (!plan) return "המשך";
-  if (plan.approachTier === "at") return "התחל ניווט במסלול";
-  if (plan.approachTier === "near") return "התחל והראה דרך למסלול";
-  return "בחר אפליקציית ניווט";
-}
-
 export default function RideSetupSheet({
   visible,
   plan,
@@ -102,7 +87,7 @@ export default function RideSetupSheet({
   const insets = useSafeAreaInsets();
   const candidates = plan?.candidates;
   const nearest = candidates?.nearest;
-  const message = locationMessage(locationStatus, plan?.locationQuality);
+  const message = rideSetupLocationNotice(locationStatus, plan?.locationQuality);
   const distance = plan?.distanceToStartMeters;
   const showNearest = Boolean(
     plan?.locationQuality === "fresh" && candidates?.nearestIsMeaningful,
@@ -127,8 +112,8 @@ export default function RideSetupSheet({
             <Icon name="close" size={24} color={palette.ink} />
           </Pressable>
           <View style={styles.headerText}>
-            <Text style={styles.title}>הכנת הרכיבה</Text>
-            <Text style={styles.subtitle}>בחרו כיוון ונקודת התחלה לפני הניווט</Text>
+            <Text style={styles.title}>הגדרות רכיבה</Text>
+            <Text style={styles.subtitle}>כיוון, נקודת התחלה והעדפות הנחיה</Text>
           </View>
         </View>
 
@@ -289,19 +274,8 @@ export default function RideSetupSheet({
               {plan.direction === "reverse" ? (
                 <Text style={styles.summaryLine}>המסלול ינווט בכיוון ההפוך.</Text>
               ) : null}
-              {plan.approachTier === "far" ? (
-                <Text style={styles.farText}>המסלול רחוק. מומלץ להגיע לנקודת ההתחלה בעזרת אפליקציית ניווט.</Text>
-              ) : null}
             </View>
           ) : null}
-
-          <View style={styles.safetyNote}>
-            <Icon name="alert-circle-outline" color={palette.muted} size={17} />
-            <Text style={styles.safetyNoteText}>
-              ההנחיות הן עזר לתכנון בלבד. רכבו בזהירות וצייתו לתמרורים ולתנאי
-              הדרך — הם קודמים לכל הנחיה מהאפליקציה.
-            </Text>
-          </View>
         </ScrollView>
 
         <Pressable
@@ -314,7 +288,7 @@ export default function RideSetupSheet({
             pressed ? styles.pressed : null,
           ]}
         >
-          <Text style={styles.primaryText}>{primaryLabel(plan)}</Text>
+          <Text style={styles.primaryText}>אישור</Text>
         </Pressable>
       </View>
     </Modal>
@@ -364,21 +338,6 @@ const styles = StyleSheet.create({
   summaryTitle: { ...text.bodyStrong, color: palette.ink, textAlign: "right", writingDirection: "rtl" },
   summaryLine: { ...text.caption, color: palette.muted, textAlign: "right", writingDirection: "rtl" },
   warning: { ...text.captionStrong, color: "#92400e", textAlign: "right", writingDirection: "rtl" },
-  farText: { ...text.captionStrong, color: palette.ink, marginTop: space.xs, textAlign: "right", writingDirection: "rtl" },
-  safetyNote: {
-    flexDirection: "row-reverse",
-    gap: 8,
-    alignItems: "flex-start",
-    marginTop: 14,
-    paddingHorizontal: 4,
-  },
-  safetyNoteText: {
-    ...text.caption,
-    flex: 1,
-    color: palette.muted,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
   primary: { minHeight: 50, borderRadius: radius.md, backgroundColor: palette.forest, alignItems: "center", justifyContent: "center", marginTop: space.sm },
   primaryDisabled: { opacity: 0.45 },
   primaryText: { ...text.bodyStrong, color: palette.white, writingDirection: "rtl" },

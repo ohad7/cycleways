@@ -6,6 +6,7 @@
 const MIN_STAGE_DWELL_MS = 2000; // stage changes settle; off-route/arrived skip it
 const ARRIVED_REMAINING_M = 15;
 const ARRIVAL_CUE_MAX_M = 150;
+const RIDE_FOLLOW_PITCH = 55;
 
 function clamp(min, max, value) {
   return Math.min(max, Math.max(min, value));
@@ -75,7 +76,7 @@ function shotFor(stage, state) {
       return {
         stage: "ride",
         mode: "follow",
-        pitch: 50,
+        pitch: RIDE_FOLLOW_PITCH,
         zoom: 16.8 + (15.8 - 16.8) * t,
         centerBias: 0,
       };
