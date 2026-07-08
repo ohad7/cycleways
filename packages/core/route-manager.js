@@ -312,6 +312,7 @@ class RouteManager {
       distanceMeters: route.distance || 0,
       failure: null,
       snappedEndpoints,
+      edgeIds: route.traversals.map((traversal) => traversal.edge.id),
     };
   }
 
