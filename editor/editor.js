@@ -893,7 +893,10 @@ function connectorVerdictText(props) {
   const v = evaluateConnectorEdge(edge, strategy);
   if (!v.allowed) {
     const accessExcluded =
-      edge.accessStatus && strategy.accessPolicy?.[edge.accessStatus] == null;
+      edge.accessStatus &&
+      strategy.accessPolicy &&
+      edge.accessStatus in strategy.accessPolicy &&
+      strategy.accessPolicy[edge.accessStatus] == null;
     const reason = accessExcluded
       ? `access "${edge.accessStatus}" excluded`
       : `class "${edge.routeClass}" excluded`;
