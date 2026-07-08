@@ -21,6 +21,14 @@ import {
   snapPointToRouteWithinWindow,
 } from "../packages/core/src/domain/routeGeometryMath.js";
 import { vsFormatTime, vsParseTime } from "./lib/vs-time.mjs";
+import {
+  DEFAULT_CONNECTOR_STRATEGY,
+  evaluateConnectorEdge,
+} from "../packages/core/src/routing/connectorCostModel.js";
+import {
+  connectorCostColor,
+  connectorClassColor,
+} from "./lib/connectorColors.mjs";
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 
@@ -177,6 +185,11 @@ const state = {
     manualBaseEdges: emptyManualBaseEdges(),
     overlay: emptyBaseOverlay(),
     cache: {},
+  },
+  connectorLens: {
+    // "off" | "class" | "eligibility" | "cost"
+    colorMode: "off",
+    strategy: structuredClone(DEFAULT_CONNECTOR_STRATEGY),
   },
 };
 
@@ -833,6 +846,20 @@ function drawPointCollection() {
   return { type: "FeatureCollection", features };
 }
 
+function connectorLensColor(props) {
+  const mode = state.connectorLens.colorMode;
+  if (mode === "off") return null;
+  const edge = {
+    routeClass: props.osmRouteClass ?? props.routeClass,
+    roadType: props.roadType,
+    accessStatus: props.accessStatus,
+  };
+  if (mode === "class") return connectorClassColor(edge.routeClass);
+  const verdict = evaluateConnectorEdge(edge, state.connectorLens.strategy);
+  if (mode === "eligibility") return verdict.allowed ? "#1b7837" : "#9ca3af";
+  return connectorCostColor(verdict.multiplier); // "cost"
+}
+
 function baseGraphCollection() {
   if (!state.baseOverlay.graphEdges) {
     return EMPTY_FEATURE_COLLECTION;
@@ -841,25 +868,31 @@ function baseGraphCollection() {
   if (
     cache.baseGraphCollection &&
     cache.baseGraphCollectionGraphEdges === state.baseOverlay.graphEdges &&
-    cache.baseGraphCollectionManualEdges === state.baseOverlay.manualBaseEdges
+    cache.baseGraphCollectionManualEdges === state.baseOverlay.manualBaseEdges &&
+    cache.baseGraphCollectionLensMode === state.connectorLens.colorMode &&
+    cache.baseGraphCollectionLensStrategy === state.connectorLens.strategy
   ) {
     return cache.baseGraphCollection;
   }
   const overriddenEdgeIds = overriddenBaseGraphEdgeIds();
-  if (overriddenEdgeIds.size === 0) {
-    cache.baseGraphCollection = state.baseOverlay.graphEdges;
-    cache.baseGraphCollectionGraphEdges = state.baseOverlay.graphEdges;
-    cache.baseGraphCollectionManualEdges = state.baseOverlay.manualBaseEdges;
-    return cache.baseGraphCollection;
-  }
-  cache.baseGraphCollection = {
-    ...state.baseOverlay.graphEdges,
-    features: (state.baseOverlay.graphEdges.features || []).filter(
-      (feature) => !overriddenEdgeIds.has(String(graphEdgeFeatureId(feature))),
-    ),
-  };
+  const sourceFeatures =
+    overriddenEdgeIds.size === 0
+      ? state.baseOverlay.graphEdges.features || []
+      : (state.baseOverlay.graphEdges.features || []).filter(
+          (feature) => !overriddenEdgeIds.has(String(graphEdgeFeatureId(feature))),
+        );
+  const features = sourceFeatures.map((feature) => ({
+    ...feature,
+    properties: {
+      ...feature.properties,
+      connectorLensColor: connectorLensColor(feature.properties || {}),
+    },
+  }));
+  cache.baseGraphCollection = { ...state.baseOverlay.graphEdges, features };
   cache.baseGraphCollectionGraphEdges = state.baseOverlay.graphEdges;
   cache.baseGraphCollectionManualEdges = state.baseOverlay.manualBaseEdges;
+  cache.baseGraphCollectionLensMode = state.connectorLens.colorMode;
+  cache.baseGraphCollectionLensStrategy = state.connectorLens.strategy;
   return cache.baseGraphCollection;
 }
 
@@ -6894,7 +6927,12 @@ async function addMapLayers() {
           "case",
           ["==", ["get", "source"], "manual"],
           BASE_GRAPH_LINE_COLOR,
-          ["coalesce", ["get", "graphColor"], BASE_GRAPH_FALLBACK_LINE_COLOR],
+          [
+            "coalesce",
+            ["get", "connectorLensColor"],
+            ["get", "graphColor"],
+            BASE_GRAPH_FALLBACK_LINE_COLOR,
+          ],
         ],
         "line-width": BASE_GRAPH_LINE_WIDTH,
         "line-opacity": BASE_GRAPH_LINE_OPACITY,
