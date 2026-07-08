@@ -39,6 +39,11 @@ assert.equal(single.failure, null);
 assert.ok(single.edgeIds.includes("ab") || single.edgeIds.includes("bc"),
   "default single run uses the local_road detour");
 assert.ok(!single.edgeIds.includes("direct"), "default single run avoids the cycle edge");
+assert.ok(single.edgeCosts.length > 0, "single run returns per-edge cost breakdown");
+assert.ok(
+  single.edgeCosts.every((entry) => Number.isFinite(entry.cost)),
+  "single run cost breakdown includes finite costs",
+);
 
 // Frequency mode, default: aggregate usage exists and every origin has a status.
 const freq = runConnectorPreview(manager, {
@@ -69,6 +74,25 @@ assert.ok((freqSoft.edgeUsage.direct || 0) > 0, "softened run uses the cycle edg
 assert.throws(
   () => runConnectorPreview(manager, { mode: "frequency" }),
   (err) => err.status === 400,
+);
+assert.throws(
+  () =>
+    runConnectorPreview(manager, {
+      mode: "frequency",
+      routeStart,
+      strategy: { ...DEFAULT_CONNECTOR_STRATEGY, uphillWeight: "not-a-number" },
+    }),
+  (err) => err.status === 400 && /uphillWeight/.test(err.message),
+);
+assert.throws(
+  () =>
+    runConnectorPreview(manager, {
+      mode: "frequency",
+      routeStart,
+      strategy: DEFAULT_CONNECTOR_STRATEGY,
+      radiusMeters: -1,
+    }),
+  (err) => err.status === 400 && /radiusMeters/.test(err.message),
 );
 
 console.log("connector-preview OK");

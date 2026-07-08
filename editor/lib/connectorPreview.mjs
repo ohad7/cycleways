@@ -1,4 +1,5 @@
 import { buildOriginGrid } from "@cycleways/core/routing/connectorSampling.js";
+import { validateConnectorStrategy } from "@cycleways/core/routing/connectorCostModel.js";
 
 function badRequest(message) {
   const err = new Error(message);
@@ -8,6 +9,19 @@ function badRequest(message) {
 
 function isLatLng(p) {
   return p && Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lng));
+}
+
+function positiveNumber(value, fallback, name) {
+  if (value === undefined || value === null || value === "") return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) throw badRequest(`${name} must be a positive number`);
+  return n;
+}
+
+function positiveInteger(value, fallback, name) {
+  const n = positiveNumber(value, fallback, name);
+  if (!Number.isInteger(n)) throw badRequest(`${name} must be a positive integer`);
+  return n;
 }
 
 function edgeIdsFromPreview(preview) {
@@ -27,13 +41,15 @@ function runSingle(manager, origin, routeStart, strategy) {
     geometry: preview.geometry || [],
     distanceMeters: preview.distanceMeters || 0,
     edgeIds: preview.failure ? [] : edgeIdsFromPreview(preview),
+    edgeCosts: preview.failure ? [] : (preview.edgeCosts || []),
   };
 }
 
 export function runConnectorPreview(manager, body = {}) {
   const { mode, routeStart, strategy } = body;
   if (!isLatLng(routeStart)) throw badRequest("routeStart {lat,lng} required");
-  if (!strategy || typeof strategy !== "object") throw badRequest("strategy required");
+  const strategyValidation = validateConnectorStrategy(strategy);
+  if (!strategyValidation.ok) throw badRequest(strategyValidation.error);
 
   if (mode === "single") {
     if (!isLatLng(body.origin)) throw badRequest("origin {lat,lng} required for single mode");
@@ -42,9 +58,9 @@ export function runConnectorPreview(manager, body = {}) {
 
   if (mode === "frequency") {
     const { origins, spacingMeters, radiusMeters, capped } = buildOriginGrid(routeStart, {
-      radiusMeters: Number(body.radiusMeters) || 2000,
-      spacingMeters: Number(body.gridSpacingMeters) || 150,
-      maxOrigins: Number(body.maxOrigins) || 400,
+      radiusMeters: positiveNumber(body.radiusMeters, 2000, "radiusMeters"),
+      spacingMeters: positiveNumber(body.gridSpacingMeters, 150, "gridSpacingMeters"),
+      maxOrigins: positiveInteger(body.maxOrigins, 400, "maxOrigins"),
     });
     const edgeUsage = {};
     const outOrigins = [];

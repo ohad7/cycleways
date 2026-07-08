@@ -29,6 +29,7 @@ export const CONNECTOR_COST_LEGEND = [
 ];
 
 const CLASS_COLORS = {
+  cw_network: "#7c3aed",
   road: "#1f78b4",
   local_road: "#6d7785",
   cycle: "#33a02c",
@@ -42,5 +43,22 @@ export function connectorClassColor(routeClass) {
 }
 
 export const CONNECTOR_CLASS_LEGEND = Object.entries(CLASS_COLORS).map(
+  ([label, color]) => ({ label, color }),
+);
+
+const ACCESS_COLORS = {
+  unrestricted: "#1b7837",
+  permitted: "#5aae61",
+  unspecified: "#6d7785",
+  conditional: "#f59e0b",
+  restricted: "#dc2626",
+  unknown: "#999999",
+};
+
+export function connectorAccessColor(accessStatus) {
+  return ACCESS_COLORS[accessStatus] || ACCESS_COLORS.unknown;
+}
+
+export const CONNECTOR_ACCESS_LEGEND = Object.entries(ACCESS_COLORS).map(
   ([label, color]) => ({ label, color }),
 );

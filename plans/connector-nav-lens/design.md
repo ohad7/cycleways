@@ -18,6 +18,9 @@ tags at pipeline build time:
   `conditional`.
 - `_connectorCostMultiplierFor(edge)` then applies `road → ×1.0`,
   `local_road → ×1.1`, plus an uphill penalty.
+- The CycleWays route network already encodes curated ownership of base edges,
+  but connector eligibility did not treat that ownership as stronger evidence
+  than the underlying OSM/base-map tags.
 
 Because the gates are binary and depend on OSM tag completeness, the connector
 often refuses perfectly good roads or snap-fails entirely (e.g. when a route
@@ -88,13 +91,18 @@ Three components plus a testing story.
 New pure module `packages/core/src/routing/connectorCostModel.js`:
 
 - `DEFAULT_CONNECTOR_STRATEGY` — a declarative object encoding **exactly** the
-  current production values so the default is behavior-preserving:
-  - `classMultipliers`: `{ road: 1, local_road: 1.1 }`, with every other
+  intended connector values:
+  - `classMultipliers`: `{ cw_network: 0.8, road: 1, local_road: 1.1 }`, with every other
     `routeClass` (`cycle`, `path_track`, `manual`, `other`) → excluded.
     `roadType === "road"` also maps to the `road` multiplier (mirrors the
     current `|| edge.roadType === "road"` allowance).
+    `cw_network` is not an OSM class; it applies when the edge has accepted
+    CycleWays ownership (`cwSegmentIds` / `cyclewaysSegmentIds`). It is evaluated
+    before base-map class/access gates, making CW-owned edges connector-eligible
+    even if OSM/base tags would otherwise exclude them.
   - `accessPolicy`: `{ restricted: "excluded", conditional: "excluded" }`; all
-    other statuses pass with multiplier 1.
+    other statuses pass with multiplier 1. CW-owned edges bypass this base-map
+    access policy by using the `cw_network` multiplier.
   - `uphillWeight`: the existing `baseRoutingUphillCostMetersPerMeter`.
   - `snap`: `"allowed-only"` (endpoints may snap only to allowed edges) — the
     current behavior; alternative value `"any"`.
@@ -106,8 +114,9 @@ New pure module `packages/core/src/routing/connectorCostModel.js`:
 
 - `_connectorEdgeAllowed` and `_connectorCostMultiplierFor` delegate to
   `evaluateConnectorEdge` with the active strategy (defaulting to
-  `DEFAULT_CONNECTOR_STRATEGY`). With the default strategy, all existing behavior
-  and tests are preserved.
+  `DEFAULT_CONNECTOR_STRATEGY`). With the default strategy, existing
+  road/local-road behavior is preserved while CW-owned edges gain the requested
+  connector eligibility through `cw_network`.
 - `previewBaseRoute(points, { costProfile, connectorStrategy })` gains an
   optional `connectorStrategy`. When present, the connector graph search computes
   edge traversal cost **live** from the strategy (via the shared model) instead
@@ -169,11 +178,11 @@ Added to the existing `base` workspace mode (no new top-level workspace):
    render greyed/dashed. Uses a colorblind-safe sequential ramp with a discrete
    "excluded" swatch.
 3. **Strategy panel** — editable controls bound to the strategy object: per-class
-   multiplier (including turning `cycle`/`path_track` from excluded into a finite
-   penalty), per-`accessStatus` policy (excluded vs. finite penalty), uphill
-   weight, and snap looseness (`allowed-only` vs. `any`). Includes a **"Reset to
-   production"** button (loads `DEFAULT_CONNECTOR_STRATEGY`) and a **"Copy as
-   JSON"** button.
+   multiplier (including the special `cw_network` multiplier and turning
+   `cycle`/`path_track` from excluded into a finite penalty), per-`accessStatus`
+   policy (excluded vs. finite penalty), uphill weight, and snap looseness
+   (`allowed-only` vs. `any`). Includes a **"Reset to production"** button
+   (loads `DEFAULT_CONNECTOR_STRATEGY`) and a **"Copy as JSON"** button.
 4. **Frequency run** — select a route (its start becomes the target) → set radius
    → **Run** → `POST /api/connector/preview` (`mode: "frequency"`) → render the
    usage heatmap (edge width and/or color by count) plus origin dots colored by
@@ -209,12 +218,15 @@ Added to the existing `base` workspace mode (no new top-level workspace):
 
 - **`connectorCostModel` unit tests:** the default strategy reproduces current
   connector verdicts for representative edges — a `road`, a `local_road`, a
-  `cycle`, and a `restricted` — using the user's named edges (`e582912979_1`,
+  non-CW `cycle`, a `restricted`, and a CW-owned edge whose base tags would
+  otherwise exclude it — using the user's named edges (`e582912979_1`,
   `e306636823_2`, `e1036215799_1`) as fixtures where their properties are known.
-  A softened strategy (e.g. `cycle` finite) flips the expected verdict.
+  A softened strategy (e.g. `cycle` finite) flips the expected verdict, and the
+  default `cw_network` multiplier makes CW-owned edges eligible.
 - **`route-manager` regression:** existing `tests/test-compute-connector.mjs`
   and `tests/test-preview-base-route.mjs` pass unchanged under the default
-  strategy (proving the refactor is behavior-preserving).
+  strategy, and the new CW-owned-edge regression proves the intentional
+  eligibility change.
 - **Endpoint test** on a small synthetic base network: a `frequency` run returns
   the expected per-edge usage counts and outcome stats; changing the strategy to
   soften `cycle` from excluded → finite changes the picked path / usage counts.

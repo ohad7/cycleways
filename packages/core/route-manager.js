@@ -62,6 +62,7 @@ class RouteManager {
     this.lastRouteFailure = null;
     this._connectorCostProfile = false;
     this._connectorStrategy = null;
+    this._connectorSnapAnyEndpoints = false;
   }
 
   /**
@@ -288,12 +289,14 @@ class RouteManager {
     }
     this._connectorCostProfile = connectorProfile;
     this._connectorStrategy = strategy;
+    this._connectorSnapAnyEndpoints = snapAny;
     let route;
     try {
       route = this._calculateBaseRoute(snapped);
     } finally {
       this._connectorCostProfile = false;
       this._connectorStrategy = null;
+      this._connectorSnapAnyEndpoints = false;
     }
     if (
       route.failure ||
@@ -313,6 +316,9 @@ class RouteManager {
       failure: null,
       snappedEndpoints,
       edgeIds: route.traversals.map((traversal) => traversal.edge.id),
+      edgeCosts: route.traversals.map((traversal) =>
+        this._baseTraversalDiagnostics(traversal),
+      ),
     };
   }
 
@@ -446,6 +452,7 @@ class RouteManager {
         .filter(Boolean),
       distanceMeters: traversal.distanceMeters,
       costMultiplier: traversal.costMultiplier,
+      connectorSnapAnyEndpoint: traversal.connectorSnapAnyEndpoint === true,
       distanceCost: traversal.distanceCost,
       uphillMeters: traversal.uphillMeters,
       downhillMeters: traversal.downhillMeters,
@@ -1092,6 +1099,29 @@ class RouteManager {
     return this._baseRoutingTraversalCost(edge, fromDistance, toDistance, true);
   }
 
+  _connectorSnapAnyEndpointCostParts(edge, fromDistance, toDistance) {
+    const verdict = evaluateConnectorEdge(edge, this._activeConnectorStrategy());
+    if (verdict.allowed) return null;
+    const distanceMeters = Math.abs(toDistance - fromDistance);
+    const costMultiplier = this._baseRoutingCostMultiplier(edge, false);
+    const distanceCost = distanceMeters * costMultiplier;
+    const uphillMeters = this._baseRoutingUphillMeters(
+      edge,
+      fromDistance,
+      toDistance,
+    );
+    const uphillCost = uphillMeters * this._activeConnectorStrategy().uphillWeight;
+    return {
+      distanceMeters,
+      costMultiplier,
+      distanceCost,
+      uphillMeters,
+      uphillCost,
+      cost: distanceCost + uphillCost,
+      connectorSnapAnyEndpoint: true,
+    };
+  }
+
   _baseRoutingCostMultiplier(edge, connector = this._connectorCostProfile) {
     if (connector) return this._connectorCostMultiplierFor(edge);
     if (edge.cwSegmentIds.length > 0) return 1;
@@ -1133,7 +1163,16 @@ class RouteManager {
     fromDistance,
     toDistance,
     connector = this._connectorCostProfile,
+    options = {},
   ) {
+    if (connector && options.snapAnyEndpoint) {
+      const endpointParts = this._connectorSnapAnyEndpointCostParts(
+        edge,
+        fromDistance,
+        toDistance,
+      );
+      if (endpointParts) return endpointParts;
+    }
     const distanceMeters = Math.abs(toDistance - fromDistance);
     const costMultiplier = this._baseRoutingCostMultiplier(edge, connector);
     const distanceCost = distanceMeters * costMultiplier;
@@ -1162,12 +1201,14 @@ class RouteManager {
     fromDistance,
     toDistance,
     connector = this._connectorCostProfile,
+    options = {},
   ) {
     return this._baseRoutingTraversalCostParts(
       edge,
       fromDistance,
       toDistance,
       connector,
+      options,
     ).cost;
   }
 
@@ -1640,9 +1681,17 @@ class RouteManager {
   _baseEndpointOptions(edge, distanceAlong, kind) {
     const distanceToStart = Math.max(0, distanceAlong);
     const distanceToEnd = Math.max(0, edge.lengthMeters - distanceAlong);
+    const traversalOptions = this._connectorSnapAnyEndpoints
+      ? { snapAnyEndpoint: true }
+      : {};
     if (kind === "start") {
-      const startTraversal = this._baseTraversal(edge, distanceAlong, 0);
-      const endTraversal = this._baseTraversal(edge, distanceAlong, edge.lengthMeters);
+      const startTraversal = this._baseTraversal(edge, distanceAlong, 0, traversalOptions);
+      const endTraversal = this._baseTraversal(
+        edge,
+        distanceAlong,
+        edge.lengthMeters,
+        traversalOptions,
+      );
       return [
         {
           nodeId: edge.from,
@@ -1656,8 +1705,13 @@ class RouteManager {
         },
       ];
     }
-    const startTraversal = this._baseTraversal(edge, 0, distanceAlong);
-    const endTraversal = this._baseTraversal(edge, edge.lengthMeters, distanceAlong);
+    const startTraversal = this._baseTraversal(edge, 0, distanceAlong, traversalOptions);
+    const endTraversal = this._baseTraversal(
+      edge,
+      edge.lengthMeters,
+      distanceAlong,
+      traversalOptions,
+    );
     return [
       {
         nodeId: edge.from,
@@ -1806,11 +1860,13 @@ class RouteManager {
     return first;
   }
 
-  _baseTraversal(edge, fromDistance, toDistance) {
+  _baseTraversal(edge, fromDistance, toDistance, options = {}) {
     const costParts = this._baseRoutingTraversalCostParts(
       edge,
       fromDistance,
       toDistance,
+      this._connectorCostProfile,
+      options,
     );
     return {
       edge,

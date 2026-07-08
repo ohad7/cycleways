@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_CONNECTOR_STRATEGY,
   evaluateConnectorEdge,
+  validateConnectorStrategy,
 } from "@cycleways/core/routing/connectorCostModel.js";
 
 const S = DEFAULT_CONNECTOR_STRATEGY;
@@ -10,6 +11,23 @@ const S = DEFAULT_CONNECTOR_STRATEGY;
 assert.deepEqual(
   evaluateConnectorEdge({ routeClass: "road" }, S),
   { allowed: true, multiplier: 1 },
+);
+
+// CW-owned edges use a first-class connector multiplier even when base tags
+// would otherwise exclude them.
+assert.deepEqual(
+  evaluateConnectorEdge(
+    { routeClass: "cycle", accessStatus: "restricted", cwSegmentIds: [10] },
+    S,
+  ),
+  { allowed: true, multiplier: 0.8 },
+);
+assert.deepEqual(
+  evaluateConnectorEdge(
+    { routeClass: "cycle", accessStatus: "restricted", cwSegmentIds: [10] },
+    { ...S, classMultipliers: { ...S.classMultipliers, cw_network: "0.75" } },
+  ),
+  { allowed: true, multiplier: 0.75 },
 );
 
 // local_road → allowed, ×1.1
@@ -71,6 +89,24 @@ assert.deepEqual(
 assert.equal(
   evaluateConnectorEdge({ routeClass: "cycle", accessStatus: "conditional" }, softened).multiplier,
   3,
+);
+
+assert.equal(validateConnectorStrategy(S).ok, true);
+assert.equal(validateConnectorStrategy({ ...S, snap: "loose" }).ok, false);
+assert.equal(validateConnectorStrategy({ ...S, uphillWeight: NaN }).ok, false);
+assert.equal(
+  validateConnectorStrategy({
+    ...S,
+    classMultipliers: { ...S.classMultipliers, cycle: -1 },
+  }).ok,
+  false,
+);
+assert.equal(
+  validateConnectorStrategy({
+    ...S,
+    classMultipliers: { ...S.classMultipliers, cw_network: null },
+  }).ok,
+  true,
 );
 
 console.log("connector-cost-model OK");

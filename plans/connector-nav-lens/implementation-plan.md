@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an editor diagnostic + tuning lens over the base edge network that colors edges by classification / connector-eligibility / cost, lets the user tune the connector cost model live, and runs the real routing engine to produce a usage-frequency heatmap toward a selected route's start.
+**Goal:** Add an editor diagnostic + tuning lens over the base edge network that colors edges by classification / connector-eligibility / cost, lets the user tune the connector cost model live, treats CycleWays-owned base edges as connector-eligible through a special `cw_network` multiplier, and runs the real routing engine to produce a usage-frequency heatmap toward a selected route's start.
 
 **Architecture:** Extract today's hardcoded connector gates from `route-manager.js` into a shared, tunable `connectorCostModel` module; make `previewBaseRoute` accept an injected strategy that is applied live during search. The editor browser computes classification/cost heatmaps client-side with that same shared model (instant, no round-trip); frequency runs go to a new editor-server endpoint that drives the real `RouteManager`.
 
@@ -11,8 +11,8 @@
 ## Global Constraints
 
 - **No map-data edits.** This feature never writes `data/map-source.geojson`, `public-data/`, or any base-graph asset. The strategy is ephemeral client state, exportable as JSON only.
-- **Default strategy is behavior-preserving.** `DEFAULT_CONNECTOR_STRATEGY` must reproduce the exact current connector verdicts and costs; all existing routing tests must pass unchanged with no strategy injected.
-- **Current production values (copy verbatim):** allowed classes `road` (×1.0) and `local_road` (×1.1); `roadType === "road"` treated as `road`; every other `routeClass` (`cycle`, `path_track`, `manual`, `other`) excluded; `accessStatus` `restricted` and `conditional` excluded; uphill weight `8` (meters cost per meter climbed, from `this.baseRoutingUphillCostMetersPerMeter`); snap mode `"allowed-only"`.
+- **Default strategy is intentional production behavior.** `DEFAULT_CONNECTOR_STRATEGY` must preserve existing road/local-road behavior while adding the requested CW override; all existing routing tests must pass unchanged with no strategy injected unless they intentionally assert the old CW exclusion.
+- **Current production values:** allowed classes `cw_network` (×0.8), `road` (×1.0), and `local_road` (×1.1); `roadType === "road"` treated as `road`; every other non-CW `routeClass` (`cycle`, `path_track`, `manual`, `other`) excluded; `accessStatus` `restricted` and `conditional` excluded for non-CW edges; uphill weight `8` (meters cost per meter climbed, from `this.baseRoutingUphillCostMetersPerMeter`); snap mode `"allowed-only"`.
 - **Tests are added to the `test` npm script** (the long `&&` chain in `package.json`) so CI runs them. Run an individual test with `node tests/<file>.mjs`.
 - **Baked connector cost stays the runtime fast path.** Live per-edge cost computation is used *only* when a custom strategy is injected (editor previews); the mobile/shard runtime path (no injected strategy) keeps reading `edge.connectorCost`.
 
@@ -41,7 +41,8 @@
 
 **Interfaces:**
 - Produces:
-  - `DEFAULT_CONNECTOR_STRATEGY` — `{ classMultipliers: { road: number, local_road: number, cycle: number|null, path_track: number|null, manual: number|null, other: number|null }, accessPolicy: { [status: string]: number|null }, uphillWeight: number, snap: "allowed-only"|"any" }`. A `null` multiplier/policy value means *excluded*.
+  - `DEFAULT_CONNECTOR_STRATEGY` — `{ classMultipliers: { cw_network: number|null, road: number, local_road: number, cycle: number|null, path_track: number|null, manual: number|null, other: number|null }, accessPolicy: { [status: string]: number|null }, uphillWeight: number, snap: "allowed-only"|"any" }`. A `null` multiplier/policy value means *excluded*.
+  - `hasCyclewaysNetworkMembership(edge) → boolean` — true when the edge has `cwSegmentIds` / `cyclewaysSegmentIds` or equivalent CW ownership markers.
   - `evaluateConnectorEdge(edge, strategy) → { allowed: boolean, multiplier: number }`. Excluded → `{ allowed: false, multiplier: Infinity }`.
 
 - [ ] **Step 1: Write the failing test**
@@ -56,6 +57,12 @@ import {
 } from "@cycleways/core/routing/connectorCostModel.js";
 
 const S = DEFAULT_CONNECTOR_STRATEGY;
+
+// CW-owned edges → allowed via cw_network, even when base tags would exclude.
+assert.deepEqual(
+  evaluateConnectorEdge({ routeClass: "cycle", accessStatus: "restricted", cwSegmentIds: [10] }, S),
+  { allowed: true, multiplier: 0.8 },
+);
 
 // road → allowed, ×1.0
 assert.deepEqual(
@@ -140,10 +147,11 @@ Create `packages/core/src/routing/connectorCostModel.js`:
 // Single source of truth for the connector cost model: the two gates that
 // decide whether an edge may carry a connector route and how expensive it is.
 // A `null` class multiplier or access-policy value means "excluded".
-// DEFAULT_CONNECTOR_STRATEGY encodes the exact current production behavior.
+// DEFAULT_CONNECTOR_STRATEGY encodes the intended connector production behavior.
 
 export const DEFAULT_CONNECTOR_STRATEGY = {
   classMultipliers: {
+    cw_network: 0.8,
     road: 1,
     local_road: 1.1,
     cycle: null,
@@ -161,6 +169,9 @@ export const DEFAULT_CONNECTOR_STRATEGY = {
 
 function classMultiplier(edge, strategy) {
   const cm = strategy.classMultipliers || {};
+  if (hasCyclewaysNetworkMembership(edge)) {
+    return cm.cw_network ?? null;
+  }
   if (edge.routeClass === "road" || edge.roadType === "road") {
     return cm.road ?? null;
   }
@@ -179,6 +190,13 @@ function accessMultiplier(edge, strategy) {
 export function evaluateConnectorEdge(edge, strategy = DEFAULT_CONNECTOR_STRATEGY) {
   const excluded = { allowed: false, multiplier: Infinity };
   if (!edge) return excluded;
+
+  if (hasCyclewaysNetworkMembership(edge)) {
+    const cw = classMultiplier(edge, strategy);
+    return cw == null || !Number.isFinite(cw)
+      ? excluded
+      : { allowed: true, multiplier: cw };
+  }
 
   const access = accessMultiplier(edge, strategy);
   if (access == null || !Number.isFinite(access)) return excluded;
@@ -310,6 +328,30 @@ assert.ok(
 
 console.log("connector-strategy OK");
 ```
+
+---
+
+## Follow-up Task: CW-owned edges are connector-eligible
+
+**Files:**
+- Modify: `packages/core/src/routing/connectorCostModel.js`
+- Modify: `packages/core/route-manager.js` only if diagnostics need to surface the new class
+- Modify: `editor/editor.js`, `editor/index.html`, `editor/lib/connectorColors.mjs`
+- Modify: `editor/server.mjs`
+- Tests: `tests/test-connector-cost-model.mjs`, `tests/test-connector-strategy.mjs`, `tests/test-connector-colors.mjs`
+
+**Behavior:**
+- Add `classMultipliers.cw_network` to `DEFAULT_CONNECTOR_STRATEGY`, defaulting to `0.8`.
+- Treat an edge as CW-owned when it has `cwSegmentIds`, `cyclewaysSegmentIds`, or equivalent single/count markers.
+- In `evaluateConnectorEdge`, check CW ownership before base-map `routeClass` and `accessStatus`. A CW-owned edge uses only the `cw_network` multiplier and is eligible even when base tags would otherwise produce `restricted`, `conditional`, `cycle`, `path_track`, `manual`, or `other` exclusion.
+- Keep non-CW behavior unchanged.
+- Add a `cw_network` multiplier row in the editor strategy panel and color CW-owned edges as `cw_network` in class mode.
+- Annotate `/api/osm/graph-edges` features with `cwSegmentIds` from `data/cw-base-overlay.json` so client-side eligibility/cost coloring can see CW ownership.
+
+**Validation:**
+- Cost-model test: CW-owned `cycle` + `restricted` edge returns `{ allowed: true, multiplier: 0.8 }`.
+- Route-manager test: default connector chooses a direct CW-owned cycle edge and reports the `0.8` multiplier in edge-cost diagnostics.
+- Color helper test: `cw_network` has a distinct class color.
 
 - [ ] **Step 2: Run the test to verify it fails**
 

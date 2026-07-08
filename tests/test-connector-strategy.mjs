@@ -79,4 +79,112 @@ assert.ok(
   "strategy must not leak into later default runs",
 );
 
+const cwNetwork = {
+  schemaVersion: 2,
+  nodes: [
+    { id: "a", coord: [35.0, 33.0] },
+    { id: "b", coord: [35.001, 33.001] },
+    { id: "c", coord: [35.002, 33.0] },
+  ],
+  edges: [
+    {
+      id: "cw-direct",
+      from: "a",
+      to: "c",
+      distanceMeters: 186,
+      coordinates: [[35.0, 33.0], [35.002, 33.0]],
+      routeClass: "cycle",
+      accessStatus: "restricted",
+      cwSegmentIds: [10],
+    },
+    {
+      id: "cw-detour-ab",
+      from: "a",
+      to: "b",
+      distanceMeters: 150,
+      coordinates: [[35.0, 33.0], [35.001, 33.001]],
+      routeClass: "local_road",
+      cwSegmentIds: [],
+    },
+    {
+      id: "cw-detour-bc",
+      from: "b",
+      to: "c",
+      distanceMeters: 150,
+      coordinates: [[35.001, 33.001], [35.002, 33.0]],
+      routeClass: "local_road",
+      cwSegmentIds: [],
+    },
+  ],
+};
+const cwManager = new RouteManager();
+await cwManager.load({ type: "FeatureCollection", features: [] }, {}, cwNetwork);
+const cwDefault = cwManager.previewBaseRoute([from, to], { costProfile: "connector" });
+assert.equal(cwDefault.failure, null, "default connector should route on CW-owned edges");
+assert.ok(cwDefault.edgeIds.includes("cw-direct"), "CW-owned cycle edge is connector-eligible by default");
+assert.ok(
+  cwDefault.edgeCosts.some((entry) => entry.edgeId === "cw-direct" && entry.costMultiplier === 0.8),
+  "CW-owned edge uses the cw_network multiplier",
+);
+
+const endpointNetwork = {
+  schemaVersion: 2,
+  nodes: [
+    { id: "a", coord: [35.0, 33.0] },
+    { id: "b", coord: [35.001, 33.0] },
+    { id: "c", coord: [35.004, 33.0] },
+  ],
+  edges: [
+    {
+      id: "road-to-junction",
+      from: "a",
+      to: "b",
+      distanceMeters: 111,
+      coordinates: [[35.0, 33.0], [35.001, 33.0]],
+      routeClass: "local_road",
+      cwSegmentIds: [],
+    },
+    {
+      id: "excluded-endpoint-cycle",
+      from: "b",
+      to: "c",
+      distanceMeters: 333,
+      coordinates: [[35.001, 33.0], [35.004, 33.0]],
+      routeClass: "cycle",
+      cwSegmentIds: [],
+    },
+  ],
+};
+const endpointManager = new RouteManager();
+await endpointManager.load({ type: "FeatureCollection", features: [] }, {}, endpointNetwork);
+const endpointOrigin = { lat: 33.0, lng: 35.0 };
+const cycleMidpointTarget = { lat: 33.0, lng: 35.0025 };
+
+const allowedOnlyEndpoint = endpointManager.previewBaseRoute(
+  [endpointOrigin, cycleMidpointTarget],
+  { costProfile: "connector", connectorStrategy: DEFAULT_CONNECTOR_STRATEGY },
+);
+assert.equal(
+  allowedOnlyEndpoint.failure,
+  "snap-failed",
+  "allowed-only snapping rejects a target that only sits on an excluded cycle edge",
+);
+
+const snapAnyEndpoint = endpointManager.previewBaseRoute(
+  [endpointOrigin, cycleMidpointTarget],
+  {
+    costProfile: "connector",
+    connectorStrategy: { ...DEFAULT_CONNECTOR_STRATEGY, snap: "any" },
+  },
+);
+assert.equal(snapAnyEndpoint.failure, null, "snap:any can reach an excluded endpoint edge");
+assert.ok(
+  snapAnyEndpoint.edgeIds.includes("excluded-endpoint-cycle"),
+  "snap:any includes only the endpoint stub on the excluded cycle edge",
+);
+assert.ok(
+  snapAnyEndpoint.edgeCosts.some((edge) => edge.connectorSnapAnyEndpoint === true),
+  "snap:any endpoint stub is marked in cost diagnostics",
+);
+
 console.log("connector-strategy OK");

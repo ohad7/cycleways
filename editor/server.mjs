@@ -2424,6 +2424,48 @@ function validationBlockers(report) {
   return blockers;
 }
 
+function cwSegmentIdsByEdgeIdFromOverlay(overlay) {
+  const byEdgeId = new Map();
+  const segments = overlay?.segments && typeof overlay.segments === "object"
+    ? overlay.segments
+    : {};
+  for (const [segmentIdKey, mapping] of Object.entries(segments)) {
+    const segmentId = Number(mapping?.segmentId ?? segmentIdKey);
+    if (!Number.isFinite(segmentId)) continue;
+    const edgeRefs = Array.isArray(mapping?.edgeRefs) ? mapping.edgeRefs : [];
+    for (const ref of edgeRefs) {
+      const edgeId = String(ref?.edgeId || ref?.manualEdgeId || "");
+      if (!edgeId) continue;
+      if (!byEdgeId.has(edgeId)) byEdgeId.set(edgeId, new Set());
+      byEdgeId.get(edgeId).add(segmentId);
+    }
+  }
+  return byEdgeId;
+}
+
+function annotateGraphEdgesWithCyclewaysMembership(graphEdges, overlay) {
+  const byEdgeId = cwSegmentIdsByEdgeIdFromOverlay(overlay);
+  if (byEdgeId.size === 0 || !Array.isArray(graphEdges?.features)) return graphEdges;
+  return {
+    ...graphEdges,
+    features: graphEdges.features.map((feature) => {
+      const props = feature?.properties || {};
+      const edgeId = String(props.edgeId || props.id || feature?.id || "");
+      const ids = edgeId ? byEdgeId.get(edgeId) : null;
+      if (!ids || ids.size === 0) return feature;
+      const cwSegmentIds = [...ids].sort((a, b) => a - b);
+      return {
+        ...feature,
+        properties: {
+          ...props,
+          cwSegmentIds,
+          cwSegmentCount: cwSegmentIds.length,
+        },
+      };
+    }),
+  };
+}
+
 async function copyFileAtomic(source, target) {
   await mkdir(dirname(target), { recursive: true });
   const tmpPath = uniqueAtomicTmpPath(target);
@@ -2794,7 +2836,13 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/osm/graph-edges") {
       logApi(requestId, "GET /api/osm/graph-edges started");
-      const graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
+      let graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
+      try {
+        const overlay = JSON.parse(await readFile(cwBaseOverlayPath, "utf-8"));
+        graphEdges = annotateGraphEdgesWithCyclewaysMembership(graphEdges, overlay);
+      } catch (err) {
+        log("warn", `api#${requestId} GET /api/osm/graph-edges skipped CW annotation`, err?.message || String(err));
+      }
       const [graphStat, manualStat] = await Promise.all([
         stat(osmGraphEdgesPath),
         stat(manualBaseEdgesPath).catch(() => null),

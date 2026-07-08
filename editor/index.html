@@ -163,6 +163,7 @@
             <select id="connector-color-mode" class="text-input compact-select">
               <option value="off">Off</option>
               <option value="class">Class</option>
+              <option value="access">Access status</option>
               <option value="eligibility">Eligibility</option>
               <option value="cost">Cost</option>
             </select>
@@ -170,6 +171,13 @@
 
             <h3 class="connector-section-title">Class multipliers</h3>
             <div id="connector-class-rows" class="connector-strategy-rows">
+              <div class="connector-strategy-row" data-connector-class="cw_network">
+                <span class="connector-strategy-row-label">cw_network</span>
+                <input id="connector-class-cw_network" type="number" step="0.05" min="0" class="connector-num-input" />
+                <label class="connector-excluded-label">
+                  <input id="connector-class-cw_network-excluded" type="checkbox" /> excluded
+                </label>
+              </div>
               <div class="connector-strategy-row" data-connector-class="road">
                 <span class="connector-strategy-row-label">road</span>
                 <input id="connector-class-road" type="number" step="0.05" min="0" class="connector-num-input" />
@@ -258,7 +266,10 @@
             <label class="field-label" for="connector-radius">Radius (m)</label>
             <input id="connector-radius" type="number" step="50" min="0" value="2000" class="text-input" />
 
-            <button id="connector-run" class="primary-button connector-run-button" type="button">Run</button>
+            <div class="action-row connector-run-actions">
+              <button id="connector-run" class="primary-button connector-run-button" type="button">Run</button>
+              <button id="connector-clear-run" class="secondary-button" type="button" disabled>Clear run</button>
+            </div>
             <div id="connector-run-status" class="connector-run-status"></div>
           </section>
 
