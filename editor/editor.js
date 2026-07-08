@@ -883,6 +883,25 @@ function connectorLensColor(props) {
   return connectorCostColor(verdict.multiplier); // "cost"
 }
 
+function connectorVerdictText(props) {
+  const edge = {
+    routeClass: props.osmRouteClass ?? props.routeClass,
+    roadType: props.roadType,
+    accessStatus: props.accessStatus,
+  };
+  const strategy = state.connectorLens.strategy;
+  const v = evaluateConnectorEdge(edge, strategy);
+  if (!v.allowed) {
+    const accessExcluded =
+      edge.accessStatus && strategy.accessPolicy?.[edge.accessStatus] == null;
+    const reason = accessExcluded
+      ? `access "${edge.accessStatus}" excluded`
+      : `class "${edge.routeClass}" excluded`;
+    return `excluded — ${reason}`;
+  }
+  return `allowed — ×${v.multiplier.toFixed(2)}`;
+}
+
 function baseGraphCollection() {
   if (!state.baseOverlay.graphEdges) {
     return EMPTY_FEATURE_COLLECTION;
@@ -1391,6 +1410,7 @@ function renderBaseEdgeAttributes(feature) {
   }
 
   const properties = feature.properties || {};
+  const connectorRow = `<div><dt>Connector</dt><dd>${escapeHtml(connectorVerdictText(properties))}</dd></div>`;
   const rows = Object.keys(properties)
     .sort((a, b) => (baseEdgePropertySortRank(a) - baseEdgePropertySortRank(b)) || a.localeCompare(b))
     .map((key) => {
@@ -1409,7 +1429,7 @@ function renderBaseEdgeAttributes(feature) {
     <section class="base-edge-data">
       <h3>Data</h3>
       <dl class="base-edge-attributes">
-        ${[...geometryRows, ...rows].join("") || `<div><dt>properties</dt><dd>No attributes</dd></div>`}
+        ${[connectorRow, ...geometryRows, ...rows].join("") || `<div><dt>properties</dt><dd>No attributes</dd></div>`}
       </dl>
     </section>
   `;
@@ -3392,6 +3412,7 @@ function applyConnectorStrategyChange(mutate) {
   state.connectorLens.strategy = next;
   updateMapSources();
   renderConnectorLensPanel();
+  renderBaseGraphPanel();
 }
 
 function setConnectorColorMode(mode) {
@@ -3446,6 +3467,7 @@ function resetConnectorStrategy() {
   state.connectorLens.strategy = structuredClone(DEFAULT_CONNECTOR_STRATEGY);
   updateMapSources();
   renderConnectorLensPanel();
+  renderBaseGraphPanel();
   setStatus("Connector Lens strategy reset to production defaults.");
 }
 
