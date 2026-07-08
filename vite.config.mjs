@@ -28,6 +28,11 @@ function routeManagerEsmPlugin() {
       // Convert the default export, then any `module.exports.NAME = VALUE;`
       // named exports (e.g. `buildSegmentSpans`). Without this the named-export
       // lines reference the undefined `module` global at runtime in the browser.
+      // Also convert any top-level `const { A, B } = require("./relative.js");`
+      // destructuring requires of sibling core modules (e.g. connectorCostModel)
+      // into real static imports — the browser has no `require` global, and
+      // dev-serve does not bundle/transform this file's internal requires the
+      // way Rollup does for the production build.
       const esm = code
         .replace(
           /module\.exports\s*=\s*RouteManager;/,
@@ -36,6 +41,10 @@ function routeManagerEsmPlugin() {
         .replace(
           /module\.exports\.(\w+)\s*=\s*(\w+);/g,
           "export { $2 as $1 };",
+        )
+        .replace(
+          /const\s*\{([^}]+)\}\s*=\s*require\((["'])(\.[^"']+)\2\);/g,
+          "import {$1} from $2$3$2;",
         );
       return {
         code: esm,

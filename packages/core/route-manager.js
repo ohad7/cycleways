@@ -31,6 +31,11 @@ function clampMeters(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+const {
+  DEFAULT_CONNECTOR_STRATEGY,
+  evaluateConnectorEdge,
+} = require("./src/routing/connectorCostModel.js");
+
 class RouteManager {
   constructor() {
     this.segments = new Map(); // segmentName -> segment data
@@ -56,6 +61,7 @@ class RouteManager {
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
     this._connectorCostProfile = false;
+    this._connectorStrategy = null;
   }
 
   /**
@@ -252,12 +258,15 @@ class RouteManager {
    * Compute a base-graph route preview from raw coordinates without committing
    * it as the planner's active route.
    */
-  previewBaseRoute(points, { costProfile = "default" } = {}) {
+  previewBaseRoute(points, { costProfile = "default", connectorStrategy = null } = {}) {
     const connectorProfile = costProfile === "connector";
+    const strategy = connectorProfile ? connectorStrategy : null;
+    const snapAny = Boolean(strategy && strategy.snap === "any");
     const snapped = this._snapRoutePoints(points, {
-      edgeFilter: connectorProfile
-        ? (edge) => this._connectorEdgeAllowed(edge)
-        : null,
+      edgeFilter:
+        connectorProfile && !snapAny
+          ? (edge) => this._connectorEdgeAllowedFor(edge, strategy)
+          : null,
     });
     const snappedEndpoints =
       snapped.length >= 2 ? [snapped[0], snapped[snapped.length - 1]] : snapped;
@@ -278,11 +287,13 @@ class RouteManager {
       };
     }
     this._connectorCostProfile = connectorProfile;
+    this._connectorStrategy = strategy;
     let route;
     try {
       route = this._calculateBaseRoute(snapped);
     } finally {
       this._connectorCostProfile = false;
+      this._connectorStrategy = null;
     }
     if (
       route.failure ||
@@ -1056,26 +1067,28 @@ class RouteManager {
     });
   }
 
+  _activeConnectorStrategy() {
+    return this._connectorStrategy || DEFAULT_CONNECTOR_STRATEGY;
+  }
+
+  _connectorEdgeAllowedFor(edge, strategy) {
+    return evaluateConnectorEdge(edge, strategy || DEFAULT_CONNECTOR_STRATEGY).allowed;
+  }
+
   _connectorCostMultiplierFor(edge) {
-    // Connector = reliable public car-accessible roads only. It is used to
-    // suggest how to reach the route start/rejoin point, so restricted/private
-    // or non-road edges are worse than useless: they can send riders into gates
-    // or blocked tracks. Return Infinity so graph search treats them as closed.
-    if (!this._connectorEdgeAllowed(edge)) return Infinity;
-    if (edge.routeClass === "road" || edge.roadType === "road") return 1;
-    return 1.1;
+    return evaluateConnectorEdge(edge, this._activeConnectorStrategy()).multiplier;
   }
 
   _connectorEdgeAllowed(edge) {
-    if (!edge) return false;
-    if (edge.accessStatus === "restricted" || edge.accessStatus === "conditional") {
-      return false;
-    }
-    return (
-      edge.routeClass === "road" ||
-      edge.routeClass === "local_road" ||
-      edge.roadType === "road"
-    );
+    return evaluateConnectorEdge(edge, this._activeConnectorStrategy()).allowed;
+  }
+
+  _connectorStepCost(adjEntry) {
+    const edge = this.baseRoutingEdges.get(adjEntry.edgeId);
+    if (!edge) return Infinity;
+    const fromDistance = adjEntry.direction === "reverse" ? edge.lengthMeters : 0;
+    const toDistance = adjEntry.direction === "reverse" ? 0 : edge.lengthMeters;
+    return this._baseRoutingTraversalCost(edge, fromDistance, toDistance, true);
   }
 
   _baseRoutingCostMultiplier(edge, connector = this._connectorCostProfile) {
@@ -1128,8 +1141,10 @@ class RouteManager {
       fromDistance,
       toDistance,
     );
-    const uphillCost =
-      uphillMeters * this.baseRoutingUphillCostMetersPerMeter;
+    const uphillWeight = connector
+      ? this._activeConnectorStrategy().uphillWeight
+      : this.baseRoutingUphillCostMetersPerMeter;
+    const uphillCost = uphillMeters * uphillWeight;
 
     return {
       distanceMeters,
@@ -1709,7 +1724,9 @@ class RouteManager {
 
       for (const edge of this.baseRoutingAdjacency.get(current.nodeId) || []) {
         const stepCost = this._connectorCostProfile
-          ? edge.connectorCost
+          ? this._connectorStrategy
+            ? this._connectorStepCost(edge)
+            : edge.connectorCost
           : edge.cost;
         if (!Number.isFinite(stepCost)) continue;
         const nextCost = current.cost + stepCost;
