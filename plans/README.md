@@ -18,6 +18,7 @@ Current plans:
 
 - `rn-mobile-map-style-parity/` - design + implementation plan for aligning the iPhone app map and route-building UI with the more-polished mobile web by sharing presentation specs + a planner view-model + a clock-injected playback engine (network/route colors, build summary, playback controls).
 
+- `connector-nav-lens/` - design and implementation plan for an editor diagnostic + tuning lens over the base edge network: classification/connector-eligibility coloring, a live client-side cost heatmap driven by a shared tunable connector cost model, and a server-run real usage-frequency heatmap toward a selected route's start (single ephemeral strategy, exportable as JSON; no data edits).
 - `map-editor-workflow/` - design and implementation plan for the map editor and source-data processing workflow.
 - `editor-name-release/` - design and implementation plan for freeing names held by deprecated map records.
 - `segment-scores/` - design and implementation plan for per-segment quality scores.
