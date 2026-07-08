@@ -18,6 +18,7 @@ Current plans:
 
 - `rn-mobile-map-style-parity/` - design + implementation plan for aligning the iPhone app map and route-building UI with the more-polished mobile web by sharing presentation specs + a planner view-model + a clock-injected playback engine (network/route colors, build summary, playback controls).
 
+- `approach-ownership/` - design for making the app own the approach leg (rider → route start) with turn-by-turn (connector rendered as a narrated leading leg of the effective route), demoting external nav (Waze/Maps) to a confidence-gated fallback; confidence is interpretable thresholds over connector features, calibrated from a labeled dataset collected via a new editor labeling tool, plus an honest connector metric that separates unreachable origins from real routing gaps.
 - `connector-nav-lens/` - design and implementation plan for an editor diagnostic + tuning lens over the base edge network: classification/connector-eligibility coloring, a live client-side cost heatmap driven by a shared tunable connector cost model, and a server-run real usage-frequency heatmap toward a selected route's start (single ephemeral strategy, exportable as JSON; no data edits).
 - `map-editor-workflow/` - design and implementation plan for the map editor and source-data processing workflow.
 - `editor-name-release/` - design and implementation plan for freeing names held by deprecated map records.
