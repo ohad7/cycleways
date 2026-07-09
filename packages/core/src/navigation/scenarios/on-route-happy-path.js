@@ -15,7 +15,7 @@ export default {
     { type: "banner", match: "שביל הצפון" },
     { type: "camera-rotations", atMost: 2 },
     { type: "camera-stage", value: "pre-turn", betweenMeters: [430, 600] },
-    { type: "camera-stage", value: "arrived" },
+    { type: "camera-stage", value: "arrived-local" },
     { type: "camera-stage", value: "off-route", never: true },
     { type: "card-mode", value: "status" },
     { type: "card-mode", value: "cue", betweenMeters: [430, 600] },

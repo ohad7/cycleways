@@ -1,7 +1,7 @@
 # Navigation Camera and Scenario Harness — Design
 
 **Date:** 2026-07-09
-**Status:** Accepted for implementation
+**Status:** Implemented; native CAM tuning remains an acceptance activity
 **Topic dir:** `plans/navigation-camera-storyboard/`
 **Builds on:** `plans/nav-ui-redesign/`, `plans/navigation-intro-rethink/`,
 `plans/approach-ownership/`, and `plans/nav-scenario-harness/`
@@ -172,6 +172,47 @@ entire long route.
   action or a deliberate delayed summary transition.
 - `planner-reset`: return to normal planner north-up overhead behavior.
 
+### 7. Treat Mapbox as the projection authority
+
+The design does not require a JavaScript reimplementation of Mapbox's complete
+pitched camera projection. The rendered map is the source of truth for exact
+screen placement.
+
+Implementation preference, in order:
+
+1. Use Mapbox's native full-coordinate/sub-rectangle camera fitting through the
+   smallest practical adapter or bridge.
+2. If the existing React Native bounds API is sufficient for a stage, use it
+   with native screen-coordinate validation.
+3. Use a bounded correction step based on native coordinate↔screen conversion
+   for discrete frames where needed.
+4. Build custom projection math only for a narrowly proven gap, not as the
+   default architecture.
+
+The native camera-fitting path must be prototyped before the full corridor
+solver and harness are built. If 55-degree framing cannot meet the visibility
+contract reliably, the stage may reduce pitch within its documented range
+rather than hide required geometry.
+
+### 8. Give camera interpolation one owner at a time
+
+Continuous RAF writes and in-flight Mapbox camera animations must never control
+the same camera properties concurrently.
+
+The preferred initial ownership model is:
+
+- continuous follow, join, and reacquisition use the app camera clock and
+  immediate Mapbox camera frames;
+- a discrete overview may use one native Mapbox animation only while app camera
+  writes are suspended;
+- entering follow/free/another overview explicitly interrupts or completes the
+  previous owner before the next owner starts;
+- if the native fitting adapter can return target camera options cleanly, the
+  implementation may use the app clock for overview interpolation too.
+
+The fitting spike decides the final mechanism. The invariant is one owner and
+one transition clock for any active camera property.
+
 ## Camera Viewport Contract
 
 The pure camera director should return a declarative viewport intent similar to:
@@ -200,6 +241,25 @@ The pure camera director should return a declarative viewport intent similar to:
 This is illustrative rather than a required literal API. The important change
 is that core describes the spatial intent and native code applies it using real
 screen dimensions, UI insets, and Mapbox camera operations.
+
+### Fitting and validation boundary
+
+Core owns semantic framing requirements:
+
+- active geometry and required points;
+- desired rider anchor and usable viewport;
+- bearing/pitch policy and allowed fallback range;
+- zoom clamps, hysteresis, and transition intent.
+
+The native adapter owns exact Mapbox camera calculation and rendered
+screen-space validation. Headless tests verify semantic inputs, stage policy,
+zoom/transition bounds, and deterministic decisions; they do not claim
+pixel-exact equivalence with Mapbox's perspective renderer.
+
+Native tests and CAM use coordinate-to-screen queries after the camera settles
+to verify rider anchor, marker visibility, and UI occlusion. A correction pass
+is permitted only for a discrete frame and must be bounded so it cannot create
+an oscillating fit loop.
 
 ### Usable viewport and padding
 
@@ -252,6 +312,10 @@ junction, and post-maneuver geometry, then chooses the closest zoom that keeps
 that corridor readable. A compact junction may zoom in; a broad turn, fork, or
 closely spaced sequence may need to zoom out.
 
+Pitch is a target subject to fit feasibility. If required corridor geometry
+cannot fit inside the safe viewport at the requested pitch and zoom bounds, the
+solver/native adapter lowers pitch before violating required visibility.
+
 ### Overview fit
 
 Overview mode uses the same geometry-to-screen solver with stage-specific
@@ -268,6 +332,11 @@ points and geometry:
 Generic pitched bounds fitting is acceptable only if it meets screen-space
 visibility assertions. Marker-slot or corridor-specific fitting is used when
 generic bounds produce unstable or misleading centers.
+
+For very long too-far views, 40 degrees is a maximum initial target rather than
+an unconditional result. Regional zoom may progressively flatten toward 20 or
+0 degrees when needed for visibility, tile practicality, and a useful map
+scale.
 
 ### Bearing
 
@@ -298,6 +367,7 @@ generic bounds produce unstable or misleading centers.
 | `ride` | follow | rider low + speed-dependent main-route corridor | 55 | active corridor fit, approx. 15.6–17.0 | main route-up |
 | `pre-turn` | follow | rider + junction + geometry after turn | 35–40 | maneuver corridor fit, approx. 16.2–17.2 | main route-up |
 | `off-route` | overview | rider + rejoin target + suggestion when available | 20 | stable rejoin fit with hysteresis | held |
+| `reacquire-route` | follow | rider + recovered main-route corridor | 20–35 → 55 | bounded blend back to corridor-derived cruise zoom | held bearing → main route-up |
 | `arrival` | follow | rider + destination + final route corridor | 30–35 | destination corridor/local fit | main route-up |
 | `arrived-local` | overview | rider + destination/flag | 0 | local fit, not whole route | north-up |
 | `ride-summary` | overview | full traveled/main route | 0 | whole-route fit | north-up |
@@ -438,18 +508,27 @@ distance, edge costs, snapped endpoints, and failure metadata that production
 connector computation would return. Both the headless runner and the native dev
 session receive them through the same scenario connector adapter.
 
+Responses are matched by semantic request identity: target mode/identity,
+origin and target geometry within declared tolerances, request purpose, and
+retry/refresh ordinal. Sequence is an assertion, not the only key. While a
+scenario is active, an unmatched, ambiguous, duplicated, or unused response is
+a harness failure; the adapter must never fall through to the live routing
+network. This makes fixture drift visible instead of allowing SIM, CAM, native,
+and headless runs to diverge silently.
+
 ### Initial journey set
 
 Use a small set of credible journeys rather than one tiny fixture per stage:
 
-1. **Guided approach journey:** intro → guided connector → connector maneuver →
-   seam → main ride → main maneuver → arrival → arrived-local.
+1. **Guided approach journey:** intro → guided connector, including refresh →
+   connector maneuver → seam → main ride.
 2. **Show-leg journey:** intro → low-confidence but plausible connector → live
    movement along it → main-route acquisition.
-3. **Too-far journey:** regional intro → too-far approach/handoff state → cancel
-   or reset.
-4. **Missed-turn journey:** ride → missed turn → off-route → moving rejoin
-   target → reacquisition.
+3. **Too-far journey:** regional intro → too-far approach with plausible live
+   movement → closer classification into navigation, or an explicit handoff
+   cancel/reset ending.
+4. **Ride/recovery journey:** ride → maneuver → missed turn → off-route →
+   moving rejoin target → reacquisition → local arrival.
 
 Additional existing journeys cover stop-and-stand, GPS gap, parallel path,
 wrong-way, and recorded real rides. They gain camera bookmarks where useful
@@ -530,7 +609,8 @@ not be included in production bundles.
 - guided approach uses approach geometry and progress;
 - join transition preserves the approach bearing/geometry before blending;
 - arrival-local and ride-summary remain distinct;
-- viewport solver respects rider anchor and UI insets on small and tall phones;
+- viewport intent carries explicit rider anchor and UI insets, and semantic
+  corridor selection reacts correctly to small and tall phone viewports;
 - overview refit hysteresis prevents one-fix animation loops.
 
 ### Journey expectations
@@ -566,6 +646,11 @@ For every bookmark:
 - user gestures and recenter work;
 - small/tall phone and large-text panel heights remain valid.
 
+Pixel-position acceptance belongs here, not in the pure headless projection
+tests. After each inspected camera settles, native screen coordinates confirm
+that required features are inside the safe viewport and that the rider is near
+the requested anchor within a documented tolerance.
+
 ## Observability and Privacy
 
 Camera inspection is dev-only and local. It does not introduce production
@@ -578,10 +663,16 @@ events.
 
 ## Risks
 
+- Pitched screen-space fitting remains the primary tuning risk. The implemented
+  path uses RNMapbox native bounds/CameraOptions plus native
+  coordinate-to-screen validation; the Phase 0 spike did not justify a custom
+  projection model or native bridge.
 - A corridor/viewport solver is more work than fixed zoom constants, but it
   centralizes behavior currently duplicated across stage-specific branches.
-- Pitched screen-space fitting may require iteration because geographic bounds
-  alone do not guarantee marker placement after perspective and padding.
+- Required geometry that fails native validation triggers one bounded fallback
+  to the stage's minimum pitch. It must not enter a correction/refit loop.
+- Mixing RAF frames with native Mapbox easing can cause cancellation or stutter;
+  the adapter must enforce single-owner animation state.
 - Retaining connector seam geometry requires an explicit transition snapshot in
   session/presentation state; the current approach state clears too early.
 - Realistic connector fixtures need curation and must be refreshed deliberately
@@ -599,7 +690,8 @@ design decision.
 1. `intro-start-facing` uses the existing 55-degree directional style and
    distance-derived marker-slot zoom.
 2. `approach-too-far` starts at 40 degrees with rider/start marker-slot or points
-   fitting. It does not use a fixed regional zoom.
+   fitting. Forty degrees is a maximum target: regional fits may flatten toward
+   20 or 0 degrees. It does not use a fixed regional zoom.
 3. `approach-show-leg` starts at 35 degrees and fits most or all of the
    connector. It does not use 55 degrees by default.
 4. Guided approach and main ride use a 55-degree cruise pitch with
@@ -611,3 +703,18 @@ design decision.
 7. Arrival is local first; whole-route summary is explicit or deliberately
    delayed.
 8. Recenter remains explicit. Timed automatic recenter is out of scope.
+
+## Implementation Record
+
+The shipped implementation follows this design with one clarified native
+boundary: exact perspective remains Mapbox-owned, while core estimates semantic
+corridor zoom and the mobile adapter validates the rendered result. Follow
+anchoring uses explicit native padding; overview bounds use the measured usable
+viewport. Failed required-point visibility can lower pitch once to the stage's
+accepted minimum.
+
+The initial CAM journey set no longer uses the synthetic L-route as its visual
+acceptance geometry. Guided approach, show-leg, ride, maneuver, and recovery use
+the real Sovev Beit Hillel catalog snapshot and a connector snapshot computed
+from the bundled routing graph. The too-far journey shows real-network movement
+in the Hula Valley while the selected Banias route remains regionally distant.

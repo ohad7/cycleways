@@ -306,7 +306,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
       });
       return undefined;
     }
-    Promise.resolve(compute(request.from, request.to))
+    Promise.resolve().then(() => compute(request.from, request.to, request))
       .then((result) => {
         if (cancelled) return;
         if (result?.failure) {
@@ -328,8 +328,16 @@ export function useNavigationSession(navigationRoute, options = {}) {
           durationMs: Date.now() - startedAt,
         });
       })
-      .catch(() => {
+      .catch((error) => {
         if (!cancelled) {
+          if (__DEV__ && error?.scenarioConnector === true) {
+            console.error(error);
+            dispatch({
+              type: NAV_ACTIONS.ERROR,
+              message: error.message || "scenario-connector-mismatch",
+            });
+            return;
+          }
           dispatch({
             type: NAV_ACTIONS.CONNECTOR_FAILED,
             requestId: request.requestId,

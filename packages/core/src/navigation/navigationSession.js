@@ -44,6 +44,8 @@ function emptyApproach() {
     suggestionDistanceMeters: null,
     distanceToRouteMeters: null,
     ownershipTier: "unknown",
+    ownershipResolving: false,
+    ownershipRefreshing: false,
     handoffSuggested: true,
     handoffProminence: "secondary",
     classificationReasons: [],
@@ -85,6 +87,9 @@ export function createNavigationSession(navigationRoute, options = {}) {
   let requestSeq = Number.isFinite(Number(restored?.requestSeq))
     ? Number(restored.requestSeq)
     : 0;
+  let cameraTransitionSeq = Number.isFinite(Number(restored?.cameraTransitionSeq))
+    ? Number(restored.cameraTransitionSeq)
+    : 0;
   let prePauseStatus = restored?.prePauseStatus || "navigating";
   let approachTracker = null;
   let approachCues = [];
@@ -106,6 +111,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
     connectorResult: null,
     error: null,
     justAcquired: false,
+    cameraTransition: null,
     rideStartTimestamp: null,
     ...(restored?.state || {}),
     route: navigationRoute,
@@ -142,7 +148,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
     return getDistance(lastRequestPos, fix) >= minMoveMeters;
   }
 
-  function suggestionRequest(fix, target) {
+  function suggestionRequest(fix, target, purpose = "initial") {
     requestSeq += 1;
     connectorRequestAttempt += 1;
     lastRequestPos = fixPoint(fix);
@@ -156,6 +162,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
         : null,
       attempt: connectorRequestAttempt,
       isRetry: connectorRequestAttempt > 1,
+      purpose,
     };
   }
 
@@ -183,6 +190,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
       suggestionDistanceMeters: keepGeometry
         ? state.approach.suggestionDistanceMeters
         : null,
+      ownershipResolving: false,
+      ownershipRefreshing: false,
     };
   }
 
@@ -250,6 +259,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
       suggestionStatus: "idle",
       suggestionDistanceMeters: null,
       ownershipTier: "too-far",
+      ownershipResolving: false,
+      ownershipRefreshing: false,
       handoffSuggested: true,
       handoffProminence: handoffProminence("too-far"),
       classificationReasons: [reason],
@@ -261,6 +272,13 @@ export function createNavigationSession(navigationRoute, options = {}) {
   }
 
   function requestStartConnectorPatch(fix, target, choices, distanceToRouteMeters) {
+    const hasAcceptedOwnership =
+      state.approach.ownershipTier !== "unknown";
+    const purpose = hasAcceptedOwnership
+      ? "refresh"
+      : state.approach.suggestionStatus === "failed"
+        ? "retry"
+        : "initial";
     return {
       status: "approaching",
       activeCue: null,
@@ -273,12 +291,20 @@ export function createNavigationSession(navigationRoute, options = {}) {
         target,
         distanceToRouteMeters,
         suggestionStatus: "requesting",
-        ownershipTier: "unknown",
+        ownershipTier: hasAcceptedOwnership
+          ? state.approach.ownershipTier
+          : "unknown",
+        ownershipResolving: !hasAcceptedOwnership,
+        ownershipRefreshing: hasAcceptedOwnership,
         handoffSuggested: true,
-        handoffProminence: handoffProminence("unknown"),
-        classificationReasons: [],
+        handoffProminence: hasAcceptedOwnership
+          ? state.approach.handoffProminence
+          : handoffProminence("unknown"),
+        classificationReasons: hasAcceptedOwnership
+          ? state.approach.classificationReasons
+          : [],
       },
-      routeRequest: suggestionRequest(fix, target),
+      routeRequest: suggestionRequest(fix, target, purpose),
       connectorResult: null,
     };
   }
@@ -313,6 +339,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           approach: emptyApproach(),
           routeRequest: null,
           connectorResult: null,
+          cameraTransition: null,
           error: null,
           justAcquired: false,
           rideStartTimestamp: null,
@@ -321,7 +348,17 @@ export function createNavigationSession(navigationRoute, options = {}) {
       case NAV_ACTIONS.LOCATION: {
         if (!ACTIVE.has(state.status)) return state;
         const latestFix = { ...action.fix };
-        state = { ...state, latestFix };
+        const fixTimestamp = Number(action.fix?.timestamp);
+        const expiredTransition =
+          state.cameraTransition &&
+          Number.isFinite(fixTimestamp) &&
+          Number.isFinite(Number(state.cameraTransition.expiresAt)) &&
+          fixTimestamp >= Number(state.cameraTransition.expiresAt);
+        state = {
+          ...state,
+          latestFix,
+          cameraTransition: expiredTransition ? null : state.cameraTransition,
+        };
         if (state.rideStartTimestamp === null) {
           state = { ...state, rideStartTimestamp: action.fix.timestamp };
         }
@@ -458,9 +495,17 @@ export function createNavigationSession(navigationRoute, options = {}) {
                 target: nextTarget,
                 distanceToRouteMeters: getDistance(action.fix, nextTarget.point),
                 suggestionStatus: "requesting",
+                ownershipResolving: false,
+                ownershipRefreshing:
+                  Array.isArray(state.approach.suggestionGeometry) &&
+                  state.approach.suggestionGeometry.length >= 2,
                 // Keep the prior suggestion visible until the new one is ready.
               },
-              routeRequest: suggestionRequest(action.fix, nextTarget),
+              routeRequest: suggestionRequest(
+                action.fix,
+                nextTarget,
+                state.approach.suggestionStatus === "ready" ? "refresh" : "initial",
+              ),
               connectorResult: null,
             });
           }
@@ -507,6 +552,32 @@ export function createNavigationSession(navigationRoute, options = {}) {
           : enteredEffectiveRoute
           ? { kind: "acquired", acquisition: "initial" }
           : cueFor(activeCue);
+        let cameraTransition = null;
+        if (joinedFromOwnedApproach || recoveredFromOffRoute) {
+          cameraTransitionSeq += 1;
+          const durationMs = 1200;
+          const startedAt = Number.isFinite(Number(action.fix?.timestamp))
+            ? Number(action.fix.timestamp)
+            : 0;
+          cameraTransition = {
+            id: `camera-transition-${cameraTransitionSeq}`,
+            kind: joinedFromOwnedApproach ? "join" : "reacquire",
+            durationMs,
+            startedAt,
+            expiresAt: startedAt + durationMs,
+            sourceGeometry: Array.isArray(state.approach.suggestionGeometry)
+              ? state.approach.suggestionGeometry
+              : null,
+            sourceTier: state.approach.ownershipTier || null,
+            sourceBearing: Number.isFinite(
+              state.approach.approachProgress?.bearingToNextDeg,
+            )
+              ? state.approach.approachProgress.bearingToNextDeg
+              : null,
+            targetGeometry: navigationRoute?.geometry || null,
+            targetProgressMeters: mainProgress.progressMeters,
+          };
+        }
         wasOffRoute = false;
         return set({
           status: "navigating",
@@ -518,6 +589,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           approach: acquiredApproach ? emptyApproach() : state.approach,
           routeRequest: null,
           connectorResult: null,
+          cameraTransition,
         });
       }
 
@@ -620,6 +692,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
                   ? distanceMeters
                   : null,
               ownershipTier: tier,
+              ownershipResolving: false,
+              ownershipRefreshing: false,
               handoffSuggested: classification.handoffSuggested,
               handoffProminence: handoffProminence(tier),
               classificationReasons: classification.reasons,
@@ -652,6 +726,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
           approach: {
             ...state.approach,
             suggestionStatus: "ready",
+            ownershipResolving: false,
+            ownershipRefreshing: false,
             suggestionGeometry: geometry,
             suggestionDistanceMeters:
               Number.isFinite(distanceMeters) && distanceMeters > 0
@@ -686,6 +762,35 @@ export function createNavigationSession(navigationRoute, options = {}) {
           return state;
         }
         if (state.routeRequest?.targetMode === "start") {
+          const retainedTier = state.approach.ownershipTier;
+          const retainAccepted =
+            retainedTier !== "unknown" &&
+            (retainedTier === "too-far" ||
+              (Array.isArray(state.approach.suggestionGeometry) &&
+                state.approach.suggestionGeometry.length >= 2));
+          if (retainAccepted) {
+            return set({
+              approach: {
+                ...state.approach,
+                suggestionStatus:
+                  retainedTier === "too-far" ? "idle" : "ready",
+                ownershipResolving: false,
+                ownershipRefreshing: false,
+              },
+              routeRequest: null,
+              connectorResult: {
+                requestId: action.requestId,
+                result: "failed",
+                reason: action.reason || "unknown",
+                attempt: state.routeRequest?.attempt ?? null,
+                isRetry: state.routeRequest?.isRetry === true,
+                targetMode: state.routeRequest?.targetMode ?? null,
+                durationMs: Number.isFinite(Number(action.durationMs))
+                  ? Number(action.durationMs)
+                  : null,
+              },
+            });
+          }
           return set({
             approach: {
               ...state.approach,
@@ -752,6 +857,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           approach: emptyApproach(),
           routeRequest: null,
           connectorResult: null,
+          cameraTransition: null,
           justAcquired: false,
         });
 
@@ -765,6 +871,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           approach: emptyApproach(),
           routeRequest: null,
           connectorResult: null,
+          cameraTransition: null,
           error: action.message || "navigation-error",
           justAcquired: false,
         });
@@ -786,6 +893,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
       lastRequestPos,
       connectorRequestAttempt,
       requestSeq,
+      cameraTransitionSeq,
       prePauseStatus,
     }),
     dispatch,

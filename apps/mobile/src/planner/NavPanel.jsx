@@ -17,6 +17,7 @@ export default function NavPanel({
   voiceEnabled = true,
   onToggleVoice,
   lockScreenGuidanceActive = false,
+  onCameraLayout,
 }) {
   const insets = useSafeAreaInsets();
   const p = getNavigationPresentation(sessionState);
@@ -45,9 +46,20 @@ export default function NavPanel({
   return (
     <View style={styles.root} pointerEvents="box-none">
       {!showTopCard ? (
-        <View />
+        <View
+          onLayout={(event) => {
+            const layout = event?.nativeEvent?.layout;
+            if (layout) onCameraLayout?.({ topOverlayBottom: layout.y + layout.height });
+          }}
+        />
       ) : (
-        <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
+        <View
+          style={[styles.banner, { marginTop: insets.top + space.sm }]}
+          onLayout={(event) => {
+            const layout = event?.nativeEvent?.layout;
+            if (layout) onCameraLayout?.({ topOverlayBottom: layout.y + layout.height });
+          }}
+        >
           {p.justAcquired ? (
             <View style={styles.acquiredRow}>
               <Icon name="checkmark-circle" color={palette.white} size={22} />
@@ -122,7 +134,13 @@ export default function NavPanel({
       ) : null}
 
       {arrived && p.arrivalSummary ? (
-        <View style={[styles.arrivalCard, { marginBottom: insets.bottom + space.md }]}>
+        <View
+          style={[styles.arrivalCard, { marginBottom: insets.bottom + space.md }]}
+          onLayout={(event) => {
+            const layout = event?.nativeEvent?.layout;
+            if (layout) onCameraLayout?.({ bottomOverlayTop: layout.y });
+          }}
+        >
           <Text style={styles.arrivalTitle}>הגעת ליעד 🎉</Text>
           <View style={styles.arrivalStats}>
             <ArrivalStat value={p.arrivalSummary.distanceText} label="מרחק" />
@@ -139,7 +157,13 @@ export default function NavPanel({
           </Pressable>
         </View>
       ) : (
-        <View style={[styles.bottomStack, { marginBottom: insets.bottom + space.md }]}>
+        <View
+          style={[styles.bottomStack, { marginBottom: insets.bottom + space.md }]}
+          onLayout={(event) => {
+            const layout = event?.nativeEvent?.layout;
+            if (layout) onCameraLayout?.({ bottomOverlayTop: layout.y });
+          }}
+        >
           {showCurrentRoadPill ? (
             <View style={styles.roadPill}>
               <Text style={styles.roadPillText} numberOfLines={1}>

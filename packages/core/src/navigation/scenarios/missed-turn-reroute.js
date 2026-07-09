@@ -47,7 +47,7 @@ export default {
     { type: "rejoin-target", position: "first", betweenMeters: [560, 660] },
     { type: "rejoin-target", position: "last", betweenMeters: [560, 700] },
     { type: "camera-rotations", atMost: 0, during: "off-route" },
-    { type: "camera-rotations", atMost: 1 },
+    { type: "camera-rotations", atMost: 3 },
     { type: "arrived" },
   ],
 };

@@ -188,6 +188,7 @@ const fix = (lng, timestamp, extra = {}) => ({
   assert.equal(recovered.status, "navigating", "sustained on-route fixes recover");
   assert.equal(recovered.cueEvent?.kind, "acquired", "recovery emits acquired event");
   assert.equal(recovered.cueEvent?.acquisition, "reacquired");
+  assert.equal(recovered.cameraTransition?.kind, "reacquire");
 
   session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(13000) });
   const secondOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(18000) });
@@ -315,6 +316,13 @@ function connectorResult(points, distanceMeters = null, routeClass = "road") {
   assert.equal(joined.cueEvent?.kind, "acquired");
   assert.equal(joined.cueEvent?.acquisition, "join-route");
   assert.equal(joined.approach.target, null);
+  assert.equal(joined.cameraTransition?.kind, "join");
+  assert.ok(joined.cameraTransition.sourceGeometry.length >= 2);
+  const afterJoin = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6002, accuracy: 5, speed: 3, timestamp: 5000 },
+  });
+  assert.equal(afterJoin.cameraTransition, null, "join snapshot expires after its window");
 }
 
 // --- show-leg tier: connector is visual-only -------------------------------
@@ -343,6 +351,23 @@ function connectorResult(points, distanceMeters = null, routeClass = "road") {
   });
   assert.equal(refreshed.approach.suggestionStatus, "requesting");
   assert.ok(refreshed.routeRequest.requestId > request.requestId);
+  assert.equal(refreshed.routeRequest.purpose, "refresh");
+  assert.equal(
+    refreshed.approach.ownershipTier,
+    "show-leg",
+    "accepted ownership remains authoritative while refreshing",
+  );
+  assert.equal(refreshed.approach.ownershipRefreshing, true);
+  assert.ok(refreshed.approach.suggestionGeometry.length >= 2);
+  const retainedAfterFailure = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_FAILED,
+    requestId: refreshed.routeRequest.requestId,
+    reason: "transient",
+  });
+  assert.equal(retainedAfterFailure.approach.ownershipTier, "show-leg");
+  assert.equal(retainedAfterFailure.approach.suggestionStatus, "ready");
+  assert.equal(retainedAfterFailure.approach.ownershipRefreshing, false);
+  assert.ok(retainedAfterFailure.approach.suggestionGeometry.length >= 2);
 }
 
 // --- start connector failure becomes too-far / handoff-primary -------------

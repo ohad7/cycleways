@@ -16,6 +16,16 @@ const nativePlatformModules = new Set([
   "location",
   "storage",
 ]);
+const devHarnessModules = new Set([
+  "@cycleways/core/navigation/scenarios/index.js",
+  "@cycleways/core/navigation/scenarios/resolve.js",
+  "@cycleways/core/navigation/scenarios/journeySchema.js",
+  "@cycleways/core/navigation/scenarioConnector.js",
+  "../navigation/journeyPlaybackSource.js",
+  "../planner/DevScenarioPicker.jsx",
+  "../planner/DevCameraOverlay.jsx",
+  "../planner/DevJourneyControls.jsx",
+]);
 
 config.watchFolders = [workspaceRoot];
 config.resolver.nodeModulesPaths = [
@@ -25,6 +35,13 @@ config.resolver.nodeModulesPaths = [
 config.resolver.unstable_enablePackageExports = true;
 config.resolver.assetExts = [...config.resolver.assetExts, "cwb"];
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (context.dev === false && devHarnessModules.has(moduleName)) {
+    return context.resolveRequest(
+      context,
+      path.resolve(projectRoot, "src/dev/emptyDevHarness.js"),
+      platform,
+    );
+  }
   if (platform === "ios" || platform === "android") {
     const nativeModuleName = nativePlatformModuleName(moduleName);
     if (

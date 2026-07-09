@@ -12,6 +12,7 @@ export default function ApproachPanel({
   onOpenSettings,
   onStop,
   onRecenter,
+  onCameraLayout,
 }) {
   const insets = useSafeAreaInsets();
   const p = getNavigationPresentation(sessionState);
@@ -24,7 +25,13 @@ export default function ApproachPanel({
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
+      <View
+        style={[styles.banner, { marginTop: insets.top + space.sm }]}
+        onLayout={(event) => {
+          const layout = event?.nativeEvent?.layout;
+          if (layout) onCameraLayout?.({ topOverlayBottom: layout.y + layout.height });
+        }}
+      >
         <Text style={styles.heading}>{p.approachHeading}</Text>
         {p.showApproachCue ? (
           <View style={styles.pointerRow}>
@@ -67,7 +74,13 @@ export default function ApproachPanel({
         </View>
       ) : null}
 
-      <View style={[styles.controls, { marginBottom: insets.bottom + space.md }]}>
+      <View
+        style={[styles.controls, { marginBottom: insets.bottom + space.md }]}
+        onLayout={(event) => {
+          const layout = event?.nativeEvent?.layout;
+          if (layout) onCameraLayout?.({ bottomOverlayTop: layout.y });
+        }}
+      >
         {showExternal ? (
           <ActionButton
             icon="open-outline"

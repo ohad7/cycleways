@@ -15,14 +15,16 @@ export default function DevScenarioPicker({
   onSelectSpeed,
   onSelect,
   onClose,
+  mode = "sim",
 }) {
+  const cameraMode = mode === "cam";
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <Text style={styles.title}>{title}</Text>
           <View style={styles.speedRow}>
-            {SPEEDS.map((value) => (
+            {(cameraMode ? [1] : SPEEDS).map((value) => (
               <Pressable
                 key={value}
                 onPress={() => onSelectSpeed(value)}
@@ -33,16 +35,30 @@ export default function DevScenarioPicker({
             ))}
           </View>
           <ScrollView style={styles.list}>
-            {scenarios.map((scenario) => (
-              <Pressable
-                key={scenario.name}
-                onPress={() => onSelect(scenario)}
-                style={styles.row}
-              >
-                <Text style={styles.rowName}>{scenario.name}</Text>
-                <Text style={styles.rowDescription}>{scenario.description}</Text>
-              </Pressable>
-            ))}
+            {scenarios.flatMap((scenario) => {
+              if (!cameraMode) {
+                return [
+                  <Pressable
+                    key={scenario.name}
+                    onPress={() => onSelect(scenario, null)}
+                    style={styles.row}
+                  >
+                    <Text style={styles.rowName}>{scenario.name}</Text>
+                    <Text style={styles.rowDescription}>{scenario.description}</Text>
+                  </Pressable>,
+                ];
+              }
+              return (scenario.bookmarks || []).map((bookmark) => (
+                <Pressable
+                  key={`${scenario.name}:${bookmark.id}`}
+                  onPress={() => onSelect(scenario, bookmark)}
+                  style={styles.row}
+                >
+                  <Text style={styles.rowName}>{bookmark.label || bookmark.id}</Text>
+                  <Text style={styles.rowDescription}>{scenario.name}</Text>
+                </Pressable>
+              ));
+            })}
           </ScrollView>
           <Pressable onPress={onClose} style={styles.close}>
             <Text style={styles.closeText}>Close</Text>

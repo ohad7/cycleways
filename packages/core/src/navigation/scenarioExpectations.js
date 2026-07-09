@@ -295,6 +295,47 @@ export function evaluateExpectations(expectations, timeline) {
         break;
       }
 
+      case "camera-sequence": {
+        const values = Array.isArray(exp.values) ? exp.values : [];
+        let cursor = -1;
+        for (const value of values) {
+          const next = entries.findIndex(
+            (entry, index) => index > cursor && entry.cameraStage === value,
+          );
+          if (next === -1) {
+            fail(
+              `camera stage sequence stopped before "${value}" after entry ${cursor}`,
+            );
+            break;
+          }
+          cursor = next;
+        }
+        break;
+      }
+
+      case "camera-fit-kind": {
+        const first = entries.find((entry) => entry.cameraFitKind === exp.value);
+        if (exp.never === true) {
+          if (first) fail(`camera fit kind "${exp.value}" occurred at entry ${first.index}`);
+        } else if (!first) {
+          fail(`camera fit kind "${exp.value}" never occurred`);
+        }
+        break;
+      }
+
+      case "camera-geometry-role": {
+        const candidates = exp.stage
+          ? entries.filter((entry) => entry.cameraStage === exp.stage)
+          : entries;
+        if (!candidates.some((entry) => entry.cameraGeometryRole === exp.value)) {
+          fail(
+            `camera geometry role "${exp.value}" never occurred` +
+              (exp.stage ? ` during ${exp.stage}` : ""),
+          );
+        }
+        break;
+      }
+
       case "card-mode": {
         const first = entries.find((e) => e.cardMode === exp.value);
         if (exp.never === true) {

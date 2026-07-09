@@ -3,7 +3,7 @@
 // appears in the dev scenario picker on the Build screen. Adding a scenario =
 // one module + one line here.
 import approachFromDistance from "./approach-from-distance.js";
-import cameraStoryboard from "./camera-storyboard.js";
+import cameraJourneys from "./camera-journeys.js";
 import currentRouteGeneric from "./current-route-generic.js";
 import gpsGap from "./gps-gap.js";
 import missedTurnReroute from "./missed-turn-reroute.js";
@@ -31,7 +31,7 @@ export const scenarios = [
   sovevBeitHillelRide,
   wrongWay,
   currentRouteGeneric,
-  ...cameraStoryboard,
+  ...cameraJourneys,
 ];
 
 export function getScenario(name) {

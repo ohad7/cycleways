@@ -13,46 +13,17 @@ import { createCueHapticPlanner } from "./cueHaptics.js";
 import { getNavigationPresentation } from "./navigationPresentation.js";
 import { createNavigationVoicePlanner } from "./navigationVoice.js";
 import { replaySession } from "./replayRunner.js";
+import { createHeadlessCameraFrameSampler } from "./cameraTimeline.js";
+import {
+  connectorRouterForMode,
+  connectorRouterForScenario,
+} from "./scenarioConnector.js";
 
 // Connector behavior per scenario. "straight-line" answers every rejoin/
 // approach request with the direct segment (the suggestion lifecycle runs
 // without the routing network); "fail" exercises the failure UX; "none"
 // leaves requests pending (replaySession controlledConnector).
-export function connectorRouterForMode(mode) {
-  if (mode === "none") return null;
-  if (mode === "fail") return () => ({ failure: "scenario-forced-failure" });
-  if (mode === "show-leg") {
-    return (request) => ({
-      geometry: [request.from, request.to],
-      edgeCosts: [
-        {
-          routeClass: "path_track",
-          roadType: null,
-          cyclewaysSegmentIds: [],
-          distanceMeters: 100,
-        },
-      ],
-    });
-  }
-  if (mode === "guide-turn") {
-    return (request) => ({
-      geometry: [
-        request.from,
-        { lat: request.from.lat, lng: request.to.lng },
-        request.to,
-      ],
-      edgeCosts: [
-        {
-          routeClass: "road",
-          roadType: "road",
-          cyclewaysSegmentIds: [],
-          distanceMeters: 100,
-        },
-      ],
-    });
-  }
-  return (request) => ({ geometry: [request.from, request.to] });
-}
+export { connectorRouterForMode };
 
 export function buildUserTimeline(replayTimeline) {
   const haptics = createCueHapticPlanner();
@@ -60,6 +31,7 @@ export function buildUserTimeline(replayTimeline) {
   // Same camera policy the app runs: target per state, governed adoption.
   const cameraGovernor = createCameraHeadingGovernor();
   const cameraDirector = createCameraDirector();
+  const cameraFrames = createHeadlessCameraFrameSampler();
   return (Array.isArray(replayTimeline) ? replayTimeline : []).map(
     (state, index) => {
       const presentation = getNavigationPresentation(state);
@@ -76,6 +48,11 @@ export function buildUserTimeline(replayTimeline) {
       const cameraHeadingTargetDeg = cameraHeadingTargetForState(state, cameraShot);
       const cameraHeadingDeg = cameraGovernor.update(
         cameraHeadingTargetDeg,
+        state.latestFix?.timestamp ?? 0,
+      );
+      const appliedCameraFrame = cameraFrames.update(
+        cameraShot,
+        cameraHeadingDeg,
         state.latestFix?.timestamp ?? 0,
       );
       return {
@@ -112,9 +89,19 @@ export function buildUserTimeline(replayTimeline) {
         cameraHeadingTargetDeg,
         cameraHeadingDeg,
         cameraStage: cameraShot.stage,
-        cameraMode: cameraShot.mode,
+        cameraMode: cameraShot.viewportMode,
+        cameraViewportMode: cameraShot.viewportMode,
+        cameraGeometryRole: cameraShot.geometryRole,
         cameraPitch: cameraShot.pitch ?? null,
         cameraZoom: cameraShot.zoom ?? null,
+        cameraZoomPolicy: cameraShot.zoomPolicy ?? null,
+        cameraRiderAnchorY: cameraShot.riderAnchorY ?? null,
+        cameraLookaheadMeters: cameraShot.lookaheadMeters ?? null,
+        cameraTransition: cameraShot.transition ?? null,
+        cameraHoldFrame: cameraShot.holdFrame === true,
+        cameraAppliedPitch: appliedCameraFrame.pitch,
+        cameraAppliedHeadingDeg: appliedCameraFrame.heading,
+        cameraTransitionState: appliedCameraFrame.transitionState,
         cameraFitKind: cameraShot.fitKind ?? null,
         cameraFocusKind: cameraShot.focusKind ?? null,
         cardMode: presentation.cardMode,
@@ -138,12 +125,12 @@ export function buildUserTimeline(replayTimeline) {
 }
 
 export function runScenario(resolved) {
-  const mode = resolved.connector ?? "straight-line";
-  const router = connectorRouterForMode(mode);
+  const router = connectorRouterForScenario(resolved);
   const options = router
     ? { connectorRouter: router }
     : { controlledConnector: true };
   const replay = replaySession(resolved.navigationRoute, resolved.fixes, options);
+  router?.assertComplete?.();
   const timeline = buildUserTimeline(replay.timeline);
   return {
     timeline,

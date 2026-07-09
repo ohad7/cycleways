@@ -7,6 +7,7 @@ This directory contains planning documents for larger project changes before imp
 
 Current plans:
 
+- `website-growth-roadmap/` - website-first design and implementation roadmap for decision-ready route content, prerendered SEO/social pages, route freshness and reporting, local saved-route comparison, and printable ride briefs while the native app remains pre-production.
 - `background-location-voice-guidance/` - design and implementation plan for iOS lock-screen ride guidance using background location updates, persisted navigation runtime state, and spoken cue prompts without voice commands.
 - `ios-app-store-release/` - design and implementation plan for preparing the iOS app, App Store Connect record, signing, privacy, TestFlight, review metadata, and launch operations for a professional App Store release.
 - `android-release/` - design and implementation plan for publishing the existing Expo/RN app to Google Play under the Cycleways brand (Personal account under `cycleways.app@gmail.com`, package `app.cycleways.mobile`), covering the 14-day tester gate, the release-only cleartext-localhost WebView fix, upload keystore + fastlane AAB pipeline, and Android background/locked-screen navigation in v1 (parity with iOS, reusing the platform-neutral core nav brain + voice adapter).

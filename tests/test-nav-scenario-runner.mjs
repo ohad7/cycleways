@@ -80,7 +80,7 @@ function straightRoute() {
     timeline.every((e) => typeof e.cardMode === "string"),
     "every entry carries the card mode",
   );
-  assert.equal(timeline[timeline.length - 1].cameraStage, "arrived");
+  assert.equal(timeline[timeline.length - 1].cameraStage, "arrived-local");
   assert.ok(
     timeline.some((e) => /עַד|יעד/.test(e.voiceText || "")),
     "arrival voice text is present",

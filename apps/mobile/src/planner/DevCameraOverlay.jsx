@@ -10,16 +10,35 @@ function fmt(value, digits = 1) {
 export default function DevCameraOverlay({ diagnostics }) {
   if (!diagnostics) return null;
   const rows = [
+    ["journey", diagnostics.journey || "-"],
+    ["bookmark", diagnostics.bookmark || "-"],
+    ["time", diagnostics.journeyTime === null || diagnostics.journeyTime === undefined
+      ? "-"
+      : `${Math.round(Number(diagnostics.journeyTime) / 1000)}s`],
     ["stage", diagnostics.stage || "-"],
     ["mode", diagnostics.mode || "-"],
-    ["pitch", fmt(diagnostics.pitch)],
-    ["zoom", fmt(diagnostics.zoom)],
+    ["geometry", diagnostics.geometryRole || "-"],
+    ["pitch", `${fmt(diagnostics.pitch)} → ${fmt(diagnostics.appliedPitch)}`],
+    ["zoom", `${fmt(diagnostics.zoom)} → ${fmt(diagnostics.appliedZoom)}`],
     ["fit", diagnostics.fitKind || "-"],
     ["focus", diagnostics.focusKind || "-"],
     ["target", fmt(diagnostics.headingTarget)],
     ["heading", fmt(diagnostics.heading)],
     ["tier", diagnostics.approachTier || "-"],
     ["intent", diagnostics.cameraIntent || "-"],
+    ["owner", diagnostics.owner || "-"],
+    ["transition", diagnostics.transitionState || "-"],
+    ["anchor", fmt(diagnostics.riderAnchorY, 2)],
+    ["viewport", diagnostics.viewport || "-"],
+    ["fit count", diagnostics.fitCount ?? 0],
+    [
+      "visibility",
+      diagnostics.validation
+        ? diagnostics.validation.valid
+          ? "ok"
+          : `outside:${diagnostics.validation.outside?.length || 0}`
+        : "-",
+    ],
   ];
   return (
     <View pointerEvents="none" style={styles.root}>

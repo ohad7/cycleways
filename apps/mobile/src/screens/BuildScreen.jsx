@@ -52,10 +52,20 @@ import {
   createCameraHeadingGovernor,
 } from "@cycleways/core/navigation/cameraHeading.js";
 import { createCameraDirector } from "@cycleways/core/navigation/cameraDirector.js";
+import {
+  cameraCorridorForProgress,
+  cameraGeometryKey,
+  cameraManeuverCorridor,
+  cameraPitchForRegionalZoom,
+  cameraTargetZoom,
+  nextAppliedZoom,
+  shouldReframeOverview,
+} from "@cycleways/core/navigation/cameraViewport.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
 import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js";
+import { bookmarkPlaybackWindow } from "@cycleways/core/navigation/scenarios/journeySchema.js";
 import {
   computeBearing,
   precomputeArcLength,
@@ -94,7 +104,10 @@ import {
   getNavigationPermissionStatus,
   getRideSetupLocation,
 } from "../navigation/locationService.js";
-import { createSimulateRideSource } from "../navigation/simulateRideSource.js";
+import { createJourneyPlaybackSource } from "../navigation/journeyPlaybackSource.js";
+import { useNavigationCamera } from "../navigation/useNavigationCamera.js";
+import { normalizeCameraViewport } from "../navigation/navigationCameraAdapter.js";
+import { connectorRouterForScenario } from "@cycleways/core/navigation/scenarioConnector.js";
 import {
   clearPendingRideIntent,
   savePendingRideIntent,
@@ -116,6 +129,7 @@ if (__DEV__) {
 import { routeRestoreDecision } from "../navigation/routeRestorePolicy.js";
 import DevScenarioPicker from "../planner/DevScenarioPicker.jsx";
 import DevCameraOverlay from "../planner/DevCameraOverlay.jsx";
+import DevJourneyControls from "../planner/DevJourneyControls.jsx";
 import Icon from "../planner/Icon.jsx";
 import { palette } from "../planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
@@ -845,11 +859,76 @@ export default function BuildScreen({ navigation, route }) {
   const [devScenarioRoute, setDevScenarioRoute] = useState(null);
   const [devRideIntroRoute, setDevRideIntroRoute] = useState(null);
   const [pendingDevRideIntro, setPendingDevRideIntro] = useState(null);
+  const [devPlaybackState, setDevPlaybackState] = useState(null);
+  const devPlaybackRef = useRef(null);
+  const pendingDevReplayRef = useRef(false);
+  const devPlaybackUiAtRef = useRef(0);
+  const initialWindow = Dimensions.get("window");
+  const [mapViewportSize, setMapViewportSize] = useState({
+    width: initialWindow.width,
+    height: initialWindow.height,
+  });
+  const [navigationOcclusion, setNavigationOcclusion] = useState({
+    topOverlayBottom: screenInsets.top + 96,
+    bottomOverlayTop: initialWindow.height - screenInsets.bottom - 96,
+  });
+  const navigationViewport = useMemo(
+    () =>
+      normalizeCameraViewport({
+        ...mapViewportSize,
+        safeInsets: screenInsets,
+        ...navigationOcclusion,
+        horizontalMargin: 16,
+        clearance: 12,
+      }),
+    [mapViewportSize, navigationOcclusion, screenInsets],
+  );
+  const navigationViewportRef = useRef(navigationViewport);
+  navigationViewportRef.current = navigationViewport;
+  const handleCameraAdapterDiagnostics = useCallback((adapterDiagnostics) => {
+    if (!__DEV__) return;
+    setDevCameraDiagnostics((current) => current
+      ? { ...current, ...adapterDiagnostics }
+      : { ...adapterDiagnostics });
+  }, []);
+  const navigationCameraRef = useNavigationCamera({
+    cameraRef,
+    mapViewRef,
+    onDiagnostics: handleCameraAdapterDiagnostics,
+  });
+  const handleNavigationOverlayLayout = useCallback((patch) => {
+    if (!patch || typeof patch !== "object") return;
+    setNavigationOcclusion((current) => {
+      const next = { ...current, ...patch };
+      if (
+        Math.abs(next.topOverlayBottom - current.topOverlayBottom) < 2 &&
+        Math.abs(next.bottomOverlayTop - current.bottomOverlayTop) < 2
+      ) return current;
+      return next;
+    });
+  }, []);
+  const handleMapViewportLayout = useCallback((event) => {
+    const width = Number(event?.nativeEvent?.layout?.width);
+    const height = Number(event?.nativeEvent?.layout?.height);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return;
+    }
+    setMapViewportSize((current) =>
+      Math.abs(current.width - width) < 1 && Math.abs(current.height - height) < 1
+        ? current
+        : { width, height },
+    );
+  }, []);
   const devVisibleScenarios = useMemo(
     () =>
       devPickerMode === "cam"
-        ? devScenarios.filter((scenario) => scenario.camera === true || scenario.group === "camera")
-        : devScenarios.filter((scenario) => scenario.camera !== true && scenario.group !== "camera"),
+        ? devScenarios.filter(
+            (scenario) =>
+              scenario.journeySchemaVersion === 1 &&
+              Array.isArray(scenario.bookmarks) &&
+              scenario.bookmarks.length > 0,
+          )
+        : devScenarios,
     [devPickerMode],
   );
   const setupRequestRef = useRef(0);
@@ -1009,6 +1088,7 @@ export default function BuildScreen({ navigation, route }) {
   // into recorderFixesRef; on stop() the full array is logged as JSON so it can
   // be copied into tests/fixtures/*.json for deterministic replay (Task 18).
   const devInnerSourceRef = useRef(null);
+  const devScenarioConnectorRef = useRef(null);
   const recorderFixesRef = useRef([]);
   // Stable proxy: created once, delegates to devInnerSourceRef at call time.
   const devSourceProxy = useRef(null);
@@ -1021,11 +1101,27 @@ export default function BuildScreen({ navigation, route }) {
     };
   }
 
+  const computeNavigationConnector = useCallback(
+    (from, to, request) => {
+      const scenarioConnector = devScenarioConnectorRef.current;
+      if (__DEV__ && scenarioConnector?.active) {
+        if (typeof scenarioConnector.router !== "function") {
+          // `connector: "none"` deliberately leaves the request pending. It
+          // must never fall through to the real routing network.
+          return new Promise(() => {});
+        }
+        return scenarioConnector.router(request || { from, to });
+      }
+      return computeConnector(from, to);
+    },
+    [computeConnector],
+  );
+
   const nav = useNavigationSession(navigationRoute, {
     background: lockScreenGuidanceEnabled,
     voice: voiceGuidanceEnabled,
     locationSource: __DEV__ ? devSourceProxy.current : undefined,
-    computeConnector,
+    computeConnector: computeNavigationConnector,
   });
   const navStatus = nav.state?.status ?? "idle";
   const isNavigating =
@@ -1142,6 +1238,7 @@ export default function BuildScreen({ navigation, route }) {
     cameraBearingRef.current = 0;
     cameraFitKeyRef.current = null;
     cameraFitAtRef.current = 0;
+    cameraOverviewFrameRef.current = null;
     cameraRef.current?.setCamera?.({
       pitch: 0,
       heading: 0,
@@ -1372,7 +1469,7 @@ export default function BuildScreen({ navigation, route }) {
   // the pendingNavigationRouteId effect so nav.start() runs only after the
   // session has re-bound to the scenario route.
   const handleDevScenarioSelect = useCallback(
-    (scenario) => {
+    (scenario, bookmark = null) => {
       if (!__DEV__) return;
       let resolved;
       try {
@@ -1386,15 +1483,69 @@ export default function BuildScreen({ navigation, route }) {
       setDevPickerVisible(false);
       setDevRideIntroRoute(null);
       setPendingDevRideIntro(null);
-      devInnerSourceRef.current = createSimulateRideSource(resolved.fixes, {
-        intervalMs: Math.max(60, Math.round(1000 / devSpeed)),
+      devScenarioConnectorRef.current = {
+        active: true,
+        name: resolved.name,
+        router: connectorRouterForScenario(resolved),
+      };
+      const playbackMode = bookmark ? "cam" : "sim";
+      const window = bookmark
+        ? bookmarkPlaybackWindow(resolved.fixes, bookmark)
+        : { warmupEndIndex: -1, startIndex: 0, endIndex: resolved.fixes.length - 1 };
+      const playbackSource = createJourneyPlaybackSource(resolved.fixes, {
+        ...window,
+        speed: playbackMode === "cam" ? 1 : devSpeed,
+        onStateChange: (playback) => {
+          const uiNow = Date.now();
+          if (
+            playback.completed !== true &&
+            uiNow - devPlaybackUiAtRef.current < 200
+          ) return;
+          devPlaybackUiAtRef.current = uiNow;
+          const fixIndex = Math.max(0, Math.min(resolved.fixes.length - 1, playback.index - 1));
+          const timestamp = resolved.fixes[fixIndex]?.timestamp ?? null;
+          setDevPlaybackState((current) => ({
+            ...(current || {}),
+            ...playback,
+            mode: playbackMode,
+            journey: resolved.name,
+            bookmark: bookmark?.label || bookmark?.id || "full journey",
+            timestamp,
+          }));
+          if (playbackMode === "cam") {
+            setDevCameraDiagnostics((current) => ({
+              ...(current || {}),
+              journey: resolved.name,
+              bookmark: bookmark?.id || "",
+              journeyTime: timestamp,
+            }));
+          }
+        },
       });
-      if (scenario.camera === true || scenario.group === "camera") {
+      devPlaybackRef.current = {
+        source: playbackSource,
+        resolved,
+        bookmark,
+        mode: playbackMode,
+        isFullJourney: !bookmark,
+      };
+      devInnerSourceRef.current = playbackSource;
+      setDevPlaybackState({
+        mode: playbackMode,
+        journey: resolved.name,
+        bookmark: bookmark?.label || bookmark?.id || "full journey",
+        timestamp: resolved.fixes[0]?.timestamp ?? null,
+        paused: false,
+        completed: false,
+      });
+      if (bookmark || scenario.camera === true || scenario.group === "camera-journey") {
         setDevCameraDiagnostics({
           stage: "starting",
           mode: "-",
           approachTier: "-",
           cameraIntent: "follow",
+          journey: resolved.name,
+          bookmark: bookmark?.id || "",
         });
       }
       if (resolved.cameraStart === "ride-intro") {
@@ -1422,6 +1573,34 @@ export default function BuildScreen({ navigation, route }) {
     },
     [devSpeed, nav, navigationRoute],
   );
+
+  const handleDevPlaybackPauseResume = useCallback(() => {
+    const source = devPlaybackRef.current?.source;
+    if (!source) return;
+    if (source.getState().paused) source.resume();
+    else source.pause();
+  }, []);
+
+  const handleDevPlaybackStep = useCallback(() => {
+    devPlaybackRef.current?.source?.step?.();
+  }, []);
+
+  const handleDevPlaybackReplay = useCallback(() => {
+    const playback = devPlaybackRef.current;
+    if (!playback) return;
+    pendingDevReplayRef.current = true;
+    nav.stop();
+    playback.source.restart();
+    devScenarioConnectorRef.current = {
+      active: true,
+      name: playback.resolved.name,
+      router: connectorRouterForScenario(playback.resolved),
+    };
+    setTimeout(() => {
+      pendingDevReplayRef.current = false;
+      void nav.start();
+    }, 0);
+  }, [nav]);
 
   useEffect(() => {
     if (!__DEV__ || !pendingDevRideIntro) return;
@@ -1483,13 +1662,29 @@ export default function BuildScreen({ navigation, route }) {
   // fixes the pre-existing leak where a SIM source survived into later rides.)
   useEffect(() => {
     if (!__DEV__) return;
+    if (pendingDevReplayRef.current) return;
     if (pendingNavigationRouteId) return;
     if (pendingDevRideIntro || rideIntroVisible || rideSettingsVisible || pickOnMapMode) return;
     if (navStatus !== "ended" && navStatus !== "error") return;
     if (devScenarioRoute) setDevScenarioRoute(null);
     if (devRideIntroRoute) setDevRideIntroRoute(null);
+    const scenarioConnector = devScenarioConnectorRef.current;
+    if (
+      navStatus === "ended" &&
+      devPlaybackRef.current?.isFullJourney &&
+      scenarioConnector?.router?.assertComplete
+    ) {
+      try {
+        scenarioConnector.router.assertComplete();
+      } catch (error) {
+        console.error(error);
+      }
+    }
     setDevCameraDiagnostics(null);
     devInnerSourceRef.current = null;
+    devScenarioConnectorRef.current = null;
+    devPlaybackRef.current = null;
+    setDevPlaybackState(null);
   }, [
     devRideIntroRoute,
     devScenarioRoute,
@@ -1681,10 +1876,13 @@ export default function BuildScreen({ navigation, route }) {
   // there is no trusted connector, or a classified connector leg for show-leg,
   // guide, and rejoin states.
   const approach = nav.state?.approach ?? null;
+  const cameraTransition = nav.state?.cameraTransition ?? null;
   const latestFix = nav.state?.latestFix ?? null;
   const approachTargetPoint = approach?.target?.point ?? null;
   const showApproachLines =
-    navStatus === "approaching" || navStatus === "off-route";
+    navStatus === "approaching" ||
+    navStatus === "off-route" ||
+    cameraTransition?.kind === "join";
   const showDirectApproachLine =
     showApproachLines && navPresentation.showDirectApproachLine;
   const directLineGeometry = useMemo(() => {
@@ -1799,10 +1997,12 @@ export default function BuildScreen({ navigation, route }) {
       shareInfo.param,
     ],
   );
-  const suggestionGeometry = approach?.suggestionGeometry;
+  const suggestionGeometry =
+    approach?.suggestionGeometry || cameraTransition?.sourceGeometry;
   const showSuggestion =
     showApproachLines &&
-    (navPresentation.showApproachLeg ||
+    (cameraTransition?.kind === "join" ||
+      navPresentation.showApproachLeg ||
       (navStatus === "off-route" && navPresentation.tier === "near")) &&
     Array.isArray(suggestionGeometry) &&
     suggestionGeometry.length >= 2;
@@ -1868,6 +2068,8 @@ export default function BuildScreen({ navigation, route }) {
   const sessionStateRef = useRef(null);
   const cameraFitKeyRef = useRef(null);
   const cameraFitAtRef = useRef(0);
+  const cameraOverviewFrameRef = useRef(null);
+  const devCameraDiagnosticsAtRef = useRef(0);
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
@@ -1928,6 +2130,7 @@ export default function BuildScreen({ navigation, route }) {
       cameraStageRef.current = null;
       cameraFitKeyRef.current = null;
       cameraFitAtRef.current = 0;
+      cameraOverviewFrameRef.current = null;
       return undefined;
     }
     puckAnchorRef.current = createPuckAnchor();
@@ -1939,6 +2142,7 @@ export default function BuildScreen({ navigation, route }) {
     cameraStageRef.current = null;
     cameraFitKeyRef.current = null;
     cameraFitAtRef.current = 0;
+    cameraOverviewFrameRef.current = null;
     const startProgress = progressRef.current;
     smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
     smoothedBearingRef.current =
@@ -2054,21 +2258,80 @@ export default function BuildScreen({ navigation, route }) {
             cameraDirectorRef.current?.update(sessionStateRef.current ?? {}, ts) ??
             {
               stage: "ride",
-              mode: "follow",
+              viewportMode: "follow",
               pitch: NAV_FOLLOW_PITCH,
-              zoom: NAV_FOLLOW_ZOOM,
-              centerBias: 0,
+              pitchRange: { min: 45, max: 55 },
+              zoomPolicy: { minZoom: 15.6, maxZoom: 17 },
+              riderAnchorY: 0.72,
             };
           const stageChanged = cameraStageRef.current !== shot.stage;
           cameraStageRef.current = shot.stage;
           const cameraEase = Math.min(1, dtMs / CAMERA_ROTATE_MS);
-          if (shot.snapOnEnter === true && stageChanged) {
-            if (Number.isFinite(shot.pitch)) cameraPitchRef.current = shot.pitch;
-            if (Number.isFinite(shot.zoom)) cameraZoomRef.current = shot.zoom;
-          } else {
-            cameraPitchRef.current += (shot.pitch - cameraPitchRef.current) * cameraEase;
-            if (Number.isFinite(shot.zoom)) {
-              cameraZoomRef.current += (shot.zoom - cameraZoomRef.current) * cameraEase;
+          const lastNativeValidation = navigationCameraRef.current?.getState?.();
+          const validationBelongsToShot =
+            (lastNativeValidation?.owner === "follow" &&
+              lastNativeValidation?.key === shot.stage) ||
+            (lastNativeValidation?.owner === "overview" &&
+              typeof lastNativeValidation?.key === "string" &&
+              lastNativeValidation.key.startsWith(`${shot.fitKind}:`));
+          const requiredGeometryOutside =
+            validationBelongsToShot &&
+            Array.isArray(lastNativeValidation?.validation?.outside) &&
+            lastNativeValidation.validation.outside.some((id) => id !== "rider");
+          const targetPitch = requiredGeometryOutside
+            ? shot.pitchRange?.min ?? shot.pitch
+            : shot.pitch;
+          cameraPitchRef.current +=
+            (targetPitch - cameraPitchRef.current) * cameraEase;
+
+          let cameraCorridor = [];
+          if (shot.viewportMode === "follow") {
+            const stateNow = sessionStateRef.current || {};
+            const isApproachGeometry = shot.geometryRole === "approach";
+            const corridorGeometry = isApproachGeometry
+              ? stateNow.approach?.approachLegGeometry || []
+              : geom;
+            const corridorProgress = isApproachGeometry
+              ? stateNow.approach?.approachProgress?.progressMeters || 0
+              : smoothedMetersRef.current;
+            const cueMeters = isApproachGeometry
+              ? stateNow.approach?.approachActiveCue?.cue?.distanceMeters
+              : stateNow.activeCue?.cue?.distanceMeters;
+            cameraCorridor = Number.isFinite(cueMeters) && shot.postManeuverMeters
+              ? cameraManeuverCorridor(
+                  corridorGeometry,
+                  corridorProgress,
+                  cueMeters,
+                  {
+                    behindMeters: shot.behindMeters,
+                    postManeuverMeters: shot.postManeuverMeters,
+                  },
+                )
+              : cameraCorridorForProgress(corridorGeometry, corridorProgress, {
+                  behindMeters: shot.behindMeters,
+                  lookaheadMeters: shot.lookaheadMeters,
+                });
+            if (shot.geometryRole === "join") {
+              const sourceGeometry = stateNow.cameraTransition?.sourceGeometry;
+              if (Array.isArray(sourceGeometry) && sourceGeometry.length >= 2) {
+                cameraCorridor = [...sourceGeometry.slice(-3), ...cameraCorridor];
+              }
+            }
+            if (cameraCorridor.length >= 2) {
+              const targetZoom = cameraTargetZoom({
+                geometry: cameraCorridor,
+                viewport: navigationViewportRef.current,
+                pitch: shot.pitch,
+                bearing: cameraBearingRef.current,
+                minZoom: shot.zoomPolicy?.minZoom,
+                maxZoom: shot.zoomPolicy?.maxZoom,
+              });
+              cameraZoomRef.current = nextAppliedZoom({
+                current: cameraZoomRef.current,
+                target: targetZoom,
+                dtMs,
+                force: stageChanged,
+              });
             }
           }
 
@@ -2091,14 +2354,22 @@ export default function BuildScreen({ navigation, route }) {
               Math.min(1, dtMs / CAMERA_ROTATE_MS),
             );
           }
-          if (__DEV__) {
+          if (__DEV__ && ts - devCameraDiagnosticsAtRef.current >= 200) {
+            devCameraDiagnosticsAtRef.current = ts;
             const nextDiagnostics = {
               stage: shot.stage,
-              mode: shot.mode,
+              mode: shot.viewportMode,
+              geometryRole: shot.geometryRole,
               pitch: Number.isFinite(shot.pitch)
                 ? Math.round(shot.pitch * 10) / 10
                 : null,
-              zoom: shot.mode === "follow" && Number.isFinite(cameraZoomRef.current)
+              appliedPitch: Number.isFinite(cameraPitchRef.current)
+                ? Math.round(cameraPitchRef.current * 10) / 10
+                : null,
+              zoom: shot.viewportMode === "follow" && Number.isFinite(cameraZoomRef.current)
+                ? Math.round(cameraZoomRef.current * 10) / 10
+                : null,
+              appliedZoom: Number.isFinite(cameraZoomRef.current)
                 ? Math.round(cameraZoomRef.current * 10) / 10
                 : null,
               fitKind: shot.fitKind || "",
@@ -2111,21 +2382,28 @@ export default function BuildScreen({ navigation, route }) {
                 : null,
               approachTier: sessionStateRef.current?.approach?.ownershipTier || "",
               cameraIntent: cameraIntentRef.current,
+              riderAnchorY: shot.riderAnchorY,
+              viewport: `${Math.round(navigationViewportRef.current.top)}-${Math.round(navigationViewportRef.current.bottom)}`,
             };
             setDevCameraDiagnostics((current) =>
               current &&
               current.stage === nextDiagnostics.stage &&
               current.mode === nextDiagnostics.mode &&
+              current.geometryRole === nextDiagnostics.geometryRole &&
               current.pitch === nextDiagnostics.pitch &&
+              current.appliedPitch === nextDiagnostics.appliedPitch &&
               current.zoom === nextDiagnostics.zoom &&
+              current.appliedZoom === nextDiagnostics.appliedZoom &&
               current.fitKind === nextDiagnostics.fitKind &&
               current.focusKind === nextDiagnostics.focusKind &&
               current.headingTarget === nextDiagnostics.headingTarget &&
               current.heading === nextDiagnostics.heading &&
               current.approachTier === nextDiagnostics.approachTier &&
-              current.cameraIntent === nextDiagnostics.cameraIntent
+              current.cameraIntent === nextDiagnostics.cameraIntent &&
+              current.riderAnchorY === nextDiagnostics.riderAnchorY &&
+              current.viewport === nextDiagnostics.viewport
                 ? current
-                : nextDiagnostics,
+                : { ...(current || {}), ...nextDiagnostics },
             );
           }
           // MarkerView is screen-aligned, so rotate the arrow by the puck's
@@ -2157,14 +2435,23 @@ export default function BuildScreen({ navigation, route }) {
           // cameraIntent flips to "free" on a user gesture, re-engaged by the
           // recenter button). setCamera/fitBounds are off the React tree, so this
           // is intentionally NOT gated on the puck-change check.
-          // Fit shots use the same helper/padding convention as the rest of
-          // this file; follow shots ease pitch/zoom like heading changes.
+          // Every navigation shot goes through the camera adapter. Follow
+          // frames are app-clocked; overview fits temporarily transfer
+          // ownership to one native Mapbox animation.
 
-          if (shot.mode === "fit") {
+          if (cameraIntentRef.current === "free") {
+            navigationCameraRef.current?.setFree("user-gesture");
+          }
+
+          if (shot.viewportMode === "overview") {
             const raw = rawFixRef.current;
             const suggestion = sessionStateRef.current?.approach?.suggestionGeometry;
             const target = sessionStateRef.current?.approach?.target;
-            const targetPoint = target?.point || progress.guidanceTargetPoint || null;
+            const routeEnd = Array.isArray(geom) && geom.length > 0
+              ? geom[geom.length - 1]
+              : null;
+            const targetPoint =
+              target?.point || progress.guidanceTargetPoint || routeEnd || null;
             const routeLookahead =
               shot.fitKind === "approach" ||
               shot.fitKind === "approach-start" ||
@@ -2175,6 +2462,8 @@ export default function BuildScreen({ navigation, route }) {
             const fitPoints = (
               shot.fitKind === "route"
                 ? geom
+                : shot.fitKind === "arrival-local"
+                  ? [validMapPoint(raw) ? raw : null, routeEnd]
                 : [
                     validMapPoint(raw) ? raw : null,
                     targetPoint,
@@ -2188,7 +2477,23 @@ export default function BuildScreen({ navigation, route }) {
                 : Number.isFinite(governedHeading)
                   ? governedHeading
                   : cameraBearingRef.current;
-            const fitPitch = Number.isFinite(shot.pitch) ? shot.pitch : null;
+            const overviewZoom = fitPoints.length >= 2
+              ? cameraTargetZoom({
+                  geometry: fitPoints,
+                  viewport: navigationViewportRef.current,
+                  pitch: shot.pitch,
+                  bearing: fitHeading,
+                  minZoom: shot.zoomPolicy?.minZoom ?? 8,
+                  maxZoom: shot.zoomPolicy?.maxZoom ?? 18,
+                })
+              : shot.zoomPolicy?.maxZoom;
+            const fitPitch = Number.isFinite(shot.pitch)
+              ? requiredGeometryOutside
+                ? shot.pitchRange?.min ?? shot.pitch
+                : shot.stage === "approach-too-far"
+                  ? cameraPitchForRegionalZoom(shot.pitch, overviewZoom)
+                  : shot.pitch
+              : null;
             const fitKeyDecimals =
               shot.fitKind === "rejoin"
                 ? REJOIN_CAMERA_FIT_KEY_DECIMALS
@@ -2201,12 +2506,44 @@ export default function BuildScreen({ navigation, route }) {
               cameraKeyNumber(fitHeading),
               cameraKeyNumber(fitPitch),
               fitPointKey,
+              cameraKeyNumber(navigationViewportRef.current.top),
+              cameraKeyNumber(navigationViewportRef.current.bottom),
             ].join(":");
+            const viewportKey = [
+              navigationViewportRef.current.width,
+              navigationViewportRef.current.height,
+              Math.round(navigationViewportRef.current.top),
+              Math.round(navigationViewportRef.current.bottom),
+            ].join("x");
+            const stableGeometry =
+              shot.fitKind === "route"
+                ? geom
+                : Array.isArray(suggestion) && suggestion.length >= 2
+                  ? suggestion
+                  : fitPoints.filter((point) =>
+                      !raw || point.lat !== raw.lat || point.lng !== raw.lng,
+                    );
+            const overviewFrame = {
+              geometryKey: `${shot.stage}:${cameraGeometryKey(stableGeometry, 5)}`,
+              viewportKey,
+              rider: validMapPoint(raw) ? raw : null,
+            };
+            const reframe = shouldReframeOverview(
+              cameraOverviewFrameRef.current,
+              overviewFrame,
+              {
+                minMoveMeters:
+                  shot.fitKind === "rejoin" ? 50 :
+                  shot.fitKind === "approach-leg" ? 40 : 70,
+              },
+            );
             if (
+              shot.holdFrame !== true &&
               cameraIntentRef.current === "follow" &&
               navStatusRef.current !== "paused" &&
               fitPoints.length >= 1 &&
-              cameraFitKeyRef.current !== fitKey
+              cameraFitKeyRef.current !== fitKey &&
+              (reframe.reframe || requiredGeometryOutside)
             ) {
               const minFitIntervalMs =
                 shot.fitKind === "rejoin" ? REJOIN_CAMERA_FIT_MIN_INTERVAL_MS : 0;
@@ -2217,11 +2554,29 @@ export default function BuildScreen({ navigation, route }) {
               if (canFitNow) {
                 cameraFitKeyRef.current = fitKey;
                 cameraFitAtRef.current = ts;
-                fitCameraToPoints(
-                  cameraRef.current,
-                  fitPoints,
-                  shot.fitKind === "route" ? 84 : 150,
-                  { heading: fitHeading, pitch: fitPitch },
+                cameraOverviewFrameRef.current = overviewFrame;
+                const rawPoint = validMapPoint(raw) ? raw : null;
+                navigationCameraRef.current?.applyOverview(
+                  {
+                    key: fitKey,
+                    points: fitPoints,
+                    requiredPoints: fitPoints.map((point, index) => ({
+                      ...point,
+                      id:
+                        rawPoint &&
+                        point.lat === rawPoint.lat &&
+                        point.lng === rawPoint.lng
+                          ? "rider"
+                          : `required-${index}`,
+                    })),
+                    riderId: rawPoint ? "rider" : null,
+                    riderAnchorY: shot.riderAnchorY,
+                    heading: fitHeading,
+                    pitch: fitPitch,
+                    zoom: overviewZoom,
+                    animationDuration: shot.transition?.durationMs,
+                  },
+                  navigationViewportRef.current,
                 );
               }
             }
@@ -2230,8 +2585,8 @@ export default function BuildScreen({ navigation, route }) {
           }
           cameraFitKeyRef.current = null;
           cameraFitAtRef.current = 0;
+          cameraOverviewFrameRef.current = null;
 
-          // Focus point per stage; center = lerp(rider, focus, centerBias).
           // Guided approach cues resolve against the temporary connector leg;
           // main-route cues continue to resolve against the primary route arc.
           let focus = null;
@@ -2262,30 +2617,57 @@ export default function BuildScreen({ navigation, route }) {
               focus = pointAndBearingAtDistance(arcNow, geom, cueMeters).point;
             }
           }
-          let centerLng = lng;
-          let centerLat = lat;
-          if (focus && shot.centerBias > 0) {
-            centerLng = lng + (focus.lng - lng) * shot.centerBias;
-            centerLat = lat + (focus.lat - lat) * shot.centerBias;
-          }
           if (
+            shot.holdFrame !== true &&
             cameraIntentRef.current === "follow" &&
             navStatusRef.current !== "paused"
           ) {
-            cameraRef.current?.setCamera?.({
-              centerCoordinate: [centerLng, centerLat],
-              heading: cameraBearingRef.current,
-              pitch: cameraPitchRef.current,
-              zoomLevel: cameraZoomRef.current,
-              animationDuration: 0,
-            });
+            navigationCameraRef.current?.applyFollow(
+              {
+                key: shot.stage,
+                center: { lng, lat },
+                heading: cameraBearingRef.current,
+                pitch: cameraPitchRef.current,
+                zoom: cameraZoomRef.current,
+                riderAnchorY: shot.riderAnchorY,
+                focus,
+                corridor: cameraCorridor,
+                requiredPoints: [
+                  { id: "rider", lng, lat },
+                  ...cameraCorridor.map((point, index) => ({
+                    ...point,
+                    id: `corridor-${index}`,
+                  })),
+                ],
+                riderId: "rider",
+                validationKey: [
+                  shot.stage,
+                  Math.round(cameraPitchRef.current / 4),
+                  Math.round(cameraZoomRef.current * 5),
+                  Math.round(navigationViewportRef.current.top),
+                  Math.round(navigationViewportRef.current.bottom),
+                  cameraCorridor.length > 0
+                    ? cameraPointKey(cameraCorridor[0], 4)
+                    : "no-corridor-start",
+                  cameraCorridor.length > 1
+                    ? cameraPointKey(cameraCorridor.at(-1), 4)
+                    : "no-corridor-end",
+                ].join(":"),
+              },
+              navigationViewportRef.current,
+            );
+          } else if (cameraIntentRef.current === "free") {
+            navigationCameraRef.current?.setFree("user-gesture");
           }
         }
       }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      navigationCameraRef.current?.reset("navigation-loop-stop");
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNavigating]);
 
@@ -2683,7 +3065,11 @@ export default function BuildScreen({ navigation, route }) {
       : null;
 
   return (
-    <View style={styles.screen} {...routePointPanResponder.panHandlers}>
+    <View
+      style={styles.screen}
+      onLayout={handleMapViewportLayout}
+      {...routePointPanResponder.panHandlers}
+    >
       <MapView
         ref={mapViewRef}
         style={styles.fill}
@@ -2787,7 +3173,7 @@ export default function BuildScreen({ navigation, route }) {
             <LineLayer
               id="approach-suggestion-line"
               style={
-                navPresentation.approachOwnershipTier === "guide"
+                (cameraTransition?.sourceTier || navPresentation.approachOwnershipTier) === "guide"
                   ? APPROACH_GUIDE_LINE_STYLE
                   : APPROACH_SUGGESTION_LINE_STYLE
               }
@@ -3023,6 +3409,14 @@ export default function BuildScreen({ navigation, route }) {
         <DevCameraOverlay diagnostics={devCameraDiagnostics} />
       ) : null}
       {__DEV__ ? (
+        <DevJourneyControls
+          playback={devPlaybackState}
+          onReplay={handleDevPlaybackReplay}
+          onPauseResume={handleDevPlaybackPauseResume}
+          onStep={handleDevPlaybackStep}
+        />
+      ) : null}
+      {__DEV__ ? (
         <DevScenarioPicker
           visible={devPickerVisible}
           title={
@@ -3035,6 +3429,7 @@ export default function BuildScreen({ navigation, route }) {
           onSelectSpeed={setDevSpeed}
           onSelect={handleDevScenarioSelect}
           onClose={() => setDevPickerVisible(false)}
+          mode={devPickerMode}
         />
       ) : null}
       {isNavigating ? (
@@ -3046,6 +3441,7 @@ export default function BuildScreen({ navigation, route }) {
             onOpenSettings={handleChangeRideSettings}
             onStop={handleStopNavigation}
             onRecenter={handleRecenter}
+            onCameraLayout={handleNavigationOverlayLayout}
           />
         ) : (
           <NavPanel
@@ -3059,6 +3455,7 @@ export default function BuildScreen({ navigation, route }) {
             voiceEnabled={nav.voiceEnabled}
             onToggleVoice={handleToggleVoiceGuidance}
             lockScreenGuidanceActive={nav.lockScreenGuidanceActive}
+            onCameraLayout={handleNavigationOverlayLayout}
           />
         )
       ) : directRideSetupPending || rideIntroVisible ? null : (

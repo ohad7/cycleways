@@ -6,6 +6,7 @@
 import { navigationRouteFromRouteState } from "../navigationRoute.js";
 import { generateTrack } from "../trackGenerator.js";
 import { applyGpsGap, insertDwell } from "../trackTools.js";
+import { validateResolvedJourney } from "./journeySchema.js";
 
 const CONNECTOR_MODES = new Set([
   "straight-line",
@@ -61,7 +62,7 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     throw err(`unknown connector mode "${connector}"`);
   }
 
-  return {
+  const resolved = {
     name,
     description: scenario.description ?? "",
     visualOnly: scenario.visualOnly === true,
@@ -71,6 +72,13 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     navigationRoute,
     fixes,
     connector,
+    connectorResponses: Array.isArray(scenario.connectorResponses)
+      ? scenario.connectorResponses
+      : null,
+    journeySchemaVersion: scenario.journeySchemaVersion ?? null,
+    bookmarks: Array.isArray(scenario.bookmarks) ? scenario.bookmarks : [],
     expect: Array.isArray(scenario.expect) ? scenario.expect : [],
   };
+  if (resolved.journeySchemaVersion !== null) validateResolvedJourney(resolved);
+  return resolved;
 }

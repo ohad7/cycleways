@@ -6,6 +6,10 @@
 // it immediately. The caller animates toward the returned heading; this
 // module only decides WHEN the heading target is allowed to move.
 import { bearingDelta, computeBearing } from "../utils/geometry.js";
+import {
+  cameraCorridorBearing,
+  cameraDominantBearing,
+} from "./cameraViewport.js";
 
 const ROUTE_BEARING_CONFIDENCE_CROSS_TRACK_M = 3;
 const ROUTE_BEARING_DISAGREE_DEG = 60;
@@ -44,16 +48,27 @@ export function cameraHeadingTarget(progress) {
 
 export function cameraHeadingTargetForState(state, cameraShot = null) {
   const stage = cameraShot?.stage || null;
-  if (stage === "off-route" || stage === "arrived") return null;
+  if (
+    stage === "off-route" ||
+    stage === "arrived-local" ||
+    stage === "ride-summary"
+  ) return null;
 
   if (stage === "approach-guide" || stage === "approach-guide-pre-turn") {
     const approachProgress = state?.approach?.approachProgress || null;
+    const corridorBearing = cameraCorridorBearing(
+      state?.approach?.approachLegGeometry,
+      approachProgress?.progressMeters,
+    );
+    if (Number.isFinite(corridorBearing)) return corridorBearing;
     return Number.isFinite(approachProgress?.bearingToNextDeg)
       ? approachProgress.bearingToNextDeg
       : null;
   }
 
   if (stage === "approach-show-leg") {
+    const dominant = cameraDominantBearing(state?.approach?.suggestionGeometry);
+    if (Number.isFinite(dominant)) return dominant;
     const latestFix = state?.latestFix || null;
     const target = state?.approach?.target?.point || null;
     if (latestFix && target) return computeBearing(latestFix, target);
@@ -69,6 +84,29 @@ export function cameraHeadingTargetForState(state, cameraShot = null) {
     return Number.isFinite(state?.progress?.guidanceBearingDeg)
       ? state.progress.guidanceBearingDeg
       : null;
+  }
+
+  if (stage === "join-route") {
+    const transition = state?.cameraTransition || null;
+    if (Number.isFinite(transition?.sourceBearing)) return transition.sourceBearing;
+    const sourceBearing = cameraDominantBearing(transition?.sourceGeometry);
+    if (Number.isFinite(sourceBearing)) return sourceBearing;
+  }
+
+  if (
+    stage === "ride" ||
+    stage === "pre-turn" ||
+    stage === "arrival" ||
+    stage === "reacquire-route" ||
+    stage === "join-route"
+  ) {
+    const held = cameraHeadingTarget(state?.progress || null);
+    if (held === null) return null;
+    const corridorBearing = cameraCorridorBearing(
+      state?.route?.geometry,
+      state?.progress?.progressMeters,
+    );
+    if (Number.isFinite(corridorBearing)) return corridorBearing;
   }
 
   return cameraHeadingTarget(state?.progress || null);

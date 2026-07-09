@@ -28,7 +28,7 @@ const riding = (over = {}) => ({
   assert.equal(zoomForSpanMeters(10), 17.5, "clamped high (span floor 50)");
 }
 
-// Ride: pitch 55, speed-breathing zoom.
+// Ride: pitch 55 with a speed-derived corridor and centralized zoom clamps.
 {
   const director = createCameraDirector();
   const slow = director.update(
@@ -37,12 +37,14 @@ const riding = (over = {}) => ({
   );
   assert.equal(slow.stage, "ride");
   assert.equal(slow.pitch, 55);
-  assert.ok(Math.abs(slow.zoom - 16.8) < 0.01, "slow = zoomed in");
+  assert.equal(slow.viewportMode, "follow");
+  assert.equal(slow.zoomPolicy.kind, "corridor-fit");
+  assert.equal(slow.lookaheadMeters, 160);
   const fast = director.update(
     riding({ progress: { ...riding().progress, smoothedSpeedMps: 8 } }),
     100,
   );
-  assert.ok(Math.abs(fast.zoom - 15.8) < 0.01, "fast = zoomed out");
+  assert.equal(fast.lookaheadMeters, 340, "faster rider sees farther ahead");
 }
 
 // Approach and off-route shots.
@@ -56,9 +58,9 @@ const riding = (over = {}) => ({
     }),
     0,
   );
-  assert.equal(approach.stage, "approach-start");
-  assert.equal(approach.mode, "fit");
-  assert.equal(approach.pitch, 20);
+  assert.equal(approach.stage, "approach-resolving");
+  assert.equal(approach.viewportMode, "overview");
+  assert.equal(approach.pitch, 55);
   assert.equal(approach.fitKind, "approach-start");
 
   const off = director.update(
@@ -70,13 +72,12 @@ const riding = (over = {}) => ({
     100, // within the dwell window — off-route must still win immediately
   );
   assert.equal(off.stage, "off-route", "off-route adopts immediately");
-  assert.equal(off.mode, "fit");
+  assert.equal(off.viewportMode, "overview");
   assert.equal(off.fitKind, "rejoin");
 }
 
-// Approach ownership stages: too-far keeps an intro-scale overview while
-// following the rider; show-leg is a fit overview; guide is a real follow
-// camera over the approach leg; approach cue lowers pitch and focuses.
+// Approach ownership stages: too-far and show-leg are stable overviews; guide
+// follows the approach corridor; a nearby connector cue lowers pitch.
 {
   const director = createCameraDirector();
   const tooFar = director.update(
@@ -88,10 +89,9 @@ const riding = (over = {}) => ({
     0,
   );
   assert.equal(tooFar.stage, "approach-too-far");
-  assert.equal(tooFar.mode, "follow");
-  assert.equal(tooFar.pitch, 55);
-  assert.equal(tooFar.zoom, 11.5);
-  assert.equal(tooFar.snapOnEnter, true);
+  assert.equal(tooFar.viewportMode, "overview");
+  assert.equal(tooFar.pitch, 40);
+  assert.equal(tooFar.zoomPolicy.kind, "points-fit");
 
   const showLeg = director.update(
     riding({
@@ -102,8 +102,8 @@ const riding = (over = {}) => ({
     100,
   );
   assert.equal(showLeg.stage, "approach-show-leg");
-  assert.equal(showLeg.mode, "fit");
-  assert.equal(showLeg.pitch, 20);
+  assert.equal(showLeg.viewportMode, "overview");
+  assert.equal(showLeg.pitch, 35);
   assert.equal(showLeg.fitKind, "approach-leg");
 
   const guide = director.update(
@@ -118,9 +118,9 @@ const riding = (over = {}) => ({
     200,
   );
   assert.equal(guide.stage, "approach-guide");
-  assert.equal(guide.mode, "follow");
+  assert.equal(guide.viewportMode, "follow");
   assert.equal(guide.pitch, 55);
-  assert.ok(Math.abs(guide.zoom - 15.8) < 0.01, "approach guide zoom breathes");
+  assert.equal(guide.lookaheadMeters, 340);
 
   const preTurn = director.update(
     riding({
@@ -135,10 +135,37 @@ const riding = (over = {}) => ({
     300,
   );
   assert.equal(preTurn.stage, "approach-guide-pre-turn");
-  assert.equal(preTurn.mode, "follow");
-  assert.equal(preTurn.pitch, 35);
-  assert.equal(preTurn.zoom, 17.2);
+  assert.equal(preTurn.viewportMode, "follow");
+  assert.equal(preTurn.pitch, 38);
+  assert.deepEqual(preTurn.pitchRange, { min: 35, max: 40 });
   assert.equal(preTurn.focusKind, "approach-cue");
+}
+
+// Resolving a connector refresh retains the accepted frame instead of
+// bouncing to a generic low-pitch approach fit.
+{
+  const director = createCameraDirector();
+  const accepted = director.update(
+    riding({
+      status: "approaching",
+      progress: { hasAcquiredRoute: false, remainingMeters: 5000 },
+      approach: { ownershipTier: "show-leg" },
+    }),
+    0,
+  );
+  const resolving = director.update(
+    riding({
+      status: "approaching",
+      progress: { hasAcquiredRoute: false, remainingMeters: 5000 },
+      approach: { ownershipTier: "unknown", suggestionStatus: "requesting" },
+    }),
+    100,
+  );
+  assert.equal(accepted.pitch, 35);
+  assert.equal(resolving.stage, "approach-resolving");
+  assert.equal(resolving.retainedStage, "approach-show-leg");
+  assert.equal(resolving.pitch, 35);
+  assert.equal(resolving.holdFrame, true);
 }
 
 // Join-route is an immediate one-frame transition shot.
@@ -157,8 +184,20 @@ const riding = (over = {}) => ({
     50,
   );
   assert.equal(join.stage, "join-route");
-  assert.equal(join.mode, "follow");
-  assert.equal(join.pitch, 40);
+  assert.equal(join.viewportMode, "follow");
+  assert.equal(join.pitch, 42);
+}
+
+// A retained seam snapshot owns the camera for its bounded duration, then
+// returns directly to ride without an extra stage dwell.
+{
+  const director = createCameraDirector();
+  const state = riding({
+    cameraTransition: { id: "join-1", kind: "join", durationMs: 1200 },
+  });
+  assert.equal(director.update(state, 100).stage, "join-route");
+  assert.equal(director.update(state, 1000).stage, "join-route");
+  assert.equal(director.update(state, 1400).stage, "ride");
 }
 
 // Pre-turn waits for the candidate dwell; a turn cue seen only briefly does not switch.
@@ -182,10 +221,9 @@ const riding = (over = {}) => ({
     3800,
   );
   assert.equal(adopted.stage, "pre-turn");
-  assert.equal(adopted.mode, "follow");
-  assert.equal(adopted.pitch, 35);
-  assert.equal(adopted.zoom, 17.2);
-  assert.equal(adopted.centerBias, 0.5);
+  assert.equal(adopted.viewportMode, "follow");
+  assert.equal(adopted.pitch, 38);
+  assert.equal(adopted.zoomPolicy.minZoom, 16.2);
   assert.equal(adopted.focusKind, "cue");
 
   const bend = createCameraDirector();
@@ -198,7 +236,7 @@ const riding = (over = {}) => ({
   assert.equal(bendShot.stage, "pre-turn");
 }
 
-// Arrival waits for dwell; arrived fits the route and is immediate.
+// Arrival waits for dwell; completion uses a local frame and is immediate.
 {
   const director = createCameraDirector();
   director.update(riding(), 0);
@@ -222,10 +260,11 @@ const riding = (over = {}) => ({
     riding({ progress: { ...riding().progress, remainingMeters: 8 } }),
     3200, // inside the dwell — arrived is immediate anyway
   );
-  assert.equal(done.stage, "arrived");
-  assert.equal(done.mode, "fit");
+  assert.equal(done.stage, "arrived-local");
+  assert.equal(done.viewportMode, "overview");
   assert.equal(done.pitch, 0);
-  assert.equal(done.fitKind, "route");
+  assert.equal(done.fitKind, "arrival-local");
+  assert.notEqual(done.fitKind, "route");
 }
 
 // Off-route wins over arrived when both conditions are true.
