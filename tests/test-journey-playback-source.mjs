@@ -20,6 +20,8 @@ const source = createJourneyPlaybackSource(fixes, {
   },
   cancelSchedule: (item) => { item.cancelled = true; },
 });
+assert.equal(source.getState().running, false);
+assert.equal(scheduled.length, 0, "selecting a journey does not begin continuous playback");
 await source.startWatch({ onFix: (fix) => emitted.push(fix.timestamp) });
 assert.deepEqual(emitted, [], "playback is scheduled so native effects can settle");
 scheduled.shift().callback();

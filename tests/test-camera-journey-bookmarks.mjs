@@ -3,13 +3,24 @@ import { runScenario } from "@cycleways/core/navigation/scenarioRunner.js";
 import { scenarios } from "@cycleways/core/navigation/scenarios/index.js";
 import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js";
 
-const journeys = scenarios.filter((scenario) => scenario.journeySchemaVersion === 1);
+const journeys = scenarios.filter((scenario) => scenario.entryMode === "ride-intro");
 assert.equal(journeys.length, 4);
 
 for (const scenario of journeys) {
   const resolved = resolveScenario(scenario);
   const { timeline } = runScenario(resolved);
+  assert.equal(resolved.journeySchemaVersion, 2);
+  assert.equal(resolved.entryMode, "ride-intro");
   for (const bookmark of resolved.bookmarks) {
+    if (bookmark.phase === "pre-start") {
+      assert.equal(bookmark.startAction, "hold");
+      assert.ok(
+        bookmark.expectedStage === "intro-start-facing" ||
+          bookmark.expectedStage === "intro-overhead",
+      );
+      continue;
+    }
+    assert.equal(bookmark.startAction, "require-confirm");
     const entries = timeline.filter(
       (entry) => entry.timestamp === bookmark.targetTimestamp,
     );

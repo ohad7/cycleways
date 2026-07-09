@@ -1,6 +1,7 @@
 # Navigation Camera and Scenario Harness — Implementation Plan
 
 **Date:** 2026-07-09
+**Updated:** 2026-07-10
 **Status:** Implemented; automated/native build validation complete
 **Design:** `plans/navigation-camera-storyboard/design.md`
 
@@ -43,6 +44,18 @@ The intended end state includes:
   compatibility fields, added focused coverage, excluded the dev harness from
   production Metro graphs, and completed repository, production-export, and
   native simulator-build validation.
+
+Lifecycle hardening completed on 2026-07-10:
+
+- upgraded shared journeys to schema v2 with an explicit `ride-intro` entry and
+  `pre-start/hold` versus `post-start/require-confirm` bookmark contracts;
+- routed both SIM and CAM through the real Ride Intro and real Start action,
+  with no watcher or connector consumption before confirmation;
+- changed Replay to re-arm Ride Intro, made cancel/end clear all harness state,
+  and restored the pre-harness setup fix/location after cleanup;
+- added visible lifecycle and expected-stage labels, aligned intro diagnostics
+  with `intro-start-facing`/`intro-overhead`, and added schema, playback, and
+  lifecycle regression coverage.
 
 Validation completed:
 

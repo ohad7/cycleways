@@ -44,7 +44,10 @@ export default function DevScenarioPicker({
                     style={styles.row}
                   >
                     <Text style={styles.rowName}>{scenario.name}</Text>
-                    <Text style={styles.rowDescription}>{scenario.description}</Text>
+                    <Text style={styles.rowDescription}>
+                      {scenario.description}
+                      {scenario.entryMode === "ride-intro" ? " · starts at Ride Intro" : " · session-only"}
+                    </Text>
                   </Pressable>,
                 ];
               }
@@ -55,7 +58,11 @@ export default function DevScenarioPicker({
                   style={styles.row}
                 >
                   <Text style={styles.rowName}>{bookmark.label || bookmark.id}</Text>
-                  <Text style={styles.rowDescription}>{scenario.name}</Text>
+                  <Text style={styles.rowDescription}>
+                    {scenario.name} · {bookmark.phase === "pre-start"
+                      ? "before Start · hold"
+                      : "after Start · tap the real button"}
+                  </Text>
                 </Pressable>
               ));
             })}

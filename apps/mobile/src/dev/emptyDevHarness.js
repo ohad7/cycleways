@@ -2,6 +2,7 @@
 // custom resolver maps dev-only imports here before graph construction, so the
 // real fixtures, bookmark UI, and diagnostics are absent from release bundles.
 export const scenarios = [];
+export const JOURNEY_SCHEMA_VERSION = 2;
 export const resolveScenario = () => {
   throw new Error("navigation scenario harness is unavailable in production");
 };
@@ -14,6 +15,10 @@ export const connectorRouterForScenario = () => null;
 export const createJourneyPlaybackSource = () => {
   throw new Error("journey playback is unavailable in production");
 };
+export const journeyRequiresRideIntro = () => false;
+export const initialJourneyPlaybackState = () => null;
+export const journeyPlaybackPatch = () => null;
+export const journeyLifecycleLabel = () => "";
 export default function EmptyDevHarness() {
   return null;
 }

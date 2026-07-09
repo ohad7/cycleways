@@ -105,6 +105,11 @@ import {
   getRideSetupLocation,
 } from "../navigation/locationService.js";
 import { createJourneyPlaybackSource } from "../navigation/journeyPlaybackSource.js";
+import {
+  initialJourneyPlaybackState,
+  journeyPlaybackPatch,
+  journeyRequiresRideIntro,
+} from "../navigation/journeyHarnessState.js";
 import { useNavigationCamera } from "../navigation/useNavigationCamera.js";
 import { normalizeCameraViewport } from "../navigation/navigationCameraAdapter.js";
 import { connectorRouterForScenario } from "@cycleways/core/navigation/scenarioConnector.js";
@@ -861,6 +866,7 @@ export default function BuildScreen({ navigation, route }) {
   const [pendingDevRideIntro, setPendingDevRideIntro] = useState(null);
   const [devPlaybackState, setDevPlaybackState] = useState(null);
   const devPlaybackRef = useRef(null);
+  const devRideSetupRestoreRef = useRef(null);
   const pendingDevReplayRef = useRef(false);
   const devPlaybackUiAtRef = useRef(0);
   const initialWindow = Dimensions.get("window");
@@ -924,7 +930,7 @@ export default function BuildScreen({ navigation, route }) {
       devPickerMode === "cam"
         ? devScenarios.filter(
             (scenario) =>
-              scenario.journeySchemaVersion === 1 &&
+              scenario.entryMode === "ride-intro" &&
               Array.isArray(scenario.bookmarks) &&
               scenario.bookmarks.length > 0,
           )
@@ -1101,6 +1107,34 @@ export default function BuildScreen({ navigation, route }) {
     };
   }
 
+  const clearDevJourneyState = useCallback(() => {
+    const restore = devRideSetupRestoreRef.current;
+    devInnerSourceRef.current = null;
+    devScenarioConnectorRef.current = null;
+    devPlaybackRef.current = null;
+    devRideSetupRestoreRef.current = null;
+    pendingDevReplayRef.current = false;
+    setDevPlaybackState(null);
+    setDevCameraDiagnostics(null);
+    setDevRideIntroRoute(null);
+    setDevScenarioRoute(null);
+    setPendingDevRideIntro(null);
+    setPendingNavigationRouteId(null);
+    setConfirmedRidePlan(null);
+    setRideSetupConnector({
+      key: "",
+      status: "idle",
+      geometry: [],
+      distanceMeters: null,
+    });
+    if (restore) {
+      setRideSetupFix(restore.rideSetupFix);
+      setRideSetupNow(restore.rideSetupNow);
+      setRideSetupLocationStatus(restore.rideSetupLocationStatus);
+      setLocationState(restore.locationState);
+    }
+  }, []);
+
   const computeNavigationConnector = useCallback(
     (from, to, request) => {
       const scenarioConnector = devScenarioConnectorRef.current;
@@ -1266,6 +1300,15 @@ export default function BuildScreen({ navigation, route }) {
         });
         setRideIntroVisible(false);
         setRideSettingsVisible(false);
+        if (__DEV__ && devPlaybackRef.current) {
+          setDevPlaybackState((current) => current
+            ? {
+                ...current,
+                lifecycle: "starting-session",
+                waitingForStart: false,
+              }
+            : current);
+        }
         void clearPendingRideIntent();
         setPendingNavigationRouteId(confirmedRouteId);
       };
@@ -1365,16 +1408,19 @@ export default function BuildScreen({ navigation, route }) {
   const handleIntroClose = useCallback(() => {
     setRideIntroVisible(false);
     if (__DEV__) {
-      setDevRideIntroRoute(null);
-      setDevScenarioRoute(null);
-      setPendingDevRideIntro(null);
-      devInnerSourceRef.current = null;
-      setDevCameraDiagnostics(null);
+      if (devPlaybackRef.current) clearDevJourneyState();
+      else {
+        setDevRideIntroRoute(null);
+        setDevScenarioRoute(null);
+        setPendingDevRideIntro(null);
+        devInnerSourceRef.current = null;
+        setDevCameraDiagnostics(null);
+      }
     }
     resetMapToOverhead();
     trackNavigationEvent("ride_setup_cancelled");
     void clearPendingRideIntent();
-  }, [resetMapToOverhead]);
+  }, [clearDevJourneyState, resetMapToOverhead]);
 
   const handleRideSettingsConfirm = useCallback(() => {
     setRideSettingsVisible(false);
@@ -1447,27 +1493,67 @@ export default function BuildScreen({ navigation, route }) {
   introFlowActiveRef.current =
     rideIntroVisible || rideSettingsVisible || pickOnMapMode;
 
+  const armDevJourneyIntro = useCallback((playback) => {
+    if (!__DEV__ || !playback?.resolved || !playback?.source) return;
+    const { resolved, bookmark, mode, source } = playback;
+    source.restart();
+    devInnerSourceRef.current = source;
+    devScenarioConnectorRef.current = {
+      active: true,
+      name: resolved.name,
+      router: connectorRouterForScenario(resolved),
+    };
+    setConfirmedRidePlan(null);
+    setPendingNavigationRouteId(null);
+    setPendingExternalPlan(null);
+    setRideIntroVisible(false);
+    setRideSettingsVisible(false);
+    setPickOnMapMode(false);
+    setRideSetupSelection(DEFAULT_RIDE_SETUP_SELECTION);
+    setDevScenarioRoute(resolved.navigationRoute);
+    setDevRideIntroRoute(resolved.navigationRoute);
+    setPendingDevRideIntro({
+      routeId: resolved.navigationRoute.id,
+      fix: resolved.fixes[0] || null,
+    });
+    setDevPlaybackState(initialJourneyPlaybackState({ resolved, bookmark, mode }));
+    setDevCameraDiagnostics({
+      stage: "intro-loading",
+      mode: "overview",
+      approachTier: "-",
+      cameraIntent: "intro",
+      journey: resolved.name,
+      bookmark: bookmark?.id || "",
+      expectedStage: bookmark?.expectedStage || "",
+      journeyTime: resolved.fixes[0]?.timestamp ?? null,
+    });
+  }, []);
+
   const handleDevSimulate = useCallback(() => {
     if (!__DEV__) return;
+    if (devPlaybackRef.current) clearDevJourneyState();
+    setRideIntroVisible(false);
     setDevPickerMode("sim");
     setDevCameraDiagnostics(null);
     setDevRideIntroRoute(null);
     setPendingDevRideIntro(null);
     setDevPickerVisible(true);
-  }, []);
+  }, [clearDevJourneyState]);
 
   const handleDevCameraStoryboard = useCallback(() => {
     if (!__DEV__) return;
+    if (devPlaybackRef.current) clearDevJourneyState();
+    setRideIntroVisible(false);
     setDevPickerMode("cam");
     setDevCameraDiagnostics(null);
     setDevPickerVisible(true);
-  }, []);
+  }, [clearDevJourneyState]);
 
   // Resolve the picked scenario through the same resolver the headless suite
-  // uses (identical fixes for the same seed), install the simulated source on
-  // the dev proxy, and start. Scenarios that carry their own route go through
-  // the pendingNavigationRouteId effect so nav.start() runs only after the
-  // session has re-bound to the scenario route.
+  // uses (identical fixes for the same seed) and install its simulated source.
+  // Shared journeys arm Ride Intro and wait for its real Start action. Legacy
+  // session-only scenarios still use pendingNavigationRouteId so nav.start()
+  // runs only after the session has re-bound to the scenario route.
   const handleDevScenarioSelect = useCallback(
     (scenario, bookmark = null) => {
       if (!__DEV__) return;
@@ -1483,12 +1569,15 @@ export default function BuildScreen({ navigation, route }) {
       setDevPickerVisible(false);
       setDevRideIntroRoute(null);
       setPendingDevRideIntro(null);
-      devScenarioConnectorRef.current = {
-        active: true,
-        name: resolved.name,
-        router: connectorRouterForScenario(resolved),
-      };
       const playbackMode = bookmark ? "cam" : "sim";
+      if (journeyRequiresRideIntro(resolved) && !devRideSetupRestoreRef.current) {
+        devRideSetupRestoreRef.current = {
+          rideSetupFix,
+          rideSetupNow,
+          rideSetupLocationStatus,
+          locationState,
+        };
+      }
       const window = bookmark
         ? bookmarkPlaybackWindow(resolved.fixes, bookmark)
         : { warmupEndIndex: -1, startIndex: 0, endIndex: resolved.fixes.length - 1 };
@@ -1504,12 +1593,14 @@ export default function BuildScreen({ navigation, route }) {
           devPlaybackUiAtRef.current = uiNow;
           const fixIndex = Math.max(0, Math.min(resolved.fixes.length - 1, playback.index - 1));
           const timestamp = resolved.fixes[fixIndex]?.timestamp ?? null;
+          const lifecyclePatch = journeyPlaybackPatch(playback);
           setDevPlaybackState((current) => ({
-            ...(current || {}),
-            ...playback,
-            mode: playbackMode,
-            journey: resolved.name,
-            bookmark: bookmark?.label || bookmark?.id || "full journey",
+            ...(current || initialJourneyPlaybackState({
+              resolved,
+              bookmark,
+              mode: playbackMode,
+            })),
+            ...lifecyclePatch,
             timestamp,
           }));
           if (playbackMode === "cam") {
@@ -1530,14 +1621,16 @@ export default function BuildScreen({ navigation, route }) {
         isFullJourney: !bookmark,
       };
       devInnerSourceRef.current = playbackSource;
-      setDevPlaybackState({
+      devScenarioConnectorRef.current = {
+        active: true,
+        name: resolved.name,
+        router: connectorRouterForScenario(resolved),
+      };
+      setDevPlaybackState(initialJourneyPlaybackState({
+        resolved,
+        bookmark,
         mode: playbackMode,
-        journey: resolved.name,
-        bookmark: bookmark?.label || bookmark?.id || "full journey",
-        timestamp: resolved.fixes[0]?.timestamp ?? null,
-        paused: false,
-        completed: false,
-      });
+      }));
       if (bookmark || scenario.camera === true || scenario.group === "camera-journey") {
         setDevCameraDiagnostics({
           stage: "starting",
@@ -1546,22 +1639,11 @@ export default function BuildScreen({ navigation, route }) {
           cameraIntent: "follow",
           journey: resolved.name,
           bookmark: bookmark?.id || "",
+          expectedStage: bookmark?.expectedStage || "",
         });
       }
-      if (resolved.cameraStart === "ride-intro") {
-        setConfirmedRidePlan(null);
-        setPendingNavigationRouteId(null);
-        setRideSettingsVisible(false);
-        setPickOnMapMode(false);
-        setRideSetupSelection(DEFAULT_RIDE_SETUP_SELECTION);
-        setDevRideIntroRoute(resolved.navigationRoute);
-        setPendingDevRideIntro({
-          routeId: resolved.navigationRoute.id,
-          fix: resolved.fixes[0] || null,
-        });
-        if (resolved.navigationRoute.id !== navigationRoute?.id) {
-          setDevScenarioRoute(resolved.navigationRoute);
-        }
+      if (journeyRequiresRideIntro(resolved)) {
+        armDevJourneyIntro(devPlaybackRef.current);
         return;
       }
       if (resolved.navigationRoute.id !== navigationRoute?.id) {
@@ -1571,7 +1653,16 @@ export default function BuildScreen({ navigation, route }) {
         void nav.start();
       }
     },
-    [devSpeed, nav, navigationRoute],
+    [
+      armDevJourneyIntro,
+      devSpeed,
+      locationState,
+      nav,
+      navigationRoute,
+      rideSetupFix,
+      rideSetupLocationStatus,
+      rideSetupNow,
+    ],
   );
 
   const handleDevPlaybackPauseResume = useCallback(() => {
@@ -1590,17 +1681,11 @@ export default function BuildScreen({ navigation, route }) {
     if (!playback) return;
     pendingDevReplayRef.current = true;
     nav.stop();
-    playback.source.restart();
-    devScenarioConnectorRef.current = {
-      active: true,
-      name: playback.resolved.name,
-      router: connectorRouterForScenario(playback.resolved),
-    };
+    armDevJourneyIntro(playback);
     setTimeout(() => {
       pendingDevReplayRef.current = false;
-      void nav.start();
     }, 0);
-  }, [nav]);
+  }, [armDevJourneyIntro, nav]);
 
   useEffect(() => {
     if (!__DEV__ || !pendingDevRideIntro) return;
@@ -1620,7 +1705,8 @@ export default function BuildScreen({ navigation, route }) {
         status: current.following ? "following" : "located",
       }));
     }
-    setRideSetupNow(Date.now());
+    const journeyTimestamp = Number(fix?.timestamp);
+    setRideSetupNow(Number.isFinite(journeyTimestamp) ? journeyTimestamp : Date.now());
     setRideSetupLocationStatus("ready");
     setRideIntroVisible(true);
     setPendingDevRideIntro(null);
@@ -1666,8 +1752,7 @@ export default function BuildScreen({ navigation, route }) {
     if (pendingNavigationRouteId) return;
     if (pendingDevRideIntro || rideIntroVisible || rideSettingsVisible || pickOnMapMode) return;
     if (navStatus !== "ended" && navStatus !== "error") return;
-    if (devScenarioRoute) setDevScenarioRoute(null);
-    if (devRideIntroRoute) setDevRideIntroRoute(null);
+    if (!devPlaybackRef.current && !devScenarioConnectorRef.current) return;
     const scenarioConnector = devScenarioConnectorRef.current;
     if (
       navStatus === "ended" &&
@@ -1680,12 +1765,9 @@ export default function BuildScreen({ navigation, route }) {
         console.error(error);
       }
     }
-    setDevCameraDiagnostics(null);
-    devInnerSourceRef.current = null;
-    devScenarioConnectorRef.current = null;
-    devPlaybackRef.current = null;
-    setDevPlaybackState(null);
+    clearDevJourneyState();
   }, [
+    clearDevJourneyState,
     devRideIntroRoute,
     devScenarioRoute,
     navStatus,
@@ -2892,7 +2974,7 @@ export default function BuildScreen({ navigation, route }) {
         ? introSlotState.heading
         : null;
       const nextDiagnostics = {
-        stage: "ride-intro",
+        stage: shouldPitchToStart ? "intro-start-facing" : "intro-overhead",
         mode: "fit",
         pitch: Number.isFinite(introSlotState?.pitch)
           ? introSlotState.pitch
@@ -2919,7 +3001,7 @@ export default function BuildScreen({ navigation, route }) {
         current.heading !== nextDiagnostics.heading ||
         current.approachTier !== nextDiagnostics.approachTier ||
         current.cameraIntent !== nextDiagnostics.cameraIntent
-          ? nextDiagnostics
+          ? { ...(current || {}), ...nextDiagnostics }
           : current,
       );
     }
@@ -3378,7 +3460,7 @@ export default function BuildScreen({ navigation, route }) {
       />
       {/* Dev-only simulate + record controls. __DEV__ is false in production
           builds so this entire block is dead-code-eliminated by Metro. */}
-      {__DEV__ && !isNavigating ? (
+      {__DEV__ && !isNavigating && !rideIntroVisible && !rideSettingsVisible ? (
         <View pointerEvents="box-none" style={styles.devControls}>
           <Pressable
             accessibilityLabel="Dev: simulate ride"

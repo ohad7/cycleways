@@ -22,6 +22,7 @@ const devHarnessModules = new Set([
   "@cycleways/core/navigation/scenarios/journeySchema.js",
   "@cycleways/core/navigation/scenarioConnector.js",
   "../navigation/journeyPlaybackSource.js",
+  "../navigation/journeyHarnessState.js",
   "../planner/DevScenarioPicker.jsx",
   "../planner/DevCameraOverlay.jsx",
   "../planner/DevJourneyControls.jsx",

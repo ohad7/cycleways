@@ -1,26 +1,64 @@
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { text } from "../theme/typography.js";
+import { journeyLifecycleLabel } from "../navigation/journeyHarnessState.js";
 
 export default function DevJourneyControls({ playback, onReplay, onPauseResume, onStep }) {
+  const [minimized, setMinimized] = useState(true);
+  const playbackKey = `${playback?.journey || ""}:${playback?.bookmarkId || ""}`;
+  useEffect(() => {
+    setMinimized(true);
+  }, [playbackKey]);
   if (!playback || playback.mode !== "cam") return null;
+  const waitingForStart = playback.lifecycle === "waiting-for-start";
+  if (minimized) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="CAM: show playback controls"
+        onPress={() => setMinimized(false)}
+        style={[styles.root, styles.rootMinimized, waitingForStart ? styles.rootWaiting : null]}
+      >
+        <Text style={styles.minimizedText} numberOfLines={1}>
+          CAM · {journeyLifecycleLabel(playback)}
+        </Text>
+        <Text style={styles.toggleText}>Show</Text>
+      </Pressable>
+    );
+  }
   return (
-    <View style={styles.root}>
-      <Text style={styles.title} numberOfLines={1}>
-        {playback.journey} · {playback.bookmark}
-      </Text>
+    <View style={[styles.root, waitingForStart ? styles.rootWaiting : null]}>
+      <View style={styles.headerRow}>
+        <Text style={styles.title} numberOfLines={1}>
+          {playback.journey} · {playback.bookmark}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="CAM: minimize playback controls"
+          onPress={() => setMinimized(true)}
+          hitSlop={8}
+        >
+          <Text style={styles.toggleText}>Hide</Text>
+        </Pressable>
+      </View>
       <Text style={styles.status}>
-        {playback.completed ? "HOLD" : playback.paused ? "PAUSED" : "1×"}
+        {journeyLifecycleLabel(playback)}
         {Number.isFinite(playback.timestamp) ? ` · ${(playback.timestamp / 1000).toFixed(0)}s` : ""}
       </Text>
-      <View style={styles.row}>
-        <Control label="Replay" onPress={onReplay} />
-        <Control
-          label={playback.paused ? "Resume" : "Pause"}
-          onPress={onPauseResume}
-          disabled={playback.completed}
-        />
-        <Control label="Step" onPress={onStep} disabled={playback.completed} />
-      </View>
+      {playback.expectedStage ? (
+        <Text style={styles.expectation}>Expect: {playback.expectedStage}</Text>
+      ) : null}
+      {waitingForStart ? null : (
+        <View style={styles.row}>
+          <Control label="Replay from intro" onPress={onReplay} />
+          <Control
+            label={playback.paused ? "Resume" : "Pause"}
+            onPress={onPauseResume}
+            disabled={playback.completed}
+          />
+          <Control label="Step" onPress={onStep} disabled={playback.completed} />
+        </View>
+      )}
     </View>
   );
 }
@@ -55,8 +93,26 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(20, 24, 28, 0.9)",
     padding: 10,
   },
-  title: { ...text.captionStrong, color: "#fff" },
+  rootWaiting: {
+    top: 44,
+    bottom: undefined,
+  },
+  rootMinimized: {
+    left: 12,
+    right: undefined,
+    maxWidth: "78%",
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  title: { ...text.captionStrong, color: "#fff", flex: 1 },
+  minimizedText: { ...text.captionStrong, color: "#fff", flexShrink: 1 },
+  toggleText: { ...text.captionStrong, color: "#8ee6ae" },
   status: { ...text.caption, color: "rgba(255,255,255,0.7)", marginTop: 2 },
+  expectation: { ...text.caption, color: "#9fe8ba", marginTop: 2 },
   row: { flexDirection: "row", gap: 8, marginTop: 8 },
   button: {
     borderRadius: 12,
@@ -69,4 +125,3 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.35 },
   pressed: { opacity: 0.7 },
 });
-

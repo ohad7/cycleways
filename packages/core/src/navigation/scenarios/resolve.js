@@ -68,7 +68,7 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     visualOnly: scenario.visualOnly === true,
     group: scenario.group || null,
     camera: scenario.camera === true,
-    cameraStart: scenario.cameraStart || null,
+    entryMode: scenario.entryMode || "session",
     navigationRoute,
     fixes,
     connector,

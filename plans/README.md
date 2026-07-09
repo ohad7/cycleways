@@ -7,6 +7,7 @@ This directory contains planning documents for larger project changes before imp
 
 Current plans:
 
+- `website-accessibility-privacy/` - accepted design and implementation plan for website accessibility, the low-turnover exemption, privacy, Google Analytics minimization, and legal disclosures with no banners, no consent prompts, and no major UX/UI changes; an analytics-consent banner is explicitly deferred future work.
 - `website-growth-roadmap/` - website-first design and implementation roadmap for decision-ready route content, prerendered SEO/social pages, route freshness and reporting, local saved-route comparison, and printable ride briefs while the native app remains pre-production.
 - `background-location-voice-guidance/` - design and implementation plan for iOS lock-screen ride guidance using background location updates, persisted navigation runtime state, and spoken cue prompts without voice commands.
 - `ios-app-store-release/` - design and implementation plan for preparing the iOS app, App Store Connect record, signing, privacy, TestFlight, review metadata, and launch operations for a professional App Store release.

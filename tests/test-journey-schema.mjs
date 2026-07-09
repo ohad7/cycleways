@@ -13,7 +13,8 @@ const fixes = [0, 1000, 2000, 3000, 4000].map((timestamp, index) => ({
 
 const journey = {
   name: "valid",
-  journeySchemaVersion: 1,
+  journeySchemaVersion: 2,
+  entryMode: "ride-intro",
   fixes,
   connectorResponses: [{
     id: "r1",
@@ -31,16 +32,34 @@ const journey = {
       snappedEndpoints: [],
     },
   }],
-  bookmarks: [{
-    id: "b1",
-    targetTimestamp: 3000,
-    preRollMs: 2000,
-    holdMs: 1000,
-    expectedStage: "ride",
-  }],
+  bookmarks: [
+    {
+      id: "intro",
+      phase: "pre-start",
+      startAction: "hold",
+      targetTimestamp: 0,
+      preRollMs: 0,
+      holdMs: 0,
+      expectedStage: "intro-start-facing",
+    },
+    {
+      id: "b1",
+      phase: "post-start",
+      startAction: "require-confirm",
+      targetTimestamp: 3000,
+      preRollMs: 2000,
+      holdMs: 1000,
+      expectedStage: "ride",
+    },
+  ],
 };
 assert.equal(validateResolvedJourney(journey), journey);
 assert.deepEqual(bookmarkPlaybackWindow(fixes, journey.bookmarks[0]), {
+  warmupEndIndex: -1,
+  startIndex: 0,
+  endIndex: 4,
+});
+assert.deepEqual(bookmarkPlaybackWindow(fixes, journey.bookmarks[1]), {
   warmupEndIndex: 0,
   startIndex: 1,
   endIndex: 3,
@@ -69,6 +88,34 @@ assert.throws(
     fixes: [fixes[0], { ...fixes[1], lng: 35.61, speed: 1 }],
   }),
   /moves at/,
+);
+assert.throws(
+  () => validateResolvedJourney({
+    ...journey,
+    entryMode: "session",
+  }),
+  /entryMode must be/,
+);
+assert.throws(
+  () => validateResolvedJourney({
+    ...journey,
+    bookmarks: journey.bookmarks.map((bookmark) => ({
+      ...bookmark,
+      phase: "post-start",
+      startAction: "require-confirm",
+    })),
+  }),
+  /requires exactly one pre-start/,
+);
+assert.throws(
+  () => validateResolvedJourney({
+    ...journey,
+    bookmarks: [
+      { ...journey.bookmarks[0], targetTimestamp: 1000 },
+      journey.bookmarks[1],
+    ],
+  }),
+  /must target the first fix/,
 );
 
 console.log("journey schema tests passed");

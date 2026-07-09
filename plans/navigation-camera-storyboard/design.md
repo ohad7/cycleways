@@ -1,6 +1,7 @@
 # Navigation Camera and Scenario Harness — Design
 
 **Date:** 2026-07-09
+**Updated:** 2026-07-10
 **Status:** Implemented; native CAM tuning remains an acceptance activity
 **Topic dir:** `plans/navigation-camera-storyboard/`
 **Builds on:** `plans/nav-ui-redesign/`, `plans/navigation-intro-rethink/`,
@@ -474,12 +475,53 @@ keeps production and dev scenarios on the same rendering path.
 
 SIM and CAM consume the same resolved journey object.
 
-- **SIM:** plays the journey from its normal entry point to completion.
-- **CAM:** presents named bookmarks within the journey. Selecting a bookmark
-  starts with a short pre-roll, plays the camera transition at 1x, then holds the
-  resulting state for inspection.
+- **SIM:** enters through the real Ride Intro card, waits for the real primary
+  Start action, then plays the journey to completion.
+- **CAM:** presents named pre-start and post-start bookmarks. Every selection
+  first enters through the real Ride Intro card. A pre-start bookmark holds
+  there without starting the navigation watcher. A post-start bookmark waits
+  for the tester to press the real product Start button, rebuilds prior session
+  state explicitly, plays the final pre-roll at 1x, then holds the result.
 
 CAM is therefore a camera inspection tool, not a second scenario library.
+State reconstruction is a labelled diagnostic shortcut, not something that may
+masquerade as the natural product flow.
+
+### Entry and Start boundary
+
+Shared camera journeys have one entry contract: `ride-intro`. Merely selecting
+a journey or bookmark installs the one-shot setup fix and route needed by the
+intro, but does not start the continuous location source or consume connector
+responses.
+
+Bookmarks declare which side of the Start boundary they inspect:
+
+- `pre-start` + `hold`: inspect the intro camera/card indefinitely. Closing the
+  card cancels the complete dev journey and clears its source, connector,
+  playback, route override, and diagnostics.
+- `post-start` + `require-confirm`: show the intro first and wait for the tester
+  to press its actual primary button. Only that production confirmation path
+  may start the session and bookmark playback.
+
+Each shared journey has exactly one pre-start bookmark, targeting its first
+fix, followed by one or more post-start bookmarks. This keeps the journey entry
+unambiguous while still allowing several camera moments after confirmation.
+
+Replay always returns to Ride Intro. It never calls `nav.start()` directly.
+CAM lifecycle text must distinguish `WAITING FOR START`, `REBUILDING`,
+`PLAYING 1x`, `PAUSED`, and `HOLD`.
+
+Playback state and camera diagnostics default to compact, independently
+expandable status pills. The compact playback pill preserves the lifecycle cue
+needed to know whether Start should be pressed; the detailed controls and
+diagnostic matrix appear only when the tester asks for them.
+
+The harness displays the selected bookmark's expected stage beside the applied
+camera diagnostics. Intro diagnostics use the same semantic stage names as the
+stage table (`intro-start-facing` or `intro-overhead`), so the tester does not
+have to translate a generic harness-only label. Cancelling or completing a dev
+journey restores the route-setup location state that existed before selection;
+simulated setup fixes must not leak into a later real Ride Intro.
 
 ### Journey contents
 
@@ -488,12 +530,15 @@ A journey contains:
 ```js
 {
   name,
+  entryMode: "ride-intro",
   route,
   fixes,
   connectorResponses,
   bookmarks: [
     {
       name,
+      phase: "pre-start" | "post-start",
+      startAction: "hold" | "require-confirm",
       preRollMs,
       holdMs,
       expectedStage,
@@ -528,7 +573,8 @@ Use a small set of credible journeys rather than one tiny fixture per stage:
    movement → closer classification into navigation, or an explicit handoff
    cancel/reset ending.
 4. **Ride/recovery journey:** ride → maneuver → missed turn → off-route →
-   moving rejoin target → reacquisition → local arrival.
+   moving rejoin target → reacquisition → local arrival. It still begins with
+   the at-start intro and explicit Start action.
 
 Additional existing journeys cover stop-and-stand, GPS gap, parallel path,
 wrong-way, and recorded real rides. They gain camera bookmarks where useful
@@ -562,6 +608,7 @@ scaled.
 CAM should provide:
 
 - journey and bookmark selection;
+- an explicit waiting-for-Start state that leaves the real intro card usable;
 - replay transition;
 - pause/resume;
 - previous/next fix or camera frame;
@@ -618,6 +665,11 @@ not be included in production bundles.
 Expectations must assert ordered behavior, not just that a label appeared once:
 
 - `guide → guide-pre-turn → join-route → ride` occurs in order;
+- every shared journey arms Ride Intro before any session fix is consumed;
+- a pre-start bookmark never starts the watcher, while a post-start bookmark
+  cannot start until the real confirmation action runs;
+- cancel and Replay clear/rebuild the whole dev journey without stale source or
+  connector state;
 - join persists for the intended transition window and then becomes ride;
 - show-leg stays overview and emits no approach cue voice;
 - too-far has no connector geometry and no guided-camera state;

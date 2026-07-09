@@ -1,6 +1,10 @@
 import { getDistance } from "../../utils/distance.js";
 
-export const JOURNEY_SCHEMA_VERSION = 1;
+export const JOURNEY_SCHEMA_VERSION = 2;
+
+export const JOURNEY_ENTRY_MODES = Object.freeze(["ride-intro"]);
+export const JOURNEY_BOOKMARK_PHASES = Object.freeze(["pre-start", "post-start"]);
+export const JOURNEY_START_ACTIONS = Object.freeze(["hold", "require-confirm"]);
 
 function failure(name, message) {
   throw new Error(`journey "${name}": ${message}`);
@@ -23,6 +27,9 @@ export function validateResolvedJourney(journey) {
   const name = journey?.name || "unnamed";
   if (journey?.journeySchemaVersion !== JOURNEY_SCHEMA_VERSION) {
     failure(name, `journeySchemaVersion must be ${JOURNEY_SCHEMA_VERSION}`);
+  }
+  if (!JOURNEY_ENTRY_MODES.includes(journey?.entryMode)) {
+    failure(name, 'entryMode must be "ride-intro"');
   }
   const fixes = Array.isArray(journey.fixes) ? journey.fixes : [];
   if (fixes.length < 2) failure(name, "requires at least two fixes");
@@ -135,12 +142,36 @@ export function validateResolvedJourney(journey) {
   const firstTimestamp = fixes[0].timestamp;
   const lastTimestamp = fixes.at(-1).timestamp;
   let previousTimestamp = -Infinity;
+  let preStartBookmarks = 0;
+  let postStartBookmarks = 0;
+  let sawPostStartBookmark = false;
   for (const bookmark of bookmarks) {
     if (typeof bookmark?.id !== "string" || bookmark.id.length === 0) {
       failure(name, "every bookmark requires an id");
     }
     if (bookmarkIds.has(bookmark.id)) failure(name, `duplicate bookmark "${bookmark.id}"`);
     bookmarkIds.add(bookmark.id);
+    if (!JOURNEY_BOOKMARK_PHASES.includes(bookmark.phase)) {
+      failure(name, `bookmark "${bookmark.id}" requires pre-start or post-start phase`);
+    }
+    if (!JOURNEY_START_ACTIONS.includes(bookmark.startAction)) {
+      failure(name, `bookmark "${bookmark.id}" has invalid startAction`);
+    }
+    if (bookmark.phase === "pre-start") {
+      preStartBookmarks += 1;
+      if (sawPostStartBookmark) {
+        failure(name, `pre-start bookmark "${bookmark.id}" must precede post-start bookmarks`);
+      }
+      if (bookmark.startAction !== "hold") {
+        failure(name, `pre-start bookmark "${bookmark.id}" must hold before Start`);
+      }
+    } else {
+      postStartBookmarks += 1;
+      sawPostStartBookmark = true;
+      if (bookmark.startAction !== "require-confirm") {
+        failure(name, `post-start bookmark "${bookmark.id}" must require confirmation`);
+      }
+    }
     const targetTimestamp = Number(bookmark.targetTimestamp);
     if (
       !Number.isFinite(targetTimestamp) ||
@@ -153,6 +184,9 @@ export function validateResolvedJourney(journey) {
       failure(name, `bookmark "${bookmark.id}" is out of order`);
     }
     previousTimestamp = targetTimestamp;
+    if (bookmark.phase === "pre-start" && targetTimestamp !== firstTimestamp) {
+      failure(name, `pre-start bookmark "${bookmark.id}" must target the first fix`);
+    }
     if (Number(bookmark.preRollMs) < 0 || Number(bookmark.holdMs) < 0) {
       failure(name, `bookmark "${bookmark.id}" has a negative pre-roll/hold`);
     }
@@ -160,12 +194,18 @@ export function validateResolvedJourney(journey) {
       failure(name, `bookmark "${bookmark.id}" requires expectedStage`);
     }
   }
+  if (preStartBookmarks !== 1 || postStartBookmarks === 0) {
+    failure(name, "requires exactly one pre-start and at least one post-start camera bookmark");
+  }
   return journey;
 }
 
 export function bookmarkPlaybackWindow(fixes, bookmark) {
   const list = Array.isArray(fixes) ? fixes : [];
   if (list.length === 0) return { warmupEndIndex: -1, startIndex: 0, endIndex: -1 };
+  if (bookmark?.phase === "pre-start") {
+    return { warmupEndIndex: -1, startIndex: 0, endIndex: list.length - 1 };
+  }
   const target = Number(bookmark?.targetTimestamp);
   const startTimestamp = target - Math.max(0, Number(bookmark?.preRollMs) || 0);
   let startIndex = list.findIndex((fix) => Number(fix.timestamp) >= startTimestamp);
