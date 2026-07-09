@@ -176,6 +176,13 @@ const APPROACH_SUGGESTION_LINE_STYLE = {
   lineJoin: "round",
   lineCap: "round",
 };
+const APPROACH_GUIDE_LINE_STYLE = {
+  lineColor: "#2f6b3c",
+  lineWidth: 5,
+  lineOpacity: 0.92,
+  lineJoin: "round",
+  lineCap: "round",
+};
 const SETUP_PREVIEW_LINE_STYLE = {
   lineColor: "#2f6b3c",
   lineWidth: 7,
@@ -1441,6 +1448,13 @@ export default function BuildScreen({ navigation, route }) {
           ? Math.round(durationMs / 250) * 250
           : null,
         distanceSource: navPresentation.approachDistanceSource,
+        approachOwnershipTier: navPresentation.approachOwnershipTier,
+        handoffProminence: navPresentation.handoffProminence,
+        classificationReasons:
+          nav.state?.approach?.classificationReasons || connectorResult.classificationReasons || [],
+        connectorDistanceMeters: Number.isFinite(Number(connectorResult.distanceMeters))
+          ? Math.round(Number(connectorResult.distanceMeters) / 50) * 50
+          : null,
       });
     }
     if (nav.state?.justAcquired && previous.status !== "navigating") {
@@ -1473,8 +1487,10 @@ export default function BuildScreen({ navigation, route }) {
   const approachTargetPoint = approach?.target?.point ?? null;
   const showApproachLines =
     navStatus === "approaching" || navStatus === "off-route";
+  const showDirectApproachLine =
+    showApproachLines && navPresentation.showDirectApproachLine;
   const directLineGeometry = useMemo(() => {
-    if (!showApproachLines || !latestFix || !approachTargetPoint) {
+    if (!showDirectApproachLine || !latestFix || !approachTargetPoint) {
       return EMPTY_FEATURE_COLLECTION;
     }
     return {
@@ -1494,7 +1510,7 @@ export default function BuildScreen({ navigation, route }) {
       ],
     };
   }, [
-    showApproachLines,
+    showDirectApproachLine,
     latestFix?.lat,
     latestFix?.lng,
     approachTargetPoint?.lat,
@@ -1561,6 +1577,9 @@ export default function BuildScreen({ navigation, route }) {
           handoffPlan?.distanceToStartMeters ??
             confirmedRidePlan?.distanceToStartMeters,
         ),
+        approachOwnershipTier: navPresentation.approachOwnershipTier,
+        handoffProminence: navPresentation.handoffProminence,
+        distanceSource: navPresentation.approachDistanceSource,
       });
       setDestSheetVisible(false);
       externalHandoffOpenedAtRef.current = Date.now();
@@ -1584,8 +1603,9 @@ export default function BuildScreen({ navigation, route }) {
   );
   const suggestionGeometry = approach?.suggestionGeometry;
   const showSuggestion =
-    navStatus === "off-route" &&
-    navPresentation.tier === "near" &&
+    showApproachLines &&
+    (navPresentation.showApproachLeg ||
+      (navStatus === "off-route" && navPresentation.tier === "near")) &&
     Array.isArray(suggestionGeometry) &&
     suggestionGeometry.length >= 2;
   const suggestionFeature = useMemo(
@@ -2429,7 +2449,7 @@ export default function BuildScreen({ navigation, route }) {
             </View>
           </MarkerView>
         ) : null}
-        {showApproachLines ? (
+        {showDirectApproachLine ? (
           <ShapeSource id="approach-direct" shape={directLineGeometry}>
             <LineLayer
               id="approach-direct-line"
@@ -2441,7 +2461,11 @@ export default function BuildScreen({ navigation, route }) {
           <ShapeSource id="approach-suggestion" shape={suggestionFeature}>
             <LineLayer
               id="approach-suggestion-line"
-              style={APPROACH_SUGGESTION_LINE_STYLE}
+              style={
+                navPresentation.approachOwnershipTier === "guide"
+                  ? APPROACH_GUIDE_LINE_STYLE
+                  : APPROACH_SUGGESTION_LINE_STYLE
+              }
             />
           </ShapeSource>
         ) : null}

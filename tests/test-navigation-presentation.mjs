@@ -178,6 +178,65 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(far.approachDistanceSource, "beeline");
 }
 
+// Approach ownership tiers drive connector visibility and handoff prominence.
+{
+  const target = { point: { lat: 32, lng: 35 }, mode: "start" };
+  const guide = getNavigationPresentation({
+    status: "approaching",
+    latestFix: { lat: 31.999, lng: 35 },
+    approach: {
+      target,
+      distanceToRouteMeters: 120,
+      ownershipTier: "guide",
+      handoffProminence: "hidden",
+      suggestionGeometry: [{ lat: 31.999, lng: 35 }, { lat: 32, lng: 35 }],
+      suggestionDistanceMeters: 130,
+      approachActiveCue: {
+        cue: { type: "turn", direction: "right" },
+        phase: "preview",
+        distanceToCueMeters: 80,
+      },
+    },
+  });
+  assert.equal(guide.approachOwnershipTier, "guide");
+  assert.equal(guide.handoffProminence, "hidden");
+  assert.equal(guide.showApproachCue, true);
+  assert.equal(guide.showApproachLeg, true);
+  assert.equal(guide.showDirectApproachLine, false);
+  assert.equal(guide.approachCuePrimaryText, "פנה ימינה");
+  assert.equal(guide.approachCueDistanceText, "80 מ׳");
+  assert.equal(guide.approachDistanceSource, "connector");
+  assert.deepEqual(guide.externalNavTarget, target.point);
+
+  const showLeg = getNavigationPresentation({
+    status: "approaching",
+    approach: {
+      target,
+      distanceToRouteMeters: 2000,
+      ownershipTier: "show-leg",
+      handoffProminence: "secondary",
+      suggestionGeometry: [{ lat: 31.98, lng: 35 }, { lat: 32, lng: 35 }],
+      suggestionDistanceMeters: 2400,
+    },
+  });
+  assert.equal(showLeg.handoffProminence, "secondary");
+  assert.equal(showLeg.showApproachCue, false);
+  assert.equal(showLeg.showApproachLeg, true);
+
+  const tooFar = getNavigationPresentation({
+    status: "approaching",
+    approach: {
+      target,
+      distanceToRouteMeters: 12000,
+      ownershipTier: "too-far",
+      handoffProminence: "primary",
+    },
+  });
+  assert.equal(tooFar.handoffProminence, "primary");
+  assert.equal(tooFar.showApproachLeg, false);
+  assert.match(tooFar.approachSupportText, /רחוקה מדי/);
+}
+
 // --- context line ---
 {
   const p = getNavigationPresentation({

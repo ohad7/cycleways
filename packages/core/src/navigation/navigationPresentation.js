@@ -121,6 +121,26 @@ function destinationLabelFor(mode) {
   }
 }
 
+function handoffProminenceForTier(tier) {
+  if (tier === "guide") return "hidden";
+  if (tier === "too-far") return "primary";
+  return "secondary";
+}
+
+function approachSupportTextForTier(tier, status) {
+  if (status !== "approaching") return "";
+  switch (tier) {
+    case "guide":
+      return "האפליקציה מנווטת אותך לתחילת המסלול";
+    case "show-leg":
+      return "הדרך לתחילת המסלול מוצגת ללא הנחיות קוליות";
+    case "too-far":
+      return "תחילת המסלול רחוקה מדי להכוונת גישה באפליקציה";
+    default:
+      return "הניווט במסלול יתחיל כשתגיע";
+  }
+}
+
 // Round to a friendly precision: nearest 10 m below 1 km, else 0.1 km.
 export function formatDistanceMeters(meters) {
   const m = Number(meters);
@@ -137,6 +157,7 @@ export function getNavigationPresentation(state = {}) {
 
   const approach = state.approach || null;
   const showApproach = status === "approaching" || offRoute;
+  const approachOwnershipTier = approach?.ownershipTier || "unknown";
   const distanceToRoute = Number(approach?.distanceToRouteMeters);
   const suggestionDistance = Number(approach?.suggestionDistanceMeters);
   const hasSuggestionGeometry =
@@ -154,6 +175,17 @@ export function getNavigationPresentation(state = {}) {
     showApproach && state.latestFix && approach?.target?.point
       ? bearingDeg(state.latestFix, approach.target.point)
       : null;
+  const approachActive = approach?.approachActiveCue || null;
+  const approachCue = cueDisplay(approachActive?.cue || null);
+  const showApproachCue =
+    status === "approaching" &&
+    approachOwnershipTier === "guide" &&
+    Boolean(approachActive);
+  const showApproachLeg =
+    showApproach &&
+    (approachOwnershipTier === "guide" || approachOwnershipTier === "show-leg") &&
+    hasSuggestionGeometry;
+  const showDirectApproachLine = showApproach && !showApproachLeg;
 
   const active = state.activeCue || null;
   const cue = cueDisplay(active?.cue || null);
@@ -277,7 +309,36 @@ export function getNavigationPresentation(state = {}) {
     contextText: buildContextText(progress),
     showApproach,
     tier,
+    approachOwnershipTier,
+    handoffProminence:
+      approach?.handoffProminence || handoffProminenceForTier(approachOwnershipTier),
+    handoffSuggested:
+      approach?.handoffSuggested !== undefined
+        ? approach.handoffSuggested === true
+        : approachOwnershipTier !== "guide",
+    showApproachCue,
+    showApproachLeg,
+    showDirectApproachLine,
     approachBearingDeg,
+    approachCueText: approachCue.text,
+    approachCueIcon: approachCue.icon,
+    approachCueDistanceText: approachActive
+      ? formatDistanceMeters(approachActive.distanceToCueMeters)
+      : "",
+    approachCuePrimaryText: (() => {
+      const c = approachActive?.cue || null;
+      if (!c) return approachCue.text;
+      if (c.type === "turn") return c.direction === "right" ? "פנה ימינה" : "פנה שמאלה";
+      if (c.type === "enter-segment") return "המשך במסלול";
+      return approachCue.text;
+    })(),
+    approachCueSecondaryText: (() => {
+      const c = approachActive?.cue || null;
+      if (!c) return "";
+      if (c.type === "turn" && c.ontoSegmentName) return `אל ${c.ontoSegmentName}`;
+      if (c.type === "enter-segment" && c.segmentName) return `אל ${c.segmentName}`;
+      return "";
+    })(),
     // Banner: "<destination> · <distance>" (e.g. "תחילת המסלול · 600 מ׳").
     destinationLabel: destinationLabelFor(approach?.target?.mode),
     approachDistanceShort: Number.isFinite(approachDisplayDistance)
@@ -289,8 +350,7 @@ export function getNavigationPresentation(state = {}) {
         : "beeline",
     disclaimerText: "ניווט מחוץ לרשת CycleWays",
     approachHeading: status === "approaching" ? "בדרך למסלול" : "חזרה למסלול",
-    approachSupportText:
-      status === "approaching" ? "הניווט במסלול יתחיל כשתגיע" : "",
+    approachSupportText: approachSupportTextForTier(approachOwnershipTier, status),
     externalNavTarget: approach?.target?.point ?? null,
     showGuidance: status === "approaching" || offRoute,
     guidanceText: Number.isFinite(progress?.guidanceDistanceMeters)

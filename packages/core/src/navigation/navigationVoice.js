@@ -40,6 +40,11 @@ function cuePhrase(event, state, locale) {
     return locale === "he-IL" ? "יָצָאתָ מֵהַמַּסְלוּל." : "You left the route.";
   }
   if (event.kind === "acquired") {
+    if (event.acquisition === "join-route") {
+      return locale === "he-IL"
+        ? "הגעת למסלול, הניווט במסלול מתחיל"
+        : "You reached the route. Route navigation starts now.";
+    }
     if (event.acquisition === "reacquired") {
       return locale === "he-IL"
         ? "חזרנו למסלול, ממשיכים בניווט"
@@ -52,8 +57,12 @@ function cuePhrase(event, state, locale) {
   if (event.kind !== "cue") return null;
 
   const cue = event.cue || {};
+  const activeCue =
+    event.leg === "approach"
+      ? state?.approach?.approachActiveCue || state?.activeCue
+      : state?.activeCue;
   const distanceText = formatSpeechDistanceMeters(
-    state?.activeCue?.distanceToCueMeters,
+    activeCue?.distanceToCueMeters,
     locale,
   );
   const prefix =
@@ -85,9 +94,9 @@ function utteranceIdFor(event) {
   if (!event) return null;
   if (event.kind === "off-route") return "state:off-route";
   if (event.kind === "acquired") {
-    return event.acquisition === "reacquired"
-      ? "state:acquired:reacquired"
-      : "state:acquired:initial";
+    if (event.acquisition === "join-route") return "state:acquired:join-route";
+    if (event.acquisition === "reacquired") return "state:acquired:reacquired";
+    return "state:acquired:initial";
   }
   if (event.kind === "cue") {
     const cue = event.cue || {};

@@ -5,6 +5,9 @@
 // Acquiring the main route is the only handoff into `navigating`.
 
 import { getDistance } from "../utils/distance.js";
+import { classifyConnector, DEFAULT_CONNECTOR_THRESHOLDS } from "../routing/connectorConfidence.js";
+import { computeConnectorFeatures } from "../routing/connectorFeatures.js";
+import { buildApproachLeg } from "./approachLeg.js";
 import {
   approachTargetChoices,
   selectConnectorTarget,
@@ -40,6 +43,14 @@ function emptyApproach() {
     suggestionStatus: "idle",
     suggestionDistanceMeters: null,
     distanceToRouteMeters: null,
+    ownershipTier: "unknown",
+    handoffSuggested: true,
+    handoffProminence: "secondary",
+    classificationReasons: [],
+    connectorFeatures: null,
+    approachProgress: null,
+    approachActiveCue: null,
+    approachLegGeometry: null,
   };
 }
 
@@ -50,6 +61,10 @@ function fixPoint(fix) {
 export function createNavigationSession(navigationRoute, options = {}) {
   const mainTracker = createRouteProgressTracker(navigationRoute, options);
   const mainCues = buildRouteCues(navigationRoute);
+  const connectorThresholds = {
+    ...DEFAULT_CONNECTOR_THRESHOLDS,
+    ...(options.connectorThresholds || {}),
+  };
   const restored = options.snapshot && options.snapshot.version === 1
     ? options.snapshot
     : null;
@@ -71,6 +86,9 @@ export function createNavigationSession(navigationRoute, options = {}) {
     ? Number(restored.requestSeq)
     : 0;
   let prePauseStatus = restored?.prePauseStatus || "navigating";
+  let approachTracker = null;
+  let approachCues = [];
+  let approachCueKey = null;
 
   let state = {
     status: "idle",
@@ -93,6 +111,20 @@ export function createNavigationSession(navigationRoute, options = {}) {
     route: navigationRoute,
     cueEvent: null,
   };
+
+  if (state.approach?.ownershipTier === "guide") {
+    state = {
+      ...state,
+      approach: {
+        ...state.approach,
+        suggestionStatus: "idle",
+        approachProgress: null,
+        approachActiveCue: null,
+        approachLegGeometry: null,
+      },
+      routeRequest: null,
+    };
+  }
 
   if (restored?.tracker) {
     mainTracker.restore(restored.tracker);
@@ -154,6 +186,18 @@ export function createNavigationSession(navigationRoute, options = {}) {
     };
   }
 
+  function handoffProminence(tier) {
+    if (tier === "guide") return "hidden";
+    if (tier === "too-far") return "primary";
+    return "secondary";
+  }
+
+  function resetApproachRuntime() {
+    approachTracker = null;
+    approachCues = [];
+    approachCueKey = null;
+  }
+
   function cueFor(activeCue) {
     const key = activeCue
       ? `main:${activeCue.cue.type}:${activeCue.cue.distanceMeters}:${activeCue.phase}`
@@ -169,6 +213,74 @@ export function createNavigationSession(navigationRoute, options = {}) {
         : null;
     mainCueKey = key;
     return event;
+  }
+
+  function approachCueFor(activeCue) {
+    const key = activeCue
+      ? `approach:${activeCue.cue.type}:${activeCue.cue.distanceMeters}:${activeCue.phase}`
+      : null;
+    const event =
+      key && key !== approachCueKey
+        ? {
+            kind: "cue",
+            cueType: activeCue.cue.type,
+            phase: activeCue.phase,
+            cue: activeCue.cue,
+            leg: "approach",
+          }
+        : null;
+    approachCueKey = key;
+    return event;
+  }
+
+  function connectorResultFromAction(action) {
+    return action.connectorResult || {
+      failure: null,
+      geometry: action.geometry,
+      distanceMeters: action.distanceMeters,
+      edgeCosts: action.edgeCosts,
+      snappedEndpoints: action.snappedEndpoints,
+    };
+  }
+
+  function tooFarApproachPatch(reason = "beyond-too-far-radius") {
+    resetApproachRuntime();
+    return {
+      suggestionGeometry: null,
+      suggestionStatus: "idle",
+      suggestionDistanceMeters: null,
+      ownershipTier: "too-far",
+      handoffSuggested: true,
+      handoffProminence: handoffProminence("too-far"),
+      classificationReasons: [reason],
+      connectorFeatures: null,
+      approachProgress: null,
+      approachActiveCue: null,
+      approachLegGeometry: null,
+    };
+  }
+
+  function requestStartConnectorPatch(fix, target, choices, distanceToRouteMeters) {
+    return {
+      status: "approaching",
+      activeCue: null,
+      offRoute: false,
+      cueEvent: null,
+      justAcquired: false,
+      approach: {
+        ...state.approach,
+        choices,
+        target,
+        distanceToRouteMeters,
+        suggestionStatus: "requesting",
+        ownershipTier: "unknown",
+        handoffSuggested: true,
+        handoffProminence: handoffProminence("unknown"),
+        classificationReasons: [],
+      },
+      routeRequest: suggestionRequest(fix, target),
+      connectorResult: null,
+    };
   }
 
   function dispatch(action) {
@@ -188,6 +300,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
       case NAV_ACTIONS.PERMISSION_GRANTED:
         mainTracker.reset();
+        resetApproachRuntime();
         mainCueKey = null;
         wasOffRoute = false;
         lastConfirmedProgressMeters = 0;
@@ -223,6 +336,78 @@ export function createNavigationSession(navigationRoute, options = {}) {
           if (!target && choices) {
             target = { ...choices.start, mode: "start" };
           }
+          const distanceToRouteMeters = target
+            ? getDistance(action.fix, target.point)
+            : null;
+          if (
+            Number.isFinite(distanceToRouteMeters) &&
+            distanceToRouteMeters > connectorThresholds.tooFarRadiusMeters
+          ) {
+            return set({
+              status: "approaching",
+              progress: mainProgress,
+              activeCue: null,
+              offRoute: false,
+              cueEvent: null,
+              justAcquired: false,
+              approach: {
+                ...state.approach,
+                choices,
+                target,
+                distanceToRouteMeters,
+                ...tooFarApproachPatch("beyond-too-far-radius"),
+              },
+              routeRequest: null,
+              connectorResult: null,
+            });
+          }
+
+          if (
+            target &&
+            state.approach.ownershipTier === "guide" &&
+            approachTracker
+          ) {
+            const approachProgress = approachTracker.update(action.fix);
+            const approachActiveCue = selectActiveCue(
+              approachCues,
+              approachProgress.progressMeters,
+            );
+            return set({
+              status: "approaching",
+              progress: mainProgress,
+              activeCue: null,
+              offRoute: false,
+              cueEvent: approachCueFor(approachActiveCue),
+              justAcquired: false,
+              approach: {
+                ...state.approach,
+                choices,
+                target,
+                distanceToRouteMeters,
+                approachProgress,
+                approachActiveCue,
+              },
+              routeRequest: null,
+            });
+          }
+
+          if (
+            target &&
+            canRequestSuggestion(action.fix, {
+              allowReadyRefresh: state.approach.ownershipTier !== "guide",
+            })
+          ) {
+            return set({
+              progress: mainProgress,
+              ...requestStartConnectorPatch(
+                action.fix,
+                target,
+                choices,
+                distanceToRouteMeters,
+              ),
+            });
+          }
+
           return set({
             status: "approaching",
             progress: mainProgress,
@@ -234,14 +419,11 @@ export function createNavigationSession(navigationRoute, options = {}) {
               ...state.approach,
               choices,
               target,
-              distanceToRouteMeters: target
-                ? getDistance(action.fix, target.point)
-                : null,
-              suggestionGeometry: null,
-              suggestionStatus: "idle",
-              suggestionDistanceMeters: null,
+              distanceToRouteMeters,
             },
-            routeRequest: null,
+            routeRequest: state.approach.suggestionStatus === "requesting"
+              ? state.routeRequest
+              : null,
           });
         }
 
@@ -306,6 +488,9 @@ export function createNavigationSession(navigationRoute, options = {}) {
         lastConfirmedProgressMeters = mainProgress.progressMeters;
         const acquiredApproach =
           state.approach.target || state.approach.suggestionStatus !== "idle";
+        const joinedFromOwnedApproach =
+          state.approach.ownershipTier === "guide" ||
+          state.approach.ownershipTier === "show-leg";
         const enteredEffectiveRoute = Boolean(
           acquiredApproach ||
             (navigationRoute?.requiresStartAcquisition === true &&
@@ -313,9 +498,12 @@ export function createNavigationSession(navigationRoute, options = {}) {
         );
         if (acquiredApproach) lastRequestPos = null;
         if (acquiredApproach) connectorRequestAttempt = 0;
+        if (acquiredApproach) resetApproachRuntime();
         const activeCue = selectActiveCue(mainCues, mainProgress.progressMeters);
         const cueEvent = recoveredFromOffRoute
           ? { kind: "acquired", acquisition: "reacquired" }
+          : joinedFromOwnedApproach
+          ? { kind: "acquired", acquisition: "join-route" }
           : enteredEffectiveRoute
           ? { kind: "acquired", acquisition: "initial" }
           : cueFor(activeCue);
@@ -341,8 +529,29 @@ export function createNavigationSession(navigationRoute, options = {}) {
         ) {
           return state;
         }
-        const geometry = buildNavigationGeometry(action.geometry);
+        const connectorResult = connectorResultFromAction(action);
+        const geometry = buildNavigationGeometry(connectorResult.geometry);
         if (geometry.length < 2) {
+          if (state.routeRequest?.targetMode === "start") {
+            return set({
+              approach: {
+                ...state.approach,
+                ...tooFarApproachPatch("invalid-geometry"),
+              },
+              routeRequest: null,
+              connectorResult: {
+                requestId: action.requestId,
+                result: "failed",
+                reason: "invalid-geometry",
+                attempt: state.routeRequest?.attempt ?? null,
+                isRetry: state.routeRequest?.isRetry === true,
+                targetMode: state.routeRequest?.targetMode ?? null,
+                durationMs: Number.isFinite(Number(action.durationMs))
+                  ? Number(action.durationMs)
+                  : null,
+              },
+            });
+          }
           return set({
             approach: failedSuggestionPatch(),
             routeRequest: null,
@@ -359,7 +568,86 @@ export function createNavigationSession(navigationRoute, options = {}) {
             },
           });
         }
-        const distanceMeters = Number(action.distanceMeters);
+        const distanceMeters = Number(connectorResult.distanceMeters);
+        if (state.routeRequest?.targetMode === "start") {
+          const features = computeConnectorFeatures(connectorResult, {
+            origin: state.routeRequest.from,
+            routeStart: state.routeRequest.to,
+          });
+          let classification = classifyConnector(features, connectorThresholds);
+          let approachLeg = null;
+          if (classification.tier === "guide") {
+            approachLeg = buildApproachLeg(connectorResult, {
+              id: `${navigationRoute?.id || "route"}:approach:${action.requestId}`,
+              target: state.approach.target?.point || state.routeRequest.to,
+            });
+            if (!approachLeg) {
+              classification = {
+                tier: "too-far",
+                handoffSuggested: true,
+                reasons: ["invalid-geometry"],
+              };
+            }
+          }
+
+          let approachProgress = null;
+          let approachActiveCue = null;
+          if (classification.tier === "guide" && approachLeg) {
+            approachTracker = createRouteProgressTracker(approachLeg.route, options);
+            approachCues = buildRouteCues(approachLeg.route);
+            approachCueKey = null;
+            if (state.latestFix) {
+              approachProgress = approachTracker.update(state.latestFix);
+              approachActiveCue = selectActiveCue(
+                approachCues,
+                approachProgress.progressMeters,
+              );
+            }
+          } else {
+            resetApproachRuntime();
+          }
+
+          const tier = classification.tier;
+          const showConnectorLeg = tier === "guide" || tier === "show-leg";
+          const legGeometry = approachLeg?.geometry || geometry;
+          return set({
+            approach: {
+              ...state.approach,
+              suggestionStatus: showConnectorLeg ? "ready" : "idle",
+              suggestionGeometry: showConnectorLeg ? legGeometry : null,
+              suggestionDistanceMeters:
+                Number.isFinite(distanceMeters) && distanceMeters > 0
+                  ? distanceMeters
+                  : null,
+              ownershipTier: tier,
+              handoffSuggested: classification.handoffSuggested,
+              handoffProminence: handoffProminence(tier),
+              classificationReasons: classification.reasons,
+              connectorFeatures: features,
+              approachProgress,
+              approachActiveCue,
+              approachLegGeometry: tier === "guide" ? legGeometry : null,
+            },
+            routeRequest: null,
+            connectorResult: {
+              requestId: action.requestId,
+              result: "ready",
+              reason: null,
+              attempt: state.routeRequest?.attempt ?? null,
+              isRetry: state.routeRequest?.isRetry === true,
+              targetMode: state.routeRequest?.targetMode ?? null,
+              durationMs: Number.isFinite(Number(action.durationMs))
+                ? Number(action.durationMs)
+                : null,
+              distanceMeters:
+                Number.isFinite(distanceMeters) && distanceMeters > 0
+                  ? distanceMeters
+                  : null,
+              ownershipTier: tier,
+              classificationReasons: classification.reasons,
+            },
+          });
+        }
         return set({
           approach: {
             ...state.approach,
@@ -396,6 +684,26 @@ export function createNavigationSession(navigationRoute, options = {}) {
           action.requestId !== state.routeRequest?.requestId
         ) {
           return state;
+        }
+        if (state.routeRequest?.targetMode === "start") {
+          return set({
+            approach: {
+              ...state.approach,
+              ...tooFarApproachPatch(action.reason || "connector-failed"),
+            },
+            routeRequest: null,
+            connectorResult: {
+              requestId: action.requestId,
+              result: "failed",
+              reason: action.reason || "unknown",
+              attempt: state.routeRequest?.attempt ?? null,
+              isRetry: state.routeRequest?.isRetry === true,
+              targetMode: state.routeRequest?.targetMode ?? null,
+              durationMs: Number.isFinite(Number(action.durationMs))
+                ? Number(action.durationMs)
+                : null,
+            },
+          });
         }
         return set({
           approach: failedSuggestionPatch(),
@@ -436,6 +744,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
       case NAV_ACTIONS.STOP:
         requestSeq += 1;
+        resetApproachRuntime();
         lastRequestPos = null;
         connectorRequestAttempt = 0;
         return set({
@@ -448,6 +757,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
       case NAV_ACTIONS.ERROR:
         requestSeq += 1;
+        resetApproachRuntime();
         lastRequestPos = null;
         connectorRequestAttempt = 0;
         return set({

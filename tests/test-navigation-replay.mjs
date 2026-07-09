@@ -161,7 +161,7 @@ import { fileURLToPath } from "node:url";
   assert.ok(last.progress.fraction > 0.9, "synth: ride completes");
 }
 
-// --- approach replay: beeline-only waiting, then physical acquisition ------
+// --- approach replay: connector ownership, then physical acquisition -------
 {
   const route = straightRoute();
   const fixes = [
@@ -174,12 +174,12 @@ import { fileURLToPath } from "node:url";
     connectorRouter: (request) => ({ geometry: [request.from, request.to] }),
   });
   assert.ok(
-    timeline.every((entry) => entry.routeRequest === null),
-    "pre-route approach does not issue connector requests",
+    timeline.some((entry) => entry.routeRequest?.targetMode === "start"),
+    "pre-route approach issues a start connector request",
   );
   assert.ok(
-    timeline.every((entry) => entry.approach.suggestionStatus !== "ready"),
-    "pre-route approach never records a ready suggestion",
+    timeline.some((entry) => entry.approach.suggestionStatus === "ready"),
+    "pre-route approach records a ready connector suggestion",
   );
   assert.ok(
     timeline.every((entry) => entry.status !== "on-connector"),

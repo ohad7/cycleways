@@ -321,6 +321,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
         dispatch({
           type: NAV_ACTIONS.CONNECTOR_READY,
           requestId: request.requestId,
+          connectorResult: result,
           geometry: result?.geometry,
           distanceMeters: result?.distanceMeters,
           snappedEndpoints: result?.snappedEndpoints,

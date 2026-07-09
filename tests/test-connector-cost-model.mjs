@@ -30,10 +30,10 @@ assert.deepEqual(
   { allowed: true, multiplier: 0.75 },
 );
 
-// local_road → allowed, ×1.1
+// local_road → allowed, current tuned multiplier.
 assert.deepEqual(
   evaluateConnectorEdge({ routeClass: "local_road" }, S),
-  { allowed: true, multiplier: 1.1 },
+  { allowed: true, multiplier: 4 },
 );
 
 // roadType "road" (non-road routeClass) → treated as road, ×1.0

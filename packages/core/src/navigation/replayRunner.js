@@ -44,14 +44,16 @@ export function replaySession(navigationRoute, fixes, options = {}) {
         reason: result.failure,
       });
     } else if (Array.isArray(result?.geometry)) {
+      const distanceMeters =
+        Number.isFinite(Number(result.distanceMeters)) && Number(result.distanceMeters) > 0
+          ? Number(result.distanceMeters)
+          : geometryDistance(result.geometry);
       session.dispatch({
         type: NAV_ACTIONS.CONNECTOR_READY,
         requestId: request.requestId,
+        connectorResult: { ...result, distanceMeters },
         geometry: result.geometry,
-        distanceMeters:
-          Number.isFinite(Number(result.distanceMeters)) && Number(result.distanceMeters) > 0
-            ? Number(result.distanceMeters)
-            : geometryDistance(result.geometry),
+        distanceMeters,
         snappedEndpoints: result.snappedEndpoints || [],
       });
     }

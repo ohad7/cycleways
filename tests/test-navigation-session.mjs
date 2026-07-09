@@ -209,11 +209,11 @@ const fix = (lng, timestamp, extra = {}) => ({
   assert.equal(far.cueEvent, null, "no cue events while approaching");
   assert.equal(
     far.approach.suggestionStatus,
-    "idle",
-    "pre-route approach never requests a connector suggestion",
+    "requesting",
+    "pre-route approach requests a connector suggestion",
   );
   assert.equal(far.approach.suggestionGeometry, null);
-  assert.equal(far.routeRequest, null, "no connector request while approaching");
+  assert.equal(far.routeRequest?.targetMode, "start", "approach request targets the start");
   const near = session.dispatch({
     type: NAV_ACTIONS.LOCATION,
     fix: { lat: 33.1, lng: 35.6, accuracy: 8, speed: 4, timestamp: 4000 },
@@ -222,6 +222,141 @@ const fix = (lng, timestamp, extra = {}) => ({
   assert.equal(near.justAcquired, true, "approach handoff is explicit for one render");
   assert.equal(near.cueEvent?.kind, "acquired");
   assert.equal(near.cueEvent?.acquisition, "initial");
+}
+
+function approachRequestedSession(fixOverride = {}) {
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  const requested = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: {
+      lat: 33.101,
+      lng: 35.6,
+      accuracy: 5,
+      speed: 3,
+      timestamp: 1000,
+      ...fixOverride,
+    },
+  });
+  assert.equal(requested.status, "approaching");
+  assert.equal(requested.routeRequest?.targetMode, "start");
+  return { session, requested };
+}
+
+function connectorResult(points, distanceMeters = null, routeClass = "road") {
+  return {
+    failure: null,
+    geometry: points,
+    distanceMeters,
+    edgeCosts: [
+      {
+        routeClass,
+        roadType: routeClass === "road" ? "road" : null,
+        cyclewaysSegmentIds: [],
+        distanceMeters: distanceMeters ?? 100,
+      },
+    ],
+  };
+}
+
+// --- pre-route too-far short-circuits connector ownership ------------------
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  const far = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.3, lng: 35.6, accuracy: 5, speed: 3, timestamp: 1000 },
+  });
+  assert.equal(far.status, "approaching");
+  assert.equal(far.approach.ownershipTier, "too-far");
+  assert.equal(far.approach.handoffProminence, "primary");
+  assert.equal(far.routeRequest, null);
+}
+
+// --- guide tier: connector leg is narrated until seam acquisition ----------
+{
+  const { session, requested } = approachRequestedSession();
+  const request = requested.routeRequest;
+  const ready = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: request.requestId,
+    connectorResult: connectorResult(
+      [
+        request.from,
+        { lat: 33.101, lng: 35.6005 },
+        { lat: 33.1, lng: 35.6005 },
+        request.to,
+      ],
+      205,
+    ),
+  });
+  assert.equal(ready.approach.ownershipTier, "guide");
+  assert.equal(ready.approach.handoffProminence, "hidden");
+  assert.equal(ready.approach.suggestionStatus, "ready");
+  assert.ok(ready.approach.approachLegGeometry.length >= 2);
+  assert.ok(ready.approach.connectorFeatures.snapOk);
+
+  const cue = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.101, lng: 35.6, accuracy: 5, speed: 3, timestamp: 2000 },
+  });
+  assert.equal(cue.status, "approaching");
+  assert.equal(cue.approach.approachActiveCue?.cue.type, "turn");
+  assert.equal(cue.cueEvent?.kind, "cue");
+  assert.equal(cue.cueEvent?.leg, "approach");
+
+  const joined = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6, accuracy: 5, speed: 3, timestamp: 3000 },
+  });
+  assert.equal(joined.status, "navigating");
+  assert.equal(joined.cueEvent?.kind, "acquired");
+  assert.equal(joined.cueEvent?.acquisition, "join-route");
+  assert.equal(joined.approach.target, null);
+}
+
+// --- show-leg tier: connector is visual-only -------------------------------
+{
+  const { session, requested } = approachRequestedSession();
+  const request = requested.routeRequest;
+  const ready = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: request.requestId,
+    connectorResult: connectorResult([request.from, request.to], 500, "path_track"),
+  });
+  assert.equal(ready.approach.ownershipTier, "show-leg");
+  assert.equal(ready.approach.handoffProminence, "secondary");
+  assert.equal(ready.approach.suggestionStatus, "ready");
+  assert.equal(ready.approach.approachActiveCue, null);
+  assert.ok(ready.approach.classificationReasons.includes("class-too-low"));
+  const later = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1008, lng: 35.6, accuracy: 5, speed: 3, timestamp: 2000 },
+  });
+  assert.equal(later.cueEvent, null, "show-leg approach does not narrate connector cues");
+  assert.equal(later.routeRequest, null, "small movement does not refresh show-leg");
+  const refreshed = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.103, lng: 35.6, accuracy: 5, speed: 3, timestamp: 4000 },
+  });
+  assert.equal(refreshed.approach.suggestionStatus, "requesting");
+  assert.ok(refreshed.routeRequest.requestId > request.requestId);
+}
+
+// --- start connector failure becomes too-far / handoff-primary -------------
+{
+  const { session, requested } = approachRequestedSession();
+  const failed = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_FAILED,
+    requestId: requested.routeRequest.requestId,
+    reason: "no-path",
+  });
+  assert.equal(failed.status, "approaching");
+  assert.equal(failed.approach.ownershipTier, "too-far");
+  assert.equal(failed.approach.handoffProminence, "primary");
+  assert.equal(failed.approach.suggestionGeometry, null);
 }
 
 function offRouteRequestedSession() {

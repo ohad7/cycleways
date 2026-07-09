@@ -20,22 +20,42 @@ export default function ApproachPanel({
     Number.isFinite(p.approachBearingDeg) && Number.isFinite(compassHeading)
       ? ((p.approachBearingDeg - compassHeading) % 360 + 360) % 360
       : p.guidanceArrowDeg;
+  const showExternal = p.handoffProminence !== "hidden";
 
   return (
     <View style={styles.root} pointerEvents="box-none">
       <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
         <Text style={styles.heading}>{p.approachHeading}</Text>
-        <View style={styles.pointerRow}>
-          {Number.isFinite(arrowDeg) ? (
-            <View style={{ transform: [{ rotate: `${arrowDeg}deg` }] }}>
-              <Icon name="navigate" color={palette.forest} size={26} />
+        {p.showApproachCue ? (
+          <View style={styles.pointerRow}>
+            <Icon name={p.approachCueIcon} color={palette.forest} size={28} />
+            <View style={styles.cueTextWrap}>
+              <Text style={styles.pointerText} numberOfLines={1}>
+                {p.approachCuePrimaryText || p.approachCueText}
+              </Text>
+              {p.approachCueSecondaryText ? (
+                <Text style={styles.support} numberOfLines={1}>
+                  {p.approachCueSecondaryText}
+                </Text>
+              ) : null}
             </View>
-          ) : null}
-          <Text style={styles.pointerText} numberOfLines={1}>
-            {p.destinationLabel}
-            {p.approachDistanceShort ? ` · ${p.approachDistanceShort}` : ""}
-          </Text>
-        </View>
+            {p.approachCueDistanceText ? (
+              <Text style={styles.cueDistance}>{p.approachCueDistanceText}</Text>
+            ) : null}
+          </View>
+        ) : (
+          <View style={styles.pointerRow}>
+            {Number.isFinite(arrowDeg) ? (
+              <View style={{ transform: [{ rotate: `${arrowDeg}deg` }] }}>
+                <Icon name="navigate" color={palette.forest} size={26} />
+              </View>
+            ) : null}
+            <Text style={styles.pointerText} numberOfLines={1}>
+              {p.destinationLabel}
+              {p.approachDistanceShort ? ` · ${p.approachDistanceShort}` : ""}
+            </Text>
+          </View>
+        )}
         {p.approachSupportText ? (
           <Text style={styles.support}>{p.approachSupportText}</Text>
         ) : null}
@@ -48,11 +68,14 @@ export default function ApproachPanel({
       ) : null}
 
       <View style={[styles.controls, { marginBottom: insets.bottom + space.md }]}>
-        <ActionButton
-          icon="open-outline"
-          label="אפליקציית ניווט"
-          onPress={onOpenExternal}
-        />
+        {showExternal ? (
+          <ActionButton
+            icon="open-outline"
+            label="אפליקציית ניווט"
+            onPress={onOpenExternal}
+            primary={p.handoffProminence === "primary"}
+          />
+        ) : null}
         <ActionButton
           icon="options-outline"
           label="הגדרות רכיבה"
@@ -64,7 +87,7 @@ export default function ApproachPanel({
   );
 }
 
-function ActionButton({ icon, label, onPress, danger = false }) {
+function ActionButton({ icon, label, onPress, danger = false, primary = false }) {
   return (
     <View style={styles.actionWrap}>
       <Pressable
@@ -73,11 +96,16 @@ function ActionButton({ icon, label, onPress, danger = false }) {
         onPress={onPress}
         style={({ pressed }) => [
           styles.actionBtn,
+          primary ? styles.actionBtnPrimary : null,
           danger ? styles.actionBtnDanger : null,
           pressed ? styles.pressed : null,
         ]}
       >
-        <Icon name={icon} color={danger ? palette.white : palette.ink} size={22} />
+        <Icon
+          name={icon}
+          color={danger || primary ? palette.white : palette.ink}
+          size={22}
+        />
       </Pressable>
       <Text style={styles.actionLabel} numberOfLines={1}>
         {label}
@@ -128,6 +156,12 @@ const styles = StyleSheet.create({
     textAlign: "right",
     flex: 1,
   },
+  cueTextWrap: { flex: 1 },
+  cueDistance: {
+    ...text.navTitle,
+    color: palette.forest,
+    writingDirection: "rtl",
+  },
   support: {
     ...text.navCaption,
     color: palette.muted,
@@ -156,6 +190,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  actionBtnPrimary: { backgroundColor: palette.forest },
   actionBtnDanger: { backgroundColor: palette.danger },
   actionLabel: {
     ...text.navCaption,

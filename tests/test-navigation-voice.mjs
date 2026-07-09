@@ -51,7 +51,7 @@ assert.equal(formatSpeechDistanceMeters(1250), "1.3 קילומטר");
   const planner = createNavigationVoicePlanner();
   const offRoute = planner.plan({ kind: "off-route" }, {}, 1000).utterance;
   assert.ok(offRoute);
-  assert.equal(offRoute.text, "יצאת מהמסלול");
+  assert.equal(offRoute.text, "יָצָאתָ מֵהַמַּסְלוּל.");
   assert.equal(offRoute.interruptsCurrentSpeech, true);
 
   const snapshot = planner.snapshot();
@@ -80,7 +80,37 @@ assert.equal(formatSpeechDistanceMeters(1250), "1.3 קילומטר");
     1000,
   ).utterance;
   assert.ok(acquired, "initial acquired speaks");
-  assert.equal(acquired.text, "הכל מוכן, יוצאים לדרך. רכבו בזהירות");
+  assert.equal(acquired.text, "הַכֹּל מוּכָן, יוֹצְאִים לַדֶּרֶךְ. רִכְבוּ בִּזְהִירוּת");
+}
+
+{
+  const planner = createNavigationVoicePlanner();
+  const approachTurn = {
+    kind: "cue",
+    cueType: "turn",
+    phase: "preview",
+    leg: "approach",
+    cue: { type: "turn", direction: "left", distanceMeters: 80 },
+  };
+  const approach = planner.plan(
+    approachTurn,
+    { approach: { approachActiveCue: { distanceToCueMeters: 76, cue: approachTurn.cue } } },
+    1000,
+  ).utterance;
+  assert.ok(approach, "approach cue speaks");
+  assert.match(approach.text, /בעוד 80 מטר/);
+  assert.match(approach.text, /פנה שמאלה/);
+}
+
+{
+  const planner = createNavigationVoicePlanner();
+  const joined = planner.plan(
+    { kind: "acquired", acquisition: "join-route" },
+    {},
+    1000,
+  ).utterance;
+  assert.ok(joined, "join-route acquired speaks");
+  assert.equal(joined.text, "הגעת למסלול, הניווט במסלול מתחיל");
 }
 
 {

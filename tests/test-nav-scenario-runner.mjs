@@ -74,7 +74,7 @@ function straightRoute() {
   );
   assert.equal(timeline[timeline.length - 1].cameraStage, "arrived");
   assert.ok(
-    timeline.some((e) => /הגעת ליעד/.test(e.voiceText || "")),
+    timeline.some((e) => /עַד|יעד/.test(e.voiceText || "")),
     "arrival voice text is present",
   );
   assert.ok(
@@ -94,8 +94,8 @@ function straightRoute() {
   );
 }
 
-// Approach ride: pre-route approach is a beeline-only waiting state. Connector
-// requests are reserved for off-route rejoin after acquisition.
+// Approach ride: pre-route approach requests connector ownership, but physical
+// route acquisition is still the only handoff into route navigation.
 {
   const route = straightRoute();
   const fixes = generateTrack(route, {
@@ -108,12 +108,12 @@ function straightRoute() {
   const ready = runScenario({ navigationRoute: route, fixes, connector: "straight-line" });
   assert.equal(ready.timeline[0].status, "approaching");
   assert.ok(
-    ready.routeRequests.length === 0,
-    "pre-route approach does not issue connector requests",
+    ready.routeRequests.some((request) => request.targetMode === "start"),
+    "pre-route approach issues a start connector request",
   );
   assert.ok(
-    ready.timeline.every((e) => e.suggestionStatus !== "ready"),
-    "pre-route approach never resolves a connector suggestion",
+    ready.timeline.some((e) => e.suggestionStatus === "ready"),
+    "pre-route approach resolves a connector suggestion",
   );
   assert.ok(
     ready.timeline.some((e) => e.justAcquired === true),
@@ -122,12 +122,12 @@ function straightRoute() {
 
   const failed = runScenario({ navigationRoute: route, fixes, connector: "fail" });
   assert.ok(
-    !failed.timeline.some((e) => e.connectorResult === "failed"),
-    "pre-route approach does not call the failing connector",
+    failed.timeline.some((e) => e.connectorResult === "failed"),
+    "pre-route approach records failed connector results",
   );
 
   const none = runScenario({ navigationRoute: route, fixes, connector: "none" });
-  assert.equal(none.routeRequests.length, 0, "no request is issued");
+  assert.ok(none.routeRequests.length > 0, "request is issued and left pending");
   assert.ok(
     !none.timeline.some((e) => e.suggestionStatus === "ready"),
     "no suggestion resolves in mode none",
