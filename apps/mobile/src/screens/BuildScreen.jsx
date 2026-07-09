@@ -712,6 +712,17 @@ export default function BuildScreen({ navigation, route }) {
       point,
       status: current.following ? "following" : "located",
     }));
+    if (introFlowActiveRef.current && !isNavigatingRef.current) {
+      setRideSetupFix((current) => ({
+        ...(current || {}),
+        lat: point.lat,
+        lng: point.lng,
+        timestamp: Date.now(),
+      }));
+      setRideSetupLocationStatus((current) =>
+        current === "loading" ? "ready" : current,
+      );
+    }
   }, []);
 
   const handleLocatePress = useCallback(() => {
@@ -811,6 +822,12 @@ export default function BuildScreen({ navigation, route }) {
   const [rideSetupFix, setRideSetupFix] = useState(null);
   const [rideSetupNow, setRideSetupNow] = useState(Date.now());
   const [rideSetupLocationStatus, setRideSetupLocationStatus] = useState("idle");
+  const [rideSetupConnector, setRideSetupConnector] = useState({
+    key: "",
+    status: "idle",
+    geometry: [],
+    distanceMeters: null,
+  });
   const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
   const [lockScreenGuidanceEnabled, setLockScreenGuidanceEnabled] = useState(true);
   const [lockScreenGuidanceHasAlwaysPermission, setLockScreenGuidanceHasAlwaysPermission] =
@@ -837,6 +854,72 @@ export default function BuildScreen({ navigation, route }) {
     [sourceNavigationRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
   );
 
+  useEffect(() => {
+    if (!rideIntroVisible || !ridePlan?.selectedPoint || !validMapPoint(rideSetupFix)) {
+      setRideSetupConnector((current) =>
+        current.status === "idle" && current.geometry.length === 0
+          ? current
+          : { key: "", status: "idle", geometry: [], distanceMeters: null },
+      );
+      return undefined;
+    }
+
+    const origin = {
+      lat: Number(rideSetupFix.lat),
+      lng: Number(rideSetupFix.lng),
+    };
+    const target = {
+      lat: Number(ridePlan.selectedPoint.lat),
+      lng: Number(ridePlan.selectedPoint.lng),
+    };
+    const key = [
+      origin.lat.toFixed(4),
+      origin.lng.toFixed(4),
+      target.lat.toFixed(5),
+      target.lng.toFixed(5),
+    ].join(":");
+
+    setRideSetupConnector((current) =>
+      current.key === key && current.status === "ready"
+        ? current
+        : { key, status: "loading", geometry: [], distanceMeters: null },
+    );
+
+    let cancelled = false;
+    Promise.resolve(computeConnector(origin, target))
+      .then((result) => {
+        if (cancelled) return;
+        const geometry = Array.isArray(result?.geometry) ? result.geometry : [];
+        setRideSetupConnector({
+          key,
+          status: geometry.length >= 2 && !result?.failure ? "ready" : "unavailable",
+          geometry: geometry.length >= 2 && !result?.failure ? geometry : [],
+          distanceMeters: Number.isFinite(Number(result?.distanceMeters))
+            ? Number(result.distanceMeters)
+            : null,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setRideSetupConnector({
+          key,
+          status: "unavailable",
+          geometry: [],
+          distanceMeters: null,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    computeConnector,
+    rideIntroVisible,
+    ridePlan?.selectedPoint,
+    rideSetupFix?.lat,
+    rideSetupFix?.lng,
+  ]);
+
   const navigationRoute =
     (__DEV__ && devScenarioRoute) ||
     confirmedRidePlan?.effectiveRoute ||
@@ -850,6 +933,14 @@ export default function BuildScreen({ navigation, route }) {
     if (setupRequestRef.current !== requestId) return;
     setRideSetupNow(Date.now());
     setRideSetupFix(result.fix || null);
+    if (validMapPoint(result.fix)) {
+      setLocationState((current) => ({
+        ...current,
+        enabled: true,
+        point: { lat: Number(result.fix.lat), lng: Number(result.fix.lng) },
+        status: current.following ? "following" : "located",
+      }));
+    }
     setRideSetupLocationStatus(result.status);
   }, []);
 
@@ -1006,6 +1097,10 @@ export default function BuildScreen({ navigation, route }) {
     () => buildRouteGeometryFeatureCollection(ridePlan?.effectiveRoute?.geometry),
     [ridePlan?.effectiveRoute?.geometry],
   );
+  const setupConnectorGeometry = useMemo(
+    () => buildRouteGeometryFeatureCollection(rideSetupConnector.geometry),
+    [rideSetupConnector.geometry],
+  );
   const displayedRouteGeometry = isNavigating ? activeRouteGeometry : routeGeometry;
   const rideIntroFitBottomPadding =
     rideIntroCardHeight > 0
@@ -1144,10 +1239,6 @@ export default function BuildScreen({ navigation, route }) {
     setRideSettingsVisible(true);
     trackNavigationEvent("ride_settings_opened", { origin: "intro" });
   }, []);
-
-  const handleIntroExternalNav = useCallback(() => {
-    openExternalHandoff(ridePlan, "intro");
-  }, [openExternalHandoff, ridePlan]);
 
   const handleIntroClose = useCallback(() => {
     setRideIntroVisible(false);
@@ -2415,6 +2506,14 @@ export default function BuildScreen({ navigation, route }) {
             <LineLayer id="ride-setup-preview-line" style={SETUP_PREVIEW_LINE_STYLE} />
           </ShapeSource>
         ) : null}
+        {rideIntroVisible && rideSetupConnector.status === "ready" ? (
+          <ShapeSource id="ride-setup-connector" shape={setupConnectorGeometry}>
+            <LineLayer
+              id="ride-setup-connector-line"
+              style={APPROACH_GUIDE_LINE_STYLE}
+            />
+          </ShapeSource>
+        ) : null}
         {startMarkerPoint ? (
           <MarkerView
             coordinate={[startMarkerPoint.lng, startMarkerPoint.lat]}
@@ -2776,7 +2875,6 @@ export default function BuildScreen({ navigation, route }) {
         plan={ridePlan}
         locationStatus={rideSetupLocationStatus}
         onConfirm={handleIntroConfirm}
-        onOpenExternal={handleIntroExternalNav}
         onOpenSettings={handleIntroOpenSettings}
         onRefreshLocation={refreshRideSetupLocation}
         onClose={handleIntroClose}

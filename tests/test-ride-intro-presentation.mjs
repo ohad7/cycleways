@@ -20,13 +20,13 @@ import {
     "ready",
   );
   assert.equal(p.headline, "תחילת המסלול במרחק 12.0 ק״מ");
-  assert.equal(p.expectationText, "הניווט במסלול יתחיל כשתגיע לנקודת ההתחלה.");
-  assert.equal(p.primaryLabel, "צא לדרך");
+  assert.equal(p.expectationText, "נכוון אותך לנקודת ההתחלה ומשם נמשיך במסלול.");
+  assert.equal(p.primaryLabel, "התחל הכוונה");
   assert.equal(p.primaryEnabled, true);
   assert.equal(p.atStart, false);
-  assert.equal(p.showExternalNav, true);
+  assert.equal(p.showExternalNav, false);
   assert.equal(p.nearestHintText, "");
-  assert.equal(p.rideLengthText, "אורך המסלול: 24.6 ק״מ");
+  assert.equal(p.rideLengthText, "");
   assert.equal(p.skipNoteText, "");
   assert.equal(p.directionNoteText, "");
 }
@@ -47,7 +47,7 @@ import {
   );
   assert.equal(p.headline, "אתה בנקודת ההתחלה");
   assert.equal(p.expectationText, "");
-  assert.equal(p.primaryLabel, "התחל ניווט במסלול");
+  assert.equal(p.primaryLabel, "התחל ניווט");
   assert.equal(p.atStart, true);
   assert.equal(p.showExternalNav, false);
 }
@@ -75,7 +75,7 @@ import {
   assert.equal(p.headline, "לא הצלחנו לקבל מיקום עדכני");
   assert.equal(p.showRetry, true);
   assert.equal(p.primaryEnabled, true);
-  assert.equal(p.showExternalNav, true);
+  assert.equal(p.showExternalNav, false);
 }
 
 {
@@ -89,10 +89,7 @@ import {
     guidedDistanceMeters: 24600,
     candidates: { nearestIsMeaningful: true },
   };
-  assert.equal(
-    getRideIntroPresentation(base, "ready").nearestHintText,
-    "אתה קרוב לנקודה על המסלול — אפשר להתחיל ממנה בהגדרות רכיבה.",
-  );
+  assert.equal(getRideIntroPresentation(base, "ready").nearestHintText, "");
   assert.equal(
     getRideIntroPresentation({ ...base, locationQuality: "stale" }, "ready")
       .nearestHintText,

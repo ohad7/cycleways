@@ -46,24 +46,17 @@ export function getRideIntroPresentation(plan, locationStatus = "idle") {
       : locationStatus === "loading"
         ? "מאתר את המיקום שלך…"
         : "לא הצלחנו לקבל מיקום עדכני";
-  const guided = Number(plan?.guidedDistanceMeters);
   const skipped = Number(plan?.skippedMeters);
   return {
     headline,
     expectationText: atStart
       ? ""
-      : "הניווט במסלול יתחיל כשתגיע לנקודת ההתחלה.",
-    primaryLabel: atStart ? "התחל ניווט במסלול" : "צא לדרך",
+      : "נכוון אותך לנקודת ההתחלה ומשם נמשיך במסלול.",
+    primaryLabel: atStart ? "התחל ניווט" : "התחל הכוונה",
     primaryEnabled: Boolean(plan) && locationStatus !== "loading",
     atStart,
-    showExternalNav: Boolean(plan) && !atStart,
-    nearestHintText:
-      !atStart &&
-      plan?.locationQuality === "fresh" &&
-      plan?.startMode === "official" &&
-      plan?.candidates?.nearestIsMeaningful
-        ? "אתה קרוב לנקודה על המסלול — אפשר להתחיל ממנה בהגדרות רכיבה."
-        : "",
+    showExternalNav: false,
+    nearestHintText: "",
     noticeText: rideSetupLocationNotice(locationStatus, plan?.locationQuality),
     showRetry:
       locationStatus === "denied" ||
@@ -71,9 +64,7 @@ export function getRideIntroPresentation(plan, locationStatus = "idle") {
       plan?.locationQuality === "stale" ||
       plan?.locationQuality === "inaccurate" ||
       plan?.locationQuality === "unavailable",
-    rideLengthText: Number.isFinite(guided)
-      ? `אורך המסלול: ${formatDistanceMeters(guided)}`
-      : "",
+    rideLengthText: "",
     skipNoteText:
       Number.isFinite(skipped) && skipped > 50
         ? `ההתחלה שבחרת מדלגת על ${formatDistanceMeters(skipped)}`

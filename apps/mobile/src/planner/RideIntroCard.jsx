@@ -10,7 +10,6 @@ export default function RideIntroCard({
   plan,
   locationStatus,
   onConfirm,
-  onOpenExternal,
   onOpenSettings,
   onRefreshLocation,
   onClose,
@@ -44,17 +43,11 @@ export default function RideIntroCard({
         {intro.expectationText ? (
           <Text style={styles.expectation}>{intro.expectationText}</Text>
         ) : null}
-        {intro.rideLengthText ? (
-          <Text style={styles.meta}>{intro.rideLengthText}</Text>
-        ) : null}
         {intro.skipNoteText ? (
           <Text style={styles.warning}>{intro.skipNoteText}</Text>
         ) : null}
         {intro.directionNoteText ? (
           <Text style={styles.meta}>{intro.directionNoteText}</Text>
-        ) : null}
-        {intro.nearestHintText ? (
-          <Text style={styles.hint}>{intro.nearestHintText}</Text>
         ) : null}
         {showNotice ? (
           <View style={styles.noticeRow}>
@@ -67,34 +60,7 @@ export default function RideIntroCard({
           </View>
         ) : null}
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={!intro.primaryEnabled}
-          onPress={onConfirm}
-          style={({ pressed }) => [
-            styles.primary,
-            !intro.primaryEnabled ? styles.primaryDisabled : null,
-            pressed ? styles.pressed : null,
-          ]}
-        >
-          <Text style={styles.primaryText}>{intro.primaryLabel}</Text>
-        </Pressable>
-
-        <View style={styles.secondaryRow}>
-          {intro.showExternalNav ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="ניווט לנקודת ההתחלה באפליקציית ניווט"
-              onPress={onOpenExternal}
-              style={({ pressed }) => [
-                styles.secondary,
-                pressed ? styles.pressed : null,
-              ]}
-            >
-              <Icon name="open-outline" color={palette.forest} size={17} />
-              <Text style={styles.secondaryText}>אפליקציית ניווט</Text>
-            </Pressable>
-          ) : null}
+        <View style={styles.actionRow}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="הגדרות רכיבה"
@@ -105,12 +71,21 @@ export default function RideIntroCard({
             ]}
           >
             <Icon name="options-outline" color={palette.forest} size={17} />
-            <Text style={styles.secondaryText}>הגדרות רכיבה</Text>
+            <Text style={styles.secondaryText}>אפשרויות</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            disabled={!intro.primaryEnabled}
+            onPress={onConfirm}
+            style={({ pressed }) => [
+              styles.primary,
+              !intro.primaryEnabled ? styles.primaryDisabled : null,
+              pressed ? styles.pressed : null,
+            ]}
+          >
+            <Text style={styles.primaryText}>{intro.primaryLabel}</Text>
           </Pressable>
         </View>
-        <Text style={styles.safety}>
-          ההנחיות הן עזר לתכנון בלבד. רכבו בזהירות וצייתו לתמרורים ולתנאי הדרך.
-        </Text>
       </View>
     </View>
   );
@@ -129,7 +104,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: palette.paper,
     borderRadius: radius.lg,
-    padding: space.lg,
+    padding: space.md,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -169,13 +144,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  hint: {
-    ...text.caption,
-    color: palette.forest,
-    marginTop: space.xs,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
   noticeRow: {
     flexDirection: "row-reverse",
     gap: space.sm,
@@ -194,12 +162,12 @@ const styles = StyleSheet.create({
   },
   retry: { ...text.captionStrong, color: palette.forest },
   primary: {
-    minHeight: 50,
+    flex: 1,
+    minHeight: 46,
     borderRadius: radius.md,
     backgroundColor: palette.forest,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: space.md,
   },
   primaryDisabled: { opacity: 0.45 },
   primaryText: {
@@ -207,33 +175,29 @@ const styles = StyleSheet.create({
     color: palette.white,
     writingDirection: "rtl",
   },
-  secondaryRow: {
+  actionRow: {
     flexDirection: "row-reverse",
-    flexWrap: "wrap",
     gap: space.sm,
-    marginTop: space.sm,
+    alignItems: "stretch",
+    marginTop: space.md,
   },
   secondary: {
     flexDirection: "row-reverse",
     alignItems: "center",
+    justifyContent: "center",
     gap: space.xs,
     paddingVertical: space.xs,
-    paddingHorizontal: space.md,
+    paddingHorizontal: space.sm,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: palette.forest,
     backgroundColor: palette.white,
+    minHeight: 46,
+    minWidth: 104,
   },
   secondaryText: {
     ...text.navBody,
     color: palette.forest,
-    writingDirection: "rtl",
-  },
-  safety: {
-    ...text.caption,
-    color: palette.muted,
-    marginTop: space.md,
-    textAlign: "right",
     writingDirection: "rtl",
   },
   pressed: { opacity: 0.72 },
