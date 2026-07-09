@@ -1,7 +1,7 @@
 // Pure navigation-session controller. Native code supplies location fixes and
-// performs best-effort connector route requests; the session keeps the main
-// route's acquisition logic and offers the connector only as a non-narrated
-// off-route rejoin suggestion. Pre-route approach is a beeline pointer only.
+// performs best-effort connector route requests. The main route remains the
+// acquisition authority; a confident pre-route connector can be a temporary
+// narrated approach leg, while weaker connectors stay visual-only or hand off.
 // Acquiring the main route is the only handoff into `navigating`.
 
 import { getDistance } from "../utils/distance.js";
@@ -327,9 +327,9 @@ export function createNavigationSession(navigationRoute, options = {}) {
         }
         const mainProgress = mainTracker.update(action.fix);
 
-        // Not yet on the route: stay in `approaching` with a live straight-line
-        // distance to the chosen target. The pre-route approach is a beeline
-        // pointer only; connector suggestions are rejoin-only.
+        // Not yet on the route: stay in `approaching` with a live distance to
+        // the chosen target. The connector classifier decides whether this is
+        // app-guided, visual-only, or too far for in-app ownership.
         if (!mainProgress.hasAcquiredRoute) {
           const choices = approachTargetChoices(navigationRoute, action.fix);
           let target = state.approach.target;
@@ -429,8 +429,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
         const offRoute = mainProgress.offRoute;
 
-        // Acquired but off-route: offer a best-effort rejoin suggestion without
-        // narration; the status stays `off-route` (never `navigating`).
+        // Acquired but off-route: offer a best-effort rejoin suggestion. The
+        // status stays `off-route` until the main route is physically acquired.
         if (offRoute) {
           const firstOffRoute = !wasOffRoute;
           wasOffRoute = true;
@@ -482,8 +482,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
           });
         }
 
-        // Acquired and on-route: the only handoff into `navigating`. Clear the
-        // approach slot and behave exactly as Phase A.
+        // Acquired and on-route: the only handoff into `navigating`. Clear any
+        // approach connector and resume main-route guidance.
         const recoveredFromOffRoute = wasOffRoute;
         lastConfirmedProgressMeters = mainProgress.progressMeters;
         const acquiredApproach =

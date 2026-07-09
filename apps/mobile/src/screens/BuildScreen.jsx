@@ -48,7 +48,7 @@ import { confirmDistanceBucket } from "@cycleways/core/navigation/rideIntroPrese
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import { createPuckAnchor } from "@cycleways/core/navigation/puckAnchor.js";
 import {
-  cameraHeadingTarget,
+  cameraHeadingTargetForState,
   createCameraHeadingGovernor,
 } from "@cycleways/core/navigation/cameraHeading.js";
 import { createCameraDirector } from "@cycleways/core/navigation/cameraDirector.js";
@@ -115,6 +115,7 @@ if (__DEV__) {
 }
 import { routeRestoreDecision } from "../navigation/routeRestorePolicy.js";
 import DevScenarioPicker from "../planner/DevScenarioPicker.jsx";
+import DevCameraOverlay from "../planner/DevCameraOverlay.jsx";
 import Icon from "../planner/Icon.jsx";
 import { palette } from "../planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
@@ -838,20 +839,38 @@ export default function BuildScreen({ navigation, route }) {
   const [pendingNavigationRouteId, setPendingNavigationRouteId] = useState(null);
   const [pendingExternalPlan, setPendingExternalPlan] = useState(null);
   const [devPickerVisible, setDevPickerVisible] = useState(false);
+  const [devPickerMode, setDevPickerMode] = useState("sim");
+  const [devCameraDiagnostics, setDevCameraDiagnostics] = useState(null);
   const [devSpeed, setDevSpeed] = useState(4);
   const [devScenarioRoute, setDevScenarioRoute] = useState(null);
+  const [devRideIntroRoute, setDevRideIntroRoute] = useState(null);
+  const [pendingDevRideIntro, setPendingDevRideIntro] = useState(null);
+  const devVisibleScenarios = useMemo(
+    () =>
+      devPickerMode === "cam"
+        ? devScenarios.filter((scenario) => scenario.camera === true || scenario.group === "camera")
+        : devScenarios.filter((scenario) => scenario.camera !== true && scenario.group !== "camera"),
+    [devPickerMode],
+  );
   const setupRequestRef = useRef(0);
   const lockScreenPermissionExplainerShownRef = useRef(false);
+
+  const rideSetupSourceRoute =
+    __DEV__ &&
+    devRideIntroRoute &&
+    (rideIntroVisible || rideSettingsVisible || pickOnMapMode || pendingDevRideIntro)
+      ? devRideIntroRoute
+      : sourceNavigationRoute;
 
   const ridePlan = useMemo(
     () =>
       createRidePlan(
-        sourceNavigationRoute,
+        rideSetupSourceRoute,
         rideSetupSelection,
         rideSetupFix,
         rideSetupNow,
       ),
-    [sourceNavigationRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
+    [rideSetupSourceRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
   );
 
   useEffect(() => {
@@ -1135,7 +1154,12 @@ export default function BuildScreen({ navigation, route }) {
     (plan) => {
       if (!plan?.effectiveRoute?.canNavigate) return;
       const completeConfirmation = () => {
+        const confirmedRouteId = plan.effectiveRoute.id;
         setConfirmedRidePlan(plan);
+        if (__DEV__ && devRideIntroRoute) {
+          setDevScenarioRoute(null);
+          setDevRideIntroRoute(null);
+        }
         trackNavigationEvent("ride_setup_confirmed", {
           direction: plan.direction,
           startMode: plan.startMode,
@@ -1146,7 +1170,7 @@ export default function BuildScreen({ navigation, route }) {
         setRideIntroVisible(false);
         setRideSettingsVisible(false);
         void clearPendingRideIntent();
-        setPendingNavigationRouteId(plan.effectiveRoute.id);
+        setPendingNavigationRouteId(confirmedRouteId);
       };
 
       const confirmWithCurrentPermission = async () => {
@@ -1212,6 +1236,7 @@ export default function BuildScreen({ navigation, route }) {
     [
       lockScreenGuidanceEnabled,
       lockScreenGuidanceHasAlwaysPermission,
+      devRideIntroRoute,
       refreshRideSetupLocation,
       rideSetupLocationStatus,
       voiceGuidanceEnabled,
@@ -1242,6 +1267,13 @@ export default function BuildScreen({ navigation, route }) {
 
   const handleIntroClose = useCallback(() => {
     setRideIntroVisible(false);
+    if (__DEV__) {
+      setDevRideIntroRoute(null);
+      setDevScenarioRoute(null);
+      setPendingDevRideIntro(null);
+      devInnerSourceRef.current = null;
+      setDevCameraDiagnostics(null);
+    }
     resetMapToOverhead();
     trackNavigationEvent("ride_setup_cancelled");
     void clearPendingRideIntent();
@@ -1320,6 +1352,17 @@ export default function BuildScreen({ navigation, route }) {
 
   const handleDevSimulate = useCallback(() => {
     if (!__DEV__) return;
+    setDevPickerMode("sim");
+    setDevCameraDiagnostics(null);
+    setDevRideIntroRoute(null);
+    setPendingDevRideIntro(null);
+    setDevPickerVisible(true);
+  }, []);
+
+  const handleDevCameraStoryboard = useCallback(() => {
+    if (!__DEV__) return;
+    setDevPickerMode("cam");
+    setDevCameraDiagnostics(null);
     setDevPickerVisible(true);
   }, []);
 
@@ -1341,9 +1384,35 @@ export default function BuildScreen({ navigation, route }) {
         return;
       }
       setDevPickerVisible(false);
+      setDevRideIntroRoute(null);
+      setPendingDevRideIntro(null);
       devInnerSourceRef.current = createSimulateRideSource(resolved.fixes, {
         intervalMs: Math.max(60, Math.round(1000 / devSpeed)),
       });
+      if (scenario.camera === true || scenario.group === "camera") {
+        setDevCameraDiagnostics({
+          stage: "starting",
+          mode: "-",
+          approachTier: "-",
+          cameraIntent: "follow",
+        });
+      }
+      if (resolved.cameraStart === "ride-intro") {
+        setConfirmedRidePlan(null);
+        setPendingNavigationRouteId(null);
+        setRideSettingsVisible(false);
+        setPickOnMapMode(false);
+        setRideSetupSelection(DEFAULT_RIDE_SETUP_SELECTION);
+        setDevRideIntroRoute(resolved.navigationRoute);
+        setPendingDevRideIntro({
+          routeId: resolved.navigationRoute.id,
+          fix: resolved.fixes[0] || null,
+        });
+        if (resolved.navigationRoute.id !== navigationRoute?.id) {
+          setDevScenarioRoute(resolved.navigationRoute);
+        }
+        return;
+      }
       if (resolved.navigationRoute.id !== navigationRoute?.id) {
         setDevScenarioRoute(resolved.navigationRoute);
         setPendingNavigationRouteId(resolved.navigationRoute.id);
@@ -1353,6 +1422,30 @@ export default function BuildScreen({ navigation, route }) {
     },
     [devSpeed, nav, navigationRoute],
   );
+
+  useEffect(() => {
+    if (!__DEV__ || !pendingDevRideIntro) return;
+    if (devRideIntroRoute?.id !== pendingDevRideIntro.routeId) return;
+    const fix = pendingDevRideIntro.fix;
+    if (fix && Number.isFinite(Number(fix.lat)) && Number.isFinite(Number(fix.lng))) {
+      setRideSetupFix({
+        ...fix,
+        lat: Number(fix.lat),
+        lng: Number(fix.lng),
+        timestamp: Number.isFinite(Number(fix.timestamp)) ? Number(fix.timestamp) : Date.now(),
+      });
+      setLocationState((current) => ({
+        ...current,
+        enabled: true,
+        point: { lat: Number(fix.lat), lng: Number(fix.lng) },
+        status: current.following ? "following" : "located",
+      }));
+    }
+    setRideSetupNow(Date.now());
+    setRideSetupLocationStatus("ready");
+    setRideIntroVisible(true);
+    setPendingDevRideIntro(null);
+  }, [devRideIntroRoute?.id, pendingDevRideIntro]);
 
   const handleDevRecord = useCallback(() => {
     if (!__DEV__) return;
@@ -1391,10 +1484,22 @@ export default function BuildScreen({ navigation, route }) {
   useEffect(() => {
     if (!__DEV__) return;
     if (pendingNavigationRouteId) return;
+    if (pendingDevRideIntro || rideIntroVisible || rideSettingsVisible || pickOnMapMode) return;
     if (navStatus !== "ended" && navStatus !== "error") return;
     if (devScenarioRoute) setDevScenarioRoute(null);
+    if (devRideIntroRoute) setDevRideIntroRoute(null);
+    setDevCameraDiagnostics(null);
     devInnerSourceRef.current = null;
-  }, [devScenarioRoute, navStatus, pendingNavigationRouteId]);
+  }, [
+    devRideIntroRoute,
+    devScenarioRoute,
+    navStatus,
+    pendingDevRideIntro,
+    pendingNavigationRouteId,
+    pickOnMapMode,
+    rideIntroVisible,
+    rideSettingsVisible,
+  ]);
 
   // Derive build-panel presentation options (matches the web's typed-cased variant).
   const mapPresentationActive = !isNavigating;
@@ -1566,13 +1671,15 @@ export default function BuildScreen({ navigation, route }) {
     navPresentation.approachDistanceSource,
     navStatus,
   ]);
-  // The puck/camera always ride the main route now; the connector is only a
-  // static suggestion overlay, never a navigated phase.
+  // The main route remains the route-acquisition authority. During a confident
+  // app-owned approach, the connector can temporarily drive cues/camera as an
+  // approach leg, then clears when the main route is acquired.
   const navGeometry = navigationRoute?.geometry || [];
   const activeGeometryKey = "main";
 
-  // Approach overlays (while approaching / off-route): a thin direct line
-  // rider→target plus, in the near tier, a dashed road-preferring suggestion.
+  // Approach overlays (while approaching / off-route): a direct line when
+  // there is no trusted connector, or a classified connector leg for show-leg,
+  // guide, and rejoin states.
   const approach = nav.state?.approach ?? null;
   const latestFix = nav.state?.latestFix ?? null;
   const approachTargetPoint = approach?.target?.point ?? null;
@@ -1757,6 +1864,7 @@ export default function BuildScreen({ navigation, route }) {
   const cameraBearingRef = useRef(0);
   const cameraPitchRef = useRef(NAV_FOLLOW_PITCH);
   const cameraZoomRef = useRef(16.5);
+  const cameraStageRef = useRef(null);
   const sessionStateRef = useRef(null);
   const cameraFitKeyRef = useRef(null);
   const cameraFitAtRef = useRef(0);
@@ -1810,12 +1918,14 @@ export default function BuildScreen({ navigation, route }) {
     if (!isNavigating) {
       setRiderPuck(null);
       setNavTraveled(EMPTY_FEATURE_COLLECTION);
+      if (__DEV__) setDevCameraDiagnostics(null);
       travelIndexRef.current = -1;
       lastPushedPuckRef.current = null;
       puckAnchorRef.current = null;
       puckGlideRef.current = null;
       cameraGovernorRef.current = null;
       cameraDirectorRef.current = null;
+      cameraStageRef.current = null;
       cameraFitKeyRef.current = null;
       cameraFitAtRef.current = 0;
       return undefined;
@@ -1826,6 +1936,7 @@ export default function BuildScreen({ navigation, route }) {
     cameraDirectorRef.current = createCameraDirector();
     cameraPitchRef.current = NAV_FOLLOW_PITCH;
     cameraZoomRef.current = NAV_FOLLOW_ZOOM;
+    cameraStageRef.current = null;
     cameraFitKeyRef.current = null;
     cameraFitAtRef.current = 0;
     const startProgress = progressRef.current;
@@ -1936,18 +2047,40 @@ export default function BuildScreen({ navigation, route }) {
               Math.min(1, dtMs / BEARING_SMOOTH_MS),
             );
           }
+          // Stage-aware shot from the camera director. The shot is computed
+          // before heading selection because approach-owned stages decide
+          // whether the camera should use main-route or approach-leg bearings.
+          const shot =
+            cameraDirectorRef.current?.update(sessionStateRef.current ?? {}, ts) ??
+            {
+              stage: "ride",
+              mode: "follow",
+              pitch: NAV_FOLLOW_PITCH,
+              zoom: NAV_FOLLOW_ZOOM,
+              centerBias: 0,
+            };
+          const stageChanged = cameraStageRef.current !== shot.stage;
+          cameraStageRef.current = shot.stage;
+          const cameraEase = Math.min(1, dtMs / CAMERA_ROTATE_MS);
+          if (shot.snapOnEnter === true && stageChanged) {
+            if (Number.isFinite(shot.pitch)) cameraPitchRef.current = shot.pitch;
+            if (Number.isFinite(shot.zoom)) cameraZoomRef.current = shot.zoom;
+          } else {
+            cameraPitchRef.current += (shot.pitch - cameraPitchRef.current) * cameraEase;
+            if (Number.isFinite(shot.zoom)) {
+              cameraZoomRef.current += (shot.zoom - cameraZoomRef.current) * cameraEase;
+            }
+          }
+
           // The puck arrow tracks the rider's direction in real time; the
-          // camera aims where cameraHeadingTarget says (route-up on route,
-          // toward the start while approaching, held still off-route), with
-          // the governor gating adoption and a slower ease. While off-route the
-          // compass is deliberately ignored by the camera so the map frame stays
-          // stable; the puck arrow still carries the live direction.
+          // camera is route-up when a route/approach leg is trusted, target-up
+          // for overview connector states, and held still off-route. Device
+          // compass remains a puck/panel input, not a map-frame steering input.
           const heading = smoothedBearingRef.current;
-          const deviceHeadingCanSteerCamera =
-            progress.offRoute !== true && Number.isFinite(deviceHeadingRef.current);
-          const cameraTarget = deviceHeadingCanSteerCamera
-            ? deviceHeadingRef.current
-            : cameraHeadingTarget(progress);
+          const cameraTarget = cameraHeadingTargetForState(
+            sessionStateRef.current ?? { progress },
+            shot,
+          );
           const governedHeading =
             cameraGovernorRef.current?.update(cameraTarget, ts) ??
             cameraBearingRef.current;
@@ -1956,6 +2089,43 @@ export default function BuildScreen({ navigation, route }) {
               cameraBearingRef.current,
               governedHeading,
               Math.min(1, dtMs / CAMERA_ROTATE_MS),
+            );
+          }
+          if (__DEV__) {
+            const nextDiagnostics = {
+              stage: shot.stage,
+              mode: shot.mode,
+              pitch: Number.isFinite(shot.pitch)
+                ? Math.round(shot.pitch * 10) / 10
+                : null,
+              zoom: shot.mode === "follow" && Number.isFinite(cameraZoomRef.current)
+                ? Math.round(cameraZoomRef.current * 10) / 10
+                : null,
+              fitKind: shot.fitKind || "",
+              focusKind: shot.focusKind || "",
+              headingTarget: Number.isFinite(cameraTarget)
+                ? Math.round(cameraTarget * 10) / 10
+                : null,
+              heading: Number.isFinite(cameraBearingRef.current)
+                ? Math.round(cameraBearingRef.current * 10) / 10
+                : null,
+              approachTier: sessionStateRef.current?.approach?.ownershipTier || "",
+              cameraIntent: cameraIntentRef.current,
+            };
+            setDevCameraDiagnostics((current) =>
+              current &&
+              current.stage === nextDiagnostics.stage &&
+              current.mode === nextDiagnostics.mode &&
+              current.pitch === nextDiagnostics.pitch &&
+              current.zoom === nextDiagnostics.zoom &&
+              current.fitKind === nextDiagnostics.fitKind &&
+              current.focusKind === nextDiagnostics.focusKind &&
+              current.headingTarget === nextDiagnostics.headingTarget &&
+              current.heading === nextDiagnostics.heading &&
+              current.approachTier === nextDiagnostics.approachTier &&
+              current.cameraIntent === nextDiagnostics.cameraIntent
+                ? current
+                : nextDiagnostics,
             );
           }
           // MarkerView is screen-aligned, so rotate the arrow by the puck's
@@ -1987,23 +2157,8 @@ export default function BuildScreen({ navigation, route }) {
           // cameraIntent flips to "free" on a user gesture, re-engaged by the
           // recenter button). setCamera/fitBounds are off the React tree, so this
           // is intentionally NOT gated on the puck-change check.
-          // Stage-aware shot from the camera director. Fit shots use the same
-          // helper/padding convention as the rest of this file; follow shots
-          // ease pitch/zoom like heading changes.
-          const shot =
-            cameraDirectorRef.current?.update(sessionStateRef.current ?? {}, ts) ??
-            {
-              stage: "ride",
-              mode: "follow",
-              pitch: NAV_FOLLOW_PITCH,
-              zoom: NAV_FOLLOW_ZOOM,
-              centerBias: 0,
-            };
-          const cameraEase = Math.min(1, dtMs / CAMERA_ROTATE_MS);
-          cameraPitchRef.current += (shot.pitch - cameraPitchRef.current) * cameraEase;
-          if (Number.isFinite(shot.zoom)) {
-            cameraZoomRef.current += (shot.zoom - cameraZoomRef.current) * cameraEase;
-          }
+          // Fit shots use the same helper/padding convention as the rest of
+          // this file; follow shots ease pitch/zoom like heading changes.
 
           if (shot.mode === "fit") {
             const raw = rawFixRef.current;
@@ -2011,7 +2166,10 @@ export default function BuildScreen({ navigation, route }) {
             const target = sessionStateRef.current?.approach?.target;
             const targetPoint = target?.point || progress.guidanceTargetPoint || null;
             const routeLookahead =
-              shot.fitKind === "approach" || shot.fitKind === "rejoin"
+              shot.fitKind === "approach" ||
+              shot.fitKind === "approach-start" ||
+              shot.fitKind === "approach-leg" ||
+              shot.fitKind === "rejoin"
                 ? routeLookaheadPoint(arcNow, geom, target)
                 : null;
             const fitPoints = (
@@ -2074,8 +2232,31 @@ export default function BuildScreen({ navigation, route }) {
           cameraFitAtRef.current = 0;
 
           // Focus point per stage; center = lerp(rider, focus, centerBias).
+          // Guided approach cues resolve against the temporary connector leg;
+          // main-route cues continue to resolve against the primary route arc.
           let focus = null;
-          if (shot.focusKind === "cue") {
+          if (shot.focusKind === "approach-cue") {
+            const approachCueMeters =
+              sessionStateRef.current?.approach?.approachActiveCue?.cue?.distanceMeters;
+            const approachGeom =
+              sessionStateRef.current?.approach?.approachLegGeometry || [];
+            if (
+              Number.isFinite(approachCueMeters) &&
+              Array.isArray(approachGeom) &&
+              approachGeom.length >= 2
+            ) {
+              focus = pointAndBearingAtDistance(
+                precomputeArcLength(approachGeom),
+                approachGeom,
+                approachCueMeters,
+              ).point;
+            }
+          } else if (shot.focusKind === "route-start") {
+            const focusMeters = Number(progress.progressMeters ?? 0) + 150;
+            if (arcNow && geom.length >= 2) {
+              focus = pointAndBearingAtDistance(arcNow, geom, focusMeters).point;
+            }
+          } else if (shot.focusKind === "cue") {
             const cueMeters = sessionStateRef.current?.activeCue?.cue?.distanceMeters;
             if (Number.isFinite(cueMeters) && arcNow && geom.length >= 2) {
               focus = pointAndBearingAtDistance(arcNow, geom, cueMeters).point;
@@ -2316,6 +2497,50 @@ export default function BuildScreen({ navigation, route }) {
             Math.ceil(rideIntroCardHeight + RIDE_INTRO_RIDER_CARD_GAP),
           )
         : rideIntroFitBottomPadding;
+    const introSlotState = shouldPitchToStart
+      ? introMarkerSlotCameraState(fixPoint, start, {
+          bottomPadding: introBottomPadding,
+          heading: introFitOptions.heading,
+          pitch: RIDE_INTRO_FIT_PITCH,
+          topInset: screenInsets.top,
+        })
+      : null;
+    if (__DEV__) {
+      const introHeading = Number.isFinite(introSlotState?.heading)
+        ? introSlotState.heading
+        : null;
+      const nextDiagnostics = {
+        stage: "ride-intro",
+        mode: "fit",
+        pitch: Number.isFinite(introSlotState?.pitch)
+          ? introSlotState.pitch
+          : Number.isFinite(introFitOptions.pitch)
+            ? introFitOptions.pitch
+            : 0,
+        zoom: Number.isFinite(introSlotState?.zoom) ? introSlotState.zoom : null,
+        fitKind: shouldPitchToStart ? "approach-start" : "route",
+        focusKind: "",
+        headingTarget: introHeading,
+        heading: introHeading,
+        approachTier: ridePlan?.approachTier || "",
+        cameraIntent: "intro",
+      };
+      setDevCameraDiagnostics((current) =>
+        !current ||
+        current.stage !== nextDiagnostics.stage ||
+        current.mode !== nextDiagnostics.mode ||
+        current.pitch !== nextDiagnostics.pitch ||
+        current.zoom !== nextDiagnostics.zoom ||
+        current.fitKind !== nextDiagnostics.fitKind ||
+        current.focusKind !== nextDiagnostics.focusKind ||
+        current.headingTarget !== nextDiagnostics.headingTarget ||
+        current.heading !== nextDiagnostics.heading ||
+        current.approachTier !== nextDiagnostics.approachTier ||
+        current.cameraIntent !== nextDiagnostics.cameraIntent
+          ? nextDiagnostics
+          : current,
+      );
+    }
     stopFollowingLocation();
     if (shouldPitchToStart) {
       setIntroCameraToMarkerSlots(cameraRef.current, fixPoint, start, {
@@ -2337,6 +2562,7 @@ export default function BuildScreen({ navigation, route }) {
     rideIntroCardHeight,
     rideIntroFitBottomPadding,
     ridePlan?.distanceToStartMeters,
+    ridePlan?.approachTier,
     rideSetupFix?.lat,
     rideSetupFix?.lng,
     screenInsets.top,
@@ -2775,6 +3001,13 @@ export default function BuildScreen({ navigation, route }) {
           >
             <Text style={styles.devButtonText}>SIM</Text>
           </Pressable>
+          <Pressable
+            accessibilityLabel="Dev: camera storyboard"
+            onPress={handleDevCameraStoryboard}
+            style={styles.devButton}
+          >
+            <Text style={styles.devButtonText}>CAM</Text>
+          </Pressable>
           {navigationRoute?.geometry?.length >= 2 ? (
             <Pressable
               accessibilityLabel="Dev: record GPS fixes"
@@ -2787,9 +3020,17 @@ export default function BuildScreen({ navigation, route }) {
         </View>
       ) : null}
       {__DEV__ ? (
+        <DevCameraOverlay diagnostics={devCameraDiagnostics} />
+      ) : null}
+      {__DEV__ ? (
         <DevScenarioPicker
           visible={devPickerVisible}
-          scenarios={devScenarios}
+          title={
+            devPickerMode === "cam"
+              ? "Dev: camera storyboard"
+              : "Dev: simulate scenario"
+          }
+          scenarios={devVisibleScenarios}
           speed={devSpeed}
           onSelectSpeed={setDevSpeed}
           onSelect={handleDevScenarioSelect}
@@ -2885,7 +3126,7 @@ export default function BuildScreen({ navigation, route }) {
         plan={ridePlan}
         selection={rideSetupSelection}
         locationStatus={rideSetupLocationStatus}
-        reverseAllowed={sourceNavigationRoute?.routeShape?.type !== "one_way"}
+        reverseAllowed={rideSetupSourceRoute?.routeShape?.type !== "one_way"}
         hapticsEnabled={nav.hapticsEnabled}
         onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
         voiceEnabled={voiceGuidanceEnabled}
@@ -3583,8 +3824,8 @@ function introSlotZoom(distanceMeters, latitude, pixelSpan) {
   return clamp(zoom, RIDE_INTRO_MIN_ZOOM, RIDE_INTRO_MAX_ZOOM);
 }
 
-function setIntroCameraToMarkerSlots(camera, rider, start, options = {}) {
-  if (!camera || !validMapPoint(rider) || !validMapPoint(start)) return;
+function introMarkerSlotCameraState(rider, start, options = {}) {
+  if (!validMapPoint(rider) || !validMapPoint(start)) return null;
   const screen = Dimensions.get("window");
   const width = Number(screen.width);
   const height = Number(screen.height);
@@ -3603,21 +3844,36 @@ function setIntroCameraToMarkerSlots(camera, rider, start, options = {}) {
   const center = interpolatePoint(rider, start, centerT);
   const distanceMeters = getDistance(rider, start);
   const zoom = introSlotZoom(distanceMeters, center.lat, spanPx);
+  const heading = Number.isFinite(options.heading)
+    ? options.heading
+    : computeBearing(rider, start);
+  const pitch = Number.isFinite(options.pitch) ? options.pitch : RIDE_INTRO_FIT_PITCH;
 
-  camera.setCamera?.({
-    type: "CameraStop",
-    centerCoordinate: [center.lng, center.lat],
-    heading: Number.isFinite(options.heading)
-      ? options.heading
-      : computeBearing(rider, start),
-    pitch: Number.isFinite(options.pitch) ? options.pitch : RIDE_INTRO_FIT_PITCH,
-    zoomLevel: zoom,
+  return {
+    center,
+    heading,
+    pitch,
+    zoom,
     padding: {
       paddingTop: topY,
       paddingRight: Math.max(42, Math.round(width * 0.12)),
       paddingBottom: Number.isFinite(bottomPadding) ? bottomPadding : 84,
       paddingLeft: Math.max(42, Math.round(width * 0.12)),
     },
+  };
+}
+
+function setIntroCameraToMarkerSlots(camera, rider, start, options = {}) {
+  if (!camera) return;
+  const state = introMarkerSlotCameraState(rider, start, options);
+  if (!state) return;
+  camera.setCamera?.({
+    type: "CameraStop",
+    centerCoordinate: [state.center.lng, state.center.lat],
+    heading: state.heading,
+    pitch: state.pitch,
+    zoomLevel: state.zoom,
+    padding: state.padding,
     animationDuration: 550,
     animationMode: "easeTo",
   });

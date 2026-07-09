@@ -56,10 +56,10 @@ const riding = (over = {}) => ({
     }),
     0,
   );
-  assert.equal(approach.stage, "approach");
+  assert.equal(approach.stage, "approach-start");
   assert.equal(approach.mode, "fit");
   assert.equal(approach.pitch, 20);
-  assert.equal(approach.fitKind, "approach");
+  assert.equal(approach.fitKind, "approach-start");
 
   const off = director.update(
     riding({
@@ -72,6 +72,93 @@ const riding = (over = {}) => ({
   assert.equal(off.stage, "off-route", "off-route adopts immediately");
   assert.equal(off.mode, "fit");
   assert.equal(off.fitKind, "rejoin");
+}
+
+// Approach ownership stages: too-far keeps an intro-scale overview while
+// following the rider; show-leg is a fit overview; guide is a real follow
+// camera over the approach leg; approach cue lowers pitch and focuses.
+{
+  const director = createCameraDirector();
+  const tooFar = director.update(
+    riding({
+      status: "approaching",
+      progress: { hasAcquiredRoute: false, remainingMeters: 5000, smoothedSpeedMps: 4 },
+      approach: { ownershipTier: "too-far" },
+    }),
+    0,
+  );
+  assert.equal(tooFar.stage, "approach-too-far");
+  assert.equal(tooFar.mode, "follow");
+  assert.equal(tooFar.pitch, 55);
+  assert.equal(tooFar.zoom, 11.5);
+  assert.equal(tooFar.snapOnEnter, true);
+
+  const showLeg = director.update(
+    riding({
+      status: "approaching",
+      progress: { hasAcquiredRoute: false, remainingMeters: 5000, smoothedSpeedMps: 4 },
+      approach: { ownershipTier: "show-leg" },
+    }),
+    100,
+  );
+  assert.equal(showLeg.stage, "approach-show-leg");
+  assert.equal(showLeg.mode, "fit");
+  assert.equal(showLeg.pitch, 20);
+  assert.equal(showLeg.fitKind, "approach-leg");
+
+  const guide = director.update(
+    riding({
+      status: "approaching",
+      progress: { hasAcquiredRoute: false, remainingMeters: 5000, smoothedSpeedMps: 2 },
+      approach: {
+        ownershipTier: "guide",
+        approachProgress: { smoothedSpeedMps: 8 },
+      },
+    }),
+    200,
+  );
+  assert.equal(guide.stage, "approach-guide");
+  assert.equal(guide.mode, "follow");
+  assert.equal(guide.pitch, 55);
+  assert.ok(Math.abs(guide.zoom - 15.8) < 0.01, "approach guide zoom breathes");
+
+  const preTurn = director.update(
+    riding({
+      status: "approaching",
+      progress: { hasAcquiredRoute: false, remainingMeters: 5000, smoothedSpeedMps: 4 },
+      approach: {
+        ownershipTier: "guide",
+        approachProgress: { smoothedSpeedMps: 4 },
+        approachActiveCue: { cue: { type: "turn" }, distanceToCueMeters: 70 },
+      },
+    }),
+    300,
+  );
+  assert.equal(preTurn.stage, "approach-guide-pre-turn");
+  assert.equal(preTurn.mode, "follow");
+  assert.equal(preTurn.pitch, 35);
+  assert.equal(preTurn.zoom, 17.2);
+  assert.equal(preTurn.focusKind, "approach-cue");
+}
+
+// Join-route is an immediate one-frame transition shot.
+{
+  const director = createCameraDirector();
+  director.update(
+    riding({
+      status: "approaching",
+      progress: { hasAcquiredRoute: false, remainingMeters: 5000, smoothedSpeedMps: 4 },
+      approach: { ownershipTier: "guide" },
+    }),
+    0,
+  );
+  const join = director.update(
+    riding({ cueEvent: { kind: "acquired", acquisition: "join-route" } }),
+    50,
+  );
+  assert.equal(join.stage, "join-route");
+  assert.equal(join.mode, "follow");
+  assert.equal(join.pitch, 40);
 }
 
 // Pre-turn waits for the candidate dwell; a turn cue seen only briefly does not switch.

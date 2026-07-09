@@ -249,6 +249,52 @@ export function evaluateExpectations(expectations, timeline) {
         break;
       }
 
+      case "camera-mode": {
+        const first = entries.find((e) => e.cameraMode === exp.value);
+        if (exp.never === true) {
+          if (first) fail(`camera mode "${exp.value}" occurred at ${progressOf(first)}m`);
+          break;
+        }
+        if (!first) {
+          fail(`camera mode "${exp.value}" never occurred`);
+          break;
+        }
+        if (Array.isArray(exp.duringStages)) {
+          const bad = entries.find(
+            (e) => exp.duringStages.includes(e.cameraStage) && e.cameraMode !== exp.value,
+          );
+          if (bad) {
+            fail(
+              `camera stage "${bad.cameraStage}" used mode "${bad.cameraMode}", expected "${exp.value}"`,
+            );
+          }
+        }
+        break;
+      }
+
+      case "camera-pitch": {
+        const candidates = exp.stage
+          ? entries.filter((e) => e.cameraStage === exp.stage)
+          : entries;
+        if (candidates.length === 0) {
+          fail(exp.stage ? `camera stage "${exp.stage}" never occurred` : "no entries");
+          break;
+        }
+        const expected = Number(exp.value);
+        const tolerance = Number(exp.tolerance ?? 0.01);
+        const first = candidates.find(
+          (e) =>
+            Number.isFinite(e.cameraPitch) &&
+            Math.abs(e.cameraPitch - expected) <= tolerance,
+        );
+        if (!first) {
+          fail(
+            `no camera pitch near ${expected} (±${tolerance})${exp.stage ? ` during ${exp.stage}` : ""}`,
+          );
+        }
+        break;
+      }
+
       case "card-mode": {
         const first = entries.find((e) => e.cardMode === exp.value);
         if (exp.never === true) {

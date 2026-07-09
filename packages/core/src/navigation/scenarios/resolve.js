@@ -7,7 +7,13 @@ import { navigationRouteFromRouteState } from "../navigationRoute.js";
 import { generateTrack } from "../trackGenerator.js";
 import { applyGpsGap, insertDwell } from "../trackTools.js";
 
-const CONNECTOR_MODES = new Set(["straight-line", "fail", "none"]);
+const CONNECTOR_MODES = new Set([
+  "straight-line",
+  "show-leg",
+  "guide-turn",
+  "fail",
+  "none",
+]);
 
 export function resolveScenario(scenario, { currentNavigationRoute = null } = {}) {
   const name = scenario?.name;
@@ -59,6 +65,9 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     name,
     description: scenario.description ?? "",
     visualOnly: scenario.visualOnly === true,
+    group: scenario.group || null,
+    camera: scenario.camera === true,
+    cameraStart: scenario.cameraStart || null,
     navigationRoute,
     fixes,
     connector,

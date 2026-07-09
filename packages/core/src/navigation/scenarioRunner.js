@@ -5,7 +5,7 @@
 // the contract the expectation evaluator (scenarioExpectations.js) checks and
 // the JSON artifact agents read when a scenario fails.
 import {
-  cameraHeadingTarget,
+  cameraHeadingTargetForState,
   createCameraHeadingGovernor,
 } from "./cameraHeading.js";
 import { createCameraDirector } from "./cameraDirector.js";
@@ -21,6 +21,36 @@ import { replaySession } from "./replayRunner.js";
 export function connectorRouterForMode(mode) {
   if (mode === "none") return null;
   if (mode === "fail") return () => ({ failure: "scenario-forced-failure" });
+  if (mode === "show-leg") {
+    return (request) => ({
+      geometry: [request.from, request.to],
+      edgeCosts: [
+        {
+          routeClass: "path_track",
+          roadType: null,
+          cyclewaysSegmentIds: [],
+          distanceMeters: 100,
+        },
+      ],
+    });
+  }
+  if (mode === "guide-turn") {
+    return (request) => ({
+      geometry: [
+        request.from,
+        { lat: request.from.lat, lng: request.to.lng },
+        request.to,
+      ],
+      edgeCosts: [
+        {
+          routeClass: "road",
+          roadType: "road",
+          cyclewaysSegmentIds: [],
+          distanceMeters: 100,
+        },
+      ],
+    });
+  }
   return (request) => ({ geometry: [request.from, request.to] });
 }
 
@@ -39,12 +69,13 @@ export function buildUserTimeline(replayTimeline) {
       const voicePlan = state.cueEvent
         ? voice.plan(state.cueEvent, state, state.latestFix?.timestamp ?? 0)
         : { utterance: null };
-      const cameraHeadingDeg = cameraGovernor.update(
-        cameraHeadingTarget(state.progress),
-        state.latestFix?.timestamp ?? 0,
-      );
       const cameraShot = cameraDirector.update(
         state,
+        state.latestFix?.timestamp ?? 0,
+      );
+      const cameraHeadingTargetDeg = cameraHeadingTargetForState(state, cameraShot);
+      const cameraHeadingDeg = cameraGovernor.update(
+        cameraHeadingTargetDeg,
         state.latestFix?.timestamp ?? 0,
       );
       return {
@@ -77,8 +108,15 @@ export function buildUserTimeline(replayTimeline) {
         haptic: hapticPlan.kind ?? null,
         voice: voicePlan.utterance,
         voiceText: voicePlan.utterance?.text ?? null,
+        approachOwnershipTier: state.approach?.ownershipTier ?? null,
+        cameraHeadingTargetDeg,
         cameraHeadingDeg,
         cameraStage: cameraShot.stage,
+        cameraMode: cameraShot.mode,
+        cameraPitch: cameraShot.pitch ?? null,
+        cameraZoom: cameraShot.zoom ?? null,
+        cameraFitKind: cameraShot.fitKind ?? null,
+        cameraFocusKind: cameraShot.focusKind ?? null,
         cardMode: presentation.cardMode,
         chipText: presentation.chip?.text ?? null,
         presentation: {

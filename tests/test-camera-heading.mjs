@@ -7,6 +7,7 @@
 import assert from "node:assert/strict";
 import {
   cameraHeadingTarget,
+  cameraHeadingTargetForState,
   createCameraHeadingGovernor,
 } from "@cycleways/core/navigation/cameraHeading.js";
 
@@ -157,6 +158,81 @@ assert.throws(
     "actual turn still adopts the route bearing",
   );
   assert.equal(cameraHeadingTarget(null), null, "no progress, no target");
+}
+
+// Full-state heading targets: guided approach uses approach-leg route bearing,
+// visual-only approach uses a stable target bearing, too-far/off-route hold.
+{
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "approaching",
+        progress: { hasAcquiredRoute: false, guidanceBearingDeg: 20 },
+        approach: {
+          ownershipTier: "guide",
+          approachProgress: { bearingToNextDeg: 87 },
+        },
+      },
+      { stage: "approach-guide" },
+    ),
+    87,
+    "guided approach aims along the approach leg",
+  );
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "approaching",
+        latestFix: { lat: 33.1, lng: 35.6 },
+        progress: { hasAcquiredRoute: false, guidanceBearingDeg: 20 },
+        approach: {
+          ownershipTier: "show-leg",
+          target: { point: { lat: 33.101, lng: 35.6 } },
+        },
+      },
+      { stage: "approach-show-leg" },
+    ),
+    0,
+    "visual approach aims at the target when available",
+  );
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "approaching",
+        latestFix: { lat: 33.1, lng: 35.6 },
+        progress: { hasAcquiredRoute: false, guidanceBearingDeg: 20 },
+        approach: {
+          ownershipTier: "too-far",
+          target: { point: { lat: 33.101, lng: 35.6 } },
+        },
+      },
+      { stage: "approach-too-far" },
+    ),
+    0,
+    "too-far approach aims from rider to selected start",
+  );
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "off-route",
+        offRoute: true,
+        progress: { hasAcquiredRoute: true, bearingToNextDeg: 87 },
+      },
+      { stage: "off-route" },
+    ),
+    null,
+    "off-route still holds heading",
+  );
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "navigating",
+        progress: { hasAcquiredRoute: true, bearingToNextDeg: 87 },
+      },
+      { stage: "ride" },
+    ),
+    87,
+    "main ride preserves route-up heading",
+  );
 }
 
 console.log("camera heading governor tests passed");

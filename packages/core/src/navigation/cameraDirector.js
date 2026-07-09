@@ -7,6 +7,7 @@ const MIN_STAGE_DWELL_MS = 2000; // stage changes settle; off-route/arrived skip
 const ARRIVED_REMAINING_M = 15;
 const ARRIVAL_CUE_MAX_M = 150;
 const RIDE_FOLLOW_PITCH = 55;
+const APPROACH_TOO_FAR_ZOOM = 11.5;
 
 function clamp(min, max, value) {
   return Math.min(max, Math.max(min, value));
@@ -21,6 +22,7 @@ export function zoomForSpanMeters(spanMeters) {
 function stageFor(state) {
   const progress = state?.progress || null;
   if (state?.offRoute === true) return "off-route";
+  if (state?.cueEvent?.acquisition === "join-route") return "join-route";
   if (
     progress?.hasAcquiredRoute === true &&
     Number.isFinite(progress?.remainingMeters) &&
@@ -28,7 +30,18 @@ function stageFor(state) {
   ) {
     return "arrived";
   }
-  if (state?.status === "approaching") return "approach";
+  if (state?.status === "approaching") {
+    const approach = state?.approach || {};
+    const tier = approach.ownershipTier || "unknown";
+    const cueType = approach.approachActiveCue?.cue?.type ?? null;
+    if (tier === "guide" && (cueType === "turn" || cueType === "bend")) {
+      return "approach-guide-pre-turn";
+    }
+    if (tier === "guide") return "approach-guide";
+    if (tier === "show-leg") return "approach-show-leg";
+    if (tier === "too-far") return "approach-too-far";
+    return "approach-start";
+  }
   const cueType = state?.activeCue?.cue?.type ?? null;
   if (
     cueType === "arrive" &&
@@ -42,9 +55,55 @@ function stageFor(state) {
 
 function shotFor(stage, state) {
   const progress = state?.progress || null;
+  const approachProgress = state?.approach?.approachProgress || null;
   switch (stage) {
-    case "approach":
-      return { stage, mode: "fit", pitch: 20, fitKind: "approach" };
+    case "approach-too-far":
+      return {
+        stage,
+        mode: "follow",
+        pitch: RIDE_FOLLOW_PITCH,
+        zoom: APPROACH_TOO_FAR_ZOOM,
+        centerBias: 0,
+        snapOnEnter: true,
+      };
+    case "approach-show-leg":
+      return { stage, mode: "fit", pitch: 20, fitKind: "approach-leg" };
+    case "approach-guide": {
+      const speed = Number.isFinite(approachProgress?.smoothedSpeedMps)
+        ? approachProgress.smoothedSpeedMps
+        : Number.isFinite(progress?.smoothedSpeedMps)
+          ? progress.smoothedSpeedMps
+          : 3;
+      const t = clamp(0, 1, (speed - 2) / 6);
+      return {
+        stage,
+        mode: "follow",
+        pitch: RIDE_FOLLOW_PITCH,
+        zoom: 16.8 + (15.8 - 16.8) * t,
+        centerBias: 0,
+        focusKind: "approach-leg",
+      };
+    }
+    case "approach-guide-pre-turn":
+      return {
+        stage,
+        mode: "follow",
+        pitch: 35,
+        zoom: 17.2,
+        centerBias: 0.5,
+        focusKind: "approach-cue",
+      };
+    case "approach-start":
+      return { stage, mode: "fit", pitch: 20, fitKind: "approach-start" };
+    case "join-route":
+      return {
+        stage,
+        mode: "follow",
+        pitch: 40,
+        zoom: 16.8,
+        centerBias: 0.35,
+        focusKind: "route-start",
+      };
     case "off-route":
       return { stage, mode: "fit", pitch: 20, fitKind: "rejoin" };
     case "pre-turn":
@@ -97,7 +156,11 @@ export function createCameraDirector() {
         candidateStage = null;
         candidateSinceMs = null;
       } else if (wanted !== stage) {
-        const immediate = wanted === "off-route" || wanted === "arrived";
+        const immediate =
+          wanted === "off-route" ||
+          wanted === "arrived" ||
+          wanted === "join-route" ||
+          wanted.startsWith("approach-");
         if (immediate) {
           stage = wanted;
           candidateStage = null;

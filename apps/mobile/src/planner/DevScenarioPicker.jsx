@@ -9,6 +9,7 @@ const SPEEDS = [1, 4, 8];
 
 export default function DevScenarioPicker({
   visible,
+  title = "Dev: simulate scenario",
   scenarios,
   speed,
   onSelectSpeed,
@@ -19,7 +20,7 @@ export default function DevScenarioPicker({
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
-          <Text style={styles.title}>Dev: simulate scenario</Text>
+          <Text style={styles.title}>{title}</Text>
           <View style={styles.speedRow}>
             {SPEEDS.map((value) => (
               <Pressable

@@ -5,7 +5,7 @@
 // wobble that comes back never moves the map), and only a sharp turn rotates
 // it immediately. The caller animates toward the returned heading; this
 // module only decides WHEN the heading target is allowed to move.
-import { bearingDelta } from "../utils/geometry.js";
+import { bearingDelta, computeBearing } from "../utils/geometry.js";
 
 const ROUTE_BEARING_CONFIDENCE_CROSS_TRACK_M = 3;
 const ROUTE_BEARING_DISAGREE_DEG = 60;
@@ -40,6 +40,38 @@ export function cameraHeadingTarget(progress) {
     return null;
   }
   return routeBearing;
+}
+
+export function cameraHeadingTargetForState(state, cameraShot = null) {
+  const stage = cameraShot?.stage || null;
+  if (stage === "off-route" || stage === "arrived") return null;
+
+  if (stage === "approach-guide" || stage === "approach-guide-pre-turn") {
+    const approachProgress = state?.approach?.approachProgress || null;
+    return Number.isFinite(approachProgress?.bearingToNextDeg)
+      ? approachProgress.bearingToNextDeg
+      : null;
+  }
+
+  if (stage === "approach-show-leg") {
+    const latestFix = state?.latestFix || null;
+    const target = state?.approach?.target?.point || null;
+    if (latestFix && target) return computeBearing(latestFix, target);
+    return Number.isFinite(state?.progress?.guidanceBearingDeg)
+      ? state.progress.guidanceBearingDeg
+      : null;
+  }
+
+  if (stage === "approach-too-far" || stage === "approach-start") {
+    const latestFix = state?.latestFix || null;
+    const target = state?.approach?.target?.point || null;
+    if (latestFix && target) return computeBearing(latestFix, target);
+    return Number.isFinite(state?.progress?.guidanceBearingDeg)
+      ? state.progress.guidanceBearingDeg
+      : null;
+  }
+
+  return cameraHeadingTarget(state?.progress || null);
 }
 
 const DEFAULTS = {

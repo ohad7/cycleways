@@ -69,6 +69,14 @@ function straightRoute() {
     "every entry carries the camera stage",
   );
   assert.ok(
+    timeline.every((e) => typeof e.cameraMode === "string"),
+    "every entry carries the camera mode",
+  );
+  assert.ok(
+    timeline.every((e) => Number.isFinite(e.cameraPitch)),
+    "every entry carries the camera pitch",
+  );
+  assert.ok(
     timeline.every((e) => typeof e.cardMode === "string"),
     "every entry carries the card mode",
   );
@@ -80,6 +88,10 @@ function straightRoute() {
   assert.ok(
     timeline.some((e) => Number.isFinite(e.cameraHeadingDeg)),
     "the governed camera heading is carried on the timeline",
+  );
+  assert.ok(
+    timeline.some((e) => Number.isFinite(e.cameraHeadingTargetDeg)),
+    "the camera heading target is carried on the timeline",
   );
   const rotations = timeline.filter(
     (e, i) =>
@@ -116,6 +128,10 @@ function straightRoute() {
     "pre-route approach resolves a connector suggestion",
   );
   assert.ok(
+    ready.timeline.some((e) => e.approachOwnershipTier === "guide"),
+    "pre-route approach exposes connector ownership tier",
+  );
+  assert.ok(
     ready.timeline.some((e) => e.justAcquired === true),
     "route acquisition event surfaces in the timeline",
   );
@@ -138,6 +154,11 @@ function straightRoute() {
 {
   const req = { from: { lat: 1, lng: 2 }, to: { lat: 3, lng: 4 } };
   assert.deepEqual(connectorRouterForMode("straight-line")(req).geometry, [req.from, req.to]);
+  assert.equal(
+    connectorRouterForMode("show-leg")(req).edgeCosts[0].routeClass,
+    "path_track",
+  );
+  assert.equal(connectorRouterForMode("guide-turn")(req).geometry.length, 3);
   assert.equal(connectorRouterForMode("fail")(req).failure, "scenario-forced-failure");
   assert.equal(connectorRouterForMode("none"), null);
 }
