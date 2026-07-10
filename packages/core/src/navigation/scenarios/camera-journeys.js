@@ -16,7 +16,6 @@ function connectorResponse({
   to,
   purpose,
   attempt,
-  routeClass = null,
   geometry = null,
   distanceMeters = null,
   edgeCosts = null,
@@ -48,13 +47,6 @@ function connectorResponse({
       snappedEndpoints: [],
       edgeCosts: Array.isArray(edgeCosts)
         ? edgeCosts
-        : routeClass
-        ? [{
-            routeClass,
-            roadType: routeClass === "road" ? "road" : null,
-            cyclewaysSegmentIds: [],
-            distanceMeters: routedDistance,
-          }]
         : [],
     },
   };
@@ -89,17 +81,6 @@ function combinedApproachRide(seed) {
     startTimestamp: connectorFixes.at(-1).timestamp + 1000,
   });
   return { connectorFixes, fixes: [...connectorFixes, ...rideFixes] };
-}
-
-function connectorGeometryAfter(fix, traveledMeters) {
-  const remaining = connectorRoute.geometry.filter(
-    (point) => Number(point.distanceFromStartMeters) > traveledMeters,
-  );
-  return [
-    { lat: Number(fix.lat), lng: Number(fix.lng) },
-    ...remaining.map((point) => ({ lat: point.lat, lng: point.lng })),
-    { lat: routeStart.lat, lng: routeStart.lng },
-  ];
 }
 
 const guidedTrack = combinedApproachRide(21);
@@ -189,69 +170,6 @@ const guidedJourney = {
   ],
 };
 
-const showLegTrack = combinedApproachRide(22);
-const showLegFixes = showLegTrack.fixes;
-const showLegRefreshIndices = [0, 27, 53, 80];
-const showLegResponses = showLegRefreshIndices.map((index, responseIndex) =>
-  connectorResponse({
-    id: `show-leg-${responseIndex + 1}`,
-    from: showLegFixes[index],
-    to: routeStart,
-    purpose: responseIndex === 0 ? "initial" : "refresh",
-    attempt: responseIndex + 1,
-    routeClass: "path_track",
-    geometry: connectorGeometryAfter(showLegFixes[index], index * 8),
-    distanceMeters: Math.max(1, connectorRoute.distanceMeters - index * 8),
-  }));
-
-const showLegJourney = {
-  name: "journey-show-leg",
-  description: "Visual-only connector with real movement and main-route acquisition",
-  group: "camera-journey",
-  camera: true,
-  entryMode: "ride-intro",
-  journeySchemaVersion: 2,
-  route: { routeState: sovevBeitHillel },
-  track: { fixes: showLegFixes },
-  connectorResponses: showLegResponses,
-  bookmarks: [
-    {
-      id: "show-leg-intro",
-      label: "Intro · before Start",
-      phase: "pre-start",
-      startAction: "hold",
-      targetTimestamp: showLegFixes[0].timestamp,
-      preRollMs: 0,
-      holdMs: 0,
-      expectedStage: "intro-start-facing",
-    },
-    {
-      id: "show-leg-moving",
-      label: "Moving through the visual connector",
-      phase: "post-start",
-      startAction: "require-confirm",
-      targetTimestamp: 50000,
-      preRollMs: 5000,
-      holdMs: 3000,
-      expectedStage: "approach-show-leg",
-    },
-    {
-      id: "show-leg-join",
-      label: "Visual connector acquisition",
-      phase: "post-start",
-      startAction: "require-confirm",
-      targetTimestamp: approachJoinTimestamp,
-      preRollMs: 5000,
-      holdMs: 3000,
-      expectedStage: "join-route",
-    },
-  ],
-  expect: [
-    { type: "camera-sequence", values: ["approach-show-leg", "join-route", "ride"] },
-    { type: "camera-mode", value: "overview", duringStages: ["approach-show-leg"] },
-  ],
-};
-
 const regionalMovementRoute = routeFor(
   hulaRegionalMovement,
   "camera-journey-hula-regional-movement",
@@ -296,7 +214,7 @@ const tooFarJourney = {
   ],
   expect: [
     { type: "camera-stage", value: "approach-too-far" },
-    { type: "camera-pitch", stage: "approach-too-far", value: 40 },
+    { type: "camera-pitch", stage: "approach-too-far", value: 55 },
     { type: "camera-fit-kind", value: "route", never: true },
   ],
 };
@@ -410,4 +328,4 @@ const recoveryJourney = {
   ],
 };
 
-export default [guidedJourney, showLegJourney, tooFarJourney, recoveryJourney];
+export default [guidedJourney, tooFarJourney, recoveryJourney];

@@ -132,8 +132,6 @@ function approachSupportTextForTier(tier, status) {
   switch (tier) {
     case "guide":
       return "האפליקציה מנווטת אותך לתחילת המסלול";
-    case "show-leg":
-      return "הדרך לתחילת המסלול מוצגת ללא הנחיות קוליות";
     case "too-far":
       return "תחילת המסלול רחוקה מדי להכוונת גישה באפליקציה";
     default:
@@ -183,7 +181,7 @@ export function getNavigationPresentation(state = {}) {
     Boolean(approachActive);
   const showApproachLeg =
     showApproach &&
-    (approachOwnershipTier === "guide" || approachOwnershipTier === "show-leg") &&
+    approachOwnershipTier === "guide" &&
     hasSuggestionGeometry;
   const showDirectApproachLine = showApproach && !showApproachLeg;
 

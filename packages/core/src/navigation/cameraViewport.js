@@ -151,15 +151,6 @@ export function nextAppliedZoom({ current, target, dtMs, policy = {}, force = fa
   return current + clamp(delta, -maxStep, maxStep);
 }
 
-export function cameraPitchForRegionalZoom(targetPitch, zoom) {
-  const pitch = Math.max(0, Number(targetPitch) || 0);
-  if (!Number.isFinite(zoom)) return pitch;
-  if (zoom <= 10.5) return 0;
-  if (zoom <= 12) return Math.min(pitch, 20);
-  if (zoom <= 13) return Math.min(pitch, 30);
-  return pitch;
-}
-
 export function cameraGeometryKey(geometry, decimals = 5) {
   const points = normalizedGeometry(geometry);
   if (points.length === 0) return "empty";
@@ -184,4 +175,3 @@ export function shouldReframeOverview(previous, next, policy = {}) {
   }
   return { reframe: false, reason: "stable" };
 }
-

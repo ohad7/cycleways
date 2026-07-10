@@ -76,8 +76,8 @@ const riding = (over = {}) => ({
   assert.equal(off.fitKind, "rejoin");
 }
 
-// Approach ownership stages: too-far and show-leg are stable overviews; guide
-// follows the approach corridor; a nearby connector cue lowers pitch.
+// Too-far is an overview; a successful connector follows the approach corridor,
+// and a nearby connector cue lowers pitch.
 {
   const director = createCameraDirector();
   const tooFar = director.update(
@@ -90,21 +90,9 @@ const riding = (over = {}) => ({
   );
   assert.equal(tooFar.stage, "approach-too-far");
   assert.equal(tooFar.viewportMode, "overview");
-  assert.equal(tooFar.pitch, 40);
-  assert.equal(tooFar.zoomPolicy.kind, "points-fit");
-
-  const showLeg = director.update(
-    riding({
-      status: "approaching",
-      progress: { hasAcquiredRoute: false, remainingMeters: 5000, smoothedSpeedMps: 4 },
-      approach: { ownershipTier: "show-leg" },
-    }),
-    100,
-  );
-  assert.equal(showLeg.stage, "approach-show-leg");
-  assert.equal(showLeg.viewportMode, "overview");
-  assert.equal(showLeg.pitch, 35);
-  assert.equal(showLeg.fitKind, "approach-leg");
+  assert.equal(tooFar.pitch, 55);
+  assert.equal(tooFar.zoomPolicy.kind, "retain-frame");
+  assert.equal(tooFar.holdFrame, true);
 
   const guide = director.update(
     riding({
@@ -115,7 +103,7 @@ const riding = (over = {}) => ({
         approachProgress: { smoothedSpeedMps: 8 },
       },
     }),
-    200,
+    100,
   );
   assert.equal(guide.stage, "approach-guide");
   assert.equal(guide.viewportMode, "follow");
@@ -132,7 +120,7 @@ const riding = (over = {}) => ({
         approachActiveCue: { cue: { type: "turn" }, distanceToCueMeters: 70 },
       },
     }),
-    300,
+    200,
   );
   assert.equal(preTurn.stage, "approach-guide-pre-turn");
   assert.equal(preTurn.viewportMode, "follow");
@@ -149,7 +137,7 @@ const riding = (over = {}) => ({
     riding({
       status: "approaching",
       progress: { hasAcquiredRoute: false, remainingMeters: 5000 },
-      approach: { ownershipTier: "show-leg" },
+      approach: { ownershipTier: "guide" },
     }),
     0,
   );
@@ -161,10 +149,10 @@ const riding = (over = {}) => ({
     }),
     100,
   );
-  assert.equal(accepted.pitch, 35);
+  assert.equal(accepted.pitch, 55);
   assert.equal(resolving.stage, "approach-resolving");
-  assert.equal(resolving.retainedStage, "approach-show-leg");
-  assert.equal(resolving.pitch, 35);
+  assert.equal(resolving.retainedStage, "approach-guide");
+  assert.equal(resolving.pitch, 55);
   assert.equal(resolving.holdFrame, true);
 }
 

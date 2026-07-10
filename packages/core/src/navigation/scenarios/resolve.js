@@ -10,7 +10,6 @@ import { validateResolvedJourney } from "./journeySchema.js";
 
 const CONNECTOR_MODES = new Set([
   "straight-line",
-  "show-leg",
   "guide-turn",
   "fail",
   "none",

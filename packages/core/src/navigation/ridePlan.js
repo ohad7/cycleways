@@ -1,4 +1,5 @@
 import { getDistance } from "../utils/distance.js";
+import { DEFAULT_CONNECTOR_THRESHOLDS } from "../routing/connectorConfidence.js";
 import {
   CONNECTOR_NEAR_RADIUS_M,
   JOIN_SKIP_PROMPT_M,
@@ -39,6 +40,28 @@ export function classifyApproach(distanceMeters, accuracyMeters = 0) {
   const accuracy = Math.max(0, Number(accuracyMeters) || 0);
   if (distance <= SETUP_AT_BASE_RADIUS_M + accuracy) return "at";
   return distance <= CONNECTOR_NEAR_RADIUS_M ? "near" : "far";
+}
+
+export function ridePlanNeedsConnectorPreview(plan) {
+  return ridePlanApproachPreviewKind(plan) === "connector";
+}
+
+export function ridePlanNeedsDirectApproachPreview(plan) {
+  return ridePlanApproachPreviewKind(plan) === "direct";
+}
+
+export function ridePlanApproachPreviewKind(plan) {
+  const distance = Number(plan?.distanceToStartMeters);
+  if (
+    !plan?.selectedPoint ||
+    !Number.isFinite(distance) ||
+    distance < 0 ||
+    plan.approachTier === "at"
+  ) return "none";
+  if (distance > DEFAULT_CONNECTOR_THRESHOLDS.tooFarRadiusMeters) {
+    return "direct";
+  }
+  return "connector";
 }
 
 export function buildRidePlanCandidates(sourceRoute, fix, direction = "forward") {
@@ -85,9 +108,15 @@ export function createRidePlan(sourceRoute, selection = {}, fix = null, now = Da
   const quality = setupLocationQuality(fix, now);
   const requestedMode = selection.startMode || "official";
   let chosen = candidates.official;
-  const restoredProgress = Number(selection.startProgressMeters);
+  const restoredProgressValue = selection.startProgressMeters;
+  const hasRestoredProgress =
+    restoredProgressValue !== null &&
+    restoredProgressValue !== undefined &&
+    restoredProgressValue !== "";
+  const restoredProgress = Number(restoredProgressValue);
   if (
     (requestedMode === "nearest" || requestedMode === "custom") &&
+    hasRestoredProgress &&
     Number.isFinite(restoredProgress) &&
     restoredProgress >= 0
   ) {

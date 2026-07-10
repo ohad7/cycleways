@@ -1,5 +1,22 @@
+import { generateTrack } from "@cycleways/core/navigation/trackGenerator.js";
+
+export function deriveRidePlanJourneyFixes(plan, options = {}) {
+  if (!plan?.effectiveRoute?.canNavigate || plan.approachTier !== "at") return [];
+  return generateTrack(plan.effectiveRoute, {
+    speedMps: 8,
+    intervalMs: 1000,
+    seed: 71,
+    startTimestamp: Number(options.startTimestamp) || 0,
+    stopAtMeters: options.mode === "cam" ? 120 : null,
+  });
+}
+
 export function journeyRequiresRideIntro(resolved) {
   return resolved?.entryMode === "ride-intro";
+}
+
+export function shouldAcceptNativeLocationUpdate({ journeyActive = false } = {}) {
+  return journeyActive !== true;
 }
 
 export function initialJourneyPlaybackState({ resolved, bookmark = null, mode = "sim" }) {
@@ -40,7 +57,7 @@ export function journeyLifecycleLabel(playback = {}) {
   switch (playback.lifecycle) {
     case "waiting-for-start":
       return playback.phase === "pre-start"
-        ? "INTRO · HOLD — START NOT PRESSED"
+        ? "BEFORE START · WAITING"
         : "INTRO · TAP THE REAL START BUTTON";
     case "starting-session":
       return "STARTING SESSION";
@@ -49,7 +66,7 @@ export function journeyLifecycleLabel(playback = {}) {
     case "paused":
       return "PAUSED";
     case "hold":
-      return "HOLD";
+      return "BOOKMARK REACHED · FROZEN";
     default:
       return "PLAYING 1×";
   }

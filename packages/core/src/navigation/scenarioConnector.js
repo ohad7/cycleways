@@ -107,17 +107,6 @@ export function createScenarioConnectorAdapter(responses, options = {}) {
 export function connectorRouterForMode(mode) {
   if (mode === "none") return null;
   if (mode === "fail") return () => ({ failure: "scenario-forced-failure" });
-  if (mode === "show-leg") {
-    return (request) => ({
-      geometry: [request.from, request.to],
-      edgeCosts: [{
-        routeClass: "path_track",
-        roadType: null,
-        cyclewaysSegmentIds: [],
-        distanceMeters: 100,
-      }],
-    });
-  }
   if (mode === "guide-turn") {
     return (request) => ({
       geometry: [

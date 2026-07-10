@@ -7,11 +7,7 @@ import {
 const T = DEFAULT_CONNECTOR_THRESHOLDS;
 
 assert.deepEqual(T, {
-  guideRadiusMeters: 3000,
   tooFarRadiusMeters: 10000,
-  maxDetourRatio: 2.5,
-  maxRoutedMeters: 8000,
-  worstClassAllowed: "local_road",
 });
 
 const good = {
@@ -39,23 +35,19 @@ assert.equal(
   "too-far",
 );
 
-const midFar = { ...good, straightLineMeters: T.guideRadiusMeters + 1 };
-assert.equal(classifyConnector(midFar, T).tier, "show-leg");
-assert.ok(classifyConnector(midFar, T).reasons.includes("beyond-guide-radius"));
-
+const longButAccepted = { ...good, straightLineMeters: 9000 };
+assert.equal(classifyConnector(longButAccepted, T).tier, "guide");
 assert.equal(
-  classifyConnector({ ...good, detourRatio: T.maxDetourRatio + 0.1 }, T).tier,
-  "show-leg",
+  classifyConnector({ ...good, detourRatio: 10 }, T).tier,
+  "guide",
 );
 assert.equal(
-  classifyConnector({ ...good, routedMeters: T.maxRoutedMeters + 1 }, T).tier,
-  "show-leg",
+  classifyConnector({ ...good, routedMeters: 9000 }, T).tier,
+  "guide",
 );
 assert.equal(
   classifyConnector({ ...good, worstRouteClass: "path_track" }, T).tier,
-  "show-leg",
+  "guide",
 );
-
-assert.equal(classifyConnector(midFar, T).handoffSuggested, true);
 
 console.log("connector-confidence OK");

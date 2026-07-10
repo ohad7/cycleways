@@ -3,25 +3,31 @@
 // bookmark's pre-roll, then plays the visible transition at 1x and holds.
 
 export function createJourneyPlaybackSource(fixes, options = {}) {
-  const list = Array.isArray(fixes) ? fixes : [];
+  let list = Array.isArray(fixes) ? fixes : [];
   const speed = Math.max(0.1, Number(options.speed) || 1);
   const warmupIntervalMs = Math.max(8, Number(options.warmupIntervalMs) || 20);
-  const warmupEndIndex = Math.min(
-    list.length - 1,
-    Number.isFinite(Number(options.warmupEndIndex))
-      ? Number(options.warmupEndIndex)
-      : -1,
-  );
-  const startIndex = Math.max(
-    warmupEndIndex + 1,
-    Number.isFinite(Number(options.startIndex)) ? Number(options.startIndex) : 0,
-  );
-  const endIndex = Math.min(
-    list.length - 1,
-    Number.isFinite(Number(options.endIndex))
-      ? Number(options.endIndex)
-      : list.length - 1,
-  );
+  let warmupEndIndex = -1;
+  let startIndex = 0;
+  let endIndex = list.length - 1;
+  const configureWindow = (window = {}) => {
+    warmupEndIndex = Math.min(
+      list.length - 1,
+      Number.isFinite(Number(window.warmupEndIndex))
+        ? Number(window.warmupEndIndex)
+        : -1,
+    );
+    startIndex = Math.max(
+      warmupEndIndex + 1,
+      Number.isFinite(Number(window.startIndex)) ? Number(window.startIndex) : 0,
+    );
+    endIndex = Math.min(
+      list.length - 1,
+      Number.isFinite(Number(window.endIndex))
+        ? Number(window.endIndex)
+        : list.length - 1,
+    );
+  };
+  configureWindow(options);
   const schedule = options.schedule || ((callback, delay) => setTimeout(callback, delay));
   const cancelSchedule = options.cancelSchedule || ((handle) => clearTimeout(handle));
   let onFix = null;
@@ -155,6 +161,11 @@ export function createJourneyPlaybackSource(fixes, options = {}) {
       const emitted = emitOne();
       emitState();
       return emitted;
+    },
+    setTrack(nextFixes, window = {}) {
+      list = Array.isArray(nextFixes) ? nextFixes : [];
+      configureWindow(window);
+      reset();
     },
     restart: reset,
     getState: () => ({

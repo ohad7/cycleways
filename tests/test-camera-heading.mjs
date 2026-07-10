@@ -160,8 +160,8 @@ assert.throws(
   assert.equal(cameraHeadingTarget(null), null, "no progress, no target");
 }
 
-// Full-state heading targets: guided approach uses approach-leg route bearing,
-// visual-only approach uses a stable target bearing, too-far/off-route hold.
+// Full-state heading targets: guided approach uses approach-leg route bearing;
+// too-far aims at the target and off-route holds.
 {
   assert.equal(
     cameraHeadingTargetForState(
@@ -177,22 +177,6 @@ assert.throws(
     ),
     87,
     "guided approach aims along the approach leg",
-  );
-  assert.equal(
-    cameraHeadingTargetForState(
-      {
-        status: "approaching",
-        latestFix: { lat: 33.1, lng: 35.6 },
-        progress: { hasAcquiredRoute: false, guidanceBearingDeg: 20 },
-        approach: {
-          ownershipTier: "show-leg",
-          target: { point: { lat: 33.101, lng: 35.6 } },
-        },
-      },
-      { stage: "approach-show-leg" },
-    ),
-    0,
-    "visual approach aims at the target when available",
   );
   assert.equal(
     cameraHeadingTargetForState(

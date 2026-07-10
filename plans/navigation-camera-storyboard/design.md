@@ -15,8 +15,7 @@ overlays, recovery states, and transitions:
 
 - Before navigation, the rider needs to understand where the selected start is.
 - A `too-far` approach is regional context and external handoff, not guidance.
-- A `show-leg` approach displays a connector but does not promise narration.
-- A `guide` approach is an active turn-by-turn leg.
+- Every successfully routed connector is an active turn-by-turn approach leg.
 - At the seam, the connector must hand off visibly and calmly to the main route.
 - During the ride, the camera must show an appropriate amount of the route ahead
   without hiding the rider behind the navigation UI.
@@ -86,7 +85,7 @@ There are three user-visible viewport modes:
   application stops until recenter.
 
 Camera **stage** explains why a particular follow or overview intent was chosen,
-for example `ride`, `pre-turn`, `approach-show-leg`, or `off-route`. Stages are
+for example `ride`, `pre-turn`, `approach-guide`, or `off-route`. Stages are
 diagnostic and policy inputs; they are not independent camera implementations.
 
 `cameraIntent === "free"` overrides the derived stage for application purposes.
@@ -334,10 +333,10 @@ Generic pitched bounds fitting is acceptable only if it meets screen-space
 visibility assertions. Marker-slot or corridor-specific fitting is used when
 generic bounds produce unstable or misleading centers.
 
-For very long too-far views, 40 degrees is a maximum initial target rather than
-an unconditional result. Regional zoom may progressively flatten toward 20 or
-0 degrees when needed for visibility, tile practicality, and a useful map
-scale.
+For a too-far approach, Start does not change the spatial question. The camera
+retains the accepted Ride Intro marker-slot frame—pitch, zoom, bearing, and
+scale—rather than replacing it with a regional bounds fit. Recenter rebuilds
+that same rider/start frame against the current measured UI insets.
 
 ### Bearing
 
@@ -347,8 +346,6 @@ scale.
   corridor, governed against small changes.
 - The route corridor, not just the next raw geometry segment, may influence the
   bearing so dense vertices do not cause needless rotation.
-- `show-leg` uses the dominant/initial connector direction chosen by the
-  viewport solver, not a continuously changing rider-to-target beeline.
 - `too-far` uses rider-to-selected-start orientation when target-facing.
 - Off-route holds the last accepted bearing.
 - Arrived/reset views are north-up.
@@ -360,8 +357,7 @@ scale.
 | `intro-start-facing` | overview | rider bottom slot + selected start top slot | 55 | marker-slot fit, distance-derived zoom | rider → start |
 | `intro-overhead` | overview | selected start + useful local route context | 0 | local/points fit | north-up |
 | `approach-resolving` | retain accepted mode | retain the accepted intro/approach frame | unchanged | no reframe for request state | unchanged |
-| `approach-too-far` | overview | rider + start + direct line; no connector | 40 initial | marker-slot/points fit with distance-derived zoom | rider → start |
-| `approach-show-leg` | overview | full or mostly-full connector + rider + start + short main-route context | 35 initial | corridor/geometry fit; stable between material changes | dominant connector direction |
+| `approach-too-far` | retained overview | rider + start + direct line; no connector | retain intro 55 | retain Ride Intro marker-slot frame; recenter rebuilds it | rider → start |
 | `approach-guide` | follow | rider low + guided connector corridor ahead | 55 | active corridor fit, approx. 15.6–17.0 | approach route-up |
 | `approach-guide-pre-turn` | follow | rider + connector junction + geometry after turn | 35–40 | maneuver corridor fit, approx. 16.2–17.2 | approach route-up |
 | `join-route` | follow | connector tail + seam + first main-route corridor | 40–45 → 55 | seam corridor, then blend into cruise | approach bearing → main bearing |
@@ -378,6 +374,25 @@ Pitch and zoom values in this table are accepted implementation starting points.
 Visibility, continuity, and stage meaning are requirements; the centralized
 numeric values remain tunable through CAM review.
 
+### Successful connector ownership
+
+The production connector router already restricts edges by CycleWays ownership,
+road class, and access policy. A successful connector inside the retained
+10 km product boundary is therefore guided. Detour ratio, routed length, and
+accepted edge metadata describe the trip but do not downgrade it to a
+non-narrated visual tier. Routing failure or lack of coverage falls back to the
+direct-line/external-navigation state; beyond 10 km remains `too-far`.
+
+Ride Intro applies that same boundary before requesting a connector. Beyond
+10 km it shows only the gray direct rider-to-start relationship. Pressing Start
+therefore changes controls and ownership text, not geometry or camera scale.
+
+The former `show-leg` tier and its CAM journey were removed after comparing the
+classifier with the committed review dataset: the review supplied no rejected
+routes to justify a second confidence gate, while the gate downgraded reviewed
+valid connectors. A future uncertain-connector tier requires a demonstrated,
+real production failure mode and representative fixtures before reintroduction.
+
 ## Detailed Stage Semantics
 
 ### Intro and approach resolving
@@ -390,9 +405,8 @@ When the rider confirms:
 
 1. Keep the intro frame while permission and connector ownership resolve.
 2. If the main route is immediately acquired, transition once into `ride`.
-3. If classified `guide`, transition once into guided approach follow.
-4. If classified `show-leg`, transition once into connector overview.
-5. If classified `too-far`, retain/reframe the rider-to-start overview without
+3. If connector routing succeeds, transition once into guided approach follow.
+4. If classified `too-far`, retain/reframe the rider-to-start overview without
    suggesting that in-app turn-by-turn guidance is active.
 
 Connector refreshes should keep the last accepted tier/camera while a new result
@@ -408,15 +422,10 @@ The main route remains visible as upcoming context but is visually secondary.
 After the seam, the main route becomes active and the connector becomes a short
 transition tail before clearing.
 
-### Show-leg
-
-`show-leg` is not a static screenshot and not narrated guidance. It is a stable
-overview that lets the rider understand the offered connector while their live
-position advances.
-
-The camera should retain most of the leg, refitting only when needed. The route
-line and live puck may move without restarting a full bounds animation every
-fix. No connector cue voice or cue-focused camera transition is permitted.
+The end of a guided connector is a route seam, not the ride destination.
+Approach cue generation must not create or speak a destination-arrival cue at
+that endpoint. The seam emits exactly one acquisition message—“reached the
+route; route navigation begins”—before main-route cues take ownership.
 
 ### Maneuvers
 
@@ -456,14 +465,20 @@ The camera and line styling must agree about which geometry currently owns the
 ride:
 
 - `too-far`: direct line and start marker only; no connector leg.
-- `show-leg`: connector in visual-suggestion style; main route visible but
-  secondary.
 - `guide`: connector in active-guidance style; main route visible but secondary.
 - `join-route`: retained connector tail and first main-route segment are both
   visible; authority crossfades to the main route.
 - `ride` and later: main route is active; connector transition state is cleared.
 - `off-route`: main route remains the authority; rejoin suggestion is visually
   distinct and never replaces it.
+
+The official route keeps a stable blue identity from Ride Intro through the
+main ride. Amber identifies approach geometry: dashed before classification and
+solid and cased for app-owned guidance. During approach the
+official route remains visible but secondary; at the join its prominence rises
+while the retained amber connector tail fades. Gray is reserved for direct or
+traveled geometry, and red-orange for rejoin suggestions. Width, dash, casing,
+and opacity duplicate these distinctions for users who cannot rely on hue.
 
 Start and destination markers must derive from navigation/session targets when
 available, not only from product-flow objects such as `confirmedRidePlan`. This
@@ -494,6 +509,15 @@ a journey or bookmark installs the one-shot setup fix and route needed by the
 intro, but does not start the continuous location source or consume connector
 responses.
 
+Ride Intro options remain real product inputs inside the harness. When the user
+selects a nearest/custom start that is already reached, the start marker moves
+to that point, the connector preview is removed, and navigation begins on the
+selected effective route without an approach or join announcement. Because
+that choice invalidates an approach-specific CAM bookmark, CAM labels it as a
+modified start and derives a short main-route continuation from the same route
+instead of replaying the obsolete official-start connector. This is a branch
+of the selected journey, not a separate fixture.
+
 Bookmarks declare which side of the Start boundary they inspect:
 
 - `pre-start` + `hold`: inspect the intro camera/card indefinitely. Closing the
@@ -508,8 +532,9 @@ fix, followed by one or more post-start bookmarks. This keeps the journey entry
 unambiguous while still allowing several camera moments after confirmation.
 
 Replay always returns to Ride Intro. It never calls `nav.start()` directly.
-CAM lifecycle text must distinguish `WAITING FOR START`, `REBUILDING`,
-`PLAYING 1x`, `PAUSED`, and `HOLD`.
+CAM lifecycle text must distinguish `BEFORE START · WAITING`, the instruction
+to tap the real Start button, `REBUILDING`, `PLAYING 1x`, `PAUSED`, and
+`BOOKMARK REACHED · FROZEN`.
 
 Playback state and camera diagnostics default to compact, independently
 expandable status pills. The compact playback pill preserves the lifecycle cue
@@ -561,18 +586,21 @@ a harness failure; the adapter must never fall through to the live routing
 network. This makes fixture drift visible instead of allowing SIM, CAM, native,
 and headless runs to diverge silently.
 
+The journey also owns location from Ride Intro until playback is cleared.
+Native Mapbox/UserLocation updates must neither replace the setup fix nor render
+a second live puck during CAM/SIM. The first journey fix is the single source
+for the intro distance, rider marker, initial camera, and subsequent playback.
+
 ### Initial journey set
 
 Use a small set of credible journeys rather than one tiny fixture per stage:
 
 1. **Guided approach journey:** intro → guided connector, including refresh →
    connector maneuver → seam → main ride.
-2. **Show-leg journey:** intro → low-confidence but plausible connector → live
-   movement along it → main-route acquisition.
-3. **Too-far journey:** regional intro → too-far approach with plausible live
+2. **Too-far journey:** regional intro → too-far approach with plausible live
    movement → closer classification into navigation, or an explicit handoff
    cancel/reset ending.
-4. **Ride/recovery journey:** ride → maneuver → missed turn → off-route →
+3. **Ride/recovery journey:** ride → maneuver → missed turn → off-route →
    moving rejoin target → reacquisition → local arrival. It still begins with
    the at-start intro and explicit Start action.
 
@@ -584,8 +612,8 @@ instead of being copied into CAM-specific scenarios.
 
 - Visual fixtures must follow roads, paths, or cycleways visible on the bundled
   map. Real catalog route snapshots and recorded/sampled tracks are preferred.
-- Connector geometry must be a believable route, not a direct line classified
-  as `show-leg` only through metadata.
+- Connector geometry must be a believable result from the production routing
+  policy, not a route forced into a camera state through fixture-only metadata.
 - Coordinate displacement, timestamps, declared speed, and heading must agree.
 - A stage-focused bookmark includes enough actual movement before and after the
   target state to evaluate tracking and transition behavior.
@@ -670,8 +698,8 @@ Expectations must assert ordered behavior, not just that a label appeared once:
   cannot start until the real confirmation action runs;
 - cancel and Replay clear/rebuild the whole dev journey without stale source or
   connector state;
+- native GPS cannot overwrite the armed journey's Ride Intro fix or puck;
 - join persists for the intended transition window and then becomes ride;
-- show-leg stays overview and emits no approach cue voice;
 - too-far has no connector geometry and no guided-camera state;
 - pre-turn includes the maneuver focus and exits after the maneuver;
 - off-route holds heading and limits refits;
@@ -741,20 +769,17 @@ design decision.
 
 1. `intro-start-facing` uses the existing 55-degree directional style and
    distance-derived marker-slot zoom.
-2. `approach-too-far` starts at 40 degrees with rider/start marker-slot or points
-   fitting. Forty degrees is a maximum target: regional fits may flatten toward
-   20 or 0 degrees. It does not use a fixed regional zoom.
-3. `approach-show-leg` starts at 35 degrees and fits most or all of the
-   connector. It does not use 55 degrees by default.
-4. Guided approach and main ride use a 55-degree cruise pitch with
+2. `approach-too-far` retains the 55-degree Ride Intro marker-slot frame and
+   performs no automatic Start-time fit. Recenter rebuilds the same frame.
+3. Guided approach and main ride use a 55-degree cruise pitch with
    corridor-derived zoom initially clamped to 15.6–17.0.
-5. Maneuver framing uses 35–40 degrees and fits rider + decision +
+4. Maneuver framing uses 35–40 degrees and fits rider + decision +
    post-maneuver geometry, initially clamped to 16.2–17.2. It may zoom in or out
    according to geometry.
-6. Off-route starts at 20 degrees with held bearing and stable rejoin fit.
-7. Arrival is local first; whole-route summary is explicit or deliberately
+5. Off-route starts at 20 degrees with held bearing and stable rejoin fit.
+6. Arrival is local first; whole-route summary is explicit or deliberately
    delayed.
-8. Recenter remains explicit. Timed automatic recenter is out of scope.
+7. Recenter remains explicit. Timed automatic recenter is out of scope.
 
 ## Implementation Record
 
@@ -766,7 +791,7 @@ viewport. Failed required-point visibility can lower pitch once to the stage's
 accepted minimum.
 
 The initial CAM journey set no longer uses the synthetic L-route as its visual
-acceptance geometry. Guided approach, show-leg, ride, maneuver, and recovery use
+acceptance geometry. Guided approach, ride, maneuver, and recovery use
 the real Sovev Beit Hillel catalog snapshot and a connector snapshot computed
 from the bundled routing graph. The too-far journey shows real-network movement
 in the Hula Valley while the selected Banias route remains regionally distant.

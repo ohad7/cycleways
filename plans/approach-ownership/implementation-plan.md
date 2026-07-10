@@ -6,7 +6,7 @@
 
 **Goal:** Ship app-owned approach navigation in phases: first the editor data + confidence tooling, then runtime approach ownership with confidence-gated external handoff.
 
-**Architecture:** Pure, node-tested core modules in `@cycleways/core` (`connectorFeatures`, `connectorConfidence`, `connectorEvaluate`) are reused identically by the editor and the app runtime. The editor labels connector routes into an append-only JSONL dataset via server endpoints, and a calibration panel scores the current thresholds against the latest label per identity key client-side. Runtime Phase 3 classifies each live connector result and branches into `guide`, `show-leg`, or `too-far`; the first implementation uses a separate approach-leg mode that switches to the existing main-route tracker at the seam instead of introducing negative-progress route tracking.
+**Architecture:** Pure, node-tested core modules in `@cycleways/core` (`connectorFeatures`, `connectorConfidence`, `connectorEvaluate`) are reused identically by the editor and the app runtime. The editor labels connector routes into an append-only JSONL dataset via server endpoints. Runtime Phase 3 guides every successfully routed connector inside the product boundary and otherwise uses `too-far`; the approach leg switches to the existing main-route tracker at the seam instead of introducing negative-progress route tracking.
 
 **Tech Stack:** Node ESM (`.mjs` tests run with `node tests/<file>.mjs`), the `@cycleways/core` workspace package, the editor's plain-Node `http` server (`editor/server.mjs`) and vanilla-JS client (`editor/editor.js`) with Mapbox GL layers, `node:crypto` for strategy hashing.
 
@@ -18,7 +18,9 @@
 - **Features come from `previewBaseRoute().edgeCosts`.** Each traversal diagnostic already carries `routeClass`, `roadType`, `cyclewaysSegmentIds`, and per-traversal `distanceMeters`. Do not add a new per-edge descriptor to `route-manager.js`.
 - **Snap failures are classified before quality math.** Persistent `snap-failed` after a diagnostic `snap:any` retry is off-network and excluded from reachable quality. `snap-ineligible` means the point is on the base graph but the current strategy cannot snap to it; count it as reachable-but-failed.
 - **Labels are append-only events, not raw evaluation rows.** Calibration/evaluation must reduce the JSONL stream to the latest record per `(routeSlug, routeStart, origin, strategyHash, featureVersion)` before scoring, so relabeling does not double-count stale verdicts.
-- **Confidence is interpretable thresholds, not ML.** Phase 3 ships with launch defaults `guideRadiusMeters: 3000` and `tooFarRadiusMeters: 10000`; keep the editor calibration panel for later adjustment once user feedback or broader labels exist.
+- **Successful routing owns guidance.** The router already enforces edge and
+  access policy. `tooFarRadiusMeters: 10000` remains the product boundary;
+  detour, route length, and accepted edge metadata do not downgrade a result.
 - **Phase 3 v1 avoids negative progress.** Do not prepend the connector into the main route tracker yet. Track/render the connector as a separate approach leg while status is `approaching`, then switch to the existing main route when the rider acquires the seam/start. A true combined route with negative progress can be a later enhancement.
 - **Tests are added to the `test` npm script** (the long `&&` chain in `package.json`). Run an individual test with `node tests/<file>.mjs`.
 - **CW membership** is detected by `hasCyclewaysNetworkMembership(edge)` (already in `connectorCostModel.js`): truthy `cwSegmentIds`/`cyclewaysSegmentIds`. In `edgeCosts` diagnostics the field is `cyclewaysSegmentIds`.
@@ -342,8 +344,8 @@ git commit -m "feat(connector): pure feature extraction from connector previews"
 **Interfaces:**
 - Consumes: `CONNECTOR_CLASS_RANK` (Task 3); feature objects shaped like `computeConnectorFeatures`' output.
 - Produces:
-  - `DEFAULT_CONNECTOR_THRESHOLDS` — `{ guideRadiusMeters:3000, tooFarRadiusMeters:10000, maxDetourRatio:2.5, maxRoutedMeters:8000, worstClassAllowed:"local_road" }` (conservative launch defaults).
-  - `classifyConnector(features, thresholds=DEFAULT_CONNECTOR_THRESHOLDS) → { tier:"guide"|"show-leg"|"too-far", handoffSuggested:boolean, reasons:string[] }`.
+  - `DEFAULT_CONNECTOR_THRESHOLDS` — `{ tooFarRadiusMeters:10000 }`.
+  - `classifyConnector(features, thresholds=DEFAULT_CONNECTOR_THRESHOLDS) → { tier:"guide"|"too-far", handoffSuggested:boolean, reasons:string[] }`.
 
 - [ ] **Step 1: Write the failing test** — create `tests/test-connector-confidence.mjs`:
 
@@ -372,19 +374,9 @@ assert.equal(
   "too-far",
 );
 
-// Within too-far but beyond guide radius → show-leg.
-const midFar = { ...good, straightLineMeters: T.guideRadiusMeters + 1 };
-assert.equal(classifyConnector(midFar, T).tier, "show-leg");
-assert.ok(classifyConnector(midFar, T).reasons.includes("beyond-guide-radius"));
-
-// High detour → show-leg.
-assert.equal(classifyConnector({ ...good, detourRatio: T.maxDetourRatio + 0.1 }, T).tier, "show-leg");
-
-// Worst class below allowance → show-leg (e.g. path_track when only local_road allowed).
-assert.equal(classifyConnector({ ...good, worstRouteClass: "path_track" }, T).tier, "show-leg");
-
-// guide requires handoffSuggested false; downgrades set it true.
-assert.equal(classifyConnector(midFar, T).handoffSuggested, true);
+// A successful result remains guided regardless of trip-shape metadata.
+assert.equal(classifyConnector({ ...good, detourRatio: 10 }, T).tier, "guide");
+assert.equal(classifyConnector({ ...good, worstRouteClass: "path_track" }, T).tier, "guide");
 console.log("connector-confidence OK");
 ```
 
@@ -393,16 +385,8 @@ console.log("connector-confidence OK");
 - [ ] **Step 3: Implement** — create `packages/core/src/routing/connectorConfidence.js`:
 
 ```js
-import { CONNECTOR_CLASS_RANK } from "./connectorFeatures.js";
-
-// Interpretable, hand-tunable launch thresholds. Revisit with broader labels or
-// user feedback; do not fit a model here.
 export const DEFAULT_CONNECTOR_THRESHOLDS = {
-  guideRadiusMeters: 3000,
   tooFarRadiusMeters: 10000,
-  maxDetourRatio: 2.5,
-  maxRoutedMeters: 8000,
-  worstClassAllowed: "local_road",
 };
 
 export function classifyConnector(features, thresholds = DEFAULT_CONNECTOR_THRESHOLDS) {
@@ -412,21 +396,7 @@ export function classifyConnector(features, thresholds = DEFAULT_CONNECTOR_THRES
   if (features.straightLineMeters > thresholds.tooFarRadiusMeters) {
     return { tier: "too-far", handoffSuggested: true, reasons: ["beyond-too-far-radius"] };
   }
-  const allowedRank =
-    CONNECTOR_CLASS_RANK[thresholds.worstClassAllowed] ?? CONNECTOR_CLASS_RANK.other;
-  const worstRank =
-    features.worstRouteClass != null
-      ? CONNECTOR_CLASS_RANK[features.worstRouteClass] ?? CONNECTOR_CLASS_RANK.other
-      : 0;
-  const reasons = [];
-  if (features.straightLineMeters > thresholds.guideRadiusMeters) reasons.push("beyond-guide-radius");
-  if (features.detourRatio > thresholds.maxDetourRatio) reasons.push("detour-too-high");
-  if (features.routedMeters > thresholds.maxRoutedMeters) reasons.push("routed-too-long");
-  if (worstRank > allowedRank) reasons.push("class-too-low");
-  if (reasons.length === 0) {
-    return { tier: "guide", handoffSuggested: false, reasons: [] };
-  }
-  return { tier: "show-leg", handoffSuggested: true, reasons };
+  return { tier: "guide", handoffSuggested: false, reasons: [] };
 }
 ```
 
@@ -436,7 +406,7 @@ export function classifyConnector(features, thresholds = DEFAULT_CONNECTOR_THRES
 
 ```bash
 git add packages/core/src/routing/connectorConfidence.js tests/test-connector-confidence.mjs package.json
-git commit -m "feat(connector): interpretable confidence classifier (guide/show-leg/too-far)"
+git commit -m "feat(connector): trust successful connector routes"
 ```
 
 ## Task 5: Threshold evaluation against labels (core)
@@ -829,7 +799,7 @@ git commit -m "feat(editor): connector labeling mode (step + v/i/b + rings + per
 
 **Interfaces:**
 - Consumes: `evaluateThresholds` from `@cycleways/core/routing/connectorEvaluate.js`, `DEFAULT_CONNECTOR_THRESHOLDS` from `@cycleways/core/routing/connectorConfidence.js`; `GET /api/connector/labels`.
-- Produces: `state.connectorLens.thresholds` (clone of `DEFAULT_CONNECTOR_THRESHOLDS`); a confusion readout that recomputes live as thresholds change.
+- Produces: `state.connectorLens.thresholds` (clone of `DEFAULT_CONNECTOR_THRESHOLDS`); a guide/too-far readout for the retained distance boundary.
 
 - [ ] **Step 1: Imports** — add to `editor/editor.js`:
 
@@ -838,7 +808,7 @@ import { evaluateThresholds } from "../packages/core/src/routing/connectorEvalua
 import { DEFAULT_CONNECTOR_THRESHOLDS } from "../packages/core/src/routing/connectorConfidence.js";
 ```
 
-- [ ] **Step 2: Markup** — in `editor/index.html`, add a calibration sub-panel: number inputs for `guideRadiusMeters`, `tooFarRadiusMeters`, `maxDetourRatio`, `maxRoutedMeters`, a select for `worstClassAllowed` (`cw_network`/`road`/`local_road`/`cycle`/`path_track`/`manual`/`other`), a `#connector-calib-load` button ("טען תוויות"), and a `#connector-calib-readout` div.
+- [ ] **Step 2: Markup** — in `editor/index.html`, add a calibration sub-panel with a `tooFarRadiusMeters` input, a `#connector-calib-load` button ("טען תוויות"), and a `#connector-calib-readout` div.
 
 - [ ] **Step 3: State + load** — in `editor/editor.js`, add `thresholds: structuredClone(DEFAULT_CONNECTOR_THRESHOLDS)` and `labelsCache: []` to `state.connectorLens`. On `#connector-calib-load`:
 
@@ -865,9 +835,9 @@ function renderConnectorCalibration() {
 }
 ```
 
-- [ ] **Step 5: Threshold inputs → live** — wire each threshold input's `change`/`input` to update `state.connectorLens.thresholds[key]` (Number for numerics; string for `worstClassAllowed`) and call `renderConnectorCalibration()`. Numeric parse guards: ignore non-finite values.
+- [ ] **Step 5: Boundary input → live** — wire the too-far input to update `state.connectorLens.thresholds.tooFarRadiusMeters` and call `renderConnectorCalibration()`. Ignore non-finite values.
 
-- [ ] **Step 6: Verify** — `node --check editor/editor.js` passes. If you can drive the editor: after labeling some origins (Task 8), click "load labels", confirm the readout shows counts and rates; change `guideRadiusMeters` down and watch `would-guide valid` drop live. If you can't run it here, don't fake it — report + give steps.
+- [ ] **Step 6: Verify** — `node --check editor/editor.js` passes. If you can drive the editor: after labeling some origins (Task 8), click "load labels", confirm the readout shows counts and rates; change the too-far boundary and watch the guide count update. If you can't run it here, don't fake it — report + give steps.
 
 - [ ] **Step 7: Restore generated files + commit** — restore any pipeline files, then:
 
@@ -880,17 +850,13 @@ git commit -m "feat(editor): connector threshold calibration panel (labels vs th
 
 # PHASE 3 — Runtime approach ownership + handoff demotion
 
-Phase 3 implements design Components 4 and 5. It deliberately skips more confidence tuning for now: the local label set contains useful `valid` coverage but no `unacceptable` examples, so the launch policy is product-risk driven and conservative.
+Phase 3 implements design Components 4 and 5. The reviewed routes support trusting successful routing; failure/no coverage and the product distance boundary remain the fallbacks.
 
 **Launch thresholds:**
 
 ```js
 {
-  guideRadiusMeters: 3000,
   tooFarRadiusMeters: 10000,
-  maxDetourRatio: 2.5,
-  maxRoutedMeters: 8000,
-  worstClassAllowed: "local_road",
 }
 ```
 
@@ -905,10 +871,9 @@ Phase 3 implements design Components 4 and 5. It deliberately skips more confide
 
 **Interfaces:**
 - Produces: `DEFAULT_CONNECTOR_THRESHOLDS.tooFarRadiusMeters === 10000`.
-- Keeps: `guideRadiusMeters === 3000`, `maxDetourRatio === 2.5`, `maxRoutedMeters === 8000`, `worstClassAllowed === "local_road"`.
 
 - [ ] **Step 1: Change the default** — update `DEFAULT_CONNECTOR_THRESHOLDS.tooFarRadiusMeters` to `10000` if it is not already set.
-- [ ] **Step 2: Assert launch defaults** — add explicit assertions for all default threshold values in `tests/test-connector-confidence.mjs`, so Phase 3 cannot silently ship stale caps.
+- [ ] **Step 2: Assert the boundary default** — add an explicit assertion in `tests/test-connector-confidence.mjs`, so Phase 3 cannot silently ship a stale cap.
 - [ ] **Step 3: Verify** — run:
 
 ```bash
@@ -1002,7 +967,7 @@ import { buildApproachLeg } from "./approachLeg.js";
 - Extend `emptyApproach()` state with:
 
 ```js
-ownershipTier: "unknown" | "guide" | "show-leg" | "too-far",
+ownershipTier: "unknown" | "guide" | "too-far",
 handoffSuggested: true,
 handoffProminence: "primary" | "secondary" | "hidden",
 classificationReasons: [],
@@ -1018,7 +983,7 @@ approachLegGeometry: null,
 - [ ] **Step 2: Too-far short circuit** — while pre-route and before any connector request, if beeline distance to the selected start exceeds `tooFarRadiusMeters`, set `ownershipTier: "too-far"`, `handoffProminence: "primary"`, no `routeRequest`, and no connector geometry.
 - [ ] **Step 3: Request pre-route connectors** — for pre-route starts within the too-far cap, issue `routeRequest = suggestionRequest(fix, target)` with `targetMode: "start"` under the existing `REQUEST_MIN_MOVE_M` gate. Keep existing off-route rejoin request behavior unchanged.
 - [ ] **Step 4: Classify successful start connector** — in `CONNECTOR_READY`, when `state.routeRequest.targetMode === "start"`, compute features from `action.connectorResult` with `{ origin: state.routeRequest.from, routeStart: state.routeRequest.to }`, classify them, and store tier/reasons/features.
-- [ ] **Step 5: Build guide/show-leg state** — if tier is `guide`, build an approach leg and create/update an internal approach tracker + cue list from that leg. If tier is `show-leg`, store `suggestionGeometry` and distance but do not create approach cues. If leg construction fails, downgrade to `too-far` with reason `invalid-geometry`.
+- [ ] **Step 5: Build guide state** — if tier is `guide`, build an approach leg and create/update an internal approach tracker + cue list from that leg. If leg construction fails, downgrade to `too-far` with reason `invalid-geometry`.
 - [ ] **Step 6: Update approach progress on each fix** — when still pre-route and tier is `guide`, update the approach tracker with the latest fix, store `approachProgress`, select `approachActiveCue`, and emit cue events using the same de-dupe pattern as `mainCueKey` but with an `approach:` prefix.
 - [ ] **Step 7: Seam acquisition** — when the existing main tracker first acquires the route after an approach tier was active, emit a seam-specific event:
 
@@ -1041,7 +1006,7 @@ Update `navigationVoice.js` so this speaks as joining the route, not the current
 - Produces stable presentation fields:
 
 ```js
-approachOwnershipTier: "unknown" | "guide" | "show-leg" | "too-far",
+approachOwnershipTier: "unknown" | "guide" | "too-far",
 handoffProminence: "hidden" | "secondary" | "primary",
 showApproachCue: boolean,
 showApproachLeg: boolean,
@@ -1051,10 +1016,10 @@ approachSupportText: string,
 ```
 
 - [ ] **Step 1: Tier mapping** — derive `approachOwnershipTier` from `state.approach.ownershipTier`; keep the existing near/far `tier` only if current UI/tests still need it.
-- [ ] **Step 2: Handoff prominence** — map `guide → hidden`, `show-leg → secondary`, `too-far → primary`, unknown/requesting → secondary.
+- [ ] **Step 2: Handoff prominence** — map `guide → hidden`, `too-far → primary`, unknown/requesting → secondary.
 - [ ] **Step 3: Cue presentation** — when `approachOwnershipTier === "guide"` and `state.approach.approachActiveCue` exists, expose the same cue text/icon/distance fields used by the turn-by-turn panel and set `showApproachCue: true`.
-- [ ] **Step 4: Copy** — for `guide`, support text says the app is guiding to the route start; for `show-leg`, support text says the connector is shown but not narrated; for `too-far`, support text says the start is too far for in-app approach guidance and external navigation is recommended.
-- [ ] **Step 5: Tests** — cover all three ownership tiers and verify `externalNavTarget` remains the selected effective start.
+- [ ] **Step 4: Copy** — for `guide`, support text says the app is guiding to the route start; for `too-far`, support text says the start is too far for in-app approach guidance and external navigation is recommended.
+- [ ] **Step 5: Tests** — cover both ownership outcomes and verify `externalNavTarget` remains the selected effective start.
 
 ## Task 15: Mobile approach UI and map layers
 
@@ -1066,7 +1031,7 @@ approachSupportText: string,
 
 **Interfaces:**
 - Consumes the presentation fields from Task 14.
-- Existing `approach.suggestionGeometry` becomes visible for both pre-route `guide`/`show-leg` and off-route rejoin, not only off-route near-tier suggestions.
+- Existing `approach.suggestionGeometry` becomes visible for pre-route `guide` and off-route rejoin, not only off-route near-tier suggestions.
 
 - [ ] **Step 1: ApproachPanel cue rendering** — if `p.showApproachCue`, render the cue row/distance like `NavPanel`; otherwise keep the current pointer-to-start row.
 - [ ] **Step 2: External button demotion** — render the external navigation action according to `p.handoffProminence`:
@@ -1074,11 +1039,11 @@ approachSupportText: string,
   - `secondary`: existing icon button is fine.
   - `primary`: make it visually primary and keep it first in the control order.
 - [ ] **Step 3: Map overlay visibility** — show connector geometry when `p.showApproachLeg` and `approach.suggestionGeometry` has at least 2 points. Continue showing the thin direct line only when `p.showDirectApproachLine` is true.
-- [ ] **Step 4: Style distinction** — use a stronger/solid-ish approach-leg style for `guide`, the existing dashed style for `show-leg`/rejoin, and no connector line for `too-far`.
+- [ ] **Step 4: Style distinction** — use a stronger/solid-ish approach-leg style for `guide`, the existing dashed style for rejoin, and no connector line for `too-far`.
 - [ ] **Step 5: Telemetry** — include `approachOwnershipTier`, `classificationReasons`, `handoffProminence`, `distanceSource`, and rounded connector distance in `approach_connector_result` / `approach_external_handoff` events.
 - [ ] **Step 6: Smoke manually** — with a dev scenario or simulated fix:
   - within 3 km + clean connector: approach cue appears; external handoff is hidden/demoted.
-  - 3-10 km or downgraded connector: leg draws; no approach cue voice.
+  - successful connector inside 10 km: guided leg and approach cues appear.
   - >10 km: no connector leg; external handoff is primary.
 
 ## Task 16: Phase 3 targeted tests
@@ -1094,8 +1059,7 @@ approachSupportText: string,
 
 - [ ] **Pre-route request** — a fresh pre-route fix within `tooFarRadiusMeters` sets `routeRequest.targetMode === "start"`.
 - [ ] **Too-far short circuit** — a pre-route fix beyond 10 km sets `ownershipTier === "too-far"` and does not issue `routeRequest`.
-- [ ] **Guide classification** — a clean connector within 3 km sets `ownershipTier === "guide"`, stores connector features/reasons, exposes approach geometry, and emits approach cue events when approaching a connector turn.
-- [ ] **Show-leg classification** — a connector beyond guide radius but under too-far, or one with a quality downgrade reason, sets `ownershipTier === "show-leg"` and never emits approach cue events.
+- [ ] **Guide classification** — every successful connector inside 10 km sets `ownershipTier === "guide"`, stores connector features/reasons, exposes approach geometry, and emits approach cue events when approaching a connector turn.
 - [ ] **Failure classification** — `CONNECTOR_FAILED` for `targetMode:"start"` becomes `too-far`/handoff-primary without throwing.
 - [ ] **Seam transition** — when the main route is acquired after approach ownership, status becomes `navigating`, approach state clears, and cue event is `{ kind:"acquired", acquisition:"join-route" }`.
 - [ ] **Rejoin unchanged** — acquired/off-route rejoin still requests `targetMode:"rejoin"` and remains non-narrated visual guidance unless a separate later task changes it.
@@ -1124,7 +1088,7 @@ Expected: each prints its `OK` line with no assertion failure.
 
 - [ ] `git status` shows only intended source/test/editor files and `data/connector-eval/` — never `data/map-source.geojson`, `public-data/`, or base-graph assets.
 
-- [ ] Drive or simulate the three runtime tiers (`guide`, `show-leg`, `too-far`) and verify map layer, panel copy, voice/haptic behavior, and external-handoff prominence.
+- [ ] Drive or simulate both runtime outcomes (`guide`, `too-far`) and verify map layer, panel copy, voice/haptic behavior, and external-handoff prominence.
 
 ## Self-review notes (traceability)
 

@@ -81,6 +81,10 @@ function cuePhrase(event, state, locale) {
         ? `עיקול ${directionText(cue.direction, locale)}`
         : `Bend ${directionText(cue.direction, locale)}`;
     case "arrive":
+      // Defensive guard for restored/legacy events: reaching the end of an
+      // approach leg means joining the main route, not arriving at the ride's
+      // destination. The acquired(join-route) event owns that announcement.
+      if (event.leg === "approach") return null;
       return locale === "he-IL" ? "הִגַּעְתָּ לַיַּעַד." : "You have arrived.";
     case "hazard":
     case "caution":

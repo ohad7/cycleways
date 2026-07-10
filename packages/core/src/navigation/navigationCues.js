@@ -37,7 +37,7 @@ function signedTurn(bearingIn, bearingOut) {
   return ((bearingOut - bearingIn + 540) % 360) - 180;
 }
 
-export function buildRouteCues(navigationRoute) {
+export function buildRouteCues(navigationRoute, options = {}) {
   const geometry = Array.isArray(navigationRoute?.geometry)
     ? navigationRoute.geometry
     : [];
@@ -98,7 +98,9 @@ export function buildRouteCues(navigationRoute) {
     });
   }
 
-  cues.push({ type: "arrive", distanceMeters: totalMeters });
+  if (options.includeArrival !== false) {
+    cues.push({ type: "arrive", distanceMeters: totalMeters });
+  }
 
   // Enter-segment cues at named span boundaries, with merge/suppression.
   const spans = Array.isArray(navigationRoute?.segmentSpans)

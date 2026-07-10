@@ -16,6 +16,8 @@ export const createJourneyPlaybackSource = () => {
   throw new Error("journey playback is unavailable in production");
 };
 export const journeyRequiresRideIntro = () => false;
+export const shouldAcceptNativeLocationUpdate = () => true;
+export const deriveRidePlanJourneyFixes = () => [];
 export const initialJourneyPlaybackState = () => null;
 export const journeyPlaybackPatch = () => null;
 export const journeyLifecycleLabel = () => "";

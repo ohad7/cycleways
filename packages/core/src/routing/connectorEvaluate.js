@@ -39,7 +39,7 @@ export function latestConnectorLabels(labels) {
 }
 
 function emptyVerdictCounts() {
-  return { guide: 0, showLeg: 0, tooFar: 0, other: 0 };
+  return { guide: 0, tooFar: 0, other: 0 };
 }
 
 export function evaluateThresholds(labels, thresholds) {
@@ -54,9 +54,6 @@ export function evaluateThresholds(labels, thresholds) {
     const { tier } = classifyConnector(record.features, thresholds);
     if (tier === "guide") {
       counts[record.verdict].guide += 1;
-    } else if (tier === "show-leg") {
-      counts[record.verdict].showLeg += 1;
-      counts[record.verdict].other += 1;
     } else {
       counts[record.verdict].tooFar += 1;
       counts[record.verdict].other += 1;

@@ -78,7 +78,7 @@ assert.deepEqual(cameraBoundsForPoints([
   });
 
   assert.equal(adapter.applyOverview({
-    key: "show-leg:a",
+    key: "overview:a",
     points: [{ lat: 33.1, lng: 35.6 }, { lat: 33.2, lng: 35.7 }],
     requiredPoints: [
       { id: "rider", lat: 33.1, lng: 35.6 },
@@ -92,7 +92,7 @@ assert.deepEqual(cameraBoundsForPoints([
   }, viewport), true);
   assert.equal(adapter.getState().owner, "overview");
   assert.equal(adapter.getState().transitionState, "running");
-  assert.equal(adapter.applyOverview({ key: "show-leg:a" }, viewport), false, "same fit is not restarted");
+  assert.equal(adapter.applyOverview({ key: "overview:a" }, viewport), false, "same fit is not restarted");
   assert.equal(timers.length, 1);
 
   assert.equal(adapter.applyFollow({

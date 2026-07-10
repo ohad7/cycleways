@@ -4,6 +4,8 @@ import {
   buildRidePlanCandidates,
   classifyApproach,
   createRidePlan,
+  ridePlanNeedsDirectApproachPreview,
+  ridePlanNeedsConnectorPreview,
   setupLocationQuality,
 } from "../packages/core/src/navigation/ridePlan.js";
 
@@ -42,12 +44,41 @@ assert.equal(candidates.nearestRequiresConfirmation, true);
 const official = createRidePlan(route, { direction: "forward", startMode: "official" }, fix, now);
 assert.equal(official.startMode, "official");
 assert.equal(official.skippedMeters, 0);
+assert.equal(ridePlanNeedsConnectorPreview(official), true);
+assert.equal(ridePlanNeedsDirectApproachPreview(official), false);
 
-const nearest = createRidePlan(route, { direction: "forward", startMode: "nearest" }, fix, now);
+const tooFarPreview = {
+  ...official,
+  distanceToStartMeters: 10_001,
+  approachTier: "far",
+};
+assert.equal(ridePlanNeedsConnectorPreview(tooFarPreview), false);
+assert.equal(ridePlanNeedsDirectApproachPreview(tooFarPreview), true);
+
+const nearest = createRidePlan(
+  route,
+  { direction: "forward", startMode: "nearest", startProgressMeters: null },
+  fix,
+  now,
+);
 assert.equal(nearest.startMode, "nearest");
 assert.ok(nearest.skippedMeters > 1000);
 assert.ok(nearest.guidedDistanceMeters < route.distanceMeters);
 assert.equal(nearest.requiresSkipConfirmation, true);
+
+const customWithNullProgress = createRidePlan(
+  route,
+  {
+    direction: "forward",
+    startMode: "custom",
+    startProgressMeters: null,
+    selectedPoint: geometry[1],
+  },
+  fix,
+  now,
+);
+assert.equal(customWithNullProgress.startMode, "custom");
+assert.ok(customWithNullProgress.startProgressMeters > 1000);
 
 const restoredNearest = createRidePlan(
   route,
@@ -95,5 +126,7 @@ const atStart = createRidePlan(
   now,
 );
 assert.equal(atStart.approachTier, "at");
+assert.equal(ridePlanNeedsConnectorPreview(atStart), false);
+assert.equal(ridePlanNeedsDirectApproachPreview(atStart), false);
 
 console.log("test-ride-plan: OK");

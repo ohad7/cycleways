@@ -1,7 +1,7 @@
 // Pure navigation-session controller. Native code supplies location fixes and
 // performs best-effort connector route requests. The main route remains the
-// acquisition authority; a confident pre-route connector can be a temporary
-// narrated approach leg, while weaker connectors stay visual-only or hand off.
+// acquisition authority; every successfully routed pre-route connector inside
+// the product boundary becomes a temporary narrated approach leg.
 // Acquiring the main route is the only handoff into `navigating`.
 
 import { getDistance } from "../utils/distance.js";
@@ -32,6 +32,7 @@ export const NAV_ACTIONS = {
 };
 
 const ACTIVE = new Set(["navigating", "off-route", "approaching"]);
+const SUPPORTED_APPROACH_TIERS = new Set(["unknown", "guide", "too-far"]);
 const REQUEST_MIN_MOVE_M = 200;
 const REJOIN_REQUEST_MIN_MOVE_M = 50;
 
@@ -117,6 +118,32 @@ export function createNavigationSession(navigationRoute, options = {}) {
     route: navigationRoute,
     cueEvent: null,
   };
+
+  // Snapshots from the former visual-only connector tier must not strand an
+  // upgraded session in a state that production can no longer create. Clear
+  // unsupported ownership so the next fix requests a newly guided connector.
+  if (!SUPPORTED_APPROACH_TIERS.has(state.approach?.ownershipTier)) {
+    state = {
+      ...state,
+      approach: {
+        ...state.approach,
+        suggestionGeometry: null,
+        suggestionStatus: "idle",
+        suggestionDistanceMeters: null,
+        ownershipTier: "unknown",
+        ownershipResolving: false,
+        ownershipRefreshing: false,
+        classificationReasons: [],
+        connectorFeatures: null,
+        approachProgress: null,
+        approachActiveCue: null,
+        approachLegGeometry: null,
+      },
+      routeRequest: null,
+    };
+    lastRequestPos = null;
+    connectorRequestAttempt = 0;
+  }
 
   if (state.approach?.ownershipTier === "guide") {
     state = {
@@ -365,8 +392,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
         const mainProgress = mainTracker.update(action.fix);
 
         // Not yet on the route: stay in `approaching` with a live distance to
-        // the chosen target. The connector classifier decides whether this is
-        // app-guided, visual-only, or too far for in-app ownership.
+        // the chosen target. A successful connector is app-guided; routing
+        // failure or the product distance boundary falls back to too-far.
         if (!mainProgress.hasAcquiredRoute) {
           const choices = approachTargetChoices(navigationRoute, action.fix);
           let target = state.approach.target;
@@ -533,9 +560,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
         lastConfirmedProgressMeters = mainProgress.progressMeters;
         const acquiredApproach =
           state.approach.target || state.approach.suggestionStatus !== "idle";
-        const joinedFromOwnedApproach =
-          state.approach.ownershipTier === "guide" ||
-          state.approach.ownershipTier === "show-leg";
+        const joinedFromOwnedApproach = state.approach.ownershipTier === "guide";
         const enteredEffectiveRoute = Boolean(
           acquiredApproach ||
             (navigationRoute?.requiresStartAcquisition === true &&
@@ -666,7 +691,11 @@ export function createNavigationSession(navigationRoute, options = {}) {
           let approachActiveCue = null;
           if (classification.tier === "guide" && approachLeg) {
             approachTracker = createRouteProgressTracker(approachLeg.route, options);
-            approachCues = buildRouteCues(approachLeg.route);
+            // The connector endpoint is the main-route seam, not the rider's
+            // destination. Acquisition emits the single join-route message.
+            approachCues = buildRouteCues(approachLeg.route, {
+              includeArrival: false,
+            });
             approachCueKey = null;
             if (state.latestFix) {
               approachProgress = approachTracker.update(state.latestFix);
@@ -680,7 +709,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           }
 
           const tier = classification.tier;
-          const showConnectorLeg = tier === "guide" || tier === "show-leg";
+          const showConnectorLeg = tier === "guide";
           const legGeometry = approachLeg?.geometry || geometry;
           return set({
             approach: {

@@ -66,17 +66,6 @@ export function cameraHeadingTargetForState(state, cameraShot = null) {
       : null;
   }
 
-  if (stage === "approach-show-leg") {
-    const dominant = cameraDominantBearing(state?.approach?.suggestionGeometry);
-    if (Number.isFinite(dominant)) return dominant;
-    const latestFix = state?.latestFix || null;
-    const target = state?.approach?.target?.point || null;
-    if (latestFix && target) return computeBearing(latestFix, target);
-    return Number.isFinite(state?.progress?.guidanceBearingDeg)
-      ? state.progress.guidanceBearingDeg
-      : null;
-  }
-
   if (stage === "approach-too-far" || stage === "approach-start") {
     const latestFix = state?.latestFix || null;
     const target = state?.approach?.target?.point || null;

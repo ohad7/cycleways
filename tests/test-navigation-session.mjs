@@ -325,7 +325,7 @@ function connectorResult(points, distanceMeters = null, routeClass = "road") {
   assert.equal(afterJoin.cameraTransition, null, "join snapshot expires after its window");
 }
 
-// --- show-leg tier: connector is visual-only -------------------------------
+// --- a successful connector is guided; metadata does not downgrade it -------
 {
   const { session, requested } = approachRequestedSession();
   const request = requested.routeRequest;
@@ -334,40 +334,11 @@ function connectorResult(points, distanceMeters = null, routeClass = "road") {
     requestId: request.requestId,
     connectorResult: connectorResult([request.from, request.to], 500, "path_track"),
   });
-  assert.equal(ready.approach.ownershipTier, "show-leg");
-  assert.equal(ready.approach.handoffProminence, "secondary");
+  assert.equal(ready.approach.ownershipTier, "guide");
+  assert.equal(ready.approach.handoffProminence, "hidden");
   assert.equal(ready.approach.suggestionStatus, "ready");
-  assert.equal(ready.approach.approachActiveCue, null);
-  assert.ok(ready.approach.classificationReasons.includes("class-too-low"));
-  const later = session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: 33.1008, lng: 35.6, accuracy: 5, speed: 3, timestamp: 2000 },
-  });
-  assert.equal(later.cueEvent, null, "show-leg approach does not narrate connector cues");
-  assert.equal(later.routeRequest, null, "small movement does not refresh show-leg");
-  const refreshed = session.dispatch({
-    type: NAV_ACTIONS.LOCATION,
-    fix: { lat: 33.103, lng: 35.6, accuracy: 5, speed: 3, timestamp: 4000 },
-  });
-  assert.equal(refreshed.approach.suggestionStatus, "requesting");
-  assert.ok(refreshed.routeRequest.requestId > request.requestId);
-  assert.equal(refreshed.routeRequest.purpose, "refresh");
-  assert.equal(
-    refreshed.approach.ownershipTier,
-    "show-leg",
-    "accepted ownership remains authoritative while refreshing",
-  );
-  assert.equal(refreshed.approach.ownershipRefreshing, true);
-  assert.ok(refreshed.approach.suggestionGeometry.length >= 2);
-  const retainedAfterFailure = session.dispatch({
-    type: NAV_ACTIONS.CONNECTOR_FAILED,
-    requestId: refreshed.routeRequest.requestId,
-    reason: "transient",
-  });
-  assert.equal(retainedAfterFailure.approach.ownershipTier, "show-leg");
-  assert.equal(retainedAfterFailure.approach.suggestionStatus, "ready");
-  assert.equal(retainedAfterFailure.approach.ownershipRefreshing, false);
-  assert.ok(retainedAfterFailure.approach.suggestionGeometry.length >= 2);
+  assert.deepEqual(ready.approach.classificationReasons, []);
+  assert.ok(ready.approach.approachLegGeometry.length >= 2);
 }
 
 // --- start connector failure becomes too-far / handoff-primary -------------
@@ -692,6 +663,26 @@ function offRouteRequestedSession() {
   });
   assert.equal(stillOff.status, "off-route");
   assert.equal(stillOff.cueEvent, null, "off-route event is not re-fired after restore");
+}
+
+// --- restore clears ownership tiers no longer supported by this build -----
+{
+  const route = straightRoute();
+  const source = createNavigationSession(route);
+  const snapshot = source.snapshot();
+  snapshot.state.approach = {
+    ...snapshot.state.approach,
+    ownershipTier: "legacy-visual-tier",
+    suggestionStatus: "ready",
+    suggestionGeometry: [route.geometry[0], route.geometry[1]],
+  };
+  snapshot.lastRequestPos = route.geometry[0];
+  snapshot.connectorRequestAttempt = 3;
+
+  const restored = createNavigationSession(route, { snapshot });
+  assert.equal(restored.getState().approach.ownershipTier, "unknown");
+  assert.equal(restored.getState().approach.suggestionStatus, "idle");
+  assert.equal(restored.getState().approach.suggestionGeometry, null);
 }
 
 console.log("navigation session lifecycle tests passed");

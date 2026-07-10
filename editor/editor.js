@@ -309,11 +309,7 @@ const els = {
   connectorLabelStatus: document.getElementById("connector-label-status"),
   connectorCalibLoad: document.getElementById("connector-calib-load"),
   connectorCalibReadout: document.getElementById("connector-calib-readout"),
-  connectorThresholdGuideRadius: document.getElementById("connector-threshold-guide-radius"),
   connectorThresholdTooFarRadius: document.getElementById("connector-threshold-too-far-radius"),
-  connectorThresholdMaxDetour: document.getElementById("connector-threshold-max-detour"),
-  connectorThresholdMaxRouted: document.getElementById("connector-threshold-max-routed"),
-  connectorThresholdWorstClass: document.getElementById("connector-threshold-worst-class"),
   baseOverlayStatus: document.getElementById("base-overlay-status"),
   baseOverlaySummary: document.getElementById("base-overlay-summary"),
   acceptBaseOverlay: document.getElementById("accept-base-overlay"),
@@ -3478,11 +3474,7 @@ function renderConnectorLensPanel() {
   els.connectorLabelMode.checked = state.connectorLens.labeling.active;
   els.connectorPickTarget.classList.toggle("active", state.connectorLens.pickingTarget);
   const thresholds = state.connectorLens.thresholds;
-  els.connectorThresholdGuideRadius.value = thresholds.guideRadiusMeters;
   els.connectorThresholdTooFarRadius.value = thresholds.tooFarRadiusMeters;
-  els.connectorThresholdMaxDetour.value = thresholds.maxDetourRatio;
-  els.connectorThresholdMaxRouted.value = thresholds.maxRoutedMeters;
-  els.connectorThresholdWorstClass.value = thresholds.worstClassAllowed;
   renderConnectorLabelStatus();
   renderConnectorCalibration();
 }
@@ -3646,9 +3638,9 @@ function renderConnectorCalibration() {
   els.connectorCalibReadout.textContent =
     `labels ${result.counts.total} · would-guide valid ${pct(result.validGuideRate)} ` +
     `· wrongly-guide unacceptable ${pct(result.invalidGuideRate)} ` +
-    `· valid g/s/t ${valid.guide}/${valid.showLeg}/${valid.tooFar} ` +
-    `· unacceptable g/s/t ${unacceptable.guide}/${unacceptable.showLeg}/${unacceptable.tooFar} ` +
-    `· borderline g/s/t ${borderline.guide}/${borderline.showLeg}/${borderline.tooFar}`;
+    `· valid guide/too-far ${valid.guide}/${valid.tooFar} ` +
+    `· unacceptable guide/too-far ${unacceptable.guide}/${unacceptable.tooFar} ` +
+    `· borderline guide/too-far ${borderline.guide}/${borderline.tooFar}`;
 }
 
 function setConnectorThresholdNumber(key, rawValue, label) {
@@ -3661,15 +3653,6 @@ function setConnectorThresholdNumber(key, rawValue, label) {
   state.connectorLens.thresholds = {
     ...state.connectorLens.thresholds,
     [key]: value,
-  };
-  renderConnectorCalibration();
-}
-
-function setConnectorWorstClassAllowed(value) {
-  if (!CONNECTOR_CLASS_KEYS.includes(value)) return;
-  state.connectorLens.thresholds = {
-    ...state.connectorLens.thresholds,
-    worstClassAllowed: value,
   };
   renderConnectorCalibration();
 }
@@ -7274,36 +7257,12 @@ function wireEvents() {
     setConnectorLabelMode(els.connectorLabelMode.checked),
   );
   els.connectorCalibLoad.addEventListener("click", () => loadConnectorLabels().catch(showError));
-  els.connectorThresholdGuideRadius.addEventListener("change", () =>
-    setConnectorThresholdNumber(
-      "guideRadiusMeters",
-      els.connectorThresholdGuideRadius.value,
-      "Guide radius",
-    ),
-  );
   els.connectorThresholdTooFarRadius.addEventListener("change", () =>
     setConnectorThresholdNumber(
       "tooFarRadiusMeters",
       els.connectorThresholdTooFarRadius.value,
       "Too-far radius",
     ),
-  );
-  els.connectorThresholdMaxDetour.addEventListener("change", () =>
-    setConnectorThresholdNumber(
-      "maxDetourRatio",
-      els.connectorThresholdMaxDetour.value,
-      "Max detour ratio",
-    ),
-  );
-  els.connectorThresholdMaxRouted.addEventListener("change", () =>
-    setConnectorThresholdNumber(
-      "maxRoutedMeters",
-      els.connectorThresholdMaxRouted.value,
-      "Max routed distance",
-    ),
-  );
-  els.connectorThresholdWorstClass.addEventListener("change", () =>
-    setConnectorWorstClassAllowed(els.connectorThresholdWorstClass.value),
   );
   els.addData.addEventListener("click", addDataMarker);
   els.mapStyle.addEventListener("change", () => switchMapStyle(els.mapStyle.value));

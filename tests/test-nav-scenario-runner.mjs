@@ -154,10 +154,6 @@ function straightRoute() {
 {
   const req = { from: { lat: 1, lng: 2 }, to: { lat: 3, lng: 4 } };
   assert.deepEqual(connectorRouterForMode("straight-line")(req).geometry, [req.from, req.to]);
-  assert.equal(
-    connectorRouterForMode("show-leg")(req).edgeCosts[0].routeClass,
-    "path_track",
-  );
   assert.equal(connectorRouterForMode("guide-turn")(req).geometry.length, 3);
   assert.equal(connectorRouterForMode("fail")(req).failure, "scenario-forced-failure");
   assert.equal(connectorRouterForMode("none"), null);

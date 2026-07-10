@@ -94,22 +94,12 @@ export function cameraIntentForStage(stage, state = {}) {
         viewportMode: "overview",
         geometryRole: "direct",
         bearingPolicy: "target",
-        pitch: 40,
-        pitchRange: { min: 0, max: 40 },
-        zoomPolicy: { kind: "points-fit", minZoom: 8.8, maxZoom: 15.5 },
+        pitch: 55,
+        pitchRange: { min: 55, max: 55 },
+        zoomPolicy: { kind: "retain-frame" },
         fitKind: "approach-start",
-        transition: { kind: "overview", durationMs: defaults.overviewDurationMs },
-      });
-    case "approach-show-leg":
-      return intent(stage, {
-        viewportMode: "overview",
-        geometryRole: "approach",
-        bearingPolicy: "route",
-        pitch: 35,
-        pitchRange: { min: 20, max: 35 },
-        zoomPolicy: { kind: "corridor-fit", minZoom: 12, maxZoom: 17 },
-        fitKind: "approach-leg",
-        transition: { kind: "overview", durationMs: defaults.overviewDurationMs },
+        transition: { kind: "hold", durationMs: 0 },
+        holdFrame: true,
       });
     case "approach-guide":
       return follow("approach");

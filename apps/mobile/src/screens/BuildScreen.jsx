@@ -43,6 +43,8 @@ import {
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
 import {
   createRidePlan,
+  ridePlanNeedsDirectApproachPreview,
+  ridePlanNeedsConnectorPreview,
 } from "@cycleways/core/navigation/ridePlan.js";
 import { confirmDistanceBucket } from "@cycleways/core/navigation/rideIntroPresentation.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
@@ -56,12 +58,12 @@ import {
   cameraCorridorForProgress,
   cameraGeometryKey,
   cameraManeuverCorridor,
-  cameraPitchForRegionalZoom,
   cameraTargetZoom,
   nextAppliedZoom,
   shouldReframeOverview,
 } from "@cycleways/core/navigation/cameraViewport.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
+import { navigationLinePresentationForState } from "@cycleways/core/navigation/navigationLinePresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
 import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js";
@@ -106,12 +108,20 @@ import {
 } from "../navigation/locationService.js";
 import { createJourneyPlaybackSource } from "../navigation/journeyPlaybackSource.js";
 import {
+  deriveRidePlanJourneyFixes,
   initialJourneyPlaybackState,
   journeyPlaybackPatch,
   journeyRequiresRideIntro,
+  shouldAcceptNativeLocationUpdate,
 } from "../navigation/journeyHarnessState.js";
 import { useNavigationCamera } from "../navigation/useNavigationCamera.js";
 import { normalizeCameraViewport } from "../navigation/navigationCameraAdapter.js";
+import {
+  SETUP_CONNECTOR_PREVIEW_STYLES,
+  SETUP_ROUTE_PREVIEW_STYLES,
+  navigationConnectorLineStyles,
+  navigationMainRouteLineStyle,
+} from "../navigation/navigationLineStyles.js";
 import { connectorRouterForScenario } from "@cycleways/core/navigation/scenarioConnector.js";
 import {
   clearPendingRideIntent,
@@ -176,40 +186,7 @@ const ROUTE_TRAVELED_LINE_STYLE = {
   lineJoin: "round",
   lineCap: "round",
 };
-
-// Thin/faint straight line rider→target: the persistent "the route is there"
-// anchor. Heavier dashed line: the road-preferring suggested connector (the
-// way you might take). Differentiated so they read as two different answers.
-const APPROACH_DIRECT_LINE_STYLE = {
-  lineColor: "#6b7280",
-  lineWidth: 2,
-  lineOpacity: 0.6,
-  lineDasharray: [1, 2],
-  lineJoin: "round",
-  lineCap: "round",
-};
-const APPROACH_SUGGESTION_LINE_STYLE = {
-  lineColor: "#2563eb",
-  lineWidth: 4,
-  lineOpacity: 0.9,
-  lineDasharray: [2, 1.5],
-  lineJoin: "round",
-  lineCap: "round",
-};
-const APPROACH_GUIDE_LINE_STYLE = {
-  lineColor: "#2f6b3c",
-  lineWidth: 5,
-  lineOpacity: 0.92,
-  lineJoin: "round",
-  lineCap: "round",
-};
-const SETUP_PREVIEW_LINE_STYLE = {
-  lineColor: "#2f6b3c",
-  lineWidth: 7,
-  lineOpacity: 0.92,
-  lineJoin: "round",
-  lineCap: "round",
-};
+const APPROACH_DIRECT_LINE_STYLES = navigationConnectorLineStyles("direct");
 
 // Adaptive rider puck colors: on-route uses the brand blue; approaching /
 // off-route is muted gray (matches the traveled line) to signal "not snapped".
@@ -373,6 +350,8 @@ const ACQUIRED_BANNER_MS = 4000;
 export default function BuildScreen({ navigation, route }) {
   const cameraRef = useRef(null);
   const routePointPressGuardRef = useRef(0);
+  const devJourneyOwnsLocationRef = useRef(false);
+  const retainedIntroCameraStateRef = useRef(null);
   const screenInsets = useSafeAreaInsets();
   const [locationState, setLocationState] = useState({
     enabled: false,
@@ -724,6 +703,9 @@ export default function BuildScreen({ navigation, route }) {
   }, []);
 
   const handleUserLocationUpdate = useCallback((location) => {
+    if (!shouldAcceptNativeLocationUpdate({
+      journeyActive: __DEV__ && devJourneyOwnsLocationRef.current,
+    })) return;
     const point = pointFromLocationEvent(location);
     if (!point) return;
     setLocationState((current) => ({
@@ -959,7 +941,12 @@ export default function BuildScreen({ navigation, route }) {
   );
 
   useEffect(() => {
-    if (!rideIntroVisible || !ridePlan?.selectedPoint || !validMapPoint(rideSetupFix)) {
+    if (
+      !rideIntroVisible ||
+      !ridePlan?.selectedPoint ||
+      !validMapPoint(rideSetupFix) ||
+      !ridePlanNeedsConnectorPreview(ridePlan)
+    ) {
       setRideSetupConnector((current) =>
         current.status === "idle" && current.geometry.length === 0
           ? current
@@ -1019,6 +1006,7 @@ export default function BuildScreen({ navigation, route }) {
   }, [
     computeConnector,
     rideIntroVisible,
+    ridePlan?.approachTier,
     ridePlan?.selectedPoint,
     rideSetupFix?.lat,
     rideSetupFix?.lng,
@@ -1109,6 +1097,7 @@ export default function BuildScreen({ navigation, route }) {
 
   const clearDevJourneyState = useCallback(() => {
     const restore = devRideSetupRestoreRef.current;
+    devJourneyOwnsLocationRef.current = false;
     devInnerSourceRef.current = null;
     devScenarioConnectorRef.current = null;
     devPlaybackRef.current = null;
@@ -1250,6 +1239,18 @@ export default function BuildScreen({ navigation, route }) {
     () => buildRouteGeometryFeatureCollection(rideSetupConnector.geometry),
     [rideSetupConnector.geometry],
   );
+  const setupDirectGeometry = useMemo(
+    () =>
+      buildRouteGeometryFeatureCollection(
+        [rideSetupFix, ridePlan?.selectedPoint].filter(validMapPoint),
+      ),
+    [
+      ridePlan?.selectedPoint?.lat,
+      ridePlan?.selectedPoint?.lng,
+      rideSetupFix?.lat,
+      rideSetupFix?.lng,
+    ],
+  );
   const displayedRouteGeometry = isNavigating ? activeRouteGeometry : routeGeometry;
   const rideIntroFitBottomPadding =
     rideIntroCardHeight > 0
@@ -1268,6 +1269,7 @@ export default function BuildScreen({ navigation, route }) {
   }, []);
 
   const resetMapToOverhead = useCallback((animationDuration = 450) => {
+    retainedIntroCameraStateRef.current = null;
     cameraPitchRef.current = 0;
     cameraBearingRef.current = 0;
     cameraFitKeyRef.current = null;
@@ -1279,6 +1281,97 @@ export default function BuildScreen({ navigation, route }) {
       animationDuration,
       animationMode: "easeTo",
     });
+  }, []);
+
+  const adaptDevJourneyToRidePlan = useCallback((plan) => {
+    if (!__DEV__ || !plan?.effectiveRoute?.canNavigate) return;
+    const playback = devPlaybackRef.current;
+    if (!playback?.source?.setTrack) return;
+
+    if (plan.startMode === "official" && plan.direction === "forward") {
+      if (!playback.modifiedRidePlan) return;
+      playback.source.setTrack(playback.originalFixes, playback.originalWindow);
+      playback.fixes = playback.originalFixes;
+      playback.bookmark = playback.originalBookmark;
+      playback.isFullJourney = playback.originalIsFullJourney;
+      playback.rideSelection = null;
+      playback.modifiedRidePlan = false;
+      setDevPlaybackState(initialJourneyPlaybackState({
+        resolved: playback.resolved,
+        bookmark: playback.bookmark,
+        mode: playback.mode,
+      }));
+      setDevCameraDiagnostics((current) => ({
+        ...(current || {}),
+        bookmark: playback.bookmark?.id || "",
+        expectedStage: playback.bookmark?.expectedStage || "",
+        journeyTime: playback.originalFixes[0]?.timestamp ?? null,
+      }));
+      return;
+    }
+
+    // A nearest/custom point that is already reached removes the approach leg.
+    // Derive movement along the selected effective route so CAM does not keep
+    // replaying the now-invalid official-start connector.
+    if (plan.approachTier !== "at") return;
+    const isCameraPlayback = playback.mode === "cam";
+    const derivedFixes = deriveRidePlanJourneyFixes(plan, {
+      mode: playback.mode,
+      startTimestamp: playback.originalFixes[0]?.timestamp ?? 0,
+    });
+    if (derivedFixes.length < 2) return;
+
+    const originalBookmark = playback.originalBookmark;
+    const preStart = originalBookmark?.phase === "pre-start";
+    const branchLabel = plan.startMode === "nearest"
+      ? "Nearest start"
+      : plan.direction === "reverse"
+        ? "Reverse start"
+        : "Selected start";
+    const derivedBookmark = isCameraPlayback
+      ? {
+          id: `modified-${plan.startMode}`,
+          label: preStart
+            ? `${branchLabel} · inspect intro`
+            : `${branchLabel} · main-route start`,
+          phase: preStart ? "pre-start" : "post-start",
+          startAction: preStart ? "hold" : "require-confirm",
+          targetTimestamp: preStart
+            ? derivedFixes[0].timestamp
+            : derivedFixes.at(-1).timestamp,
+          preRollMs: 0,
+          holdMs: 0,
+          expectedStage: preStart ? "intro-overhead" : "ride",
+        }
+      : null;
+    const derivedWindow = {
+      warmupEndIndex: -1,
+      startIndex: 0,
+      endIndex: derivedFixes.length - 1,
+    };
+
+    playback.fixes = derivedFixes;
+    playback.bookmark = derivedBookmark;
+    playback.isFullJourney = !isCameraPlayback;
+    playback.rideSelection = {
+      direction: plan.direction,
+      startMode: plan.startMode,
+      startProgressMeters: plan.startProgressMeters,
+      selectedPoint: plan.selectedPoint,
+    };
+    playback.modifiedRidePlan = true;
+    playback.source.setTrack(derivedFixes, derivedWindow);
+    setDevPlaybackState(initialJourneyPlaybackState({
+      resolved: { ...playback.resolved, fixes: derivedFixes },
+      bookmark: derivedBookmark,
+      mode: playback.mode,
+    }));
+    setDevCameraDiagnostics((current) => ({
+      ...(current || {}),
+      bookmark: derivedBookmark?.id || "modified-start",
+      expectedStage: derivedBookmark?.expectedStage || "ride",
+      journeyTime: derivedFixes[0]?.timestamp ?? null,
+    }));
   }, []);
 
   const confirmRidePlan = useCallback(
@@ -1428,8 +1521,9 @@ export default function BuildScreen({ navigation, route }) {
       confirmRidePlan(ridePlan);
       return;
     }
+    adaptDevJourneyToRidePlan(ridePlan);
     setRideIntroVisible(true);
-  }, [confirmRidePlan, ridePlan]);
+  }, [adaptDevJourneyToRidePlan, confirmRidePlan, ridePlan]);
 
   const handleRideSettingsClose = useCallback(() => {
     setRideSettingsVisible(false);
@@ -1495,6 +1589,7 @@ export default function BuildScreen({ navigation, route }) {
 
   const armDevJourneyIntro = useCallback((playback) => {
     if (!__DEV__ || !playback?.resolved || !playback?.source) return;
+    devJourneyOwnsLocationRef.current = true;
     const { resolved, bookmark, mode, source } = playback;
     source.restart();
     devInnerSourceRef.current = source;
@@ -1509,14 +1604,20 @@ export default function BuildScreen({ navigation, route }) {
     setRideIntroVisible(false);
     setRideSettingsVisible(false);
     setPickOnMapMode(false);
-    setRideSetupSelection(DEFAULT_RIDE_SETUP_SELECTION);
+    setRideSetupSelection(
+      playback.rideSelection || DEFAULT_RIDE_SETUP_SELECTION,
+    );
     setDevScenarioRoute(resolved.navigationRoute);
     setDevRideIntroRoute(resolved.navigationRoute);
     setPendingDevRideIntro({
       routeId: resolved.navigationRoute.id,
       fix: resolved.fixes[0] || null,
     });
-    setDevPlaybackState(initialJourneyPlaybackState({ resolved, bookmark, mode }));
+    setDevPlaybackState(initialJourneyPlaybackState({
+      resolved: { ...resolved, fixes: playback.fixes || resolved.fixes },
+      bookmark,
+      mode,
+    }));
     setDevCameraDiagnostics({
       stage: "intro-loading",
       mode: "overview",
@@ -1525,7 +1626,7 @@ export default function BuildScreen({ navigation, route }) {
       journey: resolved.name,
       bookmark: bookmark?.id || "",
       expectedStage: bookmark?.expectedStage || "",
-      journeyTime: resolved.fixes[0]?.timestamp ?? null,
+      journeyTime: (playback.fixes || resolved.fixes)[0]?.timestamp ?? null,
     });
   }, []);
 
@@ -1567,6 +1668,7 @@ export default function BuildScreen({ navigation, route }) {
         return;
       }
       setDevPickerVisible(false);
+      devJourneyOwnsLocationRef.current = true;
       setDevRideIntroRoute(null);
       setPendingDevRideIntro(null);
       const playbackMode = bookmark ? "cam" : "sim";
@@ -1591,13 +1693,16 @@ export default function BuildScreen({ navigation, route }) {
             uiNow - devPlaybackUiAtRef.current < 200
           ) return;
           devPlaybackUiAtRef.current = uiNow;
-          const fixIndex = Math.max(0, Math.min(resolved.fixes.length - 1, playback.index - 1));
-          const timestamp = resolved.fixes[fixIndex]?.timestamp ?? null;
+          const activePlayback = devPlaybackRef.current;
+          const activeFixes = activePlayback?.fixes || resolved.fixes;
+          const activeBookmark = activePlayback?.bookmark ?? bookmark;
+          const fixIndex = Math.max(0, Math.min(activeFixes.length - 1, playback.index - 1));
+          const timestamp = activeFixes[fixIndex]?.timestamp ?? null;
           const lifecyclePatch = journeyPlaybackPatch(playback);
           setDevPlaybackState((current) => ({
             ...(current || initialJourneyPlaybackState({
-              resolved,
-              bookmark,
+              resolved: { ...resolved, fixes: activeFixes },
+              bookmark: activeBookmark,
               mode: playbackMode,
             })),
             ...lifecyclePatch,
@@ -1607,7 +1712,7 @@ export default function BuildScreen({ navigation, route }) {
             setDevCameraDiagnostics((current) => ({
               ...(current || {}),
               journey: resolved.name,
-              bookmark: bookmark?.id || "",
+              bookmark: activeBookmark?.id || "",
               journeyTime: timestamp,
             }));
           }
@@ -1616,9 +1721,16 @@ export default function BuildScreen({ navigation, route }) {
       devPlaybackRef.current = {
         source: playbackSource,
         resolved,
+        fixes: resolved.fixes,
         bookmark,
         mode: playbackMode,
         isFullJourney: !bookmark,
+        originalFixes: resolved.fixes,
+        originalBookmark: bookmark,
+        originalWindow: window,
+        originalIsFullJourney: !bookmark,
+        rideSelection: null,
+        modifiedRidePlan: false,
       };
       devInnerSourceRef.current = playbackSource;
       devScenarioConnectorRef.current = {
@@ -1837,16 +1949,37 @@ export default function BuildScreen({ navigation, route }) {
     }),
     [networkPresentation],
   );
+  const navigationLineAuthority = useMemo(
+    () => navigationLinePresentationForState(nav.state ?? {}),
+    [
+      nav.state?.approach?.ownershipTier,
+      nav.state?.cameraTransition?.kind,
+      nav.state?.cameraTransition?.sourceTier,
+      nav.state?.offRoute,
+      nav.state?.status,
+    ],
+  );
   const routeLineStyles = useMemo(() => {
-    const variant = mapPresentationActive ? "dark" : "current";
-    const casingSpec = routeGeometryCasingStyleForPresentation(variant);
+    if (!mapPresentationActive) {
+      return {
+        casing: null,
+        core: navigationMainRouteLineStyle(
+          navigationLineAuthority.mainRouteProminence,
+        ),
+      };
+    }
+    const casingSpec = routeGeometryCasingStyleForPresentation("dark");
     const coreSpec =
-      routeGeometryLineStyleForPresentation(variant) || ROUTE_GEOMETRY_LINE_STYLE;
+      routeGeometryLineStyleForPresentation("dark") || ROUTE_GEOMETRY_LINE_STYLE;
     return {
       casing: casingSpec ? paintToRNStyle(casingSpec) : null,
       core: paintToRNStyle(coreSpec),
     };
-  }, [mapPresentationActive]);
+  }, [mapPresentationActive, navigationLineAuthority.mainRouteProminence]);
+  const approachSuggestionLineStyles = useMemo(
+    () => navigationConnectorLineStyles(navigationLineAuthority.connectorRole),
+    [navigationLineAuthority.connectorRole],
+  );
 
   const networkFeatures = useMemo(() => {
     if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
@@ -1955,8 +2088,8 @@ export default function BuildScreen({ navigation, route }) {
   const activeGeometryKey = "main";
 
   // Approach overlays (while approaching / off-route): a direct line when
-  // there is no trusted connector, or a classified connector leg for show-leg,
-  // guide, and rejoin states.
+  // there is no trusted connector, or a classified connector leg for guided
+  // approach and rejoin states.
   const approach = nav.state?.approach ?? null;
   const cameraTransition = nav.state?.cameraTransition ?? null;
   const latestFix = nav.state?.latestFix ?? null;
@@ -2348,6 +2481,15 @@ export default function BuildScreen({ navigation, route }) {
             };
           const stageChanged = cameraStageRef.current !== shot.stage;
           cameraStageRef.current = shot.stage;
+          if (
+            shot.stage === "approach-too-far" &&
+            retainedIntroCameraStateRef.current
+          ) {
+            const retained = retainedIntroCameraStateRef.current;
+            cameraPitchRef.current = retained.pitch;
+            cameraZoomRef.current = retained.zoom;
+            cameraBearingRef.current = retained.heading;
+          }
           const cameraEase = Math.min(1, dtMs / CAMERA_ROTATE_MS);
           const lastNativeValidation = navigationCameraRef.current?.getState?.();
           const validationBelongsToShot =
@@ -2572,9 +2714,7 @@ export default function BuildScreen({ navigation, route }) {
             const fitPitch = Number.isFinite(shot.pitch)
               ? requiredGeometryOutside
                 ? shot.pitchRange?.min ?? shot.pitch
-                : shot.stage === "approach-too-far"
-                  ? cameraPitchForRegionalZoom(shot.pitch, overviewZoom)
-                  : shot.pitch
+                : shot.pitch
               : null;
             const fitKeyDecimals =
               shot.fitKind === "rejoin"
@@ -2813,10 +2953,67 @@ export default function BuildScreen({ navigation, route }) {
     }
   }, []);
 
-  // Recenter button: re-engage camera follow on the rider.
+  const applyTooFarCameraFrame = useCallback((animationDuration = 0) => {
+    const rider = nav.state?.latestFix;
+    const start =
+      nav.state?.approach?.target?.point || confirmedRidePlan?.selectedPoint;
+    if (!validMapPoint(rider) || !validMapPoint(start)) return false;
+    const bottomPadding = Math.max(
+      RIDE_INTRO_FIT_BOTTOM_PADDING,
+      Math.ceil(
+        mapViewportSize.height -
+          navigationOcclusion.bottomOverlayTop +
+          RIDE_INTRO_RIDER_CARD_GAP,
+      ),
+    );
+    const retained = introMarkerSlotCameraState(rider, start, {
+      bottomPadding,
+      heading: computeBearing(rider, start),
+      pitch: RIDE_INTRO_FIT_PITCH,
+      topInset: Math.max(screenInsets.top, navigationOcclusion.topOverlayBottom),
+    });
+    if (!retained) return false;
+    retainedIntroCameraStateRef.current = retained;
+    cameraPitchRef.current = retained.pitch;
+    cameraZoomRef.current = retained.zoom;
+    cameraBearingRef.current = retained.heading;
+    setCameraToMarkerSlotState(cameraRef.current, retained, animationDuration);
+    return true;
+  }, [
+    confirmedRidePlan?.selectedPoint,
+    mapViewportSize.height,
+    nav.state?.approach?.target?.point,
+    nav.state?.latestFix,
+    navigationOcclusion.bottomOverlayTop,
+    navigationOcclusion.topOverlayBottom,
+    screenInsets.top,
+  ]);
+
+  // A normal Start retains the Ride Intro shot. Restored sessions have no
+  // intro frame to retain, so establish the same marker-slot frame once.
+  useEffect(() => {
+    if (
+      !isNavigating ||
+      navStatus !== "approaching" ||
+      nav.state?.approach?.ownershipTier !== "too-far" ||
+      retainedIntroCameraStateRef.current
+    ) return;
+    applyTooFarCameraFrame(0);
+  }, [
+    applyTooFarCameraFrame,
+    isNavigating,
+    nav.state?.approach?.ownershipTier,
+    navStatus,
+  ]);
+
+  // Recenter re-engages camera ownership. Too-far rebuilds the same
+  // rider/start marker-slot shot; other stages resume their normal policy.
   const handleRecenter = useCallback(() => {
     nav.recenter();
-  }, [nav]);
+    if (nav.state?.approach?.ownershipTier === "too-far") {
+      applyTooFarCameraFrame(450);
+    }
+  }, [applyTooFarCameraFrame, nav]);
 
   // Any hand edit detaches the route from the catalog entry it was loaded from.
   const handleClearRoute = useCallback(() => {
@@ -2868,6 +3065,9 @@ export default function BuildScreen({ navigation, route }) {
             : "official",
           selectedPoint: rideSetupSelectionParam.selectedPoint || null,
           startProgressMeters:
+            rideSetupSelectionParam.startProgressMeters !== null &&
+            rideSetupSelectionParam.startProgressMeters !== undefined &&
+            rideSetupSelectionParam.startProgressMeters !== "" &&
             Number.isFinite(Number(rideSetupSelectionParam.startProgressMeters)) &&
             Number(rideSetupSelectionParam.startProgressMeters) >= 0
               ? Number(rideSetupSelectionParam.startProgressMeters)
@@ -2969,6 +3169,7 @@ export default function BuildScreen({ navigation, route }) {
           topInset: screenInsets.top,
         })
       : null;
+    retainedIntroCameraStateRef.current = introSlotState;
     if (__DEV__) {
       const introHeading = Number.isFinite(introSlotState?.heading)
         ? introSlotState.heading
@@ -3015,9 +3216,18 @@ export default function BuildScreen({ navigation, route }) {
       });
       return;
     }
+    const localRouteContext = cameraCorridorForProgress(
+      ridePlan?.effectiveRoute?.geometry,
+      0,
+      { behindMeters: 0, lookaheadMeters: 250 },
+    );
     fitCameraToPoints(
       cameraRef.current,
-      fixPoint ? [fixPoint, start] : ridePlan?.effectiveRoute?.geometry ?? [start],
+      localRouteContext.length >= 2
+        ? [start, ...(fixPoint ? [fixPoint] : []), ...localRouteContext]
+        : fixPoint
+          ? [fixPoint, start]
+          : [start],
       introBottomPadding,
       introFitOptions,
     );
@@ -3145,6 +3355,9 @@ export default function BuildScreen({ navigation, route }) {
     setupRiderPoint && Number.isFinite(setupRiderHeading)
       ? ((setupRiderHeading - mapHeadingRef.current) % 360 + 360) % 360
       : null;
+  const devJourneyOwnsLocation = Boolean(
+    __DEV__ && (devPlaybackState || devRideIntroRoute || pendingDevRideIntro),
+  );
 
   return (
     <View
@@ -3174,9 +3387,10 @@ export default function BuildScreen({ navigation, route }) {
           followZoomLevel={14.5}
         />
         {/* Raw GPS puck: hidden while navigating (the custom adaptive puck takes
-            over) but kept mounted so onUpdate keeps feeding the latest raw fix
-            used to place the puck while approaching / off-route. */}
-        {locationState.enabled || isNavigating ? (
+            over) but kept mounted so onUpdate feeds the latest raw fix while
+            approaching / off-route. CAM/SIM unmounts it because the journey's
+            deterministic source owns both the setup marker and navigation fix. */}
+        {(locationState.enabled || isNavigating) && !devJourneyOwnsLocation ? (
           <UserLocation
             visible={!isNavigating}
             onUpdate={handleUserLocationUpdate}
@@ -3197,14 +3411,35 @@ export default function BuildScreen({ navigation, route }) {
         </ShapeSource>
         {(rideIntroVisible || rideSettingsVisible || pickOnMapMode) && ridePlan?.effectiveRoute ? (
           <ShapeSource id="ride-setup-preview" shape={setupPreviewGeometry}>
-            <LineLayer id="ride-setup-preview-line" style={SETUP_PREVIEW_LINE_STYLE} />
+            <LineLayer
+              id="ride-setup-preview-casing"
+              style={SETUP_ROUTE_PREVIEW_STYLES.casing}
+            />
+            <LineLayer
+              id="ride-setup-preview-line"
+              style={SETUP_ROUTE_PREVIEW_STYLES.core}
+            />
           </ShapeSource>
         ) : null}
-        {rideIntroVisible && rideSetupConnector.status === "ready" ? (
+        {rideIntroVisible && ridePlanNeedsDirectApproachPreview(ridePlan) ? (
+          <ShapeSource id="ride-setup-direct" shape={setupDirectGeometry}>
+            <LineLayer
+              id="ride-setup-direct-line"
+              style={APPROACH_DIRECT_LINE_STYLES.core}
+            />
+          </ShapeSource>
+        ) : null}
+        {rideIntroVisible &&
+        ridePlanNeedsConnectorPreview(ridePlan) &&
+        rideSetupConnector.status === "ready" ? (
           <ShapeSource id="ride-setup-connector" shape={setupConnectorGeometry}>
             <LineLayer
+              id="ride-setup-connector-casing"
+              style={SETUP_CONNECTOR_PREVIEW_STYLES.casing}
+            />
+            <LineLayer
               id="ride-setup-connector-line"
-              style={APPROACH_GUIDE_LINE_STYLE}
+              style={SETUP_CONNECTOR_PREVIEW_STYLES.core}
             />
           </ShapeSource>
         ) : null}
@@ -3246,19 +3481,21 @@ export default function BuildScreen({ navigation, route }) {
           <ShapeSource id="approach-direct" shape={directLineGeometry}>
             <LineLayer
               id="approach-direct-line"
-              style={APPROACH_DIRECT_LINE_STYLE}
+              style={APPROACH_DIRECT_LINE_STYLES.core}
             />
           </ShapeSource>
         ) : null}
         {showSuggestion ? (
           <ShapeSource id="approach-suggestion" shape={suggestionFeature}>
+            {approachSuggestionLineStyles.casing ? (
+              <LineLayer
+                id="approach-suggestion-casing"
+                style={approachSuggestionLineStyles.casing}
+              />
+            ) : null}
             <LineLayer
               id="approach-suggestion-line"
-              style={
-                (cameraTransition?.sourceTier || navPresentation.approachOwnershipTier) === "guide"
-                  ? APPROACH_GUIDE_LINE_STYLE
-                  : APPROACH_SUGGESTION_LINE_STYLE
-              }
+              style={approachSuggestionLineStyles.core}
             />
           </ShapeSource>
         ) : null}
@@ -4346,6 +4583,11 @@ function setIntroCameraToMarkerSlots(camera, rider, start, options = {}) {
   if (!camera) return;
   const state = introMarkerSlotCameraState(rider, start, options);
   if (!state) return;
+  setCameraToMarkerSlotState(camera, state, 550);
+}
+
+function setCameraToMarkerSlotState(camera, state, animationDuration = 0) {
+  if (!camera || !state) return;
   camera.setCamera?.({
     type: "CameraStop",
     centerCoordinate: [state.center.lng, state.center.lat],
@@ -4353,8 +4595,8 @@ function setIntroCameraToMarkerSlots(camera, rider, start, options = {}) {
     pitch: state.pitch,
     zoomLevel: state.zoom,
     padding: state.padding,
-    animationDuration: 550,
-    animationMode: "easeTo",
+    animationDuration,
+    animationMode: animationDuration > 0 ? "easeTo" : "none",
   });
 }
 

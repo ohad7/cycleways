@@ -41,4 +41,25 @@ source.restart();
 assert.equal(source.getState().index, 0);
 assert.equal(source.getState().warming, true);
 
+const replacementScheduled = [];
+const replacementEmitted = [];
+const replacement = createJourneyPlaybackSource(fixes, {
+  schedule: (callback, delay) => {
+    const item = { callback, delay, cancelled: false };
+    replacementScheduled.push(item);
+    return item;
+  },
+  cancelSchedule: (item) => { item.cancelled = true; },
+});
+const derived = [5000, 6000].map((timestamp, index) => ({
+  lat: 33.2,
+  lng: 35.7 + index * 0.00001,
+  timestamp,
+}));
+replacement.setTrack(derived, { warmupEndIndex: -1, startIndex: 0, endIndex: 1 });
+assert.equal(replacement.getState().running, false, "replacing a track does not auto-start it");
+await replacement.startWatch({ onFix: (fix) => replacementEmitted.push(fix.timestamp) });
+replacementScheduled.shift().callback();
+assert.deepEqual(replacementEmitted, [5000], "replacement track owns subsequent playback");
+
 console.log("journey playback source tests passed");

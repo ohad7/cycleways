@@ -100,6 +100,20 @@ assert.equal(formatSpeechDistanceMeters(1250), "1.3 קילומטר");
   assert.ok(approach, "approach cue speaks");
   assert.match(approach.text, /בעוד 80 מטר/);
   assert.match(approach.text, /פנה שמאלה/);
+
+  const falseArrival = planner.plan(
+    {
+      kind: "cue",
+      cueType: "arrive",
+      phase: "final",
+      leg: "approach",
+      cue: { type: "arrive", distanceMeters: 180 },
+    },
+    { approach: { approachActiveCue: { distanceToCueMeters: 10 } } },
+    2000,
+  );
+  assert.equal(falseArrival.utterance, null, "approach seam is not a destination");
+  assert.equal(falseArrival.reason, "no-phrase");
 }
 
 {

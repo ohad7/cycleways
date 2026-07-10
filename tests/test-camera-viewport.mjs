@@ -4,7 +4,6 @@ import {
   cameraCorridorForProgress,
   cameraDominantBearing,
   cameraManeuverCorridor,
-  cameraPitchForRegionalZoom,
   cameraTargetZoom,
   nextAppliedZoom,
   shouldReframeOverview,
@@ -61,10 +60,6 @@ assert.ok(Math.abs(cameraDominantBearing(geometry) - 0) < 2);
 
 assert.equal(nextAppliedZoom({ current: 16, target: 16.1, dtMs: 1000 }), 16);
 assert.equal(nextAppliedZoom({ current: 16, target: 17, dtMs: 1000 }), 16.7);
-assert.equal(cameraPitchForRegionalZoom(40, 10), 0);
-assert.equal(cameraPitchForRegionalZoom(40, 11.5), 20);
-assert.equal(cameraPitchForRegionalZoom(40, 14), 40);
-
 assert.deepEqual(
   shouldReframeOverview(null, {}),
   { reframe: true, reason: "initial" },

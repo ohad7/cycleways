@@ -12,8 +12,7 @@ const state = {
 
 const expected = {
   "approach-resolving": ["overview", "direct", 55, "points-fit"],
-  "approach-too-far": ["overview", "direct", 40, "points-fit"],
-  "approach-show-leg": ["overview", "approach", 35, "corridor-fit"],
+  "approach-too-far": ["overview", "direct", 55, "retain-frame"],
   "approach-guide": ["follow", "approach", 55, "corridor-fit"],
   "approach-guide-pre-turn": ["follow", "approach", 38, "corridor-fit"],
   "join-route": ["follow", "join", 42, "corridor-fit"],
@@ -35,6 +34,8 @@ for (const [stage, [mode, role, pitch, zoomKind]] of Object.entries(expected)) {
   assert.equal(intent.zoomPolicy.kind, zoomKind, `${stage} zoom kind`);
   assert.ok(intent.pitch >= intent.pitchRange.min && intent.pitch <= intent.pitchRange.max);
 }
+
+assert.equal(cameraIntentForStage("approach-too-far", state).holdFrame, true);
 
 assert.equal(cameraLookaheadMeters(0), NAVIGATION_CAMERA_DEFAULTS.lookaheadMinMeters);
 assert.equal(cameraLookaheadMeters(20), NAVIGATION_CAMERA_DEFAULTS.lookaheadMaxMeters);

@@ -33,10 +33,10 @@ The intended end state includes:
   arrival, and fail-closed semantic connector injection in native and headless
   execution.
 - **Phase 2:** added corridor and maneuver framing, derived/smoothed zoom,
-  corridor heading, regional pitch flattening, overview hysteresis, and retained
+  corridor heading, overview hysteresis, retained too-far frames, and retained
   join/reacquisition snapshots. All navigation writes now pass through the
   adapter.
-- **Phase 3:** replaced the camera micro-scenarios with four shared journeys,
+- **Phase 3:** replaced the camera micro-scenarios with three shared journeys,
   controllable SIM/CAM playback, 1x bookmark pre-roll/hold, ordered semantic
   camera expectations, and throttled applied-state diagnostics. Visual journeys
   use real catalog/routing geometry and physically checked fixes.
@@ -56,6 +56,82 @@ Lifecycle hardening completed on 2026-07-10:
 - added visible lifecycle and expected-stage labels, aligned intro diagnostics
   with `intro-start-facing`/`intro-overhead`, and added schema, playback, and
   lifecycle regression coverage.
+
+Line-authority correction completed on 2026-07-10:
+
+| State | Official route | Connector/recovery geometry |
+| --- | --- | --- |
+| Ride Intro | stable blue, full preview | amber dashed proposal |
+| Guided approach | blue, thinner and 44% opacity | amber solid with white casing |
+| Too far (intro and active) | blue context at 32% opacity | gray dotted direct line |
+| Join seam | blue rising to active prominence | retained amber tail at reduced opacity |
+| Main ride | blue at full prominence | none |
+| Off-route | blue remains authoritative | red-orange dashed rejoin suggestion |
+
+- [x] Added a pure semantic selector for main-route prominence and connector
+  role, independent of Mapbox styling.
+- [x] Kept the official route blue from setup through active navigation.
+- [x] Separated connector meaning by hue, dash, width, casing, and opacity so
+  color is not the only signal.
+- [x] Applied the same policy to Ride Intro, approach, join, and recovery.
+- [x] Added focused regression tests for every role and transition.
+
+Guided-seam voice correction completed on 2026-07-10:
+
+- [x] Suppressed destination-arrival cue generation for approach legs.
+- [x] Kept the `acquired: join-route` utterance as the single seam message.
+- [x] Added a defensive voice-planner guard for restored or legacy approach
+  arrival events.
+- [x] Added an end-to-end journey assertion preventing “הגעת ליעד” before the
+  guided route join and requiring exactly one join announcement.
+
+Ride Intro start-choice correction completed on 2026-07-10:
+
+- [x] Treat `startProgressMeters: null` as “not restored,” not numeric progress
+  zero, so nearest/custom selections calculate their actual projection.
+- [x] Suppress connector computation and rendering when the selected start is
+  already reached.
+- [x] Reframe an already-reached start with 250 m of local route context rather
+  than fitting two nearly coincident rider/start points.
+- [x] Preserve the selected start across CAM Replay.
+- [x] Supersede an invalidated approach bookmark after nearest-start selection
+  and derive deterministic movement along the selected effective route.
+- [x] Keep the original journey/route fixture as the source; no duplicate
+  nearest-start scenario is introduced.
+- [x] Add regression coverage for connector-preview policy, derived CAM
+  continuation, and runtime playback-track replacement.
+
+Successful-connector ownership correction completed on 2026-07-10:
+
+- [x] Make every successful connector inside the 10 km product boundary a
+  guided approach; distance, detour ratio, and accepted edge metadata no longer
+  create a second visual-only confidence tier.
+- [x] Keep routing failure/no coverage and the explicit too-far boundary as the
+  non-guided fallbacks.
+- [x] Remove `show-leg` camera, presentation, line-style, and session branches.
+- [x] Remove the metadata-forced `journey-show-leg` CAM fixture.
+- [x] Update confidence, session, presentation, camera, scenario, and line-style
+  regression coverage to enforce the two-outcome policy.
+
+Journey location-isolation correction completed on 2026-07-10:
+
+- [x] Ignore native Mapbox location updates while a CAM/SIM journey is active.
+- [x] Hide the native puck while the journey owns location, leaving the
+  scenario rider marker/custom navigation puck authoritative.
+- [x] Restore normal native location ownership when the journey is cleared.
+- [x] Assert that `journey-too-far` opens from its first fixture fix at 15.9 km,
+  safely beyond the 10 km too-far boundary.
+
+Too-far continuity correction completed on 2026-07-10:
+
+- [x] Apply the 10 km boundary in Ride Intro and skip routed connector preview
+  beyond it.
+- [x] Show the same gray direct rider-to-start line before and after Start.
+- [x] Retain the accepted 55-degree intro pitch, zoom, bearing, and scale when
+  Start enters `approach-too-far`.
+- [x] Rebuild the same marker-slot frame only on explicit Recenter or when a
+  restored too-far session has no retained intro frame.
+- [x] Remove regional pitch flattening and the redundant Start-time points fit.
 
 Validation completed:
 
@@ -119,8 +195,7 @@ native CAM tuning, not scattered constants or fixture-specific expectations.
 
 ```text
 intro pitch                         55°
-too-far pitch                       up to 40°; flatten toward 20°/0° regionally
-show-leg pitch                      35°
+too-far pitch                       retain Ride Intro 55° frame
 guided approach / ride pitch        55°
 maneuver pitch                      35–40°
 off-route pitch                     20°
@@ -360,8 +435,7 @@ Each recorded connector response identifies the semantic request with:
 - [ ] Use a route/connector pair that visibly demonstrates the claimed stage.
 - [ ] Run the same fixture through the real session in SIM, CAM, native dev
   mode, and headless execution.
-- [ ] Replace stale expectations that pin the old values such as 55° too-far or
-  20° show-leg.
+- [ ] Replace stale expectations that pin old camera values.
 - [ ] Assert identical connector consumption, stage sequence, geometry
   authority, and terminal state across all runners.
 
@@ -441,8 +515,7 @@ maneuvers and connector-to-route transitions.
 
 - [ ] Derive guide/ride bearing from a stable forward corridor tangent or
   aggregate, not a single dense segment.
-- [ ] Give show-leg a stable connector-dominant direction.
-- [ ] Keep too-far target-facing with regional pitch flattening.
+- [ ] Keep too-far target-facing by retaining/rebuilding the intro marker slots.
 - [ ] Blend the retained connector bearing into the main-route bearing at join.
 - [ ] Keep off-route hold and terminal north-up behavior explicit.
 - [ ] Preserve the existing persist/snap governor where it remains appropriate.
@@ -468,7 +541,7 @@ maneuvers and connector-to-route transitions.
 - [ ] Expire the snapshot on completion, interruption, reset, and new journey.
 - [ ] Make line/marker authority change at the same semantic boundary as the
   camera, without hiding valid geometry prematurely.
-- [ ] Add tests for guide join, show-leg join, too-far resolution, route change,
+- [ ] Add tests for guide join, too-far resolution, route change,
   connector refresh during join, and reset.
 
 ### Task 2.5: Apply every stage through one native adapter
@@ -483,7 +556,6 @@ maneuvers and connector-to-route transitions.
 
 - [ ] Apply guide and ride follow corridors with explicit rider slots.
 - [ ] Apply maneuver corridors and lower pitch only when visibility requires it.
-- [ ] Apply show-leg as a stable connector overview without chasing every fix.
 - [ ] Apply too-far as target-facing overview, flattening as regional scale
   grows.
 - [ ] Apply off-route hold, reacquisition, arrived-local, and explicit summary.
@@ -546,9 +618,8 @@ state and camera diagnostics.
 **Required journeys:**
 
 1. Guided connector into a route, including refresh and seam join.
-2. Show-leg connector with real visible leg movement and join.
-3. Too-far approach resolving into navigation at plausible cycling speed.
-4. Main-route ride with maneuver, off-route excursion, reacquisition, and
+2. Too-far approach resolving into navigation at plausible cycling speed.
+3. Main-route ride with maneuver, off-route excursion, reacquisition, and
    local arrival.
 
 **Steps:**
@@ -557,7 +628,6 @@ state and camera diagnostics.
   geometry; do not pair unrelated impossible paths.
 - [ ] Check fix-to-fix speed against declared speed and timestamp.
 - [ ] Ensure every bookmark has enough pre-roll to establish its state.
-- [ ] Ensure show-leg actually shows a connector leg and movement along it.
 - [ ] Include deliberate connector retry/refresh only where the journey tests
   that behavior.
 - [ ] Add fixture lint tests that fail on physical or semantic inconsistencies.

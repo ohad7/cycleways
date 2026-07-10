@@ -60,8 +60,8 @@ export default function DevScenarioPicker({
                   <Text style={styles.rowName}>{bookmark.label || bookmark.id}</Text>
                   <Text style={styles.rowDescription}>
                     {scenario.name} · {bookmark.phase === "pre-start"
-                      ? "before Start · hold"
-                      : "after Start · tap the real button"}
+                      ? "before Start · inspect intro; do not press Start"
+                      : "after Start · press the real Start button"}
                   </Text>
                 </Pressable>
               ));

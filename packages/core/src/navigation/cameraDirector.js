@@ -49,7 +49,6 @@ export function navigationCameraStage(state) {
       return "approach-guide-pre-turn";
     }
     if (tier === "guide") return "approach-guide";
-    if (tier === "show-leg") return "approach-show-leg";
     if (tier === "too-far") return "approach-too-far";
     return "approach-resolving";
   }

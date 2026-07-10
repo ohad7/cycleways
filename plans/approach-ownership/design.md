@@ -1,10 +1,7 @@
 # App-Owned Approach with Confidence-Gated Handoff — Design
 
 **Date:** 2026-07-09
-**Status:** Approved. `implementation-plan.md` covers Phases 1–3. Phase 3
-(Components 4 & 5 — runtime approach ownership and external-handoff demotion)
-ships with conservative launch thresholds and keeps the calibration loop for
-later adjustment once broader labels or user feedback exist.
+**Status:** Implemented; successful-connector ownership amended 2026-07-10.
 **Topic dir:** `plans/approach-ownership/`
 **Builds on:** [connector-nav-lens](../connector-nav-lens/design.md) (shared connector cost model, `cw_network` eligibility, the editor lens), [approach-destination-picker](../approach-destination-picker/design.md) (`externalNav.js`, approach target UX), [navigation-intro-rethink](../navigation-intro-rethink/design.md) (external handoff at every distance — this design supersedes that default).
 
@@ -17,7 +14,7 @@ Two problems with the handoff-by-default:
 1. **We give up the user's context to another app** on the very leg where, increasingly, we route as well or better — especially over the curated CycleWays network. A rider dropped into Waze may not return.
 2. The reason for the handoff (low connector fidelity) is now addressable: the `connector-nav-lens` work produced a tunable cost model and, crucially, `cw_network` eligibility that treats CW-owned base edges as first-class connector edges.
 
-**Intent:** invert the default. The app **owns the approach** with turn-by-turn guidance when it is confident, and external handoff becomes a **demoted, confidence-gated fallback** — surfaced only when our connector is not trustworthy for this specific origin→start pair, or the start is simply too far to guide.
+**Intent:** invert the default. The app **owns every successfully routed approach** with turn-by-turn guidance, and external handoff becomes a fallback when routing fails, coverage is unavailable, or the start is beyond the product distance boundary.
 
 The blocker is measuring "confident." We do not hand-craft a confidence formula blind; we **collect a labeled dataset in the editor** and set **interpretable thresholds** by eye against it.
 
@@ -39,7 +36,21 @@ So the honest quality signal is not the raw failure count, and it is also not al
 1. Trust the connector numbers (separate illegal origins from real gaps).
 2. Build a labeled dataset of connector routes (valid / unacceptable / borderline) in the editor.
 3. Evaluate interpretable confidence thresholds in the editor and tune them when the labeled dataset is broad enough.
-4. At ride time, use those thresholds to decide, per tier, whether to **guide** (turn-by-turn), **show a leg** (visual only), or declare **too far** — demoting external handoff to a confidence-gated fallback.
+4. At ride time, **guide** every successful connector inside the distance
+   boundary; otherwise use the `too-far`/external-navigation fallback.
+
+## 2026-07-10 ownership amendment
+
+The original three-tier design included a visual-only `show-leg` outcome. It is
+removed. The connector router already enforces CycleWays ownership, road-class,
+and access restrictions before returning a route. The committed review dataset
+contained no rejected latest labels, while the additional confidence thresholds
+downgraded reviewed valid connectors based on detour and metadata. Those signals
+describe a route but do not establish that narrated guidance is unsafe.
+
+A future uncertain-connector tier requires representative rejected routes and a
+real production failure mode. Until then, successful routing means `guide`;
+failure/no coverage or the 10 km boundary means `too-far`.
 
 ## Non-goals (YAGNI)
 
@@ -124,21 +135,21 @@ Features are then pure over the connector result — no second lookup — and id
 
 ```
 classifyConnector(features, thresholds) → {
-  tier: "guide" | "show-leg" | "too-far",
+  tier: "guide" | "too-far",
   handoffSuggested: boolean,
   reasons: string[]        // which thresholds fired (debug / telemetry)
 }
 
 DEFAULT_CONNECTOR_THRESHOLDS = {
-  guideRadiusMeters,       // straight-line ≤ this → eligible to guide
   tooFarRadiusMeters,      // straight-line > this → too-far
-  maxDetourRatio,          // routed/straight above this → downgrade from guide
-  maxRoutedMeters,         // hard cap on routed distance for guiding
-  worstClassAllowed        // do not guide over a class worse than this
 }
 ```
 
-Rule sketch: `too-far` if beyond `tooFarRadiusMeters` or `!snapOk`; else `guide` if within `guideRadiusMeters` and detour ratio / routed distance / worst class within limits; else `show-leg`. Launch defaults: `guideRadiusMeters = 3000`, `tooFarRadiusMeters = 10000`, `maxDetourRatio = 2.5`, `maxRoutedMeters = 8000`, `worstClassAllowed = "local_road"`.
+Rule: `too-far` if beyond `tooFarRadiusMeters` or `!snapOk`; otherwise
+`guide`. The retained product boundary is `tooFarRadiusMeters = 10000`.
+Successful routes already passed the connector strategy's edge and access
+gates; detour, length, and accepted route-class metadata do not second-guess
+that routing decision.
 
 **Calibration loop (editor):** an **"evaluate thresholds vs. labels"** panel reads `labels.jsonl`, reduces it to the latest label per identity key, runs `classifyConnector` on each record's stored features under the current thresholds, and shows a confusion readout — e.g. "would guide 92% of `valid`, would wrongly guide 6% of `unacceptable`". A pure `connectorEvaluate.js` helper does the scoring. This loop remains for later tuning; it no longer blocks Phase 3.
 
@@ -155,23 +166,25 @@ At nav-start and while approaching, the app computes the connector (already happ
 - Connector vertices/feature properties are tagged `leg: "approach"` so the map styles the approach leg distinctly (dashed / different color) from the CW route.
 - A true combined route with connector progress occupying negative meters is explicitly deferred until the tracker and restore path support negative offsets.
 
-**`show-leg` — visual only:** draw the connector path + live compass/distance to the start; **no voice**. Secondary external-handoff button present. (Effectively today's non-narrated dashed suggestion, now chosen deliberately by tier.)
-
 **`too-far` — do not draw:** "Start is X km away — too far to guide," with external handoff as the primary offered action.
 
-**Recompute:** as the rider moves toward the start, the connector and therefore the tier recompute under the existing move-gating (`REQUEST_MIN_MOVE_M`), so someone approaching crosses `too-far → show-leg → guide` naturally.
+**Recompute:** as the rider moves toward the start, connector availability and
+the tier recompute under the existing move-gating (`REQUEST_MIN_MOVE_M`), so
+someone approaching can cross `too-far → guide` naturally.
 
 **Off-route on the approach:** leaving the connector leg is detected by the temporary approach-leg tracker. A hard divergence clears/downgrades the current approach leg and lets the existing move-gated connector request path compute a fresh connector from the new position.
 
 **Files:** `navigationSession.js` (tier branch, pre-route connector request, approach-leg state/cues, seam transition), `navigationCues.js` (`join-route` cue helper/type), `navigationPresentation.js` (tier/prominence/copy), mobile nav-runtime wiring and approach UI. `effectiveNavigationRoute.js` stays unchanged in Phase 3 v1.
-**Tests:** session requests a pre-route connector, classifies `guide`/`show-leg`/`too-far`, guide tier exposes narrated approach cues, `show-leg` remains visual-only, connector failures become `too-far`, and acquisition emits `join-route`/transitions `approaching → navigating`.
+**Tests:** session requests a pre-route connector, classifies successful results
+as `guide` and failures/distant starts as `too-far`, exposes narrated approach
+cues, and emits `join-route` when transitioning `approaching → navigating`.
 
 ### Component 5 — External handoff demotion (app UI)
 
 `externalNav.js` is unchanged; only prominence changes, driven by the Component 3 tier.
 
 - Primary flow no longer leads with "navigate in another app"; it moves to a secondary/hidden control.
-- Prominence by tier: `guide` → hidden behind an overflow/"navigate differently" affordance; `show-leg` → secondary button beside the drawn leg; `too-far` → primary offered action.
+- Prominence by tier: `guide` → hidden behind an overflow/"navigate differently" affordance; `too-far` → primary offered action.
 - The travel-mode caveat ("external app owns the approach; Waze has no cycling mode") rides along wherever the list appears.
 - The target coordinate handed to the external app is the same effective start the connector targeted — consistent whether we guide or hand off.
 
@@ -182,7 +195,7 @@ At nav-start and while approaching, the app computes the connector (already happ
 
 - **Editor labeling:** frequency run → per-origin single connector → `computeConnectorFeatures` → human verdict → `POST /api/connector/label` → `labels.jsonl`.
 - **Editor calibration:** `labels.jsonl` → `connectorEvaluate` under current thresholds → confusion readout → hand-tuned thresholds.
-- **App runtime:** live origin + route start → `computeConnector` (with `edgeCosts` diagnostics) → `computeConnectorFeatures` → `classifyConnector(thresholds)` → tier → guide / show-leg / too-far + handoff prominence.
+- **App runtime:** live origin + route start → `computeConnector` (with `edgeCosts` diagnostics) → `computeConnectorFeatures` → `classifyConnector(thresholds)` → guide or too-far + handoff prominence.
 
 ## Error handling
 
@@ -201,9 +214,7 @@ Pure, node-tested modules carry the logic (`connectorFeatures`, `connectorConfid
 - **Phase 2:** Component 3 features/confidence modules + Component 2 labeling + calibration loop — produces the dataset and the tunable thresholds.
 - **Phase 3:** Component 4 (runtime ownership, the large build) + Component 5 (handoff demotion).
 
-Threshold values for Phase 3 launch are `guideRadiusMeters = 3000` and
-`tooFarRadiusMeters = 10000`. They are intentionally conservative product
-defaults, not a fitted model.
+The retained Phase 3 product boundary is `tooFarRadiusMeters = 10000`.
 
 ## Open decisions resolved during brainstorming
 

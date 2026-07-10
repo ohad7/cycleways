@@ -208,21 +208,6 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(guide.approachDistanceSource, "connector");
   assert.deepEqual(guide.externalNavTarget, target.point);
 
-  const showLeg = getNavigationPresentation({
-    status: "approaching",
-    approach: {
-      target,
-      distanceToRouteMeters: 2000,
-      ownershipTier: "show-leg",
-      handoffProminence: "secondary",
-      suggestionGeometry: [{ lat: 31.98, lng: 35 }, { lat: 32, lng: 35 }],
-      suggestionDistanceMeters: 2400,
-    },
-  });
-  assert.equal(showLeg.handoffProminence, "secondary");
-  assert.equal(showLeg.showApproachCue, false);
-  assert.equal(showLeg.showApproachLeg, true);
-
   const tooFar = getNavigationPresentation({
     status: "approaching",
     approach: {

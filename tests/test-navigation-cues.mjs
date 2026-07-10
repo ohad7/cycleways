@@ -44,6 +44,13 @@ function routeFrom(geometry, extra = {}) {
   assert.ok(near(arrives[0].distanceMeters, 931.5, 2), "arrive cue at route end");
   assert.equal(findType(cues, "turn").length, 0, "no turns on a straight route");
 
+  const seamCues = buildRouteCues(straight, { includeArrival: false });
+  assert.equal(
+    findType(seamCues, "arrive").length,
+    0,
+    "connector-style cue sets can omit destination arrival",
+  );
+
   // Deterministic + sorted by distance.
   const again = buildRouteCues(straight);
   assert.deepEqual(again, cues, "cue list is deterministic");
