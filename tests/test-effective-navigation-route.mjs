@@ -162,4 +162,20 @@ function route({ circular = false } = {}) {
   assert.equal(reverseTurn.direction, "left");
 }
 
+{
+  const junctions = [{ lat: 32, lng: 35.005 }];
+  const source = { ...route(), junctions };
+  for (const effective of [
+    buildEffectiveNavigationRoute(source, { direction: "forward" }),
+    buildEffectiveNavigationRoute(source, { direction: "reverse" }),
+    buildEffectiveNavigationRoute(source, {
+      direction: "forward",
+      startProgressMeters: 200,
+    }),
+  ]) {
+    assert.deepEqual(effective.junctions, junctions);
+    assert.notEqual(effective.junctions, junctions, "effective route clones junction data");
+  }
+}
+
 console.log("test-effective-navigation-route: OK");

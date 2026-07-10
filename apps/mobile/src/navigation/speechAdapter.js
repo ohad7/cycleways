@@ -15,6 +15,7 @@ export async function configureForNavigationAudio() {
     await setAudioModeAsync({
       playsInSilentMode: true,
       interruptionMode: "duckOthers",
+      shouldPlayInBackground: true,
     });
     audioConfigured = true;
     return true;

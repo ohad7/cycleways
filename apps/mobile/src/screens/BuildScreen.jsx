@@ -406,6 +406,7 @@ export default function BuildScreen({ navigation, route }) {
     handleAddDataMarkerToRoute,
     handleViewportIdle,
     computeConnector,
+    computeRouteJunctions,
     plannerDraft,
     handleRestoreDraft,
   } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
@@ -837,6 +838,11 @@ export default function BuildScreen({ navigation, route }) {
   const [lockScreenGuidanceNeedsSettings, setLockScreenGuidanceNeedsSettings] =
     useState(false);
   const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
+  const [preparedRouteJunctions, setPreparedRouteJunctions] = useState({
+    routeId: null,
+    status: "idle",
+    junctions: null,
+  });
   const [pendingNavigationRouteId, setPendingNavigationRouteId] = useState(null);
   const [pendingExternalPlan, setPendingExternalPlan] = useState(null);
   const [devPickerVisible, setDevPickerVisible] = useState(false);
@@ -939,6 +945,74 @@ export default function BuildScreen({ navigation, route }) {
       ),
     [rideSetupSourceRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
   );
+
+  // Warm junction data as soon as an effective route exists. Confirmation
+  // itself remains immediate: if this best-effort preload is not complete, the
+  // session safely retains legacy all-corners cues for that ride.
+  //
+  // Keyed on the effective-route *id*, not the object: ride-setup location
+  // ticks rebuild the effectiveRoute object (same id, identical geometry —
+  // the id encodes route/direction/loop/start-progress) every second, and an
+  // object-identity dep would rerun the full shard+network scan per tick and
+  // wipe an already-ready result right when the user confirms.
+  const junctionSourceRouteRef = useRef(null);
+  junctionSourceRouteRef.current = ridePlan?.effectiveRoute ?? null;
+  const junctionSourceRouteId = ridePlan?.effectiveRoute?.canNavigate
+    ? ridePlan.effectiveRoute.id
+    : null;
+  useEffect(() => {
+    const effectiveRoute = junctionSourceRouteRef.current;
+    if (!junctionSourceRouteId || effectiveRoute?.id !== junctionSourceRouteId) {
+      return undefined;
+    }
+    if (Array.isArray(effectiveRoute.junctions)) {
+      setPreparedRouteJunctions({
+        routeId: effectiveRoute.id,
+        status: "ready",
+        junctions: effectiveRoute.junctions,
+      });
+      return undefined;
+    }
+
+    let cancelled = false;
+    const startedAt = Date.now();
+    setPreparedRouteJunctions({
+      routeId: effectiveRoute.id,
+      status: "loading",
+      junctions: null,
+    });
+    Promise.resolve(computeRouteJunctions(effectiveRoute.geometry))
+      .then((junctions) => {
+        if (cancelled) return;
+        const complete = Array.isArray(junctions);
+        setPreparedRouteJunctions({
+          routeId: effectiveRoute.id,
+          status: complete ? "ready" : "unavailable",
+          junctions: complete ? junctions : null,
+        });
+        trackNavigationEvent("route_junctions_computed", {
+          outcome: complete ? "complete" : "unavailable",
+          junctionCount: complete ? junctions.length : null,
+          durationMs: Date.now() - startedAt,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPreparedRouteJunctions({
+          routeId: effectiveRoute.id,
+          status: "unavailable",
+          junctions: null,
+        });
+        trackNavigationEvent("route_junctions_computed", {
+          outcome: "failed",
+          junctionCount: null,
+          durationMs: Date.now() - startedAt,
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [computeRouteJunctions, junctionSourceRouteId]);
 
   useEffect(() => {
     if (
@@ -1377,19 +1451,39 @@ export default function BuildScreen({ navigation, route }) {
   const confirmRidePlan = useCallback(
     (plan) => {
       if (!plan?.effectiveRoute?.canNavigate) return;
+      const prepared =
+        preparedRouteJunctions.routeId === plan.effectiveRoute.id &&
+        preparedRouteJunctions.status === "ready" &&
+        Array.isArray(preparedRouteJunctions.junctions)
+          ? preparedRouteJunctions.junctions
+          : null;
+      const confirmedPlan =
+        Array.isArray(plan.effectiveRoute.junctions) || prepared === null
+          ? plan
+          : {
+              ...plan,
+              effectiveRoute: { ...plan.effectiveRoute, junctions: prepared },
+            };
       const completeConfirmation = () => {
-        const confirmedRouteId = plan.effectiveRoute.id;
-        setConfirmedRidePlan(plan);
+        const confirmedRouteId = confirmedPlan.effectiveRoute.id;
+        setConfirmedRidePlan(confirmedPlan);
         if (__DEV__ && devRideIntroRoute) {
           setDevScenarioRoute(null);
           setDevRideIntroRoute(null);
         }
         trackNavigationEvent("ride_setup_confirmed", {
-          direction: plan.direction,
-          startMode: plan.startMode,
-          distanceBucket: confirmDistanceBucket(plan.distanceToStartMeters),
+          direction: confirmedPlan.direction,
+          startMode: confirmedPlan.startMode,
+          distanceBucket: confirmDistanceBucket(
+            confirmedPlan.distanceToStartMeters,
+          ),
           voiceGuidance: voiceGuidanceEnabled,
           lockScreenGuidance: lockScreenGuidanceEnabled,
+          junctionCoverage: Array.isArray(
+            confirmedPlan.effectiveRoute.junctions,
+          )
+            ? "complete"
+            : "fallback",
         });
         setRideIntroVisible(false);
         setRideSettingsVisible(false);
@@ -1470,6 +1564,7 @@ export default function BuildScreen({ navigation, route }) {
       lockScreenGuidanceEnabled,
       lockScreenGuidanceHasAlwaysPermission,
       devRideIntroRoute,
+      preparedRouteJunctions,
       refreshRideSetupLocation,
       rideSetupLocationStatus,
       voiceGuidanceEnabled,
@@ -2288,6 +2383,7 @@ export default function BuildScreen({ navigation, route }) {
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
+  const lastPanSignalRef = useRef(0);
   const mapPickHandlerRef = useRef(null);
   // Live device-compass heading (deg). Drives the heading-up camera and the
   // to-route arrow so the view is adaptive to the phone's facing direction even
@@ -2941,15 +3037,18 @@ export default function BuildScreen({ navigation, route }) {
   const handleCameraChanged = useCallback((mapState) => {
     const heading = Number(mapState?.properties?.heading);
     if (Number.isFinite(heading)) mapHeadingRef.current = heading;
-    // A user pan/zoom while navigating disengages camera follow so the rider can
-    // look around / zoom out (the RAF stops driving the camera). Only fire on the
-    // follow→free transition; the recenter button re-engages.
-    if (
-      isNavigatingRef.current &&
-      mapState?.gestures?.isGestureActive &&
-      cameraIntentRef.current === "follow"
-    ) {
-      navUserPannedRef.current?.();
+    // Keep the session's idle clock aligned with the last active gesture. The
+    // first signal disengages follow; throttled signals while already free stop
+    // a long pan from auto-refollowing before the rider releases the map.
+    if (isNavigatingRef.current && mapState?.gestures?.isGestureActive) {
+      const now = Date.now();
+      if (
+        cameraIntentRef.current === "follow" ||
+        now - lastPanSignalRef.current >= 1000
+      ) {
+        lastPanSignalRef.current = now;
+        navUserPannedRef.current?.();
+      }
     }
   }, []);
 
@@ -3773,7 +3872,6 @@ export default function BuildScreen({ navigation, route }) {
             compassHeading={compassHeading}
             voiceEnabled={nav.voiceEnabled}
             onToggleVoice={handleToggleVoiceGuidance}
-            lockScreenGuidanceActive={nav.lockScreenGuidanceActive}
             onCameraLayout={handleNavigationOverlayLayout}
           />
         )

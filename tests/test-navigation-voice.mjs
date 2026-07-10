@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  compassWord,
   createNavigationVoicePlanner,
   formatSpeechDistanceMeters,
 } from "@cycleways/core/navigation/navigationVoice.js";
@@ -130,6 +131,187 @@ assert.equal(formatSpeechDistanceMeters(1250), "1.3 קילומטר");
 {
   const planner = createNavigationVoicePlanner({ enabled: false });
   assert.equal(planner.plan(turnPreview, state, 1000).reason, "disabled");
+}
+
+// --- Compound turns -------------------------------------------------------
+{
+  const planner = createNavigationVoicePlanner();
+  const first = planner.plan(
+    {
+      kind: "cue",
+      cueType: "turn",
+      phase: "final",
+      cue: {
+        type: "turn",
+        direction: "left",
+        thenDirection: "right",
+        distanceMeters: 800,
+      },
+    },
+    {},
+    1000,
+  ).utterance;
+  assert.match(first.text, /פנה שמאלה ומיד ימינה/);
+
+  const covered = planner.plan(
+    {
+      kind: "cue",
+      cueType: "turn",
+      phase: "final",
+      cue: {
+        type: "turn",
+        direction: "right",
+        distanceMeters: 840,
+        compoundPreviousDistanceMeters: 800,
+      },
+    },
+    {},
+    4000,
+  );
+  assert.equal(covered.utterance, null);
+  assert.equal(covered.reason, "compound-covered");
+
+  const missedFirst = createNavigationVoicePlanner().plan(
+    {
+      kind: "cue",
+      cueType: "turn",
+      phase: "final",
+      cue: {
+        type: "turn",
+        direction: "right",
+        distanceMeters: 840,
+        compoundPreviousDistanceMeters: 800,
+      },
+    },
+    {},
+    4000,
+  );
+  assert.ok(missedFirst.utterance, "follow-up still speaks if the compound cue was missed");
+}
+
+// --- Segment names --------------------------------------------------------
+{
+  const planner = createNavigationVoicePlanner();
+  const turnOnto = planner.plan(
+    {
+      kind: "cue",
+      cueType: "turn",
+      phase: "final",
+      cue: {
+        type: "turn",
+        direction: "right",
+        ontoSegmentName: "גשר הירדן",
+        distanceMeters: 900,
+      },
+    },
+    {},
+    1000,
+  ).utterance;
+  assert.match(turnOnto.text, /פנה ימינה אל גשר הירדן/);
+
+  const duplicateName = planner.plan(
+    {
+      kind: "cue",
+      cueType: "enter-segment",
+      phase: "final",
+      cue: {
+        type: "enter-segment",
+        segmentName: "גשר הירדן",
+        distanceMeters: 950,
+      },
+    },
+    {},
+    5000,
+  );
+  assert.equal(duplicateName.reason, "same-segment");
+
+  const unnamed = planner.plan(
+    {
+      kind: "cue",
+      cueType: "turn",
+      phase: "final",
+      cue: { type: "turn", direction: "left", distanceMeters: 1100 },
+    },
+    {},
+    8000,
+  );
+  assert.ok(unnamed.utterance);
+
+  const returnToName = planner.plan(
+    {
+      kind: "cue",
+      cueType: "enter-segment",
+      phase: "final",
+      cue: {
+        type: "enter-segment",
+        segmentName: "גשר הירדן",
+        distanceMeters: 1300,
+      },
+    },
+    {},
+    11_000,
+  );
+  assert.ok(returnToName.utterance, "same name may be spoken again after an intervening cue");
+
+  const preview = planner.plan(
+    {
+      kind: "cue",
+      cueType: "enter-segment",
+      phase: "preview",
+      cue: { type: "enter-segment", segmentName: "שביל אחר", distanceMeters: 1600 },
+    },
+    {},
+    14_000,
+  );
+  assert.equal(preview.reason, "no-phrase");
+}
+
+// --- Wrong-way, rejoin, and compass --------------------------------------
+assert.equal(compassWord(0, "he-IL"), "צפונה");
+assert.equal(compassWord(90, "he-IL"), "מזרחה");
+assert.equal(compassWord(225, "he-IL"), "דרום-מערבה");
+assert.equal(compassWord(359, "he-IL"), "צפונה");
+assert.equal(compassWord(null, "he-IL"), null);
+
+{
+  const wrongWay = createNavigationVoicePlanner().plan(
+    { kind: "wrong-way" },
+    {},
+    1000,
+  ).utterance;
+  assert.match(wrongWay.text, /נגד כיוון המסלול/);
+  assert.equal(wrongWay.interruptsCurrentSpeech, true);
+
+  const rejoin = createNavigationVoicePlanner().plan(
+    { kind: "rejoin-ready", distanceMeters: 52, bearingDeg: 10 },
+    {},
+    1000,
+  ).utterance;
+  assert.match(rejoin.text, /המסלול צפונה מכאן/);
+  assert.match(rejoin.text, /50 מטר/);
+
+  const acquired = createNavigationVoicePlanner().plan(
+    { kind: "acquired", acquisition: "join-route" },
+    { progress: { bearingToNextDeg: 180 } },
+    1000,
+  ).utterance;
+  assert.match(acquired.text, /דרומה/);
+}
+
+// Bends remain visual/haptic only.
+{
+  const bend = createNavigationVoicePlanner().plan(
+    {
+      kind: "cue",
+      cueType: "bend",
+      phase: "final",
+      cue: { type: "bend", direction: "left", distanceMeters: 400 },
+    },
+    {},
+    1000,
+  );
+  assert.equal(bend.utterance, null);
+  assert.equal(bend.reason, "no-phrase");
 }
 
 console.log("navigation voice tests passed");

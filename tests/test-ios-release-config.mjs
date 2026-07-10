@@ -28,6 +28,25 @@ for (const key of usageKeys) {
   );
 }
 
+assert.deepEqual(
+  ios.infoPlist.UIBackgroundModes,
+  ["location", "audio"],
+  "navigation needs background location AND background audio (lock-screen voice)",
+);
+
+const speechAdapter = await readFile(
+  new URL(
+    "../apps/mobile/src/navigation/speechAdapter.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
+assert.match(
+  speechAdapter,
+  /shouldPlayInBackground\s*:\s*true/,
+  "navigation speech audio session must allow background playback",
+);
+
 const he = JSON.parse(
   await readFile(
     new URL("../apps/mobile/locales/he.json", import.meta.url),

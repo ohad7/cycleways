@@ -14,6 +14,10 @@ import {
 import { createCueHapticPlanner } from "@cycleways/core/navigation/cueHaptics.js";
 import { createNavigationVoicePlanner } from "@cycleways/core/navigation/navigationVoice.js";
 import {
+  createNavigationEventClock,
+  shouldPersistNavigationSnapshot,
+} from "@cycleways/core/navigation/persistencePolicy.js";
+import {
   createDefaultLocationSource,
   startNavigationBackgroundUpdates,
   stopNavigationBackgroundUpdates,
@@ -86,6 +90,9 @@ export function useNavigationSession(navigationRoute, options = {}) {
   const watchActiveRef = useRef(false);
   const latestFixRef = useRef(null);
   const lastProcessedFixKeyRef = useRef(null);
+  const lastPersistRef = useRef({ atMs: null, status: null });
+  const eventClockRef = useRef(createNavigationEventClock());
+  const persistGenerationRef = useRef(0);
   const backgroundRequestedRef = useRef(background === true);
   backgroundRequestedRef.current = background === true;
 
@@ -161,6 +168,30 @@ export function useNavigationSession(navigationRoute, options = {}) {
     [navigationRoute],
   );
 
+  const schedulePersist = useCallback(
+    (latestFix = latestFixRef.current, policyState = null) => {
+      const generation = persistGenerationRef.current;
+      return persistCurrent(latestFix)
+        .then((saved) => {
+          // Only a successful write in the current route/clock generation moves
+          // the throttle window. Failed writes remain immediately retryable.
+          if (
+            saved === true &&
+            policyState &&
+            generation === persistGenerationRef.current &&
+            (lastPersistRef.current.atMs === null ||
+              !Number.isFinite(Number(lastPersistRef.current.atMs)) ||
+              Number(policyState.atMs) >= Number(lastPersistRef.current.atMs))
+          ) {
+            lastPersistRef.current = policyState;
+          }
+          return saved === true;
+        })
+        .catch(() => false);
+    },
+    [persistCurrent],
+  );
+
   const apply = useCallback((next) => {
     setState(next);
     return next;
@@ -171,22 +202,41 @@ export function useNavigationSession(navigationRoute, options = {}) {
       const session = sessionRef.current;
       if (!session) return null;
       const next = apply(session.dispatch(action));
-      const nowMs = action?.fix ? fixTimestamp(action.fix) : Date.now();
+      const eventTime = eventClockRef.current.timestamp(action?.fix);
+      const eventNowMs = eventTime.nowMs;
+      if (eventTime.resetPolicy) {
+        persistGenerationRef.current += 1;
+        lastPersistRef.current = { atMs: null, status: null };
+      }
 
       if (next.cueEvent && hapticsEnabledRef.current) {
-        const plan = hapticPlannerRef.current.plan(next.cueEvent, nowMs);
+        const plan = hapticPlannerRef.current.plan(next.cueEvent, eventNowMs);
         if (plan.kind) fireHaptic(plan.kind);
       }
       if (next.cueEvent && voiceEnabledRef.current) {
-        const plan = voicePlannerRef.current.plan(next.cueEvent, next, nowMs, {
+        const plan = voicePlannerRef.current.plan(next.cueEvent, next, eventNowMs, {
           enabled: voiceEnabledRef.current,
         });
         if (plan.utterance) void speakUtterance(plan.utterance);
       }
-      if (shouldPersist(next)) void persistCurrent(action?.fix || latestFixRef.current);
+      if (
+        shouldPersist(next) &&
+        shouldPersistNavigationSnapshot({
+          lastPersistAtMs: lastPersistRef.current.atMs,
+          lastStatus: lastPersistRef.current.status,
+          status: next.status,
+          hasCueEvent: Boolean(next.cueEvent),
+          nowMs: eventTime.nowMs,
+        })
+      ) {
+        void schedulePersist(action?.fix || latestFixRef.current, {
+          atMs: eventTime.nowMs,
+          status: next.status,
+        });
+      }
       return next;
     },
-    [apply, persistCurrent],
+    [apply, schedulePersist],
   );
 
   const processLocationFix = useCallback(
@@ -213,6 +263,9 @@ export function useNavigationSession(navigationRoute, options = {}) {
       sessionRef.current = null;
       latestFixRef.current = null;
       lastProcessedFixKeyRef.current = null;
+      lastPersistRef.current = { atMs: null, status: null };
+      eventClockRef.current = createNavigationEventClock();
+      persistGenerationRef.current += 1;
       setState(null);
       return undefined;
     }
@@ -225,6 +278,9 @@ export function useNavigationSession(navigationRoute, options = {}) {
     });
     latestFixRef.current = null;
     lastProcessedFixKeyRef.current = null;
+    lastPersistRef.current = { atMs: null, status: null };
+    eventClockRef.current = createNavigationEventClock();
+    persistGenerationRef.current += 1;
     setLockScreenGuidanceActive(false);
     setState(sessionRef.current.getState());
 
@@ -278,8 +334,8 @@ export function useNavigationSession(navigationRoute, options = {}) {
   );
 
   useEffect(() => {
-    if (shouldPersist(sessionRef.current?.getState?.())) void persistCurrent();
-  }, [hapticsEnabled, lockScreenGuidanceActive, persistCurrent, voiceEnabled]);
+    if (shouldPersist(sessionRef.current?.getState?.())) void schedulePersist();
+  }, [hapticsEnabled, lockScreenGuidanceActive, schedulePersist, voiceEnabled]);
 
   // Request policy stays in the pure session. Native code only executes the
   // current async request and reports its result. Background task fixes that
@@ -413,17 +469,16 @@ export function useNavigationSession(navigationRoute, options = {}) {
       await activateNavigationKeepAwake();
     }
 
+    // dispatch() persists this status transition itself; no explicit persist.
     dispatch({
       type: NAV_ACTIONS.PERMISSION_GRANTED,
       background: backgroundActive,
     });
-    await persistCurrent();
     beginWatch();
   }, [
     apply,
     beginWatch,
     dispatch,
-    persistCurrent,
     setLockScreenGuidanceActive,
   ]);
 
@@ -443,10 +498,10 @@ export function useNavigationSession(navigationRoute, options = {}) {
     setLockScreenGuidanceActive(false);
     void stopNavigationBackgroundUpdates();
     void deactivateNavigationKeepAwake();
+    // dispatch() persists the pause transition itself; no explicit persist.
     const next = dispatch({ type: NAV_ACTIONS.PAUSE });
-    void persistCurrent();
     return next;
-  }, [dispatch, persistCurrent, setLockScreenGuidanceActive, stopWatch]);
+  }, [dispatch, setLockScreenGuidanceActive, stopWatch]);
 
   const resume = useCallback(() => {
     const wasPaused = sessionRef.current?.getState()?.status === "paused";
@@ -471,7 +526,11 @@ export function useNavigationSession(navigationRoute, options = {}) {
     [dispatch],
   );
   const userPanned = useCallback(
-    () => dispatch({ type: NAV_ACTIONS.USER_PANNED }),
+    () =>
+      dispatch({
+        type: NAV_ACTIONS.USER_PANNED,
+        timestamp: latestFixRef.current?.timestamp ?? Date.now(),
+      }),
     [dispatch],
   );
 

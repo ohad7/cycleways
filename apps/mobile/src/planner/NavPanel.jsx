@@ -16,7 +16,6 @@ export default function NavPanel({
   compassHeading = null,
   voiceEnabled = true,
   onToggleVoice,
-  lockScreenGuidanceActive = false,
   onCameraLayout,
 }) {
   const insets = useSafeAreaInsets();
@@ -175,9 +174,11 @@ export default function NavPanel({
             <View
               style={styles.dataPill}
               accessible
-              accessibilityLabel={`${dataPillMainText}. ${
-                lockScreenGuidanceActive ? "ממשיך כשהמסך נעול" : "מסך ער"
-              }. ${voiceEnabled ? "קול פעיל" : "קול כבוי"}`}
+              accessibilityLabel={
+                showSpeedInDataPill
+                  ? `${dataPillMainText}. ${p.speedText}`
+                  : dataPillMainText
+              }
             >
               <View style={styles.dataPillCopy}>
                 <Text style={styles.dataPillMain} numberOfLines={1}>
@@ -188,18 +189,6 @@ export default function NavPanel({
                     {p.speedText}
                   </Text>
                 ) : null}
-              </View>
-              <View style={styles.modeIcons}>
-                <Icon
-                  name={lockScreenGuidanceActive ? "lock-closed-outline" : "phone-portrait-outline"}
-                  color={lockScreenGuidanceActive ? palette.forest : palette.muted}
-                  size={16}
-                />
-                <Icon
-                  name={voiceEnabled ? "volume-high-outline" : "volume-mute-outline"}
-                  color={voiceEnabled ? palette.forest : palette.muted}
-                  size={16}
-                />
               </View>
             </View>
             <RoundButton
@@ -421,12 +410,6 @@ const styles = StyleSheet.create({
   dataPillCopy: {
     flex: 1,
     minWidth: 0,
-  },
-  modeIcons: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-    marginStart: space.sm,
   },
   dataPillMain: {
     ...text.navBody,

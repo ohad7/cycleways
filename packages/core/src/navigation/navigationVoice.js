@@ -35,24 +35,76 @@ function directionText(direction, locale) {
   return direction === "right" ? "right" : "left";
 }
 
+export function compassWord(bearingDeg, locale = DEFAULT_LANGUAGE) {
+  if (bearingDeg === null || bearingDeg === undefined || bearingDeg === "") {
+    return null;
+  }
+  const bearing = Number(bearingDeg);
+  if (!Number.isFinite(bearing)) return null;
+  const names =
+    locale === "he-IL"
+      ? [
+          "צפונה",
+          "צפון-מזרחה",
+          "מזרחה",
+          "דרום-מזרחה",
+          "דרומה",
+          "דרום-מערבה",
+          "מערבה",
+          "צפון-מערבה",
+        ]
+      : [
+          "north",
+          "northeast",
+          "east",
+          "southeast",
+          "south",
+          "southwest",
+          "west",
+          "northwest",
+        ];
+  const normalized = ((bearing % 360) + 360) % 360;
+  return names[Math.round(normalized / 45) % 8];
+}
+
 function cuePhrase(event, state, locale) {
   if (event.kind === "off-route") {
     return locale === "he-IL" ? "יָצָאתָ מֵהַמַּסְלוּל." : "You left the route.";
   }
   if (event.kind === "acquired") {
+    const direction = compassWord(state?.progress?.bearingToNextDeg, locale);
     if (event.acquisition === "join-route") {
       return locale === "he-IL"
-        ? "הגעת למסלול, הניווט במסלול מתחיל"
-        : "You reached the route. Route navigation starts now.";
+        ? `הגעת למסלול, הניווט במסלול מתחיל${direction ? `, ממשיכים ${direction}` : ""}`
+        : `You reached the route. Route navigation starts now${direction ? `, heading ${direction}` : ""}.`;
     }
     if (event.acquisition === "reacquired") {
       return locale === "he-IL"
-        ? "חזרנו למסלול, ממשיכים בניווט"
-        : "Back on route. Continuing navigation.";
+        ? `חזרנו למסלול, ממשיכים בניווט${direction ? ` ${direction}` : ""}`
+        : `Back on route. Continuing navigation${direction ? `, heading ${direction}` : ""}.`;
     }
     return locale === "he-IL"
-      ? "הַכֹּל מוּכָן, יוֹצְאִים לַדֶּרֶךְ. רִכְבוּ בִּזְהִירוּת"
-      : "All set. Let's ride. Ride safely.";
+      ? `הַכֹּל מוּכָן, יוֹצְאִים לַדֶּרֶךְ${direction ? ` ${direction}` : ""}. רִכְבוּ בִּזְהִירוּת`
+      : `All set. Let's ride${direction ? `, heading ${direction}` : ""}. Ride safely.`;
+  }
+  if (event.kind === "wrong-way") {
+    return locale === "he-IL"
+      ? "אתה רוכב נגד כיוון המסלול"
+      : "You are riding against the route direction.";
+  }
+  if (event.kind === "rejoin-ready") {
+    const direction = compassWord(event.bearingDeg, locale);
+    const distanceText = formatSpeechDistanceMeters(event.distanceMeters, locale);
+    if (locale === "he-IL") {
+      const where = direction ? `המסלול ${direction} מכאן` : "המסלול קרוב";
+      const distance = distanceText ? `, במרחק כ־${distanceText}` : "";
+      return `${where}${distance}. עקוב אחרי הקו המסומן`;
+    }
+    const where = direction
+      ? `The route is ${direction} of you`
+      : "The route is nearby";
+    const distance = distanceText ? `, about ${distanceText} away` : "";
+    return `${where}${distance}. Follow the marked line.`;
   }
   if (event.kind !== "cue") return null;
 
@@ -71,15 +123,28 @@ function cuePhrase(event, state, locale) {
       : "";
 
   switch (cue.type) {
-    case "turn":
+    case "turn": {
+      const onto = cue.ontoSegmentName
+        ? locale === "he-IL"
+          ? ` אל ${cue.ontoSegmentName}`
+          : ` onto ${cue.ontoSegmentName}`
+        : "";
+      const then = cue.thenDirection
+        ? locale === "he-IL"
+          ? ` ומיד ${directionText(cue.thenDirection, locale)}`
+          : `, then ${directionText(cue.thenDirection, locale)}`
+        : "";
       return locale === "he-IL"
-        ? `${prefix}פנה ${directionText(cue.direction, locale)}`
-        : `${prefix}turn ${directionText(cue.direction, locale)}`;
+        ? `${prefix}פנה ${directionText(cue.direction, locale)}${onto}${then}`
+        : `${prefix}turn ${directionText(cue.direction, locale)}${onto}${then}`;
+    }
     case "bend":
-      if (event.phase !== "final") return null;
+      return null;
+    case "enter-segment":
+      if (event.phase !== "final" || !cue.segmentName) return null;
       return locale === "he-IL"
-        ? `עיקול ${directionText(cue.direction, locale)}`
-        : `Bend ${directionText(cue.direction, locale)}`;
+        ? `ממשיכים על ${cue.segmentName}`
+        : `Continuing on ${cue.segmentName}`;
     case "arrive":
       // Defensive guard for restored/legacy events: reaching the end of an
       // approach leg means joining the main route, not arriving at the ride's
@@ -94,9 +159,18 @@ function cuePhrase(event, state, locale) {
   }
 }
 
+// Single owner of the cue utterance-id format: the compound-turn suppression
+// below looks ids up by (type, distance, phase), so the format must never be
+// rebuilt by hand elsewhere.
+function cueUtteranceId(type, distanceMeters, phase) {
+  return `cue:${type}:${distanceMeters}:${phase}`;
+}
+
 function utteranceIdFor(event) {
   if (!event) return null;
   if (event.kind === "off-route") return "state:off-route";
+  if (event.kind === "wrong-way") return "state:wrong-way";
+  if (event.kind === "rejoin-ready") return "state:rejoin-ready";
   if (event.kind === "acquired") {
     if (event.acquisition === "join-route") return "state:acquired:join-route";
     if (event.acquisition === "reacquired") return "state:acquired:reacquired";
@@ -104,7 +178,7 @@ function utteranceIdFor(event) {
   }
   if (event.kind === "cue") {
     const cue = event.cue || {};
-    return `cue:${cue.type}:${cue.distanceMeters}:${event.phase}`;
+    return cueUtteranceId(cue.type, cue.distanceMeters, event.phase);
   }
   return null;
 }
@@ -112,6 +186,8 @@ function utteranceIdFor(event) {
 function priorityFor(event) {
   if (!event) return PRIORITY.info;
   if (event.kind === "off-route") return PRIORITY.alert;
+  if (event.kind === "wrong-way") return PRIORITY.alert;
+  if (event.kind === "rejoin-ready") return PRIORITY.info;
   if (event.kind === "acquired") return PRIORITY.info;
   if (event.kind === "cue") {
     if (event.cueType === "arrive") return PRIORITY.alert;
@@ -121,7 +197,12 @@ function priorityFor(event) {
 }
 
 function isRepeatableStateEvent(event) {
-  return event?.kind === "off-route" || event?.kind === "acquired";
+  return (
+    event?.kind === "off-route" ||
+    event?.kind === "acquired" ||
+    event?.kind === "wrong-way" ||
+    event?.kind === "rejoin-ready"
+  );
 }
 
 export function createNavigationVoicePlanner({
@@ -133,6 +214,7 @@ export function createNavigationVoicePlanner({
   const spokenIds = new Set(Array.isArray(memory?.spokenIds) ? memory.spokenIds : []);
   let lastSpokenAt = finite(memory?.lastSpokenAt);
   let lastUtterance = memory?.lastUtterance || null;
+  let lastSegmentNameSpoken = memory?.lastSegmentNameSpoken || null;
 
   function plan(cueEvent, state = {}, nowMs = Date.now(), settings = {}) {
     const voiceEnabled = settings.enabled !== undefined ? settings.enabled : enabled;
@@ -148,6 +230,30 @@ export function createNavigationVoicePlanner({
       ) {
         return { utterance: null, reason: "duplicate" };
       }
+    }
+
+    if (
+      cueEvent.kind === "cue" &&
+      cueEvent.cue?.type === "turn" &&
+      Number.isFinite(Number(cueEvent.cue.compoundPreviousDistanceMeters))
+    ) {
+      const previousDistance = Number(
+        cueEvent.cue.compoundPreviousDistanceMeters,
+      );
+      if (
+        spokenIds.has(cueUtteranceId("turn", previousDistance, "preview")) ||
+        spokenIds.has(cueUtteranceId("turn", previousDistance, "final"))
+      ) {
+        return { utterance: null, reason: "compound-covered" };
+      }
+    }
+    if (
+      cueEvent.kind === "cue" &&
+      cueEvent.cue?.type === "enter-segment" &&
+      cueEvent.cue.segmentName &&
+      cueEvent.cue.segmentName === lastSegmentNameSpoken
+    ) {
+      return { utterance: null, reason: "same-segment" };
     }
 
     const text = cuePhrase(cueEvent, state, settings.locale || locale);
@@ -173,6 +279,12 @@ export function createNavigationVoicePlanner({
     spokenIds.add(utteranceId);
     lastSpokenAt = finite(nowMs);
     lastUtterance = utterance;
+    const spokenName =
+      cueEvent.cue?.ontoSegmentName ||
+      (cueEvent.cue?.type === "enter-segment"
+        ? cueEvent.cue.segmentName
+        : null);
+    lastSegmentNameSpoken = spokenName || null;
     return { utterance, reason: null };
   }
 
@@ -182,6 +294,7 @@ export function createNavigationVoicePlanner({
       spokenIds: Array.from(spokenIds),
       lastSpokenAt,
       lastUtterance,
+      lastSegmentNameSpoken,
     };
   }
 
@@ -192,6 +305,7 @@ export function createNavigationVoicePlanner({
     }
     lastSpokenAt = finite(nextMemory?.lastSpokenAt);
     lastUtterance = nextMemory?.lastUtterance || null;
+    lastSegmentNameSpoken = nextMemory?.lastSegmentNameSpoken || null;
   }
 
   return { plan, snapshot, reset };

@@ -17,15 +17,34 @@ const STATUS_TEXT = {
 
 const HAZARD_FALLBACK = { text: "שים לב", icon: "alert-circle-outline" };
 
+// Turn text mirrors the voice phrase ("פנה שמאלה אל X ומיד ימינה"): the voice
+// planner suppresses the follow-up turn's own utterance after a compound
+// announcement, so the card is the rider's only reminder of the second leg.
+function directionWord(direction) {
+  return direction === "right" ? "ימינה" : "שמאלה";
+}
+
+function turnPrimaryText(cue) {
+  const base = `פנה ${directionWord(cue.direction)}`;
+  return cue.thenDirection
+    ? `${base} ומיד ${directionWord(cue.thenDirection)}`
+    : base;
+}
+
+function turnText(cue) {
+  const onto = cue.ontoSegmentName ? ` אל ${cue.ontoSegmentName}` : "";
+  const then = cue.thenDirection ? ` ומיד ${directionWord(cue.thenDirection)}` : "";
+  return `פנה ${directionWord(cue.direction)}${onto}${then}`;
+}
+
 function cueDisplay(cue) {
   if (!cue) return { text: "המשך במסלול", icon: "navigate-outline" };
   switch (cue.type) {
-    case "turn": {
-      const base = cue.direction === "right"
-        ? { text: "פנה ימינה", icon: "arrow-forward-outline" }
-        : { text: "פנה שמאלה", icon: "arrow-back-outline" };
-      return cue.ontoSegmentName ? { ...base, text: `${base.text} אל ${cue.ontoSegmentName}` } : base;
-    }
+    case "turn":
+      return {
+        text: turnText(cue),
+        icon: cue.direction === "right" ? "arrow-forward-outline" : "arrow-back-outline",
+      };
     case "bend":
       // Sharp curve of the road itself (no junction) — heads-up, not a turn.
       return cue.direction === "right"
@@ -226,7 +245,7 @@ export function getNavigationPresentation(state = {}) {
   const cuePrimaryText = (() => {
     const c = active?.cue || null;
     if (!c) return cue.text;
-    if (c.type === "turn") return c.direction === "right" ? "פנה ימינה" : "פנה שמאלה";
+    if (c.type === "turn") return turnPrimaryText(c);
     if (c.type === "enter-segment") return "המשך במסלול";
     return cue.text;
   })();
@@ -326,7 +345,7 @@ export function getNavigationPresentation(state = {}) {
     approachCuePrimaryText: (() => {
       const c = approachActive?.cue || null;
       if (!c) return approachCue.text;
-      if (c.type === "turn") return c.direction === "right" ? "פנה ימינה" : "פנה שמאלה";
+      if (c.type === "turn") return turnPrimaryText(c);
       if (c.type === "enter-segment") return "המשך במסלול";
       return approachCue.text;
     })(),

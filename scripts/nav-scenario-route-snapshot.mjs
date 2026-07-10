@@ -9,8 +9,8 @@
 //   node scripts/nav-scenario-route-snapshot.mjs <slug>
 import { readFileSync, writeFileSync } from "node:fs";
 import { buildLiveDecodeRoute } from "../editor/server.mjs";
-import { decodeCompactBaseRoutingShard } from "../packages/core/src/routing/compactBaseRoutingShard.js";
-import { getDistance } from "../packages/core/src/utils/distance.js";
+import { junctionsNearRoute } from "../packages/core/src/routing/junctionsNearRoute.js";
+import { loadBaseNetworkAroundGeometry } from "./lib/base-network.mjs";
 
 const arg = process.argv[2];
 const catalog = JSON.parse(readFileSync("public-data/route-catalog.json", "utf-8"));
@@ -39,53 +39,15 @@ const geometry = decoded.geometry.map((point) => ({
 }));
 // Network junctions (nodes referenced by 3+ distinct edges) within 50 m of
 // the route, so cue generation can tell junction turns from road bends.
-// Edges are duplicated across shard boundaries — dedupe by id before
-// counting degree, or boundary nodes read as junctions.
-function junctionsNearRoute(routeGeometry) {
-  const base = "public-data/base-routing-shards";
-  const manifest = JSON.parse(readFileSync(`${base}/manifest.json`, "utf-8"));
-  const lats = routeGeometry.map((p) => p.lat);
-  const lngs = routeGeometry.map((p) => p.lng);
-  const pad = 0.01;
-  const bbox = [
-    Math.min(...lngs) - pad,
-    Math.min(...lats) - pad,
-    Math.max(...lngs) + pad,
-    Math.max(...lats) + pad,
-  ];
-  const nodeCoord = new Map();
-  const nodeEdges = new Map();
-  for (const shardEntry of manifest.shards) {
-    const [w, s, e, n] = shardEntry.bounds;
-    if (e < bbox[0] || w > bbox[2] || n < bbox[1] || s > bbox[3]) continue;
-    const shard = decodeCompactBaseRoutingShard(
-      readFileSync(`${base}/${shardEntry.formats.compact.path}`),
-    );
-    for (const node of shard.nodes) nodeCoord.set(node.id, node.coord);
-    for (const edge of shard.edges) {
-      for (const nodeId of [edge.from, edge.to]) {
-        if (!nodeEdges.has(nodeId)) nodeEdges.set(nodeId, new Set());
-        nodeEdges.get(nodeId).add(edge.id);
-      }
-    }
-  }
-  const junctions = [];
-  for (const [nodeId, edgeIds] of nodeEdges) {
-    if (edgeIds.size < 3) continue;
-    const coord = nodeCoord.get(nodeId);
-    if (!coord) continue;
-    const point = { lat: coord[1], lng: coord[0] };
-    const nearRoute = routeGeometry.some((p) => getDistance(p, point) <= 50);
-    if (!nearRoute) continue;
-    junctions.push({
-      lat: Math.round(point.lat * 1e5) / 1e5,
-      lng: Math.round(point.lng * 1e5) / 1e5,
-    });
-  }
-  return junctions;
+function loadJunctionsNearRoute(routeGeometry) {
+  const network = loadBaseNetworkAroundGeometry(routeGeometry);
+  return junctionsNearRoute(network, routeGeometry).map((junction) => ({
+    lat: Math.round(junction.lat * 1e5) / 1e5,
+    lng: Math.round(junction.lng * 1e5) / 1e5,
+  }));
 }
 
-const junctions = junctionsNearRoute(geometry);
+const junctions = loadJunctionsNearRoute(geometry);
 const routeState = {
   points: [
     { id: "start", ...geometry[0] },

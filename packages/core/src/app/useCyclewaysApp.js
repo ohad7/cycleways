@@ -144,6 +144,14 @@ export function useCyclewaysApp({
     });
   }, []);
 
+  const computeRouteJunctions = useCallback(async (geometry) => {
+    const session = shardedRouteSessionRef.current;
+    if (typeof session?.junctionsNearRoute === "function") {
+      return session.junctionsNearRoute(geometry);
+    }
+    return null;
+  }, []);
+
   useEffect(() => () => {
     if (transientErrorTimerRef.current !== null) {
       clearTimeout(transientErrorTimerRef.current);
@@ -1284,6 +1292,7 @@ export function useCyclewaysApp({
     handleDismissDraft,
     handleAddRecentRoute,
     computeConnector,
+    computeRouteJunctions,
   };
 }
 

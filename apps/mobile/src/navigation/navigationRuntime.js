@@ -40,6 +40,14 @@ function processBackgroundRequest(session, state) {
 }
 
 async function persistFromSession(session, record, voicePlanner, latestFix) {
+  // The store queue serializes file operations, but this save's payload was
+  // built from a record loaded before the (async) fix processing above. If the
+  // foreground stopped the ride in that window, saving would resurrect it —
+  // re-check the store still holds this session before writing.
+  const current = await loadActiveNavigationSession();
+  if (!current || (record.sessionId && current.sessionId !== record.sessionId)) {
+    return;
+  }
   const state = session.getState();
   const timestamp = fixTimestamp(latestFix || state.latestFix);
   const arrivalDetectedAt =

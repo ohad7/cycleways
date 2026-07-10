@@ -5,6 +5,7 @@
 // Acquiring the main route is the only handoff into `navigating`.
 
 import { getDistance } from "../utils/distance.js";
+import { computeBearing } from "../utils/geometry.js";
 import { classifyConnector, DEFAULT_CONNECTOR_THRESHOLDS } from "../routing/connectorConfidence.js";
 import { computeConnectorFeatures } from "../routing/connectorFeatures.js";
 import { buildApproachLeg } from "./approachLeg.js";
@@ -74,6 +75,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
   let mainCueKey = restored?.mainCueKey ?? null;
   let wasOffRoute = restored?.wasOffRoute === true;
+  let wasWrongWay = restored?.wasWrongWay === true;
+  let rejoinAnnounced = restored?.rejoinAnnounced === true;
   let lastConfirmedProgressMeters = Number.isFinite(
     Number(restored?.lastConfirmedProgressMeters),
   )
@@ -92,6 +95,12 @@ export function createNavigationSession(navigationRoute, options = {}) {
     ? Number(restored.cameraTransitionSeq)
     : 0;
   let prePauseStatus = restored?.prePauseStatus || "navigating";
+  const refollowIdleMs = Number.isFinite(Number(options.refollowIdleMs))
+    ? Math.max(0, Number(options.refollowIdleMs))
+    : 12_000;
+  let lastUserPanAt = Number.isFinite(Number(restored?.lastUserPanAt))
+    ? Number(restored.lastUserPanAt)
+    : null;
   let approachTracker = null;
   let approachCues = [];
   let approachCueKey = null;
@@ -117,6 +126,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
     ...(restored?.state || {}),
     route: navigationRoute,
     cueEvent: null,
+    cameraTransition: null,
   };
 
   // Snapshots from the former visual-only connector tier must not strand an
@@ -356,6 +366,9 @@ export function createNavigationSession(navigationRoute, options = {}) {
         resetApproachRuntime();
         mainCueKey = null;
         wasOffRoute = false;
+        wasWrongWay = false;
+        rejoinAnnounced = false;
+        lastUserPanAt = null;
         lastConfirmedProgressMeters = 0;
         lastRequestPos = null;
         connectorRequestAttempt = 0;
@@ -386,6 +399,18 @@ export function createNavigationSession(navigationRoute, options = {}) {
           latestFix,
           cameraTransition: expiredTransition ? null : state.cameraTransition,
         };
+        if (state.cameraIntent === "free" && Number.isFinite(fixTimestamp)) {
+          // A pan recorded with no fix clock yet (Date.now fallback) or ahead
+          // of the fix clock (journey playback's synthetic timestamps) would
+          // wedge the camera free forever; adopt the fix clock and measure
+          // idle from here.
+          if (!Number.isFinite(lastUserPanAt) || lastUserPanAt > fixTimestamp) {
+            lastUserPanAt = fixTimestamp;
+          } else if (fixTimestamp - lastUserPanAt >= refollowIdleMs) {
+            lastUserPanAt = null;
+            state = { ...state, cameraIntent: "follow" };
+          }
+        }
         if (state.rideStartTimestamp === null) {
           state = { ...state, rideStartTimestamp: action.fix.timestamp };
         }
@@ -498,6 +523,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
         if (offRoute) {
           const firstOffRoute = !wasOffRoute;
           wasOffRoute = true;
+          wasWrongWay = false;
+          if (firstOffRoute) rejoinAnnounced = false;
           const rejoin = selectConnectorTarget(navigationRoute, action.fix, {
             mode: "rejoin",
             lastConfirmedProgressMeters,
@@ -570,13 +597,20 @@ export function createNavigationSession(navigationRoute, options = {}) {
         if (acquiredApproach) connectorRequestAttempt = 0;
         if (acquiredApproach) resetApproachRuntime();
         const activeCue = selectActiveCue(mainCues, mainProgress.progressMeters);
-        const cueEvent = recoveredFromOffRoute
+        const acquisitionEvent = recoveredFromOffRoute
           ? { kind: "acquired", acquisition: "reacquired" }
           : joinedFromOwnedApproach
           ? { kind: "acquired", acquisition: "join-route" }
           : enteredEffectiveRoute
           ? { kind: "acquired", acquisition: "initial" }
-          : cueFor(activeCue);
+          : null;
+        const wrongWayNow = mainProgress.wrongWay === true;
+        const wrongWayStarted = wrongWayNow && !wasWrongWay;
+        const cueEvent = acquisitionEvent ||
+          (wrongWayStarted ? { kind: "wrong-way" } : cueFor(activeCue));
+        // If acquisition owns this fix, leave a simultaneous wrong-way rise
+        // pending so the next fix can still announce it.
+        wasWrongWay = acquisitionEvent && wrongWayStarted ? false : wrongWayNow;
         let cameraTransition = null;
         if (joinedFromOwnedApproach || recoveredFromOffRoute) {
           cameraTransitionSeq += 1;
@@ -604,6 +638,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           };
         }
         wasOffRoute = false;
+        rejoinAnnounced = false;
         return set({
           status: "navigating",
           progress: mainProgress,
@@ -751,6 +786,25 @@ export function createNavigationSession(navigationRoute, options = {}) {
             },
           });
         }
+        let rejoinCueEvent = null;
+        if (
+          state.status === "off-route" &&
+          state.routeRequest?.targetMode === "rejoin" &&
+          !rejoinAnnounced
+        ) {
+          rejoinAnnounced = true;
+          rejoinCueEvent = {
+            kind: "rejoin-ready",
+            distanceMeters:
+              Number.isFinite(distanceMeters) && distanceMeters > 0
+                ? distanceMeters
+                : null,
+            bearingDeg:
+              state.latestFix && state.routeRequest?.to
+                ? computeBearing(state.latestFix, state.routeRequest.to)
+                : null,
+          };
+        }
         return set({
           approach: {
             ...state.approach,
@@ -764,6 +818,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
                 : null,
           },
           routeRequest: null,
+          cueEvent: rejoinCueEvent,
           connectorResult: {
             requestId: action.requestId,
             result: "ready",
@@ -871,10 +926,18 @@ export function createNavigationSession(navigationRoute, options = {}) {
         return state.status === "paused" ? set({ status: prePauseStatus }) : state;
 
       case NAV_ACTIONS.RECENTER:
+        lastUserPanAt = null;
         return set({ cameraIntent: "follow" });
 
-      case NAV_ACTIONS.USER_PANNED:
+      case NAV_ACTIONS.USER_PANNED: {
+        const timestamp = Number(action.timestamp);
+        lastUserPanAt = Number.isFinite(timestamp)
+          ? timestamp
+          : Number.isFinite(Number(state.latestFix?.timestamp))
+            ? Number(state.latestFix.timestamp)
+            : null;
         return set({ cameraIntent: "free" });
+      }
 
       case NAV_ACTIONS.STOP:
         requestSeq += 1;
@@ -914,16 +977,19 @@ export function createNavigationSession(navigationRoute, options = {}) {
     getState: () => state,
     snapshot: () => ({
       version: 1,
-      state: { ...state, cueEvent: null },
+      state: { ...state, cueEvent: null, route: null, cameraTransition: null },
       tracker: mainTracker.snapshot(),
       mainCueKey,
       wasOffRoute,
+      wasWrongWay,
+      rejoinAnnounced,
       lastConfirmedProgressMeters,
       lastRequestPos,
       connectorRequestAttempt,
       requestSeq,
       cameraTransitionSeq,
       prePauseStatus,
+      lastUserPanAt,
     }),
     dispatch,
   };

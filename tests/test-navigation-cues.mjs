@@ -208,16 +208,35 @@ function routeFrom(geometry, extra = {}) {
 
 // --- Short-segment suppression: close turns do not spam -------------------
 {
-  // Two ~90 deg turns ~11 m apart (below the min-spacing) -> only one cue.
+  // Two ~90 deg turns ~9 m apart (below the hard noise floor) -> one cue.
   const zigzag = routeFrom([
     { lat: 33.1, lng: 35.6 },
     { lat: 33.1, lng: 35.6001 }, // ~9.3 m  (turn 1)
-    { lat: 33.10010, lng: 35.6001 }, // ~20.4 m (turn 2, suppressed)
-    { lat: 33.10010, lng: 35.6002 },
+    { lat: 33.10008, lng: 35.6001 }, // ~18.2 m (turn 2, suppressed)
+    { lat: 33.10008, lng: 35.6002 },
   ]);
   const turns = findType(buildRouteCues(zigzag), "turn");
   assert.equal(turns.length, 1, "close second turn is suppressed");
   assert.ok(near(turns[0].distanceMeters, 9.3, 2), "kept the first turn");
+}
+
+// --- Compound turns: close pairs are linked, not dropped ------------------
+{
+  const route = routeFrom([
+    { lat: 33.0, lng: 35.0 },
+    { lat: 33.0, lng: 35.002 },
+    { lat: 33.00036, lng: 35.002 },
+    { lat: 33.00036, lng: 35.004 },
+  ]);
+  const turns = findType(buildRouteCues(route), "turn");
+  assert.equal(turns.length, 2, "both turns of a close pair survive");
+  assert.equal(turns[0].direction, "left");
+  assert.equal(turns[0].thenDirection, "right");
+  assert.equal(
+    turns[1].compoundPreviousDistanceMeters,
+    turns[0].distanceMeters,
+    "follow-up points back to the compound instruction",
+  );
 }
 
 // --- enter-segment cues + merge ---
@@ -262,6 +281,15 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   const cues = _brc(route);
   assert.ok(cues.some((c) => c.type === "enter-segment" && c.segmentName === "B"),
     "standalone enter-segment cue for B");
+}
+
+// A due segment boundary must not be starved by a farther maneuver preview.
+{
+  const segment = { type: "enter-segment", distanceMeters: 400, segmentName: "B" };
+  const turn = { type: "turn", distanceMeters: 485, direction: "right" };
+  const selected = selectActiveCue([segment, turn], 380);
+  assert.equal(selected.cue, segment, "final segment cue beats farther turn preview");
+  assert.equal(selected.phase, "final");
 }
 
 // --- Real catalog route: junction data is baked in and gates the cues -----

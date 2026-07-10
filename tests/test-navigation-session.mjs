@@ -24,6 +24,62 @@ function straightRoute() {
   );
 }
 
+// --- Camera auto-refollows after the last pan goes idle -------------------
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.6, 1_000) });
+  session.dispatch({ type: NAV_ACTIONS.USER_PANNED, timestamp: 2_000 });
+  assert.equal(
+    session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.601, 8_000) })
+      .cameraIntent,
+    "free",
+  );
+  assert.equal(
+    session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.602, 14_100) })
+      .cameraIntent,
+    "follow",
+  );
+  session.dispatch({ type: NAV_ACTIONS.USER_PANNED, timestamp: 15_000 });
+  assert.equal(
+    session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.603, 20_000) })
+      .cameraIntent,
+    "free",
+    "a fresh pan restarts the idle window",
+  );
+}
+
+// --- Refollow survives a pan clocked ahead of the fix clock ----------------
+// A pan recorded before the first fix falls back to Date.now(); in journey
+// playback fix timestamps are synthetic and far smaller, which used to leave
+// the camera free forever. The session adopts the fix clock instead.
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  // Pan "in the future" relative to the playback clock (wall-clock fallback).
+  session.dispatch({ type: NAV_ACTIONS.USER_PANNED, timestamp: 1_750_000_000_000 });
+  assert.equal(
+    session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.6, 1_000) })
+      .cameraIntent,
+    "free",
+    "first fix keeps the camera free and adopts the fix clock",
+  );
+  assert.equal(
+    session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.601, 5_000) })
+      .cameraIntent,
+    "free",
+    "still inside the idle window measured on the fix clock",
+  );
+  assert.equal(
+    session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.602, 13_100) })
+      .cameraIntent,
+    "follow",
+    "refollows once the fix-clock idle window elapses",
+  );
+}
+
 // --- Lifecycle: idle -> permission -> navigating -> ended -----------------
 {
   const route = straightRoute();
@@ -114,14 +170,16 @@ function navigatingSession() {
   return session;
 }
 
-const fix = (lng, timestamp, extra = {}) => ({
-  lat: 33.1,
-  lng,
-  accuracy: 5,
-  speed: 3,
-  timestamp,
-  ...extra,
-});
+function fix(lng, timestamp, extra = {}) {
+  return {
+    lat: 33.1,
+    lng,
+    accuracy: 5,
+    speed: 3,
+    timestamp,
+    ...extra,
+  };
+}
 
 // --- LOCATION drives progress; ignored when not active --------------------
 {
@@ -540,6 +598,8 @@ function offRouteRequestedSession() {
   });
   assert.equal(ready.approach.suggestionStatus, "ready");
   assert.ok(ready.approach.suggestionGeometry.length >= 2);
+  assert.equal(ready.cueEvent?.kind, "rejoin-ready");
+  assert.ok(Number.isFinite(ready.cueEvent?.bearingDeg));
   assert.equal(ready.routeRequest, null);
   const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
   assert.equal(stillOff.status, "off-route");
@@ -556,6 +616,85 @@ function offRouteRequestedSession() {
     movedOff.approach.suggestionGeometry.length >= 2,
     "old rejoin suggestion stays visible while refreshing",
   );
+  const refreshed = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: movedOff.routeRequest.requestId,
+    geometry: [movedOff.routeRequest.from, movedOff.routeRequest.to],
+    distanceMeters: 420,
+  });
+  assert.equal(refreshed.cueEvent, null, "rejoin refresh stays silent");
+}
+
+// --- Wrong-way rising edge emits once per episode -------------------------
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: {
+      lat: 33.1,
+      lng: 35.606,
+      accuracy: 5,
+      speed: 5,
+      timestamp: 0,
+    },
+  });
+  const events = [];
+  for (let index = 1; index <= 60; index += 1) {
+    const state = session.dispatch({
+      type: NAV_ACTIONS.LOCATION,
+      fix: {
+        lat: 33.1,
+        lng: 35.606 - index * 0.00005,
+        accuracy: 5,
+        speed: 5,
+        heading: 270,
+        timestamp: index * 1000,
+      },
+    });
+    if (state.cueEvent?.kind === "wrong-way") events.push(index);
+    if (state.status !== "navigating") break;
+  }
+  assert.equal(events.length, 1, "wrong-way announces once on the rising edge");
+}
+
+// --- A due named segment is emitted ahead of a farther turn preview --------
+{
+  const route = navigationRouteFromRouteState(
+    {
+      points: [
+        { id: "start", lat: 33.1, lng: 35.6 },
+        { id: "end", lat: 33.105, lng: 35.605 },
+      ],
+      geometry: [
+        { lat: 33.1, lng: 35.6 },
+        { lat: 33.1, lng: 35.605 },
+        { lat: 33.105, lng: 35.605 },
+      ],
+      segmentSpans: [
+        { startMeters: 0, endMeters: 400, name: "A" },
+        { startMeters: 400, endMeters: 1020, name: "B" },
+      ],
+    },
+    { param: "segment-priority" },
+  );
+  const session = createNavigationSession(route);
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  const state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: {
+      lat: 33.1,
+      lng: 35.60408,
+      accuracy: 5,
+      speed: 4,
+      timestamp: 1000,
+    },
+  });
+  assert.equal(state.cueEvent?.cueType, "enter-segment");
+  assert.equal(state.cueEvent?.cue?.segmentName, "B");
+  assert.equal(state.cueEvent?.phase, "final");
 }
 
 // --- no state is ever "on-connector" ---------------------------------------
@@ -608,6 +747,30 @@ function offRouteRequestedSession() {
     fix: { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 12000 },
   });
   assert.equal(state.rideStartTimestamp, 12000, "second ride gets its own start");
+}
+
+// --- Snapshot slimming: route geometry is not duplicated ------------------
+{
+  const route = straightRoute();
+  const session = createNavigationSession(route);
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6, accuracy: 5, timestamp: 1_000 },
+  });
+
+  const snapshot = session.snapshot();
+  assert.equal(snapshot.state.route, null, "snapshot omits the route object");
+  assert.equal(
+    snapshot.state.cameraTransition,
+    null,
+    "snapshot omits camera transitions",
+  );
+
+  const restored = createNavigationSession(route, { snapshot });
+  assert.equal(restored.getState().route, route, "restore re-injects the live route");
+  assert.equal(restored.getState().status, "navigating", "restore keeps status");
 }
 
 // --- snapshot / restore preserves cue and off-route transition memory -----

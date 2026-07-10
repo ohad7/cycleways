@@ -18,7 +18,9 @@ const TURN_THRESHOLD_DEG = 40; // min heading change to emit a turn cue
 // than a turn to be worth announcing. Moderate open-road curves cue nothing.
 const BEND_THRESHOLD_DEG = 75;
 const JUNCTION_GATE_M = 30; // corner within this of a junction node = a turn
-const MIN_TURN_SPACING_M = 20; // suppress turns closer than this (geometry noise)
+const MIN_TURN_SPACING_M = 10; // hard floor for geometry noise
+const COMPOUND_TURN_WINDOW_M = 60;
+const SPAN_MERGE_TOLERANCE_M = 20;
 const PREVIEW_MAX_M = 120; // upper bound of the preview window before a cue
 const FINAL_MAX_M = 35; // within this, the cue is "final"
 const SELECTION_PRIORITY = {
@@ -54,6 +56,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
   const junctions = Array.isArray(navigationRoute?.junctions)
     ? navigationRoute.junctions
     : null;
+  const cornerCues = [];
   let lastTurnDistance = -Infinity;
   for (let i = 1; i < geometry.length - 1; i++) {
     const bearingIn = computeBearing(geometry[i - 1], geometry[i]);
@@ -74,13 +77,31 @@ export function buildRouteCues(navigationRoute, options = {}) {
     const distanceMeters = geometry[i].distanceFromStartMeters;
     if (distanceMeters - lastTurnDistance < MIN_TURN_SPACING_M) continue;
     lastTurnDistance = distanceMeters;
-    cues.push({
+    cornerCues.push({
       type,
       distanceMeters,
       direction: turn > 0 ? "right" : "left",
       turnAngleDeg: angle,
     });
   }
+
+  // Link close decision pairs without removing the follow-up cue. The voice
+  // planner suppresses that follow-up only after it has actually accepted the
+  // earlier compound instruction, so a missed first announcement cannot make
+  // the second turn silent as well.
+  for (let i = 0; i < cornerCues.length - 1; i += 1) {
+    const current = cornerCues[i];
+    const next = cornerCues[i + 1];
+    if (
+      current.type === "turn" &&
+      next.type === "turn" &&
+      next.distanceMeters - current.distanceMeters <= COMPOUND_TURN_WINDOW_M
+    ) {
+      current.thenDirection = next.direction;
+      next.compoundPreviousDistanceMeters = current.distanceMeters;
+    }
+  }
+  cues.push(...cornerCues);
 
   // Hazard/POI cues from on-route active data points.
   const dataPoints = Array.isArray(navigationRoute?.activeDataPoints)
@@ -110,7 +131,9 @@ export function buildRouteCues(navigationRoute, options = {}) {
   for (const span of spans) {
     if (!span.name || span.startMeters <= 0) continue;
     const near = turnCues.find(
-      (t) => Math.abs(t.distanceMeters - span.startMeters) <= MIN_TURN_SPACING_M,
+      (t) =>
+        Math.abs(t.distanceMeters - span.startMeters) <=
+        SPAN_MERGE_TOLERANCE_M,
     );
     if (near) {
       near.ontoSegmentName = span.name; // merge into the turn
@@ -135,16 +158,21 @@ export function selectActiveCue(cues, progressMeters) {
   let selected = null;
   let selectedDistance = Infinity;
   let selectedPriority = Infinity;
+  let selectedPhasePriority = Infinity;
   for (const cue of cues) {
     if (cue.type === "start") continue; // start is informational, not a maneuver
     const d = cue.distanceMeters - progressMeters;
     if (d < 0) continue; // already passed
     if (d > PREVIEW_MAX_M) continue;
+    const phasePriority = d <= FINAL_MAX_M ? 0 : 1;
     const priority = SELECTION_PRIORITY[cue.type] ?? 1;
     if (
-      priority < selectedPriority ||
-      (priority === selectedPriority && d < selectedDistance)
+      phasePriority < selectedPhasePriority ||
+      (phasePriority === selectedPhasePriority &&
+        (priority < selectedPriority ||
+          (priority === selectedPriority && d < selectedDistance)))
     ) {
+      selectedPhasePriority = phasePriority;
       selectedPriority = priority;
       selectedDistance = d;
       selected = cue;

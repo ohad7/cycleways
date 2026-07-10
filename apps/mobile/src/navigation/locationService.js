@@ -14,6 +14,13 @@ import { Platform } from "react-native";
 import { toNavigationFix } from "@cycleways/core/navigation/locationFix.js";
 import { NAVIGATION_LOCATION_TASK } from "./backgroundTaskName.js";
 
+// Development-only permission spike. Expo Location's foreground watch cannot
+// run under lock, so the experiment retains TaskManager but skips the Always
+// request to test iOS's user-initiated When-In-Use behavior. Never enabled in
+// production builds.
+export const WHEN_IN_USE_BACKGROUND_SPIKE =
+  __DEV__ && process.env.EXPO_PUBLIC_NAV_WHEN_IN_USE_SPIKE === "1";
+
 export const NAVIGATION_BACKGROUND_LOCATION_OPTIONS = {
   accuracy: Location.Accuracy.BestForNavigation,
   timeInterval: 1000,
@@ -87,6 +94,14 @@ export async function requestNavigationPermissions({ background = false } = {}) 
   }
   if (!background || Platform.OS !== "ios") {
     return { granted: true, background: false, status: foreground.status };
+  }
+  if (WHEN_IN_USE_BACKGROUND_SPIKE) {
+    return {
+      granted: true,
+      background: true,
+      status: foreground.status,
+      permissionSpike: "when-in-use-task-manager",
+    };
   }
   const bg = await Location.requestBackgroundPermissionsAsync();
   return {

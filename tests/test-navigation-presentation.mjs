@@ -342,6 +342,28 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(riding.speedText, "17.5 קמ״ש");
   assert.equal(riding.arrivalSummary, null);
 
+  // Compound pair: the card must mirror the spoken "turn left, then right" —
+  // the voice planner suppresses the follow-up turn's own utterance, so the
+  // card is the rider's only reminder of the second leg.
+  const compound = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "turn", direction: "left", thenDirection: "right" },
+      phase: "final",
+      distanceToCueMeters: 30,
+    },
+    latestFix: { timestamp: 600000 },
+    rideStartTimestamp: 0,
+    progress: {
+      hasAcquiredRoute: true,
+      remainingMeters: 800,
+      progressMeters: 400,
+      wrongWay: false,
+    },
+  });
+  assert.equal(compound.cuePrimaryText, "פנה שמאלה ומיד ימינה");
+
   const cruising = getNavigationPresentation({
     status: "navigating",
     offRoute: false,
