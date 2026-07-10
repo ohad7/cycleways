@@ -4,6 +4,7 @@
 // one module + one line here.
 import approachFromDistance from "./approach-from-distance.js";
 import cameraJourneys from "./camera-journeys.js";
+import compoundTurnLeftRight from "./compound-turn-left-right.js";
 import currentRouteGeneric from "./current-route-generic.js";
 import gpsGap from "./gps-gap.js";
 import missedTurnReroute from "./missed-turn-reroute.js";
@@ -19,6 +20,7 @@ import wrongWay from "./wrong-way.js";
 
 export const scenarios = [
   onRouteHappyPath,
+  compoundTurnLeftRight,
   approachFromDistance,
   offRouteExcursion,
   missedTurnReroute,

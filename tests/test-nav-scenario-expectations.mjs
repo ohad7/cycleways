@@ -18,6 +18,7 @@ function entry(overrides = {}) {
     cameraStage: "ride",
     cardMode: "status",
     chipText: null,
+    voiceText: null,
     presentation: { cueText: "המשך במסלול", statusText: "", guidanceText: "" },
     ...overrides,
   };
@@ -45,7 +46,11 @@ const timeline = [
   }),
   entry({ progressMeters: 400, wrongWay: true }),
   entry({ progressMeters: 450, wrongWay: false }),
-  entry({ progressMeters: 500, presentation: { cueText: "פנה שמאלה אל שביל הצפון", statusText: "", guidanceText: "" } }),
+  entry({
+    progressMeters: 500,
+    voiceText: "בעוד 100 מטר, פנה שמאלה אל שביל הצפון",
+    presentation: { cueText: "פנה שמאלה אל שביל הצפון", statusText: "", guidanceText: "" },
+  }),
   entry({ progressMeters: 900, activeCueType: "arrive", presentation: { cueText: "הגעת ליעד", statusText: "", guidanceText: "" } }),
 ];
 
@@ -67,6 +72,7 @@ const timeline = [
       { type: "progress-at-least", meters: 800 },
       { type: "wrong-way" },
       { type: "wrong-way-resolved", final: true },
+      { type: "voice", match: "פנה שמאלה", count: 1 },
     ],
     timeline,
   );
@@ -90,12 +96,45 @@ const timeline = [
       { type: "progress-at-least", meters: 2000 },
       { type: "wrong-way", never: true }, // did fire at 400 m
       { type: "wrong-way-resolved", final: true }, // did resolve, so this one passes
+      { type: "voice", match: "פנה ימינה" }, // never spoken
       { type: "bogus-type" },
     ],
     timeline,
   );
   assert.equal(result.passed, false);
-  assert.equal(result.failures.length, 12, JSON.stringify(result.failures, null, 1));
+  assert.equal(result.failures.length, 13, JSON.stringify(result.failures, null, 1));
+}
+
+// voice: supports substring matching, exact counts, bounds, progress windows,
+// and explicit absence checks against the utterances accepted by the planner.
+{
+  const spoken = [
+    entry({ progressMeters: 100, voiceText: "פנה שמאלה ומיד ימינה" }),
+    entry({ progressMeters: 110, voiceText: null }),
+    entry({ progressMeters: 200, voiceText: "הגעת ליעד" }),
+  ];
+  assert.equal(
+    evaluateExpectations(
+      [
+        { type: "voice", match: "ומיד ימינה", count: 1, afterMeters: 50, beforeMeters: 150 },
+        { type: "voice", match: "פנה ימינה אל שביל המזרח", never: true },
+        { type: "voice", match: "הגעת", atLeast: 1, atMost: 1 },
+      ],
+      spoken,
+    ).passed,
+    true,
+  );
+  assert.equal(
+    evaluateExpectations([{ type: "voice", match: "פנה", count: 2 }], spoken).passed,
+    false,
+  );
+  assert.equal(
+    evaluateExpectations(
+      [{ type: "voice", match: "ומיד", afterMeters: 150 }],
+      spoken,
+    ).passed,
+    false,
+  );
 }
 
 // wrong-way that never fired: bare expectation fails, never-form passes.

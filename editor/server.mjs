@@ -2952,6 +2952,45 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/base-edge-state") {
+      logApi(requestId, "POST /api/base-edge-state started");
+      let manualBaseEdges;
+      let overlay;
+      try {
+        const payload = await readRequestJson(request);
+        manualBaseEdges = normalizeManualBaseEdges(payload?.manualBaseEdges);
+        overlay = normalizeCwBaseOverlay(payload?.overlay);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/base-edge-state validation failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+
+      const [previousManualBaseEdges, previousOverlay] = await Promise.all([
+        readManualBaseEdges(),
+        readCwBaseOverlay(),
+      ]);
+      try {
+        await writeJsonAtomic(manualBaseEdgesPath, manualBaseEdges);
+        await writeJsonAtomic(cwBaseOverlayPath, overlay);
+      } catch (error) {
+        await Promise.all([
+          writeJsonAtomic(manualBaseEdgesPath, previousManualBaseEdges),
+          writeJsonAtomic(cwBaseOverlayPath, previousOverlay),
+        ]).catch((rollbackError) => {
+          log("error", `api#${requestId} POST /api/base-edge-state rollback failed`, rollbackError?.message || String(rollbackError));
+        });
+        throw error;
+      }
+      logApi(requestId, "POST /api/base-edge-state saved", {
+        manualEdges: manualBaseEdges.features?.length || 0,
+        mappings: Object.keys(overlay.segments || {}).length,
+      });
+      sendJson(response, 200, { ok: true, manualBaseEdges, overlay });
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/source") {
       logApi(requestId, "POST /api/source started");
       const source = await readRequestJson(request);

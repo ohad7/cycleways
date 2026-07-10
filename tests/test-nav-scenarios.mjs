@@ -11,6 +11,10 @@ import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js
 
 assert.ok(scenarios.length >= 7, "seed scenario set is registered");
 assert.equal(getScenario("on-route-happy-path")?.name, "on-route-happy-path");
+assert.equal(
+  getScenario("compound-turn-left-right")?.name,
+  "compound-turn-left-right",
+);
 assert.equal(getScenario("nope"), null);
 assert.equal(
   new Set(scenarios.map((s) => s.name)).size,

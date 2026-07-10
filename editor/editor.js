@@ -4,6 +4,7 @@ import {
   conflictingSegmentForEdge,
   orientAppendedEdgeRef,
 } from "./lib/edge-pick.mjs";
+import { migrateOverlayEdgeReplacement } from "./lib/overlay-edge-migration.mjs";
 import {
   POI_TYPE_OPTIONS,
   poiColor,
@@ -5371,9 +5372,21 @@ async function cloneSelectedBaseGraphEdgeAsManual() {
   state.baseOverlay.selectedGraphEdgeId = null;
   state.baseOverlay.selectedManualEdgeIndex = state.baseOverlay.manualBaseEdges.features.length - 1;
   state.baseOverlay.selectedManualVertexIndex = -1;
-  await saveManualBaseEdges();
+  const migration = migrateOverlayEdgeReplacement(
+    state.baseOverlay.overlay,
+    graphEdgeId,
+    [{ edgeId: manualEdgeId, source: "manual", manualEdgeId }],
+    { updatedAt: now },
+  );
+  state.baseOverlay.overlay = migration.overlay;
+  await saveBaseEdgeState();
   renderAll();
-  setStatus(`Copied ${graphEdgeId} to editable manual base edge ${manualEdgeId}. Recalculate the graph when ready.`);
+  const migrated = migration.migratedSegmentIds.length;
+  setStatus(
+    `Copied ${graphEdgeId} to editable manual base edge ${manualEdgeId}` +
+    `${migrated ? ` and migrated ${migrated} overlay mapping${migrated === 1 ? "" : "s"}` : ""}. ` +
+    "Recalculate the graph when ready.",
+  );
 }
 
 async function deleteSelectedManualBaseEdge() {
@@ -6326,9 +6339,26 @@ async function splitSelectedManualBaseEdge() {
   };
   state.baseOverlay.selectedManualEdgeIndex = edgeIndex;
   state.baseOverlay.selectedManualVertexIndex = -1;
-  await saveManualBaseEdges();
+  const migration = migrateOverlayEdgeReplacement(
+    state.baseOverlay.overlay,
+    originalId,
+    [
+      { edgeId: firstId, source: "manual", manualEdgeId: firstId },
+      { edgeId: secondId, source: "manual", manualEdgeId: secondId },
+    ],
+    { updatedAt: now },
+  );
+  state.baseOverlay.overlay = migration.overlay;
+  await saveBaseEdgeState();
   renderAll();
-  setStatus(`Split manual base edge ${originalId}. Recalculate the graph when ready.`);
+  const migrated = migration.migratedSegmentIds.length;
+  const invalidated = migration.invalidatedSegmentIds.length;
+  setStatus(
+    `Split manual base edge ${originalId}` +
+    `${migrated ? `; migrated ${migrated} overlay mapping${migrated === 1 ? "" : "s"}` : ""}` +
+    `${invalidated ? `; marked ${invalidated} mapping${invalidated === 1 ? "" : "s"} as needing edit` : ""}. ` +
+    "Recalculate the graph when ready.",
+  );
 }
 
 async function loadSource() {
@@ -6815,6 +6845,24 @@ async function saveManualBaseEdges() {
     throw new Error(payload.error || `Manual base edge save failed: ${response.status}`);
   }
   state.baseOverlay.manualBaseEdges = payload.manualBaseEdges || state.baseOverlay.manualBaseEdges;
+  markBaseGraphStaleBecauseManualEdgesChanged();
+}
+
+async function saveBaseEdgeState() {
+  const response = await fetch("/api/base-edge-state", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      manualBaseEdges: state.baseOverlay.manualBaseEdges || emptyManualBaseEdges(),
+      overlay: state.baseOverlay.overlay || emptyBaseOverlay(),
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error || `Base edge state save failed: ${response.status}`);
+  }
+  state.baseOverlay.manualBaseEdges = payload.manualBaseEdges || state.baseOverlay.manualBaseEdges;
+  state.baseOverlay.overlay = payload.overlay || state.baseOverlay.overlay;
   markBaseGraphStaleBecauseManualEdgesChanged();
 }
 

@@ -44,6 +44,7 @@ export default {
     { type: "chip", match: "חזרה למסלול" },
     { type: "haptic", kind: "heavy" },
     { type: "rerouted", withinFixesOfOffRoute: 10 },
+    { type: "voice", match: "עקוב אחרי הקו המסומן", count: 1 },
     { type: "rejoin-target", position: "first", betweenMeters: [560, 660] },
     { type: "rejoin-target", position: "last", betweenMeters: [560, 700] },
     { type: "camera-rotations", atMost: 0, during: "off-route" },

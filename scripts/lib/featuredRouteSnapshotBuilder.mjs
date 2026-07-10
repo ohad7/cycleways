@@ -338,6 +338,20 @@ export async function buildSnapshotForSlug(slug, {
 async function writeSnapshotAtomic(slug, snapshot) {
   await mkdir(featuredRoutesDir, { recursive: true });
   const target = resolve(featuredRoutesDir, `${slug}.json`);
+  const existing = await readJsonOrNull(target);
+
+  // Builds should be idempotent. `generatedAt` describes when the snapshot's
+  // contents changed, not every time an otherwise identical build ran.
+  if (existing && typeof existing.generatedAt === "string") {
+    const candidateWithExistingTimestamp = {
+      ...snapshot,
+      generatedAt: existing.generatedAt,
+    };
+    if (JSON.stringify(candidateWithExistingTimestamp) === JSON.stringify(existing)) {
+      return { target, changed: false };
+    }
+  }
+
   const tmp = `${target}.tmp`;
   await writeFile(tmp, `${JSON.stringify(snapshot, null, 2)}\n`);
   try {
@@ -347,7 +361,7 @@ async function writeSnapshotAtomic(slug, snapshot) {
     await rm(tmp, { force: true });
     throw err;
   }
-  return target;
+  return { target, changed: true };
 }
 
 async function listSnapshotSlugs() {
@@ -394,9 +408,13 @@ export async function buildFeaturedRouteSnapshots({
         generatedAt,
         log,
       });
-      const target = await writeSnapshotAtomic(slug, snapshot);
-      written.push({ slug, path: target });
-      log("info", `route snapshot: wrote ${slug} (${snapshot.route.geometry.length} coords)`);
+      const { target, changed } = await writeSnapshotAtomic(slug, snapshot);
+      if (changed) {
+        written.push({ slug, path: target });
+        log("info", `route snapshot: wrote ${slug} (${snapshot.route.geometry.length} coords)`);
+      } else {
+        log("info", `route snapshot: unchanged ${slug}`);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       errors.push({ slug, error: message });

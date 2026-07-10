@@ -87,7 +87,7 @@
       "notes": "",
       "featured": true,
       "distanceKm": 6.5,
-      "elevationGainM": 12,
+      "elevationGainM": 13,
       "elevationLossM": 12,
       "regionId": "hula-valley",
       "passesNear": [
@@ -134,7 +134,7 @@
           "relation": "near",
           "matchType": "radius",
           "distanceM": 5,
-          "routeProgressMeters": 1501
+          "routeProgressMeters": 1521
         }
       ],
       "routeMapImage": {
@@ -157,10 +157,10 @@
       "name": "הירדן ההיסטורי",
       "summary": "מסלול דרך נחלים ישנים ותעלות רכיבה מכפר בלום דרך הירדן ההיסטורי, אגמון החולה ותעלת הביטחון",
       "intro": "רכיבה מכפר בלום לאורך הירדן ההיסטורי ששוקם, לצד שדות שקד וזית, דרך אגמון החולה ותעלת הירדן המזרחית, עם הרבה קטעי עפר פתוחים ונוף מים חקלאי.",
-      "route": "5vbUnLFA6HYL69PUsAaSZ2JS5QZJ3M7AXAw2cTYbDMCyrbosoQ9uSiPzkLURe8fJ7PHQAm4uVBqiJsmWMSqKeidgCia8abdPFoj4M61UDk23QHiBJPNDA2buWKXjuu7C7FpbLhbbhpcQSpJC3VfYBM7PtAzGscmepp7cS6MfimbNNYLP7JksEhWprnVQwo8XPryW4Bj695vKTxiQyQfV5vqiSwsHAn4FJwRwFVySCuv8kpn7nNio3zk84DBNHWbSaQuCxocrgraKhY8zBTWzd8qxNqRRDAhSRC4KgXi2j6t9wSgvu1qwCKsjPzeiDh9hCERwzLFYoaidQmJUoJH7qnEk5Mkazi9K3sZC9hsXpfZaWj5JSyKte5FpV6PCuWooG6JawWU9hQCUJ9HupqJsdXc6sbHqSoCLHceeFQHEDjMhGwCsGT",
+      "route": "fnCHTBesozUiZzvPgDAwzGUpiadxuXwhQ6eTsNffYYXtZkns9ACWDU5WGCiocibZLaT574Af4d4Cyydo5ZS42vj7FKcNQxMKmWm84enVzSDpbL84BDJoHpfyxLw2hiBLtPQNNc7LQT8anSj4G6JWuXmHtsJcK17RBGTr3cxu9ycH7J3Ty4NpeMVS1a5iTxVh3Q3juHiK1orfNYXXgXDmi5eisF4J4s3LEGKB5xJtgDjhoZpstRJBArFR2Drs45ZCPdsg7udT49UUehScgLn4C2PDsDfBUjRVTwY4KYi5yiQbhbq9cc9paSBhfdqCVF7W1xFtHAkY6P69SVx5XtVMCtth5SRcXS7U3Gq85nJS1ZoV27QDp8SFMd8Ch8CyQgrAAj3dJKv8A4GYJt4bhvxhvLX5zvfFd",
       "notes": "",
       "featured": false,
-      "distanceKm": 23.6,
+      "distanceKm": 23.7,
       "elevationGainM": 48,
       "elevationLossM": 48,
       "regionId": "hula-valley",
@@ -172,11 +172,11 @@
       "difficulty": "moderate",
       "style": "adventurous",
       "roadMix": {
-        "paved": 0.19713146126582134,
-        "dirt": 0.8028685387341786,
+        "paved": 0.24761881533131574,
+        "dirt": 0.7523811846686843,
         "road": 0
       },
-      "qualityScore": 3.0000000000000004,
+      "qualityScore": 2.9999999999999996,
       "heroImage": {
         "photo": "public-data/poi-images/poi-5b6da297-fd491b50.webp",
         "thumbnail": "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp",
@@ -186,7 +186,7 @@
         "type": "circular",
         "endpointDistanceM": 18
       },
-      "surfaceType": "dirt",
+      "surfaceType": "mixed",
       "startPlaceIds": [
         "neot-mordechai",
         "agamon-hahula",
@@ -217,11 +217,10 @@
           "matchType": "segment",
           "segmentNames": [
             "ירדן מערב כפר בלום",
-            "ירדן מערב שדות כפר בלום",
             "ירדן מערב כפר בלום"
           ],
           "distanceM": 698,
-          "routeProgressMeters": 22989
+          "routeProgressMeters": 23108
         }
       ],
       "routeMapImage": {

@@ -69,6 +69,49 @@ export function evaluateExpectations(expectations, timeline) {
         break;
       }
 
+      case "voice": {
+        const matches = entries.filter(
+          (entry) =>
+            typeof entry?.voiceText === "string" &&
+            entry.voiceText.includes(String(exp.match ?? "")),
+        );
+        const count = matches.length;
+        if (exp.never === true) {
+          if (count > 0) fail(`"${exp.match}" was spoken ${count} time(s)`);
+          break;
+        }
+        if (exp.count !== undefined && count !== Number(exp.count)) {
+          fail(`"${exp.match}" was spoken ${count} time(s), expected ${exp.count}`);
+          break;
+        }
+        if (exp.atLeast !== undefined && count < Number(exp.atLeast)) {
+          fail(`"${exp.match}" was spoken ${count} time(s), expected at least ${exp.atLeast}`);
+          break;
+        }
+        if (exp.atMost !== undefined && count > Number(exp.atMost)) {
+          fail(`"${exp.match}" was spoken ${count} time(s), expected at most ${exp.atMost}`);
+          break;
+        }
+        if (count === 0) {
+          fail(`"${exp.match}" was never spoken`);
+          break;
+        }
+        const firstProgress = progressOf(matches[0]);
+        if (
+          exp.beforeMeters !== undefined &&
+          (firstProgress === null || firstProgress > Number(exp.beforeMeters))
+        ) {
+          fail(`first "${exp.match}" at ${firstProgress}m, expected before ${exp.beforeMeters}m`);
+        }
+        if (
+          exp.afterMeters !== undefined &&
+          (firstProgress === null || firstProgress < Number(exp.afterMeters))
+        ) {
+          fail(`first "${exp.match}" at ${firstProgress}m, expected after ${exp.afterMeters}m`);
+        }
+        break;
+      }
+
       case "acquired":
         if (!entries.some((e) => e.justAcquired === true)) {
           fail("route was never acquired");

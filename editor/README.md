@@ -162,3 +162,9 @@ geometry.
 Manual base edges drawn in the editor are stored in
 `data/manual-base-edges.geojson`. They are part of the base graph input, not the
 CycleWays source geometry.
+
+When an OSM base edge is copied to a manual edge, accepted overlay references
+are migrated to the manual replacement. When a manual edge is split, whole-edge
+references are expanded to the ordered children; mappings with partial or
+unknown-direction references are marked `needs_edit` rather than migrated
+ambiguously. The editor persists the manual-edge and overlay updates together.

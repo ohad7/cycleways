@@ -13,6 +13,7 @@ export default {
     { type: "wrong-way", never: true },
     { type: "banner", match: "פנה שמאלה", afterMeters: 430, beforeMeters: 600 },
     { type: "banner", match: "שביל הצפון" },
+    { type: "voice", match: "שביל הצפון", atLeast: 1 },
     { type: "camera-rotations", atMost: 2 },
     { type: "camera-stage", value: "pre-turn", betweenMeters: [430, 600] },
     { type: "camera-stage", value: "arrived-local" },
