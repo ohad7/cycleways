@@ -926,7 +926,6 @@ export default function BuildScreen({ navigation, route }) {
     [devPickerMode],
   );
   const setupRequestRef = useRef(0);
-  const lockScreenPermissionExplainerShownRef = useRef(false);
 
   const rideSetupSourceRoute =
     __DEV__ &&
@@ -1512,49 +1511,6 @@ export default function BuildScreen({ navigation, route }) {
           );
           return;
         }
-        let hasAlwaysPermission = lockScreenGuidanceHasAlwaysPermission;
-        if (lockScreenGuidanceEnabled && !hasAlwaysPermission) {
-          try {
-            const status = await getNavigationPermissionStatus();
-            hasAlwaysPermission = status?.canUseBackground === true;
-            setLockScreenGuidanceHasAlwaysPermission(hasAlwaysPermission);
-            const foregroundGranted = status?.foreground?.status === "granted";
-            const backgroundStatus = status?.background?.status;
-            const backgroundCanAskAgain = status?.background?.canAskAgain;
-            setLockScreenGuidanceNeedsSettings(
-              Boolean(
-                foregroundGranted &&
-                  !hasAlwaysPermission &&
-                  (backgroundStatus === "denied" || backgroundCanAskAgain === false),
-              ),
-            );
-          } catch {
-            hasAlwaysPermission = false;
-          }
-        }
-
-        if (
-          lockScreenGuidanceEnabled &&
-          !hasAlwaysPermission &&
-          !lockScreenPermissionExplainerShownRef.current
-        ) {
-          Alert.alert(
-            "הכוונה כשהמסך נעול",
-            "CycleWays יבקש הרשאת מיקום תמיד כדי להמשיך לעקוב אחרי הרכיבה ולהשמיע הנחיות כשהמסך נעול.",
-            [
-              { text: "ביטול", style: "cancel" },
-              {
-                text: "המשך",
-                onPress: () => {
-                  lockScreenPermissionExplainerShownRef.current = true;
-                  completeConfirmation();
-                },
-              },
-            ],
-          );
-          return;
-        }
-
         completeConfirmation();
       };
 
@@ -1562,7 +1518,6 @@ export default function BuildScreen({ navigation, route }) {
     },
     [
       lockScreenGuidanceEnabled,
-      lockScreenGuidanceHasAlwaysPermission,
       devRideIntroRoute,
       preparedRouteJunctions,
       refreshRideSetupLocation,

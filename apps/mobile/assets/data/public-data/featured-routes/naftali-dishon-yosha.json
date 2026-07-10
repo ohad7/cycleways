@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "naftali-dishon-yosha",
-  "generatedAt": "2026-07-10T06:09:31.255Z",
+  "generatedAt": "2026-07-10T20:28:22.388Z",
   "source": {
     "routeTokenHash": "sha256:6aed7196d6cc9938593dc498adb12f4368b55aaad7aadafd2f3c21bd5764ceb8",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "5d144ed04090",
+    "mapVersion": "fbda8096ada6",
     "assetHashes": {
-      "bikeRoads": "bd5d4a59d790ca6fa70002bf9f9e61fbd25a5c5debdaccdf5f44eb2f10464f92",
-      "segments": "6a707f2e66b27f03e3a8d8e0dc2b08de57303f60f863ef1e34b501d65c14259f",
-      "cwBaseIndex": "f51ce7d59967869d635ac19a8b3eac9774c05e13a13d5bd2619a81b0862026fa",
-      "baseRoutingShards": "e7b0eb41391d1bbcd8579ecfb37ffc4af03334d422a0cf70aacb96921a28a0dc"
+      "bikeRoads": "179fea0aebc07c9b1582bdb07aaff12312849dc0efa940f3580b33845a0d546e",
+      "segments": "436aa19405dbf1ca4d6632d5ea72be06a8b8960cdd0039256517e50d39596ec5",
+      "cwBaseIndex": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
+      "baseRoutingShards": "7c7766c9759d0165976cf158b33acca0ae067f2768339aae95823af46983dd89"
     }
   },
   "route": {

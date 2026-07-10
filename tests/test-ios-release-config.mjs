@@ -66,6 +66,11 @@ const buildScreen = await readFile(
   new URL("../apps/mobile/src/screens/BuildScreen.jsx", import.meta.url),
   "utf8",
 );
+assert.doesNotMatch(
+  buildScreen,
+  /הכוונה כשהמסך נעול|יבקש הרשאת מיקום תמיד/,
+  "ride confirmation must not show the obsolete Always-location explainer",
+);
 assert.ok(
   buildScreen.includes("setTelemetryEnabled(false)"),
   "Mapbox.setTelemetryEnabled(false) missing from BuildScreen.jsx",

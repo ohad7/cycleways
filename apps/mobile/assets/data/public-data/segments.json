@@ -1724,7 +1724,7 @@
     "net_elevation_change_m": 0.0
   },
   "ירדן מערב שדות כפר בלום": {
-    "id": 45,
+    "id": 346,
     "status": "active",
     "data": [
       {
@@ -1742,17 +1742,19 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 45,
+    "splitFromName": "ירדן מערב שדות כפר בלום",
     "middle": {
-      "longitude": 35.627408,
-      "latitude": 33.149574,
-      "elevation": 70.0
+      "longitude": 35.617806,
+      "latitude": 33.157729,
+      "elevation": 73.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
-  "ירדן מזרחי שביל צפוני": {
-    "id": 39,
+  "ירדן מערב מקטע מרכזי": {
+    "id": 347,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -1760,10 +1762,52 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 45,
+    "splitFromName": "ירדן מערב שדות כפר בלום",
     "middle": {
-      "longitude": 35.62987,
-      "latitude": 33.137655,
+      "longitude": 35.62884,
+      "latitude": 33.135755,
       "elevation": 66.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מזרחי מקטע מרכזי": {
+    "id": 349,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 39,
+    "splitFromName": "ירדן מזרחי שביל צפוני",
+    "middle": {
+      "longitude": 35.62962,
+      "latitude": 33.135855,
+      "elevation": 64.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מזרחי מקטע צפוני": {
+    "id": 350,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 39,
+    "splitFromName": "ירדן מזרחי שביל צפוני",
+    "middle": {
+      "longitude": 35.628547,
+      "latitude": 33.149185,
+      "elevation": 75.0
     },
     "elevation_gain_m": 0.0,
     "elevation_loss_m": 0.0,
@@ -6329,6 +6373,42 @@
     "elevation_loss_m": 0.0,
     "net_elevation_change_m": 0.0
   },
+  "מעבר הולכי רגל גשר להבות": {
+    "id": 348,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.628595,
+      "latitude": 33.146493,
+      "elevation": 75.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל גישה גשר להבות": {
+    "id": 351,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.629213,
+      "latitude": 33.147179,
+      "elevation": 70.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
   "שביל אופניים 918 דפנה [split archive 88]": {
     "id": 88,
     "status": "deprecated",
@@ -6658,6 +6738,78 @@
       [
         35.650953,
         33.192357
+      ]
+    ]
+  },
+  "ירדן מערב שדות כפר בלום [split archive 45]": {
+    "id": 45,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "ירדן מערב שדות כפר בלום",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.609918,
+        33.165579
+      ],
+      [
+        35.614518,
+        33.159828
+      ],
+      [
+        35.621332,
+        33.155469
+      ],
+      [
+        35.627196,
+        33.150398
+      ],
+      [
+        35.628811,
+        33.143289
+      ],
+      [
+        35.628825,
+        33.135652
+      ],
+      [
+        35.627708,
+        33.128028
+      ]
+    ]
+  },
+  "ירדן מזרחי שביל צפוני [split archive 39]": {
+    "id": 39,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "ירדן מזרחי שביל צפוני",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.628832,
+        33.128072
+      ],
+      [
+        35.629629,
+        33.1359
+      ],
+      [
+        35.629663,
+        33.143711
+      ],
+      [
+        35.628548,
+        33.149181
       ]
     ]
   },
