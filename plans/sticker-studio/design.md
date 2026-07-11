@@ -1,6 +1,6 @@
 # Cycleways Sticker Studio Design
 
-**Date:** 2026-07-11
+**Date:** 2026-07-11 (updated for serverless analytics and complete operations)
 
 ## Goal
 
@@ -188,8 +188,69 @@ can be corrected later, while the placement record retains the originally
 expected destination for audit. A replacement receives a new placement code so
 scan history never becomes ambiguous.
 
-The first map MVP may store short-code assignments without deploying redirects.
-Direct destination URLs remain available until the redirect service exists.
+The short-link system is deliberately static and serverless. The private registry
+is converted at build time into a minimal public lookup file containing only the
+short code, destination, active state, and non-sensitive design identifier. The
+public `/s/:code` page resolves that file in the browser, records analytics, and
+navigates to the destination. No location coordinates, field notes, permission
+details, photos, or operator names enter the public lookup.
+
+The generated URL is a first-class property, not hidden technical metadata. As
+soon as a placement code exists, its card shows:
+
+- the full URL, for example `https://cycleways.app/s/K7M4Q`;
+- **Copy URL**, **Open/test**, and **Use in generator** actions;
+- its destination and active/inactive state;
+- a reminder that analytics starts only after the built redirect registry is
+  published.
+
+Codes are immutable and never reused. Changing the destination updates the
+static lookup at the next deployment while preserving placement identity.
+Removed stickers keep their historical code, but the published record becomes
+inactive and should show a friendly retired-link page instead of silently
+attributing new visits to another placement.
+
+### Serverless analytics
+
+Cycleways uses client-side GA4 as the only scan measurement system. Loading
+`/s/:code` emits one `sticker_scan` event before navigation with non-sensitive
+parameters:
+
+- `placement_code` — the immutable public code;
+- `campaign_id` — an analytics-safe campaign slug, not a private title;
+- `design_version` — immutable artwork/configuration identifier;
+- `destination_type` and `destination_id` — homepage, route, or campaign target;
+- `sticker_variant` — rider/template variant when useful for comparison.
+
+Exact coordinates, free-form location names, notes, photos, installer identity,
+and permission details are never sent to analytics. The private Studio registry
+maps `placement_code` back to the physical location when the operator analyses
+results.
+
+The redirect waits for the GA event callback but has a short fallback timeout
+(approximately 500–800 ms), so analytics failure or blocking never traps the
+visitor. The resolved destination also receives redundant attribution parameters:
+
+`utm_source=physical_sticker&utm_medium=qr&utm_campaign=<campaign>&utm_content=<code>`
+
+GA counts are treated as **measured visits from scans**, not an exact scan
+ledger. Ad blockers, denied consent, disabled JavaScript, offline use, and rapid
+page closure cause undercounting. This is acceptable because the primary goal is
+relative comparison between placements and creative variants. The dashboard
+must label results accordingly and must not display locally recorded scan totals
+that imply server-side completeness.
+
+GA setup requires registering the useful custom event parameters as custom
+dimensions. The Studio provides a short setup checklist and a stable GA
+Exploration recipe: rows by `placement_code`, columns/filters by campaign,
+destination, and design variant, metrics for event count, engaged sessions, and
+downstream route actions. A direct GA link may open that report, but the Studio
+does not attempt to fetch GA data or embed credentials.
+
+The existing site privacy notice must accurately disclose Google Analytics and
+the consent/storage behavior before scan analytics is released. The current
+claim that Cycleways has “No analytics” is incompatible with the existing GA tag
+and must be corrected as part of the release.
 
 ### Map interface
 
@@ -238,6 +299,53 @@ For field use, the most important quick actions are:
 Placed coordinates are not silently dragged. A correction records the previous
 coordinate in history.
 
+### Removal, archiving, and deletion
+
+Three actions have deliberately different meanings:
+
+1. **Remove sticker** changes a physical placement to `removed`, requires a
+   reason, records the time, disables its public redirect, and preserves the
+   design, QR code, verification, and replacement history.
+2. **Archive location** hides a real-world location from normal planning and map
+   views while retaining its placements and history. It is allowed only when no
+   active placement remains. Archived locations appear through an explicit
+   filter and can be restored.
+3. **Delete unused draft** permanently removes a mistaken location only when it
+   has never had a placement, export, photo, verification, or other history. It
+   requires confirmation showing the location name. Once a QR code or placement
+   exists, deletion is prohibited; archive is the correct action.
+
+This prevents routine cleanup from corrupting scan attribution or replacement
+history. Campaigns follow the same pattern: archive rather than delete once used.
+
+### End-to-end operating workflow
+
+The default workflow is organized around one clear next action per location:
+
+1. **Plan:** drop a pin and enter only name, type, and permission. Optional
+   campaign, landmark, instructions, and notes stay collapsed.
+2. **Create tracking identity:** select a destination. The Studio creates and
+   immediately reveals the immutable placement URL and its copy/test controls.
+3. **Design:** open Create with the placement context locked in. Exporting saves
+   an immutable design version and print-batch record.
+4. **Print and prepare:** the print queue groups stickers by batch and produces a
+   manifest matching location, short code, and visual thumbnail.
+5. **Place:** the field action records time and actual coordinates; operator and
+   photo remain optional.
+6. **Verify:** scan the physical QR, confirm destination and condition, and mark
+   the placement current or needing attention.
+7. **Learn:** compare GA `sticker_scan` events by public code, campaign,
+   destination, and design variant. Use placement age as context; do not compare
+   raw totals without considering days installed.
+8. **Maintain:** recheck overdue stickers, repair, mark missing, remove, or create
+   a replacement with a fresh code.
+9. **Close:** remove the last physical sticker, then archive the location. Delete
+   only an unused planning mistake.
+
+The location drawer emphasizes: current physical state, full short URL, next
+action, measured-analytics guidance, and maintenance due date. Operational
+metadata, photos, and history remain progressively disclosed.
+
 ### Generator integration
 
 The Create workspace can work independently or for a selected planned
@@ -265,10 +373,37 @@ writes, and uses a revision number to reject stale saves. Local storage may cach
 draft form state but is never the only copy of placement data. The registry has
 a schema version and can be exported as JSON and GeoJSON.
 
-Field photos should not be embedded in the registry. The MVP stores optimized
-photo files beside the registry with relative references; if the collection
-grows or multiple operators are added, move records and photos to a hosted
-database/object store without changing entity IDs.
+Field photos should not be embedded in the registry. The local Studio stores
+optimized photo files beside the registry with relative references. The project
+principle is no runtime backend: canonical operational data remains a local,
+versioned repository file and is deliberately published only through generated,
+privacy-minimized static artifacts. Multi-device live sync is out of scope; JSON
+export/import and version control are the recovery and transfer mechanisms.
+
+Because a public static app cannot write to the private registry, GA is the sole
+production scan store. Any local scan endpoint is development-only and must not
+be presented as production functionality.
+
+### Sufficiency assessment
+
+The current Studio is already sufficient for a single operator to plan pins,
+create unique placement codes, bind a design export, mark stickers placed,
+verify condition/QR behavior, flag attention or missing stickers, remove a
+physical placement, create a replacement, and export operational data.
+
+It is not yet complete as the long-term operating console because it lacks:
+
+- prominent short-URL copy/test/publish-state controls;
+- client-side `sticker_scan` GA emission and UTM forwarding;
+- a GA setup/reporting guide and honest “measured visits” language;
+- location archive/restore and safe deletion of unused drafts;
+- explicit inactive-code behavior for removed stickers;
+- placement-age-normalized comparison guidance;
+- privacy-notice alignment with the analytics actually loaded by the site.
+
+These are the completion criteria for the serverless tracking release. Embedded
+GA reporting, accounts, hosted persistence, and exact scan accounting are not
+required.
 
 ### Operational and ethical safeguards
 
@@ -306,7 +441,7 @@ database/object store without changing entity IDs.
 
 - A true vector redraw and printer-specific contour cut line.
 - A round-badge layout with an attached footer ribbon.
-- Hosted short-link redirects and privacy-preserving scan analytics.
-- Multi-user accounts, cloud sync, and conflict resolution beyond revision-based
-  single-operator saves.
+- Multi-user accounts and live cloud synchronization; repository data remains
+  intentionally single-operator and serverless.
+- Embedded GA reporting or automatic GA Data API access; analysis stays in GA.
 - Direct PDF generation; the MVP uses the browser's A4 print/PDF dialog.
