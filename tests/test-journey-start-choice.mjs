@@ -14,7 +14,16 @@ import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js
 const resolved = resolveScenario(
   scenarios.find((scenario) => scenario.name === "journey-guided-approach"),
 );
-const setupFix = resolved.fixes[0];
+const setupPoint = resolved.navigationRoute.geometry.find(
+  (point) => point.distanceFromStartMeters > 1000,
+);
+const setupFix = {
+  lat: setupPoint.lat,
+  lng: setupPoint.lng,
+  accuracy: 5,
+  speed: 0,
+  timestamp: 0,
+};
 const official = createRidePlan(
   resolved.navigationRoute,
   { direction: "forward", startMode: "official" },

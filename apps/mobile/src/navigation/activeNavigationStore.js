@@ -3,12 +3,13 @@ import {
   createNavigationPersistenceCoordinator,
   isNavigationSnapshotFresh,
 } from "@cycleways/core/navigation/persistencePolicy.js";
+import { RESUME_WARM_MAX_AGE_MS } from "@cycleways/core/navigation/resumePolicy.js";
 
 const FILE_URI = FileSystem.documentDirectory
   ? `${FileSystem.documentDirectory}active-navigation-session.json`
   : null;
 const SCHEMA_VERSION = 1;
-const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
+const STALE_AFTER_MS = RESUME_WARM_MAX_AGE_MS;
 
 async function applyStoreOperation(operation) {
   if (!FILE_URI) return false;

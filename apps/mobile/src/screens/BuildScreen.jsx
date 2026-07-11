@@ -54,6 +54,7 @@ import {
   createCameraHeadingGovernor,
 } from "@cycleways/core/navigation/cameraHeading.js";
 import { createCameraDirector } from "@cycleways/core/navigation/cameraDirector.js";
+import { plannerLocateCameraView } from "@cycleways/core/navigation/plannerLocateCamera.js";
 import {
   cameraCorridorForProgress,
   cameraGeometryKey,
@@ -104,7 +105,9 @@ import { useNavigationSession } from "../navigation/useNavigationSession.js";
 import {
   createDefaultLocationSource,
   getRideSetupLocation,
+  stopNavigationBackgroundUpdates,
 } from "../navigation/locationService.js";
+import { clearActiveNavigationSession } from "../navigation/activeNavigationStore.js";
 import { createJourneyPlaybackSource } from "../navigation/journeyPlaybackSource.js";
 import {
   deriveRidePlanJourneyFixes,
@@ -361,6 +364,9 @@ export default function BuildScreen({ navigation, route }) {
   const [catalogEntries, setCatalogEntries] = useState([]);
   const [pendingRideSetupToken, setPendingRideSetupToken] = useState(null);
   const routeTokenParam = route?.params?.routeToken ?? null;
+  const resumeRideParam = route?.params?.resumeRide ?? null;
+  const resumeRideHandledRef = useRef(false);
+  const resumeFailureShownRef = useRef(false);
   const routeSlugParam = route?.params?.slug ?? null;
   const routeNameParam = route?.params?.name ?? null;
   const openRideSetupParam = route?.params?.openRideSetup === true;
@@ -741,10 +747,14 @@ export default function BuildScreen({ navigation, route }) {
     }));
 
     if (locationState.point) {
+      const retainedView = plannerLocateCameraView({
+        zoom: mapZoomRef.current,
+        pitch: mapPitchRef.current,
+      });
       cameraRef.current?.setCamera?.({
         type: "CameraStop",
         centerCoordinate: [locationState.point.lng, locationState.point.lat],
-        zoomLevel: 14.5,
+        ...retainedView,
         animationDuration: 500,
         animationMode: "easeTo",
       });
@@ -1188,11 +1198,17 @@ export default function BuildScreen({ navigation, route }) {
     [computeConnector],
   );
 
-  const nav = useNavigationSession(navigationRoute, {
+  const navigationSessionRoute =
+    resumeRideParam && !confirmedRidePlan ? null : navigationRoute;
+  const nav = useNavigationSession(navigationSessionRoute, {
     background: lockScreenGuidanceEnabled,
     voice: voiceGuidanceEnabled,
     locationSource: __DEV__ ? devSourceProxy.current : undefined,
     computeConnector: computeNavigationConnector,
+    resumeSessionId:
+      confirmedRidePlan?.effectiveRoute?.id === navigationSessionRoute?.id
+        ? resumeRideParam?.sessionId ?? null
+        : null,
   });
   const navStatus = nav.state?.status ?? "idle";
   const isNavigating =
@@ -1389,7 +1405,7 @@ export default function BuildScreen({ navigation, route }) {
   }, []);
 
   const confirmRidePlan = useCallback(
-    (plan) => {
+    (plan, { startSession = true } = {}) => {
       if (!plan?.effectiveRoute?.canNavigate) return;
       const prepared =
         preparedRouteJunctions.routeId === plan.effectiveRoute.id &&
@@ -1437,11 +1453,11 @@ export default function BuildScreen({ navigation, route }) {
             : current);
         }
         void clearPendingRideIntent();
-        setPendingNavigationRouteId(confirmedRouteId);
+        if (startSession) setPendingNavigationRouteId(confirmedRouteId);
       };
 
       const confirmWithCurrentPermission = async () => {
-        if (rideSetupLocationStatus === "denied") {
+        if (startSession && rideSetupLocationStatus === "denied") {
           Alert.alert(
             "צריך הרשאת מיקום",
             "כדי להתחיל לעקוב בדרך למסלול צריך לאפשר מיקום לאפליקציה.",
@@ -2250,6 +2266,8 @@ export default function BuildScreen({ navigation, route }) {
   const arcRef = useRef(null);
   const navGeometryRef = useRef([]);
   const mapHeadingRef = useRef(0);
+  const mapZoomRef = useRef(null);
+  const mapPitchRef = useRef(null);
   const smoothedMetersRef = useRef(0);
   const smoothedBearingRef = useRef(0);
   const travelIndexRef = useRef(-1);
@@ -2962,6 +2980,10 @@ export default function BuildScreen({ navigation, route }) {
   const handleCameraChanged = useCallback((mapState) => {
     const heading = Number(mapState?.properties?.heading);
     if (Number.isFinite(heading)) mapHeadingRef.current = heading;
+    const zoom = Number(mapState?.properties?.zoom);
+    if (Number.isFinite(zoom)) mapZoomRef.current = zoom;
+    const pitch = Number(mapState?.properties?.pitch);
+    if (Number.isFinite(pitch)) mapPitchRef.current = pitch;
     // Keep the session's idle clock aligned with the last active gesture. The
     // first signal disengages follow; throttled signals while already free stop
     // a long pan from auto-refollowing before the rider releases the map.
@@ -3122,6 +3144,42 @@ export default function BuildScreen({ navigation, route }) {
     routeRestoreAttempt,
     routeState.status,
   ]);
+
+  useEffect(() => {
+    if (!resumeRideParam || resumeRideHandledRef.current) return;
+    if (!sourceNavigationRoute?.canNavigate) return;
+    const plan = createRidePlan(sourceNavigationRoute, resumeRideParam, null);
+    if (!plan?.effectiveRoute?.canNavigate) {
+      resumeRideHandledRef.current = true;
+      resumeFailureShownRef.current = true;
+      navigation.setParams({ resumeRide: undefined });
+      void clearActiveNavigationSession();
+      void stopNavigationBackgroundUpdates();
+      Alert.alert(
+        "לא הצלחנו להמשיך את הרכיבה",
+        "הרכיבה השמורה הסתיימה כי המסלול כבר אינו זמין.",
+      );
+      return;
+    }
+    resumeRideHandledRef.current = true;
+    confirmRidePlan(plan, { startSession: false });
+  }, [confirmRidePlan, navigation, resumeRideParam, sourceNavigationRoute]);
+
+  useEffect(() => {
+    if (!resumeRideHandledRef.current) return;
+    if (nav.restoreStatus === "restored") {
+      navigation.setParams({ resumeRide: undefined });
+      return;
+    }
+    if (nav.restoreStatus === "failed" && !resumeFailureShownRef.current) {
+      resumeFailureShownRef.current = true;
+      navigation.setParams({ resumeRide: undefined });
+      Alert.alert(
+        "לא הצלחנו להמשיך את הרכיבה",
+        "הרכיבה השמורה הסתיימה כדי למנוע התחלה מחדש ממיקום שגוי.",
+      );
+    }
+  }, [nav.restoreStatus, navigation]);
 
   // A featured-page Navigate action opens ride setup after its encoded route is
   // loaded. It never starts a continuous GPS navigation session implicitly.

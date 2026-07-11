@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { text } from "./src/theme/typography.js";
 import {
   Linking,
+  Alert,
   LogBox,
   Pressable,
   StyleSheet,
@@ -29,6 +30,12 @@ import { launchTargetFromHref } from "./src/navigation/launchTarget.js";
 import { startWebServer } from "./src/webServer.js";
 import { loadPendingRideIntent } from "./src/navigation/pendingRidePlanStore.js";
 import AnimatedLaunchSplash from "./src/splash/AnimatedLaunchSplash.jsx";
+import { activeRideLaunchDecision } from "@cycleways/core/navigation/resumePolicy.js";
+import {
+  clearActiveNavigationSession,
+  loadActiveNavigationSession,
+} from "./src/navigation/activeNavigationStore.js";
+import { stopNavigationBackgroundUpdates } from "./src/navigation/locationService.js";
 import {
   SERVER_PRELOAD_BUDGET_MS,
   settleWithin,
@@ -45,6 +52,35 @@ LogBox.ignoreLogs([
 
 const navigationRef = createNavigationContainerRef();
 
+function pendingRideParams(pendingRide) {
+  return {
+    routeToken: pendingRide.routeToken,
+    slug: pendingRide.slug,
+    name: pendingRide.name,
+    openRideSetup: true,
+    rideSetupSelection: {
+      direction: pendingRide.direction,
+      startMode: pendingRide.startMode,
+      selectedPoint: pendingRide.selectedPoint,
+      startProgressMeters: pendingRide.startProgressMeters,
+    },
+  };
+}
+
+function resumeParamsFromRecord(record) {
+  const route = record.navigationRoute;
+  return {
+    routeToken: route.routeParam,
+    resumeRide: {
+      sessionId: record.sessionId,
+      direction: route.direction,
+      startMode: route.startMode,
+      startProgressMeters: route.startProgressMeters,
+      selectedPoint: route.selectedPoint ?? null,
+    },
+  };
+}
+
 export default function App() {
   const [ready, setReady] = useState(false);
   const [showLaunchSplash, setShowLaunchSplash] = useState(true);
@@ -52,6 +88,7 @@ export default function App() {
   // it only needs monotonic progress for the bar — not per-milestone status text.
   const [splashProgress, setSplashProgress] = useState(0.12);
   const [launchError, setLaunchError] = useState(null);
+  const [warmResume, setWarmResume] = useState(null);
   const initialTargetRef = useRef({ screen: "Discover", params: undefined });
   const nativeSplashHiddenRef = useRef(false);
 
@@ -74,24 +111,37 @@ export default function App() {
 
     async function applyLaunchUrl(url, { warm = false } = {}) {
       const requestId = ++launchRequestId;
+      if (!warm) {
+        const resumeRecord = await loadActiveNavigationSession();
+        if (!mounted || requestId !== launchRequestId) return;
+        const resumeDecision = activeRideLaunchDecision(resumeRecord, {
+          initialUrl: url,
+        });
+        if (resumeDecision.action === "resume") {
+          initialTargetRef.current = {
+            screen: "Build",
+            params: resumeParamsFromRecord(resumeRecord),
+          };
+          return { error: null, resolved: null };
+        }
+        if (resumeDecision.action === "prompt") {
+          setWarmResume({
+            record: resumeRecord,
+            deferredUrl: resumeDecision.deferredUrl,
+          });
+          return { error: null, resolved: null };
+        }
+        if (resumeRecord) await clearActiveNavigationSession();
+        await stopNavigationBackgroundUpdates();
+        if (!mounted || requestId !== launchRequestId) return;
+      }
       if (!url && !warm) {
         const pendingRide = await loadPendingRideIntent();
         if (!mounted || requestId !== launchRequestId) return;
         if (pendingRide) {
           initialTargetRef.current = {
             screen: "Build",
-            params: {
-              routeToken: pendingRide.routeToken,
-              slug: pendingRide.slug,
-              name: pendingRide.name,
-              openRideSetup: true,
-              rideSetupSelection: {
-                direction: pendingRide.direction,
-                startMode: pendingRide.startMode,
-                selectedPoint: pendingRide.selectedPoint,
-                startProgressMeters: pendingRide.startProgressMeters,
-              },
-            },
+            params: pendingRideParams(pendingRide),
           };
           return { error: null, resolved: pendingRide };
         }
@@ -173,6 +223,51 @@ export default function App() {
       subscription?.remove?.();
     };
   }, [advanceSplash]);
+
+  useEffect(() => {
+    if (!ready || !warmResume) return;
+    const { record, deferredUrl } = warmResume;
+    setWarmResume(null);
+    Alert.alert("רכיבה פעילה נשמרה", "להמשיך את הרכיבה הקודמת?", [
+      {
+        text: "סיום הרכיבה",
+        style: "destructive",
+        onPress: () => {
+          void (async () => {
+            await clearActiveNavigationSession();
+            await stopNavigationBackgroundUpdates();
+            if (deferredUrl) {
+              const result = await resolveNativeLaunchUrl(deferredUrl);
+              if (result.error) {
+                setLaunchError(result.error);
+              } else if (result.resolved && navigationRef.isReady()) {
+                navigationRef.navigate("RouteDetail", {
+                  slug: result.resolved.slug,
+                  openId: Date.now(),
+                });
+              } else if (navigationRef.isReady()) {
+                const target = launchTargetFromHref(deferredUrl);
+                navigationRef.navigate(target.screen, target.params);
+              }
+              return;
+            }
+            const pendingRide = await loadPendingRideIntent();
+            if (pendingRide && navigationRef.isReady()) {
+              navigationRef.navigate("Build", pendingRideParams(pendingRide));
+            }
+          })();
+        },
+      },
+      {
+        text: "המשך רכיבה",
+        onPress: () => {
+          if (navigationRef.isReady()) {
+            navigationRef.navigate("Build", resumeParamsFromRecord(record));
+          }
+        },
+      },
+    ]);
+  }, [ready, warmResume]);
 
   return (
     <GestureHandlerRootView style={styles.fill}>

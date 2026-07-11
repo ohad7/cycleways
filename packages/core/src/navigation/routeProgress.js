@@ -79,7 +79,6 @@ const DEFAULTS = {
   confirmMs: 4000, // dwell beyond the enter threshold before confirming off-route
   recoverMs: 3000, // dwell back inside the exit threshold before recovering
   searchWindowMeters: 250, // forward/back cursor window for nearest-segment search
-  startAcquisitionWindowMeters: 150,
 };
 
 export function createRouteProgressTracker(navigationRoute, options = {}) {
@@ -283,6 +282,31 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     return best;
   }
 
+  // Earliest on-route candidate: among projections within the threshold, the
+  // smallest progressMeters wins. Standing on a loop's shared start/end picks
+  // the start leg; an out-and-back's shared corridor picks the outbound leg.
+  function findEarliestWithin(fix, thresholdMeters) {
+    let best = null;
+    for (let i = 0; i < geometry.length - 1; i++) {
+      const a = geometry[i];
+      const b = geometry[i + 1];
+      const legMeters = b.distanceFromStartMeters - a.distanceFromStartMeters;
+      if (!Number.isFinite(legMeters) || legMeters <= 0) continue;
+      const proj = projectToSegment(fix, a, b);
+      if (proj.crossTrackMeters > thresholdMeters) continue;
+      const progressMeters = a.distanceFromStartMeters + proj.t * legMeters;
+      if (best === null || progressMeters < best.progressMeters) {
+        best = {
+          index: i,
+          crossTrackMeters: proj.crossTrackMeters,
+          progressMeters,
+          snapped: proj.snapped,
+        };
+      }
+    }
+    return best;
+  }
+
   // Rider course: prefer displacement between consecutive fixes while moving;
   // fall back to reported heading; unknown when stopped (GPS course is noise).
   function riderCourse(fix) {
@@ -404,7 +428,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     const distanceToRouteStart =
       geometry.length > 0 ? getDistance(fix, geometry[0]) : 0;
     if (!acquired && requireStartAcquisition) {
-      best = findNearest(fix, 0, opts.startAcquisitionWindowMeters);
+      best = findEarliestWithin(fix, enterThreshold) || findNearest(fix, null, null);
     } else if (lastProgressMeters === null) {
       best = findNearest(fix, null, null);
     } else {
@@ -432,9 +456,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
 
     if (!acquired) {
       // Acquisition: latch true once within the on-route threshold of the line.
-      const withinSelectedStart =
-        !requireStartAcquisition || distanceToRouteStart <= enterThreshold;
-      if (best && best.crossTrackMeters <= enterThreshold && withinSelectedStart) {
+      if (best && best.crossTrackMeters <= enterThreshold) {
         acquired = true;
         lastProgressMeters = best.progressMeters;
         // The approach leg's course says nothing about on-route direction —

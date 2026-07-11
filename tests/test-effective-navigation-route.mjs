@@ -77,16 +77,8 @@ function route({ circular = false } = {}) {
     speed: 3,
     timestamp: 1000,
   });
-  assert.equal(laterLeg.hasAcquiredRoute, false, "a later leg cannot acquire before the selected start");
-  const start = tracker.update({
-    lat: effective.geometry[0].lat,
-    lng: effective.geometry[0].lng,
-    accuracy: 5,
-    speed: 3,
-    timestamp: 2000,
-  });
-  assert.equal(start.hasAcquiredRoute, true);
-  assert.ok(start.progressMeters < 2);
+  assert.equal(laterLeg.hasAcquiredRoute, true, "an on-route rider can join at a later leg");
+  assert.ok(laterLeg.progressMeters > 0, "mid-route acquisition preserves joined progress");
 }
 
 {

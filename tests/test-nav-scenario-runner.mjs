@@ -27,7 +27,8 @@ function straightRoute() {
   );
 }
 
-// Happy ride: timeline carries per-fix presentation and ends at the arrive cue.
+// Happy ride: timeline carries per-fix presentation and auto-ends after the
+// arrival cue has been shown.
 {
   const route = straightRoute();
   const fixes = generateTrack(route, { speedMps: 5, intervalMs: 1000, seed: 7 });
@@ -43,10 +44,12 @@ function straightRoute() {
     timeline[0].presentation.cueText.length > 0,
     "presentation strings are populated",
   );
-  assert.equal(last.activeCueType, "arrive", "ride ends at the arrive cue");
+  assert.equal(last.status, "ended", "ride auto-ends at the destination");
   assert.ok(
-    last.presentation.cueText.includes("הגעת ליעד"),
-    "arrival banner text present",
+    timeline.some((entry) =>
+      entry.activeCueType === "arrive" && entry.presentation.cueText.includes("הגעת ליעד")
+    ),
+    "arrival banner appears before automatic finalization",
   );
   assert.ok(
     timeline.some((e) => e.haptic !== null),

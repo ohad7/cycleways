@@ -848,5 +848,141 @@ function offRouteRequestedSession() {
   assert.equal(restored.getState().approach.suggestionGeometry, null);
 }
 
+// --- Small pre-route skips target the nearest join point ------------------
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  const state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1005, lng: 35.60215, accuracy: 5, timestamp: 1_000 },
+  });
+  assert.equal(state.status, "approaching");
+  assert.equal(state.approach.target.mode, "nearest");
+  assert.ok(
+    Math.abs(state.approach.target.mainProgressMeters - 200) < 40,
+    `target progress ~200m, got ${state.approach.target.mainProgressMeters}`,
+  );
+  const ready = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: state.routeRequest.requestId,
+    connectorResult: {
+      geometry: [state.routeRequest.from, state.routeRequest.to],
+      distanceMeters: 55,
+      edgeCosts: [{ distanceMeters: 55, routeClass: "road" }],
+      snappedEndpoints: [],
+    },
+  });
+  assert.equal(ready.approach.ownershipTier, "guide");
+  assert.equal(ready.approach.suggestionStatus, "ready");
+}
+
+function rideToNearEnd(session) {
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.6, 1_000) });
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.605, 60_000) });
+}
+
+// --- Arrival latches and auto-ends on two consecutive qualifying fixes ----
+{
+  const session = createNavigationSession(straightRoute());
+  rideToNearEnd(session);
+  const first = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.61, 120_000) });
+  assert.equal(first.status, "navigating");
+  assert.ok(first.arrival);
+  const second = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.61, 121_000) });
+  assert.equal(second.status, "ended");
+  assert.equal(second.endReason, "arrived");
+}
+
+{
+  const session = createNavigationSession(straightRoute());
+  rideToNearEnd(session);
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.61, 120_000) });
+  const noise = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.6088, 180_000) });
+  assert.equal(noise.status, "navigating");
+  assert.equal(noise.arrival, null);
+  const again = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.61, 181_000) });
+  assert.equal(again.status, "navigating", "confirmation restarts after noise");
+}
+
+{
+  const session = createNavigationSession(straightRoute());
+  rideToNearEnd(session);
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.61, 120_000) });
+  const past = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6113, accuracy: 5, speed: 3, timestamp: 121_000 },
+  });
+  assert.equal(past.status, "ended", "latched arrival suppresses off-route rejoin");
+}
+
+{
+  const session = createNavigationSession(straightRoute());
+  rideToNearEnd(session);
+  assert.equal(session.dispatch({ type: NAV_ACTIONS.STOP }).endReason, "user");
+}
+
+{
+  const session = createNavigationSession(straightRoute());
+  rideToNearEnd(session);
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.61, 120_000) });
+  const revived = createNavigationSession(straightRoute(), { snapshot: session.snapshot() });
+  const done = revived.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.61, 121_000) });
+  assert.equal(done.status, "ended");
+  assert.equal(done.endReason, "arrived");
+}
+
+function routeFromGeometry(geometry, token) {
+  return navigationRouteFromRouteState(
+    {
+      points: [
+        { id: "start", ...geometry[0] },
+        { id: "end", ...geometry.at(-1) },
+      ],
+      selectedSegments: [],
+      geometry,
+    },
+    { param: token },
+  );
+}
+
+for (const [name, geometry] of [
+  ["loop", [
+    { lat: 33.1, lng: 35.6 },
+    { lat: 33.1, lng: 35.61 },
+    { lat: 33.105, lng: 35.61 },
+    { lat: 33.105, lng: 35.6 },
+    { lat: 33.1, lng: 35.6 },
+  ]],
+  ["short-loop", [
+    { lat: 33.1, lng: 35.6 },
+    { lat: 33.1, lng: 35.6003 },
+    { lat: 33.1003, lng: 35.6003 },
+    { lat: 33.1003, lng: 35.6 },
+    { lat: 33.1, lng: 35.6 },
+  ]],
+  ["self-crossing", [
+    { lat: 33.1, lng: 35.6 },
+    { lat: 33.104, lng: 35.604 },
+    { lat: 33.1, lng: 35.604 },
+    { lat: 33.104, lng: 35.6 },
+    { lat: 33.10002, lng: 35.60002 },
+  ]],
+]) {
+  const route = routeFromGeometry(geometry, `arrival-${name}`);
+  const session = createNavigationSession(route);
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  const state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { ...geometry[0], accuracy: 5, speed: 0, timestamp: 1_000 },
+  });
+  assert.equal(state.status, "navigating", `${name} start stays active`);
+  assert.equal(state.arrival, null, `${name} start does not latch arrival`);
+  assert.ok(state.progress.remainingMeters > 15, `${name} has meaningful remaining distance`);
+}
+
 console.log("navigation session lifecycle tests passed");
 console.log("navigation session location tests passed");

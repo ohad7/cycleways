@@ -10,6 +10,7 @@ import { classifyConnector, DEFAULT_CONNECTOR_THRESHOLDS } from "../routing/conn
 import { computeConnectorFeatures } from "../routing/connectorFeatures.js";
 import { buildApproachLeg } from "./approachLeg.js";
 import {
+  JOIN_SKIP_PROMPT_M,
   approachTargetChoices,
   selectConnectorTarget,
 } from "./connectorTargeting.js";
@@ -28,9 +29,13 @@ export const NAV_ACTIONS = {
   RESUME: "RESUME",
   RECENTER: "RECENTER",
   USER_PANNED: "USER_PANNED",
+  BACKGROUND_UNAVAILABLE: "BACKGROUND_UNAVAILABLE",
   STOP: "STOP",
   ERROR: "ERROR",
 };
+
+export const ARRIVAL_LATCH_M = 15;
+export const ARRIVAL_CONFIRM_FIXES = 2;
 
 const ACTIVE = new Set(["navigating", "off-route", "approaching"]);
 const SUPPORTED_APPROACH_TIERS = new Set(["unknown", "guide", "too-far"]);
@@ -77,6 +82,12 @@ export function createNavigationSession(navigationRoute, options = {}) {
   let wasOffRoute = restored?.wasOffRoute === true;
   let wasWrongWay = restored?.wasWrongWay === true;
   let rejoinAnnounced = restored?.rejoinAnnounced === true;
+  let arrivalDetectedAt = Number.isFinite(Number(restored?.arrivalDetectedAt))
+    ? Number(restored.arrivalDetectedAt)
+    : null;
+  let arrivalFixCount = Number.isFinite(Number(restored?.arrivalFixCount))
+    ? Number(restored.arrivalFixCount)
+    : 0;
   let lastConfirmedProgressMeters = Number.isFinite(
     Number(restored?.lastConfirmedProgressMeters),
   )
@@ -112,6 +123,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
     activeCue: null,
     cueEvent: null,
     offRoute: false,
+    endReason: null,
+    arrival: null,
     cameraIntent: "follow",
     backgroundLocation: false,
     foregroundOnly: false,
@@ -127,6 +140,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
     route: navigationRoute,
     cueEvent: null,
     cameraTransition: null,
+    arrival: arrivalDetectedAt === null ? null : { detectedAt: arrivalDetectedAt },
   };
 
   // Snapshots from the former visual-only connector tier must not strand an
@@ -359,7 +373,14 @@ export function createNavigationSession(navigationRoute, options = {}) {
             error: navigationRoute?.unavailableReason || "route-not-navigable",
           });
         }
-        return set({ status: "requesting-permission", error: null });
+        arrivalDetectedAt = null;
+        arrivalFixCount = 0;
+        return set({
+          status: "requesting-permission",
+          error: null,
+          endReason: null,
+          arrival: null,
+        });
 
       case NAV_ACTIONS.PERMISSION_GRANTED:
         mainTracker.reset();
@@ -368,6 +389,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
         wasOffRoute = false;
         wasWrongWay = false;
         rejoinAnnounced = false;
+        arrivalDetectedAt = null;
+        arrivalFixCount = 0;
         lastUserPanAt = null;
         lastConfirmedProgressMeters = 0;
         lastRequestPos = null;
@@ -383,6 +406,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
           error: null,
           justAcquired: false,
           rideStartTimestamp: null,
+          endReason: null,
+          arrival: null,
         });
 
       case NAV_ACTIONS.LOCATION: {
@@ -423,7 +448,10 @@ export function createNavigationSession(navigationRoute, options = {}) {
           const choices = approachTargetChoices(navigationRoute, action.fix);
           let target = state.approach.target;
           if (!target && choices) {
-            target = { ...choices.start, mode: "start" };
+            target =
+              choices.skipMeters > 0 && choices.skipMeters < JOIN_SKIP_PROMPT_M
+                ? { ...choices.nearest, mode: "nearest" }
+                : { ...choices.start, mode: "start" };
           }
           const distanceToRouteMeters = target
             ? getDistance(action.fix, target.point)
@@ -518,9 +546,43 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
         const offRoute = mainProgress.offRoute;
 
+        const remainingNow = Number(mainProgress.remainingMeters);
+        const arrivalFix =
+          Number.isFinite(remainingNow) && remainingNow <= ARRIVAL_LATCH_M;
+        if (arrivalFix) {
+          if (arrivalDetectedAt === null) {
+            arrivalDetectedAt = action.fix.timestamp;
+            arrivalFixCount = 0;
+          }
+          arrivalFixCount += 1;
+          if (arrivalFixCount >= ARRIVAL_CONFIRM_FIXES) {
+            requestSeq += 1;
+            resetApproachRuntime();
+            lastRequestPos = null;
+            connectorRequestAttempt = 0;
+            return set({
+              status: "ended",
+              endReason: "arrived",
+              progress: mainProgress,
+              activeCue: null,
+              cueEvent: null,
+              offRoute: false,
+              arrival: { detectedAt: arrivalDetectedAt },
+              approach: emptyApproach(),
+              routeRequest: null,
+              connectorResult: null,
+              cameraTransition: null,
+              justAcquired: false,
+            });
+          }
+        } else {
+          arrivalDetectedAt = null;
+          arrivalFixCount = 0;
+        }
+
         // Acquired but off-route: offer a best-effort rejoin suggestion. The
         // status stays `off-route` until the main route is physically acquired.
-        if (offRoute) {
+        if (offRoute && arrivalDetectedAt === null) {
           const firstOffRoute = !wasOffRoute;
           wasOffRoute = true;
           wasWrongWay = false;
@@ -650,6 +712,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           routeRequest: null,
           connectorResult: null,
           cameraTransition,
+          arrival: arrivalDetectedAt === null ? null : { detectedAt: arrivalDetectedAt },
         });
       }
 
@@ -664,7 +727,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
         const connectorResult = connectorResultFromAction(action);
         const geometry = buildNavigationGeometry(connectorResult.geometry);
         if (geometry.length < 2) {
-          if (state.routeRequest?.targetMode === "start") {
+          if (state.routeRequest?.targetMode !== "rejoin") {
             return set({
               approach: {
                 ...state.approach,
@@ -701,7 +764,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
           });
         }
         const distanceMeters = Number(connectorResult.distanceMeters);
-        if (state.routeRequest?.targetMode === "start") {
+        if (state.routeRequest?.targetMode !== "rejoin") {
           const features = computeConnectorFeatures(connectorResult, {
             origin: state.routeRequest.from,
             routeStart: state.routeRequest.to,
@@ -845,7 +908,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
         ) {
           return state;
         }
-        if (state.routeRequest?.targetMode === "start") {
+        if (state.routeRequest?.targetMode !== "rejoin") {
           const retainedTier = state.approach.ownershipTier;
           const retainAccepted =
             retainedTier !== "unknown" &&
@@ -939,13 +1002,20 @@ export function createNavigationSession(navigationRoute, options = {}) {
         return set({ cameraIntent: "free" });
       }
 
+      case NAV_ACTIONS.BACKGROUND_UNAVAILABLE:
+        return set({ backgroundLocation: false, foregroundOnly: true });
+
       case NAV_ACTIONS.STOP:
         requestSeq += 1;
         resetApproachRuntime();
         lastRequestPos = null;
         connectorRequestAttempt = 0;
+        arrivalDetectedAt = null;
+        arrivalFixCount = 0;
         return set({
           status: "ended",
+          endReason: "user",
+          arrival: null,
           approach: emptyApproach(),
           routeRequest: null,
           connectorResult: null,
@@ -990,6 +1060,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
       cameraTransitionSeq,
       prePauseStatus,
       lastUserPanAt,
+      arrivalDetectedAt,
+      arrivalFixCount,
     }),
     dispatch,
   };

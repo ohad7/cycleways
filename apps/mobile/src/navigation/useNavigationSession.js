@@ -37,6 +37,8 @@ import {
   speakUtterance,
   stopNavigationSpeech,
 } from "./speechAdapter.js";
+import { createNavigationFinalizer } from "./navigationLifecycle.js";
+import { createNavigationResumeCoordinator } from "./navigationResume.js";
 
 const ACTIVE_STATUSES = new Set(["navigating", "approaching", "off-route"]);
 const PERSISTED_STATUSES = new Set([
@@ -74,6 +76,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
     voice = true,
     locationSource,
     computeConnector,
+    resumeSessionId = null,
     ...sessionOptions
   } = options;
 
@@ -93,6 +96,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
   const lastPersistRef = useRef({ atMs: null, status: null });
   const eventClockRef = useRef(createNavigationEventClock());
   const persistGenerationRef = useRef(0);
+  const finalizerRef = useRef(null);
   const backgroundRequestedRef = useRef(background === true);
   backgroundRequestedRef.current = background === true;
 
@@ -108,6 +112,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
   const [lockScreenGuidanceActive, setLockScreenGuidanceActiveState] =
     useState(false);
   const [state, setState] = useState(null);
+  const [restoreStatus, setRestoreStatus] = useState("idle");
 
   const stopWatch = useCallback(() => {
     watchActiveRef.current = false;
@@ -253,12 +258,22 @@ export function useNavigationSession(navigationRoute, options = {}) {
     [dispatch],
   );
 
-  // (Re)create the session whenever the route identity changes. If a background
-  // task persisted a matching active session while React was not mounted, restore
-  // it so returning to the app renders current state instead of pre-lock state.
+  // Create a clean session for ordinary routes. Crash resume is explicit and
+  // session-id-gated so it cannot race a normal start or silently reset progress.
   const routeId = navigationRoute?.id ?? null;
   useEffect(() => {
     let cancelled = false;
+    finalizerRef.current = createNavigationFinalizer({
+      stopWatch: () => {
+        persistGenerationRef.current += 1;
+        stopWatch();
+        setLockScreenGuidanceActive(false);
+      },
+      stopBackgroundUpdates: stopNavigationBackgroundUpdates,
+      deactivateKeepAwake: deactivateNavigationKeepAwake,
+      stopSpeech: stopNavigationSpeech,
+      clearPersisted: clearForegroundNavigation,
+    });
     if (!navigationRoute) {
       sessionRef.current = null;
       latestFixRef.current = null;
@@ -267,53 +282,89 @@ export function useNavigationSession(navigationRoute, options = {}) {
       eventClockRef.current = createNavigationEventClock();
       persistGenerationRef.current += 1;
       setState(null);
+      setRestoreStatus("idle");
       return undefined;
     }
 
-    sessionIdRef.current = `nav-${Date.now()}`;
-    sessionRef.current = createNavigationSession(navigationRoute, sessionOptions);
-    hapticPlannerRef.current.reset();
-    voicePlannerRef.current = createNavigationVoicePlanner({
-      enabled: voiceEnabledRef.current,
-    });
-    latestFixRef.current = null;
-    lastProcessedFixKeyRef.current = null;
-    lastPersistRef.current = { atMs: null, status: null };
-    eventClockRef.current = createNavigationEventClock();
-    persistGenerationRef.current += 1;
-    setLockScreenGuidanceActive(false);
-    setState(sessionRef.current.getState());
-
-    loadActiveNavigationSession()
-      .then((record) => {
-        if (cancelled) return;
-        if (record?.navigationRoute?.id !== navigationRoute.id) return;
-        const restored = createNavigationSession(navigationRoute, {
-          ...sessionOptions,
-          snapshot: record.sessionSnapshot,
-        });
-        sessionRef.current = restored;
-        sessionIdRef.current = record.sessionId || sessionIdRef.current;
-        const restoredVoice = record.settings?.voiceEnabled !== false;
-        const restoredHaptics = record.settings?.hapticsEnabled !== false;
-        voiceEnabledRef.current = restoredVoice;
-        setVoiceEnabledState(restoredVoice);
-        hapticsEnabledRef.current = restoredHaptics;
-        setHapticsEnabledState(restoredHaptics);
-        voicePlannerRef.current = createNavigationVoicePlanner({
-          enabled: restoredVoice,
-          memory: record.voiceMemory,
-        });
-        const restoredLockScreen = record.settings?.lockScreenGuidanceActive === true;
-        setLockScreenGuidanceActive(restoredLockScreen);
-        latestFixRef.current = restored.getState()?.latestFix || null;
-        const key = fixKey(latestFixRef.current);
-        lastProcessedFixKeyRef.current = key;
-        setState(restored.getState());
-      })
-      .catch(() => {
-        // Invalid snapshots are cleared by the store; keep the clean session.
+    const installRestoredSession = (restored, record) => {
+      if (cancelled) return;
+      sessionRef.current = restored;
+      sessionIdRef.current = record.sessionId;
+      hapticPlannerRef.current.reset();
+      const restoredState = restored.getState();
+      const restoredAt = Number(record.lastProcessedFixTimestamp);
+      lastPersistRef.current = {
+        atMs: Number.isFinite(restoredAt) ? restoredAt : null,
+        status: restoredState.status,
+      };
+      eventClockRef.current = createNavigationEventClock();
+      persistGenerationRef.current += 1;
+      latestFixRef.current = restoredState.latestFix || null;
+      lastProcessedFixKeyRef.current = fixKey(latestFixRef.current);
+      const restoredVoice = record.settings?.voiceEnabled !== false;
+      const restoredHaptics = record.settings?.hapticsEnabled !== false;
+      voiceEnabledRef.current = restoredVoice;
+      setVoiceEnabledState(restoredVoice);
+      hapticsEnabledRef.current = restoredHaptics;
+      setHapticsEnabledState(restoredHaptics);
+      voicePlannerRef.current = createNavigationVoicePlanner({
+        enabled: restoredVoice,
+        memory: record.voiceMemory,
       });
+      setState(restoredState);
+    };
+
+    if (resumeSessionId) {
+      sessionRef.current = null;
+      latestFixRef.current = null;
+      lastProcessedFixKeyRef.current = null;
+      setState(null);
+      setRestoreStatus("restoring");
+      const coordinator = createNavigationResumeCoordinator({
+        loadRecord: loadActiveNavigationSession,
+        createSession: createNavigationSession,
+        installSession: installRestoredSession,
+        beginWatch,
+        startBackgroundUpdates: startNavigationBackgroundUpdates,
+        stopBackgroundUpdates: stopNavigationBackgroundUpdates,
+        activateKeepAwake: activateNavigationKeepAwake,
+        deactivateKeepAwake: deactivateNavigationKeepAwake,
+        clearPersisted: clearForegroundNavigation,
+        markForegroundOnly: (restored) => {
+          const next = restored.dispatch({ type: NAV_ACTIONS.BACKGROUND_UNAVAILABLE });
+          if (!cancelled && sessionRef.current === restored) setState(next);
+        },
+        setBackgroundActive: (active) => {
+          if (!cancelled) setLockScreenGuidanceActive(active);
+        },
+      });
+      void coordinator
+        .activate({
+          navigationRoute,
+          sessionId: resumeSessionId,
+          sessionOptions,
+        })
+        .then((result) => {
+          if (!cancelled) {
+            setRestoreStatus(result.status === "restored" ? "restored" : "failed");
+          }
+        });
+    } else {
+      sessionIdRef.current = `nav-${Date.now()}`;
+      sessionRef.current = createNavigationSession(navigationRoute, sessionOptions);
+      hapticPlannerRef.current.reset();
+      voicePlannerRef.current = createNavigationVoicePlanner({
+        enabled: voiceEnabledRef.current,
+      });
+      latestFixRef.current = null;
+      lastProcessedFixKeyRef.current = null;
+      lastPersistRef.current = { atMs: null, status: null };
+      eventClockRef.current = createNavigationEventClock();
+      persistGenerationRef.current += 1;
+      setLockScreenGuidanceActive(false);
+      setState(sessionRef.current.getState());
+      setRestoreStatus("idle");
+    }
 
     return () => {
       cancelled = true;
@@ -325,10 +376,18 @@ export function useNavigationSession(navigationRoute, options = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeId]);
 
+  useEffect(() => {
+    if (state?.status === "ended" && state?.endReason === "arrived") {
+      void finalizerRef.current?.();
+    }
+  }, [state?.endReason, state?.status]);
+
   useEffect(
     () =>
       registerForegroundNavigationProcessor(async (fixes = []) => {
+        if (!sessionRef.current) return false;
         for (const fix of fixes) processLocationFix(fix);
+        return true;
       }),
     [processLocationFix],
   );
@@ -483,15 +542,10 @@ export function useNavigationSession(navigationRoute, options = {}) {
   ]);
 
   const stop = useCallback(() => {
-    stopWatch();
-    setLockScreenGuidanceActive(false);
-    void stopNavigationBackgroundUpdates();
-    void deactivateNavigationKeepAwake();
-    void stopNavigationSpeech();
     const next = dispatch({ type: NAV_ACTIONS.STOP });
-    void clearForegroundNavigation();
+    void finalizerRef.current?.();
     return next;
-  }, [dispatch, setLockScreenGuidanceActive, stopWatch]);
+  }, [dispatch]);
 
   const pause = useCallback(() => {
     stopWatch();
@@ -536,6 +590,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
 
   return {
     state,
+    restoreStatus,
     start,
     stop,
     pause,

@@ -1,4 +1,5 @@
 import { getDistance } from "../../utils/distance.js";
+import { approachTargetChoices } from "../connectorTargeting.js";
 import { navigationRouteFromRouteState } from "../navigationRoute.js";
 import { generateTrack } from "../trackGenerator.js";
 import baniasGanHatsafon from "./routes/banias-gan-hatsafon.js";
@@ -16,6 +17,8 @@ function connectorResponse({
   to,
   purpose,
   attempt,
+  targetMode = "start",
+  targetProgressMeters = 0,
   geometry = null,
   distanceMeters = null,
   edgeCosts = null,
@@ -32,8 +35,8 @@ function connectorResponse({
   return {
     id,
     match: {
-      targetMode: "start",
-      targetProgressMeters: 0,
+      targetMode,
+      targetProgressMeters,
       progressToleranceMeters: 1,
       purpose,
       attempt,
@@ -54,18 +57,21 @@ function connectorResponse({
 
 const sovevRoute = routeFor(sovevBeitHillel, "camera-journey-sovev-beit-hillel");
 const routeStart = sovevRoute.geometry[0];
+const guidedConnectorStart = {
+  lat: routeStart.lat,
+  lng: routeStart.lng + 0.006,
+};
 const connectorRoute = routeFor(
   {
     points: [
-      { id: "connector-start", ...beitHillelWestConnector.from },
-      { id: "route-start", ...beitHillelWestConnector.to },
+      { id: "connector-start", ...guidedConnectorStart },
+      { id: "route-start", ...routeStart },
     ],
     selectedSegments: [],
     segmentSpans: [],
-    geometry: beitHillelWestConnector.geometry,
-    distance: beitHillelWestConnector.distanceMeters,
+    geometry: [guidedConnectorStart, routeStart],
   },
-  "camera-journey-beit-hillel-west-connector",
+  "camera-journey-guided-connector",
 );
 
 function combinedApproachRide(seed) {
@@ -85,6 +91,7 @@ function combinedApproachRide(seed) {
 
 const guidedTrack = combinedApproachRide(21);
 const guidedFixes = guidedTrack.fixes;
+const guidedTarget = approachTargetChoices(sovevRoute, guidedFixes[0]).nearest;
 // The route tracker acquires the main route three seconds before the final
 // sampled connector point; this timestamp is asserted by the headless journey
 // timeline and used as CAM's seam bookmark.
@@ -103,11 +110,13 @@ const guidedJourney = {
     connectorResponse({
       id: "guided-initial",
       from: guidedFixes[0],
-      to: routeStart,
+      to: guidedTarget.point,
       purpose: "initial",
       attempt: 1,
-      geometry: beitHillelWestConnector.geometry,
-      distanceMeters: beitHillelWestConnector.distanceMeters,
+      targetMode: "nearest",
+      targetProgressMeters: guidedTarget.mainProgressMeters,
+      geometry: [guidedFixes[0], guidedTarget.point],
+      distanceMeters: getDistance(guidedFixes[0], guidedTarget.point),
       edgeCosts: beitHillelWestConnector.edgeCosts,
     }),
   ],
@@ -147,7 +156,7 @@ const guidedJourney = {
       label: "Main-route maneuver",
       phase: "post-start",
       startAction: "require-confirm",
-      targetTimestamp: 116000,
+      targetTimestamp: approachJoinTimestamp + 8000,
       preRollMs: 6000,
       holdMs: 2500,
       expectedStage: "pre-turn",
