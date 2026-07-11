@@ -115,4 +115,65 @@ assert.deepEqual(cameraBoundsForPoints([
   assert.ok(diagnostics.some((entry) => entry.transitionState === "interrupted"));
 }
 
+// Lock-screen guard (TestFlight build 5 watchdog kill): while the app is not
+// active, the adapter must not touch the native map — no setCamera, no
+// getPointInView — or rnmapbox camera promises deadlock the main thread on a
+// backgrounded UI and iOS kills the app (0x8BADF00D). Skipped applies return
+// false so callers can retry once the app is interactive again.
+{
+  let interactive = false;
+  const cameraStops = [];
+  const projections = [];
+  const timers = [];
+  const adapter = createNavigationCameraAdapter({
+    isInteractive: () => interactive,
+    getCamera: () => ({ setCamera: (stop) => cameraStops.push(stop) }),
+    getMap: () => ({
+      getPointInView: async ([lng, lat]) => {
+        projections.push([lng, lat]);
+        return [190, 570];
+      },
+    }),
+    schedule: (callback, ms) => {
+      const timer = { callback, ms, cancelled: false };
+      timers.push(timer);
+      return timer;
+    },
+    cancelSchedule: (timer) => {
+      timer.cancelled = true;
+    },
+  });
+
+  const followFrame = {
+    key: "ride",
+    center: { lat: 33.1, lng: 35.6 },
+    pitch: 55,
+    zoom: 16.4,
+    heading: 90,
+    riderAnchorY: 0.72,
+    requiredPoints: [{ id: "rider", lat: 33.1, lng: 35.6 }],
+    riderId: "rider",
+    validationKey: "v1",
+  };
+  assert.equal(adapter.applyFollow(followFrame, viewport), false, "follow skipped while inactive");
+  assert.equal(adapter.applyOverview({
+    key: "overview:a",
+    points: [{ lat: 33.1, lng: 35.6 }, { lat: 33.2, lng: 35.7 }],
+  }, viewport), false, "overview skipped while inactive");
+  assert.equal(cameraStops.length, 0, "no native camera calls while inactive");
+  assert.equal(timers.length, 0, "no validation scheduled while inactive");
+
+  interactive = true;
+  assert.equal(adapter.applyFollow(followFrame, viewport), true, "follow resumes when active");
+  assert.equal(cameraStops.length, 1);
+  assert.equal(timers.length, 1, "validation scheduled while active");
+
+  // Lock the screen between the schedule and the validation pass: the pending
+  // getPointInView loop must not run against the backgrounded map.
+  interactive = false;
+  timers[0].callback();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(projections.length, 0, "no projection while inactive");
+}
+
 console.log("navigation camera adapter tests passed");

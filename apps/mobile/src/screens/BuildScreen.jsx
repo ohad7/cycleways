@@ -2764,11 +2764,8 @@ export default function BuildScreen({ navigation, route }) {
                 minFitIntervalMs === 0 ||
                 ts - cameraFitAtRef.current >= minFitIntervalMs;
               if (canFitNow) {
-                cameraFitKeyRef.current = fitKey;
-                cameraFitAtRef.current = ts;
-                cameraOverviewFrameRef.current = overviewFrame;
                 const rawPoint = validMapPoint(raw) ? raw : null;
-                navigationCameraRef.current?.applyOverview(
+                const applied = navigationCameraRef.current?.applyOverview(
                   {
                     key: fitKey,
                     points: fitPoints,
@@ -2790,9 +2787,16 @@ export default function BuildScreen({ navigation, route }) {
                   },
                   navigationViewportRef.current,
                 );
+                // Only mark the fit as done when the adapter actually applied
+                // it; a skip (e.g. locked screen) retries on a later tick.
+                if (applied) {
+                  cameraFitKeyRef.current = fitKey;
+                  cameraFitAtRef.current = ts;
+                  cameraOverviewFrameRef.current = overviewFrame;
+                }
               }
             }
-            rafRef.current = requestAnimationFrame(tick);
+            scheduleTick();
             return;
           }
           cameraFitKeyRef.current = null;
@@ -2873,10 +2877,37 @@ export default function BuildScreen({ navigation, route }) {
           }
         }
       }
-      rafRef.current = requestAnimationFrame(tick);
+      scheduleTick();
     };
-    rafRef.current = requestAnimationFrame(tick);
+    // Under a locked screen RN keeps firing rAF from a background NSTimer
+    // (RCTTiming has no display link there), so this loop burned ~100% CPU on
+    // invisible UI until iOS killed the app (build 5 cpu_resource_fatal).
+    // Pause it whenever the app leaves the foreground; voice/haptics/session
+    // logic are fix-driven and unaffected.
+    function scheduleTick() {
+      if (AppState.currentState === "active") {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    }
+    const appStateSubscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") return;
+      cancelAnimationFrame(rafRef.current);
+      // Progress moved while the loop slept; snap the tweened values so the
+      // puck and camera don't glide across everything ridden under lock.
+      const resumeProgress = progressRef.current;
+      smoothedMetersRef.current = resumeProgress?.progressMeters ?? smoothedMetersRef.current;
+      smoothedBearingRef.current =
+        resumeProgress?.bearingToNextDeg ??
+        resumeProgress?.smoothedCourseDeg ??
+        smoothedBearingRef.current;
+      cameraBearingRef.current = smoothedBearingRef.current;
+      puckGlideRef.current = null;
+      lastTs = 0;
+      scheduleTick();
+    });
+    scheduleTick();
     return () => {
+      appStateSubscription.remove();
       cancelAnimationFrame(rafRef.current);
       navigationCameraRef.current?.reset("navigation-loop-stop");
     };

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { AppState } from "react-native";
 import { createNavigationCameraAdapter } from "./navigationCameraAdapter.js";
 
 export function useNavigationCamera({ cameraRef, mapViewRef, onDiagnostics }) {
@@ -9,6 +10,7 @@ export function useNavigationCamera({ cameraRef, mapViewRef, onDiagnostics }) {
     adapterRef.current = createNavigationCameraAdapter({
       getCamera: () => cameraRef.current,
       getMap: () => mapViewRef.current,
+      isInteractive: () => AppState.currentState === "active",
       onDiagnostics: (diagnostics) => diagnosticsRef.current?.(diagnostics),
     });
   }
@@ -20,4 +22,3 @@ export function useNavigationCamera({ cameraRef, mapViewRef, onDiagnostics }) {
   );
   return adapterRef;
 }
-

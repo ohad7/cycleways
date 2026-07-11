@@ -202,6 +202,12 @@ function overviewStop(frame, viewport) {
 export function createNavigationCameraAdapter(options = {}) {
   const getCamera = options.getCamera || (() => null);
   const getMap = options.getMap || (() => null);
+  // Native camera work is only legal while the app is foregrounded. Under a
+  // locked screen the When-In-Use session keeps JS and GPS alive, but rnmapbox
+  // camera promises against a backgrounded UI wedge the main thread until the
+  // iOS watchdog kills the app (0x8BADF00D, TestFlight build 5). Skipped
+  // applies return false so callers retry once the app is interactive again.
+  const isInteractive = options.isInteractive || (() => true);
   const schedule = options.schedule || ((callback, ms) => setTimeout(callback, ms));
   const cancelSchedule = options.cancelSchedule || ((handle) => clearTimeout(handle));
   let listener = options.onDiagnostics || null;
@@ -234,6 +240,7 @@ export function createNavigationCameraAdapter(options = {}) {
     if (!map || typeof map.getPointInView !== "function") return null;
     const projected = [];
     for (const item of Array.isArray(frame.requiredPoints) ? frame.requiredPoints : []) {
+      if (!isInteractive()) return null;
       if (!validPoint(item)) continue;
       try {
         const screen = await map.getPointInView([Number(item.lng), Number(item.lat)]);
@@ -268,6 +275,7 @@ export function createNavigationCameraAdapter(options = {}) {
     },
 
     applyFollow(frame = {}, viewport = {}) {
+      if (!isInteractive()) return false;
       const camera = getCamera();
       if (!camera || typeof camera.setCamera !== "function" || !validPoint(frame.center)) {
         return false;
@@ -321,6 +329,7 @@ export function createNavigationCameraAdapter(options = {}) {
     },
 
     applyOverview(frame = {}, viewport = {}) {
+      if (!isInteractive()) return false;
       const camera = getCamera();
       if (!camera || typeof camera.setCamera !== "function") return false;
       const key = frame.key ?? null;
