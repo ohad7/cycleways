@@ -18,8 +18,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleAllowMixedLocalizations": true,
-        "NSLocationWhenInUseUsageDescription": "Show your current location on the map while planning and following rides.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Keep following turn-by-turn navigation while your screen is locked during a ride.",
+        "NSLocationWhenInUseUsageDescription": "Show your current location on the map while planning and following rides, and keep turn-by-turn guidance running during a ride.",
         "UIBackgroundModes": [
           "location",
           "audio"
@@ -76,8 +75,8 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Show your current location on the map while planning and following rides.",
-          "locationAlwaysAndWhenInUsePermission": "Keep following turn-by-turn navigation while your screen is locked during a ride.",
+          "locationWhenInUsePermission": "Show your current location on the map while planning and following rides, and keep turn-by-turn guidance running during a ride.",
+          "locationAlwaysAndWhenInUsePermission": false,
           "isIosBackgroundLocationEnabled": true
         }
       ],

@@ -103,7 +103,6 @@ import RideIntroCard from "../planner/RideIntroCard.jsx";
 import { useNavigationSession } from "../navigation/useNavigationSession.js";
 import {
   createDefaultLocationSource,
-  getNavigationPermissionStatus,
   getRideSetupLocation,
 } from "../navigation/locationService.js";
 import { createJourneyPlaybackSource } from "../navigation/journeyPlaybackSource.js";
@@ -833,10 +832,6 @@ export default function BuildScreen({ navigation, route }) {
   });
   const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
   const [lockScreenGuidanceEnabled, setLockScreenGuidanceEnabled] = useState(true);
-  const [lockScreenGuidanceHasAlwaysPermission, setLockScreenGuidanceHasAlwaysPermission] =
-    useState(false);
-  const [lockScreenGuidanceNeedsSettings, setLockScreenGuidanceNeedsSettings] =
-    useState(false);
   const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
   const [preparedRouteJunctions, setPreparedRouteJunctions] = useState({
     routeId: null,
@@ -1109,25 +1104,6 @@ export default function BuildScreen({ navigation, route }) {
     setRideSetupLocationStatus(result.status);
   }, []);
 
-  const refreshNavigationPermissionStatus = useCallback(async () => {
-    try {
-      const status = await getNavigationPermissionStatus();
-      const foregroundGranted = status?.foreground?.status === "granted";
-      const backgroundStatus = status?.background?.status;
-      const backgroundCanAskAgain = status?.background?.canAskAgain;
-      const canUseBackground = status?.canUseBackground === true;
-      const needsSettings =
-        foregroundGranted &&
-        !canUseBackground &&
-        (backgroundStatus === "denied" || backgroundCanAskAgain === false);
-      setLockScreenGuidanceHasAlwaysPermission(canUseBackground);
-      setLockScreenGuidanceNeedsSettings(Boolean(needsSettings));
-    } catch {
-      setLockScreenGuidanceHasAlwaysPermission(false);
-      setLockScreenGuidanceNeedsSettings(false);
-    }
-  }, []);
-
   const openRideIntro = useCallback(
     (options = {}) => {
       const preserveSelection = options?.preserveSelection === true;
@@ -1140,9 +1116,8 @@ export default function BuildScreen({ navigation, route }) {
         restored: preserveSelection,
       });
       void refreshRideSetupLocation();
-      void refreshNavigationPermissionStatus();
     },
-    [refreshNavigationPermissionStatus, refreshRideSetupLocation],
+    [refreshRideSetupLocation],
   );
 
   // --- Dev-only simulate-ride harness + GPS recorder (Task 17) ---------------
@@ -1235,7 +1210,6 @@ export default function BuildScreen({ navigation, route }) {
       !nav.lockScreenGuidanceActive
     ) {
       setLockScreenGuidanceEnabled(false);
-      void refreshNavigationPermissionStatus();
       trackNavigationEvent("lock_screen_guidance_fallback", {
         reason: "foreground-only",
       });
@@ -1245,7 +1219,6 @@ export default function BuildScreen({ navigation, route }) {
     lockScreenGuidanceEnabled,
     nav.lockScreenGuidanceActive,
     nav.state?.foregroundOnly,
-    refreshNavigationPermissionStatus,
   ]);
 
   useEffect(() => {
@@ -1267,33 +1240,11 @@ export default function BuildScreen({ navigation, route }) {
     });
   }, [nav]);
 
-  const handleOpenLocationSettings = useCallback(() => {
-    trackNavigationEvent("lock_screen_guidance_settings_opened");
-    const settingsRequest =
-      typeof Linking.openSettings === "function"
-        ? Linking.openSettings()
-        : Linking.openURL("app-settings:");
-    Promise.resolve(settingsRequest).catch(() => {
-      Alert.alert(
-        "לא הצלחנו לפתוח הגדרות",
-        "פתחו ידנית: הגדרות > CycleWays > מיקום > תמיד.",
-      );
-    });
-  }, []);
-
   const handleToggleLockScreenGuidance = useCallback(() => {
-    if (!lockScreenGuidanceEnabled && lockScreenGuidanceNeedsSettings) {
-      handleOpenLocationSettings();
-      return;
-    }
     const next = !lockScreenGuidanceEnabled;
     setLockScreenGuidanceEnabled(next);
     trackNavigationEvent("lock_screen_guidance_toggled", { enabled: next });
-  }, [
-    handleOpenLocationSettings,
-    lockScreenGuidanceEnabled,
-    lockScreenGuidanceNeedsSettings,
-  ]);
+  }, [lockScreenGuidanceEnabled]);
 
   const handleTestVoiceGuidance = useCallback(() => {
     trackNavigationEvent("voice_guidance_tested");
@@ -3901,10 +3852,7 @@ export default function BuildScreen({ navigation, route }) {
         voiceEnabled={voiceGuidanceEnabled}
         onToggleVoice={handleToggleVoiceGuidance}
         lockScreenGuidanceEnabled={lockScreenGuidanceEnabled}
-        lockScreenGuidanceHasAlwaysPermission={lockScreenGuidanceHasAlwaysPermission}
-        lockScreenGuidanceNeedsSettings={lockScreenGuidanceNeedsSettings}
         onToggleLockScreenGuidance={handleToggleLockScreenGuidance}
-        onOpenLocationSettings={handleOpenLocationSettings}
         onTestVoice={handleTestVoiceGuidance}
         onDirectionChange={(direction) =>
           setRideSetupSelection((current) => ({

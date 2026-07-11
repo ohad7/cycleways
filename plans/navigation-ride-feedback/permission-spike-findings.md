@@ -160,6 +160,11 @@ follow-up design/plan to drop the Always request while retaining the
 TaskManager registration path and adding startup-failure telemetry (per D9,
 that removal stays out of this plan's scope).
 
+**Resolution (2026-07-11, same day):** the owner accepted the lock-screen
+evidence, explicitly waived the Home-screen and fresh-relaunch cases in favor
+of real-ride validation, and the Always removal was implemented — see
+`plans/when-in-use-navigation-permission/`.
+
 Original (2026-07-10) recommendation, superseded by the above:
 **Do not remove the Always request yet.** Source analysis corrects the proposed
 mechanism: a When-In-Use design, if viable, must retain the TaskManager-backed

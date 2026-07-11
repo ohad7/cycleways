@@ -17,16 +17,47 @@ assert.equal(ios.infoPlist.ITSAppUsesNonExemptEncryption, false);
 assert.equal(ios.infoPlist.CFBundleAllowMixedLocalizations, true);
 assert.equal(appJson.expo.locales?.he, "./locales/he.json");
 
-const usageKeys = [
-  "NSLocationWhenInUseUsageDescription",
-  "NSLocationAlwaysAndWhenInUseUsageDescription",
-];
+const usageKeys = ["NSLocationWhenInUseUsageDescription"];
 for (const key of usageKeys) {
   assert.ok(
     typeof ios.infoPlist[key] === "string" && ios.infoPlist[key].length > 10,
     `base usage string ${key}`,
   );
 }
+
+// When-In-Use permission model (plans/when-in-use-navigation-permission):
+// the app must never declare or request Always location.
+assert.equal(
+  ios.infoPlist.NSLocationAlwaysAndWhenInUseUsageDescription,
+  undefined,
+  "Always usage string must be absent - lock-screen guidance runs on While-Using",
+);
+const locationPlugin = appJson.expo.plugins.find(
+  (p) => Array.isArray(p) && p[0] === "expo-location",
+);
+assert.ok(locationPlugin, "expo-location plugin config present");
+assert.equal(
+  locationPlugin[1].locationAlwaysAndWhenInUsePermission,
+  false,
+  "expo-location plugin must exclude the Always permission string",
+);
+assert.equal(
+  locationPlugin[1].isIosBackgroundLocationEnabled,
+  true,
+  "background location updates still require the plugin flag",
+);
+const locationService = await readFile(
+  new URL(
+    "../apps/mobile/src/navigation/locationService.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
+assert.doesNotMatch(
+  locationService,
+  /requestBackgroundPermissionsAsync/,
+  "navigation must not request Always location permission",
+);
 
 assert.deepEqual(
   ios.infoPlist.UIBackgroundModes,
@@ -59,6 +90,11 @@ for (const key of usageKeys) {
     `Hebrew usage string ${key}`,
   );
 }
+assert.equal(
+  he.NSLocationAlwaysAndWhenInUseUsageDescription,
+  undefined,
+  "Hebrew Always usage string must be absent",
+);
 
 // Mapbox telemetry must stay disabled: PrivacyInfo.xcprivacy and the App
 // Store privacy labels declare no collected data.

@@ -23,10 +23,9 @@ import { palette, radius, space } from "./theme.js";
 function lockScreenTestStatusLine(test) {
   if (test.status === "running") {
     const progress = `${test.tick}/${test.totalTicks}`;
-    const spikeSuffix = test.permissionSpike ? " • מצב ניסוי: בלי הרשאת תמיד" : "";
     return test.backgroundUpdates
-      ? `בדיקת מסך נעול פעילה — נעלו את המסך (${progress})${spikeSuffix}`
-      : `בדיקה פעילה (${progress}) — אין הרשאת מיקום תמיד, האפליקציה תוקפא כשהמסך נעול`;
+      ? `בדיקת מסך נעול פעילה — נעלו את המסך (${progress})`
+      : `בדיקה פעילה (${progress}) — עדכוני הרקע לא נרשמו, האפליקציה תוקפא כשהמסך נעול`;
   }
   if (test.status === "error") {
     return "אין הרשאת מיקום — אי אפשר להריץ את בדיקת המסך הנעול";
@@ -105,10 +104,7 @@ export default function RideSetupSheet({
   voiceEnabled = true,
   onToggleVoice,
   lockScreenGuidanceEnabled = true,
-  lockScreenGuidanceHasAlwaysPermission = false,
-  lockScreenGuidanceNeedsSettings = false,
   onToggleLockScreenGuidance,
-  onOpenLocationSettings,
   onTestVoice,
 }) {
   const insets = useSafeAreaInsets();
@@ -228,39 +224,10 @@ export default function RideSetupSheet({
                       ? "ממשיך להנחות כשהמסך נעול"
                       : "רק כשהמסך ער"
                   }
-                  sub={
-                    lockScreenGuidanceHasAlwaysPermission
-                      ? "הרשאת מיקום תמיד כבר פעילה"
-                      : lockScreenGuidanceNeedsSettings
-                      ? "צריך לאפשר מיקום תמיד בהגדרות"
-                      : "מבקש הרשאת מיקום תמיד רק בזמן התחלת רכיבה"
-                  }
+                  sub="עובד עם הרשאת המיקום הרגילה — בלי הרשאת 'תמיד'"
                   selected={lockScreenGuidanceEnabled}
                   onPress={onToggleLockScreenGuidance}
                 />
-              ) : null}
-              {lockScreenGuidanceEnabled &&
-              lockScreenGuidanceNeedsSettings &&
-              onOpenLocationSettings ? (
-                <View style={styles.settingsNotice}>
-                  <View style={styles.settingsNoticeText}>
-                    <Text style={styles.settingsNoticeTitle}>צריך לאפשר מיקום תמיד</Text>
-                    <Text style={styles.settingsNoticeSub}>
-                      פתחו את הגדרות האפליקציה ובחרו מיקום &gt; תמיד.
-                    </Text>
-                  </View>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="פתיחת הגדרות מיקום"
-                    onPress={onOpenLocationSettings}
-                    style={({ pressed }) => [
-                      styles.settingsButton,
-                      pressed ? styles.pressed : null,
-                    ]}
-                  >
-                    <Text style={styles.settingsButtonText}>הגדרות</Text>
-                  </Pressable>
-                </View>
               ) : null}
               {voiceEnabled && onTestVoice ? (
                 <>
@@ -380,12 +347,6 @@ const styles = StyleSheet.create({
   testVoice: { minHeight: 42, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: space.xs, borderRadius: radius.md, borderWidth: 1, borderColor: palette.forest, backgroundColor: palette.white, marginBottom: space.sm },
   testVoiceText: { ...text.bodyStrong, color: palette.forest, writingDirection: "rtl" },
   testVoiceHint: { ...text.caption, color: palette.muted, textAlign: "right", writingDirection: "rtl", marginBottom: space.sm },
-  settingsNotice: { flexDirection: "row-reverse", alignItems: "center", gap: space.sm, backgroundColor: palette.cream, borderRadius: radius.md, padding: space.md, marginBottom: space.sm },
-  settingsNoticeText: { flex: 1 },
-  settingsNoticeTitle: { ...text.captionStrong, color: palette.ink, textAlign: "right", writingDirection: "rtl" },
-  settingsNoticeSub: { ...text.caption, color: palette.muted, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
-  settingsButton: { minHeight: 34, justifyContent: "center", borderRadius: radius.md, borderWidth: 1, borderColor: palette.forest, paddingHorizontal: space.md, backgroundColor: palette.white },
-  settingsButtonText: { ...text.captionStrong, color: palette.forest, writingDirection: "rtl" },
   notice: { flexDirection: "row-reverse", gap: space.sm, alignItems: "center", backgroundColor: palette.cream, borderRadius: radius.md, padding: space.md, marginTop: space.sm },
   noticeText: { ...text.caption, color: palette.ink, flex: 1, textAlign: "right", writingDirection: "rtl" },
   retry: { ...text.captionStrong, color: palette.forest },
