@@ -1913,7 +1913,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - [x] **Step 2: Run test to verify it fails** (module doesn't exist).
 - [x] **Step 3: Implement** the pure policy + wire the adapter (activation before speak; per-utterance single-settle guard + safety timeout; linger-timer deactivation gated by `shouldDeactivateNow`; failed activation calls `onDeactivated()` so the next speak retries).
 - [x] **Step 4: Tests pass** (`node tests/test-speech-audio-session-policy.mjs`, added to the chain).
-- [ ] **Step 5: Device verification** — Task 20's soak test, locked phone: numbered prompts audible while locked. If not, apply the D11 fallback (activate at ride start, hold for the ride) and re-run.
+- [x] **Step 5: Device verification** — 2026-07-11, physical iPhone, dev build, Always permission: Task 20 soak test run with the phone locked — numbered prompts audible while locked. D11 per-utterance background activation works; the hold-for-the-ride fallback is not needed.
 
 ---
 
@@ -1928,7 +1928,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - Produces: `startLockScreenVoiceTest()` / `stopLockScreenVoiceTest()` / `subscribeLockScreenVoiceTest` / `getLockScreenVoiceTestSnapshot` — a 12-tick × 10 s numbered-prompt soak run that starts ride-style background location updates (keep-alive under lock) and reports instrumented results. UI: long-press on the ride-setup "בדיקת קול" button toggles the soak test; a status line under the button shows progress, the missing-Always warning, and post-run results (spoken/errors/lastError deltas vs a baseline snapshot).
 
 - [x] Implement controller + sheet wiring (short press keeps the one-shot sample).
-- [ ] Device lab protocol (run A — current permission model): open ride setup → long-press בדיקת קול → grant Always if asked → lock the phone at the spoken instruction → listen for "בדיקה מספר 1…12" → unlock, read the status line. Record pass/fail per D11 (and fall back per Task 19 Step 5 if needed).
+- [x] Device lab protocol (run A — current permission model): **PASS 2026-07-11** — Always granted, phone locked, numbered prompts audible throughout. Lock-screen voice fix (D11) confirmed on device.
 - [ ] Device lab protocol (run B — Task 18 When-In-Use spike, same soak test): the controller reuses `requestNavigationPermissions`, so it honors `EXPO_PUBLIC_NAV_WHEN_IN_USE_SPIKE=1` (dev builds only). Fresh install with While-Using permission only, start the dev server with the flag, run the same soak test — the status line shows "מצב ניסוי: בלי הרשאת תמיד". Prompts audible under lock = evidence toward Task 18's go decision (record per its findings doc; the Always-request removal remains its own follow-up plan).
 
 ---
