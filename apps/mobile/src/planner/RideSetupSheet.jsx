@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { text } from "../theme/typography.js";
 import {
   Modal,
@@ -10,8 +11,33 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDistanceMeters } from "@cycleways/core/navigation/navigationPresentation.js";
 import { rideSetupLocationNotice } from "@cycleways/core/navigation/rideIntroPresentation.js";
+import {
+  getLockScreenVoiceTestSnapshot,
+  startLockScreenVoiceTest,
+  stopLockScreenVoiceTest,
+  subscribeLockScreenVoiceTest,
+} from "../navigation/lockScreenVoiceTest.js";
 import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
+
+function lockScreenTestStatusLine(test) {
+  if (test.status === "running") {
+    const progress = `${test.tick}/${test.totalTicks}`;
+    return test.backgroundUpdates
+      ? `בדיקת מסך נעול פעילה — נעלו את המסך (${progress})`
+      : `בדיקה פעילה (${progress}) — אין הרשאת מיקום תמיד, האפליקציה תוקפא כשהמסך נעול`;
+  }
+  if (test.status === "error") {
+    return "אין הרשאת מיקום — אי אפשר להריץ את בדיקת המסך הנעול";
+  }
+  if (test.status === "finished" && test.results) {
+    const base = `בדיקת המסך הנעול הסתיימה: הושמעו ${test.results.completed} מתוך ${test.results.attempts}`;
+    return test.results.errors > 0
+      ? `${base} — ${test.results.errors} שגיאות${test.results.lastError ? ` (${test.results.lastError})` : ""}`
+      : base;
+  }
+  return null;
+}
 
 function Choice({ label, sub, selected, disabled = false, onPress }) {
   return (
@@ -85,6 +111,12 @@ export default function RideSetupSheet({
   onTestVoice,
 }) {
   const insets = useSafeAreaInsets();
+  const lockScreenTest = useSyncExternalStore(
+    subscribeLockScreenVoiceTest,
+    getLockScreenVoiceTestSnapshot,
+  );
+  const lockScreenTestRunning = lockScreenTest.status === "running";
+  const lockScreenTestStatus = lockScreenTestStatusLine(lockScreenTest);
   const candidates = plan?.candidates;
   const nearest = candidates?.nearest;
   const message = rideSetupLocationNotice(locationStatus, plan?.locationQuality);
@@ -230,18 +262,39 @@ export default function RideSetupSheet({
                 </View>
               ) : null}
               {voiceEnabled && onTestVoice ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="בדיקת קול"
-                  onPress={onTestVoice}
-                  style={({ pressed }) => [
-                    styles.testVoice,
-                    pressed ? styles.pressed : null,
-                  ]}
-                >
-                  <Icon name="volume-high-outline" color={palette.forest} size={19} />
-                  <Text style={styles.testVoiceText}>בדיקת קול</Text>
-                </Pressable>
+                <>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={lockScreenTestRunning ? "עצירת בדיקת הקול" : "בדיקת קול"}
+                    onPress={() => {
+                      if (lockScreenTestRunning) {
+                        void stopLockScreenVoiceTest();
+                      } else {
+                        onTestVoice();
+                      }
+                    }}
+                    onLongPress={() => {
+                      if (lockScreenTestRunning) {
+                        void stopLockScreenVoiceTest();
+                      } else {
+                        void startLockScreenVoiceTest();
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.testVoice,
+                      pressed ? styles.pressed : null,
+                    ]}
+                  >
+                    <Icon name="volume-high-outline" color={palette.forest} size={19} />
+                    <Text style={styles.testVoiceText}>
+                      {lockScreenTestRunning ? "עצירת הבדיקה" : "בדיקת קול"}
+                    </Text>
+                  </Pressable>
+                  <Text style={styles.testVoiceHint}>
+                    {lockScreenTestStatus ??
+                      "לחיצה ארוכה: בדיקת קול למסך נעול (כשתי דקות)"}
+                  </Text>
+                </>
               ) : null}
             </>
           ) : null}
@@ -325,6 +378,7 @@ const styles = StyleSheet.create({
   choiceSub: { ...text.caption, color: palette.muted, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   testVoice: { minHeight: 42, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: space.xs, borderRadius: radius.md, borderWidth: 1, borderColor: palette.forest, backgroundColor: palette.white, marginBottom: space.sm },
   testVoiceText: { ...text.bodyStrong, color: palette.forest, writingDirection: "rtl" },
+  testVoiceHint: { ...text.caption, color: palette.muted, textAlign: "right", writingDirection: "rtl", marginBottom: space.sm },
   settingsNotice: { flexDirection: "row-reverse", alignItems: "center", gap: space.sm, backgroundColor: palette.cream, borderRadius: radius.md, padding: space.md, marginBottom: space.sm },
   settingsNoticeText: { flex: 1 },
   settingsNoticeTitle: { ...text.captionStrong, color: palette.ink, textAlign: "right", writingDirection: "rtl" },
