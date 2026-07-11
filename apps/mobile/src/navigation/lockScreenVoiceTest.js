@@ -44,6 +44,7 @@ function publish() {
         tick: run.tick,
         totalTicks: LOCK_SCREEN_TEST_TICKS,
         backgroundUpdates: run.backgroundUpdates,
+        permissionSpike: run.permissionSpike,
         error: run.error,
         results: diagnosticsDelta(run.baseline),
       };
@@ -95,6 +96,7 @@ export async function startLockScreenVoiceTest() {
     status: "running",
     tick: 0,
     backgroundUpdates: false,
+    permissionSpike: null,
     error: null,
     baseline: getSpeechDiagnostics(),
     timer: null,
@@ -112,6 +114,7 @@ export async function startLockScreenVoiceTest() {
     await finishRun("error");
     return snapshot;
   }
+  run.permissionSpike = permission.permissionSpike || null;
   run.backgroundUpdates = permission.background
     ? await startNavigationBackgroundUpdates()
     : false;

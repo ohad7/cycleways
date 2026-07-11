@@ -23,8 +23,9 @@ import { palette, radius, space } from "./theme.js";
 function lockScreenTestStatusLine(test) {
   if (test.status === "running") {
     const progress = `${test.tick}/${test.totalTicks}`;
+    const spikeSuffix = test.permissionSpike ? " • מצב ניסוי: בלי הרשאת תמיד" : "";
     return test.backgroundUpdates
-      ? `בדיקת מסך נעול פעילה — נעלו את המסך (${progress})`
+      ? `בדיקת מסך נעול פעילה — נעלו את המסך (${progress})${spikeSuffix}`
       : `בדיקה פעילה (${progress}) — אין הרשאת מיקום תמיד, האפליקציה תוקפא כשהמסך נעול`;
   }
   if (test.status === "error") {

@@ -1928,7 +1928,8 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - Produces: `startLockScreenVoiceTest()` / `stopLockScreenVoiceTest()` / `subscribeLockScreenVoiceTest` / `getLockScreenVoiceTestSnapshot` — a 12-tick × 10 s numbered-prompt soak run that starts ride-style background location updates (keep-alive under lock) and reports instrumented results. UI: long-press on the ride-setup "בדיקת קול" button toggles the soak test; a status line under the button shows progress, the missing-Always warning, and post-run results (spoken/errors/lastError deltas vs a baseline snapshot).
 
 - [x] Implement controller + sheet wiring (short press keeps the one-shot sample).
-- [ ] Device lab protocol: open ride setup → long-press בדיקת קול → grant Always if asked → lock the phone at the spoken instruction → listen for "בדיקה מספר 1…12" → unlock, read the status line. Record pass/fail per D11 (and fall back per Task 19 Step 5 if needed).
+- [ ] Device lab protocol (run A — current permission model): open ride setup → long-press בדיקת קול → grant Always if asked → lock the phone at the spoken instruction → listen for "בדיקה מספר 1…12" → unlock, read the status line. Record pass/fail per D11 (and fall back per Task 19 Step 5 if needed).
+- [ ] Device lab protocol (run B — Task 18 When-In-Use spike, same soak test): the controller reuses `requestNavigationPermissions`, so it honors `EXPO_PUBLIC_NAV_WHEN_IN_USE_SPIKE=1` (dev builds only). Fresh install with While-Using permission only, start the dev server with the flag, run the same soak test — the status line shows "מצב ניסוי: בלי הרשאת תמיד". Prompts audible under lock = evidence toward Task 18's go decision (record per its findings doc; the Always-request removal remains its own follow-up plan).
 
 ---
 
