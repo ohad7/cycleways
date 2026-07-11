@@ -32,6 +32,13 @@ the scenario-level voice/camera smoke, lock-screen speech, and the When-In-Use
 permission protocol. See `route-verification.md` and
 `permission-spike-findings.md`.
 
+**Update 2026-07-11:** The next real ride showed Task 4's fix was
+insufficient — voice was still silent under lock. Root cause (design D11): the
+audio session category is set but the session is never *activated*, and iOS
+refuses the implicit activation that makes foreground speech work. Tasks 19–20
+(below) add explicit session activation around utterances and an indoor
+lock-screen soak test on the ride-setup test-voice button.
+
 ## Global Constraints
 
 - Never hand-edit `data/map-source.geojson` or anything under `public-data/` (CLAUDE.md). The diagnostic script *reads* `public-data/`, never writes it.
@@ -46,6 +53,9 @@ permission protocol. See `route-verification.md` and
 
 New files:
 - `packages/core/src/navigation/persistencePolicy.js` — pure persist-now/skip decision.
+- `packages/core/src/navigation/speechAudioSessionPolicy.js` — pure activate/deactivate timing for the iOS audio session around utterances (Task 19).
+- `apps/mobile/src/navigation/lockScreenVoiceTest.js` — lock-screen voice soak-test controller (Task 20).
+- `tests/test-speech-audio-session-policy.mjs` (Task 19).
 - `packages/core/src/routing/junctionsNearRoute.js` — pure junction derivation (network + geometry → junction points), cell-indexed.
 - `scripts/inspect-route-cues.mjs` — diagnostic: decode a shared-route token, print cues with/without junctions.
 - `tests/test-navigation-persistence-policy.mjs`, `tests/test-junctions-near-route.mjs`.
@@ -1888,9 +1898,43 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ---
 
+### Task 19: Explicit audio-session activation around utterances (D11)
+
+**Files:**
+- Create: `packages/core/src/navigation/speechAudioSessionPolicy.js`
+- Create: `tests/test-speech-audio-session-policy.mjs` (append to the root `package.json` test chain)
+- Modify: `apps/mobile/src/navigation/speechAdapter.js`
+
+**Interfaces:**
+- Consumes: expo-audio `setIsAudioActiveAsync(active)` (native `AVAudioSession.setActive`, with `notifyOthersOnDeactivation` on false).
+- Produces: `createSpeechAudioSessionPolicy({ lingerMs })` with `onSpeakRequested() -> { shouldActivate }`, `onUtteranceSettled(nowMs)`, `shouldDeactivateNow(nowMs)`, `onDeactivated()`, `snapshot()`. Adapter activates before every `Speech.speak`, settles each utterance exactly once (onDone/onStopped/onError or a 30 s safety timeout), and deactivates after a linger once idle. `getSpeechDiagnostics()` grows `sessionActive`, `inFlight`, `activations`, `activationErrors`, and a `recentEvents` ring buffer (consumed by Task 20's UI).
+
+- [x] **Step 1: Write the failing test** — `tests/test-speech-audio-session-policy.mjs`: first speak activates / concurrent speak doesn't re-activate; no deactivation while utterances are in flight; deactivation only after `lingerMs` past the last settle; a new speak inside the linger window suppresses deactivation; after `onDeactivated()` the next speak re-activates; settle without any speak never deactivates.
+- [x] **Step 2: Run test to verify it fails** (module doesn't exist).
+- [x] **Step 3: Implement** the pure policy + wire the adapter (activation before speak; per-utterance single-settle guard + safety timeout; linger-timer deactivation gated by `shouldDeactivateNow`; failed activation calls `onDeactivated()` so the next speak retries).
+- [x] **Step 4: Tests pass** (`node tests/test-speech-audio-session-policy.mjs`, added to the chain).
+- [ ] **Step 5: Device verification** — Task 20's soak test, locked phone: numbered prompts audible while locked. If not, apply the D11 fallback (activate at ride start, hold for the ride) and re-run.
+
+---
+
+### Task 20: Lock-screen voice soak test (D12)
+
+**Files:**
+- Create: `apps/mobile/src/navigation/lockScreenVoiceTest.js`
+- Modify: `apps/mobile/src/planner/RideSetupSheet.jsx`
+
+**Interfaces:**
+- Consumes: `speakUtterance` + `getSpeechDiagnostics` (Task 19), `requestNavigationPermissions` / `startNavigationBackgroundUpdates` / `stopNavigationBackgroundUpdates` (existing).
+- Produces: `startLockScreenVoiceTest()` / `stopLockScreenVoiceTest()` / `subscribeLockScreenVoiceTest` / `getLockScreenVoiceTestSnapshot` — a 12-tick × 10 s numbered-prompt soak run that starts ride-style background location updates (keep-alive under lock) and reports instrumented results. UI: long-press on the ride-setup "בדיקת קול" button toggles the soak test; a status line under the button shows progress, the missing-Always warning, and post-run results (spoken/errors/lastError deltas vs a baseline snapshot).
+
+- [x] Implement controller + sheet wiring (short press keeps the one-shot sample).
+- [ ] Device lab protocol: open ride setup → long-press בדיקת קול → grant Always if asked → lock the phone at the spoken instruction → listen for "בדיקה מספר 1…12" → unlock, read the status line. Record pass/fail per D11 (and fall back per Task 19 Step 5 if needed).
+
+---
+
 ## Final verification
 
 - [x] `npm test` (full chain) and `npm run test:navigation-camera` — all green.
 - [x] Native iOS Simulator build/install/launch (`npx expo run:ios`) — 0 errors, 3 third-party linker warnings; app bundled and opened on an iPhone 15 simulator.
 - [ ] Simulator end-to-end with a dev journey scenario: acquisition phrase includes a compass word; a close turn pair speaks a compound instruction; panning re-follows after ~12s; the data pill shows distance/speed only.
-- [ ] Device (after native rebuild): lock-screen voice check (Task 4 Step 6) and the permission spike protocol (Task 18).
+- [ ] Device (after native rebuild): lock-screen voice check (Task 4 Step 6, now via the Task 20 soak test) and the permission spike protocol (Task 18).

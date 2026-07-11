@@ -143,6 +143,53 @@ The conservative-cue philosophy stands: the gaps are missing *kinds* of
 speech, not missing volume. Existing cooldown/dedupe/priority machinery in
 `navigationVoice.js` gates everything new.
 
+**D11 — Activate the audio session around utterances (2026-07-11, follow-up
+to D2 after lock-screen voice was still silent on the next ride).**
+D2 (background modes + `shouldPlayInBackground`) was necessary but not
+sufficient. Root cause, from reading the installed native sources
+(expo-audio 56 / expo-speech 56): **nothing in the stack ever calls
+`AVAudioSession.setActive(true)`.**
+
+- expo-audio's `setAudioModeAsync` only calls `session.setCategory(...)`
+  (`AudioModule.swift` `setAudioMode`) — it never activates the session.
+- expo-audio activates the session only when one of *its own* `AudioPlayer`s
+  plays; we never play through expo-audio.
+- expo-speech just calls `synthesizer.speak(...)`; `AVSpeechSynthesizer`
+  defaults to `usesApplicationAudioSession = true`, i.e. it renders into the
+  app's shared session and expects the app to have activated it.
+
+In the foreground iOS *implicitly* activates the session when playback starts
+— which is why the test-voice button and screen-on cues work. Implicit
+activation is refused for backgrounded/locked apps, so under lock the
+synthesizer renders into an inactive session: silence (sometimes queued and
+burst-played on unlock).
+
+Fix: explicitly activate the shared session via expo-audio's
+`setIsAudioActiveAsync(true)` before each utterance, and deactivate
+(`setIsAudioActiveAsync(false)`, which uses `notifyOthersOnDeactivation`)
+after a short linger once all in-flight utterances settle — so other audio is
+ducked only around prompts, not for the whole ride. The activate/deactivate
+timing is a pure, node-tested policy
+(`packages/core/src/navigation/speechAudioSessionPolicy.js`); the adapter
+stays thin glue. A per-utterance settle timeout guards against
+never-firing speech callbacks leaving the session (and ducking) stuck on.
+*Fallback if device testing shows iOS refuses per-utterance activation in
+the background:* activate once at ride start (while foregrounded) and hold
+for the whole ride — reliable, but ducks the rider's audio continuously.
+
+**D12 — Lock-screen voice lab test (soak test on the test-voice button).**
+Verifying #3 previously required a real ride. The failing path is just
+"`Speech.speak` while locked" — GPS content is irrelevant — so it reproduces
+indoors: **long-pressing** the ride-setup "בדיקת קול" button starts a
+~2-minute soak test that (a) starts the same background location updates a
+real ride uses (this is what keeps the app alive under lock), and (b) speaks
+a numbered prompt every 10 s. The rider locks the phone and listens for the
+numbers; on unlock the sheet shows instrumented results (spoken / errors /
+last error, from a new diagnostics ring buffer in `speechAdapter.js`).
+A short press keeps the existing one-shot sample. If "always" location
+permission is missing, the test runs but warns that the app will suspend
+under lock — itself a useful diagnostic.
+
 ## Phases
 
 1. Performance: persistence policy + snapshot slimming (D1).
@@ -152,5 +199,6 @@ speech, not missing volume. Existing cooldown/dedupe/priority machinery in
 5. Junctions for real routes + route verification (D6, D7).
 6. Pill cleanup (D8).
 7. Permission spike (D9).
+8. Audio-session activation + lock-screen lab soak test (D11, D12).
 
 See `implementation-plan.md` for the task breakdown.
