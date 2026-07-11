@@ -18,10 +18,28 @@
         <form id="sticker-form" class="controls">
           <fieldset>
             <legend>Artwork</legend>
-            <div class="segmented">
-              <label><input type="radio" name="rider" value="male" checked /><span>Male rider</span></label>
-              <label><input type="radio" name="rider" value="female" /><span>Female rider</span></label>
-            </div>
+            <label class="field">
+              <span>Rider</span>
+              <select id="rider-template">
+                <optgroup label="Adults">
+                  <option value="adult-man" selected>Adult man</option>
+                  <option value="adult-woman">Adult woman</option>
+                </optgroup>
+                <optgroup label="Kids">
+                  <option value="child-boy">Boy · 8–10</option>
+                  <option value="child-girl">Girl · 8–10</option>
+                </optgroup>
+                <optgroup label="Youth">
+                  <option value="teen-boy">Teen boy</option>
+                  <option value="teen-girl">Teen girl</option>
+                </optgroup>
+                <optgroup label="Commute">
+                  <option value="commuter-suit">Suit commuter</option>
+                  <option value="commuter-dress">Dress commuter</option>
+                </optgroup>
+              </select>
+            </label>
+            <p class="field-help">All variants use the same QR-friendly landscape and editable wordmark.</p>
           </fieldset>
 
           <fieldset>
@@ -100,4 +118,3 @@
     <script type="module" src="./app.js"></script>
   </body>
 </html>
-

@@ -30,15 +30,10 @@ fieldset { margin: 0; padding: 0 0 22px; border: 0; }
 fieldset + fieldset { padding-top: 22px; border-top: 1px solid #e3e6e0; }
 legend { width: 100%; margin-bottom: 14px; color: var(--forest-dark); font-weight: 760; }
 
-.segmented { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; background: #edf0eb; border-radius: 12px; }
-.segmented label { cursor: pointer; }
-.segmented input { position: absolute; opacity: 0; pointer-events: none; }
-.segmented span { display: block; padding: 9px 10px; border-radius: 9px; text-align: center; color: var(--muted); }
-.segmented input:checked + span { color: var(--forest-dark); background: white; box-shadow: 0 2px 8px rgba(26,45,37,.12); font-weight: 700; }
-
 .field { display: grid; gap: 7px; margin-bottom: 13px; }
 .field > span, .switch-row > span { font-size: 0.84rem; font-weight: 690; }
 .field small { color: var(--muted); font-weight: 450; }
+.field-help { margin: -4px 0 0; color: var(--muted); font-size: 0.76rem; line-height: 1.45; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 input, textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 10px; background: white; color: #202622; padding: 10px 12px; outline: none; }
 textarea { resize: vertical; min-height: 72px; }

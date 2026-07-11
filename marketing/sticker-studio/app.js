@@ -12,8 +12,14 @@ import {
 } from "./sticker-core.mjs";
 
 const assetUrls = {
-  male: new URL("../Cycleways.app.orig.png", import.meta.url).href,
-  female: new URL("../Cycleways.app.female-template.png", import.meta.url).href,
+  "adult-man": new URL("../badge-template-adult-man.png", import.meta.url).href,
+  "adult-woman": new URL("../badge-template-adult-woman.png", import.meta.url).href,
+  "child-boy": new URL("../badge-template-child-boy.png", import.meta.url).href,
+  "child-girl": new URL("../badge-template-child-girl.png", import.meta.url).href,
+  "teen-boy": new URL("../badge-template-teen-boy.png", import.meta.url).href,
+  "teen-girl": new URL("../badge-template-teen-girl.png", import.meta.url).href,
+  "commuter-suit": new URL("../badge-template-commuter-suit.png", import.meta.url).href,
+  "commuter-dress": new URL("../badge-template-commuter-dress.png", import.meta.url).href,
 };
 
 const form = document.querySelector("#sticker-form");
@@ -29,7 +35,7 @@ let currentSvg = "";
 let currentState = null;
 
 function getState() {
-  const rider = new FormData(form).get("rider") || "male";
+  const rider = document.querySelector("#rider-template").value;
   return {
     rider,
     caption: document.querySelector("#caption").value,
@@ -50,7 +56,7 @@ function buildQr(url) {
   const total = moduleCount + QR_QUIET_MODULES * 2;
   const cell = QR_SIZE_UNITS / total;
   const x = (1024 - QR_SIZE_UNITS) / 2;
-  const y = 417;
+  const y = 464;
   const modules = [];
   for (let row = 0; row < moduleCount; row += 1) {
     for (let column = 0; column < moduleCount; column += 1) {
@@ -60,7 +66,7 @@ function buildQr(url) {
   }
   return {
     moduleCount,
-    markup: `<g aria-label="QR code"><rect x="${x}" y="${y}" width="${QR_SIZE_UNITS}" height="${QR_SIZE_UNITS}" rx="16" fill="#fff" stroke="#2f3331" stroke-width="6"/><g fill="#222624" shape-rendering="crispEdges">${modules.join("")}</g></g>`,
+    markup: `<g aria-label="QR code"><rect x="${x}" y="${y}" width="${QR_SIZE_UNITS}" height="${QR_SIZE_UNITS}" rx="12" fill="#fff" stroke="#2f3331" stroke-width="5"/><g fill="#222624" shape-rendering="crispEdges">${modules.join("")}</g></g>`,
   };
 }
 

@@ -2,7 +2,8 @@
 
 **Date:** 2026-07-11
 
-1. Preserve the supplied assets and add a non-destructive female-rider template.
+1. Preserve the supplied assets and add non-destructive adult, child, teen, and
+   commuter rider templates for men/women and boys/girls.
 2. Implement pure helpers for destinations, caption wrapping, filenames, pixel
    dimensions, and physical QR module validation.
 3. Build the local Sticker Studio form and live SVG preview.
@@ -19,4 +20,3 @@ Expected validation:
 - The UI warns when a dense QR produces modules below 0.4 mm at print size.
 - PNG dimensions match the selected millimetres and DPI.
 - Hebrew captions keep their direction and never exceed two generated lines.
-

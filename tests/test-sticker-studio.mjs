@@ -33,7 +33,10 @@ assert.equal(textDirection("New route"), "ltr");
 assert.equal(escapeXml("A&B <ride>"), "A&amp;B &lt;ride&gt;");
 assert.equal(safeFilename({ rider: "female", destinationKind: "route", caption: "Ride here!" }), "cycleways-female-route-ride-here");
 
-assert.equal(qrPrintMetrics(33, 90).level, "good");
+const defaultQrMetrics = qrPrintMetrics(33, 90);
+assert.equal(defaultQrMetrics.level, "good");
+assert.ok(defaultQrMetrics.qrMm > 16 && defaultQrMetrics.qrMm < 17);
+assert.equal(qrPrintMetrics(33, 70).level, "risky");
 assert.equal(qrPrintMetrics(57, 70).level, "risky");
 
 console.log("Sticker Studio helper tests passed.");

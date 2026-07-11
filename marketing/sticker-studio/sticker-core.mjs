@@ -1,5 +1,5 @@
 export const STICKER_VIEWBOX = 1024;
-export const QR_SIZE_UNITS = 250;
+export const QR_SIZE_UNITS = 190;
 export const QR_QUIET_MODULES = 4;
 
 export function mmToPixels(mm, dpi) {
@@ -90,4 +90,3 @@ export function escapeXml(value) {
 export function textDirection(value) {
   return /[\u0590-\u05ff]/.test(value) ? "rtl" : "ltr";
 }
-
