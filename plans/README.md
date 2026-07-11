@@ -1,5 +1,7 @@
 # Plans
 
+- `navigation-ride-feedback-2/` — design and implementation plan for ride-feedback round 2: arrival auto-end with jitter protection, crash-resume policy (hot auto-resume / warm prompt) with the headless zombie-voice fix, planner locate-me view preservation, and mid-route join via earliest-candidate acquisition.
+
 - `featured-mobile-elevation-timeline/` — mobile featured-route elevation timeline design comparison.
 - `mobile-home-engagement/` — native mobile homepage engagement design comparison.
 
