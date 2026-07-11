@@ -1221,16 +1221,6 @@ export default function BuildScreen({ navigation, route }) {
     nav.state?.foregroundOnly,
   ]);
 
-  useEffect(() => {
-    void refreshNavigationPermissionStatus();
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
-        void refreshNavigationPermissionStatus();
-      }
-    });
-    return () => subscription.remove();
-  }, [refreshNavigationPermissionStatus]);
-
   const handleToggleVoiceGuidance = useCallback(() => {
     setVoiceGuidanceEnabled((current) => {
       const next = !current;
@@ -1549,7 +1539,6 @@ export default function BuildScreen({ navigation, route }) {
       setRideSettingsVisible(true);
       trackNavigationEvent("ride_settings_opened", { origin: "approach" });
       void refreshRideSetupLocation();
-      void refreshNavigationPermissionStatus();
     };
     if (nav.state?.progress?.hasAcquiredRoute) {
       Alert.alert(
@@ -1566,7 +1555,6 @@ export default function BuildScreen({ navigation, route }) {
   }, [
     nav.state?.progress?.hasAcquiredRoute,
     nav.stop,
-    refreshNavigationPermissionStatus,
     refreshRideSetupLocation,
   ]);
 
