@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cycleways Sticker Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="studio-shell">
+      <header class="studio-header">
+        <div class="eyebrow">Cycleways marketing tools</div>
+        <h1>Sticker Studio</h1>
+        <p>Create route-ready stickers with editable copy and print-safe QR codes.</p>
+      </header>
+
+      <section class="workspace">
+        <form id="sticker-form" class="controls">
+          <fieldset>
+            <legend>Artwork</legend>
+            <div class="segmented">
+              <label><input type="radio" name="rider" value="male" checked /><span>Male rider</span></label>
+              <label><input type="radio" name="rider" value="female" /><span>Female rider</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Message</legend>
+            <label class="field">
+              <span>Caption <small>one or two lines</small></span>
+              <textarea id="caption" rows="2" maxlength="72" placeholder="סרקו וגלו את המסלול">סרקו וגלו את המסלול</textarea>
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>QR destination</legend>
+            <label class="switch-row">
+              <span>Include QR code</span>
+              <input id="include-qr" type="checkbox" checked />
+            </label>
+            <label class="field">
+              <span>Destination</span>
+              <select id="destination-kind">
+                <option value="route">Recommended route</option>
+                <option value="home">Cycleways homepage</option>
+                <option value="custom">Custom URL</option>
+              </select>
+            </label>
+            <label id="route-field" class="field">
+              <span>Route slug</span>
+              <input id="route-slug" value="sovev-beit-hillel" spellcheck="false" />
+            </label>
+            <label id="custom-field" class="field" hidden>
+              <span>Custom URL</span>
+              <input id="custom-url" type="url" value="https://cycleways.app/" spellcheck="false" />
+            </label>
+            <output id="resolved-url" class="resolved-url"></output>
+          </fieldset>
+
+          <fieldset>
+            <legend>Print</legend>
+            <div class="field-row">
+              <label class="field">
+                <span>Sticker size</span>
+                <select id="size-mm">
+                  <option value="70">70 mm</option>
+                  <option value="90" selected>90 mm</option>
+                  <option value="100">100 mm</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>PNG density</span>
+                <select id="dpi">
+                  <option value="300" selected>300 DPI</option>
+                  <option value="600">600 DPI</option>
+                </select>
+              </label>
+            </div>
+            <div id="qr-status" class="qr-status" aria-live="polite"></div>
+          </fieldset>
+
+          <div class="actions">
+            <button id="download-png" class="primary" type="button">Download PNG</button>
+            <button id="download-svg" type="button">Download SVG</button>
+            <button id="print-sheet" type="button">Print A4 sheet</button>
+          </div>
+          <div id="form-error" class="form-error" role="alert"></div>
+        </form>
+
+        <section class="preview-panel" aria-label="Sticker preview">
+          <div class="preview-toolbar">
+            <span>Live preview</span>
+            <span id="pixel-size"></span>
+          </div>
+          <div id="preview" class="preview"></div>
+          <p class="preview-note">The gray area is part of the current raster artwork. Confirm final cut lines with your printer.</p>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
+

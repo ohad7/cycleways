@@ -28,6 +28,7 @@
     "posttest": "npm run test:navigation-camera",
     "test:osm": "python3 -m unittest discover -s tests -p 'test_*.py'",
     "test:smoke": "playwright test --workers=1",
+    "test:sticker-studio": "node tests/test-sticker-studio.mjs",
     "test:typography": "node tests/test-typography-tokens.mjs && node tests/test-typography-css.mjs && node tests/test-mobile-typography.mjs && node tests/test-typography-guard.mjs",
     "tokens": "node scripts/generate-typography-css.mjs",
     "predev": "npm run tokens",
