@@ -4,18 +4,33 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cycleways Sticker Studio</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
+    <script src="/mapbox-token.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
   </head>
   <body>
     <main class="studio-shell">
       <header class="studio-header">
         <div class="eyebrow">Cycleways marketing tools</div>
         <h1>Sticker Studio</h1>
-        <p>Create route-ready stickers with editable copy and print-safe QR codes.</p>
+        <p>Create, place, verify, and learn from route-ready stickers.</p>
+        <nav class="workspace-tabs" aria-label="Sticker Studio workspace">
+          <button id="show-create" class="workspace-tab active" type="button">Create</button>
+          <button id="show-locations" class="workspace-tab" type="button">Locations <span id="location-count-badge">0</span></button>
+        </nav>
       </header>
 
-      <section class="workspace">
+      <section id="create-workspace" class="workspace">
         <form id="sticker-form" class="controls">
+          <div id="placement-context" class="placement-context" hidden>
+            <div>
+              <span>Designing for placement</span>
+              <strong id="placement-context-name"></strong>
+              <code id="placement-context-code"></code>
+            </div>
+            <button id="clear-placement-context" type="button">Clear</button>
+          </div>
           <fieldset>
             <legend>Artwork</legend>
             <label class="field">
@@ -93,6 +108,10 @@
                   <option value="600">600 DPI</option>
                 </select>
               </label>
+              <label class="field">
+                <span>Print batch</span>
+                <input id="print-batch-id" placeholder="e.g. galilee-july-01" />
+              </label>
             </div>
             <div id="qr-status" class="qr-status" aria-live="polite"></div>
           </fieldset>
@@ -114,7 +133,77 @@
           <p class="preview-note">The gray area is part of the current raster artwork. Confirm final cut lines with your printer.</p>
         </section>
       </section>
+
+      <section id="locations-workspace" class="locations-workspace" hidden>
+        <div id="placement-dashboard" class="placement-dashboard" aria-label="Placement summary"></div>
+
+        <div class="location-toolbar">
+          <label class="toolbar-search">
+            <span class="sr-only">Search locations</span>
+            <input id="location-search" type="search" placeholder="Search locations, codes, or notes" />
+          </label>
+          <select id="campaign-filter" aria-label="Campaign filter"><option value="">All campaigns</option></select>
+          <select id="status-filter" aria-label="Status filter">
+            <option value="">All states</option>
+            <option value="planned">Planned</option>
+            <option value="assigned">Assigned / printed</option>
+            <option value="unverified">Needs verification</option>
+            <option value="verified">Verified</option>
+            <option value="overdue">Overdue</option>
+            <option value="failed">Needs attention</option>
+            <option value="removed">Removed</option>
+          </select>
+          <button id="print-queue-filter" type="button">Print queue</button>
+          <button id="add-location" class="primary-inline" type="button">+ Plan location</button>
+          <button id="use-current-location" type="button">Use my location</button>
+        </div>
+
+        <div class="placement-layout">
+          <aside class="location-list-panel">
+            <div class="panel-title-row">
+              <h2>Locations</h2>
+              <button id="new-campaign" class="text-button" type="button">New campaign</button>
+            </div>
+            <div id="location-list" class="location-list"></div>
+            <div class="registry-actions">
+              <button id="export-registry-json" type="button">JSON</button>
+              <button id="export-registry-geojson" type="button">GeoJSON</button>
+              <button id="export-field-pack" type="button">Field CSV</button>
+              <button id="export-verification-route" type="button">Check route</button>
+            </div>
+          </aside>
+
+          <div class="map-panel">
+            <div id="placement-map" aria-label="Sticker placement map"></div>
+            <div id="map-message" class="map-message">Loading placement map…</div>
+            <div class="map-legend" aria-label="Placement map legend">
+              <span><i class="pin planned"></i>Planned</span>
+              <span><i class="pin assigned"></i>Assigned</span>
+              <span><i class="pin unverified"></i>Verify</span>
+              <span><i class="pin verified"></i>Verified</span>
+              <span><i class="pin failed"></i>Attention</span>
+            </div>
+          </div>
+
+          <aside id="location-detail" class="location-detail">
+            <div class="empty-detail">
+              <strong>Select a location</strong>
+              <p>Click a pin or plan a new location to manage its sticker history.</p>
+            </div>
+          </aside>
+        </div>
+        <div id="registry-status" class="registry-status" aria-live="polite"></div>
+      </section>
     </main>
+    <dialog id="campaign-dialog" class="studio-dialog">
+      <form id="campaign-form" method="dialog">
+        <h2>New campaign</h2>
+        <label class="field"><span>Name</span><input id="campaign-name" required /></label>
+        <label class="field"><span>Objective</span><textarea id="campaign-objective"></textarea></label>
+        <label class="field"><span>Recheck interval</span><input id="campaign-recheck-days" type="number" min="1" value="90" /></label>
+        <div class="dialog-actions"><button value="cancel">Cancel</button><button id="save-campaign" class="primary-inline" value="default">Create</button></div>
+      </form>
+    </dialog>
     <script type="module" src="./app.js"></script>
   </body>
 </html>

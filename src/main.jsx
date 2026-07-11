@@ -13,6 +13,7 @@ const RouteDetailPage = lazyRoute("RouteDetailPage", () => import("./pages/Route
 const PrivacyPage = lazyRoute("PrivacyPage", () => import("./pages/PrivacyPage.jsx"));
 const TermsPage = lazyRoute("TermsPage", () => import("./pages/TermsPage.jsx"));
 const SupportPage = lazyRoute("SupportPage", () => import("./pages/SupportPage.jsx"));
+const StickerRedirectPage = lazyRoute("StickerRedirectPage", () => import("./pages/StickerRedirectPage.jsx"));
 
 // Splash milestone: the main bundle has parsed and is executing.
 window.__splash?.set(0.75);
@@ -233,6 +234,14 @@ createRoot(document.getElementById("root")).render(
               element={
                 <RouteReady>
                   <SupportPage />
+                </RouteReady>
+              }
+            />
+            <Route
+              path="/s/:code"
+              element={
+                <RouteReady>
+                  <StickerRedirectPage />
                 </RouteReady>
               }
             />

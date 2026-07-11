@@ -10,6 +10,7 @@ import {
   safeFilename,
   textDirection,
 } from "./sticker-core.mjs";
+import { initPlacementStudio } from "./placement-map.js";
 
 const assetUrls = {
   "adult-man": new URL("../badge-template-adult-man.png", import.meta.url).href,
@@ -30,9 +31,13 @@ const customField = document.querySelector("#custom-field");
 const resolvedUrlOutput = document.querySelector("#resolved-url");
 const qrStatus = document.querySelector("#qr-status");
 const pixelSize = document.querySelector("#pixel-size");
+const placementContextPanel = document.querySelector("#placement-context");
+const placementContextName = document.querySelector("#placement-context-name");
+const placementContextCode = document.querySelector("#placement-context-code");
 const assets = {};
 let currentSvg = "";
 let currentState = null;
+let placementStudio = null;
 
 function getState() {
   const rider = document.querySelector("#rider-template").value;
@@ -45,6 +50,7 @@ function getState() {
     customUrl: document.querySelector("#custom-url").value,
     sizeMm: Number(document.querySelector("#size-mm").value),
     dpi: Number(document.querySelector("#dpi").value),
+    printBatchId: document.querySelector("#print-batch-id").value.trim() || null,
   };
 }
 
@@ -94,6 +100,8 @@ function buildSvg(state, destination, lines) {
 }
 
 function render() {
+  const placementContext = placementStudio?.getActivePlacementContext() || null;
+  syncPlacementContext(placementContext);
   const state = getState();
   currentState = state;
   routeField.hidden = state.destinationKind !== "route";
@@ -101,16 +109,21 @@ function render() {
   errorOutput.textContent = "";
 
   try {
-    const destination = resolveDestination({
-      kind: state.destinationKind,
-      routeSlug: state.routeSlug,
-      customUrl: state.customUrl,
-    });
+    const destination = placementContext?.placement?.qr?.encodedUrl || resolveDestination({
+        kind: state.destinationKind,
+        routeSlug: state.routeSlug,
+        customUrl: state.customUrl,
+      });
+    currentState = { ...state, destination };
     const lines = captionLines(state.caption);
     const { svg, moduleCount } = buildSvg(state, destination, lines);
     currentSvg = svg;
     preview.innerHTML = svg;
-    resolvedUrlOutput.textContent = state.includeQr ? destination : "QR code disabled";
+    resolvedUrlOutput.textContent = state.includeQr
+      ? placementContext
+        ? `${destination} → ${placementContext.placement.qr?.targetUrl}`
+        : destination
+      : "QR code disabled";
 
     const pixels = mmToPixels(state.sizeMm, state.dpi);
     pixelSize.textContent = `${pixels} × ${pixels} px`;
@@ -129,6 +142,36 @@ function render() {
     qrStatus.textContent = "Waiting for a valid configuration.";
     errorOutput.textContent = error.message;
   }
+}
+
+function syncPlacementContext(context) {
+  const destinationControls = [
+    document.querySelector("#destination-kind"),
+    document.querySelector("#route-slug"),
+    document.querySelector("#custom-url"),
+  ];
+  placementContextPanel.hidden = !context;
+  destinationControls.forEach((control) => { control.disabled = Boolean(context); });
+  document.querySelector("#include-qr").disabled = Boolean(context);
+  if (context) {
+    placementContextName.textContent = context.location.name;
+    placementContextCode.textContent = context.placement.qr?.shortCode || "No QR";
+    document.querySelector("#include-qr").checked = context.placement.qr?.mode !== "none";
+  }
+}
+
+async function recordPlacementExport(extension) {
+  if (!placementStudio?.getActivePlacementContext()) return;
+  await placementStudio.recordExport({
+    rider: currentState.rider,
+    caption: currentState.caption,
+    includeQr: currentState.includeQr,
+    destination: currentState.destination,
+    sizeMm: currentState.sizeMm,
+    dpi: currentState.dpi,
+    printBatchId: currentState.printBatchId,
+    assetFilename: filename(extension),
+  });
 }
 
 async function assetToDataUrl(url) {
@@ -156,13 +199,24 @@ function filename(extension) {
   return `${safeFilename({ rider: currentState.rider, destinationKind: currentState.destinationKind, caption: currentState.caption })}.${extension}`;
 }
 
-document.querySelector("#download-svg").addEventListener("click", () => {
+document.querySelector("#download-svg").addEventListener("click", async () => {
   if (!currentSvg) return;
-  downloadBlob(new Blob([currentSvg], { type: "image/svg+xml;charset=utf-8" }), filename("svg"));
+  try {
+    await recordPlacementExport("svg");
+    downloadBlob(new Blob([currentSvg], { type: "image/svg+xml;charset=utf-8" }), filename("svg"));
+  } catch (error) {
+    errorOutput.textContent = `Export not recorded: ${error.message}`;
+  }
 });
 
-document.querySelector("#download-png").addEventListener("click", () => {
+document.querySelector("#download-png").addEventListener("click", async () => {
   if (!currentSvg) return;
+  try {
+    await recordPlacementExport("png");
+  } catch (error) {
+    errorOutput.textContent = `Export not recorded: ${error.message}`;
+    return;
+  }
   const exportState = { ...currentState };
   const exportSvg = currentSvg;
   const blob = new Blob([exportSvg], { type: "image/svg+xml;charset=utf-8" });
@@ -189,8 +243,14 @@ document.querySelector("#download-png").addEventListener("click", () => {
   image.src = url;
 });
 
-document.querySelector("#print-sheet").addEventListener("click", () => {
+document.querySelector("#print-sheet").addEventListener("click", async () => {
   if (!currentSvg) return;
+  try {
+    await recordPlacementExport("svg");
+  } catch (error) {
+    errorOutput.textContent = `Print assignment not recorded: ${error.message}`;
+    return;
+  }
   const stickerUrl = URL.createObjectURL(new Blob([currentSvg], { type: "image/svg+xml" }));
   const popup = window.open("", "_blank");
   if (!popup) {
@@ -209,10 +269,26 @@ document.querySelector("#print-sheet").addEventListener("click", () => {
 
 form.addEventListener("input", render);
 form.addEventListener("change", render);
+document.querySelector("#clear-placement-context").addEventListener("click", () => {
+  placementStudio?.clearActivePlacement();
+  render();
+});
 
-Promise.all(Object.entries(assetUrls).map(async ([key, url]) => {
+const assetsReady = Promise.all(Object.entries(assetUrls).map(async ([key, url]) => {
   assets[key] = await assetToDataUrl(url);
-})).then(render).catch((error) => {
+}));
+
+Promise.all([
+  assetsReady,
+  initPlacementStudio({
+    onContextChange() {
+      if (Object.keys(assets).length === Object.keys(assetUrls).length) render();
+    },
+  }),
+]).then(([, studio]) => {
+  placementStudio = studio;
+  render();
+}).catch((error) => {
   errorOutput.textContent = error.message;
   preview.textContent = "Artwork could not be loaded.";
 });

@@ -6,7 +6,9 @@
 
 Create a private, browser-based marketing tool that turns the Cycleways badge
 artwork into printable stickers with an editable caption and an optional QR code
-for the homepage, a recommended route, or another URL.
+for the homepage, a recommended route, or another URL. The same tool also keeps
+a private operational map of planned and installed stickers, including their
+physical history, design version, QR identity, and field verification.
 
 ## Brand treatment
 
@@ -47,9 +49,264 @@ rasters embedded as data URLs before export. `qrcode-generator`, already used by
 the application, supplies the QR matrix. Pure URL, caption, sizing, and print
 metric helpers live in a small `.mjs` module so Node tests can cover them.
 
+## Placement map
+
+The studio gains two primary workspaces:
+
+1. **Create** — design and export stickers.
+2. **Locations** — plan, install, verify, replace, and retire stickers on a map.
+
+The map is an operational tool, not a public directory. Exact coordinates,
+permission notes, and field photos must never be included in the public site or
+public analytics payloads.
+
+### Why locations and placements are separate
+
+A **location** is the durable real-world opportunity: a trailhead, bicycle shop,
+school entrance, transit station, community board, or junction. A **placement**
+is one physical sticker installed at that location.
+
+This separation preserves history. Replacing a damaged sticker creates a new
+placement attached to the same location instead of overwriting the old version,
+QR, installation date, and verification record.
+
+### Data model
+
+The repository-backed registry uses four related entities:
+
+```text
+Campaign
+  └── Location
+        └── Placement (physical sticker instance)
+              ├── DesignVersion
+              ├── QR identity and destination
+              └── Verification records and status history
+```
+
+**Campaign**
+
+- `id`, `name`, `objective`, `status`
+- optional start/end dates and route or audience focus
+- examples: “Upper Galilee launch”, “School cycling”, “Daily commute”
+
+**Location**
+
+- stable ID, name, longitude/latitude, and optional accuracy
+- location type: trailhead, junction, business, school, transit, park, board,
+  event, or other
+- placement instructions and a short human-readable landmark description
+- permission state: unknown, permission needed, approved, not required, denied
+- priority, owner, notes, and optional planned date
+- creation/update timestamps
+
+**DesignVersion**
+
+- immutable ID and creation timestamp
+- complete generator configuration: rider, caption, size, DPI, QR mode, and
+  destination
+- preview thumbnail or asset filename and a stable configuration hash
+- optional print batch ID
+
+Creating a new export creates or reuses a matching immutable design version.
+Existing placements never silently change when the current generator form is
+edited.
+
+**Placement**
+
+- stable ID and parent `locationId`
+- assigned `designVersionId`
+- QR mode, short code, encoded URL, and resolved destination at assignment time
+- lifecycle status: planned, assigned, placed, needs-attention, missing, or
+  removed, with relevant timestamps
+- optional actual coordinates when they differ from the planned pin
+- field notes, installer, surface type, exposure, and photo references
+- append-only status history
+- zero or more verification records
+- optional `replacesPlacementId` / `replacedByPlacementId`
+
+### Placement lifecycle
+
+The primary status answers “where is this physical sticker now?”
+
+```text
+planned → assigned → placed → removed
+                       ├── missing
+                       └── needs-attention
+
+needs-attention → placed (after repair)
+missing/removed → create replacement (a new placement at the same location)
+```
+
+Permission is a separate location field. Verification is also separate: a
+placed sticker may be unverified, recently verified, overdue for recheck, or have
+a failed check without inventing more lifecycle states.
+
+A placement cannot become:
+
+- `assigned` without a design version and QR identity when QR is enabled;
+- `placed` without a placement timestamp and actual coordinate confirmation;
+- verified without a result, timestamp, and checker;
+- `removed`, `missing`, or `needs-attention` without a reason.
+
+### Verification
+
+A verification record stores:
+
+- checked timestamp and checker
+- visual condition: good, faded, damaged, obstructed, or missing
+- adhesion/legibility result
+- QR scan result: passed, failed, or not applicable
+- expected and observed destination
+- note and optional photo
+
+“Validated” means both the physical sticker and QR destination passed. The map
+derives a check state from the latest record:
+
+- green — verified and current
+- amber — placed but never verified, or verification is older than the campaign
+  recheck interval
+- red — failed, damaged, missing, or needs attention
+- gray — planned, assigned, removed, or denied
+
+The default recheck interval is 90 days but belongs to the campaign so outdoor
+and indoor placements can use different schedules.
+
+### QR identity and tracking
+
+Three QR modes are supported:
+
+1. **Shared destination** — many stickers encode the same route or page. Fastest
+   to print, but scans cannot identify a location.
+2. **Campaign code** — a short campaign URL identifies the campaign but not the
+   individual location.
+3. **Placement code** — recommended. A planned placement receives a short code
+   before printing, for example `cycleways.app/s/K7M4Q`, so every physical
+   sticker is attributable to a location, design version, and lifecycle record.
+
+Short codes should redirect to the configured route/page. The redirect target
+can be corrected later, while the placement record retains the originally
+expected destination for audit. A replacement receives a new placement code so
+scan history never becomes ambiguous.
+
+The first map MVP may store short-code assignments without deploying redirects.
+Direct destination URLs remain available until the redirect service exists.
+
+### Map interface
+
+The desktop layout uses a full map with a filter/search bar and a right-hand
+details drawer. The mobile layout becomes a field workflow with a full map and a
+bottom sheet.
+
+Pin appearance communicates the derived state:
+
+- hollow gray — planned
+- blue — assigned/printed
+- amber — placed and awaiting verification or overdue
+- green — verified and current
+- red — failed, missing, or needs attention
+- crossed gray — removed or permission denied
+
+Nearby pins cluster, with the cluster ring showing the most urgent contained
+state. Filters include campaign, lifecycle status, verification state, design
+version, rider, QR target, location type, permission, and date range.
+
+Selecting a pin shows:
+
+- location name, type, coordinates, permission, priority, and instructions
+- current placement status and installed design thumbnail
+- QR code/URL and expected destination
+- planned, printed, placed, last verified, and next-check dates
+- field photos and notes
+- complete replacement and status history
+
+### Creating and updating locations
+
+Locations can be created by clicking the map, searching for a place, using the
+device's current position, or duplicating a nearby candidate. The add flow asks
+for only name, type, campaign, planned coordinate, and permission state; richer
+details can follow.
+
+For field use, the most important quick actions are:
+
+- **I placed it here** — captures actual coordinates and time
+- **Scan and verify** — checks the QR against the expected destination
+- **Add photo**
+- **Needs attention**, **Missing**, or **Removed**
+- **Create replacement** — copies the location and campaign while assigning a
+  fresh placement and QR
+
+Placed coordinates are not silently dragged. A correction records the previous
+coordinate in history.
+
+### Generator integration
+
+The Create workspace can work independently or for a selected planned
+placement. When a placement is selected:
+
+- campaign and location context appear above the generator;
+- placement QR mode/code and expected destination are locked into the export;
+- exporting records an immutable design version and assigns it to the placement;
+- a print manifest lists placement ID, short code, design version, filename, and
+  location label;
+- the map changes from planned to assigned after the print/export is confirmed.
+
+This enables a useful **print queue**: filter planned locations that have no
+assigned sticker, select several, and generate a sheet of individually tracked
+QR stickers plus a placement checklist.
+
+### Storage and synchronization
+
+For the first single-operator version, canonical data lives in a versioned file:
+
+`marketing/sticker-data/registry.json`
+
+A small local Node service exposes validated GET/PUT endpoints, performs atomic
+writes, and uses a revision number to reject stale saves. Local storage may cache
+draft form state but is never the only copy of placement data. The registry has
+a schema version and can be exported as JSON and GeoJSON.
+
+Field photos should not be embedded in the registry. The MVP stores optimized
+photo files beside the registry with relative references; if the collection
+grows or multiple operators are added, move records and photos to a hosted
+database/object store without changing entity IDs.
+
+### Operational and ethical safeguards
+
+- Permission is visible and filterable; denied locations cannot receive an
+  active placement.
+- The tool should never encourage illegal, unsafe, destructive, or unauthorized
+  placement.
+- Exact location data remains private even if aggregate campaign reporting is
+  published later.
+- Photos should avoid faces, vehicle plates, and other unnecessary identifiers.
+- QR analytics should use placement identity and coarse timestamps, not scanner
+  geolocation or fingerprinting.
+
+## High-value follow-up ideas
+
+- **Verification ride:** generate an efficient cycling route through locations
+  due for recheck, then open it in Cycleways.
+- **Coverage gaps:** compare placements with route starts, transit hubs, schools,
+  parks, and target communities to reveal underserved areas.
+- **Inventory and print batches:** track unused, assigned, placed, and discarded
+  stickers by batch and design version.
+- **Campaign dashboard:** planned versus placed, verified percentage, overdue
+  checks, QR scans, top destinations, and placements needing attention.
+- **Smart reminders:** surface outdoor stickers after rain/heat exposure or at
+  the campaign's recheck interval.
+- **Photo timeline:** before/after comparisons for fading and adhesion quality.
+- **A/B learning:** compare rider, caption, size, and destination variants using
+  placement-aware scan rates without collecting personal scanner data.
+- **Candidate score:** rank planned sites by permission readiness, route traffic,
+  visibility, audience fit, geographic coverage, and maintenance cost.
+- **Field pack:** printable or mobile checklist ordered by geography, including
+  sticker thumbnail, location photo, placement notes, and QR short code.
+
 ## Deferred decisions
 
 - A true vector redraw and printer-specific contour cut line.
 - A round-badge layout with an attached footer ribbon.
-- Managed short-link redirects and per-placement scan analytics.
+- Hosted short-link redirects and privacy-preserving scan analytics.
+- Multi-user accounts, cloud sync, and conflict resolution beyond revision-based
+  single-operator saves.
 - Direct PDF generation; the MVP uses the browser's A4 print/PDF dialog.

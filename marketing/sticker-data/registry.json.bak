@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "revision": 2,
+  "updatedAt": "2026-07-11T08:39:21.160Z",
+  "settings": {
+    "publicBaseUrl": "https://cycleways.app",
+    "defaultRecheckDays": 90
+  },
+  "campaigns": [
+    {
+      "id": "campaign-general",
+      "name": "General placements",
+      "objective": "Cycleways awareness and route discovery",
+      "status": "active",
+      "recheckDays": 90,
+      "createdAt": "2026-07-11T00:00:00.000Z",
+      "updatedAt": "2026-07-11T00:00:00.000Z"
+    }
+  ],
+  "locations": [
+    {
+      "id": "loc-20260711014723-5eq05",
+      "campaignId": "campaign-general",
+      "name": "Sde Nehemia gate",
+      "type": "trailhead",
+      "coordinates": [
+        35.618743,
+        33.182604
+      ],
+      "accuracyM": null,
+      "permissionStatus": "unknown",
+      "priority": "normal",
+      "plannedDate": null,
+      "landmark": "",
+      "instructions": "",
+      "notes": "",
+      "createdAt": "2026-07-11T01:47:23.822Z",
+      "updatedAt": "2026-07-11T01:47:23.822Z"
+    },
+    {
+      "id": "loc-20260711083921-2a062",
+      "campaignId": "campaign-general",
+      "name": "Historic Jordan start",
+      "type": "trailhead",
+      "coordinates": [
+        35.611734,
+        33.170394
+      ],
+      "accuracyM": null,
+      "permissionStatus": "unknown",
+      "priority": "normal",
+      "plannedDate": null,
+      "landmark": "",
+      "instructions": "",
+      "notes": "",
+      "createdAt": "2026-07-11T08:39:21.152Z",
+      "updatedAt": "2026-07-11T08:39:21.152Z"
+    }
+  ],
+  "designVersions": [],
+  "placements": [],
+  "scanEvents": []
+}
