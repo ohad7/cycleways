@@ -1,7 +1,9 @@
 # iOS When-In-Use Lock-Screen Navigation Spike
 
 **Date:** 2026-07-10  
-**Status:** Native-source analysis complete; physical-device protocol not run
+**Status:** Native-source analysis complete; lock-screen device case **passed
+2026-07-11** (see "Device results" below). Home-screen and repeat-run cases
+still pending before the Always-removal follow-up plan.
 
 ## Question
 
@@ -124,8 +126,41 @@ Also capture any native/JS errors from `startLocationUpdatesAsync`; the current
 wrapper converts them to `false`, so the experiment build should log the error
 without changing production behavior.
 
+## Device results — 2026-07-11 (lock-screen voice soak test)
+
+Run on a physical iPhone (dev build via `scripts/run-on-device.sh`), using the
+Task 20 lock-screen soak test (`lockScreenVoiceTest.js`: ride-style
+`startNavigationBackgroundUpdates` keep-alive + a numbered spoken prompt every
+10 s for ~2 minutes), after the D11 audio-session-activation fix landed:
+
+- **Run A (control, Always granted):** phone locked for the full run — all
+  numbered prompts audible. Confirms D11 lock-screen audio under the current
+  permission model.
+- **Run B (spike, `EXPO_PUBLIC_NAV_WHEN_IN_USE_SPIKE=1`, While-Using only):**
+  no Always prompt (spike path skips it), TaskManager consumer registered from
+  the foreground, phone locked — **all 13 prompts (intro + 12) audible**.
+  When-In-Use + foreground-initiated `startLocationUpdatesAsync` kept the app
+  running and speaking under lock, exactly the Waze/Google-Maps pattern the
+  source analysis predicted.
+- Caveat from the first (invalid) run B attempt: the `EXPO_PUBLIC_*` flag is
+  baked in when Metro starts — a stale bundler silently runs without the
+  spike. The soak-test status line shows "מצב ניסוי: בלי הרשאת תמיד" when the
+  spike is actually active; treat its absence as an invalid run.
+
+Still pending per the original protocol before a final go: the Home-screen
+(backgrounded, not locked) case, a repeat run after a fresh app launch
+(stale-registration behavior), and recording the device model / iOS version.
+All are runnable indoors with the same soak test.
+
 ## Recommendation
 
+**Lock-screen case: go.** The 2026-07-11 device results remove the main
+uncertainty. Complete the two remaining soak-test cases above, then create the
+follow-up design/plan to drop the Always request while retaining the
+TaskManager registration path and adding startup-failure telemetry (per D9,
+that removal stays out of this plan's scope).
+
+Original (2026-07-10) recommendation, superseded by the above:
 **Do not remove the Always request yet.** Source analysis corrects the proposed
 mechanism: a When-In-Use design, if viable, must retain the TaskManager-backed
 `startLocationUpdatesAsync` path and initiate it while the app is foregrounded;

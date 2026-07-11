@@ -1929,7 +1929,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 - [x] Implement controller + sheet wiring (short press keeps the one-shot sample).
 - [x] Device lab protocol (run A — current permission model): **PASS 2026-07-11** — Always granted, phone locked, numbered prompts audible throughout. Lock-screen voice fix (D11) confirmed on device.
-- [ ] Device lab protocol (run B — Task 18 When-In-Use spike, same soak test): the controller reuses `requestNavigationPermissions`, so it honors `EXPO_PUBLIC_NAV_WHEN_IN_USE_SPIKE=1` (dev builds only). Fresh install with While-Using permission only, start the dev server with the flag, run the same soak test — the status line shows "מצב ניסוי: בלי הרשאת תמיד". Prompts audible under lock = evidence toward Task 18's go decision (record per its findings doc; the Always-request removal remains its own follow-up plan).
+- [x] Device lab protocol (run B — Task 18 When-In-Use spike, same soak test): **PASS 2026-07-11** — While-Using only, spike flag active (status line showed "מצב ניסוי: בלי הרשאת תמיד", no Always prompt), phone locked: all 13 prompts audible. Recorded in `permission-spike-findings.md`; remaining before the Always-removal follow-up plan: Home-screen (backgrounded) case + fresh-relaunch repeat, both runnable with the same soak test. First attempt was invalid — a stale Metro served an unflagged bundle; the missing "מצב ניסוי" status text is the tell.
 
 ---
 
@@ -1938,4 +1938,5 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - [x] `npm test` (full chain) and `npm run test:navigation-camera` — all green.
 - [x] Native iOS Simulator build/install/launch (`npx expo run:ios`) — 0 errors, 3 third-party linker warnings; app bundled and opened on an iPhone 15 simulator.
 - [ ] Simulator end-to-end with a dev journey scenario: acquisition phrase includes a compass word; a close turn pair speaks a compound instruction; panning re-follows after ~12s; the data pill shows distance/speed only.
-- [ ] Device (after native rebuild): lock-screen voice check (Task 4 Step 6, now via the Task 20 soak test) and the permission spike protocol (Task 18).
+- [x] Device (after native rebuild): lock-screen voice check — **PASS 2026-07-11** via the Task 20 soak test (run A: Always; run B: When-In-Use spike, all prompts audible under lock). Permission spike protocol (Task 18): lock-screen case passed; Home-screen + fresh-relaunch cases remain (see `permission-spike-findings.md`).
+- [ ] Real ride: confirm actual turn cues are spoken under lock (final end-to-end validation of D11).
