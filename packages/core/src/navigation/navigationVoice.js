@@ -13,6 +13,7 @@ const PRIORITY = {
 };
 
 function finite(value) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -21,7 +22,7 @@ export function formatSpeechDistanceMeters(meters, locale = DEFAULT_LANGUAGE) {
   const value = finite(meters);
   if (value === null || value < 0) return "";
   if (locale === "he-IL") {
-    if (value < 1000) return `${Math.max(10, Math.round(value / 10) * 10)} מטר`;
+    if (value < 1000) return `${Math.max(10, Math.round(value / 10) * 10)} מטרים`;
     const km = value / 1000;
     return `${km.toFixed(km >= 10 ? 0 : 1)} קילומטר`;
   }
@@ -69,7 +70,26 @@ export function compassWord(bearingDeg, locale = DEFAULT_LANGUAGE) {
 
 function cuePhrase(event, state, locale) {
   if (event.kind === "off-route") {
-    return locale === "he-IL" ? "יָצָאתָ מֵהַמַּסְלוּל." : "You left the route.";
+    const direction = compassWord(event.bearingDeg, locale);
+    const distanceText = formatSpeechDistanceMeters(event.distanceMeters, locale);
+    if (locale === "he-IL") {
+      const routeDetails = direction
+        ? `המסלול ${direction} מכאן${distanceText ? `, במרחק כ־${distanceText}` : ""}`
+        : distanceText
+          ? `המסלול במרחק כ־${distanceText} מכאן`
+          : "";
+      return routeDetails
+        ? `יָצָאתָ מֵהַמַּסְלוּל. ${routeDetails}. עקוב אחרי הקו המסומן`
+        : "יָצָאתָ מֵהַמַּסְלוּל.";
+    }
+    const routeDetails = direction
+      ? `The route is ${direction} of you${distanceText ? `, about ${distanceText} away` : ""}`
+      : distanceText
+        ? `The route is about ${distanceText} away`
+        : "";
+    return routeDetails
+      ? `You left the route. ${routeDetails}. Follow the marked line.`
+      : "You left the route.";
   }
   if (event.kind === "acquired") {
     const direction = compassWord(state?.progress?.bearingToNextDeg, locale);
@@ -91,20 +111,6 @@ function cuePhrase(event, state, locale) {
     return locale === "he-IL"
       ? "אתה רוכב נגד כיוון המסלול"
       : "You are riding against the route direction.";
-  }
-  if (event.kind === "rejoin-ready") {
-    const direction = compassWord(event.bearingDeg, locale);
-    const distanceText = formatSpeechDistanceMeters(event.distanceMeters, locale);
-    if (locale === "he-IL") {
-      const where = direction ? `המסלול ${direction} מכאן` : "המסלול קרוב";
-      const distance = distanceText ? `, במרחק כ־${distanceText}` : "";
-      return `${where}${distance}. עקוב אחרי הקו המסומן`;
-    }
-    const where = direction
-      ? `The route is ${direction} of you`
-      : "The route is nearby";
-    const distance = distanceText ? `, about ${distanceText} away` : "";
-    return `${where}${distance}. Follow the marked line.`;
   }
   if (event.kind !== "cue") return null;
 
@@ -186,7 +192,6 @@ function utteranceIdFor(event) {
   if (!event) return null;
   if (event.kind === "off-route") return "state:off-route";
   if (event.kind === "wrong-way") return "state:wrong-way";
-  if (event.kind === "rejoin-ready") return "state:rejoin-ready";
   if (event.kind === "acquired") {
     if (event.acquisition === "join-route") return "state:acquired:join-route";
     if (event.acquisition === "reacquired") return "state:acquired:reacquired";
@@ -203,7 +208,6 @@ function priorityFor(event) {
   if (!event) return PRIORITY.info;
   if (event.kind === "off-route") return PRIORITY.alert;
   if (event.kind === "wrong-way") return PRIORITY.alert;
-  if (event.kind === "rejoin-ready") return PRIORITY.info;
   if (event.kind === "acquired") return PRIORITY.info;
   if (event.kind === "cue") {
     if (event.cueType === "arrive") return PRIORITY.alert;
@@ -216,8 +220,7 @@ function isRepeatableStateEvent(event) {
   return (
     event?.kind === "off-route" ||
     event?.kind === "acquired" ||
-    event?.kind === "wrong-way" ||
-    event?.kind === "rejoin-ready"
+    event?.kind === "wrong-way"
   );
 }
 

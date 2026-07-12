@@ -48,7 +48,7 @@ const timeline = [
   entry({ progressMeters: 450, wrongWay: false }),
   entry({
     progressMeters: 500,
-    voiceText: "בעוד 100 מטר, פנה שמאלה אל שביל הצפון",
+    voiceText: "בעוד 100 מטרים, פנה שמאלה אל שביל הצפון",
     presentation: { cueText: "פנה שמאלה אל שביל הצפון", statusText: "", guidanceText: "" },
   }),
   entry({ progressMeters: 900, activeCueType: "arrive", presentation: { cueText: "הגעת ליעד", statusText: "", guidanceText: "" } }),

@@ -586,6 +586,8 @@ function offRouteRequestedSession() {
   const confirmed = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(6000) });
   assert.equal(confirmed.status, "off-route");
   assert.ok(confirmed.cueEvent && confirmed.cueEvent.kind === "off-route", "off-route event on entry");
+  assert.ok(Number.isFinite(confirmed.cueEvent.distanceMeters));
+  assert.ok(Number.isFinite(confirmed.cueEvent.bearingDeg));
   assert.equal(confirmed.approach.target.mode, "rejoin", "off-route drives a rejoin suggestion");
   assert.equal(confirmed.approach.suggestionStatus, "requesting");
   assert.ok(confirmed.routeRequest && confirmed.routeRequest.to);
@@ -598,8 +600,7 @@ function offRouteRequestedSession() {
   });
   assert.equal(ready.approach.suggestionStatus, "ready");
   assert.ok(ready.approach.suggestionGeometry.length >= 2);
-  assert.equal(ready.cueEvent?.kind, "rejoin-ready");
-  assert.ok(Number.isFinite(ready.cueEvent?.bearingDeg));
+  assert.equal(ready.cueEvent, null, "connector readiness is not announced separately");
   assert.equal(ready.routeRequest, null);
   const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
   assert.equal(stillOff.status, "off-route");

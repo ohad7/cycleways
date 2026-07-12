@@ -47,11 +47,15 @@ overhead picture zooms out themselves; the app never forces it.
 **O4 — Guided rejoin: the connector is a guided leg.**
 When the rejoin connector arrives, it is treated like the pre-ride approach
 leg in ownership tier `"guide"` (`approachLeg.js` machinery): turn cues are
-built along the connector and voiced ("פנו ימינה בעוד 80 מטר"), ending with
-the existing reacquire/"back on route" announcement. The off-route alert
-remains the entry announcement. While no connector is available (routing
-failed or still requesting), voice stays as today: the single alert, then the
-rejoin-ready announcement when a connector lands.
+built along the connector and voiced ("פנו ימינה בעוד 80 מטרים"), ending with
+the existing reacquire/"back on route" announcement.
+
+**O4a — One off-route voice announcement.** *(Amended 2026-07-12.)*
+On confirmed departure, one immediate utterance combines the state, direction,
+and straight-line distance back ("יצאת מהמסלול. המסלול צפונה מכאן,
+במרחק כ־50 מטרים. עקוב אחרי הקו המסומן"). Connector readiness is no
+longer voiced separately; guided connector turn cues begin when available.
+All spoken sub-kilometer distances use the Hebrew plural unit `"מטרים"`.
 
 **O5 — Live off-route banner.**
 The navigation card shows an off-route state with live distance back

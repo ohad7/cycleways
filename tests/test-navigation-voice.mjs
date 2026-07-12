@@ -23,15 +23,16 @@ const state = {
   activeCue: { distanceToCueMeters: 95, cue: turnPreview.cue, phase: "preview" },
 };
 
-assert.equal(formatSpeechDistanceMeters(96), "100 מטר");
+assert.equal(formatSpeechDistanceMeters(96), "100 מטרים");
 assert.equal(formatSpeechDistanceMeters(1250), "1.3 קילומטר");
+assert.equal(formatSpeechDistanceMeters(null), "");
 
 {
   const planner = createNavigationVoicePlanner();
   const preview = planner.plan(turnPreview, state, 1000).utterance;
   assert.ok(preview, "preview turn speaks");
   assert.equal(preview.language, "he-IL");
-  assert.match(preview.text, /בעוד 100 מטר/);
+  assert.match(preview.text, /בעוד 100 מטרים/);
   assert.match(preview.text, /פנה ימינה/);
   assert.equal(preview.interruptsCurrentSpeech, false);
 
@@ -50,10 +51,24 @@ assert.equal(formatSpeechDistanceMeters(1250), "1.3 קילומטר");
 
 {
   const planner = createNavigationVoicePlanner();
-  const offRoute = planner.plan({ kind: "off-route" }, {}, 1000).utterance;
+  const offRoute = planner.plan(
+    { kind: "off-route", distanceMeters: 52, bearingDeg: 10 },
+    {},
+    1000,
+  ).utterance;
   assert.ok(offRoute);
-  assert.equal(offRoute.text, "יָצָאתָ מֵהַמַּסְלוּל.");
+  assert.match(offRoute.text, /יָצָאתָ מֵהַמַּסְלוּל/);
+  assert.match(offRoute.text, /המסלול צפונה מכאן/);
+  assert.match(offRoute.text, /50 מטרים/);
+  assert.match(offRoute.text, /עקוב אחרי הקו המסומן/);
   assert.equal(offRoute.interruptsCurrentSpeech, true);
+
+  const bareOffRoute = createNavigationVoicePlanner().plan(
+    { kind: "off-route" },
+    {},
+    1000,
+  ).utterance;
+  assert.equal(bareOffRoute.text, "יָצָאתָ מֵהַמַּסְלוּל.");
 
   const snapshot = planner.snapshot();
   const restored = createNavigationVoicePlanner({ memory: snapshot });
@@ -99,7 +114,7 @@ assert.equal(formatSpeechDistanceMeters(1250), "1.3 קילומטר");
     1000,
   ).utterance;
   assert.ok(approach, "approach cue speaks");
-  assert.match(approach.text, /בעוד 80 מטר/);
+  assert.match(approach.text, /בעוד 80 מטרים/);
   assert.match(approach.text, /פנה שמאלה/);
 
   const falseArrival = planner.plan(
@@ -282,14 +297,6 @@ assert.equal(compassWord(null, "he-IL"), null);
   assert.match(wrongWay.text, /נגד כיוון המסלול/);
   assert.equal(wrongWay.interruptsCurrentSpeech, true);
 
-  const rejoin = createNavigationVoicePlanner().plan(
-    { kind: "rejoin-ready", distanceMeters: 52, bearingDeg: 10 },
-    {},
-    1000,
-  ).utterance;
-  assert.match(rejoin.text, /המסלול צפונה מכאן/);
-  assert.match(rejoin.text, /50 מטר/);
-
   const acquired = createNavigationVoicePlanner().plan(
     { kind: "acquired", acquisition: "join-route" },
     { progress: { bearingToNextDeg: 180 } },
@@ -328,7 +335,7 @@ assert.equal(compassWord(null, "he-IL"), null);
       { activeCue: { distanceToCueMeters: 95, cue, phase: "preview" } },
       1000,
     ).utterance;
-    assert.match(utterance.text, /בעוד 100 מטר/);
+    assert.match(utterance.text, /בעוד 100 מטרים/);
     assert.match(utterance.text, /בכיכר/);
     assert.match(utterance.text, expected);
   }

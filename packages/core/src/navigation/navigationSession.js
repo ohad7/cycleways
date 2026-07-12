@@ -81,7 +81,6 @@ export function createNavigationSession(navigationRoute, options = {}) {
   let mainCueKey = restored?.mainCueKey ?? null;
   let wasOffRoute = restored?.wasOffRoute === true;
   let wasWrongWay = restored?.wasWrongWay === true;
-  let rejoinAnnounced = restored?.rejoinAnnounced === true;
   let arrivalDetectedAt = Number.isFinite(Number(restored?.arrivalDetectedAt))
     ? Number(restored.arrivalDetectedAt)
     : null;
@@ -388,7 +387,6 @@ export function createNavigationSession(navigationRoute, options = {}) {
         mainCueKey = null;
         wasOffRoute = false;
         wasWrongWay = false;
-        rejoinAnnounced = false;
         arrivalDetectedAt = null;
         arrivalFixCount = 0;
         lastUserPanAt = null;
@@ -586,7 +584,6 @@ export function createNavigationSession(navigationRoute, options = {}) {
           const firstOffRoute = !wasOffRoute;
           wasOffRoute = true;
           wasWrongWay = false;
-          if (firstOffRoute) rejoinAnnounced = false;
           const rejoin = selectConnectorTarget(navigationRoute, action.fix, {
             mode: "rejoin",
             lastConfirmedProgressMeters,
@@ -614,6 +611,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
               minMoveMeters: REJOIN_REQUEST_MIN_MOVE_M,
             })
           ) {
+            const distanceToRouteMeters = getDistance(action.fix, nextTarget.point);
             // A replacement connector was just requested; the previous leg's
             // tracker (if any) keeps guiding until the new one arrives, so
             // approachTracker/approachCues are left untouched here.
@@ -622,12 +620,18 @@ export function createNavigationSession(navigationRoute, options = {}) {
               progress: mainProgress,
               activeCue: null,
               offRoute: true,
-              cueEvent: firstOffRoute ? { kind: "off-route" } : rejoinLegCueEvent,
+              cueEvent: firstOffRoute
+                ? {
+                    kind: "off-route",
+                    distanceMeters: distanceToRouteMeters,
+                    bearingDeg: computeBearing(action.fix, nextTarget.point),
+                  }
+                : rejoinLegCueEvent,
               justAcquired: false,
               approach: {
                 ...state.approach,
                 target: nextTarget,
-                distanceToRouteMeters: getDistance(action.fix, nextTarget.point),
+                distanceToRouteMeters,
                 suggestionStatus: "requesting",
                 ownershipResolving: false,
                 ownershipRefreshing:
@@ -657,7 +661,14 @@ export function createNavigationSession(navigationRoute, options = {}) {
             progress: mainProgress,
             activeCue: null,
             offRoute: true,
-            cueEvent: firstOffRoute ? { kind: "off-route" } : rejoinLegCueEvent,
+            cueEvent: firstOffRoute
+              ? {
+                  kind: "off-route",
+                  distanceMeters: distanceToRouteMeters,
+                  bearingDeg:
+                    target?.point ? computeBearing(action.fix, target.point) : null,
+                }
+              : rejoinLegCueEvent,
             justAcquired: false,
             approach: {
               ...state.approach,
@@ -731,7 +742,6 @@ export function createNavigationSession(navigationRoute, options = {}) {
           };
         }
         wasOffRoute = false;
-        rejoinAnnounced = false;
         return set({
           status: "navigating",
           progress: mainProgress,
@@ -880,25 +890,6 @@ export function createNavigationSession(navigationRoute, options = {}) {
             },
           });
         }
-        let rejoinCueEvent = null;
-        if (
-          state.status === "off-route" &&
-          state.routeRequest?.targetMode === "rejoin" &&
-          !rejoinAnnounced
-        ) {
-          rejoinAnnounced = true;
-          rejoinCueEvent = {
-            kind: "rejoin-ready",
-            distanceMeters:
-              Number.isFinite(distanceMeters) && distanceMeters > 0
-                ? distanceMeters
-                : null,
-            bearingDeg:
-              state.latestFix && state.routeRequest?.to
-                ? computeBearing(state.latestFix, state.routeRequest.to)
-                : null,
-          };
-        }
         // O4: the rejoin connector is a guided leg — same machinery as the
         // pre-ride approach (plans/off-route-experience).
         let rejoinLeg = buildApproachLeg(connectorResult, {
@@ -936,7 +927,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
             ownershipTier: rejoinLeg ? "guide" : state.approach.ownershipTier,
           },
           routeRequest: null,
-          cueEvent: rejoinCueEvent,
+          cueEvent: null,
           connectorResult: {
             requestId: action.requestId,
             result: "ready",
@@ -1107,7 +1098,6 @@ export function createNavigationSession(navigationRoute, options = {}) {
       mainCueKey,
       wasOffRoute,
       wasWrongWay,
-      rejoinAnnounced,
       lastConfirmedProgressMeters,
       lastRequestPos,
       connectorRequestAttempt,
