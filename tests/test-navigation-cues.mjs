@@ -42,6 +42,15 @@ function routeFrom(geometry, extra = {}) {
   assert.equal(arrives.length, 1, "exactly one arrive cue");
   assert.equal(starts[0].distanceMeters, 0, "start cue at 0 m");
   assert.ok(near(arrives[0].distanceMeters, 931.5, 2), "arrive cue at route end");
+  assert.equal(
+    selectActiveCue(cues, arrives[0].distanceMeters - 201),
+    null,
+    "arrival preview does not start before 200 m",
+  );
+  const arrivalPreview = selectActiveCue(cues, arrives[0].distanceMeters - 200);
+  assert.equal(arrivalPreview?.cue.type, "arrive");
+  assert.equal(arrivalPreview?.phase, "preview");
+  assert.ok(near(arrivalPreview?.distanceToCueMeters, 200, 0.01));
   assert.equal(findType(cues, "turn").length, 0, "no turns on a straight route");
 
   const seamCues = buildRouteCues(straight, { includeArrival: false });

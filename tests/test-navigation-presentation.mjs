@@ -65,6 +65,15 @@ import {
 
 // Arrival cue.
 {
+  const preview = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: { cue: { type: "arrive" }, phase: "preview", distanceToCueMeters: 198 },
+    progress: { remainingMeters: 198 },
+  });
+  assert.equal(preview.cueText, "בעוד 200 מטרים תגיע ליעד");
+  assert.equal(preview.cuePrimaryText, "בעוד 200 מטרים תגיע ליעד");
+
   const p = getNavigationPresentation({
     status: "navigating",
     offRoute: false,

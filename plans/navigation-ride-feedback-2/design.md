@@ -52,6 +52,12 @@ and a nominal wall-clock fallback would require a separate timer lifecycle.
 While latched, off-route/rejoin transitions are suppressed — riding past the
 finish completes the arrival instead of rerouting.
 
+**R2a — Distinct arrival preview and final messages.** *(Amended 2026-07-12.)*
+The destination cue enters preview at 200 m (other maneuver previews remain at
+120 m). Its card and voice say "בעוד 200 מטרים תגיע ליעד". Crossing
+into the existing final window keeps the definitive "הגעת ליעד" message, so
+approach and arrival are no longer presented as two identical events.
+
 Core `ended` is a state transition, not native cleanup. Foreground automatic
 arrival and manual stop share one idempotent finalizer in
 `useNavigationSession`: stop the foreground watch, stop background updates,

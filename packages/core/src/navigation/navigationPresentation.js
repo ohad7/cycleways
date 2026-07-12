@@ -220,6 +220,10 @@ export function getNavigationPresentation(state = {}) {
   const cueDistanceText = active
     ? formatDistanceMeters(active.distanceToCueMeters)
     : "";
+  const arrivalPreviewText =
+    active?.cue?.type === "arrive" && active.phase === "preview"
+      ? `בעוד ${cueDistanceText.replace(/ מ׳$/, " מטרים")} תגיע ליעד`
+      : "";
   const arrived =
     !offRoute &&
     progress?.hasAcquiredRoute === true &&
@@ -256,6 +260,7 @@ export function getNavigationPresentation(state = {}) {
   const cuePrimaryText = (() => {
     const c = active?.cue || null;
     if (!c) return cue.text;
+    if (arrivalPreviewText) return arrivalPreviewText;
     if (c.type === "turn") return turnPrimaryText(c);
     if (c.type === "enter-segment") return "המשך במסלול";
     return cue.text;
@@ -358,7 +363,7 @@ export function getNavigationPresentation(state = {}) {
       : "",
     statusText: STATUS_TEXT[status] ?? "",
     showCue: navigating && !offRoute,
-    cueText: cue.text,
+    cueText: arrivalPreviewText || cue.text,
     cueIcon: cue.icon,
     cueDistanceText,
     remainingText,

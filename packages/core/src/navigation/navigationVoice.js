@@ -172,6 +172,16 @@ function cuePhrase(event, state, locale) {
       // approach leg means joining the main route, not arriving at the ride's
       // destination. The acquired(join-route) event owns that announcement.
       if (event.leg === "approach") return null;
+      if (event.phase === "preview") {
+        if (locale === "he-IL") {
+          return distanceText
+            ? `בעוד ${distanceText} תגיע ליעד`
+            : "בקרוב תגיע ליעד";
+        }
+        return distanceText
+          ? `In ${distanceText}, you will reach your destination.`
+          : "You will reach your destination soon.";
+      }
       return locale === "he-IL" ? "הִגַּעְתָּ לַיַּעַד." : "You have arrived.";
     case "hazard":
     case "caution":

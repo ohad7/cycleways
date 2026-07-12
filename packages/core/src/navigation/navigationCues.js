@@ -22,6 +22,7 @@ const MIN_TURN_SPACING_M = 10; // hard floor for geometry noise
 const COMPOUND_TURN_WINDOW_M = 60;
 const SPAN_MERGE_TOLERANCE_M = 20;
 const PREVIEW_MAX_M = 120; // upper bound of the preview window before a cue
+const ARRIVAL_PREVIEW_MAX_M = 200; // destination heads-up starts earlier
 const FINAL_MAX_M = 35; // within this, the cue is "final"
 export const ROUNDABOUT_DIRECTION_THRESHOLDS = { straightMaxDeg: 40, uTurnMaxDeg: 130 };
 export const ROUNDABOUT_SUPPRESSION_PAD_M = 8;
@@ -207,7 +208,8 @@ export function selectActiveCue(cues, progressMeters) {
     if (cue.type === "start") continue; // start is informational, not a maneuver
     const d = cue.distanceMeters - progressMeters;
     if (d < 0) continue; // already passed
-    if (d > PREVIEW_MAX_M) continue;
+    const previewMax = cue.type === "arrive" ? ARRIVAL_PREVIEW_MAX_M : PREVIEW_MAX_M;
+    if (d > previewMax) continue;
     const phasePriority = d <= FINAL_MAX_M ? 0 : 1;
     const priority = SELECTION_PRIORITY[cue.type] ?? 1;
     if (

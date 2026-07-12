@@ -101,6 +101,45 @@ assert.equal(formatSpeechDistanceMeters(null), "");
 
 {
   const planner = createNavigationVoicePlanner();
+  const preview = planner.plan(
+    {
+      kind: "cue",
+      cueType: "arrive",
+      phase: "preview",
+      cue: { type: "arrive", distanceMeters: 1000 },
+    },
+    {
+      activeCue: {
+        cue: { type: "arrive", distanceMeters: 1000 },
+        phase: "preview",
+        distanceToCueMeters: 198,
+      },
+    },
+    1000,
+  ).utterance;
+  assert.equal(preview.text, "בעוד 200 מטרים תגיע ליעד");
+
+  const final = planner.plan(
+    {
+      kind: "cue",
+      cueType: "arrive",
+      phase: "final",
+      cue: { type: "arrive", distanceMeters: 1000 },
+    },
+    {
+      activeCue: {
+        cue: { type: "arrive", distanceMeters: 1000 },
+        phase: "final",
+        distanceToCueMeters: 20,
+      },
+    },
+    2000,
+  ).utterance;
+  assert.equal(final.text, "הִגַּעְתָּ לַיַּעַד.");
+}
+
+{
+  const planner = createNavigationVoicePlanner();
   const approachTurn = {
     kind: "cue",
     cueType: "turn",
