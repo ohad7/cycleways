@@ -491,6 +491,33 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     /1[0-2]0/.test(legWithoutProgress.offRouteText),
     `fallback distance when leg progress missing, got ${legWithoutProgress.offRouteText}`,
   );
+
+  // The session's empty approach shape uses null, which must not coerce to 0.
+  const noKnownDistance = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: null,
+      approachProgress: { remainingMeters: null },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.equal(noKnownDistance.offRouteText, "יצאתם מהמסלול");
+
+  const legWithNullProgress = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: 118,
+      approachLegGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      approachProgress: { remainingMeters: null },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(
+    /1[0-2]0/.test(legWithNullProgress.offRouteText),
+    `fallback distance when leg progress is null, got ${legWithNullProgress.offRouteText}`,
+  );
 }
 
 console.log("navigation presentation tests passed");

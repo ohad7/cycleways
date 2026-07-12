@@ -277,8 +277,10 @@ export function getNavigationPresentation(state = {}) {
 
   // O5: off-route card shows the live distance back to the route.
   // Prefer remaining-along-leg (from a guided rejoin connector), fall back to straight-line.
-  const legRemaining = Number(approach?.approachProgress?.remainingMeters);
-  const straightLine = Number(approach?.distanceToRouteMeters);
+  const rawLegRemaining = approach?.approachProgress?.remainingMeters;
+  const rawStraightLine = approach?.distanceToRouteMeters;
+  const legRemaining = rawLegRemaining == null ? NaN : Number(rawLegRemaining);
+  const straightLine = rawStraightLine == null ? NaN : Number(rawStraightLine);
   const hasGuidedLeg =
     Array.isArray(approach?.approachLegGeometry) &&
     approach.approachLegGeometry.length >= 2;
