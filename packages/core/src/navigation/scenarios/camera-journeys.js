@@ -331,7 +331,10 @@ const recoveryJourney = {
   ],
   expect: [
     { type: "camera-sequence", values: ["ride", "off-route", "reacquire-route", "pre-turn", "arrived-local"] },
-    { type: "camera-rotations", atMost: 0, during: "off-route" },
+    // A guided rejoin leg is delivered during the off-route segment (see
+    // recoveryResponses above), so the frame steers course-up along it
+    // instead of holding still.
+    { type: "camera-rotations", atMost: 2, during: "off-route" },
     { type: "camera-fit-kind", value: "route", never: true },
     { type: "arrived" },
   ],

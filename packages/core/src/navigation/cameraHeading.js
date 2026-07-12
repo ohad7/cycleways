@@ -20,7 +20,9 @@ const ROUTE_BEARING_DISAGREE_DEG = 60;
 // maneuvering to get back, so the map must hold perfectly still (the puck
 // arrow and the rejoin guidance carry the live direction). Any direction
 // signal followed while off-route — even a smoothed one — rotates the frame
-// exactly when the rider most needs a stable reference.
+// exactly when the rider most needs a stable reference. (The full-state
+// entry point, `cameraHeadingTargetForState`, relaxes this once a guided
+// rejoin leg is active: the frame then steers along that leg instead.)
 export function cameraHeadingTarget(progress) {
   if (!progress) return null;
   if (progress.offRoute === true) return null;
@@ -48,11 +50,27 @@ export function cameraHeadingTarget(progress) {
 
 export function cameraHeadingTargetForState(state, cameraShot = null) {
   const stage = cameraShot?.stage || null;
-  if (
-    stage === "off-route" ||
-    stage === "arrived-local" ||
-    stage === "ride-summary"
-  ) return null;
+  if (stage === "arrived-local" || stage === "ride-summary") return null;
+
+  if (stage === "off-route") {
+    // Guided rejoin leg active: steer along it like an approach leg.
+    // No leg: hold perfectly still — the puck carries the live direction.
+    const approachProgress = state?.approach?.approachProgress || null;
+    if (
+      Array.isArray(state?.approach?.approachLegGeometry) &&
+      state.approach.approachLegGeometry.length >= 2
+    ) {
+      const corridorBearing = cameraCorridorBearing(
+        state.approach.approachLegGeometry,
+        approachProgress?.progressMeters,
+      );
+      if (Number.isFinite(corridorBearing)) return corridorBearing;
+      if (Number.isFinite(approachProgress?.bearingToNextDeg)) {
+        return approachProgress.bearingToNextDeg;
+      }
+    }
+    return null;
+  }
 
   if (stage === "approach-guide" || stage === "approach-guide-pre-turn") {
     const approachProgress = state?.approach?.approachProgress || null;

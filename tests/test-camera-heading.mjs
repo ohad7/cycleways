@@ -219,4 +219,36 @@ assert.throws(
   );
 }
 
+// --- O1: off-route with a guided rejoin leg steers along the leg -----------
+{
+  const target = cameraHeadingTargetForState(
+    {
+      status: "off-route",
+      progress: { offRoute: true },
+      approach: {
+        approachLegGeometry: [
+          { lat: 33.1018, lng: 35.6021 },
+          { lat: 33.1, lng: 35.6021 },
+        ],
+        approachProgress: { offRoute: false, bearingToNextDeg: 180, smoothedSpeedMps: 4 },
+      },
+    },
+    { stage: "off-route", bearingPolicy: "route" },
+  );
+  assert.ok(Number.isFinite(target), "guided rejoin has a heading target");
+}
+
+// --- O1: off-route with no leg still holds the frame ------------------------
+{
+  const target = cameraHeadingTargetForState(
+    {
+      status: "off-route",
+      progress: { offRoute: true },
+      approach: {},
+    },
+    { stage: "off-route", bearingPolicy: "route" },
+  );
+  assert.equal(target, null, "off-route with no guided leg holds the frame");
+}
+
 console.log("camera heading governor tests passed");

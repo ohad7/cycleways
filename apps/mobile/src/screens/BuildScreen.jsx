@@ -202,10 +202,6 @@ const NAV_FOLLOW_PITCH = 55;
 // Approach/rejoin fit shots include a small slice of the main route after the
 // join point so a straight-line connector still frames "where this ride goes".
 const APPROACH_ROUTE_LOOKAHEAD_M = 180;
-// Off-route rejoin fit shots include the live rider point, so raw GPS movement
-// would otherwise restart a bounds animation on every fix.
-const REJOIN_CAMERA_FIT_MIN_INTERVAL_MS = 1500;
-const REJOIN_CAMERA_FIT_KEY_DECIMALS = 4;
 const DEFAULT_CAMERA_FIT_KEY_DECIMALS = 5;
 // Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
 // is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
@@ -2519,10 +2515,21 @@ export default function BuildScreen({ navigation, route }) {
           let cameraCorridor = [];
           if (shot.viewportMode === "follow") {
             const stateNow = sessionStateRef.current || {};
-            const isApproachGeometry = shot.geometryRole === "approach";
-            const corridorGeometry = isApproachGeometry
+            const isApproachGeometry =
+              shot.geometryRole === "approach" || shot.geometryRole === "rejoin";
+            let corridorGeometry = isApproachGeometry
               ? stateNow.approach?.approachLegGeometry || []
               : geom;
+            // O1 fallback: before the connector arrives, frame the straight
+            // line to the rejoin target so the camera still points the way.
+            if (
+              shot.geometryRole === "rejoin" &&
+              corridorGeometry.length < 2 &&
+              validMapPoint(rawFixRef.current) &&
+              validMapPoint(stateNow.approach?.target?.point)
+            ) {
+              corridorGeometry = [rawFixRef.current, stateNow.approach.target.point];
+            }
             const corridorProgress = isApproachGeometry
               ? stateNow.approach?.approachProgress?.progressMeters || 0
               : smoothedMetersRef.current;
@@ -2687,8 +2694,7 @@ export default function BuildScreen({ navigation, route }) {
             const routeLookahead =
               shot.fitKind === "approach" ||
               shot.fitKind === "approach-start" ||
-              shot.fitKind === "approach-leg" ||
-              shot.fitKind === "rejoin"
+              shot.fitKind === "approach-leg"
                 ? routeLookaheadPoint(arcNow, geom, target)
                 : null;
             const fitPoints = (
@@ -2724,12 +2730,8 @@ export default function BuildScreen({ navigation, route }) {
                 ? shot.pitchRange?.min ?? shot.pitch
                 : shot.pitch
               : null;
-            const fitKeyDecimals =
-              shot.fitKind === "rejoin"
-                ? REJOIN_CAMERA_FIT_KEY_DECIMALS
-                : DEFAULT_CAMERA_FIT_KEY_DECIMALS;
             const fitPointKey = fitPoints
-              .map((point) => cameraPointKey(point, fitKeyDecimals))
+              .map((point) => cameraPointKey(point))
               .join("|");
             const fitKey = [
               shot.fitKind,
@@ -2762,9 +2764,7 @@ export default function BuildScreen({ navigation, route }) {
               cameraOverviewFrameRef.current,
               overviewFrame,
               {
-                minMoveMeters:
-                  shot.fitKind === "rejoin" ? 50 :
-                  shot.fitKind === "approach-leg" ? 40 : 70,
+                minMoveMeters: shot.fitKind === "approach-leg" ? 40 : 70,
               },
             );
             if (
@@ -2775,43 +2775,35 @@ export default function BuildScreen({ navigation, route }) {
               cameraFitKeyRef.current !== fitKey &&
               (reframe.reframe || requiredGeometryOutside)
             ) {
-              const minFitIntervalMs =
-                shot.fitKind === "rejoin" ? REJOIN_CAMERA_FIT_MIN_INTERVAL_MS : 0;
-              const canFitNow =
-                cameraFitKeyRef.current === null ||
-                minFitIntervalMs === 0 ||
-                ts - cameraFitAtRef.current >= minFitIntervalMs;
-              if (canFitNow) {
-                const rawPoint = validMapPoint(raw) ? raw : null;
-                const applied = navigationCameraRef.current?.applyOverview(
-                  {
-                    key: fitKey,
-                    points: fitPoints,
-                    requiredPoints: fitPoints.map((point, index) => ({
-                      ...point,
-                      id:
-                        rawPoint &&
-                        point.lat === rawPoint.lat &&
-                        point.lng === rawPoint.lng
-                          ? "rider"
-                          : `required-${index}`,
-                    })),
-                    riderId: rawPoint ? "rider" : null,
-                    riderAnchorY: shot.riderAnchorY,
-                    heading: fitHeading,
-                    pitch: fitPitch,
-                    zoom: overviewZoom,
-                    animationDuration: shot.transition?.durationMs,
-                  },
-                  navigationViewportRef.current,
-                );
-                // Only mark the fit as done when the adapter actually applied
-                // it; a skip (e.g. locked screen) retries on a later tick.
-                if (applied) {
-                  cameraFitKeyRef.current = fitKey;
-                  cameraFitAtRef.current = ts;
-                  cameraOverviewFrameRef.current = overviewFrame;
-                }
+              const rawPoint = validMapPoint(raw) ? raw : null;
+              const applied = navigationCameraRef.current?.applyOverview(
+                {
+                  key: fitKey,
+                  points: fitPoints,
+                  requiredPoints: fitPoints.map((point, index) => ({
+                    ...point,
+                    id:
+                      rawPoint &&
+                      point.lat === rawPoint.lat &&
+                      point.lng === rawPoint.lng
+                        ? "rider"
+                        : `required-${index}`,
+                  })),
+                  riderId: rawPoint ? "rider" : null,
+                  riderAnchorY: shot.riderAnchorY,
+                  heading: fitHeading,
+                  pitch: fitPitch,
+                  zoom: overviewZoom,
+                  animationDuration: shot.transition?.durationMs,
+                },
+                navigationViewportRef.current,
+              );
+              // Only mark the fit as done when the adapter actually applied
+              // it; a skip (e.g. locked screen) retries on a later tick.
+              if (applied) {
+                cameraFitKeyRef.current = fitKey;
+                cameraFitAtRef.current = ts;
+                cameraOverviewFrameRef.current = overviewFrame;
               }
             }
             scheduleTick();
