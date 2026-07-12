@@ -284,9 +284,10 @@ export function getNavigationPresentation(state = {}) {
     approach.approachLegGeometry.length >= 2;
   const backMeters =
     hasGuidedLeg && Number.isFinite(legRemaining) ? legRemaining : straightLine;
-  const offRouteTextWithDistance = Number.isFinite(backMeters)
-    ? `יצאתם מהמסלול · ${formatDistanceMeters(backMeters)} לחזרה`
-    : "יצאתם מהמסלול";
+  const offRouteTextWithDistance =
+    Number.isFinite(backMeters) && backMeters >= 0
+      ? `יצאתם מהמסלול · ${formatDistanceMeters(backMeters)} לחזרה`
+      : "יצאתם מהמסלול";
 
   let arrivalSummary = null;
   if (cardMode === "arrived") {

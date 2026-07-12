@@ -77,7 +77,7 @@ export default function NavPanel({
           {p.cardMode === "off-route" ? (
             <>
               <Text style={[styles.approachHeading, p.offRoute ? styles.offText : null]}>
-                {p.approachHeading}
+                {p.offRouteText}
               </Text>
               <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
                 {showApproachArrow ? (
@@ -94,7 +94,6 @@ export default function NavPanel({
                   numberOfLines={1}
                 >
                   {p.destinationLabel}
-                  {p.approachDistanceShort ? ` · ${p.approachDistanceShort}` : ""}
                 </Text>
               </View>
               {p.approachSupportText ? (

@@ -474,6 +474,23 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: true, offRoute: true },
   });
   assert.ok(/1[0-2]0/.test(bare.offRouteText), `fallback distance, got ${bare.offRouteText}`);
+
+  // Leg geometry present but approachProgress lacks a finite remainingMeters:
+  // fall back to the straight-line distance.
+  const legWithoutProgress = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: 118,
+      approachLegGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      approachProgress: { remainingMeters: undefined },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(
+    /1[0-2]0/.test(legWithoutProgress.offRouteText),
+    `fallback distance when leg progress missing, got ${legWithoutProgress.offRouteText}`,
+  );
 }
 
 console.log("navigation presentation tests passed");
