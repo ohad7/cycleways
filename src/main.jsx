@@ -1,6 +1,7 @@
-import React, { Component, Suspense, lazy, useEffect } from "react";
+import React, { Component, Suspense, lazy, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
+import { trackPageView } from "@cycleways/core/platform/analytics.js";
 import "./route-boundary.css";
 
 // Each page is a lazy chunk so a route only downloads the code it needs. In
@@ -13,6 +14,7 @@ const RouteDetailPage = lazyRoute("RouteDetailPage", () => import("./pages/Route
 const PrivacyPage = lazyRoute("PrivacyPage", () => import("./pages/PrivacyPage.jsx"));
 const TermsPage = lazyRoute("TermsPage", () => import("./pages/TermsPage.jsx"));
 const SupportPage = lazyRoute("SupportPage", () => import("./pages/SupportPage.jsx"));
+const AccessibilityPage = lazyRoute("AccessibilityPage", () => import("./pages/AccessibilityPage.jsx"));
 const StickerRedirectPage = lazyRoute("StickerRedirectPage", () => import("./pages/StickerRedirectPage.jsx"));
 
 // Splash milestone: the main bundle has parsed and is executing.
@@ -176,6 +178,49 @@ function HashScroller() {
   return null;
 }
 
+function AnalyticsPageViews() {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPageView(window.location);
+  }, [location.pathname]);
+
+  return null;
+}
+
+function RouteFocusManager() {
+  const location = useLocation();
+  const previousPath = useRef(location.pathname);
+
+  useEffect(() => {
+    if (previousPath.current === location.pathname) return undefined;
+    previousPath.current = location.pathname;
+    if (location.hash) return undefined;
+
+    let cancelled = false;
+    let frameId = null;
+    const focusMain = (attempt = 0) => {
+      frameId = window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        const main = document.getElementById("main-content");
+        if (main) {
+          main.focus({ preventScroll: true });
+          window.scrollTo({ top: 0, behavior: "auto" });
+        } else if (attempt < 16) {
+          focusMain(attempt + 1);
+        }
+      });
+    };
+    focusMain();
+    return () => {
+      cancelled = true;
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+    };
+  }, [location.hash, location.pathname]);
+
+  return null;
+}
+
 function getHashTarget(hash) {
   const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
   if (!rawHash) return null;
@@ -193,6 +238,8 @@ function getHashTarget(hash) {
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
+      <AnalyticsPageViews />
+      <RouteFocusManager />
       <HashScroller />
       <RouteBoundary>
         <Suspense fallback={<RouteLoadingFallback />}>
@@ -226,6 +273,14 @@ createRoot(document.getElementById("root")).render(
               element={
                 <RouteReady>
                   <TermsPage />
+                </RouteReady>
+              }
+            />
+            <Route
+              path="/accessibility"
+              element={
+                <RouteReady>
+                  <AccessibilityPage />
                 </RouteReady>
               }
             />

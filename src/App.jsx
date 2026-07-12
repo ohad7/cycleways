@@ -5,6 +5,7 @@ import DataMarkerCard from "./components/DataMarkerCard.jsx";
 import { segmentPreviewImage } from "./components/segmentPreviewImage.js";
 import { segmentRoadTypeIcon } from "./components/segmentCardHelpers.js";
 import PageShell from "./components/PageShell.jsx";
+import SiteLegalLinks from "./components/SiteLegalLinks.jsx";
 import RoutePlaybackControls from "./components/featured/RoutePlaybackControls.jsx";
 import {
   nearestPreviewForCursor,
@@ -905,6 +906,7 @@ function App() {
       onNearMeSortChange={setNearMeSort}
       onRequestLocation={handleLocateMe}
       recentRoutes={recentRoutes}
+      legalLinks={isMobileSheet ? <SiteLegalLinks compact /> : null}
     />
   );
   const buildPanel = (
@@ -939,6 +941,7 @@ function App() {
       pois={buildPois}
       onPoiClick={(poi) => handleDataPointFocus(poi)}
       showSendToPhone={!isMobileSheet}
+      legalLinks={isMobileSheet ? <SiteLegalLinks compact /> : null}
       playback={
         isMobileSheet
           ? null
@@ -1046,7 +1049,7 @@ function App() {
 
   return (
     <>
-      <PageShell>
+      <PageShell showFooter={!isMobileDiscoverHome && !isMobilePlannerShell}>
         <div
           id="error-message"
           className={state.status === "error" ? "show" : ""}

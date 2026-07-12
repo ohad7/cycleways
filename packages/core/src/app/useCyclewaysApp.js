@@ -1048,8 +1048,6 @@ export function useCyclewaysApp({
             searchStatus: "idle",
           }));
           trackSearchEvent(query, routeState.points, routeState.selectedSegments, true, {
-            lat,
-            lng,
             within_bounds: false,
           });
           return;
@@ -1068,8 +1066,6 @@ export function useCyclewaysApp({
           searchStatus: "idle",
         }));
         trackSearchEvent(query, routeState.points, routeState.selectedSegments, true, {
-          lat,
-          lng,
           within_bounds: true,
         });
       } catch (error) {

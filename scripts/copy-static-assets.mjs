@@ -79,6 +79,7 @@ if (existsSync(builtIndex)) {
     "featured",
     "routes",
     "privacy",
+    "accessibility",
     "terms",
     "support",
     "s",

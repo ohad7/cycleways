@@ -133,6 +133,42 @@ body::before {
   order: 1;
 }
 
+.skip-link {
+  position: fixed;
+  inset-inline-start: 16px;
+  top: 8px;
+  z-index: 2000000;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #fff;
+  color: #173c25;
+  font-weight: var(--font-weight-bold);
+  transform: translateY(-150%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 3px solid #173c25;
+  outline-offset: 2px;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #1f5f35;
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 .mobile-menu-btn:hover {
   background: rgba(0, 0, 0, 0.1);
 }
@@ -2242,4 +2278,30 @@ footer {
 
 .footer-content p:first-child {
   font-weight: var(--font-weight-semibold);
+}
+
+.site-legal-links {
+  margin: 8px 0 0;
+}
+
+.site-legal-links a {
+  color: inherit;
+}
+
+.site-legal-links--compact {
+  padding: 18px 12px 28px;
+  color: #42534a;
+  font-size: var(--text-caption-size);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

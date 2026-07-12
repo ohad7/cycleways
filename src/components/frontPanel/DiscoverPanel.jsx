@@ -43,6 +43,7 @@ export default function DiscoverPanel({
   onNearMeSortChange,
   onRequestLocation,
   recentRoutes,
+  legalLinks = null,
   viewportKey = "",
 }) {
   const [heroSeed] = useState(() => Math.random());
@@ -180,7 +181,7 @@ export default function DiscoverPanel({
       )}
       <div className="discover-panel__intro">
         <div className="eyebrow">גליל עליון על אופניים</div>
-        <h2>לאן רוכבים היום?</h2>
+        <h1>לאן רוכבים היום?</h1>
         <div className="discover-panel__search">
           <input
             type="search"
@@ -325,6 +326,7 @@ export default function DiscoverPanel({
       >
         + תכנן מסלול
       </button>
+      {legalLinks}
     </div>
   );
 }

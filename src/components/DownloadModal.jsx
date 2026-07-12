@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { getRouteMessage } from "./RoutePanel.jsx";
 import { getSegmentQualityLabel } from "./quality.js";
+import useDialogFocus from "./useDialogFocus.js";
 
 function DownloadModal({
   activeDataPoints,
@@ -16,14 +17,7 @@ function DownloadModal({
   const [shareOpen, setShareOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("idle");
   const routeDataPointsBySegment = groupDataPointsBySegment(activeDataPoints);
-
-  useEffect(() => {
-    const handleEscape = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [onClose]);
+  const dialogRef = useDialogFocus(onClose, shareOpen ? "share" : "download");
 
   if (shareOpen) {
     return (
@@ -34,6 +28,7 @@ function DownloadModal({
         shareStatus={shareStatus}
         shareUrl={shareUrl}
         shareUrlLength={shareUrlLength}
+        dialogRef={dialogRef}
       />
     );
   }
@@ -41,6 +36,8 @@ function DownloadModal({
   return (
     <div
       className="download-modal"
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="react-download-title"
@@ -194,6 +191,7 @@ function ShareModal({
   shareStatus,
   shareUrl,
   shareUrlLength,
+  dialogRef,
 }) {
   const encodedShareUrl = encodeURIComponent(shareUrl);
   const tooLong = shareStatus === "too_long";
@@ -201,6 +199,8 @@ function ShareModal({
   return (
     <div
       className="share-modal"
+      ref={dialogRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-labelledby="react-share-title"
@@ -246,6 +246,9 @@ function ShareModal({
                   ? "הועתק!"
                   : "העתק קישור"}
             </button>
+            <span className="visually-hidden" role="status" aria-live="polite">
+              {copyStatus === "copied" ? "הקישור הועתק ללוח" : ""}
+            </span>
           </div>
           {shareStatus === "long" && (
             <p className="share-url-warning">

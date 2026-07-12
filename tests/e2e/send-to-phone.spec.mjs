@@ -14,12 +14,18 @@ test("build panel offers a QR that encodes the share URL", async ({ page, isMobi
   const panel = page.getByTestId("front-panel");
   await expect(panel).toHaveAttribute("data-route-status", "ready", { timeout: 30_000 });
   await ensurePanelOpen(page);
-  await panel.getByRole("button", { name: "שלחו לטלפון" }).click();
+  const opener = panel.getByRole("button", { name: "שלחו לטלפון" });
+  await opener.click();
   const modal = page.locator(".send-to-phone");
   await expect(modal).toBeVisible();
   // The QR is rendered as an SVG (qrcode-generator's createSvgTag output).
   await expect(modal.locator("svg, img")).toHaveCount(1);
   await expect(modal).toContainText("סרקו עם הטלפון");
-  await modal.getByRole("button", { name: "סגירה" }).click();
+  const close = modal.getByRole("button", { name: "סגירה" });
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Escape");
   await expect(modal).toBeHidden();
+  await expect(opener).toBeFocused();
 });

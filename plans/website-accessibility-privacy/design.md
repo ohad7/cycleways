@@ -1,7 +1,7 @@
 # Website Accessibility and Privacy Compliance — Design
 
-**Date:** 2026-07-10  
-**Status:** Accepted discussion record; implementation not yet planned  
+**Date:** 2026-07-13
+**Status:** Accepted; implementation authorized
 **Scope:** Public CycleWays website and its public legal/contact surfaces
 
 ## Purpose
@@ -17,7 +17,8 @@ accessibility professional.
 
 The legal analysis and product decisions in this document rely on these facts:
 
-- CycleWays is operated by one individual.
+- CycleWays is a privately owned project operated by one individual, with no
+  separate company, association, or other legal entity.
 - The public website first went live in 2025.
 - The website is free of charge.
 - The project has no revenue and does not expect to monetize in the near term.
@@ -235,9 +236,15 @@ rights can still apply even when registration and appointment duties do not.
 
 ## Terms, identity, and licensing
 
-The terms and privacy policy should identify the real individual operator, not
-only the CycleWays brand. A support email is required; a private home address
-should not be published unless counsel determines it is necessary.
+The terms and privacy policy must not imply that CycleWays is a separate legal
+entity. The preferred public identification is "CycleWays, a privately owned
+project operated by one individual" together with the dedicated support email.
+The operator does not want to publish their personal name unless legally
+required. Whether that formulation is sufficient under the applicable
+controller-identification duties remains a legal checkpoint; the copy must not
+invent a company identity or claim that the question has been conclusively
+resolved. A private home address must not be published unless Israeli counsel
+determines it is necessary.
 
 The terms should continue to cover:
 

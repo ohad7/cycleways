@@ -1,7 +1,7 @@
 # Website Accessibility and Privacy Compliance — Implementation Plan
 
-**Date:** 2026-07-10  
-**Status:** Ready for implementation after the owner inputs in Task 0  
+**Date:** 2026-07-13
+**Status:** Implementation authorized; external and legal checkpoints remain
 **Design:** `plans/website-accessibility-privacy/design.md`
 
 ## Objective
@@ -33,13 +33,43 @@ map-first experience.
 
 ## Release strategy
 
-The repository work may be developed in ordered slices, but Tasks 2–5 must ship
-as one production release. In particular, do not publish a privacy statement
-claiming sanitized Analytics behavior before that behavior is deployed.
+Use two production stages so the current Analytics/privacy contradiction is not
+blocked on the broader accessibility pass:
+
+1. **Privacy release:** Task 2, the privacy portions of Task 4, and the
+   applicable owner actions in Task 5. The sanitized Analytics behavior and the
+   truthful Privacy copy must ship together.
+2. **Accessibility release:** Tasks 1, 3, and 6–10, plus the remaining Terms and
+   Support consistency work in Task 4.
+
+Repository work may be developed together, but no policy may claim a behavior
+that is not in the same deployed release. Task 5 is an explicit owner release
+gate rather than repository work that an agent can silently mark complete.
 
 Use the existing production/local/automation Analytics gating: production may
 load Analytics, while localhost, private development hosts, native app embeds,
 and automated Playwright browsers remain excluded.
+
+## Implementation progress — 2026-07-13
+
+Repository-controlled work in Tasks 1–9 is implemented, including sanitized
+Analytics events and SPA page views, legal/accessibility pages, shared legal
+navigation, keyboard and focus behavior, dialog containment, autocomplete
+semantics, map alternatives, reduced motion, contrast corrections, and axe
+regression coverage. The production build, focused browser coverage, and the
+existing smoke suite have been exercised.
+
+The following items remain explicit release gates and must not be inferred from
+the repository state:
+
+- Task 0 legal confirmation of the privacy-preserving operator-identification
+  wording and re-confirmation of the exemption facts;
+- Task 5 changes to the live Google Form and GA4 Admin settings, including
+  disabling history-event page views in Enhanced Measurement;
+- Task 10 manual VoiceOver/NVDA, keyboard, zoom/reflow, orientation, and visual
+  verification on the stated real platforms; and
+- Task 11 post-deployment inspection of actual GA collection requests and all
+  production public pages.
 
 ## Task 0 — Obtain owner inputs and record the compliance baseline
 
@@ -47,8 +77,12 @@ and automated Playwright browsers remain excluded.
 
 Before legal copy is finalized, obtain:
 
-- the individual operator's exact legal name for the privacy controller
-  disclosure;
+- confirmation from Israeli counsel of the legally sufficient public
+  identification of the individual operator/controller. The preferred
+  privacy-preserving form is "CycleWays, a privately owned project operated by
+  one individual" plus the dedicated contact address, without the operator's
+  personal name or residential address. If the full legal name is required,
+  limit it to the Privacy page and point-of-collection notice;
 - confirmation that `cycleways.app@gmail.com` remains the public privacy,
   accessibility, and support contact;
 - confirmation that the operator still has no revenue and no employees;
@@ -77,7 +111,10 @@ Israeli counsel if a mailing address is considered necessary.
 
 ### Exit criteria
 
-- The operator name/contact and retention decision are available for copy.
+- The operator-identification wording, contact, and retention decision are
+  available for final copy; repository copy may use the accurate
+  privacy-preserving formulation while legal confirmation remains recorded as
+  a release checkpoint.
 - The owner can perform the external Google tasks in Task 5.
 - The exemption facts have been re-confirmed as of implementation time.
 
@@ -155,6 +192,10 @@ Update the inline Google tag bootstrap in `index.html`:
 - set `allow_ad_personalization_signals: false`; and
 - keep the measurement ID in one explicit constant used by the bootstrap.
 
+In GA4 Enhanced Measurement, explicitly disable **Page changes based on browser
+history events**. Google documents that these history-driven page views can
+continue even when `send_page_view: false` is configured in code.
+
 Do not add Consent Mode commands, a CMP, or consent-state storage in this
 implementation.
 
@@ -198,9 +239,10 @@ At minimum:
 - site-authored segment/warning categories may remain only if they cannot carry
   arbitrary user input.
 
-Prefer explicit per-event parameter construction over a blacklist. If the
-generic `trackEvent` export remains, document that it accepts only schema-
-approved aggregate parameters and cover all current call sites in tests.
+Use explicit per-event parameter construction, value types, bounded lengths,
+finite numeric ranges, and enums where applicable. Prefer making the generic
+`trackEvent` helper module-private. If it remains exported, enforce the schemas
+at runtime rather than relying on caller discipline or a key-only allowlist.
 
 Keep `packages/core/src/platform/analytics.native.js` as a no-op; this plan does
 not add native analytics.
@@ -211,12 +253,18 @@ Expand `tests/test-analytics-parity.mjs` or split focused tests as needed:
 
 - `analyticsPageLocation` strips a long `?route=...` and `#fragment`;
 - page-view events never contain `?`, `#`, route payloads, or full raw URLs;
+- `page_referrer`, when present, is sanitized or omitted and cannot contain a
+  query, fragment, or user-derived value;
 - search success contains `within_bounds` but no `lat`/`lng`;
 - permitted aggregate events keep their current names and useful counts;
 - forbidden parameter keys and representative sensitive values never reach the
   `gtag` spy;
 - localhost, private hosts, and automation still suppress tracking; and
 - production host tracking still emits events.
+
+Add a production-like browser test that inspects actual GA collection requests,
+not only a `gtag` spy, and fails on an automatic or Enhanced-Measurement history
+page view.
 
 Add a focused source/build guard that fails if `index.html` restores an
 automatic default page view without `send_page_view: false`.
@@ -246,8 +294,9 @@ The page should:
 - explain that CycleWays is a free project operated by an individual;
 - state that the operator relies on the low-turnover exemption in Regulation
   35ו(ז), based on current annual turnover below NIS 100,000;
-- state that no formal accessibility coordinator is appointed because there
-  are no employees and the 25-employee threshold is not met;
+- avoid unnecessary public detail about appointment of an accessibility
+  coordinator; retain the employee-threshold reasoning in this private planning
+  record unless counsel recommends public wording;
 - say that accessibility improvements are nevertheless made voluntarily;
 - describe actual current features only after they are verified;
 - disclose known limitations of the interactive map, arbitrary map-based route
@@ -287,8 +336,11 @@ Complete this task after Task 2 so every technical statement can be verified.
 
 ### Privacy policy
 
-Rewrite `src/pages/PrivacyPage.jsx` to identify the individual operator and
-accurately describe:
+Rewrite `src/pages/PrivacyPage.jsx` to identify CycleWays accurately as a
+privately owned project operated by one individual, without implying a separate
+legal entity. Use the dedicated contact email. Do not publish the operator's
+personal name or residential address unless the Task 0 legal checkpoint says it
+is required. Accurately describe:
 
 - automatic Google Analytics use for aggregate measurement;
 - the absence of an on-site consent prompt as the accepted current posture;
@@ -402,6 +454,7 @@ The owner should:
 - enable multi-factor authentication on the Google account;
 - restrict Analytics and Form access to the minimum necessary accounts;
 - disable Google Signals;
+- disable Enhanced Measurement page views based on browser-history changes;
 - confirm no Google Ads property is linked;
 - disable advertising personalization/remarketing features;
 - choose the shortest practical event/user-data retention option;
@@ -649,6 +702,8 @@ Do not suppress an axe rule merely to make the suite green. Any exclusion must:
 ### Test expectations
 
 - Zero critical or serious first-party axe violations in the covered states.
+- No new first-party axe violation at any impact level; every remaining
+  violation must have an owner, written rationale, and accessible alternative.
 - No duplicate IDs or unnamed first-party interactive controls.
 - No focusable content hidden behind closed menus/dialogs.
 - No new violations when legal copy or route cards change.
@@ -714,6 +769,9 @@ widgets, or material layout changes.
 ### Exit criteria
 
 - Manual results and any known limitations are recorded.
+- Record the manual results in a dated file under this plan directory, including
+  the tested browser/assistive-technology versions and the visual-baseline
+  screenshots used.
 - Accessibility-page claims are adjusted to match what was actually tested.
 - No major UX/UI change is present.
 
@@ -754,6 +812,8 @@ After the combined release is deployed:
   `/?route=...#fragment` URL in a clean browser profile;
 - inspect GA4 network requests and verify the document-location/page-location
   value contains no query or fragment;
+- verify Enhanced Measurement does not emit an additional history-driven page
+  view and inspect any `page_referrer` value for query/fragment leakage;
 - verify no event parameter contains `lat`, `lng`, search text, encoded route,
   email, name, or feedback content;
 - verify production still records a sanitized page view and permitted aggregate

@@ -24,6 +24,7 @@ export default function BuildPanel({
   playback,
   error,
   emptyState,
+  legalLinks = null,
 }) {
   const buildModel = getPlannerBuildModel(routeState);
   const hasRoute = buildModel.hasRoute;
@@ -31,7 +32,7 @@ export default function BuildPanel({
   return (
     <div className="build-panel">
       {error && (
-        <div className="build-panel__error">{error.message || "לא הצלחנו לעדכן את המסלול"}</div>
+        <div className="build-panel__error" role="alert">{error.message || "לא הצלחנו לעדכן את המסלול"}</div>
       )}
       <div className="build-panel__head">
         <div>
@@ -86,6 +87,9 @@ export default function BuildPanel({
           <button type="button" className="btn-ghost" disabled={!canShare} onClick={onShare}>
             {shareCopied ? "✓ הועתק" : "שיתוף"}
           </button>
+          <span className="visually-hidden" role="status" aria-live="polite">
+            {shareCopied ? "קישור המסלול הועתק" : ""}
+          </span>
           {showSendToPhone && (
             <button type="button" className="btn-ghost" disabled={!canShare} onClick={onSendToPhone}>
               שלחו לטלפון
@@ -102,6 +106,7 @@ export default function BuildPanel({
           ))}
         </div>
       )}
+      {legalLinks}
     </div>
   );
 }

@@ -249,20 +249,25 @@
 <!-- Google tag (gtag.js) — skipped on local hosts and automated browsers (Playwright) -->
 <script>
   var host = window.location.hostname;
+  var gaMeasurementId = 'G-P1TK7GTD2J';
   if(!document.documentElement.classList.contains("app-embed-bootstrap") && host != "localhost" && host != "127.0.0.1" && !host.startsWith("10.0.") && !navigator.webdriver)
   {
       var gaScript = document.createElement('script');
       gaScript.async = true;
-      gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-P1TK7GTD2J';
+      gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaMeasurementId;
       document.head.appendChild(gaScript);
 
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
-      gtag('config', 'G-P1TK7GTD2J');
+      gtag('config', gaMeasurementId, {
+        send_page_view: false,
+        allow_google_signals: false,
+        allow_ad_personalization_signals: false
+      });
   } else {
-     window['ga-disable-G-P1TK7GTD2J'] = true;
+     window['ga-disable-' + gaMeasurementId] = true;
   }
 </script>
 

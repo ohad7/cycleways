@@ -51,9 +51,9 @@ function recordPrivateScan(shortCode) {
 
 const styles = {
   page: { minHeight: "100vh", display: "grid", placeContent: "center", justifyItems: "center", gap: 14, padding: 24, textAlign: "center", color: "#183129", background: "#eef1ec", fontFamily: "system-ui, sans-serif" },
-  badge: { width: 72, height: 72, borderRadius: "50%", display: "grid", placeItems: "center", color: "white", background: "#29473b", fontWeight: 800, letterSpacing: 2 },
-  title: { margin: 0, fontFamily: "Georgia, serif", fontWeight: 500 },
+  badge: { width: 72, height: 72, borderRadius: "50%", display: "grid", placeItems: "center", color: "white", background: "#29473b", fontWeight: "var(--font-weight-heavy)", letterSpacing: 2 },
+  title: { margin: 0, fontFamily: "Georgia, serif", fontWeight: "var(--font-weight-semibold)" },
   copy: { margin: 0, maxWidth: 420, color: "#66716b" },
-  link: { color: "#29473b", fontWeight: 700 },
+  link: { color: "#29473b", fontWeight: "var(--font-weight-bold)" },
   spinner: { width: 28, height: 28, border: "3px solid #c4cec7", borderTopColor: "#29473b", borderRadius: "50%" },
 };

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
 
@@ -9,6 +9,7 @@ function TopBar({
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const menuButtonRef = useRef(null);
   const isRoutesSection =
     location.pathname.startsWith("/routes") ||
     location.pathname.startsWith("/featured");
@@ -69,17 +70,32 @@ function TopBar({
   ];
   const renderedNavLinks = navLinks || defaultNavLinks;
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onMobileMenuToggle?.();
+      menuButtonRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mobileMenuOpen, onMobileMenuToggle]);
+
   return (
     <header className="header">
       <div className="logo-section">
         <Link to="/" reloadDocument className="site-title-link">
-          <h1 className="site-title">מפת שבילי אופניים - גליל עליון וגולן</h1>
+          <div className="site-title">מפת שבילי אופניים - גליל עליון וגולן</div>
         </Link>
       </div>
       <button
         className="mobile-menu-btn"
+        ref={menuButtonRef}
         type="button"
-        aria-label="פתיחת תפריט"
+        aria-label={mobileMenuOpen ? "סגירת תפריט" : "פתיחת תפריט"}
+        aria-expanded={mobileMenuOpen}
+        aria-controls="nav-links"
         onClick={onMobileMenuToggle}
       >
         <Icon name="menu-outline" />
@@ -99,6 +115,7 @@ function TopBar({
                   : item.href
               }
               onClick={(e) => handleAnchorClick(e, item.href)}
+              aria-current={navLinkClass(item).includes("nav-link--active") ? "page" : undefined}
             >
               {item.label}
             </a>
@@ -108,6 +125,7 @@ function TopBar({
               className={navLinkClass(item)}
               to={item.to}
               onClick={closeMobileMenu}
+              aria-current={navLinkClass(item).includes("nav-link--active") ? "page" : undefined}
             >
               {item.label}
             </Link>

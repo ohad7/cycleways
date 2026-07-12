@@ -39,7 +39,12 @@ test("panel search input shares state with the map search overlay", async ({ pag
   await openEmptyBuild(page, isMobile);
   const actions = page.getByTestId("build-empty-actions");
   await actions.getByLabel("חיפוש מיקום").fill("דפנה");
-  await expect(page.locator("#location-search")).toHaveValue("דפנה");
+  await expect(actions.getByLabel("חיפוש מיקום")).toHaveValue("דפנה");
+  if (!isMobile) {
+    await expect(page.locator("#location-search")).toHaveValue("דפנה");
+  } else {
+    await expect(page.locator("#location-search")).toHaveCount(0);
+  }
 });
 
 test("draft offer moves into the panel on Build and the floating banner yields", async ({ page, isMobile }) => {

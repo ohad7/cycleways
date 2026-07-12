@@ -7,7 +7,7 @@ import {
 
 export default function SupportPage() {
   return (
-    <LegalPage title="תמיכה ויצירת קשר" updated="5 ביולי 2026">
+    <LegalPage title="תמיכה ויצירת קשר" updated="13 ביולי 2026">
       <h2>איך יוצרים קשר</h2>
       <ul>
         <li>
@@ -38,6 +38,12 @@ export default function SupportPage() {
         עוזר לנו לאתר את הבעיה מהר.
       </p>
 
+      <h2>בעיית נגישות או צורך בחלופה</h2>
+      <p>
+        ציינו את כתובת העמוד, תיאור הקושי, סוג המכשיר והדפדפן וטכנולוגיה
+        מסייעת אם רלוונטי. אפשר לקרוא על החלופות הזמינות ב<a href="/accessibility">הצהרת הנגישות</a>.
+      </p>
+
       <h2>קרדיטים ומקורות נתונים</h2>
       <ul>
         <li>נתוני מפה: © Mapbox, © OpenStreetMap contributors.</li>
@@ -55,6 +61,9 @@ export default function SupportPage() {
         <li>
           <a href="/terms">תנאי שימוש</a>
         </li>
+        <li>
+          <a href="/accessibility">הצהרת נגישות</a>
+        </li>
       </ul>
 
       <section className="legal-page__english">
@@ -64,7 +73,8 @@ export default function SupportPage() {
           use our feedback form. When reporting an app issue, include the app
           version and build number shown on the in-app About screen. Map data
           © Mapbox © OpenStreetMap contributors; the routing network is
-          derived from OpenStreetMap data under ODbL.
+          derived from OpenStreetMap data under ODbL. Accessibility assistance
+          and practical alternatives are available by email.
         </p>
       </section>
     </LegalPage>

@@ -37,6 +37,7 @@
     "prebuild": "npm run tokens"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.60.0",
     "sharp": "^0.34.5",
     "vite": "^7.3.3"
