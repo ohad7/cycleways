@@ -206,7 +206,7 @@ export function getNavigationPresentation(state = {}) {
   const approachActive = approach?.approachActiveCue || null;
   const approachCue = cueDisplay(approachActive?.cue || null);
   const showApproachCue =
-    status === "approaching" &&
+    (status === "approaching" || offRoute) &&
     approachOwnershipTier === "guide" &&
     Boolean(approachActive);
   const showApproachLeg =
@@ -242,7 +242,7 @@ export function getNavigationPresentation(state = {}) {
     return name || label || null;
   })();
   const chip = offRoute
-    ? { kind: "rejoin", text: "חזרה למסלול" }
+    ? { kind: "rejoin", text: "בדרך חזרה למסלול" }
     : (cardMode === "cue" || cardMode === "arrived") && segmentChipText
         ? { kind: "segment", text: segmentChipText }
         : null;
@@ -286,10 +286,27 @@ export function getNavigationPresentation(state = {}) {
     approach.approachLegGeometry.length >= 2;
   const backMeters =
     hasGuidedLeg && Number.isFinite(legRemaining) ? legRemaining : straightLine;
-  const offRouteTextWithDistance =
+  const offRouteDistanceText =
     Number.isFinite(backMeters) && backMeters >= 0
-      ? `יצאתם מהמסלול · ${formatDistanceMeters(backMeters)} לחזרה`
-      : "יצאתם מהמסלול";
+      ? formatDistanceMeters(backMeters)
+      : "";
+  const hasReadyRejoin =
+    approach?.suggestionStatus === "ready" && hasSuggestionGeometry;
+  const offRouteTextWithDistance =
+    `${hasReadyRejoin ? "בדרך חזרה למסלול" : "יצאתם מהמסלול"}` +
+    (offRouteDistanceText ? ` · ${offRouteDistanceText}` : "");
+  const offRouteInstructionText = showApproachCue
+    ? (() => {
+        const c = approachActive?.cue || null;
+        if (c?.type === "turn") return turnPrimaryText(c);
+        if (c?.type === "enter-segment") return "המשיכו לפי הקו המסומן";
+        return approachCue.text;
+      })()
+    : approach?.suggestionStatus === "requesting"
+      ? "מכינים דרך חזרה למסלול…"
+      : hasReadyRejoin
+        ? "המשיכו לפי הקו המסומן"
+        : "התקדמו לכיוון המסלול";
 
   let arrivalSummary = null;
   if (cardMode === "arrived") {
@@ -347,6 +364,8 @@ export function getNavigationPresentation(state = {}) {
     remainingText,
     offRoute,
     offRouteText: offRouteTextWithDistance,
+    offRouteDistanceText,
+    offRouteInstructionText,
     showContext:
       navigating && !offRoute && Boolean(progress?.hasAcquiredRoute),
     currentRoadText: buildCurrentRoadText(progress),
@@ -401,7 +420,9 @@ export function getNavigationPresentation(state = {}) {
       ? `${status === "approaching" ? "לכיוון תחילת המסלול" : "חזרה למסלול"} · ${formatDistanceMeters(progress.guidanceDistanceMeters)}`
       : "",
     guidanceArrowDeg: relativeArrowDeg(progress),
-    wrongWay: progress?.wrongWay === true,
+    // Rejoin guidance owns the card while off-route. Main-route orientation
+    // is not actionable until the rider has physically reacquired the route.
+    wrongWay: !offRoute && progress?.wrongWay === true,
     wrongWayText: "המסלול בכיוון ההפוך - הסתובבו",
     currentOnNetwork: progress?.currentOnNetwork ?? false,
   };

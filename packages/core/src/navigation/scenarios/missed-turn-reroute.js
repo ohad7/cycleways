@@ -41,7 +41,7 @@ export default {
     { type: "status", value: "off-route", betweenMeters: [560, 660] },
     { type: "camera-stage", value: "off-route", betweenMeters: [560, 660] },
     { type: "card-mode", value: "off-route", betweenMeters: [560, 660] },
-    { type: "chip", match: "חזרה למסלול" },
+    { type: "chip", match: "בדרך חזרה למסלול" },
     { type: "haptic", kind: "heavy" },
     { type: "rerouted", withinFixesOfOffRoute: 10 },
     { type: "voice", match: "עקוב אחרי הקו המסומן", count: 1 },

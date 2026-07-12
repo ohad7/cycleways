@@ -31,7 +31,12 @@ export default function NavPanel({
     !p.wrongWay;
   const showTopCard = !arrived && !showCurrentRoadPill;
   const dataPillMainText =
-    p.remainingText || (p.cardMode === "off-route" ? "חזרה למסלול" : "");
+    p.remainingText ||
+    (p.cardMode === "off-route"
+      ? p.offRouteDistanceText
+        ? `${p.offRouteDistanceText} למסלול`
+        : p.speedText || "מחוץ למסלול"
+      : "");
   const showSpeedInDataPill = Boolean(p.remainingText && p.speedText);
 
   // Direction-to-route arrow: phone-relative when the compass is available
@@ -80,7 +85,9 @@ export default function NavPanel({
                 {p.offRouteText}
               </Text>
               <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
-                {showApproachArrow ? (
+                {p.showApproachCue ? (
+                  <Icon name={p.approachCueIcon} color={palette.white} size={26} />
+                ) : showApproachArrow ? (
                   <View style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}>
                     <Icon
                       name="navigate"
@@ -89,12 +96,24 @@ export default function NavPanel({
                     />
                   </View>
                 ) : null}
-                <Text
-                  style={[styles.cueText, p.offRoute ? styles.offText : null]}
-                  numberOfLines={1}
-                >
-                  {p.destinationLabel}
-                </Text>
+                <View style={styles.cueTextWrap}>
+                  <Text
+                    style={[styles.cueText, styles.offTextColor]}
+                    numberOfLines={1}
+                  >
+                    {p.offRouteInstructionText}
+                  </Text>
+                  {p.showApproachCue && p.approachCueSecondaryText ? (
+                    <Text style={[styles.context, styles.offTextColor]} numberOfLines={1}>
+                      {p.approachCueSecondaryText}
+                    </Text>
+                  ) : null}
+                </View>
+                {p.showApproachCue && p.approachCueDistanceText ? (
+                  <Text style={[styles.cueBigDistance, styles.offTextColor]}>
+                    {p.approachCueDistanceText}
+                  </Text>
+                ) : null}
               </View>
               {p.approachSupportText ? (
                 <Text style={styles.approachSupport}>{p.approachSupportText}</Text>
@@ -333,6 +352,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   offText: { color: palette.white, flex: 1 },
+  offTextColor: { color: palette.white },
   approachHeading: {
     ...text.navBody,
     color: palette.ink,

@@ -67,6 +67,15 @@ back to the straight-line `approach.distanceToRouteMeters` before a connector
 arrives or when routing failed. *(Amended 2026-07-12: straight-line distance
 can rise while the rider correctly follows the connector around a block.)*
 
+**O5a — One actionable warning at a time.** *(Amended 2026-07-12.)*
+Off-route guidance owns the navigation card and suppresses the main-route
+wrong-way warning until physical reacquisition. Before a connector is ready the
+card says "מכינים דרך חזרה למסלול…"; once ready it shows the real
+guided rejoin cue, falling back to "המשיכו לפי הקו המסומן". The
+header changes from "יצאתם מהמסלול" to "בדרך חזרה למסלול"
+when the connector is ready. A genuine wrong-way warning may appear only after
+the rider is back on the main route.
+
 **O6 — Rejoin target logic unchanged.**
 Target selection (nearest-ahead, forward window 1.5 km, slides forward as the
 rider moves) and connector request/refresh throttling stay as they are.

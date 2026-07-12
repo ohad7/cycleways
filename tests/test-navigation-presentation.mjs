@@ -311,6 +311,26 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   });
   assert.equal(p.wrongWay, true);
   assert.equal(p.wrongWayText, "המסלול בכיוון ההפוך - הסתובבו");
+
+  const offRouteOwnsWarning = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      suggestionStatus: "requesting",
+      distanceToRouteMeters: 120,
+    },
+    progress: { hasAcquiredRoute: true, wrongWay: true, remainingMeters: 500 },
+  });
+  assert.equal(
+    offRouteOwnsWarning.wrongWay,
+    false,
+    "main-route wrong-way warning is suppressed during rejoin guidance",
+  );
+  assert.equal(offRouteOwnsWarning.cardMode, "off-route");
+  assert.equal(
+    offRouteOwnsWarning.offRouteInstructionText,
+    "מכינים דרך חזרה למסלול…",
+  );
 }
 
 // --- cardMode / chip / speedText / arrivalSummary ------------------------
@@ -388,7 +408,10 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: true, remainingMeters: 8, wrongWay: false },
   });
   assert.equal(offRoute.cardMode, "off-route");
-  assert.deepEqual(offRoute.chip, { kind: "rejoin", text: "חזרה למסלול" });
+  assert.deepEqual(offRoute.chip, {
+    kind: "rejoin",
+    text: "בדרך חזרה למסלול",
+  });
 
   const approaching = getNavigationPresentation({
     status: "approaching",
@@ -465,6 +488,43 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   });
   assert.ok(guided.offRouteText.includes("יצאתם מהמסלול"), guided.offRouteText);
   assert.ok(/240/.test(guided.offRouteText), `leg distance, got ${guided.offRouteText}`);
+
+  const readyWithoutCue = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      suggestionStatus: "ready",
+      suggestionGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      distanceToRouteMeters: 118,
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true, wrongWay: true },
+  });
+  assert.match(readyWithoutCue.offRouteText, /בדרך חזרה למסלול/);
+  assert.equal(
+    readyWithoutCue.offRouteInstructionText,
+    "המשיכו לפי הקו המסומן",
+  );
+  assert.equal(readyWithoutCue.wrongWay, false);
+
+  const readyWithCue = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      suggestionStatus: "ready",
+      suggestionGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      ownershipTier: "guide",
+      approachActiveCue: {
+        cue: { type: "turn", direction: "left", ontoSegmentName: "שביל החורש" },
+        distanceToCueMeters: 82,
+      },
+      distanceToRouteMeters: 118,
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.equal(readyWithCue.showApproachCue, true);
+  assert.equal(readyWithCue.offRouteInstructionText, "פנה שמאלה");
+  assert.equal(readyWithCue.approachCueSecondaryText, "אל שביל החורש");
+  assert.equal(readyWithCue.approachCueDistanceText, "80 מ׳");
 
   // No leg yet: straight-line fallback.
   const bare = getNavigationPresentation({
