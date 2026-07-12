@@ -1,4 +1,2099 @@
 {
   "schemaVersion": 1,
-  "reviews": {}
+  "reviews": {
+    "osm-ways:1005259147": {
+      "fingerprint": "sha256:c4ef1cbd53df3541c49d8467f1039fb8bc6f1b570a11ef5594820a204d26c624",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1020291730": {
+      "fingerprint": "sha256:a4cf4eaa8266e1e4738f4c623a7017854c16775388bbba713a5482e21f249913",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1024609346": {
+      "fingerprint": "sha256:d3c5a1c6db97115017f82dbd0ab30d11f9989a59b047c27fa1319af3cd6b66d1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1025206478": {
+      "fingerprint": "sha256:dd1e86f930df37bc08975a5e730d3e2878e0cea00b2ba470e9ea975e0bded681",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1029265643": {
+      "fingerprint": "sha256:c688268f7e9c2d92c64f7faddbee1e1f28e0de5a4353a2dbb254ff0c35c78c1a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1031123036": {
+      "fingerprint": "sha256:26a82431fbe1e56a5e664786eb61a1dab094c856e9f2ff186cc10397ba4aa918",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034078920": {
+      "fingerprint": "sha256:b941e10d005d379825ac2be3a56f24e5e5055926fa14aaf6dfff12c4a55653c6",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034089954": {
+      "fingerprint": "sha256:d89fdf037c8007f89a2e85903e364804f522d4a5f71bdae1c9d2c057c5878466",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034089963": {
+      "fingerprint": "sha256:0f7c296fe11b23a2576dd863237b923b205f551740f4a2c52da9478e19ed717a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034180659": {
+      "fingerprint": "sha256:ade9fea1ed4043743a14ce2e80974f7674886ac3959d1a0ef2cd7d9f4e14048e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034394215": {
+      "fingerprint": "sha256:768c467a21d4729f6edc400885c3d612169f898488db0ab2b26f78b096c09bfa",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034464311": {
+      "fingerprint": "sha256:b038446e84bff94a7e9ceba623fe44bc3e8aa808066f82c1bf5e98f76f9e9d16",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034464448": {
+      "fingerprint": "sha256:0e3f3bd4fd24ebcaa3fdd9c94480bb10e73be7b6ee0e27315209e82489338f3d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034512029": {
+      "fingerprint": "sha256:9dbb79f0689fcc6e13db6870a6f288c5b664e90b2f83dbd708d14172795b6c49",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034512033": {
+      "fingerprint": "sha256:3913acfe8cdec9824c5748f906b2437ca4aa8d00824f5f7599a9d9604e27cd78",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034815249": {
+      "fingerprint": "sha256:8365f169958c9b8cd2d5f6921a370761591ffa0283c8b7b70bcdcbbdcb5c6e10",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1034815284": {
+      "fingerprint": "sha256:ab77ab86bd1d4e0e3541283a186403b8b6eb902d0591f5ad84ba5125188b1393",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1035656373": {
+      "fingerprint": "sha256:58f5c42073926356db96f774e0948f2205a25edc1fa60b177000e1e1981ecb57",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1035740695": {
+      "fingerprint": "sha256:8d11a3866e5f27056607e36e6bb10b56c75094aca00ef8add64c8af77367262e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1035740714": {
+      "fingerprint": "sha256:309c38cdf9932c623256f1859a41738ae41d428f6e0593308dd5eec68b2d766c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1035917408": {
+      "fingerprint": "sha256:92384a19e407f24b60d1312e7413cf117acd293952296a8926a5a6a30097a7a8",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1035917441": {
+      "fingerprint": "sha256:3dd384ef54bf4576512ca858452c57d2c292aa222cea56c10843ad833f5d4a78",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1036215791": {
+      "fingerprint": "sha256:7f6b12fd09cc4d0730b47725416b3bfa7b065caf8e1dd73e3792adae16dc26db",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1036241350": {
+      "fingerprint": "sha256:48aa406d66fbec675b01fbcb42ba0288f61d1aa1f1f59b8a8b52d0d1566165ac",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1040227610": {
+      "fingerprint": "sha256:0aefb224e2bab0df72f78b309af7163ba2fdc49195bb7083f6638a0d66ed7042",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1040227611": {
+      "fingerprint": "sha256:96337a3ae54654a667866927f46ac16fc675cb31822977ecaa1a5b1fd7613f2e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1054653126": {
+      "fingerprint": "sha256:f38a2dfa483f5f492c49e6199059c05b15ce3c8dfcb450a252ee0587ded3a2a1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1054653127": {
+      "fingerprint": "sha256:e45e4234e6df9312ac974bf08677e5120d58af95f3246f1742ae480f83e224bd",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1054653128": {
+      "fingerprint": "sha256:73ffa9b18a1b9c0a63ee02e85484e07766b34e26c50b23f8b86ac2b2dad1fabe",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1054653129": {
+      "fingerprint": "sha256:c7577909de3a8c093fa1c5decd7f6c3b0e778525c76564140f6f39a9e7a72e6e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1054653130": {
+      "fingerprint": "sha256:11eb3ebca3ca7d871398b7636eda4cc604812b5dfc7fad48a9125c5fb49c0dca",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1054653137": {
+      "fingerprint": "sha256:2fc55016e8210578b7bed99aadf66e3b49907202f3587aa63857248921adf6bf",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1075526338": {
+      "fingerprint": "sha256:e10b9e475b448beeac44bd576a9a4e182a953e3509de041697675d70b5993c37",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1078426948": {
+      "fingerprint": "sha256:959d3feecb0b6974baead0957fe52ded770062ff7a7a21394e7b4cdb9da8d22c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1078426961": {
+      "fingerprint": "sha256:d5d03c75a00533919bf510f6eaf3b45044635e487ada1f3b403ade7717015c3f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1078426977": {
+      "fingerprint": "sha256:7207a66c4d4dfca7fc2a7f4ce5d6cd7b008ee01aa1595747345f96c445489a10",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1086978585": {
+      "fingerprint": "sha256:76d899f2b2142e90ff016e7f36fcdd4ae80ab9476cf99a67801d9298773e43f9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:109880255": {
+      "fingerprint": "sha256:bb9061d5e36c9773e1c214a63a8b2ce51fbe35a2518aaa50f9522ee0d4dacedd",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:109880257": {
+      "fingerprint": "sha256:1ebb50afd5973c2c8dfc19aa64e9baeb7a8c53c6ec5f41fbb92633e2d29be604",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1125210821": {
+      "fingerprint": "sha256:4063f0e489d02e0eafe383c41747e9eda5a9e689a3aa7e5c74788cb11fca7075",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1128425605": {
+      "fingerprint": "sha256:7d0c172c8539b1b96a96f3b479f6a398cd5b70b5ba4c49c8a098d482bf7f14d3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1128425606": {
+      "fingerprint": "sha256:d6953ecc9cbe1ac2d0c6f62cbcf702e19258e99ac90f5d13b6c1eb30abd2caf4",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1147928743": {
+      "fingerprint": "sha256:d01df037897c8004b6cbae8b3c2d069a416e580a67a349b3ba763d59473cdae2",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1164854066": {
+      "fingerprint": "sha256:a85959013ac2e0e4d5e08e456b09769f0ee6ae3d33f2860079599ace92cb5975",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1165072084": {
+      "fingerprint": "sha256:dc61fc8ef0c611ce3bcd5903a894232e69faf91b94e1b9e2af582fa3a0ee395a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1165092960": {
+      "fingerprint": "sha256:37a6ce91ed4ffefb27a915f4e6fa6e7d50e16a71d09c347a3c7bfc9b4bdc4c8e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1165092974": {
+      "fingerprint": "sha256:f26cd6f32fcbc9dff6875daa905ad9b10bee4a363972abf4fabdb5dbf5a22fe9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1165357818": {
+      "fingerprint": "sha256:de6a043d1b4055a9a88efeedf5f0047de98e1a5e1ddda63ad99789b3f13b18e1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1167529150": {
+      "fingerprint": "sha256:fd954ebb2534fb6c4cf9caa95a0658de6180e0d7c0febb8c363aabd3fb16474a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1167529151": {
+      "fingerprint": "sha256:413608354a1ece57658723c7b0d3aa3422bdf7bc83f258a761c51f706163cf58",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1167529152": {
+      "fingerprint": "sha256:b775265c8ad7a6a2646278f7d47bed3d5d8fd93871f1ffeeff693b4ec72e0d5f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1167529153": {
+      "fingerprint": "sha256:fff68b05c1148be63d63c4098593c4b753c1889e0aa36718725cabca1e9fc112",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1167529154": {
+      "fingerprint": "sha256:6a56cc8a96b932d9036a01fbfb0a0b8ab4b9d9c7a7285a6e1866ba8e7b0a92ae",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1167529155": {
+      "fingerprint": "sha256:c6e7862a8800d32ab0587cb30a966f1cf8accecf7b71f6f70833df7aff62aefd",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1177467941": {
+      "fingerprint": "sha256:996911e5fb9ae160de1a3c82c7a68262cd5b5dc98850f0f005a1c9553237db19",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:119476274": {
+      "fingerprint": "sha256:2a77b21ec4adaf9272e40c8a0d76686bd7f76f3a6e1bdec431cf77baee351014",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1206588442,1377208921,1377208922,1377208923": {
+      "fingerprint": "sha256:d391a6a046896834fe0350c7d319b4c3ffac100ee754344b23520fd51b3dd9ab",
+      "status": "rejected",
+      "note": "",
+      "reviewedAt": "2026-07-12T11:52:35.376Z"
+    },
+    "osm-ways:1217588030": {
+      "fingerprint": "sha256:3c65904598ff35d69369f81bf14f7122df026edfbdf9c587c709cbeba9a96b8b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1223817633": {
+      "fingerprint": "sha256:59ee85eec2185d3ac3f44e725afc4cd5de5856493721c08eb2d30f1387a11a2d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1230594681": {
+      "fingerprint": "sha256:c4c5bb32d0dc5daa515c7562481f7c32eb11ec662ea2867b5023e947717ed674",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1231892634": {
+      "fingerprint": "sha256:13a36bf37f24a9786df144b321fdb83190000aff1852b729d1d4e883c4b61282",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1231892652": {
+      "fingerprint": "sha256:74f83a1732b58d3cbac09b8f019653bf81ca77ecd7279ee4bf72634b4dce4bc8",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1231892654": {
+      "fingerprint": "sha256:e45d463f56fd9fb8a2eff7148a3cb30d0a3161d2c174b764c8d93170d1683d7f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232148665": {
+      "fingerprint": "sha256:439d051ca9a1dadf5f8252d9d2e3cb196e9a0dd4c18ead1e54d69729a908ec42",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333851": {
+      "fingerprint": "sha256:5e85ba8f839c50364c5fed91cce55092e5ff5e6366b9533196670f40170f8828",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333856": {
+      "fingerprint": "sha256:1f45f409f6a2601742db0e7112c4808081f67abd0258b48a6a6fea3a2275ef93",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333866": {
+      "fingerprint": "sha256:6fa3df3926cc3b57e8909b882c3ecbc76ecee93ad196d8db0923613e9e868bdc",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333867": {
+      "fingerprint": "sha256:dbc74bb653e38cebea0a61e3d96fe0aad84cf53930653f03aabac8aa49312d1a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333889": {
+      "fingerprint": "sha256:215a8f36e4af64a52bea0d28f533f39631a7a0977bcb8eb2e7bd53a92fad9c6a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333890": {
+      "fingerprint": "sha256:c55265a79ca9c547ba734c3bc30b975686be066e785683afe5e59deb3985690e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333891": {
+      "fingerprint": "sha256:b051a4022527935136ad9ff87ce89a2fc8d23b28b4aad00713db99b979425e08",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333892": {
+      "fingerprint": "sha256:fd19f32f205243209e6c8540ee01744a4711a8f69175392daa6616cf120e6749",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333893": {
+      "fingerprint": "sha256:2b75c78fc43b2f64bc20a88845ef82e5a9ba2d40c876bf9093a532ad77550f9f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1232333894": {
+      "fingerprint": "sha256:98fd8495fccb9d8b6e5d35f38dca75e928c33e547edea2a223932c52b977b44a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1233768584": {
+      "fingerprint": "sha256:8c3033e10e53c8f11c0260cf48bd227f7bdb905815cd619c5becc5085ecadb50",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1240765776": {
+      "fingerprint": "sha256:e1b65d9e06915ed4a22026a8e826efb449e1557b37115574b193dadc6cf63e78",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:126472300": {
+      "fingerprint": "sha256:b74314646a85489acd6ce9313b92e1b8e2643e21de5f65ae5970e953dbec7315",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1283316991": {
+      "fingerprint": "sha256:bad4dbdc46598433bba99bdd84039eae4cbe801a5c58172764c685b1c5bdc402",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1293520438,1377501311": {
+      "fingerprint": "sha256:0f3fdd428df79f865e0c96c04ca3bb700fbb9df5733addb44c60302957640c26",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1293520443,1377227635,1377227636,1377227637,1488359133,1493804078": {
+      "fingerprint": "sha256:001d7abccc1107e1a2020d476a3e4dc6d840b8681bae51edccde3ee58a35a8ba",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:129581586": {
+      "fingerprint": "sha256:842bea64a88465b25148dbd554cd9d260a7b7eeef674948676d8b63f7d7ad726",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1304346711": {
+      "fingerprint": "sha256:d2697c8540fd413f19c059e48f005c6c8bb137a8f9c19906c2a261a160f86b81",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1304638424": {
+      "fingerprint": "sha256:2d85d2591f6697f84c8cd790f21d836b2deeccbf40d4bf1ada2fd495c5d1d577",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1307505037": {
+      "fingerprint": "sha256:8fb6fb105b054a162c4638f5bede12ec07665d5f988afca260ccf5b9267f906a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1341213255": {
+      "fingerprint": "sha256:38e6c8d3ce406868c5ff92d7e6ce6ac2a831352c7a01c006f2289590fdee815f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1341213256": {
+      "fingerprint": "sha256:732c4f67c143f46b74a154f95e733c64a222c3eb72a541b0e98f7cb59ca1f099",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1341213258": {
+      "fingerprint": "sha256:f2147170d821dbca22b339c40c609c41ea002993c95bda55134ed4dc58ce6f0a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1341246666,1377227645,1377227646,1377227650": {
+      "fingerprint": "sha256:75a5d340722b6c04b3cc9dfd429a9b981c69b4c02d3f0c842bc1ee1eb348fe6a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1341728159": {
+      "fingerprint": "sha256:0e3f55d42a42ca08cb4512173bffc98d782b4dc2b3a39778aac0b8cb07315707",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:138428731": {
+      "fingerprint": "sha256:d55d49709e9833b112f824e0dcbdba335b0e2514b25f1ade0fc17ef55f69b224",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:138437013": {
+      "fingerprint": "sha256:904b7200a97f994c84a49d0bf44a58d6bbfba2c9c7961120a7910ee430fdc540",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:139215560": {
+      "fingerprint": "sha256:7316178e8ca237398f209d1e0d847a7af0e239c9d5838f42d1bcdf3b03880442",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:139247247": {
+      "fingerprint": "sha256:419bc3169974d466d0c2f8e4fcfaca17137efe15d3995ac3fe9fffc59dbd8782",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1419483796": {
+      "fingerprint": "sha256:4c6b6108eb284fb7ff4b981475c3b7f7d7132a0ad38ad63dea661eb4a36f373d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1419486419": {
+      "fingerprint": "sha256:57f90048eac02d82217ef7bb4c01d439cf86fb53c2eb3097b4720358b8be6b7e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1424696179": {
+      "fingerprint": "sha256:83cdc76b9d54a8bdc6a09096e6edc3849be633fe3491a235a609822bad514eb9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1424696183": {
+      "fingerprint": "sha256:b857ee92f69f4c75d71488b7574fb3a2b8f0ca7e1d9dd0bb78cd1df257a38859",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1424696187": {
+      "fingerprint": "sha256:252e6515b4d378fcd7194766e7687defbe52bce9b7662a8055a0513c4b5f4a63",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1426757748": {
+      "fingerprint": "sha256:ecb2e9c47b5e7d60c5a58efb78c6fdb034ab04118c4769598f58a26affc28be5",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1426788268": {
+      "fingerprint": "sha256:3337270162451e4fbec8f5e709aa45b7958e8fac8bc28736ae56272957f7b41c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1430489158": {
+      "fingerprint": "sha256:62f031b293819ca9abc40752cc42ff6b1e11b53560a13a6f90411be1b078e679",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1442282644": {
+      "fingerprint": "sha256:eb3d28881e0f6a915b0818b593fa8d49963c4801323f18bf4f50ee4c34adcbb7",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1445884504": {
+      "fingerprint": "sha256:62411a8c3e998c0cb36d430eb56cd293c56d494001fffa4e35f75eab499f2c5b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1445884506,1487518618": {
+      "fingerprint": "sha256:636fe7b781e691e6a9555d1ace12fc4e671c7fb2bb35b3eb37bbff90e556d4ee",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1460457115": {
+      "fingerprint": "sha256:c3011a96cba16256d96124d94e8be51b7eb266be6b1720364761752428db37d4",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1472989609": {
+      "fingerprint": "sha256:275314a3850411799c6a5bea254aedcd78194bc741f3645a7d5b426ea62c35b2",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1475253575": {
+      "fingerprint": "sha256:1a2643c2b4ad4f3f858f3c4c51896382ed230c19dc172ba824bf85d3fb77de87",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:147945245,1377208889,1377208890,1377208891": {
+      "fingerprint": "sha256:24bbb6cbc6bdb703be266c465228c2d7c9c19d98335549715c29acde397b0ae4",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1486834097": {
+      "fingerprint": "sha256:053ad4cc36cf3a9bffea4cd26b07c1e261848415064a3a48f031c34b9117d1c0",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1508161904": {
+      "fingerprint": "sha256:c4627af254d7b809a961c39442d87e9cda50da4e5adfe9803698146b52417c3b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1509460982": {
+      "fingerprint": "sha256:aa5223e006c48b86b0527c188433ca666ba005db771fdae35d02365b802a7ca5",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1509460986": {
+      "fingerprint": "sha256:dd579fe74cc7391d50068b4e6c269170bce282885f246911c42c3224dc6d4837",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:1510208002": {
+      "fingerprint": "sha256:2debe02e9c65adae9b90a366208ea4fe99465ddaf6818fe35c7faa10530dfb00",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:173412386": {
+      "fingerprint": "sha256:0fcf7c815099f6a9cda7fb61e59304ead01ab3823b5eaeae08a6aa3e5a5201a3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:196257507": {
+      "fingerprint": "sha256:df638236f5959b1e9847a0c212cd0008dfb6e689fccc19f519ec17a29953bf90",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:201679094": {
+      "fingerprint": "sha256:6cdde5da3fece337ac006896a4e247da3fa7982e17fdc58f024de37495c3a8cd",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:203148628,1377227642,1377227643,1377227644,1487300875": {
+      "fingerprint": "sha256:fd82b5c9e462acc3a2b026b09849c3524f17fb572b257d45eddbed1d1959cd7a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:204935005": {
+      "fingerprint": "sha256:ba5831fc0cb8c37f2db873360bf395cb6566752a1c2131572f9322ed1e6f3ed8",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:223819675": {
+      "fingerprint": "sha256:9ac326a05e71441e88f31ec3a5e20a699ca51ee0c55b9d93521b01f16a765c7f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:223819676": {
+      "fingerprint": "sha256:af789016f649448e93ea3aa6ab4e5805f0cde1ea81d997936ea0f9380ee8ba20",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:228885122": {
+      "fingerprint": "sha256:48996c9bbb71c39b6ae0fc05836bffea3dcb9242dc18b074c0dd5c75b1b60236",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:245334873": {
+      "fingerprint": "sha256:c549f5eafe91deac50f263596fa2950f1d28a4911fb633c12beea3a993bebbd0",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:245343553": {
+      "fingerprint": "sha256:350a536fc1de12c283997a69177d0863fed70647db7fe0a6e189d28b49ff8402",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:246159347": {
+      "fingerprint": "sha256:92c4e1c9614789bb727e21fddcff2b65494ac31add04c9666715b2e16d4f3485",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:254678435": {
+      "fingerprint": "sha256:ce8df743a4b5af277fc95a74f63deb038f16d2a3e98350b594d39e81767ca863",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:261088917,1393607128,1393607129": {
+      "fingerprint": "sha256:a857475003c2e2d87601423219cad4b2b6ff4c8935a3fca23d6db8e579cb7239",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:265950481": {
+      "fingerprint": "sha256:d26a95c99223234fe71bb61be8ef84fc573705e0a48667635bbdc9e9e5b8794d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:294767207,1377441086,1377501314,1377501315": {
+      "fingerprint": "sha256:6092d04ad89cbbb0c64207f5df418028d68aeb9b952d70bf3beae07b762375f3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:294767208,1377227631,1377227632,1377227633": {
+      "fingerprint": "sha256:99ebe41a7a1fb8d7562cd8237c3c6cd9fbc5ba8485756748036f86a853feb617",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:295427467": {
+      "fingerprint": "sha256:2e7801921dd63f66e2463e6c5625a2116628236be052d428ec0328652e6efb54",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:306581555": {
+      "fingerprint": "sha256:295b8e2bd6641ea6dc7c1724a10d8e6b6d3cd09da08815a2e4e5058d37c55b87",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:306585532": {
+      "fingerprint": "sha256:9401f024c78dea78623a6fd4e8beaf7e3c246c388db33cad0ba566dae177c5c0",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:306585533": {
+      "fingerprint": "sha256:18eaaac0efe5e679c7daed38d8921cff5ce1e202eb2c9b0980211410fb5f583e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:306636824": {
+      "fingerprint": "sha256:9603825232d0eb0f8087c520abb1e9b14ab03d1fec4e6c3947b2bd4c413c8a6d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:306675130": {
+      "fingerprint": "sha256:ae7fa46fa02e9ef7e007d10babfb5ac7122dc4f03e02a0c27cc516dbde20f0c1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:308864389,1487518609": {
+      "fingerprint": "sha256:d940a649b8a41c59e509089b1245bf0273315d130a3a17614d29cfa9e6219250",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:308864391": {
+      "fingerprint": "sha256:0dd9c6595280a0734e9d47a5be052da678fdb419fe1e92b04f5e3e8892932d76",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:309097133": {
+      "fingerprint": "sha256:5938a59208f9fd621dda6fdaef48163bad23f982917933e3b1b39248564ee697",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:310277923": {
+      "fingerprint": "sha256:92bfe0daaa77640bd2fee2c8a77f26c642085cf37157c481b907b760efb0495f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:323780427": {
+      "fingerprint": "sha256:d53cc8efd5b556ab10a731f4dff0bf12b79479d0b156823346cfdfa7faac11cd",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:325002623": {
+      "fingerprint": "sha256:701b9d8362df8291dfe96c392670d3e74b70982eb8fa8f0f13c8a281dc3af001",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:325385554": {
+      "fingerprint": "sha256:5d771da42e9777afddaf0c5d8a9578bd1a2b0aeebc149f97e9777c97a076dc14",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:325385557": {
+      "fingerprint": "sha256:c0917275d2a4edce1a75d7207d374129a968ffdd0eaa7b1eeb3b9bf544f536ef",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:33056663": {
+      "fingerprint": "sha256:72873d462a0f7ce409c4ee2e84f0b8d15c4e80e747428c268591d19f4ba6ff8e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:33061584,1377227638,1487283919,1493804079": {
+      "fingerprint": "sha256:19bb8e6117d97d550faa8b3c8803be6d592a7dc0a75d9e495773d491ec9add8b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:33061796,1487283976": {
+      "fingerprint": "sha256:1ba01bb560c28fd0b25a1db37b13db9def22016e3a794dddeb54db1a4414c03f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:337233217": {
+      "fingerprint": "sha256:62bff237a7ba83e8586dbf72fe934b90456cd15ab066624299cf0cc190655564",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:345178912": {
+      "fingerprint": "sha256:b92a7e2db860f3a066f2acbf1b9267c77bb0dc79267efbda18c2ce9703edf475",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:346587920,1487518606,1487518607,1487518608": {
+      "fingerprint": "sha256:a9d3a4a642f466d2170817e22bdeac16776791a7b72ef44bc1fe5cb66a03e731",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:346587932,1487518603,1487518604,1487518605": {
+      "fingerprint": "sha256:34c94941238266610cd6dfcc29f631fcbcda81b0cd3d0646371d5bc4cc8affd3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:352638078": {
+      "fingerprint": "sha256:7b9cd1a33b690dac82f30d288ef82ee5b69b056e604999574fdb2fd77aeb6bf7",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:361153853,1487518617": {
+      "fingerprint": "sha256:fe52faaf5abdd658c47ef7c906392075300cb93ebd3d1ffcd0d2e64766aa5520",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:367488508,1487518610": {
+      "fingerprint": "sha256:0987f067a19e9faec800fbe6fd0b377e4039664921339584816bc85e127b438f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:367489913": {
+      "fingerprint": "sha256:ef51f98332f0fce0885ffac848435728c5a640147876509930ef7fc20c11ec93",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:367853010": {
+      "fingerprint": "sha256:0bef07b5335419484872b8b6a9101a13cb6a920307bfac422a7bbebc4deb7570",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:367853024": {
+      "fingerprint": "sha256:a46f775ac9e30a9ff37b4f6ebc40401c464800234c62e3c84fde04c9737bbca5",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:368481022": {
+      "fingerprint": "sha256:c47593a1b1de4eb786cfa8e3b39bdbb26eebb22da935a924c41ea247c41da45a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:369889421": {
+      "fingerprint": "sha256:efeb4880919c0ef12d3f5824fee341451d5934db720df48a0ec0cdeea4aa370f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:369889426": {
+      "fingerprint": "sha256:fa27e6bf135740212f8f2430073024cefb42deb6178ab83e1d63e8ad63372c5f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:372451646": {
+      "fingerprint": "sha256:658f5a6e321fef081dfbae6a3c78d1667607432935bec68e8122779dd74e926b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:41169343": {
+      "fingerprint": "sha256:97448a3f7a5c87305cb96884abb080bea4c23d07ebc439161f2608df88dfd729",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:41955434": {
+      "fingerprint": "sha256:28a6ccb49087846c0b07b01e4e89c4d6aa61d0d33c9703b07b7ccaab83700550",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:427773481": {
+      "fingerprint": "sha256:f4ec5d3d78ad8bc84ab8426b9b093ca8aa1cae4192a44e16decf0562ddd2d04c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:444875403": {
+      "fingerprint": "sha256:f8923de32423291eead4d16edaa62ef7668ca61b1e8b8c905a92fcf5380d073c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:448775136,1037522247": {
+      "fingerprint": "sha256:8ca3ce8b2cdb685078fe445dd4bafa4adb09d07959be2b731d223e00e6181a49",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:459056841": {
+      "fingerprint": "sha256:707a1ac8f0af2fd01eafea2b6999e93e010653da1c2aff97da43da368ca7d3f7",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:459216271,1377227629,1377501316,1377501317": {
+      "fingerprint": "sha256:01ce1df1c33b8d122a36289643a31f3726eb24a0a4400b796e53e76d37e22d47",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:459218062,1107374065": {
+      "fingerprint": "sha256:4ca0a699f3cd732c01ba7739d3967b0c0e9af4dbf415c1f48b9657943031b3fb",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:46692515": {
+      "fingerprint": "sha256:a7d7f02c0c2b369b05461ff150f5714ce0975dc73c8dd1fa524c17a26cb21673",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:46704610": {
+      "fingerprint": "sha256:2921e62cde72c87c96570ba8cdd7c3d9faf1c859476769813884f5630688075f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:46704981": {
+      "fingerprint": "sha256:dcc829955da50ccf99cc6fa7700fffb649b762e2b1c35514336409c0b0424756",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:46705322": {
+      "fingerprint": "sha256:e94b5400d0d3fba455064fa38acc7bdc2474dab99033127b7a2b7649e367c4f9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:46731551": {
+      "fingerprint": "sha256:60bc18d24ce00e266caae50ff41d84c65458be1a25a176bfaffcb6d1298311e3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:46731559": {
+      "fingerprint": "sha256:011f892221dae0e7f9059ec7a34c0fd925ee27257688471e51cc10c08983e0fb",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:500048162,1377227623,1377227624,1377227625": {
+      "fingerprint": "sha256:60c1db1ff9b87be3aed4646410dbbec93f89e10d657012744c32849b5e3e808f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:50336746,1487513908,1487513909,1487513910": {
+      "fingerprint": "sha256:fc53659dc32993e8a6df89781063d53938ace280e675eae70e47eda3096b9565",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:50336783": {
+      "fingerprint": "sha256:a5b24f84998034776f10e42f0a0086b8f91e756acd14f635ecd25eef55642ea8",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:514559166,1487518614,1487518615,1487518616": {
+      "fingerprint": "sha256:40438fd835017d0675c16ada8cac0c88f75489cc4652950d9b4c9c9f408898a0",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:522399750,524896061,527810450": {
+      "fingerprint": "sha256:444968c8cddce705fe394bd34362edc576abd9959b411923d9ab0799b83446bb",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:522477919": {
+      "fingerprint": "sha256:62cece20d5deae1e9e7c972f95f8a4e2e0e24521c6363a05d038b2d1d4acd9ec",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:522491907,628013890,628013891,628015029": {
+      "fingerprint": "sha256:0adb98d3cff929e96411307c4506db8b49a9c74302607216922a631ff0111f35",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:522491910": {
+      "fingerprint": "sha256:41cc08c3cefbd51b7951b4dedc52903d034bd4b79a0519e5aa6d631a1b401da5",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:522821311": {
+      "fingerprint": "sha256:ab76440d8a7a06e9658255b0c685a8a46c52b88e94fba917a74f6d7ffdfcbef0",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:526129037": {
+      "fingerprint": "sha256:e332725be43badf9d12c6ee1115d19ffeb773084baa6167c6d6e2cf1a332f314",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:526564925": {
+      "fingerprint": "sha256:5d1cc471186220e8d1f9b86494f59d1d5492ffd0b2f369cb7070ca83d8681e6e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:526564929": {
+      "fingerprint": "sha256:49624e4c4b1f30a2e4de73c2459d6684a5584ebc15dcea2508dab3725f631ef1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:526564935": {
+      "fingerprint": "sha256:6c195f713af9782d3955252f23a07d11611d21fd2b50a732f8e7971022224442",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:53820613": {
+      "fingerprint": "sha256:c8abd5934cbeedddf2d59f31cb9ddf8448febef105e2e6bd6b2f9cf7d6aa8547",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:54394656,1487518611,1487518612,1487518613": {
+      "fingerprint": "sha256:1ab79d2d1ebdad233b7d7e7ef3ba997982e2c95cb9af16ba45e81bc3aad7e63f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:545244206": {
+      "fingerprint": "sha256:6ff851ac5c24767bef75bd46c3774d600fea4ee093d9978b92b7837f0e33ab5e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:545244209": {
+      "fingerprint": "sha256:1f93a8f38b3a0bcd180bc8637f325eeafaf6faecd898dbb260cc6e5684e08ce9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:546662992": {
+      "fingerprint": "sha256:b845a618b3bc9e995f68216de11904ca04b2dc6d435d1d0ae48ad1ab912bbbbc",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:546662993": {
+      "fingerprint": "sha256:f058161c0bd3665e8d7b11e53eef8d37c84ab113f4ef727b03be24d2f6a304bc",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:547901980,1377227647,1377227648,1377227649,1377227651": {
+      "fingerprint": "sha256:9c428c647158426030636305c8502daacb2c9b69f4ba6c68b232b4691d6de3b8",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:556479320": {
+      "fingerprint": "sha256:45226f64b5dcddb59028f1de45cbf292e25bd17b95cf5abec0f0ba45e26bacde",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:556670498": {
+      "fingerprint": "sha256:c7f1cdf5f55546380fcfb34da858e6fac11787516dd2daa5705850cb0b6fce55",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:556692668": {
+      "fingerprint": "sha256:5166ffa25634048cde5028301a2f9890726cb35640d00e8014417545ec89e633",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:575399045,1377227634,1491142490,1491142491,1491142492": {
+      "fingerprint": "sha256:7e7733517bbd1649149da9532af8f9c1f0316cc4110bf31bf07e42595b84076f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:578571049": {
+      "fingerprint": "sha256:17c8d0ecfb255d20abf9d307d00da11faf160dea0721396470f3017176cf35b1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:578571668,578571677,578571680,578571689": {
+      "fingerprint": "sha256:fac07ac6519c49b6468c3853ea080824838bc7eee0c72184049ba65f0778f5e4",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:578573093": {
+      "fingerprint": "sha256:579557873d88ccfcf615e2dfc2c9a90ab793b1f17a401622cf7c4e03ee8fdcdd",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:578581072": {
+      "fingerprint": "sha256:ed78d4b4a96f8ed82c776a364ecf085ff122e5b627010fd3a13db76b38f1efd3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:578919847": {
+      "fingerprint": "sha256:57b5a3be85cec9bf877b5e7212b287d8144c4b3b8e18a34bab2e27c96cbd3ac1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:579969726,1200367022,1200367023": {
+      "fingerprint": "sha256:5bdbdddb24a5568fec0290c3214abc4090c1983746fc4f66234c0e0c78e2192a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:579970643": {
+      "fingerprint": "sha256:97d50f3dcc3beafeeae418ab7654a6e16d8b7bc1910b206714b8923fcaf39734",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:579971517": {
+      "fingerprint": "sha256:3e792d0b998b94b110152a63b08c60df6e390c0915a62cf811b61d4feb0b927d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:580249526": {
+      "fingerprint": "sha256:73d4465ab8739b4fb91511b33b32ca47a528419f1a1f568ac21aa9483e63b307",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:580998170": {
+      "fingerprint": "sha256:8bfa6783885be52a681ee44835ceddaddcac6c1241c19da7daad4802c5cc7f32",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:580998177": {
+      "fingerprint": "sha256:53f6433613412a8a3fe8ab88c265e10a0d668b919493546939ad0e7be6f1abad",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:581405203": {
+      "fingerprint": "sha256:568a4ca306b163898663407eafed8d8aae6b30937f772d66e9a208768d55966d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:581405204": {
+      "fingerprint": "sha256:1e4a083a7a8fd2a97399555c4e1f35afe1891df7b704b158646bead2a443cc34",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:583552641,1488359118": {
+      "fingerprint": "sha256:4cb68da5dfbffaa7da485e7b5bba5ae6a3b4d41e0e7e6f3d73bf23b64ffbf2b8",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:58898182": {
+      "fingerprint": "sha256:03d739397befdff6abd31d56eaf64d5fcd1db2c1d79275e968a42444a1e51b6b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:58898269": {
+      "fingerprint": "sha256:46a1aefd08b72eab6b3e7a4884514f0fb77b38595c2d131d9a35ac9e9ed22c69",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:58899239": {
+      "fingerprint": "sha256:825fe34debc126d741334461f0417201e51e1471e96a5fee2d1dba392330e94b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:60377827,1037522246": {
+      "fingerprint": "sha256:83eac80326c1526a461d3b8b8e53cb4329800fb185571ba1ca30dfd224ef4feb",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:607492775": {
+      "fingerprint": "sha256:153212c7ca716ccbc9059ac21925ee8be9b5676625aca2fcdc89bc58d8cf0341",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:607661787,1377208912,1377208913,1377208914,1377208915,1377208916": {
+      "fingerprint": "sha256:6fb3daf10f611f962d10d9ba726a369223e5bf16ff48293bd8d5ca018ddb530c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:607978764": {
+      "fingerprint": "sha256:3558f8ff00fcfdd047c98533d632a5bf1a30052e9ff38d54649e1b1d143aaad1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:608156586": {
+      "fingerprint": "sha256:3edc0d61c2f9752169ab3a501ab264a851340fc655f48785c786729e2557f59d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:608156589": {
+      "fingerprint": "sha256:020f3c42057a3e70ee1eb86f0bfa7e159a619ea6c5841023f242b57e818ac96f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:609979807": {
+      "fingerprint": "sha256:ec9ab225e197458ab09c19e46d80ec72cebf0a6a2e5d61f0aad2a9fa5d105b3f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:609984986,1377208938,1377208939,1377208940,1377208941,1377208942": {
+      "fingerprint": "sha256:aebbe2af815a5dfc6281f26749bf9e2dd24a77cf8e6d93c09f5113aafcf8da5b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:609984996,1377208935,1377501324": {
+      "fingerprint": "sha256:884a478a1da514b6a05a8b2bc311fe1fb0ab0bba67cdeaeaa8f12df7499b797d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:609985488,1377208929,1377208930,1377208931": {
+      "fingerprint": "sha256:3c0d955209314961efa544b37045a6df83c09907b7972f54430ab3ffa3fb4960",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:609988248": {
+      "fingerprint": "sha256:133ee5fb5091ddcabe627cb25db5877437805a6c8c46d5b1b462457cff6aab35",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:609990329": {
+      "fingerprint": "sha256:b25243eef7c80daa70283452fc3edc9509fd20067813381c90ed87b6cbe1a95d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:614932770": {
+      "fingerprint": "sha256:47048f71c2c03fb63d127e34678563aae30d47e169391b058774e1383207d3b2",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:626743324": {
+      "fingerprint": "sha256:5b36943d122c61260e4add8d39f678dffd64e1a033b46922221784bbffdfa08f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:635023601": {
+      "fingerprint": "sha256:d57010b95937ecf73aca0f9c19165c156efef5409832fbab19fac6ca5a9bbec2",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:646249308": {
+      "fingerprint": "sha256:37eb3f30e0b102378a80b5db4dc77848541533ff0d8811de8fce906b038174c6",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:646359647": {
+      "fingerprint": "sha256:ec269119a55cdfd41f95d08dbfce2852a9274c66331b91bd61077dd1597a62a0",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:646381335,1377227619,1377501322": {
+      "fingerprint": "sha256:d2b4d52112cbeb116a9124fe402d08743c27ec45c0e46235480c7c667593c25f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:646827535,1377501323": {
+      "fingerprint": "sha256:8c4979d5cd87449e5f2938841afcf6ea993602a915057cc837ee2f61dd6df6ac",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:646946687": {
+      "fingerprint": "sha256:6629001fef2765647ace601755861d3a5b2263ca4e3eef498fd29e06601338bb",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:647260782,1377227621,1377227622,1377501318": {
+      "fingerprint": "sha256:d8048c78a24a4311d28ebcef6475aa4cb591f4dfed2d60948010f8dbc4dfb714",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:647282662": {
+      "fingerprint": "sha256:90ab6082912c69b0e4e41e2c24c7d0be6a42e758db02ccb9cfa1034f3c545ae5",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:653368750": {
+      "fingerprint": "sha256:463366402f5469a6e477d7bf6384e3fa624b2f51b2763f1728dd7b9cb0a3ff46",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:663780325": {
+      "fingerprint": "sha256:9ddd84e33044985acd6a54e1d006220d5499fb6089427df01ac7fa77a1808ffc",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:663780413": {
+      "fingerprint": "sha256:69d603be44eff9ce1c0ca13f3f64786e075c4a3793fbd922928f53b2dff38e52",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:663780423": {
+      "fingerprint": "sha256:fa75715d2005d4ba1b07aa4ec5905fc1ce18bbe14c3f589fea3c6dc58f4411b7",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:663780440": {
+      "fingerprint": "sha256:52543ce0e6bc474c40d2b6980f66a054585f2109aab5ceac6a46a1687653373a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668070097,1304726086,1304726087": {
+      "fingerprint": "sha256:3917a8d38566270ee6752c8e9d6b1043a2ca404be05898dfeb0c113ba6502dbe",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668070102": {
+      "fingerprint": "sha256:3130bf88e58fe260c36b452d9f97ee829208beb06339d9122c8cac88fef5c9f9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668076633": {
+      "fingerprint": "sha256:0598a3d18cb8f3ecf719e53dd1d91e1d2ab4859160df87656c0925101e7c59f7",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668076664": {
+      "fingerprint": "sha256:f504dd44ab9073d461aab7d3eaaa18ceb1a580c040fbfe6f11bc3cfc498a9904",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668076676": {
+      "fingerprint": "sha256:a49d01f76eddd95759fd5075f9d215bd5e00c072860623859dee7cce4550c195",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668301866": {
+      "fingerprint": "sha256:3fbdd4fbfc04a178dcd1e2d486e502935c675f42790fd548be8b77ae3ec34059",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668305353": {
+      "fingerprint": "sha256:a07e865bcffc67839b55e2e3bf9cef5995f744de9bf2065fd6cc0c442ea6ac53",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668305359": {
+      "fingerprint": "sha256:6439fa9cd056d316dd2022abb9014f4fdca66eee7341bfc2ce3a4a46f8e83e7f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668318528": {
+      "fingerprint": "sha256:18e3e9dd13d509149d360040f5b16b42f23981dead8c6cf19bf898406d8b5a48",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668318534,1377227653,1377227654": {
+      "fingerprint": "sha256:a4761ece35f7c774e80b9ef2efdd633abcf1a5ca550d4c83e61a1e841ec0db5c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668318547": {
+      "fingerprint": "sha256:580734c5131ede785e3692ba8963f13832bc6445e8b154f4f713bfbbd75a72da",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:668318571": {
+      "fingerprint": "sha256:ea788e07d70556cb7a10b890db59836cbd70b6d132910d53ac2c3584249e04a3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:673076904": {
+      "fingerprint": "sha256:4adf711e588cf06c8a513ecbb127b54e4db896eb306a3ca5f6ee162041e7feb8",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:67732084": {
+      "fingerprint": "sha256:c934714a4d829712c1d12ee7ebc25fdac355bc4bf1e81e6ff985f028f1a365f4",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:691442985": {
+      "fingerprint": "sha256:28f12b882aac4fbfbef3bf463f82d4407a90c698c58b46921dc23a6371fb6a58",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:692305678": {
+      "fingerprint": "sha256:de03e396b8f1084b15c26116f5e53c174bb960d314c2be7c0ddd5f80cdd5f504",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:69708761,1377227652,1377501309": {
+      "fingerprint": "sha256:19edd81607733a68daa5d11deb7b390f8c56d3da917e96ebe6d5997f31350fec",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:69708800": {
+      "fingerprint": "sha256:9d3dbadc79dc5a391b4a7240e9f7b946b13e28a1967760861f6235183e00fc9b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:69714116": {
+      "fingerprint": "sha256:759d638ee4f2314204366b1cd68bb99d306a4eaacde364b8e0681aeb847cba00",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:69887212,1377227626,1377227627,1377227628": {
+      "fingerprint": "sha256:dc56a65641599ba6bb86985b8b81e98b2a4c3841bf99b9dda1bf43cdd07a5757",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:698957078": {
+      "fingerprint": "sha256:ede1d6ef96afdbc39da68aa38c5e75eeec07b8d05fe57bc5ea2f9ef6f094377b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:69898713,1377208945,1377501321": {
+      "fingerprint": "sha256:e6339b00073dd4fee51be340bbd7de8ce51de36e8d2d6f558da500d30964ff15",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:69898729,1377227620,1377501319,1377501320": {
+      "fingerprint": "sha256:df491c45c6a983115218af3ee4fa3c9362db8e8a305fd24ab10b9eb696438868",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:70033193": {
+      "fingerprint": "sha256:250744e7a290229e5428433b22aba55a3b8c84303f570f75730214267e7feeba",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:703792124": {
+      "fingerprint": "sha256:94df3f1e00130d7b774428226691dbcf1c48382daeb7fb0c7b49ba6e971910d9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:707533818": {
+      "fingerprint": "sha256:58d4791455353f05c32b574a2857392431c1a2747ea42961027d4e477a8a78de",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:709711219": {
+      "fingerprint": "sha256:94efa7b50f142db2666363db77499beafb65144edf2a57142c5f6b814ed6d30a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:715694892,815935987": {
+      "fingerprint": "sha256:08c3d7ea8586cb379ceee8f46c3b943efb28cbdd7839c85068341cd8142cfc2f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:715694895": {
+      "fingerprint": "sha256:db88ad9b0b3fc230e6e85145b7b88c7952d013abf0d20146dd248a06635fa87f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:715703980": {
+      "fingerprint": "sha256:51fc42273d4f22d97d45f65e4e1eb8bdab48da21e320ae72763e9b7f4ebc7976",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:715703988": {
+      "fingerprint": "sha256:a0edfecafea38ee0511a1b295b351c973e8f410baacb345a8968fe83498fdd9b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:717577400": {
+      "fingerprint": "sha256:61241b40bd2087a37245e53b20865aecc16c5cd32106179da0f2a047999a5aee",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:719983169": {
+      "fingerprint": "sha256:5ecdcab068ebc77b86af013773023433f445ef98261d7d0e10cb7262c717e14f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:719990790": {
+      "fingerprint": "sha256:f141277d1d729eb67e405cb8b3165a2f0c16b32bd9dd177045809d2eb3a87f9c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:738300863": {
+      "fingerprint": "sha256:358443b20a9bff358aa2d01cea93712dce3f86e06562b1e11d7d53afbcee5bc2",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:738300864,1200367041,1200367042": {
+      "fingerprint": "sha256:3218400287e172d104e83064c09ad02f65735498f8f913f3569744d844acc3dd",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:739624254": {
+      "fingerprint": "sha256:d09acdabbc97e334bf287a41aa0b64538c9d7dda50d5a7caa9f3c7cab899e73c",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:741893454,1487513905,1487513906,1487513907,1490903118,1495985060": {
+      "fingerprint": "sha256:ca75c83f768acde6b93aa6d07765a0abb1757728352a1b33302ea36f72b8a10b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:743117484": {
+      "fingerprint": "sha256:4dc8afcdf1d5095afd6f2b27dde74d5671669955294ca723e5265d0969d49fca",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:743117491": {
+      "fingerprint": "sha256:a6ba20f7a4574a7225bdbe484d5367c518182f227d526a5b1f5000cdc4684614",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:743117496": {
+      "fingerprint": "sha256:583e954f423ff7eef3f6dce455457196b06b2ea248279a1e18904654029a45a2",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:743117497": {
+      "fingerprint": "sha256:4a51f87902ac5a1daebe15ca55e4e09520a3a0eacb5ad252733737d8c47bd2f6",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:743117501": {
+      "fingerprint": "sha256:9f306b9134c2cf6709beef535f5cf3f8b7888a8a8a0e22475a0f226b0906e3c9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:743117505": {
+      "fingerprint": "sha256:36c71addb4cb3df9a7b0ba2d2f9e8a5dca5705195ba10e524653f75dcb8a29ae",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:752989188": {
+      "fingerprint": "sha256:9a738861e8c4c8c231e14c3a288dd9c6122f938875933121f7caccb71c37cb9e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:761642645": {
+      "fingerprint": "sha256:c244498dbe8d69cc2721526f41f6927139d58c46ed980a2ff6108127c114ffb3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:765720834": {
+      "fingerprint": "sha256:21ed0249ad9dc35c319aed3edd2ec33e04f220227a4737360d9c8df7ad3d1c71",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:771470642": {
+      "fingerprint": "sha256:629ddbdb034b1d725dac69ec547f6fe36bc8941b07d62451b680114cd84cb652",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:771470648": {
+      "fingerprint": "sha256:27d3eaa313d69e9e93a9d5a6d8aafaaa28a32d642fd0dcba1886eb938121e25f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:771470654": {
+      "fingerprint": "sha256:d0b473bacfafec6776acea4255b67080a2c7b7e55d12a7d77a739b27e3e89d45",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:771470659": {
+      "fingerprint": "sha256:be0cb76320020ce085eb0f5589926f3b0af24969cbc8dd4a2c95aca5b3f34213",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:771470663": {
+      "fingerprint": "sha256:209e3c57dd38c1ff6f89ea169a41142195c473fe64c45874aa172cb53ef836cc",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:771470665": {
+      "fingerprint": "sha256:5c1a2cee239e0b7d489ac975c89c84cec77d71c4b0c10bef7aa9bbb795689b78",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:771470666": {
+      "fingerprint": "sha256:aeaad166c4433bb971ff331bd8e88ec527e544054839474b5dc3730a30ffbb23",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:771470669": {
+      "fingerprint": "sha256:11e6f017c8ecc6f4640339a7c54a29b76257d5e7f578876e8b5ba45d5422f922",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:777810403": {
+      "fingerprint": "sha256:ef0b284b47ec42def69d854afd8040ea98ea1730d751c3df0acc8af30fb23272",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:777810405": {
+      "fingerprint": "sha256:434d44e1fb6aa7adfd19f30dd6487cac15ab23e489579d0adaee811d25221c97",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:789269614,1377208924,1377208925,1377208927": {
+      "fingerprint": "sha256:ec370a1f3dc73a79e59cacf4cd3995bfa30ed75293b70f7adf7d21989b26c77d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:79085239": {
+      "fingerprint": "sha256:edb0931118ea9c22b521c611b58bd25cdcbf63e56261c0ac186df8013b6baf51",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:79112552": {
+      "fingerprint": "sha256:eaffeaddadae1f434e5d2689599076cc04a99400fa3bc432cab93b6617536aa3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:794389846": {
+      "fingerprint": "sha256:23ab4265e48a0c313eabc15fd8a06233a86835adbeba7125a0eea11ebb7b7f61",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:803365333": {
+      "fingerprint": "sha256:141898bfa5e7812ad7f46a19f2800a84851908d00cd3347514cae3945f16ec1e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:803365335,1487518624": {
+      "fingerprint": "sha256:d17e0f27e1e65b4c2b3b2b7ade82ee30b96e82261abd3dc0958cbcc3b4d66a43",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:803365336,1487518620,1487518621,1487518622": {
+      "fingerprint": "sha256:2b2c48245857058067189d017ca2e7f112222d1faa944711ea08e3f7e56fcca3",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:835445113,1490859065,1490859066": {
+      "fingerprint": "sha256:b24599a2653ce69be3ef3a49019508e2b59206521323b3065238bd328baa31d4",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:835445114": {
+      "fingerprint": "sha256:6178020150dec658366fef51ea45428098f4a8f2997362b4cf3cd2ef3480f10f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:838936625": {
+      "fingerprint": "sha256:bdef5a4b473b8b04db86ff969f36a4f7ecfc62ec1ed4ed1f438270e836e7ddb1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:838936631": {
+      "fingerprint": "sha256:c49e22cbd443e1f0a046e9dd5d2bcd6aaaa3ce427e8a270720699fa89c015e72",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:838936632": {
+      "fingerprint": "sha256:5c5ad6b2b2cb9e026d3be273297c462b3e3dabc91118a3aba8d13a30ecdd8578",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:841155121": {
+      "fingerprint": "sha256:24dfb51b73e7af5b4516a6b3c09caab749e84e99594bf8a60864b1a81f6c1f2d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:841155426": {
+      "fingerprint": "sha256:6e1b88d9b923cc0cef6b06fd2fcbe52d8f7aef06848744cc975619fbd3e417ac",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:841155427": {
+      "fingerprint": "sha256:6714851af6a6f63185be7a2535993324a8e97aae78caf6affb7c5e46bb16fd93",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:841155428": {
+      "fingerprint": "sha256:df916719210e0687ad7e18379c43b6009dc1caa2ffa31612e3e3c16b299a2f70",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:842376170": {
+      "fingerprint": "sha256:716a97b9014adffc6028ae6658ef79aa63ef302a899bf5a7ab5d312cf3dd0885",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:842438959": {
+      "fingerprint": "sha256:97feb188d844107632f2b9c940ff6ce1a26efa39af54ed1e77eb43c103874f59",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:842438960": {
+      "fingerprint": "sha256:a2abf0ce7ad27d7a46621fe08b1aa34904de07c039123cee024a67850804a1bd",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:842438974": {
+      "fingerprint": "sha256:9088b35679cf8f07fad47dacab4e569c28408c2d8b4cd8aaf2aad81206bf4c31",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:844282807": {
+      "fingerprint": "sha256:b2c6ac2251ceea93b24716ae71a1ce0c1f95ab0c87d795483fe11b7870850487",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:844578702": {
+      "fingerprint": "sha256:05ff3a86fc66df0dc1d1f30f025a539f8591fb2e608871e366153c080ad3121e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:855779446": {
+      "fingerprint": "sha256:c890181ee7ca68986ac018e7e0d73668e4286800387b8d4eadfce17f0b2e8d00",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:87143658": {
+      "fingerprint": "sha256:bc548955df91bee67945dd079604eda320ac458bdce2bb0846589503dafabbfc",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:882456438": {
+      "fingerprint": "sha256:20ddc76b08685bd28e68f0671b15443cd0cf8184c6052640f84480b315026c75",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:882499156": {
+      "fingerprint": "sha256:7a3f9118554b1c259ffe3666d9b62c23e2956421199c69707c83897828c1e380",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:882499166": {
+      "fingerprint": "sha256:e518cd4041c336302ec9920be951147fe86f29ce1da73e1e47468921dfafe19d",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:888758296": {
+      "fingerprint": "sha256:a70c9dba756f92331ec71ff536667347cb0e4c7d1315280e0eacb5e172749b6f",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:889745198": {
+      "fingerprint": "sha256:afbcfd148c7071d775629fb13458cfab72afcd1fb24616e6f89ffa0b8a1ad904",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:893708900": {
+      "fingerprint": "sha256:6d7b03cc063ac23d6beb1a40283eed534dfefc0a7e0d636ad99cecaff5d85c8a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:90517379": {
+      "fingerprint": "sha256:f89d1e7bc25398f66f75df2751b6f454d59144a1416769138324c556511b34b1",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:906167680": {
+      "fingerprint": "sha256:a8a4cda078be58f90282967588c46c1d9a2b405f83a7c9cd1194323f6cd568a6",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:909770214": {
+      "fingerprint": "sha256:8140f07d2877be398b51d0cbf8f4150e5d71700a1e1e89e09e9b4f9819d193c0",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:913470502": {
+      "fingerprint": "sha256:80531c3a7af7769f6c0d4375d82f90ad8114535876a06b6a928eb0e1deed63e5",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:91449734": {
+      "fingerprint": "sha256:ec4d733482e6cc6f9080eca8296425c3d6a91bea121f7adc77cb1a2377e17574",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:91449742": {
+      "fingerprint": "sha256:f6d3f101b5d3360bac9a07e27d63a02af51b43fb18caa94b40952c9ed1019a3e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:923195576,1037522245": {
+      "fingerprint": "sha256:65d5578b2efc665510cda129f3597ef924a12b2e4cc6bebeb858c4d5692f2c10",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:954190065": {
+      "fingerprint": "sha256:cedb1796bb7ef0a675bccd634064f323eb70bad60aaed072b07951d538cfd39a",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:95741667": {
+      "fingerprint": "sha256:81fa23d943cac29a1d5c413be71c9ee92f924bd85bd9382ba8bca3a503f75e6b",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:958921300": {
+      "fingerprint": "sha256:c5bcb4a90fd44f70041806d8e3215afeadaaa88761b16994caf210d7f1c70005",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:958921301": {
+      "fingerprint": "sha256:c17b8564e57a236e2757ec44280fdf76e6f9d368c0e12f81c26f6e6795cf923e",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:963618370": {
+      "fingerprint": "sha256:69ade6a7315054bfb91b4eb72ae2b6031174ce166163af823c492560df657217",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:963618374": {
+      "fingerprint": "sha256:0395f65a1ad789eb178acec9f13ffa1a9b55dd24bc52cd3e6d9c12a03c835ed5",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:963618375": {
+      "fingerprint": "sha256:3351cf1e7645b2487f406c65078d92b9b9aeb5e3fc02a640f94a6ac5c5bba295",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:963618381": {
+      "fingerprint": "sha256:1b70199626a5ee4626042351efedb933607788b31620430dd6cd6c37e3ed5cf9",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:969476065": {
+      "fingerprint": "sha256:9e8b43874ed91ba8a73ede6a533e3938f4d70a67e1d9010e9f336625c6dcda42",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:969476331": {
+      "fingerprint": "sha256:5dc1514200295d60b0f365e99e5e6b1c391e7d87e3d71fc68f89e7504b0131a0",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:981252313": {
+      "fingerprint": "sha256:977724b05d3581ec4c109aaf5fea2a87694b5b195b22d36f5553003ed7c27044",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:981252314": {
+      "fingerprint": "sha256:5ff711509c074b4b9126b93927a9e209df3f0a451761562a2375ee097f659f44",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    },
+    "osm-ways:986737511": {
+      "fingerprint": "sha256:54eb772251bdc8b473b6a89c87e360ce370ac2b511cf498083bd4220d704c5bc",
+      "status": "accepted",
+      "note": "Accepted as a complete set after visual validation in the Roundabouts editor.",
+      "reviewedAt": "2026-07-12T11:50:31.871Z"
+    }
+  }
 }

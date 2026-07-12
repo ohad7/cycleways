@@ -1,6 +1,6 @@
 {
-  "version": "fbda8096ada6",
-  "generatedAt": "2026-07-10T20:28:16.086338Z",
+  "version": "8063067b9cee",
+  "generatedAt": "2026-07-12T11:58:00.580Z",
   "bikeRoads": "bike_roads.geojson",
   "segments": "segments.json",
   "cwBaseIndex": "cw-base-index.json",
@@ -11,7 +11,8 @@
     "segments": "436aa19405dbf1ca4d6632d5ea72be06a8b8960cdd0039256517e50d39596ec5",
     "cwBaseIndex": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
     "kml": "aec00147ac141d84d82c3acb61a2ac37c317d6d38c323c9176369bdc451f022e",
-    "baseRoutingShards": "7c7766c9759d0165976cf158b33acca0ae067f2768339aae95823af46983dd89"
+    "baseRoutingShards": "7c7766c9759d0165976cf158b33acca0ae067f2768339aae95823af46983dd89",
+    "roundabouts": "307c98e02ffd87d72c247b6816b32952cb06c78b41a3660ef36e4c9868858aeb"
   },
   "elevation": {
     "skipElevation": false,
@@ -29,5 +30,6 @@
     "overlayDisplaySegments": 284,
     "sourceDisplayFallbackSegments": 0,
     "cwBaseIndexSegments": 284
-  }
+  },
+  "roundabouts": "roundabouts.json"
 }

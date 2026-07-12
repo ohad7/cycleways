@@ -15,6 +15,16 @@ assert.equal(
   getScenario("compound-turn-left-right")?.name,
   "compound-turn-left-right",
 );
+assert.equal(
+  getScenario("roundabouts-upper-galilee")?.name,
+  "roundabouts-upper-galilee",
+);
+assert.deepEqual(
+  getScenario("roundabouts-upper-galilee").route.routeState.junctions
+    .filter((junction) => junction.kind === "roundabout")
+    .map((junction) => junction.roundaboutId),
+  ["osm-ways:306636824", "osm-ways:323780427"],
+);
 assert.equal(getScenario("nope"), null);
 assert.equal(
   new Set(scenarios.map((s) => s.name)).size,

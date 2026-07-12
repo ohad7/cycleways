@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-shear-yeshuv",
-  "generatedAt": "2026-07-10T20:28:22.019Z",
+  "generatedAt": "2026-07-12T11:58:18.469Z",
   "source": {
     "routeTokenHash": "sha256:fdf64e9baffac071fb1d734731308332dea648fbba128986d6a95250763c01dc",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "fbda8096ada6",
+    "mapVersion": "8063067b9cee",
     "assetHashes": {
       "bikeRoads": "179fea0aebc07c9b1582bdb07aaff12312849dc0efa940f3580b33845a0d546e",
       "segments": "436aa19405dbf1ca4d6632d5ea72be06a8b8960cdd0039256517e50d39596ec5",

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "slug": "roman-roads",
-  "generatedAt": "2026-07-10T20:28:21.566Z",
+  "generatedAt": "2026-07-12T11:58:17.973Z",
   "source": {
     "routeTokenHash": "sha256:0f8f1a20551a4d73879adc905e5a50cb5d63941fb911ffc163d2051455503cbd",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "fbda8096ada6",
+    "mapVersion": "8063067b9cee",
     "assetHashes": {
       "bikeRoads": "179fea0aebc07c9b1582bdb07aaff12312849dc0efa940f3580b33845a0d546e",
       "segments": "436aa19405dbf1ca4d6632d5ea72be06a8b8960cdd0039256517e50d39596ec5",
