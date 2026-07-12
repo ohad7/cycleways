@@ -154,7 +154,7 @@ export async function stopNavigationSpeech() {
 export async function speakSampleNavigationPrompt() {
   return speakUtterance({
     utteranceId: "sample",
-    text: "בעוד 200 מטר, פנה ימינה",
+    text: "בעוד 200 מטרים, פנה ימינה",
     language: "he-IL",
     priority: 3,
     interruptsCurrentSpeech: true,

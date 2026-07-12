@@ -130,15 +130,18 @@ export function cameraIntentForStage(stage, state = {}) {
         transition: { kind: "reacquire", durationMs: defaults.reacquireDurationMs },
       });
     case "off-route":
-      return intent(stage, {
-        viewportMode: "overview",
-        geometryRole: "rejoin",
-        bearingPolicy: "hold",
-        pitch: 20,
-        pitchRange: { min: 0, max: 20 },
-        zoomPolicy: { kind: "points-fit", minZoom: 12, maxZoom: 17 },
-        fitKind: "rejoin",
-        transition: { kind: "immediate", durationMs: 0 },
+      // O1/O2 (plans/off-route-experience): stay rider-centered and frame the
+      // rejoin connector like an upcoming maneuver. The zoom floor keeps the
+      // rider readable; a connector that does not fit stays off-screen.
+      return follow("rejoin", {
+        pitch: 38,
+        pitchRange: { min: 35, max: 40 },
+        zoomPolicy: {
+          kind: "corridor-fit",
+          minZoom: 14.5,
+          maxZoom: defaults.followMaxZoom,
+        },
+        transition: { kind: "eased", durationMs: 600 },
       });
     case "pre-turn":
       return follow("main", {

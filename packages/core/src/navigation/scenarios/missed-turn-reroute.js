@@ -47,8 +47,10 @@ export default {
     { type: "voice", match: "עקוב אחרי הקו המסומן", count: 1 },
     { type: "rejoin-target", position: "first", betweenMeters: [560, 660] },
     { type: "rejoin-target", position: "last", betweenMeters: [560, 700] },
-    { type: "camera-rotations", atMost: 0, during: "off-route" },
-    { type: "camera-rotations", atMost: 3 },
+    // A guided rejoin leg is delivered while off-route, so the frame steers
+    // course-up along it instead of holding still.
+    { type: "camera-rotations", atMost: 1, during: "off-route" },
+    { type: "camera-rotations", atMost: 4 },
     { type: "arrived" },
   ],
 };

@@ -275,6 +275,22 @@ export function getNavigationPresentation(state = {}) {
     return "";
   })();
 
+  // O5: off-route card shows the live distance back to the route.
+  // Prefer remaining-along-leg (from a guided rejoin connector), fall back to straight-line.
+  const rawLegRemaining = approach?.approachProgress?.remainingMeters;
+  const rawStraightLine = approach?.distanceToRouteMeters;
+  const legRemaining = rawLegRemaining == null ? NaN : Number(rawLegRemaining);
+  const straightLine = rawStraightLine == null ? NaN : Number(rawStraightLine);
+  const hasGuidedLeg =
+    Array.isArray(approach?.approachLegGeometry) &&
+    approach.approachLegGeometry.length >= 2;
+  const backMeters =
+    hasGuidedLeg && Number.isFinite(legRemaining) ? legRemaining : straightLine;
+  const offRouteTextWithDistance =
+    Number.isFinite(backMeters) && backMeters >= 0
+      ? `יצאתם מהמסלול · ${formatDistanceMeters(backMeters)} לחזרה`
+      : "יצאתם מהמסלול";
+
   let arrivalSummary = null;
   if (cardMode === "arrived") {
     const elapsedMs =
@@ -330,7 +346,7 @@ export function getNavigationPresentation(state = {}) {
     cueDistanceText,
     remainingText,
     offRoute,
-    offRouteText: "חזרו למסלול",
+    offRouteText: offRouteTextWithDistance,
     showContext:
       navigating && !offRoute && Boolean(progress?.hasAcquiredRoute),
     currentRoadText: buildCurrentRoadText(progress),

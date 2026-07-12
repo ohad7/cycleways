@@ -586,6 +586,8 @@ function offRouteRequestedSession() {
   const confirmed = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(6000) });
   assert.equal(confirmed.status, "off-route");
   assert.ok(confirmed.cueEvent && confirmed.cueEvent.kind === "off-route", "off-route event on entry");
+  assert.ok(Number.isFinite(confirmed.cueEvent.distanceMeters));
+  assert.ok(Number.isFinite(confirmed.cueEvent.bearingDeg));
   assert.equal(confirmed.approach.target.mode, "rejoin", "off-route drives a rejoin suggestion");
   assert.equal(confirmed.approach.suggestionStatus, "requesting");
   assert.ok(confirmed.routeRequest && confirmed.routeRequest.to);
@@ -598,8 +600,7 @@ function offRouteRequestedSession() {
   });
   assert.equal(ready.approach.suggestionStatus, "ready");
   assert.ok(ready.approach.suggestionGeometry.length >= 2);
-  assert.equal(ready.cueEvent?.kind, "rejoin-ready");
-  assert.ok(Number.isFinite(ready.cueEvent?.bearingDeg));
+  assert.equal(ready.cueEvent, null, "connector readiness is not announced separately");
   assert.equal(ready.routeRequest, null);
   const stillOff = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: off(7000) });
   assert.equal(stillOff.status, "off-route");
@@ -982,6 +983,88 @@ for (const [name, geometry] of [
   assert.equal(state.status, "navigating", `${name} start stays active`);
   assert.equal(state.arrival, null, `${name} start does not latch arrival`);
   assert.ok(state.progress.remainingMeters > 15, `${name} has meaningful remaining distance`);
+}
+
+// --- O4: rejoin connector is a guided leg ----------------------------------
+{
+  const session = createNavigationSession(straightRoute());
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.6, 1_000) });
+  session.dispatch({ type: NAV_ACTIONS.LOCATION, fix: fix(35.602, 5_000) });
+  // Leave the route: ~200m north, dwell past the off-route confirm window.
+  const off1 = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1018, lng: 35.602, accuracy: 5, timestamp: 20_000 },
+  });
+  const off2 = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1018, lng: 35.6021, accuracy: 5, timestamp: 26_000 },
+  });
+  const offState = off2.status === "off-route" ? off2 : off1;
+  assert.equal(offState.status, "off-route", "left the route");
+  const request = offState.routeRequest;
+  assert.ok(request, "rejoin connector requested");
+
+  // Connector back to the route: north-to-south leg with a corner.
+  const ready = session.dispatch({
+    type: NAV_ACTIONS.CONNECTOR_READY,
+    requestId: request.requestId,
+    geometry: [
+      { lat: 33.1018, lng: 35.6021 },
+      { lat: 33.1009, lng: 35.6021 },
+      { lat: 33.0999, lng: 35.6033 },
+    ],
+    distanceMeters: 230,
+  });
+  assert.ok(
+    Array.isArray(ready.approach.approachLegGeometry) &&
+      ready.approach.approachLegGeometry.length >= 2,
+    "rejoin connector became a guided leg",
+  );
+
+  // Fixes along the connector produce guided cue events.
+  const events = [];
+  for (const [lat, lng, ts] of [
+    [33.1016, 35.6021, 30_000],
+    [33.1012, 35.6021, 34_000],
+    [33.1009, 35.6021, 38_000],
+  ]) {
+    const next = session.dispatch({
+      type: NAV_ACTIONS.LOCATION,
+      fix: { lat, lng, accuracy: 5, timestamp: ts },
+    });
+    if (next.cueEvent?.kind === "cue") events.push(next.cueEvent);
+  }
+  assert.ok(events.length >= 1, "guided cues fire along the rejoin connector");
+
+  // Riding back onto the route clears the rejoin leg and reacquires. Two
+  // fixes spaced past the recovery dwell window are needed to flip the
+  // hysteresis back to "on" (mirrors the off-route confirm window above).
+  session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6035, accuracy: 5, timestamp: 42_000 },
+  });
+  const reacquired = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6036, accuracy: 5, timestamp: 46_000 },
+  });
+  assert.equal(reacquired.status, "navigating", "back on the route");
+  assert.equal(
+    reacquired.approach.approachLegGeometry,
+    null,
+    "rejoin leg is cleared on reacquisition",
+  );
+  assert.equal(
+    reacquired.cueEvent?.kind,
+    "acquired",
+    "reacquisition announces acquired",
+  );
+  assert.equal(
+    reacquired.cueEvent?.acquisition,
+    "reacquired",
+    "reacquisition is announced as reacquired",
+  );
 }
 
 console.log("navigation session lifecycle tests passed");

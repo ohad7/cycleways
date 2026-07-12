@@ -269,7 +269,7 @@ const recoveryResponses = rejoinSnapshots.map((snapshot, index) => {
 
 const recoveryJourney = {
   name: "journey-ride-recovery",
-  description: "Main ride, maneuver, off-route overview, reacquisition, and local arrival",
+  description: "Main ride, maneuver, off-route follow, reacquisition, and local arrival",
   group: "camera-journey",
   camera: true,
   entryMode: "ride-intro",
@@ -289,8 +289,8 @@ const recoveryJourney = {
       expectedStage: "intro-overhead",
     },
     {
-      id: "off-route-hold",
-      label: "Off-route stable overview",
+      id: "off-route-follow",
+      label: "Off-route rider-centered follow",
       phase: "post-start",
       startAction: "require-confirm",
       targetTimestamp: 530000,
@@ -331,7 +331,10 @@ const recoveryJourney = {
   ],
   expect: [
     { type: "camera-sequence", values: ["ride", "off-route", "reacquire-route", "pre-turn", "arrived-local"] },
-    { type: "camera-rotations", atMost: 0, during: "off-route" },
+    // A guided rejoin leg is delivered during the off-route segment (see
+    // recoveryResponses above), so the frame steers course-up along it
+    // instead of holding still.
+    { type: "camera-rotations", atMost: 2, during: "off-route" },
     { type: "camera-fit-kind", value: "route", never: true },
     { type: "arrived" },
   ],

@@ -72,8 +72,8 @@ const riding = (over = {}) => ({
     100, // within the dwell window — off-route must still win immediately
   );
   assert.equal(off.stage, "off-route", "off-route adopts immediately");
-  assert.equal(off.viewportMode, "overview");
-  assert.equal(off.fitKind, "rejoin");
+  assert.equal(off.viewportMode, "follow", "off-route stays rider-centered, not an overview");
+  assert.equal(off.geometryRole, "rejoin");
 }
 
 // Too-far is an overview; a successful connector follows the approach corridor,
@@ -267,7 +267,7 @@ const riding = (over = {}) => ({
     0,
   );
   assert.equal(shot.stage, "off-route");
-  assert.equal(shot.fitKind, "rejoin");
+  assert.equal(shot.geometryRole, "rejoin");
 }
 
 // reset() forgets the stage.

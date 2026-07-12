@@ -19,7 +19,7 @@ const expected = {
   "reacquire-route": ["follow", "main", 35, "corridor-fit"],
   ride: ["follow", "main", 55, "corridor-fit"],
   "pre-turn": ["follow", "main", 38, "corridor-fit"],
-  "off-route": ["overview", "rejoin", 20, "points-fit"],
+  "off-route": ["follow", "rejoin", 38, "corridor-fit"],
   arrival: ["follow", "arrival", 33, "local"],
   "arrived-local": ["overview", "arrival", 0, "local"],
   "ride-summary": ["overview", "summary", 0, "summary"],
@@ -40,5 +40,18 @@ assert.equal(cameraIntentForStage("approach-too-far", state).holdFrame, true);
 assert.equal(cameraLookaheadMeters(0), NAVIGATION_CAMERA_DEFAULTS.lookaheadMinMeters);
 assert.equal(cameraLookaheadMeters(20), NAVIGATION_CAMERA_DEFAULTS.lookaheadMaxMeters);
 assert.equal(cameraLookaheadMeters(5), 250);
+
+// --- O1/O2: off-route is a follow stage framing the rejoin corridor --------
+{
+  const shot = cameraIntentForStage("off-route", {});
+  assert.equal(shot.viewportMode, "follow", "off-route follows the rider");
+  assert.equal(shot.geometryRole, "rejoin");
+  assert.equal(shot.bearingPolicy, "route");
+  assert.ok(shot.pitch >= 35 && shot.pitch <= 40, `riding pitch, got ${shot.pitch}`);
+  assert.equal(shot.zoomPolicy.kind, "corridor-fit");
+  assert.equal(shot.zoomPolicy.minZoom, 14.5, "zoom floored, never an overview dive");
+  assert.notEqual(shot.transition.kind, "immediate", "no hard cut");
+  assert.ok(shot.transition.durationMs >= 400, "eased transition");
+}
 
 console.log("camera viewport intent tests passed");
