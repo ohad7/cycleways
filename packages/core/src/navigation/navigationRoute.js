@@ -115,7 +115,19 @@ function cloneJunctionList(rawJunctions) {
   if (!Array.isArray(rawJunctions)) return null;
   return rawJunctions
     .filter((j) => Number.isFinite(j?.lat) && Number.isFinite(j?.lng))
-    .map((j) => ({ lat: j.lat, lng: j.lng }));
+    .map((j) => j.kind === "roundabout"
+      ? {
+          kind: "roundabout",
+          roundaboutId: j.roundaboutId,
+          lat: j.lat,
+          lng: j.lng,
+          entryMeters: Number(j.entryMeters),
+          exitMeters: Number(j.exitMeters),
+          entryBearingDeg: Number.isFinite(Number(j.entryBearingDeg)) ? Number(j.entryBearingDeg) : null,
+          exitBearingDeg: Number.isFinite(Number(j.exitBearingDeg)) ? Number(j.exitBearingDeg) : null,
+          complete: j.complete === true,
+        }
+      : { kind: j.kind || "junction", lat: j.lat, lng: j.lng });
 }
 
 function reconcileSegmentSpans(rawSpans, geometryTotalMeters) {

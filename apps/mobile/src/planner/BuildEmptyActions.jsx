@@ -2,6 +2,7 @@ import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-na
 import { ROUTE_SEARCH_PLACEHOLDER } from "@cycleways/core/ui/routePlannerPresentation.js";
 import Icon from "./Icon.jsx";
 import { palette } from "./theme.js";
+import { text } from "../theme/typography.js";
 
 // How-to guidance shown before the route has any points. Mirrors the web
 // BuildEmptyActions steps (src/components/frontPanel/BuildEmptyActions.jsx).
@@ -117,30 +118,27 @@ const styles = StyleSheet.create({
   steps: { gap: 8 },
   stepRow: { flexDirection: "row-reverse", alignItems: "flex-start", gap: 8 },
   stepNum: {
+    ...text.captionStrong,
     minWidth: 20,
     height: 20,
     borderRadius: 10,
     textAlign: "center",
-    lineHeight: 20,
-    fontSize: 12,
-    fontWeight: "800",
+    lineHeight: 20, // centers the digit in the 20px badge circle
     color: palette.white,
     backgroundColor: palette.forest,
     overflow: "hidden",
   },
   stepText: {
+    ...text.caption,
     flex: 1,
     color: palette.ink,
-    fontSize: 13,
-    lineHeight: 19,
     textAlign: "right",
     writingDirection: "rtl",
   },
   where: { gap: 8 },
   label: {
+    ...text.captionStrong,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -153,7 +151,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.line,
     borderRadius: 10,
-    fontSize: 13,
+    ...text.body,
     backgroundColor: palette.white,
     color: palette.ink,
   },
@@ -178,14 +176,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   locateText: {
+    ...text.captionStrong,
     color: palette.white,
-    fontWeight: "800",
-    fontSize: 13,
     writingDirection: "rtl",
   },
   error: {
+    ...text.caption,
     color: palette.danger,
-    fontSize: 12,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -199,10 +196,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.cream,
   },
   draftText: {
+    ...text.captionStrong,
     flex: 1,
     color: palette.ink,
-    fontSize: 12.5,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -213,9 +209,8 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   draftBtnText: {
+    ...text.captionStrong,
     color: palette.white,
-    fontWeight: "800",
-    fontSize: 12.5,
     writingDirection: "rtl",
   },
   dim: { opacity: 0.6 },

@@ -597,4 +597,78 @@ import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
   assert.equal(noSpeed.smoothedSpeedMps, null, "no finite speed -> null");
 }
 
+// --- R6: earliest-candidate acquisition -----------------------------------
+// A rider standing +200m along the route acquires there instead of being
+// held for the start point.
+{
+  const route = {
+    requiresStartAcquisition: true,
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 931 },
+      { lat: 33.1, lng: 35.62, distanceFromStartMeters: 1862 },
+    ],
+  };
+  const tracker = createRouteProgressTracker(route);
+  // ~200m east of the start, on the line.
+  const p = tracker.update({ lat: 33.1, lng: 35.60215, accuracy: 5, timestamp: 1_000 });
+  assert.equal(p.hasAcquiredRoute, true, "mid-route join acquires");
+  assert.ok(Math.abs(p.progressMeters - 200) < 30, `progress ~200m, got ${p.progressMeters}`);
+}
+
+// On a loop (start == end) standing at the shared point picks progress 0,
+// not the far end.
+{
+  const route = {
+    requiresStartAcquisition: true,
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 931 },
+      { lat: 33.105, lng: 35.61, distanceFromStartMeters: 1487 },
+      { lat: 33.105, lng: 35.6, distanceFromStartMeters: 2418 },
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 2974 },
+    ],
+  };
+  const tracker = createRouteProgressTracker(route);
+  const p = tracker.update({ lat: 33.1, lng: 35.6, accuracy: 5, timestamp: 1_000 });
+  assert.equal(p.hasAcquiredRoute, true, "loop start acquires");
+  assert.ok(p.progressMeters < 100, `loop picks the start leg, got ${p.progressMeters}`);
+}
+
+// On an out-and-back shared corridor, the earliest qualifying projection is
+// the outbound leg rather than the geometrically identical return leg.
+{
+  const route = {
+    requiresStartAcquisition: true,
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 931 },
+      { lat: 33.1, lng: 35.62, distanceFromStartMeters: 1862 },
+      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 2793 },
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 3724 },
+    ],
+  };
+  const tracker = createRouteProgressTracker(route);
+  const p = tracker.update({ lat: 33.1, lng: 35.61, accuracy: 5, timestamp: 1_000 });
+  assert.equal(p.hasAcquiredRoute, true, "out-and-back corridor acquires");
+  assert.ok(
+    Math.abs(p.progressMeters - 931) < 30,
+    `outbound projection wins, got ${p.progressMeters}`,
+  );
+}
+
+// Far from the route: still not acquired.
+{
+  const route = {
+    requiresStartAcquisition: true,
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 931 },
+    ],
+  };
+  const tracker = createRouteProgressTracker(route);
+  const p = tracker.update({ lat: 33.15, lng: 35.6, accuracy: 5, timestamp: 1_000 });
+  assert.equal(p.hasAcquiredRoute, false, "off-route fix does not acquire");
+}
+
 console.log("route progress tests passed");

@@ -23,4 +23,12 @@ assert.deepEqual(
   { screen: "RouteDetail", params: { slug: "banias-gan-hatsafon" } },
 );
 
+// A shared route token opens the native planner on cold and warm launches.
+const sharedRouteToken =
+  "G9EAbKv36BT1q3pviFXF8P6DjGtxVveQfibUxKcathBHzr8xYcBLhiq5c6ouAbrMjTk6gKWjg5jQAayU";
+assert.deepEqual(
+  launchTargetFromHref(`cycleways:///?route=${sharedRouteToken}`),
+  { screen: "Build", params: { routeToken: sharedRouteToken } },
+);
+
 console.log("test-app-launch-target: ok");

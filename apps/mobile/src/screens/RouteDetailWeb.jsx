@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { text } from "../theme/typography.js";
 import {
   ActivityIndicator,
   Pressable,
@@ -255,16 +256,14 @@ const styles = StyleSheet.create({
     maxWidth: 360,
   },
   errorTitle: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 20,
-    fontWeight: "900",
     textAlign: "center",
     writingDirection: "rtl",
   },
   errorBody: {
+    ...text.body,
     color: palette.muted,
-    fontSize: 15,
-    lineHeight: 22,
     textAlign: "center",
     writingDirection: "rtl",
   },
@@ -278,9 +277,8 @@ const styles = StyleSheet.create({
     opacity: 0.82,
   },
   retryText: {
+    ...text.bodyStrong,
     color: "#fff",
-    fontSize: 15,
-    fontWeight: "900",
     writingDirection: "rtl",
   },
   loading: {

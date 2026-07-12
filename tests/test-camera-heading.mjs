@@ -7,6 +7,7 @@
 import assert from "node:assert/strict";
 import {
   cameraHeadingTarget,
+  cameraHeadingTargetForState,
   createCameraHeadingGovernor,
 } from "@cycleways/core/navigation/cameraHeading.js";
 
@@ -157,6 +158,97 @@ assert.throws(
     "actual turn still adopts the route bearing",
   );
   assert.equal(cameraHeadingTarget(null), null, "no progress, no target");
+}
+
+// Full-state heading targets: guided approach uses approach-leg route bearing;
+// too-far aims at the target and off-route holds.
+{
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "approaching",
+        progress: { hasAcquiredRoute: false, guidanceBearingDeg: 20 },
+        approach: {
+          ownershipTier: "guide",
+          approachProgress: { bearingToNextDeg: 87 },
+        },
+      },
+      { stage: "approach-guide" },
+    ),
+    87,
+    "guided approach aims along the approach leg",
+  );
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "approaching",
+        latestFix: { lat: 33.1, lng: 35.6 },
+        progress: { hasAcquiredRoute: false, guidanceBearingDeg: 20 },
+        approach: {
+          ownershipTier: "too-far",
+          target: { point: { lat: 33.101, lng: 35.6 } },
+        },
+      },
+      { stage: "approach-too-far" },
+    ),
+    0,
+    "too-far approach aims from rider to selected start",
+  );
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "off-route",
+        offRoute: true,
+        progress: { hasAcquiredRoute: true, bearingToNextDeg: 87 },
+      },
+      { stage: "off-route" },
+    ),
+    null,
+    "off-route still holds heading",
+  );
+  assert.equal(
+    cameraHeadingTargetForState(
+      {
+        status: "navigating",
+        progress: { hasAcquiredRoute: true, bearingToNextDeg: 87 },
+      },
+      { stage: "ride" },
+    ),
+    87,
+    "main ride preserves route-up heading",
+  );
+}
+
+// --- O1: off-route with a guided rejoin leg steers along the leg -----------
+{
+  const target = cameraHeadingTargetForState(
+    {
+      status: "off-route",
+      progress: { offRoute: true },
+      approach: {
+        approachLegGeometry: [
+          { lat: 33.1018, lng: 35.6021 },
+          { lat: 33.1, lng: 35.6021 },
+        ],
+        approachProgress: { offRoute: false, bearingToNextDeg: 180, smoothedSpeedMps: 4 },
+      },
+    },
+    { stage: "off-route", bearingPolicy: "route" },
+  );
+  assert.ok(Number.isFinite(target), "guided rejoin has a heading target");
+}
+
+// --- O1: off-route with no leg still holds the frame ------------------------
+{
+  const target = cameraHeadingTargetForState(
+    {
+      status: "off-route",
+      progress: { offRoute: true },
+      approach: {},
+    },
+    { stage: "off-route", bearingPolicy: "route" },
+  );
+  assert.equal(target, null, "off-route with no guided leg holds the frame");
 }
 
 console.log("camera heading governor tests passed");

@@ -34,6 +34,8 @@ import {
   assert.equal(p.cueText, "פנה שמאלה");
   assert.equal(p.cueDistanceText, "120 מ׳");
   assert.equal(p.cueIcon, "arrow-back-outline");
+  assert.deepEqual(p.cueManeuver, { type: "turn", direction: "left" });
+  assert.equal(p.cueNextManeuver, null);
 }
 
 // Bend cue (sharp curve, no junction): עיקול, not פנה.
@@ -65,6 +67,15 @@ import {
 
 // Arrival cue.
 {
+  const preview = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: { cue: { type: "arrive" }, phase: "preview", distanceToCueMeters: 198 },
+    progress: { remainingMeters: 198 },
+  });
+  assert.equal(preview.cueText, "בעוד 200 מטרים תגיע ליעד");
+  assert.equal(preview.cuePrimaryText, "בעוד 200 מטרים תגיע ליעד");
+
   const p = getNavigationPresentation({
     status: "navigating",
     offRoute: false,
@@ -84,7 +95,7 @@ import {
     progress: { remainingMeters: 1200 },
   });
   assert.equal(p.offRoute, true);
-  assert.equal(p.offRouteText, "חזרו למסלול");
+  assert.equal(p.offRouteText, "יצאתם מהמסלול");
 }
 
 // Non-navigating statuses surface a clear line and no cue.
@@ -117,7 +128,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(paused.statusText, "מושהה");
 }
 
-// Approach: banner label + distance, disclaimer, external target, join-nearest.
+// Approach: banner label + beeline distance, disclaimer, external target.
 {
   const near = getNavigationPresentation({
     status: "approaching",
@@ -125,16 +136,14 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     approach: {
       target: { point: { lat: 32, lng: 35 }, mode: "start" },
       distanceToRouteMeters: 600,
-      suggestionGeometry: [{ lat: 31.99, lng: 35 }, { lat: 32, lng: 35 }],
-      suggestionDistanceMeters: 900,
     },
     progress: { guidanceDistanceMeters: 600, remainingMeters: 14000 },
   });
   assert.equal(near.showApproach, true);
   assert.equal(near.tier, "near");
   assert.equal(near.destinationLabel, "תחילת המסלול");
-  assert.equal(near.approachDistanceShort, "900 מ׳");
-  assert.equal(near.approachDistanceSource, "connector");
+  assert.equal(near.approachDistanceShort, "600 מ׳");
+  assert.equal(near.approachDistanceSource, "beeline");
   assert.equal(near.disclaimerText, "ניווט מחוץ לרשת CycleWays");
   assert.deepEqual(near.externalNavTarget, { lat: 32, lng: 35 });
   // Target is due north of the rider → bearing ≈ 0.
@@ -178,6 +187,50 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   });
   assert.equal(far.tier, "far");
   assert.equal(far.approachDistanceSource, "beeline");
+}
+
+// Approach ownership tiers drive connector visibility and handoff prominence.
+{
+  const target = { point: { lat: 32, lng: 35 }, mode: "start" };
+  const guide = getNavigationPresentation({
+    status: "approaching",
+    latestFix: { lat: 31.999, lng: 35 },
+    approach: {
+      target,
+      distanceToRouteMeters: 120,
+      ownershipTier: "guide",
+      handoffProminence: "hidden",
+      suggestionGeometry: [{ lat: 31.999, lng: 35 }, { lat: 32, lng: 35 }],
+      suggestionDistanceMeters: 130,
+      approachActiveCue: {
+        cue: { type: "turn", direction: "right" },
+        phase: "preview",
+        distanceToCueMeters: 80,
+      },
+    },
+  });
+  assert.equal(guide.approachOwnershipTier, "guide");
+  assert.equal(guide.handoffProminence, "hidden");
+  assert.equal(guide.showApproachCue, true);
+  assert.equal(guide.showApproachLeg, true);
+  assert.equal(guide.showDirectApproachLine, false);
+  assert.equal(guide.approachCuePrimaryText, "פנה ימינה");
+  assert.equal(guide.approachCueDistanceText, "80 מ׳");
+  assert.equal(guide.approachDistanceSource, "connector");
+  assert.deepEqual(guide.externalNavTarget, target.point);
+
+  const tooFar = getNavigationPresentation({
+    status: "approaching",
+    approach: {
+      target,
+      distanceToRouteMeters: 12000,
+      ownershipTier: "too-far",
+      handoffProminence: "primary",
+    },
+  });
+  assert.equal(tooFar.handoffProminence, "primary");
+  assert.equal(tooFar.showApproachLeg, false);
+  assert.match(tooFar.approachSupportText, /רחוקה מדי/);
 }
 
 // --- context line ---
@@ -269,6 +322,26 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   });
   assert.equal(p.wrongWay, true);
   assert.equal(p.wrongWayText, "המסלול בכיוון ההפוך - הסתובבו");
+
+  const offRouteOwnsWarning = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      suggestionStatus: "requesting",
+      distanceToRouteMeters: 120,
+    },
+    progress: { hasAcquiredRoute: true, wrongWay: true, remainingMeters: 500 },
+  });
+  assert.equal(
+    offRouteOwnsWarning.wrongWay,
+    false,
+    "main-route wrong-way warning is suppressed during rejoin guidance",
+  );
+  assert.equal(offRouteOwnsWarning.cardMode, "off-route");
+  assert.equal(
+    offRouteOwnsWarning.offRouteInstructionText,
+    "מכינים דרך חזרה למסלול…",
+  );
 }
 
 // --- cardMode / chip / speedText / arrivalSummary ------------------------
@@ -300,6 +373,79 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(riding.speedText, "17.5 קמ״ש");
   assert.equal(riding.arrivalSummary, null);
 
+  // Compound pair: the card must mirror the spoken "turn left, then right" —
+  // the voice planner suppresses the follow-up turn's own utterance, so the
+  // card is the rider's only reminder of the second leg.
+  const compound = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "turn", direction: "left", thenDirection: "right" },
+      phase: "final",
+      distanceToCueMeters: 30,
+    },
+    latestFix: { timestamp: 600000 },
+    rideStartTimestamp: 0,
+    progress: {
+      hasAcquiredRoute: true,
+      remainingMeters: 800,
+      progressMeters: 400,
+      wrongWay: false,
+    },
+  });
+  assert.equal(compound.cuePrimaryText, "פנה שמאלה");
+  assert.equal(compound.cueNextText, "ואז פנו ימינה");
+  assert.deepEqual(compound.cueManeuver, { type: "turn", direction: "left" });
+  assert.deepEqual(compound.cueNextManeuver, { type: "turn", direction: "right" });
+
+  const turnThenRoundabout = getNavigationPresentation({
+    ...riding,
+    status: "navigating",
+    activeCue: {
+      cue: {
+        type: "turn",
+        direction: "right",
+        thenManeuver: { type: "roundabout", direction: "straight" },
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+  });
+  assert.equal(
+    turnThenRoundabout.cuePrimaryText,
+    "פנה ימינה",
+  );
+  assert.equal(turnThenRoundabout.cueNextText, "ואז בכיכר המשיכו ישר");
+  assert.deepEqual(turnThenRoundabout.cueManeuver, { type: "turn", direction: "right" });
+  assert.deepEqual(
+    turnThenRoundabout.cueNextManeuver,
+    { type: "roundabout", direction: "straight" },
+  );
+
+  const roundaboutThenTurn = getNavigationPresentation({
+    ...riding,
+    status: "navigating",
+    activeCue: {
+      cue: {
+        type: "roundabout",
+        direction: "straight",
+        thenManeuver: { type: "turn", direction: "right" },
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+  });
+  assert.equal(
+    roundaboutThenTurn.cuePrimaryText,
+    "בכיכר, המשיכו ישר",
+  );
+  assert.equal(roundaboutThenTurn.cueNextText, "ואז פנו ימינה");
+  assert.deepEqual(
+    roundaboutThenTurn.cueManeuver,
+    { type: "roundabout", direction: "straight" },
+  );
+  assert.deepEqual(roundaboutThenTurn.cueNextManeuver, { type: "turn", direction: "right" });
+
   const cruising = getNavigationPresentation({
     status: "navigating",
     offRoute: false,
@@ -324,7 +470,10 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: true, remainingMeters: 8, wrongWay: false },
   });
   assert.equal(offRoute.cardMode, "off-route");
-  assert.deepEqual(offRoute.chip, { kind: "rejoin", text: "חזרה למסלול" });
+  assert.deepEqual(offRoute.chip, {
+    kind: "rejoin",
+    text: "בדרך חזרה למסלול",
+  });
 
   const approaching = getNavigationPresentation({
     status: "approaching",
@@ -336,7 +485,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     progress: { hasAcquiredRoute: false, wrongWay: false },
   });
   assert.equal(approaching.cardMode, "approach");
-  assert.deepEqual(approaching.chip, { kind: "approach", text: "המסלול המוצע" });
+  assert.equal(approaching.chip, null, "no suggestion chip while approaching");
 
   const arrived = getNavigationPresentation({
     status: "navigating",
@@ -368,6 +517,130 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(roadClassChipLabel("road"), "כביש");
   assert.equal(roadClassChipLabel("residential"), "כביש");
   assert.equal(roadClassChipLabel("anything-else"), null);
+}
+
+// Roundabout cue card uses direction-specific copy and icon.
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "roundabout", direction: "left" },
+      phase: "preview",
+      distanceToCueMeters: 80,
+    },
+    progress: { remainingMeters: 500 },
+  });
+  assert.equal(p.cueText, "בכיכר, פנו שמאלה");
+  assert.equal(p.cueIcon, "reload-outline");
+  assert.deepEqual(p.cueManeuver, { type: "roundabout", direction: "left" });
+}
+
+// --- O5: off-route card shows the live distance back -----------------------
+{
+  // Guided leg active: remaining-along-leg wins over straight-line.
+  const guided = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: 118,
+      approachLegGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      approachProgress: { remainingMeters: 240 },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(guided.offRouteText.includes("יצאתם מהמסלול"), guided.offRouteText);
+  assert.ok(/240/.test(guided.offRouteText), `leg distance, got ${guided.offRouteText}`);
+
+  const readyWithoutCue = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      suggestionStatus: "ready",
+      suggestionGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      distanceToRouteMeters: 118,
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true, wrongWay: true },
+  });
+  assert.match(readyWithoutCue.offRouteText, /בדרך חזרה למסלול/);
+  assert.equal(
+    readyWithoutCue.offRouteInstructionText,
+    "המשיכו לפי הקו המסומן",
+  );
+  assert.equal(readyWithoutCue.wrongWay, false);
+
+  const readyWithCue = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      suggestionStatus: "ready",
+      suggestionGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      ownershipTier: "guide",
+      approachActiveCue: {
+        cue: { type: "turn", direction: "left", ontoSegmentName: "שביל החורש" },
+        distanceToCueMeters: 82,
+      },
+      distanceToRouteMeters: 118,
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.equal(readyWithCue.showApproachCue, true);
+  assert.equal(readyWithCue.offRouteInstructionText, "פנה שמאלה");
+  assert.equal(readyWithCue.approachCueSecondaryText, "אל שביל החורש");
+  assert.equal(readyWithCue.approachCueDistanceText, "80 מ׳");
+
+  // No leg yet: straight-line fallback.
+  const bare = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: { distanceToRouteMeters: 118 },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(/1[0-2]0/.test(bare.offRouteText), `fallback distance, got ${bare.offRouteText}`);
+
+  // Leg geometry present but approachProgress lacks a finite remainingMeters:
+  // fall back to the straight-line distance.
+  const legWithoutProgress = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: 118,
+      approachLegGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      approachProgress: { remainingMeters: undefined },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(
+    /1[0-2]0/.test(legWithoutProgress.offRouteText),
+    `fallback distance when leg progress missing, got ${legWithoutProgress.offRouteText}`,
+  );
+
+  // The session's empty approach shape uses null, which must not coerce to 0.
+  const noKnownDistance = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: null,
+      approachProgress: { remainingMeters: null },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.equal(noKnownDistance.offRouteText, "יצאתם מהמסלול");
+
+  const legWithNullProgress = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: 118,
+      approachLegGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      approachProgress: { remainingMeters: null },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(
+    /1[0-2]0/.test(legWithNullProgress.offRouteText),
+    `fallback distance when leg progress is null, got ${legWithNullProgress.offRouteText}`,
+  );
 }
 
 console.log("navigation presentation tests passed");

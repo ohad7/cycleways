@@ -1,136 +1,151 @@
-// Web implementation of the analytics platform service (Google Analytics / gtag).
-// A future React Native app provides a sibling `analytics.native.js`. The
-// `window` / `gtag` globals used below are web-only.
-export function trackEvent(eventName, parameters = {}) {
-  var host = window.location.hostname;
-  if (
-    host != "localhost" &&
-    host != "127.0.0.1" &&
-    !host.startsWith("10.0.") &&
-    !navigator.webdriver &&
-    typeof gtag !== "undefined"
-  ) {
-    gtag("event", eventName, parameters);
+// Privacy-minimized Google Analytics adapter for the public website. Callers
+// can only use event-specific helpers; raw URLs, coordinates, geometry and
+// user-entered values are intentionally not accepted by this module.
+
+const SAFE_METHODS = new Set(["click", "drag", "remove", "unknown"]);
+const SAFE_PLATFORMS = new Set(["facebook", "whatsapp", "copy", "native", "other"]);
+let lastTrackedPath = null;
+
+export function analyticsEnabled(
+  locationLike = globalThis.window?.location,
+  navigatorLike = globalThis.navigator,
+) {
+  const host = String(locationLike?.hostname || "");
+  if (!host || host === "localhost" || host === "127.0.0.1" || host.startsWith("10.0.")) {
+    return false;
   }
+  if (navigatorLike?.webdriver) return false;
+  if (String(locationLike?.search || "").includes("app=1")) return false;
+  if (globalThis.document?.documentElement?.classList?.contains("app-embed-bootstrap")) {
+    return false;
+  }
+  return typeof globalThis.gtag === "function";
 }
 
-// Route-specific tracking functions
-export function trackRoutePointEvent(
-  routePoints,
-  selectedSegments,
-  method,
-  additionalParams = {},
-) {
-  trackEvent("route_point_modified", {
-    points: routePoints.length,
-    segments: selectedSegments.length,
-    method: method,
-    ...additionalParams,
+export function analyticsPagePath(locationLike = globalThis.window?.location) {
+  const pathname = String(locationLike?.pathname || "/");
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return normalized.replace(/\/{2,}/g, "/") || "/";
+}
+
+export function analyticsPageLocation(locationLike = globalThis.window?.location) {
+  const origin = String(locationLike?.origin || "").replace(/\/$/, "");
+  return `${origin}${analyticsPagePath(locationLike)}`;
+}
+
+export function trackPageView(locationLike = globalThis.window?.location) {
+  const pagePath = analyticsPagePath(locationLike);
+  if (pagePath === lastTrackedPath) return;
+  lastTrackedPath = pagePath;
+  emitEvent("page_view", {
+    page_location: analyticsPageLocation(locationLike),
+    page_path: pagePath,
   });
 }
 
-export function trackUndoRedoEvent(
-  action,
-  undoStack,
-  redoStack,
-  routePoints,
-  selectedSegments,
-) {
-  trackEvent(`route_${action}`, {
-    undo_size: undoStack.length,
-    redo_size: redoStack.length,
-    segments: selectedSegments.length,
-    points: routePoints.length,
+export function trackRoutePointEvent(routePoints, selectedSegments, method) {
+  emitEvent("route_point_modified", {
+    points: count(routePoints),
+    segments: count(selectedSegments),
+    method: SAFE_METHODS.has(method) ? method : "unknown",
   });
 }
 
-export function trackSearchEvent(
-  query,
-  routePoints,
-  selectedSegments,
-  success = false,
-  additionalParams = {},
-) {
-  const eventName = success ? "location_search_success" : "location_search";
-  trackEvent(eventName, {
-    query_length: query.length,
-    has_route: selectedSegments.length > 0,
-    ...additionalParams,
+export function trackUndoRedoEvent(action, undoStack, redoStack, routePoints, selectedSegments) {
+  const safeAction = action === "redo" ? "redo" : "undo";
+  emitEvent(`route_${safeAction}`, {
+    undo_size: count(undoStack),
+    redo_size: count(redoStack),
+    segments: count(selectedSegments),
+    points: count(routePoints),
+  });
+}
+
+export function trackSearchEvent(query, routePoints, selectedSegments, success = false, options = {}) {
+  emitEvent(success ? "location_search_success" : "location_search", {
+    query_length: boundedNumber(String(query || "").length, 0, 500),
+    has_route: count(selectedSegments) > 0,
+    ...(success && typeof options.within_bounds === "boolean"
+      ? { within_bounds: options.within_bounds }
+      : {}),
   });
 }
 
 export function trackSocialShare(platform, routePoints, selectedSegments) {
-  trackEvent("social_share", {
-    platform: platform,
-    segments: selectedSegments.length,
-    points: routePoints.length,
+  emitEvent("social_share", {
+    platform: SAFE_PLATFORMS.has(platform) ? platform : "other",
+    segments: count(selectedSegments),
+    points: count(routePoints),
   });
 }
 
-export function trackSegmentFocus(segmentName, source = "unknown") {
-  trackEvent("segment_focus", {
-    segment: segmentName,
-    source: source,
+export function trackSegmentFocus(_segmentName, source = "unknown") {
+  emitEvent("segment_focus", { source: safeToken(source) });
+}
+
+export function trackWarningClick(warningType, routePoints, selectedSegments) {
+  emitEvent("warning_clicked", {
+    type: safeToken(warningType),
+    segments: count(selectedSegments),
+    points: count(routePoints),
   });
 }
 
-export function trackWarningClick(
-  warningType,
-  routePoints,
-  selectedSegments,
-  additionalParams = {},
-) {
-  trackEvent("warning_clicked", {
-    type: warningType,
-    segments: selectedSegments.length,
-    ...additionalParams,
-  });
-}
-
-export function trackRouteOperation(
-  operation,
-  routePoints,
-  selectedSegments,
-  additionalParams = {},
-) {
-  const baseParams = {
-    segments: selectedSegments.length,
-    points: routePoints.length,
-    ...additionalParams,
-  };
-
+export function trackRouteOperation(operation, routePoints, selectedSegments, options = {}) {
+  const points = count(routePoints);
+  const segments = count(selectedSegments);
   switch (operation) {
     case "share":
-      trackEvent("route_share", baseParams);
+      emitEvent("route_share", { points, segments });
       break;
     case "download":
-      trackEvent("gpx_download", {
-        ...baseParams,
-        distance_km: baseParams.distance
-          ? parseFloat((baseParams.distance / 1000).toFixed(1))
-          : 0,
+      emitEvent("gpx_download", {
+        points,
+        segments,
+        distance_km: boundedNumber(Number(options.distance) / 1000, 0, 10000, 1),
       });
       break;
     case "load_from_url":
-      trackEvent("route_loaded", {
-        segments: selectedSegments.length,
-        param_length: additionalParams.route_param_length || 0,
+      emitEvent("route_loaded", {
+        segments,
+        param_length: boundedNumber(options.route_param_length, 0, 100000),
       });
       break;
     case "reset":
-      trackEvent("route_reset", {
-        cleared_segments: additionalParams.cleared_segments || 0,
-        cleared_points: additionalParams.cleared_points || 0,
+      emitEvent("route_reset", {
+        cleared_segments: boundedNumber(options.cleared_segments, 0, 10000),
+        cleared_points: boundedNumber(options.cleared_points, 0, 10000),
       });
       break;
     default:
-      trackEvent(`route_${operation}`, baseParams);
+      emitEvent(`route_${safeToken(operation)}`, { points, segments });
   }
 }
 
-export function trackPageLoad(hasRouteParam, userAgent) {
-  trackEvent("page_load", {
-    has_route: hasRouteParam,
-    device: userAgent.includes("Mobile") ? "mobile" : "desktop",
+export function trackPageLoad(hasRouteParam, userAgent = "") {
+  emitEvent("page_load", {
+    has_route: Boolean(hasRouteParam),
+    device: String(userAgent).includes("Mobile") ? "mobile" : "desktop",
   });
+}
+
+function emitEvent(eventName, parameters) {
+  if (!analyticsEnabled()) return;
+  globalThis.gtag("event", eventName, parameters);
+}
+
+function count(value) {
+  return Array.isArray(value) ? boundedNumber(value.length, 0, 10000) : 0;
+}
+
+function safeToken(value) {
+  const token = String(value || "unknown").toLowerCase();
+  return /^[a-z0-9_-]{1,40}$/.test(token) ? token : "other";
+}
+
+function boundedNumber(value, min, max, decimals = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  const bounded = Math.min(max, Math.max(min, number));
+  return decimals > 0 ? Number(bounded.toFixed(decimals)) : Math.round(bounded);
 }

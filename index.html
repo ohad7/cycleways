@@ -102,7 +102,7 @@
   <!-- Performance and Resource Hints -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://api.mapbox.com" crossorigin>
   <link rel="dns-prefetch" href="//www.googletagmanager.com">
   <link rel="dns-prefetch" href="//nominatim.openstreetmap.org">
@@ -126,7 +126,10 @@
       direction: rtl;
       background: linear-gradient(160deg, #ededed 0%, #d2d2d2 50%, #a8a8a8 100%);
       transition: opacity 300ms ease;
-      font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      /* Literal font values on purpose: the splash must paint before external
+         CSS (typography.css arrives via styles.css @import). Values mirror the
+         tokens: Assistant stack, xl=20px, bold=700. */
+      font-family: 'Assistant', -apple-system, 'Segoe UI', Tahoma, sans-serif;
     }
     #splash.splash--hidden {
       opacity: 0;
@@ -142,7 +145,7 @@
     .splash__title {
       margin: 0;
       padding: 0 24px;
-      font-size: 20px;
+      font-size: 20px; /* pre-stylesheet paint; see #splash comment */
       font-weight: 700;
       color: #333333;
       text-align: center;
@@ -246,20 +249,25 @@
 <!-- Google tag (gtag.js) — skipped on local hosts and automated browsers (Playwright) -->
 <script>
   var host = window.location.hostname;
+  var gaMeasurementId = 'G-P1TK7GTD2J';
   if(!document.documentElement.classList.contains("app-embed-bootstrap") && host != "localhost" && host != "127.0.0.1" && !host.startsWith("10.0.") && !navigator.webdriver)
   {
       var gaScript = document.createElement('script');
       gaScript.async = true;
-      gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-P1TK7GTD2J';
+      gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaMeasurementId;
       document.head.appendChild(gaScript);
 
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
-      gtag('config', 'G-P1TK7GTD2J');
+      gtag('config', gaMeasurementId, {
+        send_page_view: false,
+        allow_google_signals: false,
+        allow_ad_personalization_signals: false
+      });
   } else {
-     window['ga-disable-G-P1TK7GTD2J'] = true;
+     window['ga-disable-' + gaMeasurementId] = true;
   }
 </script>
 

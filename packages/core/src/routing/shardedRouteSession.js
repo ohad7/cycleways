@@ -4,6 +4,7 @@ import {
   mergeBaseRoutingShards,
 } from "./baseRoutingShards.js";
 import { decodeRoutePayload } from "../utils/route-encoding.js";
+import { junctionsNearRoute } from "./junctionsNearRoute.js";
 import {
   addPoint,
   createRouteManager,
@@ -294,6 +295,25 @@ class ShardedRouteSession {
     }
     if (!covered || !this.indexedNetwork()) return empty("no-coverage");
     return this.manager.previewBaseRoute([from, to], { costProfile: "connector" });
+  }
+
+  // Junction data is authoritative only when every shard needed for the
+  // geometry loaded successfully. Returning null preserves legacy cue behavior
+  // after a coverage failure; [] specifically means complete coverage with no
+  // nearby junctions.
+  async junctionsNearRoute(geometry, options = {}) {
+    const points = Array.isArray(geometry) ? geometry : [];
+    if (points.length === 0) return null;
+    let covered = false;
+    try {
+      covered = await this.ensureCoverage(points);
+    } catch {
+      return null;
+    }
+    if (covered !== true) return null;
+    const network = this.indexedNetwork();
+    if (!network) return null;
+    return junctionsNearRoute(network, points, options);
   }
 
   async restorePoints(points) {

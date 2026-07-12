@@ -14,14 +14,14 @@
   },
   "summary": {
     "shards": 115,
-    "sourceNodes": 37585,
-    "sourceEdges": 48365,
-    "representedEdges": 48365,
-    "edgeReferences": 50563,
-    "duplicatedSourceEdges": 2024,
-    "compactShardBytes": 27712404,
-    "messagePackShardBytes": 23932223,
-    "compactBinaryShardBytes": 4828102
+    "sourceNodes": 37592,
+    "sourceEdges": 48368,
+    "representedEdges": 48368,
+    "edgeReferences": 50567,
+    "duplicatedSourceEdges": 2025,
+    "compactShardBytes": 27714924,
+    "messagePackShardBytes": 23934472,
+    "compactBinaryShardBytes": 4828847
   },
   "largestShards": [
     {
@@ -86,8 +86,8 @@
     },
     {
       "id": "g712_663",
-      "nodes": 703,
-      "edges": 926
+      "nodes": 710,
+      "edges": 927
     },
     {
       "id": "g709_662",
@@ -111,8 +111,8 @@
     },
     {
       "id": "g711_663",
-      "nodes": 634,
-      "edges": 810
+      "nodes": 636,
+      "edges": 812
     },
     {
       "id": "g713_667",

@@ -26,6 +26,18 @@ import {
   snapshotMatchesRouteToken,
   routeTokenHash,
 } from "../scripts/lib/featuredRouteSnapshotBuilder.mjs";
+import { runConnectorPreview } from "./lib/connectorPreview.mjs";
+import {
+  appendLabel,
+  latestLabels,
+  readLabels,
+  upsertStrategy,
+} from "./lib/connectorLabelStore.mjs";
+import {
+  joinRoundaboutReviews,
+  ROUNDABOUT_REVIEW_STATUSES,
+  roundaboutReviewGeoJson,
+} from "./lib/roundaboutReview.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -35,6 +47,9 @@ const sourcePath = resolve(repoRoot, "data/map-source.geojson");
 const tokenPath = resolve(repoRoot, "mapbox-token.js");
 const buildDir = resolve(repoRoot, "build");
 const dataDir = resolve(repoRoot, "data");
+const connectorEvalDir = process.env.CONNECTOR_EVAL_DIR
+  ? resolve(process.env.CONNECTOR_EVAL_DIR)
+  : resolve(dataDir, "connector-eval");
 const publicDataDir = resolve(repoRoot, "public-data");
 const buildPublicDataDir = resolve(buildDir, "public-data");
 const osmBuildDir = resolve(buildDir, "osm");
@@ -50,6 +65,10 @@ const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson")
 const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
+const roundaboutCandidatesPath = resolve(osmBuildDir, "roundabout-candidates.json");
+const roundaboutReviewPath = resolve(dataDir, "roundabout-review.json");
+const overpassResponsePath = resolve(osmBuildDir, "overpass-response.json");
+const overpassQueryPath = resolve(osmBuildDir, "overpass-query.ql");
 const poiTypesModulePath = resolve(repoRoot, "packages/core/src/data/poiTypes.js");
 const featuredEditorModulePaths = new Set([
   resolve(repoRoot, "src/components/featured/videoSync.js"),
@@ -1902,6 +1921,46 @@ async function fileDigest(pathname) {
   return digest.digest("hex");
 }
 
+async function readRoundaboutReviewState() {
+  let candidates;
+  try {
+    candidates = JSON.parse(await readFile(roundaboutCandidatesPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      const missing = new Error("Roundabout candidates are missing. Run npm run osm:roundabouts.");
+      missing.status = 409;
+      throw missing;
+    }
+    throw error;
+  }
+  let reviews;
+  try {
+    reviews = JSON.parse(await readFile(roundaboutReviewPath, "utf-8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    reviews = { schemaVersion: 1, reviews: {} };
+  }
+  let sourceFresh = false;
+  try {
+    const [responseDigest, queryDigest] = await Promise.all([
+      fileDigest(overpassResponsePath),
+      fileDigest(overpassQueryPath),
+    ]);
+    sourceFresh = candidates.sourceDigest === `sha256:${responseDigest}`
+      && candidates.queryDigest === `sha256:${queryDigest}`;
+  } catch {
+    sourceFresh = false;
+  }
+  const joined = joinRoundaboutReviews(candidates, reviews);
+  return {
+    candidates,
+    reviews,
+    joined,
+    sourceFresh,
+    geojson: roundaboutReviewGeoJson(joined),
+  };
+}
+
 async function elevatedGraphMatchesBaseGraph() {
   const elevatedGraph = JSON.parse(await readFile(osmElevatedBaseGraphPath, "utf-8"));
   const sourceDigest = elevatedGraph?.metadata?.elevation?.sourceGraphDigest;
@@ -2419,8 +2478,54 @@ function validationBlockers(report) {
   if (displayFallbacks > 0) {
     blockers.push(`${displayFallbacks} public CycleWays display geometry fallbacks`);
   }
+  const roundabouts = validation.roundabouts || {};
+  if ((roundabouts.blockingIssues || []).length > 0) {
+    blockers.push(`${roundabouts.blockingIssues.length} roundabout review blockers`);
+  }
 
   return blockers;
+}
+
+function cwSegmentIdsByEdgeIdFromOverlay(overlay) {
+  const byEdgeId = new Map();
+  const segments = overlay?.segments && typeof overlay.segments === "object"
+    ? overlay.segments
+    : {};
+  for (const [segmentIdKey, mapping] of Object.entries(segments)) {
+    const segmentId = Number(mapping?.segmentId ?? segmentIdKey);
+    if (!Number.isFinite(segmentId)) continue;
+    const edgeRefs = Array.isArray(mapping?.edgeRefs) ? mapping.edgeRefs : [];
+    for (const ref of edgeRefs) {
+      const edgeId = String(ref?.edgeId || ref?.manualEdgeId || "");
+      if (!edgeId) continue;
+      if (!byEdgeId.has(edgeId)) byEdgeId.set(edgeId, new Set());
+      byEdgeId.get(edgeId).add(segmentId);
+    }
+  }
+  return byEdgeId;
+}
+
+function annotateGraphEdgesWithCyclewaysMembership(graphEdges, overlay) {
+  const byEdgeId = cwSegmentIdsByEdgeIdFromOverlay(overlay);
+  if (byEdgeId.size === 0 || !Array.isArray(graphEdges?.features)) return graphEdges;
+  return {
+    ...graphEdges,
+    features: graphEdges.features.map((feature) => {
+      const props = feature?.properties || {};
+      const edgeId = String(props.edgeId || props.id || feature?.id || "");
+      const ids = edgeId ? byEdgeId.get(edgeId) : null;
+      if (!ids || ids.size === 0) return feature;
+      const cwSegmentIds = [...ids].sort((a, b) => a - b);
+      return {
+        ...feature,
+        properties: {
+          ...props,
+          cwSegmentIds,
+          cwSegmentCount: cwSegmentIds.length,
+        },
+      };
+    }),
+  };
 }
 
 async function copyFileAtomic(source, target) {
@@ -2501,7 +2606,7 @@ async function existingVersionedFiles(directory, pattern) {
   }
 }
 
-async function cleanupOldPublicArtifacts(promoteId, dryRun) {
+async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
   const candidates = [
     ...(await existingVersionedFiles(repoRoot, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
     ...(await existingVersionedFiles(repoRoot, /^segments\.[0-9a-f]{12}\.json$/)),
@@ -2519,6 +2624,9 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun) {
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.json$/)),
     ...(await existingVersionedFiles(resolve(publicDataDir, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
+    ...(!manifest.roundabouts
+      ? await existingVersionedFiles(publicDataDir, /^roundabouts\.json$/)
+      : []),
   ];
 
   for (const filePath of candidates) {
@@ -2535,7 +2643,7 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun) {
 }
 
 export function buildPromoteTargets(manifest) {
-  return [
+  const targets = [
     {
       label: "public manifest",
       source: buildManifestPath,
@@ -2568,6 +2676,14 @@ export function buildPromoteTargets(manifest) {
       target: dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)),
     },
   ];
+  if (manifest.roundabouts) {
+    targets.push({
+      label: "public roundabouts",
+      source: resolveManifestPath(buildPublicDataDir, manifest.roundabouts),
+      target: resolveManifestPath(publicDataDir, manifest.roundabouts),
+    });
+  }
+  return targets;
 }
 
 async function handlePromote(payload = {}) {
@@ -2666,7 +2782,7 @@ async function handlePromote(payload = {}) {
     // reads the freshly promoted data instead of stale cached copies.
     invalidateFeaturedAssetCache();
   }
-  removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun));
+  removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun), manifest);
 
   // Promoting map data changes the geometry/POIs featured snapshots are built
   // from, so regenerate them here too (the route-catalog promote does the same).
@@ -2721,6 +2837,71 @@ const server = createServer(async (request, response) => {
       backfillDeprecatedRouteAnchors(source);
       logApi(requestId, "GET /api/source loaded", summarizeSource(source));
       sendJson(response, 200, source);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/roundabouts/review") {
+      try {
+        const state = await readRoundaboutReviewState();
+        sendJson(response, 200, {
+          ok: true,
+          sourceFresh: state.sourceFresh,
+          coverage: state.joined.coverage,
+          summary: state.joined.summary,
+          warnings: state.joined.warnings,
+          blockingIssues: state.joined.blockingIssues,
+          items: state.joined.items,
+          orphaned: state.joined.orphaned,
+          geojson: state.geojson,
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/roundabouts/review") {
+      try {
+        const body = await readRequestJson(request);
+        const state = await readRoundaboutReviewState();
+        const candidate = state.candidates.roundabouts?.find((item) => item?.id === body?.id);
+        if (!candidate) throw Object.assign(new Error("Unknown roundabout candidate id"), { status: 400 });
+        if (body?.fingerprint !== candidate.fingerprint) {
+          throw Object.assign(new Error("Candidate changed; reload before reviewing"), { status: 400 });
+        }
+        if (!ROUNDABOUT_REVIEW_STATUSES.has(body?.status)) {
+          throw Object.assign(new Error("Review status must be accepted or rejected"), { status: 400 });
+        }
+        const note = typeof body?.note === "string" ? body.note.trim() : "";
+        if (note.length > 1000) throw Object.assign(new Error("Review note is too long"), { status: 400 });
+        const nextReviews = {
+          schemaVersion: 1,
+          reviews: {
+            ...(state.reviews.reviews || {}),
+            [candidate.id]: {
+              fingerprint: candidate.fingerprint,
+              status: body.status,
+              note,
+              reviewedAt: new Date().toISOString(),
+            },
+          },
+        };
+        await writeJsonAtomic(roundaboutReviewPath, nextReviews);
+        const nextState = await readRoundaboutReviewState();
+        sendJson(response, 200, {
+          ok: true,
+          sourceFresh: nextState.sourceFresh,
+          coverage: nextState.joined.coverage,
+          summary: nextState.joined.summary,
+          warnings: nextState.joined.warnings,
+          blockingIssues: nextState.joined.blockingIssues,
+          items: nextState.joined.items,
+          orphaned: nextState.joined.orphaned,
+          geojson: nextState.geojson,
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
       return;
     }
 
@@ -2793,7 +2974,13 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/osm/graph-edges") {
       logApi(requestId, "GET /api/osm/graph-edges started");
-      const graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
+      let graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
+      try {
+        const overlay = JSON.parse(await readFile(cwBaseOverlayPath, "utf-8"));
+        graphEdges = annotateGraphEdgesWithCyclewaysMembership(graphEdges, overlay);
+      } catch (err) {
+        log("warn", `api#${requestId} GET /api/osm/graph-edges skipped CW annotation`, err?.message || String(err));
+      }
       const [graphStat, manualStat] = await Promise.all([
         stat(osmGraphEdgesPath),
         stat(manualBaseEdgesPath).catch(() => null),
@@ -2894,6 +3081,45 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/base-edge-state") {
+      logApi(requestId, "POST /api/base-edge-state started");
+      let manualBaseEdges;
+      let overlay;
+      try {
+        const payload = await readRequestJson(request);
+        manualBaseEdges = normalizeManualBaseEdges(payload?.manualBaseEdges);
+        overlay = normalizeCwBaseOverlay(payload?.overlay);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log("warn", `api#${requestId} POST /api/base-edge-state validation failed`, message);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+
+      const [previousManualBaseEdges, previousOverlay] = await Promise.all([
+        readManualBaseEdges(),
+        readCwBaseOverlay(),
+      ]);
+      try {
+        await writeJsonAtomic(manualBaseEdgesPath, manualBaseEdges);
+        await writeJsonAtomic(cwBaseOverlayPath, overlay);
+      } catch (error) {
+        await Promise.all([
+          writeJsonAtomic(manualBaseEdgesPath, previousManualBaseEdges),
+          writeJsonAtomic(cwBaseOverlayPath, previousOverlay),
+        ]).catch((rollbackError) => {
+          log("error", `api#${requestId} POST /api/base-edge-state rollback failed`, rollbackError?.message || String(rollbackError));
+        });
+        throw error;
+      }
+      logApi(requestId, "POST /api/base-edge-state saved", {
+        manualEdges: manualBaseEdges.features?.length || 0,
+        mappings: Object.keys(overlay.segments || {}).length,
+      });
+      sendJson(response, 200, { ok: true, manualBaseEdges, overlay });
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/source") {
       logApi(requestId, "POST /api/source started");
       const source = await readRequestJson(request);
@@ -2978,6 +3204,84 @@ const server = createServer(async (request, response) => {
         dryRun: result.dryRun,
       });
       sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/connector/preview") {
+      logApi(requestId, "POST /api/connector/preview started");
+      try {
+        const body = await readRequestJson(request);
+        const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
+        const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
+        const { baseRoutingNetwork } = await getBaseRoutingDecodeAssets({ log });
+        const manager = await createRouteManager(
+          RouteManagerClass,
+          geoJsonData,
+          segmentsData,
+          baseRoutingNetwork,
+        );
+        const result = runConnectorPreview(manager, body);
+        logApi(requestId, "POST /api/connector/preview finished", {
+          durationMs: Date.now() - startedAt,
+          mode: body?.mode,
+        });
+        sendJson(response, 200, result);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const status = err && err.status === 400 ? 400 : 500;
+        log("warn", `api#${requestId} POST /api/connector/preview failed`, message);
+        sendJson(response, status, { error: message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/connector/label") {
+      logApi(requestId, "POST /api/connector/label started");
+      try {
+        const body = await readRequestJson(request);
+        const labelsPath = resolve(connectorEvalDir, "labels.jsonl");
+        const strategiesPath = resolve(connectorEvalDir, "strategies.json");
+        const strategyHash = await upsertStrategy(strategiesPath, body.strategy);
+        const record = await appendLabel(labelsPath, {
+          routeSlug: body.routeSlug ?? null,
+          routeStart: body.routeStart,
+          origin: body.origin,
+          verdict: body.verdict,
+          features: body.features,
+          strategyHash,
+        });
+        logApi(requestId, "POST /api/connector/label finished", {
+          durationMs: Date.now() - startedAt,
+          routeSlug: record.routeSlug,
+          verdict: record.verdict,
+        });
+        sendJson(response, 200, { ok: true, record });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const status = err && err.status === 400 ? 400 : 500;
+        log("warn", `api#${requestId} POST /api/connector/label failed`, message);
+        sendJson(response, status, { error: message });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/connector/labels") {
+      logApi(requestId, "GET /api/connector/labels started");
+      try {
+        const labelsPath = resolve(connectorEvalDir, "labels.jsonl");
+        const records = await readLabels(labelsPath);
+        const labels = latestLabels(records);
+        logApi(requestId, "GET /api/connector/labels finished", {
+          durationMs: Date.now() - startedAt,
+          raw: records.length,
+          latest: labels.length,
+        });
+        sendJson(response, 200, { labels, rawCount: records.length });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        log("warn", `api#${requestId} GET /api/connector/labels failed`, message);
+        sendJson(response, 500, { error: message });
+      }
       return;
     }
 

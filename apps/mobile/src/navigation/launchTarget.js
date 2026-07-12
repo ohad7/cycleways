@@ -1,12 +1,19 @@
-import { getNativeRoutePath } from "@cycleways/core/platform/location.native.js";
+import {
+  getNativeRoutePath,
+  getNativeRouteToken,
+} from "@cycleways/core/platform/location.native.js";
 
 // Maps a launch / deep-link href to the initial navigation target. Catalog
-// route links (routes/<slug>, featured/<slug>) open the RouteDetail screen with
-// the slug; everything else opens the Discover front page.
+// paths open RouteDetail, shared ?route= tokens open Build, and everything else
+// opens the Discover front page.
 export function launchTargetFromHref(href) {
   const routePath = getNativeRoutePath(href);
   if (routePath?.slug) {
     return { screen: "RouteDetail", params: { slug: routePath.slug } };
+  }
+  const routeToken = getNativeRouteToken(href);
+  if (routeToken) {
+    return { screen: "Build", params: { routeToken } };
   }
   return { screen: "Discover", params: undefined };
 }

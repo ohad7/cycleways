@@ -17,7 +17,9 @@ const files = new Set([
 // the build automatically — so they are not listed here.
 const directories = ["icons", "public-data"];
 
-const dataFiles = ["data/places.json", "data/region-zones.json"];
+await import("./build-sticker-redirects.mjs");
+
+const dataFiles = ["data/places.json", "data/region-zones.json", "data/sticker-redirects.json"];
 
 for (const filePath of dataFiles) {
   files.add(filePath);
@@ -77,8 +79,10 @@ if (existsSync(builtIndex)) {
     "featured",
     "routes",
     "privacy",
+    "accessibility",
     "terms",
     "support",
+    "s",
   ]);
   try {
     const catalog = JSON.parse(

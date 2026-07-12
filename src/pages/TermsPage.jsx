@@ -2,12 +2,14 @@ import React from "react";
 import LegalPage from "./legal/LegalPage.jsx";
 import {
   FEEDBACK_FORM_URL,
+  SITE_OPERATOR_DESCRIPTION,
   SUPPORT_EMAIL,
 } from "@cycleways/core/config/appLinks.js";
 
 export default function TermsPage() {
   return (
-    <LegalPage title="תנאי שימוש" updated="5 ביולי 2026">
+    <LegalPage title="תנאי שימוש" updated="13 ביולי 2026">
+      <p>{SITE_OPERATOR_DESCRIPTION}, ללא חברה או עמותה נפרדת.</p>
       <h2>הסכמה לתנאים</h2>
       <p>
         השימוש באתר www.cycleways.app ובאפליקציית CycleWays ("השירות") מהווה
@@ -58,8 +60,9 @@ export default function TermsPage() {
 
       <h2>קניין רוחני</h2>
       <p>
-        תכני השירות — המסלולים, התיאורים, הצילומים והעיצוב — שייכים ל-CycleWays
-        אלא אם צוין אחרת. נתוני המפה מסופקים על ידי Mapbox ועל בסיס נתוני
+        הזכויות בתוכן המקורי של השירות — המסלולים, התיאורים, הצילומים והעיצוב —
+        שמורות למפעיל, אלא אם צוין אחרת. הצגת קוד המקור במאגר ציבורי אינה
+        מעניקה רישיון קוד פתוח בהיעדר קובץ רישיון מפורש. נתוני המפה מסופקים על ידי Mapbox ועל בסיס נתוני
         OpenStreetMap ברישיון ODbL, וסרטונים מוטמעים כפופים לתנאי YouTube.
         השימוש בתכנים מותר לצרכים אישיים ולא מסחריים.
       </p>
@@ -84,11 +87,12 @@ export default function TermsPage() {
       <section className="legal-page__english">
         <h2>English summary</h2>
         <p>
-          CycleWays provides route information, planning tools, and ride
+          CycleWays is a privately owned project operated by one person and
+          provides route information, planning tools, and ride
           guidance AS IS. Cycling is inherently risky: field conditions change,
           and posted signs, traffic law, and actual trail conditions always
           take precedence over app guidance. You ride at your own
-          responsibility. Content is owned by CycleWays; map data by Mapbox and
+          responsibility. Rights in original content are retained by the operator; map data by Mapbox and
           OpenStreetMap contributors (ODbL). Personal, non-commercial use only.
           Israeli law applies. Contact: {SUPPORT_EMAIL}.
         </p>

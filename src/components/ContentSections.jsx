@@ -6,7 +6,7 @@ function ContentSections() {
       <main>
         <section className="content-section" id="trails">
           <header>
-            <h1 className="section-title">שבילים ומסלולים</h1>
+            <h2 className="section-title">שבילים ומסלולים</h2>
           </header>
           <div className="section-content">
             <p>
@@ -63,7 +63,7 @@ function ContentSections() {
 
         <section className="content-section" id="contact">
           <header>
-            <h1 className="section-title">איך אפשר לעזור</h1>
+            <h2 className="section-title">איך אפשר לעזור</h2>
           </header>
           <div className="section-content">
             <h2>עזרו לנו לשמור על המפה עדכנית</h2>
@@ -98,19 +98,6 @@ function ContentSections() {
         </section>
       </main>
 
-      <footer>
-        <div className="footer-content">
-          <p>&copy; 2025 CycleWays.app - מפת שבילי אופניים.</p>
-          <p>פותח לקהילת רוכבי האופניים בישראל</p>
-          <p>
-            <a href="/privacy">מדיניות פרטיות</a>
-            {" · "}
-            <a href="/terms">תנאי שימוש</a>
-            {" · "}
-            <a href="/support">תמיכה</a>
-          </p>
-        </div>
-      </footer>
     </>
   );
 }

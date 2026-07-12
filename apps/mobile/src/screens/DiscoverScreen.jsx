@@ -6,6 +6,7 @@ import { loadRouteCatalogEntries } from "@cycleways/core/data/catalog.js";
 import { resetNativeLocationHref } from "@cycleways/core/platform/location.native.js";
 import DiscoverPanel from "../planner/DiscoverPanel.jsx";
 import { palette } from "../planner/theme.js";
+import { text } from "../theme/typography.js";
 
 export default function DiscoverScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -148,13 +149,21 @@ export default function DiscoverScreen({ navigation }) {
           <Text style={styles.aboutLinkText}>אודות CycleWays · פרטיות ותנאים</Text>
         </Pressable>
       </ScrollView>
+      <View
+        pointerEvents="none"
+        style={[styles.fabScrim, { height: insets.bottom + 76 }]}
+      >
+        <View style={styles.fabFadeTop} />
+        <View style={styles.fabFadeMiddle} />
+        <View style={styles.fabFadeBottom} />
+      </View>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="תכנן מסלול"
         onPress={planFromScratch}
         style={({ pressed }) => [
           styles.fab,
-          { bottom: insets.bottom + 20 },
+          { bottom: insets.bottom + 8 },
           pressed ? styles.fabPressed : null,
         ]}
       >
@@ -166,7 +175,25 @@ export default function DiscoverScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: palette.paper },
-  scroll: { paddingTop: 18, paddingBottom: 120 },
+  scroll: { paddingTop: 14, paddingBottom: 126 },
+  fabScrim: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  fabFadeTop: {
+    flex: 1,
+    backgroundColor: "rgba(247,250,248,0.08)",
+  },
+  fabFadeMiddle: {
+    flex: 1,
+    backgroundColor: "rgba(247,250,248,0.56)",
+  },
+  fabFadeBottom: {
+    flex: 2,
+    backgroundColor: "rgba(247,250,248,0.94)",
+  },
   fab: {
     position: "absolute",
     alignSelf: "center",
@@ -183,7 +210,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   fabPressed: { opacity: 0.85 },
-  fabText: { color: palette.white, fontSize: 16, fontWeight: "800", writingDirection: "rtl" },
+  fabText: { ...text.bodyStrong, color: palette.white, writingDirection: "rtl" },
   aboutLink: {
     alignSelf: "center",
     marginTop: 8,
@@ -191,8 +218,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   aboutLinkText: {
+    ...text.caption,
     color: palette.muted,
-    fontSize: 13,
     textDecorationLine: "underline",
     writingDirection: "rtl",
   },

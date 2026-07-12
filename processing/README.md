@@ -193,6 +193,20 @@ The command writes debug artifacts under `build/osm/`:
 - `overpass-query.ql`
 - `overpass-response.json`
 
+Calculate roundabout candidates from that existing saved snapshot without
+contacting Overpass or rebuilding the base graph:
+
+```bash
+npm run osm:roundabouts
+```
+
+This writes `build/osm/roundabout-candidates.json`. Review candidates in the
+editor's **Roundabouts** workspace; decisions are stored separately in
+`data/roundabout-review.json`. The current saved query did not request
+standalone `highway=mini_roundabout` nodes, so the candidate/report coverage
+records `miniRoundaboutNodes: not-requested-by-source` rather than treating the
+absence as a verified zero.
+
 The base graph builder also reads `data/manual-base-edges.geojson` when present.
 Those editor-drawn edges are appended to the generated graph with
 `source: "manual"` so the matcher and later router can treat them like ordinary

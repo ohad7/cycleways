@@ -78,7 +78,12 @@ const base = {
     { ...base, route: "current" },
     { currentNavigationRoute: current },
   );
-  assert.equal(resolved.navigationRoute, current);
+  assert.notEqual(resolved.navigationRoute, current);
+  assert.equal(
+    resolved.navigationRoute.id,
+    `${current.id}:scenario-test-scenario`,
+    "current-route playback gets a distinct id so the session rebinds",
+  );
 }
 
 // Validation failures name the scenario and the problem.

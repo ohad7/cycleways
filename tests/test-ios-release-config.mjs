@@ -17,16 +17,66 @@ assert.equal(ios.infoPlist.ITSAppUsesNonExemptEncryption, false);
 assert.equal(ios.infoPlist.CFBundleAllowMixedLocalizations, true);
 assert.equal(appJson.expo.locales?.he, "./locales/he.json");
 
-const usageKeys = [
-  "NSLocationWhenInUseUsageDescription",
-  "NSLocationAlwaysAndWhenInUseUsageDescription",
-];
+const usageKeys = ["NSLocationWhenInUseUsageDescription"];
 for (const key of usageKeys) {
   assert.ok(
     typeof ios.infoPlist[key] === "string" && ios.infoPlist[key].length > 10,
     `base usage string ${key}`,
   );
 }
+
+// When-In-Use permission model (plans/when-in-use-navigation-permission):
+// the app must never declare or request Always location.
+assert.equal(
+  ios.infoPlist.NSLocationAlwaysAndWhenInUseUsageDescription,
+  undefined,
+  "Always usage string must be absent - lock-screen guidance runs on While-Using",
+);
+const locationPlugin = appJson.expo.plugins.find(
+  (p) => Array.isArray(p) && p[0] === "expo-location",
+);
+assert.ok(locationPlugin, "expo-location plugin config present");
+assert.equal(
+  locationPlugin[1].locationAlwaysAndWhenInUsePermission,
+  false,
+  "expo-location plugin must exclude the Always permission string",
+);
+assert.equal(
+  locationPlugin[1].isIosBackgroundLocationEnabled,
+  true,
+  "background location updates still require the plugin flag",
+);
+const locationService = await readFile(
+  new URL(
+    "../apps/mobile/src/navigation/locationService.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
+assert.doesNotMatch(
+  locationService,
+  /requestBackgroundPermissionsAsync/,
+  "navigation must not request Always location permission",
+);
+
+assert.deepEqual(
+  ios.infoPlist.UIBackgroundModes,
+  ["location", "audio"],
+  "navigation needs background location AND background audio (lock-screen voice)",
+);
+
+const speechAdapter = await readFile(
+  new URL(
+    "../apps/mobile/src/navigation/speechAdapter.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
+assert.match(
+  speechAdapter,
+  /shouldPlayInBackground\s*:\s*true/,
+  "navigation speech audio session must allow background playback",
+);
 
 const he = JSON.parse(
   await readFile(
@@ -40,12 +90,22 @@ for (const key of usageKeys) {
     `Hebrew usage string ${key}`,
   );
 }
+assert.equal(
+  he.NSLocationAlwaysAndWhenInUseUsageDescription,
+  undefined,
+  "Hebrew Always usage string must be absent",
+);
 
 // Mapbox telemetry must stay disabled: PrivacyInfo.xcprivacy and the App
 // Store privacy labels declare no collected data.
 const buildScreen = await readFile(
   new URL("../apps/mobile/src/screens/BuildScreen.jsx", import.meta.url),
   "utf8",
+);
+assert.doesNotMatch(
+  buildScreen,
+  /הכוונה כשהמסך נעול|יבקש הרשאת מיקום תמיד/,
+  "ride confirmation must not show the obsolete Always-location explainer",
 );
 assert.ok(
   buildScreen.includes("setTelemetryEnabled(false)"),

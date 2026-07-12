@@ -1,6 +1,7 @@
 import React from "react";
 import { Linking, Text } from "react-native";
 import { parseRichText } from "@cycleways/core/utils/richText.js";
+import { fontWeights } from "./theme/typography.js";
 
 // React Native renderer for the shared rich-text AST. Bold and links become
 // nested <Text>; a link's onPress opens the URL. RN has no stopPropagation on
@@ -12,7 +13,7 @@ function renderInline(nodes, linkStyle) {
     if (node.t === "break") return <Text key={i}>{"\n"}</Text>;
     if (node.t === "bold") {
       return (
-        <Text key={i} style={{ fontWeight: "700" }}>
+        <Text key={i} style={{ fontWeight: String(fontWeights.bold) }}>
           {renderInline(node.children, linkStyle)}
         </Text>
       );

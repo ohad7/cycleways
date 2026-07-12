@@ -73,7 +73,7 @@ test("splash is removed once the app is ready", async ({ page }) => {
   // App has rendered its header
   await expect(
     page.getByRole("heading", {
-      name: "מפת שבילי אופניים - גליל עליון וגולן",
+      name: "לאן רוכבים היום?",
       exact: true,
     }),
   ).toBeVisible();

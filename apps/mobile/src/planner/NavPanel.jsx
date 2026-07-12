@@ -2,7 +2,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import Icon from "./Icon.jsx";
+import ManeuverIcon from "./ManeuverIcon.jsx";
 import { palette, radius, space } from "./theme.js";
+import { text } from "../theme/typography.js";
 
 // Active turn-by-turn overlay. Decision logic lives in navigationPresentation;
 // this component renders the cue card/status pill, contextual controls, and
@@ -12,12 +14,10 @@ export default function NavPanel({
   onRecenter,
   onPauseResume,
   onStop,
-  onOpenExternal,
-  onChangeRideSettings,
   compassHeading = null,
   voiceEnabled = true,
   onToggleVoice,
-  lockScreenGuidanceActive = false,
+  onCameraLayout,
 }) {
   const insets = useSafeAreaInsets();
   const p = getNavigationPresentation(sessionState);
@@ -33,11 +33,11 @@ export default function NavPanel({
   const showTopCard = !arrived && !showCurrentRoadPill;
   const dataPillMainText =
     p.remainingText ||
-    (p.cardMode === "approach"
-      ? "בדרך למסלול"
-      : p.cardMode === "off-route"
-        ? "חזרה למסלול"
-        : "");
+    (p.cardMode === "off-route"
+      ? p.offRouteDistanceText
+        ? `${p.offRouteDistanceText} למסלול`
+        : p.speedText || "מחוץ למסלול"
+      : "");
   const showSpeedInDataPill = Boolean(p.remainingText && p.speedText);
 
   // Direction-to-route arrow: phone-relative when the compass is available
@@ -51,9 +51,20 @@ export default function NavPanel({
   return (
     <View style={styles.root} pointerEvents="box-none">
       {!showTopCard ? (
-        <View />
+        <View
+          onLayout={(event) => {
+            const layout = event?.nativeEvent?.layout;
+            if (layout) onCameraLayout?.({ topOverlayBottom: layout.y + layout.height });
+          }}
+        />
       ) : (
-        <View style={[styles.banner, { marginTop: insets.top + space.sm }]}>
+        <View
+          style={[styles.banner, { marginTop: insets.top + space.sm }]}
+          onLayout={(event) => {
+            const layout = event?.nativeEvent?.layout;
+            if (layout) onCameraLayout?.({ topOverlayBottom: layout.y + layout.height });
+          }}
+        >
           {p.justAcquired ? (
             <View style={styles.acquiredRow}>
               <Icon name="checkmark-circle" color={palette.white} size={22} />
@@ -69,13 +80,15 @@ export default function NavPanel({
             </View>
           ) : null}
 
-          {p.cardMode === "approach" || p.cardMode === "off-route" ? (
+          {p.cardMode === "off-route" ? (
             <>
               <Text style={[styles.approachHeading, p.offRoute ? styles.offText : null]}>
-                {p.approachHeading}
+                {p.offRouteText}
               </Text>
               <View style={p.offRoute ? [styles.cueRow, styles.offRow] : styles.cueRow}>
-                {showApproachArrow ? (
+                {p.showApproachCue ? (
+                  <Icon name={p.approachCueIcon} color={palette.white} size={26} />
+                ) : showApproachArrow ? (
                   <View style={{ transform: [{ rotate: `${approachArrowDeg}deg` }] }}>
                     <Icon
                       name="navigate"
@@ -84,49 +97,58 @@ export default function NavPanel({
                     />
                   </View>
                 ) : null}
-                <Text
-                  style={[styles.cueText, p.offRoute ? styles.offText : null]}
-                  numberOfLines={1}
-                >
-                  {p.destinationLabel}
-                  {p.approachDistanceShort ? ` · ${p.approachDistanceShort}` : ""}
-                </Text>
+                <View style={styles.cueTextWrap}>
+                  <Text
+                    style={[styles.cueText, styles.offTextColor]}
+                    numberOfLines={1}
+                  >
+                    {p.offRouteInstructionText}
+                  </Text>
+                  {p.showApproachCue && p.approachCueSecondaryText ? (
+                    <Text style={[styles.context, styles.offTextColor]} numberOfLines={1}>
+                      {p.approachCueSecondaryText}
+                    </Text>
+                  ) : null}
+                </View>
+                {p.showApproachCue && p.approachCueDistanceText ? (
+                  <Text style={[styles.cueBigDistance, styles.offTextColor]}>
+                    {p.approachCueDistanceText}
+                  </Text>
+                ) : null}
               </View>
               {p.approachSupportText ? (
                 <Text style={styles.approachSupport}>{p.approachSupportText}</Text>
               ) : null}
-              {p.cardMode === "approach" ? (
-                <View style={styles.approachActions}>
-                  <Pressable
-                    style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
-                    onPress={onOpenExternal}
-                    accessibilityRole="button"
-                    accessibilityLabel="פתיחה באפליקציית ניווט"
-                  >
-                    <Icon name="open-outline" color={palette.forest} size={18} />
-                    <Text style={styles.destBtnText}>אפליקציית ניווט</Text>
-                  </Pressable>
-                  <Pressable
-                    style={({ pressed }) => [styles.destBtn, pressed ? styles.destBtnPressed : null]}
-                    onPress={onChangeRideSettings}
-                    accessibilityRole="button"
-                    accessibilityLabel="שינוי הגדרות רכיבה"
-                  >
-                    <Icon name="options-outline" color={palette.forest} size={18} />
-                    <Text style={styles.destBtnText}>הגדרות רכיבה</Text>
-                  </Pressable>
-                </View>
-              ) : null}
             </>
           ) : p.cardMode === "cue" ? (
-            <View style={styles.cueRow}>
-              <Icon name={p.cueIcon} color={palette.forest} size={30} />
-              <View style={styles.cueTextWrap}>
-                <Text style={styles.cueText} numberOfLines={1}>
-                  {p.cuePrimaryText || p.cueText}
-                </Text>
+            <View
+              style={styles.cueRow}
+              accessible
+              accessibilityLabel={[
+                p.cuePrimaryText || p.cueText,
+                p.cueNextText,
+                p.cueSecondaryText,
+                p.cueDistanceText,
+              ].filter(Boolean).join(". ")}
+            >
+              <View style={styles.cueInstructions}>
+                <CueManeuverRow
+                  maneuver={p.cueManeuver}
+                  fallbackIcon={p.cueIcon}
+                >
+                  <Text style={[styles.cueText, styles.maneuverCopy]}>
+                    {p.cuePrimaryText || p.cueText}
+                  </Text>
+                </CueManeuverRow>
+                {p.cueNextText && p.cueNextManeuver ? (
+                  <CueManeuverRow maneuver={p.cueNextManeuver} secondary>
+                    <Text style={[styles.nextCueText, styles.maneuverCopy]}>
+                      {p.cueNextText}
+                    </Text>
+                  </CueManeuverRow>
+                ) : null}
                 {p.cueSecondaryText ? (
-                  <Text style={styles.context} numberOfLines={1}>
+                  <Text style={[styles.context, styles.cueContextIndent]} numberOfLines={2}>
                     {p.cueSecondaryText}
                   </Text>
                 ) : null}
@@ -150,7 +172,13 @@ export default function NavPanel({
       ) : null}
 
       {arrived && p.arrivalSummary ? (
-        <View style={[styles.arrivalCard, { marginBottom: insets.bottom + space.md }]}>
+        <View
+          style={[styles.arrivalCard, { marginBottom: insets.bottom + space.md }]}
+          onLayout={(event) => {
+            const layout = event?.nativeEvent?.layout;
+            if (layout) onCameraLayout?.({ bottomOverlayTop: layout.y });
+          }}
+        >
           <Text style={styles.arrivalTitle}>הגעת ליעד 🎉</Text>
           <View style={styles.arrivalStats}>
             <ArrivalStat value={p.arrivalSummary.distanceText} label="מרחק" />
@@ -167,7 +195,13 @@ export default function NavPanel({
           </Pressable>
         </View>
       ) : (
-        <View style={[styles.bottomStack, { marginBottom: insets.bottom + space.md }]}>
+        <View
+          style={[styles.bottomStack, { marginBottom: insets.bottom + space.md }]}
+          onLayout={(event) => {
+            const layout = event?.nativeEvent?.layout;
+            if (layout) onCameraLayout?.({ bottomOverlayTop: layout.y });
+          }}
+        >
           {showCurrentRoadPill ? (
             <View style={styles.roadPill}>
               <Text style={styles.roadPillText} numberOfLines={1}>
@@ -179,9 +213,11 @@ export default function NavPanel({
             <View
               style={styles.dataPill}
               accessible
-              accessibilityLabel={`${dataPillMainText}. ${
-                lockScreenGuidanceActive ? "ממשיך כשהמסך נעול" : "מסך ער"
-              }. ${voiceEnabled ? "קול פעיל" : "קול כבוי"}`}
+              accessibilityLabel={
+                showSpeedInDataPill
+                  ? `${dataPillMainText}. ${p.speedText}`
+                  : dataPillMainText
+              }
             >
               <View style={styles.dataPillCopy}>
                 <Text style={styles.dataPillMain} numberOfLines={1}>
@@ -192,18 +228,6 @@ export default function NavPanel({
                     {p.speedText}
                   </Text>
                 ) : null}
-              </View>
-              <View style={styles.modeIcons}>
-                <Icon
-                  name={lockScreenGuidanceActive ? "lock-closed-outline" : "phone-portrait-outline"}
-                  color={lockScreenGuidanceActive ? palette.forest : palette.muted}
-                  size={16}
-                />
-                <Icon
-                  name={voiceEnabled ? "volume-high-outline" : "volume-mute-outline"}
-                  color={voiceEnabled ? palette.forest : palette.muted}
-                  size={16}
-                />
               </View>
             </View>
             <RoundButton
@@ -222,6 +246,22 @@ export default function NavPanel({
           </View>
         </View>
       )}
+    </View>
+  );
+}
+
+function CueManeuverRow({ maneuver, fallbackIcon, secondary = false, children }) {
+  const size = secondary ? 23 : 32;
+  return (
+    <View style={styles.maneuverRow}>
+      <View style={styles.maneuverIconSlot}>
+        {maneuver ? (
+          <ManeuverIcon maneuver={maneuver} color={palette.forest} size={size} />
+        ) : fallbackIcon ? (
+          <Icon name={fallbackIcon} color={palette.forest} size={size} />
+        ) : null}
+      </View>
+      {children}
     </View>
   );
 }
@@ -335,84 +375,83 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
   },
   acquiredText: {
+    ...text.navBody,
     color: palette.white,
     flex: 1,
-    fontSize: 14,
-    fontWeight: "900",
     textAlign: "right",
     writingDirection: "rtl",
   },
   cueTextWrap: { flex: 1 },
+  cueInstructions: {
+    flex: 1,
+    minWidth: 0,
+    gap: space.xs,
+  },
+  maneuverRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  maneuverIconSlot: {
+    width: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  maneuverCopy: {
+    flex: 1,
+    flexShrink: 1,
+  },
   cueText: {
+    ...text.navTitle,
     color: palette.ink,
-    fontSize: 20,
-    fontWeight: "800",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  nextCueText: {
+    ...text.navBody,
+    color: palette.ink,
     writingDirection: "rtl",
     textAlign: "right",
   },
   offText: { color: palette.white, flex: 1 },
+  offTextColor: { color: palette.white },
   approachHeading: {
+    ...text.navBody,
     color: palette.ink,
-    fontSize: 14,
-    fontWeight: "900",
     writingDirection: "rtl",
     textAlign: "right",
     marginBottom: space.xs,
   },
   approachSupport: {
+    ...text.navCaption,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: space.xs,
   },
   cueBigDistance: {
+    ...text.display,
     color: "#1c4fd6",
-    fontSize: 22,
-    fontWeight: "900",
+    flexShrink: 0,
   },
   statusText: {
+    ...text.navBody,
     color: palette.ink,
-    fontSize: 16,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
   },
   context: {
+    ...text.navCaption,
     color: palette.muted,
-    fontSize: 13,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: 2,
   },
-  destBtn: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    alignSelf: "flex-end",
-    gap: space.xs,
-    marginTop: space.sm,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: palette.forest,
-    backgroundColor: palette.white,
+  cueContextIndent: {
+    marginRight: 34 + space.sm,
   },
   destBtnPressed: { opacity: 0.7 },
-  approachActions: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: space.sm,
-    marginTop: space.sm,
-  },
-  destBtnText: {
-    color: palette.forest,
-    fontSize: 14,
-    fontWeight: "800",
-    writingDirection: "rtl",
-  },
   bottomStack: {
     gap: space.sm,
   },
@@ -429,9 +468,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   roadPillText: {
+    ...text.navTitle,
     color: palette.ink,
-    fontSize: 17,
-    fontWeight: "900",
     writingDirection: "rtl",
     textAlign: "center",
   },
@@ -459,22 +497,14 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  modeIcons: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-    marginStart: space.sm,
-  },
   dataPillMain: {
+    ...text.navBody,
     color: palette.ink,
-    fontSize: 14,
-    fontWeight: "900",
     writingDirection: "rtl",
   },
   dataPillSub: {
+    ...text.navCaption,
     color: palette.muted,
-    fontSize: 13,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
   recenterWrap: { position: "absolute", left: space.md },
@@ -489,9 +519,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   arrivalTitle: {
+    ...text.navTitle,
     color: palette.ink,
-    fontSize: 20,
-    fontWeight: "900",
     textAlign: "center",
     writingDirection: "rtl",
   },
@@ -501,8 +530,8 @@ const styles = StyleSheet.create({
     marginTop: space.md,
   },
   arrivalStat: { alignItems: "center" },
-  arrivalStatValue: { color: palette.ink, fontSize: 18, fontWeight: "900" },
-  arrivalStatLabel: { color: palette.muted, fontSize: 11, fontWeight: "700" },
+  arrivalStatValue: { ...text.navTitle, color: palette.ink },
+  arrivalStatLabel: { ...text.label, color: palette.muted },
   arrivalDone: {
     marginTop: space.md,
     backgroundColor: palette.forest,
@@ -511,9 +540,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   arrivalDoneText: {
+    ...text.navBody,
     color: palette.white,
-    fontSize: 15,
-    fontWeight: "900",
     writingDirection: "rtl",
   },
   navBtnWrap: { alignItems: "center", gap: 4 },
@@ -533,9 +561,8 @@ const styles = StyleSheet.create({
   navBtnDanger: { backgroundColor: palette.danger },
   navBtnPressed: { opacity: 0.85 },
   navBtnLabel: {
+    ...text.navCaption,
     color: palette.ink,
-    fontSize: 12,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
 });

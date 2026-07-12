@@ -5,6 +5,7 @@ import {
   getNativePathname,
   getQueryParam,
   getNativeRoutePath,
+  getNativeRouteToken,
   getShardLoaderLocation,
   hasQueryParam,
   removeUrlParam,
@@ -22,6 +23,9 @@ assert.equal(hasQueryParam("route"), false);
 
 setNativeLocationHref("cycleways:///?route=abc123&source=test");
 assert.equal(getQueryParam("route"), "abc123");
+assert.equal(getNativeRouteToken(), "abc123");
+assert.equal(getNativeRouteToken("cycleways:///?route=from-href"), "from-href");
+assert.equal(getNativeRouteToken("https://example.com/?route=external"), null);
 assert.equal(hasQueryParam("route"), true);
 assert.equal(getQueryParam("source"), "test");
 assert.equal(getShardLoaderLocation().href, "cycleways:///");

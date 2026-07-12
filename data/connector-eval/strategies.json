@@ -1,0 +1,36 @@
+{
+  "sha256:770e464a2b416df9640fa010f41b8db679eebb731226690eece9a4eeb80f3ed0": {
+    "classMultipliers": {
+      "cw_network": 0.8,
+      "road": 1,
+      "local_road": 4,
+      "cycle": null,
+      "path_track": null,
+      "manual": null,
+      "other": null
+    },
+    "accessPolicy": {
+      "restricted": null,
+      "conditional": null
+    },
+    "uphillWeight": 8,
+    "snap": "allowed-only"
+  },
+  "sha256:361f556be8d991049eac6e2c9a6d7a3ca59704c252fc599f6feef6b56cfd5ec9": {
+    "classMultipliers": {
+      "cw_network": 0.8,
+      "road": 1,
+      "local_road": 4,
+      "cycle": null,
+      "path_track": null,
+      "manual": null,
+      "other": null
+    },
+    "accessPolicy": {
+      "restricted": null,
+      "conditional": null
+    },
+    "uphillWeight": 8,
+    "snap": "any"
+  }
+}

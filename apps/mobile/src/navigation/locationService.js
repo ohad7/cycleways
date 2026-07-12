@@ -13,6 +13,7 @@ import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
 import { toNavigationFix } from "@cycleways/core/navigation/locationFix.js";
 import { NAVIGATION_LOCATION_TASK } from "./backgroundTaskName.js";
+import { trackNavigationEvent } from "./navigationTelemetry.js";
 
 export const NAVIGATION_BACKGROUND_LOCATION_OPTIONS = {
   accuracy: Location.Accuracy.BestForNavigation,
@@ -78,33 +79,22 @@ async function getFallbackRideSetupLocation() {
   }
 }
 
-// Request the permissions navigation needs. Foreground is always required;
-// background is requested only when asked AND after foreground is granted.
+// Request the permissions navigation needs. While-Using (foreground) is all
+// iOS lock-screen guidance requires (plans/when-in-use-navigation-permission):
+// the TaskManager consumer registered while the app is foregrounded sets
+// allowsBackgroundLocationUpdates itself, and expo-location 56's
+// startLocationUpdatesAsync only checks foreground permission. Never request
+// Always. Android reports background:false until the android-release plan
+// tackles locked-screen parity.
 export async function requestNavigationPermissions({ background = false } = {}) {
   const foreground = await Location.requestForegroundPermissionsAsync();
   if (foreground.status !== "granted") {
     return { granted: false, background: false, status: foreground.status };
   }
-  if (!background || Platform.OS !== "ios") {
-    return { granted: true, background: false, status: foreground.status };
-  }
-  const bg = await Location.requestBackgroundPermissionsAsync();
   return {
     granted: true,
-    background: bg.status === "granted",
+    background: background === true && Platform.OS === "ios",
     status: foreground.status,
-  };
-}
-
-export async function getNavigationPermissionStatus() {
-  const foreground = await Location.getForegroundPermissionsAsync();
-  const background = Platform.OS === "ios"
-    ? await Location.getBackgroundPermissionsAsync()
-    : { status: "undetermined", granted: false };
-  return {
-    foreground,
-    background,
-    canUseBackground: foreground.status === "granted" && background.status === "granted",
   };
 }
 
@@ -150,6 +140,12 @@ export async function isNavigationBackgroundUpdatesActive() {
   }
 }
 
+// With the When-In-Use model this registration is the only thing standing
+// between the rider and a silent locked screen, so startup failures must be
+// observable (design W4): captured here and emitted as telemetry. BuildScreen's
+// foreground-only fallback handles the UX.
+let lastBackgroundStartError = null;
+
 export async function startNavigationBackgroundUpdates(options = {}) {
   if (Platform.OS !== "ios") return false;
   if (!TaskManager.isTaskDefined(NAVIGATION_LOCATION_TASK)) return false;
@@ -163,10 +159,22 @@ export async function startNavigationBackgroundUpdates(options = {}) {
         ...options,
       });
     }
+    lastBackgroundStartError = null;
     return true;
-  } catch {
+  } catch (error) {
+    lastBackgroundStartError = {
+      message: String(error?.message || error),
+      at: Date.now(),
+    };
+    trackNavigationEvent("background_updates_start_failed", {
+      message: lastBackgroundStartError.message,
+    });
     return false;
   }
+}
+
+export function getBackgroundLocationDiagnostics() {
+  return { lastBackgroundStartError };
 }
 
 export async function stopNavigationBackgroundUpdates() {
@@ -182,7 +190,7 @@ export async function stopNavigationBackgroundUpdates() {
 // Default real-GPS location source implementing the injectable locationSource
 // interface consumed by useNavigationSession. Returns a fresh wrapper object
 // each call so callers can safely hold the reference for the lifetime of one
-// navigation session. Swap for createSimulateRideSource (dev-only) in tests.
+// navigation session. The dev harness swaps in createJourneyPlaybackSource.
 export function createDefaultLocationSource() {
   return {
     requestPermissions: (opts) => requestNavigationPermissions(opts),

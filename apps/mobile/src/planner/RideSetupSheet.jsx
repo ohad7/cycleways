@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+import { text } from "../theme/typography.js";
 import {
   Modal,
   Pressable,
@@ -8,8 +10,34 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDistanceMeters } from "@cycleways/core/navigation/navigationPresentation.js";
+import { rideSetupLocationNotice } from "@cycleways/core/navigation/rideIntroPresentation.js";
+import {
+  getLockScreenVoiceTestSnapshot,
+  startLockScreenVoiceTest,
+  stopLockScreenVoiceTest,
+  subscribeLockScreenVoiceTest,
+} from "../navigation/lockScreenVoiceTest.js";
 import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
+
+function lockScreenTestStatusLine(test) {
+  if (test.status === "running") {
+    const progress = `${test.tick}/${test.totalTicks}`;
+    return test.backgroundUpdates
+      ? `בדיקת מסך נעול פעילה — נעלו את המסך (${progress})`
+      : `בדיקה פעילה (${progress}) — עדכוני הרקע לא נרשמו, האפליקציה תוקפא כשהמסך נעול`;
+  }
+  if (test.status === "error") {
+    return "אין הרשאת מיקום — אי אפשר להריץ את בדיקת המסך הנעול";
+  }
+  if (test.status === "finished" && test.results) {
+    const base = `בדיקת המסך הנעול הסתיימה: הושמעו ${test.results.completed} מתוך ${test.results.attempts}`;
+    return test.results.errors > 0
+      ? `${base} — ${test.results.errors} שגיאות${test.results.lastError ? ` (${test.results.lastError})` : ""}`
+      : base;
+  }
+  return null;
+}
 
 function Choice({ label, sub, selected, disabled = false, onPress }) {
   return (
@@ -59,22 +87,6 @@ function DirectionButton({ label, selected, disabled = false, onPress }) {
   );
 }
 
-function locationMessage(status, quality) {
-  if (status === "loading") return "מאתר את המיקום שלך…";
-  if (status === "denied") return "אין הרשאת מיקום. אפשר לבחור התחלה ידנית או לנסות שוב.";
-  if (status === "unavailable") return "לא הצלחנו לקבל מיקום עדכני.";
-  if (quality === "stale") return "המיקום הקיים אינו עדכני; ההמלצה לא נבחרה אוטומטית.";
-  if (quality === "inaccurate") return "דיוק המיקום נמוך; מומלץ לבחור נקודת התחלה ידנית.";
-  return "";
-}
-
-function primaryLabel(plan) {
-  if (!plan) return "המשך";
-  if (plan.approachTier === "at") return "התחל ניווט במסלול";
-  if (plan.approachTier === "near") return "התחל והראה דרך למסלול";
-  return "בחר אפליקציית ניווט";
-}
-
 export default function RideSetupSheet({
   visible,
   plan,
@@ -92,16 +104,19 @@ export default function RideSetupSheet({
   voiceEnabled = true,
   onToggleVoice,
   lockScreenGuidanceEnabled = true,
-  lockScreenGuidanceHasAlwaysPermission = false,
-  lockScreenGuidanceNeedsSettings = false,
   onToggleLockScreenGuidance,
-  onOpenLocationSettings,
   onTestVoice,
 }) {
   const insets = useSafeAreaInsets();
+  const lockScreenTest = useSyncExternalStore(
+    subscribeLockScreenVoiceTest,
+    getLockScreenVoiceTestSnapshot,
+  );
+  const lockScreenTestRunning = lockScreenTest.status === "running";
+  const lockScreenTestStatus = lockScreenTestStatusLine(lockScreenTest);
   const candidates = plan?.candidates;
   const nearest = candidates?.nearest;
-  const message = locationMessage(locationStatus, plan?.locationQuality);
+  const message = rideSetupLocationNotice(locationStatus, plan?.locationQuality);
   const distance = plan?.distanceToStartMeters;
   const showNearest = Boolean(
     plan?.locationQuality === "fresh" && candidates?.nearestIsMeaningful,
@@ -126,8 +141,8 @@ export default function RideSetupSheet({
             <Icon name="close" size={24} color={palette.ink} />
           </Pressable>
           <View style={styles.headerText}>
-            <Text style={styles.title}>הכנת הרכיבה</Text>
-            <Text style={styles.subtitle}>בחרו כיוון ונקודת התחלה לפני הניווט</Text>
+            <Text style={styles.title}>הגדרות רכיבה</Text>
+            <Text style={styles.subtitle}>כיוון, נקודת התחלה והעדפות הנחיה</Text>
           </View>
         </View>
 
@@ -209,53 +224,45 @@ export default function RideSetupSheet({
                       ? "ממשיך להנחות כשהמסך נעול"
                       : "רק כשהמסך ער"
                   }
-                  sub={
-                    lockScreenGuidanceHasAlwaysPermission
-                      ? "הרשאת מיקום תמיד כבר פעילה"
-                      : lockScreenGuidanceNeedsSettings
-                      ? "צריך לאפשר מיקום תמיד בהגדרות"
-                      : "מבקש הרשאת מיקום תמיד רק בזמן התחלת רכיבה"
-                  }
+                  sub="עובד עם הרשאת המיקום הרגילה — בלי הרשאת 'תמיד'"
                   selected={lockScreenGuidanceEnabled}
                   onPress={onToggleLockScreenGuidance}
                 />
               ) : null}
-              {lockScreenGuidanceEnabled &&
-              lockScreenGuidanceNeedsSettings &&
-              onOpenLocationSettings ? (
-                <View style={styles.settingsNotice}>
-                  <View style={styles.settingsNoticeText}>
-                    <Text style={styles.settingsNoticeTitle}>צריך לאפשר מיקום תמיד</Text>
-                    <Text style={styles.settingsNoticeSub}>
-                      פתחו את הגדרות האפליקציה ובחרו מיקום &gt; תמיד.
-                    </Text>
-                  </View>
+              {voiceEnabled && onTestVoice ? (
+                <>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="פתיחת הגדרות מיקום"
-                    onPress={onOpenLocationSettings}
+                    accessibilityLabel={lockScreenTestRunning ? "עצירת בדיקת הקול" : "בדיקת קול"}
+                    onPress={() => {
+                      if (lockScreenTestRunning) {
+                        void stopLockScreenVoiceTest();
+                      } else {
+                        onTestVoice();
+                      }
+                    }}
+                    onLongPress={() => {
+                      if (lockScreenTestRunning) {
+                        void stopLockScreenVoiceTest();
+                      } else {
+                        void startLockScreenVoiceTest();
+                      }
+                    }}
                     style={({ pressed }) => [
-                      styles.settingsButton,
+                      styles.testVoice,
                       pressed ? styles.pressed : null,
                     ]}
                   >
-                    <Text style={styles.settingsButtonText}>הגדרות</Text>
+                    <Icon name="volume-high-outline" color={palette.forest} size={19} />
+                    <Text style={styles.testVoiceText}>
+                      {lockScreenTestRunning ? "עצירת הבדיקה" : "בדיקת קול"}
+                    </Text>
                   </Pressable>
-                </View>
-              ) : null}
-              {voiceEnabled && onTestVoice ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="בדיקת קול"
-                  onPress={onTestVoice}
-                  style={({ pressed }) => [
-                    styles.testVoice,
-                    pressed ? styles.pressed : null,
-                  ]}
-                >
-                  <Icon name="volume-high-outline" color={palette.forest} size={19} />
-                  <Text style={styles.testVoiceText}>בדיקת קול</Text>
-                </Pressable>
+                  <Text style={styles.testVoiceHint}>
+                    {lockScreenTestStatus ??
+                      "לחיצה ארוכה: בדיקת קול למסך נעול (כשתי דקות)"}
+                  </Text>
+                </>
               ) : null}
             </>
           ) : null}
@@ -288,19 +295,8 @@ export default function RideSetupSheet({
               {plan.direction === "reverse" ? (
                 <Text style={styles.summaryLine}>המסלול ינווט בכיוון ההפוך.</Text>
               ) : null}
-              {plan.approachTier === "far" ? (
-                <Text style={styles.farText}>המסלול רחוק. מומלץ להגיע לנקודת ההתחלה בעזרת אפליקציית ניווט.</Text>
-              ) : null}
             </View>
           ) : null}
-
-          <View style={styles.safetyNote}>
-            <Icon name="alert-circle-outline" color={palette.muted} size={17} />
-            <Text style={styles.safetyNoteText}>
-              ההנחיות הן עזר לתכנון בלבד. רכבו בזהירות וצייתו לתמרורים ולתנאי
-              הדרך — הם קודמים לכל הנחיה מהאפליקציה.
-            </Text>
-          </View>
         </ScrollView>
 
         <Pressable
@@ -313,7 +309,7 @@ export default function RideSetupSheet({
             pressed ? styles.pressed : null,
           ]}
         >
-          <Text style={styles.primaryText}>{primaryLabel(plan)}</Text>
+          <Text style={styles.primaryText}>אישור</Text>
         </Pressable>
       </View>
     </Modal>
@@ -333,54 +329,33 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: space.md },
   header: { flexDirection: "row", alignItems: "flex-start", gap: space.md, marginBottom: space.md },
   headerText: { flex: 1 },
-  title: { color: palette.ink, fontSize: 21, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
-  subtitle: { color: palette.muted, fontSize: 13, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
-  sectionTitle: { color: palette.ink, fontSize: 14, fontWeight: "800", marginTop: space.md, marginBottom: space.sm, textAlign: "right", writingDirection: "rtl" },
+  title: { ...text.subheading, color: palette.ink, textAlign: "right", writingDirection: "rtl" },
+  subtitle: { ...text.caption, color: palette.muted, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  sectionTitle: { ...text.bodyStrong, color: palette.ink, marginTop: space.md, marginBottom: space.sm, textAlign: "right", writingDirection: "rtl" },
   directionRow: { flexDirection: "row-reverse", gap: space.sm },
   directionButton: { flex: 1, paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: palette.line, alignItems: "center", backgroundColor: palette.white },
   directionSelected: { backgroundColor: palette.forest, borderColor: palette.forest },
-  directionText: { color: palette.ink, fontSize: 15, fontWeight: "800" },
+  directionText: { ...text.bodyStrong, color: palette.ink },
   directionTextSelected: { color: palette.white },
-  helper: { color: palette.muted, fontSize: 12, textAlign: "right", writingDirection: "rtl", marginTop: space.xs },
+  helper: { ...text.caption, color: palette.muted, textAlign: "right", writingDirection: "rtl", marginTop: space.xs },
   choice: { minHeight: 58, flexDirection: "row-reverse", alignItems: "center", gap: space.md, paddingHorizontal: space.md, paddingVertical: space.sm, borderWidth: 1, borderColor: palette.line, borderRadius: radius.md, backgroundColor: palette.white, marginBottom: space.sm },
   choiceSelected: { borderColor: palette.forest, backgroundColor: "#eef6f0" },
   choiceDisabled: { opacity: 0.45 },
   choiceText: { flex: 1 },
-  choiceLabel: { color: palette.ink, fontSize: 15, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  choiceSub: { color: palette.muted, fontSize: 12, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
+  choiceLabel: { ...text.bodyStrong, color: palette.ink, textAlign: "right", writingDirection: "rtl" },
+  choiceSub: { ...text.caption, color: palette.muted, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
   testVoice: { minHeight: 42, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: space.xs, borderRadius: radius.md, borderWidth: 1, borderColor: palette.forest, backgroundColor: palette.white, marginBottom: space.sm },
-  testVoiceText: { color: palette.forest, fontSize: 14, fontWeight: "900", writingDirection: "rtl" },
-  settingsNotice: { flexDirection: "row-reverse", alignItems: "center", gap: space.sm, backgroundColor: palette.cream, borderRadius: radius.md, padding: space.md, marginBottom: space.sm },
-  settingsNoticeText: { flex: 1 },
-  settingsNoticeTitle: { color: palette.ink, fontSize: 13, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
-  settingsNoticeSub: { color: palette.muted, fontSize: 12, lineHeight: 17, marginTop: 2, textAlign: "right", writingDirection: "rtl" },
-  settingsButton: { minHeight: 34, justifyContent: "center", borderRadius: radius.md, borderWidth: 1, borderColor: palette.forest, paddingHorizontal: space.md, backgroundColor: palette.white },
-  settingsButtonText: { color: palette.forest, fontSize: 13, fontWeight: "900", writingDirection: "rtl" },
+  testVoiceText: { ...text.bodyStrong, color: palette.forest, writingDirection: "rtl" },
+  testVoiceHint: { ...text.caption, color: palette.muted, textAlign: "right", writingDirection: "rtl", marginBottom: space.sm },
   notice: { flexDirection: "row-reverse", gap: space.sm, alignItems: "center", backgroundColor: palette.cream, borderRadius: radius.md, padding: space.md, marginTop: space.sm },
-  noticeText: { color: palette.ink, flex: 1, fontSize: 12, textAlign: "right", writingDirection: "rtl" },
-  retry: { color: palette.forest, fontSize: 13, fontWeight: "900" },
+  noticeText: { ...text.caption, color: palette.ink, flex: 1, textAlign: "right", writingDirection: "rtl" },
+  retry: { ...text.captionStrong, color: palette.forest },
   summary: { borderRadius: radius.md, backgroundColor: "#eef3f1", padding: space.md, gap: 4, marginTop: space.md, marginBottom: space.md },
-  summaryTitle: { color: palette.ink, fontSize: 15, fontWeight: "900", textAlign: "right", writingDirection: "rtl" },
-  summaryLine: { color: palette.muted, fontSize: 13, textAlign: "right", writingDirection: "rtl" },
-  warning: { color: "#92400e", fontSize: 13, fontWeight: "800", textAlign: "right", writingDirection: "rtl" },
-  farText: { color: palette.ink, fontSize: 13, lineHeight: 18, fontWeight: "700", marginTop: space.xs, textAlign: "right", writingDirection: "rtl" },
-  safetyNote: {
-    flexDirection: "row-reverse",
-    gap: 8,
-    alignItems: "flex-start",
-    marginTop: 14,
-    paddingHorizontal: 4,
-  },
-  safetyNoteText: {
-    flex: 1,
-    color: palette.muted,
-    fontSize: 12.5,
-    lineHeight: 18,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
+  summaryTitle: { ...text.bodyStrong, color: palette.ink, textAlign: "right", writingDirection: "rtl" },
+  summaryLine: { ...text.caption, color: palette.muted, textAlign: "right", writingDirection: "rtl" },
+  warning: { ...text.captionStrong, color: "#92400e", textAlign: "right", writingDirection: "rtl" },
   primary: { minHeight: 50, borderRadius: radius.md, backgroundColor: palette.forest, alignItems: "center", justifyContent: "center", marginTop: space.sm },
   primaryDisabled: { opacity: 0.45 },
-  primaryText: { color: palette.white, fontSize: 16, fontWeight: "900", writingDirection: "rtl" },
+  primaryText: { ...text.bodyStrong, color: palette.white, writingDirection: "rtl" },
   pressed: { opacity: 0.72 },
 });

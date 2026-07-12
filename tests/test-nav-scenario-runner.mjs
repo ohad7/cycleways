@@ -27,7 +27,8 @@ function straightRoute() {
   );
 }
 
-// Happy ride: timeline carries per-fix presentation and ends at the arrive cue.
+// Happy ride: timeline carries per-fix presentation and auto-ends after the
+// arrival cue has been shown.
 {
   const route = straightRoute();
   const fixes = generateTrack(route, { speedMps: 5, intervalMs: 1000, seed: 7 });
@@ -43,10 +44,12 @@ function straightRoute() {
     timeline[0].presentation.cueText.length > 0,
     "presentation strings are populated",
   );
-  assert.equal(last.activeCueType, "arrive", "ride ends at the arrive cue");
+  assert.equal(last.status, "ended", "ride auto-ends at the destination");
   assert.ok(
-    last.presentation.cueText.includes("הגעת ליעד"),
-    "arrival banner text present",
+    timeline.some((entry) =>
+      entry.activeCueType === "arrive" && entry.presentation.cueText.includes("הגעת ליעד")
+    ),
+    "arrival banner appears before automatic finalization",
   );
   assert.ok(
     timeline.some((e) => e.haptic !== null),
@@ -69,17 +72,29 @@ function straightRoute() {
     "every entry carries the camera stage",
   );
   assert.ok(
+    timeline.every((e) => typeof e.cameraMode === "string"),
+    "every entry carries the camera mode",
+  );
+  assert.ok(
+    timeline.every((e) => Number.isFinite(e.cameraPitch)),
+    "every entry carries the camera pitch",
+  );
+  assert.ok(
     timeline.every((e) => typeof e.cardMode === "string"),
     "every entry carries the card mode",
   );
-  assert.equal(timeline[timeline.length - 1].cameraStage, "arrived");
+  assert.equal(timeline[timeline.length - 1].cameraStage, "arrived-local");
   assert.ok(
-    timeline.some((e) => /הגעת ליעד/.test(e.voiceText || "")),
+    timeline.some((e) => /עַד|יעד/.test(e.voiceText || "")),
     "arrival voice text is present",
   );
   assert.ok(
     timeline.some((e) => Number.isFinite(e.cameraHeadingDeg)),
     "the governed camera heading is carried on the timeline",
+  );
+  assert.ok(
+    timeline.some((e) => Number.isFinite(e.cameraHeadingTargetDeg)),
+    "the camera heading target is carried on the timeline",
   );
   const rotations = timeline.filter(
     (e, i) =>
@@ -94,8 +109,8 @@ function straightRoute() {
   );
 }
 
-// Approach ride, per connector mode: straight-line -> suggestion ready;
-// fail -> connector failure surfaces; none -> request left pending.
+// Approach ride: pre-route approach requests connector ownership, but physical
+// route acquisition is still the only handoff into route navigation.
 {
   const route = straightRoute();
   const fixes = generateTrack(route, {
@@ -108,8 +123,16 @@ function straightRoute() {
   const ready = runScenario({ navigationRoute: route, fixes, connector: "straight-line" });
   assert.equal(ready.timeline[0].status, "approaching");
   assert.ok(
+    ready.routeRequests.some((request) => request.targetMode === "start"),
+    "pre-route approach issues a start connector request",
+  );
+  assert.ok(
     ready.timeline.some((e) => e.suggestionStatus === "ready"),
-    "straight-line connector produces a ready suggestion",
+    "pre-route approach resolves a connector suggestion",
+  );
+  assert.ok(
+    ready.timeline.some((e) => e.approachOwnershipTier === "guide"),
+    "pre-route approach exposes connector ownership tier",
   );
   assert.ok(
     ready.timeline.some((e) => e.justAcquired === true),
@@ -119,11 +142,11 @@ function straightRoute() {
   const failed = runScenario({ navigationRoute: route, fixes, connector: "fail" });
   assert.ok(
     failed.timeline.some((e) => e.connectorResult === "failed"),
-    "fail connector surfaces a failed connector result",
+    "pre-route approach records failed connector results",
   );
 
   const none = runScenario({ navigationRoute: route, fixes, connector: "none" });
-  assert.ok(none.routeRequests.length >= 1, "request was issued");
+  assert.ok(none.routeRequests.length > 0, "request is issued and left pending");
   assert.ok(
     !none.timeline.some((e) => e.suggestionStatus === "ready"),
     "no suggestion resolves in mode none",
@@ -134,6 +157,7 @@ function straightRoute() {
 {
   const req = { from: { lat: 1, lng: 2 }, to: { lat: 3, lng: 4 } };
   assert.deepEqual(connectorRouterForMode("straight-line")(req).geometry, [req.from, req.to]);
+  assert.equal(connectorRouterForMode("guide-turn")(req).geometry.length, 3);
   assert.equal(connectorRouterForMode("fail")(req).failure, "scenario-forced-failure");
   assert.equal(connectorRouterForMode("none"), null);
 }

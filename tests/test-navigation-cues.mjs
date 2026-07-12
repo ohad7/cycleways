@@ -42,7 +42,23 @@ function routeFrom(geometry, extra = {}) {
   assert.equal(arrives.length, 1, "exactly one arrive cue");
   assert.equal(starts[0].distanceMeters, 0, "start cue at 0 m");
   assert.ok(near(arrives[0].distanceMeters, 931.5, 2), "arrive cue at route end");
+  assert.equal(
+    selectActiveCue(cues, arrives[0].distanceMeters - 201),
+    null,
+    "arrival preview does not start before 200 m",
+  );
+  const arrivalPreview = selectActiveCue(cues, arrives[0].distanceMeters - 200);
+  assert.equal(arrivalPreview?.cue.type, "arrive");
+  assert.equal(arrivalPreview?.phase, "preview");
+  assert.ok(near(arrivalPreview?.distanceToCueMeters, 200, 0.01));
   assert.equal(findType(cues, "turn").length, 0, "no turns on a straight route");
+
+  const seamCues = buildRouteCues(straight, { includeArrival: false });
+  assert.equal(
+    findType(seamCues, "arrive").length,
+    0,
+    "connector-style cue sets can omit destination arrival",
+  );
 
   // Deterministic + sorted by distance.
   const again = buildRouteCues(straight);
@@ -201,16 +217,35 @@ function routeFrom(geometry, extra = {}) {
 
 // --- Short-segment suppression: close turns do not spam -------------------
 {
-  // Two ~90 deg turns ~11 m apart (below the min-spacing) -> only one cue.
+  // Two ~90 deg turns ~9 m apart (below the hard noise floor) -> one cue.
   const zigzag = routeFrom([
     { lat: 33.1, lng: 35.6 },
     { lat: 33.1, lng: 35.6001 }, // ~9.3 m  (turn 1)
-    { lat: 33.10010, lng: 35.6001 }, // ~20.4 m (turn 2, suppressed)
-    { lat: 33.10010, lng: 35.6002 },
+    { lat: 33.10008, lng: 35.6001 }, // ~18.2 m (turn 2, suppressed)
+    { lat: 33.10008, lng: 35.6002 },
   ]);
   const turns = findType(buildRouteCues(zigzag), "turn");
   assert.equal(turns.length, 1, "close second turn is suppressed");
   assert.ok(near(turns[0].distanceMeters, 9.3, 2), "kept the first turn");
+}
+
+// --- Compound turns: close pairs are linked, not dropped ------------------
+{
+  const route = routeFrom([
+    { lat: 33.0, lng: 35.0 },
+    { lat: 33.0, lng: 35.002 },
+    { lat: 33.00036, lng: 35.002 },
+    { lat: 33.00036, lng: 35.004 },
+  ]);
+  const turns = findType(buildRouteCues(route), "turn");
+  assert.equal(turns.length, 2, "both turns of a close pair survive");
+  assert.equal(turns[0].direction, "left");
+  assert.equal(turns[0].thenDirection, "right");
+  assert.equal(
+    turns[1].compoundPreviousDistanceMeters,
+    turns[0].distanceMeters,
+    "follow-up points back to the compound instruction",
+  );
 }
 
 // --- enter-segment cues + merge ---
@@ -257,6 +292,15 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
     "standalone enter-segment cue for B");
 }
 
+// A due segment boundary must not be starved by a farther maneuver preview.
+{
+  const segment = { type: "enter-segment", distanceMeters: 400, segmentName: "B" };
+  const turn = { type: "turn", distanceMeters: 485, direction: "right" };
+  const selected = selectActiveCue([segment, turn], 380);
+  assert.equal(selected.cue, segment, "final segment cue beats farther turn preview");
+  assert.equal(selected.phase, "final");
+}
+
 // --- Real catalog route: junction data is baked in and gates the cues -----
 // sovev-beit-hillel used to produce 16 "turn" cues, 9 of them at plain road
 // curves (no junction within 30 m+). With junctions in the snapshot, every
@@ -295,6 +339,96 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   for (const b of findType(cues, "bend")) {
     assert.ok(b.turnAngleDeg >= 75, "bends are only genuinely sharp curves");
   }
+}
+
+// --- Roundabout traversal records replace in-ring corner noise ------------
+{
+  const route = routeFrom(
+    [
+      { lat: 33, lng: 35 },
+      { lat: 33, lng: 35.001 },
+      { lat: 32.999, lng: 35.001 },
+      { lat: 32.998, lng: 35.001 },
+    ],
+    {
+      junctions: [{
+        kind: "roundabout",
+        roundaboutId: "r1",
+        lat: 33,
+        lng: 35.001,
+        entryMeters: 70,
+        exitMeters: 140,
+        entryBearingDeg: 90,
+        exitBearingDeg: 180,
+        complete: true,
+      }],
+    },
+  );
+  const cues = buildRouteCues(route);
+  assert.deepEqual(findType(cues, "roundabout").map((cue) => cue.direction), ["right"]);
+  assert.equal(findType(cues, "turn").length + findType(cues, "bend").length, 0);
+}
+
+// Thresholds and repeated visits are one cue per traversal.
+{
+  const route = routeFrom(
+    [{ lat: 33, lng: 35 }, { lat: 33, lng: 35.01 }],
+    {
+      junctions: [
+        { kind: "roundabout", roundaboutId: "a", lat: 33, lng: 35.002, entryMeters: 100, exitMeters: 130, entryBearingDeg: 0, exitBearingDeg: 39.99, complete: true },
+        { kind: "roundabout", roundaboutId: "b", lat: 33, lng: 35.004, entryMeters: 300, exitMeters: 330, entryBearingDeg: 0, exitBearingDeg: 40, complete: true },
+        { kind: "roundabout", roundaboutId: "c", lat: 33, lng: 35.006, entryMeters: 500, exitMeters: 530, entryBearingDeg: 0, exitBearingDeg: 130, complete: true },
+        { kind: "roundabout", roundaboutId: "d", lat: 33, lng: 35.008, entryMeters: 700, exitMeters: 730, entryBearingDeg: 0, exitBearingDeg: 130.01, complete: true },
+      ],
+    },
+  );
+  assert.deepEqual(
+    findType(buildRouteCues(route), "roundabout").map((cue) => cue.direction),
+    ["straight", "right", "right", "u-turn"],
+  );
+}
+
+// A turn shortly before a roundabout announces both decisions together.
+{
+  const route = routeFrom(
+    [
+      { lat: 33, lng: 35 },
+      { lat: 33, lng: 35.001 },
+      { lat: 33.0005, lng: 35.001 },
+      { lat: 33.0015, lng: 35.001 },
+    ],
+    {
+      junctions: [
+        { kind: "junction", lat: 33, lng: 35.001 },
+        {
+          kind: "roundabout",
+          roundaboutId: "after-turn",
+          lat: 33.00025,
+          lng: 35.001,
+          entryMeters: 115,
+          exitMeters: 160,
+          entryBearingDeg: 0,
+          exitBearingDeg: 0,
+          complete: true,
+        },
+      ],
+    },
+  );
+  const cues = buildRouteCues(route);
+  const turn = findType(cues, "turn")[0];
+  const roundabout = findType(cues, "roundabout")[0];
+  assert.deepEqual(turn.thenManeuver, { type: "roundabout", direction: "straight" });
+  assert.equal(roundabout.compoundPreviousType, "turn");
+  assert.equal(roundabout.compoundPreviousDistanceMeters, turn.distanceMeters);
+}
+
+// Incomplete traversal suppresses geometry noise but cannot announce direction.
+{
+  const route = routeFrom(
+    [{ lat: 33, lng: 35 }, { lat: 33.001, lng: 35.001 }, { lat: 33.002, lng: 35.001 }],
+    { junctions: [{ kind: "roundabout", roundaboutId: "edge", lat: 33, lng: 35, entryMeters: 0, exitMeters: 180, complete: false }] },
+  );
+  assert.equal(findType(buildRouteCues(route), "roundabout").length, 0);
 }
 
 console.log("navigation cue tests passed");

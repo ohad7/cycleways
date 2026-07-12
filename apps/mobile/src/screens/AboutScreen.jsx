@@ -4,6 +4,7 @@ import * as Application from "expo-application";
 import BackButton from "./BackButton.jsx";
 import { palette, radius, space } from "../planner/theme.js";
 import { aboutModel } from "./aboutModel.js";
+import { text } from "../theme/typography.js";
 
 export default function AboutScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -61,21 +62,20 @@ const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: palette.paper },
   scroll: { paddingHorizontal: 22 },
   title: {
+    ...text.heading,
     color: palette.ink,
-    fontSize: 26,
-    fontWeight: "800",
     textAlign: "center",
   },
   version: {
+    ...text.caption,
     color: palette.muted,
-    fontSize: 14,
     textAlign: "center",
     marginTop: 4,
     writingDirection: "rtl",
   },
   tagline: {
+    ...text.body,
     color: palette.muted,
-    fontSize: 14,
     textAlign: "center",
     marginTop: 2,
     marginBottom: space.lg,
@@ -98,25 +98,22 @@ const styles = StyleSheet.create({
     borderTopColor: palette.line,
   },
   linkText: {
+    ...text.bodyStrong,
     color: palette.forest,
-    fontSize: 16,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   sectionTitle: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 15,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
     marginTop: space.md,
     marginBottom: 6,
   },
   bodyText: {
+    ...text.caption,
     color: palette.muted,
-    fontSize: 13.5,
-    lineHeight: 20,
     textAlign: "right",
     writingDirection: "rtl",
     marginBottom: 6,

@@ -69,6 +69,49 @@ export function evaluateExpectations(expectations, timeline) {
         break;
       }
 
+      case "voice": {
+        const matches = entries.filter(
+          (entry) =>
+            typeof entry?.voiceText === "string" &&
+            entry.voiceText.includes(String(exp.match ?? "")),
+        );
+        const count = matches.length;
+        if (exp.never === true) {
+          if (count > 0) fail(`"${exp.match}" was spoken ${count} time(s)`);
+          break;
+        }
+        if (exp.count !== undefined && count !== Number(exp.count)) {
+          fail(`"${exp.match}" was spoken ${count} time(s), expected ${exp.count}`);
+          break;
+        }
+        if (exp.atLeast !== undefined && count < Number(exp.atLeast)) {
+          fail(`"${exp.match}" was spoken ${count} time(s), expected at least ${exp.atLeast}`);
+          break;
+        }
+        if (exp.atMost !== undefined && count > Number(exp.atMost)) {
+          fail(`"${exp.match}" was spoken ${count} time(s), expected at most ${exp.atMost}`);
+          break;
+        }
+        if (count === 0) {
+          fail(`"${exp.match}" was never spoken`);
+          break;
+        }
+        const firstProgress = progressOf(matches[0]);
+        if (
+          exp.beforeMeters !== undefined &&
+          (firstProgress === null || firstProgress > Number(exp.beforeMeters))
+        ) {
+          fail(`first "${exp.match}" at ${firstProgress}m, expected before ${exp.beforeMeters}m`);
+        }
+        if (
+          exp.afterMeters !== undefined &&
+          (firstProgress === null || firstProgress < Number(exp.afterMeters))
+        ) {
+          fail(`first "${exp.match}" at ${firstProgress}m, expected after ${exp.afterMeters}m`);
+        }
+        break;
+      }
+
       case "acquired":
         if (!entries.some((e) => e.justAcquired === true)) {
           fail("route was never acquired");
@@ -245,6 +288,93 @@ export function evaluateExpectations(expectations, timeline) {
           if (p === null || p < min || p > max) {
             fail(`first "${exp.value}" at ${p}m, expected within [${min}, ${max}]`);
           }
+        }
+        break;
+      }
+
+      case "camera-mode": {
+        const first = entries.find((e) => e.cameraMode === exp.value);
+        if (exp.never === true) {
+          if (first) fail(`camera mode "${exp.value}" occurred at ${progressOf(first)}m`);
+          break;
+        }
+        if (!first) {
+          fail(`camera mode "${exp.value}" never occurred`);
+          break;
+        }
+        if (Array.isArray(exp.duringStages)) {
+          const bad = entries.find(
+            (e) => exp.duringStages.includes(e.cameraStage) && e.cameraMode !== exp.value,
+          );
+          if (bad) {
+            fail(
+              `camera stage "${bad.cameraStage}" used mode "${bad.cameraMode}", expected "${exp.value}"`,
+            );
+          }
+        }
+        break;
+      }
+
+      case "camera-pitch": {
+        const candidates = exp.stage
+          ? entries.filter((e) => e.cameraStage === exp.stage)
+          : entries;
+        if (candidates.length === 0) {
+          fail(exp.stage ? `camera stage "${exp.stage}" never occurred` : "no entries");
+          break;
+        }
+        const expected = Number(exp.value);
+        const tolerance = Number(exp.tolerance ?? 0.01);
+        const first = candidates.find(
+          (e) =>
+            Number.isFinite(e.cameraPitch) &&
+            Math.abs(e.cameraPitch - expected) <= tolerance,
+        );
+        if (!first) {
+          fail(
+            `no camera pitch near ${expected} (±${tolerance})${exp.stage ? ` during ${exp.stage}` : ""}`,
+          );
+        }
+        break;
+      }
+
+      case "camera-sequence": {
+        const values = Array.isArray(exp.values) ? exp.values : [];
+        let cursor = -1;
+        for (const value of values) {
+          const next = entries.findIndex(
+            (entry, index) => index > cursor && entry.cameraStage === value,
+          );
+          if (next === -1) {
+            fail(
+              `camera stage sequence stopped before "${value}" after entry ${cursor}`,
+            );
+            break;
+          }
+          cursor = next;
+        }
+        break;
+      }
+
+      case "camera-fit-kind": {
+        const first = entries.find((entry) => entry.cameraFitKind === exp.value);
+        if (exp.never === true) {
+          if (first) fail(`camera fit kind "${exp.value}" occurred at entry ${first.index}`);
+        } else if (!first) {
+          fail(`camera fit kind "${exp.value}" never occurred`);
+        }
+        break;
+      }
+
+      case "camera-geometry-role": {
+        const candidates = exp.stage
+          ? entries.filter((entry) => entry.cameraStage === exp.stage)
+          : entries;
+        if (!candidates.some((entry) => entry.cameraGeometryRole === exp.value)) {
+          fail(
+            `camera geometry role "${exp.value}" never occurred` +
+              (exp.stage ? ` during ${exp.stage}` : ""),
+          );
         }
         break;
       }

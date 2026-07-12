@@ -41,13 +41,16 @@ export default {
     { type: "status", value: "off-route", betweenMeters: [560, 660] },
     { type: "camera-stage", value: "off-route", betweenMeters: [560, 660] },
     { type: "card-mode", value: "off-route", betweenMeters: [560, 660] },
-    { type: "chip", match: "חזרה למסלול" },
+    { type: "chip", match: "בדרך חזרה למסלול" },
     { type: "haptic", kind: "heavy" },
     { type: "rerouted", withinFixesOfOffRoute: 10 },
+    { type: "voice", match: "עקוב אחרי הקו המסומן", count: 1 },
     { type: "rejoin-target", position: "first", betweenMeters: [560, 660] },
     { type: "rejoin-target", position: "last", betweenMeters: [560, 700] },
-    { type: "camera-rotations", atMost: 0, during: "off-route" },
-    { type: "camera-rotations", atMost: 1 },
+    // A guided rejoin leg is delivered while off-route, so the frame steers
+    // course-up along it instead of holding still.
+    { type: "camera-rotations", atMost: 1, during: "off-route" },
+    { type: "camera-rotations", atMost: 4 },
     { type: "arrived" },
   ],
 };

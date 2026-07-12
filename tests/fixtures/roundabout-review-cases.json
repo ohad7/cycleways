@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "name": "accepted rejected pending stale and orphaned",
+      "candidates": {
+        "schemaVersion": 1,
+        "coverage": { "miniRoundaboutNodes": "not-requested-by-source" },
+        "roundabouts": [
+          { "id": "a", "fingerprint": "fa", "classification": "roundabout", "center": { "lat": 33, "lng": 35 }, "radiusM": 20, "paths": [[[33, 35], [33.0001, 35.0001]]], "warnings": [] },
+          { "id": "b", "fingerprint": "fb", "classification": "roundabout", "center": { "lat": 33, "lng": 35 }, "radiusM": 20, "paths": [[[33, 35], [33.0001, 35.0001]]], "warnings": [] },
+          { "id": "c", "fingerprint": "fc", "classification": "roundabout", "center": { "lat": 33, "lng": 35 }, "radiusM": 20, "paths": [[[33, 35], [33.0001, 35.0001]]], "warnings": [] },
+          { "id": "d", "fingerprint": "fd-new", "classification": "roundabout", "center": { "lat": 33, "lng": 35 }, "radiusM": 20, "paths": [[[33, 35], [33.0001, 35.0001]]], "warnings": [] }
+        ]
+      },
+      "reviews": {
+        "schemaVersion": 1,
+        "reviews": {
+          "a": { "fingerprint": "fa", "status": "accepted" },
+          "b": { "fingerprint": "fb", "status": "rejected" },
+          "d": { "fingerprint": "fd-old", "status": "accepted" },
+          "gone": { "fingerprint": "fg", "status": "accepted" }
+        }
+      },
+      "expected": { "total": 4, "accepted": 1, "rejected": 1, "pending": 1, "stale": 1, "orphaned": 1, "blockingCodes": ["pending_reviews", "stale_reviews"] }
+    },
+    {
+      "name": "fully reviewed",
+      "candidates": {
+        "schemaVersion": 1,
+        "coverage": { "miniRoundaboutNodes": "available" },
+        "roundabouts": [
+          { "id": "a", "fingerprint": "fa", "classification": "mini_roundabout", "center": { "lat": 33, "lng": 35 }, "radiusM": 10, "paths": [], "warnings": [] }
+        ]
+      },
+      "reviews": { "schemaVersion": 1, "reviews": { "a": { "fingerprint": "fa", "status": "accepted" } } },
+      "expected": { "total": 1, "accepted": 1, "rejected": 0, "pending": 0, "stale": 0, "orphaned": 0, "blockingCodes": [] }
+    }
+  ]
+}

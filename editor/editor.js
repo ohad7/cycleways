@@ -4,6 +4,8 @@ import {
   conflictingSegmentForEdge,
   orientAppendedEdgeRef,
 } from "./lib/edge-pick.mjs";
+import { migrateOverlayEdgeReplacement } from "./lib/overlay-edge-migration.mjs";
+import { filterRoundaboutItems } from "./lib/roundaboutReview.mjs";
 import {
   POI_TYPE_OPTIONS,
   poiColor,
@@ -21,6 +23,33 @@ import {
   snapPointToRouteWithinWindow,
 } from "../packages/core/src/domain/routeGeometryMath.js";
 import { vsFormatTime, vsParseTime } from "./lib/vs-time.mjs";
+import {
+  DEFAULT_CONNECTOR_STRATEGY,
+  evaluateConnectorEdge,
+  hasCyclewaysNetworkMembership,
+} from "../packages/core/src/routing/connectorCostModel.js";
+import { computeConnectorFeatures } from "../packages/core/src/routing/connectorFeatures.js";
+import {
+  DEFAULT_CONNECTOR_THRESHOLDS,
+} from "../packages/core/src/routing/connectorConfidence.js";
+import { evaluateThresholds } from "../packages/core/src/routing/connectorEvaluate.js";
+import {
+  connectorCostColor,
+  connectorClassColor,
+  connectorAccessColor,
+  CONNECTOR_COST_LEGEND,
+  CONNECTOR_CLASS_LEGEND,
+  CONNECTOR_ACCESS_LEGEND,
+  CONNECTOR_EXCLUDED_COLOR,
+} from "./lib/connectorColors.mjs";
+
+const CONNECTOR_CLASS_KEYS = ["cw_network", "road", "local_road", "cycle", "path_track", "manual", "other"];
+const CONNECTOR_ACCESS_KEYS = ["restricted", "conditional"];
+const CONNECTOR_VERDICT_COLORS = {
+  valid: "#1b7837",
+  unacceptable: "#dc2626",
+  borderline: "#f59e0b",
+};
 
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 
@@ -162,6 +191,14 @@ const state = {
   draw: emptyDrawState(),
   editingEdgePickEdges: false,
   splittingEdgePickAt: null,
+  roundabouts: {
+    loading: false,
+    loaded: false,
+    error: null,
+    data: null,
+    filter: "all",
+    selectedId: null,
+  },
   baseOverlay: {
     enabled: false,
     loading: false,
@@ -178,6 +215,25 @@ const state = {
     overlay: emptyBaseOverlay(),
     cache: {},
   },
+  connectorLens: {
+    // "off" | "class" | "access" | "eligibility" | "cost"
+    colorMode: "off",
+    strategy: structuredClone(DEFAULT_CONNECTOR_STRATEGY),
+    targetStart: null,
+    targetRouteSlug: "",
+    pickingTarget: false,
+    routesLoaded: false,
+    lastFrequencyResult: null,
+    hideUnreachable: true,
+    labeling: {
+      active: false,
+      index: 0,
+      verdicts: new Map(),
+      busy: false,
+    },
+    thresholds: structuredClone(DEFAULT_CONNECTOR_THRESHOLDS),
+    labelsCache: [],
+  },
 };
 
 const els = {
@@ -185,10 +241,18 @@ const els = {
   workspaceSegments: document.getElementById("workspace-segments"),
   workspaceBase: document.getElementById("workspace-base"),
   workspaceOverlay: document.getElementById("workspace-overlay"),
+  workspaceRoundabouts: document.getElementById("workspace-roundabouts"),
   workspaceVideoSync: document.getElementById("workspace-video-sync"),
   workspaceRouteCatalog: document.getElementById("workspace-route-catalog"),
   baseGraphPanel: document.getElementById("base-graph-panel"),
   cwOverlayPanel: document.getElementById("cw-overlay-panel"),
+  roundaboutsPanel: document.getElementById("roundabouts-panel"),
+  roundaboutsStatus: document.getElementById("roundabouts-status"),
+  roundaboutsCoverage: document.getElementById("roundabouts-coverage"),
+  roundaboutsSummary: document.getElementById("roundabouts-summary"),
+  roundaboutsFilter: document.getElementById("roundabouts-filter"),
+  roundaboutsList: document.getElementById("roundabouts-list"),
+  roundaboutsDetail: document.getElementById("roundabouts-detail"),
   routeCatalogPanel: document.getElementById("route-catalog-panel"),
   segmentDrawer: document.getElementById("segment-drawer"),
   toggleSegments: document.getElementById("toggle-segments"),
@@ -245,6 +309,25 @@ const els = {
   splitManualBaseEdge: document.getElementById("split-manual-base-edge"),
   recalculateOsmGraph: document.getElementById("recalculate-osm-graph"),
   baseGraphHelp: document.getElementById("base-graph-help"),
+  connectorLensPanel: document.getElementById("connector-lens-panel"),
+  connectorColorMode: document.getElementById("connector-color-mode"),
+  connectorLegend: document.getElementById("connector-legend"),
+  connectorUphillWeight: document.getElementById("connector-uphill-weight"),
+  connectorSnap: document.getElementById("connector-snap"),
+  connectorResetStrategy: document.getElementById("connector-reset-strategy"),
+  connectorCopyStrategy: document.getElementById("connector-copy-strategy"),
+  connectorTargetRoute: document.getElementById("connector-target-route"),
+  connectorPickTarget: document.getElementById("connector-pick-target"),
+  connectorRadius: document.getElementById("connector-radius"),
+  connectorRun: document.getElementById("connector-run"),
+  connectorClearRun: document.getElementById("connector-clear-run"),
+  connectorHideUnreachable: document.getElementById("connector-hide-unreachable"),
+  connectorRunStatus: document.getElementById("connector-run-status"),
+  connectorLabelMode: document.getElementById("connector-label-mode"),
+  connectorLabelStatus: document.getElementById("connector-label-status"),
+  connectorCalibLoad: document.getElementById("connector-calib-load"),
+  connectorCalibReadout: document.getElementById("connector-calib-readout"),
+  connectorThresholdTooFarRadius: document.getElementById("connector-threshold-too-far-radius"),
   baseOverlayStatus: document.getElementById("base-overlay-status"),
   baseOverlaySummary: document.getElementById("base-overlay-summary"),
   acceptBaseOverlay: document.getElementById("accept-base-overlay"),
@@ -833,6 +916,62 @@ function drawPointCollection() {
   return { type: "FeatureCollection", features };
 }
 
+function connectorLensColor(props) {
+  const mode = state.connectorLens.colorMode;
+  if (mode === "off") return null;
+  const edge = {
+    routeClass: props.osmRouteClass ?? props.routeClass,
+    roadType: props.roadType,
+    accessStatus: props.accessStatus,
+    cwSegmentIds: props.cwSegmentIds,
+    cyclewaysSegmentIds: props.cyclewaysSegmentIds,
+    cwSegmentId: props.cwSegmentId,
+    cyclewaysSegmentId: props.cyclewaysSegmentId,
+    cwSegmentCount: props.cwSegmentCount,
+    cyclewaysSegmentCount: props.cyclewaysSegmentCount,
+  };
+  if (mode === "class") {
+    return connectorClassColor(
+      hasCyclewaysNetworkMembership(edge) ? "cw_network" : edge.routeClass,
+    );
+  }
+  if (mode === "access") return connectorAccessColor(edge.accessStatus);
+  const verdict = evaluateConnectorEdge(edge, state.connectorLens.strategy);
+  if (mode === "eligibility") return verdict.allowed ? "#1b7837" : "#9ca3af";
+  return connectorCostColor(verdict.multiplier); // "cost"
+}
+
+function connectorVerdictText(props) {
+  const edge = {
+    routeClass: props.osmRouteClass ?? props.routeClass,
+    roadType: props.roadType,
+    accessStatus: props.accessStatus,
+    cwSegmentIds: props.cwSegmentIds,
+    cyclewaysSegmentIds: props.cyclewaysSegmentIds,
+    cwSegmentId: props.cwSegmentId,
+    cyclewaysSegmentId: props.cyclewaysSegmentId,
+    cwSegmentCount: props.cwSegmentCount,
+    cyclewaysSegmentCount: props.cyclewaysSegmentCount,
+  };
+  const strategy = state.connectorLens.strategy;
+  const v = evaluateConnectorEdge(edge, strategy);
+  if (v.allowed && hasCyclewaysNetworkMembership(edge)) {
+    return `allowed — CW network ×${v.multiplier.toFixed(2)}`;
+  }
+  if (!v.allowed) {
+    const accessExcluded =
+      edge.accessStatus &&
+      strategy.accessPolicy &&
+      edge.accessStatus in strategy.accessPolicy &&
+      strategy.accessPolicy[edge.accessStatus] == null;
+    const reason = accessExcluded
+      ? `access "${edge.accessStatus}" excluded`
+      : `class "${edge.routeClass}" excluded`;
+    return `excluded — ${reason}`;
+  }
+  return `allowed — ×${v.multiplier.toFixed(2)}`;
+}
+
 function baseGraphCollection() {
   if (!state.baseOverlay.graphEdges) {
     return EMPTY_FEATURE_COLLECTION;
@@ -841,25 +980,31 @@ function baseGraphCollection() {
   if (
     cache.baseGraphCollection &&
     cache.baseGraphCollectionGraphEdges === state.baseOverlay.graphEdges &&
-    cache.baseGraphCollectionManualEdges === state.baseOverlay.manualBaseEdges
+    cache.baseGraphCollectionManualEdges === state.baseOverlay.manualBaseEdges &&
+    cache.baseGraphCollectionLensMode === state.connectorLens.colorMode &&
+    cache.baseGraphCollectionLensStrategy === state.connectorLens.strategy
   ) {
     return cache.baseGraphCollection;
   }
   const overriddenEdgeIds = overriddenBaseGraphEdgeIds();
-  if (overriddenEdgeIds.size === 0) {
-    cache.baseGraphCollection = state.baseOverlay.graphEdges;
-    cache.baseGraphCollectionGraphEdges = state.baseOverlay.graphEdges;
-    cache.baseGraphCollectionManualEdges = state.baseOverlay.manualBaseEdges;
-    return cache.baseGraphCollection;
-  }
-  cache.baseGraphCollection = {
-    ...state.baseOverlay.graphEdges,
-    features: (state.baseOverlay.graphEdges.features || []).filter(
-      (feature) => !overriddenEdgeIds.has(String(graphEdgeFeatureId(feature))),
-    ),
-  };
+  const sourceFeatures =
+    overriddenEdgeIds.size === 0
+      ? state.baseOverlay.graphEdges.features || []
+      : (state.baseOverlay.graphEdges.features || []).filter(
+          (feature) => !overriddenEdgeIds.has(String(graphEdgeFeatureId(feature))),
+        );
+  const features = sourceFeatures.map((feature) => ({
+    ...feature,
+    properties: {
+      ...feature.properties,
+      connectorLensColor: connectorLensColor(feature.properties || {}),
+    },
+  }));
+  cache.baseGraphCollection = { ...state.baseOverlay.graphEdges, features };
   cache.baseGraphCollectionGraphEdges = state.baseOverlay.graphEdges;
   cache.baseGraphCollectionManualEdges = state.baseOverlay.manualBaseEdges;
+  cache.baseGraphCollectionLensMode = state.connectorLens.colorMode;
+  cache.baseGraphCollectionLensStrategy = state.connectorLens.strategy;
   return cache.baseGraphCollection;
 }
 
@@ -1128,6 +1273,7 @@ function updateMapSources() {
   setSourceData("cw-overlay-network", cwOverlayNetworkCollection());
   setSourceData("manual-base-edges", manualBaseEdgeCollection());
   setSourceData("compose-edge-pick", composeEdgePickCollection());
+  updateRoundaboutSources();
   if (map.getLayer("segments-layer")) {
     map.setFilter("segments-layer", unselectedFilter());
   }
@@ -1163,6 +1309,16 @@ function cwOverlayNetworkFeaturesAtPoint(point) {
   return map.queryRenderedFeatures(point, { layers: ["cw-overlay-network-hit-layer"] });
 }
 
+function connectorLensFeaturesAtPoint(point) {
+  if (state.workspaceMode !== "base" || !connectorLensRunActive()) return [];
+  const layers = [
+    "connector-origins-layer",
+    "connector-single-path-layer",
+    "connector-single-path-casing-layer",
+  ].filter((layerId) => map.getLayer(layerId));
+  return layers.length > 0 ? map.queryRenderedFeatures(point, { layers }) : [];
+}
+
 function updateWorkspaceLayerVisibility() {
   const composing = isComposingNewSegmentEdges();
   const editingEdges = (state.editingEdgePickEdges || state.splittingEdgePickAt !== null) && isEdgePickedSelected();
@@ -1176,6 +1332,7 @@ function updateWorkspaceLayerVisibility() {
   const showBaseGraphHit = showBaseWorkspaceGraph || composing || editingEdges;
   const showBaseEdit = showBaseWorkspaceGraph && state.workspaceMode === "base";
   const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
+  const showRoundabouts = state.workspaceMode === "roundabouts";
 
   setLayerVisibility("segments-layer", showSegments);
   setLayerVisibility("selected-segment", showSelectedSegment);
@@ -1187,6 +1344,14 @@ function updateWorkspaceLayerVisibility() {
     setLayerVisibility(layerId, showBaseGraphHit);
   }
   for (const layerId of ["selected-base-graph-edge-layer", "selected-manual-base-edge"]) {
+    setLayerVisibility(layerId, showBaseEdit);
+  }
+  for (const layerId of [
+    "connector-usage-layer",
+    "connector-origins-layer",
+    "connector-single-path-casing-layer",
+    "connector-single-path-layer",
+  ]) {
     setLayerVisibility(layerId, showBaseEdit);
   }
   for (const layerId of [
@@ -1204,6 +1369,14 @@ function updateWorkspaceLayerVisibility() {
   }
   setLayerVisibility("compose-edge-pick-layer", composing);
   setLayerVisibility("compose-edge-pick-labels", composing);
+  for (const layerId of [
+    "roundabout-corridors-layer",
+    "roundabout-lines-corridor-layer",
+    "roundabout-lines-layer",
+    "roundabout-points-layer",
+  ]) {
+    setLayerVisibility(layerId, showRoundabouts);
+  }
 }
 
 function updateUnresolvedSegmentLayerFilter() {
@@ -1332,6 +1505,7 @@ function renderBaseEdgeAttributes(feature) {
   }
 
   const properties = feature.properties || {};
+  const connectorRow = `<div><dt>Connector</dt><dd>${escapeHtml(connectorVerdictText(properties))}</dd></div>`;
   const rows = Object.keys(properties)
     .sort((a, b) => (baseEdgePropertySortRank(a) - baseEdgePropertySortRank(b)) || a.localeCompare(b))
     .map((key) => {
@@ -1350,7 +1524,7 @@ function renderBaseEdgeAttributes(feature) {
     <section class="base-edge-data">
       <h3>Data</h3>
       <dl class="base-edge-attributes">
-        ${[...geometryRows, ...rows].join("") || `<div><dt>properties</dt><dd>No attributes</dd></div>`}
+        ${[connectorRow, ...geometryRows, ...rows].join("") || `<div><dt>properties</dt><dd>No attributes</dd></div>`}
       </dl>
     </section>
   `;
@@ -3192,13 +3366,185 @@ function renderWorkspaceChrome() {
   els.workspaceSegments.classList.toggle("active", state.workspaceMode === "segments");
   els.workspaceBase.classList.toggle("active", state.workspaceMode === "base");
   els.workspaceOverlay.classList.toggle("active", state.workspaceMode === "overlay");
+  els.workspaceRoundabouts.classList.toggle("active", state.workspaceMode === "roundabouts");
   els.workspaceVideoSync.classList.toggle("active", state.workspaceMode === "video-sync");
   els.workspaceRouteCatalog.classList.toggle("active", state.workspaceMode === "route-catalog");
   els.baseGraphPanel.hidden = state.workspaceMode !== "base";
+  els.connectorLensPanel.hidden = state.workspaceMode !== "base";
   els.cwOverlayPanel.hidden = state.workspaceMode !== "overlay";
+  els.roundaboutsPanel.hidden = state.workspaceMode !== "roundabouts";
   els.routeCatalogPanel.hidden = state.workspaceMode !== "route-catalog";
+  els.mapToolbar.hidden = state.workspaceMode === "roundabouts";
   els.toggleBaseOverlay.classList.toggle("active", state.baseOverlay.enabled);
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
+}
+
+async function loadRoundaboutReview() {
+  state.roundabouts.loading = true;
+  state.roundabouts.error = null;
+  renderRoundaboutsPanel();
+  try {
+    const response = await fetch("/api/roundabouts/review");
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load roundabouts");
+    state.roundabouts.data = payload;
+    state.roundabouts.loaded = true;
+    const ids = (payload.items || []).map((item) => item.candidate?.id).filter(Boolean);
+    if (!ids.includes(state.roundabouts.selectedId)) state.roundabouts.selectedId = ids[0] || null;
+    updateRoundaboutSources();
+  } catch (error) {
+    state.roundabouts.error = error instanceof Error ? error.message : String(error);
+    state.roundabouts.loaded = false;
+  } finally {
+    state.roundabouts.loading = false;
+    renderRoundaboutsPanel();
+  }
+}
+
+function roundaboutFilteredItems() {
+  return filterRoundaboutItems(
+    state.roundabouts.data?.items || [],
+    state.roundabouts.filter,
+  );
+}
+
+function updateRoundaboutLayerFilters() {
+  const ids = roundaboutFilteredItems().map((item) => item.candidate.id);
+  const filter = ids.length
+    ? ["in", ["get", "id"], ["literal", ids]]
+    : ["==", ["get", "id"], "__none__"];
+  for (const layerId of ["roundabout-corridors-layer", "roundabout-lines-corridor-layer", "roundabout-lines-layer", "roundabout-points-layer"]) {
+    if (map.getLayer(layerId)) map.setFilter(layerId, filter);
+  }
+}
+
+function updateRoundaboutSources() {
+  const geojson = state.roundabouts.data?.geojson || {};
+  setSourceData("roundabout-lines", geojson.lines || EMPTY_FEATURE_COLLECTION);
+  setSourceData("roundabout-points", geojson.points || EMPTY_FEATURE_COLLECTION);
+  setSourceData("roundabout-corridors", geojson.corridors || EMPTY_FEATURE_COLLECTION);
+  updateRoundaboutLayerFilters();
+}
+
+function fitRoundaboutCandidate(candidate) {
+  const bbox = candidate?.bbox;
+  if (!Array.isArray(bbox) || bbox.length !== 4) return;
+  const bounds = new mapboxgl.LngLatBounds([bbox[0], bbox[1]], [bbox[2], bbox[3]]);
+  map.fitBounds(bounds, { padding: 110, maxZoom: 18, duration: 400 });
+}
+
+async function saveRoundaboutReview(status) {
+  const item = state.roundabouts.data?.items?.find(
+    (entry) => entry.candidate?.id === state.roundabouts.selectedId,
+  );
+  if (!item) return;
+  const note = els.roundaboutsDetail.querySelector("textarea")?.value || "";
+  const response = await fetch("/api/roundabouts/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: item.candidate.id,
+      fingerprint: item.candidate.fingerprint,
+      status,
+      note,
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not save review");
+  state.roundabouts.data = payload;
+  updateRoundaboutSources();
+  const filtered = roundaboutFilteredItems();
+  const next = filtered.find((entry) => entry.candidate.id !== item.candidate.id)
+    || payload.items?.find((entry) => entry.candidate.id !== item.candidate.id);
+  state.roundabouts.selectedId = next?.candidate?.id || item.candidate.id;
+  renderRoundaboutsPanel();
+  const selected = payload.items?.find((entry) => entry.candidate.id === state.roundabouts.selectedId);
+  if (selected) fitRoundaboutCandidate(selected.candidate);
+}
+
+function moveRoundaboutSelection(delta) {
+  const items = roundaboutFilteredItems();
+  if (!items.length) return;
+  const current = items.findIndex((item) => item.candidate.id === state.roundabouts.selectedId);
+  const nextIndex = Math.max(0, Math.min(items.length - 1, (current < 0 ? 0 : current) + delta));
+  state.roundabouts.selectedId = items[nextIndex].candidate.id;
+  renderRoundaboutsPanel();
+  fitRoundaboutCandidate(items[nextIndex].candidate);
+}
+
+function renderRoundaboutsPanel() {
+  if (!els.roundaboutsPanel || state.workspaceMode !== "roundabouts") return;
+  if (state.roundabouts.loading) {
+    els.roundaboutsStatus.textContent = "Loading";
+    return;
+  }
+  if (state.roundabouts.error) {
+    els.roundaboutsStatus.textContent = "Unavailable";
+    els.roundaboutsCoverage.innerHTML = `<div class="empty-state">${escapeHtml(state.roundabouts.error)}</div>`;
+    els.roundaboutsSummary.innerHTML = "";
+    els.roundaboutsList.innerHTML = "";
+    els.roundaboutsDetail.innerHTML = "";
+    return;
+  }
+  const data = state.roundabouts.data;
+  if (!data) return;
+  els.roundaboutsStatus.textContent = data.sourceFresh ? "Current snapshot" : "Stale — recalculate";
+  const coverage = data.coverage || {};
+  els.roundaboutsCoverage.innerHTML = `
+    <strong>Saved source coverage</strong>
+    <span>Tagged ways: ${escapeHtml(coverage.roundaboutWays || "unknown")}</span>
+    <span>Circular ways: ${escapeHtml(coverage.circularWays || "unknown")}</span>
+    <span>Mini nodes: ${escapeHtml(coverage.miniRoundaboutNodes || "unknown")}</span>
+  `;
+  els.roundaboutsSummary.innerHTML = Object.entries(data.summary || {})
+    .map(([key, value]) => `<div class="base-overlay-stat"><strong>${value}</strong><span>${escapeHtml(key)}</span></div>`)
+    .join("");
+  els.roundaboutsFilter.value = state.roundabouts.filter;
+  const items = roundaboutFilteredItems();
+  els.roundaboutsList.innerHTML = "";
+  for (const item of items) {
+    const candidate = item.candidate;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `roundabout-review-item state-${item.state}${candidate.id === state.roundabouts.selectedId ? " active" : ""}`;
+    button.innerHTML = `<strong>${escapeHtml(candidate.id)}</strong><span>${escapeHtml(candidate.classification)} · ${escapeHtml(item.state)}${candidate.warnings?.length ? ` · ⚠ ${candidate.warnings.length}` : ""}</span>`;
+    button.addEventListener("click", () => {
+      state.roundabouts.selectedId = candidate.id;
+      renderRoundaboutsPanel();
+      fitRoundaboutCandidate(candidate);
+    });
+    els.roundaboutsList.appendChild(button);
+  }
+  const selected = data.items?.find((item) => item.candidate.id === state.roundabouts.selectedId);
+  if (!selected) {
+    els.roundaboutsDetail.innerHTML = `<div class="empty-state">No candidates in this filter.</div>`;
+    return;
+  }
+  const candidate = selected.candidate;
+  const osmLinks = (candidate.memberWayIds || [])
+    .map((id) => `<a href="https://www.openstreetmap.org/way/${encodeURIComponent(id)}" target="_blank" rel="noreferrer">way ${escapeHtml(id)}</a>`)
+    .join(" · ");
+  els.roundaboutsDetail.innerHTML = `
+    <h3>${escapeHtml(candidate.id)}</h3>
+    <p>${escapeHtml(candidate.classification)} · radius ${Number(candidate.radiusM).toFixed(1)} m</p>
+    <p>${osmLinks || (candidate.sourceNodeId ? `<a href="https://www.openstreetmap.org/node/${encodeURIComponent(candidate.sourceNodeId)}" target="_blank" rel="noreferrer">node ${escapeHtml(candidate.sourceNodeId)}</a>` : "")}</p>
+    <p>Warnings: ${escapeHtml((candidate.warnings || []).join(", ") || "none")}</p>
+    <textarea class="text-input textarea" rows="3" maxlength="1000" placeholder="Optional review note">${escapeHtml(selected.review?.note || "")}</textarea>
+    <div class="action-row">
+      <button type="button" data-review="accepted" class="primary-button">Accept</button>
+      <button type="button" data-review="rejected" class="secondary-button danger">Reject</button>
+    </div>
+    <div class="action-row">
+      <button type="button" data-move="-1" class="secondary-button">Previous</button>
+      <button type="button" data-move="1" class="secondary-button">Next</button>
+    </div>
+  `;
+  for (const button of els.roundaboutsDetail.querySelectorAll("[data-review]")) {
+    button.addEventListener("click", () => saveRoundaboutReview(button.dataset.review).catch(showError));
+  }
+  for (const button of els.roundaboutsDetail.querySelectorAll("[data-move]")) {
+    button.addEventListener("click", () => moveRoundaboutSelection(Number(button.dataset.move)));
+  }
 }
 
 function renderBaseGraphPanel() {
@@ -3268,6 +3614,681 @@ function renderBaseGraphPanel() {
     : selectedGraphEdge
       ? "OSM edges are generated and read-only. Use Copy Selected to create an editable manual edge from this geometry."
       : "Click any base graph edge to inspect it. Create a new manual edge, or copy a selected OSM edge to edit it.";
+}
+
+function renderConnectorLensLegend() {
+  const mode = state.connectorLens.colorMode;
+  let items = [];
+  if (mode === "class") {
+    items = CONNECTOR_CLASS_LEGEND;
+  } else if (mode === "access") {
+    items = CONNECTOR_ACCESS_LEGEND;
+  } else if (mode === "eligibility") {
+    items = [
+      { label: "allowed", color: "#1b7837" },
+      { label: "excluded", color: CONNECTOR_EXCLUDED_COLOR },
+    ];
+  } else if (mode === "cost") {
+    items = CONNECTOR_COST_LEGEND;
+  }
+  els.connectorLegend.innerHTML = items
+    .map(
+      (item) =>
+        `<span class="connector-legend-item"><span class="connector-legend-swatch" style="background:${item.color}"></span>${escapeHtml(item.label)}</span>`,
+    )
+    .join("");
+}
+
+function renderConnectorLensPanel() {
+  const strategy = state.connectorLens.strategy;
+  els.connectorColorMode.value = state.connectorLens.colorMode;
+  for (const key of CONNECTOR_CLASS_KEYS) {
+    const value = strategy.classMultipliers?.[key];
+    const numInput = document.getElementById(`connector-class-${key}`);
+    const excludedInput = document.getElementById(`connector-class-${key}-excluded`);
+    const excluded = value === null || value === undefined;
+    excludedInput.checked = excluded;
+    // Only overwrite the number input when it holds a real value; leave it
+    // populated (just disabled) while excluded so the prior multiplier is
+    // preserved and can be restored on uncheck (see setConnectorClassExcluded).
+    if (!excluded) numInput.value = value;
+    numInput.disabled = excluded;
+  }
+  for (const key of CONNECTOR_ACCESS_KEYS) {
+    const value = strategy.accessPolicy?.[key];
+    const numInput = document.getElementById(`connector-access-${key}`);
+    const excludedInput = document.getElementById(`connector-access-${key}-excluded`);
+    const excluded = value === null || value === undefined;
+    excludedInput.checked = excluded;
+    if (!excluded) numInput.value = value;
+    numInput.disabled = excluded;
+  }
+  els.connectorUphillWeight.value = strategy.uphillWeight;
+  els.connectorSnap.value = strategy.snap;
+  renderConnectorLensLegend();
+  const target = state.connectorLens.targetStart;
+  els.connectorRun.disabled = !target;
+  els.connectorClearRun.disabled = !connectorLensRunActive();
+  els.connectorHideUnreachable.checked = state.connectorLens.hideUnreachable;
+  els.connectorLabelMode.checked = state.connectorLens.labeling.active;
+  els.connectorPickTarget.classList.toggle("active", state.connectorLens.pickingTarget);
+  const thresholds = state.connectorLens.thresholds;
+  els.connectorThresholdTooFarRadius.value = thresholds.tooFarRadiusMeters;
+  renderConnectorLabelStatus();
+  renderConnectorCalibration();
+}
+
+function connectorLensRunActive() {
+  return Boolean(state.connectorLens.lastFrequencyResult);
+}
+
+function connectorOriginKey(origin) {
+  return `${Number(origin.lat).toFixed(6)},${Number(origin.lng).toFixed(6)}`;
+}
+
+function connectorLabelOrigins() {
+  return (state.connectorLens.lastFrequencyResult?.origins || []).filter(
+    (origin) => origin.status !== "snap-failed",
+  );
+}
+
+function connectorLabelCounts() {
+  const counts = { valid: 0, unacceptable: 0, borderline: 0 };
+  for (const verdict of state.connectorLens.labeling.verdicts.values()) {
+    if (verdict in counts) counts[verdict] += 1;
+  }
+  return counts;
+}
+
+function renderConnectorLabelStatus() {
+  if (!els.connectorLabelStatus) return;
+  const list = connectorLabelOrigins();
+  const labeling = state.connectorLens.labeling;
+  if (!labeling.active) {
+    els.connectorLabelStatus.textContent = list.length
+      ? `${list.length} labelable origins`
+      : "Run frequency first.";
+    return;
+  }
+  if (list.length === 0) {
+    els.connectorLabelStatus.textContent = "No labelable origins.";
+    return;
+  }
+  const clampedIndex = Math.max(0, Math.min(list.length - 1, labeling.index));
+  if (clampedIndex !== labeling.index) labeling.index = clampedIndex;
+  const counts = connectorLabelCounts();
+  const current = list[labeling.index];
+  const currentVerdict = state.connectorLens.labeling.verdicts.get(
+    connectorOriginKey(current),
+  );
+  els.connectorLabelStatus.textContent =
+    `origin ${labeling.index + 1}/${list.length}` +
+    (currentVerdict ? ` · ${currentVerdict}` : " · unlabeled") +
+    ` · valid ${counts.valid} · unacceptable ${counts.unacceptable} · borderline ${counts.borderline}`;
+}
+
+function setConnectorLabelMode(active) {
+  state.connectorLens.labeling.active = active;
+  if (active) {
+    state.connectorLens.labeling.index = Math.max(
+      0,
+      Math.min(state.connectorLens.labeling.index, connectorLabelOrigins().length - 1),
+    );
+    chooseRandomConnectorLabelOrigin()
+      .then((advanced) => {
+        if (!advanced) return stepConnectorLabel(0);
+        return null;
+      })
+      .catch(showError);
+  } else {
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+  }
+}
+
+function selectedConnectorLabelOrigin() {
+  const list = connectorLabelOrigins();
+  return list[state.connectorLens.labeling.index] || null;
+}
+
+function randomUnlabeledConnectorLabelIndex(list) {
+  const candidates = [];
+  for (let index = 0; index < list.length; index += 1) {
+    if (!state.connectorLens.labeling.verdicts.has(connectorOriginKey(list[index]))) {
+      candidates.push(index);
+    }
+  }
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+async function chooseRandomConnectorLabelOrigin() {
+  const list = connectorLabelOrigins();
+  if (list.length === 0) {
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+    return false;
+  }
+  const randomIndex = randomUnlabeledConnectorLabelIndex(list);
+  if (randomIndex === null) {
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+    return false;
+  }
+  state.connectorLens.labeling.index = randomIndex;
+  renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+  renderConnectorLabelStatus();
+  await runConnectorSingle(list[randomIndex]);
+  return true;
+}
+
+async function stepConnectorLabel(delta, { skipLabeled = false } = {}) {
+  const list = connectorLabelOrigins();
+  if (list.length === 0) {
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+    return;
+  }
+  const labeling = state.connectorLens.labeling;
+  let nextIndex = Math.max(0, Math.min(list.length - 1, labeling.index + delta));
+  if (skipLabeled) {
+    for (let offset = 1; offset <= list.length; offset += 1) {
+      const candidate = Math.min(
+        list.length - 1,
+        Math.max(0, labeling.index + Math.sign(delta || 1) * offset),
+      );
+      if (!labeling.verdicts.has(connectorOriginKey(list[candidate]))) {
+        nextIndex = candidate;
+        break;
+      }
+      if (candidate === 0 || candidate === list.length - 1) break;
+    }
+  }
+  labeling.index = nextIndex;
+  renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+  renderConnectorLabelStatus();
+  const origin = selectedConnectorLabelOrigin();
+  if (origin) await runConnectorSingle(origin);
+}
+
+function selectConnectorLabelOrigin(origin) {
+  const key = connectorOriginKey(origin);
+  const index = connectorLabelOrigins().findIndex(
+    (candidate) => connectorOriginKey(candidate) === key,
+  );
+  if (index >= 0) state.connectorLens.labeling.index = index;
+  renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+  renderConnectorLabelStatus();
+}
+
+function renderConnectorCalibration() {
+  if (!els.connectorCalibReadout) return;
+  const labels = state.connectorLens.labelsCache || [];
+  if (labels.length === 0) {
+    els.connectorCalibReadout.textContent = "No labels loaded.";
+    return;
+  }
+  const result = evaluateThresholds(labels, state.connectorLens.thresholds);
+  const pct = (value) =>
+    value == null ? "n/a" : `${Math.round(Number(value) * 100)}%`;
+  const valid = result.counts.valid;
+  const unacceptable = result.counts.unacceptable;
+  const borderline = result.counts.borderline;
+  els.connectorCalibReadout.textContent =
+    `labels ${result.counts.total} · would-guide valid ${pct(result.validGuideRate)} ` +
+    `· wrongly-guide unacceptable ${pct(result.invalidGuideRate)} ` +
+    `· valid guide/too-far ${valid.guide}/${valid.tooFar} ` +
+    `· unacceptable guide/too-far ${unacceptable.guide}/${unacceptable.tooFar} ` +
+    `· borderline guide/too-far ${borderline.guide}/${borderline.tooFar}`;
+}
+
+function setConnectorThresholdNumber(key, rawValue, label) {
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value < 0) {
+    setStatus(`${label} must be a non-negative number.`, "error");
+    renderConnectorLensPanel();
+    return;
+  }
+  state.connectorLens.thresholds = {
+    ...state.connectorLens.thresholds,
+    [key]: value,
+  };
+  renderConnectorCalibration();
+}
+
+async function loadConnectorLabels() {
+  const response = await fetch("/api/connector/labels");
+  if (!response.ok) {
+    setStatus(`Label load failed (${response.status})`, "error");
+    return;
+  }
+  const data = await response.json();
+  state.connectorLens.labelsCache = Array.isArray(data.labels) ? data.labels : [];
+  renderConnectorCalibration();
+  setStatus(`Loaded ${state.connectorLens.labelsCache.length} connector labels.`);
+}
+
+function handleConnectorLabelKey(event) {
+  if (!state.connectorLens.labeling.active || state.workspaceMode !== "base") return false;
+  if (event.altKey || event.ctrlKey || event.metaKey) return false;
+  const key = event.key.toLowerCase();
+  if (key === "v") {
+    event.preventDefault();
+    labelCurrentConnectorOrigin("valid").catch(showError);
+    return true;
+  }
+  if (key === "i") {
+    event.preventDefault();
+    labelCurrentConnectorOrigin("unacceptable").catch(showError);
+    return true;
+  }
+  if (key === "b") {
+    event.preventDefault();
+    labelCurrentConnectorOrigin("borderline").catch(showError);
+    return true;
+  }
+  if (event.key === "[") {
+    event.preventDefault();
+    stepConnectorLabel(-1).catch(showError);
+    return true;
+  }
+  if (event.key === "]") {
+    event.preventDefault();
+    stepConnectorLabel(1).catch(showError);
+    return true;
+  }
+  return false;
+}
+
+function clearBaseGraphSelectionForConnectorRun() {
+  state.baseOverlay.selectedGraphEdgeId = null;
+  state.baseOverlay.selectedManualEdgeIndex = -1;
+  state.baseOverlay.selectedManualVertexIndex = -1;
+  updateMapSources();
+  renderBaseGraphPanel();
+}
+
+// Every strategy edit must REASSIGN state.connectorLens.strategy to a new
+// object so the reference-equality cache in baseGraphCollection() detects
+// the change and recolors the base-graph-edges source.
+function applyConnectorStrategyChange(mutate) {
+  const next = structuredClone(state.connectorLens.strategy);
+  mutate(next);
+  state.connectorLens.strategy = next;
+  updateMapSources();
+  renderConnectorLensPanel();
+  renderBaseGraphPanel();
+}
+
+function setConnectorColorMode(mode) {
+  state.connectorLens.colorMode = mode;
+  updateMapSources();
+  renderConnectorLensPanel();
+}
+
+function connectorNonNegativeNumber(rawValue, label) {
+  if (rawValue === "") {
+    setStatus(`${label} must be a non-negative number.`, "error");
+    renderConnectorLensPanel();
+    return null;
+  }
+  const n = Number(rawValue);
+  if (!Number.isFinite(n) || n < 0) {
+    setStatus(`${label} must be a non-negative number.`, "error");
+    renderConnectorLensPanel();
+    return null;
+  }
+  return n;
+}
+
+function setConnectorClassMultiplier(key, rawValue) {
+  const value = connectorNonNegativeNumber(rawValue, `Class multiplier ${key}`);
+  if (value === null) return;
+  applyConnectorStrategyChange((strategy) => {
+    strategy.classMultipliers = { ...strategy.classMultipliers, [key]: value };
+  });
+}
+
+function setConnectorClassExcluded(key, excluded, fallbackValue) {
+  const fallback = excluded
+    ? null
+    : connectorNonNegativeNumber(
+        fallbackValue === "" ? "1" : fallbackValue,
+        `Class multiplier ${key}`,
+      );
+  if (!excluded && fallback === null) return;
+  applyConnectorStrategyChange((strategy) => {
+    strategy.classMultipliers = {
+      ...strategy.classMultipliers,
+      [key]: excluded ? null : fallback,
+    };
+  });
+}
+
+function setConnectorAccessValue(key, rawValue) {
+  const value = connectorNonNegativeNumber(rawValue, `Access multiplier ${key}`);
+  if (value === null) return;
+  applyConnectorStrategyChange((strategy) => {
+    strategy.accessPolicy = { ...strategy.accessPolicy, [key]: value };
+  });
+}
+
+function setConnectorAccessExcluded(key, excluded, fallbackValue) {
+  const fallback = excluded
+    ? null
+    : connectorNonNegativeNumber(
+        fallbackValue === "" ? "1" : fallbackValue,
+        `Access multiplier ${key}`,
+      );
+  if (!excluded && fallback === null) return;
+  applyConnectorStrategyChange((strategy) => {
+    strategy.accessPolicy = {
+      ...strategy.accessPolicy,
+      [key]: excluded ? null : fallback,
+    };
+  });
+}
+
+function setConnectorUphillWeight(rawValue) {
+  const value = connectorNonNegativeNumber(rawValue, "Uphill weight");
+  if (value === null) return;
+  applyConnectorStrategyChange((strategy) => {
+    strategy.uphillWeight = value;
+  });
+}
+
+function setConnectorSnap(value) {
+  applyConnectorStrategyChange((strategy) => {
+    strategy.snap = value;
+  });
+}
+
+function resetConnectorStrategy() {
+  state.connectorLens.strategy = structuredClone(DEFAULT_CONNECTOR_STRATEGY);
+  updateMapSources();
+  renderConnectorLensPanel();
+  renderBaseGraphPanel();
+  setStatus("Connector Lens strategy reset to production defaults.");
+}
+
+async function copyConnectorStrategyJson() {
+  const json = JSON.stringify(state.connectorLens.strategy, null, 2);
+  try {
+    await navigator.clipboard.writeText(json);
+    setStatus("Connector Lens strategy JSON copied to clipboard.");
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function activateConnectorLensMode() {
+  if (state.connectorLens.routesLoaded) return;
+  state.connectorLens.routesLoaded = true;
+  try {
+    const r = await fetch("/api/featured-slugs");
+    if (!r.ok) throw new Error(`Failed to load featured slugs (${r.status})`);
+    const slugs = await r.json();
+    for (const slug of slugs) {
+      const opt = document.createElement("option");
+      opt.value = slug;
+      opt.textContent = slug;
+      els.connectorTargetRoute.appendChild(opt);
+    }
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function onConnectorTargetRouteChange() {
+  const slug = els.connectorTargetRoute.value;
+  state.connectorLens.targetRouteSlug = slug;
+  if (!slug) {
+    renderConnectorLensPanel();
+    return;
+  }
+  setStatus(`Loading route ${slug} for Connector Lens target…`);
+  try {
+    const r = await fetch(`/api/video-keyframes/${slug}/route-polyline`);
+    if (!r.ok) throw new Error(`Route load failed (${r.status})`);
+    const polyline = await r.json();
+    if (!Array.isArray(polyline) || polyline.length === 0) {
+      throw new Error("Route has no geometry.");
+    }
+    state.connectorLens.targetStart = { lat: polyline[0].lat, lng: polyline[0].lng };
+    setStatus(`Connector Lens target set to start of ${slug}.`);
+    renderConnectorLensPanel();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+function toggleConnectorPickTarget() {
+  state.connectorLens.pickingTarget = !state.connectorLens.pickingTarget;
+  if (state.connectorLens.pickingTarget) {
+    setStatus("Connector Lens: click the map to set the target point.");
+  }
+  renderConnectorLensPanel();
+}
+
+function handleConnectorPickTargetClick(event) {
+  state.connectorLens.pickingTarget = false;
+  state.connectorLens.targetRouteSlug = "";
+  els.connectorTargetRoute.value = "";
+  state.connectorLens.targetStart = { lat: event.lngLat.lat, lng: event.lngLat.lng };
+  setStatus("Connector Lens target set from map click.");
+  renderConnectorLensPanel();
+}
+
+function connectorUsageCollection(edgeUsage) {
+  const features = [];
+  for (const [edgeId, count] of Object.entries(edgeUsage || {})) {
+    const feature = graphFeatureForEdgeId(edgeId);
+    if (!feature || feature.geometry?.type !== "LineString") continue;
+    features.push({
+      ...feature,
+      properties: { ...(feature.properties || {}), count },
+    });
+  }
+  return { type: "FeatureCollection", features };
+}
+
+function connectorOriginsCollection(origins) {
+  const shown = state.connectorLens.hideUnreachable
+    ? (origins || []).filter((origin) => origin.status !== "snap-failed")
+    : (origins || []);
+  const selected = selectedConnectorLabelOrigin();
+  const selectedKey = selected ? connectorOriginKey(selected) : null;
+  const features = shown.map((origin) => ({
+    type: "Feature",
+    properties: {
+      status: origin.status,
+      lat: origin.lat,
+      lng: origin.lng,
+      verdict: state.connectorLens.labeling.verdicts.get(connectorOriginKey(origin)) || "",
+      selected: state.connectorLens.labeling.active &&
+        connectorOriginKey(origin) === selectedKey,
+    },
+    geometry: { type: "Point", coordinates: [origin.lng, origin.lat] },
+  }));
+  return { type: "FeatureCollection", features };
+}
+
+function renderConnectorUsage(edgeUsage) {
+  setSourceData("connector-usage", connectorUsageCollection(edgeUsage));
+}
+
+function renderConnectorOrigins(origins) {
+  setSourceData("connector-origins", connectorOriginsCollection(origins));
+}
+
+function clearConnectorSinglePath() {
+  setSourceData("connector-single-path", EMPTY_FEATURE_COLLECTION);
+}
+
+function clearConnectorRun() {
+  state.connectorLens.lastFrequencyResult = null;
+  state.connectorLens.labeling.index = 0;
+  state.connectorLens.labeling.verdicts = new Map();
+  renderConnectorUsage({});
+  renderConnectorOrigins([]);
+  clearConnectorSinglePath();
+  els.connectorRunStatus.textContent = "";
+  renderConnectorLabelStatus();
+  renderConnectorLensPanel();
+  setStatus("Connector run cleared.");
+}
+
+async function runConnectorFrequency() {
+  const target = state.connectorLens.targetStart;
+  if (!target) {
+    setStatus("Pick a target route/point first", "error");
+    return;
+  }
+  clearConnectorSinglePath();
+  setStatus("Running connector frequency…");
+  els.connectorRun.disabled = true;
+  try {
+    const res = await fetch("/api/connector/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "frequency",
+        routeStart: target,
+        strategy: state.connectorLens.strategy,
+        radiusMeters: Number(els.connectorRadius.value) || 2000,
+        gridSpacingMeters: 150,
+        maxOrigins: 400,
+      }),
+    });
+    if (!res.ok) {
+      setStatus(`Connector run failed (${res.status})`, "error");
+      return;
+    }
+    const data = await res.json();
+    state.connectorLens.lastFrequencyResult = data;
+    state.connectorLens.labeling.index = 0;
+    state.connectorLens.labeling.verdicts = new Map();
+    clearBaseGraphSelectionForConnectorRun();
+    renderConnectorUsage(data.edgeUsage);
+    renderConnectorOrigins(data.origins);
+    renderConnectorLensPanel();
+    const s = data.stats;
+    const reachable = Number.isFinite(Number(s.reachable)) ? Number(s.reachable) : s.ok;
+    const quality = s.reachableQuality == null
+      ? "n/a"
+      : `${Math.round(Number(s.reachableQuality) * 100)}%`;
+    const failures = Object.entries(s.byFailure || {})
+      .map(([key, value]) => `${key} ${value}`)
+      .join(" · ") || "none";
+    els.connectorRunStatus.textContent =
+      `reachable ${s.ok}/${reachable} (${quality}) · total origins ${s.total} · ${failures}` +
+      (data.grid.capped ? ` · grid coarsened to ${Math.round(data.grid.spacingMeters)}m` : "");
+    if (state.connectorLens.labeling.active) {
+      const advanced = await chooseRandomConnectorLabelOrigin();
+      if (!advanced) await stepConnectorLabel(0);
+    }
+    setStatus("Connector frequency run complete.");
+  } catch (err) {
+    showError(err);
+  } finally {
+    els.connectorRun.disabled = !state.connectorLens.targetStart;
+  }
+}
+
+async function fetchConnectorSingle(origin, target = state.connectorLens.targetStart) {
+  if (!target) return null;
+  const res = await fetch("/api/connector/preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mode: "single",
+      routeStart: target,
+      origin: { lat: origin.lat, lng: origin.lng },
+      strategy: state.connectorLens.strategy,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Connector single path failed (${res.status})`);
+  }
+  return res.json();
+}
+
+function drawConnectorSinglePath(data) {
+  if (!data || data.failure || !Array.isArray(data.geometry) || data.geometry.length === 0) {
+    clearConnectorSinglePath();
+    return false;
+  }
+  setSourceData("connector-single-path", {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: data.geometry.map((p) => [p.lng, p.lat]),
+        },
+      },
+    ],
+  });
+  return true;
+}
+
+async function runConnectorSingle(origin) {
+  const target = state.connectorLens.targetStart;
+  if (!target) return;
+  try {
+    const data = await fetchConnectorSingle(origin, target);
+    if (!drawConnectorSinglePath(data)) {
+      setStatus(data.failure ? `No path: ${data.failure}` : "No path found for that origin.");
+      return;
+    }
+    setStatus(`Connector single path: ${Math.round(data.distanceMeters)}m.`);
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function labelCurrentConnectorOrigin(verdict) {
+  const labeling = state.connectorLens.labeling;
+  if (!labeling.active || labeling.busy) return;
+  const target = state.connectorLens.targetStart;
+  const origin = selectedConnectorLabelOrigin();
+  if (!target || !origin) return;
+
+  labeling.busy = true;
+  try {
+    const single = await fetchConnectorSingle(origin, target);
+    drawConnectorSinglePath(single);
+    const features = computeConnectorFeatures(single, { origin, routeStart: target });
+    const response = await fetch("/api/connector/label", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        routeSlug: state.connectorLens.targetRouteSlug || null,
+        routeStart: target,
+        origin: { lat: origin.lat, lng: origin.lng },
+        verdict,
+        features,
+        strategy: state.connectorLens.strategy,
+      }),
+    });
+    if (!response.ok) {
+      setStatus(`Label save failed (${response.status})`, "error");
+      return;
+    }
+    labeling.verdicts.set(connectorOriginKey(origin), verdict);
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+    renderConnectorLabelStatus();
+    const advanced = await chooseRandomConnectorLabelOrigin();
+    if (!advanced) {
+      setStatus("Label saved. All visible origins have labels.");
+    }
+  } catch (err) {
+    showError(err);
+  } finally {
+    labeling.busy = false;
+  }
 }
 
 function renderBaseOverlayPanel() {
@@ -3537,6 +4558,8 @@ function renderAll() {
   renderDataList();
   renderBaseGraphPanel();
   renderBaseOverlayPanel();
+  renderConnectorLensPanel();
+  renderRoundaboutsPanel();
   renderComposeStatus();
   updateMapSources();
 }
@@ -3592,7 +4615,7 @@ function setMode(mode) {
 }
 
 async function setWorkspaceMode(mode) {
-  if (!["segments", "base", "overlay", "video-sync", "route-catalog"].includes(mode)) return;
+  if (!["segments", "base", "overlay", "roundabouts", "video-sync", "route-catalog"].includes(mode)) return;
   if (state.workspaceMode === mode) {
     if ((mode === "base" || mode === "overlay") && !state.baseOverlay.loaded) {
       state.baseOverlay.enabled = true;
@@ -3628,13 +4651,25 @@ async function setWorkspaceMode(mode) {
     state.baseOverlay.selectedManualVertexIndex = -1;
   }
 
-  if (mode === "base" || mode === "overlay") {
+  if (mode === "base" || mode === "overlay" || mode === "roundabouts") {
     state.baseOverlay.enabled = true;
     if (!state.baseOverlay.loaded) {
       renderAll();
       await loadBaseOverlayData();
     }
-    setStatus(mode === "base" ? "Base Graph mode: edit manual base edges." : "CW Overlay mode: select a segment, then choose graph edges.");
+    setStatus(
+      mode === "base"
+        ? "Base Graph mode: edit manual base edges."
+        : mode === "overlay"
+          ? "CW Overlay mode: select a segment, then choose graph edges."
+          : "Roundabouts mode: review classifications from the saved OSM snapshot.",
+    );
+    if (mode === "base") {
+      activateConnectorLensMode().catch(showError);
+    }
+    if (mode === "roundabouts" && !state.roundabouts.loaded && !state.roundabouts.loading) {
+      await loadRoundaboutReview();
+    }
   } else if (mode === "video-sync") {
     state.baseOverlay.enabled = false;
     setStatus("Video Sync mode: pick a route, paste a YouTube URL, click on the map to add keyframes.");
@@ -4545,9 +5580,21 @@ async function cloneSelectedBaseGraphEdgeAsManual() {
   state.baseOverlay.selectedGraphEdgeId = null;
   state.baseOverlay.selectedManualEdgeIndex = state.baseOverlay.manualBaseEdges.features.length - 1;
   state.baseOverlay.selectedManualVertexIndex = -1;
-  await saveManualBaseEdges();
+  const migration = migrateOverlayEdgeReplacement(
+    state.baseOverlay.overlay,
+    graphEdgeId,
+    [{ edgeId: manualEdgeId, source: "manual", manualEdgeId }],
+    { updatedAt: now },
+  );
+  state.baseOverlay.overlay = migration.overlay;
+  await saveBaseEdgeState();
   renderAll();
-  setStatus(`Copied ${graphEdgeId} to editable manual base edge ${manualEdgeId}. Recalculate the graph when ready.`);
+  const migrated = migration.migratedSegmentIds.length;
+  setStatus(
+    `Copied ${graphEdgeId} to editable manual base edge ${manualEdgeId}` +
+    `${migrated ? ` and migrated ${migrated} overlay mapping${migrated === 1 ? "" : "s"}` : ""}. ` +
+    "Recalculate the graph when ready.",
+  );
 }
 
 async function deleteSelectedManualBaseEdge() {
@@ -5500,9 +6547,26 @@ async function splitSelectedManualBaseEdge() {
   };
   state.baseOverlay.selectedManualEdgeIndex = edgeIndex;
   state.baseOverlay.selectedManualVertexIndex = -1;
-  await saveManualBaseEdges();
+  const migration = migrateOverlayEdgeReplacement(
+    state.baseOverlay.overlay,
+    originalId,
+    [
+      { edgeId: firstId, source: "manual", manualEdgeId: firstId },
+      { edgeId: secondId, source: "manual", manualEdgeId: secondId },
+    ],
+    { updatedAt: now },
+  );
+  state.baseOverlay.overlay = migration.overlay;
+  await saveBaseEdgeState();
   renderAll();
-  setStatus(`Split manual base edge ${originalId}. Recalculate the graph when ready.`);
+  const migrated = migration.migratedSegmentIds.length;
+  const invalidated = migration.invalidatedSegmentIds.length;
+  setStatus(
+    `Split manual base edge ${originalId}` +
+    `${migrated ? `; migrated ${migrated} overlay mapping${migrated === 1 ? "" : "s"}` : ""}` +
+    `${invalidated ? `; marked ${invalidated} mapping${invalidated === 1 ? "" : "s"} as needing edit` : ""}. ` +
+    "Recalculate the graph when ready.",
+  );
 }
 
 async function loadSource() {
@@ -5992,6 +7056,24 @@ async function saveManualBaseEdges() {
   markBaseGraphStaleBecauseManualEdgesChanged();
 }
 
+async function saveBaseEdgeState() {
+  const response = await fetch("/api/base-edge-state", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      manualBaseEdges: state.baseOverlay.manualBaseEdges || emptyManualBaseEdges(),
+      overlay: state.baseOverlay.overlay || emptyBaseOverlay(),
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error || `Base edge state save failed: ${response.status}`);
+  }
+  state.baseOverlay.manualBaseEdges = payload.manualBaseEdges || state.baseOverlay.manualBaseEdges;
+  state.baseOverlay.overlay = payload.overlay || state.baseOverlay.overlay;
+  markBaseGraphStaleBecauseManualEdgesChanged();
+}
+
 async function saveSelectedBaseOverlayMapping(mapping) {
   state.baseOverlay.overlay = {
     ...emptyBaseOverlay(),
@@ -6355,8 +7437,16 @@ function wireEvents() {
   els.workspaceSegments.addEventListener("click", () => setWorkspaceMode("segments").catch(showError));
   els.workspaceBase.addEventListener("click", () => setWorkspaceMode("base").catch(showError));
   els.workspaceOverlay.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
+  els.workspaceRoundabouts.addEventListener("click", () => setWorkspaceMode("roundabouts").catch(showError));
   els.workspaceVideoSync.addEventListener("click", () => setWorkspaceMode("video-sync").catch(showError));
   els.workspaceRouteCatalog.addEventListener("click", () => setWorkspaceMode("route-catalog").catch(showError));
+  els.roundaboutsFilter.addEventListener("change", () => {
+    state.roundabouts.filter = els.roundaboutsFilter.value;
+    const first = roundaboutFilteredItems()[0];
+    state.roundabouts.selectedId = first?.candidate?.id || null;
+    updateRoundaboutLayerFilters();
+    renderRoundaboutsPanel();
+  });
   els.segmentSearch.addEventListener("input", renderList);
   els.toggleSegments.addEventListener("click", () => setSegmentDrawer(!state.segmentsOpen));
   els.closeSegments.addEventListener("click", () => setSegmentDrawer(false));
@@ -6398,6 +7488,46 @@ function wireEvents() {
   els.deleteManualBaseEdge.addEventListener("click", () => deleteSelectedManualBaseEdge().catch(showError));
   els.splitManualBaseEdge.addEventListener("click", () => splitSelectedManualBaseEdge().catch(showError));
   els.recalculateOsmGraph.addEventListener("click", () => recalculateOsmGraph().catch(showError));
+  els.connectorColorMode.addEventListener("change", () => setConnectorColorMode(els.connectorColorMode.value));
+  for (const key of CONNECTOR_CLASS_KEYS) {
+    const numInput = document.getElementById(`connector-class-${key}`);
+    const excludedInput = document.getElementById(`connector-class-${key}-excluded`);
+    numInput.addEventListener("change", () => setConnectorClassMultiplier(key, numInput.value));
+    excludedInput.addEventListener("change", () =>
+      setConnectorClassExcluded(key, excludedInput.checked, numInput.value),
+    );
+  }
+  for (const key of CONNECTOR_ACCESS_KEYS) {
+    const numInput = document.getElementById(`connector-access-${key}`);
+    const excludedInput = document.getElementById(`connector-access-${key}-excluded`);
+    numInput.addEventListener("change", () => setConnectorAccessValue(key, numInput.value));
+    excludedInput.addEventListener("change", () =>
+      setConnectorAccessExcluded(key, excludedInput.checked, numInput.value),
+    );
+  }
+  els.connectorUphillWeight.addEventListener("change", () => setConnectorUphillWeight(els.connectorUphillWeight.value));
+  els.connectorSnap.addEventListener("change", () => setConnectorSnap(els.connectorSnap.value));
+  els.connectorResetStrategy.addEventListener("click", resetConnectorStrategy);
+  els.connectorCopyStrategy.addEventListener("click", () => copyConnectorStrategyJson().catch(showError));
+  els.connectorTargetRoute.addEventListener("change", () => onConnectorTargetRouteChange().catch(showError));
+  els.connectorPickTarget.addEventListener("click", toggleConnectorPickTarget);
+  els.connectorRun.addEventListener("click", () => runConnectorFrequency().catch(showError));
+  els.connectorClearRun.addEventListener("click", clearConnectorRun);
+  els.connectorHideUnreachable.addEventListener("change", () => {
+    state.connectorLens.hideUnreachable = els.connectorHideUnreachable.checked;
+    renderConnectorOrigins(state.connectorLens.lastFrequencyResult?.origins || []);
+  });
+  els.connectorLabelMode.addEventListener("change", () =>
+    setConnectorLabelMode(els.connectorLabelMode.checked),
+  );
+  els.connectorCalibLoad.addEventListener("click", () => loadConnectorLabels().catch(showError));
+  els.connectorThresholdTooFarRadius.addEventListener("change", () =>
+    setConnectorThresholdNumber(
+      "tooFarRadiusMeters",
+      els.connectorThresholdTooFarRadius.value,
+      "Too-far radius",
+    ),
+  );
   els.addData.addEventListener("click", addDataMarker);
   els.mapStyle.addEventListener("change", () => switchMapStyle(els.mapStyle.value));
   els.toggleUnresolvedSegments.addEventListener("click", () => toggleUnresolvedSegments().catch(showError));
@@ -6445,6 +7575,15 @@ function wireEvents() {
       return;
     }
     if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
+    if (connectorLensFeaturesAtPoint(event.point).length > 0) return;
+    if (state.workspaceMode === "base" && connectorLensRunActive()) {
+      state.suppressNextSegmentClick = true;
+      window.setTimeout(() => {
+        state.suppressNextSegmentClick = false;
+      }, 0);
+      setStatus("Connector run is active. Clear the run to select base edges.");
+      return;
+    }
     state.suppressNextSegmentClick = true;
     window.setTimeout(() => {
       state.suppressNextSegmentClick = false;
@@ -6468,9 +7607,28 @@ function wireEvents() {
     }
   });
 
+  map.on("click", "connector-origins-layer", (event) => {
+    const feature = event.features?.[0];
+    if (!feature) return;
+    const { lat, lng } = feature.properties || {};
+    if (typeof lat !== "number" || typeof lng !== "number") return;
+    const origin = { lat, lng };
+    if (state.connectorLens.labeling.active) {
+      selectConnectorLabelOrigin(origin);
+    }
+    runConnectorSingle(origin).catch(showError);
+  });
+  map.on("mouseenter", "connector-origins-layer", () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+  map.on("mouseleave", "connector-origins-layer", () => {
+    map.getCanvas().style.cursor = state.mode === "insert" || state.mode === "draw" ? "crosshair" : "";
+  });
+
   map.on("click", "manual-base-edges-hit-layer", (event) => {
     if (state.mode !== "select" && !isComposingNewSegmentEdges()) return;
     if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
+    if (connectorLensFeaturesAtPoint(event.point).length > 0) return;
     if (isComposingNewSegmentEdges()) {
       state.suppressNextSegmentClick = true;
       window.setTimeout(() => {
@@ -6493,6 +7651,14 @@ function wireEvents() {
         state.suppressNextSegmentClick = false;
       }, 0);
       toggleEdgeInEdgePickedSegment(event.features[0]).catch(showError);
+      return;
+    }
+    if (state.workspaceMode === "base" && connectorLensRunActive()) {
+      state.suppressNextSegmentClick = true;
+      window.setTimeout(() => {
+        state.suppressNextSegmentClick = false;
+      }, 0);
+      setStatus("Connector run is active. Clear the run to select base edges.");
       return;
     }
     const manualIndex = Number(event.features[0].properties.manualIndex);
@@ -6571,6 +7737,10 @@ function wireEvents() {
   });
 
   map.on("click", (event) => {
+    if (state.connectorLens.pickingTarget) {
+      handleConnectorPickTargetClick(event);
+      return;
+    }
     if (state.workspaceMode === "video-sync") {
       handleVideoSyncMapClick(event);
       return;
@@ -6744,6 +7914,8 @@ function wireEvents() {
       return;
     }
 
+    if (handleConnectorLabelKey(event)) return;
+
     if (state.workspaceMode === "video-sync") {
       if (handleVideoSyncKey(event)) return;
     }
@@ -6879,6 +8051,29 @@ async function addMapLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  if (!map.getSource("connector-usage")) {
+    map.addSource("connector-usage", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getSource("connector-origins")) {
+    map.addSource("connector-origins", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getSource("connector-single-path")) {
+    map.addSource("connector-single-path", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  for (const sourceId of ["roundabout-lines", "roundabout-points", "roundabout-corridors"]) {
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
+    }
+  }
 
   if (!map.getLayer("base-graph-edges-layer")) {
     map.addLayer({
@@ -6894,7 +8089,12 @@ async function addMapLayers() {
           "case",
           ["==", ["get", "source"], "manual"],
           BASE_GRAPH_LINE_COLOR,
-          ["coalesce", ["get", "graphColor"], BASE_GRAPH_FALLBACK_LINE_COLOR],
+          [
+            "coalesce",
+            ["get", "connectorLensColor"],
+            ["get", "graphColor"],
+            BASE_GRAPH_FALLBACK_LINE_COLOR,
+          ],
         ],
         "line-width": BASE_GRAPH_LINE_WIDTH,
         "line-opacity": BASE_GRAPH_LINE_OPACITY,
@@ -7363,6 +8563,163 @@ async function addMapLayers() {
       },
     });
   }
+
+  if (!map.getLayer("connector-usage-layer")) {
+    map.addLayer({
+      id: "connector-usage-layer",
+      type: "line",
+      source: "connector-usage",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-width": ["interpolate", ["linear"], ["get", "count"], 1, 1, 20, 8],
+        "line-color": [
+          "interpolate",
+          ["linear"],
+          ["get", "count"],
+          1,
+          "#c7e9c0",
+          5,
+          "#74c476",
+          20,
+          "#238b45",
+        ],
+        "line-opacity": 0.85,
+      },
+    });
+  }
+
+  if (!map.getLayer("connector-single-path-casing-layer")) {
+    map.addLayer({
+      id: "connector-single-path-casing-layer",
+      type: "line",
+      source: "connector-single-path",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": "#0f172a",
+        "line-width": 10,
+        "line-opacity": 0.9,
+      },
+    });
+  }
+
+  if (!map.getLayer("connector-single-path-layer")) {
+    map.addLayer({
+      id: "connector-single-path-layer",
+      type: "line",
+      source: "connector-single-path",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": "#facc15",
+        "line-width": 6,
+        "line-opacity": 1,
+      },
+    });
+  }
+
+  if (!map.getLayer("connector-origins-layer")) {
+    map.addLayer({
+      id: "connector-origins-layer",
+      type: "circle",
+      source: "connector-origins",
+      paint: {
+        "circle-radius": ["case", ["==", ["get", "selected"], true], 7, 5],
+        "circle-color": [
+          "match",
+          ["get", "status"],
+          "ok",
+          "#1b7837",
+          "snap-ineligible",
+          "#f59e0b",
+          "#dc2626",
+        ],
+        "circle-stroke-color": [
+          "match",
+          ["get", "verdict"],
+          "valid",
+          CONNECTOR_VERDICT_COLORS.valid,
+          "unacceptable",
+          CONNECTOR_VERDICT_COLORS.unacceptable,
+          "borderline",
+          CONNECTOR_VERDICT_COLORS.borderline,
+          ["case", ["==", ["get", "selected"], true], "#facc15", "#1f2a2e"],
+        ],
+        "circle-stroke-width": [
+          "case",
+          ["!=", ["get", "verdict"], ""],
+          3,
+          ["==", ["get", "selected"], true],
+          3,
+          1,
+        ],
+      },
+    });
+  }
+
+  const reviewColor = [
+    "match",
+    ["get", "state"],
+    "accepted", "#15803d",
+    "rejected", "#b91c1c",
+    "stale", "#d97706",
+    "#f59e0b",
+  ];
+  if (!map.getLayer("roundabout-corridors-layer")) {
+    map.addLayer({
+      id: "roundabout-corridors-layer",
+      type: "fill",
+      source: "roundabout-corridors",
+      layout: { visibility: "none" },
+      paint: { "fill-color": reviewColor, "fill-opacity": 0.16 },
+    });
+  }
+  if (!map.getLayer("roundabout-lines-layer")) {
+    map.addLayer({
+      id: "roundabout-lines-corridor-layer",
+      type: "line",
+      source: "roundabout-lines",
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": reviewColor,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 9, 14, 18, 17, 34],
+        "line-opacity": 0.16,
+      },
+    });
+    map.addLayer({
+      id: "roundabout-lines-layer",
+      type: "line",
+      source: "roundabout-lines",
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": reviewColor,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 14, 9, 17, 15],
+        "line-opacity": 0.88,
+      },
+    });
+  }
+  if (!map.getLayer("roundabout-points-layer")) {
+    map.addLayer({
+      id: "roundabout-points-layer",
+      type: "circle",
+      source: "roundabout-points",
+      layout: { visibility: "none" },
+      paint: {
+        "circle-radius": 7,
+        "circle-color": reviewColor,
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+  updateRoundaboutSources();
 }
 
 // ============================================================

@@ -11,6 +11,24 @@ import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js
 
 assert.ok(scenarios.length >= 7, "seed scenario set is registered");
 assert.equal(getScenario("on-route-happy-path")?.name, "on-route-happy-path");
+assert.equal(
+  getScenario("compound-turn-left-right")?.name,
+  "compound-turn-left-right",
+);
+assert.equal(
+  getScenario("roundabouts-upper-galilee")?.name,
+  "roundabouts-upper-galilee",
+);
+assert.equal(
+  getScenario("roundabout-then-right-turn")?.name,
+  "roundabout-then-right-turn",
+);
+assert.deepEqual(
+  getScenario("roundabouts-upper-galilee").route.routeState.junctions
+    .filter((junction) => junction.kind === "roundabout")
+    .map((junction) => junction.roundaboutId),
+  ["osm-ways:306636824", "osm-ways:323780427"],
+);
 assert.equal(getScenario("nope"), null);
 assert.equal(
   new Set(scenarios.map((s) => s.name)).size,

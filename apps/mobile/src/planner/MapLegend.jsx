@@ -2,6 +2,7 @@ import { Dimensions, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { palette, radius } from "./theme.js";
+import { text } from "../theme/typography.js";
 
 // Road-type legend (same labels/colors as the desktop map-corner legend).
 const LEGEND = [
@@ -62,9 +63,8 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   title: {
+    ...text.label,
     color: palette.ink,
-    fontSize: 11,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
     marginBottom: 6,
@@ -77,9 +77,8 @@ const styles = StyleSheet.create({
   },
   swatch: { width: 16, height: 4, borderRadius: 2 },
   label: {
+    ...text.label,
     color: palette.ink,
-    fontSize: 11,
-    fontWeight: "600",
     writingDirection: "rtl",
   },
 });

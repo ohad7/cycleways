@@ -41,6 +41,7 @@ export default {
   expect: [
     { type: "status", value: "navigating" },
     { type: "wrong-way" },
+    { type: "voice", match: "נגד כיוון המסלול", count: 1 },
     { type: "wrong-way-resolved", final: true },
     {
       type: "banner",

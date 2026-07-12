@@ -3,6 +3,7 @@ import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createGzip } from "node:zlib";
 import { defineConfig } from "vite";
+import { createRegistryStore } from "./marketing/sticker-studio/registry-store.mjs";
 
 const repoRoot = dirname(fileURLToPath(import.meta.url));
 const localTokenPath = resolve(repoRoot, "mapbox-token.js");
@@ -28,6 +29,11 @@ function routeManagerEsmPlugin() {
       // Convert the default export, then any `module.exports.NAME = VALUE;`
       // named exports (e.g. `buildSegmentSpans`). Without this the named-export
       // lines reference the undefined `module` global at runtime in the browser.
+      // Also convert any top-level `const { A, B } = require("./relative.js");`
+      // destructuring requires of sibling core modules (e.g. connectorCostModel)
+      // into real static imports — the browser has no `require` global, and
+      // dev-serve does not bundle/transform this file's internal requires the
+      // way Rollup does for the production build.
       const esm = code
         .replace(
           /module\.exports\s*=\s*RouteManager;/,
@@ -36,6 +42,10 @@ function routeManagerEsmPlugin() {
         .replace(
           /module\.exports\.(\w+)\s*=\s*(\w+);/g,
           "export { $2 as $1 };",
+        )
+        .replace(
+          /const\s*\{([^}]+)\}\s*=\s*require\((["'])(\.[^"']+)\2\);/g,
+          "import {$1} from $2$3$2;",
         );
       return {
         code: esm,
@@ -170,9 +180,88 @@ function gzipStaticJsonPlugin() {
   };
 }
 
+function stickerRegistryPlugin() {
+  const store = createRegistryStore({
+    registryPath: resolve(repoRoot, "marketing/sticker-data/registry.json"),
+    redirectsPath: resolve(repoRoot, "data/sticker-redirects.json"),
+    photosDir: resolve(repoRoot, "marketing/sticker-data/photos"),
+  });
+
+  async function middleware(request, response, next) {
+    let url;
+    try {
+      url = new URL(request.url || "/", "http://127.0.0.1");
+    } catch {
+      next();
+      return;
+    }
+    if (!url.pathname.startsWith("/api/stickers/")) {
+      next();
+      return;
+    }
+
+    response.setHeader("Content-Type", "application/json; charset=utf-8");
+    response.setHeader("Cache-Control", "no-store");
+    try {
+      if (request.method === "GET" && url.pathname === "/api/stickers/registry") {
+        response.end(JSON.stringify(await store.load()));
+        return;
+      }
+      if (request.method === "PUT" && url.pathname === "/api/stickers/registry") {
+        const body = await readJsonRequest(request, 12 * 1024 * 1024);
+        response.end(JSON.stringify(await store.save(body.registry, body.expectedRevision)));
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/stickers/photo") {
+        const body = await readJsonRequest(request, 12 * 1024 * 1024);
+        response.end(JSON.stringify(await store.savePhoto(body)));
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/stickers/scan") {
+        const body = await readJsonRequest(request, 64 * 1024);
+        const registry = await store.scan(body.shortCode);
+        response.end(JSON.stringify({ ok: true, revision: registry.revision }));
+        return;
+      }
+      response.statusCode = 404;
+      response.end(JSON.stringify({ error: "Unknown sticker registry endpoint." }));
+    } catch (error) {
+      response.statusCode = error?.statusCode || 400;
+      response.end(JSON.stringify({ error: error?.message || String(error) }));
+    }
+  }
+
+  return {
+    name: "cycleways-sticker-registry",
+    configureServer(server) { server.middlewares.use(middleware); },
+    configurePreviewServer(server) { server.middlewares.use(middleware); },
+  };
+}
+
+function readJsonRequest(request, maxBytes) {
+  return new Promise((resolveBody, reject) => {
+    let size = 0;
+    const chunks = [];
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        reject(new Error("Sticker registry request is too large."));
+        request.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => {
+      try { resolveBody(JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}")); }
+      catch { reject(new Error("Sticker registry request contains invalid JSON.")); }
+    });
+    request.on("error", reject);
+  });
+}
+
 export default defineConfig({
   appType: "spa",
-  plugins: [routeManagerEsmPlugin(), mapboxTokenPlugin(), gzipStaticJsonPlugin()],
+  plugins: [routeManagerEsmPlugin(), mapboxTokenPlugin(), stickerRegistryPlugin(), gzipStaticJsonPlugin()],
   build: {
     rollupOptions: {
       input: {

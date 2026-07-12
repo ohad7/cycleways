@@ -7,10 +7,13 @@
 // Usage:
 //   node scripts/nav-scenario-route-snapshot.mjs --list
 //   node scripts/nav-scenario-route-snapshot.mjs <slug>
-import { readFileSync, writeFileSync } from "node:fs";
+//   node scripts/nav-scenario-route-snapshot.mjs --token <name> <route-token>
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { buildLiveDecodeRoute } from "../editor/server.mjs";
-import { decodeCompactBaseRoutingShard } from "../packages/core/src/routing/compactBaseRoutingShard.js";
-import { getDistance } from "../packages/core/src/utils/distance.js";
+import { joinRoundaboutReviews } from "../editor/lib/roundaboutReview.mjs";
+import { junctionsNearRoute } from "../packages/core/src/routing/junctionsNearRoute.js";
+import { roundaboutsOnRoute } from "../packages/core/src/routing/roundaboutsOnRoute.js";
+import { loadBaseNetworkAroundGeometry } from "./lib/base-network.mjs";
 
 const arg = process.argv[2];
 const catalog = JSON.parse(readFileSync("public-data/route-catalog.json", "utf-8"));
@@ -20,7 +23,16 @@ if (!arg || arg === "--list") {
   process.exit(arg ? 0 : 1);
 }
 
-const entry = catalog.entries.find((candidate) => candidate.slug === arg);
+const rawTokenMode = arg === "--token";
+const snapshotName = rawTokenMode ? process.argv[3] : arg;
+const rawToken = rawTokenMode ? process.argv[4] : null;
+if (!snapshotName || (rawTokenMode && !rawToken)) {
+  console.error("usage: node scripts/nav-scenario-route-snapshot.mjs --token <name> <route-token>");
+  process.exit(1);
+}
+const entry = rawTokenMode
+  ? { slug: snapshotName, name: snapshotName, route: rawToken }
+  : catalog.entries.find((candidate) => candidate.slug === arg);
 if (!entry) {
   console.error(`unknown catalog slug "${arg}" (use --list)`);
   process.exit(1);
@@ -37,55 +49,37 @@ const geometry = decoded.geometry.map((point) => ({
   lat: Math.round(point.lat * 1e5) / 1e5,
   lng: Math.round(point.lng * 1e5) / 1e5,
 }));
-// Network junctions (nodes referenced by 3+ distinct edges) within 50 m of
-// the route, so cue generation can tell junction turns from road bends.
-// Edges are duplicated across shard boundaries — dedupe by id before
-// counting degree, or boundary nodes read as junctions.
-function junctionsNearRoute(routeGeometry) {
-  const base = "public-data/base-routing-shards";
-  const manifest = JSON.parse(readFileSync(`${base}/manifest.json`, "utf-8"));
-  const lats = routeGeometry.map((p) => p.lat);
-  const lngs = routeGeometry.map((p) => p.lng);
-  const pad = 0.01;
-  const bbox = [
-    Math.min(...lngs) - pad,
-    Math.min(...lats) - pad,
-    Math.max(...lngs) + pad,
-    Math.max(...lats) + pad,
-  ];
-  const nodeCoord = new Map();
-  const nodeEdges = new Map();
-  for (const shardEntry of manifest.shards) {
-    const [w, s, e, n] = shardEntry.bounds;
-    if (e < bbox[0] || w > bbox[2] || n < bbox[1] || s > bbox[3]) continue;
-    const shard = decodeCompactBaseRoutingShard(
-      readFileSync(`${base}/${shardEntry.formats.compact.path}`),
+function reviewedRoundabouts() {
+  const candidatesPath = "build/osm/roundabout-candidates.json";
+  const reviewsPath = "data/roundabout-review.json";
+  if (!existsSync(candidatesPath) || !existsSync(reviewsPath)) return [];
+  const candidates = JSON.parse(readFileSync(candidatesPath, "utf-8"));
+  const reviews = JSON.parse(readFileSync(reviewsPath, "utf-8"));
+  const joined = joinRoundaboutReviews(candidates, reviews);
+  if (joined.blockingIssues.length > 0) {
+    throw new Error(
+      `roundabout review is incomplete: ${joined.blockingIssues.map((issue) => issue.code).join(", ")}`,
     );
-    for (const node of shard.nodes) nodeCoord.set(node.id, node.coord);
-    for (const edge of shard.edges) {
-      for (const nodeId of [edge.from, edge.to]) {
-        if (!nodeEdges.has(nodeId)) nodeEdges.set(nodeId, new Set());
-        nodeEdges.get(nodeId).add(edge.id);
-      }
-    }
   }
-  const junctions = [];
-  for (const [nodeId, edgeIds] of nodeEdges) {
-    if (edgeIds.size < 3) continue;
-    const coord = nodeCoord.get(nodeId);
-    if (!coord) continue;
-    const point = { lat: coord[1], lng: coord[0] };
-    const nearRoute = routeGeometry.some((p) => getDistance(p, point) <= 50);
-    if (!nearRoute) continue;
-    junctions.push({
-      lat: Math.round(point.lat * 1e5) / 1e5,
-      lng: Math.round(point.lng * 1e5) / 1e5,
-    });
-  }
-  return junctions;
+  return joined.accepted;
 }
 
-const junctions = junctionsNearRoute(geometry);
+// Network junctions (nodes referenced by 3+ distinct edges) within 50 m of
+// the route, plus reviewed roundabout traversals. Baking both into the fixture
+// keeps headless CI and the in-app SIM picker byte-identical.
+function loadJunctionsNearRoute(routeGeometry) {
+  const network = loadBaseNetworkAroundGeometry(routeGeometry);
+  const networkJunctions = junctionsNearRoute(network, routeGeometry).map((junction) => ({
+    lat: Math.round(junction.lat * 1e5) / 1e5,
+    lng: Math.round(junction.lng * 1e5) / 1e5,
+  }));
+  return [
+    ...networkJunctions,
+    ...roundaboutsOnRoute(reviewedRoundabouts(), routeGeometry),
+  ];
+}
+
+const junctions = loadJunctionsNearRoute(geometry);
 const routeState = {
   points: [
     { id: "start", ...geometry[0] },
@@ -103,9 +97,10 @@ const routeState = {
   junctions,
 };
 const header =
-  `// GENERATED by scripts/nav-scenario-route-snapshot.mjs from catalog slug\n` +
+  `// GENERATED by scripts/nav-scenario-route-snapshot.mjs from ${rawTokenMode ? "shared route token" : "catalog slug"}\n` +
   `// "${entry.slug}" (${entry.name}) on ${new Date().toISOString().slice(0, 10)}.\n` +
-  `// Re-run the script to refresh after the catalog route changes.\n`;
+  (rawTokenMode ? `// Route token: ${entry.route}\n` : "") +
+  `// Re-run the script to refresh after the ${rawTokenMode ? "shared route or reviewed roundabouts change" : "catalog route changes"}.\n`;
 const outPath = `packages/core/src/navigation/scenarios/routes/${entry.slug}.js`;
 writeFileSync(outPath, `${header}export default ${JSON.stringify(routeState, null, 2)};\n`);
 console.log(

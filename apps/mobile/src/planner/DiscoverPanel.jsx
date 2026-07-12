@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { fontSizes, text } from "../theme/typography.js";
 // Explicit .native import: this app-level file lives outside packages/core/src,
 // so Metro's core-only platform remap (metro.config.js) does not swap assets.js
 // → assets.native.js here. The web version fetches over the network instead of
@@ -15,12 +16,11 @@ import {
   FILTER_GROUPS,
   emptyFilters,
   filterRoutesByDiscoveryIntent,
-  selectDiscoveryHero,
   selectDiscoverRoutes,
-  routesWithoutDiscoveryHero,
 } from "@cycleways/core/data/discoverFilters.js";
 import { filterCatalogBySearch } from "@cycleways/core/data/catalogSearch.js";
 import RouteCard from "./RouteCard.jsx";
+import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
 
 // Native Discover list with feature parity to the mobile-web Discover panel:
@@ -43,7 +43,6 @@ export default function DiscoverPanel({
   const [nearMeSort, setNearMeSort] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterRevealY, setFilterRevealY] = useState(0);
-  const [heroSeed] = useState(() => Math.random());
   const [intentFilters, setIntentFilters] = useState(() => new Set());
 
   useEffect(() => {
@@ -143,19 +142,6 @@ export default function DiscoverPanel({
         : intentFiltered,
     [intentFiltered, nearMeSort, fix, placeById],
   );
-  const heroRoute = useMemo(
-    () =>
-      selectDiscoveryHero(ordered, {
-        seed: nearMeSort && fix ? 0 : heroSeed,
-        preferEditorial: !(nearMeSort && fix),
-      }),
-    [ordered, heroSeed, nearMeSort, fix],
-  );
-  const secondaryRoutes = useMemo(
-    () => routesWithoutDiscoveryHero(ordered, heroRoute),
-    [ordered, heroRoute],
-  );
-
   if (!entries || entries.length === 0) {
     return (
       <View style={styles.empty}>
@@ -171,33 +157,29 @@ export default function DiscoverPanel({
         <Text style={styles.heading}>לאן רוכבים היום?</Text>
       </View>
 
-      <TextInput
-        style={styles.search}
-        placeholder="חפשו מסלול או מקום"
-        placeholderTextColor={palette.muted}
-        value={query}
-        onChangeText={onQueryChange}
-        textAlign="right"
-        accessibilityLabel="חיפוש מסלול"
-      />
-
-      {heroRoute ? (
-        <RouteCard
-          entry={heroRoute}
-          index={0}
-          placeById={placeById}
-          fix={fix}
-          onSelect={onSelect}
-          variant="hero"
+      <View style={styles.searchWrap}>
+        <TextInput
+          style={styles.search}
+          placeholder="חפשו מסלול או מקום"
+          placeholderTextColor={palette.muted}
+          value={query}
+          onChangeText={onQueryChange}
+          textAlign="right"
+          accessibilityLabel="חיפוש מסלול"
         />
-      ) : null}
+        <Icon name="search-outline" size={23} color={palette.forest} />
+      </View>
 
       <View
         onLayout={(event) => setFilterRevealY(event.nativeEvent.layout.y)}
         style={styles.intent}
       >
         <Text style={styles.intentTitle}>מה מתאים לכם?</Text>
-        <View style={styles.intentChips}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.intentChips}
+        >
           {/* First child renders rightmost in this row-reverse row, so "סינון"
               sits at the right edge — the natural start of the row in Hebrew. */}
           <Pressable
@@ -223,7 +205,7 @@ export default function DiscoverPanel({
                 <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
               </View>
             ) : null}
-            <Text style={styles.filterChevron}>{filtersOpen ? "▴" : "▾"}</Text>
+            <Icon name="options-outline" size={15} color={palette.forest} />
           </Pressable>
           {DISCOVER_INTENT_FILTERS.map((intent) => (
             <Chip
@@ -240,7 +222,7 @@ export default function DiscoverPanel({
             onPress={toggleNearMe}
             variant="intent"
           />
-        </View>
+        </ScrollView>
       </View>
 
       {locationError ? (
@@ -288,16 +270,16 @@ export default function DiscoverPanel({
       ) : null}
 
       <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>עוד מסלולים מומלצים</Text>
+        <Text style={styles.sectionTitle}>מסלולים מומלצים</Text>
         <Text style={styles.sectionCount}>{`${ordered.length} מסלולים`}</Text>
       </View>
 
       <View style={styles.list}>
-        {secondaryRoutes.map((entry, index) => (
+        {ordered.map((entry, index) => (
           <RouteCard
             key={entry.slug || entry.name}
             entry={entry}
-            index={heroRoute ? index + 1 : index}
+            index={index}
             placeById={placeById}
             fix={fix}
             onSelect={onSelect}
@@ -456,72 +438,76 @@ function normalizePlaceQuery(value) {
 }
 
 const styles = StyleSheet.create({
-  root: { gap: space.md },
+  root: { gap: 14 },
   intro: { paddingHorizontal: 12, gap: 4 },
   kicker: {
+    ...text.label,
     color: "#9f5d25",
-    fontSize: 12,
-    fontWeight: "900",
     textAlign: "right",
     writingDirection: "rtl",
   },
   heading: {
+    ...text.heading,
     color: palette.ink,
-    fontSize: 30,
-    fontWeight: "900",
-    lineHeight: 36,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  search: {
+  searchWrap: {
     marginHorizontal: 12,
+    minHeight: 54,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
     borderRadius: 16,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: palette.line,
+  },
+  search: {
+    flex: 1,
+    paddingVertical: 12,
+    ...text.body,
     color: palette.ink,
-    fontSize: 15,
     writingDirection: "rtl",
   },
   intent: { paddingHorizontal: 12, gap: 8 },
   intentTitle: {
+    ...text.captionStrong,
     color: palette.ink,
-    fontSize: 13,
-    fontWeight: "900",
     textAlign: "right",
     writingDirection: "rtl",
   },
   intentChips: {
     flexDirection: "row-reverse",
-    flexWrap: "nowrap",
-    gap: 4,
+    gap: 7,
+    paddingStart: 12,
   },
   intentChip: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    flexShrink: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 6,
+    flexShrink: 0,
+    minHeight: 36,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: palette.line,
   },
   intentChipText: {
+    ...text.label,
     color: palette.ink,
-    fontSize: 11,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   filterToggle: {
     flexDirection: "row-reverse",
     alignItems: "center",
     flexShrink: 0,
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 6,
+    gap: 5,
+    minHeight: 36,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -532,12 +518,10 @@ const styles = StyleSheet.create({
     borderColor: palette.forest,
   },
   filterToggleText: {
+    ...text.label,
     color: palette.ink,
-    fontSize: 11,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
-  filterChevron: { color: palette.muted, fontSize: 10 },
   filterCountBadge: {
     minWidth: 16,
     height: 16,
@@ -548,30 +532,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   filterCountBadgeText: {
+    ...text.label,
     color: palette.white,
-    fontSize: 11,
-    fontWeight: "900",
-    lineHeight: 14,
   },
   error: {
+    ...text.caption,
     marginHorizontal: 12,
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 12,
     backgroundColor: "#fdecec",
     color: "#b42318",
-    fontSize: 13,
-    fontWeight: "800",
-    lineHeight: 18,
     textAlign: "right",
     writingDirection: "rtl",
   },
   filters: { paddingHorizontal: 12, gap: space.md },
   combo: { gap: 5 },
   comboLabel: {
+    ...text.label,
     color: palette.muted,
-    fontSize: 11,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -587,12 +566,12 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: palette.line,
   },
-  comboIcon: { fontSize: 13 },
+  comboIcon: { fontSize: fontSizes.sm },
   comboInput: {
+    ...text.body,
     flexGrow: 1,
     minWidth: 120,
     color: palette.ink,
-    fontSize: 14,
     paddingVertical: 2,
     writingDirection: "rtl",
   },
@@ -606,15 +585,14 @@ const styles = StyleSheet.create({
     backgroundColor: palette.cream,
   },
   comboSelectedText: {
+    ...text.captionStrong,
     color: palette.ink,
-    fontSize: 12,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   comboSelectedRemove: {
+    // × glyph: size-only, tight line height to center it in the pill.
     color: palette.muted,
-    fontSize: 15,
-    fontWeight: "900",
+    fontSize: fontSizes.md,
     lineHeight: 16,
   },
   comboMenu: {
@@ -639,17 +617,15 @@ const styles = StyleSheet.create({
   },
   comboMenuItemPressed: { backgroundColor: palette.paper },
   comboMenuLabel: {
+    ...text.body,
     color: palette.ink,
-    fontSize: 14,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
-  comboMenuCount: { color: palette.muted, fontSize: 12, fontWeight: "700" },
+  comboMenuCount: { ...text.caption, color: palette.muted },
   group: { gap: 5 },
   groupLabel: {
+    ...text.label,
     color: palette.muted,
-    fontSize: 11,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -670,11 +646,10 @@ const styles = StyleSheet.create({
     borderColor: palette.forest,
   },
   chipPressed: { opacity: 0.8 },
-  chipIcon: { fontSize: 12 },
+  chipIcon: { fontSize: fontSizes.sm },
   chipText: {
+    ...text.captionStrong,
     color: palette.ink,
-    fontSize: 13,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
   chipTextActive: { color: palette.white },
@@ -686,32 +661,28 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 18,
-    fontWeight: "900",
     textAlign: "right",
     writingDirection: "rtl",
   },
   sectionCount: {
+    ...text.caption,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   count: {
+    ...text.caption,
     paddingHorizontal: 12,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   list: { gap: 8, paddingHorizontal: 12 },
   empty: { paddingHorizontal: 12, paddingVertical: 18, alignItems: "center" },
   emptyText: {
+    ...text.caption,
     color: palette.muted,
-    fontSize: 13,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
 });

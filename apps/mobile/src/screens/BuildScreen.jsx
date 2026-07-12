@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Location from "expo-location";
 import { useSyntheticRoutePlaybackEngine } from "@cycleways/core/ui/routePlaybackEngine.js";
 import PlaybackControls from "../planner/PlaybackControls.jsx";
+import { fontSizes, text } from "../theme/typography.js";
 import {
   ActivityIndicator,
   Alert,
@@ -41,24 +42,39 @@ import {
 } from "@cycleways/core/data/catalog.js";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
 import {
-  canFastStartRidePlan,
   createRidePlan,
+  ridePlanNeedsDirectApproachPreview,
+  ridePlanNeedsConnectorPreview,
 } from "@cycleways/core/navigation/ridePlan.js";
+import { confirmDistanceBucket } from "@cycleways/core/navigation/rideIntroPresentation.js";
 import { traveledCoordinates } from "@cycleways/core/navigation/routeProgress.js";
 import { createPuckAnchor } from "@cycleways/core/navigation/puckAnchor.js";
 import {
-  cameraHeadingTarget,
+  cameraHeadingTargetForState,
   createCameraHeadingGovernor,
 } from "@cycleways/core/navigation/cameraHeading.js";
 import { createCameraDirector } from "@cycleways/core/navigation/cameraDirector.js";
+import { plannerLocateCameraView } from "@cycleways/core/navigation/plannerLocateCamera.js";
+import {
+  cameraCorridorForProgress,
+  cameraGeometryKey,
+  cameraManeuverCorridor,
+  cameraTargetZoom,
+  nextAppliedZoom,
+  shouldReframeOverview,
+} from "@cycleways/core/navigation/cameraViewport.js";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
+import { navigationLinePresentationForState } from "@cycleways/core/navigation/navigationLinePresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
 import { resolveScenario } from "@cycleways/core/navigation/scenarios/resolve.js";
+import { bookmarkPlaybackWindow } from "@cycleways/core/navigation/scenarios/journeySchema.js";
 import {
+  computeBearing,
   precomputeArcLength,
   pointAndBearingAtDistance,
 } from "@cycleways/core/utils/geometry.js";
+import { getDistance } from "@cycleways/core/utils/distance.js";
 import {
   nextSmoothedMeters,
   shortestAngleLerp,
@@ -81,15 +97,34 @@ import BuildEmptyActions from "../planner/BuildEmptyActions.jsx";
 import BackButton from "./BackButton.jsx";
 import RoutePoiList from "../planner/RoutePoiList.jsx";
 import NavPanel from "../planner/NavPanel.jsx";
+import ApproachPanel from "../planner/ApproachPanel.jsx";
 import DestinationSheet from "../planner/DestinationSheet.jsx";
 import RideSetupSheet from "../planner/RideSetupSheet.jsx";
+import RideIntroCard from "../planner/RideIntroCard.jsx";
 import { useNavigationSession } from "../navigation/useNavigationSession.js";
 import {
   createDefaultLocationSource,
-  getNavigationPermissionStatus,
   getRideSetupLocation,
+  stopNavigationBackgroundUpdates,
 } from "../navigation/locationService.js";
-import { createSimulateRideSource } from "../navigation/simulateRideSource.js";
+import { clearActiveNavigationSession } from "../navigation/activeNavigationStore.js";
+import { createJourneyPlaybackSource } from "../navigation/journeyPlaybackSource.js";
+import {
+  deriveRidePlanJourneyFixes,
+  initialJourneyPlaybackState,
+  journeyPlaybackPatch,
+  journeyRequiresRideIntro,
+  shouldAcceptNativeLocationUpdate,
+} from "../navigation/journeyHarnessState.js";
+import { useNavigationCamera } from "../navigation/useNavigationCamera.js";
+import { normalizeCameraViewport } from "../navigation/navigationCameraAdapter.js";
+import {
+  SETUP_CONNECTOR_PREVIEW_STYLES,
+  SETUP_ROUTE_PREVIEW_STYLES,
+  navigationConnectorLineStyles,
+  navigationMainRouteLineStyle,
+} from "../navigation/navigationLineStyles.js";
+import { connectorRouterForScenario } from "@cycleways/core/navigation/scenarioConnector.js";
 import {
   clearPendingRideIntent,
   savePendingRideIntent,
@@ -110,6 +145,8 @@ if (__DEV__) {
 }
 import { routeRestoreDecision } from "../navigation/routeRestorePolicy.js";
 import DevScenarioPicker from "../planner/DevScenarioPicker.jsx";
+import DevCameraOverlay from "../planner/DevCameraOverlay.jsx";
+import DevJourneyControls from "../planner/DevJourneyControls.jsx";
 import Icon from "../planner/Icon.jsx";
 import { palette } from "../planner/theme.js";
 import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
@@ -151,33 +188,7 @@ const ROUTE_TRAVELED_LINE_STYLE = {
   lineJoin: "round",
   lineCap: "round",
 };
-
-// Thin/faint straight line rider→target: the persistent "the route is there"
-// anchor. Heavier dashed line: the road-preferring suggested connector (the
-// way you might take). Differentiated so they read as two different answers.
-const APPROACH_DIRECT_LINE_STYLE = {
-  lineColor: "#6b7280",
-  lineWidth: 2,
-  lineOpacity: 0.6,
-  lineDasharray: [1, 2],
-  lineJoin: "round",
-  lineCap: "round",
-};
-const APPROACH_SUGGESTION_LINE_STYLE = {
-  lineColor: "#2563eb",
-  lineWidth: 4,
-  lineOpacity: 0.9,
-  lineDasharray: [2, 1.5],
-  lineJoin: "round",
-  lineCap: "round",
-};
-const SETUP_PREVIEW_LINE_STYLE = {
-  lineColor: "#2f6b3c",
-  lineWidth: 7,
-  lineOpacity: 0.92,
-  lineJoin: "round",
-  lineCap: "round",
-};
+const APPROACH_DIRECT_LINE_STYLES = navigationConnectorLineStyles("direct");
 
 // Adaptive rider puck colors: on-route uses the brand blue; approaching /
 // off-route is muted gray (matches the traveled line) to signal "not snapped".
@@ -187,14 +198,10 @@ const RIDER_PUCK_MUTED_COLOR = "#9aa6ab";
 const NAV_FOLLOW_ZOOM = 16.5;
 // Tilt for the heading-up follow camera so the rider sees the route ahead from
 // near ground level (also makes the view read as adaptive to the phone facing).
-const NAV_FOLLOW_PITCH = 50;
+const NAV_FOLLOW_PITCH = 55;
 // Approach/rejoin fit shots include a small slice of the main route after the
 // join point so a straight-line connector still frames "where this ride goes".
 const APPROACH_ROUTE_LOOKAHEAD_M = 180;
-// Off-route rejoin fit shots include the live rider point, so raw GPS movement
-// would otherwise restart a bounds animation on every fix.
-const REJOIN_CAMERA_FIT_MIN_INTERVAL_MS = 1500;
-const REJOIN_CAMERA_FIT_KEY_DECIMALS = 4;
 const DEFAULT_CAMERA_FIT_KEY_DECIMALS = 5;
 // Time constant (ms) for the puck/camera heading lerp: a frame's lerp fraction
 // is dt / BEARING_SMOOTH_MS (clamped to 1), so larger = slower rotation.
@@ -320,16 +327,30 @@ const ADD_GUARD_MS = 350;
 // Bottom camera padding used when the playback panel is docked at ~48% height,
 // so the route stays framed in the uncovered upper area during preview.
 const PLAYBACK_FIT_BOTTOM_PADDING = Math.round(Dimensions.get("window").height * 0.48) + 24;
+const RIDE_INTRO_FIT_BOTTOM_PADDING = 320;
+const RIDE_INTRO_MARKER_CLEARANCE = 56;
+const RIDE_INTRO_FIT_PITCH = NAV_FOLLOW_PITCH;
+const RIDE_INTRO_PITCH_MIN_DISTANCE_M = 25;
+const RIDE_INTRO_START_TOP_PADDING = 132;
+const RIDE_INTRO_START_SAFE_AREA_GAP = 112;
+const RIDE_INTRO_RIDER_CARD_GAP = 96;
+const RIDE_INTRO_MIN_MARKER_SPAN_PX = 180;
+const RIDE_INTRO_MIN_ZOOM = 8.8;
+const RIDE_INTRO_MAX_ZOOM = 16.8;
 const DEFAULT_RIDE_SETUP_SELECTION = {
   direction: "forward",
   startMode: "official",
   selectedPoint: null,
+  startProgressMeters: null,
 };
 const ACQUIRED_BANNER_MS = 4000;
 
 export default function BuildScreen({ navigation, route }) {
   const cameraRef = useRef(null);
   const routePointPressGuardRef = useRef(0);
+  const devJourneyOwnsLocationRef = useRef(false);
+  const retainedIntroCameraStateRef = useRef(null);
+  const screenInsets = useSafeAreaInsets();
   const [locationState, setLocationState] = useState({
     enabled: false,
     following: false,
@@ -339,6 +360,9 @@ export default function BuildScreen({ navigation, route }) {
   const [catalogEntries, setCatalogEntries] = useState([]);
   const [pendingRideSetupToken, setPendingRideSetupToken] = useState(null);
   const routeTokenParam = route?.params?.routeToken ?? null;
+  const resumeRideParam = route?.params?.resumeRide ?? null;
+  const resumeRideHandledRef = useRef(false);
+  const resumeFailureShownRef = useRef(false);
   const routeSlugParam = route?.params?.slug ?? null;
   const routeNameParam = route?.params?.name ?? null;
   const openRideSetupParam = route?.params?.openRideSetup === true;
@@ -383,9 +407,10 @@ export default function BuildScreen({ navigation, route }) {
     handleAddDataMarkerToRoute,
     handleViewportIdle,
     computeConnector,
+    computeRouteJunctions,
     plannerDraft,
     handleRestoreDraft,
-  } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
+  } = useCyclewaysApp({ enableRouteDirectionAnimation: false, includeRoundabouts: true });
 
   const routeGeometry = useMemo(
     () => buildRouteGeometryFeatureCollection(routeState.geometry),
@@ -491,6 +516,7 @@ export default function BuildScreen({ navigation, route }) {
         // claimed so they pass straight through to Mapbox.
         onStartShouldSetPanResponder: (evt) =>
           !isNavigatingRef.current &&
+          !introFlowActiveRef.current &&
           !pickOnMapModeRef.current &&
           evt.nativeEvent.touches.length <= 1 &&
           hitTestRoutePoint(
@@ -645,6 +671,7 @@ export default function BuildScreen({ navigation, route }) {
         setPickOnMapMode(false);
         return;
       }
+      if (introFlowActiveRef.current) return;
       if (isNavigatingRef.current) return; // route edits are locked while navigating
       if (Date.now() - routePointPressGuardRef.current < ADD_GUARD_MS) return;
       const point = pointFromFeature(feature);
@@ -657,6 +684,7 @@ export default function BuildScreen({ navigation, route }) {
 
   const handleDataMarkerPress = useCallback(
     (event) => {
+      if (introFlowActiveRef.current) return;
       if (isNavigatingRef.current) return; // marker add-to-route is locked while navigating
       const marker = dataMarkerFromPressEvent(event);
       if (!marker) return;
@@ -677,6 +705,9 @@ export default function BuildScreen({ navigation, route }) {
   }, []);
 
   const handleUserLocationUpdate = useCallback((location) => {
+    if (!shouldAcceptNativeLocationUpdate({
+      journeyActive: __DEV__ && devJourneyOwnsLocationRef.current,
+    })) return;
     const point = pointFromLocationEvent(location);
     if (!point) return;
     setLocationState((current) => ({
@@ -685,6 +716,17 @@ export default function BuildScreen({ navigation, route }) {
       point,
       status: current.following ? "following" : "located",
     }));
+    if (introFlowActiveRef.current && !isNavigatingRef.current) {
+      setRideSetupFix((current) => ({
+        ...(current || {}),
+        lat: point.lat,
+        lng: point.lng,
+        timestamp: Date.now(),
+      }));
+      setRideSetupLocationStatus((current) =>
+        current === "loading" ? "ready" : current,
+      );
+    }
   }, []);
 
   const handleLocatePress = useCallback(() => {
@@ -701,10 +743,14 @@ export default function BuildScreen({ navigation, route }) {
     }));
 
     if (locationState.point) {
+      const retainedView = plannerLocateCameraView({
+        zoom: mapZoomRef.current,
+        pitch: mapPitchRef.current,
+      });
       cameraRef.current?.setCamera?.({
         type: "CameraStop",
         centerCoordinate: [locationState.point.lng, locationState.point.lat],
-        zoomLevel: 14.5,
+        ...retainedView,
         animationDuration: 500,
         animationMode: "easeTo",
       });
@@ -774,36 +820,271 @@ export default function BuildScreen({ navigation, route }) {
     [routeState.geometry, shareInfo.param, selectedCatalogSlug, selectedCatalogEntry],
   );
 
-  const [rideSetupVisible, setRideSetupVisible] = useState(false);
+  const [rideIntroVisible, setRideIntroVisible] = useState(false);
+  const [rideIntroCardHeight, setRideIntroCardHeight] = useState(0);
+  const [rideSettingsVisible, setRideSettingsVisible] = useState(false);
+  const rideSettingsOriginRef = useRef("intro");
   const [rideSetupSelection, setRideSetupSelection] = useState(DEFAULT_RIDE_SETUP_SELECTION);
+  const [destSheetVisible, setDestSheetVisible] = useState(false);
+  const [pickOnMapMode, setPickOnMapMode] = useState(false);
   const [rideSetupFix, setRideSetupFix] = useState(null);
   const [rideSetupNow, setRideSetupNow] = useState(Date.now());
   const [rideSetupLocationStatus, setRideSetupLocationStatus] = useState("idle");
+  const [rideSetupConnector, setRideSetupConnector] = useState({
+    key: "",
+    status: "idle",
+    geometry: [],
+    distanceMeters: null,
+  });
   const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
   const [lockScreenGuidanceEnabled, setLockScreenGuidanceEnabled] = useState(true);
-  const [lockScreenGuidanceHasAlwaysPermission, setLockScreenGuidanceHasAlwaysPermission] =
-    useState(false);
-  const [lockScreenGuidanceNeedsSettings, setLockScreenGuidanceNeedsSettings] =
-    useState(false);
   const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
+  const [preparedRouteJunctions, setPreparedRouteJunctions] = useState({
+    routeId: null,
+    status: "idle",
+    junctions: null,
+  });
   const [pendingNavigationRouteId, setPendingNavigationRouteId] = useState(null);
   const [pendingExternalPlan, setPendingExternalPlan] = useState(null);
   const [devPickerVisible, setDevPickerVisible] = useState(false);
+  const [devPickerMode, setDevPickerMode] = useState("sim");
+  const [devCameraDiagnostics, setDevCameraDiagnostics] = useState(null);
   const [devSpeed, setDevSpeed] = useState(4);
   const [devScenarioRoute, setDevScenarioRoute] = useState(null);
+  const [devRideIntroRoute, setDevRideIntroRoute] = useState(null);
+  const [pendingDevRideIntro, setPendingDevRideIntro] = useState(null);
+  const [devPlaybackState, setDevPlaybackState] = useState(null);
+  const devPlaybackRef = useRef(null);
+  const devRideSetupRestoreRef = useRef(null);
+  const pendingDevReplayRef = useRef(false);
+  const devPlaybackUiAtRef = useRef(0);
+  const initialWindow = Dimensions.get("window");
+  const [mapViewportSize, setMapViewportSize] = useState({
+    width: initialWindow.width,
+    height: initialWindow.height,
+  });
+  const [navigationOcclusion, setNavigationOcclusion] = useState({
+    topOverlayBottom: screenInsets.top + 96,
+    bottomOverlayTop: initialWindow.height - screenInsets.bottom - 96,
+  });
+  const navigationViewport = useMemo(
+    () =>
+      normalizeCameraViewport({
+        ...mapViewportSize,
+        safeInsets: screenInsets,
+        ...navigationOcclusion,
+        horizontalMargin: 16,
+        clearance: 12,
+      }),
+    [mapViewportSize, navigationOcclusion, screenInsets],
+  );
+  const navigationViewportRef = useRef(navigationViewport);
+  navigationViewportRef.current = navigationViewport;
+  const handleCameraAdapterDiagnostics = useCallback((adapterDiagnostics) => {
+    if (!__DEV__) return;
+    setDevCameraDiagnostics((current) => current
+      ? { ...current, ...adapterDiagnostics }
+      : { ...adapterDiagnostics });
+  }, []);
+  const navigationCameraRef = useNavigationCamera({
+    cameraRef,
+    mapViewRef,
+    onDiagnostics: handleCameraAdapterDiagnostics,
+  });
+  const handleNavigationOverlayLayout = useCallback((patch) => {
+    if (!patch || typeof patch !== "object") return;
+    setNavigationOcclusion((current) => {
+      const next = { ...current, ...patch };
+      if (
+        Math.abs(next.topOverlayBottom - current.topOverlayBottom) < 2 &&
+        Math.abs(next.bottomOverlayTop - current.bottomOverlayTop) < 2
+      ) return current;
+      return next;
+    });
+  }, []);
+  const handleMapViewportLayout = useCallback((event) => {
+    const width = Number(event?.nativeEvent?.layout?.width);
+    const height = Number(event?.nativeEvent?.layout?.height);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return;
+    }
+    setMapViewportSize((current) =>
+      Math.abs(current.width - width) < 1 && Math.abs(current.height - height) < 1
+        ? current
+        : { width, height },
+    );
+  }, []);
+  const devVisibleScenarios = useMemo(
+    () =>
+      devPickerMode === "cam"
+        ? devScenarios.filter(
+            (scenario) =>
+              scenario.entryMode === "ride-intro" &&
+              Array.isArray(scenario.bookmarks) &&
+              scenario.bookmarks.length > 0,
+          )
+        : devScenarios,
+    [devPickerMode],
+  );
   const setupRequestRef = useRef(0);
-  const lockScreenPermissionExplainerShownRef = useRef(false);
+
+  const rideSetupSourceRoute =
+    __DEV__ &&
+    devRideIntroRoute &&
+    (rideIntroVisible || rideSettingsVisible || pickOnMapMode || pendingDevRideIntro)
+      ? devRideIntroRoute
+      : sourceNavigationRoute;
 
   const ridePlan = useMemo(
     () =>
       createRidePlan(
-        sourceNavigationRoute,
+        rideSetupSourceRoute,
         rideSetupSelection,
         rideSetupFix,
         rideSetupNow,
       ),
-    [sourceNavigationRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
+    [rideSetupSourceRoute, rideSetupSelection, rideSetupFix, rideSetupNow],
   );
+
+  // Warm junction data as soon as an effective route exists. Confirmation
+  // itself remains immediate: if this best-effort preload is not complete, the
+  // session safely retains legacy all-corners cues for that ride.
+  //
+  // Keyed on the effective-route *id*, not the object: ride-setup location
+  // ticks rebuild the effectiveRoute object (same id, identical geometry —
+  // the id encodes route/direction/loop/start-progress) every second, and an
+  // object-identity dep would rerun the full shard+network scan per tick and
+  // wipe an already-ready result right when the user confirms.
+  const junctionSourceRouteRef = useRef(null);
+  junctionSourceRouteRef.current = ridePlan?.effectiveRoute ?? null;
+  const junctionSourceRouteId = ridePlan?.effectiveRoute?.canNavigate
+    ? ridePlan.effectiveRoute.id
+    : null;
+  useEffect(() => {
+    const effectiveRoute = junctionSourceRouteRef.current;
+    if (!junctionSourceRouteId || effectiveRoute?.id !== junctionSourceRouteId) {
+      return undefined;
+    }
+    if (Array.isArray(effectiveRoute.junctions)) {
+      setPreparedRouteJunctions({
+        routeId: effectiveRoute.id,
+        status: "ready",
+        junctions: effectiveRoute.junctions,
+      });
+      return undefined;
+    }
+
+    let cancelled = false;
+    const startedAt = Date.now();
+    setPreparedRouteJunctions({
+      routeId: effectiveRoute.id,
+      status: "loading",
+      junctions: null,
+    });
+    Promise.resolve(computeRouteJunctions(effectiveRoute.geometry))
+      .then((junctions) => {
+        if (cancelled) return;
+        const complete = Array.isArray(junctions);
+        setPreparedRouteJunctions({
+          routeId: effectiveRoute.id,
+          status: complete ? "ready" : "unavailable",
+          junctions: complete ? junctions : null,
+        });
+        trackNavigationEvent("route_junctions_computed", {
+          outcome: complete ? "complete" : "unavailable",
+          junctionCount: complete ? junctions.length : null,
+          durationMs: Date.now() - startedAt,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPreparedRouteJunctions({
+          routeId: effectiveRoute.id,
+          status: "unavailable",
+          junctions: null,
+        });
+        trackNavigationEvent("route_junctions_computed", {
+          outcome: "failed",
+          junctionCount: null,
+          durationMs: Date.now() - startedAt,
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [computeRouteJunctions, junctionSourceRouteId]);
+
+  useEffect(() => {
+    if (
+      !rideIntroVisible ||
+      !ridePlan?.selectedPoint ||
+      !validMapPoint(rideSetupFix) ||
+      !ridePlanNeedsConnectorPreview(ridePlan)
+    ) {
+      setRideSetupConnector((current) =>
+        current.status === "idle" && current.geometry.length === 0
+          ? current
+          : { key: "", status: "idle", geometry: [], distanceMeters: null },
+      );
+      return undefined;
+    }
+
+    const origin = {
+      lat: Number(rideSetupFix.lat),
+      lng: Number(rideSetupFix.lng),
+    };
+    const target = {
+      lat: Number(ridePlan.selectedPoint.lat),
+      lng: Number(ridePlan.selectedPoint.lng),
+    };
+    const key = [
+      origin.lat.toFixed(4),
+      origin.lng.toFixed(4),
+      target.lat.toFixed(5),
+      target.lng.toFixed(5),
+    ].join(":");
+
+    setRideSetupConnector((current) =>
+      current.key === key && current.status === "ready"
+        ? current
+        : { key, status: "loading", geometry: [], distanceMeters: null },
+    );
+
+    let cancelled = false;
+    Promise.resolve(computeConnector(origin, target))
+      .then((result) => {
+        if (cancelled) return;
+        const geometry = Array.isArray(result?.geometry) ? result.geometry : [];
+        setRideSetupConnector({
+          key,
+          status: geometry.length >= 2 && !result?.failure ? "ready" : "unavailable",
+          geometry: geometry.length >= 2 && !result?.failure ? geometry : [],
+          distanceMeters: Number.isFinite(Number(result?.distanceMeters))
+            ? Number(result.distanceMeters)
+            : null,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setRideSetupConnector({
+          key,
+          status: "unavailable",
+          geometry: [],
+          distanceMeters: null,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    computeConnector,
+    rideIntroVisible,
+    ridePlan?.approachTier,
+    ridePlan?.selectedPoint,
+    rideSetupFix?.lat,
+    rideSetupFix?.lng,
+  ]);
 
   const navigationRoute =
     (__DEV__ && devScenarioRoute) ||
@@ -818,43 +1099,31 @@ export default function BuildScreen({ navigation, route }) {
     if (setupRequestRef.current !== requestId) return;
     setRideSetupNow(Date.now());
     setRideSetupFix(result.fix || null);
+    if (validMapPoint(result.fix)) {
+      setLocationState((current) => ({
+        ...current,
+        enabled: true,
+        point: { lat: Number(result.fix.lat), lng: Number(result.fix.lng) },
+        status: current.following ? "following" : "located",
+      }));
+    }
     setRideSetupLocationStatus(result.status);
   }, []);
 
-  const refreshNavigationPermissionStatus = useCallback(async () => {
-    try {
-      const status = await getNavigationPermissionStatus();
-      const foregroundGranted = status?.foreground?.status === "granted";
-      const backgroundStatus = status?.background?.status;
-      const backgroundCanAskAgain = status?.background?.canAskAgain;
-      const canUseBackground = status?.canUseBackground === true;
-      const needsSettings =
-        foregroundGranted &&
-        !canUseBackground &&
-        (backgroundStatus === "denied" || backgroundCanAskAgain === false);
-      setLockScreenGuidanceHasAlwaysPermission(canUseBackground);
-      setLockScreenGuidanceNeedsSettings(Boolean(needsSettings));
-    } catch {
-      setLockScreenGuidanceHasAlwaysPermission(false);
-      setLockScreenGuidanceNeedsSettings(false);
-    }
-  }, []);
-
-  const openRideSetup = useCallback(
+  const openRideIntro = useCallback(
     (options = {}) => {
       const preserveSelection = options?.preserveSelection === true;
       if (!preserveSelection) {
         setRideSetupSelection(DEFAULT_RIDE_SETUP_SELECTION);
       }
       setPendingExternalPlan(null);
-      setRideSetupVisible(true);
+      setRideIntroVisible(true);
       trackNavigationEvent("ride_setup_opened", {
         restored: preserveSelection,
       });
       void refreshRideSetupLocation();
-      void refreshNavigationPermissionStatus();
     },
-    [refreshNavigationPermissionStatus, refreshRideSetupLocation],
+    [refreshRideSetupLocation],
   );
 
   // --- Dev-only simulate-ride harness + GPS recorder (Task 17) ---------------
@@ -867,6 +1136,7 @@ export default function BuildScreen({ navigation, route }) {
   // into recorderFixesRef; on stop() the full array is logged as JSON so it can
   // be copied into tests/fixtures/*.json for deterministic replay (Task 18).
   const devInnerSourceRef = useRef(null);
+  const devScenarioConnectorRef = useRef(null);
   const recorderFixesRef = useRef([]);
   // Stable proxy: created once, delegates to devInnerSourceRef at call time.
   const devSourceProxy = useRef(null);
@@ -879,11 +1149,62 @@ export default function BuildScreen({ navigation, route }) {
     };
   }
 
-  const nav = useNavigationSession(navigationRoute, {
+  const clearDevJourneyState = useCallback(() => {
+    const restore = devRideSetupRestoreRef.current;
+    devJourneyOwnsLocationRef.current = false;
+    devInnerSourceRef.current = null;
+    devScenarioConnectorRef.current = null;
+    devPlaybackRef.current = null;
+    devRideSetupRestoreRef.current = null;
+    pendingDevReplayRef.current = false;
+    setDevPlaybackState(null);
+    setDevCameraDiagnostics(null);
+    setDevRideIntroRoute(null);
+    setDevScenarioRoute(null);
+    setPendingDevRideIntro(null);
+    setPendingNavigationRouteId(null);
+    setConfirmedRidePlan(null);
+    setRideSetupConnector({
+      key: "",
+      status: "idle",
+      geometry: [],
+      distanceMeters: null,
+    });
+    if (restore) {
+      setRideSetupFix(restore.rideSetupFix);
+      setRideSetupNow(restore.rideSetupNow);
+      setRideSetupLocationStatus(restore.rideSetupLocationStatus);
+      setLocationState(restore.locationState);
+    }
+  }, []);
+
+  const computeNavigationConnector = useCallback(
+    (from, to, request) => {
+      const scenarioConnector = devScenarioConnectorRef.current;
+      if (__DEV__ && scenarioConnector?.active) {
+        if (typeof scenarioConnector.router !== "function") {
+          // `connector: "none"` deliberately leaves the request pending. It
+          // must never fall through to the real routing network.
+          return new Promise(() => {});
+        }
+        return scenarioConnector.router(request || { from, to });
+      }
+      return computeConnector(from, to);
+    },
+    [computeConnector],
+  );
+
+  const navigationSessionRoute =
+    resumeRideParam && !confirmedRidePlan ? null : navigationRoute;
+  const nav = useNavigationSession(navigationSessionRoute, {
     background: lockScreenGuidanceEnabled,
     voice: voiceGuidanceEnabled,
     locationSource: __DEV__ ? devSourceProxy.current : undefined,
-    computeConnector,
+    computeConnector: computeNavigationConnector,
+    resumeSessionId:
+      confirmedRidePlan?.effectiveRoute?.id === navigationSessionRoute?.id
+        ? resumeRideParam?.sessionId ?? null
+        : null,
   });
   const navStatus = nav.state?.status ?? "idle";
   const isNavigating =
@@ -901,7 +1222,6 @@ export default function BuildScreen({ navigation, route }) {
       !nav.lockScreenGuidanceActive
     ) {
       setLockScreenGuidanceEnabled(false);
-      void refreshNavigationPermissionStatus();
       trackNavigationEvent("lock_screen_guidance_fallback", {
         reason: "foreground-only",
       });
@@ -911,18 +1231,7 @@ export default function BuildScreen({ navigation, route }) {
     lockScreenGuidanceEnabled,
     nav.lockScreenGuidanceActive,
     nav.state?.foregroundOnly,
-    refreshNavigationPermissionStatus,
   ]);
-
-  useEffect(() => {
-    void refreshNavigationPermissionStatus();
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
-        void refreshNavigationPermissionStatus();
-      }
-    });
-    return () => subscription.remove();
-  }, [refreshNavigationPermissionStatus]);
 
   const handleToggleVoiceGuidance = useCallback(() => {
     setVoiceGuidanceEnabled((current) => {
@@ -933,33 +1242,11 @@ export default function BuildScreen({ navigation, route }) {
     });
   }, [nav]);
 
-  const handleOpenLocationSettings = useCallback(() => {
-    trackNavigationEvent("lock_screen_guidance_settings_opened");
-    const settingsRequest =
-      typeof Linking.openSettings === "function"
-        ? Linking.openSettings()
-        : Linking.openURL("app-settings:");
-    Promise.resolve(settingsRequest).catch(() => {
-      Alert.alert(
-        "לא הצלחנו לפתוח הגדרות",
-        "פתחו ידנית: הגדרות > CycleWays > מיקום > תמיד.",
-      );
-    });
-  }, []);
-
   const handleToggleLockScreenGuidance = useCallback(() => {
-    if (!lockScreenGuidanceEnabled && lockScreenGuidanceNeedsSettings) {
-      handleOpenLocationSettings();
-      return;
-    }
     const next = !lockScreenGuidanceEnabled;
     setLockScreenGuidanceEnabled(next);
     trackNavigationEvent("lock_screen_guidance_toggled", { enabled: next });
-  }, [
-    handleOpenLocationSettings,
-    lockScreenGuidanceEnabled,
-    lockScreenGuidanceNeedsSettings,
-  ]);
+  }, [lockScreenGuidanceEnabled]);
 
   const handleTestVoiceGuidance = useCallback(() => {
     trackNavigationEvent("voice_guidance_tested");
@@ -974,80 +1261,209 @@ export default function BuildScreen({ navigation, route }) {
     () => buildRouteGeometryFeatureCollection(ridePlan?.effectiveRoute?.geometry),
     [ridePlan?.effectiveRoute?.geometry],
   );
+  const setupConnectorGeometry = useMemo(
+    () => buildRouteGeometryFeatureCollection(rideSetupConnector.geometry),
+    [rideSetupConnector.geometry],
+  );
+  const setupDirectGeometry = useMemo(
+    () =>
+      buildRouteGeometryFeatureCollection(
+        [rideSetupFix, ridePlan?.selectedPoint].filter(validMapPoint),
+      ),
+    [
+      ridePlan?.selectedPoint?.lat,
+      ridePlan?.selectedPoint?.lng,
+      rideSetupFix?.lat,
+      rideSetupFix?.lng,
+    ],
+  );
   const displayedRouteGeometry = isNavigating ? activeRouteGeometry : routeGeometry;
+  const rideIntroFitBottomPadding =
+    rideIntroCardHeight > 0
+      ? Math.max(
+          RIDE_INTRO_FIT_BOTTOM_PADDING,
+          Math.ceil(rideIntroCardHeight + RIDE_INTRO_MARKER_CLEARANCE),
+        )
+      : RIDE_INTRO_FIT_BOTTOM_PADDING;
+
+  const handleRideIntroCardLayout = useCallback((event) => {
+    const height = Number(event?.nativeEvent?.layout?.height);
+    if (!Number.isFinite(height) || height <= 0) return;
+    setRideIntroCardHeight((current) =>
+      Math.abs(current - height) >= 2 ? height : current,
+    );
+  }, []);
+
+  const resetMapToOverhead = useCallback((animationDuration = 450) => {
+    retainedIntroCameraStateRef.current = null;
+    cameraPitchRef.current = 0;
+    cameraBearingRef.current = 0;
+    cameraFitKeyRef.current = null;
+    cameraFitAtRef.current = 0;
+    cameraOverviewFrameRef.current = null;
+    cameraRef.current?.setCamera?.({
+      pitch: 0,
+      heading: 0,
+      animationDuration,
+      animationMode: "easeTo",
+    });
+  }, []);
+
+  const adaptDevJourneyToRidePlan = useCallback((plan) => {
+    if (!__DEV__ || !plan?.effectiveRoute?.canNavigate) return;
+    const playback = devPlaybackRef.current;
+    if (!playback?.source?.setTrack) return;
+
+    if (plan.startMode === "official" && plan.direction === "forward") {
+      if (!playback.modifiedRidePlan) return;
+      playback.source.setTrack(playback.originalFixes, playback.originalWindow);
+      playback.fixes = playback.originalFixes;
+      playback.bookmark = playback.originalBookmark;
+      playback.isFullJourney = playback.originalIsFullJourney;
+      playback.rideSelection = null;
+      playback.modifiedRidePlan = false;
+      setDevPlaybackState(initialJourneyPlaybackState({
+        resolved: playback.resolved,
+        bookmark: playback.bookmark,
+        mode: playback.mode,
+      }));
+      setDevCameraDiagnostics((current) => ({
+        ...(current || {}),
+        bookmark: playback.bookmark?.id || "",
+        expectedStage: playback.bookmark?.expectedStage || "",
+        journeyTime: playback.originalFixes[0]?.timestamp ?? null,
+      }));
+      return;
+    }
+
+    // A nearest/custom point that is already reached removes the approach leg.
+    // Derive movement along the selected effective route so CAM does not keep
+    // replaying the now-invalid official-start connector.
+    if (plan.approachTier !== "at") return;
+    const isCameraPlayback = playback.mode === "cam";
+    const derivedFixes = deriveRidePlanJourneyFixes(plan, {
+      mode: playback.mode,
+      startTimestamp: playback.originalFixes[0]?.timestamp ?? 0,
+    });
+    if (derivedFixes.length < 2) return;
+
+    const originalBookmark = playback.originalBookmark;
+    const preStart = originalBookmark?.phase === "pre-start";
+    const branchLabel = plan.startMode === "nearest"
+      ? "Nearest start"
+      : plan.direction === "reverse"
+        ? "Reverse start"
+        : "Selected start";
+    const derivedBookmark = isCameraPlayback
+      ? {
+          id: `modified-${plan.startMode}`,
+          label: preStart
+            ? `${branchLabel} · inspect intro`
+            : `${branchLabel} · main-route start`,
+          phase: preStart ? "pre-start" : "post-start",
+          startAction: preStart ? "hold" : "require-confirm",
+          targetTimestamp: preStart
+            ? derivedFixes[0].timestamp
+            : derivedFixes.at(-1).timestamp,
+          preRollMs: 0,
+          holdMs: 0,
+          expectedStage: preStart ? "intro-overhead" : "ride",
+        }
+      : null;
+    const derivedWindow = {
+      warmupEndIndex: -1,
+      startIndex: 0,
+      endIndex: derivedFixes.length - 1,
+    };
+
+    playback.fixes = derivedFixes;
+    playback.bookmark = derivedBookmark;
+    playback.isFullJourney = !isCameraPlayback;
+    playback.rideSelection = {
+      direction: plan.direction,
+      startMode: plan.startMode,
+      startProgressMeters: plan.startProgressMeters,
+      selectedPoint: plan.selectedPoint,
+    };
+    playback.modifiedRidePlan = true;
+    playback.source.setTrack(derivedFixes, derivedWindow);
+    setDevPlaybackState(initialJourneyPlaybackState({
+      resolved: { ...playback.resolved, fixes: derivedFixes },
+      bookmark: derivedBookmark,
+      mode: playback.mode,
+    }));
+    setDevCameraDiagnostics((current) => ({
+      ...(current || {}),
+      bookmark: derivedBookmark?.id || "modified-start",
+      expectedStage: derivedBookmark?.expectedStage || "ride",
+      journeyTime: derivedFixes[0]?.timestamp ?? null,
+    }));
+  }, []);
 
   const confirmRidePlan = useCallback(
-    (plan, options = {}) => {
+    (plan, { startSession = true } = {}) => {
       if (!plan?.effectiveRoute?.canNavigate) return;
-      const willStartCycleWays =
-        plan.approachTier !== "far" && plan.approachTier !== "unknown";
+      const prepared =
+        preparedRouteJunctions.routeId === plan.effectiveRoute.id &&
+        preparedRouteJunctions.status === "ready" &&
+        Array.isArray(preparedRouteJunctions.junctions)
+          ? preparedRouteJunctions.junctions
+          : null;
+      const confirmedPlan =
+        Array.isArray(plan.effectiveRoute.junctions) || prepared === null
+          ? plan
+          : {
+              ...plan,
+              effectiveRoute: { ...plan.effectiveRoute, junctions: prepared },
+            };
       const completeConfirmation = () => {
-        setConfirmedRidePlan(plan);
-        trackNavigationEvent(
-          options.fastStart ? "ride_setup_fast_started" : "ride_setup_confirmed",
-          {
-            direction: plan.direction,
-            startMode: plan.startMode,
-            approachTier: plan.approachTier,
-            voiceGuidance: voiceGuidanceEnabled,
-            lockScreenGuidance: lockScreenGuidanceEnabled,
-          },
-        );
-        setRideSetupVisible(false);
-        if (plan.approachTier === "far" || plan.approachTier === "unknown") {
-          setPendingExternalPlan(plan);
-          setDestSheetVisible(true);
-          return;
+        const confirmedRouteId = confirmedPlan.effectiveRoute.id;
+        setConfirmedRidePlan(confirmedPlan);
+        if (__DEV__ && devRideIntroRoute) {
+          setDevScenarioRoute(null);
+          setDevRideIntroRoute(null);
+        }
+        trackNavigationEvent("ride_setup_confirmed", {
+          direction: confirmedPlan.direction,
+          startMode: confirmedPlan.startMode,
+          distanceBucket: confirmDistanceBucket(
+            confirmedPlan.distanceToStartMeters,
+          ),
+          voiceGuidance: voiceGuidanceEnabled,
+          lockScreenGuidance: lockScreenGuidanceEnabled,
+          junctionCoverage: Array.isArray(
+            confirmedPlan.effectiveRoute.junctions,
+          )
+            ? "complete"
+            : "fallback",
+        });
+        setRideIntroVisible(false);
+        setRideSettingsVisible(false);
+        if (__DEV__ && devPlaybackRef.current) {
+          setDevPlaybackState((current) => current
+            ? {
+                ...current,
+                lifecycle: "starting-session",
+                waitingForStart: false,
+              }
+            : current);
         }
         void clearPendingRideIntent();
-        setPendingNavigationRouteId(plan.effectiveRoute.id);
+        if (startSession) setPendingNavigationRouteId(confirmedRouteId);
       };
 
       const confirmWithCurrentPermission = async () => {
-        let hasAlwaysPermission = lockScreenGuidanceHasAlwaysPermission;
-        if (lockScreenGuidanceEnabled && !hasAlwaysPermission) {
-          try {
-            const status = await getNavigationPermissionStatus();
-            hasAlwaysPermission = status?.canUseBackground === true;
-            setLockScreenGuidanceHasAlwaysPermission(hasAlwaysPermission);
-            const foregroundGranted = status?.foreground?.status === "granted";
-            const backgroundStatus = status?.background?.status;
-            const backgroundCanAskAgain = status?.background?.canAskAgain;
-            setLockScreenGuidanceNeedsSettings(
-              Boolean(
-                foregroundGranted &&
-                  !hasAlwaysPermission &&
-                  (backgroundStatus === "denied" || backgroundCanAskAgain === false),
-              ),
-            );
-          } catch {
-            hasAlwaysPermission = false;
-          }
-        }
-
-        if (
-          willStartCycleWays &&
-          lockScreenGuidanceEnabled &&
-          !hasAlwaysPermission &&
-          !lockScreenPermissionExplainerShownRef.current
-        ) {
+        if (startSession && rideSetupLocationStatus === "denied") {
           Alert.alert(
-            "הכוונה כשהמסך נעול",
-            "CycleWays יבקש הרשאת מיקום תמיד כדי להמשיך לעקוב אחרי הרכיבה ולהשמיע הנחיות כשהמסך נעול.",
+            "צריך הרשאת מיקום",
+            "כדי להתחיל לעקוב בדרך למסלול צריך לאפשר מיקום לאפליקציה.",
             [
               { text: "ביטול", style: "cancel" },
-              {
-                text: "המשך",
-                onPress: () => {
-                  lockScreenPermissionExplainerShownRef.current = true;
-                  completeConfirmation();
-                },
-              },
+              { text: "נסה שוב", onPress: () => void refreshRideSetupLocation() },
             ],
           );
           return;
         }
-
         completeConfirmation();
       };
 
@@ -1055,47 +1471,86 @@ export default function BuildScreen({ navigation, route }) {
     },
     [
       lockScreenGuidanceEnabled,
-      lockScreenGuidanceHasAlwaysPermission,
+      devRideIntroRoute,
+      preparedRouteJunctions,
+      refreshRideSetupLocation,
+      rideSetupLocationStatus,
       voiceGuidanceEnabled,
     ],
   );
 
-  const handleRideSetupConfirm = useCallback(() => {
+  const handleStartNavigation = useCallback(() => {
+    openRideIntro();
+  }, [openRideIntro]);
+
+  const openExternalHandoff = useCallback((plan, origin = "intro") => {
+    if (!plan) return;
+    setPendingExternalPlan({ plan, origin });
+    if (origin === "intro") setRideIntroVisible(false);
+    setDestSheetVisible(true);
+  }, []);
+
+  const handleIntroConfirm = useCallback(() => {
     confirmRidePlan(ridePlan);
   }, [confirmRidePlan, ridePlan]);
 
-  const handleStartNavigation = useCallback(async () => {
-    const selection = DEFAULT_RIDE_SETUP_SELECTION;
-    const requestId = setupRequestRef.current + 1;
-    setupRequestRef.current = requestId;
-    setRideSetupSelection(selection);
-    setPendingExternalPlan(null);
-    setRideSetupLocationStatus("loading");
-    const result = await getRideSetupLocation();
-    if (setupRequestRef.current !== requestId) return;
-    const now = Date.now();
-    const fix = result.fix || null;
-    const plan = createRidePlan(sourceNavigationRoute, selection, fix, now);
-    setRideSetupNow(now);
-    setRideSetupFix(fix);
-    setRideSetupLocationStatus(result.status);
-    if (canFastStartRidePlan(plan, selection)) {
-      confirmRidePlan(plan, { fastStart: true });
+  const handleIntroOpenSettings = useCallback(() => {
+    rideSettingsOriginRef.current = "intro";
+    setRideIntroVisible(false);
+    setRideSettingsVisible(true);
+    trackNavigationEvent("ride_settings_opened", { origin: "intro" });
+  }, []);
+
+  const handleIntroClose = useCallback(() => {
+    setRideIntroVisible(false);
+    if (__DEV__) {
+      if (devPlaybackRef.current) clearDevJourneyState();
+      else {
+        setDevRideIntroRoute(null);
+        setDevScenarioRoute(null);
+        setPendingDevRideIntro(null);
+        devInnerSourceRef.current = null;
+        setDevCameraDiagnostics(null);
+      }
+    }
+    resetMapToOverhead();
+    trackNavigationEvent("ride_setup_cancelled");
+    void clearPendingRideIntent();
+  }, [clearDevJourneyState, resetMapToOverhead]);
+
+  const handleRideSettingsConfirm = useCallback(() => {
+    setRideSettingsVisible(false);
+    if (rideSettingsOriginRef.current === "approach") {
+      confirmRidePlan(ridePlan);
       return;
     }
-    setRideSetupVisible(true);
-    trackNavigationEvent("ride_setup_opened", {
-      restored: false,
-      fastStartEligible: false,
-    });
-  }, [confirmRidePlan, sourceNavigationRoute]);
+    adaptDevJourneyToRidePlan(ridePlan);
+    setRideIntroVisible(true);
+  }, [adaptDevJourneyToRidePlan, confirmRidePlan, ridePlan]);
+
+  const handleRideSettingsClose = useCallback(() => {
+    setRideSettingsVisible(false);
+    if (rideSettingsOriginRef.current === "approach") {
+      resetMapToOverhead();
+      return;
+    }
+    setRideIntroVisible(true);
+  }, [resetMapToOverhead]);
+
+  const handleStopNavigation = useCallback(() => {
+    nav.stop();
+    resetMapToOverhead();
+  }, [nav, resetMapToOverhead]);
 
   const handleChangeRideSettings = useCallback(() => {
     const reopen = () => {
       nav.stop();
       setConfirmedRidePlan(null);
       setPendingNavigationRouteId(null);
-      openRideSetup({ preserveSelection: true });
+      rideSettingsOriginRef.current = "approach";
+      setRideSettingsVisible(true);
+      trackNavigationEvent("ride_settings_opened", { origin: "approach" });
+      void refreshRideSetupLocation();
     };
     if (nav.state?.progress?.hasAcquiredRoute) {
       Alert.alert(
@@ -1109,7 +1564,11 @@ export default function BuildScreen({ navigation, route }) {
       return;
     }
     reopen();
-  }, [nav.state?.progress?.hasAcquiredRoute, nav.stop, openRideSetup]);
+  }, [
+    nav.state?.progress?.hasAcquiredRoute,
+    nav.stop,
+    refreshRideSetupLocation,
+  ]);
 
   useEffect(() => {
     if (!pendingNavigationRouteId) return;
@@ -1125,33 +1584,210 @@ export default function BuildScreen({ navigation, route }) {
   useEffect(() => {
     isNavigatingRef.current = isNavigating;
   }, [isNavigating]);
+  const introFlowActiveRef = useRef(false);
+  introFlowActiveRef.current =
+    rideIntroVisible || rideSettingsVisible || pickOnMapMode;
+
+  const armDevJourneyIntro = useCallback((playback) => {
+    if (!__DEV__ || !playback?.resolved || !playback?.source) return;
+    devJourneyOwnsLocationRef.current = true;
+    const { resolved, bookmark, mode, source } = playback;
+    source.restart();
+    devInnerSourceRef.current = source;
+    devScenarioConnectorRef.current = {
+      active: true,
+      name: resolved.name,
+      router: connectorRouterForScenario(resolved),
+    };
+    setConfirmedRidePlan(null);
+    setPendingNavigationRouteId(null);
+    setPendingExternalPlan(null);
+    setRideIntroVisible(false);
+    setRideSettingsVisible(false);
+    setPickOnMapMode(false);
+    setRideSetupSelection(
+      playback.rideSelection || DEFAULT_RIDE_SETUP_SELECTION,
+    );
+    setDevScenarioRoute(resolved.navigationRoute);
+    setDevRideIntroRoute(resolved.navigationRoute);
+    setPendingDevRideIntro({
+      routeId: resolved.navigationRoute.id,
+      fix: resolved.fixes[0] || null,
+    });
+    setDevPlaybackState(initialJourneyPlaybackState({
+      resolved: { ...resolved, fixes: playback.fixes || resolved.fixes },
+      bookmark,
+      mode,
+    }));
+    setDevCameraDiagnostics({
+      stage: "intro-loading",
+      mode: "overview",
+      approachTier: "-",
+      cameraIntent: "intro",
+      journey: resolved.name,
+      bookmark: bookmark?.id || "",
+      expectedStage: bookmark?.expectedStage || "",
+      journeyTime: (playback.fixes || resolved.fixes)[0]?.timestamp ?? null,
+    });
+  }, []);
 
   const handleDevSimulate = useCallback(() => {
     if (!__DEV__) return;
+    if (devPlaybackRef.current) clearDevJourneyState();
+    setRideIntroVisible(false);
+    setDevPickerMode("sim");
+    setDevCameraDiagnostics(null);
+    setDevRideIntroRoute(null);
+    setPendingDevRideIntro(null);
     setDevPickerVisible(true);
-  }, []);
+  }, [clearDevJourneyState]);
+
+  const handleDevCameraStoryboard = useCallback(() => {
+    if (!__DEV__) return;
+    if (devPlaybackRef.current) clearDevJourneyState();
+    setRideIntroVisible(false);
+    setDevPickerMode("cam");
+    setDevCameraDiagnostics(null);
+    setDevPickerVisible(true);
+  }, [clearDevJourneyState]);
 
   // Resolve the picked scenario through the same resolver the headless suite
-  // uses (identical fixes for the same seed), install the simulated source on
-  // the dev proxy, and start. Scenarios that carry their own route go through
-  // the pendingNavigationRouteId effect so nav.start() runs only after the
-  // session has re-bound to the scenario route.
+  // uses (identical fixes for the same seed) and install its simulated source.
+  // Shared journeys arm Ride Intro and wait for its real Start action. Legacy
+  // session-only scenarios still use pendingNavigationRouteId so nav.start()
+  // runs only after the session has re-bound to the scenario route.
   const handleDevScenarioSelect = useCallback(
-    (scenario) => {
+    async (scenario, bookmark = null) => {
       if (!__DEV__) return;
       let resolved;
       try {
+        let currentNavigationRoute = navigationRoute;
+        if (
+          scenario?.route === "current" &&
+          currentNavigationRoute?.canNavigate === true &&
+          !Array.isArray(currentNavigationRoute.junctions)
+        ) {
+          // current-route-generic bypasses Ride Intro/confirmRidePlan, which is
+          // where prepared junctions are normally attached. Resolve them here
+          // before snapshotting the route so the SIM cannot silently fall back
+          // to raw in-roundabout geometry cues.
+          const prepared =
+            preparedRouteJunctions.status === "ready" &&
+            Array.isArray(preparedRouteJunctions.junctions) &&
+            ridePlan?.effectiveRoute?.id === preparedRouteJunctions.routeId &&
+            ridePlan.effectiveRoute.geometry.length === currentNavigationRoute.geometry.length &&
+            ridePlan.effectiveRoute.geometry.every((point, index) =>
+              point.lat === currentNavigationRoute.geometry[index]?.lat &&
+              point.lng === currentNavigationRoute.geometry[index]?.lng,
+            )
+              ? preparedRouteJunctions.junctions
+              : await computeRouteJunctions(currentNavigationRoute.geometry);
+          if (!Array.isArray(prepared)) {
+            throw new Error("could not prepare junction and roundabout cues");
+          }
+          currentNavigationRoute = {
+            ...currentNavigationRoute,
+            junctions: prepared,
+          };
+        }
         resolved = resolveScenario(scenario, {
-          currentNavigationRoute: navigationRoute,
+          currentNavigationRoute,
         });
       } catch (error) {
         Alert.alert("Scenario error", String(error?.message || error));
         return;
       }
       setDevPickerVisible(false);
-      devInnerSourceRef.current = createSimulateRideSource(resolved.fixes, {
-        intervalMs: Math.max(60, Math.round(1000 / devSpeed)),
+      devJourneyOwnsLocationRef.current = true;
+      setDevRideIntroRoute(null);
+      setPendingDevRideIntro(null);
+      const playbackMode = bookmark ? "cam" : "sim";
+      if (journeyRequiresRideIntro(resolved) && !devRideSetupRestoreRef.current) {
+        devRideSetupRestoreRef.current = {
+          rideSetupFix,
+          rideSetupNow,
+          rideSetupLocationStatus,
+          locationState,
+        };
+      }
+      const window = bookmark
+        ? bookmarkPlaybackWindow(resolved.fixes, bookmark)
+        : { warmupEndIndex: -1, startIndex: 0, endIndex: resolved.fixes.length - 1 };
+      const playbackSource = createJourneyPlaybackSource(resolved.fixes, {
+        ...window,
+        speed: playbackMode === "cam" ? 1 : devSpeed,
+        onStateChange: (playback) => {
+          const uiNow = Date.now();
+          if (
+            playback.completed !== true &&
+            uiNow - devPlaybackUiAtRef.current < 200
+          ) return;
+          devPlaybackUiAtRef.current = uiNow;
+          const activePlayback = devPlaybackRef.current;
+          const activeFixes = activePlayback?.fixes || resolved.fixes;
+          const activeBookmark = activePlayback?.bookmark ?? bookmark;
+          const fixIndex = Math.max(0, Math.min(activeFixes.length - 1, playback.index - 1));
+          const timestamp = activeFixes[fixIndex]?.timestamp ?? null;
+          const lifecyclePatch = journeyPlaybackPatch(playback);
+          setDevPlaybackState((current) => ({
+            ...(current || initialJourneyPlaybackState({
+              resolved: { ...resolved, fixes: activeFixes },
+              bookmark: activeBookmark,
+              mode: playbackMode,
+            })),
+            ...lifecyclePatch,
+            timestamp,
+          }));
+          if (playbackMode === "cam") {
+            setDevCameraDiagnostics((current) => ({
+              ...(current || {}),
+              journey: resolved.name,
+              bookmark: activeBookmark?.id || "",
+              journeyTime: timestamp,
+            }));
+          }
+        },
       });
+      devPlaybackRef.current = {
+        source: playbackSource,
+        resolved,
+        fixes: resolved.fixes,
+        bookmark,
+        mode: playbackMode,
+        isFullJourney: !bookmark,
+        originalFixes: resolved.fixes,
+        originalBookmark: bookmark,
+        originalWindow: window,
+        originalIsFullJourney: !bookmark,
+        rideSelection: null,
+        modifiedRidePlan: false,
+      };
+      devInnerSourceRef.current = playbackSource;
+      devScenarioConnectorRef.current = {
+        active: true,
+        name: resolved.name,
+        router: connectorRouterForScenario(resolved),
+      };
+      setDevPlaybackState(initialJourneyPlaybackState({
+        resolved,
+        bookmark,
+        mode: playbackMode,
+      }));
+      if (bookmark || scenario.camera === true || scenario.group === "camera-journey") {
+        setDevCameraDiagnostics({
+          stage: "starting",
+          mode: "-",
+          approachTier: "-",
+          cameraIntent: "follow",
+          journey: resolved.name,
+          bookmark: bookmark?.id || "",
+          expectedStage: bookmark?.expectedStage || "",
+        });
+      }
+      if (journeyRequiresRideIntro(resolved)) {
+        armDevJourneyIntro(devPlaybackRef.current);
+        return;
+      }
       if (resolved.navigationRoute.id !== navigationRoute?.id) {
         setDevScenarioRoute(resolved.navigationRoute);
         setPendingNavigationRouteId(resolved.navigationRoute.id);
@@ -1159,8 +1795,67 @@ export default function BuildScreen({ navigation, route }) {
         void nav.start();
       }
     },
-    [devSpeed, nav, navigationRoute],
+    [
+      armDevJourneyIntro,
+      computeRouteJunctions,
+      devSpeed,
+      locationState,
+      nav,
+      navigationRoute,
+      preparedRouteJunctions,
+      ridePlan,
+      rideSetupFix,
+      rideSetupLocationStatus,
+      rideSetupNow,
+    ],
   );
+
+  const handleDevPlaybackPauseResume = useCallback(() => {
+    const source = devPlaybackRef.current?.source;
+    if (!source) return;
+    if (source.getState().paused) source.resume();
+    else source.pause();
+  }, []);
+
+  const handleDevPlaybackStep = useCallback(() => {
+    devPlaybackRef.current?.source?.step?.();
+  }, []);
+
+  const handleDevPlaybackReplay = useCallback(() => {
+    const playback = devPlaybackRef.current;
+    if (!playback) return;
+    pendingDevReplayRef.current = true;
+    nav.stop();
+    armDevJourneyIntro(playback);
+    setTimeout(() => {
+      pendingDevReplayRef.current = false;
+    }, 0);
+  }, [armDevJourneyIntro, nav]);
+
+  useEffect(() => {
+    if (!__DEV__ || !pendingDevRideIntro) return;
+    if (devRideIntroRoute?.id !== pendingDevRideIntro.routeId) return;
+    const fix = pendingDevRideIntro.fix;
+    if (fix && Number.isFinite(Number(fix.lat)) && Number.isFinite(Number(fix.lng))) {
+      setRideSetupFix({
+        ...fix,
+        lat: Number(fix.lat),
+        lng: Number(fix.lng),
+        timestamp: Number.isFinite(Number(fix.timestamp)) ? Number(fix.timestamp) : Date.now(),
+      });
+      setLocationState((current) => ({
+        ...current,
+        enabled: true,
+        point: { lat: Number(fix.lat), lng: Number(fix.lng) },
+        status: current.following ? "following" : "located",
+      }));
+    }
+    const journeyTimestamp = Number(fix?.timestamp);
+    setRideSetupNow(Number.isFinite(journeyTimestamp) ? journeyTimestamp : Date.now());
+    setRideSetupLocationStatus("ready");
+    setRideIntroVisible(true);
+    setPendingDevRideIntro(null);
+  }, [devRideIntroRoute?.id, pendingDevRideIntro]);
 
   const handleDevRecord = useCallback(() => {
     if (!__DEV__) return;
@@ -1198,11 +1893,35 @@ export default function BuildScreen({ navigation, route }) {
   // fixes the pre-existing leak where a SIM source survived into later rides.)
   useEffect(() => {
     if (!__DEV__) return;
+    if (pendingDevReplayRef.current) return;
     if (pendingNavigationRouteId) return;
+    if (pendingDevRideIntro || rideIntroVisible || rideSettingsVisible || pickOnMapMode) return;
     if (navStatus !== "ended" && navStatus !== "error") return;
-    if (devScenarioRoute) setDevScenarioRoute(null);
-    devInnerSourceRef.current = null;
-  }, [devScenarioRoute, navStatus, pendingNavigationRouteId]);
+    if (!devPlaybackRef.current && !devScenarioConnectorRef.current) return;
+    const scenarioConnector = devScenarioConnectorRef.current;
+    if (
+      navStatus === "ended" &&
+      devPlaybackRef.current?.isFullJourney &&
+      scenarioConnector?.router?.assertComplete
+    ) {
+      try {
+        scenarioConnector.router.assertComplete();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    clearDevJourneyState();
+  }, [
+    clearDevJourneyState,
+    devRideIntroRoute,
+    devScenarioRoute,
+    navStatus,
+    pendingDevRideIntro,
+    pendingNavigationRouteId,
+    pickOnMapMode,
+    rideIntroVisible,
+    rideSettingsVisible,
+  ]);
 
   // Derive build-panel presentation options (matches the web's typed-cased variant).
   const mapPresentationActive = !isNavigating;
@@ -1263,16 +1982,37 @@ export default function BuildScreen({ navigation, route }) {
     }),
     [networkPresentation],
   );
+  const navigationLineAuthority = useMemo(
+    () => navigationLinePresentationForState(nav.state ?? {}),
+    [
+      nav.state?.approach?.ownershipTier,
+      nav.state?.cameraTransition?.kind,
+      nav.state?.cameraTransition?.sourceTier,
+      nav.state?.offRoute,
+      nav.state?.status,
+    ],
+  );
   const routeLineStyles = useMemo(() => {
-    const variant = mapPresentationActive ? "dark" : "current";
-    const casingSpec = routeGeometryCasingStyleForPresentation(variant);
+    if (!mapPresentationActive) {
+      return {
+        casing: null,
+        core: navigationMainRouteLineStyle(
+          navigationLineAuthority.mainRouteProminence,
+        ),
+      };
+    }
+    const casingSpec = routeGeometryCasingStyleForPresentation("dark");
     const coreSpec =
-      routeGeometryLineStyleForPresentation(variant) || ROUTE_GEOMETRY_LINE_STYLE;
+      routeGeometryLineStyleForPresentation("dark") || ROUTE_GEOMETRY_LINE_STYLE;
     return {
       casing: casingSpec ? paintToRNStyle(casingSpec) : null,
       core: paintToRNStyle(coreSpec),
     };
-  }, [mapPresentationActive]);
+  }, [mapPresentationActive, navigationLineAuthority.mainRouteProminence]);
+  const approachSuggestionLineStyles = useMemo(
+    () => navigationConnectorLineStyles(navigationLineAuthority.connectorRole),
+    [navigationLineAuthority.connectorRole],
+  );
 
   const networkFeatures = useMemo(() => {
     if (state.status !== "ready") return EMPTY_FEATURE_COLLECTION;
@@ -1347,6 +2087,13 @@ export default function BuildScreen({ navigation, route }) {
           ? Math.round(durationMs / 250) * 250
           : null,
         distanceSource: navPresentation.approachDistanceSource,
+        approachOwnershipTier: navPresentation.approachOwnershipTier,
+        handoffProminence: navPresentation.handoffProminence,
+        classificationReasons:
+          nav.state?.approach?.classificationReasons || connectorResult.classificationReasons || [],
+        connectorDistanceMeters: Number.isFinite(Number(connectorResult.distanceMeters))
+          ? Math.round(Number(connectorResult.distanceMeters) / 50) * 50
+          : null,
       });
     }
     if (nav.state?.justAcquired && previous.status !== "navigating") {
@@ -1367,20 +2114,27 @@ export default function BuildScreen({ navigation, route }) {
     navPresentation.approachDistanceSource,
     navStatus,
   ]);
-  // The puck/camera always ride the main route now; the connector is only a
-  // static suggestion overlay, never a navigated phase.
+  // The main route remains the route-acquisition authority. During a confident
+  // app-owned approach, the connector can temporarily drive cues/camera as an
+  // approach leg, then clears when the main route is acquired.
   const navGeometry = navigationRoute?.geometry || [];
   const activeGeometryKey = "main";
 
-  // Approach overlays (while approaching / off-route): a thin direct line
-  // rider→target plus, in the near tier, a dashed road-preferring suggestion.
+  // Approach overlays (while approaching / off-route): a direct line when
+  // there is no trusted connector, or a classified connector leg for guided
+  // approach and rejoin states.
   const approach = nav.state?.approach ?? null;
+  const cameraTransition = nav.state?.cameraTransition ?? null;
   const latestFix = nav.state?.latestFix ?? null;
   const approachTargetPoint = approach?.target?.point ?? null;
   const showApproachLines =
-    navStatus === "approaching" || navStatus === "off-route";
+    navStatus === "approaching" ||
+    navStatus === "off-route" ||
+    cameraTransition?.kind === "join";
+  const showDirectApproachLine =
+    showApproachLines && navPresentation.showDirectApproachLine;
   const directLineGeometry = useMemo(() => {
-    if (!showApproachLines || !latestFix || !approachTargetPoint) {
+    if (!showDirectApproachLine || !latestFix || !approachTargetPoint) {
       return EMPTY_FEATURE_COLLECTION;
     }
     return {
@@ -1400,7 +2154,7 @@ export default function BuildScreen({ navigation, route }) {
       ],
     };
   }, [
-    showApproachLines,
+    showDirectApproachLine,
     latestFix?.lat,
     latestFix?.lng,
     approachTargetPoint?.lat,
@@ -1426,18 +2180,24 @@ export default function BuildScreen({ navigation, route }) {
         const shouldReopen = openedAt !== null && Date.now() - openedAt >= 1000;
         externalHandoffOpenedAtRef.current = null;
         if (!shouldReopen) return;
+        const origin = pendingExternalPlan?.origin || "intro";
+        if (origin === "approach") {
+          setPendingExternalPlan(null);
+          void refreshRideSetupLocation();
+          return;
+        }
         setConfirmedRidePlan(null);
-        openRideSetup({ preserveSelection: true });
+        openRideIntro({ preserveSelection: true });
       }
     });
     return () => subscription.remove();
-  }, [openRideSetup, pendingExternalPlan]);
+  }, [openRideIntro, pendingExternalPlan, refreshRideSetupLocation]);
 
   const handleOpenExternalApp = useCallback(
     async (app) => {
+      const handoffPlan = pendingExternalPlan?.plan ?? confirmedRidePlan;
       const target =
-        pendingExternalPlan?.selectedPoint ||
-        confirmedRidePlan?.selectedPoint ||
+        handoffPlan?.selectedPoint ||
         navPresentation.externalNavTarget;
       const url = buildAppUrl(app, target);
       if (!url) return;
@@ -1447,14 +2207,23 @@ export default function BuildScreen({ navigation, route }) {
           routeToken,
           slug: routeSlugParam || selectedCatalogSlug,
           name: routeNameParam || selectedCatalogEntry?.name || null,
-          direction: confirmedRidePlan?.direction || rideSetupSelection.direction,
-          startMode: confirmedRidePlan?.startMode || rideSetupSelection.startMode,
+          direction: handoffPlan?.direction || rideSetupSelection.direction,
+          startMode: handoffPlan?.startMode || rideSetupSelection.startMode,
+          startProgressMeters:
+            handoffPlan?.startProgressMeters ??
+            rideSetupSelection.startProgressMeters,
           selectedPoint: target,
         });
       }
       trackNavigationEvent("approach_external_handoff", {
         app: app?.id || "unknown",
-        approachTier: pendingExternalPlan?.approachTier || "near",
+        distanceBucket: confirmDistanceBucket(
+          handoffPlan?.distanceToStartMeters ??
+            confirmedRidePlan?.distanceToStartMeters,
+        ),
+        approachOwnershipTier: navPresentation.approachOwnershipTier,
+        handoffProminence: navPresentation.handoffProminence,
+        distanceSource: navPresentation.approachDistanceSource,
       });
       setDestSheetVisible(false);
       externalHandoffOpenedAtRef.current = Date.now();
@@ -1476,10 +2245,13 @@ export default function BuildScreen({ navigation, route }) {
       shareInfo.param,
     ],
   );
-  const suggestionGeometry = approach?.suggestionGeometry;
+  const suggestionGeometry =
+    approach?.suggestionGeometry || cameraTransition?.sourceGeometry;
   const showSuggestion =
     showApproachLines &&
-    navPresentation.tier === "near" &&
+    (cameraTransition?.kind === "join" ||
+      navPresentation.showApproachLeg ||
+      (navStatus === "off-route" && navPresentation.tier === "near")) &&
     Array.isArray(suggestionGeometry) &&
     suggestionGeometry.length >= 2;
   const suggestionFeature = useMemo(
@@ -1522,6 +2294,8 @@ export default function BuildScreen({ navigation, route }) {
   const arcRef = useRef(null);
   const navGeometryRef = useRef([]);
   const mapHeadingRef = useRef(0);
+  const mapZoomRef = useRef(null);
+  const mapPitchRef = useRef(null);
   const smoothedMetersRef = useRef(0);
   const smoothedBearingRef = useRef(0);
   const travelIndexRef = useRef(-1);
@@ -1538,23 +2312,25 @@ export default function BuildScreen({ navigation, route }) {
   const cameraGovernorRef = useRef(null);
   const cameraDirectorRef = useRef(null);
   const cameraBearingRef = useRef(0);
-  const cameraPitchRef = useRef(50);
+  const cameraPitchRef = useRef(NAV_FOLLOW_PITCH);
   const cameraZoomRef = useRef(16.5);
+  const cameraStageRef = useRef(null);
   const sessionStateRef = useRef(null);
   const cameraFitKeyRef = useRef(null);
   const cameraFitAtRef = useRef(0);
+  const cameraOverviewFrameRef = useRef(null);
+  const devCameraDiagnosticsAtRef = useRef(0);
   // Stable handle to userPanned() so the (deps-[]) camera-change handler can
   // disengage follow on a user gesture without re-subscribing every render.
   const navUserPannedRef = useRef(null);
+  const lastPanSignalRef = useRef(0);
   const mapPickHandlerRef = useRef(null);
   // Live device-compass heading (deg). Drives the heading-up camera and the
   // to-route arrow so the view is adaptive to the phone's facing direction even
   // when stationary (GPS course is unreliable below walking speed).
   const deviceHeadingRef = useRef(null);
   const [compassHeading, setCompassHeading] = useState(null);
-  // External navigation chooser + ride-setup "tap a point" mode.
-  const [destSheetVisible, setDestSheetVisible] = useState(false);
-  const [pickOnMapMode, setPickOnMapMode] = useState(false);
+  // Ride-setup "tap a point" mode.
   const pickOnMapModeRef = useRef(false);
   pickOnMapModeRef.current = pickOnMapMode;
   progressRef.current = navProgress;
@@ -1570,8 +2346,9 @@ export default function BuildScreen({ navigation, route }) {
       ...current,
       startMode: "custom",
       selectedPoint: point,
+      startProgressMeters: null,
     }));
-    setRideSetupVisible(true);
+    setRideSettingsVisible(true);
   };
 
   // Distances are local to the active geometry. Reset interpolation state when
@@ -1594,14 +2371,17 @@ export default function BuildScreen({ navigation, route }) {
     if (!isNavigating) {
       setRiderPuck(null);
       setNavTraveled(EMPTY_FEATURE_COLLECTION);
+      if (__DEV__) setDevCameraDiagnostics(null);
       travelIndexRef.current = -1;
       lastPushedPuckRef.current = null;
       puckAnchorRef.current = null;
       puckGlideRef.current = null;
       cameraGovernorRef.current = null;
       cameraDirectorRef.current = null;
+      cameraStageRef.current = null;
       cameraFitKeyRef.current = null;
       cameraFitAtRef.current = 0;
+      cameraOverviewFrameRef.current = null;
       return undefined;
     }
     puckAnchorRef.current = createPuckAnchor();
@@ -1610,8 +2390,10 @@ export default function BuildScreen({ navigation, route }) {
     cameraDirectorRef.current = createCameraDirector();
     cameraPitchRef.current = NAV_FOLLOW_PITCH;
     cameraZoomRef.current = NAV_FOLLOW_ZOOM;
+    cameraStageRef.current = null;
     cameraFitKeyRef.current = null;
     cameraFitAtRef.current = 0;
+    cameraOverviewFrameRef.current = null;
     const startProgress = progressRef.current;
     smoothedMetersRef.current = startProgress?.progressMeters ?? 0;
     smoothedBearingRef.current =
@@ -1720,18 +2502,119 @@ export default function BuildScreen({ navigation, route }) {
               Math.min(1, dtMs / BEARING_SMOOTH_MS),
             );
           }
+          // Stage-aware shot from the camera director. The shot is computed
+          // before heading selection because approach-owned stages decide
+          // whether the camera should use main-route or approach-leg bearings.
+          const shot =
+            cameraDirectorRef.current?.update(sessionStateRef.current ?? {}, ts) ??
+            {
+              stage: "ride",
+              viewportMode: "follow",
+              pitch: NAV_FOLLOW_PITCH,
+              pitchRange: { min: 45, max: 55 },
+              zoomPolicy: { minZoom: 15.6, maxZoom: 17 },
+              riderAnchorY: 0.72,
+            };
+          const stageChanged = cameraStageRef.current !== shot.stage;
+          cameraStageRef.current = shot.stage;
+          if (
+            shot.stage === "approach-too-far" &&
+            retainedIntroCameraStateRef.current
+          ) {
+            const retained = retainedIntroCameraStateRef.current;
+            cameraPitchRef.current = retained.pitch;
+            cameraZoomRef.current = retained.zoom;
+            cameraBearingRef.current = retained.heading;
+          }
+          const cameraEase = Math.min(1, dtMs / CAMERA_ROTATE_MS);
+          const lastNativeValidation = navigationCameraRef.current?.getState?.();
+          const validationBelongsToShot =
+            (lastNativeValidation?.owner === "follow" &&
+              lastNativeValidation?.key === shot.stage) ||
+            (lastNativeValidation?.owner === "overview" &&
+              typeof lastNativeValidation?.key === "string" &&
+              lastNativeValidation.key.startsWith(`${shot.fitKind}:`));
+          const requiredGeometryOutside =
+            validationBelongsToShot &&
+            Array.isArray(lastNativeValidation?.validation?.outside) &&
+            lastNativeValidation.validation.outside.some((id) => id !== "rider");
+          const targetPitch = requiredGeometryOutside
+            ? shot.pitchRange?.min ?? shot.pitch
+            : shot.pitch;
+          cameraPitchRef.current +=
+            (targetPitch - cameraPitchRef.current) * cameraEase;
+
+          let cameraCorridor = [];
+          if (shot.viewportMode === "follow") {
+            const stateNow = sessionStateRef.current || {};
+            const isApproachGeometry =
+              shot.geometryRole === "approach" || shot.geometryRole === "rejoin";
+            let corridorGeometry = isApproachGeometry
+              ? stateNow.approach?.approachLegGeometry || []
+              : geom;
+            // O1 fallback: before the connector arrives, frame the straight
+            // line to the rejoin target so the camera still points the way.
+            if (
+              shot.geometryRole === "rejoin" &&
+              corridorGeometry.length < 2 &&
+              validMapPoint(rawFixRef.current) &&
+              validMapPoint(stateNow.approach?.target?.point)
+            ) {
+              corridorGeometry = [rawFixRef.current, stateNow.approach.target.point];
+            }
+            const corridorProgress = isApproachGeometry
+              ? stateNow.approach?.approachProgress?.progressMeters || 0
+              : smoothedMetersRef.current;
+            const cueMeters = isApproachGeometry
+              ? stateNow.approach?.approachActiveCue?.cue?.distanceMeters
+              : stateNow.activeCue?.cue?.distanceMeters;
+            cameraCorridor = Number.isFinite(cueMeters) && shot.postManeuverMeters
+              ? cameraManeuverCorridor(
+                  corridorGeometry,
+                  corridorProgress,
+                  cueMeters,
+                  {
+                    behindMeters: shot.behindMeters,
+                    postManeuverMeters: shot.postManeuverMeters,
+                  },
+                )
+              : cameraCorridorForProgress(corridorGeometry, corridorProgress, {
+                  behindMeters: shot.behindMeters,
+                  lookaheadMeters: shot.lookaheadMeters,
+                });
+            if (shot.geometryRole === "join") {
+              const sourceGeometry = stateNow.cameraTransition?.sourceGeometry;
+              if (Array.isArray(sourceGeometry) && sourceGeometry.length >= 2) {
+                cameraCorridor = [...sourceGeometry.slice(-3), ...cameraCorridor];
+              }
+            }
+            if (cameraCorridor.length >= 2) {
+              const targetZoom = cameraTargetZoom({
+                geometry: cameraCorridor,
+                viewport: navigationViewportRef.current,
+                pitch: shot.pitch,
+                bearing: cameraBearingRef.current,
+                minZoom: shot.zoomPolicy?.minZoom,
+                maxZoom: shot.zoomPolicy?.maxZoom,
+              });
+              cameraZoomRef.current = nextAppliedZoom({
+                current: cameraZoomRef.current,
+                target: targetZoom,
+                dtMs,
+                force: stageChanged,
+              });
+            }
+          }
+
           // The puck arrow tracks the rider's direction in real time; the
-          // camera aims where cameraHeadingTarget says (route-up on route,
-          // toward the start while approaching, held still off-route), with
-          // the governor gating adoption and a slower ease. While off-route the
-          // compass is deliberately ignored by the camera so the map frame stays
-          // stable; the puck arrow still carries the live direction.
+          // camera is route-up when a route/approach leg is trusted, target-up
+          // for overview connector states, and held still off-route. Device
+          // compass remains a puck/panel input, not a map-frame steering input.
           const heading = smoothedBearingRef.current;
-          const deviceHeadingCanSteerCamera =
-            progress.offRoute !== true && Number.isFinite(deviceHeadingRef.current);
-          const cameraTarget = deviceHeadingCanSteerCamera
-            ? deviceHeadingRef.current
-            : cameraHeadingTarget(progress);
+          const cameraTarget = cameraHeadingTargetForState(
+            sessionStateRef.current ?? { progress },
+            shot,
+          );
           const governedHeading =
             cameraGovernorRef.current?.update(cameraTarget, ts) ??
             cameraBearingRef.current;
@@ -1740,6 +2623,58 @@ export default function BuildScreen({ navigation, route }) {
               cameraBearingRef.current,
               governedHeading,
               Math.min(1, dtMs / CAMERA_ROTATE_MS),
+            );
+          }
+          if (__DEV__ && ts - devCameraDiagnosticsAtRef.current >= 200) {
+            devCameraDiagnosticsAtRef.current = ts;
+            const nextDiagnostics = {
+              stage: shot.stage,
+              mode: shot.viewportMode,
+              geometryRole: shot.geometryRole,
+              pitch: Number.isFinite(shot.pitch)
+                ? Math.round(shot.pitch * 10) / 10
+                : null,
+              appliedPitch: Number.isFinite(cameraPitchRef.current)
+                ? Math.round(cameraPitchRef.current * 10) / 10
+                : null,
+              zoom: shot.viewportMode === "follow" && Number.isFinite(cameraZoomRef.current)
+                ? Math.round(cameraZoomRef.current * 10) / 10
+                : null,
+              appliedZoom: Number.isFinite(cameraZoomRef.current)
+                ? Math.round(cameraZoomRef.current * 10) / 10
+                : null,
+              fitKind: shot.fitKind || "",
+              focusKind: shot.focusKind || "",
+              headingTarget: Number.isFinite(cameraTarget)
+                ? Math.round(cameraTarget * 10) / 10
+                : null,
+              heading: Number.isFinite(cameraBearingRef.current)
+                ? Math.round(cameraBearingRef.current * 10) / 10
+                : null,
+              approachTier: sessionStateRef.current?.approach?.ownershipTier || "",
+              cameraIntent: cameraIntentRef.current,
+              riderAnchorY: shot.riderAnchorY,
+              viewport: `${Math.round(navigationViewportRef.current.top)}-${Math.round(navigationViewportRef.current.bottom)}`,
+            };
+            setDevCameraDiagnostics((current) =>
+              current &&
+              current.stage === nextDiagnostics.stage &&
+              current.mode === nextDiagnostics.mode &&
+              current.geometryRole === nextDiagnostics.geometryRole &&
+              current.pitch === nextDiagnostics.pitch &&
+              current.appliedPitch === nextDiagnostics.appliedPitch &&
+              current.zoom === nextDiagnostics.zoom &&
+              current.appliedZoom === nextDiagnostics.appliedZoom &&
+              current.fitKind === nextDiagnostics.fitKind &&
+              current.focusKind === nextDiagnostics.focusKind &&
+              current.headingTarget === nextDiagnostics.headingTarget &&
+              current.heading === nextDiagnostics.heading &&
+              current.approachTier === nextDiagnostics.approachTier &&
+              current.cameraIntent === nextDiagnostics.cameraIntent &&
+              current.riderAnchorY === nextDiagnostics.riderAnchorY &&
+              current.viewport === nextDiagnostics.viewport
+                ? current
+                : { ...(current || {}), ...nextDiagnostics },
             );
           }
           // MarkerView is screen-aligned, so rotate the arrow by the puck's
@@ -1771,36 +2706,34 @@ export default function BuildScreen({ navigation, route }) {
           // cameraIntent flips to "free" on a user gesture, re-engaged by the
           // recenter button). setCamera/fitBounds are off the React tree, so this
           // is intentionally NOT gated on the puck-change check.
-          // Stage-aware shot from the camera director. Fit shots use the same
-          // helper/padding convention as the rest of this file; follow shots
-          // ease pitch/zoom like heading changes.
-          const shot =
-            cameraDirectorRef.current?.update(sessionStateRef.current ?? {}, ts) ??
-            {
-              stage: "ride",
-              mode: "follow",
-              pitch: NAV_FOLLOW_PITCH,
-              zoom: NAV_FOLLOW_ZOOM,
-              centerBias: 0,
-            };
-          const cameraEase = Math.min(1, dtMs / CAMERA_ROTATE_MS);
-          cameraPitchRef.current += (shot.pitch - cameraPitchRef.current) * cameraEase;
-          if (Number.isFinite(shot.zoom)) {
-            cameraZoomRef.current += (shot.zoom - cameraZoomRef.current) * cameraEase;
+          // Every navigation shot goes through the camera adapter. Follow
+          // frames are app-clocked; overview fits temporarily transfer
+          // ownership to one native Mapbox animation.
+
+          if (cameraIntentRef.current === "free") {
+            navigationCameraRef.current?.setFree("user-gesture");
           }
 
-          if (shot.mode === "fit") {
+          if (shot.viewportMode === "overview") {
             const raw = rawFixRef.current;
             const suggestion = sessionStateRef.current?.approach?.suggestionGeometry;
             const target = sessionStateRef.current?.approach?.target;
-            const targetPoint = target?.point || progress.guidanceTargetPoint || null;
+            const routeEnd = Array.isArray(geom) && geom.length > 0
+              ? geom[geom.length - 1]
+              : null;
+            const targetPoint =
+              target?.point || progress.guidanceTargetPoint || routeEnd || null;
             const routeLookahead =
-              shot.fitKind === "approach" || shot.fitKind === "rejoin"
+              shot.fitKind === "approach" ||
+              shot.fitKind === "approach-start" ||
+              shot.fitKind === "approach-leg"
                 ? routeLookaheadPoint(arcNow, geom, target)
                 : null;
             const fitPoints = (
               shot.fitKind === "route"
                 ? geom
+                : shot.fitKind === "arrival-local"
+                  ? [validMapPoint(raw) ? raw : null, routeEnd]
                 : [
                     validMapPoint(raw) ? raw : null,
                     targetPoint,
@@ -1814,83 +2747,230 @@ export default function BuildScreen({ navigation, route }) {
                 : Number.isFinite(governedHeading)
                   ? governedHeading
                   : cameraBearingRef.current;
-            const fitPitch = Number.isFinite(shot.pitch) ? shot.pitch : null;
-            const fitKeyDecimals =
-              shot.fitKind === "rejoin"
-                ? REJOIN_CAMERA_FIT_KEY_DECIMALS
-                : DEFAULT_CAMERA_FIT_KEY_DECIMALS;
+            const overviewZoom = fitPoints.length >= 2
+              ? cameraTargetZoom({
+                  geometry: fitPoints,
+                  viewport: navigationViewportRef.current,
+                  pitch: shot.pitch,
+                  bearing: fitHeading,
+                  minZoom: shot.zoomPolicy?.minZoom ?? 8,
+                  maxZoom: shot.zoomPolicy?.maxZoom ?? 18,
+                })
+              : shot.zoomPolicy?.maxZoom;
+            const fitPitch = Number.isFinite(shot.pitch)
+              ? requiredGeometryOutside
+                ? shot.pitchRange?.min ?? shot.pitch
+                : shot.pitch
+              : null;
             const fitPointKey = fitPoints
-              .map((point) => cameraPointKey(point, fitKeyDecimals))
+              .map((point) => cameraPointKey(point))
               .join("|");
             const fitKey = [
               shot.fitKind,
               cameraKeyNumber(fitHeading),
               cameraKeyNumber(fitPitch),
               fitPointKey,
+              cameraKeyNumber(navigationViewportRef.current.top),
+              cameraKeyNumber(navigationViewportRef.current.bottom),
             ].join(":");
+            const viewportKey = [
+              navigationViewportRef.current.width,
+              navigationViewportRef.current.height,
+              Math.round(navigationViewportRef.current.top),
+              Math.round(navigationViewportRef.current.bottom),
+            ].join("x");
+            const stableGeometry =
+              shot.fitKind === "route"
+                ? geom
+                : Array.isArray(suggestion) && suggestion.length >= 2
+                  ? suggestion
+                  : fitPoints.filter((point) =>
+                      !raw || point.lat !== raw.lat || point.lng !== raw.lng,
+                    );
+            const overviewFrame = {
+              geometryKey: `${shot.stage}:${cameraGeometryKey(stableGeometry, 5)}`,
+              viewportKey,
+              rider: validMapPoint(raw) ? raw : null,
+            };
+            const reframe = shouldReframeOverview(
+              cameraOverviewFrameRef.current,
+              overviewFrame,
+              {
+                minMoveMeters: shot.fitKind === "approach-leg" ? 40 : 70,
+              },
+            );
             if (
+              shot.holdFrame !== true &&
               cameraIntentRef.current === "follow" &&
               navStatusRef.current !== "paused" &&
               fitPoints.length >= 1 &&
-              cameraFitKeyRef.current !== fitKey
+              cameraFitKeyRef.current !== fitKey &&
+              (reframe.reframe || requiredGeometryOutside)
             ) {
-              const minFitIntervalMs =
-                shot.fitKind === "rejoin" ? REJOIN_CAMERA_FIT_MIN_INTERVAL_MS : 0;
-              const canFitNow =
-                cameraFitKeyRef.current === null ||
-                minFitIntervalMs === 0 ||
-                ts - cameraFitAtRef.current >= minFitIntervalMs;
-              if (canFitNow) {
+              const rawPoint = validMapPoint(raw) ? raw : null;
+              const applied = navigationCameraRef.current?.applyOverview(
+                {
+                  key: fitKey,
+                  points: fitPoints,
+                  requiredPoints: fitPoints.map((point, index) => ({
+                    ...point,
+                    id:
+                      rawPoint &&
+                      point.lat === rawPoint.lat &&
+                      point.lng === rawPoint.lng
+                        ? "rider"
+                        : `required-${index}`,
+                  })),
+                  riderId: rawPoint ? "rider" : null,
+                  riderAnchorY: shot.riderAnchorY,
+                  heading: fitHeading,
+                  pitch: fitPitch,
+                  zoom: overviewZoom,
+                  animationDuration: shot.transition?.durationMs,
+                },
+                navigationViewportRef.current,
+              );
+              // Only mark the fit as done when the adapter actually applied
+              // it; a skip (e.g. locked screen) retries on a later tick.
+              if (applied) {
                 cameraFitKeyRef.current = fitKey;
                 cameraFitAtRef.current = ts;
-                fitCameraToPoints(
-                  cameraRef.current,
-                  fitPoints,
-                  shot.fitKind === "route" ? 84 : 150,
-                  { heading: fitHeading, pitch: fitPitch },
-                );
+                cameraOverviewFrameRef.current = overviewFrame;
               }
             }
-            rafRef.current = requestAnimationFrame(tick);
+            scheduleTick();
             return;
           }
           cameraFitKeyRef.current = null;
           cameraFitAtRef.current = 0;
+          cameraOverviewFrameRef.current = null;
 
-          // Focus point per stage; center = lerp(rider, focus, centerBias).
+          // Guided approach cues resolve against the temporary connector leg;
+          // main-route cues continue to resolve against the primary route arc.
           let focus = null;
-          if (shot.focusKind === "cue") {
+          if (shot.focusKind === "approach-cue") {
+            const approachCueMeters =
+              sessionStateRef.current?.approach?.approachActiveCue?.cue?.distanceMeters;
+            const approachGeom =
+              sessionStateRef.current?.approach?.approachLegGeometry || [];
+            if (
+              Number.isFinite(approachCueMeters) &&
+              Array.isArray(approachGeom) &&
+              approachGeom.length >= 2
+            ) {
+              focus = pointAndBearingAtDistance(
+                precomputeArcLength(approachGeom),
+                approachGeom,
+                approachCueMeters,
+              ).point;
+            }
+          } else if (shot.focusKind === "route-start") {
+            const focusMeters = Number(progress.progressMeters ?? 0) + 150;
+            if (arcNow && geom.length >= 2) {
+              focus = pointAndBearingAtDistance(arcNow, geom, focusMeters).point;
+            }
+          } else if (shot.focusKind === "cue") {
             const cueMeters = sessionStateRef.current?.activeCue?.cue?.distanceMeters;
             if (Number.isFinite(cueMeters) && arcNow && geom.length >= 2) {
               focus = pointAndBearingAtDistance(arcNow, geom, cueMeters).point;
             }
           }
-          let centerLng = lng;
-          let centerLat = lat;
-          if (focus && shot.centerBias > 0) {
-            centerLng = lng + (focus.lng - lng) * shot.centerBias;
-            centerLat = lat + (focus.lat - lat) * shot.centerBias;
-          }
           if (
+            shot.holdFrame !== true &&
             cameraIntentRef.current === "follow" &&
             navStatusRef.current !== "paused"
           ) {
-            cameraRef.current?.setCamera?.({
-              centerCoordinate: [centerLng, centerLat],
-              heading: cameraBearingRef.current,
-              pitch: cameraPitchRef.current,
-              zoomLevel: cameraZoomRef.current,
-              animationDuration: 0,
-            });
+            navigationCameraRef.current?.applyFollow(
+              {
+                key: shot.stage,
+                center: { lng, lat },
+                heading: cameraBearingRef.current,
+                pitch: cameraPitchRef.current,
+                zoom: cameraZoomRef.current,
+                riderAnchorY: shot.riderAnchorY,
+                focus,
+                corridor: cameraCorridor,
+                requiredPoints: [
+                  { id: "rider", lng, lat },
+                  ...cameraCorridor.map((point, index) => ({
+                    ...point,
+                    id: `corridor-${index}`,
+                  })),
+                ],
+                riderId: "rider",
+                validationKey: [
+                  shot.stage,
+                  Math.round(cameraPitchRef.current / 4),
+                  Math.round(cameraZoomRef.current * 5),
+                  Math.round(navigationViewportRef.current.top),
+                  Math.round(navigationViewportRef.current.bottom),
+                  cameraCorridor.length > 0
+                    ? cameraPointKey(cameraCorridor[0], 4)
+                    : "no-corridor-start",
+                  cameraCorridor.length > 1
+                    ? cameraPointKey(cameraCorridor.at(-1), 4)
+                    : "no-corridor-end",
+                ].join(":"),
+              },
+              navigationViewportRef.current,
+            );
+          } else if (cameraIntentRef.current === "free") {
+            navigationCameraRef.current?.setFree("user-gesture");
           }
         }
       }
-      rafRef.current = requestAnimationFrame(tick);
+      scheduleTick();
     };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
+    // Under a locked screen RN keeps firing rAF from a background NSTimer
+    // (RCTTiming has no display link there), so this loop burned ~100% CPU on
+    // invisible UI until iOS killed the app (build 5 cpu_resource_fatal).
+    // Pause it whenever the app leaves the foreground; voice/haptics/session
+    // logic are fix-driven and unaffected.
+    function scheduleTick() {
+      if (AppState.currentState === "active") {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    }
+    const appStateSubscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") return;
+      cancelAnimationFrame(rafRef.current);
+      // Progress moved while the loop slept; snap the tweened values so the
+      // puck and camera don't glide across everything ridden under lock.
+      const resumeProgress = progressRef.current;
+      smoothedMetersRef.current = resumeProgress?.progressMeters ?? smoothedMetersRef.current;
+      smoothedBearingRef.current =
+        resumeProgress?.bearingToNextDeg ??
+        resumeProgress?.smoothedCourseDeg ??
+        smoothedBearingRef.current;
+      cameraBearingRef.current = smoothedBearingRef.current;
+      puckGlideRef.current = null;
+      lastTs = 0;
+      scheduleTick();
+    });
+    scheduleTick();
+    return () => {
+      appStateSubscription.remove();
+      cancelAnimationFrame(rafRef.current);
+      navigationCameraRef.current?.reset("navigation-loop-stop");
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNavigating]);
+
+  const wasNavigatingRef = useRef(false);
+  useEffect(() => {
+    if (wasNavigatingRef.current && !isNavigating) {
+      if (!rideIntroVisible && !rideSettingsVisible && !pickOnMapMode) {
+        resetMapToOverhead();
+      }
+    }
+    wasNavigatingRef.current = isNavigating;
+  }, [
+    isNavigating,
+    pickOnMapMode,
+    resetMapToOverhead,
+    rideIntroVisible,
+    rideSettingsVisible,
+  ]);
 
   // Device-compass heading watch (active only while navigating). Updates a ref
   // (read by the RAF camera each frame) and a throttled state (the to-route
@@ -1924,22 +3004,86 @@ export default function BuildScreen({ navigation, route }) {
   const handleCameraChanged = useCallback((mapState) => {
     const heading = Number(mapState?.properties?.heading);
     if (Number.isFinite(heading)) mapHeadingRef.current = heading;
-    // A user pan/zoom while navigating disengages camera follow so the rider can
-    // look around / zoom out (the RAF stops driving the camera). Only fire on the
-    // follow→free transition; the recenter button re-engages.
-    if (
-      isNavigatingRef.current &&
-      mapState?.gestures?.isGestureActive &&
-      cameraIntentRef.current === "follow"
-    ) {
-      navUserPannedRef.current?.();
+    const zoom = Number(mapState?.properties?.zoom);
+    if (Number.isFinite(zoom)) mapZoomRef.current = zoom;
+    const pitch = Number(mapState?.properties?.pitch);
+    if (Number.isFinite(pitch)) mapPitchRef.current = pitch;
+    // Keep the session's idle clock aligned with the last active gesture. The
+    // first signal disengages follow; throttled signals while already free stop
+    // a long pan from auto-refollowing before the rider releases the map.
+    if (isNavigatingRef.current && mapState?.gestures?.isGestureActive) {
+      const now = Date.now();
+      if (
+        cameraIntentRef.current === "follow" ||
+        now - lastPanSignalRef.current >= 1000
+      ) {
+        lastPanSignalRef.current = now;
+        navUserPannedRef.current?.();
+      }
     }
   }, []);
 
-  // Recenter button: re-engage camera follow on the rider.
+  const applyTooFarCameraFrame = useCallback((animationDuration = 0) => {
+    const rider = nav.state?.latestFix;
+    const start =
+      nav.state?.approach?.target?.point || confirmedRidePlan?.selectedPoint;
+    if (!validMapPoint(rider) || !validMapPoint(start)) return false;
+    const bottomPadding = Math.max(
+      RIDE_INTRO_FIT_BOTTOM_PADDING,
+      Math.ceil(
+        mapViewportSize.height -
+          navigationOcclusion.bottomOverlayTop +
+          RIDE_INTRO_RIDER_CARD_GAP,
+      ),
+    );
+    const retained = introMarkerSlotCameraState(rider, start, {
+      bottomPadding,
+      heading: computeBearing(rider, start),
+      pitch: RIDE_INTRO_FIT_PITCH,
+      topInset: Math.max(screenInsets.top, navigationOcclusion.topOverlayBottom),
+    });
+    if (!retained) return false;
+    retainedIntroCameraStateRef.current = retained;
+    cameraPitchRef.current = retained.pitch;
+    cameraZoomRef.current = retained.zoom;
+    cameraBearingRef.current = retained.heading;
+    setCameraToMarkerSlotState(cameraRef.current, retained, animationDuration);
+    return true;
+  }, [
+    confirmedRidePlan?.selectedPoint,
+    mapViewportSize.height,
+    nav.state?.approach?.target?.point,
+    nav.state?.latestFix,
+    navigationOcclusion.bottomOverlayTop,
+    navigationOcclusion.topOverlayBottom,
+    screenInsets.top,
+  ]);
+
+  // A normal Start retains the Ride Intro shot. Restored sessions have no
+  // intro frame to retain, so establish the same marker-slot frame once.
+  useEffect(() => {
+    if (
+      !isNavigating ||
+      navStatus !== "approaching" ||
+      nav.state?.approach?.ownershipTier !== "too-far" ||
+      retainedIntroCameraStateRef.current
+    ) return;
+    applyTooFarCameraFrame(0);
+  }, [
+    applyTooFarCameraFrame,
+    isNavigating,
+    nav.state?.approach?.ownershipTier,
+    navStatus,
+  ]);
+
+  // Recenter re-engages camera ownership. Too-far rebuilds the same
+  // rider/start marker-slot shot; other stages resume their normal policy.
   const handleRecenter = useCallback(() => {
     nav.recenter();
-  }, [nav]);
+    if (nav.state?.approach?.ownershipTier === "too-far") {
+      applyTooFarCameraFrame(450);
+    }
+  }, [applyTooFarCameraFrame, nav]);
 
   // Any hand edit detaches the route from the catalog entry it was loaded from.
   const handleClearRoute = useCallback(() => {
@@ -1990,6 +3134,14 @@ export default function BuildScreen({ navigation, route }) {
             ? rideSetupSelectionParam.startMode
             : "official",
           selectedPoint: rideSetupSelectionParam.selectedPoint || null,
+          startProgressMeters:
+            rideSetupSelectionParam.startProgressMeters !== null &&
+            rideSetupSelectionParam.startProgressMeters !== undefined &&
+            rideSetupSelectionParam.startProgressMeters !== "" &&
+            Number.isFinite(Number(rideSetupSelectionParam.startProgressMeters)) &&
+            Number(rideSetupSelectionParam.startProgressMeters) >= 0
+              ? Number(rideSetupSelectionParam.startProgressMeters)
+              : null,
         });
       }
       if (openRideSetupParam) {
@@ -2017,15 +3169,51 @@ export default function BuildScreen({ navigation, route }) {
     routeState.status,
   ]);
 
+  useEffect(() => {
+    if (!resumeRideParam || resumeRideHandledRef.current) return;
+    if (!sourceNavigationRoute?.canNavigate) return;
+    const plan = createRidePlan(sourceNavigationRoute, resumeRideParam, null);
+    if (!plan?.effectiveRoute?.canNavigate) {
+      resumeRideHandledRef.current = true;
+      resumeFailureShownRef.current = true;
+      navigation.setParams({ resumeRide: undefined });
+      void clearActiveNavigationSession();
+      void stopNavigationBackgroundUpdates();
+      Alert.alert(
+        "לא הצלחנו להמשיך את הרכיבה",
+        "הרכיבה השמורה הסתיימה כי המסלול כבר אינו זמין.",
+      );
+      return;
+    }
+    resumeRideHandledRef.current = true;
+    confirmRidePlan(plan, { startSession: false });
+  }, [confirmRidePlan, navigation, resumeRideParam, sourceNavigationRoute]);
+
+  useEffect(() => {
+    if (!resumeRideHandledRef.current) return;
+    if (nav.restoreStatus === "restored") {
+      navigation.setParams({ resumeRide: undefined });
+      return;
+    }
+    if (nav.restoreStatus === "failed" && !resumeFailureShownRef.current) {
+      resumeFailureShownRef.current = true;
+      navigation.setParams({ resumeRide: undefined });
+      Alert.alert(
+        "לא הצלחנו להמשיך את הרכיבה",
+        "הרכיבה השמורה הסתיימה כדי למנוע התחלה מחדש ממיקום שגוי.",
+      );
+    }
+  }, [nav.restoreStatus, navigation]);
+
   // A featured-page Navigate action opens ride setup after its encoded route is
   // loaded. It never starts a continuous GPS navigation session implicitly.
   useEffect(() => {
     if (!pendingRideSetupToken || pendingRideSetupToken !== routeTokenParam) return;
     if (state.status !== "ready" || !sourceNavigationRoute?.canNavigate) return;
     setPendingRideSetupToken(null);
-    openRideSetup({ preserveSelection: Boolean(rideSetupSelectionParam) });
+    openRideIntro({ preserveSelection: Boolean(rideSetupSelectionParam) });
   }, [
-    openRideSetup,
+    openRideIntro,
     pendingRideSetupToken,
     routeTokenParam,
     rideSetupSelectionParam,
@@ -2051,6 +3239,117 @@ export default function BuildScreen({ navigation, route }) {
       mapPresentationActive ? PLAYBACK_FIT_BOTTOM_PADDING : 84,
     );
   }, [mapPresentationActive, routeState.geometry, routeState.points, stopFollowingLocation]);
+
+  useEffect(() => {
+    if (!rideIntroVisible) return;
+    const start = ridePlan?.selectedPoint;
+    if (!start) return;
+    const fixPoint =
+      rideSetupFix &&
+      Number.isFinite(Number(rideSetupFix.lat)) &&
+      Number.isFinite(Number(rideSetupFix.lng))
+        ? { lat: Number(rideSetupFix.lat), lng: Number(rideSetupFix.lng) }
+        : null;
+    const shouldPitchToStart =
+      fixPoint &&
+      Number.isFinite(Number(ridePlan?.distanceToStartMeters)) &&
+      Number(ridePlan.distanceToStartMeters) > RIDE_INTRO_PITCH_MIN_DISTANCE_M;
+    const introFitOptions = shouldPitchToStart
+      ? {
+          heading: computeBearing(fixPoint, start),
+          pitch: RIDE_INTRO_FIT_PITCH,
+        }
+      : {};
+    const introBottomPadding =
+      shouldPitchToStart && rideIntroCardHeight > 0
+        ? Math.max(
+            rideIntroFitBottomPadding,
+            Math.ceil(rideIntroCardHeight + RIDE_INTRO_RIDER_CARD_GAP),
+          )
+        : rideIntroFitBottomPadding;
+    const introSlotState = shouldPitchToStart
+      ? introMarkerSlotCameraState(fixPoint, start, {
+          bottomPadding: introBottomPadding,
+          heading: introFitOptions.heading,
+          pitch: RIDE_INTRO_FIT_PITCH,
+          topInset: screenInsets.top,
+        })
+      : null;
+    retainedIntroCameraStateRef.current = introSlotState;
+    if (__DEV__) {
+      const introHeading = Number.isFinite(introSlotState?.heading)
+        ? introSlotState.heading
+        : null;
+      const nextDiagnostics = {
+        stage: shouldPitchToStart ? "intro-start-facing" : "intro-overhead",
+        mode: "fit",
+        pitch: Number.isFinite(introSlotState?.pitch)
+          ? introSlotState.pitch
+          : Number.isFinite(introFitOptions.pitch)
+            ? introFitOptions.pitch
+            : 0,
+        zoom: Number.isFinite(introSlotState?.zoom) ? introSlotState.zoom : null,
+        fitKind: shouldPitchToStart ? "approach-start" : "route",
+        focusKind: "",
+        headingTarget: introHeading,
+        heading: introHeading,
+        approachTier: ridePlan?.approachTier || "",
+        cameraIntent: "intro",
+      };
+      setDevCameraDiagnostics((current) =>
+        !current ||
+        current.stage !== nextDiagnostics.stage ||
+        current.mode !== nextDiagnostics.mode ||
+        current.pitch !== nextDiagnostics.pitch ||
+        current.zoom !== nextDiagnostics.zoom ||
+        current.fitKind !== nextDiagnostics.fitKind ||
+        current.focusKind !== nextDiagnostics.focusKind ||
+        current.headingTarget !== nextDiagnostics.headingTarget ||
+        current.heading !== nextDiagnostics.heading ||
+        current.approachTier !== nextDiagnostics.approachTier ||
+        current.cameraIntent !== nextDiagnostics.cameraIntent
+          ? { ...(current || {}), ...nextDiagnostics }
+          : current,
+      );
+    }
+    stopFollowingLocation();
+    if (shouldPitchToStart) {
+      setIntroCameraToMarkerSlots(cameraRef.current, fixPoint, start, {
+        bottomPadding: introBottomPadding,
+        heading: introFitOptions.heading,
+        pitch: RIDE_INTRO_FIT_PITCH,
+        topInset: screenInsets.top,
+      });
+      return;
+    }
+    const localRouteContext = cameraCorridorForProgress(
+      ridePlan?.effectiveRoute?.geometry,
+      0,
+      { behindMeters: 0, lookaheadMeters: 250 },
+    );
+    fitCameraToPoints(
+      cameraRef.current,
+      localRouteContext.length >= 2
+        ? [start, ...(fixPoint ? [fixPoint] : []), ...localRouteContext]
+        : fixPoint
+          ? [fixPoint, start]
+          : [start],
+      introBottomPadding,
+      introFitOptions,
+    );
+  }, [
+    rideIntroVisible,
+    rideIntroCardHeight,
+    rideIntroFitBottomPadding,
+    ridePlan?.distanceToStartMeters,
+    ridePlan?.approachTier,
+    rideSetupFix?.lat,
+    rideSetupFix?.lng,
+    screenInsets.top,
+    ridePlan?.effectiveRoute?.geometry,
+    ridePlan?.selectedPoint,
+    stopFollowingLocation,
+  ]);
 
   useEffect(() => {
     if (!mapUi.routeFitRequest) return;
@@ -2129,7 +3428,7 @@ export default function BuildScreen({ navigation, route }) {
   const directRideSetupRequested = Boolean(routeTokenParam && openRideSetupParam);
   const directRideSetupPending = Boolean(
     directRideSetupRequested &&
-      !rideSetupVisible &&
+      !rideIntroVisible &&
       !isNavigating &&
       (routeRestoreStatus === "waiting" ||
         routeRestoreStatus === "loading" ||
@@ -2141,9 +3440,37 @@ export default function BuildScreen({ navigation, route }) {
         routeRestoreStatus === "loading" ||
         directRideSetupPending),
   );
+  const startMarkerPoint =
+    navStatus === "approaching"
+      ? confirmedRidePlan?.selectedPoint ?? null
+      : rideIntroVisible || rideSettingsVisible || pickOnMapMode
+        ? ridePlan?.selectedPoint ?? null
+        : null;
+  const setupRiderPoint =
+    !isNavigating &&
+    (rideIntroVisible || rideSettingsVisible || pickOnMapMode) &&
+    validMapPoint(rideSetupFix)
+      ? { lat: Number(rideSetupFix.lat), lng: Number(rideSetupFix.lng) }
+      : null;
+  const rawSetupRiderHeading = rideSetupFix?.heading;
+  const setupRiderHeading =
+    rawSetupRiderHeading === null || rawSetupRiderHeading === undefined
+      ? null
+      : Number(rawSetupRiderHeading);
+  const setupRiderRotation =
+    setupRiderPoint && Number.isFinite(setupRiderHeading)
+      ? ((setupRiderHeading - mapHeadingRef.current) % 360 + 360) % 360
+      : null;
+  const devJourneyOwnsLocation = Boolean(
+    __DEV__ && (devPlaybackState || devRideIntroRoute || pendingDevRideIntro),
+  );
 
   return (
-    <View style={styles.screen} {...routePointPanResponder.panHandlers}>
+    <View
+      style={styles.screen}
+      onLayout={handleMapViewportLayout}
+      {...routePointPanResponder.panHandlers}
+    >
       <MapView
         ref={mapViewRef}
         style={styles.fill}
@@ -2166,9 +3493,10 @@ export default function BuildScreen({ navigation, route }) {
           followZoomLevel={14.5}
         />
         {/* Raw GPS puck: hidden while navigating (the custom adaptive puck takes
-            over) but kept mounted so onUpdate keeps feeding the latest raw fix
-            used to place the puck while approaching / off-route. */}
-        {locationState.enabled || isNavigating ? (
+            over) but kept mounted so onUpdate feeds the latest raw fix while
+            approaching / off-route. CAM/SIM unmounts it because the journey's
+            deterministic source owns both the setup marker and navigation fix. */}
+        {(locationState.enabled || isNavigating) && !devJourneyOwnsLocation ? (
           <UserLocation
             visible={!isNavigating}
             onUpdate={handleUserLocationUpdate}
@@ -2187,14 +3515,43 @@ export default function BuildScreen({ navigation, route }) {
           ) : null}
           <LineLayer id="route-line" style={routeLineStyles.core} />
         </ShapeSource>
-        {(rideSetupVisible || pickOnMapMode) && ridePlan?.effectiveRoute ? (
+        {(rideIntroVisible || rideSettingsVisible || pickOnMapMode) && ridePlan?.effectiveRoute ? (
           <ShapeSource id="ride-setup-preview" shape={setupPreviewGeometry}>
-            <LineLayer id="ride-setup-preview-line" style={SETUP_PREVIEW_LINE_STYLE} />
+            <LineLayer
+              id="ride-setup-preview-casing"
+              style={SETUP_ROUTE_PREVIEW_STYLES.casing}
+            />
+            <LineLayer
+              id="ride-setup-preview-line"
+              style={SETUP_ROUTE_PREVIEW_STYLES.core}
+            />
           </ShapeSource>
         ) : null}
-        {(rideSetupVisible || pickOnMapMode) && ridePlan?.selectedPoint ? (
+        {rideIntroVisible && ridePlanNeedsDirectApproachPreview(ridePlan) ? (
+          <ShapeSource id="ride-setup-direct" shape={setupDirectGeometry}>
+            <LineLayer
+              id="ride-setup-direct-line"
+              style={APPROACH_DIRECT_LINE_STYLES.core}
+            />
+          </ShapeSource>
+        ) : null}
+        {rideIntroVisible &&
+        ridePlanNeedsConnectorPreview(ridePlan) &&
+        rideSetupConnector.status === "ready" ? (
+          <ShapeSource id="ride-setup-connector" shape={setupConnectorGeometry}>
+            <LineLayer
+              id="ride-setup-connector-casing"
+              style={SETUP_CONNECTOR_PREVIEW_STYLES.casing}
+            />
+            <LineLayer
+              id="ride-setup-connector-line"
+              style={SETUP_CONNECTOR_PREVIEW_STYLES.core}
+            />
+          </ShapeSource>
+        ) : null}
+        {startMarkerPoint ? (
           <MarkerView
-            coordinate={[ridePlan.selectedPoint.lng, ridePlan.selectedPoint.lat]}
+            coordinate={[startMarkerPoint.lng, startMarkerPoint.lat]}
             anchor={{ x: 0.5, y: 1 }}
             allowOverlap
           >
@@ -2203,29 +3560,58 @@ export default function BuildScreen({ navigation, route }) {
             </View>
           </MarkerView>
         ) : null}
-        {showApproachLines ? (
+        {setupRiderPoint ? (
+          <MarkerView
+            coordinate={[setupRiderPoint.lng, setupRiderPoint.lat]}
+            anchor={{ x: 0.5, y: 0.5 }}
+            allowOverlap
+            allowOverlapWithPuck
+          >
+            <View
+              pointerEvents="none"
+              style={[
+                styles.setupRiderPuck,
+                Number.isFinite(setupRiderRotation)
+                  ? { transform: [{ rotate: `${setupRiderRotation}deg` }] }
+                  : null,
+              ]}
+            >
+              {Number.isFinite(setupRiderRotation) ? (
+                <View style={styles.setupRiderArrow} />
+              ) : null}
+              <View style={styles.setupRiderDot} />
+            </View>
+          </MarkerView>
+        ) : null}
+        {showDirectApproachLine ? (
           <ShapeSource id="approach-direct" shape={directLineGeometry}>
             <LineLayer
               id="approach-direct-line"
-              style={APPROACH_DIRECT_LINE_STYLE}
+              style={APPROACH_DIRECT_LINE_STYLES.core}
             />
           </ShapeSource>
         ) : null}
         {showSuggestion ? (
           <ShapeSource id="approach-suggestion" shape={suggestionFeature}>
+            {approachSuggestionLineStyles.casing ? (
+              <LineLayer
+                id="approach-suggestion-casing"
+                style={approachSuggestionLineStyles.casing}
+              />
+            ) : null}
             <LineLayer
               id="approach-suggestion-line"
-              style={APPROACH_SUGGESTION_LINE_STYLE}
+              style={approachSuggestionLineStyles.core}
             />
           </ShapeSource>
         ) : null}
         {isNavigating && navChip?.kind === "segment" && riderPuck ? (
           <MarkerView
             coordinate={[riderPuck.lng, riderPuck.lat]}
-            anchor={{ x: 0.5, y: -0.9 }}
+            anchor={{ x: 0.5, y: 1 }}
             allowOverlap
           >
-            <View style={styles.navChip}>
+            <View style={[styles.navChip, styles.navChipAbovePuck]}>
               <Text style={styles.navChipText} numberOfLines={1}>
                 {navChip.text}
               </Text>
@@ -2417,7 +3803,7 @@ export default function BuildScreen({ navigation, route }) {
       />
       {/* Dev-only simulate + record controls. __DEV__ is false in production
           builds so this entire block is dead-code-eliminated by Metro. */}
-      {__DEV__ && !isNavigating ? (
+      {__DEV__ && !isNavigating && !rideIntroVisible && !rideSettingsVisible ? (
         <View pointerEvents="box-none" style={styles.devControls}>
           <Pressable
             accessibilityLabel="Dev: simulate ride"
@@ -2425,6 +3811,13 @@ export default function BuildScreen({ navigation, route }) {
             style={styles.devButton}
           >
             <Text style={styles.devButtonText}>SIM</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Dev: camera storyboard"
+            onPress={handleDevCameraStoryboard}
+            style={styles.devButton}
+          >
+            <Text style={styles.devButtonText}>CAM</Text>
           </Pressable>
           {navigationRoute?.geometry?.length >= 2 ? (
             <Pressable
@@ -2438,33 +3831,58 @@ export default function BuildScreen({ navigation, route }) {
         </View>
       ) : null}
       {__DEV__ ? (
+        <DevCameraOverlay diagnostics={devCameraDiagnostics} />
+      ) : null}
+      {__DEV__ ? (
+        <DevJourneyControls
+          playback={devPlaybackState}
+          onReplay={handleDevPlaybackReplay}
+          onPauseResume={handleDevPlaybackPauseResume}
+          onStep={handleDevPlaybackStep}
+        />
+      ) : null}
+      {__DEV__ ? (
         <DevScenarioPicker
           visible={devPickerVisible}
-          scenarios={devScenarios}
+          title={
+            devPickerMode === "cam"
+              ? "Dev: camera storyboard"
+              : "Dev: simulate scenario"
+          }
+          scenarios={devVisibleScenarios}
           speed={devSpeed}
           onSelectSpeed={setDevSpeed}
           onSelect={handleDevScenarioSelect}
           onClose={() => setDevPickerVisible(false)}
+          mode={devPickerMode}
         />
       ) : null}
       {isNavigating ? (
-        <>
+        navStatus === "approaching" ? (
+          <ApproachPanel
+            sessionState={navPanelState}
+            compassHeading={compassHeading}
+            onOpenExternal={() => openExternalHandoff(confirmedRidePlan, "approach")}
+            onOpenSettings={handleChangeRideSettings}
+            onStop={handleStopNavigation}
+            onRecenter={handleRecenter}
+            onCameraLayout={handleNavigationOverlayLayout}
+          />
+        ) : (
           <NavPanel
             sessionState={navPanelState}
             onRecenter={handleRecenter}
             onPauseResume={() =>
               navStatus === "paused" ? nav.resume() : nav.pause()
             }
-            onStop={nav.stop}
-            onOpenExternal={() => setDestSheetVisible(true)}
-            onChangeRideSettings={handleChangeRideSettings}
+            onStop={handleStopNavigation}
             compassHeading={compassHeading}
             voiceEnabled={nav.voiceEnabled}
             onToggleVoice={handleToggleVoiceGuidance}
-            lockScreenGuidanceActive={nav.lockScreenGuidanceActive}
+            onCameraLayout={handleNavigationOverlayLayout}
           />
-        </>
-      ) : directRideSetupPending ? null : (
+        )
+      ) : directRideSetupPending || rideIntroVisible ? null : (
         <PlannerSheet
           sheetRef={plannerSheetRef}
           animatedPosition={sheetTop}
@@ -2514,39 +3932,50 @@ export default function BuildScreen({ navigation, route }) {
           />
         </PlannerSheet>
       )}
+      <RideIntroCard
+        visible={rideIntroVisible && !pickOnMapMode}
+        plan={ridePlan}
+        locationStatus={rideSetupLocationStatus}
+        onConfirm={handleIntroConfirm}
+        onOpenSettings={handleIntroOpenSettings}
+        onRefreshLocation={refreshRideSetupLocation}
+        onClose={handleIntroClose}
+        onLayout={handleRideIntroCardLayout}
+      />
       <RideSetupSheet
-        visible={rideSetupVisible}
+        visible={rideSettingsVisible}
         plan={ridePlan}
         selection={rideSetupSelection}
         locationStatus={rideSetupLocationStatus}
-        reverseAllowed={sourceNavigationRoute?.routeShape?.type !== "one_way"}
+        reverseAllowed={rideSetupSourceRoute?.routeShape?.type !== "one_way"}
         hapticsEnabled={nav.hapticsEnabled}
         onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
         voiceEnabled={voiceGuidanceEnabled}
         onToggleVoice={handleToggleVoiceGuidance}
         lockScreenGuidanceEnabled={lockScreenGuidanceEnabled}
-        lockScreenGuidanceHasAlwaysPermission={lockScreenGuidanceHasAlwaysPermission}
-        lockScreenGuidanceNeedsSettings={lockScreenGuidanceNeedsSettings}
         onToggleLockScreenGuidance={handleToggleLockScreenGuidance}
-        onOpenLocationSettings={handleOpenLocationSettings}
         onTestVoice={handleTestVoiceGuidance}
         onDirectionChange={(direction) =>
-          setRideSetupSelection((current) => ({ ...current, direction }))
+          setRideSetupSelection((current) => ({
+            ...current,
+            direction,
+            startProgressMeters: null,
+          }))
         }
         onStartModeChange={(startMode) =>
-          setRideSetupSelection((current) => ({ ...current, startMode }))
+          setRideSetupSelection((current) => ({
+            ...current,
+            startMode,
+            startProgressMeters: null,
+          }))
         }
         onPickCustom={() => {
-          setRideSetupVisible(false);
+          setRideSettingsVisible(false);
           setPickOnMapMode(true);
         }}
         onRefreshLocation={refreshRideSetupLocation}
-        onConfirm={handleRideSetupConfirm}
-        onClose={() => {
-          setRideSetupVisible(false);
-          trackNavigationEvent("ride_setup_cancelled");
-          void clearPendingRideIntent();
-        }}
+        onConfirm={handleRideSettingsConfirm}
+        onClose={handleRideSettingsClose}
       />
       <DestinationSheet
         visible={destSheetVisible}
@@ -2554,7 +3983,8 @@ export default function BuildScreen({ navigation, route }) {
         onOpenApp={handleOpenExternalApp}
         onClose={() => {
           setDestSheetVisible(false);
-          if (pendingExternalPlan) setRideSetupVisible(true);
+          if (pendingExternalPlan?.origin === "intro") setRideIntroVisible(true);
+          setPendingExternalPlan(null);
         }}
       />
       {pickOnMapMode ? (
@@ -2566,7 +3996,7 @@ export default function BuildScreen({ navigation, route }) {
             <Pressable
               onPress={() => {
                 setPickOnMapMode(false);
-                setRideSetupVisible(true);
+                setRideSettingsVisible(true);
               }}
               accessibilityRole="button"
               accessibilityLabel="ביטול"
@@ -3186,6 +4616,92 @@ function cameraPointKey(point, decimals = DEFAULT_CAMERA_FIT_KEY_DECIMALS) {
   return `${Number(point.lng).toFixed(decimals)},${Number(point.lat).toFixed(decimals)}`;
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function interpolatePoint(a, b, t) {
+  return {
+    lat: a.lat + (b.lat - a.lat) * t,
+    lng: a.lng + (b.lng - a.lng) * t,
+  };
+}
+
+function introSlotZoom(distanceMeters, latitude, pixelSpan) {
+  const meters = Number(distanceMeters);
+  const px = Number(pixelSpan);
+  if (!Number.isFinite(meters) || meters <= 0 || !Number.isFinite(px) || px <= 0) {
+    return 13.5;
+  }
+  const latitudeScale = Math.max(
+    0.05,
+    Math.abs(Math.cos((Number(latitude) * Math.PI) / 180)),
+  );
+  const metersPerPixel = meters / px;
+  const zoom = Math.log2((156543.03392 * latitudeScale) / metersPerPixel);
+  return clamp(zoom, RIDE_INTRO_MIN_ZOOM, RIDE_INTRO_MAX_ZOOM);
+}
+
+function introMarkerSlotCameraState(rider, start, options = {}) {
+  if (!validMapPoint(rider) || !validMapPoint(start)) return null;
+  const screen = Dimensions.get("window");
+  const width = Number(screen.width);
+  const height = Number(screen.height);
+  const topInset = Number(options.topInset);
+  const topY = Math.max(
+    RIDE_INTRO_START_TOP_PADDING,
+    (Number.isFinite(topInset) ? topInset : 0) + RIDE_INTRO_START_SAFE_AREA_GAP,
+  );
+  const bottomPadding = Number(options.bottomPadding);
+  const riderY = Number.isFinite(bottomPadding)
+    ? height - bottomPadding
+    : height - RIDE_INTRO_FIT_BOTTOM_PADDING;
+  const spanPx = Math.max(RIDE_INTRO_MIN_MARKER_SPAN_PX, riderY - topY);
+  const centerY = height / 2;
+  const centerT = clamp((riderY - centerY) / spanPx, 0.12, 0.88);
+  const center = interpolatePoint(rider, start, centerT);
+  const distanceMeters = getDistance(rider, start);
+  const zoom = introSlotZoom(distanceMeters, center.lat, spanPx);
+  const heading = Number.isFinite(options.heading)
+    ? options.heading
+    : computeBearing(rider, start);
+  const pitch = Number.isFinite(options.pitch) ? options.pitch : RIDE_INTRO_FIT_PITCH;
+
+  return {
+    center,
+    heading,
+    pitch,
+    zoom,
+    padding: {
+      paddingTop: topY,
+      paddingRight: Math.max(42, Math.round(width * 0.12)),
+      paddingBottom: Number.isFinite(bottomPadding) ? bottomPadding : 84,
+      paddingLeft: Math.max(42, Math.round(width * 0.12)),
+    },
+  };
+}
+
+function setIntroCameraToMarkerSlots(camera, rider, start, options = {}) {
+  if (!camera) return;
+  const state = introMarkerSlotCameraState(rider, start, options);
+  if (!state) return;
+  setCameraToMarkerSlotState(camera, state, 550);
+}
+
+function setCameraToMarkerSlotState(camera, state, animationDuration = 0) {
+  if (!camera || !state) return;
+  camera.setCamera?.({
+    type: "CameraStop",
+    centerCoordinate: [state.center.lng, state.center.lat],
+    heading: state.heading,
+    pitch: state.pitch,
+    zoomLevel: state.zoom,
+    padding: state.padding,
+    animationDuration,
+    animationMode: animationDuration > 0 ? "easeTo" : "none",
+  });
+}
+
 function fitCameraToPoints(camera, points, bottomPadding = 84, options = {}) {
   const normalizedPoints = Array.isArray(points)
     ? points
@@ -3201,6 +4717,12 @@ function fitCameraToPoints(camera, points, bottomPadding = 84, options = {}) {
   const cameraStopExtras = {};
   if (Number.isFinite(options.heading)) cameraStopExtras.heading = options.heading;
   if (Number.isFinite(options.pitch)) cameraStopExtras.pitch = options.pitch;
+  const padding = options.padding || {
+    paddingTop: 96,
+    paddingRight: 42,
+    paddingBottom: bottomPadding,
+    paddingLeft: 42,
+  };
 
   if (normalizedPoints.length === 1) {
     const [point] = normalizedPoints;
@@ -3223,12 +4745,7 @@ function fitCameraToPoints(camera, points, bottomPadding = 84, options = {}) {
     camera.setCamera({
       type: "CameraStop",
       bounds: { ne: [east, north], sw: [west, south] },
-      padding: {
-        paddingTop: 96,
-        paddingRight: 42,
-        paddingBottom: bottomPadding,
-        paddingLeft: 42,
-      },
+      padding,
       ...cameraStopExtras,
       animationDuration: 550,
       animationMode: "easeTo",
@@ -3242,7 +4759,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, position: "relative", backgroundColor: "#fff" },
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  hint: { fontSize: 15, textAlign: "center", color: "#333" },
+  hint: { ...text.body, textAlign: "center", color: "#333" },
   pickHint: {
     position: "absolute",
     top: 120,
@@ -3261,17 +4778,15 @@ const styles = StyleSheet.create({
     maxWidth: "90%",
   },
   pickHintText: {
+    ...text.bodyStrong,
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
     flexShrink: 1,
   },
   pickHintCancel: {
+    ...text.bodyStrong,
     color: "#9ec6a6",
-    fontSize: 14,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   setupStartMarker: {
@@ -3281,6 +4796,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: palette.forest,
+    borderWidth: 3,
+    borderColor: palette.white,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
+  },
+  setupRiderPuck: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  setupRiderArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderBottomWidth: 12,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: RIDER_PUCK_COLOR,
+    marginBottom: -4,
+  },
+  setupRiderDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: RIDER_PUCK_COLOR,
     borderWidth: 3,
     borderColor: palette.white,
     shadowColor: "#000",
@@ -3301,10 +4845,12 @@ const styles = StyleSheet.create({
     maxWidth: 220,
   },
   navChipText: {
+    ...text.captionStrong,
     color: "#1a2b1e",
-    fontSize: 12,
-    fontWeight: "800",
     writingDirection: "rtl",
+  },
+  navChipAbovePuck: {
+    transform: [{ translateY: -18 }],
   },
   navChipApproach: {
     backgroundColor: "#eef4ff",
@@ -3342,16 +4888,14 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   routeRestoreTitle: {
+    ...text.subheading,
     color: palette.ink,
-    fontSize: 17,
-    fontWeight: "900",
     textAlign: "center",
     writingDirection: "rtl",
   },
   routeRestoreText: {
+    ...text.body,
     color: palette.muted,
-    fontSize: 14,
-    fontWeight: "700",
     textAlign: "center",
     writingDirection: "rtl",
   },
@@ -3364,9 +4908,8 @@ const styles = StyleSheet.create({
   },
   routeRestoreRetryPressed: { opacity: 0.78 },
   routeRestoreRetryText: {
+    ...text.bodyStrong,
     color: palette.white,
-    fontSize: 14,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   // Adaptive rider puck: a colored dot with a heading arrow. The whole view is
@@ -3425,11 +4968,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   markerCardEmoji: {
-    fontSize: 20,
+    fontSize: fontSizes.xl,
   },
   markerCardTitle: {
-    fontSize: 16,
-    fontWeight: "800",
+    ...text.subheading,
     textAlign: "right",
     writingDirection: "rtl",
     flexShrink: 1,
@@ -3444,21 +4986,19 @@ const styles = StyleSheet.create({
   },
   markerCardCloseText: {
     color: "#333333",
-    fontSize: 22,
+    // Glyph box (×): size-only, lineHeight centers it in the 30px button.
+    fontSize: fontSizes["2xl"],
     lineHeight: 24,
-    fontWeight: "700",
   },
   markerCardSegment: {
+    ...text.captionStrong,
     color: "#52616f",
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   markerCardInfo: {
+    ...text.body,
     color: "#333333",
-    fontSize: 13,
-    lineHeight: 19,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3468,10 +5008,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   routeMessage: {
+    ...text.caption,
     color: "#333333",
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 18,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3479,23 +5017,20 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   warningText: {
+    ...text.captionStrong,
     color: "#92400e",
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   locationText: {
+    ...text.caption,
     color: "#52616f",
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   errorText: {
+    ...text.captionStrong,
     color: "#991b1b",
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3528,10 +5063,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   summaryTitle: {
+    ...text.subheading,
     flex: 1,
     color: "#172026",
-    fontSize: 17,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3545,9 +5079,9 @@ const styles = StyleSheet.create({
   },
   summaryCloseText: {
     color: "#333333",
-    fontSize: 24,
+    // Glyph box (×): size-only, lineHeight centers it in the 34px button.
+    fontSize: fontSizes["2xl"],
     lineHeight: 26,
-    fontWeight: "700",
   },
   summaryBody: {
     gap: 14,
@@ -3558,38 +5092,34 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   summarySectionTitle: {
+    // One step below summaryTitle (subheading) to keep hierarchy inside the modal.
+    ...text.bodyStrong,
     color: "#172026",
-    fontSize: 14,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryText: {
+    ...text.caption,
     color: "#333333",
-    fontSize: 13,
-    lineHeight: 19,
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryMuted: {
+    ...text.caption,
     color: "#666666",
-    fontSize: 13,
     fontStyle: "italic",
     textAlign: "right",
     writingDirection: "rtl",
   },
   summarySegmentText: {
+    ...text.caption,
     color: "#333333",
-    fontSize: 13,
-    lineHeight: 19,
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryWarningText: {
+    ...text.captionStrong,
     color: "#92400e",
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3644,14 +5174,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   chromeButtonText: {
+    // Compact toolbar chips, not full CTAs — captionStrong keeps them tight.
+    ...text.captionStrong,
     color: "#333333",
-    fontSize: 13,
-    fontWeight: "700",
     flexShrink: 1,
   },
   chromeButtonTextSymbol: {
-    fontSize: 21,
-    fontWeight: "800",
+    // Glyph symbols (undo/redo/etc.): size-only, lineHeight centers in the row.
+    fontSize: fontSizes.xl,
     lineHeight: 24,
   },
   chromeButtonTextPrimary: {
@@ -3676,16 +5206,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   buildEyebrow: {
+    ...text.label,
     color: "#6b8f86",
-    fontSize: 11,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   buildTitle: {
+    ...text.subheading,
     color: "#172026",
-    fontSize: 16,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -3710,15 +5238,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f6f4",
   },
   statValue: {
+    ...text.bodyStrong,
     color: "#172026",
-    fontSize: 14,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   statLabel: {
+    ...text.label,
     color: "#52616f",
-    fontSize: 10,
-    fontWeight: "700",
     writingDirection: "rtl",
   },
   buildFooter: {
@@ -3767,9 +5293,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   devButtonText: {
+    ...text.label,
     color: "#ffe600",
-    fontSize: 11,
-    fontWeight: "800",
     letterSpacing: 0.5,
   },
 });

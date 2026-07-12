@@ -9,6 +9,7 @@ export const JSON_ASSETS = {
   "public-data/route-catalog.json": require("../../../../apps/mobile/assets/data/public-data/route-catalog.json"),
   "public-data/cw-base-index.json": require("../../../../apps/mobile/assets/data/public-data/cw-base-index.json"),
   "public-data/base-routing-shards/manifest.json": require("../../../../apps/mobile/assets/data/public-data/base-routing-shards/manifest.json"),
+  "public-data/roundabouts.json": require("../../../../apps/mobile/assets/data/public-data/roundabouts.json"),
   "public-data/featured-routes/banias-gan-hatsafon.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/banias-gan-hatsafon.json"),
   "public-data/featured-routes/sovev-beit-hillel.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/sovev-beit-hillel.json"),
   "public-data/featured-routes/historic-jordan.json": require("../../../../apps/mobile/assets/data/public-data/featured-routes/historic-jordan.json"),

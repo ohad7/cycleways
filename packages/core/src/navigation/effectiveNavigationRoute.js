@@ -14,6 +14,12 @@ function clonePoint(point) {
   return point ? { ...point } : point;
 }
 
+function cloneJunctions(junctions) {
+  return Array.isArray(junctions)
+    ? junctions.map((junction) => ({ ...junction }))
+    : null;
+}
+
 function totalMeters(route) {
   const geometry = Array.isArray(route?.geometry) ? route.geometry : [];
   return geometry.length > 0
@@ -143,6 +149,7 @@ export function reverseNavigationRoute(route) {
     end: route?.start ? { ...route.start } : null,
     activeDataPoints: remapReverseDataPoints(route?.activeDataPoints, total),
     segmentSpans: remapReverseSpans(route?.segmentSpans, total),
+    junctions: cloneJunctions(route?.junctions),
   };
 }
 
@@ -248,6 +255,7 @@ function withEffectiveCommon(route, geometry, selection, loop) {
     geometry,
     distanceMeters: distance,
     distanceKm: Math.round((distance / 1000) * 10) / 10,
+    junctions: cloneJunctions(route?.junctions),
   };
 }
 

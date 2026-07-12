@@ -28,6 +28,13 @@ export function getNativeRoutePath(href = nativeLocationHref) {
   return { collection, slug };
 }
 
+export function getNativeRouteToken(href = nativeLocationHref) {
+  const url = nativeUrl(href);
+  if (!isSupportedRouteUrl(url)) return null;
+  const token = url.searchParams.get("route");
+  return typeof token === "string" && token.length > 0 ? token : null;
+}
+
 export function createNativeRouteHref(routeParam, metadata = {}) {
   const url = new URL(DEFAULT_NATIVE_HREF);
   url.searchParams.set("route", routeParam);

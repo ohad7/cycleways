@@ -1,10 +1,12 @@
 import React, { useMemo } from "react";
 import qrcode from "qrcode-generator";
+import useDialogFocus from "./useDialogFocus.js";
 
 // Renders the share URL as a QR so a desktop-planned route hops to the phone
 // (today: opens mobile web; later the same URL deep-links into the app — see
 // plans/navigation-handoff/design.md).
 export default function SendToPhone({ shareUrl, onClose }) {
+  const dialogRef = useDialogFocus(onClose);
   const svgMarkup = useMemo(() => {
     if (!shareUrl) return "";
     // Type 0 auto-sizes to the data; M error correction is the QR default.
@@ -16,10 +18,20 @@ export default function SendToPhone({ shareUrl, onClose }) {
 
   if (!shareUrl) return null;
   return (
-    <div className="react-modal" role="dialog" aria-modal="true" aria-label="שליחת המסלול לטלפון">
+    <div
+      className="react-modal"
+      ref={dialogRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="send-to-phone-title"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <div className="react-modal__content react-modal__content--narrow send-to-phone">
         <header className="react-modal__header">
-          <h2>שלחו לטלפון</h2>
+          <h2 id="send-to-phone-title">שלחו לטלפון</h2>
           <button className="react-modal__close" type="button" aria-label="סגירה" onClick={onClose}>
             ×
           </button>

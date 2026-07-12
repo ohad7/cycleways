@@ -1064,8 +1064,14 @@ function MapSurface({
         className="react-map"
         id="map"
         ref={containerRef}
+        role="region"
         aria-label="מפת CycleWays"
+        aria-describedby="cycleways-map-description"
       />
+      <p id="cycleways-map-description" className="visually-hidden">
+        מפה גרפית אינטראקטיבית לחקירה באמצעות מצביע ומקלדת. חיפוש, סינון,
+        פרטי מסלול, אזהרות ופעולות זמינים גם כבקרות וטקסט מחוץ למפה.
+      </p>
       {status === "initializing" && (
         <div className="react-map__overlay">טוען מפה</div>
       )}

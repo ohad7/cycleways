@@ -4029,6 +4029,486 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-45-mrfc38qr",
+      "properties": {
+        "id": "manual-45-mrfc38qr",
+        "manualEdgeId": "manual-45-mrfc38qr",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-10T19:33:52.515Z",
+        "updatedAt": "2026-07-10T19:33:52.515Z",
+        "linkedSegmentId": 45,
+        "linkedSegmentName": "ירדן מערב שדות כפר בלום"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.628333,
+            33.147047
+          ],
+          [
+            35.628333,
+            33.147005
+          ],
+          [
+            35.628329,
+            33.146901
+          ],
+          [
+            35.628308,
+            33.146673
+          ],
+          [
+            35.628317,
+            33.146646
+          ],
+          [
+            35.628355,
+            33.146612
+          ],
+          [
+            35.628351,
+            33.146566
+          ],
+          [
+            35.628362,
+            33.146539
+          ],
+          [
+            35.628415,
+            33.146526
+          ],
+          [
+            35.628492,
+            33.146511
+          ],
+          [
+            35.628595,
+            33.146493
+          ],
+          [
+            35.628798,
+            33.146458
+          ],
+          [
+            35.629033,
+            33.146429
+          ],
+          [
+            35.629135,
+            33.146417
+          ],
+          [
+            35.629245,
+            33.146404
+          ],
+          [
+            35.629328,
+            33.146399
+          ],
+          [
+            35.629337,
+            33.146426
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-414115340-mrfcjlc7-a-mrfcjqmv",
+      "properties": {
+        "id": "manual-manual-osm-414115340-mrfcjlc7-a-mrfcjqmv",
+        "manualEdgeId": "manual-manual-osm-414115340-mrfcjlc7-a-mrfcjqmv",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e414115340_2",
+        "copiedFromOsmWayId": 414115340,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-10T19:46:35.335Z",
+        "updatedAt": "2026-07-10T19:46:42.199Z",
+        "splitFrom": "manual-osm-414115340-mrfcjlc7"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.60721,
+            33.168097
+          ],
+          [
+            35.60709,
+            33.168015
+          ],
+          [
+            35.606908,
+            33.167947
+          ],
+          [
+            35.606818,
+            33.167938
+          ],
+          [
+            35.606696,
+            33.167967
+          ],
+          [
+            35.606621,
+            33.168001
+          ],
+          [
+            35.606278,
+            33.16824
+          ],
+          [
+            35.606167,
+            33.168289
+          ],
+          [
+            35.605789,
+            33.168325
+          ],
+          [
+            35.604478,
+            33.16831
+          ],
+          [
+            35.604322,
+            33.168336
+          ],
+          [
+            35.603896,
+            33.1685
+          ],
+          [
+            35.603823,
+            33.168507
+          ],
+          [
+            35.603742,
+            33.168495
+          ],
+          [
+            35.603635,
+            33.168438
+          ],
+          [
+            35.603583,
+            33.168382
+          ],
+          [
+            35.60349,
+            33.168221
+          ],
+          [
+            35.603393,
+            33.168093
+          ],
+          [
+            35.603254,
+            33.167996
+          ],
+          [
+            35.603133,
+            33.16794
+          ],
+          [
+            35.602934,
+            33.167878
+          ],
+          [
+            35.602723,
+            33.16785
+          ],
+          [
+            35.602607,
+            33.167851
+          ],
+          [
+            35.602199,
+            33.16792
+          ],
+          [
+            35.602019,
+            33.167935
+          ],
+          [
+            35.601897,
+            33.167911
+          ],
+          [
+            35.601809,
+            33.167863
+          ],
+          [
+            35.601719,
+            33.167756
+          ],
+          [
+            35.601626,
+            33.167605
+          ],
+          [
+            35.601555,
+            33.167539
+          ],
+          [
+            35.601441,
+            33.167473
+          ],
+          [
+            35.601029,
+            33.167382
+          ],
+          [
+            35.600523,
+            33.167192
+          ],
+          [
+            35.600384,
+            33.167095
+          ],
+          [
+            35.600241,
+            33.166928
+          ],
+          [
+            35.59996,
+            33.166396
+          ],
+          [
+            35.599747,
+            33.165888
+          ],
+          [
+            35.599462,
+            33.16509
+          ],
+          [
+            35.598924,
+            33.163883
+          ],
+          [
+            35.598905,
+            33.163795
+          ],
+          [
+            35.598905,
+            33.163634
+          ],
+          [
+            35.598947,
+            33.163472
+          ],
+          [
+            35.599089,
+            33.163373
+          ],
+          [
+            35.599318,
+            33.163299
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-414115340-mrfcjlc7-b-mrfcjqmv",
+      "properties": {
+        "id": "manual-manual-osm-414115340-mrfcjlc7-b-mrfcjqmv",
+        "manualEdgeId": "manual-manual-osm-414115340-mrfcjlc7-b-mrfcjqmv",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e414115340_2",
+        "copiedFromOsmWayId": 414115340,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-10T19:46:35.335Z",
+        "updatedAt": "2026-07-10T19:46:42.199Z",
+        "splitFrom": "manual-osm-414115340-mrfcjlc7"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.599318,
+            33.163299
+          ],
+          [
+            35.599318,
+            33.163125
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-348-mrfck9gl",
+      "properties": {
+        "id": "manual-348-mrfck9gl",
+        "manualEdgeId": "manual-348-mrfck9gl",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-10T19:47:06.597Z",
+        "updatedAt": "2026-07-10T19:47:06.597Z",
+        "linkedSegmentId": 348,
+        "linkedSegmentName": "מעבר הולכי רגל גשר להבות"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.599318,
+            33.163299
+          ],
+          [
+            35.5994,
+            33.163269
+          ],
+          [
+            35.600687,
+            33.162949
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-232039674-mrfdmxhw",
+      "properties": {
+        "id": "manual-osm-232039674-mrfdmxhw",
+        "manualEdgeId": "manual-osm-232039674-mrfdmxhw",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e232039674_2",
+        "copiedFromOsmWayId": 232039674,
+        "highway": "footway",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-10T20:17:10.676Z",
+        "updatedAt": "2026-07-10T20:17:15.497Z"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.617533,
+            33.182851
+          ],
+          [
+            35.617553,
+            33.182851
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-232039672-mrfdn4au",
+      "properties": {
+        "id": "manual-osm-232039672-mrfdn4au",
+        "manualEdgeId": "manual-osm-232039672-mrfdn4au",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e232039672_1",
+        "copiedFromOsmWayId": 232039672,
+        "highway": "footway",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-10T20:17:19.494Z",
+        "updatedAt": "2026-07-10T20:17:24.179Z"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.617533,
+            33.182838
+          ],
+          [
+            35.617554,
+            33.182842
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-232039672-mrfdna8e",
+      "properties": {
+        "id": "manual-osm-232039672-mrfdna8e",
+        "manualEdgeId": "manual-osm-232039672-mrfdna8e",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e232039672_2",
+        "copiedFromOsmWayId": 232039672,
+        "highway": "footway",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-10T20:17:27.182Z",
+        "updatedAt": "2026-07-10T20:17:37.484Z"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.61756,
+            33.182828
+          ],
+          [
+            35.617544,
+            33.182825
+          ],
+          [
+            35.617532,
+            33.18282
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-232039674-mrfdnmd5",
+      "properties": {
+        "id": "manual-osm-232039674-mrfdnmd5",
+        "manualEdgeId": "manual-osm-232039674-mrfdnmd5",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e232039674_1",
+        "copiedFromOsmWayId": 232039674,
+        "highway": "footway",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-10T20:17:42.905Z",
+        "updatedAt": "2026-07-10T20:17:50.601Z"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.617883,
+            33.182846
+          ],
+          [
+            35.617652,
+            33.182663
+          ]
+        ]
+      }
     }
   ]
 }

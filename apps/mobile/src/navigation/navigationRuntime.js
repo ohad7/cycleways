@@ -3,6 +3,8 @@ import {
   createNavigationSession,
 } from "@cycleways/core/navigation/navigationSession.js";
 import { createNavigationVoicePlanner } from "@cycleways/core/navigation/navigationVoice.js";
+import { shouldSpeakHeadlessCue } from "@cycleways/core/navigation/resumePolicy.js";
+import { AppState } from "react-native";
 import {
   clearActiveNavigationSession,
   loadActiveNavigationSession,
@@ -10,23 +12,17 @@ import {
 } from "./activeNavigationStore.js";
 import { stopNavigationBackgroundUpdates } from "./locationService.js";
 import { speakUtterance } from "./speechAdapter.js";
-
-const ARRIVAL_BACKGROUND_CONFIRM_MS = 60_000;
+import { isAppForegroundForHeadlessSpeech } from "./navigationLifecycle.js";
 
 let foregroundProcessor = null;
 let lastTaskError = null;
+const defaultAppActiveProbe = () =>
+  isAppForegroundForHeadlessSpeech(AppState.currentState);
+let appActiveProbe = defaultAppActiveProbe;
 
 function fixTimestamp(fix) {
   const value = Number(fix?.timestamp);
   return Number.isFinite(value) ? value : Date.now();
-}
-
-function isArrival(state) {
-  return (
-    state?.progress?.hasAcquiredRoute === true &&
-    Number.isFinite(Number(state?.progress?.remainingMeters)) &&
-    Number(state.progress.remainingMeters) <= 15
-  );
 }
 
 function processBackgroundRequest(session, state) {
@@ -40,27 +36,26 @@ function processBackgroundRequest(session, state) {
 }
 
 async function persistFromSession(session, record, voicePlanner, latestFix) {
+  // The store queue serializes file operations, but this save's payload was
+  // built from a record loaded before the (async) fix processing above. If the
+  // foreground stopped the ride in that window, saving would resurrect it —
+  // re-check the store still holds this session before writing.
+  const current = await loadActiveNavigationSession();
+  if (!current || (record.sessionId && current.sessionId !== record.sessionId)) {
+    return;
+  }
   const state = session.getState();
   const timestamp = fixTimestamp(latestFix || state.latestFix);
-  const arrivalDetectedAt =
-    isArrival(state)
-      ? (Number.isFinite(Number(record.arrivalDetectedAt))
-          ? Number(record.arrivalDetectedAt)
-          : timestamp)
-      : null;
   await saveActiveNavigationSession({
     ...record,
     sessionSnapshot: session.snapshot(),
     voiceMemory: voicePlanner?.snapshot?.() || record.voiceMemory || null,
     lastProcessedFixTimestamp: timestamp,
-    arrivalDetectedAt,
   });
-  if (
-    arrivalDetectedAt !== null &&
-    timestamp - arrivalDetectedAt >= ARRIVAL_BACKGROUND_CONFIRM_MS
-  ) {
-    await stopNavigationBackgroundUpdates();
-  }
+}
+
+export function setNavigationRuntimeAppActiveProbe(probe) {
+  appActiveProbe = typeof probe === "function" ? probe : defaultAppActiveProbe;
 }
 
 export function registerForegroundNavigationProcessor(processor) {
@@ -77,8 +72,8 @@ export async function processBackgroundNavigationFixes(fixes = []) {
   if (normalizedFixes.length === 0) return false;
 
   if (foregroundProcessor) {
-    await foregroundProcessor(normalizedFixes, { source: "background" });
-    return true;
+    const handled = await foregroundProcessor(normalizedFixes, { source: "background" });
+    if (handled !== false) return true;
   }
 
   const record = await loadActiveNavigationSession();
@@ -105,9 +100,18 @@ export async function processBackgroundNavigationFixes(fixes = []) {
     latestFix = fix;
     let next = session.dispatch({ type: NAV_ACTIONS.LOCATION, fix });
     next = processBackgroundRequest(session, next);
-    if (next.cueEvent && record.settings?.voiceEnabled === true) {
+    if (
+      next.cueEvent &&
+      record.settings?.voiceEnabled === true &&
+      shouldSpeakHeadlessCue({ appActive: appActiveProbe() })
+    ) {
       const plan = voicePlanner.plan(next.cueEvent, next, fixTimestamp(fix));
       if (plan.utterance) await speakUtterance(plan.utterance);
+    }
+    if (next.status === "ended") {
+      await clearActiveNavigationSession();
+      await stopNavigationBackgroundUpdates();
+      return true;
     }
   }
   await persistFromSession(session, record, voicePlanner, latestFix);
@@ -129,7 +133,6 @@ export async function persistForegroundNavigation({
     sessionSnapshot: session.snapshot(),
     voiceMemory: voicePlanner?.snapshot?.() || null,
     lastProcessedFixTimestamp: fixTimestamp(latestFix || session.getState()?.latestFix),
-    arrivalDetectedAt: null,
   });
 }
 

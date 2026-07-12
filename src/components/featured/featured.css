@@ -69,8 +69,9 @@
 .featured-route-kicker {
   grid-area: kicker;
   color: var(--fv-clay);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
   letter-spacing: 0;
 }
 
@@ -96,17 +97,18 @@
   grid-area: title;
   margin: 0;
   color: var(--fv-ink);
-  font-weight: 800;
-  font-size: clamp(1.9rem, 3vw, 2.8rem);
-  line-height: 1.04;
+  /* display: hero */
+  font-weight: var(--text-display-weight);
+  font-size: var(--text-display-size);
+  line-height: var(--text-display-line);
 }
 
 .featured-route-video-first .featured-route-summary {
   grid-area: summary;
   margin: 2px 0 0;
   color: var(--fv-ink-soft);
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--text-subheading-size);
+  font-weight: var(--text-subheading-weight);
   line-height: 1.35;
 }
 
@@ -125,8 +127,9 @@
   align-items: baseline;
   gap: 4px;
   color: var(--fv-ink);
-  font-size: 1.02rem;
-  font-weight: 800;
+  font-size: var(--text-body-strong-size);
+  font-weight: var(--text-body-strong-weight);
+  line-height: var(--text-body-strong-line);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -213,7 +216,7 @@
   color: #ffffff;
   cursor: pointer;
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--font-size-lg);
   line-height: 1;
   pointer-events: auto;
   box-shadow: 0 5px 14px rgba(16, 24, 32, 0.28);
@@ -240,13 +243,13 @@
   color: var(--fv-ink);
   cursor: pointer;
   font: inherit;
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
   line-height: 1;
 }
 
 .featured-map-expand-btn span[aria-hidden="true"] {
-  font-size: 1rem;
+  font-size: var(--font-size-lg);
   line-height: 1;
 }
 
@@ -291,7 +294,7 @@
 }
 .featured-gallery-card img { width: 100%; height: 160px; object-fit: cover; }
 .featured-gallery-card-body { padding: 12px; }
-.featured-gallery-card-stats { color: #666; font-size: 0.9em; margin-top: 6px; }
+.featured-gallery-card-stats { color: #666; font-size: var(--text-caption-size); margin-top: 6px; }
 
 .featured-video { margin-top: 16px; }
 .featured-video-frame {
@@ -363,7 +366,7 @@
   color: #ffffff;
   cursor: pointer;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: var(--font-size-md);
   line-height: 1;
 }
 
@@ -384,8 +387,8 @@
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.86);
   direction: rtl;
-  font-size: 0.76rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
   line-height: 1;
   white-space: nowrap;
 }
@@ -396,9 +399,9 @@
 
 .fv-video-progress-distance .fv-video-progress-value {
   color: #ffffff;
-  font-size: 0.86rem;
+  font-size: var(--text-caption-strong-size);
   font-variant-numeric: tabular-nums;
-  font-weight: 900;
+  font-weight: var(--text-caption-strong-weight);
 }
 
 .fv-video-scrubber {
@@ -460,9 +463,9 @@
   min-width: 82px;
   color: rgba(255, 255, 255, 0.9);
   direction: ltr;
-  font-size: 0.82rem;
+  font-size: var(--text-caption-strong-size);
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
+  font-weight: var(--text-caption-strong-weight);
   text-align: end;
 }
 
@@ -597,24 +600,26 @@
   display: inline-flex;
   margin-bottom: 10px;
   color: var(--fv-clay);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
   letter-spacing: 0.06em;
 }
 
 .fv-route-panel h2 {
   margin: 0 0 10px;
   color: var(--fv-ink);
-  font-weight: 800;
-  font-size: 1.45rem;
-  line-height: 1.1;
+  font-weight: var(--text-heading-weight);
+  font-size: var(--text-heading-size);
+  line-height: var(--text-heading-line);
 }
 
 .fv-route-panel p,
 .fv-route-panel .fv-route-narrative {
   margin: 0;
   color: #43505a;
-  font-size: 0.98rem;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
   line-height: 1.65;
 }
 
@@ -640,8 +645,8 @@
   color: var(--fv-ink);
   cursor: pointer;
   font: inherit;
-  font-size: 0.84rem;
-  font-weight: 900;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
   line-height: 1.15;
   text-align: center;
   text-decoration: none;
@@ -706,15 +711,17 @@
 .fv-route-panel dt {
   margin-bottom: 3px;
   color: #24313a;
-  font-size: 0.9rem;
-  font-weight: 900;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
 }
 
 .fv-route-panel dd {
   margin: 0;
   color: #53616a;
-  font-size: 0.9rem;
-  line-height: 1.45;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
+  line-height: var(--text-body-line);
 }
 
 .fv-side-heading {
@@ -727,13 +734,14 @@
 
 .fv-side-heading span {
   color: var(--fv-clay);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
   letter-spacing: 0.05em;
 }
 
 .fv-side-heading strong {
-  font-size: 1.05rem;
+  font-size: var(--text-subheading-size);
   font-variant-numeric: tabular-nums;
 }
 
@@ -884,8 +892,9 @@
   .fv-playback .fv-route-stats dt {
     margin: 0 0 2px;
     color: var(--fv-clay);
-    font-size: 0.64rem;
-    font-weight: 800;
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
@@ -894,8 +903,8 @@
     margin: 0;
     color: #24313a;
     overflow-wrap: anywhere;
-    font-size: 0.8rem;
-    font-weight: 800;
+    font-size: var(--text-caption-strong-size);
+    font-weight: var(--text-caption-strong-weight);
     font-variant-numeric: tabular-nums;
     line-height: 1.15;
   }
@@ -913,8 +922,9 @@
   .fv-playback .elevation-profile h4 {
     margin: 0 0 5px;
     color: var(--fv-ink);
-    font-size: 0.82rem;
-    font-weight: 800;
+    font-size: var(--text-caption-strong-size);
+    font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
   }
 
   .fv-playback .elevation-chart {
@@ -944,7 +954,7 @@
     top: 4px;
     inset-inline: 8px;
     padding: 2px 6px;
-    font-size: 11px;
+    font-size: var(--font-size-xs);
     line-height: 1.4;
     color: #1f2933;
     background: rgba(255, 255, 255, 0.85);
@@ -960,11 +970,11 @@
     display: inline-block;
     margin-inline-start: 8px;
     padding: 1px 6px;
-    font-size: 11px;
+    font-size: var(--text-label-size);
     line-height: 1.4;
     border-radius: 999px;
     border: 1px solid;
-    font-weight: 600;
+    font-weight: var(--text-label-weight);
   }
 
   .fv-playback .react-elevation-footer {
@@ -973,7 +983,7 @@
     justify-content: space-between;
     gap: 8px;
     margin-top: 3px;
-    font-size: 10px;
+    font-size: var(--font-size-xs);
     color: #666;
     direction: rtl;
   }
@@ -989,7 +999,7 @@
     gap: 3px 7px;
     flex: 1 1 auto;
     justify-content: center;
-    font-size: 10px;
+    font-size: var(--font-size-xs);
     color: #666;
     direction: rtl;
   }
@@ -1151,8 +1161,8 @@
 .fv-video-poi-preview span {
   display: block;
   color: var(--fv-clay);
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
   letter-spacing: 0.05em;
 }
 
@@ -1160,8 +1170,8 @@
   display: block;
   margin-top: 2px;
   overflow-wrap: anywhere;
-  font-weight: 800;
-  font-size: 1.3rem;
+  font-weight: var(--text-subheading-weight);
+  font-size: var(--text-subheading-size);
   line-height: 1.18;
 }
 
@@ -1170,7 +1180,8 @@
   margin: 5px 0 0;
   overflow: hidden;
   color: #53616a;
-  font-size: 1rem;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -1185,8 +1196,8 @@
   border-radius: 999px;
   background: var(--fv-clay-soft);
   color: var(--fv-clay);
-  font-size: 1.9rem;
-  font-weight: 900;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
   line-height: 1;
   transition: width 0.24s ease, height 0.24s ease, font-size 0.24s ease;
 }
@@ -1194,7 +1205,7 @@
 .fv-video-poi-preview--mini .fv-video-poi-preview__icon {
   width: 52px;
   height: 52px;
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
 }
 
 .fv-moments {
@@ -1260,7 +1271,7 @@
   color: #24313a;
   cursor: pointer;
   direction: ltr;
-  font-size: 1.45rem;
+  font-size: var(--font-size-2xl);
   line-height: 1;
   unicode-bidi: isolate;
   box-shadow: 0 5px 16px rgba(16, 24, 32, 0.18);
@@ -1291,8 +1302,9 @@
 .fv-moment-type {
   flex: 0 0 auto;
   color: var(--fv-clay);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
 }
 
 .fv-moment-title-line strong,
@@ -1304,12 +1316,13 @@
 .fv-moment-title-line strong {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 1rem;
+  font-size: var(--text-subheading-size);
 }
 
 .fv-moment-card-body > span {
   color: #53616a;
-  font-size: 0.9rem;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
   line-height: 1.42;
 }
 
@@ -1317,15 +1330,17 @@
 .fv-moment-card-body .fv-moment-desc {
   margin: 8px 0 0;
   color: #24313a;
-  font-size: 0.86rem;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
   line-height: 1.42;
 }
 
 .fv-carousel-counter {
   color: #53616a;
   direction: ltr;
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
   text-align: center;
 }
 
@@ -1379,13 +1394,14 @@
 .fv-route-notes h2 {
   margin: 0 0 8px;
   color: #24313a;
-  font-size: 1.35rem;
+  font-size: var(--text-heading-size);
 }
 
 .fv-route-notes p {
   margin: 0;
   color: #43505a;
-  font-size: 1rem;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
   line-height: 1.65;
 }
 
@@ -1404,7 +1420,7 @@
 .fv-route-notes dt {
   margin-bottom: 3px;
   color: #24313a;
-  font-weight: 800;
+  font-weight: var(--font-weight-semibold);
 }
 
 .fv-route-notes dd {
@@ -1429,17 +1445,18 @@
 .fv-route-about-heading span {
   display: block;
   color: var(--fv-clay);
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
   letter-spacing: 0.06em;
 }
 
 .fv-route-about-heading h2 {
   margin: 6px 0 0;
   color: var(--fv-ink);
-  font-weight: 800;
-  font-size: clamp(1.5rem, 2vw, 2rem);
-  line-height: 1.12;
+  font-weight: var(--text-heading-weight);
+  font-size: var(--text-heading-size);
+  line-height: var(--text-heading-line);
 }
 
 .fv-route-about-body {
@@ -1452,7 +1469,8 @@
 .fv-route-about-body .fv-route-narrative {
   margin: 0;
   color: var(--fv-ink-soft);
-  font-size: 1.05rem;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
   line-height: 1.7;
 }
 
@@ -1472,16 +1490,18 @@
 .fv-route-warnings-heading span {
   display: block;
   color: var(--fv-clay);
-  font-size: 0.82rem;
-  font-weight: 900;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
   letter-spacing: 0.06em;
 }
 
 .fv-route-warnings-heading h2 {
   margin: 5px 0 0;
   color: var(--fv-ink);
-  font-size: clamp(1.35rem, 1.8vw, 1.8rem);
-  line-height: 1.15;
+  font-size: var(--text-heading-size);
+  font-weight: var(--text-heading-weight);
+  line-height: var(--text-heading-line);
 }
 
 .fv-route-warning-list {
@@ -1543,7 +1563,7 @@
   height: 34px;
   border-radius: 999px;
   background: var(--fv-clay-soft);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
 }
 
 .fv-route-warning-copy {
@@ -1558,25 +1578,27 @@
   gap: 5px 9px;
   align-items: center;
   color: #6b5a4d;
-  font-size: 0.82rem;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
   line-height: 1.35;
 }
 
 .fv-route-warning-meta strong {
   color: var(--fv-clay);
-  font-weight: 900;
+  font-weight: var(--font-weight-semibold);
 }
 
 .fv-route-warning-name {
   color: var(--fv-ink);
-  font-size: 1rem;
-  font-weight: 850;
+  font-size: var(--text-subheading-size);
+  font-weight: var(--text-subheading-weight);
   line-height: 1.35;
 }
 
 .fv-route-warning-text {
   color: var(--fv-ink);
-  font-size: 0.96rem;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
   line-height: 1.55;
 }
 
@@ -1606,8 +1628,9 @@
 .fv-poi-stories-heading span {
   display: block;
   color: var(--fv-clay);
-  font-size: 0.82rem;
-  font-weight: 900;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
 }
 
 .fv-poi-stories-heading span {
@@ -1617,9 +1640,9 @@
 .fv-poi-stories-heading h2 {
   margin: 4px 0 0;
   color: var(--fv-ink);
-  font-weight: 800;
-  font-size: clamp(1.55rem, 2.2vw, 2.15rem);
-  line-height: 1.1;
+  font-weight: var(--text-heading-weight);
+  font-size: var(--text-heading-size);
+  line-height: var(--text-heading-line);
 }
 
 .fv-poi-story-list {
@@ -1670,8 +1693,9 @@
   gap: 9px;
   margin-bottom: 8px;
   color: var(--fv-clay);
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
   letter-spacing: 0.05em;
 }
 
@@ -1695,24 +1719,26 @@
   display: block;
   margin-top: 6px;
   color: var(--fv-ink-mute);
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
 }
 
 .fv-poi-story h3 {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--fv-ink);
-  font-weight: 800;
-  font-size: 1.45rem;
-  line-height: 1.14;
+  font-weight: var(--text-subheading-weight);
+  font-size: var(--text-subheading-size);
+  line-height: var(--text-subheading-line);
 }
 
 .fv-poi-story-info,
 .fv-poi-story-description {
   margin: 10px 0 0;
   color: #43505a;
-  font-size: 0.98rem;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
   line-height: 1.58;
 }
 
@@ -1768,8 +1794,8 @@
   border-radius: 999px;
   background: rgba(16, 24, 32, 0.72);
   color: #ffffff;
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: var(--text-caption-strong-size);
+  font-weight: var(--text-caption-strong-weight);
   line-height: 1.2;
   box-shadow: 0 4px 12px rgba(16, 24, 32, 0.24);
   pointer-events: none;
@@ -1803,7 +1829,8 @@
   }
 
   .featured-route-video-first .featured-route-header h1 {
-    font-size: clamp(1.7rem, 7vw, 2.4rem);
+    font-size: var(--text-display-size);
+    /* display: hero */
   }
 
   /* Stats become a clean horizontal metric row under the title on phones. */
@@ -1960,7 +1987,7 @@
   .fv-video-progress-distance {
     gap: 4px;
     padding: 5px 7px;
-    font-size: 0.68rem;
+    font-size: var(--font-size-xs);
   }
 
   .fv-video-progress-distance span {
@@ -1968,12 +1995,12 @@
   }
 
   .fv-video-progress-distance .fv-video-progress-value {
-    font-size: 0.78rem;
+    font-size: var(--font-size-sm);
   }
 
   .fv-video-time {
     min-width: 70px;
-    font-size: 0.72rem;
+    font-size: var(--font-size-xs);
   }
 
   /* Mini live map over the video. The desktop side-map (null on phones) and
@@ -2098,8 +2125,8 @@
   .fv-mobile-elevation-strip .elevation-profile h4 {
     margin: 0 0 5px;
     color: var(--fv-ink);
-    font-size: 0.76rem;
-    font-weight: 850;
+    font-size: var(--text-caption-strong-size);
+    font-weight: var(--text-caption-strong-weight);
     line-height: 1.2;
   }
 
@@ -2142,8 +2169,8 @@
     background: rgba(255, 255, 255, 0.9);
     color: #1f2933;
     direction: rtl;
-    font-size: 10px;
-    font-weight: 750;
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
     line-height: 1.25;
     pointer-events: none;
     white-space: nowrap;
@@ -2163,9 +2190,9 @@
     padding: 1px 6px;
     border: 1px solid;
     border-radius: 999px;
-    font-size: 10px;
+    font-size: var(--text-label-size);
     line-height: 1.3;
-    font-weight: 750;
+    font-weight: var(--text-label-weight);
   }
 
   .fv-mobile-elevation-strip .react-elevation-footer {
@@ -2176,8 +2203,9 @@
     margin-top: 5px;
     color: var(--fv-ink-mute);
     direction: rtl;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+  line-height: var(--text-label-line);
   }
 
   .fv-mobile-elevation-strip .react-elevation-footer .distance-label {
@@ -2267,9 +2295,9 @@
     display: inline-grid;
     width: 40px;
     height: 40px;
-    font-size: 1.15rem;
+    font-size: var(--font-size-lg);
   }
-  .fv-video-poi-preview strong { margin-top: 0; font-size: 0.9rem; line-height: 1.15; }
+  .fv-video-poi-preview strong { margin-top: 0; font-size: var(--text-body-strong-size); line-height: 1.15; }
   .fv-video-poi-preview p { display: none; }
 
   /* Collapsed: image-only circle. */
@@ -2278,7 +2306,7 @@
   .fv-video-poi-preview--mini .fv-video-poi-preview__icon {
     width: 36px;
     height: 36px;
-    font-size: 1rem;
+    font-size: var(--font-size-lg);
   }
   .fv-video-poi-preview--mini div { max-width: 0; }
 
@@ -2312,7 +2340,7 @@
   .fv-route-action {
     min-height: 50px;
     padding: 8px 7px;
-    font-size: 0.82rem;
+    font-size: var(--text-caption-strong-size);
   }
 
   .fv-side-elevation-wrap {
@@ -2329,11 +2357,11 @@
   }
 
   .fv-side-elevation-wrap .fv-side-heading span {
-    font-size: 0.74rem;
+    font-size: var(--font-size-xs);
   }
 
   .fv-side-elevation-wrap .fv-side-heading strong {
-    font-size: 0.98rem;
+    font-size: var(--text-body-size);
   }
 
   .fv-side-elevation-wrap .fv-route-stats {
@@ -2356,8 +2384,8 @@
   .fv-side-elevation-wrap .fv-route-stats dt {
     margin: 0 0 2px;
     color: var(--fv-clay);
-    font-size: 0.62rem;
-    font-weight: 800;
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
     line-height: 1.05;
     white-space: nowrap;
   }
@@ -2366,8 +2394,8 @@
     margin: 0;
     color: var(--fv-ink);
     overflow-wrap: anywhere;
-    font-size: 0.76rem;
-    font-weight: 850;
+    font-size: var(--text-caption-strong-size);
+    font-weight: var(--text-caption-strong-weight);
     font-variant-numeric: tabular-nums;
     line-height: 1.12;
   }
@@ -2381,8 +2409,9 @@
   .fv-side-elevation-wrap .elevation-profile h4 {
     margin: 0 0 6px;
     color: var(--fv-ink);
-    font-size: 0.86rem;
-    font-weight: 850;
+    font-size: var(--text-caption-strong-size);
+    font-weight: var(--text-caption-strong-weight);
+  line-height: var(--text-caption-strong-line);
   }
 
   .fv-side-elevation-wrap .elevation-chart {
@@ -2419,7 +2448,7 @@
     background: rgba(255, 255, 255, 0.88);
     color: #1f2933;
     direction: rtl;
-    font-size: 10px;
+    font-size: var(--font-size-xs);
     line-height: 1.35;
     pointer-events: none;
     white-space: nowrap;
@@ -2431,9 +2460,9 @@
     padding: 1px 5px;
     border: 1px solid;
     border-radius: 999px;
-    font-size: 10px;
+    font-size: var(--text-label-size);
     line-height: 1.35;
-    font-weight: 650;
+    font-weight: var(--text-label-weight);
   }
 
   .fv-side-elevation-wrap .react-elevation-footer {
@@ -2444,7 +2473,7 @@
     margin-top: 4px;
     color: var(--fv-ink-mute);
     direction: rtl;
-    font-size: 10px;
+    font-size: var(--font-size-xs);
   }
 
   .fv-side-elevation-wrap .react-elevation-footer .distance-label {
@@ -2583,7 +2612,7 @@
     top: 9px;
     inset-inline-start: 9px;
     padding: 4px 8px;
-    font-size: 0.72rem;
+    font-size: var(--text-label-size);
   }
 
   .fv-poi-story-copy {
@@ -2593,21 +2622,22 @@
 
   .fv-poi-story-kicker {
     margin-bottom: 6px;
-    font-size: 0.78rem;
+    font-size: var(--text-label-size);
   }
 
   .fv-poi-story h3 {
-    font-size: 1.32rem;
+    font-size: var(--text-subheading-size);
   }
 
   .fv-poi-story-type {
     margin-top: 5px;
-    font-size: 0.8rem;
+    font-size: var(--text-caption-strong-size);
   }
 
   .fv-poi-story-description {
     margin-top: 8px;
-    font-size: 0.96rem;
+    font-size: var(--text-body-size);
+  font-weight: var(--text-body-weight);
     line-height: 1.52;
   }
 }

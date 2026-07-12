@@ -74,4 +74,39 @@ const offGrid = await session.computeConnector(
 assert.ok(offGrid.failure);
 assert.deepEqual(session.manager.getRouteInfo(), before);
 
+const junctions = await session.junctionsNearRoute([
+  { lat: 33.00001, lng: 35.0001 },
+  { lat: 33.00001, lng: 35.0019 },
+]);
+assert.ok(Array.isArray(junctions), "complete coverage produces junction data");
+assert.equal(junctions.length, 0, "fixture has no degree-3 junction");
+
+const partialCoverageSession = await createShardedRouteSession(
+  RouteManager,
+  { type: "FeatureCollection", features: [] },
+  {},
+  manifest,
+  async (entry) => {
+    if (entry.id === "west") return shards.west;
+    throw new Error("simulated shard failure");
+  },
+  { paddingShards: 0 },
+);
+await partialCoverageSession.restorePoints([
+  { lat: 33.00001, lng: 35.0001 },
+  { lat: 33.00001, lng: 35.0009 },
+]);
+assert.ok(
+  partialCoverageSession.indexedNetwork(),
+  "precondition: a partial network is already indexed",
+);
+assert.equal(
+  await partialCoverageSession.junctionsNearRoute([
+    { lat: 33.00001, lng: 35.0001 },
+    { lat: 33.00001, lng: 35.0019 },
+  ]),
+  null,
+  "failed coverage returns null rather than partial junction data",
+);
+
 console.log("test-compute-connector OK");

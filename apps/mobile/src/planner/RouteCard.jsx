@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { text } from "../theme/typography.js";
 import {
   Dimensions,
   Image,
@@ -72,8 +73,7 @@ export default function RouteCard({
   const meta = [
     Number.isFinite(entry?.distanceKm) ? `${entry.distanceKm} ק״מ` : null,
     routeShapeLabel(entry),
-    viaNames.length ? viaNames.join(" · ") : null,
-  ].filter(Boolean).slice(0, 3);
+  ].filter(Boolean);
 
   const nearMeters = fix ? distanceToRouteStartMeters(entry, placeById, fix) : null;
   const nearLabel = formatDistanceFromUser(nearMeters);
@@ -147,37 +147,43 @@ export default function RouteCard({
         ]}
         testID={`route-card-${entry.slug || entry.name}`}
       >
-        <View style={[styles.compactThumb, { backgroundColor: tintFor(chipColor) }]}>
-          {firstImage ? (
-            <Image source={firstImage} style={styles.compactImage} resizeMode="cover" />
-          ) : (
-            <Icon name="bicycle-outline" size={28} color={chipColor} />
-          )}
+        <View style={styles.compactTitleRow}>
+          <Text style={styles.title} numberOfLines={1}>
+            {entry.name}
+          </Text>
+          <Icon name="chevron-back-outline" size={22} color={palette.forest} />
         </View>
-        <View style={styles.compactBody}>
-          <View style={styles.titleRow}>
-            <View style={[styles.swatch, { backgroundColor: swatchColor }]} />
-            <Text style={styles.title} numberOfLines={1}>
-              {entry.name}
-            </Text>
-            {difficultyLabel ? (
-              <View style={[styles.chip, { backgroundColor: chipColor }]}>
-                <Text style={styles.chipText}>{difficultyLabel}</Text>
-              </View>
+        <View style={styles.compactContent}>
+          <View style={[styles.compactThumb, { backgroundColor: tintFor(chipColor) }]}>
+            {firstImage ? (
+              <Image source={firstImage} style={styles.compactImage} resizeMode="cover" />
+            ) : (
+              <Icon name="bicycle-outline" size={28} color={chipColor} />
+            )}
+          </View>
+          <View style={styles.compactBody}>
+            {summary ? (
+              <Text style={styles.summary} numberOfLines={2}>
+                {summary}
+              </Text>
             ) : null}
           </View>
-          {summary ? (
-            <Text style={styles.summary} numberOfLines={2}>
-              {summary}
-            </Text>
-          ) : null}
-          {meta.length ? (
-            <Text style={styles.meta} numberOfLines={1}>
-              {meta.join(" · ")}
-            </Text>
-          ) : null}
-          {nearLabel ? <Text style={styles.near}>{nearLabel}</Text> : null}
         </View>
+        <View style={styles.compactMetaRow}>
+          {difficultyLabel ? (
+            <View style={[styles.chip, { backgroundColor: chipColor }]}>
+              <Text style={styles.chipText}>{difficultyLabel}</Text>
+            </View>
+          ) : null}
+          {meta.length || viaNames.length ? (
+            <Text style={styles.compactMetaItem} numberOfLines={1}>
+              {[...meta, viaNames.length ? viaNames.join(" · ") : null]
+                .filter(Boolean)
+                .join("  |  ")}
+            </Text>
+          ) : null}
+        </View>
+        {nearLabel ? <Text style={styles.near}>{nearLabel}</Text> : null}
       </Pressable>
     );
   }
@@ -322,19 +328,16 @@ const styles = StyleSheet.create({
   },
   heroSwatch: { width: 8, height: 8, borderRadius: 4 },
   heroKickerText: {
+    ...text.label,
     color: "rgba(255,255,255,0.92)",
-    fontSize: 11,
-    fontWeight: "900",
     writingDirection: "rtl",
   },
   heroCopy: {
     gap: 5,
   },
   heroTitle: {
+    ...text.heading,
     color: palette.white,
-    fontSize: 22,
-    fontWeight: "900",
-    lineHeight: 27,
     textAlign: "right",
     writingDirection: "rtl",
     textShadowColor: "rgba(0,0,0,0.35)",
@@ -342,19 +345,16 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   heroSummary: {
+    ...text.caption,
     width: "100%",
     color: palette.forestDk,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   heroMeta: {
+    ...text.captionStrong,
     flexShrink: 1,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -364,12 +364,11 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   heroChip: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
-  heroChipText: { color: palette.white, fontSize: 10, fontWeight: "900" },
+  heroChipText: { ...text.label, color: palette.white },
   heroNear: {
+    ...text.label,
     flexShrink: 1,
     color: palette.muted,
-    fontSize: 11,
-    fontWeight: "800",
     writingDirection: "rtl",
   },
   heroCta: {
@@ -380,25 +379,34 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: "#f3f7f1",
     color: palette.forest,
-    fontSize: 12,
-    fontWeight: "800",
+    ...text.captionStrong,
     overflow: "hidden",
     writingDirection: "rtl",
   },
   compactCard: {
-    flexDirection: "row-reverse",
-    alignItems: "stretch",
-    gap: 10,
-    padding: 9,
+    gap: 6,
+    padding: 10,
     borderRadius: radius.md,
     backgroundColor: palette.white,
     borderColor: "#e6ece7",
     borderWidth: StyleSheet.hairlineWidth,
   },
+  compactTitleRow: {
+    width: "100%",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  compactContent: {
+    flexDirection: "row-reverse",
+    alignItems: "stretch",
+    gap: 9,
+  },
   compactThumb: {
     position: "relative",
-    width: 106,
-    height: 92,
+    width: 96,
+    height: 76,
     borderRadius: radius.sm || 10,
     alignItems: "center",
     justifyContent: "center",
@@ -420,7 +428,20 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     justifyContent: "center",
-    gap: 3,
+    gap: 4,
+  },
+  compactMetaRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  compactMetaItem: {
+    ...text.captionStrong,
+    flex: 1,
+    flexShrink: 1,
+    color: palette.muted,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   cardPressed: { opacity: 0.86 },
   card: {
@@ -464,33 +485,31 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: "row-reverse", alignItems: "center", gap: 6 },
   swatch: { width: 9, height: 9, borderRadius: 5, flexShrink: 0 },
   title: {
+    ...text.subheading,
+    flex: 1,
     flexShrink: 1,
     color: palette.ink,
-    fontSize: 16,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },
   chip: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
-  chipText: { color: palette.white, fontSize: 10, fontWeight: "800" },
+  chipText: { ...text.label, color: palette.white },
   summary: {
+    ...text.caption,
     color: "#52615c",
-    fontSize: 13,
-    lineHeight: 19,
     textAlign: "right",
     writingDirection: "rtl",
+    lineHeight: 18,
   },
   meta: {
+    ...text.captionStrong,
     color: palette.muted,
-    fontSize: 12,
-    fontWeight: "700",
     textAlign: "right",
     writingDirection: "rtl",
   },
   near: {
+    ...text.label,
     color: palette.forestDk,
-    fontSize: 11,
-    fontWeight: "800",
     textAlign: "right",
     writingDirection: "rtl",
   },

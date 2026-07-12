@@ -77,16 +77,8 @@ function route({ circular = false } = {}) {
     speed: 3,
     timestamp: 1000,
   });
-  assert.equal(laterLeg.hasAcquiredRoute, false, "a later leg cannot acquire before the selected start");
-  const start = tracker.update({
-    lat: effective.geometry[0].lat,
-    lng: effective.geometry[0].lng,
-    accuracy: 5,
-    speed: 3,
-    timestamp: 2000,
-  });
-  assert.equal(start.hasAcquiredRoute, true);
-  assert.ok(start.progressMeters < 2);
+  assert.equal(laterLeg.hasAcquiredRoute, true, "an on-route rider can join at a later leg");
+  assert.ok(laterLeg.progressMeters > 0, "mid-route acquisition preserves joined progress");
 }
 
 {
@@ -160,6 +152,22 @@ function route({ circular = false } = {}) {
   const reverseTurn = buildRouteCues(reverseNavigationRoute(source)).find((cue) => cue.type === "turn");
   assert.equal(forwardTurn.direction, "right");
   assert.equal(reverseTurn.direction, "left");
+}
+
+{
+  const junctions = [{ lat: 32, lng: 35.005 }];
+  const source = { ...route(), junctions };
+  for (const effective of [
+    buildEffectiveNavigationRoute(source, { direction: "forward" }),
+    buildEffectiveNavigationRoute(source, { direction: "reverse" }),
+    buildEffectiveNavigationRoute(source, {
+      direction: "forward",
+      startProgressMeters: 200,
+    }),
+  ]) {
+    assert.deepEqual(effective.junctions, junctions);
+    assert.notEqual(effective.junctions, junctions, "effective route clones junction data");
+  }
 }
 
 console.log("test-effective-navigation-route: OK");

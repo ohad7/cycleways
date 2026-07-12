@@ -2,6 +2,7 @@ import { View, Pressable, Text, StyleSheet } from "react-native";
 import Slider from "@react-native-community/slider";
 import { palette, radius } from "./theme.js";
 import { formatPlaybackTime as formatTime } from "@cycleways/core/ui/playbackReadout.js";
+import { fontSizes, text } from "../theme/typography.js";
 
 // Native equivalent of the web RoutePlaybackControls: play/pause + scrub the
 // route-preview marker. Bound to the shared playback engine.
@@ -53,7 +54,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center", backgroundColor: palette.cream,
   },
   disabled: { opacity: 0.4 },
-  glyph: { fontSize: 15, color: palette.ink },
+  glyph: { fontSize: fontSizes.md, color: palette.ink }, // glyph: size-only
   slider: { flex: 1, height: 40 },
-  time: { fontSize: 12, color: palette.muted, minWidth: 72, textAlign: "left" },
+  time: { ...text.caption, color: palette.muted, minWidth: 72, textAlign: "left" },
 });

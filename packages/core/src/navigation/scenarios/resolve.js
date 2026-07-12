@@ -6,8 +6,14 @@
 import { navigationRouteFromRouteState } from "../navigationRoute.js";
 import { generateTrack } from "../trackGenerator.js";
 import { applyGpsGap, insertDwell } from "../trackTools.js";
+import { validateResolvedJourney } from "./journeySchema.js";
 
-const CONNECTOR_MODES = new Set(["straight-line", "fail", "none"]);
+const CONNECTOR_MODES = new Set([
+  "straight-line",
+  "guide-turn",
+  "fail",
+  "none",
+]);
 
 export function resolveScenario(scenario, { currentNavigationRoute = null } = {}) {
   const name = scenario?.name;
@@ -21,7 +27,13 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     if (currentNavigationRoute?.canNavigate !== true) {
       throw err("requires a navigable current route");
     }
-    navigationRoute = currentNavigationRoute;
+    // A current-route scenario is a playback snapshot, not the live planner
+    // route. Give it a distinct id so id-keyed navigation sessions rebind even
+    // when only metadata (for example roundabout junctions) changed.
+    navigationRoute = {
+      ...currentNavigationRoute,
+      id: `${currentNavigationRoute.id}:scenario-${name}`,
+    };
   } else if (scenario.route?.routeState) {
     navigationRoute = navigationRouteFromRouteState(scenario.route.routeState, {
       param: `scenario-${name}`,
@@ -55,13 +67,23 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     throw err(`unknown connector mode "${connector}"`);
   }
 
-  return {
+  const resolved = {
     name,
     description: scenario.description ?? "",
     visualOnly: scenario.visualOnly === true,
+    group: scenario.group || null,
+    camera: scenario.camera === true,
+    entryMode: scenario.entryMode || "session",
     navigationRoute,
     fixes,
     connector,
+    connectorResponses: Array.isArray(scenario.connectorResponses)
+      ? scenario.connectorResponses
+      : null,
+    journeySchemaVersion: scenario.journeySchemaVersion ?? null,
+    bookmarks: Array.isArray(scenario.bookmarks) ? scenario.bookmarks : [],
     expect: Array.isArray(scenario.expect) ? scenario.expect : [],
   };
+  if (resolved.journeySchemaVersion !== null) validateResolvedJourney(resolved);
+  return resolved;
 }

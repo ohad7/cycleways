@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import RouteCard from "./RouteCard.jsx";
 import { catalogFilter } from "./catalogFilter.js";
 import {
@@ -36,8 +36,11 @@ export function PlaceAutocompleteFilter({
   selected,
   icon,
 }) {
+  const inputId = useId();
+  const listboxId = inputId + "-listbox";
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const selectedValues = Array.from(selected || []);
   const optionByValue = useMemo(
     () => new Map((options || []).map((option) => [option.value, option])),
@@ -57,14 +60,19 @@ export function PlaceAutocompleteFilter({
   );
   const showDropdown = focused && matches.length > 0;
 
+  useEffect(() => {
+    setActiveIndex((index) => Math.min(index, Math.max(matches.length - 1, 0)));
+  }, [matches.length]);
+
   const selectOption = (value) => {
     onSelect(value);
     setQuery("");
+    setActiveIndex(0);
   };
 
   return (
     <div className="wd-combo">
-      <span className="wd-combo__label">{label}</span>
+      <label className="wd-combo__label" htmlFor={inputId}>{label}</label>
       <div className="wd-combo__box">
         {icon && <span className="wd-combo__icon" aria-hidden="true">{icon}</span>}
         {selectedValues.map((value) => {
@@ -83,18 +91,39 @@ export function PlaceAutocompleteFilter({
           );
         })}
         <input
+          id={inputId}
           type="search"
           value={query}
           placeholder={selectedValues.length > 0 ? "הוספה..." : placeholder}
           autoComplete="off"
-          aria-label={label}
-          onBlur={() => setTimeout(() => setFocused(false), 120)}
-          onChange={(event) => setQuery(event.target.value)}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={showDropdown}
+          aria-controls={listboxId}
+          aria-activedescendant={
+            showDropdown ? listboxId + "-option-" + activeIndex : undefined
+          }
+          onBlur={() => setFocused(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActiveIndex(0);
+          }}
           onFocus={() => setFocused(true)}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && matches[0]) {
+            if (event.key === "ArrowDown" && matches.length > 0) {
               event.preventDefault();
-              selectOption(matches[0].value);
+              setFocused(true);
+              setActiveIndex((index) => (index + 1) % matches.length);
+            } else if (event.key === "ArrowUp" && matches.length > 0) {
+              event.preventDefault();
+              setFocused(true);
+              setActiveIndex((index) => (index - 1 + matches.length) % matches.length);
+            } else if (event.key === "Enter" && matches[activeIndex]) {
+              event.preventDefault();
+              selectOption(matches[activeIndex].value);
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              setFocused(false);
             }
             if (
               event.key === "Backspace" &&
@@ -107,11 +136,17 @@ export function PlaceAutocompleteFilter({
         />
       </div>
       {showDropdown && (
-        <ul className="wd-combo__menu">
-          {matches.map((option) => (
-            <li key={option.value}>
+        <ul className="wd-combo__menu" id={listboxId} role="listbox">
+          {matches.map((option, index) => (
+            <li
+              key={option.value}
+              id={listboxId + "-option-" + index}
+              role="option"
+              aria-selected={index === activeIndex}
+            >
               <button
                 type="button"
+                tabIndex={-1}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => selectOption(option.value)}
               >
@@ -122,6 +157,9 @@ export function PlaceAutocompleteFilter({
           ))}
         </ul>
       )}
+      {focused && query && matches.length === 0 ? (
+        <span className="visually-hidden" role="status">לא נמצאו אפשרויות</span>
+      ) : null}
     </div>
   );
 }

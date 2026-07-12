@@ -1,3 +1,4 @@
+import { text } from "../theme/typography.js";
 // Dev-only navigation scenario picker (nav-scenario-harness). Rendered only
 // under __DEV__ from BuildScreen; lists the shared scenario registry and a
 // playback-speed toggle. Deliberately unstyled relative to the app chrome —
@@ -8,19 +9,22 @@ const SPEEDS = [1, 4, 8];
 
 export default function DevScenarioPicker({
   visible,
+  title = "Dev: simulate scenario",
   scenarios,
   speed,
   onSelectSpeed,
   onSelect,
   onClose,
+  mode = "sim",
 }) {
+  const cameraMode = mode === "cam";
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
-          <Text style={styles.title}>Dev: simulate scenario</Text>
+          <Text style={styles.title}>{title}</Text>
           <View style={styles.speedRow}>
-            {SPEEDS.map((value) => (
+            {(cameraMode ? [1] : SPEEDS).map((value) => (
               <Pressable
                 key={value}
                 onPress={() => onSelectSpeed(value)}
@@ -31,16 +35,37 @@ export default function DevScenarioPicker({
             ))}
           </View>
           <ScrollView style={styles.list}>
-            {scenarios.map((scenario) => (
-              <Pressable
-                key={scenario.name}
-                onPress={() => onSelect(scenario)}
-                style={styles.row}
-              >
-                <Text style={styles.rowName}>{scenario.name}</Text>
-                <Text style={styles.rowDescription}>{scenario.description}</Text>
-              </Pressable>
-            ))}
+            {scenarios.flatMap((scenario) => {
+              if (!cameraMode) {
+                return [
+                  <Pressable
+                    key={scenario.name}
+                    onPress={() => onSelect(scenario, null)}
+                    style={styles.row}
+                  >
+                    <Text style={styles.rowName}>{scenario.name}</Text>
+                    <Text style={styles.rowDescription}>
+                      {scenario.description}
+                      {scenario.entryMode === "ride-intro" ? " · starts at Ride Intro" : " · session-only"}
+                    </Text>
+                  </Pressable>,
+                ];
+              }
+              return (scenario.bookmarks || []).map((bookmark) => (
+                <Pressable
+                  key={`${scenario.name}:${bookmark.id}`}
+                  onPress={() => onSelect(scenario, bookmark)}
+                  style={styles.row}
+                >
+                  <Text style={styles.rowName}>{bookmark.label || bookmark.id}</Text>
+                  <Text style={styles.rowDescription}>
+                    {scenario.name} · {bookmark.phase === "pre-start"
+                      ? "before Start · inspect intro; do not press Start"
+                      : "after Start · press the real Start button"}
+                  </Text>
+                </Pressable>
+              ));
+            })}
           </ScrollView>
           <Pressable onPress={onClose} style={styles.close}>
             <Text style={styles.closeText}>Close</Text>
@@ -64,7 +89,7 @@ const styles = StyleSheet.create({
     maxHeight: "70%",
     padding: 16,
   },
-  title: { color: "#fff", fontSize: 16, fontWeight: "600", marginBottom: 10 },
+  title: { ...text.subheading, color: "#fff", marginBottom: 10 },
   speedRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
   speedChip: {
     borderColor: "#555",
@@ -74,11 +99,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   speedChipActive: { backgroundColor: "#3a6", borderColor: "#3a6" },
-  speedText: { color: "#fff", fontSize: 13 },
+  speedText: { ...text.captionStrong, color: "#fff" },
   list: { flexGrow: 0 },
   row: { borderTopColor: "#333", borderTopWidth: 1, paddingVertical: 10 },
-  rowName: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  rowDescription: { color: "#aaa", fontSize: 12, marginTop: 2 },
+  rowName: { ...text.bodyStrong, color: "#fff" },
+  rowDescription: { ...text.caption, color: "#aaa", marginTop: 2 },
   close: { alignItems: "center", paddingVertical: 12 },
-  closeText: { color: "#3a6", fontSize: 14, fontWeight: "600" },
+  closeText: { ...text.bodyStrong, color: "#3a6" },
 });
