@@ -138,6 +138,22 @@ function cuePhrase(event, state, locale) {
         ? `${prefix}פנה ${directionText(cue.direction, locale)}${onto}${then}`
         : `${prefix}turn ${directionText(cue.direction, locale)}${onto}${then}`;
     }
+    case "roundabout": {
+      const phrases = locale === "he-IL"
+        ? {
+            straight: "בכיכר, המשיכו ישר",
+            right: "בכיכר, פנו ימינה",
+            left: "בכיכר, פנו שמאלה",
+            "u-turn": "בכיכר, חזרו לאחור",
+          }
+        : {
+            straight: "At the roundabout, continue straight",
+            right: "At the roundabout, turn right",
+            left: "At the roundabout, turn left",
+            "u-turn": "At the roundabout, turn back",
+          };
+      return phrases[cue.direction] ? `${prefix}${phrases[cue.direction]}` : null;
+    }
     case "bend":
       return null;
     case "enter-segment":

@@ -414,7 +414,7 @@ export default function BuildScreen({ navigation, route }) {
     computeRouteJunctions,
     plannerDraft,
     handleRestoreDraft,
-  } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
+  } = useCyclewaysApp({ enableRouteDirectionAnimation: false, includeRoundabouts: true });
 
   const routeGeometry = useMemo(
     () => buildRouteGeometryFeatureCollection(routeState.geometry),

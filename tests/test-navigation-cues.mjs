@@ -332,4 +332,60 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   }
 }
 
+// --- Roundabout traversal records replace in-ring corner noise ------------
+{
+  const route = routeFrom(
+    [
+      { lat: 33, lng: 35 },
+      { lat: 33, lng: 35.001 },
+      { lat: 32.999, lng: 35.001 },
+      { lat: 32.998, lng: 35.001 },
+    ],
+    {
+      junctions: [{
+        kind: "roundabout",
+        roundaboutId: "r1",
+        lat: 33,
+        lng: 35.001,
+        entryMeters: 70,
+        exitMeters: 140,
+        entryBearingDeg: 90,
+        exitBearingDeg: 180,
+        complete: true,
+      }],
+    },
+  );
+  const cues = buildRouteCues(route);
+  assert.deepEqual(findType(cues, "roundabout").map((cue) => cue.direction), ["right"]);
+  assert.equal(findType(cues, "turn").length + findType(cues, "bend").length, 0);
+}
+
+// Thresholds and repeated visits are one cue per traversal.
+{
+  const route = routeFrom(
+    [{ lat: 33, lng: 35 }, { lat: 33, lng: 35.01 }],
+    {
+      junctions: [
+        { kind: "roundabout", roundaboutId: "a", lat: 33, lng: 35.002, entryMeters: 100, exitMeters: 130, entryBearingDeg: 0, exitBearingDeg: 39.99, complete: true },
+        { kind: "roundabout", roundaboutId: "b", lat: 33, lng: 35.004, entryMeters: 300, exitMeters: 330, entryBearingDeg: 0, exitBearingDeg: 40, complete: true },
+        { kind: "roundabout", roundaboutId: "c", lat: 33, lng: 35.006, entryMeters: 500, exitMeters: 530, entryBearingDeg: 0, exitBearingDeg: 130, complete: true },
+        { kind: "roundabout", roundaboutId: "d", lat: 33, lng: 35.008, entryMeters: 700, exitMeters: 730, entryBearingDeg: 0, exitBearingDeg: 130.01, complete: true },
+      ],
+    },
+  );
+  assert.deepEqual(
+    findType(buildRouteCues(route), "roundabout").map((cue) => cue.direction),
+    ["straight", "right", "right", "u-turn"],
+  );
+}
+
+// Incomplete traversal suppresses geometry noise but cannot announce direction.
+{
+  const route = routeFrom(
+    [{ lat: 33, lng: 35 }, { lat: 33.001, lng: 35.001 }, { lat: 33.002, lng: 35.001 }],
+    { junctions: [{ kind: "roundabout", roundaboutId: "edge", lat: 33, lng: 35, entryMeters: 0, exitMeters: 180, complete: false }] },
+  );
+  assert.equal(findType(buildRouteCues(route), "roundabout").length, 0);
+}
+
 console.log("navigation cue tests passed");

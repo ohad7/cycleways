@@ -314,4 +314,24 @@ assert.equal(compassWord(null, "he-IL"), null);
   assert.equal(bend.reason, "no-phrase");
 }
 
+// Roundabout phrasing supports all directions and preview distance prefixes.
+{
+  for (const [direction, expected] of [
+    ["straight", /ישר/],
+    ["right", /ימינה/],
+    ["left", /שמאלה/],
+    ["u-turn", /לאחור/],
+  ]) {
+    const cue = { type: "roundabout", direction, distanceMeters: 500 };
+    const utterance = createNavigationVoicePlanner().plan(
+      { kind: "cue", cueType: "roundabout", phase: "preview", cue },
+      { activeCue: { distanceToCueMeters: 95, cue, phase: "preview" } },
+      1000,
+    ).utterance;
+    assert.match(utterance.text, /בעוד 100 מטר/);
+    assert.match(utterance.text, /בכיכר/);
+    assert.match(utterance.text, expected);
+  }
+}
+
 console.log("navigation voice tests passed");

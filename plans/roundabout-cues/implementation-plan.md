@@ -1,623 +1,475 @@
 # Roundabout Detection and Direction Cues — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+**Date:** 2026-07-12
+**Goal:** Implement `plans/roundabout-cues/design.md` C1–C7: local candidate
+extraction from the saved OSM snapshot, editor-owned human review, reviewed
+shape-based runtime data, route-relative traversal records, and one
+direction-only cue per complete roundabout traversal.
 
-**Goal:** Implement `plans/roundabout-cues/design.md` (C1–C6): offline tag-based roundabout detection shipped as a separate `roundabouts.json` artifact (shards untouched), route-baked roundabout clusters, and one entry-anchored direction-only cue per traversal.
+**Architecture:** A local-only `osm:roundabouts` command produces deterministic
+candidates from the existing saved Overpass response/query without fetching or
+rebuilding the base graph. The editor displays every candidate, source coverage,
+and accept/reject decisions. Build joins candidates with reviews, blocks
+publication on pending/stale decisions, and publishes only accepted shapes
+through the manifest. A pure core matcher turns accepted shapes into
+route-relative traversal intervals; navigation cues suppress interval corners
+and announce at entry. The manifest—not file existence—is the runtime
+availability authority.
 
-**Architecture:** Data flows offline→app: `processing/build_roundabouts.py` (new) extracts clusters from the fetched OSM network; `processing/build_map.py` publishes the artifact + manifest entry during Build; the editor Promote copies it like other single-file artifacts. In the app, a pure core matcher (`roundaboutsOnRoute`) bakes `kind: "roundabout"` records into `route.junctions` at ride-confirm, `navigationCues` collapses in-cluster corners into one direction cue, and voice/presentation phrase it. A missing artifact degrades to today's behavior at every stage.
+**Tech stack:** Python 3 processing scripts and plain-assert tests; editor
+Node server + vanilla browser UI/Mapbox; `@cycleways/core`; React Native mobile
+offline assets; node test scripts under `tests/`.
 
-**Tech Stack:** Python 3 processing scripts (plain-assert test scripts, no pytest dependency), node test scripts (`node tests/test-*.mjs`), `@cycleways/core`, React Native mobile app.
+**Implementation status (2026-07-12):** Code and automated tests are complete.
+`npm run osm:roundabouts` produced 349 candidates from the saved snapshot, with
+mini coverage correctly reported as `not-requested-by-source`. The editor view
+was visually verified with no browser errors. Owner accept/reject review,
+Build/Promote of the reviewed artifact, asset sync after promotion, and
+TestFlight ride validation remain operational rollout steps. `npm run build`,
+the roundabout suites, and the navigation-camera suite pass. The full `npm test`
+run reaches an unrelated existing typography-guard failure in
+`src/pages/StickerRedirectPage.jsx`.
 
 ## Global Constraints
 
-- Run node tests from the repo root: `node tests/test-<name>.mjs`; python from the repo root: `python3 processing/<script>.py`.
-- **Never hand-edit `public-data/`** — the artifact reaches production only via Build + Promote, which the owner runs (CLAUDE.md). This plan only changes pipeline *code*; committing generated `public-data/roundabouts.json` is a plan violation.
-- Hebrew UI copy, RTL.
-- Commit after every task; `feat(nav): …` messages with the `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>` trailer.
-- Finish with `node tests/test-mobile-undefined-references.mjs`.
+- Never hand-edit generated files under `build/` or `public-data/`.
+- Human decisions belong only in `data/roundabout-review.json` and are written
+  atomically by the editor.
+- Preserve existing website behavior and routing-shard formats.
+- Do not modify `fetch_osm_network.py`, invoke `osm:fetch`, contact Overpass, or
+  replace/rebuild the current OSM/base graph in this plan.
+- Records without `kind` in restored routes remain legacy plain junctions.
+- Use exact shape/progress calculations in pure modules; keep server/UI layers
+  thin and testable.
+- Commit generated mobile asset maps only when the repository's existing
+  offline-asset workflow requires them; never add a `require()` for a missing
+  optional asset.
+- Finish with `node tests/test-mobile-undefined-references.mjs` and the full
+  relevant node/Python suites.
 
 ---
 
-### Task 1: `build_roundabouts.py` — clusters from OSM tags (C1)
+## Task 1 — Local snapshot command and coverage contract (C1)
 
-**Files:**
-- Create: `processing/build_roundabouts.py`
-- Create: `processing/test_build_roundabouts.py` (plain-assert script)
+**Files**
 
-**Interfaces:**
-- Consumes: the fetched OSM network GeoJSON (`build/osm/osm-raw-ways.geojson`, written by `fetch_osm_network.py`, which retains all OSM tags in feature properties — verified). Mini-roundabout *nodes* are not in the ways file; fetch them from the same Overpass response if present (`build/osm/overpass-response.json`, elements with `type: "node"` and `tags.highway == "mini_roundabout"`); tolerate the response file being absent.
-- Produces: `extract_roundabouts(ways_geojson, overpass_data) -> list[dict]` and a CLI writing `{ "schemaVersion": 1, "generatedAt": ..., "roundabouts": [{ "center": { "lat": ..., "lng": ... }, "radiusM": ... }, ...] }`. Task 2 calls `extract_roundabouts` from `build_map.py`.
+- Create `processing/build_roundabouts.py`.
+- Create `processing/test_build_roundabouts.py`.
+- Modify `package.json` to add only the independent `osm:roundabouts` target.
 
-- [ ] **Step 1: Write the failing test**
+**Steps**
 
-Create `processing/test_build_roundabouts.py`:
+- [ ] Add `npm run osm:roundabouts` as
+  `python3 processing/build_roundabouts.py`. Do not append it to `osm:fetch` or
+  any Build dependency chain.
+- [ ] Give the script local defaults for
+  `build/osm/overpass-response.json`, `build/osm/overpass-query.ql`, and
+  `build/osm/roundabout-candidates.json`.
+- [ ] Fail clearly when the saved response/query is absent. The error may tell
+  the owner that an existing OSM snapshot is required, but must never fetch it.
+- [ ] Compute response and query digests. Determine coverage from the saved
+  query: ordinary/circular ways are available when their encompassing highway
+  way query is present; minis are `available` only when the query explicitly
+  requested `highway=mini_roundabout`, otherwise
+  `not-requested-by-source`.
+- [ ] Emit schema/version/source/coverage metadata even when no candidates of an
+  available class are found, so “zero found” and “not requested” remain distinct.
+- [ ] Add tests that patch/guard network APIs or otherwise prove the command has
+  no network path; test missing files, present/absent mini selector, digests,
+  and deterministic coverage output.
 
-```python
-#!/usr/bin/env python3
-"""Plain-assert tests for build_roundabouts (run: python3 processing/test_build_roundabouts.py)."""
-from build_roundabouts import extract_roundabouts
+**Acceptance**
 
-
-def ring(lng0, lat0, r_deg, tag="roundabout"):
-    # Square "ring" is fine: clustering uses vertices, not curvature.
-    coords = [
-        [lng0 - r_deg, lat0 - r_deg],
-        [lng0 + r_deg, lat0 - r_deg],
-        [lng0 + r_deg, lat0 + r_deg],
-        [lng0 - r_deg, lat0 + r_deg],
-        [lng0 - r_deg, lat0 - r_deg],
-    ]
-    return {
-        "type": "Feature",
-        "geometry": {"type": "LineString", "coordinates": coords},
-        "properties": {"junction": tag, "highway": "residential", "osmId": 1},
-    }
-
-
-# Tagged ring becomes one cluster with a sane radius.
-ways = {"type": "FeatureCollection", "features": [ring(35.6, 33.1, 0.0002)]}
-clusters = extract_roundabouts(ways, None)
-assert len(clusters) == 1, clusters
-c = clusters[0]
-assert abs(c["center"]["lat"] - 33.1) < 1e-4 and abs(c["center"]["lng"] - 35.6) < 1e-4
-assert 10 <= c["radiusM"] <= 60, c["radiusM"]
-
-# Two rings sharing a vertex merge into one cluster.
-shared = ring(35.6, 33.1, 0.0002)
-neighbor = ring(35.6004, 33.1, 0.0002)
-neighbor["geometry"]["coordinates"][0] = shared["geometry"]["coordinates"][1]
-ways2 = {"type": "FeatureCollection", "features": [shared, neighbor]}
-assert len(extract_roundabouts(ways2, None)) == 1
-
-# junction=circular counts; untagged ways are ignored.
-ways3 = {
-    "type": "FeatureCollection",
-    "features": [ring(35.7, 33.2, 0.0002, tag="circular"), ring(35.8, 33.3, 0.0002, tag="")],
-}
-only = extract_roundabouts(ways3, None)
-assert len(only) == 1 and abs(only[0]["center"]["lng"] - 35.7) < 1e-4
-
-# Mini-roundabout node from the overpass response: fixed 10 m radius.
-overpass = {
-    "elements": [
-        {"type": "node", "id": 7, "lat": 33.4, "lon": 35.9, "tags": {"highway": "mini_roundabout"}}
-    ]
-}
-mini = extract_roundabouts({"type": "FeatureCollection", "features": []}, overpass)
-assert len(mini) == 1 and mini[0]["radiusM"] == 10
-
-print("build_roundabouts tests passed")
-```
-
-- [ ] **Step 2: Run to verify it fails**
-
-Run: `cd processing && python3 test_build_roundabouts.py`
-Expected: `ModuleNotFoundError: build_roundabouts`.
-
-- [ ] **Step 3: Implement**
-
-Create `processing/build_roundabouts.py` following the style of the other processing scripts (argparse, `write_json` helper, summary print):
-
-```python
-#!/usr/bin/env python3
-"""Extract roundabout clusters from the fetched OSM network (C1,
-plans/roundabout-cues). Tag-based only: ways tagged junction=roundabout or
-junction=circular, plus highway=mini_roundabout nodes. Output feeds
-build_map.py which publishes public-data/roundabouts.json.
-"""
-from __future__ import annotations
-
-import argparse
-import json
-import math
-from datetime import datetime, timezone
-from pathlib import Path
-
-MINI_ROUNDABOUT_RADIUS_M = 10.0
-MERGE_DISTANCE_M = 25.0  # rings within this merge into one roundabout
-MIN_RADIUS_M = 10.0
-
-M_PER_DEG_LAT = 111_320.0
-
-
-def _meters(a, b):
-    lat = math.radians((a[1] + b[1]) / 2)
-    dx = (a[0] - b[0]) * M_PER_DEG_LAT * math.cos(lat)
-    dy = (a[1] - b[1]) * M_PER_DEG_LAT
-    return math.hypot(dx, dy)
-
-
-def _is_roundabout_way(properties):
-    return str(properties.get("junction", "")).lower() in {"roundabout", "circular"}
-
-
-def extract_roundabouts(ways_geojson, overpass_data):
-    # Collect member vertex groups: one group per tagged way, one per mini node.
-    groups = []
-    for feature in (ways_geojson or {}).get("features", []):
-        properties = feature.get("properties") or {}
-        geometry = feature.get("geometry") or {}
-        if geometry.get("type") != "LineString" or not _is_roundabout_way(properties):
-            continue
-        coords = geometry.get("coordinates") or []
-        if len(coords) >= 2:
-            groups.append(list(coords))
-    for element in (overpass_data or {}).get("elements", []):
-        tags = element.get("tags") or {}
-        if element.get("type") == "node" and tags.get("highway") == "mini_roundabout":
-            groups.append([[element["lon"], element["lat"]]])
-
-    # Union-find merge: groups whose nearest vertices are within MERGE_DISTANCE_M
-    # (shared vertices included) belong to one roundabout.
-    parent = list(range(len(groups)))
-
-    def find(i):
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
-
-    for i in range(len(groups)):
-        for j in range(i + 1, len(groups)):
-            if find(i) == find(j):
-                continue
-            if any(
-                _meters(a, b) <= MERGE_DISTANCE_M for a in groups[i] for b in groups[j]
-            ):
-                parent[find(j)] = find(i)
-
-    merged = {}
-    for index, group in enumerate(groups):
-        merged.setdefault(find(index), []).extend(group)
-
-    clusters = []
-    for points in merged.values():
-        lng = sum(p[0] for p in points) / len(points)
-        lat = sum(p[1] for p in points) / len(points)
-        radius = max(
-            (_meters([lng, lat], p) for p in points),
-            default=0.0,
-        )
-        clusters.append(
-            {
-                "center": {"lat": round(lat, 7), "lng": round(lng, 7)},
-                "radiusM": round(max(radius, MIN_RADIUS_M), 1),
-            }
-        )
-    clusters.sort(key=lambda c: (c["center"]["lat"], c["center"]["lng"]))
-    return clusters
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--osm-dir", type=Path, default=Path("build/osm"))
-    parser.add_argument("--out", type=Path, default=Path("build/osm/roundabouts.json"))
-    args = parser.parse_args()
-
-    with (args.osm_dir / "osm-raw-ways.geojson").open() as handle:
-        ways = json.load(handle)
-    overpass_path = args.osm_dir / "overpass-response.json"
-    overpass = json.loads(overpass_path.read_text()) if overpass_path.exists() else None
-
-    clusters = extract_roundabouts(ways, overpass)
-    payload = {
-        "schemaVersion": 1,
-        "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "roundabouts": clusters,
-    }
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(payload, separators=(",", ":")) + "\n")
-    print(f"build_roundabouts: {len(clusters)} clusters -> {args.out}")
-
-
-if __name__ == "__main__":
-    main()
-```
-
-Note the O(n²) union-find pair scan: fine for a few thousand rings; if the real dataset makes it slow, bucket groups by ~0.001° grid cells first (same pattern as `detect_osm_intersections.py`).
-
-- [ ] **Step 4: Run tests + real data spot-check**
-
-Run: `cd processing && python3 test_build_roundabouts.py`
-Expected: `build_roundabouts tests passed`.
-
-If `build/osm/osm-raw-ways.geojson` exists locally, also run `python3 processing/build_roundabouts.py` and sanity-check the count (Israel-wide network: hundreds to a few thousands) and one known roundabout's coordinates against the map. If the file is absent, note that in the commit message and rely on the fixture tests.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add processing/build_roundabouts.py processing/test_build_roundabouts.py
-git commit -m "feat(nav): offline roundabout cluster extraction from OSM tags"
-```
+- Running `osm:roundabouts` changes only its derived candidate output.
+- It does not change raw OSM, intersections, the base graph, or matches.
+- The current snapshot reports mini coverage as `not-requested-by-source`
+  rather than an authoritative zero.
 
 ---
 
-### Task 2: Publish `roundabouts.json` through Build + Promote (C2 + C6)
+## Task 2 — Deterministic candidate extraction and accurate shape model (C1–C2)
 
-**Files:**
-- Modify: `processing/build_map.py` (manifest composition, ~line 2890 `manifest_path`, `"baseRoutingShards"` entries at ~2902/2908 show the pattern)
-- Modify: `editor/server.mjs` (promote copy list ~lines 2608-2610 `cwBaseIndex` single-file copy pattern; manifest validation ~2677)
-- Modify: `apps/mobile/scripts/sync-offline-assets.mjs` (bundle list, ~line 27)
+**Files**
 
-**Interfaces:**
-- Consumes: `build/osm/roundabouts.json` from Task 1 (or invokes `extract_roundabouts` directly — prefer copying the already-generated file so `build_map.py` does not re-run Overpass-dependent code).
-- Produces: `map-manifest.json` gains `"roundabouts": "roundabouts.json"` plus a `hashes.roundabouts` digest; promote copies `roundabouts.json` from the build dir to `public-data/`; the mobile offline bundle includes it. **All optional:** when `build/osm/roundabouts.json` is missing, the manifest omits the key, promote skips it, and the app treats it as "no data".
+- Continue `processing/build_roundabouts.py` and its focused test.
 
-- [ ] **Step 1: build_map.py**
+**Interfaces**
 
-Mirror the `baseRoutingShards` manifest entries (~2902, 2908, 2938): copy `build/osm/roundabouts.json` into the build public-data dir when present, add the manifest key and `file_digest` hash, and include it in the build summary. Follow the surrounding code style exactly; guard with `if roundabouts_src.exists():`.
+```text
+extract_roundabout_candidates(overpass_data, source_coverage)
+  -> { schemaVersion, sourceDigest, queryDigest, coverage, roundabouts }
 
-- [ ] **Step 2: editor/server.mjs promote**
-
-Mirror the `cwBaseIndex` single-file copy (lines ~2608-2610): when `manifest.roundabouts` is set, copy `resolveManifestPath(buildPublicDataDir, manifest.roundabouts)` → `resolveManifestPath(publicDataDir, manifest.roundabouts)`. Do **not** add it to the required-keys validation (~2677) — the artifact is optional by design (C6).
-
-- [ ] **Step 3: Offline bundle**
-
-In `apps/mobile/scripts/sync-offline-assets.mjs` add to the entries list:
-
-```js
-  { logicalPath: "public-data/roundabouts.json", optional: true },
+CLI:
+  --overpass build/osm/overpass-response.json
+  --query build/osm/overpass-query.ql
+  --out build/osm/roundabout-candidates.json
 ```
 
-Check whether the entries support an `optional` flag (read how the list is consumed); if not, add missing-file tolerance for this entry rather than failing the sync.
+**Steps**
 
-- [ ] **Step 4: Verify**
+- [ ] Normalize selected ways from their OSM node-id list and `geometry`.
+  Reject malformed/non-finite elements with a counted warning rather than
+  emitting unusable runtime records.
+- [ ] Group roundabout ways only through shared OSM node ids using union-find.
+  Do not proximity-merge separate groups.
+- [ ] Order connected member-way coordinates into deterministic path
+  components. Preserve separate components explicitly if malformed topology
+  cannot form one chain; add a `disconnected_components` warning.
+- [ ] Emit stable ids from sorted member way ids (`osm-ways:...`). When mini
+  coverage is available, emit minis from their node id (`osm-node:...`).
+- [ ] Derive center, maximum display radius, bbox, compact `[lat,lng]` paths,
+  classification, member ids, warnings, and candidate-only review tags
+  (`junction`, `highway`, `name`, `oneway`, source id). When present, minis use
+  a fixed 10 m radius.
+- [ ] Compute `fingerprint` from normalized classification/member ids/geometry,
+  and `sourceDigest` from normalized relevant saved-response elements. Preserve
+  Task 1's query digest and coverage; sort all output deterministically.
+- [ ] Warn—without merging—when candidate bounds overlap or candidates are
+  unusually close, unusually large, disconnected, or non-closed.
+- [ ] Add fixture tests for shared-node split rings, close but distinct rings,
+  `junction=circular`, optional mini nodes when coverage is available,
+  deterministic ordering/fingerprints, changed-geometry fingerprint
+  invalidation, malformed geometry, and warnings.
 
-Run: `node tests/test-ios-release-config.mjs && node tests/test-asset-injection.mjs` (and any test the repo has for the sync script — `grep -l sync-offline tests/*.mjs`).
-Expected: PASS. Then run a local Build (`python3 processing/build_map.py --help` first; run the build the way `plans/`/`processing/README.md` documents) if the inputs exist, and confirm the manifest gains the key. **Do not run Promote** — the owner promotes.
+**Acceptance**
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add processing/build_map.py editor/server.mjs apps/mobile/scripts/sync-offline-assets.mjs
-git commit -m "feat(nav): publish roundabouts.json through build+promote and the offline bundle"
-```
+- Re-running unchanged input is byte-stable except `generatedAt` (or tests
+  compare the deterministic content excluding it).
+- No network or base-graph output changes when the calculation runs.
+- Candidate paths visibly follow tagged OSM road centerlines.
 
 ---
 
-### Task 3: Core matcher `roundaboutsOnRoute` (C3)
+## Task 3 — Review model and validation join (C2–C3)
 
-**Files:**
-- Create: `packages/core/src/routing/roundaboutsOnRoute.js`
-- Test: `tests/test-roundabouts-on-route.mjs` (new)
+**Files**
 
-**Interfaces:**
-- Consumes: cluster list `[{ center: { lat, lng }, radiusM }]` (artifact shape from Task 1), route geometry `[{ lat, lng }, ...]`.
-- Produces: `roundaboutsOnRoute(clusters, routeGeometry, { padM = 0 } = {})` → `[{ kind: "roundabout", lat, lng, radiusM }]` for every cluster whose circle (radius + `padM`) the route passes through (any vertex inside, or any segment crossing the circle). Task 4 appends these to `route.junctions`.
+- Create `processing/roundabout_review.py` (pure normalization/join helpers).
+- Create `processing/test_roundabout_review.py`.
+- Create `data/roundabout-review.json` with schema version 1 and empty reviews.
+- Create `tests/fixtures/roundabout-review-cases.json` as language-neutral
+  conformance cases for Python Build code and the JavaScript editor helper.
 
-- [ ] **Step 1: Write the failing test**
+**Interfaces**
 
-Create `tests/test-roundabouts-on-route.mjs`:
-
-```js
-import assert from "node:assert/strict";
-import { roundaboutsOnRoute } from "@cycleways/core/routing/roundaboutsOnRoute.js";
-
-const cluster = { center: { lat: 33.1, lng: 35.605 }, radiusM: 20 };
-const route = [
-  { lat: 33.1, lng: 35.6 },
-  { lat: 33.1, lng: 35.61 },
-];
-
-// The route passes straight through the circle (segment crossing, no vertex
-// inside): matched.
-const hits = roundaboutsOnRoute([cluster], route);
-assert.equal(hits.length, 1);
-assert.equal(hits[0].kind, "roundabout");
-assert.equal(hits[0].radiusM, 20);
-assert.ok(Math.abs(hits[0].lat - 33.1) < 1e-9 && Math.abs(hits[0].lng - 35.605) < 1e-9);
-
-// 30m north of the circle edge: not matched.
-const far = { center: { lat: 33.1006, lng: 35.605 }, radiusM: 20 };
-assert.equal(roundaboutsOnRoute([far], route).length, 0);
-
-// Degenerate inputs are safe.
-assert.deepEqual(roundaboutsOnRoute(null, route), []);
-assert.deepEqual(roundaboutsOnRoute([cluster], []), []);
-
-console.log("roundabouts-on-route tests passed");
+```text
+join_roundabout_reviews(candidates, review_data)
+  -> {
+       accepted,
+       rejected,
+       pending,
+       stale,
+       orphaned,
+       warnings,
+       blockingIssues
+     }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+**Steps**
 
-Run: `node tests/test-roundabouts-on-route.mjs`
-Expected: FAIL — module not found.
+- [ ] Validate review schema and normalize records keyed by stable candidate id.
+- [ ] A decision applies only when its fingerprint exactly matches the current
+  candidate. Missing decisions are pending; mismatches are stale.
+- [ ] Accepted candidates feed runtime output; rejected candidates do not.
+  Orphaned reviews warn but do not block.
+- [ ] Invalid status, duplicate ids, invalid fingerprints, and invalid accepted
+  geometry are blocking issues.
+- [ ] Test every state transition, including an accepted candidate becoming
+  stale after geometry changes and returning to accepted after re-review.
+- [ ] Put the canonical accepted/rejected/pending/stale/orphaned cases and
+  expected summary/blocker results in the shared fixture. Task 4's JavaScript
+  helper must pass the same cases, preventing the editor display and Build gate
+  from assigning different states.
 
-- [ ] **Step 3: Implement**
+**Acceptance**
 
-Create `packages/core/src/routing/roundaboutsOnRoute.js`, reusing `projectToSegment` from `@cycleways/core` navigation (`packages/core/src/navigation/routeProgress.js` exports it) for point-to-segment distance:
-
-```js
-// Match roundabout clusters against a route line (C3, plans/roundabout-cues).
-// Pure point-in-circle / segment-distance checks — no network topology.
-import { projectToSegment } from "../navigation/routeProgress.js";
-
-export function roundaboutsOnRoute(clusters, routeGeometry, { padM = 0 } = {}) {
-  const list = Array.isArray(clusters) ? clusters : [];
-  const geometry = Array.isArray(routeGeometry) ? routeGeometry : [];
-  if (list.length === 0 || geometry.length < 2) return [];
-  const matches = [];
-  for (const cluster of list) {
-    const lat = Number(cluster?.center?.lat);
-    const lng = Number(cluster?.center?.lng);
-    const radiusM = Number(cluster?.radiusM);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(radiusM)) {
-      continue;
-    }
-    const center = { lat, lng };
-    const reach = radiusM + Math.max(0, Number(padM) || 0);
-    let hit = false;
-    for (let i = 0; i < geometry.length - 1 && !hit; i++) {
-      const proj = projectToSegment(center, geometry[i], geometry[i + 1]);
-      hit = proj.crossTrackMeters <= reach;
-    }
-    if (hit) matches.push({ kind: "roundabout", lat, lng, radiusM });
-  }
-  return matches;
-}
-```
-
-For nationwide cluster lists this linear scan is O(clusters × segments); if profiling shows it matters at ride-confirm, add the grid-bucket pre-filter used by `junctionsNearRoute.js` — not before.
-
-- [ ] **Step 4: Run to verify pass**
-
-Run: `node tests/test-roundabouts-on-route.mjs`
-Expected: `roundabouts-on-route tests passed`.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/core/src/routing/roundaboutsOnRoute.js tests/test-roundabouts-on-route.mjs
-git commit -m "feat(nav): pure roundabout-cluster route matcher"
-```
+- The join result is deterministic and contains enough detail for both the
+  editor summary and Build/Promote validation.
 
 ---
 
-### Task 4: Bake roundabout records into `route.junctions` (C3 wiring)
+## Task 4 — Editor Roundabouts validation view (C3)
 
-**Files:**
-- Modify: `packages/core/src/app/useCyclewaysApp.js:147-153` (`computeRouteJunctions`)
-- Modify: whatever supplies `useCyclewaysApp`'s data dependencies with a roundabouts loader (find with `grep -rn "useCyclewaysApp(" apps/mobile packages/core/src` and read how the sharded route session/data assets are injected — mirror that pattern for a lazily-loaded, cached `loadRoundabouts()` that resolves the artifact or `null`)
-- Modify: `apps/mobile` asset loading — the native side loads bundled JSON via `getJsonAsset("public-data/...")` (see the comment in `sync-offline-assets.mjs`); the web side may pass a no-op loader (navigation is app-only)
+**Files**
 
-**Interfaces:**
-- Consumes: `roundaboutsOnRoute` (Task 3); the bundled/fetched `roundabouts.json` (Tasks 1–2).
-- Produces: `computeRouteJunctions(geometry)` resolves to plain junction nodes **plus** `{ kind: "roundabout", lat, lng, radiusM }` records. Plain nodes additionally gain `kind: "junction"` — read `junctionsNearRoute.js`'s returned record shape first and add the field there. Task 5 consumes `route.junctions` entries by `kind`.
+- Modify `editor/server.mjs`.
+- Modify `editor/index.html`, `editor/editor.js`, and `editor/styles.css`.
+- Add a small pure editor helper if useful, for example
+  `editor/lib/roundaboutReview.mjs`.
+- Add/extend focused editor API and UI-helper node tests.
 
-- [ ] **Step 1: Extend `computeRouteJunctions`**
+**Server API**
 
-```js
-  const computeRouteJunctions = useCallback(async (geometry) => {
-    const session = shardedRouteSessionRef.current;
-    if (typeof session?.junctionsNearRoute !== "function") return null;
-    const junctions = await session.junctionsNearRoute(geometry);
-    if (!Array.isArray(junctions)) return junctions;
-    // Roundabout clusters ride along as kind-tagged junction records
-    // (plans/roundabout-cues C3). Missing artifact = no records = today's cues.
-    const clusters = await loadRoundaboutsOnce();
-    if (!Array.isArray(clusters) || clusters.length === 0) return junctions;
-    return [...junctions, ...roundaboutsOnRoute(clusters, geometry)];
-  }, []);
-```
+- `GET /api/roundabouts/review` reads candidates plus reviews, runs the review
+  join, and returns candidate GeoJSON/display data, individual review states,
+  summary counts, warnings, source freshness, and coverage.
+- `POST /api/roundabouts/review` accepts one `{ id, fingerprint, status, note }`
+  decision, validates it against the current candidate, merges it without
+  dropping other decisions, updates `reviewedAt`, and atomically writes
+  `data/roundabout-review.json`.
+- Reject unknown ids, stale fingerprints, invalid statuses, and oversized
+  notes with `400`. Do not expose arbitrary file paths.
 
-`loadRoundaboutsOnce` caches a single load attempt (memoized promise), resolves the artifact's `.roundabouts` array via the injected loader, and swallows failures to `null`. Wire the loader through the same dependency surface `useCyclewaysApp` already uses for data assets — read the hook's options/parameters first and follow its existing injection pattern.
+**Editor UI**
 
-- [ ] **Step 2: `kind` on plain junction records**
+- [ ] Add a **Roundabouts** workspace/view using the existing editor map and
+  workspace conventions.
+- [ ] Draw ring centerlines prominently plus the proposed 12 m matching
+  corridor over the base graph; draw minis as points with 10 m circles.
+- [ ] Color accepted green, rejected red, pending/stale amber. Warnings get a
+  visible badge or casing independent of review status.
+- [ ] Add All / Pending / Accepted / Rejected / Warnings filters and counts.
+- [ ] Add a persistent source-coverage banner. In the current snapshot it must
+  say that ordinary/circular tagged ways are covered and mini-roundabout nodes
+  were not requested; do not present minis as a verified zero.
+- [ ] Add a keyboard-friendly review list. Selecting a row fits the candidate
+  and opens details: id, classification, member ids with OpenStreetMap links,
+  relevant tags, radius, warning list, fingerprint state, status, and note.
+- [ ] Add Accept, Reject, Previous, and Next. Saving advances to the next item
+  under the active filter so reviewing the full area is fast.
+- [ ] Never edit generated candidate geometry from this view.
+- [ ] Handle missing/stale candidate files with an explicit “run
+  `npm run osm:roundabouts`” state rather than an empty-success state. Never
+  offer or trigger a network fetch from this view.
 
-In `junctionsNearRoute.js`, add `kind: "junction"` to each returned record (read the return mapping at the end of the file). Run `node tests/test-*.mjs`-suite members that cover it: `grep -l junctionsNearRoute tests/*.mjs`, run those.
-Expected: PASS (consumers ignore unknown fields; fix any exact-shape assertions to include `kind`).
+**Tests and manual check**
 
-- [ ] **Step 3: Native loader**
+- [ ] Test API read/join, atomic decision merge, validation failures, and that
+  one update preserves unrelated reviews.
+- [ ] Test the JavaScript review join against
+  `tests/fixtures/roundabout-review-cases.json`, then test pure
+  filter/count/color/view-model helpers.
+- [ ] Open the editor, scan all candidates at whole-area zoom, then review a
+  small accepted/rejected/pending fixture set and confirm filters and Next work.
 
-On the mobile side, supply the loader reading `getJsonAsset("public-data/roundabouts.json")` (grep `getJsonAsset` in `apps/mobile/src` for the exact helper and its error behavior); absent asset → `null`.
+**Acceptance**
 
-- [ ] **Step 4: Static + suite check**
-
-Run: `node tests/test-mobile-undefined-references.mjs` and the tests found in Step 2.
-Expected: all PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/core/src/app/useCyclewaysApp.js packages/core/src/routing/junctionsNearRoute.js apps/mobile
-git commit -m "feat(nav): bake roundabout clusters into route junctions at ride-confirm"
-```
-
----
-
-### Task 5: One entry-anchored direction cue per roundabout (C4)
-
-**Files:**
-- Modify: `packages/core/src/navigation/navigationCues.js` (corner-cue loop; `JUNCTION_GATE_M` gating at the top of `buildRouteCues`)
-- Test: `tests/test-navigation-cues.mjs` (extend)
-
-**Interfaces:**
-- Consumes: `route.junctions` entries with `kind: "roundabout"`, `lat`, `lng`, `radiusM` (Task 4).
-- Produces: cue objects `{ type: "roundabout", direction: "straight" | "right" | "left" | "u-turn", distanceMeters }` anchored at the route's entry into the cluster; corners inside a cluster emit no turn/bend cues. New exported constant `ROUNDABOUT_DIRECTION_THRESHOLDS = { straightMaxDeg: 40, uTurnMinDeg: 130 }`. Cue `type: "roundabout"` joins `SELECTION_PRIORITY` at turn priority (0).
-
-- [ ] **Step 1: Write the failing tests**
-
-Read `tests/test-navigation-cues.mjs` for its route-fixture helpers, then append fixtures (geometry with `distanceFromStartMeters`; a roundabout cluster junction at a corner):
-
-```js
-// --- C4: roundabout traversals collapse to one direction cue ---------------
-// Straight through: the route jogs around the circle center (two ~45°
-// corners inside the cluster) but enters and leaves on the same bearing.
-{
-  const route = {
-    geometry: [
-      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
-      { lat: 33.1, lng: 35.6045, distanceFromStartMeters: 419 },
-      { lat: 33.10012, lng: 35.605, distanceFromStartMeters: 467 },
-      { lat: 33.1, lng: 35.6055, distanceFromStartMeters: 515 },
-      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 934 },
-    ],
-    junctions: [{ kind: "roundabout", lat: 33.1, lng: 35.605, radiusM: 25 }],
-  };
-  const cues = buildRouteCues(route);
-  const roundaboutCues = cues.filter((cue) => cue.type === "roundabout");
-  assert.equal(roundaboutCues.length, 1, "one cue per traversal");
-  assert.equal(roundaboutCues[0].direction, "straight");
-  assert.ok(
-    roundaboutCues[0].distanceMeters < 467,
-    "anchored at entry, before the center",
-  );
-  assert.equal(
-    cues.filter((cue) => cue.type === "turn" || cue.type === "bend").length,
-    0,
-    "in-cluster corners suppressed",
-  );
-}
-
-// Right exit: net bearing change ~90° to the right.
-{
-  const route = {
-    geometry: [
-      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
-      { lat: 33.1, lng: 35.605, distanceFromStartMeters: 467 },
-      { lat: 33.0995, lng: 35.605, distanceFromStartMeters: 523 },
-      { lat: 33.095, lng: 35.605, distanceFromStartMeters: 1024 },
-    ],
-    junctions: [{ kind: "roundabout", lat: 33.1, lng: 35.605, radiusM: 25 }],
-  };
-  const roundaboutCues = buildRouteCues(route).filter((c) => c.type === "roundabout");
-  assert.equal(roundaboutCues.length, 1);
-  assert.equal(roundaboutCues[0].direction, "right");
-}
-
-// A cluster the route passes near but not through changes nothing.
-{
-  const route = {
-    geometry: [
-      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
-      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 934 },
-    ],
-    junctions: [{ kind: "roundabout", lat: 33.1008, lng: 35.605, radiusM: 25 }],
-  };
-  assert.equal(
-    buildRouteCues(route).filter((c) => c.type === "roundabout").length,
-    0,
-  );
-}
-```
-
-- [ ] **Step 2: Run to verify they fail**
-
-Run: `node tests/test-navigation-cues.mjs`
-Expected: FAIL — no `roundabout` cue type exists.
-
-- [ ] **Step 3: Implement in `buildRouteCues`**
-
-1. Split `route.junctions` by `kind`: plain nodes keep feeding the existing `JUNCTION_GATE_M` turn gating (records without a `kind` count as plain — backward compatibility with already-persisted routes); `kind: "roundabout"` records feed the new pass.
-2. For each roundabout record, walk the geometry to find the **entry index** (first vertex/segment-crossing within `radiusM + JUNCTION_GATE_M` of the center — reuse the same distance helper the file already uses) and the **exit index** (first vertex beyond that range again).
-3. Entry course = bearing into the entry segment; exit course = bearing out of the exit segment; `delta = signedTurn(entryCourse, exitCourse)` (the file's existing helper). Direction via the exported constant `export const ROUNDABOUT_DIRECTION_THRESHOLDS = { straightMaxDeg: 40, uTurnMinDeg: 130 };` — `|delta| < straightMaxDeg` → `"straight"`; up to `uTurnMinDeg` → `delta > 0 ? "right" : "left"`; beyond → `"u-turn"`.
-4. Push `{ type: "roundabout", direction, distanceMeters: entryDistance }` where `entryDistance` is the `distanceFromStartMeters` at the entry point.
-5. Suppress corner cues whose corner vertex lies within `radiusM + JUNCTION_GATE_M` of any roundabout center (filter them in the existing corner loop).
-6. Add `roundabout: 0` to `SELECTION_PRIORITY`.
-
-- [ ] **Step 4: Run cue + downstream suites**
-
-Run: `node tests/test-navigation-cues.mjs && node tests/test-navigation-session.mjs && node tests/test-cue-haptics.mjs && node tests/test-navigation-voice.mjs`
-Expected: PASS (voice/haptics treat unknown cue types conservatively today; Task 6 adds the phrasing).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/core/src/navigation/navigationCues.js tests/test-navigation-cues.mjs
-git commit -m "feat(nav): entry-anchored direction cue replaces roundabout corner noise"
-```
+- The owner can review every candidate without opening raw JSON or another map.
+- Re-running the local calculation keeps unchanged decisions. If an OSM
+  snapshot is explicitly replaced in the future, changed candidates clearly
+  return to stale/pending review.
 
 ---
 
-### Task 6: Voice and card phrasing (C5)
+## Task 5 — Build, manifest, Promote, and offline lifecycle (C3–C4)
 
-**Files:**
-- Modify: `packages/core/src/navigation/navigationVoice.js` (cue phrasing — the `cuePhrase` turn section)
-- Modify: `packages/core/src/navigation/navigationPresentation.js` (cue card text/icon — the `case "arrive"` block at ~line 55 shows the shape)
-- Test: `tests/test-navigation-voice.mjs`, `tests/test-navigation-presentation.mjs` (extend)
+**Files**
 
-**Interfaces:**
-- Consumes: cue events with `cue.type === "roundabout"` and `cue.direction` (Task 5).
-- Produces: Hebrew phrases — `straight`: "בכיכר, המשיכו ישר"; `right`: "בכיכר, פנו ימינה"; `left`: "בכיכר, פנו שמאלה"; `u-turn`: "בכיכר, חזרו לאחור" — with the same distance prefixes as turns ("בעוד 100 מטר — בכיכר, פנו ימינה"); card `{ text: <same>, icon: "reload-outline" }` (or the icon the repo's icon set uses for rotation — check existing icon names in `navigationPresentation.js` and pick the closest).
+- Modify `processing/build_map.py` and its focused tests.
+- Modify `editor/server.mjs` and `tests/test-editor-promote-targets.mjs`.
+- Modify `apps/mobile/scripts/sync-offline-assets.mjs` and its tests.
+- Modify `packages/core/src/data/mapAssets.js` and
+  `tests/test-map-assets.mjs`.
 
-- [ ] **Step 1: Write the failing tests**
+**Steps**
 
-Read the existing turn-phrase cases in `tests/test-navigation-voice.mjs` and mirror one per direction, e.g.:
+- [ ] During Build, load current candidates and reviews via the Task 3 join.
+  Include review counts and blocking issues in the validation report.
+- [ ] Prove candidate `sourceDigest` and `queryDigest` correspond to the current
+  saved Overpass response/query. Missing/stale candidates and pending/stale
+  reviews block promotion.
+- [ ] Include coverage in the validation report and runtime artifact metadata.
+  `miniRoundaboutNodes: not-requested-by-source` is a prominent warning but not
+  a blocker for reviewed ordinary/circular candidates.
+- [ ] Write compact `build/public-data/roundabouts.json` from accepted records
+  only. Exclude candidate-only source tags, review status/note, and rejected
+  candidates.
+- [ ] Add `roundabouts` and `hashes.roundabouts` to `map-manifest.json`; include
+  the file in the combined version digest.
+- [ ] Add a conditional single-file Promote target. When the new manifest
+  intentionally omits the optional key, remove an older unreferenced
+  `public-data/roundabouts.json` during Promote cleanup.
+- [ ] Extend Promote tests for present, absent, blocking-review, and stale-file
+  cases.
+- [ ] Make `loadMapAssets` load the manifest-relative/versioned file only when
+  `manifest.roundabouts` exists and expose `roundaboutsData`; on absence expose
+  `null`. Do not probe a fixed filename.
+- [ ] Make offline sync derive the optional entry from the manifest. Track only
+  successfully copied assets when generating `bundledAssets.native.js`, so an
+  absent optional file never creates a broken `require()`.
+- [ ] Test web/native injected asset loading and offline sync with the artifact
+  present, absent, and formerly present.
 
-```js
-// --- C5: roundabout phrasing ------------------------------------------------
-{
-  const plan = planner.plan(
-    {
-      kind: "cue",
-      cueType: "roundabout",
-      phase: "final",
-      cue: { type: "roundabout", direction: "straight", distanceMeters: 500 },
-    },
-    baseState,
-    1_000,
-  );
-  assert.ok(plan.utterance.text.includes("בכיכר"), plan.utterance.text);
-  assert.ok(plan.utterance.text.includes("ישר"), plan.utterance.text);
-}
-```
+**Acceptance**
 
-(match the file's actual planner construction/`baseState` helpers; add a `right` + distance-prefix case and a presentation-card case in `test-navigation-presentation.mjs` asserting text + icon for `direction: "left"`.)
-
-- [ ] **Step 2: Run to verify they fail**
-
-Run: `node tests/test-navigation-voice.mjs && node tests/test-navigation-presentation.mjs`
-Expected: FAIL — unknown cue type falls through to generic/none.
-
-- [ ] **Step 3: Implement**
-
-In `navigationVoice.js`'s cue phrasing, add a `roundabout` branch next to the turn phrasing, reusing the existing distance-prefix helper:
-
-```js
-  const ROUNDABOUT_PHRASES = {
-    straight: "בכיכר, המשיכו ישר",
-    right: "בכיכר, פנו ימינה",
-    left: "בכיכר, פנו שמאלה",
-    "u-turn": "בכיכר, חזרו לאחור",
-  };
-```
-
-English fallback (the file phrases both locales): "At the roundabout, continue straight / turn right / turn left / turn back". In `navigationPresentation.js`, add the `case "roundabout"` card next to `case "arrive"` with the same Hebrew text and the chosen icon.
-
-- [ ] **Step 4: Run to verify pass**
-
-Run: `node tests/test-navigation-voice.mjs && node tests/test-navigation-presentation.mjs`
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/core/src/navigation/navigationVoice.js packages/core/src/navigation/navigationPresentation.js tests/test-navigation-voice.mjs tests/test-navigation-presentation.mjs
-git commit -m "feat(nav): roundabout voice and cue-card phrasing"
-```
+- Manifest absence means no runtime data even if an obsolete physical file was
+  present before Promote.
+- Changing accepted roundabout data changes the manifest version.
+- Promote cannot publish unreviewed or changed classifications.
 
 ---
 
-### Task 7: Full verification and rollout notes
+## Task 6 — Shape matcher and route-relative traversal records (C5)
 
-**Files:** none.
+**Files**
 
-- [ ] **Step 1: Full node suite + python tests**
+- Create `packages/core/src/routing/roundaboutsOnRoute.js`.
+- Create `tests/test-roundabouts-on-route.mjs`.
 
-```bash
-for f in tests/test-*.mjs; do node "$f" >/dev/null 2>&1 || echo "FAIL $f"; done; echo suite-done
-cd processing && python3 test_build_roundabouts.py
+**Interface**
+
+```text
+roundaboutsOnRoute(roundabouts, routeGeometry, options?)
+  -> one { kind: "roundabout", roundaboutId, lat, lng,
+           entryMeters, exitMeters, entryBearingDeg, exitBearingDeg,
+           complete } per maximal traversal interval
 ```
-Expected: only `suite-done` + `build_roundabouts tests passed`.
 
-- [ ] **Step 2: Degradation check**
+Use exported defaults `RING_MATCH_M = 12`, `MIN_MATCHED_ROUTE_M = 8`, and
+`COURSE_SAMPLE_OFFSET_M = 20`.
 
-With no `roundabouts.json` present (the default in a fresh checkout), `node tests/test-navigation-cues.mjs` fixtures without roundabout junctions must produce byte-identical cues to before this plan (the suite passing covers it — state it in the task summary explicitly).
+**Steps**
 
-- [ ] **Step 3: Rollout (owner steps — document, do not run)**
+- [ ] Reuse existing route-progress interpolation/projection utilities where
+  their contracts fit; add small pure local-metre helpers rather than vertex
+  approximations where they do not.
+- [ ] Bucket candidates by bbox/grid cells, then calculate detailed proximity
+  between route segments and ring-path segments. Minis use the 10 m point
+  circle.
+- [ ] Clip/interpolate boundary crossings into exact route-progress distances.
+  Produce every maximal matched interval, not merely the first candidate hit.
+- [ ] Reject complete intervals whose matched route length is below
+  `MIN_MATCHED_ROUTE_M`.
+- [ ] Sample entry/exit course at `COURSE_SAMPLE_OFFSET_M` outside the interval.
+  Mark start-inside/end-inside intervals incomplete when a course is missing.
+- [ ] Return a separate record when the route encounters the same id again.
+- [ ] Ignore malformed records safely and keep deterministic route order.
 
-Record at the end of this file: the owner runs `python3 processing/build_roundabouts.py` after the next `osm:fetch`, then Build + Promote to publish `roundabouts.json`; then `npm run assets:sync -w @cycleways/mobile` picks it up for the next app build. Ship order is free (C6): app without data degrades; data without app is ignored.
+**Tests**
 
-- [ ] **Step 4: Device validation note**
+- Ordinary ring traversal with interpolated boundaries.
+- Sparse segment crossing the shape.
+- Tangent and short perpendicular crossing rejected.
+- Nearby parallel road rejected.
+- Mini-roundabout traversal.
+- Two visits to the same roundabout produce two records.
+- Start-inside and end-inside produce incomplete records.
+- Multiple nearby candidates remain distinct.
+- Degenerate geometry and malformed artifact records are safe.
+- A representative long route × real candidate-count performance check stays
+  comfortably within ride-confirm latency; record the measured threshold in
+  the test or task notes.
 
-After the next TestFlight ride: one straight-through roundabout and one right-exit must each produce a single correct instruction, and no "right… left" artifacts.
+---
+
+## Task 7 — Bake traversals into `route.junctions` (C5 wiring)
+
+**Files**
+
+- Modify `packages/core/src/routing/junctionsNearRoute.js`.
+- Modify `packages/core/src/app/useCyclewaysApp.js`.
+- Extend `tests/test-junctions-near-route.mjs` and app/controller tests.
+
+**Steps**
+
+- [ ] Add `kind: "junction"` to newly computed plain junction records. Treat
+  restored records without `kind` as plain junctions elsewhere.
+- [ ] Read reviewed runtime data from `state.assets.roundaboutsData`; do not add
+  an independent fixed-path loader or second cache.
+- [ ] `computeRouteJunctions(geometry)` awaits ordinary junctions, computes all
+  roundabout traversal records with Task 6, and returns their concatenation.
+  Missing/null data returns today's junction result unchanged apart from the
+  additive `kind` on newly computed records.
+- [ ] Verify built, restored, featured/recommended, and edited routes all pass
+  through the same ride-confirm baking path or add the missing wiring/tests.
+
+**Acceptance**
+
+- Every navigation route contains the traversal records it needs without
+  retaining the nationwide artifact.
+- Missing data and legacy persisted routes remain safe.
+
+---
+
+## Task 8 — Interval-based cue generation (C6)
+
+**Files**
+
+- Modify `packages/core/src/navigation/navigationCues.js`.
+- Extend `tests/test-navigation-cues.mjs`.
+
+**Steps**
+
+- [ ] Split plain junctions from `kind: "roundabout"` traversal records;
+  records without kind remain plain.
+- [ ] Suppress turn/bend corners whose route-progress distance lies inside any
+  traversal interval plus a small exported route-distance suppression pad.
+- [ ] For every complete traversal, compute signed entry→exit bearing delta and
+  emit one `{ type: "roundabout", direction, distanceMeters: entryMeters }`.
+- [ ] Implement/test exact thresholds: `< 40` straight, `40..130` left/right,
+  `> 130` U-turn.
+- [ ] Do not emit a direction cue for incomplete traversals, but still suppress
+  their internal geometry noise.
+- [ ] Give `roundabout` turn selection/sort priority. Ensure span-boundary merge
+  logic does not attach or duplicate an enter-segment cue inside a traversal.
+
+**Tests**
+
+- Straight, right, left, and U-turn.
+- Exactly 40° and 130°.
+- Two traversals of the same id produce two cues.
+- Incomplete start/end traversal suppression without a false cue.
+- Existing near-roundabout corner cues are unchanged when no traversal record
+  was baked.
+- Missing roundabout data reproduces pre-feature cues byte-for-byte.
+- Navigation session and haptics safely carry the new cue type.
+
+---
+
+## Task 9 — Voice and presentation (C7)
+
+**Files**
+
+- Modify `packages/core/src/navigation/navigationVoice.js`.
+- Modify `packages/core/src/navigation/navigationPresentation.js`.
+- Extend `tests/test-navigation-voice.mjs` and
+  `tests/test-navigation-presentation.mjs`.
+
+**Steps**
+
+- [ ] Add Hebrew and English fallback phrases for straight/right/left/U-turn.
+- [ ] Reuse the existing preview distance-prefix behavior.
+- [ ] Add a roundabout cue-card case with the same Hebrew primary text and the
+  closest verified icon from the current app icon set.
+- [ ] Test all four directions, preview/final voice behavior, text, icon, and
+  unknown-direction defensive fallback.
+
+---
+
+## Task 10 — Full validation and rollout
+
+- [ ] Run all focused Python tests from `processing/` and all affected node
+  tests from the repository root.
+- [ ] Run the complete node test suite and
+  `node tests/test-mobile-undefined-references.mjs`.
+- [ ] Run `npm run osm:roundabouts` against the existing saved snapshot; inspect
+  count, coverage, warnings, largest radii, closest pairs, and malformed
+  records. Confirm timestamps/digests for raw OSM and base-graph files are
+  unchanged.
+- [ ] In the editor Roundabouts view, have the owner accept/reject every pending
+  or stale candidate, acknowledge source coverage, and scan warning-bearing
+  candidates. Record coverage plus accepted/rejected/warning counts in the task
+  completion note.
+- [ ] Build locally and confirm validation counts, manifest hash/version, and
+  accepted-only runtime output. Do not Promote unless the owner requests it.
+- [ ] Run representative navigation scenarios for straight/right/left/U-turn
+  and a repeated traversal if the local network contains one.
+- [ ] For TestFlight, sync offline assets after reviewed data is promoted. Ride
+  at least one straight-through and one right-exit roundabout and confirm one
+  correct instruction per traversal with no corner-noise pair.
+
+## Rollout Order
+
+The app can ship before the reviewed artifact: manifest absence preserves
+today's behavior. The artifact may also be promoted before an app understands
+it: older clients ignore the manifest key. After the first reviewed artifact is
+published, future OSM changes become pending/stale in the editor and block
+promotion until reviewed, preventing silent classification drift.
+
+## Explicitly Deferred — `osm:update`
+
+Do not implement OSM fetching/diff/application as part of these tasks. A future
+plan should add an independent `osm:update` workflow that fetches into staging,
+calculates identity/tag/geometry and manual-override impact diffs, shows Current
+/ Staged / Diff editor layers, and requires explicit Apply before replacing the
+current snapshot. The design document records its required safety contract.

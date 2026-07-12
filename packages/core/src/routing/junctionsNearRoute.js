@@ -113,7 +113,7 @@ export function junctionsNearRoute(
         );
       }
     }
-    if (near) junctions.push(point);
+    if (near) junctions.push({ kind: "junction", ...point });
   }
   return junctions;
 }

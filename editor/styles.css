@@ -873,6 +873,52 @@ button:disabled {
   background: #f8faf9;
 }
 
+.roundabouts-coverage {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.65rem;
+  margin-bottom: 0.7rem;
+  border: 1px solid #e0b24c;
+  border-radius: 8px;
+  background: #fff8dd;
+  font-size: 0.78rem;
+}
+
+.roundabouts-list {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 34vh;
+  overflow: auto;
+  margin: 0.65rem 0;
+}
+
+.roundabout-review-item {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #d7d7d0;
+  border-left: 5px solid #f59e0b;
+  border-radius: 7px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.roundabout-review-item.state-accepted { border-left-color: #15803d; }
+.roundabout-review-item.state-rejected { border-left-color: #b91c1c; }
+.roundabout-review-item.state-stale { border-left-color: #d97706; }
+.roundabout-review-item.active { background: #f2efe4; outline: 2px solid #756b4f; }
+.roundabout-review-item span { font-size: 0.75rem; color: #65645f; }
+
+.roundabouts-detail {
+  padding-top: 0.6rem;
+  border-top: 1px solid #dedbd0;
+}
+
+.roundabouts-detail h3 { margin: 0 0 0.35rem; font-size: 0.9rem; }
+.roundabouts-detail p { margin: 0.25rem 0; font-size: 0.78rem; overflow-wrap: anywhere; }
+
 .base-overlay-review-heading {
   color: var(--muted);
   font-size: 12px;

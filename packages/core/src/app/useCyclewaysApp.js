@@ -47,6 +47,7 @@ import {
 } from "../routing/routeActions.js";
 import { createBaseRoutingShardFetchLoader } from "../routing/baseRoutingShards.js";
 import { createShardedRouteSession } from "../routing/shardedRouteSession.js";
+import { roundaboutsOnRoute } from "../routing/roundaboutsOnRoute.js";
 import {
   initialRouteState,
   routeReducer,
@@ -88,6 +89,7 @@ function recordRecentRoute(setRecentRoutes, entry) {
 
 export function useCyclewaysApp({
   enableRouteDirectionAnimation = true,
+  includeRoundabouts = false,
 } = {}) {
   const [state, setState] = useState({
     status: "loading",
@@ -147,10 +149,16 @@ export function useCyclewaysApp({
   const computeRouteJunctions = useCallback(async (geometry) => {
     const session = shardedRouteSessionRef.current;
     if (typeof session?.junctionsNearRoute === "function") {
-      return session.junctionsNearRoute(geometry);
+      const junctions = await session.junctionsNearRoute(geometry);
+      if (!Array.isArray(junctions)) return junctions;
+      const roundabouts = state.assets?.roundaboutsData?.roundabouts;
+      return [
+        ...junctions,
+        ...roundaboutsOnRoute(roundabouts, geometry),
+      ];
     }
     return null;
-  }, []);
+  }, [state.assets?.roundaboutsData]);
 
   useEffect(() => () => {
     if (transientErrorTimerRef.current !== null) {
@@ -244,6 +252,7 @@ export function useCyclewaysApp({
         const assets = await loadMapAssets({
           signal: controller.signal,
           baseRoutingMode: "shards",
+          includeRoundabouts,
         });
         if (controller.signal.aborted) return;
         setState({
@@ -268,7 +277,7 @@ export function useCyclewaysApp({
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [includeRoundabouts]);
 
   useEffect(() => {
     if (state.status !== "ready") return undefined;

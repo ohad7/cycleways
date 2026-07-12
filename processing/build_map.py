@@ -32,6 +32,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from .roundabout_review import join_roundabout_reviews
+except ImportError:  # Direct script execution: processing/ is on sys.path.
+    from roundabout_review import join_roundabout_reviews
+
 
 KML_NAMESPACE = "http://www.opengis.net/kml/2.2"
 DEFAULT_ELEVATION_URL = "http://localhost/api/v1/lookup"
@@ -2876,17 +2881,19 @@ def write_runtime_manifest(
     output_base_routing_shards: Path,
     elevation_stats: dict[str, Any],
     validation: dict[str, Any],
+    output_roundabouts: Path | None = None,
 ) -> tuple[dict[str, Any], Path]:
     base_routing_shard_manifest = output_base_routing_shards / "manifest.json"
-    version = combined_digest(
-        [
+    version_inputs = [
             output_geojson,
             output_segments,
             output_cw_base_index,
             output_kml,
             base_routing_shard_manifest,
         ]
-    )[:12]
+    if output_roundabouts and output_roundabouts.exists():
+        version_inputs.append(output_roundabouts)
+    version = combined_digest(version_inputs)[:12]
     manifest_path = public_data_dir / "map-manifest.json"
 
     def public_relative(path: Path) -> str:
@@ -2927,8 +2934,11 @@ def write_runtime_manifest(
             "cwBaseIndexSegments": validation.get("cwBaseIndex", {}).get("segments"),
         },
     }
+    if output_roundabouts and output_roundabouts.exists():
+        manifest["roundabouts"] = public_relative(output_roundabouts)
+        manifest["hashes"]["roundabouts"] = file_digest(output_roundabouts)
     write_json(manifest_path, manifest)
-    return {
+    runtime = {
         "version": version,
         "manifest": str(manifest_path),
         "geojson": str(output_geojson),
@@ -2936,7 +2946,61 @@ def write_runtime_manifest(
         "cwBaseIndex": str(output_cw_base_index),
         "kml": str(output_kml),
         "baseRoutingShards": str(base_routing_shard_manifest),
-    }, manifest_path
+    }
+    if output_roundabouts and output_roundabouts.exists():
+        runtime["roundabouts"] = str(output_roundabouts)
+    return runtime, manifest_path
+
+
+def build_reviewed_roundabouts(
+    candidates_path: Path,
+    review_path: Path,
+    overpass_path: Path,
+    query_path: Path,
+    output_path: Path,
+) -> tuple[dict[str, Any], Path | None]:
+    if not candidates_path.exists():
+        return {
+            "summary": {"total": 0, "accepted": 0, "rejected": 0, "pending": 0, "stale": 0, "orphaned": 0, "warnings": 0},
+            "coverage": {},
+            "warnings": [],
+            "blockingIssues": [{"code": "missing_roundabout_candidates"}],
+            "sourceFresh": False,
+        }, None
+    candidates = load_json(candidates_path, {})
+    reviews = load_json(review_path, {"schemaVersion": 1, "reviews": {}})
+    joined = join_roundabout_reviews(candidates, reviews)
+    source_fresh = False
+    if overpass_path.exists() and query_path.exists():
+        source_fresh = (
+            candidates.get("sourceDigest") == f"sha256:{file_digest(overpass_path)}"
+            and candidates.get("queryDigest") == f"sha256:{file_digest(query_path)}"
+        )
+    if not source_fresh:
+        joined["blockingIssues"].append({"code": "stale_roundabout_candidates"})
+    runtime_records = []
+    for candidate in joined["accepted"]:
+        runtime_records.append({
+            key: candidate[key]
+            for key in ("id", "classification", "center", "radiusM", "bbox", "paths")
+            if key in candidate
+        })
+    payload = {
+        "schemaVersion": 1,
+        "sourceDigest": candidates.get("sourceDigest"),
+        "queryDigest": candidates.get("queryDigest"),
+        "coverage": candidates.get("coverage") or {},
+        "roundabouts": runtime_records,
+    }
+    write_json(output_path, payload, compact=True)
+    validation = {
+        "summary": joined["summary"],
+        "coverage": joined["coverage"],
+        "warnings": joined["warnings"],
+        "blockingIssues": joined["blockingIssues"],
+        "sourceFresh": source_fresh,
+    }
+    return validation, output_path
 
 
 def process_elevations(
@@ -3094,6 +3158,14 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         base_routing_asset,
     )
     validation["baseRoutingShards"] = base_routing_shard_validation
+    roundabout_validation, output_roundabouts = build_reviewed_roundabouts(
+        args.roundabout_candidates.resolve(),
+        args.roundabout_reviews.resolve(),
+        args.overpass_response.resolve(),
+        args.overpass_query.resolve(),
+        public_data_dir / "roundabouts.json",
+    )
+    validation["roundabouts"] = roundabout_validation
     runtime_outputs, manifest_path = write_runtime_manifest(
         public_data_dir,
         output_geojson,
@@ -3103,6 +3175,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         public_data_dir / "base-routing-shards",
         elevation_stats,
         validation,
+        output_roundabouts,
     )
     emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {
@@ -3240,6 +3313,14 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         base_routing_asset,
     )
     validation["baseRoutingShards"] = base_routing_shard_validation
+    roundabout_validation, output_roundabouts = build_reviewed_roundabouts(
+        args.roundabout_candidates.resolve(),
+        args.roundabout_reviews.resolve(),
+        args.overpass_response.resolve(),
+        args.overpass_query.resolve(),
+        public_data_dir / "roundabouts.json",
+    )
+    validation["roundabouts"] = roundabout_validation
     runtime_outputs, manifest_path = write_runtime_manifest(
         public_data_dir,
         output_geojson,
@@ -3249,6 +3330,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         public_data_dir / "base-routing-shards",
         elevation_stats,
         validation,
+        output_roundabouts,
     )
     emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {
@@ -3328,6 +3410,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=Path("data/base-edge-share-ids.json"),
         help="Authoring-only stable base edge share-id registry.",
+    )
+    parser.add_argument(
+        "--roundabout-candidates",
+        type=Path,
+        default=Path("build/osm/roundabout-candidates.json"),
+    )
+    parser.add_argument(
+        "--roundabout-reviews",
+        type=Path,
+        default=Path("data/roundabout-review.json"),
+    )
+    parser.add_argument(
+        "--overpass-response",
+        type=Path,
+        default=Path("build/osm/overpass-response.json"),
+    )
+    parser.add_argument(
+        "--overpass-query",
+        type=Path,
+        default=Path("build/osm/overpass-query.ql"),
     )
     parser.add_argument("--elevation-url", default=DEFAULT_ELEVATION_URL)
     parser.add_argument("--skip-elevation", action="store_true")

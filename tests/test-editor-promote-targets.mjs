@@ -11,6 +11,7 @@ const manifest = {
   cwBaseIndex: "cw-base-index.json",
   kml: "exports/map.kml",
   baseRoutingShards: "base-routing-shards/manifest.json",
+  roundabouts: "roundabouts.json",
 };
 
 const targets = buildPromoteTargets(manifest);
@@ -20,6 +21,20 @@ assert.ok(byLabel.has("public CW base index"));
 assert.equal(
   byLabel.get("public CW base index").source,
   path.join(repoRoot, "build/public-data/cw-base-index.json"),
+);
+
+assert.equal(
+  byLabel.get("public roundabouts").source,
+  path.join(repoRoot, "build/public-data/roundabouts.json"),
+);
+assert.equal(
+  byLabel.get("public roundabouts").target,
+  path.join(repoRoot, "public-data/roundabouts.json"),
+);
+
+assert.equal(
+  buildPromoteTargets({ ...manifest, roundabouts: null }).some((target) => target.label === "public roundabouts"),
+  false,
 );
 assert.equal(
   byLabel.get("public CW base index").target,

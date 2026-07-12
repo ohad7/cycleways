@@ -26,6 +26,7 @@
             <button id="workspace-segments" class="tool-button active" type="button">Segments</button>
             <button id="workspace-base" class="tool-button" type="button">Base Graph</button>
             <button id="workspace-overlay" class="tool-button" type="button">CW Overlay</button>
+            <button id="workspace-roundabouts" class="tool-button" type="button">Roundabouts</button>
             <button id="workspace-video-sync" class="tool-button" type="button">Video Sync</button>
             <button id="workspace-route-catalog" class="tool-button" type="button">Route Catalog</button>
           </div>
@@ -331,6 +332,26 @@
             <div id="base-overlay-review-list" class="base-overlay-review-list"></div>
 
             <div id="base-overlay-edges" class="base-overlay-edges"></div>
+          </section>
+
+          <section id="roundabouts-panel" class="panel workspace-panel" hidden>
+            <header class="panel-header">
+              <h2>Roundabouts</h2>
+              <span id="roundabouts-status">Not loaded</span>
+            </header>
+            <div id="roundabouts-coverage" class="roundabouts-coverage"></div>
+            <div id="roundabouts-summary" class="base-overlay-review-stats"></div>
+            <label class="field-label" for="roundabouts-filter">Show</label>
+            <select id="roundabouts-filter" class="text-input compact-select">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="stale">Stale</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+              <option value="warnings">Warnings</option>
+            </select>
+            <div id="roundabouts-list" class="roundabouts-list"></div>
+            <div id="roundabouts-detail" class="roundabouts-detail"></div>
           </section>
 
           <section id="route-catalog-panel" class="panel workspace-panel" hidden>

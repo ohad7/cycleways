@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import sharp from "sharp";
 import { routeThumbnailPath } from "@cycleways/core/data/catalog.js";
 import { isWarningType, primaryPoiImage } from "@cycleways/core/data/poiTypes.js";
@@ -49,9 +49,13 @@ async function main() {
   await fs.rm(targetRoot, { recursive: true, force: true });
   await fs.mkdir(targetRoot, { recursive: true });
 
+  const mapManifest = JSON.parse(
+    await fs.readFile(path.join(sourceRoot, "map-manifest.json"), "utf8"),
+  );
+  const manifestAssets = optionalManifestJsonAssets(mapManifest);
   const snapshotAssets = await featuredRouteSnapshotAssets();
   const videoAssets = await featuredVideoAssets();
-  const allJsonAssets = [...jsonAssets, ...snapshotAssets, ...videoAssets];
+  const allJsonAssets = [...jsonAssets, ...manifestAssets, ...snapshotAssets, ...videoAssets];
 
   for (const asset of allJsonAssets) {
     await copyLogicalAsset(asset.logicalPath, asset.targetPath);
@@ -367,7 +371,15 @@ function assetMapEntry(logicalPath, targetLogicalPath = logicalPath) {
   return `  ${JSON.stringify(logicalPath)}: require(${JSON.stringify(requirePath)}),`;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+export function optionalManifestJsonAssets(manifest = {}) {
+  return manifest.roundabouts
+    ? [{ logicalPath: `public-data/${String(manifest.roundabouts).replace(/^\/+/, "")}` }]
+    : [];
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

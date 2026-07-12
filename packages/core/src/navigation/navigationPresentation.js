@@ -50,6 +50,17 @@ function cueDisplay(cue) {
       return cue.direction === "right"
         ? { text: "עיקול ימינה", icon: "arrow-forward-outline" }
         : { text: "עיקול שמאלה", icon: "arrow-back-outline" };
+    case "roundabout": {
+      const text = {
+        straight: "בכיכר, המשיכו ישר",
+        right: "בכיכר, פנו ימינה",
+        left: "בכיכר, פנו שמאלה",
+        "u-turn": "בכיכר, חזרו לאחור",
+      }[cue.direction];
+      return text
+        ? { text, icon: "reload-outline" }
+        : { text: "המשך במסלול", icon: "navigate-outline" };
+    }
     case "enter-segment":
       return { text: cue.segmentName ? `כניסה אל ${cue.segmentName}` : "המשך במסלול", icon: "navigate-outline" };
     case "arrive":

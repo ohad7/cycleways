@@ -7,12 +7,14 @@ const manifest = {
   segments: "segments.json",
   cwBaseIndex: "cw-base-index.json",
   baseRoutingShards: "base-routing-shards.test/manifest.json",
+  roundabouts: "roundabouts.json",
 };
 const assetsByPath = new Map([
   ["public-data/map-manifest.json", manifest],
   ["public-data/bike-roads.json", { type: "FeatureCollection", features: [] }],
   ["public-data/segments.json", { Segment: { id: 1 } }],
   ["public-data/cw-base-index.json", { segments: { 1: [[100, 0]] } }],
+  ["public-data/roundabouts.json", { roundabouts: [{ id: "r1" }] }],
   [
     "public-data/base-routing-shards.test/manifest.json",
     { shards: [{ id: "g1_1", path: "shards/g1_1.json" }] },
@@ -36,7 +38,7 @@ global.fetch = async (url) => {
 };
 
 try {
-  const shardedAssets = await loadMapAssets();
+  const shardedAssets = await loadMapAssets({ includeRoundabouts: true });
   assert.equal(shardedAssets.baseRoutingMode, "shards");
   assert.equal(shardedAssets.baseRoutingNetworkData, null);
   assert.equal(Object.keys(shardedAssets.cwBaseIndexData.segments).length, 1);
@@ -49,12 +51,15 @@ try {
     requestedPaths.includes("public-data/base-routing-shards.test/manifest.json?v=shard-test"),
   );
   assert.ok(requestedPaths.includes("public-data/cw-base-index.json?v=shard-test"));
+  assert.ok(requestedPaths.includes("public-data/roundabouts.json?v=shard-test"));
+  assert.equal(shardedAssets.roundaboutsData.roundabouts.length, 1);
   assert.ok(!requestedPaths.includes("public-data/base-routing-network.json"));
   assert.equal(summarizeMapAssets(shardedAssets).baseRoutingShards, 1);
   assert.equal(summarizeMapAssets(shardedAssets).cwBaseIndexSegments, 1);
+  assert.equal(summarizeMapAssets(shardedAssets).roundabouts, 1);
 
   requestedPaths.length = 0;
-  const legacyAssets = await loadMapAssets({ baseRoutingMode: "legacy" });
+  const legacyAssets = await loadMapAssets({ baseRoutingMode: "legacy", includeRoundabouts: true });
   assert.equal(legacyAssets.baseRoutingMode, "legacy");
   assert.equal(legacyAssets.baseRoutingNetworkData, null);
   assert.equal(legacyAssets.baseRoutingShardManifestData, null);

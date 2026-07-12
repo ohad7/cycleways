@@ -2,7 +2,7 @@
 
 - `navigation-ride-feedback-2/` — design and implementation plan for ride-feedback round 2: arrival auto-end with jitter protection, crash-resume policy (hot auto-resume / warm prompt) with the headless zombie-voice fix, planner locate-me view preservation, and mid-route join via earliest-candidate acquisition.
 - `off-route-experience/` — design and implementation plan for the follow-first off-route experience: rider-centered camera with the rejoin connector as the framed corridor, eased transitions, guided turn-by-turn rejoin via the approach-leg machinery, and a live distance-back banner.
-- `roundabout-cues/` — design and implementation plan for tag-based offline roundabout detection shipped as a separate `roundabouts.json` artifact (shards untouched), route-baked roundabout clusters, and a single entry-anchored direction-only cue per traversal ("בכיכר, המשיכו ישר").
+- `roundabout-cues/` — design and implementation plan for local, editor-reviewed roundabout extraction from the existing saved OSM snapshot (fresh OSM update/diff explicitly deferred), shape-based traversal matching in a separate manifest-owned artifact (shards untouched), and one entry-anchored direction-only cue per traversal ("בכיכר, המשיכו ישר").
 
 - `featured-mobile-elevation-timeline/` — mobile featured-route elevation timeline design comparison.
 - `mobile-home-engagement/` — native mobile homepage engagement design comparison.

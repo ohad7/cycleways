@@ -434,4 +434,20 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(roadClassChipLabel("anything-else"), null);
 }
 
+// Roundabout cue card uses direction-specific copy and icon.
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "roundabout", direction: "left" },
+      phase: "preview",
+      distanceToCueMeters: 80,
+    },
+    progress: { remainingMeters: 500 },
+  });
+  assert.equal(p.cueText, "בכיכר, פנו שמאלה");
+  assert.equal(p.cueIcon, "reload-outline");
+}
+
 console.log("navigation presentation tests passed");

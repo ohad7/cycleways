@@ -5,6 +5,7 @@ import {
   orientAppendedEdgeRef,
 } from "./lib/edge-pick.mjs";
 import { migrateOverlayEdgeReplacement } from "./lib/overlay-edge-migration.mjs";
+import { filterRoundaboutItems } from "./lib/roundaboutReview.mjs";
 import {
   POI_TYPE_OPTIONS,
   poiColor,
@@ -190,6 +191,14 @@ const state = {
   draw: emptyDrawState(),
   editingEdgePickEdges: false,
   splittingEdgePickAt: null,
+  roundabouts: {
+    loading: false,
+    loaded: false,
+    error: null,
+    data: null,
+    filter: "all",
+    selectedId: null,
+  },
   baseOverlay: {
     enabled: false,
     loading: false,
@@ -232,10 +241,18 @@ const els = {
   workspaceSegments: document.getElementById("workspace-segments"),
   workspaceBase: document.getElementById("workspace-base"),
   workspaceOverlay: document.getElementById("workspace-overlay"),
+  workspaceRoundabouts: document.getElementById("workspace-roundabouts"),
   workspaceVideoSync: document.getElementById("workspace-video-sync"),
   workspaceRouteCatalog: document.getElementById("workspace-route-catalog"),
   baseGraphPanel: document.getElementById("base-graph-panel"),
   cwOverlayPanel: document.getElementById("cw-overlay-panel"),
+  roundaboutsPanel: document.getElementById("roundabouts-panel"),
+  roundaboutsStatus: document.getElementById("roundabouts-status"),
+  roundaboutsCoverage: document.getElementById("roundabouts-coverage"),
+  roundaboutsSummary: document.getElementById("roundabouts-summary"),
+  roundaboutsFilter: document.getElementById("roundabouts-filter"),
+  roundaboutsList: document.getElementById("roundabouts-list"),
+  roundaboutsDetail: document.getElementById("roundabouts-detail"),
   routeCatalogPanel: document.getElementById("route-catalog-panel"),
   segmentDrawer: document.getElementById("segment-drawer"),
   toggleSegments: document.getElementById("toggle-segments"),
@@ -1256,6 +1273,7 @@ function updateMapSources() {
   setSourceData("cw-overlay-network", cwOverlayNetworkCollection());
   setSourceData("manual-base-edges", manualBaseEdgeCollection());
   setSourceData("compose-edge-pick", composeEdgePickCollection());
+  updateRoundaboutSources();
   if (map.getLayer("segments-layer")) {
     map.setFilter("segments-layer", unselectedFilter());
   }
@@ -1314,6 +1332,7 @@ function updateWorkspaceLayerVisibility() {
   const showBaseGraphHit = showBaseWorkspaceGraph || composing || editingEdges;
   const showBaseEdit = showBaseWorkspaceGraph && state.workspaceMode === "base";
   const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
+  const showRoundabouts = state.workspaceMode === "roundabouts";
 
   setLayerVisibility("segments-layer", showSegments);
   setLayerVisibility("selected-segment", showSelectedSegment);
@@ -1350,6 +1369,14 @@ function updateWorkspaceLayerVisibility() {
   }
   setLayerVisibility("compose-edge-pick-layer", composing);
   setLayerVisibility("compose-edge-pick-labels", composing);
+  for (const layerId of [
+    "roundabout-corridors-layer",
+    "roundabout-lines-corridor-layer",
+    "roundabout-lines-layer",
+    "roundabout-points-layer",
+  ]) {
+    setLayerVisibility(layerId, showRoundabouts);
+  }
 }
 
 function updateUnresolvedSegmentLayerFilter() {
@@ -3339,14 +3366,185 @@ function renderWorkspaceChrome() {
   els.workspaceSegments.classList.toggle("active", state.workspaceMode === "segments");
   els.workspaceBase.classList.toggle("active", state.workspaceMode === "base");
   els.workspaceOverlay.classList.toggle("active", state.workspaceMode === "overlay");
+  els.workspaceRoundabouts.classList.toggle("active", state.workspaceMode === "roundabouts");
   els.workspaceVideoSync.classList.toggle("active", state.workspaceMode === "video-sync");
   els.workspaceRouteCatalog.classList.toggle("active", state.workspaceMode === "route-catalog");
   els.baseGraphPanel.hidden = state.workspaceMode !== "base";
   els.connectorLensPanel.hidden = state.workspaceMode !== "base";
   els.cwOverlayPanel.hidden = state.workspaceMode !== "overlay";
+  els.roundaboutsPanel.hidden = state.workspaceMode !== "roundabouts";
   els.routeCatalogPanel.hidden = state.workspaceMode !== "route-catalog";
+  els.mapToolbar.hidden = state.workspaceMode === "roundabouts";
   els.toggleBaseOverlay.classList.toggle("active", state.baseOverlay.enabled);
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
+}
+
+async function loadRoundaboutReview() {
+  state.roundabouts.loading = true;
+  state.roundabouts.error = null;
+  renderRoundaboutsPanel();
+  try {
+    const response = await fetch("/api/roundabouts/review");
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load roundabouts");
+    state.roundabouts.data = payload;
+    state.roundabouts.loaded = true;
+    const ids = (payload.items || []).map((item) => item.candidate?.id).filter(Boolean);
+    if (!ids.includes(state.roundabouts.selectedId)) state.roundabouts.selectedId = ids[0] || null;
+    updateRoundaboutSources();
+  } catch (error) {
+    state.roundabouts.error = error instanceof Error ? error.message : String(error);
+    state.roundabouts.loaded = false;
+  } finally {
+    state.roundabouts.loading = false;
+    renderRoundaboutsPanel();
+  }
+}
+
+function roundaboutFilteredItems() {
+  return filterRoundaboutItems(
+    state.roundabouts.data?.items || [],
+    state.roundabouts.filter,
+  );
+}
+
+function updateRoundaboutLayerFilters() {
+  const ids = roundaboutFilteredItems().map((item) => item.candidate.id);
+  const filter = ids.length
+    ? ["in", ["get", "id"], ["literal", ids]]
+    : ["==", ["get", "id"], "__none__"];
+  for (const layerId of ["roundabout-corridors-layer", "roundabout-lines-corridor-layer", "roundabout-lines-layer", "roundabout-points-layer"]) {
+    if (map.getLayer(layerId)) map.setFilter(layerId, filter);
+  }
+}
+
+function updateRoundaboutSources() {
+  const geojson = state.roundabouts.data?.geojson || {};
+  setSourceData("roundabout-lines", geojson.lines || EMPTY_FEATURE_COLLECTION);
+  setSourceData("roundabout-points", geojson.points || EMPTY_FEATURE_COLLECTION);
+  setSourceData("roundabout-corridors", geojson.corridors || EMPTY_FEATURE_COLLECTION);
+  updateRoundaboutLayerFilters();
+}
+
+function fitRoundaboutCandidate(candidate) {
+  const bbox = candidate?.bbox;
+  if (!Array.isArray(bbox) || bbox.length !== 4) return;
+  const bounds = new mapboxgl.LngLatBounds([bbox[0], bbox[1]], [bbox[2], bbox[3]]);
+  map.fitBounds(bounds, { padding: 110, maxZoom: 18, duration: 400 });
+}
+
+async function saveRoundaboutReview(status) {
+  const item = state.roundabouts.data?.items?.find(
+    (entry) => entry.candidate?.id === state.roundabouts.selectedId,
+  );
+  if (!item) return;
+  const note = els.roundaboutsDetail.querySelector("textarea")?.value || "";
+  const response = await fetch("/api/roundabouts/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: item.candidate.id,
+      fingerprint: item.candidate.fingerprint,
+      status,
+      note,
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not save review");
+  state.roundabouts.data = payload;
+  updateRoundaboutSources();
+  const filtered = roundaboutFilteredItems();
+  const next = filtered.find((entry) => entry.candidate.id !== item.candidate.id)
+    || payload.items?.find((entry) => entry.candidate.id !== item.candidate.id);
+  state.roundabouts.selectedId = next?.candidate?.id || item.candidate.id;
+  renderRoundaboutsPanel();
+  const selected = payload.items?.find((entry) => entry.candidate.id === state.roundabouts.selectedId);
+  if (selected) fitRoundaboutCandidate(selected.candidate);
+}
+
+function moveRoundaboutSelection(delta) {
+  const items = roundaboutFilteredItems();
+  if (!items.length) return;
+  const current = items.findIndex((item) => item.candidate.id === state.roundabouts.selectedId);
+  const nextIndex = Math.max(0, Math.min(items.length - 1, (current < 0 ? 0 : current) + delta));
+  state.roundabouts.selectedId = items[nextIndex].candidate.id;
+  renderRoundaboutsPanel();
+  fitRoundaboutCandidate(items[nextIndex].candidate);
+}
+
+function renderRoundaboutsPanel() {
+  if (!els.roundaboutsPanel || state.workspaceMode !== "roundabouts") return;
+  if (state.roundabouts.loading) {
+    els.roundaboutsStatus.textContent = "Loading";
+    return;
+  }
+  if (state.roundabouts.error) {
+    els.roundaboutsStatus.textContent = "Unavailable";
+    els.roundaboutsCoverage.innerHTML = `<div class="empty-state">${escapeHtml(state.roundabouts.error)}</div>`;
+    els.roundaboutsSummary.innerHTML = "";
+    els.roundaboutsList.innerHTML = "";
+    els.roundaboutsDetail.innerHTML = "";
+    return;
+  }
+  const data = state.roundabouts.data;
+  if (!data) return;
+  els.roundaboutsStatus.textContent = data.sourceFresh ? "Current snapshot" : "Stale — recalculate";
+  const coverage = data.coverage || {};
+  els.roundaboutsCoverage.innerHTML = `
+    <strong>Saved source coverage</strong>
+    <span>Tagged ways: ${escapeHtml(coverage.roundaboutWays || "unknown")}</span>
+    <span>Circular ways: ${escapeHtml(coverage.circularWays || "unknown")}</span>
+    <span>Mini nodes: ${escapeHtml(coverage.miniRoundaboutNodes || "unknown")}</span>
+  `;
+  els.roundaboutsSummary.innerHTML = Object.entries(data.summary || {})
+    .map(([key, value]) => `<div class="base-overlay-stat"><strong>${value}</strong><span>${escapeHtml(key)}</span></div>`)
+    .join("");
+  els.roundaboutsFilter.value = state.roundabouts.filter;
+  const items = roundaboutFilteredItems();
+  els.roundaboutsList.innerHTML = "";
+  for (const item of items) {
+    const candidate = item.candidate;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `roundabout-review-item state-${item.state}${candidate.id === state.roundabouts.selectedId ? " active" : ""}`;
+    button.innerHTML = `<strong>${escapeHtml(candidate.id)}</strong><span>${escapeHtml(candidate.classification)} · ${escapeHtml(item.state)}${candidate.warnings?.length ? ` · ⚠ ${candidate.warnings.length}` : ""}</span>`;
+    button.addEventListener("click", () => {
+      state.roundabouts.selectedId = candidate.id;
+      renderRoundaboutsPanel();
+      fitRoundaboutCandidate(candidate);
+    });
+    els.roundaboutsList.appendChild(button);
+  }
+  const selected = data.items?.find((item) => item.candidate.id === state.roundabouts.selectedId);
+  if (!selected) {
+    els.roundaboutsDetail.innerHTML = `<div class="empty-state">No candidates in this filter.</div>`;
+    return;
+  }
+  const candidate = selected.candidate;
+  const osmLinks = (candidate.memberWayIds || [])
+    .map((id) => `<a href="https://www.openstreetmap.org/way/${encodeURIComponent(id)}" target="_blank" rel="noreferrer">way ${escapeHtml(id)}</a>`)
+    .join(" · ");
+  els.roundaboutsDetail.innerHTML = `
+    <h3>${escapeHtml(candidate.id)}</h3>
+    <p>${escapeHtml(candidate.classification)} · radius ${Number(candidate.radiusM).toFixed(1)} m</p>
+    <p>${osmLinks || (candidate.sourceNodeId ? `<a href="https://www.openstreetmap.org/node/${encodeURIComponent(candidate.sourceNodeId)}" target="_blank" rel="noreferrer">node ${escapeHtml(candidate.sourceNodeId)}</a>` : "")}</p>
+    <p>Warnings: ${escapeHtml((candidate.warnings || []).join(", ") || "none")}</p>
+    <textarea class="text-input textarea" rows="3" maxlength="1000" placeholder="Optional review note">${escapeHtml(selected.review?.note || "")}</textarea>
+    <div class="action-row">
+      <button type="button" data-review="accepted" class="primary-button">Accept</button>
+      <button type="button" data-review="rejected" class="secondary-button danger">Reject</button>
+    </div>
+    <div class="action-row">
+      <button type="button" data-move="-1" class="secondary-button">Previous</button>
+      <button type="button" data-move="1" class="secondary-button">Next</button>
+    </div>
+  `;
+  for (const button of els.roundaboutsDetail.querySelectorAll("[data-review]")) {
+    button.addEventListener("click", () => saveRoundaboutReview(button.dataset.review).catch(showError));
+  }
+  for (const button of els.roundaboutsDetail.querySelectorAll("[data-move]")) {
+    button.addEventListener("click", () => moveRoundaboutSelection(Number(button.dataset.move)));
+  }
 }
 
 function renderBaseGraphPanel() {
@@ -4361,6 +4559,7 @@ function renderAll() {
   renderBaseGraphPanel();
   renderBaseOverlayPanel();
   renderConnectorLensPanel();
+  renderRoundaboutsPanel();
   renderComposeStatus();
   updateMapSources();
 }
@@ -4416,7 +4615,7 @@ function setMode(mode) {
 }
 
 async function setWorkspaceMode(mode) {
-  if (!["segments", "base", "overlay", "video-sync", "route-catalog"].includes(mode)) return;
+  if (!["segments", "base", "overlay", "roundabouts", "video-sync", "route-catalog"].includes(mode)) return;
   if (state.workspaceMode === mode) {
     if ((mode === "base" || mode === "overlay") && !state.baseOverlay.loaded) {
       state.baseOverlay.enabled = true;
@@ -4452,15 +4651,24 @@ async function setWorkspaceMode(mode) {
     state.baseOverlay.selectedManualVertexIndex = -1;
   }
 
-  if (mode === "base" || mode === "overlay") {
+  if (mode === "base" || mode === "overlay" || mode === "roundabouts") {
     state.baseOverlay.enabled = true;
     if (!state.baseOverlay.loaded) {
       renderAll();
       await loadBaseOverlayData();
     }
-    setStatus(mode === "base" ? "Base Graph mode: edit manual base edges." : "CW Overlay mode: select a segment, then choose graph edges.");
+    setStatus(
+      mode === "base"
+        ? "Base Graph mode: edit manual base edges."
+        : mode === "overlay"
+          ? "CW Overlay mode: select a segment, then choose graph edges."
+          : "Roundabouts mode: review classifications from the saved OSM snapshot.",
+    );
     if (mode === "base") {
       activateConnectorLensMode().catch(showError);
+    }
+    if (mode === "roundabouts" && !state.roundabouts.loaded && !state.roundabouts.loading) {
+      await loadRoundaboutReview();
     }
   } else if (mode === "video-sync") {
     state.baseOverlay.enabled = false;
@@ -7229,8 +7437,16 @@ function wireEvents() {
   els.workspaceSegments.addEventListener("click", () => setWorkspaceMode("segments").catch(showError));
   els.workspaceBase.addEventListener("click", () => setWorkspaceMode("base").catch(showError));
   els.workspaceOverlay.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
+  els.workspaceRoundabouts.addEventListener("click", () => setWorkspaceMode("roundabouts").catch(showError));
   els.workspaceVideoSync.addEventListener("click", () => setWorkspaceMode("video-sync").catch(showError));
   els.workspaceRouteCatalog.addEventListener("click", () => setWorkspaceMode("route-catalog").catch(showError));
+  els.roundaboutsFilter.addEventListener("change", () => {
+    state.roundabouts.filter = els.roundaboutsFilter.value;
+    const first = roundaboutFilteredItems()[0];
+    state.roundabouts.selectedId = first?.candidate?.id || null;
+    updateRoundaboutLayerFilters();
+    renderRoundaboutsPanel();
+  });
   els.segmentSearch.addEventListener("input", renderList);
   els.toggleSegments.addEventListener("click", () => setSegmentDrawer(!state.segmentsOpen));
   els.closeSegments.addEventListener("click", () => setSegmentDrawer(false));
@@ -7853,6 +8069,11 @@ async function addMapLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  for (const sourceId of ["roundabout-lines", "roundabout-points", "roundabout-corridors"]) {
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
+    }
+  }
 
   if (!map.getLayer("base-graph-edges-layer")) {
     map.addLayer({
@@ -8442,6 +8663,63 @@ async function addMapLayers() {
       },
     });
   }
+
+  const reviewColor = [
+    "match",
+    ["get", "state"],
+    "accepted", "#15803d",
+    "rejected", "#b91c1c",
+    "stale", "#d97706",
+    "#f59e0b",
+  ];
+  if (!map.getLayer("roundabout-corridors-layer")) {
+    map.addLayer({
+      id: "roundabout-corridors-layer",
+      type: "fill",
+      source: "roundabout-corridors",
+      layout: { visibility: "none" },
+      paint: { "fill-color": reviewColor, "fill-opacity": 0.16 },
+    });
+  }
+  if (!map.getLayer("roundabout-lines-layer")) {
+    map.addLayer({
+      id: "roundabout-lines-corridor-layer",
+      type: "line",
+      source: "roundabout-lines",
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": reviewColor,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 9, 14, 18, 17, 34],
+        "line-opacity": 0.16,
+      },
+    });
+    map.addLayer({
+      id: "roundabout-lines-layer",
+      type: "line",
+      source: "roundabout-lines",
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": reviewColor,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 14, 9, 17, 15],
+        "line-opacity": 0.88,
+      },
+    });
+  }
+  if (!map.getLayer("roundabout-points-layer")) {
+    map.addLayer({
+      id: "roundabout-points-layer",
+      type: "circle",
+      source: "roundabout-points",
+      layout: { visibility: "none" },
+      paint: {
+        "circle-radius": 7,
+        "circle-color": reviewColor,
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+  updateRoundaboutSources();
 }
 
 // ============================================================

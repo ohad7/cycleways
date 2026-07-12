@@ -33,6 +33,11 @@ import {
   readLabels,
   upsertStrategy,
 } from "./lib/connectorLabelStore.mjs";
+import {
+  joinRoundaboutReviews,
+  ROUNDABOUT_REVIEW_STATUSES,
+  roundaboutReviewGeoJson,
+} from "./lib/roundaboutReview.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -60,6 +65,10 @@ const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson")
 const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
+const roundaboutCandidatesPath = resolve(osmBuildDir, "roundabout-candidates.json");
+const roundaboutReviewPath = resolve(dataDir, "roundabout-review.json");
+const overpassResponsePath = resolve(osmBuildDir, "overpass-response.json");
+const overpassQueryPath = resolve(osmBuildDir, "overpass-query.ql");
 const poiTypesModulePath = resolve(repoRoot, "packages/core/src/data/poiTypes.js");
 const featuredEditorModulePaths = new Set([
   resolve(repoRoot, "src/components/featured/videoSync.js"),
@@ -1912,6 +1921,46 @@ async function fileDigest(pathname) {
   return digest.digest("hex");
 }
 
+async function readRoundaboutReviewState() {
+  let candidates;
+  try {
+    candidates = JSON.parse(await readFile(roundaboutCandidatesPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      const missing = new Error("Roundabout candidates are missing. Run npm run osm:roundabouts.");
+      missing.status = 409;
+      throw missing;
+    }
+    throw error;
+  }
+  let reviews;
+  try {
+    reviews = JSON.parse(await readFile(roundaboutReviewPath, "utf-8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    reviews = { schemaVersion: 1, reviews: {} };
+  }
+  let sourceFresh = false;
+  try {
+    const [responseDigest, queryDigest] = await Promise.all([
+      fileDigest(overpassResponsePath),
+      fileDigest(overpassQueryPath),
+    ]);
+    sourceFresh = candidates.sourceDigest === `sha256:${responseDigest}`
+      && candidates.queryDigest === `sha256:${queryDigest}`;
+  } catch {
+    sourceFresh = false;
+  }
+  const joined = joinRoundaboutReviews(candidates, reviews);
+  return {
+    candidates,
+    reviews,
+    joined,
+    sourceFresh,
+    geojson: roundaboutReviewGeoJson(joined),
+  };
+}
+
 async function elevatedGraphMatchesBaseGraph() {
   const elevatedGraph = JSON.parse(await readFile(osmElevatedBaseGraphPath, "utf-8"));
   const sourceDigest = elevatedGraph?.metadata?.elevation?.sourceGraphDigest;
@@ -2429,6 +2478,10 @@ function validationBlockers(report) {
   if (displayFallbacks > 0) {
     blockers.push(`${displayFallbacks} public CycleWays display geometry fallbacks`);
   }
+  const roundabouts = validation.roundabouts || {};
+  if ((roundabouts.blockingIssues || []).length > 0) {
+    blockers.push(`${roundabouts.blockingIssues.length} roundabout review blockers`);
+  }
 
   return blockers;
 }
@@ -2553,7 +2606,7 @@ async function existingVersionedFiles(directory, pattern) {
   }
 }
 
-async function cleanupOldPublicArtifacts(promoteId, dryRun) {
+async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
   const candidates = [
     ...(await existingVersionedFiles(repoRoot, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
     ...(await existingVersionedFiles(repoRoot, /^segments\.[0-9a-f]{12}\.json$/)),
@@ -2571,6 +2624,9 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun) {
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.json$/)),
     ...(await existingVersionedFiles(resolve(publicDataDir, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
+    ...(!manifest.roundabouts
+      ? await existingVersionedFiles(publicDataDir, /^roundabouts\.json$/)
+      : []),
   ];
 
   for (const filePath of candidates) {
@@ -2587,7 +2643,7 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun) {
 }
 
 export function buildPromoteTargets(manifest) {
-  return [
+  const targets = [
     {
       label: "public manifest",
       source: buildManifestPath,
@@ -2620,6 +2676,14 @@ export function buildPromoteTargets(manifest) {
       target: dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)),
     },
   ];
+  if (manifest.roundabouts) {
+    targets.push({
+      label: "public roundabouts",
+      source: resolveManifestPath(buildPublicDataDir, manifest.roundabouts),
+      target: resolveManifestPath(publicDataDir, manifest.roundabouts),
+    });
+  }
+  return targets;
 }
 
 async function handlePromote(payload = {}) {
@@ -2718,7 +2782,7 @@ async function handlePromote(payload = {}) {
     // reads the freshly promoted data instead of stale cached copies.
     invalidateFeaturedAssetCache();
   }
-  removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun));
+  removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun), manifest);
 
   // Promoting map data changes the geometry/POIs featured snapshots are built
   // from, so regenerate them here too (the route-catalog promote does the same).
@@ -2773,6 +2837,71 @@ const server = createServer(async (request, response) => {
       backfillDeprecatedRouteAnchors(source);
       logApi(requestId, "GET /api/source loaded", summarizeSource(source));
       sendJson(response, 200, source);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/roundabouts/review") {
+      try {
+        const state = await readRoundaboutReviewState();
+        sendJson(response, 200, {
+          ok: true,
+          sourceFresh: state.sourceFresh,
+          coverage: state.joined.coverage,
+          summary: state.joined.summary,
+          warnings: state.joined.warnings,
+          blockingIssues: state.joined.blockingIssues,
+          items: state.joined.items,
+          orphaned: state.joined.orphaned,
+          geojson: state.geojson,
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/roundabouts/review") {
+      try {
+        const body = await readRequestJson(request);
+        const state = await readRoundaboutReviewState();
+        const candidate = state.candidates.roundabouts?.find((item) => item?.id === body?.id);
+        if (!candidate) throw Object.assign(new Error("Unknown roundabout candidate id"), { status: 400 });
+        if (body?.fingerprint !== candidate.fingerprint) {
+          throw Object.assign(new Error("Candidate changed; reload before reviewing"), { status: 400 });
+        }
+        if (!ROUNDABOUT_REVIEW_STATUSES.has(body?.status)) {
+          throw Object.assign(new Error("Review status must be accepted or rejected"), { status: 400 });
+        }
+        const note = typeof body?.note === "string" ? body.note.trim() : "";
+        if (note.length > 1000) throw Object.assign(new Error("Review note is too long"), { status: 400 });
+        const nextReviews = {
+          schemaVersion: 1,
+          reviews: {
+            ...(state.reviews.reviews || {}),
+            [candidate.id]: {
+              fingerprint: candidate.fingerprint,
+              status: body.status,
+              note,
+              reviewedAt: new Date().toISOString(),
+            },
+          },
+        };
+        await writeJsonAtomic(roundaboutReviewPath, nextReviews);
+        const nextState = await readRoundaboutReviewState();
+        sendJson(response, 200, {
+          ok: true,
+          sourceFresh: nextState.sourceFresh,
+          coverage: nextState.joined.coverage,
+          summary: nextState.joined.summary,
+          warnings: nextState.joined.warnings,
+          blockingIssues: nextState.joined.blockingIssues,
+          items: nextState.joined.items,
+          orphaned: nextState.joined.orphaned,
+          geojson: nextState.geojson,
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
       return;
     }
 

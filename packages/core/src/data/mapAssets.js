@@ -46,7 +46,7 @@ export async function loadMapManifest(options = {}) {
 }
 
 export async function loadMapAssets(options = {}) {
-  const { baseRoutingMode = "shards", ...fetchOptions } = options;
+  const { baseRoutingMode = "shards", includeRoundabouts = false, ...fetchOptions } = options;
   const manifest = await loadMapManifest(fetchOptions);
   const manifestBasePath = manifest.assetBasePath || MAP_MANIFEST_PATH;
   const useRoutingShards =
@@ -59,6 +59,7 @@ export async function loadMapAssets(options = {}) {
     geoJsonData,
     cwBaseIndexData,
     baseRoutingShardManifestData,
+    roundaboutsData,
   ] = await Promise.all([
     getJsonAsset(manifest.segments, { basePath: manifestBasePath, ...fetchOptions }),
     getJsonAsset(manifest.bikeRoads, { basePath: manifestBasePath, ...fetchOptions }),
@@ -74,6 +75,12 @@ export async function loadMapAssets(options = {}) {
           { basePath: manifestBasePath, ...fetchOptions },
         )
       : Promise.resolve(null),
+    includeRoundabouts && manifest.roundabouts
+      ? getJsonAsset(assetPathWithVersion(manifest.roundabouts, manifest.version), {
+          basePath: manifestBasePath,
+          ...fetchOptions,
+        })
+      : Promise.resolve(null),
   ]);
 
   return {
@@ -84,6 +91,7 @@ export async function loadMapAssets(options = {}) {
     baseRoutingNetworkData: null,
     baseRoutingShardManifestData,
     baseRoutingShardManifestPath,
+    roundaboutsData,
     baseRoutingMode: useRoutingShards ? "shards" : "legacy",
   };
 }
@@ -96,6 +104,7 @@ export function summarizeMapAssets({
   baseRoutingShardManifestData,
   baseRoutingMode,
   cwBaseIndexData,
+  roundaboutsData,
 }) {
   const features = geoJsonData?.features || [];
   const coordinateCount = features.reduce((total, feature) => {
@@ -118,5 +127,7 @@ export function summarizeMapAssets({
     baseRoutingShards: baseRoutingShardManifestData?.shards?.length || 0,
     cwBaseIndexFile: manifest.cwBaseIndex || null,
     cwBaseIndexSegments: Object.keys(cwBaseIndexData?.segments || {}).length,
+    roundaboutsFile: manifest.roundabouts || null,
+    roundabouts: Array.isArray(roundaboutsData?.roundabouts) ? roundaboutsData.roundabouts.length : 0,
   };
 }
