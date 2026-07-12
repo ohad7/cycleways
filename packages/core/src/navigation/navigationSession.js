@@ -592,6 +592,21 @@ export function createNavigationSession(navigationRoute, options = {}) {
             lastConfirmedProgressMeters,
           });
           const nextTarget = rejoin ? { ...rejoin, mode: "rejoin" } : null;
+
+          // O4: keep guiding along the current rejoin leg (if any) on every
+          // off-route fix, mirroring the approaching branch's per-fix update.
+          let rejoinLegProgress = null;
+          let rejoinLegActiveCue = null;
+          let rejoinLegCueEvent = null;
+          if (approachTracker) {
+            rejoinLegProgress = approachTracker.update(action.fix);
+            rejoinLegActiveCue = selectActiveCue(
+              approachCues,
+              rejoinLegProgress.progressMeters,
+            );
+            rejoinLegCueEvent = approachCueFor(rejoinLegActiveCue);
+          }
+
           if (
             nextTarget &&
             canRequestSuggestion(action.fix, {
@@ -599,12 +614,15 @@ export function createNavigationSession(navigationRoute, options = {}) {
               minMoveMeters: REJOIN_REQUEST_MIN_MOVE_M,
             })
           ) {
+            // A replacement connector was just requested; the previous leg's
+            // tracker (if any) keeps guiding until the new one arrives, so
+            // approachTracker/approachCues are left untouched here.
             return set({
               status: "off-route",
               progress: mainProgress,
               activeCue: null,
               offRoute: true,
-              cueEvent: firstOffRoute ? { kind: "off-route" } : null,
+              cueEvent: firstOffRoute ? { kind: "off-route" } : rejoinLegCueEvent,
               justAcquired: false,
               approach: {
                 ...state.approach,
@@ -616,6 +634,8 @@ export function createNavigationSession(navigationRoute, options = {}) {
                   Array.isArray(state.approach.suggestionGeometry) &&
                   state.approach.suggestionGeometry.length >= 2,
                 // Keep the prior suggestion visible until the new one is ready.
+                approachProgress: rejoinLegProgress,
+                approachActiveCue: rejoinLegActiveCue,
               },
               routeRequest: suggestionRequest(
                 action.fix,
@@ -637,9 +657,15 @@ export function createNavigationSession(navigationRoute, options = {}) {
             progress: mainProgress,
             activeCue: null,
             offRoute: true,
-            cueEvent: firstOffRoute ? { kind: "off-route" } : null,
+            cueEvent: firstOffRoute ? { kind: "off-route" } : rejoinLegCueEvent,
             justAcquired: false,
-            approach: { ...state.approach, target, distanceToRouteMeters },
+            approach: {
+              ...state.approach,
+              target,
+              distanceToRouteMeters,
+              approachProgress: rejoinLegProgress,
+              approachActiveCue: rejoinLegActiveCue,
+            },
           });
         }
 
@@ -682,7 +708,12 @@ export function createNavigationSession(navigationRoute, options = {}) {
             : 0;
           cameraTransition = {
             id: `camera-transition-${cameraTransitionSeq}`,
-            kind: joinedFromOwnedApproach ? "join" : "reacquire",
+            // Recovering from off-route always reads as "reacquire" even
+            // though O4 now also sets ownershipTier "guide" while the rejoin
+            // connector is guiding — that tier answers "is this leg guided?",
+            // not "did the rider ever leave the route?". Mirrors the
+            // acquisitionEvent priority above (recoveredFromOffRoute first).
+            kind: recoveredFromOffRoute ? "reacquire" : "join",
             durationMs,
             startedAt,
             expiresAt: startedAt + durationMs,
@@ -868,17 +899,41 @@ export function createNavigationSession(navigationRoute, options = {}) {
                 : null,
           };
         }
+        // O4: the rejoin connector is a guided leg — same machinery as the
+        // pre-ride approach (plans/off-route-experience).
+        let rejoinLeg = buildApproachLeg(connectorResult, {
+          id: `${navigationRoute?.id || "route"}:rejoin:${action.requestId}`,
+          target: state.approach.target?.point || state.routeRequest.to,
+        });
+        let rejoinProgress = null;
+        let rejoinActiveCue = null;
+        if (rejoinLeg) {
+          approachTracker = createRouteProgressTracker(rejoinLeg.route, options);
+          approachCues = buildRouteCues(rejoinLeg.route, { includeArrival: false });
+          approachCueKey = null;
+          if (state.latestFix) {
+            rejoinProgress = approachTracker.update(state.latestFix);
+            rejoinActiveCue = selectActiveCue(
+              approachCues,
+              rejoinProgress.progressMeters,
+            );
+          }
+        }
         return set({
           approach: {
             ...state.approach,
             suggestionStatus: "ready",
             ownershipResolving: false,
             ownershipRefreshing: false,
-            suggestionGeometry: geometry,
+            suggestionGeometry: rejoinLeg ? rejoinLeg.geometry : geometry,
             suggestionDistanceMeters:
               Number.isFinite(distanceMeters) && distanceMeters > 0
                 ? distanceMeters
                 : null,
+            approachLegGeometry: rejoinLeg ? rejoinLeg.geometry : null,
+            approachProgress: rejoinProgress,
+            approachActiveCue: rejoinActiveCue,
+            ownershipTier: rejoinLeg ? "guide" : state.approach.ownershipTier,
           },
           routeRequest: null,
           cueEvent: rejoinCueEvent,
