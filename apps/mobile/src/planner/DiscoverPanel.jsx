@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { fontSizes, text } from "../theme/typography.js";
 // Explicit .native import: this app-level file lives outside packages/core/src,
 // so Metro's core-only platform remap (metro.config.js) does not swap assets.js
@@ -20,6 +20,7 @@ import {
 } from "@cycleways/core/data/discoverFilters.js";
 import { filterCatalogBySearch } from "@cycleways/core/data/catalogSearch.js";
 import RouteCard from "./RouteCard.jsx";
+import Icon from "./Icon.jsx";
 import { palette, radius, space } from "./theme.js";
 
 // Native Discover list with feature parity to the mobile-web Discover panel:
@@ -156,22 +157,29 @@ export default function DiscoverPanel({
         <Text style={styles.heading}>לאן רוכבים היום?</Text>
       </View>
 
-      <TextInput
-        style={styles.search}
-        placeholder="חפשו מסלול או מקום"
-        placeholderTextColor={palette.muted}
-        value={query}
-        onChangeText={onQueryChange}
-        textAlign="right"
-        accessibilityLabel="חיפוש מסלול"
-      />
+      <View style={styles.searchWrap}>
+        <TextInput
+          style={styles.search}
+          placeholder="חפשו מסלול או מקום"
+          placeholderTextColor={palette.muted}
+          value={query}
+          onChangeText={onQueryChange}
+          textAlign="right"
+          accessibilityLabel="חיפוש מסלול"
+        />
+        <Icon name="search-outline" size={23} color={palette.forest} />
+      </View>
 
       <View
         onLayout={(event) => setFilterRevealY(event.nativeEvent.layout.y)}
         style={styles.intent}
       >
         <Text style={styles.intentTitle}>מה מתאים לכם?</Text>
-        <View style={styles.intentChips}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.intentChips}
+        >
           {/* First child renders rightmost in this row-reverse row, so "סינון"
               sits at the right edge — the natural start of the row in Hebrew. */}
           <Pressable
@@ -197,7 +205,7 @@ export default function DiscoverPanel({
                 <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
               </View>
             ) : null}
-            <Text style={styles.filterChevron}>{filtersOpen ? "▴" : "▾"}</Text>
+            <Icon name="options-outline" size={15} color={palette.forest} />
           </Pressable>
           {DISCOVER_INTENT_FILTERS.map((intent) => (
             <Chip
@@ -214,7 +222,7 @@ export default function DiscoverPanel({
             onPress={toggleNearMe}
             variant="intent"
           />
-        </View>
+        </ScrollView>
       </View>
 
       {locationError ? (
@@ -430,7 +438,7 @@ function normalizePlaceQuery(value) {
 }
 
 const styles = StyleSheet.create({
-  root: { gap: space.md },
+  root: { gap: 14 },
   intro: { paddingHorizontal: 12, gap: 4 },
   kicker: {
     ...text.label,
@@ -444,14 +452,21 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  search: {
+  searchWrap: {
     marginHorizontal: 12,
+    minHeight: 54,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
     borderRadius: 16,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: palette.line,
+  },
+  search: {
+    flex: 1,
+    paddingVertical: 12,
     ...text.body,
     color: palette.ink,
     writingDirection: "rtl",
@@ -465,15 +480,16 @@ const styles = StyleSheet.create({
   },
   intentChips: {
     flexDirection: "row-reverse",
-    flexWrap: "nowrap",
-    gap: 4,
+    gap: 7,
+    paddingStart: 12,
   },
   intentChip: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    flexShrink: 1,
-    paddingHorizontal: 7,
-    paddingVertical: 6,
+    flexShrink: 0,
+    minHeight: 36,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -488,9 +504,10 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     flexShrink: 0,
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 6,
+    gap: 5,
+    minHeight: 36,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: radius.pill,
     backgroundColor: palette.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -505,7 +522,6 @@ const styles = StyleSheet.create({
     color: palette.ink,
     writingDirection: "rtl",
   },
-  filterChevron: { color: palette.muted, fontSize: fontSizes.xs },
   filterCountBadge: {
     minWidth: 16,
     height: 16,
