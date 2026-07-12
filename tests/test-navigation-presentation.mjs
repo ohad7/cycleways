@@ -84,7 +84,7 @@ import {
     progress: { remainingMeters: 1200 },
   });
   assert.equal(p.offRoute, true);
-  assert.equal(p.offRouteText, "חזרו למסלול");
+  assert.equal(p.offRouteText, "יצאתם מהמסלול");
 }
 
 // Non-navigating statuses surface a clear line and no cue.
@@ -448,6 +448,32 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   });
   assert.equal(p.cueText, "בכיכר, פנו שמאלה");
   assert.equal(p.cueIcon, "reload-outline");
+}
+
+// --- O5: off-route card shows the live distance back -----------------------
+{
+  // Guided leg active: remaining-along-leg wins over straight-line.
+  const guided = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: 118,
+      approachLegGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      approachProgress: { remainingMeters: 240 },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(guided.offRouteText.includes("יצאתם מהמסלול"), guided.offRouteText);
+  assert.ok(/240/.test(guided.offRouteText), `leg distance, got ${guided.offRouteText}`);
+
+  // No leg yet: straight-line fallback.
+  const bare = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: { distanceToRouteMeters: 118 },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(/1[0-2]0/.test(bare.offRouteText), `fallback distance, got ${bare.offRouteText}`);
 }
 
 console.log("navigation presentation tests passed");
