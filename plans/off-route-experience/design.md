@@ -55,9 +55,13 @@ rejoin-ready announcement when a connector lands.
 
 **O5 — Live off-route banner.**
 The navigation card shows an off-route state with live distance back
-("יצאתם מהמסלול · 120 מ׳ לחזרה") driven by `approach.distanceToRouteMeters`,
-replacing the generic state text, so the screen answers "how far back?" at a
-glance.
+("יצאתם מהמסלול · 120 מ׳ לחזרה"), replacing the generic state text, so the
+screen answers "how far back?" at a glance. The distance is the remaining
+meters *along the guided rejoin leg* (`approach.approachProgress.remainingMeters`)
+when a leg is active — monotonic while the rider follows guidance — falling
+back to the straight-line `approach.distanceToRouteMeters` before a connector
+arrives or when routing failed. *(Amended 2026-07-12: straight-line distance
+can rise while the rider correctly follows the connector around a block.)*
 
 **O6 — Rejoin target logic unchanged.**
 Target selection (nearest-ahead, forward window 1.5 km, slides forward as the

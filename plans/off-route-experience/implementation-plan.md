@@ -15,7 +15,7 @@
 - Hebrew UI copy, RTL.
 - Commit after every task; `feat(nav): …` / `fix(nav): …` messages with the `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>` trailer.
 - Finish with `node tests/test-mobile-undefined-references.mjs` (catches release-crashing stale references).
-- **Coordination:** the ride-feedback-round-2 agent may be editing `navigationSession.js` and `BuildScreen.jsx`. Before starting, run `git status` / `git log --oneline -5`; if their work is uncommitted in these files, wait or coordinate rather than interleave.
+- **Coordination:** resolved — ride-feedback-round-2 landed (`77a05e4 feat(nav): implement ride feedback round 2`); `navigationSession.js` / `BuildScreen.jsx` are clean as of 2026-07-12. Work on a dedicated branch off `main` (e.g. `feature/off-route-experience`); the currently checked-out `feature/voice-commands-bugfix` has unrelated uncommitted changes (`apps/mobile/app.json`, `data/sticker-redirects.json`) — leave them untouched.
 
 ---
 
@@ -74,7 +74,7 @@ Replace the `case "off-route":` block (currently `viewportMode: "overview"`, `mi
       });
 ```
 
-The transition kind `"eased"` is new — grep the core for how existing kinds are consumed (`grep -rn '"maneuver"\|transition.kind\|transition?.kind' packages/core/src/navigation apps/mobile/src`) and either register `"eased"` wherever kinds are enumerated (camera timeline/director/BuildScreen) or, if consumers only read `durationMs` and treat unknown kinds as animated, keep it as-is with a test proving a 600 ms animated transition results. Do not ship a kind that silently falls back to a 0 ms cut.
+The transition kind `"eased"` is new — **verified 2026-07-12: safe.** No consumer switches on `transition.kind`: `cameraTimeline.js:12` reads only `durationMs`, `BuildScreen.jsx:2804` passes `durationMs` to `applyOverview` (overview mode only), and `cameraDirector.js` reads `state.cameraTransition` (a different object). In live follow mode the smoothing comes from the per-frame pitch lerp (`CAMERA_ROTATE_MS`) plus the zoom velocity clamp in `nextAppliedZoom` (`force: stageChanged` bypasses only the dead band, not the rate limit), so there is no hard cut; the 600 ms is exercised by the headless `cameraTimeline` sampler and by `applyOverview` when leaving off-route into an overview stage. Keep the Step 1 assertion (`durationMs >= 400`, kind !== "immediate") as the regression guard.
 
 - [ ] **Step 4: Run camera suites**
 
@@ -225,7 +225,7 @@ In each off-route `set` patch, add `approachProgress: rejoinLegProgress`, `appro
             cueEvent: firstOffRoute ? { kind: "off-route" } : rejoinLegCueEvent,
 ```
 
-3. **Leg reset:** when a *new* rejoin connector request goes out (`suggestionStatus: "requesting"` patch in the off-route branch), the previous leg keeps guiding until the replacement arrives — do not reset there. Verify re-acquisition resets: the acquired path (line ~660) calls `resetApproachRuntime()` when `state.approach.target` is set, which the off-route branch maintains. Add `assert` coverage if not.
+3. **Leg reset:** when a *new* rejoin connector request goes out (`suggestionStatus: "requesting"` patch in the off-route branch), the previous leg keeps guiding until the replacement arrives — do not reset there. Re-acquisition reset is **verified 2026-07-12**: the acquired path (`navigationSession.js:650-660`) computes `acquiredApproach` from `state.approach.target || suggestionStatus !== "idle"` — the off-route branch always maintains `target` — so `resetApproachRuntime()` runs and the patch sets `approach: emptyApproach()`, clearing the leg geometry. Still add an assert to the Task 2 test: after riding back onto the route, `approach.approachLegGeometry` is null and the `acquired`/`reacquired` cue event fires.
 
 - [ ] **Step 4: Run session + voice suites**
 
@@ -286,23 +286,33 @@ Expected: FAIL — off-route returns null unconditionally today.
 
 - [ ] **Step 3: Implement heading**
 
-In `cameraHeading.js`, where `progress.offRoute === true` returns null, first check for an active guided rejoin leg and reuse the approach-leg course path (the same source `approach-guide` stages use — `approach.approachProgress.bearingToNextDeg`):
+**The fix goes in `cameraHeadingTargetForState`, NOT `cameraHeadingTarget`.** The stage-level early return at `cameraHeading.js:50-55` (`stage === "off-route" || "arrived-local" || "ride-summary"` → null) short-circuits before `cameraHeadingTarget(progress)` is ever consulted, so patching the `progress.offRoute === true` branch alone is dead code for this stage. Split `"off-route"` out of that early return and reuse the same corridor-bearing path the `approach-guide` stages use (lines 57-67):
 
 ```js
-  if (progress.offRoute === true) {
-    const rejoinProgress = state?.approach?.approachProgress;
+  if (stage === "arrived-local" || stage === "ride-summary") return null;
+
+  if (stage === "off-route") {
+    // Guided rejoin leg active: steer along it like an approach leg.
+    // No leg: hold perfectly still — the puck carries the live direction.
+    const approachProgress = state?.approach?.approachProgress || null;
     if (
       Array.isArray(state?.approach?.approachLegGeometry) &&
-      state.approach.approachLegGeometry.length >= 2 &&
-      Number.isFinite(rejoinProgress?.bearingToNextDeg)
+      state.approach.approachLegGeometry.length >= 2
     ) {
-      return rejoinProgress.bearingToNextDeg;
+      const corridorBearing = cameraCorridorBearing(
+        state.approach.approachLegGeometry,
+        approachProgress?.progressMeters,
+      );
+      if (Number.isFinite(corridorBearing)) return corridorBearing;
+      if (Number.isFinite(approachProgress?.bearingToNextDeg)) {
+        return approachProgress.bearingToNextDeg;
+      }
     }
     return null;
   }
 ```
 
-(match the file's actual variable names; the comment block at lines 19-26 explaining "held still off-route" must be updated to say "held still only while no guided rejoin leg exists".)
+Also update the module header comment (lines 19-26, "returns null off-route: … the map must hold perfectly still") to say the frame holds still only while no guided rejoin leg exists.
 
 - [ ] **Step 4: BuildScreen corridor for `rejoin`**
 
@@ -328,15 +338,27 @@ In the rAF loop's corridor pick (`BuildScreen.jsx:2520-2545`), the geometry choi
 
 (`const` → `let` for `corridorGeometry`; `corridorProgress`/`cueMeters` already use the approach fields, which Task 2 populates for rejoin.)
 
-- [ ] **Step 5: Run suites + static check**
+Cleanup while here: the overview `fitKind === "rejoin"` paths in BuildScreen become dead once off-route is a follow stage — `REJOIN_CAMERA_FIT_MIN_INTERVAL_MS` (line ~207, used ~2779) and the `"rejoin"` cases in the fit-points/`minMoveMeters` picks (~2691, ~2728, ~2766). Remove them (and the constant) rather than leaving unreachable branches.
 
-Run: `node tests/test-camera-heading.mjs && node tests/test-camera-viewport.mjs && node tests/test-mobile-undefined-references.mjs`
+- [ ] **Step 5: Update scenario expectations that encode "map holds still off-route"**
+
+Three scenario fixtures assert `{ type: "camera-rotations", atMost: 0, during: "off-route" }`, which the guided-rejoin heading deliberately breaks (the frame is course-up along the leg):
+
+- `packages/core/src/navigation/scenarios/off-route-excursion.js:28`
+- `packages/core/src/navigation/scenarios/missed-turn-rejoin-later.js:44`
+- `packages/core/src/navigation/scenarios/camera-journeys.js:334`, plus the `off-route-hold` / "Off-route stable overview" bookmark (~lines 292-299) which expects the old overview framing.
+
+Where the scenario has no connector delivered (rider off-route, no leg), keep `atMost: 0` — the hold behavior is preserved without a leg. Where a rejoin leg is active, replace with a bounded expectation (e.g. rotations only while the leg turns) or drop the constraint; update the `off-route-hold` bookmark to expect the follow stage/pitch. These encode the *old* design, not requirements.
+
+- [ ] **Step 6: Run suites + static check**
+
+Run: `node tests/test-camera-heading.mjs && node tests/test-camera-viewport.mjs && node tests/test-nav-scenario-runner.mjs && node tests/test-nav-scenarios.mjs && node tests/test-mobile-undefined-references.mjs`
 Expected: all PASS / `ok`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add packages/core/src/navigation/cameraHeading.js apps/mobile/src/screens/BuildScreen.jsx tests/test-camera-heading.mjs
+git add packages/core/src/navigation/cameraHeading.js apps/mobile/src/screens/BuildScreen.jsx packages/core/src/navigation/scenarios tests/test-camera-heading.mjs
 git commit -m "feat(nav): off-route camera steers and frames along the rejoin leg"
 ```
 
@@ -349,8 +371,8 @@ git commit -m "feat(nav): off-route camera steers and frames along the rejoin le
 - Test: `tests/test-navigation-presentation.mjs` (extend)
 
 **Interfaces:**
-- Consumes: `state.approach.distanceToRouteMeters` (maintained by the session off-route branch).
-- Produces: the off-route card text carries the live distance: `"יצאתם מהמסלול · 120 מ׳ לחזרה"` (distance formatted by the file's existing meter-formatting helper; omit the suffix when the distance is unknown: `"יצאתם מהמסלול"`).
+- Consumes: `state.approach.approachProgress.remainingMeters` (populated by Task 2 while a guided rejoin leg is active), falling back to `state.approach.distanceToRouteMeters` (maintained by the session off-route branch) when no leg exists.
+- Produces: the off-route card text carries the live distance: `"יצאתם מהמסלול · 120 מ׳ לחזרה"` (distance formatted by the existing `formatDistanceMeters`; omit the suffix when neither distance is known: `"יצאתם מהמסלול"`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -359,21 +381,32 @@ Read `tests/test-navigation-presentation.mjs` and the presentation module to fin
 ```js
 // --- O5: off-route card shows the live distance back -----------------------
 {
-  const card = /* the module's card/state builder */ ({
+  // Guided leg active: remaining-along-leg wins over straight-line.
+  const guided = getNavigationPresentation({
+    status: "off-route",
+    offRoute: true,
+    approach: {
+      distanceToRouteMeters: 118,
+      approachLegGeometry: [{ lat: 33.1, lng: 35.6 }, { lat: 33.101, lng: 35.6 }],
+      approachProgress: { remainingMeters: 240 },
+    },
+    progress: { hasAcquiredRoute: true, offRoute: true },
+  });
+  assert.ok(guided.offRouteText.includes("יצאתם מהמסלול"), guided.offRouteText);
+  assert.ok(/240/.test(guided.offRouteText), `leg distance, got ${guided.offRouteText}`);
+
+  // No leg yet: straight-line fallback.
+  const bare = getNavigationPresentation({
     status: "off-route",
     offRoute: true,
     approach: { distanceToRouteMeters: 118 },
     progress: { hasAcquiredRoute: true, offRoute: true },
   });
-  assert.ok(
-    card.text.includes("יצאתם מהמסלול"),
-    `off-route title, got ${card.text}`,
-  );
-  assert.ok(/1[0-2]0|118/.test(card.text), `distance in text, got ${card.text}`);
+  assert.ok(/1[0-2]0/.test(bare.offRouteText), `fallback distance, got ${bare.offRouteText}`);
 }
 ```
 
-Replace the placeholder call with the module's real builder and shape (the test must call the same function the app calls; read the existing off-route case in the test file if one exists and extend it).
+Replace the placeholder call with the module's real builder and shape. Verified 2026-07-12: the builder is `getNavigationPresentation(state)`; the off-route copy lives in `offRouteText` (currently the static `"חזרו למסלול"`, `navigationPresentation.js:333`) alongside `cardMode: "off-route"` and the chip `{ kind: "rejoin", text: "חזרה למסלול" }`. Existing off-route cases in `tests/test-navigation-presentation.mjs` (~lines 81, 386) show the state shape — extend those. Assert on the field BuildScreen actually renders for the off-route card (check its `cardMode === "off-route"` branch) rather than a generic `card.text`.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -382,17 +415,22 @@ Expected: FAIL — current off-route text is a generic state with no distance.
 
 - [ ] **Step 3: Implement**
 
-In `navigationPresentation.js`'s off-route case, compose the text from the existing distance formatter (grep the file for how other states format meters — reuse it, do not add a new formatter):
+In `navigationPresentation.js`, compose `offRouteText` from the existing `formatDistanceMeters` (do not add a new formatter). Prefer remaining-along-leg, fall back to straight-line (design O5 as amended):
 
 ```js
-    const distanceMeters = Number(state?.approach?.distanceToRouteMeters);
-    const distanceText = Number.isFinite(distanceMeters)
-      ? ` · ${formatDistanceMeters(distanceMeters)} לחזרה`
-      : "";
-    return { text: `יצאתם מהמסלול${distanceText}`, /* keep existing icon */ };
+    const legRemaining = Number(approach?.approachProgress?.remainingMeters);
+    const straightLine = Number(approach?.distanceToRouteMeters);
+    const hasGuidedLeg =
+      Array.isArray(approach?.approachLegGeometry) &&
+      approach.approachLegGeometry.length >= 2;
+    const backMeters =
+      hasGuidedLeg && Number.isFinite(legRemaining) ? legRemaining : straightLine;
+    const offRouteText = Number.isFinite(backMeters)
+      ? `יצאתם מהמסלול · ${formatDistanceMeters(backMeters)} לחזרה`
+      : "יצאתם מהמסלול";
 ```
 
-(match the file's actual return shape and formatter name.)
+(wire it into the returned `offRouteText` field — currently the static `"חזרו למסלול"` at line ~333; check BuildScreen's off-route card rendering still reads that field and update copy expectations in existing tests that pin the old string.)
 
 - [ ] **Step 4: Run to verify pass**
 
