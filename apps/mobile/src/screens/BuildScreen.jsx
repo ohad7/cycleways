@@ -1657,12 +1657,41 @@ export default function BuildScreen({ navigation, route }) {
   // session-only scenarios still use pendingNavigationRouteId so nav.start()
   // runs only after the session has re-bound to the scenario route.
   const handleDevScenarioSelect = useCallback(
-    (scenario, bookmark = null) => {
+    async (scenario, bookmark = null) => {
       if (!__DEV__) return;
       let resolved;
       try {
+        let currentNavigationRoute = navigationRoute;
+        if (
+          scenario?.route === "current" &&
+          currentNavigationRoute?.canNavigate === true &&
+          !Array.isArray(currentNavigationRoute.junctions)
+        ) {
+          // current-route-generic bypasses Ride Intro/confirmRidePlan, which is
+          // where prepared junctions are normally attached. Resolve them here
+          // before snapshotting the route so the SIM cannot silently fall back
+          // to raw in-roundabout geometry cues.
+          const prepared =
+            preparedRouteJunctions.status === "ready" &&
+            Array.isArray(preparedRouteJunctions.junctions) &&
+            ridePlan?.effectiveRoute?.id === preparedRouteJunctions.routeId &&
+            ridePlan.effectiveRoute.geometry.length === currentNavigationRoute.geometry.length &&
+            ridePlan.effectiveRoute.geometry.every((point, index) =>
+              point.lat === currentNavigationRoute.geometry[index]?.lat &&
+              point.lng === currentNavigationRoute.geometry[index]?.lng,
+            )
+              ? preparedRouteJunctions.junctions
+              : await computeRouteJunctions(currentNavigationRoute.geometry);
+          if (!Array.isArray(prepared)) {
+            throw new Error("could not prepare junction and roundabout cues");
+          }
+          currentNavigationRoute = {
+            ...currentNavigationRoute,
+            junctions: prepared,
+          };
+        }
         resolved = resolveScenario(scenario, {
-          currentNavigationRoute: navigationRoute,
+          currentNavigationRoute,
         });
       } catch (error) {
         Alert.alert("Scenario error", String(error?.message || error));
@@ -1768,10 +1797,13 @@ export default function BuildScreen({ navigation, route }) {
     },
     [
       armDevJourneyIntro,
+      computeRouteJunctions,
       devSpeed,
       locationState,
       nav,
       navigationRoute,
+      preparedRouteJunctions,
+      ridePlan,
       rideSetupFix,
       rideSetupLocationStatus,
       rideSetupNow,
@@ -3576,10 +3608,10 @@ export default function BuildScreen({ navigation, route }) {
         {isNavigating && navChip?.kind === "segment" && riderPuck ? (
           <MarkerView
             coordinate={[riderPuck.lng, riderPuck.lat]}
-            anchor={{ x: 0.5, y: -0.9 }}
+            anchor={{ x: 0.5, y: 1 }}
             allowOverlap
           >
-            <View style={styles.navChip}>
+            <View style={[styles.navChip, styles.navChipAbovePuck]}>
               <Text style={styles.navChipText} numberOfLines={1}>
                 {navChip.text}
               </Text>
@@ -4816,6 +4848,9 @@ const styles = StyleSheet.create({
     ...text.captionStrong,
     color: "#1a2b1e",
     writingDirection: "rtl",
+  },
+  navChipAbovePuck: {
+    transform: [{ translateY: -18 }],
   },
   navChipApproach: {
     backgroundColor: "#eef4ff",

@@ -19,6 +19,10 @@ assert.equal(
   getScenario("roundabouts-upper-galilee")?.name,
   "roundabouts-upper-galilee",
 );
+assert.equal(
+  getScenario("roundabout-then-right-turn")?.name,
+  "roundabout-then-right-turn",
+);
 assert.deepEqual(
   getScenario("roundabouts-upper-galilee").route.routeState.junctions
     .filter((junction) => junction.kind === "roundabout")

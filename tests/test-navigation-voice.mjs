@@ -243,6 +243,81 @@ assert.equal(formatSpeechDistanceMeters(null), "");
   assert.ok(missedFirst.utterance, "follow-up still speaks if the compound cue was missed");
 }
 
+// --- Compound turn/roundabout maneuvers -----------------------------------
+{
+  const turnThenRoundabout = createNavigationVoicePlanner().plan(
+    {
+      kind: "cue",
+      cueType: "turn",
+      phase: "final",
+      cue: {
+        type: "turn",
+        direction: "right",
+        distanceMeters: 500,
+        thenManeuver: { type: "roundabout", direction: "straight" },
+      },
+    },
+    {},
+    1000,
+  ).utterance;
+  assert.equal(turnThenRoundabout.text, "פנה ימינה, ואז בכיכר המשיכו ישר");
+
+  const planner = createNavigationVoicePlanner();
+  const roundaboutThenTurn = planner.plan(
+    {
+      kind: "cue",
+      cueType: "roundabout",
+      phase: "final",
+      cue: {
+        type: "roundabout",
+        direction: "straight",
+        distanceMeters: 600,
+        exitDistanceMeters: 650,
+        thenManeuver: { type: "turn", direction: "right" },
+      },
+    },
+    {},
+    1000,
+  ).utterance;
+  assert.equal(roundaboutThenTurn.text, "בכיכר, המשיכו ישר, ואז פנו ימינה");
+
+  const coveredTurn = planner.plan(
+    {
+      kind: "cue",
+      cueType: "turn",
+      phase: "final",
+      cue: {
+        type: "turn",
+        direction: "right",
+        distanceMeters: 659,
+        compoundPreviousType: "roundabout",
+        compoundPreviousDistanceMeters: 600,
+      },
+    },
+    {},
+    4000,
+  );
+  assert.equal(coveredTurn.reason, "compound-covered");
+
+  const missedRoundabout = createNavigationVoicePlanner().plan(
+    {
+      kind: "cue",
+      cueType: "turn",
+      phase: "final",
+      cue: {
+        type: "turn",
+        direction: "right",
+        distanceMeters: 659,
+        compoundPreviousType: "roundabout",
+        compoundPreviousDistanceMeters: 600,
+      },
+    },
+    {},
+    4000,
+  );
+  assert.ok(missedRoundabout.utterance);
+}
+
 // --- Segment names --------------------------------------------------------
 {
   const planner = createNavigationVoicePlanner();

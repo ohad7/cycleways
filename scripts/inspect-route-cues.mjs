@@ -4,7 +4,9 @@
 //
 // Usage: node scripts/inspect-route-cues.mjs <route-token>
 import { buildLiveDecodeRoute } from "../editor/server.mjs";
+import { readFile } from "node:fs/promises";
 import { junctionsNearRoute } from "../packages/core/src/routing/junctionsNearRoute.js";
+import { roundaboutsOnRoute } from "../packages/core/src/routing/roundaboutsOnRoute.js";
 import { navigationRouteFromRouteState } from "../packages/core/src/navigation/navigationRoute.js";
 import { buildRouteCues } from "../packages/core/src/navigation/navigationCues.js";
 import { loadBaseNetworkAroundGeometry } from "./lib/base-network.mjs";
@@ -69,7 +71,11 @@ function printCues(label, junctions) {
       cue.type,
       cue.direction || "",
       cue.turnAngleDeg ? `${Math.round(cue.turnAngleDeg)}°` : "",
-      cue.thenDirection ? `then ${cue.thenDirection}` : "",
+      cue.thenManeuver
+        ? `then ${cue.thenManeuver.type}:${cue.thenManeuver.direction}`
+        : cue.thenDirection
+          ? `then turn:${cue.thenDirection}`
+          : "",
       cue.ontoSegmentName || cue.segmentName || "",
       `@${point.lat.toFixed(5)},${point.lng.toFixed(5)}`,
     ].filter(Boolean);
@@ -82,8 +88,14 @@ console.log(`token ${token}`);
 console.log(`geometry ${decoded.geometry.length} points`);
 printCues("WITHOUT junctions (legacy)", null);
 const network = loadBaseNetworkAroundGeometry(decoded.geometry);
-const junctions = junctionsNearRoute(network, decoded.geometry);
+const roundaboutPayload = JSON.parse(
+  await readFile(new URL("../public-data/roundabouts.json", import.meta.url), "utf8"),
+);
+const junctions = [
+  ...junctionsNearRoute(network, decoded.geometry),
+  ...roundaboutsOnRoute(roundaboutPayload.roundabouts, decoded.geometry),
+];
 console.log(
-  `\nderived ${junctions.length} junctions near the route from ${network.shardCount} shards`,
+  `\nderived ${junctions.length} junction/roundabout records near the route from ${network.shardCount} shards`,
 );
 printCues("WITH junctions (junction-gated)", junctions);

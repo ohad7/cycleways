@@ -15,6 +15,7 @@ import parallelPath from "./parallel-path.js";
 import recordedRealRide from "./recorded-real-ride.js";
 import rerouteFailure from "./reroute-failure.js";
 import roundaboutsUpperGalilee from "./roundabouts-upper-galilee.js";
+import roundaboutThenRightTurn from "./roundabout-then-right-turn.js";
 import stopAndStand from "./stop-and-stand.js";
 import sovevBeitHillelRide from "./sovev-beit-hillel-ride.js";
 import wrongWay from "./wrong-way.js";
@@ -33,6 +34,7 @@ export const scenarios = [
   recordedRealRide,
   sovevBeitHillelRide,
   roundaboutsUpperGalilee,
+  roundaboutThenRightTurn,
   wrongWay,
   currentRouteGeneric,
   ...cameraJourneys,

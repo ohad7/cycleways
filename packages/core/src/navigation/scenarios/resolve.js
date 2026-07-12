@@ -27,7 +27,13 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     if (currentNavigationRoute?.canNavigate !== true) {
       throw err("requires a navigable current route");
     }
-    navigationRoute = currentNavigationRoute;
+    // A current-route scenario is a playback snapshot, not the live planner
+    // route. Give it a distinct id so id-keyed navigation sessions rebind even
+    // when only metadata (for example roundabout junctions) changed.
+    navigationRoute = {
+      ...currentNavigationRoute,
+      id: `${currentNavigationRoute.id}:scenario-${name}`,
+    };
   } else if (scenario.route?.routeState) {
     navigationRoute = navigationRouteFromRouteState(scenario.route.routeState, {
       param: `scenario-${name}`,

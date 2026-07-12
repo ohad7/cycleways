@@ -43,6 +43,19 @@ function signedTurn(bearingIn, bearingOut) {
   return ((bearingOut - bearingIn + 540) % 360) - 180;
 }
 
+function isCompoundManeuver(cue) {
+  return (
+    (cue?.type === "turn" || cue?.type === "roundabout") &&
+    !(cue.type === "roundabout" && cue.direction === "u-turn")
+  );
+}
+
+function maneuverCompletionMeters(cue) {
+  return cue?.type === "roundabout" && Number.isFinite(Number(cue.exitDistanceMeters))
+    ? Number(cue.exitDistanceMeters)
+    : Number(cue?.distanceMeters);
+}
+
 export function buildRouteCues(navigationRoute, options = {}) {
   const geometry = Array.isArray(navigationRoute?.geometry)
     ? navigationRoute.geometry
@@ -119,25 +132,36 @@ export function buildRouteCues(navigationRoute, options = {}) {
       type: "roundabout",
       direction,
       distanceMeters: Number(traversal.entryMeters),
+      exitDistanceMeters: Number(traversal.exitMeters),
       roundaboutId: traversal.roundaboutId || null,
       turnAngleDeg: angle,
     });
   }
   cornerCues.sort((a, b) => a.distanceMeters - b.distanceMeters);
 
-  // Link close decision pairs without removing the follow-up cue. The voice
+  // Link close decision pairs without removing the follow-up cue. For a
+  // roundabout followed by another maneuver, proximity starts at the
+  // roundabout exit rather than its entry. The voice
   // planner suppresses that follow-up only after it has actually accepted the
   // earlier compound instruction, so a missed first announcement cannot make
-  // the second turn silent as well.
+  // the second maneuver silent as well.
   for (let i = 0; i < cornerCues.length - 1; i += 1) {
     const current = cornerCues[i];
     const next = cornerCues[i + 1];
+    const gapMeters = next.distanceMeters - maneuverCompletionMeters(current);
     if (
-      current.type === "turn" &&
-      next.type === "turn" &&
-      next.distanceMeters - current.distanceMeters <= COMPOUND_TURN_WINDOW_M
+      isCompoundManeuver(current) &&
+      isCompoundManeuver(next) &&
+      gapMeters >= 0 &&
+      gapMeters <= COMPOUND_TURN_WINDOW_M
     ) {
-      current.thenDirection = next.direction;
+      current.thenManeuver = { type: next.type, direction: next.direction };
+      // Preserve the original turn-turn field for older persisted sessions and
+      // consumers while thenManeuver becomes the canonical representation.
+      if (current.type === "turn" && next.type === "turn") {
+        current.thenDirection = next.direction;
+      }
+      next.compoundPreviousType = current.type;
       next.compoundPreviousDistanceMeters = current.distanceMeters;
     }
   }

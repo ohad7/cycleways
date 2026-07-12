@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
 import Icon from "./Icon.jsx";
+import ManeuverIcon from "./ManeuverIcon.jsx";
 import { palette, radius, space } from "./theme.js";
 import { text } from "../theme/typography.js";
 
@@ -120,14 +121,34 @@ export default function NavPanel({
               ) : null}
             </>
           ) : p.cardMode === "cue" ? (
-            <View style={styles.cueRow}>
-              <Icon name={p.cueIcon} color={palette.forest} size={30} />
-              <View style={styles.cueTextWrap}>
-                <Text style={styles.cueText} numberOfLines={1}>
-                  {p.cuePrimaryText || p.cueText}
-                </Text>
+            <View
+              style={styles.cueRow}
+              accessible
+              accessibilityLabel={[
+                p.cuePrimaryText || p.cueText,
+                p.cueNextText,
+                p.cueSecondaryText,
+                p.cueDistanceText,
+              ].filter(Boolean).join(". ")}
+            >
+              <View style={styles.cueInstructions}>
+                <CueManeuverRow
+                  maneuver={p.cueManeuver}
+                  fallbackIcon={p.cueIcon}
+                >
+                  <Text style={[styles.cueText, styles.maneuverCopy]}>
+                    {p.cuePrimaryText || p.cueText}
+                  </Text>
+                </CueManeuverRow>
+                {p.cueNextText && p.cueNextManeuver ? (
+                  <CueManeuverRow maneuver={p.cueNextManeuver} secondary>
+                    <Text style={[styles.nextCueText, styles.maneuverCopy]}>
+                      {p.cueNextText}
+                    </Text>
+                  </CueManeuverRow>
+                ) : null}
                 {p.cueSecondaryText ? (
-                  <Text style={styles.context} numberOfLines={1}>
+                  <Text style={[styles.context, styles.cueContextIndent]} numberOfLines={2}>
                     {p.cueSecondaryText}
                   </Text>
                 ) : null}
@@ -225,6 +246,22 @@ export default function NavPanel({
           </View>
         </View>
       )}
+    </View>
+  );
+}
+
+function CueManeuverRow({ maneuver, fallbackIcon, secondary = false, children }) {
+  const size = secondary ? 23 : 32;
+  return (
+    <View style={styles.maneuverRow}>
+      <View style={styles.maneuverIconSlot}>
+        {maneuver ? (
+          <ManeuverIcon maneuver={maneuver} color={palette.forest} size={size} />
+        ) : fallbackIcon ? (
+          <Icon name={fallbackIcon} color={palette.forest} size={size} />
+        ) : null}
+      </View>
+      {children}
     </View>
   );
 }
@@ -345,8 +382,34 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   cueTextWrap: { flex: 1 },
+  cueInstructions: {
+    flex: 1,
+    minWidth: 0,
+    gap: space.xs,
+  },
+  maneuverRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  maneuverIconSlot: {
+    width: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  maneuverCopy: {
+    flex: 1,
+    flexShrink: 1,
+  },
   cueText: {
     ...text.navTitle,
+    color: palette.ink,
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  nextCueText: {
+    ...text.navBody,
     color: palette.ink,
     writingDirection: "rtl",
     textAlign: "right",
@@ -370,6 +433,7 @@ const styles = StyleSheet.create({
   cueBigDistance: {
     ...text.display,
     color: "#1c4fd6",
+    flexShrink: 0,
   },
   statusText: {
     ...text.navBody,
@@ -383,6 +447,9 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: 2,
+  },
+  cueContextIndent: {
+    marginRight: 34 + space.sm,
   },
   destBtnPressed: { opacity: 0.7 },
   bottomStack: {

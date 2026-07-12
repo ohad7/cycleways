@@ -151,13 +151,13 @@ export default function App() {
       setLaunchError(result.error);
       if (!result.error) {
         if (warm) {
-          // Warm catalog-route link: open the detail screen by slug. RouteDetail
-          // loads from the bundled snapshot, so the seeded href is not used here
-          // (the editor is reached later via the detail CTA, which passes the
-          // route token explicitly and resets the href first).
-          if (navigationRef.isReady() && result.resolved) {
-            navigationRef.navigate("RouteDetail", {
-              slug: result.resolved.slug,
+          // Route paths open their catalog detail; raw ?route= links open Build
+          // with the token explicitly so the restore does not depend on Build
+          // already being mounted and observing the synthetic native href.
+          if (navigationRef.isReady()) {
+            const target = launchTargetFromHref(url);
+            navigationRef.navigate(target.screen, {
+              ...target.params,
               openId: Date.now(),
             });
           }

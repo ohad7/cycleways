@@ -24,16 +24,74 @@ function directionWord(direction) {
   return direction === "right" ? "ימינה" : "שמאלה";
 }
 
+function roundaboutPhrase(direction) {
+  return {
+    straight: "בכיכר, המשיכו ישר",
+    right: "בכיכר, פנו ימינה",
+    left: "בכיכר, פנו שמאלה",
+    "u-turn": "בכיכר, חזרו לאחור",
+  }[direction] || null;
+}
+
+function maneuverDescriptor(cue) {
+  if (cue?.type === "turn" || cue?.type === "bend") {
+    return { type: cue.type, direction: cue.direction };
+  }
+  if (cue?.type === "roundabout") {
+    return { type: "roundabout", direction: cue.direction };
+  }
+  return null;
+}
+
+function nextManeuverDescriptor(cue) {
+  const maneuver = cue?.thenManeuver || (cue?.thenDirection
+    ? { type: "turn", direction: cue.thenDirection }
+    : null);
+  return maneuver && (maneuver.type === "turn" || maneuver.type === "roundabout")
+    ? { type: maneuver.type, direction: maneuver.direction }
+    : null;
+}
+
+function primaryManeuverText(cue) {
+  if (cue?.type === "turn") return `פנה ${directionWord(cue.direction)}`;
+  if (cue?.type === "roundabout") return roundaboutPhrase(cue.direction) || "המשך במסלול";
+  return cueDisplay(cue).text;
+}
+
+function nextManeuverText(cue) {
+  const maneuver = nextManeuverDescriptor(cue);
+  if (maneuver?.type === "turn") return `ואז פנו ${directionWord(maneuver.direction)}`;
+  if (maneuver?.type === "roundabout") {
+    const phrase = roundaboutPhrase(maneuver.direction);
+    return phrase ? `ואז ${phrase.replace(/^בכיכר,\s*/, "בכיכר ")}` : "";
+  }
+  return "";
+}
+
+function thenManeuverPhrase(cue) {
+  const maneuver = cue.thenManeuver || (cue.thenDirection
+    ? { type: "turn", direction: cue.thenDirection }
+    : null);
+  if (maneuver?.type === "turn") {
+    return cue.type === "roundabout"
+      ? `, ואז פנו ${directionWord(maneuver.direction)}`
+      : ` ומיד ${directionWord(maneuver.direction)}`;
+  }
+  if (maneuver?.type === "roundabout") {
+    const phrase = roundaboutPhrase(maneuver.direction);
+    return phrase ? `, ואז ${phrase.replace(/^בכיכר,\s*/, "בכיכר ")}` : "";
+  }
+  return "";
+}
+
 function turnPrimaryText(cue) {
   const base = `פנה ${directionWord(cue.direction)}`;
-  return cue.thenDirection
-    ? `${base} ומיד ${directionWord(cue.thenDirection)}`
-    : base;
+  return `${base}${thenManeuverPhrase(cue)}`;
 }
 
 function turnText(cue) {
   const onto = cue.ontoSegmentName ? ` אל ${cue.ontoSegmentName}` : "";
-  const then = cue.thenDirection ? ` ומיד ${directionWord(cue.thenDirection)}` : "";
+  const then = thenManeuverPhrase(cue);
   return `פנה ${directionWord(cue.direction)}${onto}${then}`;
 }
 
@@ -51,14 +109,9 @@ function cueDisplay(cue) {
         ? { text: "עיקול ימינה", icon: "arrow-forward-outline" }
         : { text: "עיקול שמאלה", icon: "arrow-back-outline" };
     case "roundabout": {
-      const text = {
-        straight: "בכיכר, המשיכו ישר",
-        right: "בכיכר, פנו ימינה",
-        left: "בכיכר, פנו שמאלה",
-        "u-turn": "בכיכר, חזרו לאחור",
-      }[cue.direction];
+      const text = roundaboutPhrase(cue.direction);
       return text
-        ? { text, icon: "reload-outline" }
+        ? { text: `${text}${thenManeuverPhrase(cue)}`, icon: "reload-outline" }
         : { text: "המשך במסלול", icon: "navigate-outline" };
     }
     case "enter-segment":
@@ -261,10 +314,13 @@ export function getNavigationPresentation(state = {}) {
     const c = active?.cue || null;
     if (!c) return cue.text;
     if (arrivalPreviewText) return arrivalPreviewText;
-    if (c.type === "turn") return turnPrimaryText(c);
+    if (c.type === "turn" || c.type === "roundabout") return primaryManeuverText(c);
     if (c.type === "enter-segment") return "המשך במסלול";
     return cue.text;
   })();
+  const cueNextText = nextManeuverText(active?.cue || null);
+  const cueManeuver = maneuverDescriptor(active?.cue || null);
+  const cueNextManeuver = nextManeuverDescriptor(active?.cue || null);
   const cueSecondaryText = (() => {
     const c = active?.cue || null;
     if (!c) return "";
@@ -355,7 +411,10 @@ export function getNavigationPresentation(state = {}) {
     chip,
     speedText,
     cuePrimaryText,
+    cueNextText,
     cueSecondaryText,
+    cueManeuver,
+    cueNextManeuver,
     arrivalSummary,
     justAcquired: state.justAcquired === true,
     acquisitionText: state.justAcquired === true

@@ -388,6 +388,40 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   );
 }
 
+// A turn shortly before a roundabout announces both decisions together.
+{
+  const route = routeFrom(
+    [
+      { lat: 33, lng: 35 },
+      { lat: 33, lng: 35.001 },
+      { lat: 33.0005, lng: 35.001 },
+      { lat: 33.0015, lng: 35.001 },
+    ],
+    {
+      junctions: [
+        { kind: "junction", lat: 33, lng: 35.001 },
+        {
+          kind: "roundabout",
+          roundaboutId: "after-turn",
+          lat: 33.00025,
+          lng: 35.001,
+          entryMeters: 115,
+          exitMeters: 160,
+          entryBearingDeg: 0,
+          exitBearingDeg: 0,
+          complete: true,
+        },
+      ],
+    },
+  );
+  const cues = buildRouteCues(route);
+  const turn = findType(cues, "turn")[0];
+  const roundabout = findType(cues, "roundabout")[0];
+  assert.deepEqual(turn.thenManeuver, { type: "roundabout", direction: "straight" });
+  assert.equal(roundabout.compoundPreviousType, "turn");
+  assert.equal(roundabout.compoundPreviousDistanceMeters, turn.distanceMeters);
+}
+
 // Incomplete traversal suppresses geometry noise but cannot announce direction.
 {
   const route = routeFrom(

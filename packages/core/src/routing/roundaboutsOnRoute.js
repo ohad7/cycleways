@@ -1,11 +1,19 @@
 import { getDistance, distanceToLineSegment } from "../utils/distance.js";
-import { computeBearing, pointAndBearingAtDistance, precomputeArcLength } from "../utils/geometry.js";
+import {
+  bearingDelta,
+  computeBearing,
+  pointAndBearingAtDistance,
+  precomputeArcLength,
+} from "../utils/geometry.js";
 
 export const RING_MATCH_M = 12;
 export const MIN_MATCHED_ROUTE_M = 8;
 export const COURSE_SAMPLE_OFFSET_M = 20;
 const SAMPLE_STEP_M = 4;
 const MAX_ALIGNMENT_DELTA_DEG = 65;
+const COURSE_SAMPLE_MIN_OFFSET_M = 2;
+const COURSE_SAMPLE_STEP_M = 2;
+const MAX_COURSE_CHANGE_DEG = 40;
 
 function normalizedGeometry(routeGeometry) {
   const points = (Array.isArray(routeGeometry) ? routeGeometry : [])
@@ -66,6 +74,33 @@ function pointMatches(point, routeBearing, candidate, matchM) {
 
 function interpolate(a, b, fraction) {
   return { lat: a.lat + (b.lat - a.lat) * fraction, lng: a.lng + (b.lng - a.lng) * fraction };
+}
+
+// Prefer the requested 20 m course sample, but do not let it cross a separate
+// turn immediately before/after the roundabout. The first point safely outside
+// the matched ring establishes the local road course; progressively farther
+// samples are accepted only while they remain on that same course.
+function courseBearingOutsideTraversal(arc, points, boundaryMeters, direction, maxOffsetMeters) {
+  const available = direction < 0
+    ? boundaryMeters
+    : arc.totalDistMeters - boundaryMeters;
+  const maxOffset = Math.min(maxOffsetMeters, available);
+  if (maxOffset <= 0) return null;
+  const initialOffset = Math.min(COURSE_SAMPLE_MIN_OFFSET_M, maxOffset);
+  const initialDistance = boundaryMeters + direction * initialOffset;
+  const initialBearing = pointAndBearingAtDistance(arc, points, initialDistance).bearingDeg;
+  let selectedBearing = initialBearing;
+  for (
+    let offset = initialOffset + COURSE_SAMPLE_STEP_M;
+    offset <= maxOffset + 1e-6;
+    offset += COURSE_SAMPLE_STEP_M
+  ) {
+    const distance = boundaryMeters + direction * Math.min(offset, maxOffset);
+    const candidateBearing = pointAndBearingAtDistance(arc, points, distance).bearingDeg;
+    if (bearingDelta(initialBearing, candidateBearing) >= MAX_COURSE_CHANGE_DEG) break;
+    selectedBearing = candidateBearing;
+  }
+  return selectedBearing;
 }
 
 function refineBoundary(a, b, routeBearing, candidate, matchM, lowT, highT, targetInside) {
@@ -147,11 +182,15 @@ export function roundaboutsOnRoute(roundabouts, routeGeometry, options = {}) {
     if (!candidate?.id || !candidateBounds(candidate, opts.ringMatchM)) continue;
     for (const [entryMeters, exitMeters] of intervalsForCandidate(candidate, points, arc, opts)) {
       const complete = entryMeters > 0.5 && exitMeters < total - 0.5;
-      const entrySample = complete
-        ? pointAndBearingAtDistance(arc, points, Math.max(0, entryMeters - opts.courseSampleOffsetM))
+      const entryBearingDeg = complete
+        ? courseBearingOutsideTraversal(
+            arc, points, entryMeters, -1, opts.courseSampleOffsetM,
+          )
         : null;
-      const exitSample = complete
-        ? pointAndBearingAtDistance(arc, points, Math.min(total, exitMeters + opts.courseSampleOffsetM))
+      const exitBearingDeg = complete
+        ? courseBearingOutsideTraversal(
+            arc, points, exitMeters, 1, opts.courseSampleOffsetM,
+          )
         : null;
       traversals.push({
         kind: "roundabout",
@@ -160,8 +199,8 @@ export function roundaboutsOnRoute(roundabouts, routeGeometry, options = {}) {
         lng: Number(candidate.center?.lng),
         entryMeters,
         exitMeters,
-        entryBearingDeg: entrySample?.bearingDeg ?? null,
-        exitBearingDeg: exitSample?.bearingDeg ?? null,
+        entryBearingDeg,
+        exitBearingDeg,
         complete,
       });
     }

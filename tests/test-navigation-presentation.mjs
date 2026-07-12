@@ -34,6 +34,8 @@ import {
   assert.equal(p.cueText, "פנה שמאלה");
   assert.equal(p.cueDistanceText, "120 מ׳");
   assert.equal(p.cueIcon, "arrow-back-outline");
+  assert.deepEqual(p.cueManeuver, { type: "turn", direction: "left" });
+  assert.equal(p.cueNextManeuver, null);
 }
 
 // Bend cue (sharp curve, no junction): עיקול, not פנה.
@@ -391,7 +393,58 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
       wrongWay: false,
     },
   });
-  assert.equal(compound.cuePrimaryText, "פנה שמאלה ומיד ימינה");
+  assert.equal(compound.cuePrimaryText, "פנה שמאלה");
+  assert.equal(compound.cueNextText, "ואז פנו ימינה");
+  assert.deepEqual(compound.cueManeuver, { type: "turn", direction: "left" });
+  assert.deepEqual(compound.cueNextManeuver, { type: "turn", direction: "right" });
+
+  const turnThenRoundabout = getNavigationPresentation({
+    ...riding,
+    status: "navigating",
+    activeCue: {
+      cue: {
+        type: "turn",
+        direction: "right",
+        thenManeuver: { type: "roundabout", direction: "straight" },
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+  });
+  assert.equal(
+    turnThenRoundabout.cuePrimaryText,
+    "פנה ימינה",
+  );
+  assert.equal(turnThenRoundabout.cueNextText, "ואז בכיכר המשיכו ישר");
+  assert.deepEqual(turnThenRoundabout.cueManeuver, { type: "turn", direction: "right" });
+  assert.deepEqual(
+    turnThenRoundabout.cueNextManeuver,
+    { type: "roundabout", direction: "straight" },
+  );
+
+  const roundaboutThenTurn = getNavigationPresentation({
+    ...riding,
+    status: "navigating",
+    activeCue: {
+      cue: {
+        type: "roundabout",
+        direction: "straight",
+        thenManeuver: { type: "turn", direction: "right" },
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+  });
+  assert.equal(
+    roundaboutThenTurn.cuePrimaryText,
+    "בכיכר, המשיכו ישר",
+  );
+  assert.equal(roundaboutThenTurn.cueNextText, "ואז פנו ימינה");
+  assert.deepEqual(
+    roundaboutThenTurn.cueManeuver,
+    { type: "roundabout", direction: "straight" },
+  );
+  assert.deepEqual(roundaboutThenTurn.cueNextManeuver, { type: "turn", direction: "right" });
 
   const cruising = getNavigationPresentation({
     status: "navigating",
@@ -480,6 +533,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   });
   assert.equal(p.cueText, "בכיכר, פנו שמאלה");
   assert.equal(p.cueIcon, "reload-outline");
+  assert.deepEqual(p.cueManeuver, { type: "roundabout", direction: "left" });
 }
 
 // --- O5: off-route card shows the live distance back -----------------------

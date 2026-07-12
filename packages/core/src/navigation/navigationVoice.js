@@ -36,6 +36,46 @@ function directionText(direction, locale) {
   return direction === "right" ? "right" : "left";
 }
 
+function roundaboutText(direction, locale) {
+  const phrases = locale === "he-IL"
+    ? {
+        straight: "בכיכר, המשיכו ישר",
+        right: "בכיכר, פנו ימינה",
+        left: "בכיכר, פנו שמאלה",
+        "u-turn": "בכיכר, חזרו לאחור",
+      }
+    : {
+        straight: "At the roundabout, continue straight",
+        right: "At the roundabout, turn right",
+        left: "At the roundabout, turn left",
+        "u-turn": "At the roundabout, turn back",
+      };
+  return phrases[direction] || null;
+}
+
+function thenManeuverText(maneuver, locale, sourceType) {
+  if (!maneuver) return "";
+  if (maneuver.type === "roundabout") {
+    const phrase = roundaboutText(maneuver.direction, locale);
+    if (!phrase) return "";
+    const normalized = locale === "he-IL"
+      ? phrase.replace(/^בכיכר,\s*/, "בכיכר ")
+      : phrase.replace(/^At the roundabout,\s*/, "at the roundabout, ");
+    return locale === "he-IL" ? `, ואז ${normalized}` : `, then ${normalized}`;
+  }
+  if (maneuver.type === "turn") {
+    if (sourceType === "roundabout") {
+      return locale === "he-IL"
+        ? `, ואז פנו ${directionText(maneuver.direction, locale)}`
+        : `, then turn ${directionText(maneuver.direction, locale)}`;
+    }
+    return locale === "he-IL"
+      ? ` ומיד ${directionText(maneuver.direction, locale)}`
+      : `, then turn ${directionText(maneuver.direction, locale)}`;
+  }
+  return "";
+}
+
 export function compassWord(bearingDeg, locale = DEFAULT_LANGUAGE) {
   if (bearingDeg === null || bearingDeg === undefined || bearingDeg === "") {
     return null;
@@ -135,30 +175,21 @@ function cuePhrase(event, state, locale) {
           ? ` אל ${cue.ontoSegmentName}`
           : ` onto ${cue.ontoSegmentName}`
         : "";
-      const then = cue.thenDirection
-        ? locale === "he-IL"
-          ? ` ומיד ${directionText(cue.thenDirection, locale)}`
-          : `, then ${directionText(cue.thenDirection, locale)}`
-        : "";
+      const then = thenManeuverText(
+        cue.thenManeuver || (cue.thenDirection
+          ? { type: "turn", direction: cue.thenDirection }
+          : null),
+        locale,
+        "turn",
+      );
       return locale === "he-IL"
         ? `${prefix}פנה ${directionText(cue.direction, locale)}${onto}${then}`
         : `${prefix}turn ${directionText(cue.direction, locale)}${onto}${then}`;
     }
     case "roundabout": {
-      const phrases = locale === "he-IL"
-        ? {
-            straight: "בכיכר, המשיכו ישר",
-            right: "בכיכר, פנו ימינה",
-            left: "בכיכר, פנו שמאלה",
-            "u-turn": "בכיכר, חזרו לאחור",
-          }
-        : {
-            straight: "At the roundabout, continue straight",
-            right: "At the roundabout, turn right",
-            left: "At the roundabout, turn left",
-            "u-turn": "At the roundabout, turn back",
-          };
-      return phrases[cue.direction] ? `${prefix}${phrases[cue.direction]}` : null;
+      const phrase = roundaboutText(cue.direction, locale);
+      const then = thenManeuverText(cue.thenManeuver, locale, "roundabout");
+      return phrase ? `${prefix}${phrase}${then}` : null;
     }
     case "bend":
       return null;
@@ -263,15 +294,15 @@ export function createNavigationVoicePlanner({
 
     if (
       cueEvent.kind === "cue" &&
-      cueEvent.cue?.type === "turn" &&
       Number.isFinite(Number(cueEvent.cue.compoundPreviousDistanceMeters))
     ) {
+      const previousType = cueEvent.cue.compoundPreviousType || "turn";
       const previousDistance = Number(
         cueEvent.cue.compoundPreviousDistanceMeters,
       );
       if (
-        spokenIds.has(cueUtteranceId("turn", previousDistance, "preview")) ||
-        spokenIds.has(cueUtteranceId("turn", previousDistance, "final"))
+        spokenIds.has(cueUtteranceId(previousType, previousDistance, "preview")) ||
+        spokenIds.has(cueUtteranceId(previousType, previousDistance, "final"))
       ) {
         return { utterance: null, reason: "compound-covered" };
       }
