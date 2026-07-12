@@ -148,36 +148,38 @@ export default function RouteCard({
         ]}
         testID={`route-card-${entry.slug || entry.name}`}
       >
-        <View style={[styles.compactThumb, { backgroundColor: tintFor(chipColor) }]}>
-          {firstImage ? (
-            <Image source={firstImage} style={styles.compactImage} resizeMode="cover" />
-          ) : (
-            <Icon name="bicycle-outline" size={28} color={chipColor} />
-          )}
+        <View style={styles.compactTitleRow}>
+          <View style={[styles.swatch, { backgroundColor: swatchColor }]} />
+          <Text style={styles.title} numberOfLines={1}>
+            {entry.name}
+          </Text>
         </View>
-        <View style={styles.compactBody}>
-          <View style={styles.titleRow}>
-            <View style={[styles.swatch, { backgroundColor: swatchColor }]} />
-            <Text style={styles.title} numberOfLines={1}>
-              {entry.name}
-            </Text>
+        <View style={styles.compactContent}>
+          <View style={[styles.compactThumb, { backgroundColor: tintFor(chipColor) }]}>
+            {firstImage ? (
+              <Image source={firstImage} style={styles.compactImage} resizeMode="cover" />
+            ) : (
+              <Icon name="bicycle-outline" size={28} color={chipColor} />
+            )}
+          </View>
+          <View style={styles.compactBody}>
             {difficultyLabel ? (
-              <View style={[styles.chip, { backgroundColor: chipColor }]}>
+              <View style={[styles.chip, styles.compactDifficulty, { backgroundColor: chipColor }]}>
                 <Text style={styles.chipText}>{difficultyLabel}</Text>
               </View>
             ) : null}
+            {summary ? (
+              <Text style={styles.summary} numberOfLines={2}>
+                {summary}
+              </Text>
+            ) : null}
+            {meta.length ? (
+              <Text style={styles.meta} numberOfLines={1}>
+                {meta.join(" · ")}
+              </Text>
+            ) : null}
+            {nearLabel ? <Text style={styles.near}>{nearLabel}</Text> : null}
           </View>
-          {summary ? (
-            <Text style={styles.summary} numberOfLines={2}>
-              {summary}
-            </Text>
-          ) : null}
-          {meta.length ? (
-            <Text style={styles.meta} numberOfLines={1}>
-              {meta.join(" · ")}
-            </Text>
-          ) : null}
-          {nearLabel ? <Text style={styles.near}>{nearLabel}</Text> : null}
         </View>
       </Pressable>
     );
@@ -379,14 +381,23 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   compactCard: {
-    flexDirection: "row-reverse",
-    alignItems: "stretch",
-    gap: 10,
+    gap: 8,
     padding: 9,
     borderRadius: radius.md,
     backgroundColor: palette.white,
     borderColor: "#e6ece7",
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  compactTitleRow: {
+    width: "100%",
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+  },
+  compactContent: {
+    flexDirection: "row-reverse",
+    alignItems: "stretch",
+    gap: 10,
   },
   compactThumb: {
     position: "relative",
@@ -415,6 +426,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 3,
   },
+  compactDifficulty: { alignSelf: "flex-end" },
   cardPressed: { opacity: 0.86 },
   card: {
     borderRadius: radius.md,
@@ -458,6 +470,7 @@ const styles = StyleSheet.create({
   swatch: { width: 9, height: 9, borderRadius: 5, flexShrink: 0 },
   title: {
     ...text.subheading,
+    flex: 1,
     flexShrink: 1,
     color: palette.ink,
     textAlign: "right",

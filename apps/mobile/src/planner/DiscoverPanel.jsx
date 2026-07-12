@@ -16,9 +16,7 @@ import {
   FILTER_GROUPS,
   emptyFilters,
   filterRoutesByDiscoveryIntent,
-  selectDiscoveryHero,
   selectDiscoverRoutes,
-  routesWithoutDiscoveryHero,
 } from "@cycleways/core/data/discoverFilters.js";
 import { filterCatalogBySearch } from "@cycleways/core/data/catalogSearch.js";
 import RouteCard from "./RouteCard.jsx";
@@ -44,7 +42,6 @@ export default function DiscoverPanel({
   const [nearMeSort, setNearMeSort] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterRevealY, setFilterRevealY] = useState(0);
-  const [heroSeed] = useState(() => Math.random());
   const [intentFilters, setIntentFilters] = useState(() => new Set());
 
   useEffect(() => {
@@ -144,19 +141,6 @@ export default function DiscoverPanel({
         : intentFiltered,
     [intentFiltered, nearMeSort, fix, placeById],
   );
-  const heroRoute = useMemo(
-    () =>
-      selectDiscoveryHero(ordered, {
-        seed: nearMeSort && fix ? 0 : heroSeed,
-        preferEditorial: !(nearMeSort && fix),
-      }),
-    [ordered, heroSeed, nearMeSort, fix],
-  );
-  const secondaryRoutes = useMemo(
-    () => routesWithoutDiscoveryHero(ordered, heroRoute),
-    [ordered, heroRoute],
-  );
-
   if (!entries || entries.length === 0) {
     return (
       <View style={styles.empty}>
@@ -181,17 +165,6 @@ export default function DiscoverPanel({
         textAlign="right"
         accessibilityLabel="חיפוש מסלול"
       />
-
-      {heroRoute ? (
-        <RouteCard
-          entry={heroRoute}
-          index={0}
-          placeById={placeById}
-          fix={fix}
-          onSelect={onSelect}
-          variant="hero"
-        />
-      ) : null}
 
       <View
         onLayout={(event) => setFilterRevealY(event.nativeEvent.layout.y)}
@@ -289,16 +262,16 @@ export default function DiscoverPanel({
       ) : null}
 
       <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>עוד מסלולים מומלצים</Text>
+        <Text style={styles.sectionTitle}>מסלולים מומלצים</Text>
         <Text style={styles.sectionCount}>{`${ordered.length} מסלולים`}</Text>
       </View>
 
       <View style={styles.list}>
-        {secondaryRoutes.map((entry, index) => (
+        {ordered.map((entry, index) => (
           <RouteCard
             key={entry.slug || entry.name}
             entry={entry}
-            index={heroRoute ? index + 1 : index}
+            index={index}
             placeById={placeById}
             fix={fix}
             onSelect={onSelect}

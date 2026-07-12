@@ -155,7 +155,7 @@ export default function DiscoverScreen({ navigation }) {
         onPress={planFromScratch}
         style={({ pressed }) => [
           styles.fab,
-          { bottom: insets.bottom + 20 },
+          { bottom: insets.bottom + 8 },
           pressed ? styles.fabPressed : null,
         ]}
       >
