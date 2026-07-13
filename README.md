@@ -1,5 +1,19 @@
 # CycleWays
 
+## License
+
+- **Code** — [GNU GPL-3.0](LICENSE). You may use, modify, and redistribute it,
+  but derivative works must remain open source under the same license.
+- **Map data** — the curated route data (`data/map-source.geojson` and the
+  artifacts generated from it in `public-data/`, which the Build → Promote
+  pipeline produces) is licensed separately under the
+  [Open Database License (ODbL) 1.0](data/LICENSE). If you build on this data,
+  you must attribute CycleWays and share your improvements under the same
+  terms.
+- **Name and logo** — the CycleWays name, logo, and app icons are *not*
+  covered by these licenses and may not be used to represent forks or
+  derivative apps.
+
 ## Local Development
 
 Install dependencies once:

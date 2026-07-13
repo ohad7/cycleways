@@ -12,6 +12,7 @@ import {
   Linking,
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -33,6 +34,7 @@ import Mapbox, {
 } from "@rnmapbox/maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSharedValue } from "react-native-reanimated";
+import { routeShareContent } from "../sharing/routeShare.js";
 import { useCyclewaysApp } from "@cycleways/core/app/useCyclewaysApp.js";
 import { dataMarkerFeatureCollection } from "@cycleways/core/data/dataMarkers.js";
 import { POI_LABELS, POI_COLORS } from "@cycleways/core/data/poiTypes.js";
@@ -764,11 +766,7 @@ export default function BuildScreen({ navigation, route }) {
 
   const shareRoute = useCallback(() => {
     if (!shareUrl) return;
-    void Share.share({
-      title: "שיתוף המסלול",
-      message: shareUrl,
-      url: shareUrl,
-    }).catch((error) => {
+    void Share.share(routeShareContent(shareUrl, Platform.OS)).catch((error) => {
       console.warn("Native route share failed:", error);
     });
   }, [shareUrl]);
