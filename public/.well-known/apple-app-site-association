@@ -1,0 +1,28 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "9K5YBKH2UN.app.cycleways.mobile"
+        ],
+        "components": [
+          {
+            "/": "/",
+            "?": {
+              "route": "?*"
+            },
+            "comment": "Open non-empty shared route tokens in CycleWays"
+          },
+          {
+            "/": "/routes/*",
+            "comment": "Open catalog route details in CycleWays"
+          },
+          {
+            "/": "/featured/*",
+            "comment": "Open featured route details in CycleWays"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,3 +1,5 @@
+import { SITE_ORIGIN } from "../config/appLinks.js";
+
 const DEFAULT_NATIVE_HREF = "cycleways:///";
 const NATIVE_ROUTE_COLLECTIONS = new Set(["routes", "featured"]);
 const CYCLEWAYS_WEB_HOSTS = new Set(["cycleways.app", "www.cycleways.app"]);
@@ -80,6 +82,14 @@ export function removeUrlParam(name) {
 
 export function getShardLoaderLocation() {
   return { href: DEFAULT_NATIVE_HREF };
+}
+
+// Public shares must never inherit the synthetic cycleways:/// location used
+// for native routing and bundled asset resolution. A standard HTTPS URL gives
+// recipients the web fallback today and becomes an iOS Universal Link when a
+// signed associated build is installed.
+export function getShareLocation() {
+  return { href: `${SITE_ORIGIN}/` };
 }
 
 function currentUrl() {

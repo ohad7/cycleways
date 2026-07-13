@@ -45,3 +45,9 @@ export function pushUrlParam(name, value) {
 export function getShardLoaderLocation() {
   return window.location;
 }
+
+// Preserve the current web origin (including localhost during development).
+// Production is already hosted at the canonical public share origin.
+export function getShareLocation() {
+  return window.location;
+}
