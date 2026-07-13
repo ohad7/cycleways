@@ -13,6 +13,7 @@ import {
   removePoint,
   restoreRouteFromParam,
 } from "@cycleways/core/routing/routeActions.js";
+import { getShareLocation as getNativeShareLocation } from "@cycleways/core/platform/location.native.js";
 
 const require = createRequire(import.meta.url);
 const RouteManager = require("../packages/core/route-manager.js");
@@ -86,6 +87,17 @@ const shareUrl = buildShareUrl(
   new URL("https://example.test/"),
 );
 assert.match(shareUrl, /^https:\/\/example\.test\/\?route=/);
+const nativeShareUrl = buildShareUrl(
+  snapshot,
+  segmentsData,
+  manager,
+  getNativeShareLocation(),
+);
+assert.match(
+  nativeShareUrl,
+  /^https:\/\/www\.cycleways\.app\/\?route=/,
+  "native user-facing shares use the canonical Universal Link origin",
+);
 const shareInfo = buildShareInfo(
   snapshot,
   segmentsData,

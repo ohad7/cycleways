@@ -30,5 +30,30 @@ assert.deepEqual(
   launchTargetFromHref(`cycleways:///?route=${sharedRouteToken}`),
   { screen: "Build", params: { routeToken: sharedRouteToken } },
 );
+assert.deepEqual(
+  launchTargetFromHref(
+    `https://www.cycleways.app/?route=${sharedRouteToken}`,
+  ),
+  { screen: "Build", params: { routeToken: sharedRouteToken } },
+);
+
+// Canonical HTTPS catalog links follow the same launch mapping as legacy
+// custom-scheme links.
+assert.deepEqual(
+  launchTargetFromHref(
+    "https://www.cycleways.app/routes/sovev-beit-hillel",
+  ),
+  { screen: "RouteDetail", params: { slug: "sovev-beit-hillel" } },
+);
+assert.deepEqual(
+  launchTargetFromHref(
+    "https://www.cycleways.app/featured/banias-gan-hatsafon",
+  ),
+  { screen: "RouteDetail", params: { slug: "banias-gan-hatsafon" } },
+);
+assert.deepEqual(
+  launchTargetFromHref(`https://example.com/?route=${sharedRouteToken}`),
+  { screen: "Discover", params: undefined },
+);
 
 console.log("test-app-launch-target: ok");

@@ -6,6 +6,38 @@ const appJson = JSON.parse(
 );
 const ios = appJson.expo.ios;
 
+assert.deepEqual(
+  ios.associatedDomains,
+  ["applinks:www.cycleways.app"],
+  "the signed app must claim the canonical Universal Link host",
+);
+
+const aasa = JSON.parse(
+  await readFile(
+    new URL(
+      "../public/.well-known/apple-app-site-association",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
+const universalLinkDetails = aasa.applinks?.details?.[0];
+assert.deepEqual(
+  universalLinkDetails?.appIDs,
+  ["9K5YBKH2UN.app.cycleways.mobile"],
+  "AASA identity must match the Apple team and iOS bundle identifier",
+);
+assert.deepEqual(
+  universalLinkDetails?.components?.map((component) => component["/"]),
+  ["/", "/routes/*", "/featured/*"],
+  "AASA must claim only shared and catalog route content",
+);
+assert.equal(
+  universalLinkDetails?.components?.[0]?.["?"]?.route,
+  "?*",
+  "the root Universal Link must require a non-empty route query item",
+);
+
 // Build number must exist and be numeric so release uploads can bump it.
 assert.match(ios.buildNumber, /^\d+$/);
 

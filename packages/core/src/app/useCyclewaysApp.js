@@ -28,6 +28,7 @@ import {
   setUrlParam,
   pushUrlParam,
   getShardLoaderLocation,
+  getShareLocation,
 } from "../platform/location.js";
 import { getCurrentPosition } from "../platform/geolocation.js";
 import { dataMarkerFeaturesFromSegments } from "../data/dataMarkers.js";
@@ -1164,7 +1165,7 @@ export function useCyclewaysApp({
       routeState,
       state.assets.segmentsData,
       routeManagerRef.current,
-      getShardLoaderLocation(),
+      getShareLocation(),
       state.assets.cwBaseIndexData,
     );
   }, [
