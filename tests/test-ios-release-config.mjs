@@ -1,10 +1,21 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { routeShareContent } from "../apps/mobile/src/sharing/routeShare.js";
 
 const appJson = JSON.parse(
   await readFile(new URL("../apps/mobile/app.json", import.meta.url), "utf8"),
 );
 const ios = appJson.expo.ios;
+
+const universalRouteUrl =
+  "https://www.cycleways.app/?route=encoded-route";
+assert.deepEqual(routeShareContent(universalRouteUrl, "ios"), {
+  url: universalRouteUrl,
+});
+assert.deepEqual(routeShareContent(universalRouteUrl, "android"), {
+  title: "שיתוף המסלול",
+  message: universalRouteUrl,
+});
 
 assert.deepEqual(
   ios.associatedDomains,
