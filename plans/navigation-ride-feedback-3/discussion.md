@@ -1,7 +1,7 @@
 # Ride feedback round 3 — discussion
 
 **Date:** 2026-07-13
-**Status:** implementation split into focused plans; crossing and voice UX remain open
+**Status:** implementation split into focused plans; crossing is now implementation-ready and S3/S4 remain open
 **Ride:** ~10.0 km, Kiryat Shmona → גן הצפון (via כביש 99, שביל תל חי, כביש 90 כפר גלעדי,
 כבישון עגל, כביש 9974 כפר יובל, שדות כפר יובל, שביל אופניים 99, גן הצפון).
 Ridden on the iOS app; every reported issue reproduces in the simulator SIM
@@ -20,14 +20,16 @@ scenario over the shared route token.
 - C1 follow-camera padding now transitions for 500 ms inside the existing
   camera owner; automated camera and journey suites pass, with original-ride
   SIM visual acceptance pending.
-- M1/S2 first-class crossing maneuvers, S3 segment-distance confirmation, and
-  S4 car-road entry warnings remain open.
+- M1/S2 first-class crossing maneuvers now have a focused implementation-ready
+  design and plan; implementation and manual acceptance remain open. S3
+  segment-distance confirmation and S4 car-road entry warnings remain open.
 
 Focused design and validation records live in
 [`bicycle-traversal-policy`](../bicycle-traversal-policy/design.md),
 [`via-point-spur`](../via-point-spur/design.md),
-[`navigation-geometry-cleanup`](../navigation-geometry-cleanup/design.md), and
-[`navigation-camera-padding`](../navigation-camera-padding/design.md).
+[`navigation-geometry-cleanup`](../navigation-geometry-cleanup/design.md),
+[`navigation-camera-padding`](../navigation-camera-padding/design.md), and
+[`road-crossing-maneuvers`](../road-crossing-maneuvers/design.md).
 
 ## How the diagnostic was made
 
