@@ -20,9 +20,11 @@ scenario over the shared route token.
 - C1 follow-camera padding now transitions for 500 ms inside the existing
   camera owner; automated camera and journey suites pass, with original-ride
   SIM visual acceptance pending.
-- M1/S2 first-class crossing maneuvers now have a focused implementation-ready
-  design and plan; implementation and manual acceptance remain open. S3
-  segment-distance confirmation and S4 car-road entry warnings remain open.
+- M1/S2 first-class crossing maneuvers now have an implementation-ready offline
+  classification and editor-review design: one logical crossing can own
+  multiple directed base-edge mappings, and runtime uses confirmed mappings
+  only. Implementation and manual acceptance remain open. S3 segment-distance
+  confirmation and S4 car-road entry warnings remain open.
 
 Focused design and validation records live in
 [`bicycle-traversal-policy`](../bicycle-traversal-policy/design.md),
@@ -234,14 +236,12 @@ properties: id, name, status, roadType, quality, …).
 - **Turn costs in general: rejected.** The search is node-state Dijkstra with
   per-directed-edge baked costs; real turn costs need edge-pair state — a
   structural change nothing in this ride demands.
-- **Crossing costs are not turn costs.** The crossings the route took are
-  distinct short edges (the 482 m jog is edge 26114). Penalizing them is a
-  plain per-edge multiplier — zero architecture change. Classify crossing-like
-  edges at shard build time and give them a fixed cost (~30–60
-  equivalent-meters). The road-4× vs CW-1× gap still sends riders across to
-  real infrastructure when it is worth it, but stops side-weaving for marginal
-  gains. This also naturally implements the rule "the left side wins only when
-  there is CW infrastructure good enough to pay for two crossings".
+- **Crossing costs are not turn costs, but the original per-edge proposal is
+  superseded.** A logical crossing can span multiple directed edge slices, so
+  offline candidates and editor-confirmed mappings now provide the topology.
+  The first implementation uses that data only for narration. Any later fixed
+  equivalent-distance cost must be a separately versioned policy with route-
+  delta and no-path validation across planning, approach, and rejoin.
 - **Direction tags fit natively where needed**: adjacency entries are already
   directional, so a per-segment `direction` attribute promoted through the
   pipeline becomes a reverse-traversal multiplier (soft penalty, ×2–3) with a
@@ -251,11 +251,13 @@ properties: id, name, status, roadType, quality, …).
 
 ## UX opportunities (data already exists)
 
-- **S2 — "Cross the road" as a first-class maneuver.** One geometric detector
-  (M1) feeds both a new voice/card instruction ("חצו את הכביש לצד השני") and
-  the routing crossing penalty. Bike navigation that says this instead of a
-  nonsense turn pair is a real differentiator — arguably the category gap the
-  rider sensed ("I don't think even Google Maps realizes this").
+- **S2 — "Cross the road" as a first-class maneuver.** A graph-wide offline
+  detector proposes logical `side-change` crossings; editor-confirmed directed
+  mappings feed the voice/card instruction ("חצו את הכביש לצד השני"). Runtime
+  geometry does not classify crossings, and route cost is a separate future
+  rollout. Bike navigation that says this instead of a nonsense turn pair is a
+  real differentiator — arguably the category gap the rider sensed ("I don't
+  think even Google Maps realizes this").
 - **S3 — "Continue on X for N km."** `segmentSpans` already carry name +
   start/end meters; an `enter-segment` cue type already exists (currently
   final-phase-only, suppressed near turns). Adding remaining-length to the turn
@@ -295,11 +297,11 @@ properties: id, name, status, roadType, quality, …).
 2. **Mechanical instruction bugs, independent and testable:**
    M4 vertex dedupe → M3 same-direction merge → M2 via-point spur trim →
    C1 camera padding easing.
-3. **Crossing as a first-class concept:** crossing-edge classification at shard
-   build (+ CW-polyline jog detection), feeding the "חצו את הכביש" instruction
-   (S2) and the routing crossing penalty. Also revisit the click-snap CW
-   preference so snapping never jumps to the far side of a road — the crossing
-   classification provides the "is this across the road" signal for free.
+3. **Crossing as a first-class concept:** graph-wide offline candidate
+   generation plus editor-reviewed logical crossings with multiple directed
+   base-edge mappings, feeding the "חצו את הכביש" instruction (S2) only.
+   Crossing-aware route cost and click-snap behavior are deferred until the
+   confirmed topology has separate policy and route-delta validation.
 4. **Quick data-backed wins:** continue-on-segment distance phrase (S3);
    promote `roadType` and speak car-road entry warnings (S4).
 5. **Later / as needed:** editorial `direction` attribute on CW segments (soft

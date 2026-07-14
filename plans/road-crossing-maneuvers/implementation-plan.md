@@ -1,303 +1,878 @@
-# First-class road-crossing maneuvers — implementation plan
+# Reviewed road-crossing maneuvers — implementation plan
 
 **Date:** 2026-07-14
 **Status:** planned; implementation not started
 **Design:** `plans/road-crossing-maneuvers/design.md`
 
-## Delivery strategy
+## Goal
 
-Implement the narration concept without changing route search cost. Land the
-work in vertical slices so route-context propagation, cue semantics and rider
-presentation each have deterministic tests before the real-ride replay is
-updated.
+Implement an offline-reviewed road-crossing system modeled after the existing
+roundabout workflow:
 
-The likely production changes are concentrated in:
+1. generate graph-wide `side-change` crossing candidates locally;
+2. inspect, accept, reject, repair or manually add them in the editor;
+3. publish only valid confirmed directed mappings in a versioned artifact;
+4. match those mappings against attested routes for main, approach and rejoin
+   navigation; and
+5. replace false opposite-turn pairs with one first-class crossing cue.
 
-- `packages/core/route-manager.js`;
-- shared route snapshot/reducer/action/navigation-route modules;
-- `packages/core/src/navigation/effectiveNavigationRoute.js`;
-- a new `packages/core/src/navigation/roadCrossings.js`;
-- cue, voice, presentation, haptic and camera shared-core modules;
-- `apps/mobile/src/planner/ManeuverIcon.jsx`;
-- navigation unit, scenario and Road 99 replay tests.
+This plan changes navigation semantics but not route search costs or route
+geometry.
 
-## Phase 0 — lock the corrected baseline
+## Delivery order
 
-- [ ] Preserve the current strict Road 99 coordinate replay as the integration
-      fixture: about 10,111.6 m, directionally attested, no old via-point gap or
-      spur.
-- [ ] Record the current maneuver facts before modifying the builder:
-      19 ordinary turns; the remaining right/left pair around
-      3,822–3,838 m; the following straight roundabout.
-- [ ] Add or retain small geometry fixtures for the original pure 87°/87°
-      crossing even though the corrected route no longer traverses that old
-      path.
-- [ ] Run the cue, voice, presentation, haptic, camera, effective-route and
-      navigation-scenario suites as a baseline.
+The work should land in five independently testable layers:
 
-**Exit:** failures after this point can be attributed to the crossing change,
-not to stale expectations from the earlier route.
+```text
+candidate extraction
+    → review/editor
+        → build/publication/assets
+            → route matching
+                → cue and rider experience
+```
 
-## Phase 1 — add route-context spans
+Do not begin cue suppression until the confirmed artifact and matcher are
+testable. Do not publish a runtime artifact until the editor can repair
+multi-edge and direction-specific mappings.
 
-- [ ] Add a pure `buildRouteContextSpans(traversals)` helper next to
-      `buildSegmentSpans`.
-- [ ] Derive deterministic fields: start/end meters, route class, highway,
-      road type, source, CW-network membership and stable edge share IDs.
-- [ ] Merge only adjacent spans whose classification fields match; do not
-      change the name-oriented merge semantics of `segmentSpans`.
-- [ ] Return the spans from every successful `RouteManager.getRouteInfo()`
-      path, including restored base routes.
-- [ ] Propagate and clone the field through:
-  - [ ] empty route state and route reducer;
-  - [ ] route snapshots/actions and the app controller snapshot boundary;
-  - [ ] built/catalog navigation-route construction;
-  - [ ] any scenario/fixture route shape that explicitly models the full
-        navigation-route contract.
-- [ ] Reconcile span distance totals against navigation geometry as is done
-      for `segmentSpans`.
-- [ ] Include the normalized spans in `navigationPlanFingerprint`.
+## Global invariants
+
+- Generated files under `build/` and `public-data/` are never hand-edited.
+- Human decisions live only in `data/crossing-review.json` and are written
+  atomically.
+- Candidate generation performs no network access and never invokes OSM fetch.
+- Candidate confidence never means automatic acceptance.
+- Runtime uses only confirmed mappings; it never runs the candidate heuristic.
+- Edge identity uses stable `edgeShareId`, never ephemeral array index or shard
+  position.
+- Mapping directions are explicit and must agree with the reviewed bicycle
+  traversal policy.
+- A logical crossing may contain several action slices and several mapping
+  variants.
+- `null` crossing evidence means unavailable; `[]` means evaluated with no
+  match.
+- Route content, route legality and route search cost remain unchanged.
+- Missing crossing data preserves existing turn guidance.
+- Stale accepted data cannot be promoted or resurrected from an older file.
+- Main, approach and rejoin use the same pure matcher.
+- The first release publishes only `kind: "side-change"`.
+
+## Task 0 — preserve and measure the corrected baseline
+
+**Files/tests**
+
+- Existing Road 99 coordinate replay and cue inspection scripts.
+- Add a focused route fixture only if the current replay is not already
+  stable enough for exact assertions.
+
+**Steps**
+
+- [ ] Re-run the corrected strict Road 99 route from the recorded coordinates.
+- [ ] Record route distance, route-content fingerprint, graph version, policy
+      digest, ordered traversal shares around all original feedback sites and
+      current cue list.
+- [ ] Lock these current facts:
+  - [ ] route distance approximately 10,111.6 m within existing tolerance;
+  - [ ] valid directional route attestation;
+  - [ ] 19 ordinary turn cues;
+  - [ ] remaining right/left pair around 3,822–3,838 m;
+  - [ ] following straight-roundabout record and cue;
+  - [ ] old Tel Hai 154° cue absent;
+  - [ ] via-point spur and repaired geometry gaps remain absent.
+- [ ] Record the current action-edge evidence at the remaining crossing,
+      including share 48308 and the relevant partial traversal of share 48320;
+      derive approach/departure shares from the replay rather than hard-coding
+      assumptions from the design example.
+- [ ] Preserve the original 87°/87° pure sidestep as a synthetic detector
+      fixture even though the corrected route no longer takes that path.
+- [ ] Run current focused navigation/camera/roundabout suites and full
+      `npm test` before production changes.
+
+**Acceptance**
+
+- Baseline evidence is reproducible from committed inputs.
+- Later crossing tests compare route facts separately from cue facts, so cue
+  improvements cannot hide a route regression.
+
+## Task 1 — define candidate, review and runtime schemas
+
+**Files**
+
+- Create `processing/crossing_review.py`.
+- Create `editor/lib/crossingReview.mjs`.
+- Create `tests/fixtures/crossing-review-cases.json`.
+- Create Python and Node parity tests.
+
+**Steps**
+
+- [ ] Define schema version 1 for:
+  - [ ] generated candidate payload;
+  - [ ] logical crossing candidate;
+  - [ ] directed traversal mapping;
+  - [ ] source-controlled review entry;
+  - [ ] curator-authored manual crossing;
+  - [ ] promoted runtime payload.
+- [ ] Reuse route-attestation fraction quantization: integers 0–1,000,000.
+- [ ] Validate `before`, `action` and `after` slice arrays independently.
+- [ ] Require at least one slice in each section for a complete v1 mapping.
+- [ ] Require finite entry/exit coordinates, non-empty logical/mapping IDs,
+      unique IDs, valid bounds and `kind: "side-change"`.
+- [ ] Model review states:
+  - [ ] `pending` — no decision;
+  - [ ] `accepted` — matching fingerprint and at least one selected mapping;
+  - [ ] `rejected` — matching fingerprint and no published mapping;
+  - [ ] `stale-accepted` — changed candidate previously accepted;
+  - [ ] `stale-rejected` — changed candidate previously rejected;
+  - [ ] `orphaned` — review ID absent from candidates;
+  - [ ] `invalid` — malformed review or mapping.
+- [ ] Treat `stale-accepted` and invalid accepted/manual records as blocking.
+- [ ] Treat pending, stale-rejected and orphaned records as visible warnings but
+      not general Build blockers.
+- [ ] Validate accepted mapping IDs exist in the current candidate unless a
+      valid override replaces them.
+- [ ] Validate mapping overrides against the same contract and require a
+      `replacesMappingId` plus source-edge fingerprint.
+- [ ] Validate manual crossings and their audit/source fingerprints.
+- [ ] Implement identical normalization, ordering, summary counts, warning and
+      blocking-issue codes in Python and JavaScript.
 
 **Tests**
 
-- [ ] Ordered spans have continuous, monotonic distances and end at route
-      distance.
-- [ ] A track → short manual paved connector → trunk road produces separate
-      spans.
-- [ ] Metadata-only changes alter the navigation-plan fingerprint.
-- [ ] Legacy routes with no spans remain valid.
+- [ ] accepted/rejected/pending/stale states;
+- [ ] accepted forward mapping with reverse omitted;
+- [ ] multiple accepted mappings;
+- [ ] repaired mapping override;
+- [ ] manual logical crossing;
+- [ ] missing or repeated share IDs/slices;
+- [ ] invalid/reversed fractions and zero-length action;
+- [ ] duplicate logical/mapping IDs;
+- [ ] orphaned reviews;
+- [ ] deterministic ordering and Python/JS parity.
 
-**Exit:** the current Road 99 replay exposes road context across the remaining
-crossing without changing route geometry or attestation.
+**Acceptance**
 
-## Phase 2 — make context survive effective-route transforms
+- The same fixture produces byte-equivalent normalized promoted records and
+  issue codes in processing and editor code.
 
-- [ ] Generalize or reuse span transform helpers in
-      `effectiveNavigationRoute.js` for `routeContextSpans`.
-- [ ] Reverse ordering and distances on exact reverse.
-- [ ] Clip spans for a selected linear start point.
-- [ ] Split/rotate spans for a selected start on a circular route.
-- [ ] Clone spans rather than sharing mutable references between source and
-      effective routes.
-- [ ] Ensure an app-owned approach or rejoin route carries spans when its
-      computed route info provides them.
+## Task 2 — implement the local graph-wide candidate generator
+
+**Files**
+
+- Create `processing/build_crossing_candidates.py`.
+- Create `processing/test_build_crossing_candidates.py`.
+- Add `crossings:candidates` and a focused test script to `package.json`.
+- Document the command in `processing/README.md`.
+
+**Inputs/defaults**
+
+```text
+build/osm/osm-base-graph-elevated.json
+data/base-edge-share-ids.json
+current reviewed bicycle traversal-policy source/digest
+optional CW overlay for diagnostics
+→ build/crossings/candidates.json
+```
+
+**Steps**
+
+- [ ] Fail clearly when graph, share registry or traversal policy is missing.
+- [ ] Prove the command has no network path and never invokes OSM fetch.
+- [ ] Compute canonical input digests and coverage fields.
+- [ ] Join every graph edge to its stable share ID; report missing and duplicate
+      joins as blocking generator errors.
+- [ ] Normalize edge geometry, direction policy, road class, source tags,
+      bridge/tunnel/layer values and source identity.
+- [ ] Build a local spatial index for motor-road corridor segments; do not scan
+      every road against every edge quadratically.
+- [ ] Build a node/edge adjacency index respecting allowed bicycle direction.
+- [ ] Enumerate bounded local action paths, initially 4–60 m and at most a
+      documented small edge count.
+- [ ] For each path:
+  - [ ] project entry/exit anchors onto a candidate road corridor;
+  - [ ] compute signed side-of-corridor and lateral separation;
+  - [ ] measure approach, action, departure and net headings over stable arms;
+  - [ ] verify approach/departure context is not the same action path;
+  - [ ] collect positive OSM/path/crossing/CW evidence;
+  - [ ] reject known grade-separated paths;
+  - [ ] warn when grade-separation evidence is incomplete;
+  - [ ] create explicit directed `before/action/after` slices;
+  - [ ] derive the reverse mapping only when every reversed slice is allowed.
+- [ ] Group mappings into logical crossings using crossed-road identity,
+      anchors and overlapping action signatures; never proximity alone.
+- [ ] Deduplicate exact directed mapping signatures.
+- [ ] Compute stable logical IDs, mapping IDs and fingerprints.
+- [ ] Emit deterministic sorted JSON; `generatedAt` must be the only
+      intentionally variable field.
+- [ ] Emit audit counters for considered paths, each rejection reason,
+      confidence/evidence buckets, warnings and resulting logical/mapping
+      counts.
+
+**Candidate-generation tests**
+
+- [ ] one-edge crossing connector;
+- [ ] multi-edge crossing action;
+- [ ] partial first/last edge slices;
+- [ ] forward-only and bidirectional mappings;
+- [ ] opposite sides of the same corridor;
+- [ ] parallel side paths and dual carriageways;
+- [ ] manual edge mixed with OSM edge;
+- [ ] OSM `footway=crossing` positive evidence;
+- [ ] bridge, tunnel and incompatible layer rejection;
+- [ ] same-side connector rejection;
+- [ ] road-following edge rejection;
+- [ ] U-turn/switchback rejection;
+- [ ] perpendicular ordinary intersection omitted from `side-change` output;
+- [ ] nearby distinct crossings do not merge;
+- [ ] stable IDs with harmless source ordering changes;
+- [ ] changed geometry/policy changes fingerprint;
+- [ ] no network access and deterministic output.
+
+**Acceptance**
+
+- The command completes on the complete current base graph with bounded memory
+  and a useful audit summary.
+- It produces candidates outside CW membership as well as within it.
+
+## Task 3 — calibrate candidates against real and control locations
+
+**Files**
+
+- Add small named base-network fixtures under `tests/fixtures/`.
+- Add a deterministic candidate-report script if Python output alone is not
+  sufficient for inspection.
+
+**Steps**
+
+- [ ] Verify the remaining Road 99 crossing appears as one logical candidate
+      with the correct action and direction mapping(s).
+- [ ] Verify the original 87°/87° crossing shape produces a candidate in its
+      synthetic network fixture.
+- [ ] Check the old Tel Hai location and explain whether no candidate exists or
+      why it remains pending/rejected; do not force it into a positive fixture.
+- [ ] Add controls for ordinary chicanes, adjacent junction turns, roundabout
+      entry/exit, dual carriageway ramps, bridges, tunnels and path-to-road
+      joins that are not side changes.
+- [ ] Run the generator across the current graph and stratify candidates by:
+  - [ ] inside/outside CW membership;
+  - [ ] evidence/confidence bucket;
+  - [ ] motor-road class;
+  - [ ] forward-only/bidirectional;
+  - [ ] one-edge/multi-edge;
+  - [ ] warning type.
+- [ ] Tune only broad candidate thresholds. Do not optimize for a low count by
+      hiding uncertain candidates from review.
+- [ ] Record known limitations and candidate counts in the plan implementation
+      status when code lands.
+
+**Acceptance**
+
+- Road 99 is discoverable without embedding its coordinates as a production
+  special case.
+- Negative fixtures remain candidates only when deliberately warning-worthy,
+  never silently promoted.
+
+## Task 4 — implement review joining and editor API
+
+**Files**
+
+- Continue `editor/lib/crossingReview.mjs`.
+- Modify `editor/server.mjs`.
+- Add server/lib tests.
+- Initialize `data/crossing-review.json` only through a reviewed patch or the
+  editor’s empty schema, not generated output.
+
+**Endpoints**
+
+```text
+GET  /api/crossings/review
+POST /api/crossings/review
+POST /api/crossings/manual
+PUT  /api/crossings/manual/:id
+DELETE /api/crossings/manual/:id
+```
+
+**Steps**
+
+- [ ] Read candidates and review data with clear 409 errors for missing/stale
+      candidate generation.
+- [ ] Recompute graph/share/policy digests and expose `sourceFresh`.
+- [ ] Join generated candidates, reviews and manual crossings.
+- [ ] Return summary, coverage, warnings, blocking issues, items, orphaned
+      reviews and map GeoJSON.
+- [ ] Generate separate GeoJSON collections for:
+  - [ ] crossed-road corridors;
+  - [ ] approach paths;
+  - [ ] action paths;
+  - [ ] departure paths;
+  - [ ] entry/exit arrows/points;
+  - [ ] warning/invalid markers.
+- [ ] On review writes, require current candidate ID and fingerprint.
+- [ ] Accept only current mapping IDs or validated mapping overrides.
+- [ ] Enforce note length and status contract.
+- [ ] For manual create/update, validate every referenced share ID against the
+      current base graph and policy before writing.
+- [ ] Use stable manual IDs generated by the server and preserve `createdAt`;
+      update `updatedAt` on change.
+- [ ] Write the entire review file atomically and return freshly joined state.
+- [ ] Reject lost-update writes using candidate/source fingerprints.
+- [ ] Do not mutate candidate, graph, overlay or OSM files.
 
 **Tests**
 
-- [ ] forward clone, exact reverse, mid-route clip and loop rotation;
-- [ ] a span crossing the loop seam splits into two valid intervals;
-- [ ] no output span lies outside effective route distance;
-- [ ] invalid reverse policy still fails for policy reasons, not because of
-      context metadata.
+- [ ] GET empty, populated, missing-candidate and stale-source states;
+- [ ] accept/reject and selected mapping IDs;
+- [ ] stale client fingerprint rejection;
+- [ ] valid/invalid mapping override;
+- [ ] manual create/update/delete;
+- [ ] direction-policy violation;
+- [ ] atomic-write failure leaves prior file intact;
+- [ ] GeoJSON carries state and mapping identifiers.
 
-**Exit:** crossing detection can always run against the geometry actually being
-navigated.
+**Acceptance**
 
-## Phase 3 — implement the pure detector
+- API behavior is deterministic and the only writable file is
+  `data/crossing-review.json`.
 
-- [ ] Create `roadCrossings.js` with named, documented calibration constants.
-- [ ] Accept cleaned cue geometry, raw corner candidates, roundabout intervals
-      and optional route-context spans.
-- [ ] Compute robust incoming/outgoing bearings over distance arms rather than
-      adjacent vertices.
-- [ ] Recognize only opposite-direction pairs within the length and angle
-      envelope.
-- [ ] Implement the two confidence paths:
-  - [ ] general envelope plus motor-road context;
-  - [ ] stricter near-zero-net geometry fallback.
-- [ ] Reject roundabout overlap, same-direction pairs, U-shapes, insufficient
-      arms and non-consecutive decisions.
-- [ ] Return stable `source`, `confidence` and `reasonCode` diagnostics for
-      accepted candidates.
-- [ ] Keep rejected-candidate diagnostics available to tests/replay tooling,
-      but do not place them in normal cue lists.
+## Task 5 — build the Crossings review workspace
 
-**Positive tests**
+**Files**
 
-- [ ] 87° right + 87° left, 12 m apart, zero net change;
-- [ ] mirror-direction version;
-- [ ] current 112° right + 74° left with road context;
-- [ ] a crossing drawn inside a single CW polyline that meets the strict
-      geometry-only gate;
-- [ ] deterministic output with sub-metre duplicates already removed.
+- Modify `editor/index.html`.
+- Modify `editor/editor.js`.
+- Modify `editor/styles.css`.
+- Extend browser/editor smoke tests where available.
 
-**Negative tests**
+**Steps**
 
-- [ ] same-direction split turn;
-- [ ] normal S-bend/chicane without road context;
-- [ ] switchback/U-shape;
-- [ ] two decisions at adjacent junctions;
-- [ ] pair too long or too short;
-- [ ] pair with excessive net heading change;
-- [ ] corner inside a roundabout interval;
-- [ ] paved path with no evidence of a crossed road;
-- [ ] truncated effective route containing only one side of a crossing.
+- [ ] Add a **Crossings** workspace button next to Roundabouts and directional
+      review tools.
+- [ ] Load review state only when the workspace opens; show loading, stale and
+      error states honestly.
+- [ ] Add filters: All, Pending, Accepted, Rejected, Stale, Manual, Warnings.
+- [ ] Show summary counts and graph/share/policy freshness.
+- [ ] Draw every candidate at once with stable state colors.
+- [ ] Draw selected mapping with distinct styles for before/action/after.
+- [ ] Draw entry-to-exit arrowheads large enough to understand direction at
+      normal editor zoom.
+- [ ] Highlight the crossed road independently from the route mapping.
+- [ ] Keep base one-way edge arrows visible and legible underneath/alongside
+      the crossing overlay.
+- [ ] Selecting a row or map feature fits to its bbox and opens details.
+- [ ] Detail panel shows:
+  - [ ] logical kind and crossed road;
+  - [ ] source IDs/links and graph edge/share IDs;
+  - [ ] evidence, warnings and candidate metrics;
+  - [ ] mapping direction and slice fractions;
+  - [ ] bicycle policy state/reason for each direction;
+  - [ ] candidate/review/source fingerprints;
+  - [ ] review note.
+- [ ] Add Accept, Reject, Previous and Next keyboard-friendly actions.
+- [ ] Require at least one selected mapping before Accept.
+- [ ] Allow selecting forward/reverse/alternate mappings independently.
+- [ ] Make pending/stale/invalid states impossible to confuse with accepted.
+- [ ] Preserve selected item/filter across successful writes where possible.
 
-**Exit:** classification is pure, explainable and conservative before it can
-change any rider output.
+**Visual acceptance**
 
-## Phase 4 — integrate the cue model
+- [ ] At the Road 99 candidate, the map clearly shows the starting side, action
+      edge set, destination side, crossed road and supported direction.
+- [ ] A curator can distinguish two nearby crossings without toggling the base
+      graph off.
+- [ ] No browser errors or invisible click targets at desktop editor sizes.
 
-- [ ] Run crossing recognition after corner/roundabout extraction and before
-      same-direction merge and compound linking.
-- [ ] Replace both accepted corner cues with one `crossing` cue; never mutate
-      route geometry.
-- [ ] Preserve start and completion distances and the diagnostic entry
-      direction.
-- [ ] Add `crossing` to maneuver priority and active-cue selection.
-- [ ] Treat crossing as compound-capable, measuring the following gap from
-      `completionDistanceMeters`.
-- [ ] Support crossing → turn and crossing → roundabout in `thenManeuver`.
-- [ ] Keep the following cue in the cue list and retain guarded follow-up
+## Task 6 — implement mapping repair and manual crossing creation
+
+**Files**
+
+- Continue editor UI/server/lib modules.
+- Reuse existing base-edge selection and one-way layer helpers where possible.
+- Add focused pure tests for trace construction.
+
+**Mapping-edit steps**
+
+- [ ] Add **Edit mapping** mode for generated and manual records.
+- [ ] Guide the curator through crossed road, approach, action and departure
+      selection in that order.
+- [ ] Restrict action selection to a contiguous directed path; show why a
+      proposed next edge is invalid.
+- [ ] Allow entry/exit anchors to snap to an interior fraction of first/last
+      action edges.
+- [ ] Display ordered slice numbers and direction arrows.
+- [ ] Validate every selected traversal under current bicycle policy.
+- [ ] Allow replacing one generated mapping without changing other accepted
+      variants.
+- [ ] Show a diff between generated and override mappings before save.
+- [ ] Provide Cancel/Undo during an edit without changing review data.
+
+**Manual-add steps**
+
+- [ ] Add **Add crossing** from the Crossings workspace.
+- [ ] Create one logical record, then add one or more directed mappings.
+- [ ] Support “derive reverse” only when the policy validator proves it legal;
+      still require the curator to confirm the derived mapping visually.
+- [ ] Require crossed-road selection or an explicit “unnamed road” value with
+      map anchor.
+- [ ] Require a note for manual crossings and mapping overrides.
+- [ ] Save source-edge fingerprints and audit timestamps.
+- [ ] Allow later edit/delete with confirmation.
+
+**Tests**
+
+- [ ] valid one-edge and multi-edge trace;
+- [ ] discontinuity and wrong direction rejection;
+- [ ] partial edge anchors;
+- [ ] legal/illegal reverse derivation;
+- [ ] alternate mapping for same logical crossing;
+- [ ] cancel/undo leaves state unchanged;
+- [ ] source edge change makes override/manual record stale.
+
+**Acceptance**
+
+- A curator can correctly represent a crossing the detector missed or split
+  across several edges without hand-editing JSON.
+
+## Task 7 — join reviews during Build and publish confirmed data
+
+**Files**
+
+- Modify `processing/build_map.py`.
+- Continue `processing/crossing_review.py`.
+- Add `tests/test_crossing_build.py`.
+- Extend build-validation reports.
+
+**Steps**
+
+- [ ] Add candidate/review CLI paths with repository defaults.
+- [ ] Recompute and validate source graph, share registry and policy digests.
+- [ ] Join candidate reviews and manual crossings.
+- [ ] Validate every accepted mapping against the graph actually used for the
+      routing build, not only candidate-time metadata.
+- [ ] Resolve mapping overrides and selected mapping IDs.
+- [ ] Detect duplicate signatures and overlapping logical crossings.
+- [ ] Emit pending/stale-rejected/orphaned counts as warnings.
+- [ ] Block on stale accepted, invalid accepted/manual records, source mismatch,
+      missing shares, prohibited directions and mapping conflicts.
+- [ ] Write compact `build/public-data/crossings.json` containing only runtime
+      fields and accepted mappings.
+- [ ] Include graph version, source/share/policy digests and review summary.
+- [ ] If there are zero accepted/manual crossings, intentionally omit the
+      runtime artifact and manifest entry rather than publishing an ambiguous
+      empty stale file.
+- [ ] Keep rejected/pending evidence and notes out of runtime data.
+
+**Tests**
+
+- [ ] accepted subset publishes while unrelated pending candidates warn;
+- [ ] stale rejected warns, stale accepted blocks;
+- [ ] manual record publishes;
+- [ ] forward-only selection omits reverse;
+- [ ] source/policy/share mismatch blocks;
+- [ ] duplicate/conflicting mapping blocks;
+- [ ] zero confirmed records omits artifact;
+- [ ] deterministic compact output and digest.
+
+**Acceptance**
+
+- Build cannot publish a mapping that the current graph or direction policy no
+  longer supports.
+
+## Task 8 — manifest, Promote and mobile offline assets
+
+**Files**
+
+- Build manifest/promotion helpers and tests.
+- `packages/core/src/data/mapAssets.js`.
+- Mobile offline sync script and generated asset map only after Promote.
+- `tests/test-map-assets.mjs`, `tests/test-editor-promote-targets.mjs` and a new
+  `tests/test-mobile-crossing-assets.mjs`.
+
+**Steps**
+
+- [ ] Register runtime artifact as `manifest.crossings`.
+- [ ] Add `hashes.crossings` and include it in manifest version/release digest.
+- [ ] Promote the immutable/versioned crossing artifact like roundabouts.
+- [ ] Remove an older promoted crossing file when current manifest omits it.
+- [ ] Extend `loadMapAssets` with `includeCrossings`, defaulting false for
+      surfaces that do not navigate.
+- [ ] Return `crossingsData` and include counts in asset diagnostics.
+- [ ] Extend optional manifest JSON asset discovery for mobile sync.
+- [ ] Generate a native literal `require()` only when the promoted manifest
+      references the artifact.
+- [ ] Ensure missing optional crossing data does not break web or native boot.
+
+**Tests**
+
+- [ ] manifest present/absent/version hash behavior;
+- [ ] Promote copies current artifact and removes stale old artifact;
+- [ ] web loader includes only when requested;
+- [ ] native offline sync present/absent behavior;
+- [ ] no undefined Metro asset references.
+
+**Acceptance**
+
+- Manifest—not file existence—is the only runtime availability authority.
+
+## Task 9 — implement the pure attested-route matcher
+
+**Files**
+
+- Create `packages/core/src/routing/crossingsOnRoute.js`.
+- Export through the package map as needed.
+- Create `tests/test-crossings-on-route.mjs`.
+
+**Steps**
+
+- [ ] Normalize/validate runtime artifact and route attestation.
+- [ ] Return `null`/an explicit unavailable result for artifact graph or policy
+      incompatibility; do not misreport it as zero matches.
+- [ ] Build a route-slice index with cumulative attested distances.
+- [ ] Match directed before/action/after signatures by share ID, direction and
+      required fraction coverage.
+- [ ] Permit route slices to start/end outside required candidate fractions
+      while requiring the complete action interval.
+- [ ] Interpolate entry/exit progress inside partial first/last action slices.
+- [ ] Reconcile attested traversal distance to navigation geometry total using
+      one documented deterministic scale.
+- [ ] Verify computed entry/exit anchors are geographically near the reviewed
+      anchors; treat large mismatch as incompatible data, not a match.
+- [ ] Emit complete route-relative crossing records in route order.
+- [ ] Represent start-inside/end-inside as incomplete diagnostics and omit them
+      from cue-ready output.
+- [ ] Emit every repeated complete traversal.
+- [ ] Deduplicate exact repeats and reject overlapping conflicting records.
+
+**Tests**
+
+- [ ] exact one-edge action;
+- [ ] multi-edge action;
+- [ ] partial edge entry/exit;
+- [ ] forward and reverse mappings;
+- [ ] route uses same action edge with different approach/departure — no match;
+- [ ] missing before/after context — incomplete/no cue;
+- [ ] repeated visit;
+- [ ] route starts/ends inside;
+- [ ] graph/policy mismatch;
+- [ ] geometry/attestation distance reconciliation;
+- [ ] anchor mismatch;
+- [ ] malformed artifact preserves navigation fallback.
+
+**Acceptance**
+
+- Matching outcome depends only on confirmed mapping plus attested route
+  evidence, never on live geometric classification.
+
+## Task 10 — prepare crossings for the effective main route
+
+**Files**
+
+- `packages/core/src/app/useCyclewaysApp.js`.
+- `apps/mobile/src/screens/BuildScreen.jsx`.
+- `packages/core/src/navigation/navigationRoute.js`.
+- `packages/core/src/routing/routeAttestation.js`.
+- Navigation-route/effective-route/ride-plan/session tests.
+
+**Steps**
+
+- [ ] Load crossing data for native navigation surfaces.
+- [ ] Add an app callback that matches crossings from
+      `(crossingsData, routingValidation, geometry)`.
+- [ ] Prepare crossings only after direction/start/loop effective-route
+      selection, alongside existing junction/roundabout preparation.
+- [ ] Add `navigationRoute.crossings` with null-vs-empty semantics.
+- [ ] Clone and validate crossing records when constructing/restoring a
+      navigation route.
+- [ ] Do not carry source-route crossing distances through reverse/clip/rotate;
+      recompute against the transformed attestation instead.
+- [ ] Include crossings and artifact compatibility/version in
+      `navigationPlanFingerprint`.
+- [ ] Update ride-plan confirmation and current-route dev scenario paths so
+      they cannot bypass crossing preparation.
+- [ ] Persist prepared crossings in active ride state with the effective route.
+- [ ] Bump maneuver generator to `navigation-cues-v3` and update default/fallback
+      version tests.
+
+**Tests**
+
+- [ ] forward, exact reverse, alternate linear start and rotated loop;
+- [ ] missing artifact vs evaluated-empty distinction;
+- [ ] navigation-plan fingerprint changes with mapping/artifact/crossing list;
+- [ ] v2 active plan rebuild/rejection behavior;
+- [ ] no stale crossing distances after effective-route change;
+- [ ] current-route SIM preparation cannot skip crossings.
+
+**Acceptance**
+
+- The route entering navigation already contains crossing intervals matching
+  its exact effective geometry and attestation.
+
+## Task 11 — attest and annotate approach/rejoin connectors
+
+**Files**
+
+- `packages/core/route-manager.js`.
+- `packages/core/src/routing/shardedRouteSession.js` if propagation is needed.
+- `packages/core/src/app/useCyclewaysApp.js`.
+- `packages/core/src/navigation/approachLeg.js`.
+- Connector, approach and navigation-session tests/scenarios.
+
+**Steps**
+
+- [ ] Extend successful `previewBaseRoute` results with a route attestation
+      built from the preview candidate; failure results remain explicit and
+      carry no false attestation.
+- [ ] Ensure preview attestation does not mutate the active planner route.
+- [ ] Preserve connector cost profile and strict directional-policy evidence.
+- [ ] In the app’s shared `computeConnector` wrapper, match confirmed crossings
+      using preview attestation and geometry.
+- [ ] Attach `crossings: null|[]|records` to the connector result.
+- [ ] Have `buildApproachLeg` copy routing validation and crossings into its
+      route model.
+- [ ] Ensure both initial approach and off-route rejoin pass through that same
+      builder.
+- [ ] Do not put crossing records into `junctions`; keep existing turn-gating
+      fallback semantics unchanged.
+- [ ] Include connector crossing evidence in replay/scenario snapshots where
+      deterministic responses are serialized.
+
+**Tests**
+
+- [ ] connector attestation validates against returned geometry;
+- [ ] ordinary and connector cost profiles both remain directionally legal;
+- [ ] approach matching and cue generation;
+- [ ] rejoin matching and cue generation;
+- [ ] connector without artifact/context keeps legacy cues;
+- [ ] failed/no-coverage connector cannot fabricate crossing evidence;
+- [ ] preview remains non-mutating.
+
+**Acceptance**
+
+- A rider navigated outside the CW network to the route start or back to the
+  route receives the same confirmed crossing instruction as on the main route.
+
+## Task 12 — add first-class crossing cue semantics
+
+**Files**
+
+- `packages/core/src/navigation/navigationCues.js`.
+- `tests/test-navigation-cues.mjs` and focused crossing fixtures.
+
+**Steps**
+
+- [ ] Read complete crossing records separately from junctions/roundabouts.
+- [ ] Suppress turn/bend corners inside `[entryMeters - pad,
+      exitMeters + pad]`.
+- [ ] Emit one cue at entry with completion at exit, logical ID, kind and
+      optional crossed-road name.
+- [ ] Emit a crossing even when confirmed traversal has no sharp corner pair.
+- [ ] Never emit from incomplete records.
+- [ ] Add crossing to maneuver selection priority.
+- [ ] Make crossing compound-capable; calculate gap from completion.
+- [ ] Support crossing → turn and crossing → roundabout.
+- [ ] Keep the following cue in the list and preserve guarded voice
       suppression.
-- [ ] Let named-segment merge logic consider crossing completion where relevant
-      without attaching a fake left/right direction.
-- [ ] Bump `maneuverGeneratorVersion` from `navigation-cues-v2` to
-      `navigation-cues-v3` and update fallback/default expectations.
+- [ ] Ensure enter-segment merge/suppression does not attach a fake turn
+      direction to a crossing.
+- [ ] Keep raw edge/mapping IDs out of rider presentation objects where they are
+      not needed; logical ID may remain for diagnostics/dedupe.
 
 **Tests**
 
-- [ ] one accepted pair becomes exactly one cue;
-- [ ] crossing completion controls compound distance;
-- [ ] crossing followed by a 60 m-away roundabout compounds; 60 m + epsilon
-      does not;
-- [ ] the following cue remains independently selectable;
-- [ ] persisted v2/v3 fingerprints differ deterministically;
-- [ ] no cue contains raw edge IDs.
+- [ ] interval suppresses both reported corners and nothing outside it;
+- [ ] confirmed smooth crossing still emits;
+- [ ] incomplete and unavailable data emit nothing;
+- [ ] crossing followed by roundabout at 60 m compounds; epsilon beyond does
+      not;
+- [ ] following cue remains independently selectable;
+- [ ] overlapping roundabout/crossing evidence fails a validation test rather
+      than silently deleting one cue;
+- [ ] ordinary geometry is byte-for-byte compatible when crossings are null.
 
-**Exit:** the shared cue list expresses the maneuver correctly and survives
-restore/version boundaries.
+**Acceptance**
 
-## Phase 5 — voice and presentation
+- Cue generation consumes reviewed semantic evidence and no longer tries to
+  decide whether geometry is a road crossing.
 
-- [ ] Add Hebrew and English crossing phrases to `navigationVoice.js`.
-- [ ] Add crossing handling to compound phrase generation in both source and
-      following positions where supported.
-- [ ] Verify preview includes formatted distance and final does not.
-- [ ] Preserve the existing rule that a following cue is suppressed only after
-      the compound source utterance was accepted.
-- [ ] Add crossing text and maneuver descriptors to
-      `navigationPresentation.js`.
-- [ ] Represent the following turn/roundabout in the secondary card row.
-- [ ] Add a dedicated transverse-road crossing glyph to
-      `ManeuverIcon.jsx`; include an accessible textual label at the card level
-      even though the SVG remains decorative.
-- [ ] Keep a safe generic fallback for any renderer that has not added the
-      glyph yet.
+## Task 13 — voice, card, icon, haptic and camera behavior
+
+**Files**
+
+- `packages/core/src/navigation/navigationVoice.js`.
+- `packages/core/src/navigation/navigationPresentation.js`.
+- `packages/core/src/navigation/cueHaptics.js`.
+- Camera director/adapter tests as applicable.
+- `apps/mobile/src/planner/ManeuverIcon.jsx`.
+- Voice/presentation/haptic/camera tests.
+
+**Steps**
+
+- [ ] Add Hebrew and English crossing phrases.
+- [ ] Add crossing as source in compound text generation.
+- [ ] Support crossing → turn and crossing → roundabout text.
+- [ ] Keep follow-up suppression contingent on the source compound utterance
+      actually being accepted.
+- [ ] Add primary/secondary crossing presentation descriptors.
+- [ ] Keep crossed-road name as optional secondary context, not required voice
+      content.
+- [ ] Draw a dedicated crossing glyph with two road sides and transverse arrow.
+- [ ] Keep SVG decorative and card text accessible.
+- [ ] Lock light preview/medium final haptics with explicit crossing tests.
+- [ ] Add crossing to near-maneuver camera eligibility and focus at entry.
+- [ ] Reuse existing camera stages and C1 padding interpolation.
 
 **Tests**
 
 - [ ] Hebrew/English preview and final copy;
-- [ ] crossing → straight roundabout and crossing → left/right turn copy;
-- [ ] voice dedupe IDs use `crossing` and remain phase-specific;
-- [ ] rejected/unsaid compound source does not silence the following cue;
-- [ ] primary and secondary presentation descriptors match the cue contract.
+- [ ] compound roundabout/left/right copy;
+- [ ] cue utterance ID and phase dedupe;
+- [ ] unsaid compound does not silence next maneuver;
+- [ ] presentation descriptor and fallback;
+- [ ] haptic intensity/cooldown;
+- [ ] camera pre-maneuver stage and no first-cue snap regression.
 
-**Exit:** the rider sees and hears “cross the road,” never a turn arrow or
-right/left phrase for an accepted crossing.
+**Acceptance**
 
-## Phase 6 — haptics and camera
+- The rider sees and hears a crossing action, never a left/right icon or phrase
+  for the confirmed action interval.
 
-- [ ] Confirm the generic maneuver haptic path yields light preview and medium
-      final for `crossing`; add explicit tests so future defaults cannot change
-      it accidentally.
-- [ ] Include `crossing` in camera-director near-maneuver eligibility.
-- [ ] Focus the pre-maneuver camera at crossing start without adding a new
-      camera owner/stage.
-- [ ] Ensure the C1 500 ms padding transition continues uninterrupted when a
-      crossing becomes the first active maneuver.
+## Task 14 — Road 99, corpus and scenario validation
 
-**Tests**
+**Files**
 
-- [ ] haptic preview/final intensity and cooldown;
-- [ ] camera stage transition and target distance;
-- [ ] no camera snap regression when the crossing preview becomes active.
+- Road 99 replay test/script.
+- `packages/core/src/navigation/scenarios/` and route fixtures.
+- Candidate/matcher audit tooling.
 
-**Exit:** crossing feels like a normal important maneuver and reuses the
-settled camera architecture.
+**Steps**
 
-## Phase 7 — real-route and shared-path validation
-
-- [ ] Recreate the current Road 99 route from the recorded coordinates using
-      strict directed routing.
-- [ ] Assert route distance remains within the existing replay tolerance around
-      10,111.6 m and route attestation remains valid.
+- [ ] Review the generated Road 99 candidate in the editor; repair mapping if
+      required and accept only supported direction(s).
+- [ ] Build the confirmed runtime artifact from that review.
+- [ ] Recreate the strict route from recorded coordinates.
+- [ ] Assert route distance and route-content fingerprint remain at baseline.
 - [ ] Assert around 3,822–3,838 m:
-  - [ ] no literal right/left pair remains;
-  - [ ] exactly one road-crossing cue exists;
-  - [ ] the following straight roundabout exists;
-  - [ ] compound text includes both actions when scheduled from the crossing.
-- [ ] Assert the cue delta is 19 → 17 ordinary turns plus one crossing; do not
-      weaken the test to a total-count-only assertion.
-- [ ] Assert the old Tel Hai false cue stays absent.
-- [ ] Exercise the same cue builder through:
-  - [ ] a main navigation route;
-  - [ ] an app-owned approach leg;
-  - [ ] a routed rejoin leg;
-  - [ ] exact reverse where policy permits;
-  - [ ] restored route/session construction.
-- [ ] Protect the successful field-navigation portion of the original ride
-      from new crossing false positives.
+  - [ ] exactly one confirmed crossing match;
+  - [ ] no literal right/left cue pair;
+  - [ ] one crossing cue with correct interval;
+  - [ ] following straight-roundabout cue preserved;
+  - [ ] compound phrase when completion-to-entry gap is about 56 m.
+- [ ] Assert ordinary turns change from 19 to 17 and one crossing is added.
+- [ ] Assert no crossing is reintroduced at the corrected Tel Hai site without
+      a confirmed mapping.
+- [ ] Assert field-navigation portion has no unexpected crossing matches.
+- [ ] Add main, approach and rejoin scenarios using the same logical crossing.
+- [ ] Add forward-only scenario proving reverse route does not match.
+- [ ] Add repeated crossing and start-inside scenarios.
+- [ ] Produce two audit reports:
+  - [ ] offline candidates by status/evidence/warning/coverage;
+  - [ ] confirmed runtime matches across current catalog/scenario routes.
+- [ ] Require every high-confidence candidate within Road 99 and current
+      catalog/scenario coverage to be accepted or rejected before first
+      release.
+- [ ] Add every discovered false candidate/match as a permanent fixture.
 
-**Exit:** the change solves the actual remaining ride symptom without changing
-the route or other good guidance.
+**Acceptance**
 
-## Phase 8 — corpus calibration and regression gate
+- The original remaining symptom is fixed without route, roundabout,
+  directionality, camera or field-navigation regression.
 
-- [ ] Add a deterministic audit command/test helper that prints each accepted
-      candidate with route name, distances, geometry metrics, context and reason
-      code.
-- [ ] Run it across navigation scenarios, recommended/catalog route fixtures
-      that can be restored offline, and the original ride replay.
-- [ ] Treat unexpected geometry-only acceptances as release blockers until
-      represented by a named positive fixture or rejected by a refined rule.
-- [ ] Add every discovered false positive as a permanent negative fixture.
-- [ ] Run focused tests followed by full `npm test` and `git diff --check`.
-- [ ] Update the original discussion status and record exact replay results.
+## Task 15 — focused, full and operational validation
 
-**Exit:** automated evidence supports the detector thresholds; there are no
-unexplained accepted candidates in the available offline corpus.
+**Automated commands**
 
-## Phase 9 — manual acceptance (explicitly pending while remote)
+- [ ] Add `npm run test:crossings` covering Python and Node crossing suites.
+- [ ] Run candidate/review/build/manifest/promote/mobile-asset tests.
+- [ ] Run matcher/cue/voice/presentation/haptic/camera tests.
+- [ ] Run connector, effective-route, navigation-session and scenario suites.
+- [ ] Run existing roundabout and bicycle-traversal-policy suites.
+- [ ] Run `node tests/test-mobile-undefined-references.mjs`.
+- [ ] Run `npm run build` if Build/manifest code changed.
+- [ ] Run full `npm test`.
+- [ ] Run `git diff --check`.
 
-- [ ] In SIM, approach the crossing at normal replay speed and verify preview
-      timing, card hierarchy, glyph, compound roundabout reminder and camera
-      framing.
-- [ ] Listen once with the screen active and once with lock-screen/background
-      voice enabled.
-- [ ] Confirm the roundabout is still announced if the crossing utterance is
-      skipped, interrupted or starts inside the final window.
-- [ ] Record device/simulator version, route fingerprint and result in the
-      implementation record.
+**Editor manual gate**
 
-This gate may remain marked pending until local access is available. Automated
-completion must not be presented as physical/manual acceptance.
+- [ ] Start the editor and open Crossings.
+- [ ] Confirm coverage/freshness and summary counts.
+- [ ] Inspect all high-confidence/warning candidates in Road 99/catalog scope.
+- [ ] Validate accepted action arrows against one-way base-edge arrows.
+- [ ] Exercise accept, reject, direction selection, mapping repair and manual
+      add/edit/delete.
+- [ ] Verify stale accepted mappings are unmistakable and Build-blocking.
+- [ ] Verify no browser console errors.
 
-## Deferred follow-up — confirmed crossing topology and route cost
+**Simulator/device gate — explicitly pending while remote**
 
-Do not implement a routing penalty in the phases above. Open a separate design
-update only after the maneuver detector and audit have produced useful crossing
-candidates. That update must specify:
+- [ ] Replay the Road 99 approach to the crossing at normal and accelerated
+      speed.
+- [ ] Verify preview timing, card hierarchy, glyph and camera framing.
+- [ ] Listen with screen active and lock-screen/background voice.
+- [ ] Verify the roundabout still announces if crossing speech is skipped,
+      interrupted or begins inside the final window.
+- [ ] Exercise an approach/rejoin crossing scenario.
+- [ ] Record device/simulator version, graph/artifact/navigation-plan
+      fingerprints and result.
 
-- the logical crossing registry and multiple-base-edge mapping format;
-- editor candidate/confirmed/rejected workflow;
-- build artifact and digest/version propagation;
-- cost application in route building, approach and rejoin;
-- route-delta, no-path and two-crossing far-side-network reports;
-- click-snap interaction across parallel carriageways.
+Manual editor and simulator/device gates may remain pending until local access
+is available. Automated success must not be reported as manual acceptance.
 
-Only confirmed records may affect path search. Inferred cue candidates remain
-non-authoritative.
+## Task 16 — documentation and rollout record
 
-## Completion checklist
+**Files**
 
-- [ ] Design invariants are represented by tests, not comments alone.
-- [ ] No route-choice cost changed.
-- [ ] Road 99 route length and legal attestation are unchanged.
-- [ ] Remaining false turn pair is one crossing cue.
-- [ ] Following roundabout remains independently safe to announce.
-- [ ] Main, approach and rejoin cue paths are covered.
-- [ ] Navigation cue version/fingerprint is bumped.
+- Update this plan’s implementation status and checked tasks.
+- Update `plans/road-crossing-maneuvers/design.md` only for approved design
+  changes discovered during implementation.
+- Update `plans/navigation-ride-feedback-3/discussion.md` with exact outcome.
+- Update `processing/README.md` and editor help text.
+
+**Steps**
+
+- [ ] Record candidate counts and review coverage.
+- [ ] Record accepted Road 99 logical/mapping IDs and why each direction was
+      accepted or omitted.
+- [ ] Record source graph/share/policy/artifact digests.
+- [ ] Record route/cue before-and-after facts.
+- [ ] Record automated commands and results.
+- [ ] Keep manual gates visibly pending until performed.
+- [ ] Document regeneration workflow:
+  1. rebuild base graph/policy inputs;
+  2. run `crossings:candidates`;
+  3. review pending/stale items;
+  4. Build and inspect validation;
+  5. Promote;
+  6. sync mobile offline assets;
+  7. rerun route/scenario gates.
+
+## First-release gate summary
+
+The first runtime publication is allowed only when all are true:
+
+- [ ] Road 99 crossing mapping is editor-confirmed.
+- [ ] Every accepted mapping is current, valid and directionally allowed.
+- [ ] No stale accepted or invalid manual record exists.
+- [ ] All high-confidence candidates in Road 99/catalog/scenario coverage have
+      decisions.
+- [ ] Pending candidates outside that scope are counted and omitted.
+- [ ] Main, approach and rejoin matcher tests pass.
+- [ ] Route length/content fingerprint remain unchanged.
+- [ ] Crossing cue replaces the pair and preserves the roundabout.
+- [ ] Manifest/Promote/offline sync cannot resurrect stale data.
 - [ ] Focused and full automated suites pass.
-- [ ] Corpus audit has no unexplained acceptance.
-- [ ] Manual SIM/device validation is recorded or explicitly pending.
+- [ ] Manual gates are completed or explicitly marked pending.
+
+## Deferred follow-up — route cost and snapping
+
+Do not add route cost in the tasks above. After confirmed crossing coverage and
+runtime matching are stable, prepare a separate design amendment covering:
+
+- a versioned `crossingAvoidanceClass` or equivalent policy;
+- equivalent-distance cost and its rationale;
+- consistent planner/approach/rejoin application;
+- attestation binding to crossing artifact and cost-policy digests;
+- route-delta, new no-path and two-crossing far-side-infrastructure reports;
+- editor visualization of cost effect;
+- click-snap behavior across parallel road sides;
+- staged rollout and rollback.
+
+Confirmation makes a crossing eligible for that future policy; it does not
+enable the policy automatically.
