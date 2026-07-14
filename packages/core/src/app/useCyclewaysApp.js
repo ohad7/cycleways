@@ -50,6 +50,7 @@ import { createBaseRoutingShardFetchLoader } from "../routing/baseRoutingShards.
 import { createShardedRouteSession } from "../routing/shardedRouteSession.js";
 import { routeCommandMessage } from "../routing/cwAlignmentPresentation.js";
 import { roundaboutsOnRoute } from "../routing/roundaboutsOnRoute.js";
+import { crossingsOnRoute } from "../routing/crossingsOnRoute.js";
 import {
   initialRouteState,
   routeReducer,
@@ -92,6 +93,7 @@ function recordRecentRoute(setRecentRoutes, entry) {
 export function useCyclewaysApp({
   enableRouteDirectionAnimation = true,
   includeRoundabouts = false,
+  includeCrossings = false,
 } = {}) {
   const [state, setState] = useState({
     status: "loading",
@@ -135,18 +137,28 @@ export function useCyclewaysApp({
     directionAnimatorRef.current = createRouteDirectionAnimator();
   }
 
-  const computeConnector = useCallback((from, to) => {
+  const computeConnector = useCallback(async (from, to) => {
     const session = shardedRouteSessionRef.current;
     if (typeof session?.computeConnector === "function") {
-      return session.computeConnector(from, to);
+      const connector = await session.computeConnector(from, to);
+      const geometry = connector?.geometry || [];
+      return {
+        ...connector,
+        crossings: crossingsOnRoute(
+          state.assets?.crossingsData,
+          connector?.routingValidation,
+          geometry,
+        ),
+      };
     }
-    return Promise.resolve({
+    return {
       geometry: [],
       distanceMeters: 0,
       failure: "no-router",
       snappedEndpoints: [],
-    });
-  }, []);
+      crossings: null,
+    };
+  }, [state.assets?.crossingsData]);
 
   const computeRouteJunctions = useCallback(async (geometry) => {
     const session = shardedRouteSessionRef.current;
@@ -161,6 +173,12 @@ export function useCyclewaysApp({
     }
     return null;
   }, [state.assets?.roundaboutsData]);
+
+  const computeRouteCrossings = useCallback((route) => crossingsOnRoute(
+    state.assets?.crossingsData,
+    route?.routingValidation,
+    route?.geometry,
+  ), [state.assets?.crossingsData]);
 
   useEffect(() => () => {
     if (transientErrorTimerRef.current !== null) {
@@ -256,6 +274,7 @@ export function useCyclewaysApp({
           signal: controller.signal,
           baseRoutingMode: "shards",
           includeRoundabouts,
+          includeCrossings,
         });
         if (controller.signal.aborted) return;
         setState({
@@ -280,7 +299,7 @@ export function useCyclewaysApp({
     return () => {
       controller.abort();
     };
-  }, [includeRoundabouts]);
+  }, [includeCrossings, includeRoundabouts]);
 
   useEffect(() => {
     if (state.status !== "ready") return undefined;
@@ -1366,6 +1385,7 @@ export function useCyclewaysApp({
     handleAddRecentRoute,
     computeConnector,
     computeRouteJunctions,
+    computeRouteCrossings,
   };
 }
 

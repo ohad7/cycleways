@@ -31,6 +31,13 @@ export function buildApproachLeg(connectorResult, { id = "approach", target = nu
       activeDataPoints: [],
       segmentSpans: [],
       junctions: null,
+      crossings: Array.isArray(connectorResult?.crossings)
+        ? connectorResult.crossings.map((crossing) => ({ ...crossing }))
+        : null,
+      routingValidation: connectorResult?.routingValidation
+        ? structuredClone(connectorResult.routingValidation)
+        : null,
+      maneuverGeneratorVersion: "navigation-cues-v3",
       approachTarget: target,
     },
     geometry,

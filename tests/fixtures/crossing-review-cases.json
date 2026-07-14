@@ -1,0 +1,106 @@
+{
+  "candidates": {
+    "schemaVersion": 1,
+    "coverage": { "baseGraph": "complete" },
+    "crossings": [
+      {
+        "id": "crossing-accepted",
+        "fingerprint": "sha256:accepted",
+        "kind": "side-change",
+        "center": { "lat": 33.1, "lng": 35.1 },
+        "mappings": [
+          {
+            "id": "mapping-forward",
+            "direction": "forward",
+            "match": {
+              "before": [{ "edgeShareId": 1, "fromFractionQ": 0, "toFractionQ": 1000000 }],
+              "action": [{ "edgeShareId": 2, "fromFractionQ": 1000000, "toFractionQ": 0 }],
+              "after": [{ "edgeShareId": 3, "fromFractionQ": 0, "toFractionQ": 1000000 }]
+            },
+            "entry": { "lat": 33.1, "lng": 35.1 },
+            "exit": { "lat": 33.1001, "lng": 35.1001 }
+          },
+          {
+            "id": "mapping-reverse",
+            "direction": "reverse",
+            "match": {
+              "before": [{ "edgeShareId": 3, "fromFractionQ": 1000000, "toFractionQ": 0 }],
+              "action": [{ "edgeShareId": 2, "fromFractionQ": 0, "toFractionQ": 1000000 }],
+              "after": [{ "edgeShareId": 1, "fromFractionQ": 1000000, "toFractionQ": 0 }]
+            },
+            "entry": { "lat": 33.1001, "lng": 35.1001 },
+            "exit": { "lat": 33.1, "lng": 35.1 }
+          }
+        ]
+      },
+      {
+        "id": "crossing-stale-rejected",
+        "fingerprint": "sha256:new",
+        "kind": "side-change",
+        "center": { "lat": 33.2, "lng": 35.2 },
+        "mappings": [{
+          "id": "mapping-stale",
+          "match": {
+            "before": [{ "edgeShareId": 4, "fromFractionQ": 0, "toFractionQ": 1000000 }],
+            "action": [{ "edgeShareId": 5, "fromFractionQ": 0, "toFractionQ": 1000000 }],
+            "after": [{ "edgeShareId": 6, "fromFractionQ": 0, "toFractionQ": 1000000 }]
+          },
+          "entry": { "lat": 33.2, "lng": 35.2 },
+          "exit": { "lat": 33.2001, "lng": 35.2001 }
+        }]
+      },
+      {
+        "id": "crossing-pending",
+        "fingerprint": "sha256:pending",
+        "kind": "side-change",
+        "center": { "lat": 33.3, "lng": 35.3 },
+        "mappings": [{
+          "id": "mapping-pending",
+          "match": {
+            "before": [{ "edgeShareId": 7, "fromFractionQ": 0, "toFractionQ": 1000000 }],
+            "action": [{ "edgeShareId": 8, "fromFractionQ": 0, "toFractionQ": 1000000 }],
+            "after": [{ "edgeShareId": 9, "fromFractionQ": 0, "toFractionQ": 1000000 }]
+          },
+          "entry": { "lat": 33.3, "lng": 35.3 },
+          "exit": { "lat": 33.3001, "lng": 35.3001 }
+        }]
+      }
+    ]
+  },
+  "reviews": {
+    "schemaVersion": 1,
+    "reviews": {
+      "crossing-accepted": {
+        "candidateFingerprint": "sha256:accepted",
+        "status": "accepted",
+        "acceptedMappingIds": ["mapping-forward"],
+        "mappingOverrides": []
+      },
+      "crossing-stale-rejected": {
+        "candidateFingerprint": "sha256:old",
+        "status": "rejected"
+      },
+      "orphaned": {
+        "candidateFingerprint": "sha256:gone",
+        "status": "rejected"
+      }
+    },
+    "manualCrossings": [{
+      "id": "manual-crossing-1",
+      "kind": "side-change",
+      "center": { "lat": 33.4, "lng": 35.4 },
+      "sourceEdgeFingerprint": "sha256:manual-edges",
+      "audit": { "createdAt": "2026-07-14T00:00:00Z", "updatedAt": "2026-07-14T00:00:00Z" },
+      "mappings": [{
+        "id": "mapping-manual",
+        "match": {
+          "before": [{ "edgeShareId": 10, "fromFractionQ": 0, "toFractionQ": 1000000 }],
+          "action": [{ "edgeShareId": 11, "fromFractionQ": 0, "toFractionQ": 1000000 }],
+          "after": [{ "edgeShareId": 12, "fromFractionQ": 0, "toFractionQ": 1000000 }]
+        },
+        "entry": { "lat": 33.4, "lng": 35.4 },
+        "exit": { "lat": 33.4001, "lng": 35.4001 }
+      }]
+    }]
+  }
+}

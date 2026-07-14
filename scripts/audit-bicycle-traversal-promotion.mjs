@@ -148,6 +148,7 @@ if (manifest && shardManifest && overlay && cwIndex) {
       kml: manifest.kml,
       baseRoutingShards: manifest.baseRoutingShards,
       roundabouts: manifest.roundabouts,
+      crossings: manifest.crossings,
       cwAlignmentGeometry: manifest.cwAlignmentGeometry,
       legacyCwBaseIndex: manifest.legacyRoutingCompatibility?.cwBaseIndex,
       legacyRoutingCompatibilityMetadata:

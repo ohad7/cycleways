@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildRouteAttestation,
+  navigationPlanFingerprint,
   reverseRouteAttestation,
   validateRouteAttestation,
 } from "../packages/core/src/routing/routeAttestation.js";
@@ -58,5 +59,20 @@ assert.deepEqual(validateRouteAttestation(reversed), { ok: true, reason: null })
 const tampered = structuredClone(twoWay);
 tampered.traversalSlices[0].edgeShareId = 19;
 assert.equal(validateRouteAttestation(tampered).reason, "route-content-fingerprint-mismatch");
+
+const navigationRoute = {
+  geometry: twoWay.geometry,
+  routingValidation: twoWay,
+  junctions: [],
+  crossings: [],
+  segmentSpans: [],
+  maneuverGeneratorVersion: "navigation-cues-v3",
+};
+const withoutCrossing = navigationPlanFingerprint(navigationRoute);
+const withCrossing = navigationPlanFingerprint({
+  ...navigationRoute,
+  crossings: [{ kind: "crossing", crossingId: "c1", mappingId: "m1", entryMeters: 10, exitMeters: 20, complete: true }],
+});
+assert.notEqual(withCrossing, withoutCrossing, "confirmed crossing evidence invalidates persisted cue plans");
 
 console.log("route attestation ok");

@@ -1,7 +1,7 @@
 # Ride feedback round 3 — discussion
 
 **Date:** 2026-07-13
-**Status:** implementation split into focused plans; crossing is now implementation-ready and S3/S4 remain open
+**Status:** directionality/ride fixes and crossing code implemented; crossing data rollout/manual validation and S3/S4 remain open
 **Ride:** ~10.0 km, Kiryat Shmona → גן הצפון (via כביש 99, שביל תל חי, כביש 90 כפר גלעדי,
 כבישון עגל, כביש 9974 כפר יובל, שדות כפר יובל, שביל אופניים 99, גן הצפון).
 Ridden on the iOS app; every reported issue reproduces in the simulator SIM
@@ -20,11 +20,10 @@ scenario over the shared route token.
 - C1 follow-camera padding now transitions for 500 ms inside the existing
   camera owner; automated camera and journey suites pass, with original-ride
   SIM visual acceptance pending.
-- M1/S2 first-class crossing maneuvers now have an implementation-ready offline
-  classification and editor-review design: one logical crossing can own
+- M1/S2 first-class crossing code is implemented: one logical crossing can own
   multiple directed base-edge mappings, and runtime uses confirmed mappings
-  only. Implementation and manual acceptance remain open. S3 segment-distance
-  confirmation and S4 car-road entry warnings remain open.
+  only. Stable-share/direction curation and manual acceptance remain open. S3
+  segment-distance confirmation and S4 car-road entry warnings remain open.
 
 Focused design and validation records live in
 [`bicycle-traversal-policy`](../bicycle-traversal-policy/design.md),
@@ -32,6 +31,23 @@ Focused design and validation records live in
 [`navigation-geometry-cleanup`](../navigation-geometry-cleanup/design.md),
 [`navigation-camera-padding`](../navigation-camera-padding/design.md), and
 [`road-crossing-maneuvers`](../road-crossing-maneuvers/design.md).
+
+### 2026-07-14 crossing implementation update
+
+The reviewed-crossing pipeline and navigation behavior are now implemented.
+Only editor-confirmed directed mappings can produce a crossing cue, and the
+same attestation matcher is used on the effective main route, approach route,
+and rejoin route. The cue replaces corners inside the reviewed action interval
+while preserving and optionally compounding the following roundabout.
+
+No Road 99 crossing has been silently accepted. Candidate generation currently
+stops because the released stable-share registry is 475 edges behind the
+48,856-edge elevated graph, and publication would also reject the relevant
+`manual-unreviewed` Road 99 direction evidence. Those are intentional rollout
+gates. With a temporary complete registry the detector found the target as
+`crossing:1092567462:33.2351-35.5800:48308`, confirming graph-wide discovery
+without a coordinate special case. The complete automated suite and production
+web build pass; remote editor/simulator/audio validation remains pending.
 
 ## How the diagnostic was made
 

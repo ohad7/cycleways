@@ -99,7 +99,7 @@ assert.ok(
     built.geometry[1].distanceFromStartMeters,
 );
 assert.equal(built.activeDataPoints.length, 1);
-assert.equal(built.maneuverGeneratorVersion, "navigation-cues-v2");
+assert.equal(built.maneuverGeneratorVersion, "navigation-cues-v3");
 
 const catalog = navigationRouteFromCatalogEntry(
   {

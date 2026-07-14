@@ -535,4 +535,48 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   assert.equal(findType(buildRouteCues(route), "roundabout").length, 0);
 }
 
+// A reviewed crossing replaces its opposite corner pair and compounds with a
+// real maneuver shortly after the rider reaches the other side.
+{
+  const route = routeFrom(
+    [
+      { lat: 33, lng: 35 },
+      { lat: 33, lng: 35.001 },
+      { lat: 33.00015, lng: 35.001 },
+      { lat: 33.00015, lng: 35.002 },
+    ],
+    {
+      crossings: [{
+        kind: "crossing",
+        crossingId: "crossing-1",
+        mappingId: "mapping-1",
+        crossingKind: "side-change",
+        crossedRoadName: "Road 99",
+        entryMeters: 88,
+        exitMeters: 112,
+        complete: true,
+      }],
+      junctions: [{
+        kind: "roundabout",
+        roundaboutId: "after-crossing",
+        lat: 33.00015,
+        lng: 35.0015,
+        entryMeters: 165,
+        exitMeters: 182,
+        entryBearingDeg: 90,
+        exitBearingDeg: 90,
+        complete: true,
+      }],
+    },
+  );
+  const cues = buildRouteCues(route);
+  const crossing = findType(cues, "crossing")[0];
+  assert.equal(findType(cues, "crossing").length, 1);
+  assert.equal(crossing.completionDistanceMeters, 112);
+  assert.equal(crossing.crossedRoadName, "Road 99");
+  assert.deepEqual(crossing.thenManeuver, { type: "roundabout", direction: "straight" });
+  assert.equal(findType(cues, "turn").length + findType(cues, "bend").length, 0);
+  assert.equal(findType(cues, "roundabout")[0].compoundPreviousType, "crossing");
+}
+
 console.log("navigation cue tests passed");

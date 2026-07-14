@@ -34,9 +34,11 @@ from typing import Any
 
 try:
     from .roundabout_review import join_roundabout_reviews
+    from .crossing_review import join_crossing_reviews
     from .bicycle_traversal_policy import POLICY_DIGEST, POLICY_ID, normalize_bicycle_traversal
 except ImportError:  # Direct script execution: processing/ is on sys.path.
     from roundabout_review import join_roundabout_reviews
+    from crossing_review import join_crossing_reviews
     from bicycle_traversal_policy import POLICY_DIGEST, POLICY_ID, normalize_bicycle_traversal
 
 
@@ -3369,6 +3371,7 @@ def write_runtime_manifest(
     elevation_stats: dict[str, Any],
     validation: dict[str, Any],
     output_roundabouts: Path | None = None,
+    output_crossings: Path | None = None,
     output_cw_alignment_geometry: Path | None = None,
     legacy_compatibility: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
@@ -3382,6 +3385,8 @@ def write_runtime_manifest(
         ]
     if output_roundabouts and output_roundabouts.exists():
         version_inputs.append(output_roundabouts)
+    if output_crossings and output_crossings.exists():
+        version_inputs.append(output_crossings)
     if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
         version_inputs.append(output_cw_alignment_geometry)
     if legacy_compatibility:
@@ -3432,6 +3437,10 @@ def write_runtime_manifest(
             immutable_roundabouts = versioned_file(output_roundabouts)
             shutil.copyfile(output_roundabouts, immutable_roundabouts)
             output_roundabouts = immutable_roundabouts
+        if output_crossings and output_crossings.exists():
+            immutable_crossings = versioned_file(output_crossings)
+            shutil.copyfile(output_crossings, immutable_crossings)
+            output_crossings = immutable_crossings
 
     def public_relative(path: Path) -> str:
         return path.relative_to(public_data_dir).as_posix()
@@ -3474,6 +3483,9 @@ def write_runtime_manifest(
     if output_roundabouts and output_roundabouts.exists():
         manifest["roundabouts"] = public_relative(output_roundabouts)
         manifest["hashes"]["roundabouts"] = file_digest(output_roundabouts)
+    if output_crossings and output_crossings.exists():
+        manifest["crossings"] = public_relative(output_crossings)
+        manifest["hashes"]["crossings"] = file_digest(output_crossings)
     if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
         manifest["cwAlignmentGeometry"] = public_relative(output_cw_alignment_geometry)
         manifest["hashes"]["cwAlignmentGeometry"] = file_digest(
@@ -3507,6 +3519,8 @@ def write_runtime_manifest(
     }
     if output_roundabouts and output_roundabouts.exists():
         runtime["roundabouts"] = str(output_roundabouts)
+    if output_crossings and output_crossings.exists():
+        runtime["crossings"] = str(output_crossings)
     if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
         runtime["cwAlignmentGeometry"] = str(output_cw_alignment_geometry)
     return runtime, manifest_path
@@ -3592,6 +3606,167 @@ def build_reviewed_roundabouts(
         "sourceFresh": source_fresh,
     }
     return validation, output_path
+
+
+def build_reviewed_crossings(
+    candidates_path: Path,
+    review_path: Path,
+    graph_path: Path,
+    share_registry_path: Path,
+    graph_version: str,
+    output_path: Path,
+) -> tuple[dict[str, Any], Path | None]:
+    empty_summary = {
+        "total": 0, "accepted": 0, "rejected": 0, "pending": 0,
+        "staleAccepted": 0, "staleRejected": 0, "manual": 0,
+        "invalid": 0, "orphaned": 0, "warnings": 0,
+    }
+    if not candidates_path.exists():
+        output_path.unlink(missing_ok=True)
+        return {
+            "summary": empty_summary,
+            "coverage": {},
+            "warnings": [{"code": "missing_crossing_candidates"}],
+            "blockingIssues": [],
+            "sourceFresh": False,
+        }, None
+    candidates = load_json(candidates_path, {})
+    reviews = load_json(review_path, {"schemaVersion": 1, "reviews": {}, "manualCrossings": []})
+    joined = join_crossing_reviews(candidates, reviews)
+    expected_graph_digest = f"sha256:{file_digest(graph_path)}"
+    expected_registry_digest = f"sha256:{file_digest(share_registry_path)}"
+    source_fresh = (
+        candidates.get("sourceGraphDigest") == expected_graph_digest
+        and candidates.get("edgeShareRegistryDigest") == expected_registry_digest
+        and candidates.get("traversalPolicyDigest") == POLICY_DIGEST
+    )
+    if not source_fresh:
+        joined["blockingIssues"].append({"code": "stale_crossing_candidates"})
+
+    graph = load_json(graph_path, {})
+    share_registry = load_json(share_registry_path, {})
+    share_by_edge = share_registry.get("edges") or {}
+    edge_by_share: dict[int, dict[str, Any]] = {}
+    for edge in graph.get("edges") or []:
+        share_id = share_by_edge.get(edge.get("id"))
+        if isinstance(share_id, int):
+            edge_by_share[share_id] = edge
+
+    seen_mapping_ids: set[str] = set()
+    seen_mapping_signatures: dict[str, str] = {}
+    action_signatures: dict[str, str] = {}
+
+    def slice_position(edge: dict[str, Any], share_id: int, fraction_q: int) -> tuple[Any, ...]:
+        if fraction_q == 0:
+            return ("node", edge.get("fromNodeId"))
+        if fraction_q == 1_000_000:
+            return ("node", edge.get("toNodeId"))
+        return ("edge", share_id, fraction_q)
+
+    for crossing in joined["runtimeCrossings"]:
+        for mapping in crossing.get("mappings") or []:
+            mapping_id = mapping.get("id")
+            if mapping_id in seen_mapping_ids:
+                joined["blockingIssues"].append({
+                    "code": "duplicate_runtime_mapping_id", "id": crossing.get("id"),
+                    "mappingId": mapping_id,
+                })
+            seen_mapping_ids.add(mapping_id)
+            match = mapping.get("match") or {}
+            mapping_signature = json.dumps(match, sort_keys=True, separators=(",", ":"))
+            if mapping_signature in seen_mapping_signatures:
+                joined["blockingIssues"].append({
+                    "code": "duplicate_crossing_mapping_signature", "id": crossing.get("id"),
+                    "mappingId": mapping_id,
+                    "otherMappingId": seen_mapping_signatures[mapping_signature],
+                })
+            else:
+                seen_mapping_signatures[mapping_signature] = str(mapping_id)
+            action_signature = json.dumps(match.get("action") or [], sort_keys=True, separators=(",", ":"))
+            other_crossing_id = action_signatures.get(action_signature)
+            if other_crossing_id is not None and other_crossing_id != crossing.get("id"):
+                joined["blockingIssues"].append({
+                    "code": "conflicting_crossing_action_signature", "id": crossing.get("id"),
+                    "mappingId": mapping_id, "otherCrossingId": other_crossing_id,
+                })
+            else:
+                action_signatures[action_signature] = str(crossing.get("id"))
+            ordered_slices: list[tuple[dict[str, Any], dict[str, Any]]] = []
+            repeated_slices: set[tuple[int, int, int]] = set()
+            for section in ("before", "action", "after"):
+                slices = ((mapping.get("match") or {}).get(section) or [])
+                for item in slices:
+                    edge = edge_by_share.get(item.get("edgeShareId"))
+                    if edge is None:
+                        joined["blockingIssues"].append({
+                            "code": "missing_crossing_edge_share", "id": crossing.get("id"),
+                            "mappingId": mapping_id, "edgeShareId": item.get("edgeShareId"),
+                        })
+                        continue
+                    direction = "forward" if item["toFractionQ"] > item["fromFractionQ"] else "reverse"
+                    shadow = edge.get("bicycleTraversalShadow") or {}
+                    state = shadow.get(direction) if shadow.get("policyDigest") == POLICY_DIGEST else "unknown"
+                    if state != "allowed":
+                        joined["blockingIssues"].append({
+                            "code": "crossing_mapping_not_allowed", "id": crossing.get("id"),
+                            "mappingId": mapping_id, "edgeShareId": item.get("edgeShareId"),
+                            "direction": direction, "state": state or "unknown",
+                        })
+                    signature = (
+                        item.get("edgeShareId"), item.get("fromFractionQ"), item.get("toFractionQ")
+                    )
+                    if signature in repeated_slices:
+                        joined["blockingIssues"].append({
+                            "code": "repeated_crossing_mapping_slice", "id": crossing.get("id"),
+                            "mappingId": mapping_id, "edgeShareId": item.get("edgeShareId"),
+                        })
+                    repeated_slices.add(signature)
+                    ordered_slices.append((item, edge))
+            for index in range(1, len(ordered_slices)):
+                previous, previous_edge = ordered_slices[index - 1]
+                current, current_edge = ordered_slices[index]
+                previous_end = slice_position(
+                    previous_edge, previous["edgeShareId"], previous["toFractionQ"]
+                )
+                current_start = slice_position(
+                    current_edge, current["edgeShareId"], current["fromFractionQ"]
+                )
+                if previous_end != current_start or previous_end == ("node", None):
+                    joined["blockingIssues"].append({
+                        "code": "discontinuous_crossing_mapping", "id": crossing.get("id"),
+                        "mappingId": mapping_id, "atSlice": index,
+                    })
+    if joined["blockingIssues"]:
+        codes = ", ".join(issue["code"] for issue in joined["blockingIssues"][:6])
+        raise ValueError(
+            f"Crossing publication blocked by {len(joined['blockingIssues'])} issue(s): {codes}"
+        )
+    if not joined["runtimeCrossings"]:
+        output_path.unlink(missing_ok=True)
+        return {
+            "summary": joined["summary"],
+            "coverage": joined["coverage"],
+            "warnings": [*joined["warnings"], {"code": "no_confirmed_crossings"}],
+            "blockingIssues": [],
+            "sourceFresh": True,
+        }, None
+    payload = {
+        "schemaVersion": 1,
+        "graphVersion": graph_version,
+        "sourceGraphDigest": expected_graph_digest,
+        "edgeShareRegistryDigest": expected_registry_digest,
+        "traversalPolicyDigest": POLICY_DIGEST,
+        "reviewSummary": joined["summary"],
+        "crossings": joined["runtimeCrossings"],
+    }
+    write_json(output_path, payload, compact=True)
+    return {
+        "summary": joined["summary"],
+        "coverage": joined["coverage"],
+        "warnings": joined["warnings"],
+        "blockingIssues": [],
+        "sourceFresh": True,
+    }, output_path
 
 
 def process_elevations(
@@ -3776,6 +3951,15 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         public_data_dir / "roundabouts.json",
     )
     validation["roundabouts"] = roundabout_validation
+    crossing_validation, output_crossings = build_reviewed_crossings(
+        args.crossing_candidates.resolve(),
+        args.crossing_reviews.resolve(),
+        args.routing_graph.resolve(),
+        args.base_edge_share_ids.resolve(),
+        str(base_routing_asset.get("graphVersion") or ""),
+        public_data_dir / "crossings.json",
+    )
+    validation["crossings"] = crossing_validation
     legacy_compatibility = stage_legacy_routing_compatibility(
         public_data_dir, args.routing_profile
     )
@@ -3789,6 +3973,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         elevation_stats,
         validation,
         output_roundabouts,
+        output_crossings,
         output_cw_alignment_geometry,
         legacy_compatibility,
     )
@@ -3960,6 +4145,15 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         public_data_dir / "roundabouts.json",
     )
     validation["roundabouts"] = roundabout_validation
+    crossing_validation, output_crossings = build_reviewed_crossings(
+        args.crossing_candidates.resolve(),
+        args.crossing_reviews.resolve(),
+        args.routing_graph.resolve(),
+        args.base_edge_share_ids.resolve(),
+        str(base_routing_asset.get("graphVersion") or ""),
+        public_data_dir / "crossings.json",
+    )
+    validation["crossings"] = crossing_validation
     legacy_compatibility = stage_legacy_routing_compatibility(
         public_data_dir, args.routing_profile
     )
@@ -3973,6 +4167,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         elevation_stats,
         validation,
         output_roundabouts,
+        output_crossings,
         output_cw_alignment_geometry,
         legacy_compatibility,
     )
@@ -4081,6 +4276,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--roundabout-reviews",
         type=Path,
         default=Path("data/roundabout-review.json"),
+    )
+    parser.add_argument(
+        "--crossing-candidates",
+        type=Path,
+        default=Path("build/crossings/candidates.json"),
+    )
+    parser.add_argument(
+        "--crossing-reviews",
+        type=Path,
+        default=Path("data/crossing-review.json"),
     )
     parser.add_argument(
         "--overpass-response",

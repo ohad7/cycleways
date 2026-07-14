@@ -538,6 +538,25 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
 
 // --- O5: off-route card shows the live distance back -----------------------
 {
+  const p = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "crossing", crossedRoadName: "כביש 99" },
+      phase: "preview",
+      distanceToCueMeters: 92,
+    },
+    progress: { remainingMeters: 500 },
+  });
+  assert.equal(p.cueText, "חצו לצד השני של הכביש");
+  assert.equal(p.cueIcon, "crossing");
+  assert.equal(p.cuePrimaryText, "חצו לצד השני של הכביש");
+  assert.equal(p.cueSecondaryText, "כביש 99");
+  assert.deepEqual(p.cueManeuver, { type: "crossing" });
+}
+
+// --- O5: off-route card shows the live distance back -----------------------
+{
   // Guided leg active: remaining-along-leg wins over straight-line.
   const guided = getNavigationPresentation({
     status: "off-route",

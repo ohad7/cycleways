@@ -40,6 +40,12 @@ import {
   roundaboutReviewGeoJson,
 } from "./lib/roundaboutReview.mjs";
 import {
+  CROSSING_REVIEW_STATUSES,
+  crossingIssue,
+  crossingReviewGeoJson,
+  joinCrossingReviews,
+} from "./lib/crossingReview.mjs";
+import {
   acceptAlignmentDraft,
   alignmentMappingDigest,
   applyReviewedMigrationBatch,
@@ -92,6 +98,9 @@ const bicycleTraversalOverridesPath = resolve(dataDir, "bicycle-traversal-overri
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const roundaboutCandidatesPath = resolve(osmBuildDir, "roundabout-candidates.json");
 const roundaboutReviewPath = resolve(dataDir, "roundabout-review.json");
+const crossingCandidatesPath = resolve(buildDir, "crossings/candidates.json");
+const crossingReviewPath = resolve(dataDir, "crossing-review.json");
+const baseEdgeShareRegistryPath = resolve(dataDir, "base-edge-share-ids.json");
 const overpassResponsePath = resolve(osmBuildDir, "overpass-response.json");
 const overpassQueryPath = resolve(osmBuildDir, "overpass-query.ql");
 const poiTypesModulePath = resolve(repoRoot, "packages/core/src/data/poiTypes.js");
@@ -2774,6 +2783,64 @@ async function readRoundaboutReviewState() {
   };
 }
 
+async function readCrossingReviewState() {
+  let candidates;
+  try {
+    candidates = JSON.parse(await readFile(crossingCandidatesPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      const missing = new Error("Crossing candidates are missing. Run npm run crossings:candidates.");
+      missing.status = 409;
+      throw missing;
+    }
+    throw error;
+  }
+  let reviews;
+  try {
+    reviews = JSON.parse(await readFile(crossingReviewPath, "utf-8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    reviews = { schemaVersion: 1, reviews: {}, manualCrossings: [] };
+  }
+  let sourceFresh = false;
+  try {
+    const [graphDigest, registryDigest, graphText] = await Promise.all([
+      fileDigest(osmElevatedBaseGraphPath),
+      fileDigest(baseEdgeShareRegistryPath),
+      readFile(osmElevatedBaseGraphPath, "utf-8"),
+    ]);
+    const graphPolicyDigest = JSON.parse(graphText)?.metadata?.bicycleTraversalShadowPolicyDigest;
+    sourceFresh = candidates.sourceGraphDigest === `sha256:${graphDigest}`
+      && candidates.edgeShareRegistryDigest === `sha256:${registryDigest}`
+      && candidates.traversalPolicyDigest === graphPolicyDigest;
+  } catch {
+    sourceFresh = false;
+  }
+  const joined = joinCrossingReviews(candidates, reviews);
+  return {
+    candidates,
+    reviews,
+    joined,
+    sourceFresh,
+    geojson: crossingReviewGeoJson(joined),
+  };
+}
+
+function crossingReviewResponse(state) {
+  return {
+    ok: true,
+    sourceFresh: state.sourceFresh,
+    coverage: state.joined.coverage,
+    summary: state.joined.summary,
+    warnings: state.joined.warnings,
+    blockingIssues: state.joined.blockingIssues,
+    items: state.joined.items,
+    manualItems: state.joined.manualItems,
+    orphaned: state.joined.orphaned,
+    geojson: state.geojson,
+  };
+}
+
 async function elevatedGraphMatchesBaseGraph() {
   const elevatedGraph = JSON.parse(await readFile(osmElevatedBaseGraphPath, "utf-8"));
   const sourceDigest = elevatedGraph?.metadata?.elevation?.sourceGraphDigest;
@@ -3314,6 +3381,10 @@ function validationBlockers(report) {
   if ((roundabouts.blockingIssues || []).length > 0) {
     blockers.push(`${roundabouts.blockingIssues.length} roundabout review blockers`);
   }
+  const crossings = validation.crossings || {};
+  if ((crossings.blockingIssues || []).length > 0) {
+    blockers.push(`${crossings.blockingIssues.length} crossing review blockers`);
+  }
 
   return blockers;
 }
@@ -3447,6 +3518,7 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
       manifest.cwAlignmentGeometry,
       manifest.kml,
       manifest.roundabouts,
+      manifest.crossings,
       manifest.routeCatalog,
       manifest.featuredRoutesBase,
       manifest.legacyRoutingCompatibility?.cwBaseIndex,
@@ -3482,6 +3554,9 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
     ...(await existingVersionedFiles(resolve(publicDataDir, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
     ...(!manifest.roundabouts
       ? await existingVersionedFiles(publicDataDir, /^roundabouts\.json$/)
+      : []),
+    ...(!manifest.crossings
+      ? await existingVersionedFiles(publicDataDir, /^crossings(?:\.[0-9a-f]{12})?\.json$/)
       : []),
   ].filter((filePath) => !protectedPaths.has(filePath));
 
@@ -3542,6 +3617,13 @@ export function buildPromoteTargets(manifest, {
       label: "public roundabouts",
       source: resolveManifestPath(buildPublicDataDir, manifest.roundabouts),
       target: resolveManifestPath(publicDataDir, manifest.roundabouts),
+    });
+  }
+  if (manifest.crossings) {
+    targets.push({
+      label: "public crossings",
+      source: resolveManifestPath(buildPublicDataDir, manifest.crossings),
+      target: resolveManifestPath(publicDataDir, manifest.crossings),
     });
   }
   if (manifest.legacyRoutingCompatibility?.cwBaseIndex) {
@@ -3971,6 +4053,111 @@ const server = createServer(async (request, response) => {
           orphaned: nextState.joined.orphaned,
           geojson: nextState.geojson,
         });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/crossings/review") {
+      try {
+        sendJson(response, 200, crossingReviewResponse(await readCrossingReviewState()));
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/crossings/review") {
+      try {
+        const body = await readRequestJson(request);
+        const state = await readCrossingReviewState();
+        if (!state.sourceFresh) {
+          throw Object.assign(new Error("Crossing candidates are stale; regenerate before reviewing"), { status: 409 });
+        }
+        const candidate = state.candidates.crossings?.find((item) => item?.id === body?.id);
+        if (!candidate) throw Object.assign(new Error("Unknown crossing candidate id"), { status: 400 });
+        if (body?.candidateFingerprint !== candidate.fingerprint) {
+          throw Object.assign(new Error("Candidate changed; reload before reviewing"), { status: 400 });
+        }
+        if (!CROSSING_REVIEW_STATUSES.has(body?.status)) {
+          throw Object.assign(new Error("Review status must be accepted or rejected"), { status: 400 });
+        }
+        const note = typeof body?.note === "string" ? body.note.trim() : "";
+        if (note.length > 1000) throw Object.assign(new Error("Review note is too long"), { status: 400 });
+        const candidateMappingIds = new Set((candidate.mappings || []).map((mapping) => mapping.id));
+        const acceptedMappingIds = body.status === "accepted"
+          ? (Array.isArray(body.acceptedMappingIds) ? body.acceptedMappingIds : [...candidateMappingIds])
+          : [];
+        if (body.status === "accepted" && (!acceptedMappingIds.length
+          || acceptedMappingIds.some((id) => !candidateMappingIds.has(id)))) {
+          throw Object.assign(new Error("Accepted mappings must select current candidate mappings"), { status: 400 });
+        }
+        const mappingOverrides = Array.isArray(body.mappingOverrides) ? body.mappingOverrides : [];
+        const nextReviews = {
+          schemaVersion: 1,
+          reviews: {
+            ...(state.reviews.reviews || {}),
+            [candidate.id]: {
+              candidateFingerprint: candidate.fingerprint,
+              status: body.status,
+              acceptedMappingIds,
+              mappingOverrides,
+              note,
+              reviewedAt: new Date().toISOString(),
+            },
+          },
+          manualCrossings: state.reviews.manualCrossings || [],
+        };
+        const validation = joinCrossingReviews(state.candidates, nextReviews);
+        const item = validation.items.find((entry) => entry.candidate?.id === candidate.id);
+        if (item?.state === "invalid") {
+          throw Object.assign(new Error("Crossing mapping review is invalid"), { status: 400 });
+        }
+        await writeJsonAtomic(crossingReviewPath, nextReviews);
+        sendJson(response, 200, crossingReviewResponse(await readCrossingReviewState()));
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/crossings/manual") {
+      try {
+        const body = await readRequestJson(request);
+        const state = await readCrossingReviewState();
+        if (!state.sourceFresh) {
+          throw Object.assign(new Error("Crossing candidates are stale; regenerate before editing manual crossings"), { status: 409 });
+        }
+        const crossing = body?.crossing;
+        const issue = crossingIssue(crossing);
+        if (issue || !String(crossing?.id || "").startsWith("manual-crossing-")) {
+          throw Object.assign(new Error(`Invalid manual crossing: ${issue || "invalid_manual_id"}`), { status: 400 });
+        }
+        const now = new Date().toISOString();
+        const existing = (state.reviews.manualCrossings || []).find((item) => item.id === crossing.id);
+        const nextCrossing = {
+          ...crossing,
+          audit: {
+            createdAt: existing?.audit?.createdAt || crossing?.audit?.createdAt || now,
+            updatedAt: now,
+          },
+        };
+        const manualCrossings = (state.reviews.manualCrossings || []).filter((item) => item.id !== crossing.id);
+        manualCrossings.push(nextCrossing);
+        manualCrossings.sort((a, b) => a.id.localeCompare(b.id));
+        const nextReviews = {
+          schemaVersion: 1,
+          reviews: state.reviews.reviews || {},
+          manualCrossings,
+        };
+        const validation = joinCrossingReviews(state.candidates, nextReviews);
+        const manualItem = validation.manualItems.find((item) => item.crossing?.id === crossing.id);
+        if (manualItem?.state !== "manual") {
+          throw Object.assign(new Error("Manual crossing does not pass publication validation"), { status: 400 });
+        }
+        await writeJsonAtomic(crossingReviewPath, nextReviews);
+        sendJson(response, 200, crossingReviewResponse(await readCrossingReviewState()));
       } catch (error) {
         sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
       }

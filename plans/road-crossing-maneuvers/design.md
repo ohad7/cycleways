@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-14
 **Revision:** 2026-07-14 — replaced runtime geometric classification with offline candidate generation and editor-reviewed mappings
-**Status:** implementation-ready design; implementation not started
+**Status:** implemented in code; first reviewed-data rollout pending
 **Origin:** M1/S2 in `plans/navigation-ride-feedback-3/discussion.md`
 
 ## Outcome
@@ -40,6 +40,37 @@ current directionally legal route of about 10,111.6 m.
 This supersedes the earlier proposal to infer crossings while building cues.
 The geometry detector still has an important role, but only as an offline
 candidate producer and audit tool.
+
+## Implementation record — 2026-07-14
+
+The version-1 architecture is implemented across processing, the editor,
+publication, shared routing, and the native navigation presentation. The
+implementation includes graph-wide local candidate extraction, confirmed-only
+review joining, multi-mapping records, manifest/offline publication, pure
+attestation matching for main/approach/rejoin routes, cue replacement, Hebrew
+and English voice, a dedicated card/icon, haptics, and camera participation.
+
+The first production data release is deliberately not part of this code commit.
+Two existing data gates must be resolved through their normal review workflows:
+
+- the elevated graph currently has 48,856 edges while the released stable
+  edge-share registry contains 48,381, so candidate generation refuses to
+  proceed until the 475 new identities are reviewed and promoted; and
+- the relevant Road 99 manual traversal evidence is still `manual-unreviewed`,
+  so Build will reject an accepted crossing mapping that uses it until its
+  direction policy is reviewed.
+
+With a temporary complete identity registry, the graph-wide detector produced
+1,656 logical review candidates and found the Road 99 location without a
+coordinate special case (`crossing:1092567462:33.2351-35.5800:48308`). This is
+diagnostic evidence only: it is not committed as an accepted crossing and
+cannot reach runtime until the editor and Build gates pass.
+
+The initial editor release supports independent mapping selection and validated
+advanced JSON repair/manual records while displaying all mappings, action
+arrows, corridor context, and base one-way arrows on the map. The guided
+click-by-click trace authoring UX described below remains a curator-workflow
+enhancement; it does not weaken publication validation or runtime safety.
 
 ## Problem definition
 

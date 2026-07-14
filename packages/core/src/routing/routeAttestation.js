@@ -201,9 +201,10 @@ export function navigationPlanFingerprint(navigationRoute) {
       Number(Number(point?.lng).toFixed(7)),
     ]),
     junctions: navigationRoute.junctions || null,
+    crossings: navigationRoute.crossings || null,
     segmentSpans: navigationRoute.segmentSpans || [],
     maneuverGeneratorVersion:
-      navigationRoute.maneuverGeneratorVersion || "navigation-cues-v2",
+      navigationRoute.maneuverGeneratorVersion || "navigation-cues-v3",
     cuePlan: navigationRoute.cuePlan || null,
   });
 }

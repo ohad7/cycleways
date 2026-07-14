@@ -6,6 +6,7 @@ import {
 } from "./lib/edge-pick.mjs";
 import { migrateOverlayEdgeReplacement } from "./lib/overlay-edge-migration.mjs";
 import { filterRoundaboutItems } from "./lib/roundaboutReview.mjs";
+import { filterCrossingItems } from "./lib/crossingReview.mjs";
 import {
   buildBaseEdgeDirectionLayer,
   summarizeBaseEdgeDirectionLayer,
@@ -204,6 +205,14 @@ const state = {
     filter: "all",
     selectedId: null,
   },
+  crossings: {
+    loading: false,
+    loaded: false,
+    error: null,
+    data: null,
+    filter: "all",
+    selectedId: null,
+  },
   baseOverlay: {
     enabled: false,
     loading: false,
@@ -260,6 +269,7 @@ const els = {
   workspaceBase: document.getElementById("workspace-base"),
   workspaceOverlay: document.getElementById("workspace-overlay"),
   workspaceRoundabouts: document.getElementById("workspace-roundabouts"),
+  workspaceCrossings: document.getElementById("workspace-crossings"),
   workspaceVideoSync: document.getElementById("workspace-video-sync"),
   workspaceRouteCatalog: document.getElementById("workspace-route-catalog"),
   baseGraphPanel: document.getElementById("base-graph-panel"),
@@ -271,6 +281,15 @@ const els = {
   roundaboutsFilter: document.getElementById("roundabouts-filter"),
   roundaboutsList: document.getElementById("roundabouts-list"),
   roundaboutsDetail: document.getElementById("roundabouts-detail"),
+  crossingsPanel: document.getElementById("crossings-panel"),
+  crossingsStatus: document.getElementById("crossings-status"),
+  crossingsCoverage: document.getElementById("crossings-coverage"),
+  crossingsSummary: document.getElementById("crossings-summary"),
+  crossingsFilter: document.getElementById("crossings-filter"),
+  crossingsList: document.getElementById("crossings-list"),
+  crossingsDetail: document.getElementById("crossings-detail"),
+  crossingsManualJson: document.getElementById("crossings-manual-json"),
+  crossingsSaveManual: document.getElementById("crossings-save-manual"),
   routeCatalogPanel: document.getElementById("route-catalog-panel"),
   segmentDrawer: document.getElementById("segment-drawer"),
   toggleSegments: document.getElementById("toggle-segments"),
@@ -1599,7 +1618,8 @@ function updateWorkspaceLayerVisibility() {
   const showBaseGraphVisual = showBaseWorkspaceGraph || showUnresolvedSegments || composing || editingEdges;
   const showBaseGraphHit = showBaseWorkspaceGraph || composing || editingEdges;
   const showBaseEdit = showBaseWorkspaceGraph && state.workspaceMode === "base";
-  const showOneWayDirections = showBaseEdit && state.baseOverlay.showOneWayDirections;
+  const showCrossings = state.workspaceMode === "crossings";
+  const showOneWayDirections = (showBaseEdit && state.baseOverlay.showOneWayDirections) || showCrossings;
   const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
   const showDirectionReview = showOverlay && state.directionReview.loaded;
   const showRoundabouts = state.workspaceMode === "roundabouts";
@@ -1672,6 +1692,14 @@ function updateWorkspaceLayerVisibility() {
     "roundabout-points-layer",
   ]) {
     setLayerVisibility(layerId, showRoundabouts);
+  }
+  for (const layerId of [
+    "crossing-corridors-layer",
+    "crossing-context-layer",
+    "crossing-actions-layer",
+    "crossing-arrows-layer",
+  ]) {
+    setLayerVisibility(layerId, showCrossings);
   }
   if (map.getLayer("selected-segment")) {
     map.setPaintProperty("selected-segment", "line-color", showDirectionReview ? "#64748b" : "#f2c94c");
@@ -3695,14 +3723,16 @@ function renderWorkspaceChrome() {
   els.workspaceBase.classList.toggle("active", state.workspaceMode === "base");
   els.workspaceOverlay.classList.toggle("active", state.workspaceMode === "overlay");
   els.workspaceRoundabouts.classList.toggle("active", state.workspaceMode === "roundabouts");
+  els.workspaceCrossings.classList.toggle("active", state.workspaceMode === "crossings");
   els.workspaceVideoSync.classList.toggle("active", state.workspaceMode === "video-sync");
   els.workspaceRouteCatalog.classList.toggle("active", state.workspaceMode === "route-catalog");
   els.baseGraphPanel.hidden = state.workspaceMode !== "base";
   els.connectorLensPanel.hidden = state.workspaceMode !== "base";
   els.cwOverlayPanel.hidden = state.workspaceMode !== "overlay";
   els.roundaboutsPanel.hidden = state.workspaceMode !== "roundabouts";
+  els.crossingsPanel.hidden = state.workspaceMode !== "crossings";
   els.routeCatalogPanel.hidden = state.workspaceMode !== "route-catalog";
-  els.mapToolbar.hidden = state.workspaceMode === "roundabouts";
+  els.mapToolbar.hidden = state.workspaceMode === "roundabouts" || state.workspaceMode === "crossings";
   els.toggleBaseOverlay.classList.toggle("active", state.baseOverlay.enabled);
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
 }
@@ -3872,6 +3902,226 @@ function renderRoundaboutsPanel() {
   }
   for (const button of els.roundaboutsDetail.querySelectorAll("[data-move]")) {
     button.addEventListener("click", () => moveRoundaboutSelection(Number(button.dataset.move)));
+  }
+}
+
+async function loadCrossingReview() {
+  state.crossings.loading = true;
+  state.crossings.error = null;
+  renderCrossingsPanel();
+  try {
+    const response = await fetch("/api/crossings/review");
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load crossings");
+    state.crossings.data = payload;
+    state.crossings.loaded = true;
+    const ids = crossingFilteredItems().map((item) => item.candidate?.id).filter(Boolean);
+    if (!ids.includes(state.crossings.selectedId)) state.crossings.selectedId = ids[0] || null;
+    updateCrossingSources();
+  } catch (error) {
+    state.crossings.error = error instanceof Error ? error.message : String(error);
+    state.crossings.loaded = false;
+  } finally {
+    state.crossings.loading = false;
+    renderCrossingsPanel();
+  }
+}
+
+function crossingReviewItems() {
+  const candidates = state.crossings.data?.items || [];
+  const manual = (state.crossings.data?.manualItems || []).map((item) => ({
+    candidate: item.crossing,
+    review: null,
+    state: item.state,
+    manual: true,
+  }));
+  return [...candidates, ...manual];
+}
+
+function crossingFilteredItems() {
+  const items = crossingReviewItems();
+  if (state.crossings.filter === "manual") return items.filter((item) => item.manual);
+  return filterCrossingItems(items, state.crossings.filter);
+}
+
+function updateCrossingLayerFilters() {
+  const ids = crossingFilteredItems().map((item) => item.candidate.id);
+  const filter = ids.length
+    ? ["in", ["get", "id"], ["literal", ids]]
+    : ["==", ["get", "id"], "__none__"];
+  for (const layerId of [
+    "crossing-corridors-layer", "crossing-context-layer",
+    "crossing-actions-layer", "crossing-arrows-layer",
+  ]) {
+    if (map.getLayer(layerId)) map.setFilter(layerId, filter);
+  }
+}
+
+function updateCrossingSources() {
+  const geojson = state.crossings.data?.geojson || {};
+  setSourceData("crossing-corridors", geojson.corridors || EMPTY_FEATURE_COLLECTION);
+  setSourceData("crossing-context", geojson.context || EMPTY_FEATURE_COLLECTION);
+  setSourceData("crossing-actions", geojson.action || EMPTY_FEATURE_COLLECTION);
+  setSourceData("crossing-arrows", geojson.arrows || EMPTY_FEATURE_COLLECTION);
+  updateCrossingLayerFilters();
+}
+
+function fitCrossingCandidate(candidate) {
+  const bbox = candidate?.bbox;
+  if (!Array.isArray(bbox) || bbox.length !== 4) return;
+  const bounds = new mapboxgl.LngLatBounds([bbox[0], bbox[1]], [bbox[2], bbox[3]]);
+  if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
+    bounds.extend([bbox[0] + 0.0002, bbox[1] + 0.0002]);
+    bounds.extend([bbox[0] - 0.0002, bbox[1] - 0.0002]);
+  }
+  map.fitBounds(bounds, { padding: 120, maxZoom: 19, duration: 400 });
+}
+
+async function saveCrossingReview(status) {
+  const item = state.crossings.data?.items?.find(
+    (entry) => entry.candidate?.id === state.crossings.selectedId,
+  );
+  if (!item) return;
+  const note = els.crossingsDetail.querySelector("textarea[data-crossing-note]")?.value || "";
+  const acceptedMappingIds = [...els.crossingsDetail.querySelectorAll("input[data-mapping-id]:checked")]
+    .map((input) => input.dataset.mappingId);
+  let mappingOverrides = [];
+  const overrideText = els.crossingsDetail.querySelector("textarea[data-mapping-overrides]")?.value.trim();
+  if (overrideText) {
+    mappingOverrides = JSON.parse(overrideText);
+    if (!Array.isArray(mappingOverrides)) throw new Error("Mapping overrides must be a JSON array.");
+  }
+  const response = await fetch("/api/crossings/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: item.candidate.id,
+      candidateFingerprint: item.candidate.fingerprint,
+      status,
+      acceptedMappingIds,
+      mappingOverrides,
+      note,
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not save crossing review");
+  state.crossings.data = payload;
+  updateCrossingSources();
+  renderCrossingsPanel();
+}
+
+async function saveManualCrossing() {
+  const crossing = JSON.parse(els.crossingsManualJson.value);
+  const response = await fetch("/api/crossings/manual", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ crossing }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not save manual crossing");
+  state.crossings.data = payload;
+  state.crossings.selectedId = crossing.id;
+  updateCrossingSources();
+  renderCrossingsPanel();
+  fitCrossingCandidate(crossing);
+}
+
+function moveCrossingSelection(delta) {
+  const items = crossingFilteredItems();
+  if (!items.length) return;
+  const current = items.findIndex((item) => item.candidate.id === state.crossings.selectedId);
+  const nextIndex = Math.max(0, Math.min(items.length - 1, (current < 0 ? 0 : current) + delta));
+  state.crossings.selectedId = items[nextIndex].candidate.id;
+  renderCrossingsPanel();
+  fitCrossingCandidate(items[nextIndex].candidate);
+}
+
+function renderCrossingsPanel() {
+  if (!els.crossingsPanel || state.workspaceMode !== "crossings") return;
+  if (state.crossings.loading) {
+    els.crossingsStatus.textContent = "Loading";
+    return;
+  }
+  if (state.crossings.error) {
+    els.crossingsStatus.textContent = "Unavailable";
+    els.crossingsCoverage.innerHTML = `<div class="empty-state">${escapeHtml(state.crossings.error)}</div>`;
+    els.crossingsSummary.innerHTML = "";
+    els.crossingsList.innerHTML = "";
+    els.crossingsDetail.innerHTML = "";
+    return;
+  }
+  const data = state.crossings.data;
+  if (!data) return;
+  els.crossingsStatus.textContent = data.sourceFresh ? "Current graph snapshot" : "Stale — regenerate candidates";
+  const coverage = data.coverage || {};
+  els.crossingsCoverage.innerHTML = `
+    <strong>Graph-wide review queue</strong>
+    <span>Base graph: ${escapeHtml(coverage.baseGraph || "unknown")}</span>
+    <span>Stable edge IDs: ${escapeHtml(coverage.stableEdgeShareIds || "unknown")}</span>
+    <span>Grade separation: ${escapeHtml(coverage.gradeSeparationTags || "unknown")}</span>
+    <span>One-way base-edge arrows are shown on the map in this workspace.</span>
+  `;
+  els.crossingsSummary.innerHTML = Object.entries(data.summary || {})
+    .map(([key, value]) => `<div class="base-overlay-stat"><strong>${value}</strong><span>${escapeHtml(key)}</span></div>`)
+    .join("");
+  els.crossingsFilter.value = state.crossings.filter;
+  const items = crossingFilteredItems();
+  els.crossingsList.innerHTML = "";
+  for (const item of items) {
+    const candidate = item.candidate;
+    const roadName = candidate.crossedRoad?.name || candidate.crossedRoad?.highway || "road";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `roundabout-review-item state-${item.state}${candidate.id === state.crossings.selectedId ? " active" : ""}`;
+    button.innerHTML = `<strong>${escapeHtml(roadName)}</strong><span>${escapeHtml(item.state)} · ${candidate.mappings?.length || 0} mapping(s)${candidate.warnings?.length ? ` · ⚠ ${candidate.warnings.length}` : ""}</span>`;
+    button.addEventListener("click", () => {
+      state.crossings.selectedId = candidate.id;
+      renderCrossingsPanel();
+      fitCrossingCandidate(candidate);
+    });
+    els.crossingsList.appendChild(button);
+  }
+  const selected = crossingReviewItems().find((item) => item.candidate.id === state.crossings.selectedId);
+  if (!selected) {
+    els.crossingsDetail.innerHTML = `<div class="empty-state">No crossings in this filter.</div>`;
+    return;
+  }
+  const candidate = selected.candidate;
+  if (selected.manual) {
+    els.crossingsDetail.innerHTML = `
+      <h3>${escapeHtml(candidate.id)}</h3>
+      <p>Manual confirmed crossing · ${candidate.mappings?.length || 0} mapping(s)</p>
+      <button type="button" data-edit-manual class="secondary-button">Load into manual editor</button>
+      <div class="action-row"><button type="button" data-move="-1" class="secondary-button">Previous</button><button type="button" data-move="1" class="secondary-button">Next</button></div>
+    `;
+    els.crossingsDetail.querySelector("[data-edit-manual]")?.addEventListener("click", () => {
+      els.crossingsManualJson.value = JSON.stringify(candidate, null, 2);
+    });
+  } else {
+    const accepted = new Set(selected.review?.acceptedMappingIds || candidate.mappings?.map((mapping) => mapping.id) || []);
+    const mappings = (candidate.mappings || []).map((mapping) => {
+      const slices = (section) => (mapping.match?.[section] || [])
+        .map((slice) => `${slice.edgeShareId}:${slice.fromFractionQ}→${slice.toFractionQ}`).join(" · ");
+      return `<label class="crossing-mapping-review"><span><input type="checkbox" data-mapping-id="${escapeHtml(mapping.id)}" ${accepted.has(mapping.id) ? "checked" : ""}> <strong>${escapeHtml(mapping.direction || "explicit")}</strong> · ${escapeHtml(mapping.policy?.state || "unknown")}</span><code>before ${escapeHtml(slices("before"))}</code><code>action ${escapeHtml(slices("action"))}</code><code>after ${escapeHtml(slices("after"))}</code></label>`;
+    }).join("");
+    els.crossingsDetail.innerHTML = `
+      <h3>${escapeHtml(candidate.id)}</h3>
+      <p>${escapeHtml(candidate.crossedRoad?.name || candidate.crossedRoad?.highway || "Unknown road")} · ${escapeHtml(selected.state)}</p>
+      <p>Evidence: ${escapeHtml((candidate.evidence || []).join(", ") || "none")}</p>
+      <p>Warnings: ${escapeHtml((candidate.warnings || []).join(", ") || "none")}</p>
+      ${mappings}
+      <label class="field-label">Mapping overrides (advanced JSON array)</label>
+      <textarea data-mapping-overrides class="text-input textarea" rows="5" spellcheck="false">${escapeHtml(JSON.stringify(selected.review?.mappingOverrides || [], null, 2))}</textarea>
+      <textarea data-crossing-note class="text-input textarea" rows="3" maxlength="1000" placeholder="Review note">${escapeHtml(selected.review?.note || "")}</textarea>
+      <div class="action-row"><button type="button" data-review="accepted" class="primary-button">Accept selected mappings</button><button type="button" data-review="rejected" class="secondary-button danger">Reject</button></div>
+      <div class="action-row"><button type="button" data-move="-1" class="secondary-button">Previous</button><button type="button" data-move="1" class="secondary-button">Next</button></div>
+    `;
+    for (const button of els.crossingsDetail.querySelectorAll("[data-review]")) {
+      button.addEventListener("click", () => saveCrossingReview(button.dataset.review).catch(showError));
+    }
+  }
+  for (const button of els.crossingsDetail.querySelectorAll("[data-move]")) {
+    button.addEventListener("click", () => moveCrossingSelection(Number(button.dataset.move)));
   }
 }
 
@@ -5358,6 +5608,7 @@ function renderAll() {
   renderBaseOverlayPanel();
   renderConnectorLensPanel();
   renderRoundaboutsPanel();
+  renderCrossingsPanel();
   renderComposeStatus();
   updateMapSources();
 }
@@ -5414,7 +5665,7 @@ function setMode(mode) {
 }
 
 async function setWorkspaceMode(mode) {
-  if (!["segments", "base", "overlay", "roundabouts", "video-sync", "route-catalog"].includes(mode)) return;
+  if (!["segments", "base", "overlay", "roundabouts", "crossings", "video-sync", "route-catalog"].includes(mode)) return;
   if (state.workspaceMode === mode) {
     if ((mode === "base" || mode === "overlay") && !state.baseOverlay.loaded) {
       state.baseOverlay.enabled = true;
@@ -5450,7 +5701,7 @@ async function setWorkspaceMode(mode) {
     state.baseOverlay.selectedManualVertexIndex = -1;
   }
 
-  if (mode === "base" || mode === "overlay" || mode === "roundabouts") {
+  if (mode === "base" || mode === "overlay" || mode === "roundabouts" || mode === "crossings") {
     state.baseOverlay.enabled = true;
     if (!state.baseOverlay.loaded) {
       renderAll();
@@ -5461,13 +5712,18 @@ async function setWorkspaceMode(mode) {
         ? "Base Graph mode: edit manual base edges."
         : mode === "overlay"
           ? "CW Overlay mode: select a segment, then choose graph edges."
-          : "Roundabouts mode: review classifications from the saved OSM snapshot.",
+          : mode === "roundabouts"
+            ? "Roundabouts mode: review classifications from the saved OSM snapshot."
+            : "Crossings mode: review directed side-change mappings; arrows run from entry to exit.",
     );
     if (mode === "base") {
       activateConnectorLensMode().catch(showError);
     }
     if (mode === "roundabouts" && !state.roundabouts.loaded && !state.roundabouts.loading) {
       await loadRoundaboutReview();
+    }
+    if (mode === "crossings" && !state.crossings.loaded && !state.crossings.loading) {
+      await loadCrossingReview();
     }
   } else if (mode === "video-sync") {
     state.baseOverlay.enabled = false;
@@ -8454,6 +8710,7 @@ function wireEvents() {
     markSelectedDirectionUnavailable().catch(showError),
   );
   els.workspaceRoundabouts.addEventListener("click", () => setWorkspaceMode("roundabouts").catch(showError));
+  els.workspaceCrossings.addEventListener("click", () => setWorkspaceMode("crossings").catch(showError));
   els.workspaceVideoSync.addEventListener("click", () => setWorkspaceMode("video-sync").catch(showError));
   els.workspaceRouteCatalog.addEventListener("click", () => setWorkspaceMode("route-catalog").catch(showError));
   els.roundaboutsFilter.addEventListener("change", () => {
@@ -8463,6 +8720,14 @@ function wireEvents() {
     updateRoundaboutLayerFilters();
     renderRoundaboutsPanel();
   });
+  els.crossingsFilter.addEventListener("change", () => {
+    state.crossings.filter = els.crossingsFilter.value;
+    const first = crossingFilteredItems()[0];
+    state.crossings.selectedId = first?.candidate?.id || null;
+    updateCrossingLayerFilters();
+    renderCrossingsPanel();
+  });
+  els.crossingsSaveManual.addEventListener("click", () => saveManualCrossing().catch(showError));
   els.segmentSearch.addEventListener("input", renderList);
   els.toggleSegments.addEventListener("click", () => setSegmentDrawer(!state.segmentsOpen));
   els.closeSegments.addEventListener("click", () => setSegmentDrawer(false));
@@ -8601,6 +8866,24 @@ function wireEvents() {
     }, 0);
     setStatus(`Selected mapped CW segment ${feature.properties.overlaySegmentName || segmentId}.`);
   });
+
+  for (const layerId of ["crossing-actions-layer", "crossing-arrows-layer", "crossing-corridors-layer"]) {
+    map.on("click", layerId, (event) => {
+      if (state.workspaceMode !== "crossings") return;
+      const crossingId = String(event.features?.[0]?.properties?.id || "");
+      const item = crossingReviewItems().find((entry) => entry.candidate?.id === crossingId);
+      if (!item) return;
+      state.crossings.selectedId = crossingId;
+      renderCrossingsPanel();
+      fitCrossingCandidate(item.candidate);
+    });
+    map.on("mouseenter", layerId, () => {
+      if (state.workspaceMode === "crossings") map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", layerId, () => {
+      if (state.workspaceMode === "crossings") map.getCanvas().style.cursor = "";
+    });
+  }
 
   map.on("click", "base-graph-edges-hit-layer", (event) => {
     if (state.mode !== "select" && !isComposingNewSegmentEdges()) return;
@@ -9149,6 +9432,11 @@ async function addMapLayers() {
     });
   }
   for (const sourceId of ["roundabout-lines", "roundabout-points", "roundabout-corridors"]) {
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
+    }
+  }
+  for (const sourceId of ["crossing-corridors", "crossing-context", "crossing-actions", "crossing-arrows"]) {
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
     }
@@ -10006,6 +10294,10 @@ async function addMapLayers() {
     "accepted", "#15803d",
     "rejected", "#b91c1c",
     "stale", "#d97706",
+    "staleAccepted", "#d97706",
+    "staleRejected", "#d97706",
+    "invalid", "#c026d3",
+    "manual", "#2563eb",
     "#f59e0b",
   ];
   if (!map.getLayer("roundabout-corridors-layer")) {
@@ -10055,7 +10347,53 @@ async function addMapLayers() {
       },
     });
   }
+  if (!map.getLayer("crossing-corridors-layer")) {
+    map.addLayer({
+      id: "crossing-corridors-layer",
+      type: "line",
+      source: "crossing-corridors",
+      layout: { "line-cap": "round", visibility: "none" },
+      paint: { "line-color": "#7c3aed", "line-width": 8, "line-opacity": 0.45 },
+    });
+  }
+  if (!map.getLayer("crossing-context-layer")) {
+    map.addLayer({
+      id: "crossing-context-layer",
+      type: "line",
+      source: "crossing-context",
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: { "line-color": reviewColor, "line-width": 5, "line-opacity": 0.7, "line-dasharray": [1, 1.3] },
+    });
+  }
+  if (!map.getLayer("crossing-actions-layer")) {
+    map.addLayer({
+      id: "crossing-actions-layer",
+      type: "line",
+      source: "crossing-actions",
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: { "line-color": reviewColor, "line-width": 9, "line-opacity": 0.92 },
+    });
+  }
+  if (!map.getLayer("crossing-arrows-layer")) {
+    map.addLayer({
+      id: "crossing-arrows-layer",
+      type: "symbol",
+      source: "crossing-arrows",
+      layout: {
+        visibility: "none",
+        "symbol-placement": "line",
+        "symbol-spacing": 45,
+        "text-field": "▶",
+        "text-size": 18,
+        "text-rotation-alignment": "map",
+        "text-keep-upright": false,
+        "text-allow-overlap": true,
+      },
+      paint: { "text-color": reviewColor, "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
+    });
+  }
   updateRoundaboutSources();
+  updateCrossingSources();
 }
 
 // ============================================================

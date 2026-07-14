@@ -17,6 +17,7 @@ const manifest = {
     metadata: "routing-compat/cw-base-index-v1.metadata.json",
   },
   roundabouts: "roundabouts.json",
+  crossings: "crossings.json",
 };
 
 const targets = buildPromoteTargets(manifest);
@@ -50,6 +51,14 @@ assert.equal(
 assert.equal(
   byLabel.get("public roundabouts").target,
   path.join(repoRoot, "public-data/roundabouts.json"),
+);
+assert.equal(
+  byLabel.get("public crossings").source,
+  path.join(repoRoot, "build/public-data/crossings.json"),
+);
+assert.equal(
+  byLabel.get("public crossings").target,
+  path.join(repoRoot, "public-data/crossings.json"),
 );
 
 assert.equal(

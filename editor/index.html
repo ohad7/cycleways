@@ -27,6 +27,7 @@
             <button id="workspace-base" class="tool-button" type="button">Base Graph</button>
             <button id="workspace-overlay" class="tool-button" type="button">CW Overlay</button>
             <button id="workspace-roundabouts" class="tool-button" type="button">Roundabouts</button>
+            <button id="workspace-crossings" class="tool-button" type="button">Crossings</button>
             <button id="workspace-video-sync" class="tool-button" type="button">Video Sync</button>
             <button id="workspace-route-catalog" class="tool-button" type="button">Route Catalog</button>
           </div>
@@ -472,6 +473,35 @@
             </select>
             <div id="roundabouts-list" class="roundabouts-list"></div>
             <div id="roundabouts-detail" class="roundabouts-detail"></div>
+          </section>
+
+          <section id="crossings-panel" class="panel workspace-panel" hidden>
+            <header class="panel-header">
+              <h2>Road Crossings</h2>
+              <span id="crossings-status">Not loaded</span>
+            </header>
+            <div id="crossings-coverage" class="roundabouts-coverage"></div>
+            <div id="crossings-summary" class="base-overlay-review-stats"></div>
+            <label class="field-label" for="crossings-filter">Show</label>
+            <select id="crossings-filter" class="text-input compact-select">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+              <option value="staleAccepted">Stale accepted</option>
+              <option value="staleRejected">Stale rejected</option>
+              <option value="invalid">Invalid</option>
+              <option value="manual">Manual</option>
+              <option value="warnings">Warnings</option>
+            </select>
+            <div id="crossings-list" class="roundabouts-list"></div>
+            <div id="crossings-detail" class="roundabouts-detail"></div>
+            <details class="crossing-manual-editor">
+              <summary>Add or replace a manual crossing</summary>
+              <p>Paste a complete <code>manual-crossing-*</code> logical crossing. Multiple directed mappings are supported.</p>
+              <textarea id="crossings-manual-json" class="text-input textarea" rows="8" spellcheck="false"></textarea>
+              <button id="crossings-save-manual" type="button" class="secondary-button">Validate and save manual crossing</button>
+            </details>
           </section>
 
           <section id="route-catalog-panel" class="panel workspace-panel" hidden>

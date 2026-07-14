@@ -6,8 +6,11 @@ import {
 
 assert.deepEqual(optionalManifestJsonAssets({}), []);
 assert.deepEqual(
-  optionalManifestJsonAssets({ roundabouts: "roundabouts.json" }),
-  [{ logicalPath: "public-data/roundabouts.json" }],
+  optionalManifestJsonAssets({ roundabouts: "roundabouts.json", crossings: "crossings.json" }),
+  [
+    { logicalPath: "public-data/roundabouts.json" },
+    { logicalPath: "public-data/crossings.json" },
+  ],
 );
 
 assert.deepEqual(
@@ -18,6 +21,7 @@ assert.deepEqual(
     baseRoutingShards: "routing/manifest.json",
     routeCatalog: "route-catalog.abc123.json",
     cwAlignmentGeometry: "cw-alignments.json",
+    crossings: "crossings.json",
     legacyRoutingCompatibility: {
       cwBaseIndex: "routing-compat/cw-v1.json",
       metadata: "routing-compat/cw-v1.metadata.json",
@@ -28,6 +32,7 @@ assert.deepEqual(
       logicalPath: "public-data/bike_roads.geojson",
       targetPath: "public-data/bike_roads.geojson.json",
     },
+    { logicalPath: "public-data/crossings.json" },
     { logicalPath: "public-data/cw-alignments.json" },
     { logicalPath: "public-data/cw-base-index.json" },
     { logicalPath: "public-data/route-catalog.abc123.json" },

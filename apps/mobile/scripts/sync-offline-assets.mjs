@@ -378,9 +378,9 @@ function assetMapEntry(logicalPath, targetLogicalPath = logicalPath) {
 }
 
 export function optionalManifestJsonAssets(manifest = {}) {
-  return manifest.roundabouts
-    ? [{ logicalPath: `public-data/${String(manifest.roundabouts).replace(/^\/+/, "")}` }]
-    : [];
+  return [manifest.roundabouts, manifest.crossings]
+    .filter(Boolean)
+    .map((relative) => ({ logicalPath: `public-data/${String(relative).replace(/^\/+/, "")}` }));
 }
 
 export function manifestReferencedJsonAssets(manifest = {}) {
@@ -403,6 +403,7 @@ export function manifestReferencedJsonAssets(manifest = {}) {
   add(manifest.cwBaseIndex);
   add(manifest.baseRoutingShards);
   add(manifest.roundabouts);
+  add(manifest.crossings);
   add(manifest.cwAlignmentGeometry);
   add(manifest.legacyRoutingCompatibility?.cwBaseIndex);
   add(manifest.legacyRoutingCompatibility?.metadata);
@@ -441,6 +442,7 @@ async function verifyManifestAssetHashes(manifest) {
     cwBaseIndex: manifest.cwBaseIndex,
     baseRoutingShards: manifest.baseRoutingShards,
     roundabouts: manifest.roundabouts,
+    crossings: manifest.crossings,
     cwAlignmentGeometry: manifest.cwAlignmentGeometry,
     legacyCwBaseIndex: manifest.legacyRoutingCompatibility?.cwBaseIndex,
     legacyRoutingCompatibilityMetadata:

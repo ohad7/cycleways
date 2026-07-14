@@ -115,8 +115,30 @@ function createNavigationRoute({
     passesNear: arrayOfStrings(metadata?.passesNear),
     segmentSpans: reconcileSegmentSpans(routeState?.segmentSpans, computedDistance),
     junctions: cloneJunctionList(routeState?.junctions),
-    maneuverGeneratorVersion: "navigation-cues-v2",
+    crossings: cloneCrossingList(routeState?.crossings),
+    maneuverGeneratorVersion: "navigation-cues-v3",
   };
+}
+
+function cloneCrossingList(rawCrossings) {
+  if (!Array.isArray(rawCrossings)) return null;
+  return rawCrossings
+    .filter((crossing) =>
+      crossing?.kind === "crossing"
+      && crossing.complete === true
+      && Number.isFinite(Number(crossing.entryMeters))
+      && Number.isFinite(Number(crossing.exitMeters))
+      && Number(crossing.exitMeters) >= Number(crossing.entryMeters))
+    .map((crossing) => ({
+      kind: "crossing",
+      crossingId: String(crossing.crossingId || ""),
+      mappingId: String(crossing.mappingId || ""),
+      crossingKind: crossing.crossingKind || "side-change",
+      crossedRoadName: crossing.crossedRoadName || null,
+      entryMeters: Number(crossing.entryMeters),
+      exitMeters: Number(crossing.exitMeters),
+      complete: true,
+    }));
 }
 
 // Network junction nodes (3+ edges) near the route, baked in at route

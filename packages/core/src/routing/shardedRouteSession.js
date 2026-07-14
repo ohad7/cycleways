@@ -288,6 +288,7 @@ class ShardedRouteSession {
       distanceMeters: 0,
       failure,
       snappedEndpoints: [],
+      routingValidation: null,
     });
     if (!this.manager || typeof this.manager.previewBaseRoute !== "function") {
       return empty("no-router");

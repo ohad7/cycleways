@@ -37,6 +37,20 @@ import { createCueHapticPlanner } from "@cycleways/core/navigation/cueHaptics.js
   );
 }
 
+// Reviewed crossings use the normal maneuver pattern.
+{
+  const preview = createCueHapticPlanner();
+  assert.equal(
+    preview.plan({ kind: "cue", cueType: "crossing", phase: "preview" }, 1000).kind,
+    "light",
+  );
+  const final = createCueHapticPlanner();
+  assert.equal(
+    final.plan({ kind: "cue", cueType: "crossing", phase: "final" }, 1000).kind,
+    "medium",
+  );
+}
+
 // Acquiring the selected route start gets one affirmative haptic.
 {
   const planner = createCueHapticPlanner();

@@ -1,7 +1,7 @@
 # Reviewed road-crossing maneuvers — implementation plan
 
 **Date:** 2026-07-14
-**Status:** planned; implementation not started
+**Status:** code implemented and automated validation complete; reviewed-data and manual gates pending
 **Design:** `plans/road-crossing-maneuvers/design.md`
 
 ## Goal
@@ -18,6 +18,55 @@ roundabout workflow:
 
 This plan changes navigation semantics but not route search costs or route
 geometry.
+
+## Implementation status — 2026-07-14
+
+Implemented and automated:
+
+- schema/review parity modules and source-controlled empty review data;
+- local graph-wide candidate generation with stable-share completeness,
+  traversal-policy and known grade-separation gates;
+- a Crossings editor workspace showing all candidates/mappings, corridor and
+  direction overlays, independent mapping acceptance, advanced validated
+  mapping repair, and manual multi-mapping records;
+- Build validation, optional confirmed-only `crossings.json`, immutable
+  manifest/Promote cleanup, shared asset loading, and native offline sync;
+- pure directed attestation matching with partial-slice progress, graph/policy
+  compatibility, reviewed-anchor sanity checks, repeated visits, and
+  null-versus-empty evidence;
+- effective main-route preparation and shared connector attestation/matching
+  for both approach and rejoin;
+- `navigation-cues-v3`, corner suppression, crossing cue/compound behavior,
+  Hebrew and English speech, dedicated presentation/icon, normal maneuver
+  haptics, camera eligibility, and navigation-plan fingerprinting; and
+- focused crossing suites, existing roundabout/directionality regressions,
+  the complete `npm test` suite, and the production web build.
+
+Implementation refinements still open:
+
+- replace the editor's advanced JSON mapping repair/manual editor with the
+  guided click-by-click ordered edge trace described in Task 6;
+- add server-level manual update/delete convenience endpoints and browser smoke
+  coverage (Build remains the authoritative graph/policy validator meanwhile);
+- expand the detector control corpus and candidate audit reports beyond the
+  initial synthetic and Road 99 diagnostics; and
+- add the final committed Road 99 route/cue regression after its stable shares,
+  direction policy, and crossing mapping can be reviewed rather than guessed.
+
+First-data-rollout blockers and manual gates:
+
+- promote 475 missing stable share IDs (48,856 current graph edges versus
+  48,381 released registry entries), then regenerate candidates;
+- review the Road 99 manual base-edge direction policy;
+- accept/repair the Road 99 mapping in the Crossings editor and Build/Promote
+  the resulting artifact; and
+- perform the already-deferred editor plus simulator/device/audio validation
+  when local access is available.
+
+The graph-wide diagnostic run using a temporary complete registry produced
+1,656 logical candidates and found Road 99 as
+`crossing:1092567462:33.2351-35.5800:48308`, with action share 48308. That run
+was not promoted or copied into source-controlled review data.
 
 ## Delivery order
 

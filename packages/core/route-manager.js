@@ -347,6 +347,7 @@ class RouteManager {
         distanceMeters: 0,
         failure: "no-base-network",
         snappedEndpoints: [],
+        routingValidation: null,
       };
     }
     this._connectorCostProfile = connectorProfile;
@@ -379,6 +380,7 @@ class RouteManager {
         distanceMeters: 0,
         failure: candidate.failure || route.failure || "no-path",
         snappedEndpoints,
+        routingValidation: null,
       };
     }
     return {
@@ -389,6 +391,11 @@ class RouteManager {
       edgeIds: route.traversals.map((traversal) => traversal.edge.id),
       edgeCosts: route.traversals.map((traversal) =>
         this._baseTraversalDiagnostics(traversal),
+      ),
+      routingValidation: this._baseRouteAttestation(
+        route,
+        snapped,
+        connectorProfile ? "connector-directed-search" : "preview-directed-search",
       ),
     };
   }

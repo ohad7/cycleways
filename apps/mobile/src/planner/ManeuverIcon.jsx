@@ -13,12 +13,25 @@ export default function ManeuverIcon({ maneuver, color, size = 32 }) {
       accessible={false}
       pointerEvents="none"
     >
-      {maneuver.type === "roundabout" ? (
+      {maneuver.type === "crossing" ? (
+        <CrossingGlyph color={color} />
+      ) : maneuver.type === "roundabout" ? (
         <RoundaboutGlyph direction={maneuver.direction} color={color} />
       ) : (
         <TurnGlyph direction={maneuver.direction} color={color} />
       )}
     </Svg>
+  );
+}
+
+function CrossingGlyph({ color }) {
+  return (
+    <>
+      <StrokePath color={color} d="M7 3V29" />
+      <StrokePath color={color} d="M25 3V29" />
+      <StrokePath color={color} d="M4 16H28" />
+      <StrokePath color={color} d="M23 11L28 16L23 21" />
+    </>
   );
 }
 

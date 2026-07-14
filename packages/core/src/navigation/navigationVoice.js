@@ -64,7 +64,7 @@ function thenManeuverText(maneuver, locale, sourceType) {
     return locale === "he-IL" ? `, ואז ${normalized}` : `, then ${normalized}`;
   }
   if (maneuver.type === "turn") {
-    if (sourceType === "roundabout") {
+    if (sourceType === "roundabout" || sourceType === "crossing") {
       return locale === "he-IL"
         ? `, ואז פנו ${directionText(maneuver.direction, locale)}`
         : `, then turn ${directionText(maneuver.direction, locale)}`;
@@ -169,6 +169,13 @@ function cuePhrase(event, state, locale) {
       : "";
 
   switch (cue.type) {
+    case "crossing": {
+      const then = thenManeuverText(cue.thenManeuver, locale, "crossing");
+      const phrase = locale === "he-IL"
+        ? "חצו בזהירות לצד השני של הכביש"
+        : "Cross carefully to the other side of the road";
+      return `${prefix}${phrase}${then}`;
+    }
     case "turn": {
       const onto = cue.ontoSegmentName
         ? locale === "he-IL"

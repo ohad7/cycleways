@@ -1010,6 +1010,10 @@ button:disabled {
 .roundabout-review-item.state-accepted { border-left-color: #15803d; }
 .roundabout-review-item.state-rejected { border-left-color: #b91c1c; }
 .roundabout-review-item.state-stale { border-left-color: #d97706; }
+.roundabout-review-item.state-staleAccepted,
+.roundabout-review-item.state-staleRejected { border-left-color: #d97706; }
+.roundabout-review-item.state-invalid { border-left-color: #c026d3; }
+.roundabout-review-item.state-manual { border-left-color: #2563eb; }
 .roundabout-review-item.active { background: #f2efe4; outline: 2px solid #756b4f; }
 .roundabout-review-item span { font-size: 0.75rem; color: #65645f; }
 
@@ -1020,6 +1024,20 @@ button:disabled {
 
 .roundabouts-detail h3 { margin: 0 0 0.35rem; font-size: 0.9rem; }
 .roundabouts-detail p { margin: 0.25rem 0; font-size: 0.78rem; overflow-wrap: anywhere; }
+
+.crossing-mapping-review {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.65rem 0;
+  padding: 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 0.76rem;
+}
+
+.crossing-mapping-review code { overflow-wrap: anywhere; }
+.crossing-manual-editor { margin-top: 0.8rem; font-size: 0.78rem; }
+.crossing-manual-editor textarea { width: 100%; margin: 0.5rem 0; font-family: ui-monospace, monospace; }
 
 .base-overlay-review-heading {
   color: var(--muted);

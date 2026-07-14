@@ -413,9 +413,14 @@ export default function BuildScreen({ navigation, route }) {
     handleViewportIdle,
     computeConnector,
     computeRouteJunctions,
+    computeRouteCrossings,
     plannerDraft,
     handleRestoreDraft,
-  } = useCyclewaysApp({ enableRouteDirectionAnimation: false, includeRoundabouts: true });
+  } = useCyclewaysApp({
+    enableRouteDirectionAnimation: false,
+    includeRoundabouts: true,
+    includeCrossings: true,
+  });
 
   const routeGeometry = useMemo(
     () => buildRouteGeometryFeatureCollection(routeState.geometry),
@@ -852,6 +857,7 @@ export default function BuildScreen({ navigation, route }) {
     routeId: null,
     status: "idle",
     junctions: null,
+    crossings: null,
   });
   const [pendingNavigationRouteId, setPendingNavigationRouteId] = useState(null);
   const [pendingExternalPlan, setPendingExternalPlan] = useState(null);
@@ -974,11 +980,12 @@ export default function BuildScreen({ navigation, route }) {
     if (!junctionSourceRouteId || effectiveRoute?.id !== junctionSourceRouteId) {
       return undefined;
     }
-    if (Array.isArray(effectiveRoute.junctions)) {
+    if (Array.isArray(effectiveRoute.junctions) && Array.isArray(effectiveRoute.crossings)) {
       setPreparedRouteJunctions({
         routeId: effectiveRoute.id,
         status: "ready",
         junctions: effectiveRoute.junctions,
+        crossings: effectiveRoute.crossings,
       });
       return undefined;
     }
@@ -989,19 +996,25 @@ export default function BuildScreen({ navigation, route }) {
       routeId: effectiveRoute.id,
       status: "loading",
       junctions: null,
+      crossings: null,
     });
-    Promise.resolve(computeRouteJunctions(effectiveRoute.geometry))
-      .then((junctions) => {
+    Promise.all([
+      Promise.resolve(computeRouteJunctions(effectiveRoute.geometry)),
+      Promise.resolve(computeRouteCrossings(effectiveRoute)),
+    ])
+      .then(([junctions, crossings]) => {
         if (cancelled) return;
         const complete = Array.isArray(junctions);
         setPreparedRouteJunctions({
           routeId: effectiveRoute.id,
           status: complete ? "ready" : "unavailable",
           junctions: complete ? junctions : null,
+          crossings: Array.isArray(crossings) ? crossings : null,
         });
         trackNavigationEvent("route_junctions_computed", {
           outcome: complete ? "complete" : "unavailable",
           junctionCount: complete ? junctions.length : null,
+          crossingCount: Array.isArray(crossings) ? crossings.length : null,
           durationMs: Date.now() - startedAt,
         });
       })
@@ -1011,6 +1024,7 @@ export default function BuildScreen({ navigation, route }) {
           routeId: effectiveRoute.id,
           status: "unavailable",
           junctions: null,
+          crossings: null,
         });
         trackNavigationEvent("route_junctions_computed", {
           outcome: "failed",
@@ -1021,7 +1035,7 @@ export default function BuildScreen({ navigation, route }) {
     return () => {
       cancelled = true;
     };
-  }, [computeRouteJunctions, junctionSourceRouteId]);
+  }, [computeRouteCrossings, computeRouteJunctions, junctionSourceRouteId]);
 
   useEffect(() => {
     if (
@@ -1418,13 +1432,24 @@ export default function BuildScreen({ navigation, route }) {
         Array.isArray(preparedRouteJunctions.junctions)
           ? preparedRouteJunctions.junctions
           : null;
-      const confirmedPlan =
-        Array.isArray(plan.effectiveRoute.junctions) || prepared === null
-          ? plan
-          : {
-              ...plan,
-              effectiveRoute: { ...plan.effectiveRoute, junctions: prepared },
-            };
+      const preparedCrossings =
+        preparedRouteJunctions.routeId === plan.effectiveRoute.id
+        && preparedRouteJunctions.status === "ready"
+        && Array.isArray(preparedRouteJunctions.crossings)
+          ? preparedRouteJunctions.crossings
+          : null;
+      const needsJunctions = !Array.isArray(plan.effectiveRoute.junctions) && prepared !== null;
+      const needsCrossings = !Array.isArray(plan.effectiveRoute.crossings) && preparedCrossings !== null;
+      const confirmedPlan = !needsJunctions && !needsCrossings
+        ? plan
+        : {
+            ...plan,
+            effectiveRoute: {
+              ...plan.effectiveRoute,
+              ...(needsJunctions ? { junctions: prepared } : {}),
+              ...(needsCrossings ? { crossings: preparedCrossings } : {}),
+            },
+          };
       const completeConfirmation = () => {
         const confirmedRouteId = confirmedPlan.effectiveRoute.id;
         setConfirmedRidePlan(confirmedPlan);
@@ -1445,6 +1470,9 @@ export default function BuildScreen({ navigation, route }) {
           )
             ? "complete"
             : "fallback",
+          crossingCoverage: Array.isArray(confirmedPlan.effectiveRoute.crossings)
+            ? "complete"
+            : "unavailable",
         });
         setRideIntroVisible(false);
         setRideSettingsVisible(false);
@@ -1674,7 +1702,8 @@ export default function BuildScreen({ navigation, route }) {
         if (
           scenario?.route === "current" &&
           currentNavigationRoute?.canNavigate === true &&
-          !Array.isArray(currentNavigationRoute.junctions)
+          (!Array.isArray(currentNavigationRoute.junctions)
+            || !Array.isArray(currentNavigationRoute.crossings))
         ) {
           // current-route-generic bypasses Ride Intro/confirmRidePlan, which is
           // where prepared junctions are normally attached. Resolve them here
@@ -1694,9 +1723,16 @@ export default function BuildScreen({ navigation, route }) {
           if (!Array.isArray(prepared)) {
             throw new Error("could not prepare junction and roundabout cues");
           }
+          const preparedCrossings =
+            preparedRouteJunctions.status === "ready"
+            && Array.isArray(preparedRouteJunctions.crossings)
+            && ridePlan?.effectiveRoute?.id === preparedRouteJunctions.routeId
+              ? preparedRouteJunctions.crossings
+              : computeRouteCrossings(currentNavigationRoute);
           currentNavigationRoute = {
             ...currentNavigationRoute,
             junctions: prepared,
+            crossings: Array.isArray(preparedCrossings) ? preparedCrossings : null,
           };
         }
         resolved = resolveScenario(scenario, {
@@ -1806,6 +1842,7 @@ export default function BuildScreen({ navigation, route }) {
     },
     [
       armDevJourneyIntro,
+      computeRouteCrossings,
       computeRouteJunctions,
       devSpeed,
       locationState,

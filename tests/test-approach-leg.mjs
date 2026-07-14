@@ -13,6 +13,10 @@ const leg = buildApproachLeg(
       { lat: 33.1, lng: 35.601 },
     ],
     distanceMeters: 180,
+    crossings: [{
+      kind: "crossing", crossingId: "c1", mappingId: "m1",
+      crossingKind: "side-change", entryMeters: 20, exitMeters: 40, complete: true,
+    }],
   },
   { id: "approach:test", target: { lat: 33.1, lng: 35.601 } },
 );
@@ -31,6 +35,7 @@ assert.ok(
   "approach geometry has monotonic progress",
 );
 assert.equal(leg.route.approachTarget.lat, 33.1);
+assert.equal(leg.route.crossings[0].crossingId, "c1");
 
 const cues = buildRouteCues(leg.route);
 assert.equal(cues[0].type, "start");

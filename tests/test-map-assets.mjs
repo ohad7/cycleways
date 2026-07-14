@@ -8,6 +8,7 @@ const manifest = {
   cwBaseIndex: "cw-base-index.json",
   baseRoutingShards: "base-routing-shards.test/manifest.json",
   roundabouts: "roundabouts.json",
+  crossings: "crossings.json",
 };
 const assetsByPath = new Map([
   ["public-data/map-manifest.json", manifest],
@@ -15,6 +16,7 @@ const assetsByPath = new Map([
   ["public-data/segments.json", { Segment: { id: 1 } }],
   ["public-data/cw-base-index.json", { segments: { 1: [[100, 0]] } }],
   ["public-data/roundabouts.json", { roundabouts: [{ id: "r1" }] }],
+  ["public-data/crossings.json", { crossings: [{ id: "c1" }] }],
   [
     "public-data/base-routing-shards.test/manifest.json",
     { shards: [{ id: "g1_1", path: "shards/g1_1.json" }] },
@@ -38,7 +40,7 @@ global.fetch = async (url) => {
 };
 
 try {
-  const shardedAssets = await loadMapAssets({ includeRoundabouts: true });
+  const shardedAssets = await loadMapAssets({ includeRoundabouts: true, includeCrossings: true });
   assert.equal(shardedAssets.baseRoutingMode, "shards");
   assert.equal(shardedAssets.baseRoutingNetworkData, null);
   assert.equal(Object.keys(shardedAssets.cwBaseIndexData.segments).length, 1);
@@ -52,11 +54,13 @@ try {
   );
   assert.ok(requestedPaths.includes("public-data/cw-base-index.json?v=shard-test"));
   assert.ok(requestedPaths.includes("public-data/roundabouts.json?v=shard-test"));
+  assert.ok(requestedPaths.includes("public-data/crossings.json?v=shard-test"));
   assert.equal(shardedAssets.roundaboutsData.roundabouts.length, 1);
   assert.ok(!requestedPaths.includes("public-data/base-routing-network.json"));
   assert.equal(summarizeMapAssets(shardedAssets).baseRoutingShards, 1);
   assert.equal(summarizeMapAssets(shardedAssets).cwBaseIndexSegments, 1);
   assert.equal(summarizeMapAssets(shardedAssets).roundabouts, 1);
+  assert.equal(summarizeMapAssets(shardedAssets).crossings, 1);
 
   requestedPaths.length = 0;
   const legacyAssets = await loadMapAssets({ baseRoutingMode: "legacy", includeRoundabouts: true });

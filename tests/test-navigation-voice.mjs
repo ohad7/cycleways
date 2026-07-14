@@ -455,4 +455,28 @@ assert.equal(compassWord(null, "he-IL"), null);
   }
 }
 
+// Crossing phrasing is safety-specific and supports a following maneuver.
+{
+  const cue = {
+    type: "crossing",
+    distanceMeters: 500,
+    thenManeuver: { type: "roundabout", direction: "straight" },
+  };
+  const utterance = createNavigationVoicePlanner().plan(
+    { kind: "cue", cueType: "crossing", phase: "preview", cue },
+    { activeCue: { distanceToCueMeters: 118, cue, phase: "preview" } },
+    1000,
+  ).utterance;
+  assert.match(utterance.text, /בעוד 120 מטרים/);
+  assert.match(utterance.text, /חצו בזהירות לצד השני של הכביש/);
+  assert.match(utterance.text, /ואז בכיכר המשיכו ישר/);
+
+  const english = createNavigationVoicePlanner({ locale: "en-US" }).plan(
+    { kind: "cue", cueType: "crossing", phase: "final", cue },
+    { activeCue: { distanceToCueMeters: 10, cue, phase: "final" } },
+    1000,
+  ).utterance;
+  assert.match(english.text, /Cross carefully to the other side of the road/);
+}
+
 console.log("navigation voice tests passed");

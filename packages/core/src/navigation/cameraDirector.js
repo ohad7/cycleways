@@ -22,7 +22,7 @@ function maneuverIsNear(activeCue) {
   const cueType = activeCue?.cue?.type ?? null;
   const distance = Number(activeCue?.distanceToCueMeters);
   return (
-    (cueType === "turn" || cueType === "bend" || cueType === "roundabout") &&
+    (cueType === "turn" || cueType === "bend" || cueType === "roundabout" || cueType === "crossing") &&
     Number.isFinite(distance) &&
     distance >= -25 &&
     distance <= MANEUVER_ENTER_MAX_M

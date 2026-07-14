@@ -40,6 +40,7 @@ function maneuverDescriptor(cue) {
   if (cue?.type === "roundabout") {
     return { type: "roundabout", direction: cue.direction };
   }
+  if (cue?.type === "crossing") return { type: "crossing" };
   return null;
 }
 
@@ -55,6 +56,7 @@ function nextManeuverDescriptor(cue) {
 function primaryManeuverText(cue) {
   if (cue?.type === "turn") return `פנה ${directionWord(cue.direction)}`;
   if (cue?.type === "roundabout") return roundaboutPhrase(cue.direction) || "המשך במסלול";
+  if (cue?.type === "crossing") return "חצו לצד השני של הכביש";
   return cueDisplay(cue).text;
 }
 
@@ -114,6 +116,8 @@ function cueDisplay(cue) {
         ? { text: `${text}${thenManeuverPhrase(cue)}`, icon: "reload-outline" }
         : { text: "המשך במסלול", icon: "navigate-outline" };
     }
+    case "crossing":
+      return { text: "חצו לצד השני של הכביש", icon: "crossing" };
     case "enter-segment":
       return { text: cue.segmentName ? `כניסה אל ${cue.segmentName}` : "המשך במסלול", icon: "navigate-outline" };
     case "arrive":
@@ -314,7 +318,7 @@ export function getNavigationPresentation(state = {}) {
     const c = active?.cue || null;
     if (!c) return cue.text;
     if (arrivalPreviewText) return arrivalPreviewText;
-    if (c.type === "turn" || c.type === "roundabout") return primaryManeuverText(c);
+    if (c.type === "turn" || c.type === "roundabout" || c.type === "crossing") return primaryManeuverText(c);
     if (c.type === "enter-segment") return "המשך במסלול";
     return cue.text;
   })();
@@ -325,6 +329,7 @@ export function getNavigationPresentation(state = {}) {
     const c = active?.cue || null;
     if (!c) return "";
     if (c.type === "turn" && c.ontoSegmentName) return `אל ${c.ontoSegmentName}`;
+    if (c.type === "crossing" && c.crossedRoadName) return c.crossedRoadName;
     if (c.type === "enter-segment" && c.segmentName) return `אל ${c.segmentName}`;
     if (
       progress?.nextSegmentName &&
@@ -360,6 +365,7 @@ export function getNavigationPresentation(state = {}) {
     ? (() => {
         const c = approachActive?.cue || null;
         if (c?.type === "turn") return turnPrimaryText(c);
+        if (c?.type === "crossing") return primaryManeuverText(c);
         if (c?.type === "enter-segment") return "המשיכו לפי הקו המסומן";
         return approachCue.text;
       })()
@@ -463,6 +469,7 @@ export function getNavigationPresentation(state = {}) {
       const c = approachActive?.cue || null;
       if (!c) return "";
       if (c.type === "turn" && c.ontoSegmentName) return `אל ${c.ontoSegmentName}`;
+      if (c.type === "crossing" && c.crossedRoadName) return c.crossedRoadName;
       if (c.type === "enter-segment" && c.segmentName) return `אל ${c.segmentName}`;
       return "";
     })(),

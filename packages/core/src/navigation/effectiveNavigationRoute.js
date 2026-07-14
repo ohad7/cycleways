@@ -160,6 +160,7 @@ export function reverseNavigationRoute(route) {
     activeDataPoints: remapReverseDataPoints(route?.activeDataPoints, total),
     segmentSpans: remapReverseSpans(route?.segmentSpans, total),
     junctions: cloneJunctions(route?.junctions),
+    crossings: null,
   };
 }
 
@@ -280,6 +281,9 @@ function withEffectiveCommon(route, geometry, selection, loop) {
     distanceMeters: distance,
     distanceKm: Math.round((distance / 1000) * 10) / 10,
     junctions: cloneJunctions(route?.junctions),
+    // Crossing intervals are attestation-relative and must be matched again
+    // after reverse/clip/loop transforms; source distances are never remapped.
+    crossings: null,
   };
 }
 

@@ -8,6 +8,7 @@ const DEFAULT_MAP_ASSETS = {
   cwBaseIndex: null,
   cwAlignmentGeometry: null,
   legacyRoutingCompatibility: null,
+  crossings: null,
   assetBasePath: MAP_MANIFEST_PATH,
 };
 
@@ -48,7 +49,12 @@ export async function loadMapManifest(options = {}) {
 }
 
 export async function loadMapAssets(options = {}) {
-  const { baseRoutingMode = "shards", includeRoundabouts = false, ...fetchOptions } = options;
+  const {
+    baseRoutingMode = "shards",
+    includeRoundabouts = false,
+    includeCrossings = false,
+    ...fetchOptions
+  } = options;
   const manifest = await loadMapManifest(fetchOptions);
   const manifestBasePath = manifest.assetBasePath || MAP_MANIFEST_PATH;
   const useRoutingShards =
@@ -62,6 +68,7 @@ export async function loadMapAssets(options = {}) {
     cwBaseIndexData,
     baseRoutingShardManifestData,
     roundaboutsData,
+    crossingsData,
     cwAlignmentGeometryData,
     legacyCwBaseIndexData,
     legacyRoutingCompatibilityMetadata,
@@ -82,6 +89,12 @@ export async function loadMapAssets(options = {}) {
       : Promise.resolve(null),
     includeRoundabouts && manifest.roundabouts
       ? getJsonAsset(assetPathWithVersion(manifest.roundabouts, manifest.version), {
+          basePath: manifestBasePath,
+          ...fetchOptions,
+        })
+      : Promise.resolve(null),
+    includeCrossings && manifest.crossings
+      ? getJsonAsset(assetPathWithVersion(manifest.crossings, manifest.version), {
           basePath: manifestBasePath,
           ...fetchOptions,
         })
@@ -130,6 +143,7 @@ export async function loadMapAssets(options = {}) {
     baseRoutingShardManifestData,
     baseRoutingShardManifestPath,
     roundaboutsData,
+    crossingsData,
     cwAlignmentGeometryData,
     legacyRoutingCompatibility,
     baseRoutingMode: useRoutingShards ? "shards" : "legacy",
@@ -145,6 +159,7 @@ export function summarizeMapAssets({
   baseRoutingMode,
   cwBaseIndexData,
   roundaboutsData,
+  crossingsData,
   cwAlignmentGeometryData,
   legacyRoutingCompatibility,
 }) {
@@ -175,5 +190,7 @@ export function summarizeMapAssets({
       legacyRoutingCompatibility?.metadata?.releaseId || null,
     roundaboutsFile: manifest.roundabouts || null,
     roundabouts: Array.isArray(roundaboutsData?.roundabouts) ? roundaboutsData.roundabouts.length : 0,
+    crossingsFile: manifest.crossings || null,
+    crossings: Array.isArray(crossingsData?.crossings) ? crossingsData.crossings.length : 0,
   };
 }

@@ -222,6 +222,15 @@ const riding = (over = {}) => ({
     2200,
   );
   assert.equal(bendShot.stage, "pre-turn");
+
+  const crossing = createCameraDirector();
+  crossing.update(riding(), 0);
+  crossing.update(riding({ activeCue: { cue: { type: "crossing" }, distanceToCueMeters: 80 } }), 100);
+  const crossingShot = crossing.update(
+    riding({ activeCue: { cue: { type: "crossing" }, distanceToCueMeters: 75 } }),
+    2200,
+  );
+  assert.equal(crossingShot.stage, "pre-turn");
 }
 
 // Arrival waits for dwell; completion uses a local frame and is immediate.

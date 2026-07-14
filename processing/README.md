@@ -334,3 +334,16 @@ npm run osm:elevation -- --cache-only --allow-missing-elevation
 `--cache-only` reports edges that do not yet have a complete cached profile.
 Without `--allow-missing-elevation`, the command exits non-zero when any edge is
 missing elevation so the elevated graph cannot silently become a complete input.
+# Reviewed road-crossing candidates
+
+Generate the local, graph-wide side-change review queue with:
+
+```bash
+npm run crossings:candidates
+```
+
+The command reads the existing elevated base graph and stable edge-share-ID
+registry and writes `build/crossings/candidates.json`. It performs no network
+requests and does not publish runtime data. Review candidates in the editor's
+**Crossings** workspace; human decisions are stored in
+`data/crossing-review.json`.

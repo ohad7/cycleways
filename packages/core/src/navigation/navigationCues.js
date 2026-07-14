@@ -29,9 +29,11 @@ const ARRIVAL_PREVIEW_MAX_M = 200; // destination heads-up starts earlier
 const FINAL_MAX_M = 35; // within this, the cue is "final"
 export const ROUNDABOUT_DIRECTION_THRESHOLDS = { straightMaxDeg: 40, uTurnMaxDeg: 130 };
 export const ROUNDABOUT_SUPPRESSION_PAD_M = 8;
+export const CROSSING_SUPPRESSION_PAD_M = 8;
 const SELECTION_PRIORITY = {
   turn: 0,
   roundabout: 0,
+  crossing: 0,
   arrive: 0,
   bend: 1,
   caution: 1,
@@ -48,7 +50,7 @@ function signedTurn(bearingIn, bearingOut) {
 
 function isCompoundManeuver(cue) {
   return (
-    (cue?.type === "turn" || cue?.type === "roundabout") &&
+    (cue?.type === "turn" || cue?.type === "roundabout" || cue?.type === "crossing") &&
     !(cue.type === "roundabout" && cue.direction === "u-turn")
   );
 }
@@ -163,6 +165,15 @@ export function buildRouteCues(navigationRoute, options = {}) {
       && Number.isFinite(Number(junction.exitMeters))
       && Number(junction.exitMeters) >= Number(junction.entryMeters),
   ) || [];
+  const crossingTraversals = Array.isArray(navigationRoute?.crossings)
+    ? navigationRoute.crossings.filter(
+      (crossing) => crossing?.kind === "crossing"
+        && crossing.complete === true
+        && Number.isFinite(Number(crossing.entryMeters))
+        && Number.isFinite(Number(crossing.exitMeters))
+        && Number(crossing.exitMeters) >= Number(crossing.entryMeters),
+    )
+    : [];
   let cornerCues = [];
   let lastTurnDistance = -Infinity;
   for (let i = 1; i < cueGeometry.length - 1; i++) {
@@ -171,6 +182,11 @@ export function buildRouteCues(navigationRoute, options = {}) {
       (traversal) =>
         distanceMeters >= Number(traversal.entryMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
         && distanceMeters <= Number(traversal.exitMeters) + ROUNDABOUT_SUPPRESSION_PAD_M,
+    )) continue;
+    if (crossingTraversals.some(
+      (crossing) =>
+        distanceMeters >= Number(crossing.entryMeters) - CROSSING_SUPPRESSION_PAD_M
+        && distanceMeters <= Number(crossing.exitMeters) + CROSSING_SUPPRESSION_PAD_M,
     )) continue;
     const bearingIn = computeBearing(cueGeometry[i - 1], cueGeometry[i]);
     const bearingOut = computeBearing(cueGeometry[i], cueGeometry[i + 1]);
@@ -219,6 +235,17 @@ export function buildRouteCues(navigationRoute, options = {}) {
       exitDistanceMeters: Number(traversal.exitMeters),
       roundaboutId: traversal.roundaboutId || null,
       turnAngleDeg: angle,
+    });
+  }
+  for (const crossing of crossingTraversals) {
+    cornerCues.push({
+      type: "crossing",
+      crossingKind: crossing.crossingKind || "side-change",
+      distanceMeters: Number(crossing.entryMeters),
+      completionDistanceMeters: Number(crossing.exitMeters),
+      crossedRoadName: crossing.crossedRoadName || null,
+      crossingId: crossing.crossingId || null,
+      mappingId: crossing.mappingId || null,
     });
   }
   cornerCues.sort((a, b) => a.distanceMeters - b.distanceMeters);
@@ -289,6 +316,11 @@ export function buildRouteCues(navigationRoute, options = {}) {
         span.startMeters >= Number(traversal.entryMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
         && span.startMeters <= Number(traversal.exitMeters) + ROUNDABOUT_SUPPRESSION_PAD_M,
     )) continue;
+    if (crossingTraversals.some(
+      (crossing) =>
+        span.startMeters >= Number(crossing.entryMeters) - CROSSING_SUPPRESSION_PAD_M
+        && span.startMeters <= Number(crossing.exitMeters) + CROSSING_SUPPRESSION_PAD_M,
+    )) continue;
     const near = turnCues.find(
       (t) =>
         distanceToManeuver(span.startMeters, t) <= SPAN_MERGE_TOLERANCE_M,
@@ -301,7 +333,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
   }
 
   // Sort by distance; when distances tie, turn/arrive before enter-segment.
-  const PRIORITY = { start: 0, turn: 1, roundabout: 1, arrive: 1, bend: 1, "enter-segment": 2 };
+  const PRIORITY = { start: 0, turn: 1, roundabout: 1, crossing: 1, arrive: 1, bend: 1, "enter-segment": 2 };
   cues.sort((a, b) =>
     a.distanceMeters - b.distanceMeters ||
     (PRIORITY[a.type] ?? 3) - (PRIORITY[b.type] ?? 3),
