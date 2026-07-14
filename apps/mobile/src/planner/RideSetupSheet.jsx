@@ -165,7 +165,7 @@ export default function RideSetupSheet({
             />
           </View>
           {!reverseAllowed ? (
-            <Text style={styles.helper}>המסלול מסומן כחד-כיווני ולכן אי אפשר להפוך אותו.</Text>
+            <Text style={styles.helper}>לא ניתן להפוך את המסלול בדיוק בכיוון הנגדי. אפשר לחזור לתכנון ולבקש מסלול חזרה נפרד.</Text>
           ) : null}
 
           <Text style={styles.sectionTitle}>נקודת התחלה</Text>

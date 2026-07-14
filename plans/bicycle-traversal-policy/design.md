@@ -1,7 +1,7 @@
 # Bicycle Traversal Policy Design
 
 **Date:** 2026-07-13  
-**Status:** accepted design — implementation plan ready
+**Status:** accepted design — implementation in progress
 
 ## Summary
 
@@ -32,6 +32,61 @@ This design deliberately precedes the crossing/maneuver work from
 That work needs a route regenerated under the permitted-traversal policy;
 otherwise we would design instructions around geometry the planner should never
 produce.
+
+## 2026-07-14 amendment — global routing and exception-based curation
+
+Directionality is a property of the base routing graph, not of the CycleWays
+overlay. The same hard traversal verdict applies when a route is wholly outside
+the CycleWays network, while routing from the rider's location to a route's
+starting point, and while navigation computes an initial approach or rejoin.
+Those surfaces may use different costs, but they may not use different
+permissions. In product wording, “safe” for these connectors means that the
+result follows the app's modeled direction and access policy; it is not a wider
+claim about real-world safety.
+
+The runtime has one directed graph search for ordinary base routes and
+connector-cost routes. The mobile ride-setup approach and navigation
+approach/rejoin both call the same connector entry point. A regression fixture
+must keep a prohibited direct edge shorter than an allowed detour and prove
+that all three surfaces select the detour. Final route validation remains
+mandatory even though disallowed adjacency is omitted during graph loading.
+
+This guarantee becomes a production guarantee only after the policy-bound V3
+graph and strict manifest are promoted. The currently released V1/V2 assets do
+not contain sufficient policy evidence and must not be described as already
+protected. The code and complete policy-bound asset set are still one atomic
+Gate D cutover.
+
+Review is exception-based:
+
+- `symmetric_candidate` means the existing alignment and its exact reverse are
+  both mechanically valid. The curator may approve these in one explicit batch
+  that records reviewer, date, and batch ID; the action publishes the existing
+  explicit alignment and a digest-bound `reverseOf` alignment.
+- `direction_evidence_needed` means the only blocker is an unreviewed manual
+  base edge. The curator reviews that base edge once, rebuilds, and every
+  dependent segment is revalidated. These are not presented as structurally
+  invalid CycleWays mappings.
+- `invalid_existing`, `single_direction_candidate`, and `unresolved` remain
+  individual review queues. Distinct opposite paths, divided carriageways, and
+  unavailable directions are never bulk-inferred.
+
+The editor's Base Graph workspace is also the direction-policy inspection and
+correction surface for every base edge, including edges with no CycleWays
+membership. A toggle overlays every direction-limited edge at once: repeated
+arrowheads point in the actually permitted travel direction, including
+reverse-only edges whose display geometry must be reversed, while separate
+styles distinguish confirmed one-way evidence from conditional/unknown review
+cases. Selecting an edge draws A and B at the stored endpoints and shows
+forward/reverse states, reason codes, and evidence. Manual-edge edits stay on
+the manual feature. OSM-derived
+geometry and tags remain read-only; a reviewed correction creates a
+whole-source-way override keyed by OSM way ID and the unsplit oriented geometry
+digest, with both states, rationale, evidence, reviewer, and date. It applies
+to every split graph edge from that way. A missing way or changed geometry
+makes the override stale and blocks the build until it is removed or reviewed
+again. Saving or removing either kind of direction evidence marks graph and
+Direction Review evidence stale until the curator rebuilds.
 
 ## Why this is a separate foundation
 
@@ -448,8 +503,11 @@ Migration is an editor-owned, reviewable process rather than a bulk JSON rewrite
    permitted graph; it may not copy CW ownership to a nearby carriageway or
    replace only the visibly problematic edge.
 5. **Classify the result.** The migration report groups segments as
-   `symmetric_candidate`, `alternate_candidate`, `invalid_existing`,
-   `single_direction_candidate`, or `unresolved`. It reports affected offered
+   `symmetric_candidate`, `alternate_candidate`,
+   `direction_evidence_needed`, `invalid_existing`,
+   `single_direction_candidate`, or `unresolved`. Manual-only unknown evidence
+   uses `direction_evidence_needed`; `invalid_existing` is reserved for a hard
+   policy, topology, endpoint, or mapping failure. It reports affected offered
    routes and the exact reasons for every non-ready alignment.
 6. **Review in the editor.** The curator views direction arrows and both
    physical lines, previews each direction, then accepts the sequence, edits
@@ -542,6 +600,8 @@ normalized policy artifact and provides:
 - allowed/prohibited/conditional/unknown colors and directional arrows;
 - raw tags, normalized per-direction verdict, reason, provenance, policy
   digest, and override evidence for the selected edge;
+- Base Graph selection for any manual or OSM edge, including A/B orientation,
+  arrows, and reviewed direction-policy editing independent of CW membership;
 - separate `aToB` and `bToA` alignment tabs whose published and draft badges,
   metrics, and edge lists can be visible at the same time;
 - queues for invalid existing alignments, missing second directions,

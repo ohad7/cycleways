@@ -1,5 +1,10 @@
 import { getDistance } from "../utils/distance.js";
 import { buildNavigationGeometry } from "./navigationRoute.js";
+import {
+  reverseRouteAttestation,
+  transformRouteAttestation,
+  validateRouteAttestation,
+} from "../routing/routeAttestation.js";
 
 export const LOOP_SEAM_TOLERANCE_M = 25;
 
@@ -133,10 +138,15 @@ export function reverseNavigationRoute(route) {
       return copy;
     }),
   );
+  const reversedValidation = reverseRouteAttestation(route?.routingValidation);
   return {
     ...route,
     id: derivedId(route, "reverse", 0, false),
     direction: "reverse",
+    canNavigate: reversedValidation !== null,
+    unavailableReason:
+      reversedValidation !== null ? null : "reverse-not-allowed",
+    routingValidation: reversedValidation,
     geometry: reversedGeometry,
     points: Array.isArray(route?.points)
       ? [...route.points].reverse().map(clonePoint)
@@ -242,6 +252,17 @@ function withEffectiveCommon(route, geometry, selection, loop) {
   const distance = geometry.length > 0
     ? Number(geometry[geometry.length - 1].distanceFromStartMeters) || 0
     : 0;
+  const routingValidation = transformRouteAttestation(
+    route?.routingValidation,
+    {
+      geometry,
+      startProgressMeters: selection.startProgressMeters,
+      sourceGeometryTotalMeters: totalMeters(route),
+      rotateLoop: loop,
+    },
+  );
+  const evidence = validateRouteAttestation(routingValidation, { geometry });
+  const canNavigate = geometry.length >= 2 && route?.canNavigate === true && evidence.ok;
   return {
     ...route,
     id: derivedId(route, selection.direction, selection.startProgressMeters, loop),
@@ -250,8 +271,11 @@ function withEffectiveCommon(route, geometry, selection, loop) {
     startProgressMeters: selection.startProgressMeters,
     isEffectiveLoop: loop,
     requiresStartAcquisition: true,
-    canNavigate: geometry.length >= 2,
-    unavailableReason: geometry.length >= 2 ? null : "invalid-effective-route",
+    routingValidation,
+    canNavigate,
+    unavailableReason: canNavigate
+      ? null
+      : route?.unavailableReason || evidence.reason || "invalid-effective-route",
     geometry,
     distanceMeters: distance,
     distanceKm: Math.round((distance / 1000) * 10) / 10,

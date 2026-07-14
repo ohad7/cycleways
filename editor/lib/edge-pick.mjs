@@ -193,3 +193,68 @@ export function conflictingSegmentForEdge(edgeId, excludeSegmentId, overlaySegme
   }
   return null;
 }
+
+export function directedIntervalKey(ref) {
+  return [
+    String(ref?.edgeId || ""),
+    ref?.direction === "reverse" ? "reverse" : "forward",
+    Number(ref?.fromFraction ?? 0),
+    Number(ref?.toFraction ?? 1),
+  ].join("|");
+}
+
+/** Validate one V2 alignment without reading or mutating the opposite slot. */
+export function validateDirectionReviewAlignment({
+  segmentId,
+  alignmentKey,
+  edgeRefs,
+  edgeLookup,
+  directedOwners = new Map(),
+  continuityGaps = [],
+  endpointValidation = { ok: true },
+  evidenceCurrent = true,
+}) {
+  const reasons = [];
+  const traversalStates = {};
+  if (!Array.isArray(edgeRefs) || edgeRefs.length === 0) reasons.push({ code: "alignment_empty" });
+  if (!evidenceCurrent) reasons.push({ code: "stale_evidence" });
+  if (!endpointValidation?.ok) {
+    reasons.push({ code: "endpoint_zone_failure", ...(endpointValidation || {}) });
+  }
+  for (const gap of continuityGaps || []) reasons.push({ code: "continuity_gap", ...gap });
+  for (const [index, ref] of (edgeRefs || []).entries()) {
+    const edge = edgeLookup?.get(String(ref.edgeId));
+    if (!edge) {
+      reasons.push({ code: "missing_edge", edgeId: String(ref.edgeId) });
+      traversalStates[`${index}:${String(ref.edgeId)}`] = "unknown";
+      continue;
+    }
+    const direction = ref.direction === "reverse" ? "reverse" : "forward";
+    const traversal = edge.bicycleTraversal?.[direction] || "unknown";
+    traversalStates[`${index}:${String(ref.edgeId)}`] = traversal;
+    if (traversal !== "allowed") {
+      reasons.push({
+        code: "non_allowed_traversal",
+        edgeId: String(ref.edgeId),
+        direction,
+        state: traversal,
+        reason: edge.bicycleTraversal?.[`${direction}Reason`] || "missing_policy_evidence",
+      });
+    }
+    const owner = directedOwners.get(directedIntervalKey(ref));
+    if (
+      owner &&
+      (Number(owner.segmentId) !== Number(segmentId) || owner.alignmentKey !== alignmentKey)
+    ) {
+      reasons.push({ code: "directed_ownership_conflict", edgeId: String(ref.edgeId), owner });
+    }
+  }
+  return {
+    ok: reasons.length === 0,
+    status: reasons.length === 0 ? "valid" : "invalid",
+    reasons,
+    traversalStates,
+    ...(endpointValidation?.terminals ? { terminals: endpointValidation.terminals } : {}),
+    ...(endpointValidation?.distances ? { endpointDistancesMeters: endpointValidation.distances } : {}),
+  };
+}

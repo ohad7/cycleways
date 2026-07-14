@@ -160,6 +160,9 @@ export function snapshotRouteManager(manager, segmentsData) {
     elevationLoss: info.elevationLoss || 0,
     routeFailure: info.failure || null,
     segmentSpans: info.segmentSpans || [],
+    routingValidation: info.routingValidation
+      ? cloneJsonValue(info.routingValidation)
+      : null,
     activeDataPoints: getActiveRouteDataPoints(
       info.segments,
       geometry,
@@ -184,7 +187,14 @@ export function routeStateSnapshot(routeState) {
     })),
     routeFailure: routeState.routeFailure || null,
     segmentSpans: (routeState.segmentSpans || []).map((s) => ({ ...s })),
+    routingValidation: routeState.routingValidation
+      ? cloneJsonValue(routeState.routingValidation)
+      : null,
   };
+}
+
+function cloneJsonValue(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 export function buildShareUrl(

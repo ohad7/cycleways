@@ -34,8 +34,10 @@ from typing import Any
 
 try:
     from .roundabout_review import join_roundabout_reviews
+    from .bicycle_traversal_policy import POLICY_DIGEST, POLICY_ID, normalize_bicycle_traversal
 except ImportError:  # Direct script execution: processing/ is on sys.path.
     from roundabout_review import join_roundabout_reviews
+    from bicycle_traversal_policy import POLICY_DIGEST, POLICY_ID, normalize_bicycle_traversal
 
 
 KML_NAMESPACE = "http://www.opengis.net/kml/2.2"
@@ -70,10 +72,12 @@ ACCEPTED_MAPPING_LENGTH_WARNING_MAX_RATIO = 1.35
 ACCEPTED_MAPPING_LENGTH_BLOCK_MIN_RATIO = 0.8
 ACCEPTED_MAPPING_LENGTH_BLOCK_MAX_RATIO = 2.0
 PUBLIC_DATA_DIR = "public-data"
+ROUTING_COMPAT_DIR = Path(__file__).resolve().parents[1] / "data" / "routing-compat"
 BASE_ROUTING_SHARD_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_MANIFEST_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_SIZE_DEGREES = 0.05
 BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION = 2
+BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION = 3
 BASE_ROUTING_COMPACT_SHARD_MAGIC = b"CWBS1"
 BASE_ROUTING_COMPACT_COORDINATE_SCALE = 1_000_000
 BASE_ROUTING_COMPACT_DISTANCE_SCALE = 10
@@ -211,8 +215,16 @@ def pack_compact_base_routing_shard(shard_asset: dict[str, Any]) -> bytes:
         if isinstance(node, dict) and isinstance(node.get("id"), str)
     }
 
+    source_routing_schema_version = int(
+        shard_asset.get("sourceRoutingSchemaVersion") or 0
+    )
+    format_version = (
+        BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION
+        if source_routing_schema_version >= 3
+        else BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION
+    )
     payload = bytearray(BASE_ROUTING_COMPACT_SHARD_MAGIC)
-    write_varuint(payload, BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION)
+    write_varuint(payload, format_version)
     write_varuint(payload, len(strings))
     for value in strings:
         encoded = value.encode("utf-8")
@@ -288,6 +300,50 @@ def pack_compact_base_routing_shard(shard_asset: dict[str, Any]) -> bytes:
         else:
             write_varuint(payload, 0)
 
+        if format_version >= BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION:
+            traversal = (
+                edge.get("bicycleTraversal")
+                if isinstance(edge.get("bicycleTraversal"), dict)
+                else {}
+            )
+            traversal_state_codes = {
+                None: 0,
+                "allowed": 1,
+                "prohibited": 2,
+                "conditional": 3,
+                "unknown": 4,
+            }
+            write_varuint(payload, traversal_state_codes.get(traversal.get("forward"), 0))
+            write_varuint(payload, traversal_state_codes.get(traversal.get("reverse"), 0))
+            write_nullable_string_index(payload, string_index, traversal.get("policyId"))
+            write_nullable_string_index(payload, string_index, traversal.get("policyDigest"))
+            write_nullable_string_index(payload, string_index, traversal.get("forwardReason"))
+            write_nullable_string_index(payload, string_index, traversal.get("reverseReason"))
+            alignments = (
+                edge.get("cwAlignments")
+                if isinstance(edge.get("cwAlignments"), dict)
+                else {}
+            )
+            for direction in ("forward", "reverse"):
+                memberships = (
+                    alignments.get(direction)
+                    if isinstance(alignments.get(direction), list)
+                    else []
+                )
+                write_varuint(payload, len(memberships))
+                for membership in memberships:
+                    write_varuint(payload, int(membership.get("segmentId") or 0))
+                    write_nullable_string_index(
+                        payload,
+                        string_index,
+                        membership.get("alignmentKey"),
+                    )
+                    write_nullable_string_index(
+                        payload,
+                        string_index,
+                        membership.get("mappingDigest"),
+                    )
+
     return bytes(payload)
 
 
@@ -307,6 +363,20 @@ def compact_shard_string_table(
             value = edge.get(key)
             if isinstance(value, str) and value != "":
                 strings.add(value)
+        traversal = edge.get("bicycleTraversal")
+        if isinstance(traversal, dict):
+            for key in ("policyId", "policyDigest", "forwardReason", "reverseReason"):
+                value = traversal.get(key)
+                if isinstance(value, str) and value != "":
+                    strings.add(value)
+        alignments = edge.get("cwAlignments")
+        if isinstance(alignments, dict):
+            for direction in ("forward", "reverse"):
+                for membership in alignments.get(direction) or []:
+                    for key in ("alignmentKey", "mappingDigest"):
+                        value = membership.get(key) if isinstance(membership, dict) else None
+                        if isinstance(value, str) and value != "":
+                            strings.add(value)
     return sorted(strings)
 
 
@@ -1953,6 +2023,7 @@ def normalize_base_edge_share_id_registry(raw: Any) -> dict[str, Any]:
 def assign_base_edge_share_ids(
     edge_ids: list[str],
     registry_path: Path | None = None,
+    proposal_path: Path | None = None,
 ) -> tuple[dict[str, int], dict[str, Any]]:
     unique_edge_ids = sorted(set(edge_id for edge_id in edge_ids if isinstance(edge_id, str) and edge_id))
     if registry_path is None:
@@ -1978,12 +2049,21 @@ def assign_base_edge_share_ids(
         next_share_id += 1
         new_ids += 1
 
-    updated_registry = {
+    proposed_registry = {
         "schemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
         "nextShareId": next_share_id,
         "edges": dict(sorted(existing_edges.items())),
     }
-    write_sorted_json(registry_path, updated_registry)
+    staged_proposal_path = proposal_path
+    if staged_proposal_path is None:
+        staged_proposal_path = registry_path.with_name(
+            f"{registry_path.stem}.proposal{registry_path.suffix}"
+        )
+    if new_ids > 0:
+        # Released share-ID history is immutable during an ordinary build.  The
+        # build may use the deterministic proposal in-memory, but publication
+        # requires a separate review/promotion step.
+        write_sorted_json(staged_proposal_path, proposed_registry)
 
     runtime_edge_set = set(unique_edge_ids)
     share_ids = {edge_id: existing_edges[edge_id] for edge_id in unique_edge_ids}
@@ -1995,7 +2075,70 @@ def assign_base_edge_share_ids(
         "newIds": new_ids,
         "retiredIds": retired_ids,
         "registry": str(registry_path),
+        "proposal": str(staged_proposal_path) if new_ids > 0 else None,
+        "releasedRegistryMutated": False,
     }
+
+
+def accepted_v2_alignment_mappings(
+    overlay: dict[str, Any],
+    active_ids: set[int],
+) -> list[dict[str, Any]]:
+    mappings: list[dict[str, Any]] = []
+    for raw_segment_id, segment in (overlay.get("segments") or {}).items():
+        if not isinstance(segment, dict):
+            continue
+        segment_id = int(raw_segment_id)
+        if segment_id not in active_ids:
+            continue
+        alignments = segment.get("alignments") or {}
+        for alignment_key in ("aToB", "bToA"):
+            record = (alignments.get(alignment_key) or {}).get("published")
+            if not isinstance(record, dict) or record.get("disposition") != "accepted":
+                continue
+            realization = record.get("realization") or {}
+            if realization.get("type") == "explicit":
+                edge_refs = realization.get("edgeRefs") or []
+            elif realization.get("type") == "reverseOf":
+                target_key = realization.get("alignmentKey")
+                target = (alignments.get(target_key) or {}).get("published") or {}
+                target_realization = target.get("realization") or {}
+                if target_realization.get("type") != "explicit":
+                    raise ValueError(
+                        f"V2 segment {segment_id} {alignment_key} reverseOf target is not explicit"
+                    )
+                if realization.get("referencedMappingDigest") != target.get("mappingDigest"):
+                    raise ValueError(
+                        f"V2 segment {segment_id} {alignment_key} reverseOf digest is stale"
+                    )
+                edge_refs = [
+                    {
+                        **ref,
+                        "direction": (
+                            "forward" if ref.get("direction") == "reverse" else "reverse"
+                        ),
+                        "sequenceIndex": index,
+                    }
+                    for index, ref in enumerate(reversed(target_realization.get("edgeRefs") or []))
+                ]
+            else:
+                raise ValueError(
+                    f"V2 segment {segment_id} {alignment_key} has invalid accepted realization"
+                )
+            mappings.append(
+                {
+                    "segmentId": segment_id,
+                    "segmentName": segment.get("segmentName"),
+                    "alignmentKey": alignment_key,
+                    "mappingDigest": record.get("mappingDigest"),
+                    "status": "accepted_v2_alignment",
+                    "edgeRefs": edge_refs,
+                }
+            )
+    return sorted(
+        mappings,
+        key=lambda value: (int(value["segmentId"]), str(value["alignmentKey"])),
+    )
 
 
 def build_base_routing_asset(
@@ -2006,6 +2149,8 @@ def build_base_routing_asset(
     base_graph_path: Path | None = None,
     source_geojson: dict[str, Any] | None = None,
     base_edge_share_ids_path: Path | None = None,
+    base_edge_share_id_proposal_path: Path | None = None,
+    routing_profile: str = "production-v1",
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     ensure_current_routing_graph(graph_path, manual_base_edges_path, base_graph_path)
     if not overlay_path.exists():
@@ -2018,6 +2163,13 @@ def build_base_routing_asset(
         base_graph_path,
     )
     overlay = load_json(overlay_path, {})
+    overlay_schema_version = int(overlay.get("schemaVersion") or 1)
+    if routing_profile == "production-v1" and overlay_schema_version != 1:
+        raise ValueError("production-v1 routing profile requires a V1 overlay")
+    if routing_profile == "staged-v2" and overlay_schema_version != 2:
+        raise ValueError("staged-v2 routing profile requires a V2 overlay")
+    if routing_profile not in {"production-v1", "staged-v2"}:
+        raise ValueError(f"unknown routing profile: {routing_profile}")
     graph_edges = [
         edge
         for edge in graph.get("edges", [])
@@ -2036,20 +2188,25 @@ def build_base_routing_asset(
 
     edges_by_id = {edge["id"]: edge for edge in graph_edges}
     active_ids = active_segment_ids(segments_data)
-    accepted_mappings = [
-        mapping
-        for mapping in (overlay.get("segments") or {}).values()
-        if (
-            isinstance(mapping, dict)
-            and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
-            and mapping.get("segmentId") in active_ids
-        )
-    ]
+    accepted_mappings = (
+        accepted_v2_alignment_mappings(overlay, active_ids)
+        if routing_profile == "staged-v2"
+        else [
+            mapping
+            for mapping in (overlay.get("segments") or {}).values()
+            if (
+                isinstance(mapping, dict)
+                and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
+                and mapping.get("segmentId") in active_ids
+            )
+        ]
+    )
     accepted_mappings.sort(key=lambda mapping: int(mapping.get("segmentId") or 0))
 
     blockers: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
     owners_by_edge_id: dict[str, list[int]] = defaultdict(list)
+    owners_by_directed_edge: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     accepted_segment_ids: set[int] = set()
     source_lengths = source_segment_lengths(source_geojson)
 
@@ -2090,7 +2247,47 @@ def build_base_routing_asset(
                 previous_edge_id = edge_id
                 continue
 
-            owners_by_edge_id[edge_id].append(segment_id)
+            direction = "reverse" if edge_ref.get("direction") == "reverse" else "forward"
+            if routing_profile == "staged-v2":
+                owners_by_directed_edge[(edge_id, direction)].append(
+                    {
+                        "segmentId": segment_id,
+                        "alignmentKey": mapping.get("alignmentKey"),
+                        "mappingDigest": mapping.get("mappingDigest"),
+                    }
+                )
+                edge_tags = (
+                    edges_by_id[edge_id].get("tags")
+                    if isinstance(edges_by_id[edge_id].get("tags"), dict)
+                    else {}
+                )
+                edge_shadow = edges_by_id[edge_id].get("bicycleTraversalShadow")
+                edge_policy = (
+                    edge_shadow
+                    if isinstance(edge_shadow, dict)
+                    and edge_shadow.get("policyId") == POLICY_ID
+                    and edge_shadow.get("policyDigest") == POLICY_DIGEST
+                    else normalize_bicycle_traversal(
+                        edge_tags,
+                        source=str(edges_by_id[edge_id].get("source") or "osm"),
+                        manual=edge_tags,
+                    )
+                )
+                if edge_policy[direction] != "allowed":
+                    blockers.append(
+                        {
+                            "segmentId": segment_id,
+                            "alignmentKey": mapping.get("alignmentKey"),
+                            "edgeId": edge_id,
+                            "direction": direction,
+                            "state": edge_policy[direction],
+                            "reason": edge_policy[f"{direction}Reason"],
+                            "issue": "accepted V2 alignment contains a non-allowed traversal",
+                        }
+                    )
+                    has_edge_ref_blocker = True
+            else:
+                owners_by_edge_id[edge_id].append(segment_id)
             accepted_length_m += routing_edge_distance_m(edges_by_id[edge_id])
             edge_start_node, edge_end_node = oriented_routing_edge_nodes(
                 edges_by_id[edge_id],
@@ -2208,16 +2405,35 @@ def build_base_routing_asset(
             }
         )
 
+    duplicate_directed_edges = [
+        {
+            "edgeId": edge_id,
+            "direction": direction,
+            "owners": owners,
+        }
+        for (edge_id, direction), owners in sorted(owners_by_directed_edge.items())
+        if len({(owner["segmentId"], owner["alignmentKey"]) for owner in owners}) > 1
+    ]
+    for duplicate in duplicate_directed_edges:
+        blockers.append(
+            {
+                **duplicate,
+                "issue": "directed edge is owned by more than one accepted V2 alignment",
+            }
+        )
+
     unresolved_segment_ids = sorted(active_ids - accepted_segment_ids)
     for segment_id in unresolved_segment_ids:
         source_length = source_lengths.get(segment_id)
-        blockers.append(
-            {
-                "segmentId": segment_id,
-                "segmentName": source_length.get("name") if source_length else None,
-                "issue": "active segment has no accepted base overlay mapping",
-            }
-        )
+        issue = {
+            "segmentId": segment_id,
+            "segmentName": source_length.get("name") if source_length else None,
+            "issue": "active segment has no accepted base overlay mapping",
+        }
+        if routing_profile == "staged-v2":
+            warnings.append(issue)
+        else:
+            blockers.append(issue)
 
     if blockers:
         examples = "; ".join(
@@ -2237,6 +2453,8 @@ def build_base_routing_asset(
         runtime_nodes.append({"id": node["id"], "coord": coord})
 
     runtime_edges = []
+    traversal_shadow_states: Counter[str] = Counter()
+    traversal_shadow_reasons: Counter[str] = Counter()
     missing_runtime_elevation_edge_ids = []
     for edge in graph_edges:
         coordinates = [
@@ -2250,6 +2468,25 @@ def build_base_routing_asset(
         if len(coordinates) < 2:
             continue
         tags = edge.get("tags") if isinstance(edge.get("tags"), dict) else {}
+        existing_shadow = edge.get("bicycleTraversalShadow")
+        traversal_shadow = (
+            existing_shadow
+            if isinstance(existing_shadow, dict)
+            and existing_shadow.get("policyId") == POLICY_ID
+            and existing_shadow.get("policyDigest") == POLICY_DIGEST
+            else normalize_bicycle_traversal(
+                tags,
+                source=str(edge.get("source") or "osm"),
+                manual=tags,
+            )
+        )
+        for traversal_direction in ("forward", "reverse"):
+            traversal_shadow_states[
+                f"{traversal_direction}:{traversal_shadow[traversal_direction]}"
+            ] += 1
+            traversal_shadow_reasons[
+                f"{traversal_direction}:{traversal_shadow[f'{traversal_direction}Reason']}"
+            ] += 1
         runtime_edge = {
             "id": edge["id"],
             "from": edge["fromNodeId"],
@@ -2261,8 +2498,20 @@ def build_base_routing_asset(
             "highway": tags.get("highway"),
             "accessStatus": tags.get("accessStatus"),
             "roadType": tags.get("roadType"),
-            "cwSegmentIds": sorted(set(owners_by_edge_id.get(edge["id"], []))),
         }
+        if routing_profile == "staged-v2":
+            runtime_edge["bicycleTraversal"] = traversal_shadow
+            runtime_edge["cwAlignments"] = {
+                direction: sorted(
+                    owners_by_directed_edge.get((edge["id"], direction), []),
+                    key=lambda value: (int(value["segmentId"]), str(value["alignmentKey"])),
+                )
+                for direction in ("forward", "reverse")
+            }
+        else:
+            runtime_edge["cwSegmentIds"] = sorted(
+                set(owners_by_edge_id.get(edge["id"], []))
+            )
         runtime_elevation = compact_routing_elevation(edge)
         if runtime_elevation:
             runtime_edge["elevation"] = runtime_elevation
@@ -2273,7 +2522,15 @@ def build_base_routing_asset(
     share_ids_by_edge_id, share_id_validation = assign_base_edge_share_ids(
         [edge["id"] for edge in runtime_edges],
         base_edge_share_ids_path,
+        base_edge_share_id_proposal_path,
     )
+    effective_registry_path = (
+        Path(share_id_validation["proposal"])
+        if share_id_validation.get("proposal")
+        else base_edge_share_ids_path
+    )
+    if effective_registry_path is not None and effective_registry_path.exists():
+        share_id_validation["registryDigest"] = file_digest(effective_registry_path)
     for runtime_edge in runtime_edges:
         runtime_edge["shareId"] = share_ids_by_edge_id[runtime_edge["id"]]
 
@@ -2290,17 +2547,84 @@ def build_base_routing_asset(
         "graphNodes": len(runtime_nodes),
         "graphEdges": len(runtime_edges),
         "acceptedMappings": len(accepted_segment_ids),
-        "cyclewaysEdges": sum(1 for edge in runtime_edges if edge["cwSegmentIds"]),
+        "cyclewaysEdges": sum(
+            1
+            for edge in runtime_edges
+            if (
+                any(edge.get("cwAlignments", {}).get(direction) for direction in ("forward", "reverse"))
+                if routing_profile == "staged-v2"
+                else edge.get("cwSegmentIds")
+            )
+        ),
         "elevationEdges": sum(1 for edge in runtime_edges if edge.get("elevation")),
         "shareIds": share_id_validation,
+        "bicycleTraversalShadow": {
+            "policyId": POLICY_ID,
+            "policyDigest": POLICY_DIGEST,
+            "states": dict(sorted(traversal_shadow_states.items())),
+            "reasons": dict(sorted(traversal_shadow_reasons.items())),
+            "enforced": routing_profile == "staged-v2",
+        },
         "unresolvedSegmentIds": unresolved_segment_ids,
         "unresolvedSegments": len(unresolved_segment_ids),
         "duplicateAcceptedEdges": len(duplicate_edges),
+        "duplicateAcceptedDirectedEdges": len(duplicate_directed_edges),
+        "routingProfile": routing_profile,
         "warnings": warnings,
         "blockers": [],
     }
+    routing_contract = None
+    if routing_profile == "staged-v2":
+        legacy_compatibility_metadata = load_json(
+            ROUTING_COMPAT_DIR / "cw-base-index-v1.metadata.json", {}
+        )
+        legacy_registry_digest = legacy_compatibility_metadata.get(
+            "baseEdgeShareRegistryDigest"
+        )
+        legacy_graph_hash = legacy_compatibility_metadata.get(
+            "legacyGraphVersionHash"
+        )
+        if not legacy_registry_digest or not legacy_graph_hash:
+            raise ValueError("staged V3 build requires released legacy compatibility metadata")
+        semantic_components = {
+            "graph": {"nodes": graph_nodes, "edges": graph_edges},
+            "policyId": POLICY_ID,
+            "policyDigest": POLICY_DIGEST,
+            "overlay": overlay,
+            "shareIdSchemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
+            "baseEdgeShareRegistryDigest": share_id_validation.get(
+                "registryDigest"
+            ),
+            "runtimeSchemaVersion": 3,
+        }
+        routing_context_digest = hashlib.sha256(
+            json.dumps(
+                semantic_components,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        routing_contract = {
+            "schemaVersion": 1,
+            "baseRoutingSchemaVersion": 3,
+            "policyId": POLICY_ID,
+            "policyDigest": POLICY_DIGEST,
+            "routingContextDigest": routing_context_digest,
+            "strictTraversalPolicy": True,
+            "baseEdgeShareRegistryDigest": share_id_validation.get(
+                "registryDigest"
+            ),
+            "legacyCompatibilityRegistryDigest": legacy_registry_digest,
+            "legacyCompatibilityGraphVersionHashes": {
+                str(legacy_graph_hash).lower(): legacy_registry_digest
+            },
+            "legacyCwBaseIndexSha256": legacy_compatibility_metadata.get(
+                "sourceSha256"
+            ),
+        }
     asset = {
-        "schemaVersion": 2,
+        "schemaVersion": 3 if routing_profile == "staged-v2" else 2,
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "nodes": runtime_nodes,
         "edges": runtime_edges,
@@ -2313,6 +2637,11 @@ def build_base_routing_asset(
             "unresolvedSegments": validation["unresolvedSegments"],
         },
     }
+    if routing_contract is not None:
+        asset["graphVersion"] = routing_contract["routingContextDigest"]
+        asset["policyId"] = POLICY_ID
+        asset["policyDigest"] = POLICY_DIGEST
+        asset["routingContract"] = routing_contract
     return asset, validation
 
 
@@ -2523,6 +2852,15 @@ def build_base_routing_shards(
         "summary": summary,
         "shards": manifest_shards,
     }
+    if int(base_routing_asset.get("schemaVersion") or 0) >= 3:
+        manifest.update(
+            {
+                "graphVersion": base_routing_asset.get("graphVersion"),
+                "policyId": base_routing_asset.get("policyId"),
+                "policyDigest": base_routing_asset.get("policyDigest"),
+                "routingContract": base_routing_asset.get("routingContract"),
+            }
+        )
     report = {
         "manifest": {
             "schemaVersion": manifest["schemaVersion"],
@@ -2821,21 +3159,27 @@ def build_public_cw_base_index(
     segments: dict[str, Any] = {}
     missing_share_ids: list[dict[str, Any]] = []
 
-    accepted_mappings = [
-        mapping
-        for mapping in (overlay.get("segments") or {}).values()
-        if (
-            isinstance(mapping, dict)
-            and isinstance(mapping.get("segmentId"), int)
-            and mapping.get("segmentId") in active_ids
-            and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
-        )
-    ]
+    overlay_schema_version = int(overlay.get("schemaVersion") or 1)
+    accepted_mappings = (
+        accepted_v2_alignment_mappings(overlay, active_ids)
+        if overlay_schema_version == 2
+        else [
+            mapping
+            for mapping in (overlay.get("segments") or {}).values()
+            if (
+                isinstance(mapping, dict)
+                and isinstance(mapping.get("segmentId"), int)
+                and mapping.get("segmentId") in active_ids
+                and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
+            )
+        ]
+    )
     accepted_mappings.sort(key=lambda mapping: int(mapping.get("segmentId") or 0))
 
     for mapping in accepted_mappings:
         segment_id = int(mapping["segmentId"])
         edge_refs = []
+        alignment_shard_ids: set[str] = set()
         for edge_ref in sorted_overlay_edge_refs(mapping):
             edge_id = edge_ref.get("edgeId")
             runtime_edge = runtime_edges_by_id.get(edge_id)
@@ -2847,8 +3191,30 @@ def build_public_cw_base_index(
                 continue
             direction_bit = 1 if edge_ref.get("direction") == "reverse" else 0
             edge_refs.append([share_id, direction_bit])
+            if overlay_schema_version == 2 and runtime_edge:
+                bounds = base_routing_edge_bounds(runtime_edge)
+                if bounds is not None:
+                    alignment_shard_ids.update(
+                        base_routing_shard_id(lng_cell, lat_cell)
+                        for lng_cell, lat_cell in base_routing_shard_cells(
+                            bounds,
+                            BASE_ROUTING_SHARD_SIZE_DEGREES,
+                        )
+                    )
         if edge_refs:
-            segments[str(segment_id)] = edge_refs
+            if overlay_schema_version == 2:
+                segment_entry = segments.setdefault(
+                    str(segment_id),
+                    {"segmentId": segment_id, "alignments": {}},
+                )
+                segment_entry["alignments"][mapping["alignmentKey"]] = {
+                    "disposition": "accepted",
+                    "mappingDigest": mapping.get("mappingDigest"),
+                    "edgeRefs": edge_refs,
+                    "shardIds": sorted(alignment_shard_ids),
+                }
+            else:
+                segments[str(segment_id)] = edge_refs
 
     if missing_share_ids:
         examples = "; ".join(
@@ -2860,16 +3226,137 @@ def build_public_cw_base_index(
             f"{examples}"
         )
 
+    if overlay_schema_version == 2:
+        for raw_segment_id, overlay_segment in (overlay.get("segments") or {}).items():
+            segment_id = int(raw_segment_id)
+            if segment_id not in active_ids or not isinstance(overlay_segment, dict):
+                continue
+            entry = segments.setdefault(
+                str(segment_id),
+                {"segmentId": segment_id, "alignments": {}},
+            )
+            entry["routingDisposition"] = overlay_segment.get("routingDisposition")
+            entry["endpoints"] = overlay_segment.get("endpoints")
+            for alignment_key in ("aToB", "bToA"):
+                if alignment_key in entry["alignments"]:
+                    continue
+                published = (
+                    (overlay_segment.get("alignments") or {})
+                    .get(alignment_key, {})
+                    .get("published")
+                )
+                if isinstance(published, dict) and published.get("disposition") == "unavailable":
+                    entry["alignments"][alignment_key] = {
+                        "disposition": "unavailable",
+                        "unavailableReasonCode": published.get("unavailableReasonCode"),
+                    }
+                else:
+                    entry["alignments"][alignment_key] = {"disposition": "needs_review"}
+
     index = {
-        "schemaVersion": 1,
+        "schemaVersion": 2 if overlay_schema_version == 2 else 1,
         "edgeShareIdSchemaVersion": BASE_ROUTING_SHARE_ID_SCHEMA_VERSION,
         "segments": segments,
     }
+    if overlay_schema_version == 2:
+        index["policyId"] = base_routing_asset.get("policyId")
+        index["policyDigest"] = base_routing_asset.get("policyDigest")
+        index["routingContextDigest"] = (
+            base_routing_asset.get("routingContract") or {}
+        ).get("routingContextDigest")
     validation = {
         "segments": len(segments),
-        "edgeRefs": sum(len(edge_refs) for edge_refs in segments.values()),
+        "alignments": (
+            sum(
+                1
+                for segment in segments.values()
+                for alignment in segment.get("alignments", {}).values()
+                if alignment.get("disposition") == "accepted"
+            )
+            if overlay_schema_version == 2
+            else len(segments)
+        ),
+        "edgeRefs": (
+            sum(
+                len(alignment.get("edgeRefs") or [])
+                for segment in segments.values()
+                for alignment in segment.get("alignments", {}).values()
+            )
+            if overlay_schema_version == 2
+            else sum(len(edge_refs) for edge_refs in segments.values())
+        ),
     }
     return index, validation
+
+
+def build_public_cw_alignment_geometry(
+    base_routing_asset: dict[str, Any],
+    overlay_path: Path,
+    segments_data: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Project each accepted V2 alignment into a direction-detail map layer."""
+    overlay = load_json(overlay_path, {})
+    if int(overlay.get("schemaVersion") or 1) != 2:
+        return {"schemaVersion": 1, "type": "FeatureCollection", "features": []}, {
+            "alignments": 0,
+            "edgeRefs": 0,
+        }
+
+    runtime_edges = {
+        edge["id"]: edge
+        for edge in base_routing_asset.get("edges", [])
+        if isinstance(edge, dict) and isinstance(edge.get("id"), str)
+    }
+    mappings = accepted_v2_alignment_mappings(overlay, active_segment_ids(segments_data))
+    features = []
+    for mapping in mappings:
+        coordinates: list[list[float]] = []
+        refs = sorted_overlay_edge_refs(mapping)
+        for ref in refs:
+            edge = runtime_edges.get(ref.get("edgeId"))
+            if edge is None:
+                raise ValueError(
+                    "CW alignment geometry references a missing runtime edge: "
+                    f"{mapping['segmentId']} {mapping['alignmentKey']} {ref.get('edgeId')}"
+                )
+            append_public_edge_coordinates(
+                coordinates,
+                oriented_public_edge_coordinates(edge, ref.get("direction")),
+            )
+        if len(coordinates) < 2:
+            raise ValueError(
+                "CW alignment geometry contains no renderable coordinates: "
+                f"{mapping['segmentId']} {mapping['alignmentKey']}"
+            )
+        segment = (overlay.get("segments") or {}).get(str(mapping["segmentId"])) or {}
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "segmentId": mapping["segmentId"],
+                    "segmentName": mapping.get("segmentName"),
+                    "alignmentKey": mapping["alignmentKey"],
+                    "mappingDigest": mapping.get("mappingDigest"),
+                    "endpoints": segment.get("endpoints"),
+                },
+                "geometry": {"type": "LineString", "coordinates": coordinates},
+            }
+        )
+    return {
+        "schemaVersion": 1,
+        "policyId": base_routing_asset.get("policyId"),
+        "policyDigest": base_routing_asset.get("policyDigest"),
+        "routingContextDigest": (base_routing_asset.get("routingContract") or {}).get(
+            "routingContextDigest"
+        ),
+        "type": "FeatureCollection",
+        "features": features,
+    }, {
+        "alignments": len(features),
+        "edgeRefs": sum(
+            len(sorted_overlay_edge_refs(mapping)) for mapping in mappings
+        ),
+    }
 
 
 def write_runtime_manifest(
@@ -2882,6 +3369,8 @@ def write_runtime_manifest(
     elevation_stats: dict[str, Any],
     validation: dict[str, Any],
     output_roundabouts: Path | None = None,
+    output_cw_alignment_geometry: Path | None = None,
+    legacy_compatibility: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     base_routing_shard_manifest = output_base_routing_shards / "manifest.json"
     version_inputs = [
@@ -2893,8 +3382,56 @@ def write_runtime_manifest(
         ]
     if output_roundabouts and output_roundabouts.exists():
         version_inputs.append(output_roundabouts)
+    if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
+        version_inputs.append(output_cw_alignment_geometry)
+    if legacy_compatibility:
+        version_inputs.extend(
+            Path(value)
+            for key, value in legacy_compatibility.items()
+            if key.endswith("Path")
+        )
     version = combined_digest(version_inputs)[:12]
     manifest_path = public_data_dir / "map-manifest.json"
+
+    # Enforced V3 releases are immutable bundles. Keep the stable build outputs
+    # as convenient local inspection artifacts, but point the manifest at
+    # content-versioned copies so publishing a new release cannot mutate files
+    # still referenced by an older manifest/client.
+    if output_cw_alignment_geometry is not None and legacy_compatibility:
+        def versioned_file(path: Path) -> Path:
+            return path.with_name(f"{path.stem}.{version}{path.suffix}")
+
+        immutable_geojson = versioned_file(output_geojson)
+        immutable_segments = versioned_file(output_segments)
+        immutable_cw_base_index = versioned_file(output_cw_base_index)
+        immutable_kml = versioned_file(output_kml)
+        immutable_alignment_geometry = versioned_file(output_cw_alignment_geometry)
+        immutable_shards = output_base_routing_shards.with_name(
+            f"{output_base_routing_shards.name}.{version}"
+        )
+        for source, target in (
+            (output_geojson, immutable_geojson),
+            (output_segments, immutable_segments),
+            (output_cw_base_index, immutable_cw_base_index),
+            (output_kml, immutable_kml),
+            (output_cw_alignment_geometry, immutable_alignment_geometry),
+        ):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        if immutable_shards.exists():
+            shutil.rmtree(immutable_shards)
+        shutil.copytree(output_base_routing_shards, immutable_shards)
+        output_geojson = immutable_geojson
+        output_segments = immutable_segments
+        output_cw_base_index = immutable_cw_base_index
+        output_kml = immutable_kml
+        output_cw_alignment_geometry = immutable_alignment_geometry
+        output_base_routing_shards = immutable_shards
+        base_routing_shard_manifest = output_base_routing_shards / "manifest.json"
+        if output_roundabouts and output_roundabouts.exists():
+            immutable_roundabouts = versioned_file(output_roundabouts)
+            shutil.copyfile(output_roundabouts, immutable_roundabouts)
+            output_roundabouts = immutable_roundabouts
 
     def public_relative(path: Path) -> str:
         return path.relative_to(public_data_dir).as_posix()
@@ -2937,6 +3474,27 @@ def write_runtime_manifest(
     if output_roundabouts and output_roundabouts.exists():
         manifest["roundabouts"] = public_relative(output_roundabouts)
         manifest["hashes"]["roundabouts"] = file_digest(output_roundabouts)
+    if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
+        manifest["cwAlignmentGeometry"] = public_relative(output_cw_alignment_geometry)
+        manifest["hashes"]["cwAlignmentGeometry"] = file_digest(
+            output_cw_alignment_geometry
+        )
+    if legacy_compatibility:
+        index_path = Path(legacy_compatibility["indexPath"])
+        metadata_path = Path(legacy_compatibility["metadataPath"])
+        manifest["legacyRoutingCompatibility"] = {
+            "schemaVersion": 1,
+            "cwBaseIndex": public_relative(index_path),
+            "metadata": public_relative(metadata_path),
+            "cwBaseIndexSha256": file_digest(index_path),
+            "metadataSha256": file_digest(metadata_path),
+            "registryDigest": legacy_compatibility["registryDigest"],
+            "graphVersionHashes": legacy_compatibility["graphVersionHashes"],
+        }
+        manifest["hashes"]["legacyCwBaseIndex"] = file_digest(index_path)
+        manifest["hashes"]["legacyRoutingCompatibilityMetadata"] = file_digest(
+            metadata_path
+        )
     write_json(manifest_path, manifest)
     runtime = {
         "version": version,
@@ -2949,7 +3507,40 @@ def write_runtime_manifest(
     }
     if output_roundabouts and output_roundabouts.exists():
         runtime["roundabouts"] = str(output_roundabouts)
+    if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
+        runtime["cwAlignmentGeometry"] = str(output_cw_alignment_geometry)
     return runtime, manifest_path
+
+
+def stage_legacy_routing_compatibility(
+    public_data_dir: Path, routing_profile: str
+) -> dict[str, Any] | None:
+    if routing_profile != "staged-v2":
+        return None
+    source_index = ROUTING_COMPAT_DIR / "cw-base-index-v1.json"
+    source_metadata = ROUTING_COMPAT_DIR / "cw-base-index-v1.metadata.json"
+    metadata = load_json(source_metadata, {})
+    if not source_index.exists() or not metadata:
+        raise ValueError("released V1 routing compatibility bundle is missing")
+    actual_index_digest = file_digest(source_index)
+    if actual_index_digest != metadata.get("sourceSha256"):
+        raise ValueError("released V1 CW compatibility index digest mismatch")
+    registry_digest = metadata.get("baseEdgeShareRegistryDigest")
+    graph_hash = str(metadata.get("legacyGraphVersionHash") or "").lower()
+    if not registry_digest or not re.fullmatch(r"[0-9a-f]{8}", graph_hash):
+        raise ValueError("released V1 routing compatibility identity is invalid")
+    target_dir = public_data_dir / "routing-compat"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_index = target_dir / source_index.name
+    target_metadata = target_dir / source_metadata.name
+    shutil.copyfile(source_index, target_index)
+    shutil.copyfile(source_metadata, target_metadata)
+    return {
+        "indexPath": str(target_index),
+        "metadataPath": str(target_metadata),
+        "registryDigest": registry_digest,
+        "graphVersionHashes": {graph_hash: registry_digest},
+    }
 
 
 def build_reviewed_roundabouts(
@@ -3086,6 +3677,11 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     output_geojson = public_data_dir / "bike_roads.geojson"
     output_segments = public_data_dir / "segments.json"
     output_cw_base_index = public_data_dir / "cw-base-index.json"
+    output_cw_alignment_geometry = (
+        public_data_dir / "cw-alignment-geometry.json"
+        if args.routing_profile == "staged-v2"
+        else None
+    )
     output_report = out_dir / "report.json"
 
     densities = create_uniform_kml(input_kml, uniform_kml, args.max_distance)
@@ -3116,6 +3712,8 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         args.routing_base_graph.resolve(),
         geojson_data,
         args.base_edge_share_ids.resolve(),
+        args.base_edge_share_id_proposal.resolve(),
+        args.routing_profile,
     )
     site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
         compact_geojson_for_site(geojson_data),
@@ -3142,6 +3740,17 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         generated_segments,
     )
     write_json(output_cw_base_index, cw_base_index, compact=True)
+    if output_cw_alignment_geometry is not None:
+        cw_alignment_geometry, cw_alignment_geometry_validation = (
+            build_public_cw_alignment_geometry(
+                base_routing_asset,
+                args.cw_base_overlay.resolve(),
+                generated_segments,
+            )
+        )
+        write_json(output_cw_alignment_geometry, cw_alignment_geometry, compact=True)
+    else:
+        cw_alignment_geometry_validation = {"alignments": 0, "edgeRefs": 0}
 
     validation = validate_outputs(
         site_geojson_data,
@@ -3153,6 +3762,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     validation["baseRouting"] = base_routing_validation
     validation["cyclewaysDisplayGeometry"] = display_geometry_validation
     validation["cwBaseIndex"] = cw_base_index_validation
+    validation["cwAlignmentGeometry"] = cw_alignment_geometry_validation
     base_routing_shard_outputs, base_routing_shard_validation = write_base_routing_shards(
         public_data_dir / "base-routing-shards",
         base_routing_asset,
@@ -3166,6 +3776,9 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         public_data_dir / "roundabouts.json",
     )
     validation["roundabouts"] = roundabout_validation
+    legacy_compatibility = stage_legacy_routing_compatibility(
+        public_data_dir, args.routing_profile
+    )
     runtime_outputs, manifest_path = write_runtime_manifest(
         public_data_dir,
         output_geojson,
@@ -3176,6 +3789,8 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         elevation_stats,
         validation,
         output_roundabouts,
+        output_cw_alignment_geometry,
+        legacy_compatibility,
     )
     emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {
@@ -3194,6 +3809,11 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
             "geojson": str(output_geojson),
             "segments": str(output_segments),
             "cwBaseIndex": str(output_cw_base_index),
+            "cwAlignmentGeometry": (
+                str(output_cw_alignment_geometry)
+                if output_cw_alignment_geometry is not None
+                else None
+            ),
             "baseRoutingShards": base_routing_shard_outputs,
             "manifest": str(manifest_path),
             "runtime": runtime_outputs,
@@ -3239,6 +3859,11 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     output_geojson = public_data_dir / "bike_roads.geojson"
     output_segments = public_data_dir / "segments.json"
     output_cw_base_index = public_data_dir / "cw-base-index.json"
+    output_cw_alignment_geometry = (
+        public_data_dir / "cw-alignment-geometry.json"
+        if args.routing_profile == "staged-v2"
+        else None
+    )
     output_report = out_dir / "report.json"
 
     geojson_data, metrics_by_name, densities, elevation_stats = geojson_to_processed_geojson(
@@ -3270,6 +3895,8 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         args.routing_base_graph.resolve(),
         geojson_data,
         args.base_edge_share_ids.resolve(),
+        args.base_edge_share_id_proposal.resolve(),
+        args.routing_profile,
     )
     site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
         compact_geojson_for_site(geojson_data),
@@ -3296,6 +3923,17 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         generated_segments,
     )
     write_json(output_cw_base_index, cw_base_index, compact=True)
+    if output_cw_alignment_geometry is not None:
+        cw_alignment_geometry, cw_alignment_geometry_validation = (
+            build_public_cw_alignment_geometry(
+                base_routing_asset,
+                args.cw_base_overlay.resolve(),
+                generated_segments,
+            )
+        )
+        write_json(output_cw_alignment_geometry, cw_alignment_geometry, compact=True)
+    else:
+        cw_alignment_geometry_validation = {"alignments": 0, "edgeRefs": 0}
     write_kml_from_geojson(geojson_data, output_kml)
 
     validation = validate_outputs(
@@ -3308,6 +3946,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     validation["baseRouting"] = base_routing_validation
     validation["cyclewaysDisplayGeometry"] = display_geometry_validation
     validation["cwBaseIndex"] = cw_base_index_validation
+    validation["cwAlignmentGeometry"] = cw_alignment_geometry_validation
     base_routing_shard_outputs, base_routing_shard_validation = write_base_routing_shards(
         public_data_dir / "base-routing-shards",
         base_routing_asset,
@@ -3321,6 +3960,9 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         public_data_dir / "roundabouts.json",
     )
     validation["roundabouts"] = roundabout_validation
+    legacy_compatibility = stage_legacy_routing_compatibility(
+        public_data_dir, args.routing_profile
+    )
     runtime_outputs, manifest_path = write_runtime_manifest(
         public_data_dir,
         output_geojson,
@@ -3331,6 +3973,8 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         elevation_stats,
         validation,
         output_roundabouts,
+        output_cw_alignment_geometry,
+        legacy_compatibility,
     )
     emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {
@@ -3347,6 +3991,11 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
             "geojson": str(output_geojson),
             "segments": str(output_segments),
             "cwBaseIndex": str(output_cw_base_index),
+            "cwAlignmentGeometry": (
+                str(output_cw_alignment_geometry)
+                if output_cw_alignment_geometry is not None
+                else None
+            ),
             "baseRoutingShards": base_routing_shard_outputs,
             "manifest": str(manifest_path),
             "runtime": runtime_outputs,
@@ -3410,6 +4059,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=Path("data/base-edge-share-ids.json"),
         help="Authoring-only stable base edge share-id registry.",
+    )
+    parser.add_argument(
+        "--base-edge-share-id-proposal",
+        type=Path,
+        default=Path("build/base-edge-share-ids.proposal.json"),
+        help="Staged share-ID proposal written when the released registry lacks current edges.",
+    )
+    parser.add_argument(
+        "--routing-profile",
+        choices=("production-v1", "staged-v2"),
+        default="production-v1",
+        help="Select exactly one routing schema/input profile; V1 and V2 records cannot be mixed.",
     )
     parser.add_argument(
         "--roundabout-candidates",

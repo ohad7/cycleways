@@ -18,6 +18,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from .bicycle_traversal_policy import POLICY_DIGEST, POLICY_ID, normalize_bicycle_traversal
+except ImportError:  # Direct script execution: processing/ is on sys.path.
+    from bicycle_traversal_policy import POLICY_DIGEST, POLICY_ID, normalize_bicycle_traversal
+
 
 DEFAULT_MAX_DISTANCE_M = 28.0
 DEFAULT_SAMPLE_SPACING_M = 18.0
@@ -41,6 +46,21 @@ MAX_CONNECTOR_BRIDGE_M = 45.0
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def traversal_policy_for_properties(properties: dict[str, Any]) -> dict[str, Any]:
+    existing = properties.get("bicycleTraversal")
+    if (
+        isinstance(existing, dict)
+        and existing.get("policyId") == POLICY_ID
+        and existing.get("policyDigest") == POLICY_DIGEST
+    ):
+        return existing
+    return normalize_bicycle_traversal(
+        properties,
+        source=str(properties.get("source") or "osm"),
+        manual=properties,
+    )
 
 
 def write_json(path: Path, data: Any, *, compact: bool = False) -> None:
@@ -213,6 +233,7 @@ class EdgeSpatialIndex:
             projected = [project(coord) for coord in coordinates]
             properties = feature.get("properties") or {}
             edge_id = str(properties.get("edgeId") or properties.get("id") or feature.get("id"))
+            traversal = traversal_policy_for_properties(properties)
 
             for segment_index in range(len(projected) - 1):
                 start = projected[segment_index]
@@ -227,6 +248,7 @@ class EdgeSpatialIndex:
                     "start": start,
                     "end": end,
                     "vector": vector,
+                    "bicycleTraversal": traversal,
                 }
                 segment_id = len(self.segments)
                 self.segments.append(segment)
@@ -264,22 +286,29 @@ class EdgeConnectivityIndex:
             )
             self.edge_by_id[edge_id] = feature
             self.feature_index_by_edge_id[edge_id] = feature_index
-            self.adjacency[str(from_node_id)].append(
-                {
-                    "toNodeId": str(to_node_id),
-                    "edgeId": edge_id,
-                    "direction": "forward",
-                    "distanceMeters": distance_m,
-                }
-            )
-            self.adjacency[str(to_node_id)].append(
-                {
-                    "toNodeId": str(from_node_id),
-                    "edgeId": edge_id,
-                    "direction": "reverse",
-                    "distanceMeters": distance_m,
-                }
-            )
+            traversal = traversal_policy_for_properties(properties)
+            if traversal["forward"] == "allowed":
+                self.adjacency[str(from_node_id)].append(
+                    {
+                        "toNodeId": str(to_node_id),
+                        "edgeId": edge_id,
+                        "direction": "forward",
+                        "distanceMeters": distance_m,
+                        "policyId": POLICY_ID,
+                        "policyDigest": POLICY_DIGEST,
+                    }
+                )
+            if traversal["reverse"] == "allowed":
+                self.adjacency[str(to_node_id)].append(
+                    {
+                        "toNodeId": str(from_node_id),
+                        "edgeId": edge_id,
+                        "direction": "reverse",
+                        "distanceMeters": distance_m,
+                        "policyId": POLICY_ID,
+                        "policyDigest": POLICY_DIGEST,
+                    }
+                )
 
     def oriented_nodes(self, edge_id: str, direction: str) -> tuple[str | None, str | None]:
         feature = self.edge_by_id.get(edge_id)
@@ -343,6 +372,232 @@ class EdgeConnectivityIndex:
                 )
                 push_count += 1
         return []
+
+
+def _edge_feature_id(feature: dict[str, Any]) -> str:
+    properties = feature.get("properties") or {}
+    return str(properties.get("edgeId") or properties.get("id") or feature.get("id") or "")
+
+
+def _edge_policy(feature: dict[str, Any]) -> dict[str, Any]:
+    properties = feature.get("properties") or {}
+    return traversal_policy_for_properties(properties)
+
+
+def exact_reverse_alignment(
+    accepted_refs: list[dict[str, Any]],
+    edge_features: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Prove or reject the literal reverse of one accepted alignment."""
+    by_id = {_edge_feature_id(feature): feature for feature in edge_features}
+    reversed_refs = []
+    reasons = []
+    for index, ref in enumerate(reversed(accepted_refs)):
+        edge_id = str(ref.get("edgeId") or "")
+        direction = "forward" if ref.get("direction") == "reverse" else "reverse"
+        feature = by_id.get(edge_id)
+        if feature is None:
+            reasons.append({"code": "missing_edge", "edgeId": edge_id})
+        else:
+            policy = _edge_policy(feature)
+            if policy[direction] != "allowed":
+                reasons.append(
+                    {
+                        "code": "non_allowed_traversal",
+                        "edgeId": edge_id,
+                        "direction": direction,
+                        "state": policy[direction],
+                        "reason": policy[f"{direction}Reason"],
+                    }
+                )
+        reversed_refs.append(
+            {
+                **ref,
+                "edgeId": edge_id,
+                "direction": direction,
+                "sequenceIndex": index,
+            }
+        )
+    return {
+        "status": "valid" if not reasons else "invalid",
+        "kind": "exact-reverse",
+        "algorithmVersion": "directional-opposite-v1",
+        "policyId": POLICY_ID,
+        "policyDigest": POLICY_DIGEST,
+        "edgeRefs": reversed_refs,
+        "reasons": reasons,
+    }
+
+
+def _distance_point_to_segment_m(
+    point: list[float],
+    start: list[float],
+    end: list[float],
+) -> float:
+    lat0 = math.radians((float(point[1]) + float(start[1]) + float(end[1])) / 3)
+    scale_x = 111_320.0 * math.cos(lat0)
+    scale_y = 111_320.0
+    px, py = float(point[0]) * scale_x, float(point[1]) * scale_y
+    ax, ay = float(start[0]) * scale_x, float(start[1]) * scale_y
+    bx, by = float(end[0]) * scale_x, float(end[1]) * scale_y
+    projected, _fraction = segment_projection((px, py), (ax, ay), (bx, by))
+    return math.hypot(px - projected[0], py - projected[1])
+
+
+def _distance_point_to_line_m(point: list[float], line: list[list[float]]) -> float:
+    if len(line) < 2:
+        return math.inf
+    return min(
+        _distance_point_to_segment_m(point, line[index - 1], line[index])
+        for index in range(1, len(line))
+    )
+
+
+def corridor_constrained_opposite_path(
+    edge_features: list[dict[str, Any]],
+    source_coordinates: list[list[float]],
+    from_node_id: str,
+    to_node_id: str,
+    *,
+    max_lateral_offset_m: float = 45.0,
+    max_length_ratio: float = 1.5,
+) -> dict[str, Any]:
+    """Find one allowed directed path tightly bounded to a logical corridor."""
+    source_length = line_length_m(source_coordinates)
+    candidates = []
+    lateral_by_edge_id: dict[str, float] = {}
+    for feature in edge_features:
+        coordinates = [clean_coord(coord) for coord in (feature.get("geometry") or {}).get("coordinates", []) if len(coord) >= 2]
+        if len(coordinates) < 2:
+            continue
+        # Bounding every retained vertex prevents a distant detour with only
+        # one close endpoint from being labeled the same logical segment.
+        max_offset = max(_distance_point_to_line_m(coord, source_coordinates) for coord in coordinates)
+        if max_offset > max_lateral_offset_m:
+            continue
+        edge_id = _edge_feature_id(feature)
+        lateral_by_edge_id[edge_id] = max_offset
+        candidates.append(feature)
+
+    connectivity = EdgeConnectivityIndex(candidates)
+    max_distance = max(source_length * max_length_ratio, 1.0)
+    path = connectivity.shortest_connector_path(
+        str(from_node_id),
+        str(to_node_id),
+        max_distance_m=max_distance,
+        excluded_edge_ids=set(),
+    )
+    if not path:
+        return {
+            "status": "no_candidate",
+            "kind": "corridor-opposite",
+            "algorithmVersion": "directional-opposite-v1",
+            "policyId": POLICY_ID,
+            "policyDigest": POLICY_DIGEST,
+            "reasons": ["no_allowed_corridor_path"],
+        }
+    distance_m = sum(float(ref["distanceMeters"]) for ref in path)
+    edge_refs = [
+        {
+            "edgeId": ref["edgeId"],
+            "direction": ref["direction"],
+            "sequenceIndex": index,
+            "fromFraction": 0,
+            "toFraction": 1,
+        }
+        for index, ref in enumerate(path)
+    ]
+    return {
+        "status": "needs_review",
+        "kind": "corridor-opposite",
+        "algorithmVersion": "directional-opposite-v1",
+        "policyId": POLICY_ID,
+        "policyDigest": POLICY_DIGEST,
+        "edgeRefs": edge_refs,
+        "metrics": {
+            "distanceMeters": round(distance_m, 3),
+            "sourceLengthMeters": round(source_length, 3),
+            "lengthRatio": round(distance_m / source_length, 5) if source_length > 0 else None,
+            "maxLateralOffsetMeters": round(
+                max((lateral_by_edge_id.get(ref["edgeId"], 0) for ref in path), default=0),
+                3,
+            ),
+        },
+        "rejectedAlternatives": [],
+    }
+
+
+def propose_opposite_alignment(
+    accepted_refs: list[dict[str, Any]],
+    edge_features: list[dict[str, Any]],
+    source_coordinates: list[list[float]],
+    *,
+    max_lateral_offset_m: float = 45.0,
+    max_length_ratio: float = 1.5,
+) -> dict[str, Any]:
+    exact = exact_reverse_alignment(accepted_refs, edge_features)
+    if exact["status"] == "valid":
+        return {**exact, "classification": "symmetric_candidate"}
+
+    connectivity = EdgeConnectivityIndex(edge_features)
+    if not accepted_refs:
+        return {
+            "status": "no_candidate",
+            "kind": "corridor-opposite",
+            "classification": "unresolved",
+            "reasons": ["accepted_alignment_is_empty"],
+            "rejectedAlternatives": [exact],
+        }
+    first = accepted_refs[0]
+    last = accepted_refs[-1]
+    accepted_start, _accepted_first_end = connectivity.oriented_nodes(
+        str(first.get("edgeId") or ""),
+        "reverse" if first.get("direction") == "reverse" else "forward",
+    )
+    _accepted_last_start, accepted_end = connectivity.oriented_nodes(
+        str(last.get("edgeId") or ""),
+        "reverse" if last.get("direction") == "reverse" else "forward",
+    )
+    corridor = corridor_constrained_opposite_path(
+        edge_features,
+        source_coordinates,
+        str(accepted_end or ""),
+        str(accepted_start or ""),
+        max_lateral_offset_m=max_lateral_offset_m,
+        max_length_ratio=max_length_ratio,
+    )
+    return {
+        **corridor,
+        "classification": "alternate_candidate" if corridor["status"] == "needs_review" else "single_direction_candidate",
+        "rejectedAlternatives": [exact, *(corridor.get("rejectedAlternatives") or [])],
+    }
+
+
+def directed_ownership_conflicts(
+    alignments: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    owners: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
+    for alignment in alignments:
+        if not alignment.get("active", True) or alignment.get("archived", False):
+            continue
+        for ref in alignment.get("edgeRefs") or []:
+            key = (
+                str(ref.get("edgeId") or ""),
+                "reverse" if ref.get("direction") == "reverse" else "forward",
+                float(ref.get("fromFraction", 0)),
+                float(ref.get("toFraction", 1)),
+            )
+            owners[key].append(
+                {
+                    "segmentId": alignment.get("segmentId"),
+                    "alignmentKey": alignment.get("alignmentKey"),
+                }
+            )
+    return [
+        {"directedInterval": list(key), "owners": value}
+        for key, value in sorted(owners.items())
+        if len({(owner["segmentId"], owner["alignmentKey"]) for owner in value}) > 1
+    ]
 
 
 def active_cycleways_features(source_geojson: dict[str, Any]) -> list[dict[str, Any]]:
@@ -440,6 +695,9 @@ def find_best_match(
         if angle_degrees > direction_limit_degrees and distance_m > 4.0:
             continue
 
+        direction = direction_label(sample["sourceVector"], candidate["vector"])
+        if candidate["bicycleTraversal"][direction] != "allowed":
+            continue
         score = distance_m + (angle_degrees / max(direction_limit_degrees, 1.0)) * direction_penalty_m
         if best is None or score < best["score"]:
             best = {
@@ -447,8 +705,10 @@ def find_best_match(
                 "featureIndex": candidate["featureIndex"],
                 "distanceMeters": distance_m,
                 "angleDegrees": angle_degrees,
-                "direction": direction_label(sample["sourceVector"], candidate["vector"]),
+                "direction": direction,
                 "score": score,
+                "policyId": POLICY_ID,
+                "policyDigest": POLICY_DIGEST,
             }
     return best
 

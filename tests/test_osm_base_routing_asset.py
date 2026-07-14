@@ -8,6 +8,7 @@ from processing.build_map import (
     build_base_routing_asset,
     build_base_routing_shards,
     build_public_cw_base_index,
+    build_public_cw_alignment_geometry,
     build_public_cycleways_display_geojson,
     validate_outputs,
     write_base_routing_shards,
@@ -178,13 +179,160 @@ class BaseRoutingAssetTests(unittest.TestCase):
             self.assertEqual(index_validation["segments"], 1)
             self.assertEqual(index_validation["edgeRefs"], 1)
 
-    def test_runtime_asset_updates_stable_share_id_registry(self):
+    def test_staged_v3_asset_emits_direction_scoped_policy_contract(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            graph_path = root / "osm-base-graph.json"
+            overlay_path = root / "cw-base-overlay-v2.json"
+            manual_edges_path = root / "manual-base-edges.geojson"
+            write_json(
+                graph_path,
+                {
+                    "nodes": [
+                        {"id": "west", "coord": [35, 33]},
+                        {"id": "east", "coord": [35.001, 33]},
+                    ],
+                    "edges": [
+                        {
+                            "id": "edge-1",
+                            "fromNodeId": "west",
+                            "toNodeId": "east",
+                            "distanceMeters": 93,
+                            "coordinates": [[35, 33], [35.001, 33]],
+                            "source": "osm",
+                            "tags": {
+                                "highway": "residential",
+                                "osmRouteClass": "local_road",
+                            },
+                        }
+                    ],
+                },
+            )
+            write_json(manual_edges_path, {"type": "FeatureCollection", "features": []})
+            write_json(
+                overlay_path,
+                {
+                    "schemaVersion": 2,
+                    "segments": {
+                        "7": {
+                            "segmentId": 7,
+                            "segmentName": "Two-way test segment",
+                            "alignments": {
+                                "aToB": {
+                                    "published": {
+                                        "disposition": "accepted",
+                                        "mappingDigest": "a-to-b-digest",
+                                        "realization": {
+                                            "type": "explicit",
+                                            "edgeRefs": [
+                                                {
+                                                    "edgeId": "edge-1",
+                                                    "direction": "forward",
+                                                    "sequenceIndex": 0,
+                                                }
+                                            ],
+                                        },
+                                    }
+                                },
+                                "bToA": {
+                                    "published": {
+                                        "disposition": "accepted",
+                                        "mappingDigest": "b-to-a-digest",
+                                        "realization": {
+                                            "type": "explicit",
+                                            "edgeRefs": [
+                                                {
+                                                    "edgeId": "edge-1",
+                                                    "direction": "reverse",
+                                                    "sequenceIndex": 0,
+                                                }
+                                            ],
+                                        },
+                                    }
+                                },
+                            },
+                        }
+                    },
+                },
+            )
+
+            asset, validation = build_base_routing_asset(
+                graph_path,
+                overlay_path,
+                manual_edges_path,
+                {"Two-way test segment": {"id": 7, "status": "active"}},
+                routing_profile="staged-v2",
+            )
+
+            self.assertEqual(asset["schemaVersion"], 3)
+            self.assertEqual(asset["graphVersion"], asset["routingContract"]["routingContextDigest"])
+            self.assertTrue(asset["routingContract"]["strictTraversalPolicy"])
+            self.assertEqual(asset["policyId"], asset["routingContract"]["policyId"])
+            edge = asset["edges"][0]
+            self.assertNotIn("cwSegmentIds", edge)
+            self.assertEqual(edge["bicycleTraversal"]["forward"], "allowed")
+            self.assertEqual(edge["bicycleTraversal"]["reverse"], "allowed")
+            self.assertEqual(edge["cwAlignments"]["forward"][0]["alignmentKey"], "aToB")
+            self.assertEqual(edge["cwAlignments"]["reverse"][0]["alignmentKey"], "bToA")
+            self.assertEqual(validation["routingProfile"], "staged-v2")
+            self.assertEqual(validation["duplicateAcceptedDirectedEdges"], 0)
+
+            manifest, _, _ = build_base_routing_shards(asset)
+            self.assertEqual(manifest["sourceRoutingSchemaVersion"], 3)
+            self.assertEqual(manifest["graphVersion"], asset["graphVersion"])
+            self.assertEqual(manifest["routingContract"], asset["routingContract"])
+
+            public_index, index_validation = build_public_cw_base_index(
+                asset,
+                overlay_path,
+                {"Two-way test segment": {"id": 7, "status": "active"}},
+            )
+            self.assertEqual(public_index["schemaVersion"], 2)
+            self.assertEqual(
+                public_index["segments"]["7"]["alignments"]["aToB"]["edgeRefs"],
+                [[1, 0]],
+            )
+            self.assertEqual(
+                public_index["segments"]["7"]["alignments"]["bToA"]["edgeRefs"],
+                [[1, 1]],
+            )
+            self.assertEqual(index_validation["alignments"], 2)
+
+            alignment_geometry, geometry_validation = build_public_cw_alignment_geometry(
+                asset,
+                overlay_path,
+                {"Two-way test segment": {"id": 7, "status": "active"}},
+            )
+            self.assertEqual(geometry_validation["alignments"], 2)
+            features_by_key = {
+                feature["properties"]["alignmentKey"]: feature
+                for feature in alignment_geometry["features"]
+            }
+            self.assertEqual(
+                features_by_key["aToB"]["geometry"]["coordinates"],
+                [[35.0, 33.0], [35.001, 33.0]],
+            )
+            self.assertEqual(
+                features_by_key["bToA"]["geometry"]["coordinates"],
+                [[35.001, 33.0], [35.0, 33.0]],
+            )
+
+            with self.assertRaisesRegex(ValueError, "production-v1.*V1"):
+                build_base_routing_asset(
+                    graph_path,
+                    overlay_path,
+                    manual_edges_path,
+                    {"Two-way test segment": {"id": 7, "status": "active"}},
+                )
+
+    def test_runtime_asset_stages_share_id_proposal_without_mutating_release(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             graph_path = root / "osm-base-graph.json"
             overlay_path = root / "cw-base-overlay.json"
             manual_edges_path = root / "manual-base-edges.geojson"
             registry_path = root / "base-edge-share-ids.json"
+            proposal_path = root / "base-edge-share-ids.proposal.json"
             write_json(
                 graph_path,
                 {
@@ -221,6 +369,7 @@ class BaseRoutingAssetTests(unittest.TestCase):
                 manual_edges_path,
                 {},
                 base_edge_share_ids_path=registry_path,
+                base_edge_share_id_proposal_path=proposal_path,
             )
 
             share_ids = {edge["id"]: edge["shareId"] for edge in asset["edges"]}
@@ -228,9 +377,14 @@ class BaseRoutingAssetTests(unittest.TestCase):
             self.assertEqual(share_ids["edge-new"], 8)
             registry = json.loads(registry_path.read_text(encoding="utf-8"))
             self.assertEqual(registry["edges"]["retired"], 3)
-            self.assertEqual(registry["nextShareId"], 9)
+            self.assertEqual(registry["nextShareId"], 8)
+            self.assertNotIn("edge-new", registry["edges"])
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            self.assertEqual(proposal["edges"]["edge-new"], 8)
+            self.assertEqual(proposal["nextShareId"], 9)
             self.assertEqual(validation["shareIds"]["newIds"], 1)
             self.assertEqual(validation["shareIds"]["retiredIds"], 1)
+            self.assertFalse(validation["shareIds"]["releasedRegistryMutated"])
 
     def test_runtime_asset_compacts_fresh_elevated_endpoint_metrics(self):
         with tempfile.TemporaryDirectory() as directory:

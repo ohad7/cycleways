@@ -158,6 +158,7 @@ function App() {
     activeDataPointIds,
     dataMarkerFeatures,
     routePointDragPreview,
+    routeProposal,
     displayedRoutePoints,
     inspectedSegmentDetails,
     inspectedSegment,
@@ -183,6 +184,10 @@ function App() {
     handleRoutePointDragEnd,
     handleRoutePointDragStart,
     handleRoutePointRemove,
+    handleReturnToStart,
+    handlePlanOppositeDirection,
+    handleAcceptRouteProposal,
+    handleDismissRouteProposal,
     handleRoutePointSelect,
     handleRouteLineDrag,
     handleRouteLineDragStart,
@@ -949,6 +954,11 @@ function App() {
               "planner-route-playback planner-route-playback--panel",
             )
       }
+      routeProposal={routeProposal}
+      onReturnToStart={handleReturnToStart}
+      onPlanOppositeDirection={handlePlanOppositeDirection}
+      onAcceptRouteProposal={handleAcceptRouteProposal}
+      onDismissRouteProposal={handleDismissRouteProposal}
       elevation={
         <PanelElevationGraph
           geometry={routeState.geometry}
@@ -1219,6 +1229,7 @@ function App() {
                   elevationHover={mapUi.elevationHover}
                   focusedSegment={routeState.focusedSegment}
                   geoJsonData={state.assets.geoJsonData}
+                  cwAlignmentGeometry={state.assets.cwAlignmentGeometryData}
                   hideBuiltRoute={panel.state === "discover" && Boolean(hoveredRouteSlug)}
                   hoveredSegment={routeState.hoveredSegment}
                   onDataMarkerClick={handleDataMarkerClick}

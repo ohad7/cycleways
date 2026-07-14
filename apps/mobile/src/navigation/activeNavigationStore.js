@@ -4,11 +4,15 @@ import {
   isNavigationSnapshotFresh,
 } from "@cycleways/core/navigation/persistencePolicy.js";
 import { RESUME_WARM_MAX_AGE_MS } from "@cycleways/core/navigation/resumePolicy.js";
+import {
+  navigationPlanFingerprint,
+  validateRouteAttestation,
+} from "@cycleways/core/routing/routeAttestation.js";
 
 const FILE_URI = FileSystem.documentDirectory
   ? `${FileSystem.documentDirectory}active-navigation-session.json`
   : null;
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const STALE_AFTER_MS = RESUME_WARM_MAX_AGE_MS;
 
 async function applyStoreOperation(operation) {
@@ -50,10 +54,19 @@ export async function saveActiveNavigationSession(record) {
   if (!FILE_URI || !record?.navigationRoute || !record?.sessionSnapshot) {
     return false;
   }
+  const attestation = validateRouteAttestation(
+    record.navigationRoute.routingValidation,
+    { geometry: record.navigationRoute.geometry },
+  );
+  const planFingerprint = navigationPlanFingerprint(record.navigationRoute);
+  if (!attestation.ok || !planFingerprint) return false;
   const payload = {
     ...record,
     version: SCHEMA_VERSION,
     savedAt: Date.now(),
+    routeContentFingerprint:
+      record.navigationRoute.routingValidation.contentFingerprint,
+    navigationPlanFingerprint: planFingerprint,
   };
   return storeCoordinator.request({
     kind: "save",
@@ -85,6 +98,23 @@ export async function loadActiveNavigationSession(now = Date.now()) {
       return null;
     }
     if (!parsed.navigationRoute || !parsed.sessionSnapshot) {
+      await clearActiveNavigationSession();
+      return null;
+    }
+    const attestation = validateRouteAttestation(
+      parsed.navigationRoute.routingValidation,
+      { geometry: parsed.navigationRoute.geometry },
+    );
+    const expectedPlanFingerprint = navigationPlanFingerprint(
+      parsed.navigationRoute,
+    );
+    if (
+      !attestation.ok ||
+      parsed.routeContentFingerprint !==
+        parsed.navigationRoute.routingValidation.contentFingerprint ||
+      !expectedPlanFingerprint ||
+      parsed.navigationPlanFingerprint !== expectedPlanFingerprint
+    ) {
       await clearActiveNavigationSession();
       return null;
     }

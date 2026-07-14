@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "segmentId": 174,
+  "segmentName": "כביש 99 קריית שמונה",
+  "description": "Small divided Road 99 corridor proving that one logical CycleWays segment needs two physical directional alignments.",
+  "endpoints": {
+    "A": {"label": "east", "lat": 33.220896180282395, "lng": 35.58559658159864},
+    "B": {"label": "west", "lat": 33.2221379, "lng": 35.58154275}
+  },
+  "parallelProjectionForA": {
+    "edgeShareId": 19,
+    "edgeFraction": 0.22331509387500495,
+    "lat": 33.22097081721579,
+    "lng": 35.58560011650076,
+    "offsetMeters": 8.305759881307253
+  },
+  "physicalEdges": {
+    "aToB": {
+      "edgeShareId": 19,
+      "edgeId": "e1006452932_1",
+      "direction": "forward",
+      "lengthMeters": 485.0,
+      "allowedByRawOsm": true,
+      "tags": {"highway": "trunk", "oneway": "yes", "ref": "99"}
+    },
+    "bToA": {
+      "edgeShareId": 370,
+      "edgeId": "e1024904326_1",
+      "direction": "forward",
+      "lengthMeters": 547.3,
+      "allowedByRawOsm": true,
+      "tags": {"highway": "trunk", "oneway": "yes", "ref": "99"}
+    },
+    "knownBadAtoB": {
+      "edgeShareId": 370,
+      "edgeId": "e1024904326_1",
+      "direction": "reverse",
+      "allowedByRawOsm": false
+    }
+  },
+  "intents": [
+    {"id": "a-to-b", "waypoints": ["A", "B"], "requiredAlignment": "aToB"},
+    {"id": "b-to-a", "waypoints": ["B", "A"], "requiredAlignment": "bToA"},
+    {"id": "a-to-b-to-a", "waypoints": ["A", "B", "A"], "requiredAlignments": ["aToB", "bToA"]}
+  ]
+}

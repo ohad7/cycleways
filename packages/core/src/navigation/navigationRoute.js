@@ -3,6 +3,7 @@ import {
   routeSurfaceType,
 } from "../data/catalog.js";
 import { getDistance } from "../utils/distance.js";
+import { validateRouteAttestation } from "../routing/routeAttestation.js";
 
 const DEFAULT_BUILT_ROUTE_NAME = "My route";
 
@@ -65,7 +66,15 @@ function createNavigationRoute({
   const distanceMeters =
     finiteNonNegative(routeState?.distance) || computedDistance;
   const routeFailure = routeState?.routeFailure || null;
-  const status = navigationRouteStatus({ points, geometry, routeFailure });
+  const routingValidation = routeState?.routingValidation
+    ? JSON.parse(JSON.stringify(routeState.routingValidation))
+    : null;
+  const status = navigationRouteStatus({
+    points,
+    geometry,
+    routeFailure,
+    routingValidation,
+  });
   const segmentRefs = selectedSegments.map((name) => ({
     name,
     id: segmentIdForName(name, metadata?.segmentsData),
@@ -98,6 +107,7 @@ function createNavigationRoute({
     selectedSegmentNames: selectedSegments,
     activeDataPoints: cloneDataPointList(routeState?.activeDataPoints),
     routeFailure,
+    routingValidation,
     start: metadata?.start || null,
     end: metadata?.end || null,
     regionId: metadata?.regionId || "",
@@ -105,6 +115,7 @@ function createNavigationRoute({
     passesNear: arrayOfStrings(metadata?.passesNear),
     segmentSpans: reconcileSegmentSpans(routeState?.segmentSpans, computedDistance),
     junctions: cloneJunctionList(routeState?.junctions),
+    maneuverGeneratorVersion: "navigation-cues-v2",
   };
 }
 
@@ -143,12 +154,21 @@ function reconcileSegmentSpans(rawSpans, geometryTotalMeters) {
   }));
 }
 
-function navigationRouteStatus({ points, geometry, routeFailure }) {
+function navigationRouteStatus({
+  points,
+  geometry,
+  routeFailure,
+  routingValidation,
+}) {
   if (routeFailure || (points.length >= 2 && geometry.length < 2)) {
     return { reason: "broken-route" };
   }
   if (geometry.length < 2) {
     return { reason: "empty-route" };
+  }
+  const evidence = validateRouteAttestation(routingValidation, { geometry });
+  if (!evidence.ok) {
+    return { reason: evidence.reason };
   }
   return { reason: null };
 }

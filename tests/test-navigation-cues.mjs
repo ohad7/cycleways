@@ -215,6 +215,110 @@ function routeFrom(geometry, extra = {}) {
   assert.equal(hazardOnly.cue.type, "caution", "hazard-only case still selects hazard");
 }
 
+// --- Geometry cleanup: stable bearings + one physical turn ----------------
+// A sub-metre span-joint duplicate must not define a bearing arm. The raw
+// east -> north route below has a 0.07 m north-east intermediate segment;
+// without cue-local cleanup it reports only the noisy ~50° first corner.
+{
+  const route = routeFrom([
+    { lat: 33, lng: 35 },
+    { lat: 33, lng: 35.001 },
+    { lat: 33.0000005, lng: 35.0010005 },
+    { lat: 33.001, lng: 35.001 },
+  ]);
+  const turns = findType(buildRouteCues(route), "turn");
+  assert.equal(turns.length, 1, "the duplicate joint produces one physical turn");
+  assert.equal(turns[0].direction, "left");
+  assert.ok(
+    near(turns[0].turnAngleDeg, 90, 5),
+    `the stable arms recover the physical ~90° angle, got ${turns[0].turnAngleDeg}`,
+  );
+}
+
+// Dense but legitimate sampling must not turn into one unbounded duplicate
+// cluster. Each point is about 0.5 m from the previous point, while the two
+// route arms are about 5 m long.
+{
+  const geometry = [];
+  for (let index = 0; index <= 10; index += 1) {
+    geometry.push({ lat: 33, lng: 35 + index * 0.000006 });
+  }
+  for (let index = 1; index <= 10; index += 1) {
+    geometry.push({ lat: 33 + index * 0.000005, lng: 35.00006 });
+  }
+  const turns = findType(buildRouteCues(routeFrom(geometry)), "turn");
+  assert.equal(turns.length, 1, "dense sampling preserves the physical corner");
+  assert.ok(near(turns[0].turnAngleDeg, 90, 5));
+}
+
+// One physical turn drawn as two moderate same-direction corners at the same
+// nearest junction merges before compound linking.
+{
+  const geometry = [
+    { lat: 33, lng: 35 },
+    { lat: 33, lng: 35.001 },
+    { lat: 33.000144, lng: 35.001134 },
+    { lat: 33.001, lng: 35.00085 },
+  ];
+  const route = routeFrom(geometry, { junctions: [geometry[1]] });
+  const turns = findType(buildRouteCues(route), "turn");
+  assert.equal(turns.length, 1, "split corners at one junction become one turn");
+  assert.equal(turns[0].direction, "left");
+  assert.ok(near(turns[0].turnAngleDeg, 105, 5));
+  assert.equal(turns[0].mergedCornerCount, 2);
+  assert.ok(
+    turns[0].completionDistanceMeters - turns[0].distanceMeters > 19,
+    "the merged maneuver retains its physical completion point",
+  );
+  assert.equal(turns[0].thenDirection, undefined);
+
+  const completion = route.geometry[2].distanceFromStartMeters;
+  const total = route.geometry.at(-1).distanceFromStartMeters;
+  const namedRoute = routeFrom(geometry, {
+    junctions: [geometry[1]],
+    segmentSpans: [
+      { startMeters: 0, endMeters: completion, name: "Approach" },
+      { startMeters: completion, endMeters: total, name: "After the turn" },
+    ],
+  });
+  const namedCues = buildRouteCues(namedRoute);
+  assert.equal(findType(namedCues, "turn")[0].ontoSegmentName, "After the turn");
+  assert.equal(
+    findType(namedCues, "enter-segment").length,
+    0,
+    "a segment beginning at the merged completion attaches to the turn",
+  );
+}
+
+// The same geometry represents two decisions when each corner has its own
+// nearest junction; proximity alone must not merge them.
+{
+  const geometry = [
+    { lat: 33, lng: 35 },
+    { lat: 33, lng: 35.001 },
+    { lat: 33.000144, lng: 35.001134 },
+    { lat: 33.001, lng: 35.00085 },
+  ];
+  const route = routeFrom(geometry, { junctions: [geometry[1], geometry[2]] });
+  const turns = findType(buildRouteCues(route), "turn");
+  assert.equal(turns.length, 2, "distinct nearest junctions preserve two turns");
+  assert.equal(turns[0].thenDirection, "left");
+}
+
+// Even at one junction, two 90° corners exceed the conservative merge-angle
+// cap and stay as separate decisions.
+{
+  const geometry = [
+    { lat: 33, lng: 35 },
+    { lat: 33, lng: 35.001 },
+    { lat: 33.00018, lng: 35.001 },
+    { lat: 33.00018, lng: 34.9999 },
+  ];
+  const route = routeFrom(geometry, { junctions: [geometry[1]] });
+  const turns = findType(buildRouteCues(route), "turn");
+  assert.equal(turns.length, 2, "a combined ~180° pair is not collapsed");
+}
+
 // --- Short-segment suppression: close turns do not spam -------------------
 {
   // Two ~90 deg turns ~9 m apart (below the hard noise floor) -> one cue.

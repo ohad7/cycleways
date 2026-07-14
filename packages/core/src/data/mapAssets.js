@@ -6,6 +6,8 @@ const DEFAULT_MAP_ASSETS = {
   bikeRoads: "bike_roads.geojson",
   segments: "segments.json",
   cwBaseIndex: null,
+  cwAlignmentGeometry: null,
+  legacyRoutingCompatibility: null,
   assetBasePath: MAP_MANIFEST_PATH,
 };
 
@@ -60,6 +62,9 @@ export async function loadMapAssets(options = {}) {
     cwBaseIndexData,
     baseRoutingShardManifestData,
     roundaboutsData,
+    cwAlignmentGeometryData,
+    legacyCwBaseIndexData,
+    legacyRoutingCompatibilityMetadata,
   ] = await Promise.all([
     getJsonAsset(manifest.segments, { basePath: manifestBasePath, ...fetchOptions }),
     getJsonAsset(manifest.bikeRoads, { basePath: manifestBasePath, ...fetchOptions }),
@@ -81,7 +86,40 @@ export async function loadMapAssets(options = {}) {
           ...fetchOptions,
         })
       : Promise.resolve(null),
+    manifest.cwAlignmentGeometry
+      ? getJsonAsset(
+          assetPathWithVersion(manifest.cwAlignmentGeometry, manifest.version),
+          { basePath: manifestBasePath, ...fetchOptions },
+        )
+      : Promise.resolve(null),
+    manifest.legacyRoutingCompatibility?.cwBaseIndex
+      ? getJsonAsset(
+          assetPathWithVersion(
+            manifest.legacyRoutingCompatibility.cwBaseIndex,
+            manifest.version,
+          ),
+          { basePath: manifestBasePath, ...fetchOptions },
+        )
+      : Promise.resolve(null),
+    manifest.legacyRoutingCompatibility?.metadata
+      ? getJsonAsset(
+          assetPathWithVersion(
+            manifest.legacyRoutingCompatibility.metadata,
+            manifest.version,
+          ),
+          { basePath: manifestBasePath, ...fetchOptions },
+        )
+      : Promise.resolve(null),
   ]);
+
+  const legacyRoutingCompatibility = legacyCwBaseIndexData &&
+    legacyRoutingCompatibilityMetadata
+    ? {
+        manifest: manifest.legacyRoutingCompatibility,
+        cwBaseIndex: legacyCwBaseIndexData,
+        metadata: legacyRoutingCompatibilityMetadata,
+      }
+    : null;
 
   return {
     manifest,
@@ -92,6 +130,8 @@ export async function loadMapAssets(options = {}) {
     baseRoutingShardManifestData,
     baseRoutingShardManifestPath,
     roundaboutsData,
+    cwAlignmentGeometryData,
+    legacyRoutingCompatibility,
     baseRoutingMode: useRoutingShards ? "shards" : "legacy",
   };
 }
@@ -105,6 +145,8 @@ export function summarizeMapAssets({
   baseRoutingMode,
   cwBaseIndexData,
   roundaboutsData,
+  cwAlignmentGeometryData,
+  legacyRoutingCompatibility,
 }) {
   const features = geoJsonData?.features || [];
   const coordinateCount = features.reduce((total, feature) => {
@@ -127,6 +169,10 @@ export function summarizeMapAssets({
     baseRoutingShards: baseRoutingShardManifestData?.shards?.length || 0,
     cwBaseIndexFile: manifest.cwBaseIndex || null,
     cwBaseIndexSegments: Object.keys(cwBaseIndexData?.segments || {}).length,
+    cwAlignmentGeometryFeatures:
+      cwAlignmentGeometryData?.features?.length || 0,
+    legacyRoutingCompatibility:
+      legacyRoutingCompatibility?.metadata?.releaseId || null,
     roundaboutsFile: manifest.roundabouts || null,
     roundabouts: Array.isArray(roundaboutsData?.roundabouts) ? roundaboutsData.roundabouts.length : 0,
   };

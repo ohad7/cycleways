@@ -402,6 +402,11 @@ export default function BuildScreen({ navigation, route }) {
     handleRoutePointDrag,
     handleRoutePointDragEnd,
     routePointDragPreview,
+    routeProposal,
+    handleReturnToStart,
+    handlePlanOppositeDirection,
+    handleAcceptRouteProposal,
+    handleDismissRouteProposal,
     handleDataMarkerClick,
     handleSelectedDataMarkerClear,
     handleAddDataMarkerToRoute,
@@ -416,6 +421,10 @@ export default function BuildScreen({ navigation, route }) {
     () => buildRouteGeometryFeatureCollection(routeState.geometry),
     [routeState.geometry],
   );
+  const cwAlignmentGeometry = state.assets?.cwAlignmentGeometryData || {
+    type: "FeatureCollection",
+    features: [],
+  };
 
   const searchHighlight = useMemo(
     () => buildSearchHighlightFeatureCollection(mapUi.searchHighlight),
@@ -3509,6 +3518,36 @@ export default function BuildScreen({ navigation, route }) {
           <LineLayer id="network-casing" style={networkLayerStyles.casing} />
           <LineLayer id="network-line" style={networkLayerStyles.core} />
         </ShapeSource>
+        {cwAlignmentGeometry.features?.length > 0 ? (
+          <ShapeSource id="cw-directional-alignments" shape={cwAlignmentGeometry}>
+            <LineLayer
+              id="cw-directional-alignments-line"
+              minZoomLevel={11}
+              style={{
+                lineColor: "#087f8c",
+                lineWidth: 3,
+                lineOpacity: 0.82,
+                lineCap: "round",
+                lineJoin: "round",
+              }}
+            />
+            <SymbolLayer
+              id="cw-directional-alignments-arrows"
+              minZoomLevel={12}
+              style={{
+                symbolPlacement: "line",
+                symbolSpacing: 90,
+                textField: "➤",
+                textSize: 13,
+                textColor: "#ffffff",
+                textHaloColor: "#087f8c",
+                textHaloWidth: 1.5,
+                textKeepUpright: false,
+                textRotationAlignment: "map",
+              }}
+            />
+          </ShapeSource>
+        ) : null}
         <ShapeSource id="route-geometry" shape={displayedRouteGeometry}>
           {routeLineStyles.casing ? (
             <LineLayer id="route-casing" style={routeLineStyles.casing} />
@@ -3914,6 +3953,11 @@ export default function BuildScreen({ navigation, route }) {
             presentation={routePresentation}
             routePoints={displayedRoutePoints}
             routeState={routeState}
+            routeProposal={routeProposal}
+            onReturnToStart={handleReturnToStart}
+            onPlanOppositeDirection={handlePlanOppositeDirection}
+            onAcceptRouteProposal={handleAcceptRouteProposal}
+            onDismissRouteProposal={handleDismissRouteProposal}
             emptyState={
               <BuildEmptyActions
                 searchQuery={mapUi.searchQuery}
@@ -3947,7 +3991,9 @@ export default function BuildScreen({ navigation, route }) {
         plan={ridePlan}
         selection={rideSetupSelection}
         locationStatus={rideSetupLocationStatus}
-        reverseAllowed={rideSetupSourceRoute?.routeShape?.type !== "one_way"}
+        reverseAllowed={
+          rideSetupSourceRoute?.routingValidation?.exactReverseAllowed === true
+        }
         hapticsEnabled={nav.hapticsEnabled}
         onToggleHaptics={() => nav.setHapticsEnabled(!nav.hapticsEnabled)}
         voiceEnabled={voiceGuidanceEnabled}
@@ -4024,6 +4070,11 @@ function BuildPanelContent({
   presentation,
   routePoints,
   routeState,
+  routeProposal,
+  onReturnToStart,
+  onPlanOppositeDirection,
+  onAcceptRouteProposal,
+  onDismissRouteProposal,
 }) {
   const buildModel = getPlannerBuildModel(routeState);
   const hasPoints = routePoints.length > 0;
@@ -4119,6 +4170,48 @@ function BuildPanelContent({
                   <Text style={styles.statLabel}>{label}</Text>
                 </View>
               ))}
+            </View>
+          ) : null}
+
+          {buildModel.hasRoute ? (
+            <View style={styles.directionActions}>
+              <ChromeButton
+                label="חזרה להתחלה"
+                onPress={onReturnToStart}
+                accessibilityLabel="תכנון מסלול חזרה לנקודת ההתחלה"
+              />
+              <ChromeButton
+                label="כיוון הפוך"
+                onPress={onPlanOppositeDirection}
+                accessibilityLabel="תכנון מסלול חדש בכיוון ההפוך"
+              />
+            </View>
+          ) : null}
+
+          {routeProposal?.routeInfo ? (
+            <View style={styles.routeProposal} accessibilityLiveRegion="polite">
+              <Text style={styles.routeProposalTitle}>
+                {routeProposal.purpose === "return"
+                  ? "טיוטת מסלול חזרה"
+                  : "טיוטה בכיוון ההפוך"}
+              </Text>
+              <Text style={styles.routeProposalText}>
+                {(Number(routeProposal.routeInfo.distance || 0) / 1000).toFixed(1)} ק״מ
+              </Text>
+              <Text style={styles.routeProposalHint}>
+                המסלול הקיים לא ישתנה עד לאישור.
+              </Text>
+              <View style={styles.directionActions}>
+                <ChromeButton
+                  label="שימוש במסלול"
+                  onPress={onAcceptRouteProposal}
+                  primary
+                />
+                <ChromeButton
+                  label="ביטול"
+                  onPress={onDismissRouteProposal}
+                />
+              </View>
             </View>
           ) : null}
 
@@ -5245,6 +5338,37 @@ const styles = StyleSheet.create({
   statLabel: {
     ...text.label,
     color: "#52616f",
+    writingDirection: "rtl",
+  },
+  directionActions: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  routeProposal: {
+    gap: 5,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#5b9187",
+    backgroundColor: "#eef7f4",
+  },
+  routeProposalTitle: {
+    ...text.bodyStrong,
+    color: "#172026",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  routeProposalText: {
+    ...text.body,
+    color: "#172026",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  routeProposalHint: {
+    ...text.caption,
+    color: "#52616f",
+    textAlign: "right",
     writingDirection: "rtl",
   },
   buildFooter: {

@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-14",
+  "status": "candidate_pending_manual_direction_review",
+  "description": "A direction-safe reconstruction of the reported iOS ride. It preserves the original corridor, uses Road 99 westbound legally, and avoids both the original first-control U-turn and the 5.6 m via-point spur.",
+  "derivedFrom": "tests/fixtures/bicycle-traversal/road-99-ride.json",
+  "coordinateReplan": {
+    "acceptedFingerprint": null,
+    "observedCandidateFingerprint": "sha256-ef360dae015a719cac8e62e962b50bc727a94cc43464c56ec42346d4f4fa0a75",
+    "coordinates": [
+      {
+        "lat": 33.21348766745349,
+        "lng": 35.585172391152135
+      },
+      {
+        "lat": 33.22039845006485,
+        "lng": 35.58702695460441
+      },
+      {
+        "lat": 33.22102,
+        "lng": 35.585596
+      },
+      {
+        "lat": 33.222479464324955,
+        "lng": 35.577189527326574
+      },
+      {
+        "lat": 33.22355800977551,
+        "lng": 35.57536291318568
+      },
+      {
+        "lat": 33.23525,
+        "lng": 35.5802
+      },
+      {
+        "lat": 33.235557,
+        "lng": 35.5804
+      },
+      {
+        "lat": 33.2357,
+        "lng": 35.5806
+      },
+      {
+        "lat": 33.23605,
+        "lng": 35.580583
+      },
+      {
+        "lat": 33.241055825741796,
+        "lng": 35.582172052838374
+      },
+      {
+        "lat": 33.244158486273605,
+        "lng": 35.58964437415529
+      },
+      {
+        "lat": 33.23332476608971,
+        "lng": 35.59685887627246
+      },
+      {
+        "lat": 33.232233,
+        "lng": 35.599184
+      },
+      {
+        "lat": 33.230587,
+        "lng": 35.602552
+      },
+      {
+        "lat": 33.225234076558046,
+        "lng": 35.60411766821326
+      },
+      {
+        "lat": 33.22514,
+        "lng": 35.612
+      },
+      {
+        "lat": 33.22502,
+        "lng": 35.61311
+      },
+      {
+        "lat": 33.22495,
+        "lng": 35.61304
+      },
+      {
+        "lat": 33.22483,
+        "lng": 35.61301
+      },
+      {
+        "lat": 33.2247,
+        "lng": 35.61315
+      },
+      {
+        "lat": 33.2247,
+        "lng": 35.61335
+      },
+      {
+        "lat": 33.22299275521477,
+        "lng": 35.6159510493019
+      }
+    ]
+  },
+  "observedCandidate": {
+    "mapVersion": "2afc92b9f9f9",
+    "distanceMeters": 10111.568040913078,
+    "originalDistanceMeters": 10018.922386511025,
+    "distanceDeltaMeters": 92.64565440205297,
+    "sameDirectedBaseEdgePercent": 81.91081746570697,
+    "elevationGainMeters": 222.9307392816192,
+    "elevationLossMeters": 231,
+    "traversalCount": 105,
+    "geometryPointCount": 322,
+    "cueCounts": {
+      "start": 1,
+      "roundabout": 6,
+      "turn": 19,
+      "bend": 2,
+      "arrive": 1
+    },
+    "canNavigate": true,
+    "prohibitedOrUnknownTraversals": 0,
+    "road99": {
+      "requiredEdgeShareId": 19,
+      "requiredDirection": "forward",
+      "distanceMeters": 485,
+      "forbiddenEdgeShareId": 370,
+      "forbiddenDirection": "reverse",
+      "forbiddenTraversalPresent": false
+    },
+    "viaPointSpur": {
+      "rejectedEdgeShareId": 29897,
+      "reverseForwardPairPresent": false,
+      "replacementEdgeShareId": 26101,
+      "snapDisplacementMeters": 5.579133496186929,
+      "falseCompoundCuePresent": false
+    },
+    "navigationGeometryCleanup": {
+      "cueAnalysisGeometryPointCount": 312,
+      "corrupted154DegreeInstructionPresent": false,
+      "crossingPairAfterCleanup": [
+        "right",
+        "left"
+      ],
+      "splitLeftTurnMerged": true,
+      "mergedTurnDistanceMeters": 8656.836787053635,
+      "mergedTurnCompletionMeters": 8677.131169565015,
+      "mergedTurnAngleDegrees": 104.73172937515847
+    },
+    "closedWayClosures": [
+      {
+        "osmWayId": 855779446,
+        "edgeId": "e855779446_7",
+        "edgeShareId": 48803,
+        "direction": "forward",
+        "distanceMeters": 5.5
+      },
+      {
+        "osmWayId": 958921301,
+        "edgeId": "e958921301_8",
+        "edgeShareId": 48829,
+        "direction": "forward",
+        "distanceMeters": 14.6
+      }
+    ]
+  },
+  "requiredCandidateBaseData": {
+    "reviewedManualEdgeIds": [
+      "manual-174-mpn1uyqr",
+      "manual-174-mpe4wecq",
+      "manual-164-mpe4fbrz",
+      "manual-manual-osm-1092567462-mpe4drrn-a-mpe4dzx1",
+      "manual-osm-815936012-mpc6a4zo",
+      "manual-osm-138609192-mpc9242r",
+      "manual-osm-529023380-mpdma4wt"
+    ]
+  }
+}

@@ -17,6 +17,7 @@ import {
 import { buildRouteCues, selectActiveCue } from "./navigationCues.js";
 import { buildNavigationGeometry } from "./navigationRoute.js";
 import { createRouteProgressTracker } from "./routeProgress.js";
+import { validateRouteAttestation } from "../routing/routeAttestation.js";
 
 export const NAV_ACTIONS = {
   START: "START",
@@ -366,11 +367,20 @@ export function createNavigationSession(navigationRoute, options = {}) {
 
     switch (action.type) {
       case NAV_ACTIONS.START:
-        if (!navigationRoute?.canNavigate) {
-          return set({
-            status: "error",
-            error: navigationRoute?.unavailableReason || "route-not-navigable",
-          });
+        {
+          const evidence = validateRouteAttestation(
+            navigationRoute?.routingValidation,
+            { geometry: navigationRoute?.geometry },
+          );
+          if (!navigationRoute?.canNavigate || !evidence.ok) {
+            return set({
+              status: "error",
+              error:
+                navigationRoute?.unavailableReason ||
+                evidence.reason ||
+                "route-not-navigable",
+            });
+          }
         }
         arrivalDetectedAt = null;
         arrivalFixCount = 0;

@@ -1,9 +1,20 @@
 import assert from "node:assert/strict";
-import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
+import {
+  navigationRouteFromRouteState as createNavigationRouteFromRouteState,
+} from "@cycleways/core/navigation/navigationRoute.js";
 import {
   NAV_ACTIONS,
   createNavigationSession,
 } from "@cycleways/core/navigation/navigationSession.js";
+import { withFixtureRoutingValidation } from "./helpers/routing-validation.mjs";
+
+function navigationRouteFromRouteState(routeState, shareInfo, metadata) {
+  return createNavigationRouteFromRouteState(
+    withFixtureRoutingValidation(routeState),
+    shareInfo,
+    metadata,
+  );
+}
 
 function straightRoute() {
   return navigationRouteFromRouteState(

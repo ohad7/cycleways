@@ -17,6 +17,23 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from .bicycle_traversal_policy import (
+        POLICY_DIGEST,
+        POLICY_ID,
+        normalize_bicycle_traversal,
+        source_geometry_digest,
+        validate_override,
+    )
+except ImportError:  # Direct script execution: processing/ is on sys.path.
+    from bicycle_traversal_policy import (
+        POLICY_DIGEST,
+        POLICY_ID,
+        normalize_bicycle_traversal,
+        source_geometry_digest,
+        validate_override,
+    )
+
 
 DEFAULT_NODE_MERGE_TOLERANCE_M = 0.5
 DEFAULT_SPLIT_TOLERANCE_M = 1.0
@@ -28,6 +45,7 @@ SOURCE_PRIORITY = {
     "calculated_crossing": 3,
     "osm_intersection": 2,
     "osm_vertex": 1,
+    "osm_ring_split": 0,
     "osm_endpoint": 0,
 }
 
@@ -448,6 +466,61 @@ def slice_way_geometry(
     return sliced
 
 
+def is_closed_way(coords: list[list[float]]) -> bool:
+    return len(coords) >= 3 and coord_key(coords[0]) == coord_key(coords[-1])
+
+
+def slice_closed_way_wrap_geometry(
+    coords: list[list[float]],
+    start_split: dict[str, Any],
+    end_split: dict[str, Any],
+) -> list[list[float]]:
+    """Slice forward across a closed way's stored end/start boundary."""
+
+    sliced: list[list[float]] = []
+    append_coord(sliced, start_split["coord"])
+    for index in range(start_split["segmentIndex"] + 1, len(coords)):
+        append_coord(sliced, coords[index])
+    # Skip coords[0]: a valid closed LineString repeats it at coords[-1].
+    for index in range(1, end_split["segmentIndex"] + 1):
+        append_coord(sliced, coords[index])
+    append_coord(sliced, end_split["coord"])
+    return sliced
+
+
+def closed_way_midpoint_split(coords: list[list[float]], project, unproject) -> dict[str, Any] | None:
+    """Create a deterministic second node for a ring with only one attachment."""
+
+    projected_coords = [project(coord) for coord in coords]
+    cumulative = cumulative_lengths(projected_coords)
+    if not cumulative or cumulative[-1] <= 0:
+        return None
+    target_distance = cumulative[-1] / 2
+    for segment_index in range(len(projected_coords) - 1):
+        segment_start_distance = cumulative[segment_index]
+        segment_end_distance = cumulative[segment_index + 1]
+        segment_length = segment_end_distance - segment_start_distance
+        if segment_length <= 0 or target_distance > segment_end_distance:
+            continue
+        t = (target_distance - segment_start_distance) / segment_length
+        start = projected_coords[segment_index]
+        end = projected_coords[segment_index + 1]
+        point_m = (
+            start[0] + (end[0] - start[0]) * t,
+            start[1] + (end[1] - start[1]) * t,
+        )
+        return {
+            "coord": unproject(point_m),
+            "pointM": point_m,
+            "segmentIndex": segment_index,
+            "distanceAlongMeters": target_distance,
+            "distanceToLineMeters": 0.0,
+            "sources": {"osm_ring_split"},
+            "source": "osm_ring_split",
+        }
+    return None
+
+
 def edge_properties(
     edge_id: str,
     way_id: int,
@@ -507,6 +580,7 @@ def build_graph(
     raw_geojson: dict[str, Any],
     intersections_geojson: dict[str, Any],
     manual_edges_geojson: dict[str, Any] | None,
+    traversal_overrides: dict[str, Any] | None = None,
     *,
     node_merge_tolerance_m: float,
     split_tolerance_m: float,
@@ -522,6 +596,19 @@ def build_graph(
         for feature in (manual_edges_geojson or {}).get("features", [])
         if (feature.get("geometry") or {}).get("type") == "LineString"
     ]
+    override_records: dict[int, dict[str, Any]] = {}
+    if traversal_overrides:
+        if int(traversal_overrides.get("schemaVersion") or 0) != 1:
+            raise ValueError("Bicycle traversal overrides require schemaVersion 1")
+        if traversal_overrides.get("policyId") != POLICY_ID:
+            raise ValueError(f"Bicycle traversal overrides require policyId {POLICY_ID}")
+        for record in traversal_overrides.get("overrides") or []:
+            way_id = int(record.get("osmWayId") or 0)
+            if way_id <= 0:
+                raise ValueError("Bicycle traversal override is missing a positive osmWayId")
+            if way_id in override_records:
+                raise ValueError(f"Duplicate bicycle traversal override for OSM way {way_id}")
+            override_records[way_id] = record
     overridden_edge_ids = {
         str(properties.get("copiedFromEdgeId"))
         for feature in manual_features
@@ -538,6 +625,7 @@ def build_graph(
     split_count_by_source: Counter[str] = Counter()
     skipped_short_edges = 0
     split_counts = []
+    seen_override_way_ids: set[int] = set()
 
     for feature in sorted(features, key=lambda item: int(item.get("properties", {}).get("osmId") or 0)):
         properties = feature.get("properties") or {}
@@ -545,6 +633,11 @@ def build_graph(
         coords = feature.get("geometry", {}).get("coordinates") or []
         if not way_id or len(coords) < 2:
             continue
+        source_geometry_digest_value = source_geometry_digest(coords)
+        override = override_records.get(way_id)
+        if override is not None:
+            validate_override(override, source_geometry_digest_value)
+            seen_override_way_ids.add(way_id)
 
         candidates = split_candidates.get(way_id, [])
         splits = merge_way_splits(
@@ -554,6 +647,16 @@ def build_graph(
             unproject,
             split_tolerance_m=split_tolerance_m,
         )
+        if is_closed_way(coords) and len(splits) == 1:
+            midpoint_split = closed_way_midpoint_split(coords, project, unproject)
+            if midpoint_split is not None:
+                distance_to_existing = math.hypot(
+                    midpoint_split["pointM"][0] - splits[0]["pointM"][0],
+                    midpoint_split["pointM"][1] - splits[0]["pointM"][1],
+                )
+                if distance_to_existing > split_tolerance_m:
+                    splits.append(midpoint_split)
+                    splits.sort(key=lambda split: split["distanceAlongMeters"])
         if len(splits) < 2:
             continue
 
@@ -561,10 +664,19 @@ def build_graph(
         for split in splits:
             split_count_by_source[split["source"]] += 1
 
-        for slice_index in range(len(splits) - 1):
-            start_split = splits[slice_index]
-            end_split = splits[slice_index + 1]
-            geometry = slice_way_geometry(coords, start_split, end_split)
+        way_slices = [
+            (slice_index + 1, splits[slice_index], splits[slice_index + 1], False)
+            for slice_index in range(len(splits) - 1)
+        ]
+        if is_closed_way(coords):
+            way_slices.append((len(splits), splits[-1], splits[0], True))
+
+        for slice_index, start_split, end_split, wraps_boundary in way_slices:
+            geometry = (
+                slice_closed_way_wrap_geometry(coords, start_split, end_split)
+                if wraps_boundary
+                else slice_way_geometry(coords, start_split, end_split)
+            )
             if len(geometry) < 2:
                 continue
             distance_m = line_length_m(geometry)
@@ -572,7 +684,7 @@ def build_graph(
                 skipped_short_edges += 1
                 continue
 
-            edge_id = f"e{way_id}_{slice_index + 1}"
+            edge_id = f"e{way_id}_{slice_index}"
             if edge_id in overridden_edge_ids:
                 continue
 
@@ -594,7 +706,7 @@ def build_graph(
             public_properties = edge_properties(
                 edge_id,
                 way_id,
-                slice_index + 1,
+                slice_index,
                 properties,
                 from_node_id,
                 to_node_id,
@@ -606,10 +718,26 @@ def build_graph(
                 "toNodeId": to_node_id,
                 "source": "osm",
                 "osmWayId": way_id,
-                "sliceIndex": slice_index + 1,
+                "sliceIndex": slice_index,
+                "sourceGeometryDigest": source_geometry_digest_value,
                 "distanceMeters": round(distance_m, 1),
                 "coordinates": geometry,
                 "tags": clean_properties(properties),
+            }
+            edge_record["bicycleTraversalShadow"] = normalize_bicycle_traversal(
+                edge_record["tags"], source="osm", override=override
+            )
+            public_properties["sourceGeometryDigest"] = source_geometry_digest_value
+            public_properties["bicycleTraversal"] = {
+                key: edge_record["bicycleTraversalShadow"].get(key)
+                for key in (
+                    "policyId",
+                    "policyDigest",
+                    "forward",
+                    "reverse",
+                    "forwardReason",
+                    "reverseReason",
+                )
             }
             edge_records.append(edge_record)
             edge_features.append(
@@ -623,6 +751,13 @@ def build_graph(
                     "properties": public_properties,
                 }
             )
+
+    missing_override_way_ids = sorted(set(override_records) - seen_override_way_ids)
+    if missing_override_way_ids:
+        raise ValueError(
+            "Bicycle traversal overrides reference missing OSM ways: "
+            + ", ".join(str(value) for value in missing_override_way_ids[:10])
+        )
 
     for manual_index, feature in enumerate(manual_features):
         properties = feature.get("properties") or {}
@@ -675,6 +810,9 @@ def build_graph(
             "coordinates": coords,
             "tags": clean_properties(public_properties),
         }
+        edge_record["bicycleTraversalShadow"] = normalize_bicycle_traversal(
+            edge_record["tags"], source="manual", manual=properties
+        )
         edge_records.append(edge_record)
         edge_features.append(
             {
@@ -728,6 +866,9 @@ def build_graph(
             "splitToleranceMeters": split_tolerance_m,
             "minEdgeLengthMeters": min_edge_length_m,
             "manualOverrideEdges": len(overridden_edge_ids),
+            "reviewedTraversalOverrides": len(override_records),
+            "bicycleTraversalShadowPolicyId": POLICY_ID,
+            "bicycleTraversalShadowPolicyDigest": POLICY_DIGEST,
         },
         "nodes": public_nodes,
         "edges": edge_records,
@@ -839,6 +980,7 @@ def graph_summary(
         "splitToleranceMeters": metadata["splitToleranceMeters"],
         "minEdgeLengthMeters": metadata["minEdgeLengthMeters"],
         "manualOverrideEdges": metadata.get("manualOverrideEdges", 0),
+        "reviewedTraversalOverrides": metadata.get("reviewedTraversalOverrides", 0),
     }
 
 
@@ -861,6 +1003,12 @@ def main() -> int:
         type=Path,
         default=Path("data/manual-base-edges.geojson"),
         help="Manually drawn base edges GeoJSON.",
+    )
+    parser.add_argument(
+        "--bicycle-traversal-overrides",
+        type=Path,
+        default=Path("data/bicycle-traversal-overrides.json"),
+        help="Reviewed OSM-way traversal overrides.",
     )
     parser.add_argument(
         "--output-graph",
@@ -910,10 +1058,16 @@ def main() -> int:
         if args.manual_edges_geojson.exists()
         else {"type": "FeatureCollection", "features": []}
     )
+    traversal_overrides = (
+        load_json(args.bicycle_traversal_overrides)
+        if args.bicycle_traversal_overrides.exists()
+        else {"schemaVersion": 1, "policyId": POLICY_ID, "overrides": []}
+    )
     graph, nodes, edges, summary = build_graph(
         raw_geojson,
         intersections_geojson,
         manual_edges_geojson,
+        traversal_overrides,
         node_merge_tolerance_m=args.node_merge_tolerance_m,
         split_tolerance_m=args.split_tolerance_m,
         min_edge_length_m=args.min_edge_length_m,

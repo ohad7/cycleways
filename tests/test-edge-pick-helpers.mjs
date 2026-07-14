@@ -4,6 +4,8 @@ import {
   validateEdgePickMapping,
   conflictingSegmentForEdge,
   orientAppendedEdgeRef,
+  directedIntervalKey,
+  validateDirectionReviewAlignment,
 } from "../editor/lib/edge-pick.mjs";
 
 // stitchCoordsFromEdgeRefs ---------------------------------------------------
@@ -250,3 +252,52 @@ console.log("conflictingSegmentForEdge ok");
 }
 
 console.log("orientAppendedEdgeRef ok");
+
+// Direction Review validation ------------------------------------------------
+
+{
+  const edgeLookup = new Map([
+    ["e1", { bicycleTraversal: { forward: "allowed", reverse: "prohibited", reverseReason: "osm-oneway" } }],
+  ]);
+  const forward = validateDirectionReviewAlignment({
+    segmentId: 99,
+    alignmentKey: "aToB",
+    edgeRefs: [{ edgeId: "e1", direction: "forward" }],
+    edgeLookup,
+  });
+  assert.equal(forward.ok, true);
+  const reverse = validateDirectionReviewAlignment({
+    segmentId: 99,
+    alignmentKey: "bToA",
+    edgeRefs: [{ edgeId: "e1", direction: "reverse" }],
+    edgeLookup,
+  });
+  assert.equal(reverse.ok, false);
+  assert.equal(reverse.reasons[0].code, "non_allowed_traversal");
+}
+
+{
+  const ref = { edgeId: "e1", direction: "forward", fromFraction: 0, toFraction: 1 };
+  const owners = new Map([
+    [directedIntervalKey(ref), { segmentId: 7, alignmentKey: "aToB" }],
+  ]);
+  const conflict = validateDirectionReviewAlignment({
+    segmentId: 8,
+    alignmentKey: "aToB",
+    edgeRefs: [ref],
+    edgeLookup: new Map([["e1", { bicycleTraversal: { forward: "allowed" } }]]),
+    directedOwners: owners,
+  });
+  assert.equal(conflict.ok, false);
+  assert.equal(conflict.reasons[0].code, "directed_ownership_conflict");
+  const opposite = validateDirectionReviewAlignment({
+    segmentId: 8,
+    alignmentKey: "bToA",
+    edgeRefs: [{ ...ref, direction: "reverse" }],
+    edgeLookup: new Map([["e1", { bicycleTraversal: { reverse: "allowed" } }]]),
+    directedOwners: owners,
+  });
+  assert.equal(opposite.ok, true, "opposite directed ownership is independent");
+}
+
+console.log("validateDirectionReviewAlignment ok");

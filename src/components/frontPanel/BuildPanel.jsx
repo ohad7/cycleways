@@ -22,6 +22,11 @@ export default function BuildPanel({
   onPoiClick,
   elevation,
   playback,
+  routeProposal = null,
+  onReturnToStart,
+  onPlanOppositeDirection,
+  onAcceptRouteProposal,
+  onDismissRouteProposal,
   error,
   emptyState,
   legalLinks = null,
@@ -80,6 +85,41 @@ export default function BuildPanel({
       {hasRoute && playback}
 
       {hasRoute && (
+        <div className="build-panel__direction-actions" aria-label="פעולות כיוון וחזרה">
+          <button type="button" className="btn-ghost" onClick={onReturnToStart}>
+            תכנון חזרה לנקודת ההתחלה
+          </button>
+          <button type="button" className="btn-ghost" onClick={onPlanOppositeDirection}>
+            תכנון המסלול בכיוון ההפוך
+          </button>
+        </div>
+      )}
+
+      {routeProposal?.routeInfo ? (
+        <div className="build-panel__route-proposal" role="status" aria-live="polite">
+          <strong>
+            {routeProposal.purpose === "return"
+              ? "טיוטת מסלול חזרה"
+              : "טיוטה בכיוון ההפוך"}
+          </strong>
+          <span>
+            {formatProposalDistance(routeProposal.routeInfo.distance)} · שינוי של {formatProposalDelta(
+              routeProposal.routeInfo.distance - routeState.distance,
+            )}
+          </span>
+          <small>המסלול הקיים יישאר ללא שינוי עד לאישור.</small>
+          <div>
+            <button type="button" className="btn-primary" onClick={onAcceptRouteProposal}>
+              שימוש במסלול הזה
+            </button>
+            <button type="button" className="btn-ghost" onClick={onDismissRouteProposal}>
+              ביטול הטיוטה
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {hasRoute && (
         <div className="build-panel__actions">
           <button type="button" className="btn-primary" disabled={!canDownload} onClick={onDownloadGpx}>
             <Icon name="download-outline" /> GPX
@@ -109,6 +149,16 @@ export default function BuildPanel({
       {legalLinks}
     </div>
   );
+}
+
+function formatProposalDistance(meters) {
+  return `${(Math.max(0, Number(meters) || 0) / 1000).toFixed(1)} ק״מ`;
+}
+
+function formatProposalDelta(meters) {
+  const value = Number(meters) || 0;
+  const prefix = value > 0 ? "+" : value < 0 ? "−" : "";
+  return `${prefix}${(Math.abs(value) / 1000).toFixed(1)} ק״מ`;
 }
 
 function Stat({ k, v }) {

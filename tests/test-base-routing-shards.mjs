@@ -124,6 +124,32 @@ const shardTraversalIds = await routeTraversalIds(shardNetwork);
 assert.deepEqual(shardTraversalIds, fullTraversalIds);
 assert.deepEqual(shardTraversalIds, ["cw-west", "east-connector"]);
 
+assert.throws(
+  () =>
+    mergeBaseRoutingShards([
+      { id: "v2", sourceRoutingSchemaVersion: 2, nodes: [], edges: [] },
+      { id: "v3", sourceRoutingSchemaVersion: 3, nodes: [], edges: [] },
+    ]),
+  /Mixed base-routing shard schema versions/,
+);
+const strictMerged = mergeBaseRoutingShards(
+  [{ id: "strict", sourceRoutingSchemaVersion: 3, nodes, edges }],
+  {
+    graphVersion: "strict-v3",
+    policyId: "il-bicycle-v1",
+    policyDigest: "fixture-policy",
+    routingContract: {
+      baseRoutingSchemaVersion: 3,
+      policyId: "il-bicycle-v1",
+      policyDigest: "fixture-policy",
+      strictTraversalPolicy: true,
+    },
+  },
+);
+assert.equal(strictMerged.schemaVersion, 3);
+assert.equal(strictMerged.graphVersion, "strict-v3");
+assert.equal(strictMerged.routingContract.strictTraversalPolicy, true);
+
 const loadedShardIds = [];
 const shardStatuses = [];
 let shardedManagerLoads = 0;

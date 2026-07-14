@@ -7,6 +7,7 @@ import { navigationRouteFromRouteState } from "../navigationRoute.js";
 import { generateTrack } from "../trackGenerator.js";
 import { applyGpsGap, insertDwell } from "../trackTools.js";
 import { validateResolvedJourney } from "./journeySchema.js";
+import { buildRouteAttestation } from "../../routing/routeAttestation.js";
 
 const CONNECTOR_MODES = new Set([
   "straight-line",
@@ -35,7 +36,10 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
       id: `${currentNavigationRoute.id}:scenario-${name}`,
     };
   } else if (scenario.route?.routeState) {
-    navigationRoute = navigationRouteFromRouteState(scenario.route.routeState, {
+    navigationRoute = navigationRouteFromRouteState(attestScenarioRouteState(
+      scenario.route.routeState,
+      name,
+    ), {
       param: `scenario-${name}`,
     });
     if (!navigationRoute.canNavigate) {
@@ -86,4 +90,46 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
   };
   if (resolved.journeySchemaVersion !== null) validateResolvedJourney(resolved);
   return resolved;
+}
+
+function attestScenarioRouteState(routeState, name) {
+  if (routeState?.routingValidation) return routeState;
+  const geometry = Array.isArray(routeState?.geometry) ? routeState.geometry : [];
+  if (geometry.length < 2) return routeState;
+  const points = Array.isArray(routeState?.points) && routeState.points.length >= 2
+    ? [routeState.points[0], routeState.points.at(-1)]
+    : [geometry[0], geometry.at(-1)];
+  return {
+    ...routeState,
+    routingValidation: buildRouteAttestation({
+      validationContext: {
+        baseRoutingSchemaVersion: 3,
+        graphVersion: `scenario-${name}-v3`,
+        policyId: "il-bicycle-v1",
+        policyDigest: "navigation-scenario-fixture",
+        routingContextDigest: `scenario-${name}`,
+      },
+      traversalSlices: [{
+        edgeShareId: 1,
+        fromFraction: 0,
+        toFraction: 1,
+        distanceMeters: Math.max(1, Number(routeState?.distance) || 1000),
+        policyState: "allowed",
+        policyReason: "navigation-scenario-fixture",
+        oppositePolicyState: "allowed",
+        oppositePolicyReason: "navigation-scenario-fixture",
+        shardIds: ["navigation-scenario-fixture"],
+      }],
+      waypointOccurrences: points.map((point, index) => ({
+        id: point?.id || `scenario-${name}-${index}`,
+        lat: Number(point?.lat),
+        lng: Number(point?.lng),
+        baseEdgeShareId: 1,
+        baseEdgeFraction: index,
+      })),
+      legBoundaries: [{ startTraversal: 0, endTraversal: 1 }],
+      geometry,
+      derivation: "navigation-scenario-fixture",
+    }),
+  };
 }

@@ -1,11 +1,33 @@
 # Ride feedback round 3 — discussion
 
 **Date:** 2026-07-13
-**Status:** discussion / diagnostic — no implementation plan yet
+**Status:** implementation split into focused plans; crossing and voice UX remain open
 **Ride:** ~10.0 km, Kiryat Shmona → גן הצפון (via כביש 99, שביל תל חי, כביש 90 כפר גלעדי,
 כבישון עגל, כביש 9974 כפר יובל, שדות כפר יובל, שביל אופניים 99, גן הצפון).
 Ridden on the iOS app; every reported issue reproduces in the simulator SIM
 scenario over the shared route token.
+
+## Implementation status — 2026-07-14
+
+- Directional bicycle-policy code, editor review tooling, and staged assets are
+  implemented, but curation, Road 99 visual acceptance, and the atomic Gate D
+  production promotion remain open.
+- M2 via-point spur avoidance is implemented; its automated Road 99 replay
+  passes and the repaired closed-way joins remain in the shared manual visual
+  gate.
+- M3 split-turn merging and M4 cue-geometry cleanup are implemented. The ride
+  has 19 ordinary turn cues, no false 154° cue, and one merged 105° left.
+- C1 follow-camera padding now transitions for 500 ms inside the existing
+  camera owner; automated camera and journey suites pass, with original-ride
+  SIM visual acceptance pending.
+- M1/S2 first-class crossing maneuvers, S3 segment-distance confirmation, and
+  S4 car-road entry warnings remain open.
+
+Focused design and validation records live in
+[`bicycle-traversal-policy`](../bicycle-traversal-policy/design.md),
+[`via-point-spur`](../via-point-spur/design.md),
+[`navigation-geometry-cleanup`](../navigation-geometry-cleanup/design.md), and
+[`navigation-camera-padding`](../navigation-camera-padding/design.md).
 
 ## How the diagnostic was made
 

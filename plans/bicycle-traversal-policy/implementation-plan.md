@@ -1,7 +1,7 @@
 # Bicycle Traversal Policy — Implementation Plan
 
 **Date:** 2026-07-13  
-**Status:** ready for implementation  
+**Status:** implementation in progress
 **Design:** [`design.md`](./design.md)
 
 ## Outcome
@@ -24,6 +24,54 @@ Ship one policy-bound routing system in which:
 This is a staged data migration and product cutover, not a local `oneway` fix.
 The production reader stays on the current format until the new policy, overlay,
 assets, runtime, curated data, and clients pass one atomic promotion gate.
+
+## 2026-07-14 amendment — immediate implementation slice
+
+This slice changes curation from “inspect every ordinary two-way segment” to
+“batch the proved default and inspect the exceptions,” and makes base-edge
+direction policy editable in the Base Graph workspace.
+
+Implemented in this slice:
+
+- [x] Split manual-only unknown failures into
+  `direction_evidence_needed`; keep structural/policy failures in
+  `invalid_existing`.
+- [x] Add a reviewed symmetric migration batch operation that publishes the
+  existing explicit direction plus a digest-bound `reverseOf`, with reviewer,
+  review date, and batch ID.
+- [x] Show direction endpoints/arrows and normalized forward/reverse state for
+  the selected manual or OSM base edge.
+- [x] Add a Base Graph toggle for all direction-limited edges, with repeated
+  arrows oriented to permitted travel and a distinct review style for an
+  allowed direction whose opposite remains conditional/unknown.
+- [x] Save manual direction evidence on the manual edge and save OSM
+  corrections in `data/bicycle-traversal-overrides.json` as reviewed
+  whole-source-way overrides.
+- [x] Validate OSM way identity and oriented source-geometry digest in both the
+  editor API and graph builder; apply a valid override to all split edges and
+  reject stale/missing references.
+- [x] Preserve reviewed override policy through the matcher, elevated graph,
+  staged V3 asset, compact shards, and runtime graph.
+- [x] Add a routing fixture proving ordinary off-CycleWays routing,
+  connector-cost routing, and the sharded approach/rejoin connector all reject
+  the shorter prohibited direction and use a permitted detour.
+
+Current migration classification after this change is 219 mechanically proved
+`symmetric_candidate`, 37 `direction_evidence_needed`, 12 true
+`invalid_existing`, 11 `single_direction_candidate`, and 5 `unresolved`, over
+284 active legacy mappings. These counts are evidence for queue design, not a
+promotion waiver: the 65 exception records still require their defined
+dispositions, and symmetric publication still requires the explicit batch
+action.
+
+Remaining release work in this plan is unchanged:
+
+- [ ] Curate manual evidence and the hard exception queues, including both
+  explicit Road 99 alignments and offered-route impact.
+- [ ] Rebuild all V3 routing/shard/mobile assets and close the route corpus and
+  promotion audits.
+- [ ] Promote code and policy-bound assets atomically at Gate D. Until then the
+  released V1/V2 manifest remains policy-less and must not be called protected.
 
 ## Delivery rules
 
@@ -382,8 +430,11 @@ python3 -m unittest discover -s tests -p 'test_osm_base_routing_asset.py'
   deprecated mappings only in the audit snapshot; generate V2 direction slots
   and candidate classifications for the 284 active segments.
 - [ ] Classify every active segment as `symmetric_candidate`,
-  `alternate_candidate`, `invalid_existing`, `single_direction_candidate`, or
-  `unresolved`, with consumer impact and exact reasons.
+  `alternate_candidate`, `direction_evidence_needed`, `invalid_existing`,
+  `single_direction_candidate`, or `unresolved`, with consumer impact and exact
+  reasons. Use `direction_evidence_needed` only when every blocker is an
+  unreviewed manual-edge direction; reserve `invalid_existing` for hard
+  policy/topology/endpoint/mapping failures.
 - [ ] Ensure a second direction starts as `needs_review`; no migration code may
   infer reviewed unavailability.
 - [ ] Preserve drafts and accepted states independently per alignment so an
@@ -474,6 +525,11 @@ python3 -m unittest discover -s tests -p 'test_bicycle_traversal_policy.py'
   alignment retains the one logical segment identity.
 - [ ] Color base traversals by normalized state and show raw tags, normalized
   reason, source provenance, policy digest, and override evidence.
+- [ ] Let Base Graph selection inspect every manual and OSM edge independently
+  of CW membership, with A/B endpoints and stored-orientation arrows. Save
+  manual evidence on the manual feature; save an OSM correction only through a
+  reviewed whole-way override with current source-geometry digest and mark the
+  graph stale until rebuilt.
 - [ ] Add per-alignment actions: generate candidate, derive proved exact
   reverse, pick/edit directed edges, revalidate, accept, mark reviewed
   unavailable with a stable public reason code plus internal rationale/evidence,
@@ -1162,6 +1218,17 @@ node tests/test-road-99-traversal-policy.mjs
   says otherwise.
 - [ ] Test isolated Road 99 directions and the full return composition. Require
   a real graph connection and forbid edge 370 reverse.
+- [ ] Complete the deferred Road 99 closed-way visual acceptance when local
+  editor/map access is available. In the one-way base-edge layer, verify that
+  generated edges `e855779446_7` (5.5 m) and `e958921301_8` (14.6 m) close the
+  two roundabouts without a visible gap and that both arrows follow legal
+  forward circulation. Replay the candidate in
+  `tests/fixtures/bicycle-traversal/road-99-ride-candidate.json`; confirm the
+  10,111.6 m line has no gap or artificial manual connector. This check blocks
+  fingerprint freeze and promotion, but does not block automated work or the
+  next ride-feedback item while the curator is remote. If subsequent route
+  geometry work changes the candidate, refresh these expected metrics before
+  performing the deferred check.
 - [ ] After curator visual acceptance, freeze the replacement traversal
   fingerprint and a simulator-accepted shared token.
 - [ ] Run the complete offered-route corpus and close every correctness review
@@ -1228,6 +1295,11 @@ npm run test:smoke
 
 Manual acceptance on web and iOS:
 
+- [ ] Toggle the one-way base-edge layer around the Route 90/Tel Hai and Gan
+  Hatzafon roundabouts; confirm the restored closing arcs are drawn, connected,
+  and arrowed in the same circulation direction as the rest of each ring.
+- [ ] Replay the Road 99 ride candidate and confirm there are no visible gaps
+  and no manual gap-connector features in either the editor or product map.
 - [ ] Open either Road 99 carriageway and confirm one logical segment detail.
 - [ ] Inspect both direction arrows and endpoint-oriented availability labels.
 - [ ] Plan A-to-B and B-to-A independently.

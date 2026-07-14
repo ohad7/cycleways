@@ -3,6 +3,39 @@ import {
   navigationRouteFromCatalogEntry,
   navigationRouteFromRouteState,
 } from "@cycleways/core/navigation/navigationRoute.js";
+import { buildRouteAttestation } from "@cycleways/core/routing/routeAttestation.js";
+
+const routingValidation = buildRouteAttestation({
+  validationContext: {
+    baseRoutingSchemaVersion: 3,
+    graphVersion: "fixture-v3",
+    policyId: "il-bicycle-v1",
+    policyDigest: "fixture-policy",
+    routingContextDigest: "fixture-context",
+  },
+  traversalSlices: [
+    {
+      edgeShareId: 1,
+      fromFraction: 0,
+      toFraction: 1,
+      distanceMeters: 230,
+      policyState: "allowed",
+      policyReason: "fixture",
+      oppositePolicyState: "allowed",
+      oppositePolicyReason: "fixture",
+    },
+  ],
+  waypointOccurrences: [
+    { id: "start", lat: 33.1, lng: 35.6, baseEdgeShareId: 1, baseEdgeFraction: 0 },
+    { id: "end", lat: 33.101, lng: 35.602, baseEdgeShareId: 1, baseEdgeFraction: 1 },
+  ],
+  legBoundaries: [{ startTraversal: 0, endTraversal: 1 }],
+  geometry: [
+    { lat: 33.1, lng: 35.6 },
+    { lat: 33.1005, lng: 35.601 },
+    { lat: 33.101, lng: 35.602 },
+  ],
+});
 
 const routeState = {
   points: [
@@ -27,6 +60,7 @@ const routeState = {
     },
   ],
   routeFailure: null,
+  routingValidation,
 };
 
 const built = navigationRouteFromRouteState(
@@ -65,6 +99,7 @@ assert.ok(
     built.geometry[1].distanceFromStartMeters,
 );
 assert.equal(built.activeDataPoints.length, 1);
+assert.equal(built.maneuverGeneratorVersion, "navigation-cues-v2");
 
 const catalog = navigationRouteFromCatalogEntry(
   {
@@ -139,6 +174,13 @@ const missingGeometry = navigationRouteFromRouteState(
 );
 assert.equal(missingGeometry.canNavigate, false);
 assert.equal(missingGeometry.unavailableReason, "broken-route");
+
+const geometryOnly = navigationRouteFromRouteState(
+  { ...routeState, routingValidation: null },
+  { param: "geometry-only" },
+);
+assert.equal(geometryOnly.canNavigate, false);
+assert.equal(geometryOnly.unavailableReason, "missing-route-attestation");
 
 // --- segmentSpans reconciled to the geometry distance frame ---
 {

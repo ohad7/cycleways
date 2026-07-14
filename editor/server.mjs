@@ -18,6 +18,7 @@ import {
 import {
   loadFeaturedAssetsFromDisk,
   getBaseRoutingDecodeAssets,
+  loadRouteStateForSlug,
   loadRoutePolylineForSlug,
   invalidateFeaturedAssetCache,
   buildFeaturedRouteSnapshots,
@@ -38,6 +39,25 @@ import {
   ROUNDABOUT_REVIEW_STATUSES,
   roundaboutReviewGeoJson,
 } from "./lib/roundaboutReview.mjs";
+import {
+  acceptAlignmentDraft,
+  alignmentMappingDigest,
+  applyReviewedMigrationBatch,
+  applyReviewedSymmetricMigrationBatch,
+  clearAlignmentDraft,
+  deriveReverseAlignmentDraft,
+  materializeAcceptedAlignment,
+  normalizeAlignmentEdgeRefs,
+  oppositeAlignmentKey,
+  parseCwOverlayV2,
+  publishAlignmentUnavailable,
+  setAlignmentDraft,
+} from "./lib/cw-overlay-v2.mjs";
+import {
+  directedIntervalKey,
+  validateDirectionReviewAlignment,
+} from "./lib/edge-pick.mjs";
+import { normalizeDirectionReviewWorkspace } from "./lib/direction-review-workspace.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -64,6 +84,11 @@ const osmMatchSummaryPath = resolve(osmBuildDir, "cw-osm-match-summary.json");
 const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson");
 const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
+const cwBaseOverlayV2StagedPath = resolve(dataDir, "cw-base-overlay.v2.staged.json");
+const cwBaseOverlayV2ProposalPath = resolve(buildDir, "cw-base-overlay-v2.proposal.json");
+const cwSegmentWorkspacePath = resolve(dataDir, "cw-segment-workspace.json");
+const bicycleTraversalPolicyAuditPath = resolve(buildDir, "bicycle-traversal-policy-audit.json");
+const bicycleTraversalOverridesPath = resolve(dataDir, "bicycle-traversal-overrides.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const roundaboutCandidatesPath = resolve(osmBuildDir, "roundabout-candidates.json");
 const roundaboutReviewPath = resolve(dataDir, "roundabout-review.json");
@@ -82,6 +107,9 @@ const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
 const routeCatalogDraftPath = resolve(editorRoot, ".drafts/route-catalog.json");
 const routeCatalogPublicPath = resolve(publicDataDir, "route-catalog.json");
 const featuredRoutesDir = resolve(publicDataDir, "featured-routes");
+const promotionFeaturedRoutesDir = resolve(buildDir, "promotion-featured-routes");
+const promotionCatalogPath = resolve(buildDir, "promotion-route-catalog.json");
+const promotionManifestPath = resolve(buildDir, "promotion-map-manifest.json");
 const poiImagesDir = resolve(publicDataDir, "poi-images");
 const routeMapImagesDir = resolve(publicDataDir, "route-map-images");
 const imagesDir = resolve(repoRoot, "public/images");
@@ -92,9 +120,19 @@ const devReloadEnabled = process.env.EDITOR_CLIENT_RELOAD === "1";
 let requestCounter = 0;
 let buildCounter = 0;
 let osmGraphCounter = 0;
+let directionReviewRefreshCounter = 0;
 let promoteCounter = 0;
 let atomicWriteCounter = 0;
+let directionReviewGraphCache = null;
+let osmWaySourceDigestCache = null;
 const devReloadClients = new Set();
+
+async function currentPromotedRouteCatalogPath() {
+  const manifest = await readJsonOrNull(promotedManifestPath);
+  return manifest?.routeCatalog
+    ? resolveManifestPath(publicDataDir, manifest.routeCatalog)
+    : routeCatalogPublicPath;
+}
 
 const qualityKeys = ["overall", "safety", "comfort", "scenery"];
 const dataMarkerOptionalStringFields = [
@@ -1328,6 +1366,153 @@ export async function promoteCatalogDraft({ draftPath, publicPath, places, zones
   return { ok: true, publicPath, entryCount: enriched.entries.length };
 }
 
+async function preparePromotionCatalog({
+  sourcePath,
+  publicDataRoot,
+  manifest,
+}) {
+  const draft = JSON.parse(await readFile(sourcePath, "utf-8"));
+  validateCatalogDraft(draft);
+  invalidateFeaturedAssetCache();
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk({
+    publicDataRoot,
+    manifest,
+  });
+  const segmentFeatureLookup = buildSegmentFeatureLookup(geoJsonData);
+  const places = (await readJsonOrNull(placesPath))?.places || [];
+  const zones = (await readJsonOrNull(regionZonesPath))?.zones || [];
+  const entries = [];
+  for (const entry of draft.entries) {
+    const { routeState } = await loadRouteStateForSlug(entry.slug, {
+      routeCatalogPath: sourcePath,
+      publicDataRoot,
+      manifest,
+      allowSnapshotFallback: false,
+      log,
+    });
+    if (!routeState || routeState.requiresReview) {
+      throw new Error(
+        `entry ${entry.slug}: promotion requires an exact current-policy route token`,
+      );
+    }
+    const decoded = catalogDecodedRouteFromState(
+      routeState,
+      segmentsData,
+      segmentFeatureLookup,
+    );
+    if (!decoded) {
+      throw new Error(`entry ${entry.slug}: route token failed staged decode`);
+    }
+    entries.push({
+      ...entry,
+      ...classifyRoute(decoded, { places, zones }),
+    });
+  }
+  const catalog = { version: 1, entries };
+  const missingImages = await findMissingCatalogImages(catalog, repoRoot);
+  if (missingImages.length > 0) {
+    throw new Error(
+      `Route catalog promote blocked: ${missingImages.length} image file(s) are referenced but missing: ${missingImages.join(", ")}`,
+    );
+  }
+  await writeJsonAtomic(promotionCatalogPath, catalog);
+  return catalog;
+}
+
+async function snapshotDigestIndex(directory) {
+  const names = (await readdir(directory))
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+  const hashes = {};
+  for (const name of names) {
+    hashes[name.replace(/\.json$/, "")] = await fileDigest(resolve(directory, name));
+  }
+  return hashes;
+}
+
+async function preparePromotionRelease({
+  manifest,
+  publicDataRoot,
+  catalogSourcePath,
+}) {
+  const catalog = await preparePromotionCatalog({
+    sourcePath: catalogSourcePath,
+    publicDataRoot,
+    manifest,
+  });
+  const catalogDigest = await fileDigest(promotionCatalogPath);
+  const immutableCatalogName = `route-catalog.${catalogDigest.slice(0, 12)}.json`;
+  const immutableCatalogPath = resolve(buildPublicDataDir, immutableCatalogName);
+  await copyFileAtomic(promotionCatalogPath, immutableCatalogPath);
+
+  await rm(promotionFeaturedRoutesDir, { recursive: true, force: true });
+  invalidateFeaturedAssetCache();
+  const snapshots = await buildFeaturedRouteSnapshots({
+    routeCatalogPath: immutableCatalogPath,
+    publicDataRoot,
+    manifest,
+    outputDir: promotionFeaturedRoutesDir,
+    allowSnapshotFallback: false,
+    strict: true,
+    log,
+  });
+  const snapshotHashes = await snapshotDigestIndex(promotionFeaturedRoutesDir);
+  const snapshotIndexDigest = createHash("sha256")
+    .update(JSON.stringify(snapshotHashes))
+    .digest("hex");
+  const immutableSnapshotsName = `featured-routes.${snapshotIndexDigest.slice(0, 12)}`;
+  const immutableSnapshotsPath = resolve(buildPublicDataDir, immutableSnapshotsName);
+  await copyDirectoryAtomic(promotionFeaturedRoutesDir, immutableSnapshotsPath);
+
+  const shardManifest = JSON.parse(
+    await readFile(
+      resolveManifestPath(publicDataRoot, manifest.baseRoutingShards),
+      "utf-8",
+    ),
+  );
+  const mapAssetHashes = Object.fromEntries(
+    Object.entries(manifest.hashes || {}).filter(
+      ([key]) => key !== "routeCatalog" && key !== "featuredRouteSnapshots",
+    ),
+  );
+  const releaseIndex = {
+    schemaVersion: 1,
+    mapVersion: manifest.version,
+    policyId: shardManifest.routingContract?.policyId || null,
+    policyDigest: shardManifest.routingContract?.policyDigest || null,
+    routingContextDigest:
+      shardManifest.routingContract?.routingContextDigest || null,
+    baseEdgeShareRegistryDigest:
+      shardManifest.routingContract?.baseEdgeShareRegistryDigest || null,
+    mapAssetHashes,
+    routeCatalogSha256: catalogDigest,
+    featuredRouteSnapshotHashes: snapshotHashes,
+  };
+  const releaseBundleDigest = createHash("sha256")
+    .update(JSON.stringify(releaseIndex))
+    .digest("hex");
+  const releaseManifest = {
+    ...manifest,
+    routeCatalog: immutableCatalogName,
+    featuredRoutesBase: immutableSnapshotsName,
+    releaseBundleDigest,
+    releaseIndex,
+    hashes: {
+      ...mapAssetHashes,
+      routeCatalog: catalogDigest,
+      featuredRouteSnapshots: snapshotIndexDigest,
+    },
+  };
+  await writeJsonAtomic(promotionManifestPath, releaseManifest);
+  return {
+    catalog,
+    snapshots,
+    releaseManifest,
+    immutableCatalogPath,
+    immutableSnapshotsPath,
+  };
+}
+
 export function classifyRoute(input, refs) {
   const { geometry, roadTypeFractions, qualityScore } = input;
   const selectedSegments = Array.isArray(input.selectedSegments)
@@ -1699,6 +1884,592 @@ async function readCwBaseOverlay() {
   }
 }
 
+async function readJsonFileOrNull(path) {
+  try {
+    return JSON.parse(await readFile(path, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function sourceGeometryDigestForCoordinates(coordinates) {
+  const normalized = (coordinates || [])
+    .filter((coordinate) => Array.isArray(coordinate) && coordinate.length >= 2)
+    .map((coordinate) =>
+      coordinate.slice(0, 2).map((value) => {
+        const text = Number(value).toFixed(7).replace(/0+$/, "").replace(/\.$/, "");
+        return text === "-0" || text === "" ? "0" : text;
+      }),
+    );
+  return createHash("sha256").update(JSON.stringify(normalized)).digest("hex");
+}
+
+async function readOsmWaySourceDigestMap() {
+  const sourceStat = await stat(osmRawWaysPath);
+  const cacheKey = `${sourceStat.mtimeMs}:${sourceStat.size}`;
+  if (osmWaySourceDigestCache?.cacheKey === cacheKey) {
+    return osmWaySourceDigestCache.byWayId;
+  }
+  const raw = JSON.parse(await readFile(osmRawWaysPath, "utf-8"));
+  const byWayId = new Map();
+  for (const feature of raw.features || []) {
+    const wayId = Number(feature?.properties?.osmId);
+    const coordinates = feature?.geometry?.coordinates;
+    if (!Number.isInteger(wayId) || wayId <= 0 || !Array.isArray(coordinates)) continue;
+    byWayId.set(wayId, sourceGeometryDigestForCoordinates(coordinates));
+  }
+  osmWaySourceDigestCache = { cacheKey, byWayId };
+  return byWayId;
+}
+
+function emptyBicycleTraversalOverrides() {
+  return {
+    schemaVersion: 1,
+    policyId: "il-bicycle-v1",
+    description: "Reviewed whole-source-way bicycle traversal overrides.",
+    overrides: [],
+  };
+}
+
+async function readBicycleTraversalOverrides() {
+  return (await readJsonFileOrNull(bicycleTraversalOverridesPath)) || emptyBicycleTraversalOverrides();
+}
+
+async function normalizeBicycleTraversalOverrides(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Bicycle traversal overrides must be an object");
+  }
+  if (Number(value.schemaVersion) !== 1 || value.policyId !== "il-bicycle-v1") {
+    throw new Error("Bicycle traversal overrides require schemaVersion 1 and policyId il-bicycle-v1");
+  }
+  if (!Array.isArray(value.overrides)) {
+    throw new Error("Bicycle traversal overrides must contain an overrides array");
+  }
+  const sourceDigests = await readOsmWaySourceDigestMap();
+  const states = new Set(["allowed", "prohibited", "conditional", "unknown"]);
+  const seen = new Set();
+  const overrides = value.overrides.map((raw, index) => {
+    const osmWayId = Number(raw?.osmWayId);
+    if (!Number.isInteger(osmWayId) || osmWayId <= 0) {
+      throw new Error(`Traversal override ${index} requires a positive osmWayId`);
+    }
+    if (seen.has(osmWayId)) throw new Error(`Duplicate traversal override for OSM way ${osmWayId}`);
+    seen.add(osmWayId);
+    const currentDigest = sourceDigests.get(osmWayId);
+    if (!currentDigest) throw new Error(`Traversal override references missing OSM way ${osmWayId}`);
+    if (raw.sourceGeometryDigest !== currentDigest) {
+      throw new Error(`Traversal override for OSM way ${osmWayId} has stale source geometry`);
+    }
+    if (
+      !raw.states ||
+      typeof raw.states !== "object" ||
+      Array.isArray(raw.states) ||
+      !states.has(raw.states.forward) ||
+      !states.has(raw.states.reverse) ||
+      Object.keys(raw.states).some((key) => !["forward", "reverse"].includes(key))
+    ) {
+      throw new Error(`Traversal override for OSM way ${osmWayId} requires forward and reverse states`);
+    }
+    const normalized = {
+      osmWayId,
+      sourceGeometryDigest: currentDigest,
+      states: { forward: raw.states.forward, reverse: raw.states.reverse },
+    };
+    for (const field of ["rationale", "evidence", "reviewer", "reviewedAt"]) {
+      if (typeof raw[field] !== "string" || raw[field].trim() === "") {
+        throw new Error(`Traversal override for OSM way ${osmWayId} requires ${field}`);
+      }
+      normalized[field] = raw[field].trim();
+    }
+    if (typeof raw.updatedAt === "string" && raw.updatedAt.trim()) {
+      normalized.updatedAt = raw.updatedAt.trim();
+    }
+    return normalized;
+  });
+  overrides.sort((left, right) => left.osmWayId - right.osmWayId);
+  return {
+    schemaVersion: 1,
+    policyId: "il-bicycle-v1",
+    description:
+      typeof value.description === "string" && value.description.trim()
+        ? value.description.trim()
+        : emptyBicycleTraversalOverrides().description,
+    overrides,
+  };
+}
+
+async function readDirectionReviewOverlay() {
+  const staged = await readJsonFileOrNull(cwBaseOverlayV2StagedPath);
+  if (staged) {
+    return {
+      source: "staged",
+      readOnly: process.env.CW_OVERLAY_PROFILE !== "staged-v2",
+      overlay: parseCwOverlayV2(staged),
+    };
+  }
+  const proposal = await readJsonFileOrNull(cwBaseOverlayV2ProposalPath);
+  if (proposal) {
+    return { source: "migration-proposal", readOnly: true, overlay: parseCwOverlayV2(proposal) };
+  }
+  return null;
+}
+
+function requireStagedV2Profile() {
+  if (process.env.CW_OVERLAY_PROFILE !== "staged-v2") {
+    throw new Error("Direction Review writes require CW_OVERLAY_PROFILE=staged-v2");
+  }
+}
+
+function compactBicycleTraversal(value) {
+  if (!value || typeof value !== "object") return null;
+  return {
+    policyId: value.policyId || null,
+    policyDigest: value.policyDigest || null,
+    forward: value.forward || "unknown",
+    reverse: value.reverse || "unknown",
+    forwardReason: value.forwardReason || "missing_policy_evidence",
+    reverseReason: value.reverseReason || "missing_policy_evidence",
+  };
+}
+
+async function readDirectionReviewGraphContext() {
+  const [graphStat, auditStat] = await Promise.all([
+    stat(osmElevatedBaseGraphPath),
+    stat(bicycleTraversalPolicyAuditPath),
+  ]);
+  const cacheKey = `${graphStat.mtimeMs}:${graphStat.size}:${auditStat.mtimeMs}:${auditStat.size}`;
+  if (directionReviewGraphCache?.cacheKey === cacheKey) return directionReviewGraphCache;
+
+  const [graphBytes, auditBytes] = await Promise.all([
+    readFile(osmElevatedBaseGraphPath),
+    readFile(bicycleTraversalPolicyAuditPath),
+  ]);
+  const graph = JSON.parse(graphBytes);
+  const audit = JSON.parse(auditBytes);
+  const edgeLookup = new Map();
+  for (const edge of graph.edges || []) {
+    const edgeId = String(edge?.id || "");
+    if (!edgeId) continue;
+    edgeLookup.set(edgeId, {
+      edgeId,
+      source: edge.source || "osm",
+      fromNodeId: edge.fromNodeId ? String(edge.fromNodeId) : null,
+      toNodeId: edge.toNodeId ? String(edge.toNodeId) : null,
+      coordinates: Array.isArray(edge.coordinates) ? edge.coordinates : [],
+      tags: edge.tags && typeof edge.tags === "object" ? edge.tags : {},
+      bicycleTraversal: compactBicycleTraversal(edge.bicycleTraversalShadow),
+    });
+  }
+  directionReviewGraphCache = {
+    cacheKey,
+    graphDigest: createHash("sha256").update(graphBytes).digest("hex"),
+    policyDigest: audit.policyDigest,
+    policyId: audit.policy?.policyId,
+    edgeLookup,
+  };
+  return directionReviewGraphCache;
+}
+
+function reverseAlignmentRefs(refs) {
+  return normalizeAlignmentEdgeRefs(refs)
+    .reverse()
+    .map((ref, sequenceIndex) => ({
+      ...ref,
+      direction: ref.direction === "reverse" ? "forward" : "reverse",
+      sequenceIndex,
+    }));
+}
+
+function directionReviewRecordRefs(segment, alignmentKey, record) {
+  if (record?.realization?.type === "explicit") {
+    return normalizeAlignmentEdgeRefs(record.realization.edgeRefs);
+  }
+  if (record?.realization?.type === "reverseOf") {
+    const target = segment.alignments?.[record.realization.alignmentKey]?.published;
+    if (target?.realization?.type === "explicit") {
+      return reverseAlignmentRefs(target.realization.edgeRefs);
+    }
+  }
+  if (record?.candidate?.kind === "exact-reverse") {
+    const targetKey = record.candidate.reverseOfAlignmentKey || oppositeAlignmentKey(alignmentKey);
+    const targetSlot = segment.alignments?.[targetKey];
+    const target = targetSlot?.published || targetSlot?.draft;
+    if (target?.realization?.type === "explicit") {
+      return reverseAlignmentRefs(target.realization.edgeRefs);
+    }
+  }
+  return [];
+}
+
+function directionReviewDistanceMeters(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return Infinity;
+  const radians = (value) => (Number(value) * Math.PI) / 180;
+  const dLat = radians(b[1] - a[1]);
+  const dLng = radians(b[0] - a[0]);
+  const lat1 = radians(a[1]);
+  const lat2 = radians(b[1]);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function directionReviewOrientedCoordinates(ref, edge) {
+  const coords = (edge?.coordinates || []).map((coordinate) => coordinate.slice());
+  return ref?.direction === "reverse" ? coords.reverse() : coords;
+}
+
+function directionReviewContinuityGaps(refs, edgeLookup) {
+  const gaps = [];
+  for (let index = 0; index < refs.length - 1; index++) {
+    const leftRef = refs[index];
+    const rightRef = refs[index + 1];
+    const left = edgeLookup.get(String(leftRef.edgeId));
+    const right = edgeLookup.get(String(rightRef.edgeId));
+    if (!left || !right) continue;
+    const leftCoords = directionReviewOrientedCoordinates(leftRef, left);
+    const rightCoords = directionReviewOrientedCoordinates(rightRef, right);
+    const distanceMeters = directionReviewDistanceMeters(
+      leftCoords[leftCoords.length - 1],
+      rightCoords[0],
+    );
+    const leftEndNode = leftRef.direction === "reverse" ? left.fromNodeId : left.toNodeId;
+    const rightStartNode = rightRef.direction === "reverse" ? right.toNodeId : right.fromNodeId;
+    if ((leftEndNode && rightStartNode && leftEndNode !== rightStartNode) || distanceMeters > 12) {
+      gaps.push({
+        sequenceIndex: index,
+        fromEdgeId: String(leftRef.edgeId),
+        toEdgeId: String(rightRef.edgeId),
+        distanceMeters,
+        fromNodeId: leftEndNode,
+        toNodeId: rightStartNode,
+      });
+    }
+  }
+  return gaps;
+}
+
+function directionReviewEndpointValidation(segment, alignmentKey, refs, edgeLookup) {
+  if (refs.length === 0) return { ok: true };
+  const first = edgeLookup.get(String(refs[0].edgeId));
+  const last = edgeLookup.get(String(refs[refs.length - 1].edgeId));
+  const firstCoords = directionReviewOrientedCoordinates(refs[0], first);
+  const lastCoords = directionReviewOrientedCoordinates(refs[refs.length - 1], last);
+  if (firstCoords.length === 0 || lastCoords.length === 0) return { ok: false };
+  const start = firstCoords[0];
+  const end = lastCoords[lastCoords.length - 1];
+  const startEndpoint = alignmentKey === "aToB" ? segment.endpoints.a : segment.endpoints.b;
+  const endEndpoint = alignmentKey === "aToB" ? segment.endpoints.b : segment.endpoints.a;
+  const distances = {
+    start: directionReviewDistanceMeters(start, startEndpoint.coordinate),
+    end: directionReviewDistanceMeters(end, endEndpoint.coordinate),
+  };
+  return {
+    ok: distances.start <= Number(startEndpoint.zoneMeters) && distances.end <= Number(endEndpoint.zoneMeters),
+    terminals: { start, end },
+    distances,
+    startZoneMeters: Number(startEndpoint.zoneMeters),
+    endZoneMeters: Number(endEndpoint.zoneMeters),
+  };
+}
+
+function directionReviewDirectedOwners(overlay) {
+  const owners = new Map();
+  for (const segment of Object.values(overlay.segments || {})) {
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      for (const ref of materializeAcceptedAlignment(segment, alignmentKey) || []) {
+        owners.set(directedIntervalKey(ref), {
+          segmentId: segment.segmentId,
+          segmentName: segment.segmentName,
+          alignmentKey,
+        });
+      }
+    }
+  }
+  return owners;
+}
+
+async function validateDirectionReviewRefs(overlay, segment, alignmentKey, refs) {
+  const context = await readDirectionReviewGraphContext();
+  return validateDirectionReviewRefsWithContext(
+    overlay,
+    segment,
+    alignmentKey,
+    refs,
+    context,
+    directionReviewDirectedOwners(overlay),
+  );
+}
+
+function validateDirectionReviewRefsWithContext(
+  overlay,
+  segment,
+  alignmentKey,
+  refs,
+  context,
+  directedOwners,
+) {
+  const normalizedRefs = normalizeAlignmentEdgeRefs(refs);
+  return validateDirectionReviewAlignment({
+    segmentId: segment.segmentId,
+    alignmentKey,
+    edgeRefs: normalizedRefs,
+    edgeLookup: context.edgeLookup,
+    directedOwners,
+    continuityGaps: directionReviewContinuityGaps(normalizedRefs, context.edgeLookup),
+    endpointValidation: directionReviewEndpointValidation(
+      segment,
+      alignmentKey,
+      normalizedRefs,
+      context.edgeLookup,
+    ),
+    evidenceCurrent:
+      context.graphDigest === overlay.graphDigest &&
+      context.policyDigest === overlay.policyDigest,
+  });
+}
+
+async function validatePublishedDirectionReviewOverlay(overlay) {
+  const context = await readDirectionReviewGraphContext();
+  const owners = directionReviewDirectedOwners(overlay);
+  const seenDirectedIntervals = new Map();
+  for (const segment of Object.values(overlay.segments || {})) {
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      const published = segment.alignments?.[alignmentKey]?.published;
+      if (published?.disposition !== "accepted") continue;
+      const refs = materializeAcceptedAlignment(segment, alignmentKey);
+      if (!Array.isArray(refs) || refs.length === 0) {
+        throw new Error(`Published ${segment.segmentId} ${alignmentKey} cannot be materialized`);
+      }
+      for (const ref of refs) {
+        const key = directedIntervalKey(ref);
+        const previous = seenDirectedIntervals.get(key);
+        if (
+          previous &&
+          (previous.segmentId !== segment.segmentId || previous.alignmentKey !== alignmentKey)
+        ) {
+          throw new Error(
+            `Published directed interval ${key} is owned by both ${previous.segmentId} ${previous.alignmentKey} and ${segment.segmentId} ${alignmentKey}`,
+          );
+        }
+        seenDirectedIntervals.set(key, { segmentId: segment.segmentId, alignmentKey });
+      }
+      const validation = validateDirectionReviewRefsWithContext(
+        overlay,
+        segment,
+        alignmentKey,
+        refs,
+        context,
+        owners,
+      );
+      if (!validation.ok) {
+        const reason = validation.reasons[0];
+        throw new Error(
+          `Published ${segment.segmentId} ${alignmentKey} is invalid: ${reason?.reason || reason?.code || "review required"}`,
+        );
+      }
+    }
+  }
+}
+
+async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
+  const next = structuredClone(proposalOverlay);
+  const context = await readDirectionReviewGraphContext();
+  const owners = directionReviewDirectedOwners(proposalOverlay);
+  const preserved = { unavailable: 0, publishedAsDraft: 0, drafts: 0, skippedSourceChanges: 0 };
+
+  for (const segment of Object.values(next.segments || {})) {
+    const previous = stagedOverlay?.segments?.[String(segment.segmentId)];
+    if (!previous) continue;
+    if (previous.sourceGeometryDigest !== segment.sourceGeometryDigest) {
+      preserved.skippedSourceChanges += 1;
+      continue;
+    }
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      const previousSlot = previous.alignments?.[alignmentKey];
+      const nextSlot = segment.alignments[alignmentKey];
+      if (previousSlot?.published?.disposition === "unavailable") {
+        nextSlot.published = structuredClone(previousSlot.published);
+        nextSlot.draft = null;
+        preserved.unavailable += 1;
+        continue;
+      }
+
+      const previousRecord = previousSlot?.published?.disposition === "accepted"
+        ? previousSlot.published
+        : previousSlot?.draft;
+      if (!previousRecord) continue;
+      const refs = directionReviewRecordRefs(previous, alignmentKey, previousRecord);
+      if (refs.length === 0) continue;
+      const validation = validateDirectionReviewRefsWithContext(
+        next,
+        segment,
+        alignmentKey,
+        refs,
+        context,
+        owners,
+      );
+      nextSlot.published = null;
+      nextSlot.draft = {
+        disposition: "needs_review",
+        realization: { type: "explicit", edgeRefs: normalizeAlignmentEdgeRefs(refs) },
+        mappingDigest: undefined,
+        candidate: {
+          kind: previousSlot.published?.disposition === "accepted"
+            ? "previously-published"
+            : "previous-draft",
+          previousCandidateKind: previousSlot.draft?.candidate?.kind,
+          previousReview: previousSlot.published?.review
+            ? structuredClone(previousSlot.published.review)
+            : undefined,
+        },
+        validation,
+      };
+      nextSlot.draft.mappingDigest = alignmentMappingDigest(
+        segment.segmentId,
+        alignmentKey,
+        nextSlot.draft.realization,
+      );
+      if (previousSlot.published?.disposition === "accepted") preserved.publishedAsDraft += 1;
+      else preserved.drafts += 1;
+    }
+  }
+  return { overlay: parseCwOverlayV2(next), preserved };
+}
+
+async function refreshDirectionReviewEvidence(payload = {}) {
+  const refreshId = ++directionReviewRefreshCounter;
+  await ensureCurrentBaseRoutingArtifacts(`direction-review-${refreshId}`, payload);
+  await runBuildDependencyStep(
+    `direction-review-${refreshId}`,
+    "bicycle traversal policy audit",
+    "python3",
+    [
+      "processing/bicycle_traversal_policy.py",
+      "--graph",
+      "build/osm/osm-base-graph-elevated.json",
+      "--output",
+      "build/bicycle-traversal-policy-audit.json",
+      "--overlay",
+      "data/routing-compat/cw-base-overlay-v1.json",
+      "--cw-index",
+      "data/routing-compat/cw-base-index-v1.json",
+    ],
+  );
+  await runBuildDependencyStep(
+    `direction-review-${refreshId}`,
+    "CW Overlay V2 migration proposal",
+    "node",
+    ["scripts/migrate-cw-base-overlay-v2.mjs"],
+  );
+  directionReviewGraphCache = null;
+  const [proposalValue, stagedOverlay] = await Promise.all([
+    readJsonFileOrNull(cwBaseOverlayV2ProposalPath),
+    readJsonFileOrNull(cwBaseOverlayV2StagedPath),
+  ]);
+  const proposalOverlay = proposalValue ? parseCwOverlayV2(proposalValue) : null;
+  if (!proposalOverlay) throw new Error("Direction Review proposal was not produced");
+  const rebased = stagedOverlay
+    ? await rebaseDirectionReviewState(proposalOverlay, parseCwOverlayV2(stagedOverlay))
+    : { overlay: proposalOverlay, preserved: { unavailable: 0, publishedAsDraft: 0, drafts: 0, skippedSourceChanges: 0 } };
+  await writeJsonAtomic(cwBaseOverlayV2StagedPath, rebased.overlay);
+  return { refreshId, ...rebased };
+}
+
+async function applyDirectionReviewAlignmentAction(payload) {
+  const overlay = parseCwOverlayV2(
+    JSON.parse(await readFile(cwBaseOverlayV2StagedPath, "utf-8")),
+  );
+  const segmentId = Number(payload?.segmentId);
+  const alignmentKey = payload?.alignmentKey;
+  const segment = overlay.segments?.[String(segmentId)];
+  if (!segment || !["aToB", "bToA"].includes(alignmentKey)) {
+    throw new Error("Direction Review action requires a valid segmentId and alignmentKey");
+  }
+
+  let next = overlay;
+  let validation = null;
+  switch (payload.action) {
+    case "save-draft": {
+      const refs = normalizeAlignmentEdgeRefs(payload.edgeRefs || []);
+      validation = await validateDirectionReviewRefs(overlay, segment, alignmentKey, refs);
+      next = setAlignmentDraft(overlay, segmentId, alignmentKey, {
+        realization: refs.length > 0 ? { type: "explicit", edgeRefs: refs } : null,
+        validation,
+        candidate: { kind: "manual-editor" },
+      });
+      break;
+    }
+    case "revalidate": {
+      const slot = segment.alignments[alignmentKey];
+      const refs = directionReviewRecordRefs(segment, alignmentKey, slot.draft);
+      validation = await validateDirectionReviewRefs(overlay, segment, alignmentKey, refs);
+      next = setAlignmentDraft(overlay, segmentId, alignmentKey, {
+        realization: slot.draft?.realization || (refs.length > 0 ? { type: "explicit", edgeRefs: refs } : null),
+        validation,
+        candidate: slot.draft?.candidate || { kind: "manual-editor" },
+      });
+      break;
+    }
+    case "derive-reverse": {
+      const targetKey = oppositeAlignmentKey(alignmentKey);
+      const target = segment.alignments[targetKey]?.published;
+      const refs = target?.realization?.type === "explicit"
+        ? reverseAlignmentRefs(target.realization.edgeRefs)
+        : [];
+      validation = await validateDirectionReviewRefs(overlay, segment, alignmentKey, refs);
+      next = deriveReverseAlignmentDraft(overlay, segmentId, alignmentKey, validation);
+      break;
+    }
+    case "accept": {
+      let working = overlay;
+      let workingSegment = segment;
+      let draft = workingSegment.alignments[alignmentKey].draft;
+      if (!draft?.realization && draft?.candidate?.kind === "exact-reverse") {
+        const targetKey = oppositeAlignmentKey(alignmentKey);
+        const target = workingSegment.alignments[targetKey]?.published;
+        const refs = target?.realization?.type === "explicit"
+          ? reverseAlignmentRefs(target.realization.edgeRefs)
+          : [];
+        validation = await validateDirectionReviewRefs(working, workingSegment, alignmentKey, refs);
+        working = deriveReverseAlignmentDraft(working, segmentId, alignmentKey, validation);
+        workingSegment = working.segments[String(segmentId)];
+        draft = workingSegment.alignments[alignmentKey].draft;
+      }
+      const refs = directionReviewRecordRefs(workingSegment, alignmentKey, draft);
+      validation = await validateDirectionReviewRefs(working, workingSegment, alignmentKey, refs);
+      working = setAlignmentDraft(working, segmentId, alignmentKey, {
+        realization: draft?.realization || null,
+        validation,
+        candidate: draft?.candidate || { kind: "manual-editor" },
+      });
+      if (!validation.ok) {
+        const reason = validation.reasons[0];
+        throw new Error(`Alignment is not valid: ${reason?.reason || reason?.code || "review required"}`);
+      }
+      next = acceptAlignmentDraft(working, segmentId, alignmentKey, payload);
+      break;
+    }
+    case "unavailable":
+      next = publishAlignmentUnavailable(overlay, segmentId, alignmentKey, payload);
+      break;
+    case "clear-draft":
+      next = clearAlignmentDraft(overlay, segmentId, alignmentKey);
+      break;
+    default:
+      throw new Error(`Unknown Direction Review action: ${payload?.action || "missing"}`);
+  }
+  return { overlay: parseCwOverlayV2(next), validation };
+}
+
+async function readDirectionReviewWorkspace() {
+  const workspace = await readJsonFileOrNull(cwSegmentWorkspacePath);
+  return normalizeDirectionReviewWorkspace(
+    workspace || { schemaVersion: 1, nextReservedSegmentId: 1, entries: {} },
+  );
+}
+
 function normalizeManualBaseEdges(geojson) {
   if (!geojson || geojson.type !== "FeatureCollection" || !Array.isArray(geojson.features)) {
     throw new Error("Manual base edges must be a GeoJSON FeatureCollection");
@@ -1740,6 +2511,48 @@ function normalizeManualBaseEdges(geojson) {
     properties.manualEdgeId = manualEdgeId;
     properties.id = properties.id || manualEdgeId;
     properties.source = "manual";
+    const traversal = properties.bicycleTraversal;
+    if (traversal === undefined || traversal === null) {
+      properties.bicycleTraversal = {
+        forward: "unknown",
+        reverse: "unknown",
+        reviewed: false,
+      };
+    } else {
+      if (!traversal || typeof traversal !== "object" || Array.isArray(traversal)) {
+        throw new Error(`Manual base edge ${manualEdgeId} has invalid bicycleTraversal`);
+      }
+      const states = new Set(["allowed", "prohibited", "conditional", "unknown"]);
+      if (!states.has(traversal.forward) || !states.has(traversal.reverse)) {
+        throw new Error(
+          `Manual base edge ${manualEdgeId} bicycleTraversal must define forward and reverse states`,
+        );
+      }
+      const forwardUnknown = traversal.forward === "unknown";
+      const reverseUnknown = traversal.reverse === "unknown";
+      if (forwardUnknown !== reverseUnknown) {
+        throw new Error(
+          `Manual base edge ${manualEdgeId} must review both bicycleTraversal directions together`,
+        );
+      }
+      if (!forwardUnknown && traversal.reviewed !== true) {
+        throw new Error(
+          `Manual base edge ${manualEdgeId} reviewed traversal states require reviewed=true`,
+        );
+      }
+      if (!forwardUnknown) {
+        for (const field of ["reviewer", "reviewedAt", "rationale"]) {
+          if (typeof traversal[field] !== "string" || traversal[field].trim() === "") {
+            throw new Error(
+              `Manual base edge ${manualEdgeId} reviewed traversal states require ${field}`,
+            );
+          }
+          traversal[field] = traversal[field].trim();
+        }
+      } else {
+        traversal.reviewed = false;
+      }
+    }
 
     if (
       properties.linkedSegmentId !== undefined &&
@@ -2038,6 +2851,7 @@ async function ensureCurrentBaseRoutingArtifacts(buildId, payload) {
     ["raw OSM ways", osmRawWaysPath],
     ["OSM intersections", osmIntersectionsPath],
     ["manual base edges", manualBaseEdgesPath],
+    ["bicycle traversal overrides", bicycleTraversalOverridesPath],
   ];
   const inputStats = await Promise.all(
     graphInputs.map(async ([label, pathname]) => ({
@@ -2097,12 +2911,29 @@ async function handleBuild(payload) {
   payload = payload || {};
   const buildId = ++buildCounter;
   const startedAt = Date.now();
+  const stagedAuthoring = process.env.CW_OVERLAY_PROFILE === "staged-v2";
+  let canonicalOverlaySchemaVersion = 1;
+  try {
+    canonicalOverlaySchemaVersion = Number(
+      JSON.parse(await readFile(cwBaseOverlayPath, "utf-8")).schemaVersion || 1,
+    );
+  } catch {}
+  const routingProfile = stagedAuthoring || canonicalOverlaySchemaVersion === 2
+    ? "staged-v2"
+    : "production-v1";
+  const overlayPath = stagedAuthoring
+    ? "data/cw-base-overlay.v2.staged.json"
+    : "data/cw-base-overlay.json";
   const args = [
     "processing/build_map.py",
     "--input-geojson",
     "data/map-source.geojson",
     "--out-dir",
     "build",
+    "--routing-profile",
+    routingProfile,
+    "--cw-base-overlay",
+    overlayPath,
     "--verbose",
   ];
 
@@ -2112,6 +2943,7 @@ async function handleBuild(payload) {
 
   log("info", `build#${buildId} started`, {
     mode: "full-elevation",
+    routingProfile,
     command: `python3 ${args.join(" ")}`,
   });
 
@@ -2607,6 +3439,25 @@ async function existingVersionedFiles(directory, pattern) {
 }
 
 async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
+  const protectedPaths = new Set(
+    [
+      manifest.bikeRoads,
+      manifest.segments,
+      manifest.cwBaseIndex,
+      manifest.cwAlignmentGeometry,
+      manifest.kml,
+      manifest.roundabouts,
+      manifest.routeCatalog,
+      manifest.featuredRoutesBase,
+      manifest.legacyRoutingCompatibility?.cwBaseIndex,
+      manifest.legacyRoutingCompatibility?.metadata,
+    ]
+      .filter(Boolean)
+      .map((entry) => resolveManifestPath(publicDataDir, entry)),
+  );
+  if (manifest.baseRoutingShards) {
+    protectedPaths.add(dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)));
+  }
   const candidates = [
     ...(await existingVersionedFiles(repoRoot, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
     ...(await existingVersionedFiles(repoRoot, /^segments\.[0-9a-f]{12}\.json$/)),
@@ -2622,12 +3473,17 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
     ...(await existingVersionedFiles(publicDataDir, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
     ...(await existingVersionedFiles(publicDataDir, /^segments\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^cw-base-index\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^cw-alignment-geometry\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^base-routing-shards\.[0-9a-f]{12}$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^route-catalog\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(publicDataDir, /^featured-routes\.[0-9a-f]{12}$/)),
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.json$/)),
     ...(await existingVersionedFiles(resolve(publicDataDir, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
     ...(!manifest.roundabouts
       ? await existingVersionedFiles(publicDataDir, /^roundabouts\.json$/)
       : []),
-  ];
+  ].filter((filePath) => !protectedPaths.has(filePath));
 
   for (const filePath of candidates) {
     log("info", `promote#${promoteId} removing old public artifact`, {
@@ -2642,13 +3498,11 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
   return candidates;
 }
 
-export function buildPromoteTargets(manifest) {
+export function buildPromoteTargets(manifest, {
+  featuredRoutesSource = null,
+  manifestSource = buildManifestPath,
+} = {}) {
   const targets = [
-    {
-      label: "public manifest",
-      source: buildManifestPath,
-      target: promotedManifestPath,
-    },
     {
       label: "public geojson",
       source: resolveManifestPath(buildPublicDataDir, manifest.bikeRoads),
@@ -2676,6 +3530,13 @@ export function buildPromoteTargets(manifest) {
       target: dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)),
     },
   ];
+  if (manifest.cwAlignmentGeometry) {
+    targets.push({
+      label: "public CW alignment geometry",
+      source: resolveManifestPath(buildPublicDataDir, manifest.cwAlignmentGeometry),
+      target: resolveManifestPath(publicDataDir, manifest.cwAlignmentGeometry),
+    });
+  }
   if (manifest.roundabouts) {
     targets.push({
       label: "public roundabouts",
@@ -2683,7 +3544,151 @@ export function buildPromoteTargets(manifest) {
       target: resolveManifestPath(publicDataDir, manifest.roundabouts),
     });
   }
+  if (manifest.legacyRoutingCompatibility?.cwBaseIndex) {
+    targets.push({
+      label: "legacy routing compatibility index",
+      source: resolveManifestPath(
+        buildPublicDataDir,
+        manifest.legacyRoutingCompatibility.cwBaseIndex,
+      ),
+      target: resolveManifestPath(
+        publicDataDir,
+        manifest.legacyRoutingCompatibility.cwBaseIndex,
+      ),
+    });
+  }
+  if (manifest.legacyRoutingCompatibility?.metadata) {
+    targets.push({
+      label: "legacy routing compatibility metadata",
+      source: resolveManifestPath(
+        buildPublicDataDir,
+        manifest.legacyRoutingCompatibility.metadata,
+      ),
+      target: resolveManifestPath(
+        publicDataDir,
+        manifest.legacyRoutingCompatibility.metadata,
+      ),
+    });
+  }
+  if (manifest.routeCatalog) {
+    targets.push({
+      label: "versioned route catalog",
+      source: resolveManifestPath(buildPublicDataDir, manifest.routeCatalog),
+      target: resolveManifestPath(publicDataDir, manifest.routeCatalog),
+    });
+  }
+  if (manifest.featuredRoutesBase) {
+    targets.push({
+      kind: "directory",
+      label: "versioned featured route snapshots",
+      source: resolveManifestPath(buildPublicDataDir, manifest.featuredRoutesBase),
+      target: resolveManifestPath(publicDataDir, manifest.featuredRoutesBase),
+    });
+  }
+  if (featuredRoutesSource) {
+    targets.push({
+      kind: "directory",
+      label: "featured route snapshots",
+      source: featuredRoutesSource,
+      target: featuredRoutesDir,
+    });
+  }
+  // The manifest is the public mutable pointer. It must be switched only after
+  // every referenced immutable asset and precomputed snapshot is in place.
+  targets.push({
+    label: "public manifest",
+    source: manifestSource,
+    target: promotedManifestPath,
+  });
   return targets;
+}
+
+async function runStrictTraversalPromotionAudit(
+  promoteId,
+  overlayPath = cwBaseOverlayV2StagedPath,
+) {
+  const result = await runBuildDependencyStep(
+    `promote-${promoteId}`,
+    "strict traversal promotion audit",
+    process.execPath,
+    [
+      resolve(repoRoot, "scripts/audit-bicycle-traversal-promotion.mjs"),
+      "--root",
+      buildPublicDataDir,
+      "--overlay",
+      overlayPath,
+      "--report-only",
+    ],
+  );
+  let audit;
+  try {
+    audit = JSON.parse(result.stdout);
+  } catch {
+    throw new Error("Strict traversal promotion audit returned invalid output.");
+  }
+  if (audit.status !== "ready") {
+    const counts = Object.entries(audit.blockerCounts || {})
+      .map(([code, count]) => `${code}=${count}`)
+      .join(", ");
+    throw new Error(
+      `Promote blocked by strict traversal audit${counts ? `: ${counts}` : "."}`,
+    );
+  }
+  return audit;
+}
+
+async function runOfferedRouteCorpusAudit(
+  promoteId,
+  catalogPath,
+  publicDataRoot = buildPublicDataDir,
+) {
+  const result = await runBuildDependencyStep(
+    `promote-${promoteId}`,
+    "offered route corpus audit",
+    process.execPath,
+    [
+      resolve(repoRoot, "scripts/validate-offered-route-corpus.mjs"),
+      "--root",
+      publicDataRoot,
+      "--catalog",
+      catalogPath,
+    ],
+  );
+  let audit;
+  try {
+    audit = JSON.parse(result.stdout);
+  } catch {
+    throw new Error("Offered route corpus audit returned invalid output.");
+  }
+  if (audit.status !== "ready") {
+    const counts = Object.entries(audit.blockerCounts || {})
+      .map(([code, count]) => `${code}=${count}`)
+      .join(", ");
+    throw new Error(
+      `Promote blocked by offered route corpus${counts ? `: ${counts}` : "."}`,
+    );
+  }
+  return audit;
+}
+
+async function runReportedRideAudit(promoteId, publicDataRoot = buildPublicDataDir) {
+  const result = await runBuildDependencyStep(
+    `promote-${promoteId}`,
+    "reported ride coordinate audit",
+    process.execPath,
+    [
+      resolve(repoRoot, "scripts/recreate-navigation-ride.mjs"),
+      "--root",
+      publicDataRoot,
+    ],
+  );
+  const audit = JSON.parse(result.stdout);
+  if (audit.status !== "ready") {
+    throw new Error(
+      `Promote blocked by reported ride recreation: ${(audit.blockers || []).join(", ")}`,
+    );
+  }
+  return audit;
 }
 
 async function handlePromote(payload = {}) {
@@ -2695,8 +3700,17 @@ async function handlePromote(payload = {}) {
 
   const report = JSON.parse(await readFile(reportPath, "utf-8"));
   const manifest = JSON.parse(await readFile(buildManifestPath, "utf-8"));
+  const strictTraversalBuild = report.validation?.baseRouting?.routingProfile === "staged-v2";
+  if (!strictTraversalBuild) {
+    throw new Error(
+      "Legacy V1/V2 routing promotion is disabled. Build the reviewed staged-v2/V3 release.",
+    );
+  }
   const sourceStat = await stat(sourcePath);
   const reportStat = await stat(reportPath);
+  const builtOverlayPath = report.inputs?.cwBaseOverlay
+    ? resolve(String(report.inputs.cwBaseOverlay))
+    : (strictTraversalBuild ? cwBaseOverlayV2StagedPath : cwBaseOverlayPath);
 
   if (reportStat.mtimeMs + 1000 < sourceStat.mtimeMs) {
     throw new Error("Build is stale. Run Build after saving the source, then promote.");
@@ -2705,7 +3719,7 @@ async function handlePromote(payload = {}) {
   for (const routingInput of [
     osmBaseGraphPath,
     osmElevatedBaseGraphPath,
-    cwBaseOverlayPath,
+    builtOverlayPath,
     manualBaseEdgesPath,
   ]) {
     const routingInputStat = await stat(routingInput);
@@ -2744,13 +3758,41 @@ async function handlePromote(payload = {}) {
   if (!manifest.cwBaseIndex) {
     throw new Error("Promote requires a CW base index in the build manifest.");
   }
+  if (strictTraversalBuild) {
+    if (!manifest.cwAlignmentGeometry || !manifest.legacyRoutingCompatibility) {
+      throw new Error(
+        "Strict traversal promote requires alignment geometry and the legacy compatibility bundle.",
+      );
+    }
+    await runStrictTraversalPromotionAudit(promoteId, builtOverlayPath);
+  }
+
+  let catalogSourcePath = await currentPromotedRouteCatalogPath();
+  let usesCatalogDraft = false;
+  try {
+    await stat(routeCatalogDraftPath);
+    catalogSourcePath = routeCatalogDraftPath;
+    usesCatalogDraft = true;
+  } catch {}
+  await runOfferedRouteCorpusAudit(promoteId, catalogSourcePath);
+  await runReportedRideAudit(promoteId);
+  const release = await preparePromotionRelease({
+    manifest,
+    publicDataRoot: buildPublicDataDir,
+    catalogSourcePath,
+  });
+  const releaseManifest = release.releaseManifest;
+  const snapshots = release.snapshots;
 
   log("info", `promote#${promoteId} checks passed`, {
-    version: manifest.version,
+    version: releaseManifest.version,
+    releaseBundleDigest: releaseManifest.releaseBundleDigest,
     warnings: (report.validation?.routeCompatibilityWarnings || []).length,
   });
 
-  const targets = buildPromoteTargets(manifest);
+  const targets = buildPromoteTargets(releaseManifest, {
+    manifestSource: promotionManifestPath,
+  });
 
   for (const target of targets) {
     await stat(target.source);
@@ -2765,7 +3807,44 @@ async function handlePromote(payload = {}) {
   });
 
   let removed = [];
+  const shareRegistry = report.validation?.baseRouting?.shareIds || {};
+  const registryProposalPath = shareRegistry.proposal
+    ? resolve(String(shareRegistry.proposal))
+    : null;
+  const releasedRegistryPath = shareRegistry.registry
+    ? resolve(String(shareRegistry.registry))
+    : null;
   if (!payload.dryRun) {
+    // The immutable V1 authoring snapshot already lives in data/routing-compat.
+    // Advance the canonical authoring pointer only after every V3 release gate
+    // has passed; future ordinary builds then remain policy-enforced.
+    await copyFileAtomic(builtOverlayPath, cwBaseOverlayPath);
+    const registryDigest = release.releaseManifest.releaseIndex
+      ?.baseEdgeShareRegistryDigest;
+    const effectiveRegistryPath = Number(shareRegistry.newIds) > 0
+      ? registryProposalPath
+      : releasedRegistryPath;
+    if (registryDigest && effectiveRegistryPath) {
+      const historyPath = resolve(
+        dataDir,
+        "routing-registry-history",
+        `${registryDigest}.json`,
+      );
+      try {
+        await stat(historyPath);
+      } catch {
+        await copyFileAtomic(effectiveRegistryPath, historyPath);
+      }
+    }
+    if (Number(shareRegistry.newIds) > 0) {
+      if (!registryProposalPath || !releasedRegistryPath) {
+        throw new Error("Share-ID allocation has no promotable registry proposal.");
+      }
+      // Advancing the high-water mark is intentionally irreversible. If a
+      // later immutable copy fails, allocated IDs remain reserved and are not
+      // reused by a subsequent build.
+      await copyFileAtomic(registryProposalPath, releasedRegistryPath);
+    }
     for (const target of targets) {
       log("info", `promote#${promoteId} copying ${target.label}`, {
         source: repoRelative(target.source),
@@ -2781,33 +3860,26 @@ async function handlePromote(payload = {}) {
     // featured-route decoding (keyframe polyline, catalog, Phase 2 snapshots)
     // reads the freshly promoted data instead of stale cached copies.
     invalidateFeaturedAssetCache();
-  }
-  removed = await cleanupOldPublicArtifacts(promoteId, Boolean(payload.dryRun), manifest);
-
-  // Promoting map data changes the geometry/POIs featured snapshots are built
-  // from, so regenerate them here too (the route-catalog promote does the same).
-  // Without this, featured pages would render stale snapshots after a map promote.
-  let snapshots = null;
-  if (!payload.dryRun) {
-    try {
-      snapshots = await buildFeaturedRouteSnapshots({ log });
-    } catch (err) {
-      log("error", `promote#${promoteId} featured snapshot rebuild failed`, {
-        message: err?.message,
-      });
-      snapshots = { written: [], removed: [], errors: [{ slug: null, message: err?.message || String(err) }] };
+    if (usesCatalogDraft) {
+      await unlink(routeCatalogDraftPath);
     }
   }
+  removed = await cleanupOldPublicArtifacts(
+    promoteId,
+    Boolean(payload.dryRun),
+    releaseManifest,
+  );
 
   log("info", `promote#${promoteId} finished`, {
     dryRun: Boolean(payload.dryRun),
-    version: manifest.version,
+    version: releaseManifest.version,
     removed: removed.length,
   });
 
   return {
     dryRun: Boolean(payload.dryRun),
-    version: manifest.version,
+    version: releaseManifest.version,
+    releaseBundleDigest: releaseManifest.releaseBundleDigest,
     manifest: promotedManifestPath,
     promoted: targets.map((target) => ({
       label: target.label,
@@ -2976,24 +4048,74 @@ const server = createServer(async (request, response) => {
       logApi(requestId, "GET /api/osm/graph-edges started");
       let graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
       try {
+        const sourceDigests = await readOsmWaySourceDigestMap();
+        graphEdges = {
+          ...graphEdges,
+          features: (graphEdges.features || []).map((feature) => {
+            const properties = feature?.properties || {};
+            const osmWayId = Number(properties.osmWayId);
+            const sourceGeometryDigest = sourceDigests.get(osmWayId);
+            return sourceGeometryDigest
+              ? { ...feature, properties: { ...properties, sourceGeometryDigest } }
+              : feature;
+          }),
+        };
+      } catch (err) {
+        log("warn", `api#${requestId} GET /api/osm/graph-edges skipped source digests`, err?.message || String(err));
+      }
+      try {
+        const directionContext = await readDirectionReviewGraphContext();
+        graphEdges = {
+          ...graphEdges,
+          features: (graphEdges.features || []).map((feature) => {
+            const properties = feature?.properties || {};
+            const edgeId = String(properties.edgeId || properties.id || feature?.id || "");
+            const evidence = directionContext.edgeLookup.get(edgeId);
+            if (!evidence?.bicycleTraversal) return feature;
+            return {
+              ...feature,
+              properties: {
+                ...properties,
+                bicycleTraversal: evidence.bicycleTraversal,
+              },
+            };
+          }),
+          metadata: {
+            ...(graphEdges.metadata || {}),
+            directionReviewGraphDigest: directionContext.graphDigest,
+            directionReviewPolicyDigest: directionContext.policyDigest,
+            directionReviewPolicyId: directionContext.policyId,
+          },
+        };
+      } catch (err) {
+        log("warn", `api#${requestId} GET /api/osm/graph-edges skipped direction evidence`, err?.message || String(err));
+      }
+      try {
         const overlay = JSON.parse(await readFile(cwBaseOverlayPath, "utf-8"));
         graphEdges = annotateGraphEdgesWithCyclewaysMembership(graphEdges, overlay);
       } catch (err) {
         log("warn", `api#${requestId} GET /api/osm/graph-edges skipped CW annotation`, err?.message || String(err));
       }
-      const [graphStat, manualStat] = await Promise.all([
+      const [graphStat, manualStat, overrideStat] = await Promise.all([
         stat(osmGraphEdgesPath),
         stat(manualBaseEdgesPath).catch(() => null),
+        stat(bicycleTraversalOverridesPath).catch(() => null),
       ]);
       graphEdges.metadata = {
         ...(graphEdges.metadata || {}),
         graphEdgesModifiedAt: graphStat.mtime.toISOString(),
         manualBaseEdgesModifiedAt: manualStat?.mtime?.toISOString() || null,
+        bicycleTraversalOverridesModifiedAt: overrideStat?.mtime?.toISOString() || null,
         graphStaleBecauseManualBaseEdgesChanged: Boolean(manualStat && manualStat.mtimeMs > graphStat.mtimeMs),
+        graphStaleBecauseTraversalOverridesChanged: Boolean(
+          overrideStat && overrideStat.mtimeMs > graphStat.mtimeMs,
+        ),
       };
       logApi(requestId, "GET /api/osm/graph-edges loaded", {
         features: graphEdges.features?.length || 0,
-        stale: graphEdges.metadata.graphStaleBecauseManualBaseEdgesChanged,
+        stale:
+          graphEdges.metadata.graphStaleBecauseManualBaseEdgesChanged ||
+          graphEdges.metadata.graphStaleBecauseTraversalOverridesChanged,
       });
       sendJson(response, 200, graphEdges);
       return;
@@ -3031,6 +4153,170 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/api/cw-base-overlay-v2") {
+      const result = await readDirectionReviewOverlay();
+      if (!result) {
+        sendJson(response, 404, {
+          ok: false,
+          error: "Prepare the Direction Review proposal before opening this workspace.",
+        });
+        return;
+      }
+      sendJson(response, 200, {
+        ok: true,
+        profile: process.env.CW_OVERLAY_PROFILE || "production-v1",
+        ...result,
+      });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay-v2") {
+      try {
+        requireStagedV2Profile();
+        const payload = await readRequestJson(request);
+        const overlay = parseCwOverlayV2(payload?.overlay || payload);
+        await validatePublishedDirectionReviewOverlay(overlay);
+        await writeJsonAtomic(cwBaseOverlayV2StagedPath, overlay);
+        sendJson(response, 200, { ok: true, source: "staged", overlay });
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay-v2/alignment-action") {
+      try {
+        requireStagedV2Profile();
+        const payload = await readRequestJson(request);
+        const result = await applyDirectionReviewAlignmentAction(payload);
+        await writeJsonAtomic(cwBaseOverlayV2StagedPath, result.overlay);
+        sendJson(response, 200, {
+          ok: true,
+          source: "staged",
+          action: payload.action,
+          validation: result.validation,
+          overlay: result.overlay,
+        });
+      } catch (error) {
+        sendJson(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay-v2/refresh-evidence") {
+      try {
+        requireStagedV2Profile();
+        const payload = await readRequestJson(request);
+        const result = await refreshDirectionReviewEvidence(payload);
+        sendJson(response, 200, {
+          ok: true,
+          source: "staged",
+          refreshId: result.refreshId,
+          preserved: result.preserved,
+          overlay: result.overlay,
+        });
+      } catch (error) {
+        sendJson(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay-v2/apply-migration") {
+      try {
+        requireStagedV2Profile();
+        const payload = await readRequestJson(request);
+        if (!payload?.reviewer || !payload?.reviewedAt || !payload?.batchId) {
+          throw new Error("Migration apply requires reviewer, reviewedAt, and batchId");
+        }
+        const proposal = parseCwOverlayV2(
+          JSON.parse(await readFile(cwBaseOverlayV2ProposalPath, "utf-8")),
+        );
+        const staged = await readJsonFileOrNull(cwBaseOverlayV2StagedPath);
+        const applied = applyReviewedMigrationBatch(proposal, payload.segmentIds, payload);
+        if (staged) {
+          const parsedStaged = parseCwOverlayV2(staged);
+          const selected = new Set((payload.segmentIds || []).map(Number));
+          for (const [segmentId, segment] of Object.entries(parsedStaged.segments)) {
+            if (!selected.has(Number(segmentId))) applied.overlay.segments[segmentId] = segment;
+          }
+        }
+        const overlay = parseCwOverlayV2(applied.overlay);
+        await writeJsonAtomic(cwBaseOverlayV2StagedPath, overlay);
+        sendJson(response, 200, { ok: true, applied: applied.applied, overlay });
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay-v2/apply-symmetric-batch") {
+      try {
+        requireStagedV2Profile();
+        const payload = await readRequestJson(request);
+        if (!payload?.reviewer || !payload?.reviewedAt || !payload?.batchId) {
+          throw new Error("Symmetric migration requires reviewer, reviewedAt, and batchId");
+        }
+        const proposal = parseCwOverlayV2(
+          JSON.parse(await readFile(cwBaseOverlayV2ProposalPath, "utf-8")),
+        );
+        const requestedIds = Array.isArray(payload.segmentIds)
+          ? payload.segmentIds.map(Number).filter(Number.isInteger)
+          : Object.values(proposal.segments)
+              .filter((segment) => segment.migration?.classification === "symmetric_candidate")
+              .map((segment) => segment.segmentId);
+        const applied = applyReviewedSymmetricMigrationBatch(
+          proposal,
+          requestedIds,
+          payload,
+        );
+        const staged = await readJsonFileOrNull(cwBaseOverlayV2StagedPath);
+        if (staged) {
+          const parsedStaged = parseCwOverlayV2(staged);
+          const selected = new Set(applied.applied.map((item) => Number(item.segmentId)));
+          for (const [segmentId, segment] of Object.entries(parsedStaged.segments)) {
+            if (!selected.has(Number(segmentId))) applied.overlay.segments[segmentId] = segment;
+          }
+        }
+        const overlay = parseCwOverlayV2(applied.overlay);
+        await validatePublishedDirectionReviewOverlay(overlay);
+        await writeJsonAtomic(cwBaseOverlayV2StagedPath, overlay);
+        sendJson(response, 200, {
+          ok: true,
+          applied: applied.applied,
+          skipped: applied.skipped,
+          overlay,
+        });
+      } catch (error) {
+        sendJson(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/cw-segment-workspace") {
+      sendJson(response, 200, await readDirectionReviewWorkspace());
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-segment-workspace") {
+      try {
+        const workspace = normalizeDirectionReviewWorkspace(await readRequestJson(request));
+        await writeJsonAtomic(cwSegmentWorkspacePath, workspace);
+        sendJson(response, 200, { ok: true, workspace });
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) });
+      }
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/api/manual-base-edges") {
       logApi(requestId, "GET /api/manual-base-edges started");
       const manualBaseEdges = await readManualBaseEdges();
@@ -3038,6 +4324,27 @@ const server = createServer(async (request, response) => {
         features: manualBaseEdges.features?.length || 0,
       });
       sendJson(response, 200, manualBaseEdges);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/bicycle-traversal-overrides") {
+      const overrides = await readBicycleTraversalOverrides();
+      sendJson(response, 200, overrides);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/bicycle-traversal-overrides") {
+      try {
+        const overrides = await normalizeBicycleTraversalOverrides(await readRequestJson(request));
+        await writeJsonAtomic(bicycleTraversalOverridesPath, overrides);
+        directionReviewGraphCache = null;
+        sendJson(response, 200, { ok: true, overrides });
+      } catch (error) {
+        sendJson(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       return;
     }
 
@@ -3369,7 +4676,7 @@ const server = createServer(async (request, response) => {
             sendJson(response, 200, draft);
             return;
           }
-          const promoted = await readJsonOrNull(routeCatalogPublicPath);
+          const promoted = await readJsonOrNull(await currentPromotedRouteCatalogPath());
           if (promoted) {
             sendJson(response, 200, promoted);
             return;
@@ -3493,41 +4800,58 @@ const server = createServer(async (request, response) => {
       }
       // /api/route-catalog/promote  (POST)
       if (parts.length === 3 && parts[2] === "promote" && request.method === "POST") {
-        const places = (await readJsonOrNull(placesPath))?.places || [];
-        const zones = (await readJsonOrNull(regionZonesPath))?.zones || [];
-        const decodeRoute = await buildLiveDecodeRoute();
         try {
-          const result = await promoteCatalogDraft({
-            draftPath: routeCatalogDraftPath,
-            publicPath: routeCatalogPublicPath,
-            places,
-            zones,
-            decodeRoute,
-          });
-          // The promoted catalog determines the recommended route set. Drop the
-          // long-lived decode caches so snapshots regenerate against the freshly
-          // promoted catalog/assets, then rebuild every route snapshot (with
-          // orphan cleanup handled inside the builder).
-          invalidateFeaturedAssetCache();
-          let snapshots;
-          try {
-            snapshots = await buildFeaturedRouteSnapshots({ log });
-          } catch (snapshotErr) {
-            snapshots = {
-              written: [],
-              removed: [],
-              errors: [
-                {
-                  slug: null,
-                  error:
-                    snapshotErr instanceof Error
-                      ? snapshotErr.message
-                      : String(snapshotErr),
-                },
-              ],
-            };
+          const manifest = JSON.parse(await readFile(promotedManifestPath, "utf-8"));
+          const shardManifest = JSON.parse(
+            await readFile(
+              resolveManifestPath(publicDataDir, manifest.baseRoutingShards),
+              "utf-8",
+            ),
+          );
+          if (
+            Number(shardManifest.sourceRoutingSchemaVersion) !== 3 ||
+            shardManifest.routingContract?.strictTraversalPolicy !== true
+          ) {
+            throw new Error(
+              "Route-catalog promotion requires the current strict V3 routing release.",
+            );
           }
-          sendJson(response, 200, { ...result, snapshots });
+          await runOfferedRouteCorpusAudit(
+            `catalog-${Date.now()}`,
+            routeCatalogDraftPath,
+            publicDataDir,
+          );
+          const release = await preparePromotionRelease({
+            manifest,
+            publicDataRoot: publicDataDir,
+            catalogSourcePath: routeCatalogDraftPath,
+          });
+          const labels = new Set([
+            "versioned route catalog",
+            "versioned featured route snapshots",
+            "public manifest",
+          ]);
+          const targets = buildPromoteTargets(release.releaseManifest, {
+            manifestSource: promotionManifestPath,
+          }).filter((target) => labels.has(target.label));
+          for (const target of targets) {
+            await stat(target.source);
+          }
+          for (const target of targets) {
+            if (target.kind === "directory") {
+              await copyDirectoryAtomic(target.source, target.target);
+            } else {
+              await copyFileAtomic(target.source, target.target);
+            }
+          }
+          await unlink(routeCatalogDraftPath);
+          invalidateFeaturedAssetCache();
+          sendJson(response, 200, {
+            ok: true,
+            entryCount: release.catalog.entries.length,
+            releaseBundleDigest: release.releaseManifest.releaseBundleDigest,
+            snapshots: release.snapshots,
+          });
         } catch (err) {
           sendJson(response, 400, { ok: false, error: err.message });
         }
@@ -3539,7 +4863,7 @@ const server = createServer(async (request, response) => {
       // Source of truth is the catalog (draft first, then promoted). Fall back
       // to legacy .meta.js enumeration if neither exists.
       const draft = await readJsonOrNull(routeCatalogDraftPath);
-      const promoted = await readJsonOrNull(routeCatalogPublicPath);
+      const promoted = await readJsonOrNull(await currentPromotedRouteCatalogPath());
       const source = draft || promoted;
       if (source && Array.isArray(source.entries)) {
         sendJson(response, 200, source.entries.map((e) => e.slug));

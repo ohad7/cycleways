@@ -48,6 +48,7 @@ import {
 } from "../routing/routeActions.js";
 import { createBaseRoutingShardFetchLoader } from "../routing/baseRoutingShards.js";
 import { createShardedRouteSession } from "../routing/shardedRouteSession.js";
+import { routeCommandMessage } from "../routing/cwAlignmentPresentation.js";
 import { roundaboutsOnRoute } from "../routing/roundaboutsOnRoute.js";
 import {
   initialRouteState,
@@ -229,6 +230,7 @@ export function useCyclewaysApp({
     future: [],
   });
   const [routingShardStatus, setRoutingShardStatus] = useState(null);
+  const [routeProposal, setRouteProposal] = useState(null);
 
   useEffect(() => {
     routeStateRef.current = routeState;
@@ -301,6 +303,8 @@ export function useCyclewaysApp({
               ),
               {
                 cwBaseIndex: state.assets.cwBaseIndexData,
+                legacyRoutingCompatibility:
+                  state.assets.legacyRoutingCompatibility,
                 onStatus: (status) => {
                   if (!disposed) {
                     setRoutingShardStatus(status);
@@ -457,6 +461,7 @@ export function useCyclewaysApp({
         ...current,
         selectedRoutePointIndex: null,
       }));
+      setRouteProposal(null);
 
       if (clearUrl) {
         clearRouteUrl();
@@ -698,17 +703,74 @@ export function useCyclewaysApp({
     if (!routeManagerRef.current || state.status !== "ready") return;
 
     try {
-      const snapshot = removePoint(
-        routeManagerRef.current,
-        index,
-        state.assets.segmentsData,
-      );
+      const session = shardedRouteSessionRef.current;
+      const snapshot = session
+        ? session.removePoint(index)
+        : removePoint(
+            routeManagerRef.current,
+            index,
+            state.assets.segmentsData,
+          );
       commitRouteSnapshot(snapshot);
       trackRoutePointEvent(snapshot.points, snapshot.selectedSegments, "remove");
     } catch (error) {
       dispatchRoute({ type: "route/error", error });
     }
   }, [commitRouteSnapshot, state.assets, state.status]);
+
+  const planRouteCommand = useCallback(async (command) => {
+    const session = shardedRouteSessionRef.current;
+    if (!session || typeof session[command] !== "function") {
+      dispatchRoute({
+        type: "route/error",
+        error: new Error("הפעולה זמינה רק לאחר טעינת נתוני הניתוב הכיווניים."),
+      });
+      return null;
+    }
+    const proposal = await session[command]();
+    if (!proposal?.ok) {
+      dispatchRoute({
+        type: "route/error",
+        error: new Error(routeCommandMessage(proposal?.failure, "he")),
+      });
+      return proposal;
+    }
+    setRouteProposal(proposal);
+    return proposal;
+  }, []);
+
+  const handleReturnToStart = useCallback(
+    () => planRouteCommand("appendReturnToStart"),
+    [planRouteCommand],
+  );
+
+  const handlePlanOppositeDirection = useCallback(
+    () => planRouteCommand("planOppositeDirection"),
+    [planRouteCommand],
+  );
+
+  const handleAcceptRouteProposal = useCallback(() => {
+    const session = shardedRouteSessionRef.current;
+    if (!session || !routeProposal?.id) return false;
+    const result = session.acceptRouteProposal(routeProposal.id);
+    if (!result?.ok) {
+      setRouteProposal(null);
+      dispatchRoute({
+        type: "route/error",
+        error: new Error(routeCommandMessage(result?.failure, "he")),
+      });
+      return false;
+    }
+    commitRouteSnapshot(result.snapshot);
+    setRouteProposal(null);
+    return true;
+  }, [commitRouteSnapshot, routeProposal]);
+
+  const handleDismissRouteProposal = useCallback(() => {
+    const session = shardedRouteSessionRef.current;
+    if (routeProposal?.id) session?.dismissRouteProposal?.(routeProposal.id);
+    setRouteProposal(null);
+  }, [routeProposal]);
 
   const handleRouteClear = useCallback(() => {
     routeClickQueueRef.current = [];
@@ -1259,6 +1321,7 @@ export function useCyclewaysApp({
     activeDataPointIds,
     dataMarkerFeatures,
     routePointDragPreview,
+    routeProposal,
     displayedRoutePoints,
     inspectedSegmentDetails,
     inspectedSegment,
@@ -1285,6 +1348,10 @@ export function useCyclewaysApp({
     handleRoutePointDragEnd,
     handleRoutePointDragStart,
     handleRoutePointRemove,
+    handleReturnToStart,
+    handlePlanOppositeDirection,
+    handleAcceptRouteProposal,
+    handleDismissRouteProposal,
     handleRoutePointSelect,
     handleRouteLineDrag,
     handleRouteLineDragStart,
@@ -1316,6 +1383,7 @@ function routeStateFromSnapshot(current, snapshot, options = {}) {
     activeDataPoints: snapshot.activeDataPoints,
     routeFailure: snapshot.routeFailure || null,
     segmentSpans: snapshot.segmentSpans || [],
+    routingValidation: snapshot.routingValidation || null,
     pendingPoints: preservePending ? current.pendingPoints : [],
     routingPhase:
       preservePending && current.pendingPoints.length > 0
@@ -1338,6 +1406,7 @@ function clearRouteStateFields() {
     activeDataPoints: [],
     routeFailure: null,
     segmentSpans: [],
+    routingValidation: null,
     pendingPoints: [],
     routingPhase: "idle",
     error: null,

@@ -1,6 +1,6 @@
 const textDecoder = new TextDecoder();
 const MAGIC = "CWBS1";
-const SUPPORTED_VERSIONS = new Set([1, 2]);
+const SUPPORTED_VERSIONS = new Set([1, 2, 3]);
 const COORDINATE_SCALE = 1_000_000;
 const DISTANCE_SCALE = 10;
 
@@ -119,6 +119,13 @@ class CompactBaseRoutingShardDecoder {
       if (elevation) {
         edge.elevation = elevation;
       }
+      if (this.version >= 3) {
+        edge.bicycleTraversal = this.readBicycleTraversal(strings);
+        edge.cwAlignments = {
+          forward: this.readAlignmentMemberships(strings),
+          reverse: this.readAlignmentMemberships(strings),
+        };
+      }
       edges.push(edge);
     }
     return edges;
@@ -162,6 +169,33 @@ class CompactBaseRoutingShardDecoder {
       toMeters: this.readScaledSigned(DISTANCE_SCALE, 1),
       netMeters: this.readScaledSigned(DISTANCE_SCALE, 1),
     };
+  }
+
+  readBicycleTraversal(strings) {
+    const states = [null, "allowed", "prohibited", "conditional", "unknown"];
+    const forward = states[this.readVarUint()] || "unknown";
+    const reverse = states[this.readVarUint()] || "unknown";
+    return {
+      policyId: this.readNullableString(strings),
+      policyDigest: this.readNullableString(strings),
+      forward,
+      reverse,
+      forwardReason: this.readNullableString(strings),
+      reverseReason: this.readNullableString(strings),
+    };
+  }
+
+  readAlignmentMemberships(strings) {
+    const count = this.readVarUint();
+    const memberships = [];
+    for (let index = 0; index < count; index++) {
+      memberships.push({
+        segmentId: this.readVarUint(),
+        alignmentKey: this.readNullableString(strings),
+        mappingDigest: this.readNullableString(strings),
+      });
+    }
+    return memberships;
   }
 
   readNullableVersion() {

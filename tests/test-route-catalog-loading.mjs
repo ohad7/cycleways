@@ -22,4 +22,14 @@ assert.equal(catalog.entries.length, 1);
 assert.equal(catalog.entries[0].slug, "sovev-beit-hillel");
 assert.equal(catalog.entries[0].route, "encoded-route");
 
+let requestedVersionedPath = null;
+await loadRouteCatalogWithAssetLoader(
+  async (assetPath) => {
+    requestedVersionedPath = assetPath;
+    return { version: 1, entries: [] };
+  },
+  { manifest: { routeCatalog: "route-catalog.abc123.json" } },
+);
+assert.equal(requestedVersionedPath, "public-data/route-catalog.abc123.json");
+
 console.log("route catalog loading tests passed");

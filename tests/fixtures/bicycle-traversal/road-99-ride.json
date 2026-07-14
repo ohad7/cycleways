@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-13",
+  "description": "Frozen exact-token and coordinate-replan inputs from the reported iOS ride. Known-bad replay facts describe the V1 baseline, not desired behavior.",
+  "token": "3WpzNYgCHHQyuK6TQu12zsT1AC3R8t6ut2gXkUn3iZaL3jTbPAL6kNSbipBafZTy8detmsiJ1KuTfDYeKBjv3A4t97XCD1VwsCT9NTZbKicwrZjYktskZzc29pAFZLY9iqatw1D5Eg82XutCxZoyaEKBrueDj2ZwM49mLyLkeVtGDDgcKaTKUmupPKxVuiYunMQhsywaz9PkTWib3VwDd7Bm9pYHc1b7nJZyYaub6JtzWm2AcDvLGQyyQTLS7SETogEnBaSBmfuaRjEj6",
+  "tokenSha256": "a5bed7b01d0816a21090d52c26c18c7ed255f2eab8061f3cf030e1a00394ad21",
+  "decoded": {
+    "version": 6,
+    "type": "hybrid_route_v6",
+    "graphVersion": "hf03acd80",
+    "graphVersionHash": 4030385536,
+    "shardIds": ["g711_664", "g712_664"],
+    "segmentIds": [174, 164, 159, 176, 175, 121, 62, 97, 326, 10],
+    "anchors": [
+      {"baseEdgeShareId": 29693, "baseEdgeFraction": 0.4482490272373541},
+      {"baseEdgeShareId": 29712, "baseEdgeFraction": 0.9738918135347524},
+      {"baseEdgeShareId": 29897, "baseEdgeFraction": 0.9442282749675746},
+      {"baseEdgeShareId": 370, "baseEdgeFraction": 0.8017547875181201},
+      {"baseEdgeShareId": 364, "baseEdgeFraction": 0.38364232852674146},
+      {"baseEdgeShareId": 11835, "baseEdgeFraction": 0.1833524071107042},
+      {"baseEdgeShareId": 44247, "baseEdgeFraction": 0.8775310902571145},
+      {"baseEdgeShareId": 16049, "baseEdgeFraction": 0.16279850461585413},
+      {"baseEdgeShareId": 10771, "baseEdgeFraction": 0.7437857633325704},
+      {"baseEdgeShareId": 11753, "baseEdgeFraction": 0.47595941100175476},
+      {"baseEdgeShareId": 27823, "baseEdgeFraction": 0.5214618142977036}
+    ]
+  },
+  "coordinateReplan": {
+    "acceptedFingerprint": null,
+    "coordinates": [
+      {"lat": 33.21348766745349, "lng": 35.585172391152135},
+      {"lat": 33.21555090369252, "lng": 35.58813158116818},
+      {"lat": 33.22039845006485, "lng": 35.58702695460441},
+      {"lat": 33.220896180282395, "lng": 35.58559658159864},
+      {"lat": 33.222479464324955, "lng": 35.577189527326574},
+      {"lat": 33.22355800977551, "lng": 35.57536291318568},
+      {"lat": 33.241055825741796, "lng": 35.582172052838374},
+      {"lat": 33.244158486273605, "lng": 35.58964437415529},
+      {"lat": 33.23332476608971, "lng": 35.59685887627246},
+      {"lat": 33.225234076558046, "lng": 35.60411766821326},
+      {"lat": 33.22299275521477, "lng": 35.6159510493019}
+    ]
+  },
+  "knownBadExactReplay": {
+    "distanceMeters": 10018.922386511025,
+    "traversalCount": 85,
+    "forbiddenTraversal": {
+      "edgeShareId": 370,
+      "edgeId": "e1024904326_1",
+      "direction": "reverse",
+      "distanceMeters": 547.3,
+      "osmTags": {"highway": "trunk", "oneway": "yes", "ref": "99"}
+    }
+  }
+}

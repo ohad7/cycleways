@@ -19,6 +19,9 @@ const TURN_THRESHOLD_DEG = 40; // min heading change to emit a turn cue
 const BEND_THRESHOLD_DEG = 75;
 const JUNCTION_GATE_M = 30; // corner within this of a junction node = a turn
 const MIN_TURN_SPACING_M = 10; // hard floor for geometry noise
+const CUE_GEOMETRY_DEDUPE_M = 1;
+const SAME_TURN_MERGE_WINDOW_M = 30;
+const SAME_TURN_MERGE_MAX_ANGLE_DEG = 135;
 const COMPOUND_TURN_WINDOW_M = 60;
 const SPAN_MERGE_TOLERANCE_M = 20;
 const PREVIEW_MAX_M = 120; // upper bound of the preview window before a cue
@@ -51,9 +54,87 @@ function isCompoundManeuver(cue) {
 }
 
 function maneuverCompletionMeters(cue) {
-  return cue?.type === "roundabout" && Number.isFinite(Number(cue.exitDistanceMeters))
-    ? Number(cue.exitDistanceMeters)
+  if (cue?.type === "roundabout" && Number.isFinite(Number(cue.exitDistanceMeters))) {
+    return Number(cue.exitDistanceMeters);
+  }
+  return Number.isFinite(Number(cue?.completionDistanceMeters))
+    ? Number(cue.completionDistanceMeters)
     : Number(cue?.distanceMeters);
+}
+
+function cueGeometryWithoutNearDuplicates(geometry) {
+  if (geometry.length === 0) return [];
+  const result = [geometry[0]];
+  for (let index = 1; index < geometry.length; index += 1) {
+    const point = geometry[index];
+    const previous = result.at(-1);
+    if (getDistance(previous, point) >= CUE_GEOMETRY_DEDUPE_M) {
+      result.push(point);
+    }
+  }
+  return result;
+}
+
+function nearestJunctionIndex(point, junctions) {
+  let selectedIndex = null;
+  let selectedDistance = Infinity;
+  for (let index = 0; index < junctions.length; index += 1) {
+    const distance = getDistance(point, junctions[index]);
+    if (
+      distance <= JUNCTION_GATE_M &&
+      (distance < selectedDistance ||
+        (distance === selectedDistance && index < selectedIndex))
+    ) {
+      selectedIndex = index;
+      selectedDistance = distance;
+    }
+  }
+  return selectedIndex;
+}
+
+function canMergeSamePhysicalTurn(first, second) {
+  if (
+    first?.type !== "turn" ||
+    second?.type !== "turn" ||
+    first.direction !== second.direction ||
+    !Number.isInteger(first._nearestJunctionIndex) ||
+    first._nearestJunctionIndex !== second._nearestJunctionIndex
+  ) {
+    return false;
+  }
+  const gapMeters = second.distanceMeters - maneuverCompletionMeters(first);
+  const combinedAngle =
+    Number(first.turnAngleDeg || 0) + Number(second.turnAngleDeg || 0);
+  return (
+    gapMeters >= 0 &&
+    gapMeters <= SAME_TURN_MERGE_WINDOW_M &&
+    combinedAngle <= SAME_TURN_MERGE_MAX_ANGLE_DEG
+  );
+}
+
+function mergeSamePhysicalTurns(cornerCues) {
+  const merged = [];
+  for (const cue of cornerCues) {
+    const previous = merged.at(-1);
+    if (!canMergeSamePhysicalTurn(previous, cue)) {
+      merged.push(cue);
+      continue;
+    }
+    previous.turnAngleDeg =
+      Number(previous.turnAngleDeg || 0) + Number(cue.turnAngleDeg || 0);
+    previous.completionDistanceMeters = maneuverCompletionMeters(cue);
+    previous.mergedCornerCount = Number(previous.mergedCornerCount || 1) +
+      Number(cue.mergedCornerCount || 1);
+    previous._geometryEndIndex = cue._geometryEndIndex ?? cue._geometryIndex;
+  }
+  return merged;
+}
+
+function distanceToManeuver(meters, cue) {
+  const start = Number(cue?.distanceMeters);
+  const end = Math.max(start, maneuverCompletionMeters(cue));
+  if (meters >= start && meters <= end) return 0;
+  return Math.min(Math.abs(meters - start), Math.abs(meters - end));
 }
 
 export function buildRouteCues(navigationRoute, options = {}) {
@@ -63,6 +144,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
   if (geometry.length < 2) return [];
 
   const totalMeters = geometry[geometry.length - 1].distanceFromStartMeters;
+  const cueGeometry = cueGeometryWithoutNearDuplicates(geometry);
   const cues = [{ type: "start", distanceMeters: 0 }];
 
   // Turn/bend cues from sharp heading deltas, distance-gated to avoid spam.
@@ -81,26 +163,25 @@ export function buildRouteCues(navigationRoute, options = {}) {
       && Number.isFinite(Number(junction.exitMeters))
       && Number(junction.exitMeters) >= Number(junction.entryMeters),
   ) || [];
-  const cornerCues = [];
+  let cornerCues = [];
   let lastTurnDistance = -Infinity;
-  for (let i = 1; i < geometry.length - 1; i++) {
-    const distanceMeters = geometry[i].distanceFromStartMeters;
+  for (let i = 1; i < cueGeometry.length - 1; i++) {
+    const distanceMeters = cueGeometry[i].distanceFromStartMeters;
     if (roundaboutTraversals.some(
       (traversal) =>
         distanceMeters >= Number(traversal.entryMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
         && distanceMeters <= Number(traversal.exitMeters) + ROUNDABOUT_SUPPRESSION_PAD_M,
     )) continue;
-    const bearingIn = computeBearing(geometry[i - 1], geometry[i]);
-    const bearingOut = computeBearing(geometry[i], geometry[i + 1]);
+    const bearingIn = computeBearing(cueGeometry[i - 1], cueGeometry[i]);
+    const bearingOut = computeBearing(cueGeometry[i], cueGeometry[i + 1]);
     const turn = signedTurn(bearingIn, bearingOut);
     const angle = Math.abs(turn);
     if (angle < TURN_THRESHOLD_DEG) continue;
     let type = "turn";
+    let closestJunctionIndex = null;
     if (plainJunctions) {
-      const atJunction = plainJunctions.some(
-        (j) => getDistance(geometry[i], j) <= JUNCTION_GATE_M,
-      );
-      if (!atJunction) {
+      closestJunctionIndex = nearestJunctionIndex(cueGeometry[i], plainJunctions);
+      if (closestJunctionIndex === null) {
         if (angle < BEND_THRESHOLD_DEG) continue;
         type = "bend";
       }
@@ -112,6 +193,9 @@ export function buildRouteCues(navigationRoute, options = {}) {
       distanceMeters,
       direction: turn > 0 ? "right" : "left",
       turnAngleDeg: angle,
+      _geometryIndex: i,
+      _geometryEndIndex: i,
+      _nearestJunctionIndex: closestJunctionIndex,
     });
   }
 
@@ -138,6 +222,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
     });
   }
   cornerCues.sort((a, b) => a.distanceMeters - b.distanceMeters);
+  cornerCues = mergeSamePhysicalTurns(cornerCues);
 
   // Link close decision pairs without removing the follow-up cue. For a
   // roundabout followed by another maneuver, proximity starts at the
@@ -164,6 +249,11 @@ export function buildRouteCues(navigationRoute, options = {}) {
       next.compoundPreviousType = current.type;
       next.compoundPreviousDistanceMeters = current.distanceMeters;
     }
+  }
+  for (const cue of cornerCues) {
+    delete cue._geometryIndex;
+    delete cue._geometryEndIndex;
+    delete cue._nearestJunctionIndex;
   }
   cues.push(...cornerCues);
 
@@ -201,8 +291,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
     )) continue;
     const near = turnCues.find(
       (t) =>
-        Math.abs(t.distanceMeters - span.startMeters) <=
-        SPAN_MERGE_TOLERANCE_M,
+        distanceToManeuver(span.startMeters, t) <= SPAN_MERGE_TOLERANCE_M,
     );
     if (near) {
       near.ontoSegmentName = span.name; // merge into the turn

@@ -26,6 +26,17 @@ const SNAP_THRESHOLD_PIXELS = 40;
 const SNAP_THRESHOLD_MIN_METERS = 25;
 const CW_SNAP_PREFERENCE_PIXELS = 12;
 const CW_SNAP_PREFERENCE_MIN_METERS = 4;
+const DEFAULT_BASE_SNAP_CANDIDATES = 4;
+const MAX_BASE_SNAP_CANDIDATES = 6;
+const SNAP_DISPLACEMENT_COST_PER_METER = 10;
+// A short reverse/forward overlap at an interior shaping point is usually an
+// incidental snap onto a dangling edge, not a useful route instruction. Give
+// that boundary a bounded preference penalty so a nearby continuous candidate
+// can win without deleting unavoidable or deliberate out-and-back geometry.
+// See plans/via-point-spur/design.md.
+const SHORT_VIA_REVERSAL_MAX_OVERLAP_METERS = 12;
+const SHORT_VIA_REVERSAL_PENALTY_COST = 100;
+const BASE_TRAVERSAL_EPSILON_METERS = 0.01;
 
 function clampMeters(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -35,6 +46,13 @@ const {
   DEFAULT_CONNECTOR_STRATEGY,
   evaluateConnectorEdge,
 } = require("./src/routing/connectorCostModel.js");
+const {
+  bicycleTraversalVerdict,
+  validateTraversalSlices,
+} = require("./src/routing/bicycleTraversalPolicy.js");
+const {
+  buildRouteAttestation,
+} = require("./src/routing/routeAttestation.js");
 
 class RouteManager {
   constructor() {
@@ -57,6 +75,11 @@ class RouteManager {
     this.baseRoutingMetersPerDegreeLat = 111320;
     this.baseRoutingUphillCostMetersPerMeter = 8;
     this.baseRoutingGraphVersion = "";
+    this.baseRoutingTraversalPolicy = {
+      strict: false,
+      policyId: null,
+      policyDigest: null,
+    };
     this.segmentNamesById = new Map();
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
@@ -141,6 +164,19 @@ class RouteManager {
       throw new Error("Invalid point coordinates");
     }
 
+    if (this.baseRoutingNetwork) {
+      const requestedPoints = this.routePoints.map((routePoint) => ({
+        ...(routePoint.requestedCoordinate || routePoint),
+        id: routePoint.id,
+        occurrenceId: routePoint.occurrenceId,
+        legPurpose: routePoint.legPurpose,
+      }));
+      return this.recalculateRoute([
+        ...requestedPoints,
+        { ...point, id: point.id || Date.now() + Math.random() },
+      ]);
+    }
+
     // Snap point to nearest segment
     const snappedPoint = this.snapToNetwork(point);
     if (!snappedPoint) {
@@ -195,6 +231,18 @@ class RouteManager {
       return [...this.selectedSegments];
     }
 
+    if (this.baseRoutingNetwork) {
+      const requestedPoints = this.routePoints
+        .filter((_, pointIndex) => pointIndex !== index)
+        .map((routePoint) => ({
+          ...(routePoint.requestedCoordinate || routePoint),
+          id: routePoint.id,
+          occurrenceId: routePoint.occurrenceId,
+          legPurpose: routePoint.legPurpose,
+        }));
+      return this.recalculateRoute(requestedPoints);
+    }
+
     // Remove the point from internal array
     this.routePoints.splice(index, 1);
 
@@ -222,6 +270,34 @@ class RouteManager {
    * @returns {Array} Updated list of selected segments
    */
   recalculateRoute(points) {
+    if (this.baseRoutingNetwork) {
+      const validPoints = (Array.isArray(points) ? points : []).filter((point) =>
+        this._isValidPoint(point),
+      );
+      if (validPoints.length === 0) {
+        this.clearRoute();
+        return [];
+      }
+      const candidate = this.planBaseRouteCandidate(validPoints);
+      if (!candidate.ok) {
+        // Planning is transactional: an invalid edit cannot replace a route
+        // that is already committed and usable.
+        if (this.baseRouteInfo && !this.baseRouteInfo.failure) {
+          return [...this.selectedSegments];
+        }
+        this.routePoints = candidate.routePoints;
+        this.baseRouteInfo = this._emptyBaseRoute(candidate.failure);
+        this.selectedSegments = [];
+        this.lastRouteFailure = candidate.failure;
+        return [];
+      }
+      this.routePoints = candidate.routePoints;
+      this.baseRouteInfo = candidate.route;
+      this.selectedSegments = [...candidate.route.segments];
+      this.lastRouteFailure = null;
+      return [...this.selectedSegments];
+    }
+
     this.routePoints = this._snapRoutePoints(points);
 
     this._recalculateRoute();
@@ -234,15 +310,17 @@ class RouteManager {
    * @returns {Object} Preview route info
    */
   previewRouteInfo(points) {
-    const routePoints = this._snapRoutePoints(points);
     if (this.baseRoutingNetwork) {
-      const baseRoute = this._calculateBaseRoute(routePoints);
+      const candidate = this.planBaseRouteCandidate(points);
+      const baseRoute = candidate.route || this._emptyBaseRoute(candidate.failure);
       return {
-        points: routePoints,
+        points: candidate.routePoints,
         segments: baseRoute.segments,
         orderedCoordinates: baseRoute.orderedCoordinates,
+        failure: candidate.failure,
       };
     }
+    const routePoints = this._snapRoutePoints(points);
     const segments =
       routePoints.length >= 2
         ? this._findOptimalRouteThroughPoints(routePoints)
@@ -263,41 +341,34 @@ class RouteManager {
     const connectorProfile = costProfile === "connector";
     const strategy = connectorProfile ? connectorStrategy : null;
     const snapAny = Boolean(strategy && strategy.snap === "any");
-    const snapped = this._snapRoutePoints(points, {
-      edgeFilter:
-        connectorProfile && !snapAny
-          ? (edge) => this._connectorEdgeAllowedFor(edge, strategy)
-          : null,
-    });
-    const snappedEndpoints =
-      snapped.length >= 2 ? [snapped[0], snapped[snapped.length - 1]] : snapped;
-    if (snapped.length < 2 || snapped.some((point) => point.unsnapped)) {
-      return {
-        geometry: [],
-        distanceMeters: 0,
-        failure: "snap-failed",
-        snappedEndpoints,
-      };
-    }
     if (!this.baseRoutingNetwork) {
       return {
         geometry: [],
         distanceMeters: 0,
         failure: "no-base-network",
-        snappedEndpoints,
+        snappedEndpoints: [],
       };
     }
     this._connectorCostProfile = connectorProfile;
     this._connectorStrategy = strategy;
     this._connectorSnapAnyEndpoints = snapAny;
-    let route;
+    let candidate;
     try {
-      route = this._calculateBaseRoute(snapped);
+      candidate = this.planBaseRouteCandidate(points, {
+        edgeFilter:
+          connectorProfile && !snapAny
+            ? (edge) => this._connectorEdgeAllowedFor(edge, strategy)
+            : null,
+      });
     } finally {
       this._connectorCostProfile = false;
       this._connectorStrategy = null;
       this._connectorSnapAnyEndpoints = false;
     }
+    const route = candidate.route || this._emptyBaseRoute(candidate.failure);
+    const snapped = candidate.routePoints || [];
+    const snappedEndpoints =
+      snapped.length >= 2 ? [snapped[0], snapped[snapped.length - 1]] : snapped;
     if (
       route.failure ||
       !Array.isArray(route.orderedCoordinates) ||
@@ -306,7 +377,7 @@ class RouteManager {
       return {
         geometry: [],
         distanceMeters: 0,
-        failure: route.failure || "no-path",
+        failure: candidate.failure || route.failure || "no-path",
         snappedEndpoints,
       };
     }
@@ -381,6 +452,11 @@ class RouteManager {
         orderedCoordinates: routeInfo.orderedCoordinates,
         failure: routeInfo.failure || this.lastRouteFailure,
         segmentSpans: buildSegmentSpans(routeInfo.traversals, this.segmentNamesById),
+        routingValidation: this._baseRouteAttestation(
+          routeInfo,
+          this.routePoints,
+          routeInfo.derivation || "directed-search",
+        ),
       };
     }
     const totalDistance = this._calculateTotalDistance();
@@ -397,6 +473,50 @@ class RouteManager {
     };
   }
 
+  getRouteInfoForBaseCandidate(candidate) {
+    if (!candidate?.ok || !candidate.route) return null;
+    const routeInfo = candidate.route;
+    return {
+      points: candidate.routePoints.map((point) => ({ ...point })),
+      segments: [...routeInfo.segments],
+      distance: routeInfo.distance,
+      cost: routeInfo.cost,
+      distanceCost: routeInfo.distanceCost,
+      uphillCost: routeInfo.uphillCost,
+      cyclewaysDistance: routeInfo.cyclewaysDistance,
+      nonCyclewaysDistance: routeInfo.nonCyclewaysDistance,
+      uphillMeters: routeInfo.uphillMeters,
+      downhillMeters: routeInfo.downhillMeters,
+      elevationGain: routeInfo.uphillMeters,
+      elevationLoss: routeInfo.downhillMeters,
+      orderedCoordinates: routeInfo.orderedCoordinates,
+      failure: null,
+      segmentSpans: buildSegmentSpans(routeInfo.traversals, this.segmentNamesById),
+      routingValidation: this._baseRouteAttestation(
+        routeInfo,
+        candidate.routePoints,
+        candidate.derivation || "directed-search",
+      ),
+    };
+  }
+
+  commitBaseRouteCandidate(candidate) {
+    if (!candidate?.ok || !candidate.route || !Array.isArray(candidate.routePoints)) {
+      return false;
+    }
+    const validation = validateTraversalSlices(
+      candidate.route.traversals,
+      this.baseRoutingTraversalPolicy,
+    );
+    if (!validation.ok) return false;
+    candidate.route.derivation = candidate.derivation || "directed-search";
+    this.routePoints = candidate.routePoints.map((point) => ({ ...point }));
+    this.baseRouteInfo = candidate.route;
+    this.selectedSegments = [...candidate.route.segments];
+    this.lastRouteFailure = null;
+    return true;
+  }
+
   /**
    * Return base-graph route diagnostics for tuning without exposing the
    * internal traversal objects through ordinary route snapshots.
@@ -409,6 +529,11 @@ class RouteManager {
       this.baseRouteInfo ||
       this._calculateBaseRoute(this.routePoints);
 
+    const routingValidation = this._baseRouteAttestation(
+      routeInfo,
+      this.routePoints,
+      routeInfo.derivation || "directed-search",
+    );
     return {
       failure: routeInfo.failure || this.lastRouteFailure,
       distance: routeInfo.distance,
@@ -421,6 +546,8 @@ class RouteManager {
       downhillMeters: routeInfo.downhillMeters,
       uphillCostMetersPerMeter: this.baseRoutingUphillCostMetersPerMeter,
       graphVersion: this.baseRoutingGraphVersion,
+      contentFingerprint: routingValidation?.contentFingerprint || null,
+      exactReverseAllowed: routingValidation?.exactReverseAllowed === true,
       segments: [...routeInfo.segments],
       traversals: routeInfo.traversals.map((traversal) =>
         this._baseTraversalDiagnostics(traversal),
@@ -436,18 +563,112 @@ class RouteManager {
     };
   }
 
+  _baseRouteAttestation(
+    routeInfo,
+    routePoints = this.routePoints,
+    derivation = "directed-search",
+  ) {
+    if (
+      !routeInfo ||
+      routeInfo.failure ||
+      !Array.isArray(routeInfo.traversals) ||
+      routeInfo.traversals.length === 0
+    ) {
+      return null;
+    }
+    const traversalSlices = routeInfo.traversals.map((traversal) => {
+      const currentVerdict =
+        traversal.policyVerdict ||
+        this._baseTraversalVerdict(
+          traversal.edge,
+          traversal.fromDistance,
+          traversal.toDistance,
+        );
+      const oppositeVerdict = this._baseTraversalVerdict(
+        traversal.edge,
+        traversal.toDistance,
+        traversal.fromDistance,
+      );
+      return {
+        edgeShareId: traversal.edge.shareId,
+        fromFraction:
+          traversal.edge.lengthMeters > 0
+            ? traversal.fromDistance / traversal.edge.lengthMeters
+            : 0,
+        toFraction:
+          traversal.edge.lengthMeters > 0
+            ? traversal.toDistance / traversal.edge.lengthMeters
+            : 0,
+        distanceMeters: Math.abs(
+          traversal.toDistance - traversal.fromDistance,
+        ),
+        policyState: currentVerdict.state,
+        policyReason: currentVerdict.reason,
+        oppositePolicyState: oppositeVerdict.state,
+        oppositePolicyReason: oppositeVerdict.reason,
+        cwMembership: traversal.cwMemberships || [],
+        oppositeCwMembership: this._cwMembershipsForTraversal(
+          traversal.edge,
+          traversal.toDistance,
+          traversal.fromDistance,
+        ),
+        shardIds: traversal.edge.shardIds || [],
+      };
+    });
+    let traversalCursor = 0;
+    const legBoundaries = (routeInfo.legs || []).map((leg, index) => {
+      const startTraversal = traversalCursor;
+      traversalCursor += Array.isArray(leg.traversals) ? leg.traversals.length : 0;
+      return {
+        purpose: routePoints[index + 1]?.legPurpose || "ordinary",
+        fromOccurrence: index,
+        toOccurrence: index + 1,
+        startTraversal,
+        endTraversal: traversalCursor,
+      };
+    });
+    const contract = this.baseRoutingNetwork?.routingContract || {};
+    return buildRouteAttestation({
+      validationContext: {
+        baseRoutingSchemaVersion: this.baseRoutingNetwork?.schemaVersion,
+        graphVersion: this.baseRoutingGraphVersion,
+        policyId: this.baseRoutingTraversalPolicy.policyId,
+        policyDigest: this.baseRoutingTraversalPolicy.policyDigest,
+        routingContextDigest: contract.routingContextDigest || "",
+      },
+      traversalSlices,
+      waypointOccurrences: routePoints,
+      legBoundaries,
+      geometry: routeInfo.orderedCoordinates,
+      reverseConstraint: routeInfo.reverseConstraint || "policy-only",
+      derivation,
+    });
+  }
+
   _baseTraversalDiagnostics(traversal) {
+    const memberships = Array.isArray(traversal.cwMemberships)
+      ? traversal.cwMemberships
+      : [];
+    const segmentIds = [...new Set(memberships.map((value) => Number(value.segmentId)))];
     return {
       edgeId: traversal.edge.id,
       edgeShareId: traversal.edge.shareId,
       shardIds: [...(traversal.edge.shardIds || [])],
       direction: traversal.direction,
+      policyVerdict: traversal.policyVerdict
+        ? { ...traversal.policyVerdict }
+        : this._baseTraversalVerdict(
+            traversal.edge,
+            traversal.fromDistance,
+            traversal.toDistance,
+          ),
       source: traversal.edge.source,
       routeClass: traversal.edge.routeClass,
       highway: traversal.edge.highway,
       roadType: traversal.edge.roadType,
-      cyclewaysSegmentIds: [...traversal.edge.cwSegmentIds],
-      cyclewaysSegmentNames: traversal.edge.cwSegmentIds
+      cyclewaysSegmentIds: segmentIds,
+      cyclewaysAlignments: memberships.map((value) => ({ ...value })),
+      cyclewaysSegmentNames: segmentIds
         .map((segmentId) => this.segmentNamesById.get(Number(segmentId)))
         .filter(Boolean),
       distanceMeters: traversal.distanceMeters,
@@ -503,6 +724,11 @@ class RouteManager {
       return [];
     }
 
+
+    if (this.baseRoutingNetwork) {
+      return this.recalculateRoute(validPoints);
+    }
+
     const previousSegments = [...this.selectedSegments];
     this.clearRoute();
     this.routePoints = this._snapRoutePoints(validPoints);
@@ -542,8 +768,13 @@ class RouteManager {
   }
 
   restoreBaseRouteFromPayload(payload) {
+    const candidate = this.planBaseRouteFromPayload(payload);
+    return candidate.ok ? this.commitBaseRouteCandidate(candidate) : false;
+  }
+
+  planBaseRouteFromPayload(payload) {
     if (!this.baseRoutingNetwork || !payload || payload.type !== "base_route_v4") {
-      return false;
+      return { ok: false, failure: "invalid-base-route-payload" };
     }
 
     const anchors = Array.isArray(payload.routePoints)
@@ -551,14 +782,14 @@ class RouteManager {
       : [];
     const legs = Array.isArray(payload.legs) ? payload.legs : [];
     if (anchors.length === 0 || legs.length !== Math.max(0, anchors.length - 1)) {
-      return false;
+      return { ok: false, failure: "invalid-base-route-payload" };
     }
 
     const routePoints = anchors.map((anchor, index) =>
       this._baseRoutePointFromShareAnchor(anchor, index),
     );
     if (routePoints.some((point) => point === null)) {
-      return false;
+      return { ok: false, failure: "unresolved-route-anchor" };
     }
 
     const route = this._emptyBaseRoute();
@@ -569,18 +800,20 @@ class RouteManager {
         routePoints[index + 1],
       );
       if (!leg) {
-        return false;
+        return { ok: false, failure: "invalid-route-traversal" };
       }
       route.legs.push(leg);
       this._appendBaseLegToRoute(route, leg);
     }
 
     route.segments = this._cyclewaysSegmentsForBaseTraversals(route.traversals);
-    this.routePoints = routePoints;
-    this.baseRouteInfo = route;
-    this.selectedSegments = [...route.segments];
-    this.lastRouteFailure = null;
-    return true;
+    return {
+      ok: true,
+      failure: null,
+      routePoints,
+      route,
+      derivation: "exact-restore",
+    };
   }
 
   /**
@@ -887,6 +1120,11 @@ class RouteManager {
     this.baseRoutingSpatialSegments = [];
     this.baseRoutingMetersPerDegreeLng = this.baseRoutingMetersPerDegreeLat;
     this.baseRoutingGraphVersion = "";
+    this.baseRoutingTraversalPolicy = {
+      strict: false,
+      policyId: null,
+      policyDigest: null,
+    };
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
 
@@ -908,6 +1146,7 @@ class RouteManager {
       graphVersion: network.graphVersion || network.generatedAt || "",
       nodes: [],
       edges: [],
+      routingContract: network.routingContract || null,
     };
     if (
       targetNetwork.graphVersion === "" &&
@@ -917,6 +1156,14 @@ class RouteManager {
     }
     if (!this.baseRoutingNetwork) {
       this._setBaseRoutingProjection(network.nodes);
+      const contract = network.routingContract || {};
+      this.baseRoutingTraversalPolicy = {
+        strict:
+          contract.strictTraversalPolicy === true ||
+          Number(network.schemaVersion) >= 3,
+        policyId: contract.policyId || network.policyId || null,
+        policyDigest: contract.policyDigest || network.policyDigest || null,
+      };
     }
 
     let addedNodes = 0;
@@ -940,8 +1187,12 @@ class RouteManager {
       if (Number.isSafeInteger(edge.shareId) && edge.shareId > 0) {
         this.baseRoutingEdgesByShareId.set(edge.shareId, edge);
       }
-      this._addBaseRoutingAdjacency(edge.from, edge.to, edge, "forward");
-      this._addBaseRoutingAdjacency(edge.to, edge.from, edge, "reverse");
+      if (this._baseTraversalVerdict(edge, 0, edge.lengthMeters).allowed) {
+        this._addBaseRoutingAdjacency(edge.from, edge.to, edge, "forward");
+      }
+      if (this._baseTraversalVerdict(edge, edge.lengthMeters, 0).allowed) {
+        this._addBaseRoutingAdjacency(edge.to, edge.from, edge, "reverse");
+      }
       this._indexBaseRoutingEdge(edge);
       targetNetwork.edges.push(edgeData);
       addedEdges++;
@@ -1022,11 +1273,26 @@ class RouteManager {
       highway: edgeData.highway || null,
       accessStatus: edgeData.accessStatus || null,
       roadType: edgeData.roadType || null,
+      bicycleTraversal:
+        edgeData.bicycleTraversal && typeof edgeData.bicycleTraversal === "object"
+          ? { ...edgeData.bicycleTraversal }
+          : null,
       cwSegmentIds: Array.isArray(edgeData.cwSegmentIds)
         ? edgeData.cwSegmentIds
             .map((segmentId) => Number(segmentId))
             .filter((segmentId) => Number.isFinite(segmentId))
         : [],
+      cwAlignments:
+        edgeData.cwAlignments && typeof edgeData.cwAlignments === "object"
+          ? {
+              forward: Array.isArray(edgeData.cwAlignments.forward)
+                ? edgeData.cwAlignments.forward.map((value) => ({ ...value }))
+                : [],
+              reverse: Array.isArray(edgeData.cwAlignments.reverse)
+                ? edgeData.cwAlignments.reverse.map((value) => ({ ...value }))
+                : [],
+            }
+          : null,
       shardIds: Array.isArray(edgeData.shardIds)
         ? [...new Set(edgeData.shardIds.map(String).filter(Boolean))].sort()
         : [],
@@ -1075,6 +1341,33 @@ class RouteManager {
     });
   }
 
+  _baseTraversalVerdict(edge, fromDistance, toDistance) {
+    return bicycleTraversalVerdict(
+      edge,
+      fromDistance,
+      toDistance,
+      this.baseRoutingTraversalPolicy,
+    );
+  }
+
+  _cwMembershipsForDirection(edge, direction) {
+    if (edge?.cwAlignments) {
+      return Array.isArray(edge.cwAlignments[direction])
+        ? edge.cwAlignments[direction]
+        : [];
+    }
+    return (edge?.cwSegmentIds || []).map((segmentId) => ({
+      segmentId,
+      alignmentKey: null,
+      legacy: true,
+    }));
+  }
+
+  _cwMembershipsForTraversal(edge, fromDistance, toDistance) {
+    const direction = Number(toDistance) < Number(fromDistance) ? "reverse" : "forward";
+    return this._cwMembershipsForDirection(edge, direction);
+  }
+
   _activeConnectorStrategy() {
     return this._connectorStrategy || DEFAULT_CONNECTOR_STRATEGY;
   }
@@ -1083,8 +1376,27 @@ class RouteManager {
     return evaluateConnectorEdge(edge, strategy || DEFAULT_CONNECTOR_STRATEGY).allowed;
   }
 
-  _connectorCostMultiplierFor(edge) {
-    return evaluateConnectorEdge(edge, this._activeConnectorStrategy()).multiplier;
+  _connectorEvaluationEdge(edge, fromDistance, toDistance) {
+    if (!edge?.cwAlignments) return edge;
+    return {
+      ...edge,
+      // Connector classification is traversal-direction scoped in V3.  Strip
+      // the aggregate alignment object so the shared model only sees the CW
+      // memberships that apply to this particular traversal.
+      cwAlignments: null,
+      cwSegmentIds: this._cwMembershipsForTraversal(
+        edge,
+        fromDistance,
+        toDistance,
+      ).map((value) => value.segmentId),
+    };
+  }
+
+  _connectorCostMultiplierFor(edge, fromDistance, toDistance) {
+    return evaluateConnectorEdge(
+      this._connectorEvaluationEdge(edge, fromDistance, toDistance),
+      this._activeConnectorStrategy(),
+    ).multiplier;
   }
 
   _connectorEdgeAllowed(edge) {
@@ -1100,10 +1412,18 @@ class RouteManager {
   }
 
   _connectorSnapAnyEndpointCostParts(edge, fromDistance, toDistance) {
-    const verdict = evaluateConnectorEdge(edge, this._activeConnectorStrategy());
+    const verdict = evaluateConnectorEdge(
+      this._connectorEvaluationEdge(edge, fromDistance, toDistance),
+      this._activeConnectorStrategy(),
+    );
     if (verdict.allowed) return null;
     const distanceMeters = Math.abs(toDistance - fromDistance);
-    const costMultiplier = this._baseRoutingCostMultiplier(edge, false);
+    const costMultiplier = this._baseRoutingCostMultiplier(
+      edge,
+      false,
+      fromDistance,
+      toDistance,
+    );
     const distanceCost = distanceMeters * costMultiplier;
     const uphillMeters = this._baseRoutingUphillMeters(
       edge,
@@ -1122,9 +1442,16 @@ class RouteManager {
     };
   }
 
-  _baseRoutingCostMultiplier(edge, connector = this._connectorCostProfile) {
-    if (connector) return this._connectorCostMultiplierFor(edge);
-    if (edge.cwSegmentIds.length > 0) return 1;
+  _baseRoutingCostMultiplier(
+    edge,
+    connector = this._connectorCostProfile,
+    fromDistance = 0,
+    toDistance = edge?.lengthMeters || 0,
+  ) {
+    if (connector) {
+      return this._connectorCostMultiplierFor(edge, fromDistance, toDistance);
+    }
+    if (this._cwMembershipsForTraversal(edge, fromDistance, toDistance).length > 0) return 1;
     if (edge.routeClass === "cycle") return 1.35;
     if (edge.routeClass === "path_track" || edge.routeClass === "manual") {
       return 1.6;
@@ -1165,6 +1492,22 @@ class RouteManager {
     connector = this._connectorCostProfile,
     options = {},
   ) {
+    const policyVerdict = this._baseTraversalVerdict(
+      edge,
+      fromDistance,
+      toDistance,
+    );
+    if (!policyVerdict.allowed) {
+      return {
+        distanceMeters: Math.abs(toDistance - fromDistance),
+        costMultiplier: Infinity,
+        distanceCost: Infinity,
+        uphillMeters: 0,
+        uphillCost: 0,
+        cost: Infinity,
+        policyVerdict,
+      };
+    }
     if (connector && options.snapAnyEndpoint) {
       const endpointParts = this._connectorSnapAnyEndpointCostParts(
         edge,
@@ -1174,7 +1517,12 @@ class RouteManager {
       if (endpointParts) return endpointParts;
     }
     const distanceMeters = Math.abs(toDistance - fromDistance);
-    const costMultiplier = this._baseRoutingCostMultiplier(edge, connector);
+    const costMultiplier = this._baseRoutingCostMultiplier(
+      edge,
+      connector,
+      fromDistance,
+      toDistance,
+    );
     const distanceCost = distanceMeters * costMultiplier;
     const uphillMeters = this._baseRoutingUphillMeters(
       edge,
@@ -1292,6 +1640,91 @@ class RouteManager {
     return candidates;
   }
 
+  _baseRoutingSnapCandidates(point, thresholdMeters = null, options = {}) {
+    if (!this._isValidPoint(point)) return [];
+    const normalizedPoint = { lat: Number(point.lat), lng: Number(point.lng) };
+    const metersPerPixel = Number(point.metersPerPixel);
+    const hasPixelScale = Number.isFinite(metersPerPixel) && metersPerPixel > 0;
+    const effectiveThresholdMeters = Number.isFinite(thresholdMeters)
+      ? thresholdMeters
+      : hasPixelScale
+        ? clampMeters(
+            SNAP_THRESHOLD_PIXELS * metersPerPixel,
+            SNAP_THRESHOLD_MIN_METERS,
+            this.snapThresholdMeters,
+          )
+        : this.snapThresholdMeters;
+    const edgeFilter =
+      typeof options.edgeFilter === "function" ? options.edgeFilter : null;
+    const bestByEdge = new Map();
+
+    for (const candidate of this._baseRoutingCandidates(normalizedPoint)) {
+      const edge = this.baseRoutingEdges.get(candidate.edgeId);
+      if (!edge || (edgeFilter && !edgeFilter(edge))) continue;
+      const allowedDirections = ["forward", "reverse"].filter((direction) =>
+        this._baseTraversalVerdict(
+          edge,
+          direction === "reverse" ? edge.lengthMeters : 0,
+          direction === "reverse" ? 0 : edge.lengthMeters,
+        ).allowed,
+      );
+      if (allowedDirections.length === 0) continue;
+      const snapped = this._getClosestPointOnLineSegment(
+        normalizedPoint,
+        candidate.start,
+        candidate.end,
+      );
+      const distanceMeters = this._getDistance(normalizedPoint, snapped);
+      if (distanceMeters > effectiveThresholdMeters) continue;
+
+      const baseSnap = this._buildBaseRoutingSnap(
+        edge,
+        candidate,
+        snapped,
+        distanceMeters,
+      );
+      const record = {
+        ...baseSnap,
+        requestedCoordinate: normalizedPoint,
+        selectedAnchor: {
+          edgeId: edge.id,
+          edgeShareId: edge.shareId,
+          edgeFraction: baseSnap.baseEdgeFraction,
+        },
+        snapProvenance: {
+          source: "base-routing-candidate",
+          displacementMeters: distanceMeters,
+          allowedDirections,
+        },
+        isCyclewaysEdge:
+          this._cwMembershipsForDirection(edge, "forward").length > 0 ||
+          this._cwMembershipsForDirection(edge, "reverse").length > 0,
+      };
+      const existing = bestByEdge.get(edge.id);
+      if (
+        !existing ||
+        distanceMeters < existing.distanceMeters ||
+        (distanceMeters === existing.distanceMeters &&
+          record.baseEdgeDistanceMeters < existing.baseEdgeDistanceMeters)
+      ) {
+        bestByEdge.set(edge.id, record);
+      }
+    }
+
+    const limit = Math.min(
+      MAX_BASE_SNAP_CANDIDATES,
+      Math.max(1, Number(options.maxCandidates) || DEFAULT_BASE_SNAP_CANDIDATES),
+    );
+    return [...bestByEdge.values()]
+      .sort(
+        (first, second) =>
+          first.distanceMeters - second.distanceMeters ||
+          String(first.baseEdgeId).localeCompare(String(second.baseEdgeId)) ||
+          first.baseEdgeDistanceMeters - second.baseEdgeDistanceMeters,
+      )
+      .slice(0, limit);
+  }
+
   _snapToBaseRoutingNetwork(point, thresholdMeters = null, options = {}) {
     if (!this._isValidPoint(point)) return null;
     const normalizedPoint = {
@@ -1316,38 +1749,13 @@ class RouteManager {
           CW_SNAP_PREFERENCE_MARGIN_METERS,
         )
       : CW_SNAP_PREFERENCE_MARGIN_METERS;
-    let best = null;
-    let bestCw = null;
-    const edgeFilter =
-      typeof options.edgeFilter === "function" ? options.edgeFilter : null;
-
-    for (const candidate of this._baseRoutingCandidates(normalizedPoint)) {
-      const edge = this.baseRoutingEdges.get(candidate.edgeId);
-      if (!edge) continue;
-      if (edgeFilter && !edgeFilter(edge)) continue;
-      const snapped = this._getClosestPointOnLineSegment(
-        normalizedPoint,
-        candidate.start,
-        candidate.end,
-      );
-      const distanceMeters = this._getDistance(normalizedPoint, snapped);
-      if (distanceMeters > effectiveThresholdMeters) continue;
-
-      const isCyclewaysEdge = edge.cwSegmentIds.length > 0;
-      const improvesOverall = !best || distanceMeters < best.distanceMeters;
-      const improvesCw =
-        isCyclewaysEdge && (!bestCw || distanceMeters < bestCw.distanceMeters);
-      if (!improvesOverall && !improvesCw) continue;
-
-      const record = this._buildBaseRoutingSnap(
-        edge,
-        candidate,
-        snapped,
-        distanceMeters,
-      );
-      if (improvesOverall) best = record;
-      if (improvesCw) bestCw = record;
-    }
+    const candidates = this._baseRoutingSnapCandidates(
+      normalizedPoint,
+      effectiveThresholdMeters,
+      { ...options, maxCandidates: MAX_BASE_SNAP_CANDIDATES },
+    );
+    const best = candidates[0] || null;
+    const bestCw = candidates.find((candidate) => candidate.isCyclewaysEdge) || null;
 
     if (!best) return null;
     // Prefer the closest CycleWays edge when it is within the preference margin
@@ -1392,7 +1800,11 @@ class RouteManager {
   }
 
   _primaryCyclewaysSegmentName(edge) {
-    for (const segmentId of edge?.cwSegmentIds || []) {
+    const memberships = [
+      ...this._cwMembershipsForDirection(edge, "forward"),
+      ...this._cwMembershipsForDirection(edge, "reverse"),
+    ];
+    for (const segmentId of new Set(memberships.map((value) => value.segmentId))) {
       const name = this.segmentNamesById.get(Number(segmentId));
       if (name) return name;
     }
@@ -1420,9 +1832,17 @@ class RouteManager {
     }
 
     if (this.baseRoutingNetwork) {
-      this.baseRouteInfo = this._calculateBaseRoute(this.routePoints);
-      this.selectedSegments = [...this.baseRouteInfo.segments];
-      this.lastRouteFailure = this.baseRouteInfo.failure || null;
+      const candidate = this.planBaseRouteCandidate(this.routePoints);
+      if (!candidate.ok) {
+        this.baseRouteInfo = this._emptyBaseRoute(candidate.failure);
+        this.selectedSegments = [];
+        this.lastRouteFailure = candidate.failure;
+        return;
+      }
+      this.routePoints = candidate.routePoints;
+      this.baseRouteInfo = candidate.route;
+      this.selectedSegments = [...candidate.route.segments];
+      this.lastRouteFailure = null;
       return;
     }
 
@@ -1474,6 +1894,176 @@ class RouteManager {
     return route;
   }
 
+  /**
+   * Plan a route without mutating the currently committed route.  Candidate
+   * selection is joint across waypoint occurrences, so one interior anchor is
+   * used for both adjacent legs while repeated coordinates remain independent.
+   */
+  planBaseRouteCandidate(points, options = {}) {
+    const requestedPoints = (Array.isArray(points) ? points : []).filter((point) =>
+      this._isValidPoint(point),
+    );
+    if (!this.baseRoutingNetwork || requestedPoints.length === 0) {
+      return { ok: false, failure: "no-base-network", routePoints: [], route: null };
+    }
+
+    const thresholdMeters = Number.isFinite(Number(options.thresholdMeters))
+      ? Math.max(0, Number(options.thresholdMeters))
+      : null;
+    const candidateLayers = requestedPoints.map((point, index) =>
+      this._baseRoutingSnapCandidates(point, thresholdMeters, options).map(
+        (candidate) => ({
+          ...candidate,
+          id: point.id || `route-point-${index}`,
+          occurrenceId: point.occurrenceId || point.id || `occurrence-${index}`,
+          legPurpose: point.legPurpose || "ordinary",
+          requestedCoordinate: {
+            lat: Number(point.lat),
+            lng: Number(point.lng),
+          },
+        }),
+      ),
+    );
+    if (candidateLayers.some((layer) => layer.length === 0)) {
+      return {
+        ok: false,
+        failure: "snap-failed",
+        routePoints: candidateLayers.map((layer, index) =>
+          layer[0] || {
+            ...requestedPoints[index],
+            unsnapped: true,
+            occurrenceId:
+              requestedPoints[index].occurrenceId ||
+              requestedPoints[index].id ||
+              `occurrence-${index}`,
+          },
+        ),
+        route: null,
+      };
+    }
+    if (candidateLayers.length === 1) {
+      return {
+        ok: true,
+        failure: null,
+        routePoints: [candidateLayers[0][0]],
+        route: this._emptyBaseRoute(),
+      };
+    }
+
+    let states = candidateLayers[0].map((candidate, candidateIndex) => ({
+      candidate,
+      candidateIndex,
+      score:
+        Number(candidate.distanceMeters || 0) * SNAP_DISPLACEMENT_COST_PER_METER,
+      legs: [],
+      routePoints: [candidate],
+      tieKey: `${candidate.baseEdgeId}:${candidate.baseEdgeDistanceMeters}`,
+    }));
+
+    for (let layerIndex = 1; layerIndex < candidateLayers.length; layerIndex++) {
+      const nextStates = [];
+      for (const [candidateIndex, candidate] of candidateLayers[layerIndex].entries()) {
+        // The next boundary score depends on the directed traversal used to
+        // arrive here. Retain the best state per arrival signature instead of
+        // collapsing all paths to one state per snap candidate.
+        const bestStatesByArrival = new Map();
+        for (const previousState of states) {
+          const leg = this._routeBaseGraphLeg(previousState.candidate, candidate);
+          if (!leg || !Number.isFinite(leg.cost)) continue;
+          const boundaryPenalty = this._shortViaReversalPenalty(
+            previousState.legs.at(-1),
+            leg,
+          );
+          const score =
+            previousState.score +
+            leg.cost +
+            Number(candidate.distanceMeters || 0) * SNAP_DISPLACEMENT_COST_PER_METER +
+            boundaryPenalty;
+          const tieKey = `${previousState.tieKey}|${candidate.baseEdgeId}:${candidate.baseEdgeDistanceMeters}`;
+          const arrivalKey = this._baseLegArrivalSignature(leg);
+          const bestState = bestStatesByArrival.get(arrivalKey);
+          if (
+            !bestState ||
+            score < bestState.score ||
+            (score === bestState.score && tieKey < bestState.tieKey)
+          ) {
+            bestStatesByArrival.set(arrivalKey, {
+              candidate,
+              candidateIndex,
+              score,
+              legs: [...previousState.legs, leg],
+              routePoints: [...previousState.routePoints, candidate],
+              tieKey,
+            });
+          }
+        }
+        nextStates.push(...bestStatesByArrival.values());
+      }
+      states = nextStates;
+      if (states.length === 0) {
+        return {
+          ok: false,
+          failure: "no-permitted-path",
+          routePoints: candidateLayers.map((layer) => layer[0]),
+          route: null,
+        };
+      }
+    }
+
+    states.sort(
+      (first, second) => first.score - second.score || first.tieKey.localeCompare(second.tieKey),
+    );
+    const selected = states[0];
+    const route = this._emptyBaseRoute();
+    for (const leg of selected.legs) {
+      route.legs.push(leg);
+      this._appendBaseLegToRoute(route, leg);
+    }
+    route.segments = this._cyclewaysSegmentsForBaseTraversals(route.traversals);
+    return {
+      ok: true,
+      failure: null,
+      routePoints: selected.routePoints,
+      route,
+      snapCandidateCounts: candidateLayers.map((layer) => layer.length),
+      score: selected.score,
+    };
+  }
+
+  _baseLegArrivalSignature(leg) {
+    const traversal = leg?.traversals?.at(-1);
+    if (!traversal?.edge?.id) return "none";
+    const fromDistance = Number(traversal.fromDistance) || 0;
+    const toDistance = Number(traversal.toDistance) || 0;
+    return `${traversal.edge.id}:${traversal.direction}:${fromDistance.toFixed(3)}:${toDistance.toFixed(3)}`;
+  }
+
+  _shortViaReversalPenalty(incomingLeg, outgoingLeg) {
+    const incoming = incomingLeg?.traversals?.at(-1);
+    const outgoing = outgoingLeg?.traversals?.[0];
+    if (
+      !incoming?.edge?.id ||
+      incoming.edge.id !== outgoing?.edge?.id ||
+      incoming.direction === outgoing.direction
+    ) {
+      return 0;
+    }
+
+    const incomingStart = Math.min(incoming.fromDistance, incoming.toDistance);
+    const incomingEnd = Math.max(incoming.fromDistance, incoming.toDistance);
+    const outgoingStart = Math.min(outgoing.fromDistance, outgoing.toDistance);
+    const outgoingEnd = Math.max(outgoing.fromDistance, outgoing.toDistance);
+    const overlapMeters = Math.max(
+      0,
+      Math.min(incomingEnd, outgoingEnd) -
+        Math.max(incomingStart, outgoingStart),
+    );
+    return overlapMeters > BASE_TRAVERSAL_EPSILON_METERS &&
+      overlapMeters <= SHORT_VIA_REVERSAL_MAX_OVERLAP_METERS
+      ? SHORT_VIA_REVERSAL_PENALTY_COST
+      : 0;
+  }
+
   _appendBaseLegToRoute(route, leg) {
     for (const traversal of leg.traversals) {
       route.traversals.push(traversal);
@@ -1494,7 +2084,8 @@ class RouteManager {
   _cyclewaysSegmentsForBaseTraversals(traversals) {
     const segments = [];
     for (const traversal of traversals) {
-      for (const segmentId of traversal.edge.cwSegmentIds) {
+      for (const membership of traversal.cwMemberships || []) {
+        const segmentId = membership.segmentId;
         const name = this.segmentNamesById.get(Number(segmentId));
         if (
           name &&
@@ -1536,7 +2127,7 @@ class RouteManager {
     let best = null;
     for (const candidate of candidates) {
       const leg = this._baseLegFromTraversals(candidate.traversals);
-      if (!Number.isFinite(leg.cost)) continue;
+      if (!leg || !Number.isFinite(leg.cost)) continue;
       if (!best || leg.cost < best.cost) {
         best = leg;
       }
@@ -1651,6 +2242,16 @@ class RouteManager {
         direction === "reverse" ? 0 : edge.lengthMeters,
       );
     });
+
+    for (let index = 0; index < traversals.length; index++) {
+      const traversal = traversals[index];
+      if (
+        Math.abs(traversal.toDistance - traversal.fromDistance) > 1e-6 &&
+        traversal.direction !== directedEdges[index].direction
+      ) {
+        return null;
+      }
+    }
 
     return this._baseLegFromTraversals(traversals);
   }
@@ -1861,6 +2462,11 @@ class RouteManager {
   }
 
   _baseTraversal(edge, fromDistance, toDistance, options = {}) {
+    const policyVerdict = this._baseTraversalVerdict(
+      edge,
+      fromDistance,
+      toDistance,
+    );
     const costParts = this._baseRoutingTraversalCostParts(
       edge,
       fromDistance,
@@ -1873,6 +2479,12 @@ class RouteManager {
       fromDistance,
       toDistance,
       direction: toDistance < fromDistance ? "reverse" : "forward",
+      policyVerdict,
+      cwMemberships: this._cwMembershipsForTraversal(
+        edge,
+        fromDistance,
+        toDistance,
+      ).map((value) => ({ ...value })),
       ...costParts,
       downhillMeters: this._baseRoutingDownhillMeters(
         edge,
@@ -1883,6 +2495,11 @@ class RouteManager {
   }
 
   _baseLegFromTraversals(traversals) {
+    const policyValidation = validateTraversalSlices(
+      traversals,
+      this.baseRoutingTraversalPolicy,
+    );
+    if (!policyValidation.ok) return null;
     const leg = {
       traversals: traversals.filter((traversal) => traversal.distanceMeters > 0.01),
       orderedCoordinates: [],
@@ -1909,7 +2526,7 @@ class RouteManager {
       leg.uphillCost += traversal.uphillCost;
       leg.uphillMeters += traversal.uphillMeters;
       leg.downhillMeters += traversal.downhillMeters;
-      if (traversal.edge.cwSegmentIds.length > 0) {
+      if ((traversal.cwMemberships || []).length > 0) {
         leg.cyclewaysDistance += traversal.distanceMeters;
       } else {
         leg.nonCyclewaysDistance += traversal.distanceMeters;
@@ -3250,8 +3867,8 @@ class RouteManager {
 /**
  * Build an ordered list of segment spans from a base-routing traversal list.
  * Adjacent traversals sharing the same (name, onNetwork) tuple are merged into
- * a single span. Off-network edges (no cwSegmentIds or id not in segmentNamesById)
- * produce spans with name=null, cwSegmentId=null, onNetwork=false.
+ * a single span. Off-network traversals (no direction-scoped CW membership, or
+ * an id not in segmentNamesById) produce a null-name, off-network span.
  *
  * @param {Array} traversals - ordered traversal objects from a computed route
  * @param {Map} segmentNamesById - map from numeric segment id → display name
@@ -3266,7 +3883,9 @@ function buildSegmentSpans(traversals, segmentNamesById) {
         (traversal.toDistance - traversal.fromDistance)) || 0,
     );
     if (length <= 0) continue;
-    const ids = traversal.edge?.cwSegmentIds ?? [];
+    const ids = Array.isArray(traversal.cwMemberships)
+      ? traversal.cwMemberships.map((value) => value.segmentId)
+      : traversal.edge?.cwSegmentIds ?? [];
     const cwSegmentId = ids.length > 0 ? Number(ids[0]) : null;
     const name = cwSegmentId != null ? segmentNamesById.get(cwSegmentId) ?? null : null;
     const onNetwork = name != null;

@@ -11,6 +11,11 @@ const manifest = {
   cwBaseIndex: "cw-base-index.json",
   kml: "exports/map.kml",
   baseRoutingShards: "base-routing-shards/manifest.json",
+  cwAlignmentGeometry: "cw-alignment-geometry.json",
+  legacyRoutingCompatibility: {
+    cwBaseIndex: "routing-compat/cw-base-index-v1.json",
+    metadata: "routing-compat/cw-base-index-v1.metadata.json",
+  },
   roundabouts: "roundabouts.json",
 };
 
@@ -18,6 +23,21 @@ const targets = buildPromoteTargets(manifest);
 const byLabel = new Map(targets.map((target) => [target.label, target]));
 
 assert.ok(byLabel.has("public CW base index"));
+assert.ok(byLabel.has("public CW alignment geometry"));
+assert.ok(byLabel.has("legacy routing compatibility index"));
+assert.ok(byLabel.has("legacy routing compatibility metadata"));
+assert.equal(targets.at(-1).label, "public manifest");
+
+const releaseTargets = buildPromoteTargets({
+  ...manifest,
+  routeCatalog: "route-catalog.abc123.json",
+  featuredRoutesBase: "featured-routes.def456",
+});
+assert.ok(releaseTargets.some((target) => target.label === "versioned route catalog"));
+assert.ok(
+  releaseTargets.some((target) => target.label === "versioned featured route snapshots"),
+);
+assert.equal(releaseTargets.at(-1).label, "public manifest");
 assert.equal(
   byLabel.get("public CW base index").source,
   path.join(repoRoot, "build/public-data/cw-base-index.json"),

@@ -7,6 +7,10 @@ import {
 import { migrateOverlayEdgeReplacement } from "./lib/overlay-edge-migration.mjs";
 import { filterRoundaboutItems } from "./lib/roundaboutReview.mjs";
 import {
+  buildBaseEdgeDirectionLayer,
+  summarizeBaseEdgeDirectionLayer,
+} from "./lib/base-edge-direction-layer.mjs";
+import {
   POI_TYPE_OPTIONS,
   poiColor,
   poiEmoji,
@@ -179,6 +183,7 @@ const state = {
   draggingManualBaseVertex: false,
   draggingDataMarker: null,
   suppressNextSegmentClick: false,
+  directionReviewToggledThisClick: null,
   showUnresolvedSegments: false,
   unresolvedSegmentIds: [],
   unresolvedSegmentFilterKey: null,
@@ -204,6 +209,7 @@ const state = {
     loading: false,
     loaded: false,
     recalculating: false,
+    showOneWayDirections: false,
     selectedGraphEdgeId: null,
     selectedManualEdgeIndex: -1,
     selectedManualVertexIndex: -1,
@@ -212,8 +218,20 @@ const state = {
     matchSummary: null,
     matchPreview: null,
     manualBaseEdges: emptyManualBaseEdges(),
+    traversalOverrides: emptyTraversalOverrides(),
     overlay: emptyBaseOverlay(),
     cache: {},
+  },
+  directionReview: {
+    loaded: false,
+    source: null,
+    readOnly: true,
+    profile: "production-v1",
+    overlay: null,
+    alignmentKey: "aToB",
+    applying: false,
+    busy: false,
+    editing: false,
   },
   connectorLens: {
     // "off" | "class" | "access" | "eligibility" | "cost"
@@ -303,11 +321,26 @@ const els = {
   buildReport: document.getElementById("build-report"),
   baseGraphStatus: document.getElementById("base-graph-status"),
   baseGraphSummary: document.getElementById("base-graph-summary"),
+  toggleBaseOneWayDirections: document.getElementById("toggle-base-one-way-directions"),
+  baseOneWayDirectionLegend: document.getElementById("base-one-way-direction-legend"),
+  baseOneWayDirectionSummary: document.getElementById("base-one-way-direction-summary"),
   newManualBaseEdge: document.getElementById("new-manual-base-edge"),
   cloneBaseGraphEdge: document.getElementById("clone-base-graph-edge"),
   deleteManualBaseEdge: document.getElementById("delete-manual-base-edge"),
   splitManualBaseEdge: document.getElementById("split-manual-base-edge"),
+  manualEdgeDirectionReview: document.getElementById("manual-edge-direction-review"),
+  baseEdgeDirectionHelp: document.getElementById("base-edge-direction-help"),
+  manualEdgeForward: document.getElementById("manual-edge-forward"),
+  manualEdgeReverse: document.getElementById("manual-edge-reverse"),
+  manualEdgeReviewer: document.getElementById("manual-edge-reviewer"),
+  manualEdgeReviewDate: document.getElementById("manual-edge-review-date"),
+  manualEdgeRationale: document.getElementById("manual-edge-rationale"),
+  baseEdgeDirectionEvidence: document.getElementById("base-edge-direction-evidence"),
+  saveManualEdgeDirection: document.getElementById("save-manual-edge-direction"),
+  clearOsmDirectionOverride: document.getElementById("clear-osm-direction-override"),
+  manualEdgeDirectionStatus: document.getElementById("manual-edge-direction-status"),
   recalculateOsmGraph: document.getElementById("recalculate-osm-graph"),
+  refreshDirectionReview: document.getElementById("refresh-direction-review"),
   baseGraphHelp: document.getElementById("base-graph-help"),
   connectorLensPanel: document.getElementById("connector-lens-panel"),
   connectorColorMode: document.getElementById("connector-color-mode"),
@@ -341,6 +374,26 @@ const els = {
   baseOverlayReviewStats: document.getElementById("base-overlay-review-stats"),
   baseOverlayReviewList: document.getElementById("base-overlay-review-list"),
   baseOverlayEdges: document.getElementById("base-overlay-edges"),
+  directionReviewSource: document.getElementById("direction-review-source"),
+  directionReviewAToB: document.getElementById("direction-review-a-to-b"),
+  directionReviewBToA: document.getElementById("direction-review-b-to-a"),
+  directionReviewSlotStatuses: document.getElementById("direction-review-slot-statuses"),
+  directionReviewSummary: document.getElementById("direction-review-summary"),
+  directionReviewEdges: document.getElementById("direction-review-edges"),
+  directionReviewReviewer: document.getElementById("direction-review-reviewer"),
+  directionReviewDate: document.getElementById("direction-review-date"),
+  directionReviewBatch: document.getElementById("direction-review-batch"),
+  directionReviewApplyMigration: document.getElementById("direction-review-apply-migration"),
+  directionReviewApplySymmetricBatch: document.getElementById("direction-review-apply-symmetric-batch"),
+  directionReviewEdit: document.getElementById("direction-review-edit"),
+  directionReviewRevalidate: document.getElementById("direction-review-revalidate"),
+  directionReviewUseReverse: document.getElementById("direction-review-use-reverse"),
+  directionReviewAccept: document.getElementById("direction-review-accept"),
+  directionReviewClearDraft: document.getElementById("direction-review-clear-draft"),
+  directionReviewUnavailableReason: document.getElementById("direction-review-unavailable-reason"),
+  directionReviewRationale: document.getElementById("direction-review-rationale"),
+  directionReviewUserExplanation: document.getElementById("direction-review-user-explanation"),
+  directionReviewMarkUnavailable: document.getElementById("direction-review-mark-unavailable"),
   statusBar: document.getElementById("status-bar"),
 };
 
@@ -408,6 +461,15 @@ function emptyManualBaseEdges() {
   return {
     type: "FeatureCollection",
     features: [],
+  };
+}
+
+function emptyTraversalOverrides() {
+  return {
+    schemaVersion: 1,
+    policyId: "il-bicycle-v1",
+    description: "Reviewed whole-source-way bicycle traversal overrides.",
+    overrides: [],
   };
 }
 
@@ -1008,6 +1070,42 @@ function baseGraphCollection() {
   return cache.baseGraphCollection;
 }
 
+function baseGraphOneWayDirectionCollection() {
+  if (!state.baseOverlay.graphEdges) return EMPTY_FEATURE_COLLECTION;
+  const cache = state.baseOverlay.cache || (state.baseOverlay.cache = {});
+  if (
+    cache.baseGraphOneWayDirectionCollection &&
+    cache.baseGraphOneWayDirectionGraphEdges === state.baseOverlay.graphEdges &&
+    cache.baseGraphOneWayDirectionManualEdges === state.baseOverlay.manualBaseEdges &&
+    cache.baseGraphOneWayDirectionOverrides === state.baseOverlay.traversalOverrides
+  ) {
+    return cache.baseGraphOneWayDirectionCollection;
+  }
+  cache.baseGraphOneWayDirectionCollection = buildBaseEdgeDirectionLayer(
+    state.baseOverlay.graphEdges,
+    state.baseOverlay.manualBaseEdges,
+    state.baseOverlay.traversalOverrides,
+  );
+  cache.baseGraphOneWayDirectionGraphEdges = state.baseOverlay.graphEdges;
+  cache.baseGraphOneWayDirectionManualEdges = state.baseOverlay.manualBaseEdges;
+  cache.baseGraphOneWayDirectionOverrides = state.baseOverlay.traversalOverrides;
+  cache.baseGraphOneWayDirectionSummary = summarizeBaseEdgeDirectionLayer(
+    cache.baseGraphOneWayDirectionCollection,
+  );
+  return cache.baseGraphOneWayDirectionCollection;
+}
+
+function baseGraphOneWayDirectionSummary() {
+  baseGraphOneWayDirectionCollection();
+  return (
+    state.baseOverlay.cache?.baseGraphOneWayDirectionSummary || {
+      total: 0,
+      confirmedOneWay: 0,
+      needsReview: 0,
+    }
+  );
+}
+
 function graphEdgeFeatureId(feature) {
   return feature?.properties?.edgeId || feature?.properties?.id || feature?.id || null;
 }
@@ -1049,6 +1147,19 @@ function selectedBaseGraphEdgeCollection() {
         features: [feature],
       }
     : EMPTY_FEATURE_COLLECTION;
+}
+
+function selectedBaseEdgePermittedDirectionCollection() {
+  if (!state.baseOverlay.enabled || state.workspaceMode !== "base") {
+    return EMPTY_FEATURE_COLLECTION;
+  }
+  const feature = selectedManualBaseEdge() || selectedBaseGraphEdge();
+  if (!feature) return EMPTY_FEATURE_COLLECTION;
+  return buildBaseEdgeDirectionLayer(
+    { type: "FeatureCollection", features: [feature] },
+    state.baseOverlay.manualBaseEdges,
+    state.baseOverlay.traversalOverrides,
+  );
 }
 
 function selectedSegmentId() {
@@ -1118,6 +1229,29 @@ function manualBaseEdgeCollection() {
   return cache.manualBaseEdgeCollection;
 }
 
+function manualBaseEdgeEndpointCollection() {
+  const feature = selectedManualBaseEdge() || selectedBaseGraphEdge();
+  const coordinates = feature?.geometry?.coordinates || [];
+  if (state.workspaceMode !== "base" || coordinates.length < 2) {
+    return EMPTY_FEATURE_COLLECTION;
+  }
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: coordinates[0] },
+        properties: { label: "A", direction: "forward start" },
+      },
+      {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: coordinates[coordinates.length - 1] },
+        properties: { label: "B", direction: "forward end" },
+      },
+    ],
+  };
+}
+
 function composeEdgePickCollection() {
   if (!isComposingNewSegmentEdges()) {
     return { type: "FeatureCollection", features: [] };
@@ -1182,6 +1316,132 @@ function selectedOverlayEdgeCollection() {
   return {
     type: "FeatureCollection",
     features,
+  };
+}
+
+function directionReviewSegment(segmentId = selectedSegmentId()) {
+  if (segmentId === null || !state.directionReview.loaded) return null;
+  return state.directionReview.overlay?.segments?.[String(segmentId)] || null;
+}
+
+function reverseDirectionReviewRefs(refs) {
+  return normalizeOverlayEdgeRefs(refs)
+    .reverse()
+    .map((ref, sequenceIndex) => ({
+      ...ref,
+      direction: ref.direction === "reverse" ? "forward" : "reverse",
+      sequenceIndex,
+    }));
+}
+
+function directionReviewRefsForRecord(segment, alignmentKey, record) {
+  if (record?.realization?.type === "explicit") {
+    return normalizeOverlayEdgeRefs(record.realization.edgeRefs);
+  }
+  if (record?.realization?.type === "reverseOf") {
+    const target = segment?.alignments?.[record.realization.alignmentKey]?.published;
+    if (target?.realization?.type === "explicit") {
+      return reverseDirectionReviewRefs(target.realization.edgeRefs);
+    }
+  }
+  if (record?.candidate?.kind === "exact-reverse") {
+    const targetKey = record.candidate.reverseOfAlignmentKey || (alignmentKey === "aToB" ? "bToA" : "aToB");
+    const targetSlot = segment?.alignments?.[targetKey];
+    const target = targetSlot?.draft || targetSlot?.published;
+    if (target?.realization?.type === "explicit") {
+      return reverseDirectionReviewRefs(target.realization.edgeRefs);
+    }
+  }
+  return [];
+}
+
+function directionReviewDisplayRecord(segment, alignmentKey) {
+  const slot = segment?.alignments?.[alignmentKey];
+  return slot?.draft || slot?.published || null;
+}
+
+function directionReviewTraversalForRef(ref) {
+  const feature = graphFeatureForEdgeId(ref?.edgeId);
+  const evidence = feature?.properties?.bicycleTraversal || {};
+  const direction = ref?.direction === "reverse" ? "reverse" : "forward";
+  return {
+    state: evidence[direction] || "unknown",
+    reason: evidence[`${direction}Reason`] || "missing_policy_evidence",
+    policyId: evidence.policyId || state.directionReview.overlay?.policyId || "unknown",
+    policyDigest: evidence.policyDigest || state.directionReview.overlay?.policyDigest || "unknown",
+  };
+}
+
+function directionReviewAlignmentCollection() {
+  if (
+    !state.baseOverlay.enabled ||
+    state.workspaceMode !== "overlay" ||
+    !state.directionReview.loaded
+  ) {
+    return EMPTY_FEATURE_COLLECTION;
+  }
+  const segment = directionReviewSegment();
+  if (!segment) return EMPTY_FEATURE_COLLECTION;
+  const features = [];
+  for (const alignmentKey of ["aToB", "bToA"]) {
+    const record = directionReviewDisplayRecord(segment, alignmentKey);
+    const refs = directionReviewRefsForRecord(segment, alignmentKey, record);
+    for (const [index, ref] of refs.entries()) {
+      const source = graphFeatureForEdgeId(ref.edgeId);
+      const coords = source?.geometry?.coordinates;
+      if (!Array.isArray(coords) || coords.length < 2) continue;
+      const oriented = ref.direction === "reverse"
+        ? [...coords].reverse().map((coord) => coord.slice())
+        : coords.map((coord) => coord.slice());
+      const traversal = directionReviewTraversalForRef(ref);
+      features.push({
+        type: "Feature",
+        id: `direction-review-${segment.segmentId}-${alignmentKey}-${index}`,
+        geometry: { type: "LineString", coordinates: oriented },
+        properties: {
+          alignmentKey,
+          alignmentLabel: alignmentKey === "aToB" ? "A → B" : "B → A",
+          selected: state.directionReview.alignmentKey === alignmentKey,
+          edgeId: String(ref.edgeId),
+          direction: ref.direction === "reverse" ? "reverse" : "forward",
+          sequenceIndex: index,
+          sequenceNumber: index + 1,
+          traversalState: traversal.state,
+          traversalReason: traversal.reason,
+          draft: Boolean(segment.alignments[alignmentKey]?.draft),
+          hovered: String(state.baseOverlay.hoveredOverlayEdgeId || "") === String(ref.edgeId),
+        },
+      });
+    }
+  }
+  return { type: "FeatureCollection", features };
+}
+
+function directionReviewEndpointCollection() {
+  if (
+    !state.baseOverlay.enabled ||
+    state.workspaceMode !== "overlay" ||
+    !state.directionReview.loaded
+  ) {
+    return EMPTY_FEATURE_COLLECTION;
+  }
+  const segment = directionReviewSegment();
+  if (!segment) return EMPTY_FEATURE_COLLECTION;
+  return {
+    type: "FeatureCollection",
+    features: ["a", "b"].map((endpointKey) => ({
+      type: "Feature",
+      id: `direction-review-endpoint-${segment.segmentId}-${endpointKey}`,
+      geometry: {
+        type: "Point",
+        coordinates: segment.endpoints[endpointKey].coordinate,
+      },
+      properties: {
+        endpointKey,
+        label: endpointKey.toUpperCase(),
+        zoneMeters: Number(segment.endpoints[endpointKey].zoneMeters),
+      },
+    })),
   };
 }
 
@@ -1267,11 +1527,19 @@ function updateMapSources() {
   setSourceData("draw-line", drawLineCollection());
   setSourceData("draw-points", drawPointCollection());
   setSourceData("base-graph-edges", baseGraphCollection());
+  setSourceData("base-graph-one-way-directions", baseGraphOneWayDirectionCollection());
   setSourceData("selected-base-graph-edge", selectedBaseGraphEdgeCollection());
+  setSourceData(
+    "selected-base-edge-permitted-direction",
+    selectedBaseEdgePermittedDirectionCollection(),
+  );
   setSourceData("selected-match-preview", selectedMatchCollection());
   setSourceData("selected-overlay-edges", selectedOverlayEdgeCollection());
+  setSourceData("direction-review-alignments", directionReviewAlignmentCollection());
+  setSourceData("direction-review-endpoints", directionReviewEndpointCollection());
   setSourceData("cw-overlay-network", cwOverlayNetworkCollection());
   setSourceData("manual-base-edges", manualBaseEdgeCollection());
+  setSourceData("manual-base-edge-endpoints", manualBaseEdgeEndpointCollection());
   setSourceData("compose-edge-pick", composeEdgePickCollection());
   updateRoundaboutSources();
   if (map.getLayer("segments-layer")) {
@@ -1331,7 +1599,9 @@ function updateWorkspaceLayerVisibility() {
   const showBaseGraphVisual = showBaseWorkspaceGraph || showUnresolvedSegments || composing || editingEdges;
   const showBaseGraphHit = showBaseWorkspaceGraph || composing || editingEdges;
   const showBaseEdit = showBaseWorkspaceGraph && state.workspaceMode === "base";
+  const showOneWayDirections = showBaseEdit && state.baseOverlay.showOneWayDirections;
   const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
+  const showDirectionReview = showOverlay && state.directionReview.loaded;
   const showRoundabouts = state.workspaceMode === "roundabouts";
 
   setLayerVisibility("segments-layer", showSegments);
@@ -1343,7 +1613,19 @@ function updateWorkspaceLayerVisibility() {
   for (const layerId of ["base-graph-edges-hit-layer", "manual-base-edges-hit-layer"]) {
     setLayerVisibility(layerId, showBaseGraphHit);
   }
-  for (const layerId of ["selected-base-graph-edge-layer", "selected-manual-base-edge"]) {
+  for (const layerId of [
+    "base-graph-one-way-directions-layer",
+    "base-graph-one-way-direction-arrows",
+  ]) {
+    setLayerVisibility(layerId, showOneWayDirections);
+  }
+  for (const layerId of [
+    "selected-base-graph-edge-layer",
+    "selected-base-graph-edge-direction-arrows",
+    "selected-manual-base-edge",
+    "manual-base-edge-endpoints-layer",
+    "manual-base-edge-endpoint-labels",
+  ]) {
     setLayerVisibility(layerId, showBaseEdit);
   }
   for (const layerId of [
@@ -1357,6 +1639,10 @@ function updateWorkspaceLayerVisibility() {
   for (const layerId of [
     "cw-overlay-network-layer",
     "cw-overlay-network-hit-layer",
+  ]) {
+    setLayerVisibility(layerId, showOverlay);
+  }
+  for (const layerId of [
     "selected-overlay-edges-layer",
     "selected-overlay-hovered-edge-layer",
     "selected-match-edges-layer",
@@ -1365,7 +1651,17 @@ function updateWorkspaceLayerVisibility() {
     "selected-match-unmatched-samples-layer",
     "selected-match-distant-samples-layer",
   ]) {
-    setLayerVisibility(layerId, showOverlay);
+    setLayerVisibility(layerId, showOverlay && !showDirectionReview);
+  }
+  for (const layerId of [
+    "direction-review-alignments-layer",
+    "direction-review-hover-layer",
+    "direction-review-arrows-layer",
+    "direction-review-sequence-layer",
+    "direction-review-endpoints-layer",
+    "direction-review-endpoint-labels",
+  ]) {
+    setLayerVisibility(layerId, showDirectionReview);
   }
   setLayerVisibility("compose-edge-pick-layer", composing);
   setLayerVisibility("compose-edge-pick-labels", composing);
@@ -1376,6 +1672,11 @@ function updateWorkspaceLayerVisibility() {
     "roundabout-points-layer",
   ]) {
     setLayerVisibility(layerId, showRoundabouts);
+  }
+  if (map.getLayer("selected-segment")) {
+    map.setPaintProperty("selected-segment", "line-color", showDirectionReview ? "#64748b" : "#f2c94c");
+    map.setPaintProperty("selected-segment", "line-opacity", showDirectionReview ? 0.42 : 0.9);
+    map.setPaintProperty("selected-segment", "line-width", showDirectionReview ? 5 : 7);
   }
 }
 
@@ -1405,6 +1706,7 @@ function updateDataMarkerSources() {
 function updateManualBaseEditSources() {
   if (!map.getSource("manual-base-edges")) return;
   map.getSource("manual-base-edges").setData(manualBaseEdgeCollection());
+  map.getSource("manual-base-edge-endpoints")?.setData(manualBaseEdgeEndpointCollection());
   map.getSource("vertices").setData(vertexCollection());
   if (map.getLayer("selected-manual-base-edge")) {
     map.setFilter("selected-manual-base-edge", selectedManualBaseEdgeFilter());
@@ -1850,17 +2152,43 @@ function isBaseOverlayMappingLocked(mapping) {
 }
 
 function isBaseGraphStale() {
-  return Boolean(state.baseOverlay.graphEdges?.metadata?.graphStaleBecauseManualBaseEdgesChanged);
+  const metadata = state.baseOverlay.graphEdges?.metadata || {};
+  return Boolean(
+    metadata.graphStaleBecauseManualBaseEdgesChanged ||
+    metadata.graphStaleBecauseTraversalOverridesChanged
+  );
 }
 
 function baseGraphStaleReason() {
   const metadata = state.baseOverlay.graphEdges?.metadata || {};
+  if (metadata.graphStaleBecauseTraversalOverridesChanged) {
+    const graphTime = metadata.graphEdgesModifiedAt
+      ? new Date(metadata.graphEdgesModifiedAt).toLocaleString()
+      : "unknown";
+    const overrideTime = metadata.bicycleTraversalOverridesModifiedAt
+      ? new Date(metadata.bicycleTraversalOverridesModifiedAt).toLocaleString()
+      : "unknown";
+    return `Traversal overrides changed after graph build (${overrideTime} > ${graphTime})`;
+  }
   if (!metadata.graphStaleBecauseManualBaseEdgesChanged) return "";
   const graphTime = metadata.graphEdgesModifiedAt ? new Date(metadata.graphEdgesModifiedAt).toLocaleString() : "unknown";
   const manualTime = metadata.manualBaseEdgesModifiedAt
     ? new Date(metadata.manualBaseEdgesModifiedAt).toLocaleString()
     : "unknown";
   return `Manual base edges changed after graph build (${manualTime} > ${graphTime})`;
+}
+
+function markBaseGraphStaleBecauseTraversalOverridesChanged() {
+  if (!state.baseOverlay.graphEdges) return;
+  state.baseOverlay.graphEdges = {
+    ...state.baseOverlay.graphEdges,
+    metadata: {
+      ...(state.baseOverlay.graphEdges.metadata || {}),
+      bicycleTraversalOverridesModifiedAt: new Date().toISOString(),
+      graphStaleBecauseTraversalOverridesChanged: true,
+    },
+  };
+  invalidateBaseOverlayDerivedCache();
 }
 
 function markBaseGraphStaleBecauseManualEdgesChanged() {
@@ -3547,6 +3875,81 @@ function renderRoundaboutsPanel() {
   }
 }
 
+function traversalOverrideForFeature(feature) {
+  const osmWayId = Number(feature?.properties?.osmWayId);
+  if (!Number.isInteger(osmWayId) || osmWayId <= 0) return null;
+  return (
+    state.baseOverlay.traversalOverrides?.overrides?.find(
+      (record) => Number(record.osmWayId) === osmWayId,
+    ) || null
+  );
+}
+
+function renderBaseEdgeDirectionReview(feature, disabled) {
+  const properties = feature?.properties || {};
+  const manual = properties.source === "manual";
+  const selectedId = manual ? manualBaseEdgeFeatureId(feature) : graphEdgeFeatureId(feature);
+  const override = manual ? null : traversalOverrideForFeature(feature);
+  els.manualEdgeDirectionReview.hidden = !feature;
+  if (!feature) {
+    els.manualEdgeDirectionReview.dataset.edgeId = "";
+    return;
+  }
+
+  const traversal = properties.bicycleTraversal || {};
+  const forward = override?.states?.forward || traversal.forward || "unknown";
+  const reverse = override?.states?.reverse || traversal.reverse || "unknown";
+  const fullyReviewed = manual
+    ? traversal.reviewed === true && forward !== "unknown" && reverse !== "unknown"
+    : Boolean(override);
+  const activeInput = els.manualEdgeDirectionReview.contains(document.activeElement);
+  const selectionKey = `${manual ? "manual" : "osm"}:${selectedId || ""}`;
+  const changedSelection = els.manualEdgeDirectionReview.dataset.edgeId !== selectionKey;
+  if (!activeInput || changedSelection) {
+    els.manualEdgeForward.value = forward;
+    els.manualEdgeReverse.value = reverse;
+    els.manualEdgeReviewer.value = override?.reviewer || traversal.reviewer || "";
+    els.manualEdgeReviewDate.value = override?.reviewedAt || traversal.reviewedAt || new Date().toISOString().slice(0, 10);
+    els.manualEdgeRationale.value = override?.rationale || traversal.rationale || "";
+    els.baseEdgeDirectionEvidence.value = override?.evidence || traversal.evidence || "";
+  }
+  els.manualEdgeDirectionReview.dataset.edgeId = selectionKey;
+  for (const input of [
+    els.manualEdgeForward,
+    els.manualEdgeReverse,
+    els.manualEdgeReviewer,
+    els.manualEdgeReviewDate,
+    els.manualEdgeRationale,
+    els.baseEdgeDirectionEvidence,
+  ]) {
+    input.disabled = disabled;
+  }
+  const osmEditable =
+    Number.isInteger(Number(properties.osmWayId)) &&
+    Boolean(properties.sourceGeometryDigest);
+  els.saveManualEdgeDirection.disabled = disabled || (!manual && !osmEditable);
+  els.saveManualEdgeDirection.textContent = manual
+    ? "Save manual direction policy"
+    : override
+      ? "Update reviewed OSM override"
+      : "Create reviewed OSM override";
+  els.clearOsmDirectionOverride.hidden = manual || !override;
+  els.clearOsmDirectionOverride.disabled = disabled || manual || !override;
+  els.baseEdgeDirectionHelp.textContent = manual
+    ? "Forward follows the stored manual line from A to B. Review this base edge once; every logical segment using it will revalidate after rebuild."
+    : `Forward follows OSM way ${properties.osmWayId || "unknown"} from A to B. The values below are the normalized routing policy. An override applies to every split edge from this source way and requires evidence.`;
+  els.manualEdgeDirectionStatus.className = `base-overlay-bulk-summary state-${
+    fullyReviewed || (!manual && forward !== "unknown" && reverse !== "unknown") ? "reviewed" : "unreviewed"
+  }`;
+  els.manualEdgeDirectionStatus.textContent = manual
+    ? fullyReviewed
+      ? `Reviewed by ${traversal.reviewer} on ${traversal.reviewedAt}. Rebuild before using this evidence in routing or Direction Review.`
+      : "Not fully reviewed. Unknown manual-edge directions remain blocked from every routing surface."
+    : override
+      ? `Reviewed override by ${override.reviewer} on ${override.reviewedAt}. Rebuild before it affects routing. OSM policy was ${traversal.forward || "unknown"}/${traversal.reverse || "unknown"} (${traversal.forwardReason || "unknown"}; ${traversal.reverseReason || "unknown"}).`
+      : `Derived from OSM: ${forward}/${reverse} (${traversal.forwardReason || "unknown"}; ${traversal.reverseReason || "unknown"}). Create an override only when reviewed evidence shows the source data is wrong or incomplete.`;
+}
+
 function renderBaseGraphPanel() {
   if (state.workspaceMode !== "base") return;
 
@@ -3566,8 +3969,19 @@ function renderBaseGraphPanel() {
   const selectedGraphId = graphEdgeFeatureId(selectedGraphEdge);
   const selectedVertex = state.baseOverlay.selectedManualVertexIndex;
   const coords = selected?.geometry?.coordinates || [];
+  const directionSummary = loaded
+    ? baseGraphOneWayDirectionSummary()
+    : { total: 0, confirmedOneWay: 0, needsReview: 0 };
 
   els.baseGraphStatus.textContent = recalculating ? "Recalculating" : loading ? "Loading" : loaded ? "Loaded" : "Not loaded";
+  els.toggleBaseOneWayDirections.checked = state.baseOverlay.showOneWayDirections;
+  els.toggleBaseOneWayDirections.disabled = !loaded || loading || recalculating;
+  els.baseOneWayDirectionLegend.hidden = !state.baseOverlay.showOneWayDirections;
+  els.baseOneWayDirectionSummary.textContent = loaded
+    ? `${directionSummary.confirmedOneWay.toLocaleString()} confirmed one-way · ${directionSummary.needsReview.toLocaleString()} direction-limited review · arrows point in the permitted travel direction`
+    : loading
+      ? "Loading direction-policy evidence…"
+      : "Load the Base Graph to inspect all direction-limited edges.";
   els.newManualBaseEdge.disabled = loading || recalculating || isDrawing() || !loaded;
   els.cloneBaseGraphEdge.disabled =
     loading ||
@@ -3581,6 +3995,21 @@ function renderBaseGraphPanel() {
     loading || recalculating || isDrawing() || !selected || selectedVertex <= 0 || selectedVertex >= coords.length - 1;
   els.recalculateOsmGraph.disabled = loading || recalculating || isDrawing() || !loaded;
   els.recalculateOsmGraph.textContent = recalculating ? "Recalculating..." : "Recalculate Graph + Matches";
+  const canRefreshDirectionReview =
+    loaded &&
+    !loading &&
+    !recalculating &&
+    !isDrawing() &&
+    state.directionReview.profile === "staged-v2" &&
+    !state.directionReview.readOnly;
+  els.refreshDirectionReview.disabled = !canRefreshDirectionReview;
+  els.refreshDirectionReview.textContent = recalculating
+    ? "Refreshing V2 evidence..."
+    : "Rebuild graph + refresh V2 evidence";
+  renderBaseEdgeDirectionReview(
+    selectedBaseFeature,
+    loading || recalculating || isDrawing() || !loaded,
+  );
 
   if (loading) {
     els.baseGraphSummary.innerHTML = `<div class="empty-state">Loading OSM graph artifacts...</div>`;
@@ -3610,9 +4039,9 @@ function renderBaseGraphPanel() {
     ${renderBaseEdgeAttributes(selectedBaseFeature)}
   `;
   els.baseGraphHelp.textContent = selected
-    ? "Drag vertices to reshape. Use Insert near the selected line to add a vertex, or Split on an internal vertex."
+    ? "Review both stored directions above. After geometry or policy changes, rebuild and refresh V2 evidence before revalidating an alignment."
     : selectedGraphEdge
-      ? "OSM edges are generated and read-only. Use Copy Selected to create an editable manual edge from this geometry."
+      ? "Inspect normalized direction evidence above. Geometry remains generated from OSM; reviewed direction corrections are saved as source-way overrides."
       : "Click any base graph edge to inspect it. Create a new manual edge, or copy a selected OSM edge to edit it.";
 }
 
@@ -4301,6 +4730,7 @@ function renderBaseOverlayPanel() {
   const loaded = state.baseOverlay.loaded;
   const enabled = state.baseOverlay.enabled;
   const reviewedEdgeRefs = normalizeOverlayEdgeRefs(displayedOverlayEdgeRefs());
+  renderDirectionReview(segmentId);
 
   els.toggleBaseOverlay.classList.toggle("active", enabled);
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
@@ -4549,6 +4979,374 @@ function renderBaseOverlayPanel() {
   }
 }
 
+function directionReviewRecord(segmentId, alignmentKey = state.directionReview.alignmentKey) {
+  return state.directionReview.overlay?.segments?.[String(segmentId)]?.alignments?.[alignmentKey] || null;
+}
+
+function directionReviewSlotLabel(slot) {
+  const published = slot?.published;
+  const draft = slot?.draft;
+  if (draft) return `${draft.candidate?.kind || "draft"} · ${draft.validation?.status || "pending"}`;
+  if (published?.disposition === "accepted") return "accepted";
+  if (published?.disposition === "unavailable") {
+    return `unavailable · ${published.unavailableReasonCode}`;
+  }
+  return "unreviewed";
+}
+
+function directionReviewEvidenceSummary(ref) {
+  const feature = graphFeatureForEdgeId(ref.edgeId);
+  const properties = feature?.properties || {};
+  const traversal = directionReviewTraversalForRef(ref);
+  const raw = [
+    properties.highway ? `highway=${properties.highway}` : null,
+    properties.oneway ? `oneway=${properties.oneway}` : null,
+    properties["oneway:bicycle"] ? `oneway:bicycle=${properties["oneway:bicycle"]}` : null,
+    properties.bicycle ? `bicycle=${properties.bicycle}` : null,
+    properties.ref ? `ref=${properties.ref}` : null,
+  ].filter(Boolean);
+  return { traversal, raw: raw.join(" · ") || properties.source || "no raw tags" };
+}
+
+function renderDirectionReviewEdges(segment, alignmentKey, record) {
+  els.directionReviewEdges.innerHTML = "";
+  const refs = directionReviewRefsForRecord(segment, alignmentKey, record);
+  if (refs.length === 0) {
+    els.directionReviewEdges.innerHTML = '<div class="empty-state">No physical alignment is mapped for this direction.</div>';
+    return refs;
+  }
+  for (const [index, ref] of refs.entries()) {
+    const evidence = directionReviewEvidenceSummary(ref);
+    const row = document.createElement("div");
+    row.className = "direction-review-edge";
+    row.dataset.edgeId = String(ref.edgeId);
+    row.innerHTML = `
+      <span class="direction-review-edge-sequence">${index + 1}</span>
+      <span class="direction-review-edge-main">
+        <strong>${escapeHtml(String(ref.edgeId))} · ${escapeHtml(ref.direction === "reverse" ? "reverse" : "forward")}</strong>
+        <small><span class="direction-review-edge-state ${escapeHtml(evidence.traversal.state)}">${escapeHtml(evidence.traversal.state)}</span> · ${escapeHtml(evidence.traversal.reason)} · ${escapeHtml(evidence.raw)}</small>
+      </span>
+      <span class="direction-review-edge-buttons"></span>`;
+    const buttons = row.querySelector(".direction-review-edge-buttons");
+    if (state.directionReview.editing) {
+      const flip = document.createElement("button");
+      flip.type = "button";
+      flip.textContent = "↕";
+      flip.title = `Flip traversal of ${ref.edgeId}`;
+      flip.addEventListener("click", () => flipDirectionReviewEdge(index).catch(showError));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "×";
+      remove.title = `Remove ${ref.edgeId}`;
+      remove.addEventListener("click", () => removeDirectionReviewEdge(index).catch(showError));
+      buttons.append(flip, remove);
+    }
+    row.addEventListener("mouseenter", () => {
+      state.baseOverlay.hoveredOverlayEdgeId = String(ref.edgeId);
+      row.classList.add("hovered");
+      updateMapSources();
+    });
+    row.addEventListener("mouseleave", () => {
+      if (String(state.baseOverlay.hoveredOverlayEdgeId) === String(ref.edgeId)) {
+        state.baseOverlay.hoveredOverlayEdgeId = null;
+      }
+      row.classList.remove("hovered");
+      updateMapSources();
+    });
+    els.directionReviewEdges.appendChild(row);
+  }
+  return refs;
+}
+
+function renderDirectionReview(segmentId) {
+  if (!els.directionReviewSummary) return;
+  const review = state.directionReview;
+  els.directionReviewAToB.classList.toggle("active", review.alignmentKey === "aToB");
+  els.directionReviewBToA.classList.toggle("active", review.alignmentKey === "bToA");
+  els.directionReviewAToB.setAttribute("aria-selected", String(review.alignmentKey === "aToB"));
+  els.directionReviewBToA.setAttribute("aria-selected", String(review.alignmentKey === "bToA"));
+  els.directionReviewEdges.classList.toggle("direction-review-editing", review.editing);
+  els.directionReviewSource.textContent = review.loaded
+    ? `${review.source} · ${review.profile}${review.readOnly ? " · read-only" : ""}`
+    : "Not prepared";
+  if (!review.loaded) {
+    els.directionReviewSummary.innerHTML =
+      '<div class="empty-state">Run the policy audit and V2 migration proposal before Direction Review.</div>';
+    els.directionReviewSlotStatuses.innerHTML = "";
+    els.directionReviewEdges.innerHTML = "";
+    els.directionReviewApplyMigration.disabled = true;
+    els.directionReviewApplySymmetricBatch.disabled = true;
+    return;
+  }
+  const segment = review.overlay?.segments?.[String(segmentId)];
+  if (!segment) {
+    els.directionReviewSummary.innerHTML =
+      '<div class="empty-state">This segment is not present in the active V1 migration set.</div>';
+    els.directionReviewSlotStatuses.innerHTML = "";
+    els.directionReviewEdges.innerHTML = "";
+    els.directionReviewApplyMigration.disabled = true;
+    els.directionReviewApplySymmetricBatch.disabled = true;
+    return;
+  }
+  const slot = segment.alignments[review.alignmentKey];
+  const record = slot.draft || slot.published;
+  const validation = slot.draft?.validation;
+  els.directionReviewSlotStatuses.innerHTML = ["aToB", "bToA"]
+    .map((alignmentKey) => `
+      <div class="direction-review-slot-status${alignmentKey === review.alignmentKey ? " active" : ""}">
+        <strong>${alignmentKey === "aToB" ? "A → B" : "B → A"}</strong>
+        <span>${escapeHtml(directionReviewSlotLabel(segment.alignments[alignmentKey]))}</span>
+      </div>`)
+    .join("");
+  const reasonList = (validation?.reasons || [])
+    .slice(0, 8)
+    .map((reason) => `${reason.edgeId ? `${reason.edgeId}: ` : ""}${reason.reason || reason.code}`)
+    .join("; ");
+  const refs = renderDirectionReviewEdges(segment, review.alignmentKey, record);
+  const stateClass = validation?.status === "valid" || (!slot.draft && slot.published?.disposition === "accepted")
+    ? "direction-review-state-valid"
+    : "direction-review-state-invalid";
+  const endpointDistances = validation?.endpointDistancesMeters;
+  els.directionReviewSummary.innerHTML = `
+    <dl class="base-overlay-metrics">
+      <div><dt>Logical segment</dt><dd>${escapeHtml(segment.segmentName)} (#${segment.segmentId})</dd></div>
+      <div><dt>Alignment</dt><dd>${review.alignmentKey === "aToB" ? "A → B" : "B → A"}</dd></div>
+      <div><dt>Published</dt><dd>${escapeHtml(slot.published?.disposition || "none")}</dd></div>
+      <div><dt>Draft</dt><dd>${escapeHtml(slot.draft?.candidate?.kind || slot.draft?.disposition || "none")}</dd></div>
+      <div><dt>Classification</dt><dd>${escapeHtml(segment.migration?.classification || "—")}</dd></div>
+      <div><dt>Directed refs</dt><dd>${refs.length}</dd></div>
+      <div><dt>Validation</dt><dd class="${stateClass}">${escapeHtml(validation?.status || slot.published?.disposition || "unreviewed")}</dd></div>
+      ${endpointDistances ? `<div><dt>Endpoint drift</dt><dd>${Math.round(endpointDistances.start)}m start · ${Math.round(endpointDistances.end)}m end</dd></div>` : ""}
+      ${reasonList ? `<div><dt>Blocking evidence</dt><dd>${escapeHtml(reasonList)}</dd></div>` : ""}
+    </dl>`;
+  const writable =
+    !review.busy &&
+    !review.applying &&
+    review.profile === "staged-v2" &&
+    !review.readOnly;
+  const oppositeKey = review.alignmentKey === "aToB" ? "bToA" : "aToB";
+  const oppositePublished = segment.alignments[oppositeKey]?.published;
+  const canReverse = oppositePublished?.disposition === "accepted" && oppositePublished.realization?.type === "explicit";
+  els.directionReviewEdit.disabled = !writable;
+  els.directionReviewEdit.textContent = review.editing ? "Finish edge editing" : "Edit directed edges";
+  els.directionReviewRevalidate.disabled = !writable || !slot.draft;
+  els.directionReviewUseReverse.disabled = !writable || !canReverse;
+  const draftCanMaterialize =
+    Boolean(slot.draft?.realization) ||
+    (slot.draft?.candidate?.kind === "exact-reverse" && canReverse);
+  els.directionReviewAccept.disabled =
+    !writable || !slot.draft || validation?.status !== "valid" || !draftCanMaterialize;
+  els.directionReviewClearDraft.disabled = !writable || !slot.draft;
+  els.directionReviewMarkUnavailable.disabled = !writable;
+  const canApply =
+    writable &&
+    slot.draft?.candidate?.kind === "v1-existing" &&
+    validation?.status === "valid";
+  els.directionReviewApplyMigration.disabled = !canApply;
+  const symmetricIds = directionReviewSymmetricBatchIds();
+  els.directionReviewApplySymmetricBatch.disabled = !writable || symmetricIds.length === 0;
+  els.directionReviewApplySymmetricBatch.textContent = symmetricIds.length > 0
+    ? `Batch-approve ${symmetricIds.length} verified bidirectional segments`
+    : "No verified bidirectional segments pending";
+}
+
+function directionReviewSymmetricBatchIds() {
+  return Object.values(state.directionReview.overlay?.segments || {})
+    .filter((segment) => {
+      if (segment.migration?.classification !== "symmetric_candidate") return false;
+      const slots = Object.values(segment.alignments || {});
+      if (slots.some((slot) => slot?.published)) return false;
+      const existing = slots.find((slot) => slot?.draft?.candidate?.kind === "v1-existing");
+      const reverse = slots.find((slot) => slot?.draft?.candidate?.kind === "exact-reverse");
+      return existing?.draft?.validation?.status === "valid" && reverse?.draft?.validation?.status === "valid";
+    })
+    .map((segment) => segment.segmentId)
+    .sort((a, b) => Number(a) - Number(b));
+}
+
+function directionReviewReviewFields() {
+  return {
+    reviewer: els.directionReviewReviewer.value.trim(),
+    reviewedAt: els.directionReviewDate.value,
+    batchId: els.directionReviewBatch.value.trim(),
+  };
+}
+
+async function runDirectionReviewAction(action, extra = {}) {
+  const segmentId = selectedSegmentId();
+  const alignmentKey = state.directionReview.alignmentKey;
+  if (!segmentId) throw new Error("Select a segment first.");
+  state.directionReview.busy = true;
+  renderAll();
+  try {
+    const response = await fetch("/api/cw-base-overlay-v2/alignment-action", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ segmentId, alignmentKey, action, ...extra }),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || `Direction Review action failed: ${response.status}`);
+    }
+    state.directionReview.overlay = payload.overlay;
+    state.directionReview.source = payload.source || "staged";
+    state.directionReview.readOnly = false;
+    setStatus(`${alignmentKey === "aToB" ? "A → B" : "B → A"}: ${action.replaceAll("-", " ")}.`);
+    return payload;
+  } finally {
+    state.directionReview.busy = false;
+    renderAll();
+  }
+}
+
+function currentDirectionReviewRefs() {
+  const segment = directionReviewSegment();
+  if (!segment) return [];
+  const record = directionReviewDisplayRecord(segment, state.directionReview.alignmentKey);
+  return directionReviewRefsForRecord(segment, state.directionReview.alignmentKey, record);
+}
+
+async function toggleDirectionReviewEditing() {
+  if (state.directionReview.editing) {
+    state.directionReview.editing = false;
+    renderAll();
+    setStatus("Finished directed-edge editing. Revalidate, then accept when all checks pass.");
+    return;
+  }
+  const slot = directionReviewRecord(selectedSegmentId());
+  if (!slot?.draft?.realization || slot.draft.realization.type !== "explicit") {
+    await runDirectionReviewAction("save-draft", { edgeRefs: currentDirectionReviewRefs() });
+  }
+  state.directionReview.editing = true;
+  renderAll();
+  setStatus("Direction editing active: click base edges to add/remove them; use ↕ to flip traversal.");
+}
+
+async function saveDirectionReviewRefs(edgeRefs) {
+  await runDirectionReviewAction("save-draft", { edgeRefs: normalizeOverlayEdgeRefs(edgeRefs) });
+}
+
+async function removeDirectionReviewEdge(index) {
+  const refs = currentDirectionReviewRefs();
+  if (index < 0 || index >= refs.length) return;
+  await saveDirectionReviewRefs(refs.filter((_ref, refIndex) => refIndex !== index));
+}
+
+async function flipDirectionReviewEdge(index) {
+  const refs = currentDirectionReviewRefs();
+  if (index < 0 || index >= refs.length) return;
+  refs[index] = {
+    ...refs[index],
+    direction: refs[index].direction === "reverse" ? "forward" : "reverse",
+  };
+  await saveDirectionReviewRefs(refs);
+}
+
+async function toggleDirectionReviewBaseEdge(feature) {
+  const refs = currentDirectionReviewRefs();
+  const nextRef = edgeRefFromBaseFeature(feature, refs.length);
+  if (!nextRef) return;
+  if (!state.directionReviewToggledThisClick) {
+    state.directionReviewToggledThisClick = new Set();
+    window.setTimeout(() => {
+      state.directionReviewToggledThisClick = null;
+    }, 0);
+  }
+  if (state.directionReviewToggledThisClick.has(String(nextRef.edgeId))) return;
+  state.directionReviewToggledThisClick.add(String(nextRef.edgeId));
+  const existingIndex = refs.findIndex((ref) => String(ref.edgeId) === String(nextRef.edgeId));
+  const nextRefs = existingIndex >= 0
+    ? refs.filter((_ref, index) => index !== existingIndex)
+    : orientAppendedEdgeRef(refs, nextRef, baseEdgeGeometryLookup());
+  await saveDirectionReviewRefs(nextRefs);
+}
+
+async function acceptSelectedDirectionReview() {
+  const review = directionReviewReviewFields();
+  if (!review.reviewer || !review.reviewedAt || !review.batchId) {
+    throw new Error("Reviewer, review date, and batch ID are required.");
+  }
+  await runDirectionReviewAction("accept", review);
+  state.directionReview.editing = false;
+}
+
+async function markSelectedDirectionUnavailable() {
+  const review = directionReviewReviewFields();
+  const unavailableReasonCode = els.directionReviewUnavailableReason.value;
+  const rationale = els.directionReviewRationale.value.trim();
+  if (!review.reviewer || !review.reviewedAt || !unavailableReasonCode || !rationale) {
+    throw new Error("Reviewer, review date, unavailable reason, and rationale are required.");
+  }
+  await runDirectionReviewAction("unavailable", {
+    ...review,
+    unavailableReasonCode,
+    rationale,
+    userExplanation: els.directionReviewUserExplanation.value.trim(),
+  });
+  state.directionReview.editing = false;
+}
+
+async function applySelectedDirectionMigration() {
+  const segmentId = selectedSegmentId();
+  const reviewer = els.directionReviewReviewer.value.trim();
+  const reviewedAt = els.directionReviewDate.value;
+  const batchId = els.directionReviewBatch.value.trim();
+  if (!segmentId || !reviewer || !reviewedAt || !batchId) {
+    throw new Error("Reviewer, review date, and batch ID are required.");
+  }
+  state.directionReview.applying = true;
+  renderAll();
+  try {
+    const response = await fetch("/api/cw-base-overlay-v2/apply-migration", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ segmentIds: [segmentId], reviewer, reviewedAt, batchId }),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload.error || `Migration apply failed: ${response.status}`);
+    state.directionReview.overlay = payload.overlay;
+    state.directionReview.source = "staged";
+    state.directionReview.readOnly = false;
+    state.directionReview.editing = false;
+    setStatus(`Applied reviewed V1 direction for segment ${segmentId}.`);
+  } finally {
+    state.directionReview.applying = false;
+    renderAll();
+  }
+}
+
+async function applySymmetricDirectionMigrationBatch() {
+  const segmentIds = directionReviewSymmetricBatchIds();
+  const { reviewer, reviewedAt, batchId } = directionReviewReviewFields();
+  if (!reviewer || !reviewedAt || !batchId) {
+    throw new Error("Reviewer, review date, and batch ID are required.");
+  }
+  if (segmentIds.length === 0) {
+    throw new Error("No mechanically verified bidirectional segments are pending.");
+  }
+  state.directionReview.applying = true;
+  renderAll();
+  try {
+    const response = await fetch("/api/cw-base-overlay-v2/apply-symmetric-batch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ segmentIds, reviewer, reviewedAt, batchId }),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || `Symmetric migration failed: ${response.status}`);
+    }
+    state.directionReview.overlay = payload.overlay;
+    state.directionReview.source = "staged";
+    state.directionReview.readOnly = false;
+    state.directionReview.editing = false;
+    setStatus(`Batch-approved ${payload.applied?.length || 0} verified bidirectional segments.`);
+  } finally {
+    state.directionReview.applying = false;
+    renderAll();
+  }
+}
+
 function renderAll() {
   els.sourceSummary.textContent = `${state.activeFeatures.length} active · ${state.source.features.length} records`;
   renderWorkspaceChrome();
@@ -4570,6 +5368,7 @@ function selectFeatureByActiveIndex(index, fit = false) {
     return;
   }
   state.selectedIndex = index;
+  state.directionReview.editing = false;
   state.selectedVertexIndex = -1;
   state.selectedDataIndex = -1;
   renderAll();
@@ -5519,7 +6318,9 @@ function selectBaseGraphEdge(feature, fit = false) {
   if (fit && feature.geometry?.coordinates?.length >= 2) {
     fitCoordinates(feature.geometry.coordinates);
   }
-  setStatus(`Selected OSM base edge ${graphEdgeId}. Use Copy Selected to make it editable.`);
+  setStatus(
+    `Selected OSM base edge ${graphEdgeId}. Review direction below; use Copy Selected only to edit geometry.`,
+  );
 }
 
 function roadTypeForGraphFeature(feature) {
@@ -6595,12 +7396,14 @@ async function loadBaseOverlayData() {
       matchPreviewResponse,
       overlayResponse,
       manualBaseEdgesResponse,
+      traversalOverridesResponse,
     ] = await Promise.all([
       fetch("/api/osm/graph-edges"),
       fetch("/api/osm/match-summary"),
       fetch("/api/osm/match-preview"),
       fetch("/api/cw-base-overlay"),
       fetch("/api/manual-base-edges"),
+      fetch("/api/bicycle-traversal-overrides"),
     ]);
     for (const response of [
       graphEdgesResponse,
@@ -6608,23 +7411,39 @@ async function loadBaseOverlayData() {
       matchPreviewResponse,
       overlayResponse,
       manualBaseEdgesResponse,
+      traversalOverridesResponse,
     ]) {
       if (!response.ok) {
         throw new Error(`Failed to load ${response.url}: ${response.status}`);
       }
     }
-    const [graphEdges, matchSummary, matchPreview, overlay, manualBaseEdges] = await Promise.all([
+    const [graphEdges, matchSummary, matchPreview, overlay, manualBaseEdges, traversalOverrides] = await Promise.all([
       graphEdgesResponse.json(),
       matchSummaryResponse.json(),
       matchPreviewResponse.json(),
       overlayResponse.json(),
       manualBaseEdgesResponse.json(),
+      traversalOverridesResponse.json(),
     ]);
     state.baseOverlay.graphEdges = graphEdges;
     state.baseOverlay.matchSummary = matchSummary;
     state.baseOverlay.matchPreview = matchPreview;
     state.baseOverlay.manualBaseEdges = manualBaseEdges || emptyManualBaseEdges();
+    state.baseOverlay.traversalOverrides = traversalOverrides || emptyTraversalOverrides();
     state.baseOverlay.overlay = overlay || emptyBaseOverlay();
+    try {
+      const directionResponse = await fetch("/api/cw-base-overlay-v2");
+      if (directionResponse.ok) {
+        const directionPayload = await directionResponse.json();
+        state.directionReview.loaded = true;
+        state.directionReview.source = directionPayload.source;
+        state.directionReview.readOnly = directionPayload.readOnly;
+        state.directionReview.profile = directionPayload.profile;
+        state.directionReview.overlay = directionPayload.overlay;
+      }
+    } catch {
+      state.directionReview.loaded = false;
+    }
     state.baseOverlay.loaded = true;
     setStatus(
       `Loaded ${graphEdges.features?.length || 0} base graph edges and ${matchSummary.sourceSegments || 0} segment matches.`,
@@ -6797,6 +7616,45 @@ async function recalculateOsmGraph() {
     const sourceSegments = state.baseOverlay.matchSummary?.sourceSegments || 0;
     setStatus(`Recalculated ${graphEdges} graph edges and ${sourceSegments} CW matches.`);
   } finally {
+    state.baseOverlay.recalculating = false;
+    renderAll();
+  }
+}
+
+async function refreshDirectionReviewEvidence() {
+  if (state.baseOverlay.loading || state.baseOverlay.recalculating || state.directionReview.busy) return;
+  if (state.directionReview.profile !== "staged-v2" || state.directionReview.readOnly) {
+    throw new Error("Restart the editor with CW_OVERLAY_PROFILE=staged-v2 before refreshing V2 evidence.");
+  }
+  state.baseOverlay.recalculating = true;
+  state.directionReview.busy = true;
+  renderAll();
+  setStatus("Rebuilding the graph, policy audit, and Direction Review proposal...");
+  try {
+    const response = await fetch("/api/cw-base-overlay-v2/refresh-evidence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || `Direction Review refresh failed: ${response.status}`);
+    }
+    state.baseOverlay.loaded = false;
+    state.baseOverlay.graphEdges = null;
+    state.baseOverlay.matchSummary = null;
+    state.baseOverlay.matchPreview = null;
+    state.directionReview.overlay = payload.overlay;
+    state.directionReview.source = payload.source || "staged";
+    state.directionReview.readOnly = false;
+    invalidateBaseOverlayDerivedCache();
+    await loadBaseOverlayData();
+    const preserved = payload.preserved || {};
+    setStatus(
+      `Direction Review evidence refreshed. ${Number(preserved.publishedAsDraft || 0)} accepted alignment${Number(preserved.publishedAsDraft || 0) === 1 ? "" : "s"} moved back to reviewed drafts; ${Number(preserved.drafts || 0)} working draft${Number(preserved.drafts || 0) === 1 ? "" : "s"} and ${Number(preserved.unavailable || 0)} unavailable decision${Number(preserved.unavailable || 0) === 1 ? "" : "s"} preserved.`,
+    );
+  } finally {
+    state.directionReview.busy = false;
     state.baseOverlay.recalculating = false;
     renderAll();
   }
@@ -7054,6 +7912,130 @@ async function saveManualBaseEdges() {
   }
   state.baseOverlay.manualBaseEdges = payload.manualBaseEdges || state.baseOverlay.manualBaseEdges;
   markBaseGraphStaleBecauseManualEdgesChanged();
+}
+
+async function saveSelectedManualEdgeDirectionPolicy() {
+  const index = state.baseOverlay.selectedManualEdgeIndex;
+  const manualFeature = selectedManualBaseEdge();
+  const graphFeature = selectedBaseGraphEdge();
+  const feature = manualFeature || graphFeature;
+  if (!feature) {
+    throw new Error("Select a base edge before reviewing its direction policy.");
+  }
+
+  const forward = els.manualEdgeForward.value;
+  const reverse = els.manualEdgeReverse.value;
+  const forwardUnknown = forward === "unknown";
+  const reverseUnknown = reverse === "unknown";
+  if (forwardUnknown !== reverseUnknown) {
+    throw new Error("Review both directions together, or leave both as Needs review.");
+  }
+
+  const reviewed = !forwardUnknown;
+  const reviewer = els.manualEdgeReviewer.value.trim();
+  const reviewedAt = els.manualEdgeReviewDate.value;
+  const rationale = els.manualEdgeRationale.value.trim();
+  const evidence = els.baseEdgeDirectionEvidence.value.trim();
+  if (manualFeature && reviewed && (!reviewer || !reviewedAt || !rationale)) {
+    throw new Error("Reviewed manual directions require a reviewer, review date, and evidence/rationale.");
+  }
+
+  if (graphFeature) {
+    const properties = graphFeature.properties || {};
+    const osmWayId = Number(properties.osmWayId);
+    const sourceGeometryDigest = properties.sourceGeometryDigest;
+    if (!Number.isInteger(osmWayId) || osmWayId <= 0 || !sourceGeometryDigest) {
+      throw new Error("The selected OSM edge is missing stable source-way identity. Rebuild the graph first.");
+    }
+    if (!reviewer || !reviewedAt || !rationale || !evidence) {
+      throw new Error("OSM direction overrides require reviewer, review date, rationale, and evidence reference.");
+    }
+    const current = state.baseOverlay.traversalOverrides || emptyTraversalOverrides();
+    const record = {
+      osmWayId,
+      sourceGeometryDigest,
+      states: { forward, reverse },
+      rationale,
+      evidence,
+      reviewer,
+      reviewedAt,
+      updatedAt: new Date().toISOString(),
+    };
+    const overrides = [
+      ...(current.overrides || []).filter((item) => Number(item.osmWayId) !== osmWayId),
+      record,
+    ].sort((left, right) => Number(left.osmWayId) - Number(right.osmWayId));
+    const response = await fetch("/api/bicycle-traversal-overrides", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...current, overrides }),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || `Traversal override save failed: ${response.status}`);
+    }
+    state.baseOverlay.traversalOverrides = payload.overrides;
+    markBaseGraphStaleBecauseTraversalOverridesChanged();
+    renderAll();
+    setStatus(
+      `Saved reviewed ${forward}/${reverse} override for OSM way ${osmWayId}. Rebuild before routing uses it.`,
+    );
+    return;
+  }
+
+  if (index < 0) {
+    throw new Error("Select a manual base edge before saving its direction policy.");
+  }
+
+  const now = new Date().toISOString();
+  const nextFeature = {
+    ...feature,
+    properties: {
+      ...(feature.properties || {}),
+      updatedAt: now,
+      bicycleTraversal: reviewed
+        ? { forward, reverse, reviewed: true, reviewer, reviewedAt, rationale, ...(evidence ? { evidence } : {}) }
+        : { forward: "unknown", reverse: "unknown", reviewed: false },
+    },
+  };
+  const features = [...manualBaseEdgeFeatures()];
+  features[index] = nextFeature;
+  state.baseOverlay.manualBaseEdges = { type: "FeatureCollection", features };
+  await saveManualBaseEdges();
+  renderAll();
+  setStatus(
+    reviewed
+      ? `Saved reviewed ${forward}/${reverse} direction policy for ${manualBaseEdgeFeatureId(nextFeature)}. Recalculate the graph before V2 revalidation.`
+      : `Cleared direction review for ${manualBaseEdgeFeatureId(nextFeature)}. The edge remains blocked until reviewed and rebuilt.`,
+  );
+}
+
+async function clearSelectedOsmDirectionOverride() {
+  const feature = selectedBaseGraphEdge();
+  const osmWayId = Number(feature?.properties?.osmWayId);
+  if (!feature || !Number.isInteger(osmWayId) || osmWayId <= 0) {
+    throw new Error("Select an OSM base edge with a reviewed override.");
+  }
+  const current = state.baseOverlay.traversalOverrides || emptyTraversalOverrides();
+  if (!(current.overrides || []).some((item) => Number(item.osmWayId) === osmWayId)) {
+    throw new Error(`OSM way ${osmWayId} has no reviewed override.`);
+  }
+  const response = await fetch("/api/bicycle-traversal-overrides", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...current,
+      overrides: current.overrides.filter((item) => Number(item.osmWayId) !== osmWayId),
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error || `Traversal override removal failed: ${response.status}`);
+  }
+  state.baseOverlay.traversalOverrides = payload.overrides;
+  markBaseGraphStaleBecauseTraversalOverridesChanged();
+  renderAll();
+  setStatus(`Removed the reviewed override for OSM way ${osmWayId}. Rebuild to restore OSM-derived policy.`);
 }
 
 async function saveBaseEdgeState() {
@@ -7437,6 +8419,40 @@ function wireEvents() {
   els.workspaceSegments.addEventListener("click", () => setWorkspaceMode("segments").catch(showError));
   els.workspaceBase.addEventListener("click", () => setWorkspaceMode("base").catch(showError));
   els.workspaceOverlay.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
+  els.directionReviewAToB.addEventListener("click", () => {
+    state.directionReview.alignmentKey = "aToB";
+    state.directionReview.editing = false;
+    renderAll();
+  });
+  els.directionReviewBToA.addEventListener("click", () => {
+    state.directionReview.alignmentKey = "bToA";
+    state.directionReview.editing = false;
+    renderAll();
+  });
+  if (!els.directionReviewDate.value) {
+    els.directionReviewDate.value = new Date().toISOString().slice(0, 10);
+  }
+  els.directionReviewApplyMigration.addEventListener("click", () =>
+    applySelectedDirectionMigration().catch(showError),
+  );
+  els.directionReviewApplySymmetricBatch.addEventListener("click", () =>
+    applySymmetricDirectionMigrationBatch().catch(showError),
+  );
+  els.directionReviewEdit.addEventListener("click", () => toggleDirectionReviewEditing().catch(showError));
+  els.directionReviewRevalidate.addEventListener("click", () =>
+    runDirectionReviewAction("revalidate").catch(showError),
+  );
+  els.directionReviewUseReverse.addEventListener("click", () =>
+    runDirectionReviewAction("derive-reverse").catch(showError),
+  );
+  els.directionReviewAccept.addEventListener("click", () => acceptSelectedDirectionReview().catch(showError));
+  els.directionReviewClearDraft.addEventListener("click", () => {
+    state.directionReview.editing = false;
+    runDirectionReviewAction("clear-draft").catch(showError);
+  });
+  els.directionReviewMarkUnavailable.addEventListener("click", () =>
+    markSelectedDirectionUnavailable().catch(showError),
+  );
   els.workspaceRoundabouts.addEventListener("click", () => setWorkspaceMode("roundabouts").catch(showError));
   els.workspaceVideoSync.addEventListener("click", () => setWorkspaceMode("video-sync").catch(showError));
   els.workspaceRouteCatalog.addEventListener("click", () => setWorkspaceMode("route-catalog").catch(showError));
@@ -7487,7 +8503,28 @@ function wireEvents() {
   els.cloneBaseGraphEdge.addEventListener("click", () => cloneSelectedBaseGraphEdgeAsManual().catch(showError));
   els.deleteManualBaseEdge.addEventListener("click", () => deleteSelectedManualBaseEdge().catch(showError));
   els.splitManualBaseEdge.addEventListener("click", () => splitSelectedManualBaseEdge().catch(showError));
+  if (!els.manualEdgeReviewDate.value) {
+    els.manualEdgeReviewDate.value = new Date().toISOString().slice(0, 10);
+  }
+  els.saveManualEdgeDirection.addEventListener("click", () =>
+    saveSelectedManualEdgeDirectionPolicy().catch(showError),
+  );
+  els.clearOsmDirectionOverride.addEventListener("click", () =>
+    clearSelectedOsmDirectionOverride().catch(showError),
+  );
+  els.toggleBaseOneWayDirections.addEventListener("change", () => {
+    state.baseOverlay.showOneWayDirections = els.toggleBaseOneWayDirections.checked;
+    renderAll();
+    setStatus(
+      state.baseOverlay.showOneWayDirections
+        ? "Showing every direction-limited base edge. Arrowheads point in the permitted travel direction."
+        : "One-way direction layer hidden.",
+    );
+  });
   els.recalculateOsmGraph.addEventListener("click", () => recalculateOsmGraph().catch(showError));
+  els.refreshDirectionReview.addEventListener("click", () =>
+    refreshDirectionReviewEvidence().catch(showError),
+  );
   els.connectorColorMode.addEventListener("change", () => setConnectorColorMode(els.connectorColorMode.value));
   for (const key of CONNECTOR_CLASS_KEYS) {
     const numInput = document.getElementById(`connector-class-${key}`);
@@ -7592,6 +8629,10 @@ function wireEvents() {
       toggleEdgeInCompose(event.features[0]);
       return;
     }
+    if (state.workspaceMode === "overlay" && state.directionReview.editing) {
+      toggleDirectionReviewBaseEdge(event.features[0]).catch(showError);
+      return;
+    }
     if (state.splittingEdgePickAt !== null && isEdgePickedSelected()) {
       splitEdgePickedAtClickedEdge(event.features[0]).catch(showError);
       return;
@@ -7635,6 +8676,14 @@ function wireEvents() {
         state.suppressNextSegmentClick = false;
       }, 0);
       toggleEdgeInCompose(event.features[0]);
+      return;
+    }
+    if (state.workspaceMode === "overlay" && state.directionReview.editing) {
+      state.suppressNextSegmentClick = true;
+      window.setTimeout(() => {
+        state.suppressNextSegmentClick = false;
+      }, 0);
+      toggleDirectionReviewBaseEdge(event.features[0]).catch(showError);
       return;
     }
     if (state.splittingEdgePickAt !== null && isEdgePickedSelected()) {
@@ -8015,8 +9064,20 @@ async function addMapLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  if (!map.getSource("base-graph-one-way-directions")) {
+    map.addSource("base-graph-one-way-directions", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
   if (!map.getSource("selected-base-graph-edge")) {
     map.addSource("selected-base-graph-edge", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getSource("selected-base-edge-permitted-direction")) {
+    map.addSource("selected-base-edge-permitted-direction", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
     });
@@ -8033,6 +9094,18 @@ async function addMapLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  if (!map.getSource("direction-review-alignments")) {
+    map.addSource("direction-review-alignments", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getSource("direction-review-endpoints")) {
+    map.addSource("direction-review-endpoints", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
   if (!map.getSource("cw-overlay-network")) {
     map.addSource("cw-overlay-network", {
       type: "geojson",
@@ -8041,6 +9114,12 @@ async function addMapLayers() {
   }
   if (!map.getSource("manual-base-edges")) {
     map.addSource("manual-base-edges", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!map.getSource("manual-base-edge-endpoints")) {
+    map.addSource("manual-base-edge-endpoints", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
     });
@@ -8132,6 +9211,29 @@ async function addMapLayers() {
         "line-color": "#f2c94c",
         "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 14, 8, 16, 11],
         "line-opacity": 0.95,
+      },
+    });
+  }
+
+  if (!map.getLayer("selected-base-graph-edge-direction-arrows")) {
+    map.addLayer({
+      id: "selected-base-graph-edge-direction-arrows",
+      type: "symbol",
+      source: "selected-base-edge-permitted-direction",
+      layout: {
+        "symbol-placement": "line",
+        "symbol-spacing": 90,
+        "text-field": "▶",
+        "text-size": 13,
+        "text-rotation-alignment": "map",
+        "text-keep-upright": false,
+        "text-allow-overlap": true,
+        visibility: "none",
+      },
+      paint: {
+        "text-color": "#111827",
+        "text-halo-color": "#f2c94c",
+        "text-halo-width": 2,
       },
     });
   }
@@ -8265,6 +9367,140 @@ async function addMapLayers() {
         ],
         "line-opacity": ["case", ["==", ["get", "overlayHovered"], true], 1, 0.72],
       },
+    });
+  }
+
+  if (!map.getLayer("direction-review-alignments-layer")) {
+    map.addLayer({
+      id: "direction-review-alignments-layer",
+      type: "line",
+      source: "direction-review-alignments",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+        visibility: "none",
+      },
+      paint: {
+        "line-color": [
+          "match",
+          ["get", "traversalState"],
+          "prohibited",
+          "#dc2626",
+          "unknown",
+          "#b91c1c",
+          "conditional",
+          "#d97706",
+          ["case", ["==", ["get", "alignmentKey"], "aToB"], "#0f766e", "#7c3aed"],
+        ],
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          10,
+          ["case", ["get", "selected"], 6, 3.5],
+          14,
+          ["case", ["get", "selected"], 10, 6],
+          16,
+          ["case", ["get", "selected"], 14, 9],
+        ],
+        "line-opacity": ["case", ["get", "selected"], 0.96, 0.42],
+      },
+    });
+  }
+
+  if (!map.getLayer("direction-review-hover-layer")) {
+    map.addLayer({
+      id: "direction-review-hover-layer",
+      type: "line",
+      source: "direction-review-alignments",
+      filter: ["==", ["get", "hovered"], true],
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": "#f97316",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 9, 14, 14, 16, 18],
+        "line-opacity": 1,
+      },
+    });
+  }
+
+  if (!map.getLayer("direction-review-arrows-layer")) {
+    map.addLayer({
+      id: "direction-review-arrows-layer",
+      type: "symbol",
+      source: "direction-review-alignments",
+      filter: ["==", ["get", "selected"], true],
+      layout: {
+        "symbol-placement": "line",
+        "symbol-spacing": 90,
+        "text-field": "▶",
+        "text-size": 13,
+        "text-rotation-alignment": "map",
+        "text-keep-upright": false,
+        "text-allow-overlap": true,
+        visibility: "none",
+      },
+      paint: {
+        "text-color": "#ffffff",
+        "text-halo-color": [
+          "case",
+          ["==", ["get", "traversalState"], "allowed"],
+          ["case", ["==", ["get", "alignmentKey"], "aToB"], "#0f766e", "#7c3aed"],
+          "#b91c1c",
+        ],
+        "text-halo-width": 2,
+      },
+    });
+  }
+
+  if (!map.getLayer("direction-review-sequence-layer")) {
+    map.addLayer({
+      id: "direction-review-sequence-layer",
+      type: "symbol",
+      source: "direction-review-alignments",
+      filter: ["==", ["get", "selected"], true],
+      layout: {
+        "symbol-placement": "line-center",
+        "text-field": ["to-string", ["get", "sequenceNumber"]],
+        "text-size": 10,
+        "text-allow-overlap": false,
+        visibility: "none",
+      },
+      paint: {
+        "text-color": "#0f172a",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.5,
+      },
+    });
+  }
+
+  if (!map.getLayer("direction-review-endpoints-layer")) {
+    map.addLayer({
+      id: "direction-review-endpoints-layer",
+      type: "circle",
+      source: "direction-review-endpoints",
+      layout: { visibility: "none" },
+      paint: {
+        "circle-radius": 10,
+        "circle-color": "#f8fafc",
+        "circle-stroke-color": "#0f172a",
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+
+  if (!map.getLayer("direction-review-endpoint-labels")) {
+    map.addLayer({
+      id: "direction-review-endpoint-labels",
+      type: "symbol",
+      source: "direction-review-endpoints",
+      layout: {
+        "text-field": ["get", "label"],
+        "text-size": 12,
+        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+        "text-allow-overlap": true,
+        visibility: "none",
+      },
+      paint: { "text-color": "#0f172a" },
     });
   }
 
@@ -8467,6 +9703,106 @@ async function addMapLayers() {
         "line-opacity": 0.95,
       },
     });
+  }
+
+  if (!map.getLayer("manual-base-edge-endpoints-layer")) {
+    map.addLayer({
+      id: "manual-base-edge-endpoints-layer",
+      type: "circle",
+      source: "manual-base-edge-endpoints",
+      paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 14, 8, 16, 10],
+        "circle-color": ["match", ["get", "label"], "A", "#0f766e", "#7c3aed"],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 2,
+      },
+    });
+  }
+
+  if (!map.getLayer("manual-base-edge-endpoint-labels")) {
+    map.addLayer({
+      id: "manual-base-edge-endpoint-labels",
+      type: "symbol",
+      source: "manual-base-edge-endpoints",
+      layout: {
+        "text-field": ["get", "label"],
+        "text-size": 11,
+        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+      },
+      paint: {
+        "text-color": "#ffffff",
+        "text-halo-color": "#111827",
+        "text-halo-width": 0.4,
+      },
+    });
+  }
+
+  if (!map.getLayer("base-graph-one-way-directions-layer")) {
+    map.addLayer({
+      id: "base-graph-one-way-directions-layer",
+      type: "line",
+      source: "base-graph-one-way-directions",
+      minzoom: 7,
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+        visibility: "none",
+      },
+      paint: {
+        "line-color": [
+          "match",
+          ["get", "directionLayerClass"],
+          "confirmed-one-way",
+          "#c2410c",
+          "#a16207",
+        ],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 7, 2, 11, 4, 15, 7],
+        "line-opacity": 0.92,
+      },
+    });
+  }
+
+  if (!map.getLayer("base-graph-one-way-direction-arrows")) {
+    map.addLayer({
+      id: "base-graph-one-way-direction-arrows",
+      type: "symbol",
+      source: "base-graph-one-way-directions",
+      minzoom: 9.5,
+      layout: {
+        "symbol-placement": "line",
+        "symbol-spacing": 75,
+        "text-field": "▶",
+        "text-size": ["interpolate", ["linear"], ["zoom"], 9.5, 11, 14, 15, 17, 18],
+        "text-rotation-alignment": "map",
+        "text-keep-upright": false,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+        visibility: "none",
+      },
+      paint: {
+        "text-color": "#ffffff",
+        "text-halo-color": [
+          "match",
+          ["get", "directionLayerClass"],
+          "confirmed-one-way",
+          "#c2410c",
+          "#a16207",
+        ],
+        "text-halo-width": 2.5,
+      },
+    });
+  }
+
+  for (const layerId of [
+    "selected-base-graph-edge-layer",
+    "selected-base-graph-edge-direction-arrows",
+    "selected-manual-base-edge",
+    "manual-base-edge-endpoints-layer",
+    "manual-base-edge-endpoint-labels",
+  ]) {
+    if (map.getLayer(layerId)) map.moveLayer(layerId);
   }
 
   if (!map.getLayer("draw-line-layer")) {

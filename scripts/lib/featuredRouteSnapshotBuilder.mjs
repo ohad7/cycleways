@@ -20,6 +20,7 @@ import { decodeRoutePayload } from "@cycleways/core/utils/route-encoding.js";
 import { mergeBaseRoutingShards } from "@cycleways/core/routing/baseRoutingShards.js";
 import { decodeCompactBaseRoutingShard } from "@cycleways/core/routing/compactBaseRoutingShard.js";
 import { decodeMessagePack } from "@cycleways/core/routing/messagePack.js";
+import { createShardedRouteSession } from "@cycleways/core/routing/shardedRouteSession.js";
 import { dataMarkerFeaturesFromActiveDataPoints } from "@cycleways/core/data/dataMarkers.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
@@ -48,34 +49,53 @@ async function readJsonOrNull(filePath) {
 
 // --- Asset loading (lifted from editor/server.mjs, deduplicated here) -------
 
-let cachedFeaturedAssets = null;
-export async function loadFeaturedAssetsFromDisk() {
-  if (cachedFeaturedAssets) return cachedFeaturedAssets;
-  const manifestRaw = await readFile(promotedManifestPath, "utf-8");
-  const manifest = JSON.parse(manifestRaw);
+const cachedFeaturedAssets = new Map();
+export async function loadFeaturedAssetsFromDisk({
+  publicDataRoot = publicDataDir,
+  manifest = null,
+} = {}) {
+  const resolvedManifest = manifest || JSON.parse(
+    await readFile(resolve(publicDataRoot, "map-manifest.json"), "utf-8"),
+  );
+  const cacheKey = `${publicDataRoot}:${resolvedManifest.version || "unversioned"}`;
+  if (cachedFeaturedAssets.has(cacheKey)) return cachedFeaturedAssets.get(cacheKey);
   const geoJsonData = JSON.parse(
-    await readFile(resolve(publicDataDir, manifest.bikeRoads), "utf-8"),
+    await readFile(resolve(publicDataRoot, resolvedManifest.bikeRoads), "utf-8"),
   );
   const segmentsData = JSON.parse(
-    await readFile(resolve(publicDataDir, manifest.segments), "utf-8"),
+    await readFile(resolve(publicDataRoot, resolvedManifest.segments), "utf-8"),
   );
-  cachedFeaturedAssets = { geoJsonData, segmentsData };
-  return cachedFeaturedAssets;
+  const value = { geoJsonData, segmentsData };
+  cachedFeaturedAssets.set(cacheKey, value);
+  return value;
 }
 
 // Base-graph routes (hybrid_route_v6 / base_route_v4 tokens) need the base
 // routing network + cw-base index to decode, just like the web app. Merge all
 // shards once and cache, so catalog recompute/promote and keyframe polyline
 // decoding handle base-graph routes (not only segment-based ones).
-let cachedBaseRoutingDecode = null;
-export async function getBaseRoutingDecodeAssets({ log = defaultLog } = {}) {
-  if (cachedBaseRoutingDecode) return cachedBaseRoutingDecode;
+const cachedBaseRoutingDecode = new Map();
+export async function getBaseRoutingDecodeAssets({
+  log = defaultLog,
+  publicDataRoot = publicDataDir,
+  manifest = null,
+} = {}) {
+  const resolvedManifest = manifest || JSON.parse(
+    await readFile(resolve(publicDataRoot, "map-manifest.json"), "utf-8"),
+  );
+  const cacheKey = `${publicDataRoot}:${resolvedManifest.version || "unversioned"}`;
+  if (cachedBaseRoutingDecode.has(cacheKey)) return cachedBaseRoutingDecode.get(cacheKey);
   let baseRoutingNetwork = null;
   let cwBaseIndex = null;
+  let legacyCwBaseIndex = null;
+  let legacyRoutingCompatibility = null;
+  let shardManifest = null;
+  let shardsDir = null;
   try {
-    const shardsDir = resolve(publicDataDir, "base-routing-shards");
-    const shardManifest = JSON.parse(
-      await readFile(resolve(shardsDir, "manifest.json"), "utf-8"),
+    const shardManifestPath = resolve(publicDataRoot, resolvedManifest.baseRoutingShards);
+    shardsDir = resolve(shardManifestPath, "..");
+    shardManifest = JSON.parse(
+      await readFile(shardManifestPath, "utf-8"),
     );
     const shards = await Promise.all(
       (shardManifest.shards || []).map(async (entry) => {
@@ -86,7 +106,10 @@ export async function getBaseRoutingDecodeAssets({ log = defaultLog } = {}) {
       }),
     );
     const network = mergeBaseRoutingShards(shards);
-    network.graphVersion = shardManifest.generatedAt || "";
+    network.graphVersion = shardManifest.graphVersion || shardManifest.generatedAt || "";
+    network.policyId = shardManifest.policyId || null;
+    network.policyDigest = shardManifest.policyDigest || null;
+    network.routingContract = shardManifest.routingContract || null;
     if (Array.isArray(network.edges) && network.edges.length > 0) {
       baseRoutingNetwork = network;
     }
@@ -95,30 +118,65 @@ export async function getBaseRoutingDecodeAssets({ log = defaultLog } = {}) {
   }
   try {
     cwBaseIndex = JSON.parse(
-      await readFile(resolve(publicDataDir, "cw-base-index.json"), "utf-8"),
+      await readFile(resolve(publicDataRoot, resolvedManifest.cwBaseIndex), "utf-8"),
     );
   } catch (err) {
     log("warn", `cw-base-index unavailable for route decode: ${err.message}`);
   }
-  cachedBaseRoutingDecode = { baseRoutingNetwork, cwBaseIndex };
-  return cachedBaseRoutingDecode;
+  try {
+    const legacy = resolvedManifest.legacyRoutingCompatibility;
+    if (legacy?.cwBaseIndex) {
+      const bytes = await readFile(resolve(publicDataRoot, legacy.cwBaseIndex));
+      const actual = createHash("sha256").update(bytes).digest("hex");
+      if (actual !== legacy.cwBaseIndexSha256) {
+        throw new Error("legacy CW base index hash mismatch");
+      }
+      legacyCwBaseIndex = JSON.parse(bytes.toString("utf-8"));
+      const metadataBytes = await readFile(resolve(publicDataRoot, legacy.metadata));
+      const metadataActual = createHash("sha256").update(metadataBytes).digest("hex");
+      if (metadataActual !== legacy.metadataSha256) {
+        throw new Error("legacy routing compatibility metadata hash mismatch");
+      }
+      legacyRoutingCompatibility = {
+        manifest: legacy,
+        cwBaseIndex: legacyCwBaseIndex,
+        metadata: JSON.parse(metadataBytes.toString("utf-8")),
+      };
+    }
+  } catch (err) {
+    log("warn", `legacy cw-base-index unavailable for route decode: ${err.message}`);
+  }
+  const value = {
+    baseRoutingNetwork,
+    cwBaseIndex,
+    legacyCwBaseIndex,
+    legacyRoutingCompatibility,
+    shardManifest,
+    shardsDir,
+  };
+  cachedBaseRoutingDecode.set(cacheKey, value);
+  return value;
 }
 
 // Clear the module-scope decode caches. The long-lived editor must call this
 // after a promote so that subsequent decodes read freshly promoted assets
 // (segments/bike-roads/base-routing shards) instead of stale cached copies.
 export function invalidateFeaturedAssetCache() {
-  cachedFeaturedAssets = null;
-  cachedBaseRoutingDecode = null;
+  cachedFeaturedAssets.clear();
+  cachedBaseRoutingDecode.clear();
 }
 
 async function resolveRouteTokenForSlug(slug, {
   draftCatalogPath = null,
+  routeCatalogPath = routeCatalogPublicPath,
   log = defaultLog,
 } = {}) {
   // First try an optional draft catalog (for in-progress editor edits), then
   // the promoted one, and fall back to the .meta.js seed for legacy routes.
-  const entry = await resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath });
+  const entry = await resolveRouteCatalogEntryForSlug(slug, {
+    draftCatalogPath,
+    routeCatalogPath,
+  });
   let routeToken = entry?.route || null;
   if (!routeToken) {
     try {
@@ -133,9 +191,12 @@ async function resolveRouteTokenForSlug(slug, {
   return routeToken;
 }
 
-async function resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath = null } = {}) {
+async function resolveRouteCatalogEntryForSlug(slug, {
+  draftCatalogPath = null,
+  routeCatalogPath = routeCatalogPublicPath,
+} = {}) {
   const draft = draftCatalogPath ? await readJsonOrNull(draftCatalogPath) : null;
-  const promoted = await readJsonOrNull(routeCatalogPublicPath);
+  const promoted = await readJsonOrNull(routeCatalogPath);
   const lookup = (cat) => cat?.entries?.find((e) => e.slug === slug) || null;
   return lookup(draft) || lookup(promoted) || null;
 }
@@ -145,29 +206,76 @@ async function resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath = null }
 // activeDataPoints objects). Returns the decoded routeToken/routeFormat too.
 export async function loadRouteStateForSlug(slug, {
   draftCatalogPath = null,
+  routeCatalogPath = routeCatalogPublicPath,
+  publicDataRoot = publicDataDir,
+  manifest = null,
+  allowSnapshotFallback = true,
+  snapshotDir = featuredRoutesDir,
   log = defaultLog,
 } = {}) {
-  const routeToken = await resolveRouteTokenForSlug(slug, { draftCatalogPath, log });
+  const routeToken = await resolveRouteTokenForSlug(slug, {
+    draftCatalogPath,
+    routeCatalogPath,
+    log,
+  });
   const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
-  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
-  const { baseRoutingNetwork, cwBaseIndex } = await getBaseRoutingDecodeAssets({ log });
-  const manager = await createRouteManager(
-    RouteManagerClass,
-    geoJsonData,
-    segmentsData,
+  const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk({
+    publicDataRoot,
+    manifest,
+  });
+  const {
     baseRoutingNetwork,
-  );
+    cwBaseIndex,
+    legacyCwBaseIndex,
+    legacyRoutingCompatibility,
+    shardManifest,
+    shardsDir,
+  } = await getBaseRoutingDecodeAssets({
+    log,
+    publicDataRoot,
+    manifest,
+  });
   let routeState = null;
   let decodeSource = null;
   let decodeError = null;
   try {
-    routeState = restoreRouteFromParam(manager, routeToken, segmentsData, cwBaseIndex);
+    const strictTraversal = Number(shardManifest?.sourceRoutingSchemaVersion) === 3 &&
+      shardManifest?.routingContract?.strictTraversalPolicy === true;
+    if (strictTraversal) {
+      const loadShard = async (entry) => {
+        const bytes = await readFile(resolve(shardsDir, entry.path));
+        if (entry.format === "msgpack") return decodeMessagePack(bytes);
+        if (entry.format === "compact") return decodeCompactBaseRoutingShard(bytes);
+        return JSON.parse(new TextDecoder().decode(bytes));
+      };
+      const session = await createShardedRouteSession(
+        RouteManagerClass,
+        geoJsonData,
+        segmentsData,
+        shardManifest,
+        loadShard,
+        { cwBaseIndex, legacyRoutingCompatibility },
+      );
+      routeState = await session.restoreRouteParam(routeToken);
+    } else {
+      const manager = await createRouteManager(
+        RouteManagerClass,
+        geoJsonData,
+        segmentsData,
+        baseRoutingNetwork,
+      );
+      const payload = decodeRoutePayload(routeToken);
+      const restoreCwBaseIndex = payload.type === "hybrid_route_v6"
+        ? legacyCwBaseIndex
+        : cwBaseIndex;
+      routeState = restoreRouteFromParam(manager, routeToken, segmentsData, restoreCwBaseIndex);
+    }
     if (routeState) decodeSource = "live";
   } catch (err) {
     decodeError = err;
   }
-  if (!routeState) {
-    const fallbackSnapshot = await readFeaturedRouteSnapshot(slug);
+  if (!routeState && allowSnapshotFallback) {
+    const fallbackSnapshot = await readFeaturedRouteSnapshot(slug, { snapshotDir });
     if (fallbackSnapshot && snapshotMatchesRouteToken(fallbackSnapshot, routeToken)) {
       const fallbackState = routeStateFromFeaturedSnapshot(fallbackSnapshot);
       if (Array.isArray(fallbackState.geometry) && fallbackState.geometry.length >= 2) {
@@ -208,9 +316,11 @@ export function routeTokenHash(routeToken) {
   return `sha256:${sha256Hex(String(routeToken || ""))}`;
 }
 
-export async function readFeaturedRouteSnapshot(slug) {
+export async function readFeaturedRouteSnapshot(slug, {
+  snapshotDir = featuredRoutesDir,
+} = {}) {
   if (typeof slug !== "string" || slug.length === 0) return null;
-  return readJsonOrNull(resolve(featuredRoutesDir, `${slug}.json`));
+  return readJsonOrNull(resolve(snapshotDir, `${slug}.json`));
 }
 
 export function snapshotMatchesRouteToken(snapshot, routeToken) {
@@ -313,6 +423,10 @@ export function buildSnapshotFromRouteState({
 export async function buildSnapshotForSlug(slug, {
   manifest,
   draftCatalogPath = null,
+  routeCatalogPath = routeCatalogPublicPath,
+  publicDataRoot = publicDataDir,
+  allowSnapshotFallback = true,
+  snapshotDir = featuredRoutesDir,
   generatedAt,
   log = defaultLog,
 } = {}) {
@@ -320,9 +434,23 @@ export async function buildSnapshotForSlug(slug, {
   if (!resolvedManifest) throw new Error("map-manifest.json not found");
   const { routeState, routeToken, routeFormat, decodeSource } = await loadRouteStateForSlug(slug, {
     draftCatalogPath,
+    routeCatalogPath,
+    publicDataRoot,
+    manifest: resolvedManifest,
+    allowSnapshotFallback,
+    snapshotDir,
     log,
   });
-  const entry = await resolveRouteCatalogEntryForSlug(slug, { draftCatalogPath });
+  if (decodeSource === "existing_snapshot") {
+    const existing = await readFeaturedRouteSnapshot(slug, { snapshotDir });
+    if (existing && snapshotMatchesRouteToken(existing, routeToken)) {
+      return existing;
+    }
+  }
+  const entry = await resolveRouteCatalogEntryForSlug(slug, {
+    draftCatalogPath,
+    routeCatalogPath,
+  });
   return buildSnapshotFromRouteState({
     slug,
     displayImage: entry?.routeMapImage || null,
@@ -335,9 +463,11 @@ export async function buildSnapshotForSlug(slug, {
   });
 }
 
-async function writeSnapshotAtomic(slug, snapshot) {
-  await mkdir(featuredRoutesDir, { recursive: true });
-  const target = resolve(featuredRoutesDir, `${slug}.json`);
+async function writeSnapshotAtomic(slug, snapshot, {
+  outputDir = featuredRoutesDir,
+} = {}) {
+  await mkdir(outputDir, { recursive: true });
+  const target = resolve(outputDir, `${slug}.json`);
   const existing = await readJsonOrNull(target);
 
   // Builds should be idempotent. `generatedAt` describes when the snapshot's
@@ -364,10 +494,10 @@ async function writeSnapshotAtomic(slug, snapshot) {
   return { target, changed: true };
 }
 
-async function listSnapshotSlugs() {
+async function listSnapshotSlugs(snapshotDir = featuredRoutesDir) {
   let files = [];
   try {
-    files = await readdir(featuredRoutesDir);
+    files = await readdir(snapshotDir);
   } catch {
     return [];
   }
@@ -376,8 +506,12 @@ async function listSnapshotSlugs() {
     .map((f) => f.replace(/\.json$/, ""));
 }
 
-export async function readRouteCatalogSlugs() {
-  const catalog = await readJsonOrNull(routeCatalogPublicPath);
+export async function readRouteCatalogSlugs({
+  routeCatalogPath = routeCatalogPublicPath,
+  draftCatalogPath = null,
+} = {}) {
+  const catalog = (draftCatalogPath ? await readJsonOrNull(draftCatalogPath) : null) ||
+    await readJsonOrNull(routeCatalogPath);
   const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
   return entries
     .map((e) => e?.slug)
@@ -392,23 +526,53 @@ export async function readFeaturedCatalogSlugs() {
 // orphaned snapshot files for routes no longer present in the route catalog.
 export async function buildFeaturedRouteSnapshots({
   draftCatalogPath = null,
+  routeCatalogPath = routeCatalogPublicPath,
+  publicDataRoot = publicDataDir,
+  manifest = null,
+  outputDir = featuredRoutesDir,
+  allowSnapshotFallback = true,
+  strict = false,
   generatedAt,
   log = defaultLog,
 } = {}) {
-  const manifest = await readJsonOrNull(promotedManifestPath);
-  if (!manifest) throw new Error("map-manifest.json not found");
-  const routeSlugs = await readRouteCatalogSlugs();
+  const resolvedManifest = manifest || await readJsonOrNull(
+    resolve(publicDataRoot, "map-manifest.json"),
+  );
+  if (!resolvedManifest) throw new Error("map-manifest.json not found");
+  const routeSlugs = await readRouteCatalogSlugs({
+    routeCatalogPath,
+    draftCatalogPath,
+  });
   const written = [];
   const errors = [];
+  const prepared = [];
   for (const slug of routeSlugs) {
     try {
       const snapshot = await buildSnapshotForSlug(slug, {
-        manifest,
+        manifest: resolvedManifest,
         draftCatalogPath,
+        routeCatalogPath,
+        publicDataRoot,
+        allowSnapshotFallback,
+        snapshotDir: outputDir,
         generatedAt,
         log,
       });
-      const { target, changed } = await writeSnapshotAtomic(slug, snapshot);
+      prepared.push({ slug, snapshot });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push({ slug, error: message });
+      log("error", `route snapshot: failed for ${slug}: ${message}`);
+    }
+  }
+  if (strict && errors.length > 0) {
+    throw new Error(
+      `Featured route snapshot preflight failed: ${errors.map(({ slug, error }) => `${slug}: ${error}`).join("; ")}`,
+    );
+  }
+  for (const { slug, snapshot } of prepared) {
+    try {
+      const { target, changed } = await writeSnapshotAtomic(slug, snapshot, { outputDir });
       if (changed) {
         written.push({ slug, path: target });
         log("info", `route snapshot: wrote ${slug} (${snapshot.route.geometry.length} coords)`);
@@ -421,13 +585,18 @@ export async function buildFeaturedRouteSnapshots({
       log("error", `route snapshot: failed for ${slug}: ${message}`);
     }
   }
+  if (strict && errors.length > 0) {
+    throw new Error(
+      `Featured route snapshot write failed: ${errors.map(({ slug, error }) => `${slug}: ${error}`).join("; ")}`,
+    );
+  }
 
   // Orphan cleanup: drop snapshots for routes no longer in the catalog.
   const routeSet = new Set(routeSlugs);
   const removed = [];
-  for (const slug of await listSnapshotSlugs()) {
+  for (const slug of await listSnapshotSlugs(outputDir)) {
     if (!routeSet.has(slug)) {
-      await rm(resolve(featuredRoutesDir, `${slug}.json`), { force: true });
+      await rm(resolve(outputDir, `${slug}.json`), { force: true });
       removed.push(slug);
       log("info", `route snapshot: removed orphan ${slug}`);
     }
@@ -439,19 +608,25 @@ export async function buildFeaturedRouteSnapshots({
 // Validate snapshots without rewriting them. Returns a list of failure strings.
 export async function checkFeaturedRouteSnapshots({
   draftCatalogPath = null,
+  routeCatalogPath = routeCatalogPublicPath,
+  publicDataRoot = publicDataDir,
+  snapshotDir = featuredRoutesDir,
   log = defaultLog,
 } = {}) {
   const failures = [];
-  const manifest = await readJsonOrNull(promotedManifestPath);
+  const manifest = await readJsonOrNull(resolve(publicDataRoot, "map-manifest.json"));
   if (!manifest) {
     return { failures: ["map-manifest.json not found"], orphans: [] };
   }
   const { mapVersion } = loadManifestSource(manifest);
-  const routeSlugs = await readRouteCatalogSlugs();
+  const routeSlugs = await readRouteCatalogSlugs({
+    routeCatalogPath,
+    draftCatalogPath,
+  });
   const routeSet = new Set(routeSlugs);
 
   for (const slug of routeSlugs) {
-    const snapshot = await readJsonOrNull(resolve(featuredRoutesDir, `${slug}.json`));
+    const snapshot = await readJsonOrNull(resolve(snapshotDir, `${slug}.json`));
     if (!snapshot) {
       failures.push(`${slug}: snapshot file is missing`);
       continue;
@@ -465,7 +640,11 @@ export async function checkFeaturedRouteSnapshots({
     // routeTokenHash must match the current token.
     let routeToken = null;
     try {
-      routeToken = await resolveRouteTokenForSlug(slug, { draftCatalogPath, log });
+      routeToken = await resolveRouteTokenForSlug(slug, {
+        draftCatalogPath,
+        routeCatalogPath,
+        log,
+      });
     } catch (err) {
       failures.push(`${slug}: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -515,7 +694,7 @@ export async function checkFeaturedRouteSnapshots({
   }
 
   // Orphans are failures in --check mode.
-  const orphans = (await listSnapshotSlugs()).filter((slug) => !routeSet.has(slug));
+  const orphans = (await listSnapshotSlugs(snapshotDir)).filter((slug) => !routeSet.has(slug));
   for (const slug of orphans) {
     failures.push(`${slug}: orphan snapshot (slug no longer featured)`);
   }

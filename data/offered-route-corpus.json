@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "policyId": "il-bicycle-v1",
+  "status": "awaiting-v3-curation",
+  "entries": [
+    { "slug": "banias-gan-hatsafon", "acceptedFingerprint": null },
+    { "slug": "sovev-beit-hillel", "acceptedFingerprint": null },
+    { "slug": "historic-jordan", "acceptedFingerprint": null },
+    { "slug": "kovshey-hagolan", "acceptedFingerprint": null },
+    { "slug": "sovev-dafna", "acceptedFingerprint": null },
+    { "slug": "roman-roads", "acceptedFingerprint": null },
+    { "slug": "sovev-shear-yeshuv", "acceptedFingerprint": null },
+    { "slug": "naftali-dishon-yosha", "acceptedFingerprint": null }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "2026-07-13-v1",
+  "immutableInputs": {
+    "cwBaseIndexV1Sha256": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
+    "cwBaseOverlayV1Sha256": "75cecddc5eed0aa264b3b04ec5ff744e8bf535ba2f5dc7cd028f338a5fc26c33",
+    "baseEdgeShareRegistryV1FileSha256": "02bfa01e1a9fa65d838d9a957f2d053306cd58d61e15cf53bf15918d812deef4",
+    "baseEdgeShareRegistryDigest": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d",
+    "logicalMapSourceSha256": "ee3a775992f59294042b05b1f4b738e01c0d8ddc0012cb9c840df42aa25c3f28",
+    "baseRoutingManifestSha256": "7c7766c9759d0165976cf158b33acca0ae067f2768339aae95823af46983dd89"
+  },
+  "graphIdentity": {
+    "graphVersion": "2026-07-10T20:28:11.541285Z",
+    "legacyGraphVersionHash": "f03acd80",
+    "registryDigest": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d",
+    "lookup": {
+      "f03acd80": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d"
+    }
+  },
+  "cycleways": {
+    "publicIndexMappings": 284,
+    "overlayRecords": 309,
+    "activeOverlayMappings": 284,
+    "deprecatedSplitArchiveMappings": 25,
+    "activeMappingRefs": 1526,
+    "archiveMappingRefs": 192,
+    "archivedSegmentIds": [
+      36,
+      39,
+      45,
+      51,
+      57,
+      71,
+      76,
+      77,
+      86,
+      88,
+      91,
+      95,
+      98,
+      141,
+      142,
+      148,
+      153,
+      160,
+      161,
+      166,
+      194,
+      215,
+      300,
+      332,
+      341
+    ],
+    "logicalStatusCounts": {
+      "active": 284,
+      "deprecated": 53,
+      "legacy": 10
+    },
+    "directedOwnershipOverlaps": {
+      "duplicatedDirectedKeys": 155,
+      "activeToActiveKeys": 0,
+      "activeToArchiveKeys": 155,
+      "archiveToArchiveKeys": 21
+    }
+  },
+  "routeConsumers": [
+    {
+      "path": "packages/core/src/routing/routeActions.js",
+      "present": true
+    },
+    {
+      "path": "packages/core/src/routing/shardedRouteSession.js",
+      "present": true
+    },
+    {
+      "path": "packages/core/route-manager.js",
+      "present": true
+    },
+    {
+      "path": "public-data/route-catalog.json",
+      "present": true
+    },
+    {
+      "path": "public-data/featured-routes",
+      "present": true
+    },
+    {
+      "path": "src/featured",
+      "present": true
+    }
+  ],
+  "road99Fingerprint": {
+    "tokenSha256": "a5bed7b01d0816a21090d52c26c18c7ed255f2eab8061f3cf030e1a00394ad21",
+    "graphVersion": "hf03acd80",
+    "anchorsSha256": "0fe790eaf65c5b1e36a8200c202630fcc74f16707496bca67feb2273a93520ec",
+    "coordinatesSha256": "faa8e65cc2c601c8fc68a66f10cea4ef301c2c47d268933724f0a6cb6fb3bacc",
+    "knownBadDistanceMeters": 10018.922386511025,
+    "knownBadEdgeShareId": 370,
+    "knownBadReverseMeters": 547.3
+  }
+}

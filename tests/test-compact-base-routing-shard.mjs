@@ -63,6 +63,60 @@ assert.deepEqual(decodeCompactBaseRoutingShard(shardPayload), {
   },
 });
 
+const policyShardPayload = encodeCompactShard({
+  formatVersion: 3,
+  schemaVersion: 1,
+  sourceRoutingSchemaVersion: 3,
+  id: "g1_1",
+  bounds: [35, 33, 35.05, 33.05],
+  nodes: [
+    { id: "n1", coord: [35, 33] },
+    { id: "n2", coord: [35.001, 33.002] },
+  ],
+  edges: [
+    {
+      id: "edge-policy",
+      shareId: 43,
+      from: "n1",
+      to: "n2",
+      distanceMeters: 123.4,
+      coordinates: [[35, 33], [35.001, 33.002]],
+      source: "osm",
+      routeClass: "road",
+      highway: "primary",
+      accessStatus: "open",
+      roadType: "road",
+      cwSegmentIds: [],
+      bicycleTraversal: {
+        policyId: "il-bicycle-v1",
+        policyDigest: "policy-digest",
+        forward: "allowed",
+        reverse: "prohibited",
+        forwardReason: "oneway-forward",
+        reverseReason: "oneway-reverse",
+      },
+      cwAlignments: {
+        forward: [{ segmentId: 174, alignmentKey: "aToB", mappingDigest: "mapping-a" }],
+        reverse: [],
+      },
+      elevation: null,
+    },
+  ],
+});
+const decodedPolicyShard = decodeCompactBaseRoutingShard(policyShardPayload);
+assert.deepEqual(decodedPolicyShard.edges[0].bicycleTraversal, {
+  policyId: "il-bicycle-v1",
+  policyDigest: "policy-digest",
+  forward: "allowed",
+  reverse: "prohibited",
+  forwardReason: "oneway-forward",
+  reverseReason: "oneway-reverse",
+});
+assert.deepEqual(decodedPolicyShard.edges[0].cwAlignments, {
+  forward: [{ segmentId: 174, alignmentKey: "aToB", mappingDigest: "mapping-a" }],
+  reverse: [],
+});
+
 let requestedUrl = "";
 const previousFetch = globalThis.fetch;
 globalThis.fetch = async (url) => {
@@ -117,6 +171,18 @@ function encodeCompactShard(shard) {
         edge.highway,
         edge.accessStatus,
         edge.roadType,
+        edge.bicycleTraversal?.policyId,
+        edge.bicycleTraversal?.policyDigest,
+        edge.bicycleTraversal?.forwardReason,
+        edge.bicycleTraversal?.reverseReason,
+        ...(edge.cwAlignments?.forward || []).flatMap((membership) => [
+          membership.alignmentKey,
+          membership.mappingDigest,
+        ]),
+        ...(edge.cwAlignments?.reverse || []).flatMap((membership) => [
+          membership.alignmentKey,
+          membership.mappingDigest,
+        ]),
       ]),
     ]),
   ]
@@ -170,10 +236,32 @@ function encodeCompactShard(shard) {
     writeNullableStringIndex(bytes, stringIndex, edge.roadType);
     writeVarUint(bytes, edge.cwSegmentIds.length);
     edge.cwSegmentIds.forEach((segmentId) => writeVarUint(bytes, segmentId));
-    writeVarUint(bytes, 1);
-    writeVarInt(bytes, Math.round(edge.elevation.fromMeters * 10));
-    writeVarInt(bytes, Math.round(edge.elevation.toMeters * 10));
-    writeVarInt(bytes, Math.round(edge.elevation.netMeters * 10));
+    if (edge.elevation) {
+      writeVarUint(bytes, 1);
+      writeVarInt(bytes, Math.round(edge.elevation.fromMeters * 10));
+      writeVarInt(bytes, Math.round(edge.elevation.toMeters * 10));
+      writeVarInt(bytes, Math.round(edge.elevation.netMeters * 10));
+    } else {
+      writeVarUint(bytes, 0);
+    }
+    if ((shard.formatVersion || 1) >= 3) {
+      const stateCode = { allowed: 1, prohibited: 2, conditional: 3, unknown: 4 };
+      writeVarUint(bytes, stateCode[edge.bicycleTraversal?.forward] || 0);
+      writeVarUint(bytes, stateCode[edge.bicycleTraversal?.reverse] || 0);
+      writeNullableStringIndex(bytes, stringIndex, edge.bicycleTraversal?.policyId);
+      writeNullableStringIndex(bytes, stringIndex, edge.bicycleTraversal?.policyDigest);
+      writeNullableStringIndex(bytes, stringIndex, edge.bicycleTraversal?.forwardReason);
+      writeNullableStringIndex(bytes, stringIndex, edge.bicycleTraversal?.reverseReason);
+      for (const direction of ["forward", "reverse"]) {
+        const memberships = edge.cwAlignments?.[direction] || [];
+        writeVarUint(bytes, memberships.length);
+        for (const membership of memberships) {
+          writeVarUint(bytes, membership.segmentId);
+          writeNullableStringIndex(bytes, stringIndex, membership.alignmentKey);
+          writeNullableStringIndex(bytes, stringIndex, membership.mappingDigest);
+        }
+      }
+    }
   }
   return new Uint8Array(bytes);
 }

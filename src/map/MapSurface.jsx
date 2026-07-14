@@ -6,6 +6,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   addRouteNetworkLayers,
+  clearCwAlignmentLayers,
+  CW_ALIGNMENT_HIT_LAYER_ID,
   clearVideoCursorLayer,
   clearRouteDirectionPulseLayer,
   clearRouteNetworkLayers,
@@ -27,6 +29,7 @@ import {
   syncVideoCursorLayer,
   syncSegmentHighlightLayer,
   syncRecommendedRoutesLayer,
+  syncCwAlignmentLayers,
 } from "./mapLayers.js";
 import { requireMapboxToken } from "./mapboxToken.js";
 import { getMapboxGl, whenMapboxReady } from "./mapboxProvider.js";
@@ -81,6 +84,7 @@ function MapSurface({
   focusedMarker,
   focusedSegment,
   geoJsonData,
+  cwAlignmentGeometry = null,
   elevationHover,
   hideBuiltRoute = false,
   hoveredSegment,
@@ -402,6 +406,28 @@ function MapSurface({
     caps.networkLayers,
     caps.hoverPreview,
   ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready" || !caps.networkLayers) return undefined;
+    syncCwAlignmentLayers(map, cwAlignmentGeometry);
+    const handleAlignmentClick = (event) => {
+      const feature = event.features?.[0];
+      const segmentName = feature?.properties?.segmentName || null;
+      if (!segmentName) return;
+      event.preventDefault?.();
+      callbacksRef.current.onSegmentFocus?.(segmentName);
+    };
+    if (map.getLayer(CW_ALIGNMENT_HIT_LAYER_ID)) {
+      map.on("click", CW_ALIGNMENT_HIT_LAYER_ID, handleAlignmentClick);
+    }
+    return () => {
+      runMapCleanup(map, () => {
+        map.off("click", CW_ALIGNMENT_HIT_LAYER_ID, handleAlignmentClick);
+        clearCwAlignmentLayers(map);
+      });
+    };
+  }, [cwAlignmentGeometry, status, caps.networkLayers]);
 
   useEffect(() => {
     if (status !== "ready") return;

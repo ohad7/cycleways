@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "policyId": "il-bicycle-v1",
+  "description": "Reviewed whole-source-way bicycle traversal overrides. Empty until evidence is curated.",
+  "overrides": []
+}

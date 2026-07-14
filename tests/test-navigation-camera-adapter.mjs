@@ -115,6 +115,99 @@ assert.deepEqual(cameraBoundsForPoints([
   assert.ok(diagnostics.some((entry) => entry.transitionState === "interrupted"));
 }
 
+// C1 regression: the first cue mounts a taller top card at the same moment the
+// camera changes ride -> pre-turn. The follow owner must retain the old rider
+// anchor on that frame and ease only the padding toward the new layout.
+{
+  let nowMs = 1_000;
+  const cameraStops = [];
+  const timers = [];
+  const adapter = createNavigationCameraAdapter({
+    now: () => nowMs,
+    followPaddingDurationMs: 500,
+    getCamera: () => ({ setCamera: (stop) => cameraStops.push(stop) }),
+    getMap: () => ({ getPointInView: async () => [190, 570] }),
+    schedule: (callback, ms) => {
+      const timer = { callback, ms };
+      timers.push(timer);
+      return timer;
+    },
+  });
+  const statusViewport = normalizeCameraViewport({
+    width: 390,
+    height: 844,
+    safeInsets: { top: 47, bottom: 34 },
+    topOverlayBottom: 47,
+    bottomOverlayTop: 748,
+    clearance: 12,
+  });
+  const cueViewport = normalizeCameraViewport({
+    width: 390,
+    height: 844,
+    safeInsets: { top: 47, bottom: 34 },
+    topOverlayBottom: 188,
+    bottomOverlayTop: 748,
+    clearance: 12,
+  });
+  const frame = {
+    center: { lat: 33.1, lng: 35.6 },
+    pitch: 55,
+    zoom: 16.4,
+    heading: 90,
+    riderAnchorY: 0.72,
+  };
+
+  adapter.applyFollow({ ...frame, key: "ride" }, statusViewport);
+  const before = cameraStops.at(-1).padding;
+  const target = cameraPaddingForRiderAnchor(cueViewport, frame.riderAnchorY);
+  assert.notDeepEqual(target, before, "the cue card materially changes target padding");
+
+  nowMs += 16;
+  const cueFrame = {
+    ...frame,
+    key: "pre-turn",
+    requiredPoints: [{ id: "rider", lat: 33.1, lng: 35.6 }],
+    riderId: "rider",
+    validationKey: "first-cue-layout",
+  };
+  adapter.applyFollow(cueFrame, cueViewport);
+  assert.deepEqual(
+    cameraStops.at(-1).padding,
+    before,
+    "the first cue frame does not jump to the new padding",
+  );
+  assert.equal(timers.length, 0, "placement validation waits for padding");
+
+  nowMs += 250;
+  adapter.applyFollow(cueFrame, cueViewport);
+  const halfway = cameraStops.at(-1).padding;
+  assert.ok(halfway.paddingTop > before.paddingTop);
+  assert.ok(halfway.paddingTop < target.paddingTop);
+  assert.equal(timers.length, 0);
+
+  nowMs += 250;
+  adapter.applyFollow(cueFrame, cueViewport);
+  assert.deepEqual(cameraStops.at(-1).padding, target, "padding settles at the cue layout");
+  assert.equal(adapter.getState().paddingTransitionState, "settled");
+  assert.equal(timers.length, 1, "settled placement is validated once");
+
+  const tallerViewport = normalizeCameraViewport({
+    width: 390,
+    height: 844,
+    safeInsets: { top: 47, bottom: 34 },
+    topOverlayBottom: 220,
+    bottomOverlayTop: 748,
+    clearance: 12,
+  });
+  nowMs += 20;
+  adapter.applyFollow({ ...frame, key: "pre-turn" }, tallerViewport);
+  assert.deepEqual(
+    cameraStops.at(-1).padding,
+    target,
+    "a changed target restarts from the currently displayed padding",
+  );
+}
+
 // Lock-screen guard (TestFlight build 5 watchdog kill): while the app is not
 // active, the adapter must not touch the native map — no setCamera, no
 // getPointInView — or rnmapbox camera promises deadlock the main thread on a

@@ -12,5 +12,7 @@ export function emptyRouteSnapshot() {
     elevationLoss: 0,
     activeDataPoints: [],
     routeFailure: null,
+    segmentSpans: [],
+    routingValidation: null,
   };
 }

@@ -53,6 +53,8 @@ export function hasCyclewaysNetworkMembership(edge) {
   const arrays = [
     edge.cwSegmentIds,
     edge.cyclewaysSegmentIds,
+    edge.cwAlignments?.forward,
+    edge.cwAlignments?.reverse,
   ];
   if (arrays.some((value) => Array.isArray(value) && value.length > 0)) {
     return true;

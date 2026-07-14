@@ -142,6 +142,18 @@
               <div class="empty-state">Switch to Base Graph mode to edit manual base edges.</div>
             </div>
 
+            <div class="base-direction-layer-control">
+              <label class="checkbox-row" for="toggle-base-one-way-directions">
+                <input id="toggle-base-one-way-directions" type="checkbox" disabled />
+                Show all one-way directions
+              </label>
+              <div id="base-one-way-direction-legend" class="base-direction-layer-legend" hidden>
+                <span><i class="direction-arrow confirmed" aria-hidden="true">▶</i> Confirmed one-way</span>
+                <span><i class="direction-arrow review" aria-hidden="true">▶</i> Direction-limited; review evidence</span>
+              </div>
+              <p id="base-one-way-direction-summary" class="base-overlay-bulk-summary"></p>
+            </div>
+
             <div class="action-row base-overlay-actions">
               <button id="new-manual-base-edge" class="primary-button" type="button" disabled>New Edge</button>
               <button id="clone-base-graph-edge" class="secondary-button" type="button" disabled>Copy Selected</button>
@@ -149,8 +161,65 @@
               <button id="split-manual-base-edge" class="secondary-button" type="button" disabled>Split</button>
             </div>
 
+            <fieldset id="manual-edge-direction-review" class="manual-edge-direction-review" hidden>
+              <legend>Base edge direction policy</legend>
+              <p id="base-edge-direction-help" class="manual-edge-direction-help">
+                Forward follows the stored line from its first vertex (A) to its last vertex (B). Reverse is B to A.
+              </p>
+              <div class="manual-edge-direction-grid">
+                <label class="field-label" for="manual-edge-forward">
+                  A → B (forward)
+                  <select id="manual-edge-forward" class="text-input compact-select">
+                    <option value="unknown">Needs review</option>
+                    <option value="allowed">Allowed</option>
+                    <option value="prohibited">Prohibited</option>
+                    <option value="conditional">Conditional</option>
+                  </select>
+                </label>
+                <label class="field-label" for="manual-edge-reverse">
+                  B → A (reverse)
+                  <select id="manual-edge-reverse" class="text-input compact-select">
+                    <option value="unknown">Needs review</option>
+                    <option value="allowed">Allowed</option>
+                    <option value="prohibited">Prohibited</option>
+                    <option value="conditional">Conditional</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field-label" for="manual-edge-reviewer">Reviewer</label>
+              <input id="manual-edge-reviewer" class="text-input" type="text" autocomplete="name" />
+              <label class="field-label" for="manual-edge-review-date">Review date</label>
+              <input id="manual-edge-review-date" class="text-input" type="date" />
+              <label class="field-label" for="manual-edge-rationale">Evidence and rationale</label>
+              <textarea
+                id="manual-edge-rationale"
+                class="text-input textarea"
+                rows="3"
+                maxlength="2000"
+                placeholder="What proves these direction states?"
+              ></textarea>
+              <label class="field-label" for="base-edge-direction-evidence">Evidence reference</label>
+              <input
+                id="base-edge-direction-evidence"
+                class="text-input"
+                type="text"
+                maxlength="2000"
+                placeholder="OSM link, survey, imagery, or other source"
+              />
+              <button id="save-manual-edge-direction" class="primary-button base-overlay-bulk-button" type="button">
+                Save direction policy
+              </button>
+              <button id="clear-osm-direction-override" class="secondary-button danger base-overlay-bulk-button" type="button" hidden>
+                Remove OSM override
+              </button>
+              <p id="manual-edge-direction-status" class="base-overlay-bulk-summary"></p>
+            </fieldset>
+
             <button id="recalculate-osm-graph" class="secondary-button base-overlay-bulk-button" type="button" disabled>
               Recalculate Graph + Matches
+            </button>
+            <button id="refresh-direction-review" class="primary-button base-overlay-bulk-button" type="button" disabled>
+              Rebuild graph + refresh V2 evidence
             </button>
             <p id="base-graph-help" class="base-overlay-bulk-summary">Manual edges are stored separately from OSM.</p>
           </section>
@@ -309,6 +378,57 @@
               <h2>Base Overlay</h2>
               <span id="base-overlay-status">Not loaded</span>
             </header>
+
+            <section class="direction-review" aria-labelledby="direction-review-title">
+              <div class="direction-review-heading">
+                <h3 id="direction-review-title">Direction Review (V2)</h3>
+                <span id="direction-review-source">Not prepared</span>
+              </div>
+              <div class="direction-review-tabs" role="tablist" aria-label="Physical alignment">
+                <button id="direction-review-a-to-b" class="mini-button active" type="button" role="tab">A → B</button>
+                <button id="direction-review-b-to-a" class="mini-button" type="button" role="tab">B → A</button>
+              </div>
+              <div id="direction-review-slot-statuses" class="direction-review-slot-statuses" aria-label="Alignment statuses"></div>
+              <div id="direction-review-summary" class="base-overlay-summary">
+                <div class="empty-state">Prepare the V2 migration proposal to review both directions.</div>
+              </div>
+              <div class="direction-review-legend" aria-label="Direction Review map legend">
+                <span><i class="direction-review-swatch a-to-b"></i>A → B</span>
+                <span><i class="direction-review-swatch b-to-a"></i>B → A</span>
+                <span><i class="direction-review-swatch blocked"></i>non-allowed</span>
+              </div>
+              <div id="direction-review-edges" class="direction-review-edges"></div>
+              <div class="direction-review-actions">
+                <button id="direction-review-edit" class="secondary-button" type="button" disabled>Edit directed edges</button>
+                <button id="direction-review-revalidate" class="secondary-button" type="button" disabled>Revalidate</button>
+                <button id="direction-review-use-reverse" class="secondary-button" type="button" disabled>Use opposite path in reverse</button>
+                <button id="direction-review-accept" class="primary-button" type="button" disabled>Accept direction</button>
+                <button id="direction-review-clear-draft" class="secondary-button danger" type="button" disabled>Clear draft</button>
+              </div>
+              <div class="direction-review-apply">
+                <input id="direction-review-reviewer" class="text-input" type="text" placeholder="Reviewer" aria-label="Reviewer" />
+                <input id="direction-review-date" class="text-input" type="date" aria-label="Review date" />
+                <input id="direction-review-batch" class="text-input" type="text" placeholder="Batch ID" aria-label="Migration batch ID" />
+                <button id="direction-review-apply-migration" class="secondary-button" type="button" disabled>
+                  Apply reviewed V1 direction
+                </button>
+                <button id="direction-review-apply-symmetric-batch" class="primary-button" type="button" disabled>
+                  Batch-approve verified bidirectional segments
+                </button>
+              </div>
+              <details class="direction-review-unavailable">
+                <summary>Not offered in this direction</summary>
+                <select id="direction-review-unavailable-reason" class="text-input" aria-label="Unavailable reason">
+                  <option value="">Select reason…</option>
+                  <option value="no_canonical_alignment">No canonical alignment</option>
+                  <option value="outside_logical_corridor">Outside logical corridor</option>
+                  <option value="editorially_not_offered">Editorially not offered</option>
+                </select>
+                <textarea id="direction-review-rationale" class="text-input textarea" rows="3" placeholder="Internal rationale and evidence" aria-label="Unavailable rationale"></textarea>
+                <input id="direction-review-user-explanation" class="text-input" type="text" placeholder="User-facing explanation" aria-label="User-facing explanation" />
+                <button id="direction-review-mark-unavailable" class="secondary-button danger" type="button" disabled>Mark direction unavailable</button>
+              </details>
+            </section>
 
             <div id="base-overlay-summary" class="base-overlay-summary">
               <div class="empty-state">Select a segment and enable Base Graph to review its OSM mapping.</div>

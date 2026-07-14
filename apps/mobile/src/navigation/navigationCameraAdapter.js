@@ -6,6 +6,8 @@
 const DEFAULT_OVERVIEW_DURATION_MS = 500;
 const DEFAULT_ANCHOR_Y = 0.72;
 const DEFAULT_CLEARANCE = 12;
+const DEFAULT_FOLLOW_PADDING_DURATION_MS = 500;
+const PADDING_KEYS = ["paddingTop", "paddingRight", "paddingBottom", "paddingLeft"];
 
 function finite(value, fallback = 0) {
   const number = Number(value);
@@ -18,6 +20,25 @@ function clamp(value, min, max) {
 
 function validPoint(point) {
   return Number.isFinite(Number(point?.lng)) && Number.isFinite(Number(point?.lat));
+}
+
+function samePadding(first, second, tolerance = 0.01) {
+  return PADDING_KEYS.every(
+    (key) => Math.abs(finite(first?.[key]) - finite(second?.[key])) <= tolerance,
+  );
+}
+
+function paddingAtTransition(transition, nowMs) {
+  const durationMs = Math.max(0, finite(transition?.durationMs));
+  const linear = durationMs === 0
+    ? 1
+    : clamp((nowMs - finite(transition?.startedAtMs)) / durationMs, 0, 1);
+  const eased = linear * linear * (3 - 2 * linear);
+  return Object.fromEntries(PADDING_KEYS.map((key) => [
+    key,
+    finite(transition?.from?.[key]) +
+      (finite(transition?.to?.[key]) - finite(transition?.from?.[key])) * eased,
+  ]));
 }
 
 export function normalizeCameraViewport(input = {}) {
@@ -202,6 +223,11 @@ function overviewStop(frame, viewport) {
 export function createNavigationCameraAdapter(options = {}) {
   const getCamera = options.getCamera || (() => null);
   const getMap = options.getMap || (() => null);
+  const now = options.now || (() => Date.now());
+  const followPaddingDurationMs = Math.max(
+    0,
+    finite(options.followPaddingDurationMs, DEFAULT_FOLLOW_PADDING_DURATION_MS),
+  );
   // Native camera work is only legal while the app is foregrounded. Under a
   // locked screen the When-In-Use session keeps JS and GPS alive, but rnmapbox
   // camera promises against a backgrounded UI wedge the main thread until the
@@ -213,6 +239,7 @@ export function createNavigationCameraAdapter(options = {}) {
   let listener = options.onDiagnostics || null;
   let settleHandle = null;
   let transitionSeq = 0;
+  let followPaddingTransition = null;
   let state = {
     owner: "idle",
     transitionId: null,
@@ -222,6 +249,7 @@ export function createNavigationCameraAdapter(options = {}) {
     fitCount: 0,
     validation: null,
     validationKey: null,
+    paddingTransitionState: "idle",
   };
 
   const emit = (patch = {}) => {
@@ -233,6 +261,61 @@ export function createNavigationCameraAdapter(options = {}) {
   const clearSettle = () => {
     if (settleHandle !== null) cancelSchedule(settleHandle);
     settleHandle = null;
+  };
+
+  const clearFollowPadding = () => {
+    followPaddingTransition = null;
+  };
+
+  const resolveFollowPadding = (target, continueFromFollow) => {
+    const nowMs = finite(now());
+    if (!continueFromFollow || !followPaddingTransition) {
+      followPaddingTransition = {
+        from: target,
+        to: target,
+        startedAtMs: nowMs,
+        durationMs: followPaddingDurationMs,
+      };
+      return { padding: { ...target }, settled: true };
+    }
+
+    const current = paddingAtTransition(followPaddingTransition, nowMs);
+    if (!samePadding(target, followPaddingTransition.to)) {
+      if (followPaddingDurationMs === 0) {
+        followPaddingTransition = {
+          from: target,
+          to: target,
+          startedAtMs: nowMs,
+          durationMs: 0,
+        };
+        return { padding: { ...target }, settled: true };
+      }
+      followPaddingTransition = {
+        from: current,
+        to: target,
+        startedAtMs: nowMs,
+        durationMs: followPaddingDurationMs,
+      };
+      return { padding: current, settled: false };
+    }
+
+    if (samePadding(followPaddingTransition.from, followPaddingTransition.to)) {
+      return { padding: { ...target }, settled: true };
+    }
+
+    const settled =
+      followPaddingDurationMs === 0 ||
+      nowMs - followPaddingTransition.startedAtMs >= followPaddingDurationMs;
+    if (settled) {
+      followPaddingTransition = {
+        from: target,
+        to: target,
+        startedAtMs: nowMs,
+        durationMs: followPaddingDurationMs,
+      };
+      return { padding: { ...target }, settled: true };
+    }
+    return { padding: current, settled: false };
   };
 
   const projectAndValidate = async (frame, viewport, transitionId) => {
@@ -280,17 +363,23 @@ export function createNavigationCameraAdapter(options = {}) {
       if (!camera || typeof camera.setCamera !== "function" || !validPoint(frame.center)) {
         return false;
       }
+      const wasFollowing = state.owner === "follow";
       const key = frame.key ?? null;
       const ownershipChanged = state.owner !== "follow" || state.key !== key;
       if (ownershipChanged) interrupt(frame.interruptionReason || "follow");
       const transitionId = ownershipChanged ? ++transitionSeq : state.transitionId;
+      const targetPadding = cameraPaddingForRiderAnchor(viewport, frame.riderAnchorY);
+      const { padding, settled: paddingSettled } = resolveFollowPadding(
+        targetPadding,
+        wasFollowing,
+      );
       camera.setCamera({
         type: "CameraStop",
         centerCoordinate: [Number(frame.center.lng), Number(frame.center.lat)],
         heading: Number.isFinite(frame.heading) ? frame.heading : 0,
         pitch: Number.isFinite(frame.pitch) ? frame.pitch : 0,
         zoomLevel: Number.isFinite(frame.zoom) ? frame.zoom : 16,
-        padding: cameraPaddingForRiderAnchor(viewport, frame.riderAnchorY),
+        padding,
         animationDuration: 0,
         animationMode: "none",
       });
@@ -299,6 +388,7 @@ export function createNavigationCameraAdapter(options = {}) {
         zoom: Number.isFinite(frame.zoom) ? frame.zoom : 16,
         heading: Number.isFinite(frame.heading) ? frame.heading : 0,
         riderAnchorY: frame.riderAnchorY ?? DEFAULT_ANCHOR_Y,
+        padding,
       };
       if (ownershipChanged) {
         emit({
@@ -309,11 +399,18 @@ export function createNavigationCameraAdapter(options = {}) {
           interruptionReason: null,
           applied,
           validationKey: frame.validationKey ?? null,
+          paddingTransitionState: paddingSettled ? "settled" : "running",
         });
       } else {
-        state = { ...state, applied };
+        state = {
+          ...state,
+          applied,
+          validationKey: frame.validationKey ?? state.validationKey,
+          paddingTransitionState: paddingSettled ? "settled" : "running",
+        };
       }
       if (
+        paddingSettled &&
         frame.validationKey &&
         frame.validationKey !== state.lastValidatedKey &&
         Array.isArray(frame.requiredPoints) &&
@@ -337,6 +434,7 @@ export function createNavigationCameraAdapter(options = {}) {
       interrupt(frame.interruptionReason || "overview-replaced");
       const stop = overviewStop(frame, viewport);
       if (!stop.bounds && !stop.centerCoordinate) return false;
+      clearFollowPadding();
       const transitionId = ++transitionSeq;
       camera.setCamera(stop);
       emit({
@@ -349,6 +447,7 @@ export function createNavigationCameraAdapter(options = {}) {
         validation: null,
         validationKey: null,
         lastValidatedKey: null,
+        paddingTransitionState: "idle",
       });
       const settle = () => {
         settleHandle = null;
@@ -367,17 +466,20 @@ export function createNavigationCameraAdapter(options = {}) {
     setFree(reason = "user-gesture") {
       if (state.owner === "free") return;
       interrupt(reason);
+      clearFollowPadding();
       emit({
         owner: "free",
         transitionId: ++transitionSeq,
         transitionState: "settled",
         key: null,
         interruptionReason: reason,
+        paddingTransitionState: "idle",
       });
     },
 
     reset(reason = "reset") {
       interrupt(reason);
+      clearFollowPadding();
       emit({
         owner: "idle",
         transitionId: null,
@@ -385,6 +487,7 @@ export function createNavigationCameraAdapter(options = {}) {
         key: null,
         interruptionReason: reason,
         validation: null,
+        paddingTransitionState: "idle",
       });
     },
 

@@ -93,7 +93,7 @@ export function baseRoutingShardEntriesForPoints(
   return bounds ? baseRoutingShardEntriesForBounds(manifest, bounds) : [];
 }
 
-export function mergeBaseRoutingShards(shards) {
+export function mergeBaseRoutingShards(shards, manifest = null) {
   const nodesById = new Map();
   const edgesById = new Map();
   const shardIds = [];
@@ -109,6 +109,11 @@ export function mergeBaseRoutingShards(shards) {
     if (sourceRoutingSchemaVersion === null) {
       sourceRoutingSchemaVersion =
         shard.sourceRoutingSchemaVersion ?? shard.schemaVersion ?? null;
+    } else if (
+      shard.sourceRoutingSchemaVersion != null &&
+      Number(shard.sourceRoutingSchemaVersion) !== Number(sourceRoutingSchemaVersion)
+    ) {
+      throw new Error("Mixed base-routing shard schema versions are not allowed");
     }
 
     for (const node of shard.nodes) {
@@ -149,6 +154,10 @@ export function mergeBaseRoutingShards(shards) {
   );
   return {
     schemaVersion: sourceRoutingSchemaVersion,
+    graphVersion: manifest?.graphVersion || manifest?.generatedAt || "",
+    policyId: manifest?.policyId || null,
+    policyDigest: manifest?.policyDigest || null,
+    routingContract: manifest?.routingContract || null,
     nodes,
     edges,
     summary: {
@@ -174,7 +183,7 @@ export async function loadBaseRoutingShardSubset(
   return {
     entries,
     shards,
-    network: mergeBaseRoutingShards(shards),
+    network: mergeBaseRoutingShards(shards, manifest),
   };
 }
 

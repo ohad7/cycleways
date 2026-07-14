@@ -8,6 +8,7 @@ import {
   ridePlanNeedsConnectorPreview,
   setupLocationQuality,
 } from "../packages/core/src/navigation/ridePlan.js";
+import { buildRouteAttestation } from "../packages/core/src/routing/routeAttestation.js";
 
 const now = 10_000;
 const geometry = buildNavigationGeometry([
@@ -24,6 +25,31 @@ const route = {
   routeShape: { type: "linear" },
   activeDataPoints: [],
   segmentSpans: [],
+  routingValidation: buildRouteAttestation({
+    validationContext: {
+      baseRoutingSchemaVersion: 3,
+      graphVersion: "fixture-v3",
+      policyId: "il-bicycle-v1",
+      policyDigest: "fixture-policy",
+      routingContextDigest: "fixture-context",
+    },
+    traversalSlices: [{
+      edgeShareId: 1,
+      fromFraction: 0,
+      toFraction: 1,
+      distanceMeters: geometry.at(-1).distanceFromStartMeters,
+      policyState: "allowed",
+      policyReason: "fixture",
+      oppositePolicyState: "allowed",
+      oppositePolicyReason: "fixture",
+    }],
+    waypointOccurrences: [
+      { id: "a", lat: 32, lng: 35, baseEdgeShareId: 1, baseEdgeFraction: 0 },
+      { id: "b", lat: 32.01, lng: 35.02, baseEdgeShareId: 1, baseEdgeFraction: 1 },
+    ],
+    legBoundaries: [{ startTraversal: 0, endTraversal: 1 }],
+    geometry,
+  }),
 };
 
 assert.equal(setupLocationQuality(null, now), "unavailable");
@@ -109,14 +135,25 @@ const reverse = createRidePlan(route, { direction: "reverse", startMode: "offici
 assert.equal(reverse.effectiveRoute.geometry[0].lat, route.geometry.at(-1).lat);
 assert.equal(reverse.effectiveRoute.geometry[0].lng, route.geometry.at(-1).lng);
 
-const oneWay = createRidePlan(
-  { ...route, routeShape: { type: "one_way" } },
+const curatedOneDirection = createRidePlan(
+  {
+    ...route,
+    routingValidation: buildRouteAttestation({
+      validationContext: route.routingValidation.validationContext,
+      traversalSlices: route.routingValidation.traversalSlices,
+      waypointOccurrences: route.routingValidation.waypointOccurrences,
+      legBoundaries: route.routingValidation.legBoundaries,
+      geometry,
+      reverseConstraint: "curated-opposite-distinct-or-unavailable",
+    }),
+  },
   { direction: "reverse", startMode: "official" },
   fix,
   now,
 );
-assert.equal(oneWay.reverseAllowed, false);
-assert.equal(oneWay.direction, "forward");
+assert.equal(curatedOneDirection.reverseAllowed, false);
+assert.equal(curatedOneDirection.direction, "reverse");
+assert.equal(curatedOneDirection.failure, "reverse-not-allowed");
 
 const atStartFix = { lat: 32, lng: 35, accuracy: 5, timestamp: now };
 const atStart = createRidePlan(

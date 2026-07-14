@@ -99,10 +99,21 @@ export function buildRidePlanCandidates(sourceRoute, fix, direction = "forward")
 }
 
 export function createRidePlan(sourceRoute, selection = {}, fix = null, now = Date.now()) {
-  const reverseAllowed = sourceRoute?.routeShape?.type !== "one_way";
-  const direction = selection.direction === "reverse" && reverseAllowed
-    ? "reverse"
-    : "forward";
+  const reverseAllowed =
+    sourceRoute?.routingValidation?.exactReverseAllowed === true;
+  if (selection.direction === "reverse" && !reverseAllowed) {
+    return {
+      direction: "reverse",
+      reverseAllowed: false,
+      failure: "reverse-not-allowed",
+      effectiveRoute: {
+        ...sourceRoute,
+        canNavigate: false,
+        unavailableReason: "reverse-not-allowed",
+      },
+    };
+  }
+  const direction = selection.direction === "reverse" ? "reverse" : "forward";
   const candidates = buildRidePlanCandidates(sourceRoute, fix, direction);
   if (!candidates) return null;
   const quality = setupLocationQuality(fix, now);

@@ -1,11 +1,13 @@
-import { getJsonAsset } from "../platform/assets.js";
+import { getJsonAsset, resolveAssetPath } from "../platform/assets.js";
+import { loadMapManifest } from "./mapAssets.js";
 import { emptyRouteSnapshot } from "../routing/routeSnapshot.js";
 
 const FEATURED_ROUTES_BASE_PATH = "public-data/featured-routes";
 const SUPPORTED_SCHEMA_VERSION = 1;
 
-function featuredRouteSnapshotPath(slug) {
-  return `${FEATURED_ROUTES_BASE_PATH}/${slug}.json`;
+function featuredRouteSnapshotPath(slug, manifest = null) {
+  const base = manifest?.featuredRoutesBase || FEATURED_ROUTES_BASE_PATH.replace(/^public-data\//, "");
+  return resolveAssetPath(`${base}/${slug}.json`, "public-data/map-manifest.json");
 }
 
 function validateSnapshot(snapshot, slug) {
@@ -38,8 +40,22 @@ export async function loadFeaturedRouteSnapshot(slug, options = {}) {
   if (!slug) {
     throw new Error("loadFeaturedRouteSnapshot requires a slug");
   }
-  const snapshot = await getJsonAsset(featuredRouteSnapshotPath(slug), options);
-  return validateSnapshot(snapshot, slug);
+  const { manifest: suppliedManifest = null, ...assetOptions } = options;
+  const manifest = suppliedManifest || await loadMapManifest(assetOptions);
+  const snapshot = await getJsonAsset(
+    featuredRouteSnapshotPath(slug, manifest),
+    assetOptions,
+  );
+  const validated = validateSnapshot(snapshot, slug);
+  if (
+    manifest?.version &&
+    validated.source?.mapVersion !== manifest.version
+  ) {
+    throw new Error(
+      `featured route snapshot "${slug}" targets map ${validated.source?.mapVersion}, expected ${manifest.version}`,
+    );
+  }
+  return validated;
 }
 
 export const loadRouteSnapshot = loadFeaturedRouteSnapshot;

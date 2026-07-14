@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
+import { createHash } from "crypto";
 import sharp from "sharp";
 import { routeThumbnailPath } from "@cycleways/core/data/catalog.js";
 import { isWarningType, primaryPoiImage } from "@cycleways/core/data/poiTypes.js";
@@ -25,14 +26,7 @@ const appGalleryModuleFile = path.join(
 
 const jsonAssets = [
   { logicalPath: "public-data/map-manifest.json" },
-  {
-    logicalPath: "public-data/bike_roads.geojson",
-    targetPath: "public-data/bike_roads.geojson.json",
-  },
-  { logicalPath: "public-data/segments.json" },
   { logicalPath: "public-data/route-catalog.json" },
-  { logicalPath: "public-data/cw-base-index.json" },
-  { logicalPath: "public-data/base-routing-shards/manifest.json" },
 ];
 
 // places.json lives under the web data/ dir, not public-data/. Bundle it under a
@@ -52,10 +46,17 @@ async function main() {
   const mapManifest = JSON.parse(
     await fs.readFile(path.join(sourceRoot, "map-manifest.json"), "utf8"),
   );
-  const manifestAssets = optionalManifestJsonAssets(mapManifest);
-  const snapshotAssets = await featuredRouteSnapshotAssets();
+  const manifestAssets = manifestReferencedJsonAssets(mapManifest);
+  const snapshotAssets = await featuredRouteSnapshotAssets(mapManifest);
   const videoAssets = await featuredVideoAssets();
-  const allJsonAssets = [...jsonAssets, ...manifestAssets, ...snapshotAssets, ...videoAssets];
+  const allJsonAssets = dedupeLogicalAssets([
+    ...jsonAssets,
+    ...manifestAssets,
+    ...snapshotAssets,
+    ...videoAssets,
+  ]);
+
+  await verifyManifestAssetHashes(mapManifest);
 
   for (const asset of allJsonAssets) {
     await copyLogicalAsset(asset.logicalPath, asset.targetPath);
@@ -72,27 +73,22 @@ async function main() {
   // the same logical key. JPG keeps photo thumbnails small (~10x smaller than
   // PNG). Deduped by source path.
   const imagePaths = dedupeBySource([
-    ...(await collectCatalogThumbnailPaths()),
-    ...(await collectPoiThumbnailPaths()),
-    ...(await collectSnapshotImagePaths()),
+    ...(await collectCatalogThumbnailPaths(mapManifest)),
+    ...(await collectPoiThumbnailPaths(mapManifest)),
+    ...(await collectSnapshotImagePaths(mapManifest)),
   ]);
   for (const image of imagePaths) {
     await convertWebpToJpg(image.sourceLogical, image.targetLogical);
   }
 
-  const shardSourceDir = path.join(sourceRoot, "base-routing-shards/shards");
-  const shardNames = (await fs.readdir(shardSourceDir))
-    .filter((name) => name.endsWith(".cwb"))
-    .sort();
-  for (const shardName of shardNames) {
-    await copyLogicalAsset(
-      `public-data/base-routing-shards/shards/${shardName}`,
-    );
+  const routingBinaries = await manifestRoutingBinaryAssets(mapManifest);
+  for (const asset of routingBinaries) {
+    await copyLogicalAsset(asset.logicalPath);
   }
 
   await fs.writeFile(
     generatedFile,
-    generateBundledAssetModule(allJsonAssets, shardNames),
+    generateBundledAssetModule(allJsonAssets, routingBinaries),
     "utf8",
   );
 
@@ -104,7 +100,7 @@ async function main() {
   // Per-route gallery manifest (slug -> ordered thumbnail logical paths) + the
   // set of slugs that have a synced video, for the rich Discover cards. Keyed by
   // the original webp paths so the card resolves them through ROUTE_IMAGES.
-  const galleries = await collectRouteGalleries();
+  const galleries = await collectRouteGalleries(mapManifest);
   await fs.writeFile(
     appGalleryModuleFile,
     generateRouteGalleriesModule(galleries),
@@ -112,19 +108,21 @@ async function main() {
   );
 
   console.log(
-    `[mobile-assets] copied ${allJsonAssets.length + extraJsonAssets.length} JSON assets, ${imagePaths.length} images, and ${shardNames.length} routing shards`,
+    `[mobile-assets] copied ${allJsonAssets.length + extraJsonAssets.length} JSON assets, ${imagePaths.length} images, and ${routingBinaries.length} routing shards`,
   );
 }
 
 // One { logicalPath } entry per catalog slug for public-data/featured-routes/<slug>.json.
-async function featuredRouteSnapshotAssets() {
-  const catalogPath = path.join(sourceRoot, "route-catalog.json");
+async function featuredRouteSnapshotAssets(manifest = {}) {
+  const catalogRelative = manifest.routeCatalog || "route-catalog.json";
+  const snapshotsBase = manifest.featuredRoutesBase || "featured-routes";
+  const catalogPath = path.join(sourceRoot, catalogRelative);
   const catalog = JSON.parse(await fs.readFile(catalogPath, "utf8"));
   const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
   return entries
     .map((e) => e.slug)
     .filter(Boolean)
-    .map((slug) => ({ logicalPath: `public-data/featured-routes/${slug}.json` }));
+    .map((slug) => ({ logicalPath: `public-data/${snapshotsBase}/${slug}.json` }));
 }
 
 // The route-video index + per-route keyframe files, so the native synced-video
@@ -145,9 +143,9 @@ async function featuredVideoAssets() {
 
 // POI image paths referenced by per-route snapshot files, so ROUTE_IMAGES
 // covers detail-screen thumbnails too.
-async function collectSnapshotImagePaths() {
+async function collectSnapshotImagePaths(manifest = {}) {
   const sources = new Set();
-  const dir = path.join(sourceRoot, "featured-routes");
+  const dir = path.join(sourceRoot, manifest.featuredRoutesBase || "featured-routes");
   let files = [];
   try {
     files = (await fs.readdir(dir)).filter((f) => f.endsWith(".json"));
@@ -174,9 +172,12 @@ async function collectSnapshotImagePaths() {
 // Per-route Discover-card gallery: the card display thumbnail followed by the
 // route's POI thumbnails (in route order), keyed by webp logical paths so the
 // card resolves them through ROUTE_IMAGES. Plus the set of slugs with a video.
-async function collectRouteGalleries() {
+async function collectRouteGalleries(manifest = {}) {
   const catalog = JSON.parse(
-    await fs.readFile(path.join(sourceRoot, "route-catalog.json"), "utf8"),
+    await fs.readFile(
+      path.join(sourceRoot, manifest.routeCatalog || "route-catalog.json"),
+      "utf8",
+    ),
   );
   const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
   const galleries = {};
@@ -200,7 +201,11 @@ async function collectRouteGalleries() {
     try {
       snap = JSON.parse(
         await fs.readFile(
-          path.join(sourceRoot, "featured-routes", `${entry.slug}.json`),
+          path.join(
+            sourceRoot,
+            manifest.featuredRoutesBase || "featured-routes",
+            `${entry.slug}.json`,
+          ),
           "utf8",
         ),
       );
@@ -239,8 +244,11 @@ export const ROUTE_VIDEO_SLUGS = new Set(${JSON.stringify(videoSlugs)});
 // Returns [{ sourceLogical (webp), targetLogical (jpg) }] for each catalog
 // hero thumbnail. Keyed by the original (webp) logical path so callers don't
 // need to know about the jpg transcode.
-async function collectCatalogThumbnailPaths() {
-  const catalogPath = path.join(sourceRoot, "route-catalog.json");
+async function collectCatalogThumbnailPaths(manifest = {}) {
+  const catalogPath = path.join(
+    sourceRoot,
+    manifest.routeCatalog || "route-catalog.json",
+  );
   const catalog = JSON.parse(await fs.readFile(catalogPath, "utf8"));
   const entries = Array.isArray(catalog?.entries) ? catalog.entries : [];
   const sources = new Set();
@@ -260,8 +268,8 @@ async function collectCatalogThumbnailPaths() {
 
 // Primary thumbnails of every on-route POI (non-warning data point) across all
 // segments, so the native "נקודות עניין בדרך" panel has its photos offline.
-async function collectPoiThumbnailPaths() {
-  const segmentsPath = path.join(sourceRoot, "segments.json");
+async function collectPoiThumbnailPaths(manifest = {}) {
+  const segmentsPath = path.join(sourceRoot, manifest.segments || "segments.json");
   const segments = JSON.parse(await fs.readFile(segmentsPath, "utf8"));
   const sources = new Set();
   for (const segmentInfo of Object.values(segments || {})) {
@@ -315,17 +323,15 @@ async function copyAbsoluteAsset(sourceAbsolute, targetLogicalPath) {
   await fs.copyFile(sourceAbsolute, targetPath);
 }
 
-function generateBundledAssetModule(jsonList, shardNames) {
+function generateBundledAssetModule(jsonList, routingBinaries) {
   const jsonEntries = [
     ...jsonList.map((asset) =>
       assetMapEntry(asset.logicalPath, asset.targetPath),
     ),
     ...extraJsonAssets.map((asset) => assetMapEntry(asset.logicalPath)),
   ].join("\n");
-  const binaryEntries = shardNames
-    .map((name) =>
-      assetMapEntry(`public-data/base-routing-shards/shards/${name}`),
-    )
+  const binaryEntries = routingBinaries
+    .map((asset) => assetMapEntry(asset.logicalPath))
     .join("\n");
 
   return `// Generated by apps/mobile/scripts/sync-offline-assets.mjs.
@@ -375,6 +381,136 @@ export function optionalManifestJsonAssets(manifest = {}) {
   return manifest.roundabouts
     ? [{ logicalPath: `public-data/${String(manifest.roundabouts).replace(/^\/+/, "")}` }]
     : [];
+}
+
+export function manifestReferencedJsonAssets(manifest = {}) {
+  const assets = [];
+  const add = (relativePath, targetPath = null) => {
+    if (!relativePath) return;
+    const clean = String(relativePath).replace(/^\/+/, "");
+    assets.push({
+      logicalPath: `public-data/${clean}`,
+      ...(targetPath ? { targetPath } : {}),
+    });
+  };
+  add(
+    manifest.bikeRoads,
+    manifest.bikeRoads
+      ? `public-data/${String(manifest.bikeRoads).replace(/^\/+/, "")}.json`
+      : null,
+  );
+  add(manifest.segments);
+  add(manifest.cwBaseIndex);
+  add(manifest.baseRoutingShards);
+  add(manifest.roundabouts);
+  add(manifest.cwAlignmentGeometry);
+  add(manifest.legacyRoutingCompatibility?.cwBaseIndex);
+  add(manifest.legacyRoutingCompatibility?.metadata);
+  add(manifest.routeCatalog);
+  return dedupeLogicalAssets(assets);
+}
+
+async function manifestRoutingBinaryAssets(manifest) {
+  if (!manifest?.baseRoutingShards) return [];
+  const relativeManifest = String(manifest.baseRoutingShards).replace(/^\/+/, "");
+  const shardManifest = JSON.parse(
+    await fs.readFile(path.join(sourceRoot, relativeManifest), "utf8"),
+  );
+  const baseDir = path.posix.dirname(relativeManifest);
+  const assets = [];
+  for (const entry of shardManifest.shards || []) {
+    const compact = entry?.formats?.compact;
+    const relative = compact?.path || entry?.path;
+    if (!relative) throw new Error(`Routing shard ${entry?.id || "unknown"} has no path`);
+    const logicalPath = `public-data/${path.posix.join(baseDir, relative)}`;
+    const sourcePath = path.join(sourceRoot, path.posix.join(baseDir, relative));
+    const digest = await sha256File(sourcePath);
+    const expected = compact?.sha256;
+    if (expected && digest !== expected) {
+      throw new Error(`Routing shard digest mismatch: ${entry.id}`);
+    }
+    assets.push({ logicalPath, sha256: digest });
+  }
+  return assets.sort((a, b) => a.logicalPath.localeCompare(b.logicalPath));
+}
+
+async function verifyManifestAssetHashes(manifest) {
+  const references = {
+    bikeRoads: manifest.bikeRoads,
+    segments: manifest.segments,
+    cwBaseIndex: manifest.cwBaseIndex,
+    baseRoutingShards: manifest.baseRoutingShards,
+    roundabouts: manifest.roundabouts,
+    cwAlignmentGeometry: manifest.cwAlignmentGeometry,
+    legacyCwBaseIndex: manifest.legacyRoutingCompatibility?.cwBaseIndex,
+    legacyRoutingCompatibilityMetadata:
+      manifest.legacyRoutingCompatibility?.metadata,
+    routeCatalog: manifest.routeCatalog,
+  };
+  for (const [key, relative] of Object.entries(references)) {
+    const expected = manifest.hashes?.[key];
+    if (!relative || !expected) continue;
+    const actual = await sha256File(
+      path.join(sourceRoot, String(relative).replace(/^\/+/, "")),
+    );
+    if (actual !== expected) throw new Error(`Manifest asset digest mismatch: ${key}`);
+  }
+  const legacy = manifest.legacyRoutingCompatibility;
+  if (
+    legacy?.cwBaseIndexSha256 &&
+    legacy.cwBaseIndexSha256 !== manifest.hashes?.legacyCwBaseIndex
+  ) {
+    throw new Error("Legacy compatibility index hash disagrees with map manifest");
+  }
+  if (manifest.releaseIndex) {
+    if (
+      manifest.hashes?.routeCatalog !==
+      manifest.releaseIndex.routeCatalogSha256
+    ) {
+      throw new Error("Route catalog digest disagrees with release index");
+    }
+    const releaseDigest = createHash("sha256")
+      .update(JSON.stringify(manifest.releaseIndex))
+      .digest("hex");
+    if (releaseDigest !== manifest.releaseBundleDigest) {
+      throw new Error("Release bundle digest mismatch");
+    }
+    const snapshotHashes = {};
+    for (const slug of Object.keys(
+      manifest.releaseIndex.featuredRouteSnapshotHashes || {},
+    ).sort()) {
+      const expected = manifest.releaseIndex.featuredRouteSnapshotHashes[slug];
+      const actual = await sha256File(
+        path.join(
+          sourceRoot,
+          manifest.featuredRoutesBase,
+          `${slug}.json`,
+        ),
+      );
+      if (actual !== expected) {
+        throw new Error(`Featured route snapshot digest mismatch: ${slug}`);
+      }
+      snapshotHashes[slug] = actual;
+    }
+    const snapshotIndexDigest = createHash("sha256")
+      .update(JSON.stringify(snapshotHashes))
+      .digest("hex");
+    if (snapshotIndexDigest !== manifest.hashes?.featuredRouteSnapshots) {
+      throw new Error("Featured route snapshot index digest mismatch");
+    }
+  }
+}
+
+async function sha256File(filePath) {
+  return createHash("sha256").update(await fs.readFile(filePath)).digest("hex");
+}
+
+function dedupeLogicalAssets(assets) {
+  const byLogicalPath = new Map();
+  for (const asset of assets) byLogicalPath.set(asset.logicalPath, asset);
+  return [...byLogicalPath.values()].sort((a, b) =>
+    a.logicalPath.localeCompare(b.logicalPath),
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
