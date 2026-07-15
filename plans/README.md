@@ -1,5 +1,6 @@
 # Plans
 
+- `navigation-way-names/` — proposed design and implementation plan separating stable internal CycleWays segments from rider-facing named ways, standalone named features, and intentionally unnamed connectors, with guidance spans for navigation plus shared web/native route-itinerary, map-label, exact-section, editor, validation, and migration behavior.
 - `road-crossing-maneuvers/` — comprehensive design and implementation plan for graph-wide offline `side-change` crossing candidates, editor-reviewed logical crossings with multiple directed partial-edge mappings and manual creation/repair, confirmed-only manifest/offline publication, attested matching across main/approach/rejoin routes, and one first-class crossing cue; routing cost remains a separate future rollout.
 - `navigation-camera-padding/` — design and implementation plan for removing the first-cue map jump by interpolating measured follow-camera padding inside the existing single camera owner, without mounting permanent empty UI or restarting native animations on every frame.
 - `navigation-geometry-cleanup/` — design and implementation plan for a cue-only sub-metre vertex cleanup plus guarded same-junction corner merging, fixing corrupted turn angles and the reported redundant “left, then immediately left” without changing route geometry or hiding real close decisions.
