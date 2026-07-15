@@ -32,7 +32,7 @@
     "test:smoke": "playwright test --workers=1",
     "test:sticker-studio": "node tests/test-sticker-studio.mjs && node tests/test-sticker-registry.mjs",
     "test:roundabouts": "python3 processing/test_build_roundabouts.py && python3 processing/test_roundabout_review.py && node tests/test-roundabout-review.mjs && node tests/test-roundabouts-on-route.mjs && node tests/test-mobile-roundabout-assets.mjs",
-    "test:crossings": "python3 processing/test_build_crossing_candidates.py && python3 processing/test_crossing_review.py && python3 processing/test_build_crossing_publication.py && node tests/test-crossing-review.mjs && node tests/test-crossings-on-route.mjs",
+    "test:crossings": "python3 processing/test_build_crossing_candidates.py && python3 processing/test_crossing_review.py && python3 processing/test_build_crossing_publication.py && node tests/test-crossing-review.mjs && node tests/test-crossings-on-route.mjs && node tests/test-road99-crossing-impact.mjs",
     "test:typography": "node tests/test-typography-tokens.mjs && node tests/test-typography-css.mjs && node tests/test-mobile-typography.mjs && node tests/test-typography-guard.mjs",
     "tokens": "node scripts/generate-typography-css.mjs",
     "predev": "npm run tokens",

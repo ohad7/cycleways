@@ -68,6 +68,36 @@ The graph-wide diagnostic run using a temporary complete registry produced
 `crossing:1092567462:33.2351-35.5800:48308`, with action share 48308. That run
 was not promoted or copied into source-controlled review data.
 
+## Headless Road 99 impact validation — 2026-07-15
+
+The corrected coordinate replay was run without the editor or simulator, first
+with current publishable evidence and then with the discovered Road 99 mapping
+injected as explicitly confirmed test evidence. Both passes used the same
+route geometry and attestation.
+
+| Evidence | Current baseline | Confirmed-mapping simulation |
+|---|---:|---:|
+| Route distance | 10,111.568 m | 10,111.568 m |
+| Route content fingerprint | `sha256-e38b982c…` | identical |
+| Ordinary turns | 19 | 17 |
+| Crossings | 0 | 1 |
+| Roundabouts | 6 | 6 |
+| Action interval | right at 3,822.35 m, left at 3,838.58 m | crossing from 3,822.25–3,838.25 m |
+| Following maneuver | straight roundabout at 3,893.57 m | preserved and compounded |
+| Final Hebrew speech | `פנה ימינה ומיד שמאלה` | `חצו בזהירות לצד השני של הכביש, ואז בכיכר המשיכו ישר` |
+
+This replay exposed and fixed a matcher edge case: the route attestation splits
+departure share 48320 at a waypoint boundary, while the reviewed mapping
+correctly represents the same continuous edge as one slice. Matching now joins
+adjacent, directionally contiguous slices of the same stable edge without
+allowing unrelated intervening edges. The focused matcher test and a named Road
+99 impact regression lock this behavior into `npm run test:crossings`.
+
+This validates the expected instruction and proves the route itself is
+unchanged. It is not editor acceptance: the injected mapping remains
+unpublishable until stable-share promotion and manual direction review are
+completed.
+
 ## Delivery order
 
 The work should land in five independently testable layers:

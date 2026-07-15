@@ -60,6 +60,38 @@ const wrongDirection = structuredClone(artifact);
 wrongDirection.crossings[0].mappings[0].match.action[0] = routeSlice(2, 200_000, 800_000);
 assert.deepEqual(crossingsOnRoute(wrongDirection, attestation, geometry), []);
 
+const splitAttestation = buildRouteAttestation({
+  validationContext: context,
+  traversalSlices: [
+    routeSlice(1, 0, 1_000_000),
+    routeSlice(2, 1_000_000, 0, 20_000),
+    routeSlice(3, 0, 400_000, 4_000),
+    routeSlice(3, 400_000, 1_000_000, 6_000),
+  ],
+  waypointOccurrences: [], legBoundaries: [], geometry,
+});
+assert.equal(
+  crossingsOnRoute(artifact, splitAttestation, geometry).length,
+  1,
+  "one reviewed edge slice may be covered by adjacent attestation slices",
+);
+
+const interruptedContext = buildRouteAttestation({
+  validationContext: context,
+  traversalSlices: [
+    routeSlice(1, 0, 1_000_000),
+    routeSlice(99, 0, 1_000_000),
+    routeSlice(2, 1_000_000, 0, 20_000),
+    routeSlice(3, 0, 1_000_000),
+  ],
+  waypointOccurrences: [], legBoundaries: [], geometry,
+});
+assert.deepEqual(
+  crossingsOnRoute(artifact, interruptedContext, geometry),
+  [],
+  "unrelated route edges must not be skipped between mapping sections",
+);
+
 const wrongAnchors = structuredClone(artifact);
 wrongAnchors.crossings[0].mappings[0].entry = { lat: 34, lng: 35 };
 assert.deepEqual(crossingsOnRoute(wrongAnchors, attestation, geometry), []);

@@ -49,6 +49,16 @@ gates. With a temporary complete registry the detector found the target as
 without a coordinate special case. The complete automated suite and production
 web build pass; remote editor/simulator/audio validation remains pending.
 
+On 2026-07-15 a headless before/after replay validated the rider-visible
+effect without requiring the simulator. The 10,111.568 m route and content
+fingerprint remained identical; turns changed from 19 to 17, one crossing was
+added, all six roundabouts remained, and the instruction at 3,822 m changed
+from `פנה ימינה ומיד שמאלה` to
+`חצו בזהירות לצד השני של הכביש, ואז בכיכר המשיכו ישר`. The replay also found
+and fixed matching across two adjacent attestation slices of departure edge
+48320. This is now covered by the focused crossing suite, but the mapping is
+still injected test evidence rather than accepted production data.
+
 ## How the diagnostic was made
 
 - The route token decodes with `decodeRoutePayload` (hybrid v6, graph
