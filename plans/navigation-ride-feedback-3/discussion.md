@@ -349,3 +349,23 @@ properties: id, name, status, roadType, quality, …).
 - Even with perfect routing, crossings remain in legitimate routes — the
   crossing instruction is needed regardless of the routing fixes. They are
   complements, not alternatives.
+
+## 2026-07-15 — optional reviewed intersection guidance
+
+The crossing feature now covers one deliberately narrow centerline-junction
+case in addition to physical action paths. A manually reviewed
+`junction-transition` can express “cross, then turn” using exact directed
+before/after base-edge mappings even when the graph has no separate crossing
+edge. It does not alter the logical CW segment model, route search or bicycle
+directionality.
+
+The rider controls these additional junction instructions with a durable Ride
+Settings option, enabled by default during pre-production testing. Turning it
+off restores the ordinary named turn. It does not disable reviewed physical
+crossings such as the Road 99 turn-pair replacement.
+
+The first reviewed example is only the movement from `שביל אדום הרי נפתלי`
+across 9977 to `דרך נוף מצפה עדי - מטולה דרום`. The right turn onto 9977 and
+the reverse movement are intentionally not inferred. Automated real-graph
+tests cover both preference states and the right-turn negative control; manual
+editor and device/audio checks remain deferred until local access is available.

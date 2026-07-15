@@ -21,23 +21,38 @@ function validExpectedSlice(value) {
     && value.fromFractionQ !== value.toFractionQ;
 }
 
-function validMapping(mapping) {
+function validMapping(mapping, representation = "action-path") {
   if (!mapping?.id || !validCoordinate(mapping.entry) || !validCoordinate(mapping.exit)) return false;
-  return ["before", "action", "after"].every((section) =>
-    Array.isArray(mapping?.match?.[section])
-    && mapping.match[section].length > 0
-    && mapping.match[section].every(validExpectedSlice));
+  const sectionsValid = ["before", "action", "after"].every((section) => {
+    const slices = mapping?.match?.[section];
+    const allowEmpty = representation === "junction-transition" && section === "action";
+    if (allowEmpty) return Array.isArray(slices) && slices.length === 0;
+    return Array.isArray(slices)
+      && slices.length > 0
+      && slices.every(validExpectedSlice);
+  });
+  if (!sectionsValid) return false;
+  if (representation !== "junction-transition") return true;
+  return Math.abs(Number(mapping.entry.lat) - Number(mapping.exit.lat)) <= 0.000001
+    && Math.abs(Number(mapping.entry.lng) - Number(mapping.exit.lng)) <= 0.000001
+    && mapping.continuation?.type === "turn"
+    && (mapping.continuation?.direction === "left" || mapping.continuation?.direction === "right");
 }
 
 function validArtifactCrossings(crossings) {
   const logicalIds = new Set();
   const mappingIds = new Set();
   for (const crossing of crossings) {
+    const representation = crossing?.representation || "action-path";
+    const guidancePolicy = crossing?.guidancePolicy || "always";
     if (!crossing?.id || crossing.kind !== "side-change" || logicalIds.has(crossing.id)
+      || !new Set(["action-path", "junction-transition"]).has(representation)
+      || !new Set(["always", "user-option"]).has(guidancePolicy)
+      || (guidancePolicy === "user-option" && representation !== "junction-transition")
       || !Array.isArray(crossing.mappings) || !crossing.mappings.length) return false;
     logicalIds.add(crossing.id);
     for (const mapping of crossing.mappings) {
-      if (!validMapping(mapping) || mappingIds.has(mapping.id)) return false;
+      if (!validMapping(mapping, representation) || mappingIds.has(mapping.id)) return false;
       mappingIds.add(mapping.id);
     }
   }
@@ -165,6 +180,8 @@ function attemptCompleteMapping(expected, routeSlices, progress, fromRouteIndex)
   let minimumPositionQ = null;
   let actionStartQ = null;
   let actionEndQ = null;
+  let beforeEndQ = null;
+  let afterStartQ = null;
   let firstRouteIndex = null;
   for (let tokenIndex = 0; tokenIndex < expected.length; tokenIndex += 1) {
     const token = expected[tokenIndex];
@@ -180,7 +197,16 @@ function attemptCompleteMapping(expected, routeSlices, progress, fromRouteIndex)
       actionStartQ = coverage.startProgressQ;
     }
     if (token.section === "action") actionEndQ = coverage.endProgressQ;
+    if (token.section === "before") beforeEndQ = coverage.endProgressQ;
+    if (token.section === "after" && afterStartQ === null) {
+      afterStartQ = coverage.startProgressQ;
+    }
     minimumPositionQ = Number(token.slice.toFractionQ);
+  }
+  if (actionStartQ === null && beforeEndQ !== null && afterStartQ !== null) {
+    const boundaryQ = (beforeEndQ + afterStartQ) / 2;
+    actionStartQ = boundaryQ;
+    actionEndQ = boundaryQ;
   }
   return {
     match: {
@@ -193,13 +219,16 @@ function attemptCompleteMapping(expected, routeSlices, progress, fromRouteIndex)
   };
 }
 
-function findCompleteMapping(mapping, routeSlices, progress, fromRouteIndex = 0) {
+function findCompleteMapping(mapping, routeSlices, progress, fromRouteIndex = 0, representation = "action-path") {
   const expected = [
     ...(mapping?.match?.before || []).map((slice) => ({ section: "before", slice })),
     ...(mapping?.match?.action || []).map((slice) => ({ section: "action", slice })),
     ...(mapping?.match?.after || []).map((slice) => ({ section: "after", slice })),
   ];
-  if (!expected.length || !mapping?.match?.before?.length || !mapping?.match?.action?.length || !mapping?.match?.after?.length) {
+  const actionRequired = representation !== "junction-transition";
+  if (!expected.length || !mapping?.match?.before?.length
+    || (actionRequired && !mapping?.match?.action?.length)
+    || !mapping?.match?.after?.length) {
     return null;
   }
   let searchFrom = fromRouteIndex;
@@ -226,7 +255,12 @@ function crossingRecord(crossing, mapping, match, attestedTotalQ, geometry, arc)
     crossingId: crossing.id,
     mappingId: mapping.id,
     crossingKind: crossing.kind,
+    crossingRepresentation: crossing.representation || "action-path",
+    guidancePolicy: crossing.guidancePolicy || "always",
     crossedRoadName: crossing.crossedRoad?.name || null,
+    continuation: mapping.continuation
+      ? { type: mapping.continuation.type, direction: mapping.continuation.direction }
+      : null,
     entryMeters,
     exitMeters,
     complete: true,
@@ -269,10 +303,11 @@ export function crossingsOnRoute(artifact, routeAttestation, routeGeometry) {
   const matches = [];
   for (const crossing of artifact.crossings) {
     if (!crossing?.id || crossing.kind !== "side-change") continue;
+    const representation = crossing.representation || "action-path";
     for (const mapping of crossing.mappings || []) {
       let searchFrom = 0;
       while (searchFrom < routeSlices.length) {
-        const match = findCompleteMapping(mapping, routeSlices, progress, searchFrom);
+        const match = findCompleteMapping(mapping, routeSlices, progress, searchFrom, representation);
         if (!match) break;
         const record = crossingRecord(crossing, mapping, match, attestedTotalQ, geometry, arc);
         if (record) matches.push(record);

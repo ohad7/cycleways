@@ -70,7 +70,11 @@ function fixPoint(fix) {
 
 export function createNavigationSession(navigationRoute, options = {}) {
   const mainTracker = createRouteProgressTracker(navigationRoute, options);
-  const mainCues = buildRouteCues(navigationRoute);
+  const cueOptions = {
+    intersectionCrossingGuidanceEnabled:
+      options.intersectionCrossingGuidanceEnabled !== false,
+  };
+  const mainCues = buildRouteCues(navigationRoute, cueOptions);
   const connectorThresholds = {
     ...DEFAULT_CONNECTOR_THRESHOLDS,
     ...(options.connectorThresholds || {}),
@@ -843,6 +847,7 @@ export function createNavigationSession(navigationRoute, options = {}) {
             // The connector endpoint is the main-route seam, not the rider's
             // destination. Acquisition emits the single join-route message.
             approachCues = buildRouteCues(approachLeg.route, {
+              ...cueOptions,
               includeArrival: false,
             });
             approachCueKey = null;
@@ -910,7 +915,10 @@ export function createNavigationSession(navigationRoute, options = {}) {
         let rejoinActiveCue = null;
         if (rejoinLeg) {
           approachTracker = createRouteProgressTracker(rejoinLeg.route, options);
-          approachCues = buildRouteCues(rejoinLeg.route, { includeArrival: false });
+          approachCues = buildRouteCues(rejoinLeg.route, {
+            ...cueOptions,
+            includeArrival: false,
+          });
           approachCueKey = null;
           if (state.latestFix) {
             rejoinProgress = approachTracker.update(state.latestFix);

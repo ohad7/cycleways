@@ -165,10 +165,14 @@ export function buildRouteCues(navigationRoute, options = {}) {
       && Number.isFinite(Number(junction.exitMeters))
       && Number(junction.exitMeters) >= Number(junction.entryMeters),
   ) || [];
+  const intersectionCrossingGuidanceEnabled =
+    options.intersectionCrossingGuidanceEnabled !== false;
   const crossingTraversals = Array.isArray(navigationRoute?.crossings)
     ? navigationRoute.crossings.filter(
       (crossing) => crossing?.kind === "crossing"
         && crossing.complete === true
+        && (crossing.guidancePolicy !== "user-option"
+          || intersectionCrossingGuidanceEnabled)
         && Number.isFinite(Number(crossing.entryMeters))
         && Number.isFinite(Number(crossing.exitMeters))
         && Number(crossing.exitMeters) >= Number(crossing.entryMeters),
@@ -246,6 +250,11 @@ export function buildRouteCues(navigationRoute, options = {}) {
       crossedRoadName: crossing.crossedRoadName || null,
       crossingId: crossing.crossingId || null,
       mappingId: crossing.mappingId || null,
+      crossingRepresentation: crossing.crossingRepresentation || "action-path",
+      guidancePolicy: crossing.guidancePolicy || "always",
+      thenManeuver: crossing.continuation?.type === "turn"
+        ? { type: "turn", direction: crossing.continuation.direction }
+        : undefined,
     });
   }
   cornerCues.sort((a, b) => a.distanceMeters - b.distanceMeters);
@@ -264,6 +273,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
     if (
       isCompoundManeuver(current) &&
       isCompoundManeuver(next) &&
+      !current.thenManeuver &&
       gapMeters >= 0 &&
       gapMeters <= COMPOUND_TURN_WINDOW_M
     ) {
@@ -316,11 +326,28 @@ export function buildRouteCues(navigationRoute, options = {}) {
         span.startMeters >= Number(traversal.entryMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
         && span.startMeters <= Number(traversal.exitMeters) + ROUNDABOUT_SUPPRESSION_PAD_M,
     )) continue;
-    if (crossingTraversals.some(
-      (crossing) =>
-        span.startMeters >= Number(crossing.entryMeters) - CROSSING_SUPPRESSION_PAD_M
-        && span.startMeters <= Number(crossing.exitMeters) + CROSSING_SUPPRESSION_PAD_M,
-    )) continue;
+    const crossingAtSpan = crossingTraversals.find((crossing) => {
+      const tolerance = crossing.crossingRepresentation === "junction-transition"
+        ? SPAN_MERGE_TOLERANCE_M
+        : CROSSING_SUPPRESSION_PAD_M;
+      return span.startMeters >= Number(crossing.entryMeters) - tolerance
+        && span.startMeters <= Number(crossing.exitMeters) + tolerance;
+    });
+    if (crossingAtSpan) {
+      const crossingCue = cues.find(
+        (cue) => cue.type === "crossing"
+          && cue.crossingId === crossingAtSpan.crossingId
+          && Math.abs(cue.distanceMeters - Number(crossingAtSpan.entryMeters)) < 0.1,
+      );
+      if (crossingCue?.thenManeuver?.type === "turn") {
+        crossingCue.ontoSegmentName = span.name;
+        crossingCue.thenManeuver = {
+          ...crossingCue.thenManeuver,
+          ontoSegmentName: span.name,
+        };
+      }
+      continue;
+    }
     const near = turnCues.find(
       (t) =>
         distanceToManeuver(span.startMeters, t) <= SPAN_MERGE_TOLERANCE_M,

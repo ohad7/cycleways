@@ -105,6 +105,8 @@ export default function RideSetupSheet({
   onToggleVoice,
   lockScreenGuidanceEnabled = true,
   onToggleLockScreenGuidance,
+  intersectionCrossingGuidanceEnabled = true,
+  onToggleIntersectionCrossingGuidance,
   onTestVoice,
 }) {
   const insets = useSafeAreaInsets();
@@ -202,6 +204,22 @@ export default function RideSetupSheet({
                 sub="רטט קצר לפני פניות והתראות"
                 selected={hapticsEnabled}
                 onPress={onToggleHaptics}
+              />
+            </>
+          ) : null}
+
+          {onToggleIntersectionCrossingGuidance ? (
+            <>
+              <Text style={styles.sectionTitle}>הנחיות בצמתים</Text>
+              <Choice
+                label={
+                  intersectionCrossingGuidanceEnabled
+                    ? "הנחיות חצייה לפני פנייה פעילות"
+                    : "הנחיות חצייה לפני פנייה כבויות"
+                }
+                sub="בצמתים שנבדקו: חצו את הכביש ואז פנו. אפשר לכבות אם ההנחיה מיותרת."
+                selected={intersectionCrossingGuidanceEnabled}
+                onPress={onToggleIntersectionCrossingGuidance}
               />
             </>
           ) : null}

@@ -347,3 +347,11 @@ registry and writes `build/crossings/candidates.json`. It performs no network
 requests and does not publish runtime data. Review candidates in the editor's
 **Crossings** workspace; human decisions are stored in
 `data/crossing-review.json`.
+
+The same review model also supports explicitly authored
+`representation: "junction-transition"` records for side changes represented
+by a shared centerline junction instead of a physical action edge. These must
+have directed before/after context, a coincident anchor and a reviewed left or
+right continuation. They are never inferred automatically. Records marked
+`guidancePolicy: "user-option"` are controlled by the rider's experimental
+intersection-crossing setting; ordinary action-path crossings remain active.

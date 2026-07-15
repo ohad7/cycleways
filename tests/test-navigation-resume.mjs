@@ -7,12 +7,13 @@ function harness({ status = "navigating", backgroundLocation = false, background
     sessionId: "s1",
     navigationRoute: { id: "r1" },
     sessionSnapshot: { version: 1 },
+    settings: { intersectionCrossingGuidanceEnabled: false },
   };
   const session = { getState: () => ({ status, backgroundLocation }) };
   const coordinator = createNavigationResumeCoordinator({
     loadRecord: async () => record,
     createSession: (_route, options) => {
-      events.push(["create", options.snapshot]);
+      events.push(["create", options]);
       return session;
     },
     installSession: () => events.push(["install"]),
@@ -27,17 +28,32 @@ function harness({ status = "navigating", backgroundLocation = false, background
     clearPersisted: async () => events.push(["clear"]),
     markForegroundOnly: () => events.push(["foreground-only"]),
     setBackgroundActive: (value) => events.push(["background-active", value]),
+    recordSessionOptions: (savedRecord) => ({
+      intersectionCrossingGuidanceEnabled:
+        savedRecord.settings?.intersectionCrossingGuidanceEnabled !== false,
+    }),
   });
   return { coordinator, events, record };
 }
 
 {
-  const { coordinator, events } = harness();
-  const result = await coordinator.activate({ navigationRoute: { id: "r1" }, sessionId: "s1" });
+  const { coordinator, events, record } = harness();
+  const result = await coordinator.activate({
+    navigationRoute: { id: "r1" },
+    sessionId: "s1",
+    sessionOptions: { intersectionCrossingGuidanceEnabled: true },
+  });
   assert.equal(result.status, "restored");
   assert.ok(events.findIndex(([name]) => name === "install") < events.findIndex(([name]) => name === "watch"));
   assert.ok(events.some(([name]) => name === "awake-on"));
   assert.ok(!events.some(([name]) => name === "start"), "normal start is never dispatched");
+  const createOptions = events.find(([name]) => name === "create")?.[1];
+  assert.equal(
+    createOptions?.intersectionCrossingGuidanceEnabled,
+    false,
+    "crash resume restores the ride's immutable crossing-guidance preference",
+  );
+  assert.deepEqual(createOptions?.snapshot, record.sessionSnapshot);
 }
 
 {

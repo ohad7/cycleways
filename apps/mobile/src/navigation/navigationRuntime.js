@@ -89,6 +89,8 @@ export async function processBackgroundNavigationFixes(fixes = []) {
 
   const session = createNavigationSession(record.navigationRoute, {
     snapshot: record.sessionSnapshot,
+    intersectionCrossingGuidanceEnabled:
+      record.settings?.intersectionCrossingGuidanceEnabled !== false,
   });
   const voicePlanner = createNavigationVoicePlanner({
     enabled: record.settings?.voiceEnabled === true,

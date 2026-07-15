@@ -64,14 +64,19 @@ function thenManeuverText(maneuver, locale, sourceType) {
     return locale === "he-IL" ? `, ואז ${normalized}` : `, then ${normalized}`;
   }
   if (maneuver.type === "turn") {
+    const onto = maneuver.ontoSegmentName
+      ? locale === "he-IL"
+        ? ` אל ${maneuver.ontoSegmentName}`
+        : ` onto ${maneuver.ontoSegmentName}`
+      : "";
     if (sourceType === "roundabout" || sourceType === "crossing") {
       return locale === "he-IL"
-        ? `, ואז פנו ${directionText(maneuver.direction, locale)}`
-        : `, then turn ${directionText(maneuver.direction, locale)}`;
+        ? `, ואז פנו ${directionText(maneuver.direction, locale)}${onto}`
+        : `, then turn ${directionText(maneuver.direction, locale)}${onto}`;
     }
     return locale === "he-IL"
-      ? ` ומיד ${directionText(maneuver.direction, locale)}`
-      : `, then turn ${directionText(maneuver.direction, locale)}`;
+      ? ` ומיד ${directionText(maneuver.direction, locale)}${onto}`
+      : `, then turn ${directionText(maneuver.direction, locale)}${onto}`;
   }
   return "";
 }
@@ -348,6 +353,7 @@ export function createNavigationVoicePlanner({
     lastUtterance = utterance;
     const spokenName =
       cueEvent.cue?.ontoSegmentName ||
+      cueEvent.cue?.thenManeuver?.ontoSegmentName ||
       (cueEvent.cue?.type === "enter-segment"
         ? cueEvent.cue.segmentName
         : null);

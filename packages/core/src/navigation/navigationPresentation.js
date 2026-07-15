@@ -62,7 +62,12 @@ function primaryManeuverText(cue) {
 
 function nextManeuverText(cue) {
   const maneuver = nextManeuverDescriptor(cue);
-  if (maneuver?.type === "turn") return `ואז פנו ${directionWord(maneuver.direction)}`;
+  if (maneuver?.type === "turn") {
+    const onto = cue?.thenManeuver?.ontoSegmentName
+      ? ` אל ${cue.thenManeuver.ontoSegmentName}`
+      : "";
+    return `ואז פנו ${directionWord(maneuver.direction)}${onto}`;
+  }
   if (maneuver?.type === "roundabout") {
     const phrase = roundaboutPhrase(maneuver.direction);
     return phrase ? `ואז ${phrase.replace(/^בכיכר,\s*/, "בכיכר ")}` : "";
@@ -75,9 +80,10 @@ function thenManeuverPhrase(cue) {
     ? { type: "turn", direction: cue.thenDirection }
     : null);
   if (maneuver?.type === "turn") {
-    return cue.type === "roundabout"
-      ? `, ואז פנו ${directionWord(maneuver.direction)}`
-      : ` ומיד ${directionWord(maneuver.direction)}`;
+    const onto = maneuver.ontoSegmentName ? ` אל ${maneuver.ontoSegmentName}` : "";
+    return cue.type === "roundabout" || cue.type === "crossing"
+      ? `, ואז פנו ${directionWord(maneuver.direction)}${onto}`
+      : ` ומיד ${directionWord(maneuver.direction)}${onto}`;
   }
   if (maneuver?.type === "roundabout") {
     const phrase = roundaboutPhrase(maneuver.direction);
@@ -363,9 +369,11 @@ export function getNavigationPresentation(state = {}) {
     (offRouteDistanceText ? ` · ${offRouteDistanceText}` : "");
   const offRouteInstructionText = showApproachCue
     ? (() => {
-        const c = approachActive?.cue || null;
-        if (c?.type === "turn") return turnPrimaryText(c);
-        if (c?.type === "crossing") return primaryManeuverText(c);
+      const c = approachActive?.cue || null;
+      if (c?.type === "turn") return turnPrimaryText(c);
+      if (c?.type === "crossing") {
+        return [primaryManeuverText(c), nextManeuverText(c)].filter(Boolean).join(" ");
+      }
         if (c?.type === "enter-segment") return "המשיכו לפי הקו המסומן";
         return approachCue.text;
       })()

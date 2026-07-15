@@ -134,7 +134,13 @@ function cloneCrossingList(rawCrossings) {
       crossingId: String(crossing.crossingId || ""),
       mappingId: String(crossing.mappingId || ""),
       crossingKind: crossing.crossingKind || "side-change",
+      crossingRepresentation: crossing.crossingRepresentation || "action-path",
+      guidancePolicy: crossing.guidancePolicy || "always",
       crossedRoadName: crossing.crossedRoadName || null,
+      continuation: crossing.continuation?.type === "turn"
+        && (crossing.continuation?.direction === "left" || crossing.continuation?.direction === "right")
+        ? { type: "turn", direction: crossing.continuation.direction }
+        : null,
       entryMeters: Number(crossing.entryMeters),
       exitMeters: Number(crossing.exitMeters),
       complete: true,

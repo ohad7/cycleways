@@ -134,6 +134,10 @@ import {
   trackNavigationEvent,
 } from "../navigation/navigationTelemetry.js";
 import { speakSampleNavigationPrompt } from "../navigation/speechAdapter.js";
+import {
+  loadRideGuidancePreferences,
+  saveRideGuidancePreferences,
+} from "../navigation/rideGuidancePreferences.js";
 
 // Dev builds surface navigation telemetry (connector results, ride setup…) in
 // the Metro console — the only way to see WHY an approach suggestion failed
@@ -852,6 +856,9 @@ export default function BuildScreen({ navigation, route }) {
   });
   const [voiceGuidanceEnabled, setVoiceGuidanceEnabled] = useState(true);
   const [lockScreenGuidanceEnabled, setLockScreenGuidanceEnabled] = useState(true);
+  const [intersectionCrossingGuidanceEnabled, setIntersectionCrossingGuidanceEnabled] =
+    useState(true);
+  const [rideGuidancePreferencesReady, setRideGuidancePreferencesReady] = useState(false);
   const [confirmedRidePlan, setConfirmedRidePlan] = useState(null);
   const [preparedRouteJunctions, setPreparedRouteJunctions] = useState({
     routeId: null,
@@ -882,6 +889,20 @@ export default function BuildScreen({ navigation, route }) {
     topOverlayBottom: screenInsets.top + 96,
     bottomOverlayTop: initialWindow.height - screenInsets.bottom - 96,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadRideGuidancePreferences().then((preferences) => {
+      if (cancelled) return;
+      setIntersectionCrossingGuidanceEnabled(
+        preferences.intersectionCrossingGuidanceEnabled !== false,
+      );
+      setRideGuidancePreferencesReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const navigationViewport = useMemo(
     () =>
       normalizeCameraViewport({
@@ -1218,10 +1239,13 @@ export default function BuildScreen({ navigation, route }) {
   );
 
   const navigationSessionRoute =
-    resumeRideParam && !confirmedRidePlan ? null : navigationRoute;
+    !rideGuidancePreferencesReady || (resumeRideParam && !confirmedRidePlan)
+      ? null
+      : navigationRoute;
   const nav = useNavigationSession(navigationSessionRoute, {
     background: lockScreenGuidanceEnabled,
     voice: voiceGuidanceEnabled,
+    intersectionCrossingGuidanceEnabled,
     locationSource: __DEV__ ? devSourceProxy.current : undefined,
     computeConnector: computeNavigationConnector,
     resumeSessionId:
@@ -1270,6 +1294,18 @@ export default function BuildScreen({ navigation, route }) {
     setLockScreenGuidanceEnabled(next);
     trackNavigationEvent("lock_screen_guidance_toggled", { enabled: next });
   }, [lockScreenGuidanceEnabled]);
+
+  const handleToggleIntersectionCrossingGuidance = useCallback(() => {
+    const next = !intersectionCrossingGuidanceEnabled;
+    setIntersectionCrossingGuidanceEnabled(next);
+    void saveRideGuidancePreferences({
+      schemaVersion: 1,
+      intersectionCrossingGuidanceEnabled: next,
+    });
+    trackNavigationEvent("intersection_crossing_guidance_toggled", {
+      enabled: next,
+    });
+  }, [intersectionCrossingGuidanceEnabled]);
 
   const handleTestVoiceGuidance = useCallback(() => {
     trackNavigationEvent("voice_guidance_tested");
@@ -1465,6 +1501,7 @@ export default function BuildScreen({ navigation, route }) {
           ),
           voiceGuidance: voiceGuidanceEnabled,
           lockScreenGuidance: lockScreenGuidanceEnabled,
+          intersectionCrossingGuidance: intersectionCrossingGuidanceEnabled,
           junctionCoverage: Array.isArray(
             confirmedPlan.effectiveRoute.junctions,
           )
@@ -1508,6 +1545,7 @@ export default function BuildScreen({ navigation, route }) {
     },
     [
       lockScreenGuidanceEnabled,
+      intersectionCrossingGuidanceEnabled,
       devRideIntroRoute,
       preparedRouteJunctions,
       refreshRideSetupLocation,
@@ -4037,6 +4075,8 @@ export default function BuildScreen({ navigation, route }) {
         onToggleVoice={handleToggleVoiceGuidance}
         lockScreenGuidanceEnabled={lockScreenGuidanceEnabled}
         onToggleLockScreenGuidance={handleToggleLockScreenGuidance}
+        intersectionCrossingGuidanceEnabled={intersectionCrossingGuidanceEnabled}
+        onToggleIntersectionCrossingGuidance={handleToggleIntersectionCrossingGuidance}
         onTestVoice={handleTestVoiceGuidance}
         onDirectionChange={(direction) =>
           setRideSetupSelection((current) => ({

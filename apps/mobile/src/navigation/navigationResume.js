@@ -17,6 +17,7 @@ export function createNavigationResumeCoordinator({
   clearPersisted,
   markForegroundOnly,
   setBackgroundActive,
+  recordSessionOptions,
 }) {
   let requestKey = null;
   let inFlight = null;
@@ -43,6 +44,7 @@ export function createNavigationResumeCoordinator({
         }
         const session = createSession(navigationRoute, {
           ...sessionOptions,
+          ...(recordSessionOptions?.(record) || {}),
           snapshot: record.sessionSnapshot,
         });
         const restoredState = session?.getState?.();

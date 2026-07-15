@@ -112,6 +112,72 @@ class CrossingPublicationTests(unittest.TestCase):
             self.assertFalse(output_path.exists())
             self.assertIn("no_confirmed_crossings", [item["code"] for item in validation["warnings"]])
 
+    def test_junction_transition_publishes_without_action_edge(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            graph_path = root / "graph.json"
+            registry_path = root / "registry.json"
+            candidates_path = root / "candidates.json"
+            reviews_path = root / "reviews.json"
+            output_path = root / "crossings.json"
+            graph = {"edges": [
+                {
+                    "id": "approach", "fromNodeId": "junction", "toNodeId": "south",
+                    "bicycleTraversalShadow": {
+                        "policyDigest": POLICY_DIGEST, "forward": "allowed", "reverse": "allowed",
+                    },
+                },
+                {
+                    "id": "departure", "fromNodeId": "north", "toNodeId": "junction",
+                    "bicycleTraversalShadow": {
+                        "policyDigest": POLICY_DIGEST, "forward": "allowed", "reverse": "allowed",
+                    },
+                },
+            ]}
+            registry = {"schemaVersion": 1, "edges": {"approach": 1, "departure": 2}}
+            write(graph_path, graph)
+            write(registry_path, registry)
+            write(candidates_path, {
+                "schemaVersion": 1,
+                "sourceGraphDigest": f"sha256:{file_digest(graph_path)}",
+                "edgeShareRegistryDigest": f"sha256:{file_digest(registry_path)}",
+                "traversalPolicyDigest": POLICY_DIGEST,
+                "crossings": [],
+            })
+            write(reviews_path, {
+                "schemaVersion": 1,
+                "reviews": {},
+                "manualCrossings": [{
+                    "id": "manual-crossing-transition",
+                    "kind": "side-change",
+                    "representation": "junction-transition",
+                    "guidancePolicy": "user-option",
+                    "center": {"lat": 33.2, "lng": 35.5},
+                    "sourceEdgeFingerprint": "sha256:transition",
+                    "audit": {"createdAt": "2026-07-15T00:00:00Z", "updatedAt": "2026-07-15T00:00:00Z"},
+                    "mappings": [{
+                        "id": "mapping-transition",
+                        "match": {
+                            "before": [{"edgeShareId": 1, "fromFractionQ": 1_000_000, "toFractionQ": 0}],
+                            "action": [],
+                            "after": [{"edgeShareId": 2, "fromFractionQ": 1_000_000, "toFractionQ": 0}],
+                        },
+                        "entry": {"lat": 33.2, "lng": 35.5},
+                        "exit": {"lat": 33.2, "lng": 35.5},
+                        "continuation": {"type": "turn", "direction": "left"},
+                    }],
+                }],
+            })
+            validation, result = build_reviewed_crossings(
+                candidates_path, reviews_path, graph_path, registry_path, "graph-v3", output_path
+            )
+            self.assertEqual(result, output_path)
+            self.assertEqual(validation["blockingIssues"], [])
+            published = json.loads(output_path.read_text())["crossings"][0]
+            self.assertEqual(published["representation"], "junction-transition")
+            self.assertEqual(published["guidancePolicy"], "user-option")
+            self.assertEqual(published["mappings"][0]["match"]["action"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

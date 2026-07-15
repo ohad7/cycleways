@@ -4073,7 +4073,8 @@ function renderCrossingsPanel() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `roundabout-review-item state-${item.state}${candidate.id === state.crossings.selectedId ? " active" : ""}`;
-    button.innerHTML = `<strong>${escapeHtml(roadName)}</strong><span>${escapeHtml(item.state)} · ${candidate.mappings?.length || 0} mapping(s)${candidate.warnings?.length ? ` · ⚠ ${candidate.warnings.length}` : ""}</span>`;
+    const representation = candidate.representation || "action-path";
+    button.innerHTML = `<strong>${escapeHtml(roadName)}</strong><span>${escapeHtml(item.state)} · ${escapeHtml(representation)} · ${candidate.mappings?.length || 0} mapping(s)${candidate.warnings?.length ? ` · ⚠ ${candidate.warnings.length}` : ""}</span>`;
     button.addEventListener("click", () => {
       state.crossings.selectedId = candidate.id;
       renderCrossingsPanel();
@@ -4090,7 +4091,7 @@ function renderCrossingsPanel() {
   if (selected.manual) {
     els.crossingsDetail.innerHTML = `
       <h3>${escapeHtml(candidate.id)}</h3>
-      <p>Manual confirmed crossing · ${candidate.mappings?.length || 0} mapping(s)</p>
+      <p>Manual confirmed crossing · ${escapeHtml(candidate.representation || "action-path")} · ${escapeHtml(candidate.guidancePolicy || "always")} · ${candidate.mappings?.length || 0} mapping(s)</p>
       <button type="button" data-edit-manual class="secondary-button">Load into manual editor</button>
       <div class="action-row"><button type="button" data-move="-1" class="secondary-button">Previous</button><button type="button" data-move="1" class="secondary-button">Next</button></div>
     `;
@@ -4102,11 +4103,14 @@ function renderCrossingsPanel() {
     const mappings = (candidate.mappings || []).map((mapping) => {
       const slices = (section) => (mapping.match?.[section] || [])
         .map((slice) => `${slice.edgeShareId}:${slice.fromFractionQ}→${slice.toFractionQ}`).join(" · ");
-      return `<label class="crossing-mapping-review"><span><input type="checkbox" data-mapping-id="${escapeHtml(mapping.id)}" ${accepted.has(mapping.id) ? "checked" : ""}> <strong>${escapeHtml(mapping.direction || "explicit")}</strong> · ${escapeHtml(mapping.policy?.state || "unknown")}</span><code>before ${escapeHtml(slices("before"))}</code><code>action ${escapeHtml(slices("action"))}</code><code>after ${escapeHtml(slices("after"))}</code></label>`;
+      const continuation = mapping.continuation?.type === "turn"
+        ? ` · then ${mapping.continuation.direction}`
+        : "";
+      return `<label class="crossing-mapping-review"><span><input type="checkbox" data-mapping-id="${escapeHtml(mapping.id)}" ${accepted.has(mapping.id) ? "checked" : ""}> <strong>${escapeHtml(mapping.direction || "explicit")}</strong> · ${escapeHtml(mapping.policy?.state || "unknown")}${escapeHtml(continuation)}</span><code>before ${escapeHtml(slices("before"))}</code><code>action ${escapeHtml(slices("action") || "junction anchor")}</code><code>after ${escapeHtml(slices("after"))}</code></label>`;
     }).join("");
     els.crossingsDetail.innerHTML = `
       <h3>${escapeHtml(candidate.id)}</h3>
-      <p>${escapeHtml(candidate.crossedRoad?.name || candidate.crossedRoad?.highway || "Unknown road")} · ${escapeHtml(selected.state)}</p>
+      <p>${escapeHtml(candidate.crossedRoad?.name || candidate.crossedRoad?.highway || "Unknown road")} · ${escapeHtml(selected.state)} · ${escapeHtml(candidate.representation || "action-path")} · ${escapeHtml(candidate.guidancePolicy || "always")}</p>
       <p>Evidence: ${escapeHtml((candidate.evidence || []).join(", ") || "none")}</p>
       <p>Warnings: ${escapeHtml((candidate.warnings || []).join(", ") || "none")}</p>
       ${mappings}

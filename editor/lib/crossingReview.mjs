@@ -22,21 +22,35 @@ export function validCrossingSlice(value) {
     && value.fromFractionQ !== value.toFractionQ;
 }
 
-export function crossingMappingIssue(mapping) {
+export function crossingMappingIssue(mapping, { representation = "action-path" } = {}) {
   if (!mapping || typeof mapping !== "object" || typeof mapping.id !== "string" || !mapping.id) {
     return "invalid_mapping_identity";
   }
   if (!mapping.match || typeof mapping.match !== "object") return "invalid_mapping_match";
   for (const section of ["before", "action", "after"]) {
     const slices = mapping.match[section];
-    if (!Array.isArray(slices) || !slices.length || !slices.every(validCrossingSlice)) {
+    const allowEmpty = representation === "junction-transition" && section === "action";
+    if (!Array.isArray(slices) || (!slices.length && !allowEmpty) || !slices.every(validCrossingSlice)) {
       return `invalid_mapping_${section}`;
     }
     const signatures = slices.map((slice) => `${slice.edgeShareId}:${slice.fromFractionQ}:${slice.toFractionQ}`);
     if (new Set(signatures).size !== signatures.length) return `duplicate_mapping_${section}_slice`;
   }
+  if (representation === "junction-transition" && mapping.match.action.length > 0) {
+    return "invalid_transition_action";
+  }
   if (!validCrossingCoordinate(mapping.entry) || !validCrossingCoordinate(mapping.exit)) {
     return "invalid_mapping_anchors";
+  }
+  if (representation === "junction-transition") {
+    if (Math.abs(mapping.entry.lat - mapping.exit.lat) > 0.000001
+      || Math.abs(mapping.entry.lng - mapping.exit.lng) > 0.000001) {
+      return "invalid_transition_anchors";
+    }
+    if (mapping.continuation?.type !== "turn"
+      || !new Set(["left", "right"]).has(mapping.continuation?.direction)) {
+      return "invalid_transition_continuation";
+    }
   }
   if (mapping.sourceEdgeFingerprint !== undefined
     && (typeof mapping.sourceEdgeFingerprint !== "string" || !mapping.sourceEdgeFingerprint)) {
@@ -53,11 +67,22 @@ export function crossingIssue(crossing, { requireFingerprint = false } = {}) {
     return "invalid_crossing_fingerprint";
   }
   if (crossing.kind !== "side-change") return "invalid_crossing_kind";
+  const representation = crossing.representation || "action-path";
+  if (!new Set(["action-path", "junction-transition"]).has(representation)) {
+    return "invalid_crossing_representation";
+  }
+  const guidancePolicy = crossing.guidancePolicy || "always";
+  if (!new Set(["always", "user-option"]).has(guidancePolicy)) {
+    return "invalid_crossing_guidance_policy";
+  }
+  if (guidancePolicy === "user-option" && representation !== "junction-transition") {
+    return "invalid_optional_crossing_representation";
+  }
   if (!validCrossingCoordinate(crossing.center)) return "invalid_crossing_center";
   if (!Array.isArray(crossing.mappings) || !crossing.mappings.length) return "invalid_crossing_mappings";
   const mappingIds = new Set();
   for (const mapping of crossing.mappings) {
-    const issue = crossingMappingIssue(mapping);
+    const issue = crossingMappingIssue(mapping, { representation });
     if (issue) return issue;
     if (mappingIds.has(mapping.id)) return "duplicate_mapping_id";
     mappingIds.add(mapping.id);
@@ -69,6 +94,8 @@ function runtimeCrossing(candidate, mappings) {
   const result = {
     id: candidate.id,
     kind: candidate.kind,
+    representation: candidate.representation || "action-path",
+    guidancePolicy: candidate.guidancePolicy || "always",
     center: candidate.center,
     bbox: candidate.bbox || [candidate.center.lng, candidate.center.lat, candidate.center.lng, candidate.center.lat],
     mappings,
@@ -134,7 +161,9 @@ export function joinCrossingReviews(candidatesPayload = {}, reviewData = {}) {
           } else {
             for (const override of overrides) {
               const replaced = override?.replacesMappingId;
-              const overrideIssue = crossingMappingIssue(override);
+              const overrideIssue = crossingMappingIssue(override, {
+                representation: candidate.representation || "action-path",
+              });
               if (!replaced || typeof override?.sourceEdgeFingerprint !== "string"
                 || !override.sourceEdgeFingerprint || overrideIssue) {
                 state = "invalid";
@@ -231,14 +260,30 @@ export function crossingReviewGeoJson(joined) {
   ];
   for (const item of allItems) {
     const crossing = item.logical;
-    const properties = { id: crossing.id, state: item.state, warning: Boolean(crossing.warnings?.length) };
+    const properties = {
+      id: crossing.id,
+      state: item.state,
+      warning: Boolean(crossing.warnings?.length),
+      representation: crossing.representation || "action-path",
+      guidancePolicy: crossing.guidancePolicy || "always",
+    };
     for (const mapping of crossing.mappings || []) {
       const mappingProperties = { ...properties, mappingId: mapping.id, direction: mapping.direction || "explicit" };
       const routeGeometry = Array.isArray(mapping.geometry) ? mapping.geometry : null;
       if (routeGeometry?.length >= 2) {
         action.push({ type: "Feature", geometry: { type: "LineString", coordinates: routeGeometry.map(({ lat, lng }) => [lng, lat]) }, properties: mappingProperties });
       }
-      arrows.push({ type: "Feature", geometry: { type: "LineString", coordinates: [[mapping.entry.lng, mapping.entry.lat], [mapping.exit.lng, mapping.exit.lat]] }, properties: mappingProperties });
+      const sameAnchor = Math.abs(mapping.entry.lat - mapping.exit.lat) <= 0.000001
+        && Math.abs(mapping.entry.lng - mapping.exit.lng) <= 0.000001;
+      const beforeGeometry = Array.isArray(mapping.beforeGeometry) ? mapping.beforeGeometry : [];
+      const afterGeometry = Array.isArray(mapping.afterGeometry) ? mapping.afterGeometry : [];
+      const arrowCoordinates = sameAnchor
+        && beforeGeometry.length >= 2
+        && afterGeometry.length >= 2
+        ? [beforeGeometry.at(-2), beforeGeometry.at(-1), afterGeometry[1]]
+          .map(({ lat, lng }) => [lng, lat])
+        : [[mapping.entry.lng, mapping.entry.lat], [mapping.exit.lng, mapping.exit.lat]];
+      arrows.push({ type: "Feature", geometry: { type: "LineString", coordinates: arrowCoordinates }, properties: mappingProperties });
       for (const section of ["beforeGeometry", "afterGeometry"]) {
         if (Array.isArray(mapping[section]) && mapping[section].length >= 2) {
           context.push({ type: "Feature", geometry: { type: "LineString", coordinates: mapping[section].map(({ lat, lng }) => [lng, lat]) }, properties: mappingProperties });

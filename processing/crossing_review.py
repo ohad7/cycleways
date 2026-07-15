@@ -41,7 +41,7 @@ def valid_slice(value: Any) -> bool:
     )
 
 
-def mapping_issue(mapping: Any) -> str | None:
+def mapping_issue(mapping: Any, *, representation: str = "action-path") -> str | None:
     if not isinstance(mapping, dict) or not isinstance(mapping.get("id"), str) or not mapping["id"]:
         return "invalid_mapping_identity"
     match = mapping.get("match")
@@ -49,7 +49,12 @@ def mapping_issue(mapping: Any) -> str | None:
         return "invalid_mapping_match"
     for section in ("before", "action", "after"):
         slices = match.get(section)
-        if not isinstance(slices, list) or not slices or not all(valid_slice(item) for item in slices):
+        allow_empty = representation == "junction-transition" and section == "action"
+        if (
+            not isinstance(slices, list)
+            or (not slices and not allow_empty)
+            or not all(valid_slice(item) for item in slices)
+        ):
             return f"invalid_mapping_{section}"
         signatures = [
             (item["edgeShareId"], item["fromFractionQ"], item["toFractionQ"])
@@ -57,8 +62,22 @@ def mapping_issue(mapping: Any) -> str | None:
         ]
         if len(set(signatures)) != len(signatures):
             return f"duplicate_mapping_{section}_slice"
+    if representation == "junction-transition" and match.get("action"):
+        return "invalid_transition_action"
     if not valid_coordinate(mapping.get("entry")) or not valid_coordinate(mapping.get("exit")):
         return "invalid_mapping_anchors"
+    if representation == "junction-transition":
+        entry = mapping["entry"]
+        exit_anchor = mapping["exit"]
+        if abs(entry["lat"] - exit_anchor["lat"]) > 0.000001 or abs(entry["lng"] - exit_anchor["lng"]) > 0.000001:
+            return "invalid_transition_anchors"
+        continuation = mapping.get("continuation")
+        if (
+            not isinstance(continuation, dict)
+            or continuation.get("type") != "turn"
+            or continuation.get("direction") not in {"left", "right"}
+        ):
+            return "invalid_transition_continuation"
     source_fingerprint = mapping.get("sourceEdgeFingerprint")
     if source_fingerprint is not None and (not isinstance(source_fingerprint, str) or not source_fingerprint):
         return "invalid_source_edge_fingerprint"
@@ -72,6 +91,14 @@ def crossing_issue(crossing: Any, *, require_fingerprint: bool) -> str | None:
         return "invalid_crossing_fingerprint"
     if crossing.get("kind") != "side-change":
         return "invalid_crossing_kind"
+    representation = crossing.get("representation", "action-path")
+    if representation not in {"action-path", "junction-transition"}:
+        return "invalid_crossing_representation"
+    guidance_policy = crossing.get("guidancePolicy", "always")
+    if guidance_policy not in {"always", "user-option"}:
+        return "invalid_crossing_guidance_policy"
+    if guidance_policy == "user-option" and representation != "junction-transition":
+        return "invalid_optional_crossing_representation"
     if not valid_coordinate(crossing.get("center")):
         return "invalid_crossing_center"
     mappings = crossing.get("mappings")
@@ -79,7 +106,7 @@ def crossing_issue(crossing: Any, *, require_fingerprint: bool) -> str | None:
         return "invalid_crossing_mappings"
     mapping_ids: set[str] = set()
     for mapping in mappings:
-        issue = mapping_issue(mapping)
+        issue = mapping_issue(mapping, representation=representation)
         if issue:
             return issue
         if mapping["id"] in mapping_ids:
@@ -92,6 +119,8 @@ def _runtime_crossing(candidate: dict[str, Any], mappings: list[dict[str, Any]])
     result = {
         "id": candidate["id"],
         "kind": candidate["kind"],
+        "representation": candidate.get("representation", "action-path"),
+        "guidancePolicy": candidate.get("guidancePolicy", "always"),
         "center": candidate["center"],
         "bbox": candidate.get("bbox") or [
             candidate["center"]["lng"], candidate["center"]["lat"],
@@ -175,7 +204,10 @@ def join_crossing_reviews(
                         blocking.append({"code": "invalid_mapping_overrides", "id": candidate_id})
                     for override in overrides:
                         replaced = override.get("replacesMappingId") if isinstance(override, dict) else None
-                        issue_override = mapping_issue(override)
+                        issue_override = mapping_issue(
+                            override,
+                            representation=candidate.get("representation", "action-path"),
+                        )
                         source_fingerprint = override.get("sourceEdgeFingerprint") if isinstance(override, dict) else None
                         if not replaced or not isinstance(source_fingerprint, str) or not source_fingerprint or issue_override:
                             state = "invalid"

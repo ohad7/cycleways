@@ -1,7 +1,7 @@
 # Reviewed road-crossing maneuvers — implementation plan
 
 **Date:** 2026-07-14
-**Status:** code implemented and automated validation complete; reviewed-data and manual gates pending
+**Status:** implementation complete; manual editor/device review and crossings artifact promotion remain gated
 **Design:** `plans/road-crossing-maneuvers/design.md`
 
 ## Goal
@@ -67,6 +67,29 @@ The graph-wide diagnostic run using a temporary complete registry produced
 1,656 logical candidates and found Road 99 as
 `crossing:1092567462:33.2351-35.5800:48308`, with action share 48308. That run
 was not promoted or copied into source-controlled review data.
+
+## Experimental intersection guidance amendment — 2026-07-15
+
+Implement a manually reviewed `junction-transition` representation for the
+three-segment Margaliot intersection and a persistent, default-on rider
+preference. This amendment is deliberately narrower than automatic junction
+detection: only an explicit directed mapping can produce the extra guidance.
+
+The implementation must preserve two outcomes from the same route:
+
+- preference on: `cross carefully, then turn left onto <segment>`;
+- preference off: the existing ordinary named left-turn cue.
+
+Existing action-path crossings remain unconditional and are unaffected by the
+new setting. Route search, route geometry and bicycle directionality do not
+change.
+
+Implementation completed on 2026-07-15. Automated validation includes the
+reviewed Margaliot graph transition, both preference states, the 9977 right-turn
+negative control, durable preference defaults, crash-resume restoration, the
+focused crossing/navigation suites, production build and full repository test
+suite. Manual editor and device/audio checks remain deferred while working
+remotely, and publication remains behind the pre-existing stable-share gates.
 
 ## Headless Road 99 impact validation — 2026-07-15
 
@@ -135,6 +158,81 @@ multi-edge and direction-specific mappings.
 - Stale accepted data cannot be promoted or resurrected from an older file.
 - Main, approach and rejoin use the same pure matcher.
 - The first release publishes only `kind: "side-change"`.
+- `junction-transition` is a representation of `side-change`, not a new route
+  edge or logical CW segment.
+- Empty action arrays are valid only for reviewed junction transitions with
+  contiguous before/after context, coincident anchors and a continuation turn.
+- The user preference filters only `guidancePolicy: "user-option"`; reviewed
+  action-path crossings stay active.
+
+## Task 17 — optional intersection crossing experiment
+
+**Design target**
+
+- Keep logical segment and direction models unchanged.
+- Add backward-compatible crossing fields:
+  `representation`, `guidancePolicy` and mapping `continuation`.
+- Persist `intersectionCrossingGuidanceEnabled`, defaulting true.
+
+**Schema, review and publication**
+
+- [x] Update Python and JavaScript crossing validators in parity.
+- [x] Keep `action-path` mappings unchanged and require their action slices.
+- [x] Allow action-less `junction-transition` mappings only with non-empty
+      directed before/after context, coincident anchors and a reviewed left or
+      right continuation.
+- [x] Preserve representation/guidance fields in confirmed runtime artifacts.
+- [x] Validate topology continuity and policy for before→after without treating
+      every empty action signature as the same crossing.
+- [x] Show representation, optional policy and continuation in the Crossings
+      editor; draw a visible context arrow even when entry equals exit.
+
+**Runtime matching and cue semantics**
+
+- [x] Match the before→after signature without skipping route slices.
+- [x] Place the route-relative entry and exit at their shared attested boundary
+      and retain anchor sanity checks.
+- [x] Carry representation, guidance policy and continuation through route
+      matching, navigation-route cloning, approach and rejoin legs.
+- [x] Add `intersectionCrossingGuidanceEnabled` to cue-building options and use
+      the same immutable option for main, approach and rejoin cue lists.
+- [x] With the option on, suppress the colocated ordinary turn and speak/show
+      crossing → turn, including the destination CW segment name.
+- [x] With the option off, omit only the optional crossing before suppression
+      and preserve the ordinary named turn.
+- [x] Ensure an existing `always` crossing still replaces its noisy geometry
+      when the option is off.
+
+**Native preference**
+
+- [x] Add a durable, schema-versioned ride-guidance preference store with
+      fail-safe default `true`.
+- [x] Add a Hebrew toggle in Ride Settings explaining that it adds
+      “cross, then turn” at reviewed intersections.
+- [x] Save immediately, include the value in navigation telemetry and active
+      session settings, and use it in background/crash-resume processing.
+
+**Margaliot reviewed example and validation**
+
+- [x] Add only the directed dirt-road→north-sideline mapping using stable
+      shares `17233 reverse → 42656 reverse` at
+      `33.2205053, 35.548282`.
+- [x] Keep dirt-road→9977 (`42652 forward`) as an ordinary right turn.
+- [x] Do not infer the reverse crossing.
+- [x] Add one real-data regression loading the reviewed record and current base
+      graph: matcher on/off cue delta, Hebrew phrase and right-turn negative
+      control.
+- [x] Extend schema/review/publication, matcher, cue, voice, presentation,
+      persistence and navigation-session tests.
+- [x] Run `npm run test:crossings`, focused navigation tests, `npm run build`,
+      full `npm test` and `git diff --check`.
+
+**Manual gates**
+
+- [ ] Inspect the transition in the Crossings editor, including the visible
+      approach/departure arrow and one-way layer.
+- [ ] Listen to both preference states on simulator/device when local access is
+      available.
 
 ## Task 0 — preserve and measure the corrected baseline
 

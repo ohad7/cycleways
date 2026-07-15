@@ -477,6 +477,25 @@ assert.equal(compassWord(null, "he-IL"), null);
     1000,
   ).utterance;
   assert.match(english.text, /Cross carefully to the other side of the road/);
+
+  const intersectionCue = {
+    type: "crossing",
+    distanceMeters: 600,
+    thenManeuver: {
+      type: "turn",
+      direction: "left",
+      ontoSegmentName: "דרך נוף מצפה עדי - מטולה דרום",
+    },
+  };
+  const intersection = createNavigationVoicePlanner().plan(
+    { kind: "cue", cueType: "crossing", phase: "final", cue: intersectionCue },
+    { activeCue: { distanceToCueMeters: 10, cue: intersectionCue, phase: "final" } },
+    2000,
+  ).utterance;
+  assert.match(
+    intersection.text,
+    /חצו בזהירות לצד השני של הכביש, ואז פנו שמאלה אל דרך נוף מצפה עדי - מטולה דרום/,
+  );
 }
 
 console.log("navigation voice tests passed");

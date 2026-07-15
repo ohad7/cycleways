@@ -1,5 +1,99 @@
 {
   "schemaVersion": 1,
   "reviews": {},
-  "manualCrossings": []
+  "manualCrossings": [
+    {
+      "id": "manual-crossing-margaliot-dirt-to-sideline",
+      "kind": "side-change",
+      "representation": "junction-transition",
+      "guidancePolicy": "user-option",
+      "center": {
+        "lat": 33.2205053,
+        "lng": 35.548282
+      },
+      "bbox": [
+        35.5477011,
+        33.2204367,
+        35.5483479,
+        33.2207388
+      ],
+      "crossedRoad": {
+        "source": "osm",
+        "sourceIds": [
+          815914964,
+          815914965
+        ],
+        "name": "כביש 9977",
+        "highway": "secondary"
+      },
+      "sourceEdgeFingerprint": "sha256:be68e6919bf9c97997967ba29143c95691cf87128b80ce3af3d7834d82859f3e",
+      "audit": {
+        "createdAt": "2026-07-15T00:00:00Z",
+        "updatedAt": "2026-07-15T00:00:00Z"
+      },
+      "warnings": [
+        "physical-side-change-reviewed-on-centerline-graph"
+      ],
+      "mappings": [
+        {
+          "id": "mapping-margaliot-dirt-to-sideline",
+          "direction": "dirt-to-north",
+          "match": {
+            "before": [
+              {
+                "edgeShareId": 17233,
+                "fromFractionQ": 1000000,
+                "toFractionQ": 0
+              }
+            ],
+            "action": [],
+            "after": [
+              {
+                "edgeShareId": 42656,
+                "fromFractionQ": 1000000,
+                "toFractionQ": 0
+              }
+            ]
+          },
+          "entry": {
+            "lat": 33.2205053,
+            "lng": 35.548282
+          },
+          "exit": {
+            "lat": 33.2205053,
+            "lng": 35.548282
+          },
+          "continuation": {
+            "type": "turn",
+            "direction": "left"
+          },
+          "beforeGeometry": [
+            {
+              "lat": 33.2204367,
+              "lng": 35.5477011
+            },
+            {
+              "lat": 33.2205053,
+              "lng": 35.548282
+            }
+          ],
+          "afterGeometry": [
+            {
+              "lat": 33.2205053,
+              "lng": 35.548282
+            },
+            {
+              "lat": 33.2207388,
+              "lng": 35.5483479
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:711b2bf3dba252edf36b9f45a9656158bf3ecda3c9c439b8fab4121697bafb6b"
+        }
+      ]
+    }
+  ]
 }

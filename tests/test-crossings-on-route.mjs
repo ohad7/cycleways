@@ -109,4 +109,60 @@ assert.deepEqual(crossingsOnRoute(artifact, incomplete, geometry), []);
 assert.equal(crossingsOnRoute({ ...artifact, graphVersion: "other" }, attestation, geometry), null);
 assert.equal(crossingsOnRoute(null, attestation, geometry), null);
 
+const transitionAttestation = buildRouteAttestation({
+  validationContext: context,
+  traversalSlices: [
+    routeSlice(10, 1_000_000, 0, 10_000),
+    routeSlice(11, 1_000_000, 0, 20_000),
+  ],
+  waypointOccurrences: [], legBoundaries: [], geometry,
+});
+const transitionArtifact = {
+  schemaVersion: 1,
+  graphVersion: "graph-1",
+  traversalPolicyDigest: "policy-digest-1",
+  crossings: [{
+    id: "crossing-transition",
+    kind: "side-change",
+    representation: "junction-transition",
+    guidancePolicy: "user-option",
+    crossedRoad: { name: "Road 9977" },
+    mappings: [{
+      id: "mapping-transition",
+      match: {
+        before: [routeSlice(10, 1_000_000, 0)],
+        action: [],
+        after: [routeSlice(11, 1_000_000, 0)],
+      },
+      entry: { lat: 33, lng: 35.0003333 },
+      exit: { lat: 33, lng: 35.0003333 },
+      continuation: { type: "turn", direction: "left" },
+    }],
+  }],
+};
+const transitionMatches = crossingsOnRoute(
+  transitionArtifact,
+  transitionAttestation,
+  geometry,
+);
+assert.equal(transitionMatches.length, 1);
+assert.equal(transitionMatches[0].entryMeters, transitionMatches[0].exitMeters);
+assert.equal(transitionMatches[0].crossingRepresentation, "junction-transition");
+assert.equal(transitionMatches[0].guidancePolicy, "user-option");
+assert.deepEqual(transitionMatches[0].continuation, { type: "turn", direction: "left" });
+
+const unrelatedTransition = buildRouteAttestation({
+  validationContext: context,
+  traversalSlices: [
+    routeSlice(10, 1_000_000, 0, 10_000),
+    routeSlice(12, 1_000_000, 0, 20_000),
+  ],
+  waypointOccurrences: [], legBoundaries: [], geometry,
+});
+assert.deepEqual(
+  crossingsOnRoute(transitionArtifact, unrelatedTransition, geometry),
+  [],
+  "the matcher never infers a transition from a nearby or unrelated turn",
+);
+
 console.log("crossings-on-route tests passed");

@@ -74,6 +74,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
     background = false,
     haptics = true,
     voice = true,
+    intersectionCrossingGuidanceEnabled = true,
     locationSource,
     computeConnector,
     resumeSessionId = null,
@@ -99,6 +100,9 @@ export function useNavigationSession(navigationRoute, options = {}) {
   const finalizerRef = useRef(null);
   const backgroundRequestedRef = useRef(background === true);
   backgroundRequestedRef.current = background === true;
+  const intersectionCrossingGuidanceEnabledRef = useRef(
+    intersectionCrossingGuidanceEnabled !== false,
+  );
 
   const hapticPlannerRef = useRef(createCueHapticPlanner());
   const hapticsEnabledRef = useRef(haptics === true);
@@ -165,6 +169,8 @@ export function useNavigationSession(navigationRoute, options = {}) {
           hapticsEnabled: hapticsEnabledRef.current,
           lockScreenGuidanceEnabled: backgroundRequestedRef.current,
           lockScreenGuidanceActive: lockScreenGuidanceActiveRef.current,
+          intersectionCrossingGuidanceEnabled:
+            intersectionCrossingGuidanceEnabledRef.current,
         },
         voicePlanner: voicePlannerRef.current,
         latestFix,
@@ -261,8 +267,15 @@ export function useNavigationSession(navigationRoute, options = {}) {
   // Create a clean session for ordinary routes. Crash resume is explicit and
   // session-id-gated so it cannot race a normal start or silently reset progress.
   const routeId = navigationRoute?.id ?? null;
+  const crossingGuidanceKey = intersectionCrossingGuidanceEnabled !== false
+    ? "intersection-crossings-on"
+    : "intersection-crossings-off";
   useEffect(() => {
     let cancelled = false;
+    const requestedIntersectionCrossingGuidanceEnabled =
+      intersectionCrossingGuidanceEnabled !== false;
+    intersectionCrossingGuidanceEnabledRef.current =
+      requestedIntersectionCrossingGuidanceEnabled;
     finalizerRef.current = createNavigationFinalizer({
       stopWatch: () => {
         persistGenerationRef.current += 1;
@@ -303,6 +316,8 @@ export function useNavigationSession(navigationRoute, options = {}) {
       lastProcessedFixKeyRef.current = fixKey(latestFixRef.current);
       const restoredVoice = record.settings?.voiceEnabled !== false;
       const restoredHaptics = record.settings?.hapticsEnabled !== false;
+      intersectionCrossingGuidanceEnabledRef.current =
+        record.settings?.intersectionCrossingGuidanceEnabled !== false;
       voiceEnabledRef.current = restoredVoice;
       setVoiceEnabledState(restoredVoice);
       hapticsEnabledRef.current = restoredHaptics;
@@ -337,12 +352,20 @@ export function useNavigationSession(navigationRoute, options = {}) {
         setBackgroundActive: (active) => {
           if (!cancelled) setLockScreenGuidanceActive(active);
         },
+        recordSessionOptions: (record) => ({
+          intersectionCrossingGuidanceEnabled:
+            record.settings?.intersectionCrossingGuidanceEnabled !== false,
+        }),
       });
       void coordinator
         .activate({
           navigationRoute,
           sessionId: resumeSessionId,
-          sessionOptions,
+          sessionOptions: {
+            ...sessionOptions,
+            intersectionCrossingGuidanceEnabled:
+              requestedIntersectionCrossingGuidanceEnabled,
+          },
         })
         .then((result) => {
           if (!cancelled) {
@@ -351,7 +374,11 @@ export function useNavigationSession(navigationRoute, options = {}) {
         });
     } else {
       sessionIdRef.current = `nav-${Date.now()}`;
-      sessionRef.current = createNavigationSession(navigationRoute, sessionOptions);
+      sessionRef.current = createNavigationSession(navigationRoute, {
+        ...sessionOptions,
+        intersectionCrossingGuidanceEnabled:
+          requestedIntersectionCrossingGuidanceEnabled,
+      });
       hapticPlannerRef.current.reset();
       voicePlannerRef.current = createNavigationVoicePlanner({
         enabled: voiceEnabledRef.current,
@@ -374,7 +401,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
     };
     // sessionOptions intentionally excluded: thresholds are stable per session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeId]);
+  }, [crossingGuidanceKey, routeId]);
 
   useEffect(() => {
     if (state?.status === "ended" && state?.endReason === "arrived") {

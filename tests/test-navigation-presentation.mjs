@@ -555,6 +555,33 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.deepEqual(p.cueManeuver, { type: "crossing" });
 }
 
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: {
+        type: "crossing",
+        crossedRoadName: "כביש 9977",
+        thenManeuver: {
+          type: "turn",
+          direction: "left",
+          ontoSegmentName: "דרך נוף מצפה עדי - מטולה דרום",
+        },
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+    progress: { remainingMeters: 500 },
+  });
+  assert.equal(p.cuePrimaryText, "חצו לצד השני של הכביש");
+  assert.equal(
+    p.cueNextText,
+    "ואז פנו שמאלה אל דרך נוף מצפה עדי - מטולה דרום",
+  );
+  assert.deepEqual(p.cueNextManeuver, { type: "turn", direction: "left" });
+}
+
 // --- O5: off-route card shows the live distance back -----------------------
 {
   // Guided leg active: remaining-along-leg wins over straight-line.

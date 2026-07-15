@@ -61,6 +61,19 @@ const routeState = {
   ],
   routeFailure: null,
   routingValidation,
+  crossings: [{
+    kind: "crossing",
+    crossingId: "transition-1",
+    mappingId: "mapping-1",
+    crossingKind: "side-change",
+    crossingRepresentation: "junction-transition",
+    guidancePolicy: "user-option",
+    crossedRoadName: "Road 9977",
+    continuation: { type: "turn", direction: "left" },
+    entryMeters: 100,
+    exitMeters: 100,
+    complete: true,
+  }],
 };
 
 const built = navigationRouteFromRouteState(
@@ -99,6 +112,9 @@ assert.ok(
     built.geometry[1].distanceFromStartMeters,
 );
 assert.equal(built.activeDataPoints.length, 1);
+assert.deepEqual(built.crossings[0].continuation, { type: "turn", direction: "left" });
+assert.equal(built.crossings[0].crossingRepresentation, "junction-transition");
+assert.equal(built.crossings[0].guidancePolicy, "user-option");
 assert.equal(built.maneuverGeneratorVersion, "navigation-cues-v3");
 
 const catalog = navigationRouteFromCatalogEntry(

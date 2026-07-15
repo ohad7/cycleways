@@ -1,8 +1,8 @@
 # Reviewed road-crossing maneuvers
 
 **Date:** 2026-07-14
-**Revision:** 2026-07-14 — replaced runtime geometric classification with offline candidate generation and editor-reviewed mappings
-**Status:** implemented in code; first reviewed-data rollout pending
+**Revision:** 2026-07-15 — added experimental, user-optional intersection side-change guidance
+**Status:** implementation complete; manual editor/device review and artifact promotion remain gated
 **Origin:** M1/S2 in `plans/navigation-ride-feedback-3/discussion.md`
 
 ## Outcome
@@ -34,6 +34,8 @@ current directionally legal route of about 10,111.6 m.
 | Editor workflow | Show every candidate and mapping on a dedicated layer; allow accept, reject, direction selection, mapping repair and manual creation. | Curators can correct detector output rather than editing generated files. |
 | Review rollout | Pending candidates are omitted but do not block unrelated publication; stale or invalid previously accepted mappings do block. | Review can proceed incrementally while no unconfirmed crossing reaches users. |
 | Cue semantics | Bake a route-relative interval and replace corner cues inside it with one `crossing` cue. | The following real maneuver is preserved and may be compounded. |
+| Intersection experiment | A reviewed `junction-transition` may have no physical action edge and may request `cross-and-turn` guidance. | The default-on user preference replaces the ordinary turn with “cross, then turn”; disabling it restores the ordinary turn. |
+| Preference boundary | Only records marked `guidancePolicy: "user-option"` obey the experiment switch. | Disabling the experiment never resurrects the false Road 99 turn pair or suppresses other reviewed crossing safety cues. |
 | Route choice | No crossing penalty in this implementation. | Confirmed topology becomes reusable evidence, but route-cost policy remains a separate decision and rollout. |
 | Persistence | Add crossings to the navigation-plan fingerprint and bump to `navigation-cues-v3`. | Stored v2 plans cannot silently resume with different instructions. |
 
@@ -71,6 +73,25 @@ advanced JSON repair/manual records while displaying all mappings, action
 arrows, corridor context, and base one-way arrows on the map. The guided
 click-by-click trace authoring UX described below remains a curator-workflow
 enhancement; it does not weaken publication validation or runtime safety.
+
+## Experimental intersection implementation record — 2026-07-15
+
+The optional intersection amendment is implemented across review validation,
+publication, editor visualization, attested route matching, cue generation,
+voice/presentation, native ride settings, durable preference storage and
+foreground/background/crash-resume navigation. The reviewed Margaliot record
+contains only the directed dirt-road-to-north-sideline transition; the right
+turn onto 9977 and the reverse movement remain ordinary, unclassified turns.
+
+The real-data regression confirms both preference states on the current graph:
+enabled produces one crossing with a reviewed left continuation and the
+destination segment name, while disabled restores the ordinary named left
+turn. It also confirms that the right branch does not match the crossing.
+
+The record is source-reviewed but cannot yet reach a bundled mobile artifact:
+the existing stable-share/candidate promotion gates described above still
+prevent a complete crossings build. This is a data-rollout gate, not missing
+runtime or UI implementation.
 
 ## Problem definition
 
@@ -125,6 +146,37 @@ A straight path crossing a perpendicular street may later support a separate
 `through-crossing` warning policy. It is not silently included now; announcing
 every ordinary intersection would be noisy and is not needed to solve the
 reported ride.
+
+### Experimental intersection side changes
+
+Some real side changes have no separate crossing edge. At the junction of
+`שביל אדום הרי נפתלי`, `כביש 9977 מרגליות` and
+`דרך נוף מצפה עדי - מטולה דרום`, the base graph has one centerline node:
+
+- arriving from the dirt road and turning right onto 9977 is an ordinary turn;
+- arriving from the dirt road and continuing north requires crossing the road
+  and then turning left onto the sideline; and
+- the crossing itself has no lateral base edge because the road is represented
+  by a centerline.
+
+This case stays one logical `side-change`, but uses
+`representation: "junction-transition"`. Its directed mapping contains
+non-empty `before` and `after` context, an empty `action` array, a single
+entry/exit anchor at their common node and a reviewed continuation maneuver.
+It is manually curated in the experiment; the ordinary short-action detector
+does not auto-classify centerline junctions.
+
+The rider setting is **intersection crossing guidance**, enabled by default
+while the app is pre-production. It controls only crossings explicitly marked
+`guidancePolicy: "user-option"`:
+
+- enabled: “חצו בזהירות לצד השני של הכביש, ואז פנו שמאלה אל …”;
+- disabled: the same route produces its normal “פנה שמאלה אל …” cue; and
+- `guidancePolicy: "always"` (including the Road 99 corner-pair replacement)
+  remains active regardless of the setting.
+
+This is a narration preference, not a route-search preference. It does not
+change route geometry, bicycle legality, crossing cost or the selected path.
 
 ## Architecture
 
@@ -255,6 +307,39 @@ A changed fingerprint makes the prior review stale. Stable IDs preserve the
 review history without treating changed topology as still accepted.
 
 ## D2 — Logical crossing and mapping schema
+
+The schema is backward compatible. Existing records default to
+`representation: "action-path"` and `guidancePolicy: "always"`. An experimental
+intersection record uses:
+
+```json
+{
+  "kind": "side-change",
+  "representation": "junction-transition",
+  "guidancePolicy": "user-option",
+  "mappings": [{
+    "match": {
+      "before": [{ "edgeShareId": 17233, "fromFractionQ": 1000000, "toFractionQ": 0 }],
+      "action": [],
+      "after": [{ "edgeShareId": 42656, "fromFractionQ": 1000000, "toFractionQ": 0 }]
+    },
+    "entry": { "lat": 33.2205053, "lng": 35.548282 },
+    "exit": { "lat": 33.2205053, "lng": 35.548282 },
+    "continuation": { "type": "turn", "direction": "left" }
+  }]
+}
+```
+
+Validation rules are representation-specific:
+
+- `action-path` retains the v1 requirement for non-empty `before`, `action`
+  and `after` sections;
+- `junction-transition` requires non-empty `before` and `after`, requires an
+  empty `action`, requires coincident reviewed anchors and requires a left or
+  right `continuation` turn;
+- every listed slice remains explicit, directed, contiguous, stable-share
+  identified and allowed by the bicycle policy; and
+- forward and reverse movements are never inferred from one another.
 
 A generated logical candidate has the following shape. The coordinates and
 non-action share IDs below are illustrative; implementation derives the exact
@@ -481,6 +566,12 @@ For each confirmed mapping, it scans the ordered route slices for:
 2. all directed `action` slices with the required fraction coverage; and
 3. the directed `after` signature.
 
+For `junction-transition`, step 2 is intentionally empty. The matcher requires
+the reviewed `before` immediately followed by the reviewed `after`, and places
+the zero-length crossing interval at their attested boundary. Anchor sanity
+checking still applies at that boundary. The route matcher does not infer a
+crossing from an arbitrary left turn.
+
 It calculates route-progress entry and exit from cumulative attested traversal
 distance, interpolating within partial first/last action slices, then reconciles
 that distance frame to navigation geometry. Geometry is used for progress and
@@ -546,6 +637,20 @@ evidence gap: a geometry-only connector cannot safely prove which directed
 base edges it used.
 
 ## D7 — Cue generation and rider experience
+
+Cue generation receives the immutable ride preference used by main-route,
+approach and rejoin sessions. For a matched `junction-transition`:
+
+- when enabled, the crossing interval suppresses the colocated geometry turn,
+  emits one crossing cue and carries the reviewed continuation direction and
+  destination segment name into voice and card copy;
+- when disabled, the optional crossing is removed before suppression, so the
+  normal turn and segment-name merge run unchanged; and
+- a crossing with `guidancePolicy: "always"` is never filtered.
+
+The setting is stored as an app preference and copied into active-navigation
+state so foreground, lock-screen/background processing and crash resume build
+the same cue list.
 
 For each complete confirmed crossing interval, `navigationCues.js`:
 
@@ -660,7 +765,8 @@ the confirmed crossing evidence and maneuver version change.
 
 - Live or cue-time road-crossing classification.
 - Automatic acceptance based on confidence.
-- Announcing every perpendicular intersection crossing.
+- Announcing every perpendicular intersection crossing or auto-accepting
+  centerline junction transitions.
 - Claiming a zebra crossing, signal, right of way or legal safety not present in
   reviewed data.
 - Editing OSM or the base graph from the crossing workspace.

@@ -3682,15 +3682,21 @@ def build_reviewed_crossings(
                 })
             else:
                 seen_mapping_signatures[mapping_signature] = str(mapping_id)
-            action_signature = json.dumps(match.get("action") or [], sort_keys=True, separators=(",", ":"))
-            other_crossing_id = action_signatures.get(action_signature)
-            if other_crossing_id is not None and other_crossing_id != crossing.get("id"):
-                joined["blockingIssues"].append({
-                    "code": "conflicting_crossing_action_signature", "id": crossing.get("id"),
-                    "mappingId": mapping_id, "otherCrossingId": other_crossing_id,
-                })
-            else:
-                action_signatures[action_signature] = str(crossing.get("id"))
+            action_slices = match.get("action") or []
+            # Junction transitions intentionally have no physical action edge;
+            # their before+after signature is already checked for duplicates.
+            # Treating every empty list as one action would make all reviewed
+            # centerline junctions conflict globally.
+            if action_slices:
+                action_signature = json.dumps(action_slices, sort_keys=True, separators=(",", ":"))
+                other_crossing_id = action_signatures.get(action_signature)
+                if other_crossing_id is not None and other_crossing_id != crossing.get("id"):
+                    joined["blockingIssues"].append({
+                        "code": "conflicting_crossing_action_signature", "id": crossing.get("id"),
+                        "mappingId": mapping_id, "otherCrossingId": other_crossing_id,
+                    })
+                else:
+                    action_signatures[action_signature] = str(crossing.get("id"))
             ordered_slices: list[tuple[dict[str, Any], dict[str, Any]]] = []
             repeated_slices: set[tuple[int, int, int]] = set()
             for section in ("before", "action", "after"):

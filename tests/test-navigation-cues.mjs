@@ -579,4 +579,72 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   assert.equal(findType(cues, "roundabout")[0].compoundPreviousType, "crossing");
 }
 
+// A reviewed centerline-junction transition is an optional cross-and-turn.
+// Turning the experiment off restores the ordinary named turn rather than
+// removing guidance at the junction.
+{
+  const geometry = [
+    { lat: 33, lng: 35 },
+    { lat: 33, lng: 35.001 },
+    { lat: 33.001, lng: 35.001 },
+  ];
+  const baseline = routeFrom(geometry);
+  const cornerMeters = baseline.geometry[1].distanceFromStartMeters;
+  const totalMeters = baseline.distanceMeters;
+  const route = routeFrom(geometry, {
+    junctions: [{ lat: 33, lng: 35.001 }],
+    crossings: [{
+      kind: "crossing",
+      crossingId: "crossing-transition",
+      mappingId: "mapping-transition",
+      crossingKind: "side-change",
+      crossingRepresentation: "junction-transition",
+      guidancePolicy: "user-option",
+      crossedRoadName: "Road 9977",
+      continuation: { type: "turn", direction: "left" },
+      entryMeters: cornerMeters,
+      exitMeters: cornerMeters,
+      complete: true,
+    }],
+    segmentSpans: [
+      { startMeters: 0, endMeters: cornerMeters, name: "Dirt road" },
+      { startMeters: cornerMeters, endMeters: totalMeters, name: "North sideline" },
+    ],
+  });
+
+  const enabled = buildRouteCues(route);
+  const crossing = findType(enabled, "crossing")[0];
+  assert.equal(findType(enabled, "turn").length, 0);
+  assert.deepEqual(crossing.thenManeuver, {
+    type: "turn",
+    direction: "left",
+    ontoSegmentName: "North sideline",
+  });
+
+  const disabled = buildRouteCues(route, {
+    intersectionCrossingGuidanceEnabled: false,
+  });
+  assert.equal(findType(disabled, "crossing").length, 0);
+  assert.equal(findType(disabled, "turn").length, 1);
+  assert.equal(findType(disabled, "turn")[0].direction, "left");
+  assert.equal(findType(disabled, "turn")[0].ontoSegmentName, "North sideline");
+
+  const alwaysRoute = {
+    ...route,
+    crossings: route.crossings.map((item) => ({
+      ...item,
+      crossingRepresentation: "action-path",
+      guidancePolicy: "always",
+      continuation: null,
+    })),
+  };
+  assert.equal(
+    findType(buildRouteCues(alwaysRoute, {
+      intersectionCrossingGuidanceEnabled: false,
+    }), "crossing").length,
+    1,
+    "the user option does not disable existing reviewed action-path guidance",
+  );
+}
+
 console.log("navigation cue tests passed");
