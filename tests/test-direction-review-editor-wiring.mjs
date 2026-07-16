@@ -39,6 +39,8 @@ for (const id of [
   "direction-review-finalize-manual-queue",
   "direction-review-approve-manual-help",
   "refresh-direction-review",
+  "edit-base-overlay-edges",
+  "base-overlay-edge-edit-help",
 ]) {
   assert.match(html, new RegExp(`id=["']${id}["']`), `editor is missing #${id}`);
 }
@@ -59,6 +61,7 @@ for (const token of [
   "clearSelectedOsmDirectionOverride",
   "applySymmetricDirectionMigrationBatch",
   "refreshDirectionReviewEvidence",
+  "toggleBaseOverlayEdgeEditing",
 ]) {
   assert.match(editor, new RegExp(token), `editor wiring is missing ${token}`);
 }
@@ -83,6 +86,12 @@ assert.match(editor, /finalizeQueuedManualDirectionReviews/);
 assert.match(server, /manual-bidirectional-finalize/);
 assert.match(editor, /reviewer \|\|= "ohad"/);
 assert.match(editor, /localDateInputValue/);
+assert.match(editor, /showOverlay && !editingPhysicalEdges/);
+assert.match(editor, /editingPhysicalEdges = state\.editingOverlayEdges \|\| state\.directionReview\.editing/);
+assert.match(editor, /!state\.directionReview\.editing &&[\s\S]{0,100}cwOverlayNetworkFeaturesAtPoint/);
+assert.match(editor, /Boolean\(directionReviewSegment\(\)\)/);
+assert.match(editor, /editingPhysicalEdges \? 0\.2/);
+assert.match(editor, /clearBaseOverlayMappingForSegment\(originalId\)/);
 assert.doesNotMatch(
   server,
   /previous\.sourceGeometryDigest\s*!==\s*segment\.sourceGeometryDigest[\s\S]{0,160}continue;/,

@@ -650,8 +650,32 @@ button:disabled {
   margin-top: 10px;
 }
 
+.base-overlay-selected-mapping {
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.base-overlay-selected-mapping > h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
 .base-overlay-actions button {
   flex: 1 1 130px;
+}
+
+.base-overlay-actions .secondary-button.active {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.base-overlay-edge-section h3 {
+  margin: 14px 0 0;
+  font-size: 13px;
 }
 
 .base-overlay-bulk-button {

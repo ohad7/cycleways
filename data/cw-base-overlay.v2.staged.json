@@ -3,7 +3,7 @@
   "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
   "policyId": "il-bicycle-v1",
   "proposal": {
-    "authoringOverlayDigest": "9e9bc70f433389e0adbb5025f1149027767f9a468342e3f3fe6b4bfb16dda210",
+    "authoringOverlayDigest": "5aea3bbc8c18a7d2efb0282e1b04afd5fb9436752b1a0740e3044a2da3592dad",
     "nonAuthoritative": true,
     "source": "cw-base-overlay-v1",
     "sourceIndexDigest": "402e63dae845f3b29eabd7e5910eb5e43304c78d80efb66f83b4206a5990aa56",
@@ -7421,8 +7421,9 @@
     "65": {
       "alignments": {
         "aToB": {
-          "draft": {
-            "disposition": "needs_review",
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -7663,73 +7664,22 @@
               ]
             },
             "mappingDigest": "34559679adbfaeb4c155383815c22622e71a0b7687c2971f11d2534730b59bd5",
-            "candidate": {
-              "kind": "previously-published",
-              "sourceGeometryChanged": true,
-              "previousReview": {
-                "reviewer": "ohad",
-                "reviewedAt": "2026-07-17",
-                "batchId": "direction-review-2026-07-17",
-                "graphDigest": "45b36389e410ac1419892fb559bf2e74d88756646082e97f822659ae910e180d",
-                "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-                "sourceGeometryDigest": "8c90388b45fc565637416ccd984c663954682d65374e4033f61984121c3ee029",
-                "mappingDigest": "34559679adbfaeb4c155383815c22622e71a0b7687c2971f11d2534730b59bd5",
-                "evidenceDigest": "475b99236f4671d56acc426f7f8401fb81f393838fd21bb058316a8ce62f67ce"
-              }
-            },
-            "validation": {
-              "ok": true,
-              "status": "valid",
-              "reasons": [],
-              "traversalStates": {
-                "0:e734631664_1": "allowed",
-                "1:e734631665_1": "allowed",
-                "2:e734631666_2": "allowed",
-                "3:e734631666_1": "allowed",
-                "4:e1381547052_1": "allowed",
-                "5:e1381547052_2": "allowed",
-                "6:e1381547052_3": "allowed",
-                "7:e1381547052_4": "allowed",
-                "8:e1381547052_5": "allowed",
-                "9:e1381547051_6": "allowed",
-                "10:e1381547051_1": "allowed",
-                "11:e1381547051_2": "allowed",
-                "12:e40857273_1": "allowed",
-                "13:e40857273_2": "allowed",
-                "14:e581405154_1": "allowed",
-                "15:e581405204_2": "allowed",
-                "16:e581405204_3": "allowed",
-                "17:e581405204_4": "allowed",
-                "18:e581405199_1": "allowed",
-                "19:e1421421710_1": "allowed",
-                "20:e581405157_1": "allowed",
-                "21:e581405186_1": "allowed",
-                "22:e1421420696_1": "allowed",
-                "23:e1421420696_2": "allowed",
-                "24:e1421420693_1": "allowed",
-                "25:e1421420685_1": "allowed"
-              },
-              "terminals": {
-                "start": [
-                  35.5866411,
-                  33.1106124
-                ],
-                "end": [
-                  35.5721062,
-                  33.1113772
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 2.586844417024406,
-                "end": 2.1388013049190833
-              }
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-17",
+              "batchId": "direction-review-2026-07-17",
+              "graphDigest": "b2b77fe121a4ff5b354e2ff92c3896315373adb168cbc23a568b2deff7486996",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "790959bf592e1ee39d6d74fce6eee4dae65a9e815aec6aaa7426f20782fe47ed",
+              "mappingDigest": "34559679adbfaeb4c155383815c22622e71a0b7687c2971f11d2534730b59bd5",
+              "evidenceDigest": "475b99236f4671d56acc426f7f8401fb81f393838fd21bb058316a8ce62f67ce"
             }
-          },
-          "published": null
+          }
         },
         "bToA": {
-          "draft": {
-            "disposition": "needs_review",
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -7952,67 +7902,17 @@
               ]
             },
             "mappingDigest": "8768140bc746e2dc389e10f8e36f489885b282af62a2cd56b762651f2939d5cf",
-            "candidate": {
-              "kind": "previously-published",
-              "sourceGeometryChanged": true,
-              "previousReview": {
-                "reviewer": "ohad",
-                "reviewedAt": "2026-07-17",
-                "batchId": "direction-review-2026-07-17",
-                "graphDigest": "45b36389e410ac1419892fb559bf2e74d88756646082e97f822659ae910e180d",
-                "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-                "sourceGeometryDigest": "8c90388b45fc565637416ccd984c663954682d65374e4033f61984121c3ee029",
-                "mappingDigest": "8768140bc746e2dc389e10f8e36f489885b282af62a2cd56b762651f2939d5cf",
-                "evidenceDigest": "6afdb4089b37cd52d6727d27f9f0d07ac7f6267c33e08294c71e6ff8d55eccb1"
-              }
-            },
-            "validation": {
-              "ok": true,
-              "status": "valid",
-              "reasons": [],
-              "traversalStates": {
-                "0:e1421420685_1": "allowed",
-                "1:e581405159_1": "allowed",
-                "2:e1421420691_1": "allowed",
-                "3:e1421420691_2": "allowed",
-                "4:e1421421712_1": "allowed",
-                "5:e581405157_1": "allowed",
-                "6:e581405139_1": "allowed",
-                "7:e581405204_6": "allowed",
-                "8:e581405204_7": "allowed",
-                "9:e581405127_1": "allowed",
-                "10:e40857273_2": "allowed",
-                "11:e40857273_1": "allowed",
-                "12:e1381547051_2": "allowed",
-                "13:e1381547051_1": "allowed",
-                "14:e1381547051_6": "allowed",
-                "15:e1381547052_5": "allowed",
-                "16:e1381547052_4": "allowed",
-                "17:e1381547052_3": "allowed",
-                "18:e1381547052_2": "allowed",
-                "19:e1381547052_1": "allowed",
-                "20:e734631666_1": "allowed",
-                "21:e734631666_2": "allowed",
-                "22:e734631665_1": "allowed",
-                "23:e734631664_1": "allowed"
-              },
-              "terminals": {
-                "start": [
-                  35.5721062,
-                  33.1113772
-                ],
-                "end": [
-                  35.5866411,
-                  33.1106124
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 2.1388013049190833,
-                "end": 2.586844417024406
-              }
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-17",
+              "batchId": "direction-review-2026-07-17",
+              "graphDigest": "b2b77fe121a4ff5b354e2ff92c3896315373adb168cbc23a568b2deff7486996",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "790959bf592e1ee39d6d74fce6eee4dae65a9e815aec6aaa7426f20782fe47ed",
+              "mappingDigest": "8768140bc746e2dc389e10f8e36f489885b282af62a2cd56b762651f2939d5cf",
+              "evidenceDigest": "6afdb4089b37cd52d6727d27f9f0d07ac7f6267c33e08294c71e6ff8d55eccb1"
             }
-          },
-          "published": null
+          }
         }
       },
       "endpoints": {
@@ -43026,13 +42926,9 @@
       "alignments": {
         "aToB": {
           "draft": {
-            "candidate": {
-              "classification": "single_direction_candidate",
-              "kind": "new-authoring"
-            },
             "disposition": "needs_review",
-            "mappingDigest": "0ceb6635de9ffb11aa7c9bddbd09e867be4f18a5239c3c2f93f4e6344d69808a",
             "realization": {
+              "type": "explicit",
               "edgeRefs": [
                 {
                   "direction": "forward",
@@ -43169,29 +43065,19 @@
                   "source": "osm",
                   "toFraction": 1
                 }
-              ],
-              "type": "explicit"
+              ]
+            },
+            "mappingDigest": "0ceb6635de9ffb11aa7c9bddbd09e867be4f18a5239c3c2f93f4e6344d69808a",
+            "candidate": {
+              "classification": "single_direction_candidate",
+              "kind": "new-authoring"
             },
             "validation": {
-              "reasons": [],
+              "ok": true,
               "status": "valid",
-              "terminals": {
-                "end": [
-                  35.5593759,
-                  33.048841
-                ],
-                "start": [
-                  35.5675158,
-                  33.0464886
-                ]
-              },
+              "reasons": [],
               "traversalStates": {
                 "0:e841159366_2": "allowed",
-                "10:e841160751_4": "allowed",
-                "11:e841160751_5": "allowed",
-                "12:e841160751_6": "allowed",
-                "13:e841160751_7": "allowed",
-                "14:e841160751_8": "allowed",
                 "1:e841159366_3": "allowed",
                 "2:e841159366_4": "allowed",
                 "3:e841159365_1": "allowed",
@@ -43200,7 +43086,26 @@
                 "6:e65426680_1": "allowed",
                 "7:e841160751_1": "allowed",
                 "8:e841160751_2": "allowed",
-                "9:e841160751_3": "allowed"
+                "9:e841160751_3": "allowed",
+                "10:e841160751_4": "allowed",
+                "11:e841160751_5": "allowed",
+                "12:e841160751_6": "allowed",
+                "13:e841160751_7": "allowed",
+                "14:e841160751_8": "allowed"
+              },
+              "terminals": {
+                "start": [
+                  35.5675158,
+                  33.0464886
+                ],
+                "end": [
+                  35.5593759,
+                  33.048841
+                ]
+              },
+              "endpointDistancesMeters": {
+                "start": 7.495568523771818,
+                "end": 0.3720203248540323
               }
             }
           },
@@ -43320,6 +43225,223 @@
       "segmentId": 358,
       "segmentName": "רחוב פנימי שדה אליעזר",
       "sourceGeometryDigest": "6de5544c819f25fcd2dd6fcb8f2b3a2a12df80a51e830310de32da13c9b73bbb"
+    },
+    "360": {
+      "alignments": {
+        "aToB": {
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "edgeRefs": [
+                {
+                  "direction": "forward",
+                  "edgeId": "e841158834_6",
+                  "fromFraction": 0,
+                  "osmWayId": 841158834,
+                  "sequenceIndex": 0,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841155423_1",
+                  "fromFraction": 0,
+                  "osmWayId": 841155423,
+                  "sequenceIndex": 1,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841155428_2",
+                  "fromFraction": 0,
+                  "osmWayId": 841155428,
+                  "sequenceIndex": 2,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e65426716_1",
+                  "fromFraction": 0,
+                  "osmWayId": 65426716,
+                  "sequenceIndex": 3,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841159366_1",
+                  "fromFraction": 0,
+                  "osmWayId": 841159366,
+                  "sequenceIndex": 4,
+                  "source": "osm",
+                  "toFraction": 1
+                }
+              ],
+              "type": "explicit"
+            },
+            "mappingDigest": "9f8aeade2bbd9cc733f31bd6feeacc63e6376e0d94b7cdc977faa692fef20a82",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-17",
+              "batchId": "direction-review-2026-07-17",
+              "graphDigest": "b2b77fe121a4ff5b354e2ff92c3896315373adb168cbc23a568b2deff7486996",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "63ef349c6cb7c83f77151a9df98c3d6783b486c8c35baa275cc60471fdb14a50",
+              "mappingDigest": "9f8aeade2bbd9cc733f31bd6feeacc63e6376e0d94b7cdc977faa692fef20a82",
+              "evidenceDigest": "3ca8852e4b51cfda8d371735b49484500c8840e46313e51d9a1ee1b2c76b4158"
+            }
+          }
+        },
+        "bToA": {
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "e841159366_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841159366
+                },
+                {
+                  "edgeId": "e841155416_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841155416
+                },
+                {
+                  "edgeId": "e841155428_4",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 2,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841155428
+                },
+                {
+                  "edgeId": "e841155428_5",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 3,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841155428
+                },
+                {
+                  "edgeId": "e841155428_6",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 4,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841155428
+                },
+                {
+                  "edgeId": "e841155428_7",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 5,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841155428
+                },
+                {
+                  "edgeId": "e841155428_8",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 6,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841155428
+                },
+                {
+                  "edgeId": "e841158832_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 7,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158832
+                },
+                {
+                  "edgeId": "e841158834_6",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 8,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158834
+                }
+              ]
+            },
+            "mappingDigest": "3f52019e3e7f0947f42c7b6fcb00c5a0b1a5b871c70dd96cec6b8ec3f96c8e04",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-17",
+              "batchId": "direction-review-2026-07-17",
+              "graphDigest": "b2b77fe121a4ff5b354e2ff92c3896315373adb168cbc23a568b2deff7486996",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "63ef349c6cb7c83f77151a9df98c3d6783b486c8c35baa275cc60471fdb14a50",
+              "mappingDigest": "3f52019e3e7f0947f42c7b6fcb00c5a0b1a5b871c70dd96cec6b8ec3f96c8e04",
+              "evidenceDigest": "44eda98f3d403fcc8b65dcc96db0cca7dc52d242466dbf3a97ddb3ba90f59321"
+            }
+          }
+        }
+      },
+      "endpoints": {
+        "a": {
+          "coordinate": [
+            35.56801275,
+            33.04603625
+          ],
+          "labels": {
+            "key": "A"
+          },
+          "zoneMeters": 30
+        },
+        "b": {
+          "coordinate": [
+            35.56752953450581,
+            33.0464566486788
+          ],
+          "labels": {
+            "key": "B"
+          },
+          "zoneMeters": 30
+        }
+      },
+      "lifecycleStatus": "active",
+      "migration": {
+        "classification": "single_direction_candidate",
+        "endpointMatch": {
+          "alignmentKey": "aToB",
+          "distances": {
+            "endA": 68.37734386334598,
+            "endB": 3.7764196160902186,
+            "startA": 8.61715295929087,
+            "startB": 71.13018818852282
+          },
+          "reason": "matched"
+        },
+        "sourceMappingOrigin": "authoring-v1",
+        "sourceMappingStatus": "accepted_auto_match",
+        "sourceSchemaVersion": 1
+      },
+      "navigable": true,
+      "segmentId": 360,
+      "segmentName": "ככר כניסה שדה אליעזר",
+      "sourceGeometryDigest": "63ef349c6cb7c83f77151a9df98c3d6783b486c8c35baa275cc60471fdb14a50"
     }
   }
 }

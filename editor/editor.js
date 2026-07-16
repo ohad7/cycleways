@@ -194,6 +194,7 @@ const state = {
   draggingDataMarker: null,
   suppressNextSegmentClick: false,
   directionReviewToggledThisClick: null,
+  overlayToggledThisClick: null,
   showUnresolvedSegments: false,
   unresolvedSegmentIds: [],
   unresolvedSegmentFilterKey: null,
@@ -205,6 +206,7 @@ const state = {
   mapStyle: getInitialMapStyle(),
   draw: emptyDrawState(),
   editingEdgePickEdges: false,
+  editingOverlayEdges: false,
   splittingEdgePickAt: null,
   roundabouts: {
     loading: false,
@@ -399,6 +401,8 @@ const els = {
   connectorThresholdTooFarRadius: document.getElementById("connector-threshold-too-far-radius"),
   baseOverlayStatus: document.getElementById("base-overlay-status"),
   baseOverlaySummary: document.getElementById("base-overlay-summary"),
+  editBaseOverlayEdges: document.getElementById("edit-base-overlay-edges"),
+  baseOverlayEdgeEditHelp: document.getElementById("base-overlay-edge-edit-help"),
   acceptBaseOverlay: document.getElementById("accept-base-overlay"),
   recalculateSelectedOverlay: document.getElementById("recalculate-selected-overlay"),
   snapBoundaryOverlay: document.getElementById("snap-boundary-overlay"),
@@ -1663,7 +1667,12 @@ function updateWorkspaceLayerVisibility() {
   const showCrossings = state.workspaceMode === "crossings";
   const showOneWayDirections = (showBaseEdit && state.baseOverlay.showOneWayDirections) || showCrossings;
   const showOverlay = showBaseWorkspaceGraph && state.workspaceMode === "overlay";
-  const showDirectionReview = showOverlay && state.directionReview.loaded;
+  const editingPhysicalEdges = state.editingOverlayEdges || state.directionReview.editing;
+  const showDirectionReview =
+    showOverlay &&
+    state.directionReview.loaded &&
+    Boolean(directionReviewSegment()) &&
+    !state.editingOverlayEdges;
   const showRoundabouts = state.workspaceMode === "roundabouts";
 
   setLayerVisibility("segments-layer", showSegments);
@@ -1671,6 +1680,20 @@ function updateWorkspaceLayerVisibility() {
   setLayerVisibility("unresolved-segments-layer", showUnresolvedSegments);
   for (const layerId of ["base-graph-edges-layer", "manual-base-edges-layer"]) {
     setLayerVisibility(layerId, showBaseGraphVisual);
+    if (map.getLayer(layerId)) {
+      map.setPaintProperty(
+        layerId,
+        "line-width",
+        editingPhysicalEdges
+          ? ["interpolate", ["linear"], ["zoom"], 10, 3, 13, 5, 16, 7]
+          : BASE_GRAPH_LINE_WIDTH,
+      );
+      map.setPaintProperty(
+        layerId,
+        "line-opacity",
+        editingPhysicalEdges ? 0.9 : BASE_GRAPH_LINE_OPACITY,
+      );
+    }
   }
   for (const layerId of ["base-graph-edges-hit-layer", "manual-base-edges-hit-layer"]) {
     setLayerVisibility(layerId, showBaseGraphHit);
@@ -1698,12 +1721,11 @@ function updateWorkspaceLayerVisibility() {
   ]) {
     setLayerVisibility(layerId, showBaseEdit);
   }
-  for (const layerId of [
-    "cw-overlay-network-layer",
+  setLayerVisibility("cw-overlay-network-layer", showOverlay);
+  setLayerVisibility(
     "cw-overlay-network-hit-layer",
-  ]) {
-    setLayerVisibility(layerId, showOverlay);
-  }
+    showOverlay && !editingPhysicalEdges,
+  );
   for (const layerId of [
     "selected-overlay-edges-layer",
     "selected-overlay-hovered-edge-layer",
@@ -1725,6 +1747,15 @@ function updateWorkspaceLayerVisibility() {
   ]) {
     setLayerVisibility(layerId, showDirectionReview);
   }
+  if (map.getLayer("direction-review-alignments-layer")) {
+    map.setPaintProperty(
+      "direction-review-alignments-layer",
+      "line-opacity",
+      state.directionReview.editing
+        ? ["case", ["get", "selected"], 0.88, 0.1]
+        : ["case", ["get", "selected"], 0.96, 0.42],
+    );
+  }
   setLayerVisibility("compose-edge-pick-layer", composing);
   setLayerVisibility("compose-edge-pick-labels", composing);
   for (const layerId of [
@@ -1744,9 +1775,14 @@ function updateWorkspaceLayerVisibility() {
     setLayerVisibility(layerId, showCrossings);
   }
   if (map.getLayer("selected-segment")) {
-    map.setPaintProperty("selected-segment", "line-color", showDirectionReview ? "#64748b" : "#f2c94c");
-    map.setPaintProperty("selected-segment", "line-opacity", showDirectionReview ? 0.42 : 0.9);
-    map.setPaintProperty("selected-segment", "line-width", showDirectionReview ? 5 : 7);
+    const mutedSelectedSegment = showDirectionReview || editingPhysicalEdges;
+    map.setPaintProperty("selected-segment", "line-color", mutedSelectedSegment ? "#64748b" : "#f2c94c");
+    map.setPaintProperty(
+      "selected-segment",
+      "line-opacity",
+      editingPhysicalEdges ? 0.2 : showDirectionReview ? 0.42 : 0.9,
+    );
+    map.setPaintProperty("selected-segment", "line-width", mutedSelectedSegment ? 5 : 7);
   }
 }
 
@@ -3320,13 +3356,21 @@ async function toggleSelectedOverlayBaseEdge(feature) {
   const edgeRefs = normalizeOverlayEdgeRefs(existing?.edgeRefs?.length ? existing.edgeRefs : edgeRefsForAutoMatch(segmentId));
   const ref = edgeRefFromBaseFeature(feature, edgeRefs.length);
   if (!ref) return;
+  if (!state.overlayToggledThisClick) {
+    state.overlayToggledThisClick = new Set();
+    window.setTimeout(() => {
+      state.overlayToggledThisClick = null;
+    }, 0);
+  }
+  if (state.overlayToggledThisClick.has(String(ref.edgeId))) return;
+  state.overlayToggledThisClick.add(String(ref.edgeId));
 
   const existingIndex = edgeRefs.findIndex((edgeRef) => String(edgeRef.edgeId) === ref.edgeId);
   let nextRefs;
   if (existingIndex >= 0) {
     nextRefs = edgeRefs.filter((_edgeRef, index) => index !== existingIndex);
   } else {
-    nextRefs = [...edgeRefs, ref];
+    nextRefs = orientAppendedEdgeRef(edgeRefs, ref, baseEdgeGeometryLookup());
   }
   nextRefs = normalizeOverlayEdgeRefs(nextRefs);
 
@@ -3347,8 +3391,37 @@ async function toggleSelectedOverlayBaseEdge(feature) {
   });
   setStatus(
     existingIndex >= 0
-      ? `Removed base edge ${ref.edgeId} from ${featureName(selected)}.`
-      : `Added base edge ${ref.edgeId} to ${featureName(selected)}.`,
+      ? `Removed base edge ${ref.edgeId} from ${featureName(selected)} (${nextRefs.length} selected).`
+      : `Added base edge ${ref.edgeId} to ${featureName(selected)} (${nextRefs.length} selected).`,
+  );
+}
+
+async function toggleBaseOverlayEdgeEditing() {
+  if (state.workspaceMode !== "overlay") return;
+  if (!state.baseOverlay.loaded) {
+    state.baseOverlay.enabled = true;
+    await loadBaseOverlayData();
+  }
+
+  const segmentId = selectedSegmentId();
+  const selected = selectedFeature();
+  if (!selected || segmentId === null) {
+    throw new Error("Select a CW segment before editing its mapping edges.");
+  }
+  if (isBaseGraphStale()) {
+    throw new Error("Recalculate the base graph before editing mapping edges.");
+  }
+  if (isBaseOverlayMappingLocked(overlayMappingForSegment(segmentId))) {
+    throw new Error("Clear the accepted mapping before editing its base edges.");
+  }
+
+  state.directionReview.editing = false;
+  state.editingOverlayEdges = !state.editingOverlayEdges;
+  renderAll();
+  setStatus(
+    state.editingOverlayEdges
+      ? `Editing ${featureName(selected)}: click any base edge to add or remove it.`
+      : `Finished editing mapping edges for ${featureName(selected)}.`,
   );
 }
 
@@ -5052,6 +5125,9 @@ function renderBaseOverlayPanel() {
     els.markManualBaseOverlay.disabled = true;
     els.clearBaseOverlay.disabled = true;
     els.baseOverlayEdges.innerHTML = "";
+    els.editBaseOverlayEdges.disabled = true;
+    els.editBaseOverlayEdges.classList.remove("active");
+    els.baseOverlayEdgeEditHelp.textContent = "Select a segment to edit its mapping edges.";
     return;
   }
 
@@ -5065,6 +5141,9 @@ function renderBaseOverlayPanel() {
     els.markManualBaseOverlay.disabled = true;
     els.clearBaseOverlay.disabled = true;
     els.baseOverlayEdges.innerHTML = "";
+    els.editBaseOverlayEdges.disabled = true;
+    els.editBaseOverlayEdges.classList.remove("active");
+    els.baseOverlayEdgeEditHelp.textContent = "Loading base graph edges…";
     return;
   }
 
@@ -5078,6 +5157,9 @@ function renderBaseOverlayPanel() {
     els.markManualBaseOverlay.disabled = true;
     els.clearBaseOverlay.disabled = !mapping;
     els.baseOverlayEdges.innerHTML = "";
+    els.editBaseOverlayEdges.disabled = true;
+    els.editBaseOverlayEdges.classList.remove("active");
+    els.baseOverlayEdgeEditHelp.textContent = "Load the base graph before editing mapping edges.";
     return;
   }
 
@@ -5211,6 +5293,23 @@ function renderBaseOverlayPanel() {
     snapPlan.actions.length === 0;
   els.markManualBaseOverlay.disabled = true;
   els.clearBaseOverlay.disabled = !mapping;
+  const canEditMappingEdges =
+    !baseGraphStaleForSegment &&
+    !mappingLocked &&
+    !state.baseOverlay.recalculating &&
+    !state.directionReview.editing;
+  els.editBaseOverlayEdges.disabled = !canEditMappingEdges;
+  els.editBaseOverlayEdges.classList.toggle("active", state.editingOverlayEdges);
+  els.editBaseOverlayEdges.textContent = state.editingOverlayEdges
+    ? "Finish editing edges"
+    : "Edit mapping edges";
+  els.baseOverlayEdgeEditHelp.textContent = baseGraphStaleForSegment
+    ? "Recalculate the base graph before editing mapping edges."
+    : mappingLocked
+      ? "Clear the accepted mapping before editing its base edges."
+      : state.editingOverlayEdges
+        ? "Editing is active: click any base edge on the map to add or remove it from this segment."
+        : "Choose Edit mapping edges to make map clicks modify this segment instead of selecting other CW segments.";
 
   const edgeRefs = reviewedEdgeRefs;
   els.baseOverlayEdges.innerHTML = "";
@@ -5753,6 +5852,7 @@ async function toggleDirectionReviewEditing() {
     setStatus("Finished directed-edge editing. Revalidate, then accept when all checks pass.");
     return;
   }
+  state.editingOverlayEdges = false;
   const slot = directionReviewRecord(selectedSegmentId());
   if (!slot?.draft?.realization || slot.draft.realization.type !== "explicit") {
     await runDirectionReviewAction("save-draft", { edgeRefs: currentDirectionReviewRefs() });
@@ -5983,6 +6083,7 @@ function selectFeatureByActiveIndex(index, fit = false) {
   }
   state.selectedIndex = index;
   state.directionReview.editing = false;
+  state.editingOverlayEdges = false;
   state.selectedVertexIndex = -1;
   state.selectedDataIndex = -1;
   renderAll();
@@ -6045,6 +6146,7 @@ async function setWorkspaceMode(mode) {
 
   const previousMode = state.workspaceMode;
   state.workspaceMode = mode;
+  if (mode !== "overlay") state.editingOverlayEdges = false;
   if (previousMode === "video-sync" && mode !== "video-sync") {
     vsDeactivate();
   }
@@ -7843,7 +7945,7 @@ function partitionDataMarkers(markers, firstCoords, secondCoords) {
   return { firstData, secondData };
 }
 
-function splitSelectedSegment() {
+async function splitSelectedSegment() {
   if (state.workspaceMode === "base") {
     splitSelectedManualBaseEdge().catch(showError);
     return;
@@ -7868,6 +7970,15 @@ function splitSelectedSegment() {
   };
   const originalId = originalProperties.id;
   const originalName = featureName(feature);
+
+  if (!state.baseOverlay.loaded) {
+    await loadBaseOverlayData();
+  }
+  if (overlayMappingForSegment(originalId)) {
+    clearBaseOverlayMappingForSegment(originalId);
+    await saveBaseOverlay();
+  }
+
   const nextId = nextSegmentId();
   const [firstName, secondName] = uniqueSplitNames(originalName, sourceIndex);
   const archivedParentName = archiveName(originalName, originalId, "split archive", new Set([sourceIndex]));
@@ -8765,6 +8876,7 @@ async function acceptSelectedAutoMatch() {
     await persistSelectedOverlayMatch(segmentId);
   }
   await saveSelectedBaseOverlayMapping(reviewedOverlayMapping(segmentId, feature, match, edgeRefs));
+  state.editingOverlayEdges = false;
   const status = overlayNetworkStatus(matchSummaryForSegment(segmentId));
   setStatus(
     status.resolved
@@ -8815,6 +8927,7 @@ async function bulkAcceptFullAutoMatches() {
     segments,
   };
   await saveBaseOverlay();
+  state.editingOverlayEdges = false;
   renderAll();
 
   const details = [
@@ -8874,6 +8987,7 @@ async function clearSelectedBaseOverlayMapping() {
     segments,
   };
   await saveBaseOverlay();
+  state.editingOverlayEdges = false;
   renderAll();
   setStatus(`Cleared base overlay mapping for ${featureName(feature)}.`);
 }
@@ -9170,7 +9284,7 @@ function wireEvents() {
   els.modeInsert.addEventListener("click", () => setMode("insert"));
   els.extendSegment.addEventListener("click", startExtendDraw);
   els.deleteVertex.addEventListener("click", deleteSelectedVertex);
-  els.splitSegment.addEventListener("click", splitSelectedSegment);
+  els.splitSegment.addEventListener("click", () => splitSelectedSegment().catch(showError));
   els.toggleBaseOverlay.addEventListener("click", () => toggleBaseOverlay().catch(showError));
   els.drawDone.addEventListener("click", () => finishDraw().catch(showError));
   els.drawCancel.addEventListener("click", cancelDraw);
@@ -9277,6 +9391,7 @@ function wireEvents() {
   els.saveSource.addEventListener("click", () => saveSource().catch(showError));
   els.runBuild.addEventListener("click", () => runBuild().catch(showError));
   els.promoteBuild.addEventListener("click", () => promoteBuild().catch(showError));
+  els.editBaseOverlayEdges.addEventListener("click", () => toggleBaseOverlayEdgeEditing().catch(showError));
   els.acceptBaseOverlay.addEventListener("click", () => acceptSelectedAutoMatch().catch(showError));
   els.recalculateSelectedOverlay.addEventListener("click", () => recalculateSelectedOverlayMatch().catch(showError));
   els.snapBoundaryOverlay.addEventListener("click", () => snapSelectedBoundaryOverlay().catch(showError));
@@ -9296,6 +9411,7 @@ function wireEvents() {
 
   map.on("click", "cw-overlay-network-hit-layer", (event) => {
     if (state.workspaceMode !== "overlay" || state.mode !== "select") return;
+    if (state.editingOverlayEdges || state.directionReview.editing) return;
     const feature = event.features?.[0];
     const segmentId = Number(feature?.properties?.overlaySegmentId);
     if (!Number.isInteger(segmentId) || !selectSegmentById(segmentId)) return;
@@ -9333,7 +9449,11 @@ function wireEvents() {
     ) {
       return;
     }
-    if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
+    if (
+      !state.editingOverlayEdges &&
+      !state.directionReview.editing &&
+      cwOverlayNetworkFeaturesAtPoint(event.point).length > 0
+    ) return;
     if (connectorLensFeaturesAtPoint(event.point).length > 0) return;
     if (state.workspaceMode === "base" && connectorLensRunActive()) {
       state.suppressNextSegmentClick = true;
@@ -9390,7 +9510,11 @@ function wireEvents() {
 
   map.on("click", "manual-base-edges-hit-layer", (event) => {
     if (state.mode !== "select" && !isComposingNewSegmentEdges()) return;
-    if (cwOverlayNetworkFeaturesAtPoint(event.point).length > 0) return;
+    if (
+      !state.editingOverlayEdges &&
+      !state.directionReview.editing &&
+      cwOverlayNetworkFeaturesAtPoint(event.point).length > 0
+    ) return;
     if (connectorLensFeaturesAtPoint(event.point).length > 0) return;
     if (isComposingNewSegmentEdges()) {
       state.suppressNextSegmentClick = true;
