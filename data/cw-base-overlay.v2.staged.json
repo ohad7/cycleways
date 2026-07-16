@@ -29811,70 +29811,9 @@
     "174": {
       "alignments": {
         "aToB": {
-          "draft": {
-            "disposition": "needs_review",
-            "candidate": {
-              "kind": "manual-editor"
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "endpoint_zone_failure",
-                  "ok": false,
-                  "terminals": {
-                    "start": [
-                      35.5867928,
-                      33.2210163
-                    ],
-                    "end": [
-                      35.602288,
-                      33.225227
-                    ]
-                  },
-                  "distances": {
-                    "start": 1127.4820717641946,
-                    "end": 17.00593228960347
-                  },
-                  "startZoneMeters": 30,
-                  "endZoneMeters": 30
-                }
-              ],
-              "traversalStates": {
-                "0:e626743324_8": "allowed",
-                "1:e626743324_9": "allowed",
-                "2:e626743324_1": "allowed",
-                "3:e626743324_2": "allowed",
-                "4:e626743324_3": "allowed",
-                "5:e626743324_4": "allowed",
-                "6:e623776483_1": "allowed",
-                "7:e1024904323_1": "allowed",
-                "8:e1024904323_2": "allowed",
-                "9:e1024904318_1": "allowed",
-                "10:e844282807_2": "allowed",
-                "11:e844282807_3": "allowed",
-                "12:e844282808_1": "allowed",
-                "13:e844282808_2": "allowed",
-                "14:e844282808_3": "allowed",
-                "15:e844282808_4": "allowed",
-                "16:manual-edge-mrnltwsa": "allowed"
-              },
-              "terminals": {
-                "start": [
-                  35.5867928,
-                  33.2210163
-                ],
-                "end": [
-                  35.602288,
-                  33.225227
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 1127.4820717641946,
-                "end": 17.00593228960347
-              }
-            },
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -30033,68 +29972,22 @@
                 }
               ]
             },
-            "mappingDigest": "21b6089a75f23449807613036099997a81093a0c205b26890a9cf9024f7e244c"
-          },
-          "published": null
+            "mappingDigest": "21b6089a75f23449807613036099997a81093a0c205b26890a9cf9024f7e244c",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-16",
+              "batchId": "1",
+              "graphDigest": "55ddcbef85825829479018fb310c4f302942c5d067a4e25d8cd9034f07520193",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "cb36397bc8bfc0a83fb5619b6a0fe88396e20a85932816919696d28a2e39c5a1",
+              "mappingDigest": "21b6089a75f23449807613036099997a81093a0c205b26890a9cf9024f7e244c"
+            }
+          }
         },
         "bToA": {
-          "draft": {
-            "disposition": "needs_review",
-            "candidate": {
-              "kind": "manual-editor"
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "endpoint_zone_failure",
-                  "ok": false,
-                  "terminals": {
-                    "start": [
-                      35.602288,
-                      33.225227
-                    ],
-                    "end": [
-                      35.5867928,
-                      33.2210163
-                    ]
-                  },
-                  "distances": {
-                    "start": 17.00593228960347,
-                    "end": 1127.4820717641946
-                  },
-                  "startZoneMeters": 30,
-                  "endZoneMeters": 30
-                }
-              ],
-              "traversalStates": {
-                "0:manual-edge-mrnlxmj5": "allowed",
-                "1:e1024609370_2": "allowed",
-                "2:e844282807_5": "allowed",
-                "3:e844282807_6": "allowed",
-                "4:e844282807_7": "allowed",
-                "5:e844282810_1": "allowed",
-                "6:e1024609375_1": "allowed",
-                "7:e1024609376_1": "allowed",
-                "8:e626743324_6": "allowed",
-                "9:e626743324_7": "allowed"
-              },
-              "terminals": {
-                "start": [
-                  35.602288,
-                  33.225227
-                ],
-                "end": [
-                  35.5867928,
-                  33.2210163
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 17.00593228960347,
-                "end": 1127.4820717641946
-              }
-            },
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -30190,16 +30083,24 @@
                 }
               ]
             },
-            "mappingDigest": "f7f9be093c47b0010463294aac90321614e7962c27b7a608b746804d041dc6e5"
-          },
-          "published": null
+            "mappingDigest": "f7f9be093c47b0010463294aac90321614e7962c27b7a608b746804d041dc6e5",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-16",
+              "batchId": "1",
+              "graphDigest": "55ddcbef85825829479018fb310c4f302942c5d067a4e25d8cd9034f07520193",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "cb36397bc8bfc0a83fb5619b6a0fe88396e20a85932816919696d28a2e39c5a1",
+              "mappingDigest": "f7f9be093c47b0010463294aac90321614e7962c27b7a608b746804d041dc6e5"
+            }
+          }
         }
       },
       "endpoints": {
         "a": {
           "coordinate": [
-            35.57476005860417,
-            33.22223585900039
+            35.586754660586166,
+            33.220973194786254
           ],
           "labels": {
             "key": "A"
@@ -30208,8 +30109,8 @@
         },
         "b": {
           "coordinate": [
-            35.602148770873356,
-            33.22532612199184
+            35.60228170034756,
+            33.22519865559363
           ],
           "labels": {
             "key": "B"
@@ -30236,7 +30137,7 @@
       "navigable": true,
       "segmentId": 174,
       "segmentName": "כביש 99 קריית שמונה",
-      "sourceGeometryDigest": "c3f12935f39f9cc4d5ff5649a6c65244ed11d73d59143184f790ea8c9d49abdc"
+      "sourceGeometryDigest": "cb36397bc8bfc0a83fb5619b6a0fe88396e20a85932816919696d28a2e39c5a1"
     },
     "175": {
       "alignments": {
