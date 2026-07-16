@@ -145,13 +145,17 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-19T06:29:41.181Z",
-        "updatedAt": "2026-05-19T06:32:41.994Z",
+        "updatedAt": "2026-07-16T21:35:51.317Z",
         "linkedSegmentId": 136,
         "linkedSegmentName": "נחל חצור מחניים",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #136 (נחל חצור מחניים) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #136; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -292,12 +296,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:30:15.415Z",
-        "updatedAt": "2026-05-19T06:31:09.712Z",
+        "updatedAt": "2026-07-16T21:35:51.317Z",
         "splitFrom": "manual-osm-79590066-mpc977g7",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #136 (נחל חצור מחניים) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #136; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -758,12 +766,16 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:13:00.685Z",
-        "updatedAt": "2026-05-19T07:13:07.052Z",
+        "updatedAt": "2026-07-16T21:40:22.968Z",
         "splitFrom": "manual-osm-815935991-mpcaq6tp",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #170 (דרך נוף מצפה עדי מטולה צפון) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #170; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -815,12 +827,16 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:13:00.685Z",
-        "updatedAt": "2026-05-19T07:13:07.052Z",
+        "updatedAt": "2026-07-16T21:40:38.038Z",
         "splitFrom": "manual-osm-815935991-mpcaq6tp",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #181 (מצפה דדו מטולה אתר בבניה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #181; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -913,12 +929,16 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:13:13.678Z",
-        "updatedAt": "2026-05-19T07:13:33.484Z",
+        "updatedAt": "2026-07-16T21:37:07.353Z",
         "splitFrom": "manual-osm-164242192-mpcaqgum",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #165 (דרך מעבר להר הצפייה מטעים מטולה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #165; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -953,13 +973,17 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-19T07:14:07.230Z",
-        "updatedAt": "2026-05-19T07:14:07.230Z",
+        "updatedAt": "2026-07-16T21:37:07.353Z",
         "linkedSegmentId": 165,
         "linkedSegmentName": "דרך מעבר להר הצפייה מטעים מטולה",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #165 (דרך מעבר להר הצפייה מטעים מטולה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #165; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1030,13 +1054,17 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-19T07:41:47.163Z",
-        "updatedAt": "2026-05-19T07:41:47.163Z",
+        "updatedAt": "2026-07-16T21:41:03.875Z",
         "linkedSegmentId": 223,
         "linkedSegmentName": "האגם הנעלם",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #223 (האגם הנעלם) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #223; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1157,12 +1185,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:11.642Z",
-        "updatedAt": "2026-05-19T07:56:17.365Z",
+        "updatedAt": "2026-07-16T21:41:14.324Z",
         "splitFrom": "manual-osm-526566324-mpcc9q0q",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #243 (סובב דפנה שדות) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #243; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1194,12 +1226,16 @@
         "osmRouteClass": "road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:24.543Z",
-        "updatedAt": "2026-05-19T07:56:35.365Z",
+        "updatedAt": "2026-07-16T21:39:08.895Z",
         "splitFrom": "manual-osm-958921321-mpcc9zz3",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #61 (כביש 99 שאר ישוב) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #61; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1239,12 +1275,16 @@
         "osmRouteClass": "road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:24.543Z",
-        "updatedAt": "2026-05-19T07:56:35.365Z",
+        "updatedAt": "2026-07-16T21:38:51.877Z",
         "splitFrom": "manual-osm-958921321-mpcc9zz3",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #60 (כביש 99 קיבוץ דן) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #60; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1275,13 +1315,17 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-19T07:57:00.694Z",
-        "updatedAt": "2026-05-26T19:56:17.416Z",
+        "updatedAt": "2026-07-16T21:41:14.324Z",
         "linkedSegmentId": 243,
         "linkedSegmentName": "סובב דפנה שדות",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #243 (סובב דפנה שדות) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #243; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1349,12 +1393,16 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:59:43.139Z",
-        "updatedAt": "2026-05-27T01:21:59.183Z",
+        "updatedAt": "2026-07-16T21:40:54.529Z",
         "splitFrom": "manual-osm-660704151-mpcce97n",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #222 (דרך היקפית דרום כפר סאלד) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #222; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1398,12 +1446,16 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:59:43.139Z",
-        "updatedAt": "2026-05-27T01:21:37.127Z",
+        "updatedAt": "2026-07-16T21:41:03.875Z",
         "splitFrom": "manual-osm-660704151-mpcce97n",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #223 (האגם הנעלם) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #223; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1479,13 +1531,17 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-19T09:31:25.514Z",
-        "updatedAt": "2026-05-20T15:08:17.592Z",
+        "updatedAt": "2026-07-16T21:36:49.475Z",
         "linkedSegmentId": 157,
         "linkedSegmentName": "שדות בית הלל - מזרח",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #157 (שדות בית הלל - מזרח) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #157; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1681,12 +1737,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T09:31:30.273Z",
-        "updatedAt": "2026-05-20T15:08:20.881Z",
+        "updatedAt": "2026-07-16T21:35:35.206Z",
         "splitFrom": "manual-osm-366459807-mpcfoajl",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #117 (שדות בית הלל מערב) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #117; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -1842,12 +1902,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T09:31:30.273Z",
-        "updatedAt": "2026-05-20T15:08:24.173Z",
+        "updatedAt": "2026-07-16T21:39:33.430Z",
         "splitFrom": "manual-osm-366459807-mpcfoajl",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #78 (נחל עיון מחנה גיבור) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #78; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -2578,13 +2642,17 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-05-20T15:38:25.131Z",
-        "updatedAt": "2026-05-20T15:38:25.131Z",
+        "updatedAt": "2026-07-16T21:36:26.191Z",
         "linkedSegmentId": 146,
         "linkedSegmentName": "רחוב הנרייטה סאלד",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #146 (רחוב הנרייטה סאלד) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #146; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -2673,12 +2741,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T20:39:41.408Z",
-        "updatedAt": "2026-05-20T20:48:42.415Z",
+        "updatedAt": "2026-07-16T21:39:47.735Z",
         "splitFrom": "manual-osm-244191207-mpeizfq8",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #93 (שביל אופניים 9779 תל אנפה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #93; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -2713,13 +2785,17 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-20T20:40:00.824Z",
-        "updatedAt": "2026-05-20T20:48:48.742Z",
+        "updatedAt": "2026-07-16T21:39:47.735Z",
         "linkedSegmentId": 93,
         "linkedSegmentName": "שביל אופניים 9779 תל אנפה",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #93 (שביל אופניים 9779 תל אנפה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #93; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -2751,12 +2827,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T22:15:06.145Z",
-        "updatedAt": "2026-05-20T22:15:29.194Z",
+        "updatedAt": "2026-07-16T21:40:01.725Z",
         "splitFrom": "manual-osm-550409482-mpeme4yp",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #105 (שביל חום תל נעמה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #105; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -2918,12 +2998,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T22:15:10.451Z",
-        "updatedAt": "2026-05-20T22:15:54.158Z",
+        "updatedAt": "2026-07-16T21:40:01.725Z",
         "splitFrom": "manual-osm-550409483-mpeme8ab",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #105 (שביל חום תל נעמה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #105; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -2982,13 +3066,17 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-20T22:16:14.299Z",
-        "updatedAt": "2026-05-20T22:16:14.299Z",
+        "updatedAt": "2026-07-16T21:40:01.725Z",
         "linkedSegmentId": 105,
         "linkedSegmentName": "שביל חום תל נעמה",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #105 (שביל חום תל נעמה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #105; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -3273,13 +3361,17 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-05-24T14:49:54.857Z",
-        "updatedAt": "2026-05-24T14:50:23.552Z",
+        "updatedAt": "2026-07-16T21:41:34.895Z",
         "linkedSegmentId": 301,
         "linkedSegmentName": "New segment - 2",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #301 (גדר מערכת בית הלל צפון) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #301; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -4893,11 +4985,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-07-10T20:17:42.905Z",
-        "updatedAt": "2026-07-10T20:17:50.601Z",
+        "updatedAt": "2026-07-16T21:35:19.842Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #31 (טיילת עמי) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #31; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
