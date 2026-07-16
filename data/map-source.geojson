@@ -51769,7 +51769,173 @@
       "type": "Feature",
       "properties": {
         "id": 150,
-        "name": "בקעת יחמור",
+        "name": "בקעת יחמור [split archive 150]",
+        "status": "deprecated",
+        "roadType": "dirt",
+        "styleUrl": "#sty-109",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "בקעת יחמור",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.567895,
+            33.046035
+          ],
+          [
+            35.55974,
+            33.048677
+          ],
+          [
+            35.553448,
+            33.052103
+          ],
+          [
+            35.551726,
+            33.058943
+          ],
+          [
+            35.545635,
+            33.062102
+          ],
+          [
+            35.547366,
+            33.06923
+          ],
+          [
+            35.548188,
+            33.074851
+          ],
+          [
+            35.548932,
+            33.081074
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 353,
+        "name": "כביש מערכת שדה אליעזר [split archive 353]",
+        "status": "deprecated",
+        "roadType": "dirt",
+        "styleUrl": "#sty-109",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 150,
+        "splitFromName": "בקעת יחמור",
+        "originalName": "כביש מערכת שדה אליעזר",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.56896,
+            33.046043
+          ],
+          [
+            35.562264,
+            33.047055
+          ],
+          [
+            35.557653,
+            33.048215
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 355,
+        "name": "רחוב פנימי שדה אליעזר [split archive 355]",
+        "status": "deprecated",
+        "roadType": "dirt",
+        "styleUrl": "#sty-109",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 353,
+        "splitFromName": "כביש מערכת שדה אליעזר",
+        "originalName": "רחוב פנימי שדה אליעזר",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.569814,
+            33.046049
+          ],
+          [
+            35.56309,
+            33.04716
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 357,
+        "name": "רחוב פנימי שדה אליעזר [split archive 357]",
+        "status": "deprecated",
+        "roadType": "dirt",
+        "styleUrl": "#sty-109",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 355,
+        "splitFromName": "רחוב פנימי שדה אליעזר",
+        "originalName": "רחוב פנימי שדה אליעזר",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.570296,
+            33.046052
+          ],
+          [
+            35.567581,
+            33.046147
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 359,
+        "name": "כביש גישה שדה אליעזר",
         "status": "active",
         "roadType": "dirt",
         "styleUrl": "#sty-109",
@@ -51782,7 +51948,9 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "splitFrom": 357,
+        "splitFromName": "רחוב פנימי שדה אליעזר"
       },
       "geometry": {
         "type": "LineString",
@@ -51881,6 +52049,38 @@
             35.56801275,
             33.04603625,
             149
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 360,
+        "name": "ככר כניסה שדה אליעזר",
+        "status": "active",
+        "roadType": "dirt",
+        "styleUrl": "#sty-109",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 357,
+        "splitFromName": "רחוב פנימי שדה אליעזר"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.56801275,
+            33.04603625,
+            149
           ],
           [
             35.567736,
@@ -51897,6 +52097,38 @@
             33.046352,
             149
           ],
+          [
+            35.5674485,
+            33.0465255,
+            153
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 358,
+        "name": "רחוב פנימי שדה אליעזר",
+        "status": "active",
+        "roadType": "dirt",
+        "styleUrl": "#sty-109",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 355,
+        "splitFromName": "רחוב פנימי שדה אליעזר"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
           [
             35.5674485,
             33.0465255,
@@ -52061,6 +52293,38 @@
             35.559372046311495,
             33.04884187140202,
             160
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 356,
+        "name": "כביש מערכת שדה אליעזר",
+        "status": "active",
+        "roadType": "dirt",
+        "styleUrl": "#sty-109",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 353,
+        "splitFromName": "כביש מערכת שדה אליעזר"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.559372046311495,
+            33.04884187140202,
+            160
           ],
           [
             35.559372046311495,
@@ -52148,10 +52412,42 @@
             185
           ],
           [
-            35.55653425367697,
-            33.04916086665918,
+            35.55658488853368,
+            33.04916370674259,
             190
           ],
+          [
+            35.556281766666665,
+            33.0492401,
+            190
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 354,
+        "name": "בקעת יחמור",
+        "status": "active",
+        "roadType": "dirt",
+        "styleUrl": "#sty-109",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 150,
+        "splitFromName": "בקעת יחמור"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
           [
             35.556281766666665,
             33.0492401,
