@@ -115,4 +115,53 @@ const evidenceNeeded = buildMigrationProposal({
 assert.equal(evidenceNeeded.report.classifications.direction_evidence_needed, 1);
 assert.equal(evidenceNeeded.report.classifications.invalid_existing, undefined);
 
+const mapSourceWithNewSegment = {
+  features: [
+    ...mapSource.features,
+    {
+      type: "Feature",
+      properties: { id: 9, name: "New cycleway", status: "active" },
+      geometry: { type: "LineString", coordinates: [[35, 33], [35.01, 33]] },
+    },
+  ],
+};
+const withNewAuthoringSegment = buildMigrationProposal({
+  overlayV1,
+  authoringOverlayV1: {
+    schemaVersion: 1,
+    segments: {
+      ...overlayV1.segments,
+      "9": {
+        segmentId: 9,
+        segmentName: "New cycleway",
+        status: "accepted_edge_set",
+        edgeRefs: [
+          { edgeId: "east", direction: "forward", sequenceIndex: 0, fromFraction: 0, toFraction: 1 },
+        ],
+      },
+    },
+  },
+  publicIndexV1,
+  mapSource: mapSourceWithNewSegment,
+  graph,
+  policyAudit,
+  graphDigest: "graph-digest",
+});
+assert.equal(withNewAuthoringSegment.report.activeV1Mappings, 1);
+assert.equal(withNewAuthoringSegment.report.activeAuthoringSegments, 2);
+assert.equal(withNewAuthoringSegment.report.newAuthoringSegments, 1);
+assert.equal(withNewAuthoringSegment.report.proposedSegments, 2);
+assert.equal(
+  withNewAuthoringSegment.overlay.segments["9"].alignments.aToB.draft.candidate.kind,
+  "new-authoring",
+);
+assert.equal(
+  withNewAuthoringSegment.overlay.segments["9"].migration.sourceMappingOrigin,
+  "authoring-v1",
+);
+assert.equal(
+  withNewAuthoringSegment.overlay.segments["9"].alignments.bToA.draft.candidate.kind,
+  "exact-reverse",
+);
+
 console.log("CW Overlay V2 migration ok");

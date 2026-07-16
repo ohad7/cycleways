@@ -200,6 +200,7 @@ function endpointMatch(validation, a, b, zoneMeters) {
 
 export function buildMigrationProposal({
   overlayV1,
+  authoringOverlayV1 = overlayV1,
   publicIndexV1,
   mapSource,
   graph,
@@ -207,8 +208,14 @@ export function buildMigrationProposal({
   graphDigest,
   endpointZoneMeters = 30,
 }) {
-  const activeIds = new Set(Object.keys(publicIndexV1.segments || {}).map(Number));
   const sourceById = sourceFeatureById(mapSource);
+  const legacyActiveIds = new Set(Object.keys(publicIndexV1.segments || {}).map(Number));
+  const activeIds = new Set([
+    ...legacyActiveIds,
+    ...[...sourceById.entries()]
+      .filter(([, feature]) => String(feature.properties?.status || "active") === "active")
+      .map(([segmentId]) => segmentId),
+  ]);
   const graphById = new Map((graph.edges || []).map((edge) => [String(edge.id), edge]));
   const policyLookup = nonAllowedLookup(policyAudit);
   const segments = {};
@@ -217,7 +224,10 @@ export function buildMigrationProposal({
   const ownership = new Map();
 
   for (const segmentId of [...activeIds].sort((a, b) => a - b)) {
-    const mapping = overlayV1.segments?.[String(segmentId)];
+    const isLegacySegment = legacyActiveIds.has(segmentId);
+    const mapping = isLegacySegment
+      ? overlayV1.segments?.[String(segmentId)]
+      : authoringOverlayV1.segments?.[String(segmentId)];
     const source = sourceById.get(segmentId);
     if (!mapping || !source || source.geometry?.type !== "LineString") {
       queue.push({ segmentId, code: !mapping ? "missing_v1_mapping" : "missing_logical_source" });
@@ -266,6 +276,7 @@ export function buildMigrationProposal({
       migration: {
         classification,
         sourceSchemaVersion: 1,
+        sourceMappingOrigin: isLegacySegment ? "frozen-v1" : "authoring-v1",
         sourceMappingStatus: mapping.status,
         endpointMatch: endpoint,
       },
@@ -278,7 +289,7 @@ export function buildMigrationProposal({
       disposition: "needs_review",
       realization: existingRealization,
       mappingDigest: existingDigest,
-      candidate: { kind: "v1-existing", classification },
+      candidate: { kind: isLegacySegment ? "v1-existing" : "new-authoring", classification },
       validation: existingValidation,
     };
 
@@ -322,6 +333,7 @@ export function buildMigrationProposal({
     proposal: {
       source: "cw-base-overlay-v1",
       sourceOverlayDigest: digestCwOverlayValue(overlayV1),
+      authoringOverlayDigest: digestCwOverlayValue(authoringOverlayV1),
       sourceIndexDigest: digestCwOverlayValue(publicIndexV1),
       nonAuthoritative: true,
     },
@@ -332,9 +344,11 @@ export function buildMigrationProposal({
     schemaVersion: 1,
     graphDigest,
     policyDigest: policyAudit.policyDigest,
-    activeV1Mappings: activeIds.size,
+    activeV1Mappings: legacyActiveIds.size,
+    activeAuthoringSegments: activeIds.size,
+    newAuthoringSegments: activeIds.size - legacyActiveIds.size,
     proposedSegments: Object.keys(segments).length,
-    archivedV1Mappings: Object.keys(overlayV1.segments || {}).length - activeIds.size,
+    archivedV1Mappings: Object.keys(overlayV1.segments || {}).length - legacyActiveIds.size,
     classifications: Object.fromEntries(Object.entries(classifications).sort()),
     queue,
   };
@@ -350,6 +364,7 @@ function argument(name, fallback) {
 function main() {
   const paths = {
     overlay: argument("--overlay-v1", "data/routing-compat/cw-base-overlay-v1.json"),
+    authoringOverlay: argument("--authoring-overlay-v1", "data/cw-base-overlay.json"),
     index: argument("--index-v1", "data/routing-compat/cw-base-index-v1.json"),
     source: argument("--map-source", "data/map-source.geojson"),
     graph: argument("--graph", "build/osm/osm-base-graph-elevated.json"),
@@ -360,6 +375,7 @@ function main() {
   const graphBytes = readFileSync(paths.graph);
   const result = buildMigrationProposal({
     overlayV1: JSON.parse(readFileSync(paths.overlay, "utf8")),
+    authoringOverlayV1: JSON.parse(readFileSync(paths.authoringOverlay, "utf8")),
     publicIndexV1: JSON.parse(readFileSync(paths.index, "utf8")),
     mapSource: JSON.parse(readFileSync(paths.source, "utf8")),
     graph: JSON.parse(graphBytes),
