@@ -5,8 +5,9 @@
   "description": "A direction-safe reconstruction of the reported iOS ride. It preserves the original corridor, uses Road 99 westbound legally, and avoids both the original first-control U-turn and the 5.6 m via-point spur.",
   "derivedFrom": "tests/fixtures/bicycle-traversal/road-99-ride.json",
   "coordinateReplan": {
-    "acceptedFingerprint": null,
-    "observedCandidateFingerprint": "sha256-ef360dae015a719cac8e62e962b50bc727a94cc43464c56ec42346d4f4fa0a75",
+    "requiredSegmentIds": [174, 352],
+    "acceptedFingerprint": "sha256-b9e13f4854c557d483726ac8d03433a3f83b9d19cee469d24eb8b1fc0f50e7d4",
+    "observedCandidateFingerprint": "sha256-b9e13f4854c557d483726ac8d03433a3f83b9d19cee469d24eb8b1fc0f50e7d4",
     "coordinates": [
       {
         "lat": 33.21348766745349,

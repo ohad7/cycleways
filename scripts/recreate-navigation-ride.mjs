@@ -59,6 +59,26 @@ const points = fixture.coordinateReplan.coordinates.map((point, index) => ({
 const route = await session.restorePoints(points);
 const slices = route?.routingValidation?.traversalSlices || [];
 const forbidden = slices.filter((slice) => slice.policyState !== "allowed");
+const traversedShareIds = new Set(slices.map((slice) => Number(slice.edgeShareId)));
+const requiredSegments = (fixture.coordinateReplan.requiredSegmentIds || []).map((value) => {
+  const segmentId = Number(value);
+  const segment = cwBaseIndex.segments?.[String(segmentId)];
+  const acceptedShareIds = [...new Set(
+    Object.values(segment?.alignments || {})
+      .filter((alignment) => alignment?.disposition === "accepted")
+      .flatMap((alignment) => alignment.edgeRefs || [])
+      .map((ref) => Number(ref[0])),
+  )];
+  const traversedAcceptedShareIds = acceptedShareIds.filter((shareId) =>
+    traversedShareIds.has(shareId),
+  );
+  return {
+    segmentId,
+    published: acceptedShareIds.length > 0,
+    traversed: traversedAcceptedShareIds.length > 0,
+    traversedAcceptedShareIds,
+  };
+});
 const edge370Reverse = slices.filter(
   (slice) =>
     Number(slice.edgeShareId) === 370 &&
@@ -71,6 +91,10 @@ if (!validateRouteAttestation(route?.routingValidation, { geometry: route?.geome
 }
 if (forbidden.length > 0) blockers.push("non-allowed-traversal");
 if (edge370Reverse.length > 0) blockers.push("road-99-edge-370-reverse");
+for (const required of requiredSegments) {
+  if (!required.published) blockers.push(`required-segment-unpublished:${required.segmentId}`);
+  else if (!required.traversed) blockers.push(`required-segment-not-traversed:${required.segmentId}`);
+}
 const acceptedFingerprint = fixture.coordinateReplan.acceptedFingerprint;
 const actualFingerprint = route?.routingValidation?.contentFingerprint || null;
 if (!acceptedFingerprint) {
@@ -85,6 +109,7 @@ const report = {
   root,
   fixture: path.resolve(values.fixture),
   blockers,
+  requiredSegments,
   route: route
     ? {
       distanceMeters: route.distance,
