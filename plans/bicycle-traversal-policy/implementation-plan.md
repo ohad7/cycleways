@@ -592,7 +592,9 @@ python3 -m unittest discover -s tests -p 'test_bicycle_traversal_policy.py'
   marks just those edges bidirectional, rebuilds policy/V2 evidence, verifies
   both alignments, and accepts only that segment. Keep the action disabled when
   any OSM one-way, roundabout, continuity, endpoint, or conflicting evidence
-  also blocks the segment.
+  also blocks the segment. Default the experimental reviewer to `ohad`, use the
+  curator's local date, and generate a batch ID so this action requires no form
+  entry; keep the fields editable for later multi-reviewer use.
 - [ ] Create new logical segments and existing endpoint/geometry changes in the
   unpublished workspace. Add atomic Activate/Cancel behavior; an unfinished
   segment creates no public card, runtime mapping, or promotion blocker, and an

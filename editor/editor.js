@@ -5642,7 +5642,7 @@ function renderDirectionReview(segmentId) {
     ? `Approve ${manualApproval.edgeIds.length} manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"} as bidirectional & accept segment`
     : "Cannot auto-resolve this segment";
   els.directionReviewApproveManualHelp.textContent = manualApproval.eligible
-    ? `Reviews only this segment's ${manualApproval.edgeIds.length} unknown manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"}, rebuilds V2 evidence, verifies both directions, and accepts this segment. Shared edges may remove blockers elsewhere, but other segments are not accepted.`
+    ? `Uses reviewer ohad and today's date by default. Reviews only this segment's ${manualApproval.edgeIds.length} unknown manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"}, rebuilds V2 evidence, verifies both directions, and accepts this segment. Shared edges may remove blockers elsewhere, but other segments are not accepted.`
     : manualApproval.otherReasons.length > 0
       ? "This segment also has one-way, roundabout, continuity, or endpoint blockers. Review those explicitly."
       : missingManualEdges.length > 0
@@ -5664,12 +5664,24 @@ function directionReviewSymmetricBatchIds() {
     .sort((a, b) => Number(a) - Number(b));
 }
 
-function directionReviewReviewFields() {
-  return {
-    reviewer: els.directionReviewReviewer.value.trim(),
-    reviewedAt: els.directionReviewDate.value,
-    batchId: els.directionReviewBatch.value.trim(),
-  };
+function localDateInputValue(date = new Date()) {
+  const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localTime.toISOString().slice(0, 10);
+}
+
+function directionReviewReviewFields({ autoFill = false, segmentId = null } = {}) {
+  let reviewer = els.directionReviewReviewer.value.trim();
+  let reviewedAt = els.directionReviewDate.value;
+  let batchId = els.directionReviewBatch.value.trim();
+  if (autoFill) {
+    reviewer ||= "ohad";
+    reviewedAt ||= localDateInputValue();
+    batchId ||= `manual-bidirectional-${segmentId || "review"}-${reviewedAt}`;
+    els.directionReviewReviewer.value = reviewer;
+    els.directionReviewDate.value = reviewedAt;
+    els.directionReviewBatch.value = batchId;
+  }
+  return { reviewer, reviewedAt, batchId };
 }
 
 async function runDirectionReviewAction(action, extra = {}) {
@@ -5763,10 +5775,10 @@ async function toggleDirectionReviewBaseEdge(feature) {
 }
 
 async function acceptSelectedDirectionReview() {
-  const review = directionReviewReviewFields();
-  if (!review.reviewer || !review.reviewedAt || !review.batchId) {
-    throw new Error("Reviewer, review date, and batch ID are required.");
-  }
+  const review = directionReviewReviewFields({
+    autoFill: true,
+    segmentId: selectedSegmentId(),
+  });
   await runDirectionReviewAction("accept", review);
   state.directionReview.editing = false;
 }
@@ -5779,10 +5791,7 @@ async function approveSelectedManualEdgesBidirectional() {
   if (!approval.eligible) {
     throw new Error("This segment has blockers beyond unknown manual-edge direction evidence.");
   }
-  const review = directionReviewReviewFields();
-  if (!review.reviewer || !review.reviewedAt || !review.batchId) {
-    throw new Error("Reviewer, review date, and batch ID are required.");
-  }
+  const review = directionReviewReviewFields({ autoFill: true, segmentId });
 
   state.directionReview.resolvingManualEvidence = true;
   renderAll();
@@ -9081,8 +9090,10 @@ function wireEvents() {
     state.directionReview.editing = false;
     renderAll();
   });
-  if (!els.directionReviewDate.value) {
-    els.directionReviewDate.value = new Date().toISOString().slice(0, 10);
+  if (!els.directionReviewReviewer.value) els.directionReviewReviewer.value = "ohad";
+  if (!els.directionReviewDate.value) els.directionReviewDate.value = localDateInputValue();
+  if (!els.directionReviewBatch.value) {
+    els.directionReviewBatch.value = `direction-review-${els.directionReviewDate.value}`;
   }
   els.directionReviewApplyMigration.addEventListener("click", () =>
     applySelectedDirectionMigration().catch(showError),

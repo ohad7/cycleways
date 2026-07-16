@@ -78,6 +78,8 @@ assert.match(editor, /buildDirectionReviewEvidenceRows/);
 assert.match(editor, /openDirectionReviewBaseEdge/);
 assert.match(editor, /collectIssueSegmentIds/);
 assert.match(editor, /approveSelectedManualEdgesBidirectional/);
+assert.match(editor, /reviewer \|\|= "ohad"/);
+assert.match(editor, /localDateInputValue/);
 assert.doesNotMatch(
   server,
   /previous\.sourceGeometryDigest\s*!==\s*segment\.sourceGeometryDigest[\s\S]{0,160}continue;/,
