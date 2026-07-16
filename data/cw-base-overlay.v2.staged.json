@@ -30002,8 +30002,9 @@
     "174": {
       "alignments": {
         "aToB": {
-          "draft": {
-            "disposition": "needs_review",
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -30163,63 +30164,21 @@
               ]
             },
             "mappingDigest": "21b6089a75f23449807613036099997a81093a0c205b26890a9cf9024f7e244c",
-            "candidate": {
-              "kind": "previously-published",
-              "sourceGeometryChanged": true,
-              "previousReview": {
-                "reviewer": "ohad",
-                "reviewedAt": "2026-07-16",
-                "batchId": "1",
-                "graphDigest": "55ddcbef85825829479018fb310c4f302942c5d067a4e25d8cd9034f07520193",
-                "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-                "sourceGeometryDigest": "cb36397bc8bfc0a83fb5619b6a0fe88396e20a85932816919696d28a2e39c5a1",
-                "mappingDigest": "21b6089a75f23449807613036099997a81093a0c205b26890a9cf9024f7e244c"
-              }
-            },
-            "validation": {
-              "ok": true,
-              "status": "valid",
-              "reasons": [],
-              "traversalStates": {
-                "0:e626743324_8": "allowed",
-                "1:e626743324_9": "allowed",
-                "2:e626743324_1": "allowed",
-                "3:e626743324_2": "allowed",
-                "4:e626743324_3": "allowed",
-                "5:e626743324_4": "allowed",
-                "6:e623776483_1": "allowed",
-                "7:e1024904323_1": "allowed",
-                "8:e1024904323_2": "allowed",
-                "9:e1024904318_1": "allowed",
-                "10:e844282807_2": "allowed",
-                "11:e844282807_3": "allowed",
-                "12:e844282808_1": "allowed",
-                "13:e844282808_2": "allowed",
-                "14:e844282808_3": "allowed",
-                "15:e844282808_4": "allowed",
-                "16:manual-edge-mrnltwsa": "allowed"
-              },
-              "terminals": {
-                "start": [
-                  35.5867928,
-                  33.2210163
-                ],
-                "end": [
-                  35.602288,
-                  33.225227
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 5.963257768661639,
-                "end": 3.205763864339032
-              }
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-16",
+              "batchId": "1",
+              "graphDigest": "aa346b0658cb0a9fde5bc62e2749032f2ffbd9aee5e452e2462697cd163386ac",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "d4c95fc1d67f880681b30d885b635b548c13087abe98c8c03f675ce5078aff1e",
+              "mappingDigest": "21b6089a75f23449807613036099997a81093a0c205b26890a9cf9024f7e244c"
             }
-          },
-          "published": null
+          }
         },
         "bToA": {
-          "draft": {
-            "disposition": "needs_review",
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -30316,52 +30275,16 @@
               ]
             },
             "mappingDigest": "f7f9be093c47b0010463294aac90321614e7962c27b7a608b746804d041dc6e5",
-            "candidate": {
-              "kind": "previously-published",
-              "sourceGeometryChanged": true,
-              "previousReview": {
-                "reviewer": "ohad",
-                "reviewedAt": "2026-07-16",
-                "batchId": "1",
-                "graphDigest": "55ddcbef85825829479018fb310c4f302942c5d067a4e25d8cd9034f07520193",
-                "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-                "sourceGeometryDigest": "cb36397bc8bfc0a83fb5619b6a0fe88396e20a85932816919696d28a2e39c5a1",
-                "mappingDigest": "f7f9be093c47b0010463294aac90321614e7962c27b7a608b746804d041dc6e5"
-              }
-            },
-            "validation": {
-              "ok": true,
-              "status": "valid",
-              "reasons": [],
-              "traversalStates": {
-                "0:manual-edge-mrnlxmj5": "allowed",
-                "1:e1024609370_2": "allowed",
-                "2:e844282807_5": "allowed",
-                "3:e844282807_6": "allowed",
-                "4:e844282807_7": "allowed",
-                "5:e844282810_1": "allowed",
-                "6:e1024609375_1": "allowed",
-                "7:e1024609376_1": "allowed",
-                "8:e626743324_6": "allowed",
-                "9:e626743324_7": "allowed"
-              },
-              "terminals": {
-                "start": [
-                  35.602288,
-                  33.225227
-                ],
-                "end": [
-                  35.5867928,
-                  33.2210163
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 3.205763864339032,
-                "end": 5.963257768661639
-              }
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-16",
+              "batchId": "1",
+              "graphDigest": "aa346b0658cb0a9fde5bc62e2749032f2ffbd9aee5e452e2462697cd163386ac",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "d4c95fc1d67f880681b30d885b635b548c13087abe98c8c03f675ce5078aff1e",
+              "mappingDigest": "f7f9be093c47b0010463294aac90321614e7962c27b7a608b746804d041dc6e5"
             }
-          },
-          "published": null
+          }
         }
       },
       "endpoints": {
