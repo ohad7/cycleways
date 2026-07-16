@@ -644,6 +644,11 @@ normalized policy artifact and provides:
   metrics, and edge lists can be visible at the same time;
 - queues for invalid existing alignments, missing second directions,
   one-way/roundabout CW ownership, manual unknowns, and affected offered routes;
+- a persisted fast-review queue for manual bidirectional evidence: reviewing a
+  segment saves its edge evidence immediately without changing runtime
+  membership, while one explicit batch finalization rebuilds graph/policy
+  evidence once, revalidates every queued segment, accepts only passing
+  alignments, and retains failures with actionable reasons;
 - token exact-replay and coordinate-replan previews with before/after lines and
   a zero-non-allowed traversal result; and
 - explicit accept, edit, unavailable, fix-source, withdraw, and display-only

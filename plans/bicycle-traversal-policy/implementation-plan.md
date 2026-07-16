@@ -588,13 +588,16 @@ python3 -m unittest discover -s tests -p 'test_bicycle_traversal_policy.py'
   and direct links from segment mappings and evidence items to Base Graph edge
   inspection.
 - [x] For a selected `direction_evidence_needed` segment whose only blockers
-  are unknown manual-edge direction states, provide one reviewed action that
-  marks just those edges bidirectional, rebuilds policy/V2 evidence, verifies
-  both alignments, and accepts only that segment. Keep the action disabled when
-  any OSM one-way, roundabout, continuity, endpoint, or conflicting evidence
-  also blocks the segment. Default the experimental reviewer to `ohad`, use the
-  curator's local date, and generate a batch ID so this action requires no form
-  entry; keep the fields editable for later multi-reviewer use.
+  are unknown manual-edge direction states, provide a fast reviewed action that
+  marks just those edges bidirectional and persists the segment in a pending
+  acceptance queue without rebuilding. One explicit batch action rebuilds
+  graph/policy/V2 evidence once, verifies every queued segment, accepts only
+  passing alignments, and retains failures with reasons. Keep the per-segment
+  action disabled when any OSM one-way, roundabout, continuity, endpoint, or
+  conflicting evidence also blocks the segment. Default the experimental
+  reviewer to `ohad`, use the curator's local date, and generate a batch ID so
+  review clicks require no form entry; keep the fields editable for later
+  multi-reviewer use.
 - [ ] Create new logical segments and existing endpoint/geometry changes in the
   unpublished workspace. Add atomic Activate/Cancel behavior; an unfinished
   segment creates no public card, runtime mapping, or promotion blocker, and an

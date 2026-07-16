@@ -36,6 +36,7 @@ for (const id of [
   "direction-review-queue-previous",
   "direction-review-queue-next",
   "direction-review-approve-manual-bidirectional",
+  "direction-review-finalize-manual-queue",
   "direction-review-approve-manual-help",
   "refresh-direction-review",
 ]) {
@@ -78,6 +79,8 @@ assert.match(editor, /buildDirectionReviewEvidenceRows/);
 assert.match(editor, /openDirectionReviewBaseEdge/);
 assert.match(editor, /collectIssueSegmentIds/);
 assert.match(editor, /approveSelectedManualEdgesBidirectional/);
+assert.match(editor, /finalizeQueuedManualDirectionReviews/);
+assert.match(server, /manual-bidirectional-finalize/);
 assert.match(editor, /reviewer \|\|= "ohad"/);
 assert.match(editor, /localDateInputValue/);
 assert.doesNotMatch(

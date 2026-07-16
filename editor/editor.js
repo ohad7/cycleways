@@ -14,7 +14,6 @@ import {
 import {
   DIRECTION_REVIEW_CLASSIFICATION_LABELS,
   DIRECTION_REVIEW_CLASSIFICATIONS,
-  applyManualBidirectionalReview,
   buildDirectionReviewEvidenceRows,
   buildDirectionReviewIssueRows,
   filterDirectionReviewEvidenceRows,
@@ -252,6 +251,7 @@ const state = {
     busy: false,
     editing: false,
     resolvingManualEvidence: false,
+    pendingManualApprovals: { schemaVersion: 1, items: {} },
     queueView: "segments",
     queueFilter: "issues",
     queueQuery: "",
@@ -431,6 +431,7 @@ const els = {
   directionReviewApplyMigration: document.getElementById("direction-review-apply-migration"),
   directionReviewApplySymmetricBatch: document.getElementById("direction-review-apply-symmetric-batch"),
   directionReviewApproveManualBidirectional: document.getElementById("direction-review-approve-manual-bidirectional"),
+  directionReviewFinalizeManualQueue: document.getElementById("direction-review-finalize-manual-queue"),
   directionReviewApproveManualHelp: document.getElementById("direction-review-approve-manual-help"),
   directionReviewEdit: document.getElementById("direction-review-edit"),
   directionReviewRevalidate: document.getElementById("direction-review-revalidate"),
@@ -5363,6 +5364,9 @@ function renderDirectionReviewQueue() {
     ]),
   );
   const acceptedCount = allRows.length - issueRows.length;
+  const pendingManualCount = Object.keys(
+    review.pendingManualApprovals?.items || {},
+  ).length;
   els.directionReviewQueueSummary.textContent =
     `${issueRows.length} issues · ${evidenceRows.length} base edges`;
   els.directionReviewQueueCounts.innerHTML = [
@@ -5371,6 +5375,9 @@ function renderDirectionReviewQueue() {
         `<span class="direction-review-queue-count">${escapeHtml(DIRECTION_REVIEW_CLASSIFICATION_LABELS[classification])}: ${counts[classification]}</span>`,
     ),
     `<span class="direction-review-queue-count">Accepted: ${acceptedCount}</span>`,
+    ...(pendingManualCount > 0
+      ? [`<span class="direction-review-queue-count">Queued: ${pendingManualCount}</span>`]
+      : []),
   ].join("");
   els.directionReviewQueueSegments.classList.toggle("active", review.queueView === "segments");
   els.directionReviewQueueEvidence.classList.toggle("active", review.queueView === "evidence");
@@ -5535,6 +5542,19 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
 function renderDirectionReview(segmentId) {
   if (!els.directionReviewSummary) return;
   const review = state.directionReview;
+  const pendingManualItems = Object.values(review.pendingManualApprovals?.items || {});
+  const pendingManualCount = pendingManualItems.length;
+  const pendingWritable =
+    review.loaded &&
+    !review.busy &&
+    !review.applying &&
+    !review.resolvingManualEvidence &&
+    review.profile === "staged-v2" &&
+    !review.readOnly;
+  els.directionReviewFinalizeManualQueue.hidden = pendingManualCount === 0;
+  els.directionReviewFinalizeManualQueue.disabled = !pendingWritable || pendingManualCount === 0;
+  els.directionReviewFinalizeManualQueue.textContent =
+    `Rebuild & finalize ${pendingManualCount} queued review${pendingManualCount === 1 ? "" : "s"}`;
   els.directionReviewAToB.classList.toggle("active", review.alignmentKey === "aToB");
   els.directionReviewBToA.classList.toggle("active", review.alignmentKey === "bToA");
   els.directionReviewAToB.setAttribute("aria-selected", String(review.alignmentKey === "aToB"));
@@ -5628,6 +5648,7 @@ function renderDirectionReview(segmentId) {
     ? `Batch-approve ${symmetricIds.length} verified bidirectional segments`
     : "No verified bidirectional segments pending";
   const manualApproval = manualBidirectionalResolutionCandidate(segment);
+  const queuedManualApproval = review.pendingManualApprovals?.items?.[String(segment.segmentId)];
   const showManualApproval = segment.migration?.classification === "direction_evidence_needed";
   const missingManualEdges = manualApproval.edgeIds.filter(
     (edgeId) => !manualBaseEdgeFeatures().some(
@@ -5637,12 +5658,18 @@ function renderDirectionReview(segmentId) {
   els.directionReviewApproveManualBidirectional.hidden = !showManualApproval;
   els.directionReviewApproveManualHelp.hidden = !showManualApproval;
   els.directionReviewApproveManualBidirectional.disabled =
-    !writable || !manualApproval.eligible || missingManualEdges.length > 0;
-  els.directionReviewApproveManualBidirectional.textContent = manualApproval.eligible
-    ? `Approve ${manualApproval.edgeIds.length} manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"} as bidirectional & accept segment`
+    !writable || !manualApproval.eligible || missingManualEdges.length > 0 || Boolean(queuedManualApproval);
+  els.directionReviewApproveManualBidirectional.textContent = queuedManualApproval
+    ? "Queued for batch finalization"
+    : manualApproval.eligible
+      ? `Approve ${manualApproval.edgeIds.length} manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"} as bidirectional & queue segment`
     : "Cannot auto-resolve this segment";
-  els.directionReviewApproveManualHelp.textContent = manualApproval.eligible
-    ? `Uses reviewer ohad and today's date by default. Reviews only this segment's ${manualApproval.edgeIds.length} unknown manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"}, rebuilds V2 evidence, verifies both directions, and accepts this segment. Shared edges may remove blockers elsewhere, but other segments are not accepted.`
+  els.directionReviewApproveManualHelp.textContent = queuedManualApproval
+    ? queuedManualApproval.lastError
+      ? `Still queued. Last finalization error: ${queuedManualApproval.lastError}`
+      : `Queued ${new Date(queuedManualApproval.queuedAt).toLocaleString()}. Continue reviewing; rebuild and finalize the whole queue once when ready.`
+    : manualApproval.eligible
+      ? `Uses reviewer ohad and today's date by default. Saves this segment's ${manualApproval.edgeIds.length} manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"} immediately and queues acceptance. Use the batch finalizer once after reviewing several segments.`
     : manualApproval.otherReasons.length > 0
       ? "This segment also has one-way, roundabout, continuity, or endpoint blockers. Review those explicitly."
       : missingManualEdges.length > 0
@@ -5796,69 +5823,57 @@ async function approveSelectedManualEdgesBidirectional() {
   state.directionReview.resolvingManualEvidence = true;
   renderAll();
   try {
-    const now = new Date().toISOString();
-    const rationale =
-      `Reviewer confirmed CycleWays segment #${segmentId} (${segment.segmentName}) and its referenced manual edges are rideable in both directions.`;
-    const evidence = `Direction Review segment #${segmentId}; batch ${review.batchId}`;
-    const previousManualBaseEdges = state.baseOverlay.manualBaseEdges;
-    const appliedReview = applyManualBidirectionalReview(
-      state.baseOverlay.manualBaseEdges || emptyManualBaseEdges(),
-      {
-        edgeIds: approval.edgeIds,
-        reviewer: review.reviewer,
-        reviewedAt: review.reviewedAt,
-        rationale,
-        evidence,
-        updatedAt: now,
-      },
-    );
-    state.baseOverlay.manualBaseEdges = appliedReview.manualBaseEdges;
-    try {
-      await saveManualBaseEdges();
-    } catch (error) {
-      state.baseOverlay.manualBaseEdges = previousManualBaseEdges;
-      throw error;
-    }
-
-    const originalAlignmentKey = state.directionReview.alignmentKey;
-    setStatus(
-      `Saved bidirectional evidence for ${approval.edgeIds.length} manual edge${approval.edgeIds.length === 1 ? "" : "s"}. Rebuilding and verifying segment #${segmentId}...`,
-    );
-    await refreshDirectionReviewEvidence();
-    let refreshed = state.directionReview.overlay?.segments?.[String(segmentId)];
-    const acceptanceOrder = ["aToB", "bToA"].sort((left, right) => {
-      const leftExplicit = refreshed?.alignments?.[left]?.draft?.realization?.type === "explicit" ? 0 : 1;
-      const rightExplicit = refreshed?.alignments?.[right]?.draft?.realization?.type === "explicit" ? 0 : 1;
-      return leftExplicit - rightExplicit;
+    const response = await fetch("/api/cw-base-overlay-v2/manual-bidirectional-queue", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ segmentId, ...review }),
     });
-    try {
-      for (const alignmentKey of acceptanceOrder) {
-        refreshed = state.directionReview.overlay?.segments?.[String(segmentId)];
-        const slot = refreshed?.alignments?.[alignmentKey];
-        if (slot?.published?.disposition === "accepted") continue;
-        if (!slot?.draft || slot.draft.validation?.status !== "valid") {
-          const firstReason = slot?.draft?.validation?.reasons?.[0];
-          throw new Error(
-            `Evidence was saved, but ${alignmentKey === "aToB" ? "A → B" : "B → A"} is still blocked: ${firstReason?.reason || firstReason?.code || "review required"}.`,
-          );
-        }
-        state.directionReview.alignmentKey = alignmentKey;
-        await runDirectionReviewAction("accept", review);
-      }
-    } finally {
-      state.directionReview.alignmentKey = originalAlignmentKey;
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || `Direction Review queue failed: ${response.status}`);
     }
-    refreshed = state.directionReview.overlay?.segments?.[String(segmentId)];
-    if (!["aToB", "bToA"].every(
-      (alignmentKey) => refreshed?.alignments?.[alignmentKey]?.published?.disposition === "accepted",
-    )) {
-      throw new Error("Manual evidence was saved, but the segment did not finish accepting both directions.");
-    }
-    state.directionReview.editing = false;
-    refreshUnresolvedSegmentHighlights();
-    renderAll();
+    state.baseOverlay.manualBaseEdges = payload.manualBaseEdges;
+    state.directionReview.pendingManualApprovals = payload.queue;
+    markBaseGraphStaleBecauseManualEdgesChanged();
     setStatus(
-      `Resolved segment #${segmentId}: reviewed ${approval.edgeIds.length} manual edge${approval.edgeIds.length === 1 ? "" : "s"} as bidirectional and accepted both directions.`,
+      `Queued segment #${segmentId}. Continue reviewing, then finalize the queue once.`,
+    );
+  } finally {
+    state.directionReview.resolvingManualEvidence = false;
+    renderAll();
+  }
+}
+
+async function finalizeQueuedManualDirectionReviews() {
+  if (state.directionReview.resolvingManualEvidence) return;
+  state.directionReview.resolvingManualEvidence = true;
+  renderAll();
+  setStatus("Rebuilding once and finalizing all queued manual-direction reviews...");
+  try {
+    const response = await fetch("/api/cw-base-overlay-v2/manual-bidirectional-finalize", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || `Queued Direction Review finalization failed: ${response.status}`);
+    }
+    state.directionReview.overlay = payload.overlay;
+    state.directionReview.pendingManualApprovals = payload.queue;
+    state.baseOverlay.loaded = false;
+    state.baseOverlay.graphEdges = null;
+    state.baseOverlay.matchSummary = null;
+    state.baseOverlay.matchPreview = null;
+    invalidateBaseOverlayDerivedCache();
+    await loadBaseOverlayData();
+    refreshUnresolvedSegmentHighlights();
+    const completed = payload.completedSegmentIds?.length || 0;
+    const failed = payload.failures?.length || 0;
+    setStatus(
+      `Finalized ${completed} queued segment${completed === 1 ? "" : "s"}` +
+      `${failed ? `; ${failed} remain queued with review errors` : ""}.`,
+      failed ? "error" : "info",
     );
   } finally {
     state.directionReview.resolvingManualEvidence = false;
@@ -8076,6 +8091,11 @@ async function loadBaseOverlayData() {
         state.directionReview.readOnly = directionPayload.readOnly;
         state.directionReview.profile = directionPayload.profile;
         state.directionReview.overlay = directionPayload.overlay;
+        const pendingResponse = await fetch("/api/cw-base-overlay-v2/manual-bidirectional-queue");
+        if (pendingResponse.ok) {
+          const pendingPayload = await pendingResponse.json();
+          state.directionReview.pendingManualApprovals = pendingPayload.queue;
+        }
       }
     } catch {
       state.directionReview.loaded = false;
@@ -9103,6 +9123,9 @@ function wireEvents() {
   );
   els.directionReviewApproveManualBidirectional.addEventListener("click", () =>
     approveSelectedManualEdgesBidirectional().catch(showError),
+  );
+  els.directionReviewFinalizeManualQueue.addEventListener("click", () =>
+    finalizeQueuedManualDirectionReviews().catch(showError),
   );
   els.directionReviewEdit.addEventListener("click", () => toggleDirectionReviewEditing().catch(showError));
   els.directionReviewRevalidate.addEventListener("click", () =>

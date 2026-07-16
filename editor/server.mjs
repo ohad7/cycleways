@@ -65,6 +65,16 @@ import {
   validateDirectionReviewAlignment,
 } from "./lib/edge-pick.mjs";
 import { normalizeDirectionReviewWorkspace } from "./lib/direction-review-workspace.mjs";
+import {
+  emptyDirectionReviewPendingApprovals,
+  normalizeDirectionReviewPendingApprovals,
+  queueDirectionReviewPendingApproval,
+  settleDirectionReviewPendingApprovals,
+} from "./lib/direction-review-pending.mjs";
+import {
+  applyManualBidirectionalReview,
+  manualBidirectionalResolutionCandidate,
+} from "./lib/direction-review-issues.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -94,6 +104,10 @@ const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const cwBaseOverlayV2StagedPath = resolve(dataDir, "cw-base-overlay.v2.staged.json");
 const cwBaseOverlayV2ProposalPath = resolve(buildDir, "cw-base-overlay-v2.proposal.json");
 const cwSegmentWorkspacePath = resolve(dataDir, "cw-segment-workspace.json");
+const directionReviewPendingApprovalsPath = resolve(
+  editorRoot,
+  ".drafts/direction-review-pending.json",
+);
 const bicycleTraversalPolicyAuditPath = resolve(buildDir, "bicycle-traversal-policy-audit.json");
 const bicycleTraversalOverridesPath = resolve(dataDir, "bicycle-traversal-overrides.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
@@ -2626,6 +2640,161 @@ async function readDirectionReviewWorkspace() {
   );
 }
 
+async function readDirectionReviewPendingApprovals() {
+  const value = await readJsonFileOrNull(directionReviewPendingApprovalsPath);
+  return normalizeDirectionReviewPendingApprovals(
+    value || emptyDirectionReviewPendingApprovals(),
+  );
+}
+
+async function queueManualBidirectionalDirectionReview(payload) {
+  requireStagedV2Profile();
+  const overlay = parseCwOverlayV2(
+    JSON.parse(await readFile(cwBaseOverlayV2StagedPath, "utf-8")),
+  );
+  const segmentId = Number(payload?.segmentId);
+  const segment = overlay.segments?.[String(segmentId)];
+  if (!segment) throw new Error(`Direction Review segment ${segmentId} does not exist`);
+  const approval = manualBidirectionalResolutionCandidate(segment);
+  if (!approval.eligible) {
+    throw new Error("This segment has blockers beyond unknown manual-edge direction evidence");
+  }
+  const reviewer = String(payload?.reviewer || "").trim();
+  const reviewedAt = String(payload?.reviewedAt || "").trim();
+  const batchId = String(payload?.batchId || "").trim();
+  if (!reviewer || !reviewedAt || !batchId) {
+    throw new Error("Queued Direction Review requires reviewer, reviewedAt, and batchId");
+  }
+  const now = new Date().toISOString();
+  const rationale =
+    `Reviewer confirmed CycleWays segment #${segmentId} (${segment.segmentName}) and its referenced manual edges are rideable in both directions.`;
+  const previousManualBaseEdges = normalizeManualBaseEdges(await readManualBaseEdges());
+  const applied = applyManualBidirectionalReview(
+    previousManualBaseEdges,
+    {
+      edgeIds: approval.edgeIds,
+      reviewer,
+      reviewedAt,
+      rationale,
+      evidence: `Direction Review segment #${segmentId}; batch ${batchId}`,
+      updatedAt: now,
+    },
+  );
+  const manualBaseEdges = normalizeManualBaseEdges(applied.manualBaseEdges);
+  const queue = queueDirectionReviewPendingApproval(
+    await readDirectionReviewPendingApprovals(),
+    {
+      segmentId,
+      segmentName: segment.segmentName,
+      sourceGeometryDigest: segment.sourceGeometryDigest,
+      edgeIds: approval.edgeIds,
+      alignmentMappingDigests: Object.fromEntries(
+        ["aToB", "bToA"].flatMap((alignmentKey) => {
+          const slot = segment.alignments?.[alignmentKey];
+          const digest = slot?.draft?.mappingDigest || slot?.published?.mappingDigest;
+          return digest ? [[alignmentKey, digest]] : [];
+        }),
+      ),
+      reviewer,
+      reviewedAt,
+      batchId,
+      queuedAt: now,
+    },
+  );
+  await writeJsonAtomic(manualBaseEdgesPath, manualBaseEdges);
+  try {
+    await writeJsonAtomic(directionReviewPendingApprovalsPath, queue);
+  } catch (error) {
+    await writeJsonAtomic(manualBaseEdgesPath, previousManualBaseEdges);
+    throw error;
+  }
+  directionReviewGraphCache = null;
+  return { queue, manualBaseEdges, item: queue.items[String(segmentId)] };
+}
+
+async function finalizeManualBidirectionalDirectionReviews(payload = {}) {
+  requireStagedV2Profile();
+  const queueBefore = await readDirectionReviewPendingApprovals();
+  const items = Object.values(queueBefore.items);
+  if (items.length === 0) throw new Error("No manual direction reviews are queued");
+  const refresh = await refreshDirectionReviewEvidence(payload);
+  const completedSegmentIds = [];
+  const failures = [];
+  for (const item of items) {
+    try {
+      let overlay = parseCwOverlayV2(
+        JSON.parse(await readFile(cwBaseOverlayV2StagedPath, "utf-8")),
+      );
+      let segment = overlay.segments?.[String(item.segmentId)];
+      if (!segment) throw new Error("Segment disappeared during evidence refresh");
+      if (segment.sourceGeometryDigest !== item.sourceGeometryDigest) {
+        throw new Error("Segment geometry changed after it was queued; review it again");
+      }
+      for (const [alignmentKey, mappingDigest] of Object.entries(item.alignmentMappingDigests || {})) {
+        const slot = segment.alignments?.[alignmentKey];
+        const currentDigest = slot?.draft?.mappingDigest || slot?.published?.mappingDigest;
+        if (currentDigest !== mappingDigest) {
+          throw new Error(`${alignmentKey} mapping changed after it was queued; review it again`);
+        }
+      }
+      const acceptanceOrder = ["aToB", "bToA"].sort((left, right) => {
+        const leftExplicit = segment.alignments?.[left]?.draft?.realization?.type === "explicit" ? 0 : 1;
+        const rightExplicit = segment.alignments?.[right]?.draft?.realization?.type === "explicit" ? 0 : 1;
+        return leftExplicit - rightExplicit;
+      });
+      for (const alignmentKey of acceptanceOrder) {
+        overlay = parseCwOverlayV2(
+          JSON.parse(await readFile(cwBaseOverlayV2StagedPath, "utf-8")),
+        );
+        segment = overlay.segments?.[String(item.segmentId)];
+        if (segment?.alignments?.[alignmentKey]?.published?.disposition === "accepted") continue;
+        const result = await applyDirectionReviewAlignmentAction({
+          segmentId: item.segmentId,
+          alignmentKey,
+          action: "accept",
+          reviewer: item.reviewer,
+          reviewedAt: item.reviewedAt,
+          batchId: item.batchId,
+        });
+        await writeJsonAtomic(cwBaseOverlayV2StagedPath, result.overlay);
+      }
+      overlay = parseCwOverlayV2(
+        JSON.parse(await readFile(cwBaseOverlayV2StagedPath, "utf-8")),
+      );
+      segment = overlay.segments?.[String(item.segmentId)];
+      if (!["aToB", "bToA"].every(
+        (alignmentKey) => segment?.alignments?.[alignmentKey]?.published?.disposition === "accepted",
+      )) {
+        throw new Error("Both directions were not accepted");
+      }
+      completedSegmentIds.push(item.segmentId);
+    } catch (error) {
+      failures.push({
+        segmentId: item.segmentId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  const attemptedAt = new Date().toISOString();
+  const queue = settleDirectionReviewPendingApprovals(queueBefore, {
+    completedSegmentIds,
+    failures,
+    attemptedAt,
+  });
+  await writeJsonAtomic(directionReviewPendingApprovalsPath, queue);
+  const overlay = parseCwOverlayV2(
+    JSON.parse(await readFile(cwBaseOverlayV2StagedPath, "utf-8")),
+  );
+  return {
+    queue,
+    overlay,
+    completedSegmentIds,
+    failures,
+    refreshId: refresh.refreshId,
+    preserved: refresh.preserved,
+  };
+}
+
 function normalizeManualBaseEdges(geojson) {
   if (!geojson || geojson.type !== "FeatureCollection" || !Array.isArray(geojson.features)) {
     throw new Error("Manual base edges must be a GeoJSON FeatureCollection");
@@ -4501,6 +4670,40 @@ const server = createServer(async (request, response) => {
         profile: process.env.CW_OVERLAY_PROFILE || "production-v1",
         ...result,
       });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/cw-base-overlay-v2/manual-bidirectional-queue") {
+      sendJson(response, 200, {
+        ok: true,
+        queue: await readDirectionReviewPendingApprovals(),
+      });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay-v2/manual-bidirectional-queue") {
+      try {
+        const result = await queueManualBidirectionalDirectionReview(await readRequestJson(request));
+        sendJson(response, 200, { ok: true, ...result });
+      } catch (error) {
+        sendJson(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/cw-base-overlay-v2/manual-bidirectional-finalize") {
+      try {
+        const result = await finalizeManualBidirectionalDirectionReviews(await readRequestJson(request));
+        sendJson(response, 200, { ok: true, source: "staged", ...result });
+      } catch (error) {
+        sendJson(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       return;
     }
 
