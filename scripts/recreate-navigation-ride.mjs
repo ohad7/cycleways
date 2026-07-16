@@ -87,11 +87,15 @@ const report = {
   blockers,
   route: route
     ? {
-        distanceMeters: route.distance,
-        waypointCount: route.points?.length || 0,
-        traversalCount: slices.length,
-        contentFingerprint: actualFingerprint,
-        requiresReview: route.requiresReview === true,
+      distanceMeters: route.distance,
+      waypointCount: route.points?.length || 0,
+      traversalCount: slices.length,
+      contentFingerprint: actualFingerprint,
+      requiresReview: route.requiresReview === true,
+      routeFailure: route.routeFailure || null,
+      unsnappedPoints: (route.points || [])
+        .map((point, index) => ({ index, lat: point.lat, lng: point.lng, unsnapped: point.unsnapped === true }))
+        .filter((point) => point.unsnapped),
       }
     : null,
 };

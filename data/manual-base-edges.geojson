@@ -16,11 +16,14 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T05:08:33.348Z",
-        "updatedAt": "2026-05-26T19:46:21.458Z",
+        "updatedAt": "2026-07-16T16:33:22.811Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "dirt road"
         }
       },
       "geometry": {
@@ -72,11 +75,14 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:26:17.763Z",
-        "updatedAt": "2026-05-19T06:26:47.490Z",
+        "updatedAt": "2026-07-16T16:33:50.185Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "dirt road connector"
         }
       },
       "geometry": {
@@ -2269,11 +2275,14 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T05:24:13.277Z",
-        "updatedAt": "2026-06-02T15:35:17.737Z",
+        "updatedAt": "2026-07-16T16:34:33.800Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "gan htzaafon service road sidewalk"
         }
       },
       "geometry": {
@@ -2349,12 +2358,15 @@
         "osmRouteClass": "road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T13:50:55.955Z",
-        "updatedAt": "2026-05-20T13:51:06.517Z",
+        "updatedAt": "2026-07-16T16:32:51.676Z",
         "splitFrom": "manual-osm-1092567462-mpe4drrn",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "sidewalk and tel hai connector"
         }
       },
       "geometry": {
@@ -2450,13 +2462,16 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-05-20T13:52:08.543Z",
-        "updatedAt": "2026-05-26T19:52:08.195Z",
+        "updatedAt": "2026-07-16T16:32:33.177Z",
         "linkedSegmentId": 164,
         "linkedSegmentName": "שביל תל חי",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "side walk and connector"
         }
       },
       "geometry": {
@@ -2483,13 +2498,16 @@
         "status": "active",
         "roadType": "road",
         "createdAt": "2026-05-20T14:05:25.034Z",
-        "updatedAt": "2026-05-20T14:05:25.034Z",
+        "updatedAt": "2026-07-16T16:13:38.999Z",
         "linkedSegmentId": 174,
         "linkedSegmentName": "כביש 99 קריית שמונה",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "crossroad"
         }
       },
       "geometry": {
@@ -3501,39 +3519,6 @@
           [
             35.601841,
             33.214589
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "id": "manual-174-mpn1uyqr",
-      "properties": {
-        "id": "manual-174-mpn1uyqr",
-        "manualEdgeId": "manual-174-mpn1uyqr",
-        "source": "manual",
-        "status": "active",
-        "roadType": "road",
-        "createdAt": "2026-05-26T19:50:14.883Z",
-        "updatedAt": "2026-05-26T19:50:14.883Z",
-        "linkedSegmentId": 174,
-        "linkedSegmentName": "כביש 99 קריית שמונה",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.576498,
-            33.22235
-          ],
-          [
-            35.576392,
-            33.222383
           ]
         ]
       }

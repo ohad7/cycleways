@@ -340,6 +340,8 @@ const els = {
   buildReport: document.getElementById("build-report"),
   baseGraphStatus: document.getElementById("base-graph-status"),
   baseGraphSummary: document.getElementById("base-graph-summary"),
+  baseEdgeSearch: document.getElementById("base-edge-search"),
+  findBaseEdge: document.getElementById("find-base-edge"),
   toggleBaseOneWayDirections: document.getElementById("toggle-base-one-way-directions"),
   baseOneWayDirectionLegend: document.getElementById("base-one-way-direction-legend"),
   baseOneWayDirectionSummary: document.getElementById("base-one-way-direction-summary"),
@@ -4228,6 +4230,8 @@ function renderBaseGraphPanel() {
     : { total: 0, confirmedOneWay: 0, needsReview: 0 };
 
   els.baseGraphStatus.textContent = recalculating ? "Recalculating" : loading ? "Loading" : loaded ? "Loaded" : "Not loaded";
+  els.baseEdgeSearch.disabled = loading || recalculating || !loaded;
+  els.findBaseEdge.disabled = loading || recalculating || !loaded;
   els.toggleBaseOneWayDirections.checked = state.baseOverlay.showOneWayDirections;
   els.toggleBaseOneWayDirections.disabled = !loaded || loading || recalculating;
   els.baseOneWayDirectionLegend.hidden = !state.baseOverlay.showOneWayDirections;
@@ -6583,6 +6587,38 @@ function selectBaseGraphEdge(feature, fit = false) {
   );
 }
 
+function findBaseEdgeById() {
+  const edgeId = els.baseEdgeSearch.value.trim();
+  if (!edgeId) {
+    setStatus("Enter a base edge ID to find.", "error");
+    els.baseEdgeSearch.focus();
+    return;
+  }
+  if (!state.baseOverlay.loaded) {
+    setStatus("Load the Base Graph before finding an edge.", "error");
+    return;
+  }
+
+  const manualIndex = manualBaseEdgeFeatures().findIndex(
+    (feature) => String(manualBaseEdgeFeatureId(feature)) === edgeId,
+  );
+  if (manualIndex >= 0) {
+    selectManualBaseEdgeByIndex(manualIndex, true);
+    return;
+  }
+
+  const graphFeature = (state.baseOverlay.graphEdges?.features || []).find(
+    (feature) => String(graphEdgeFeatureId(feature)) === edgeId,
+  );
+  if (graphFeature) {
+    selectBaseGraphEdge(graphFeature, true);
+    return;
+  }
+
+  setStatus(`Base edge ${edgeId} was not found in the loaded graph or manual edges.`, "error");
+  els.baseEdgeSearch.select();
+}
+
 function roadTypeForGraphFeature(feature) {
   const properties = feature?.properties || {};
   if (properties.roadType) return properties.roadType;
@@ -7910,8 +7946,11 @@ async function refreshDirectionReviewEvidence() {
     invalidateBaseOverlayDerivedCache();
     await loadBaseOverlayData();
     const preserved = payload.preserved || {};
+    const sourceRebaseText = Number(preserved.rebasedSourceChanges || 0) > 0
+      ? ` ${Number(preserved.rebasedSourceChanges)} source-changed segment${Number(preserved.rebasedSourceChanges) === 1 ? "" : "s"} rebased without losing mappings.`
+      : "";
     setStatus(
-      `Direction Review evidence refreshed. ${Number(preserved.publishedAsDraft || 0)} accepted alignment${Number(preserved.publishedAsDraft || 0) === 1 ? "" : "s"} moved back to reviewed drafts; ${Number(preserved.drafts || 0)} working draft${Number(preserved.drafts || 0) === 1 ? "" : "s"} and ${Number(preserved.unavailable || 0)} unavailable decision${Number(preserved.unavailable || 0) === 1 ? "" : "s"} preserved.`,
+      `Direction Review evidence refreshed. ${Number(preserved.publishedAsDraft || 0)} accepted alignment${Number(preserved.publishedAsDraft || 0) === 1 ? "" : "s"} moved back to reviewed drafts; ${Number(preserved.drafts || 0)} working draft${Number(preserved.drafts || 0) === 1 ? "" : "s"} and ${Number(preserved.unavailable || 0)} unavailable decision${Number(preserved.unavailable || 0) === 1 ? "" : "s"} preserved.${sourceRebaseText}`,
     );
   } finally {
     state.directionReview.busy = false;
@@ -8769,6 +8808,12 @@ function wireEvents() {
     renderAll();
   });
   els.newManualBaseEdge.addEventListener("click", startManualBaseEdgeDraw);
+  els.findBaseEdge.addEventListener("click", findBaseEdgeById);
+  els.baseEdgeSearch.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    findBaseEdgeById();
+  });
   els.cloneBaseGraphEdge.addEventListener("click", () => cloneSelectedBaseGraphEdgeAsManual().catch(showError));
   els.deleteManualBaseEdge.addEventListener("click", () => deleteSelectedManualBaseEdge().catch(showError));
   els.splitManualBaseEdge.addEventListener("click", () => splitSelectedManualBaseEdge().catch(showError));

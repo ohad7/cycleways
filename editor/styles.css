@@ -1522,6 +1522,18 @@ button:disabled {
   margin-bottom: 12px;
 }
 
+.base-edge-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+
+.base-edge-search-row button {
+  min-width: 72px;
+}
+
 .action-row {
   display: flex;
   gap: 8px;

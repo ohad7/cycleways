@@ -143,6 +143,20 @@
               <div class="empty-state">Switch to Base Graph mode to edit manual base edges.</div>
             </div>
 
+            <label class="field-label" for="base-edge-search">Find base edge by ID</label>
+            <div class="base-edge-search-row">
+              <input
+                id="base-edge-search"
+                class="text-input"
+                type="search"
+                placeholder="e1024904326_1 or manual-edge-id"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+              />
+              <button id="find-base-edge" class="secondary-button" type="button" disabled>Find</button>
+            </div>
+
             <div class="base-direction-layer-control">
               <label class="checkbox-row" for="toggle-base-one-way-directions">
                 <input id="toggle-base-one-way-directions" type="checkbox" disabled />

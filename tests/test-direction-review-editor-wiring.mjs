@@ -25,6 +25,8 @@ for (const id of [
   "toggle-base-one-way-directions",
   "base-one-way-direction-legend",
   "base-one-way-direction-summary",
+  "base-edge-search",
+  "find-base-edge",
   "direction-review-apply-symmetric-batch",
   "refresh-direction-review",
 ]) {
@@ -42,6 +44,7 @@ for (const token of [
   "base-graph-one-way-directions-layer",
   "base-graph-one-way-direction-arrows",
   "buildBaseEdgeDirectionLayer",
+  "findBaseEdgeById",
   "saveSelectedManualEdgeDirectionPolicy",
   "clearSelectedOsmDirectionOverride",
   "applySymmetricDirectionMigrationBatch",
@@ -56,6 +59,13 @@ assert.match(server, /\/api\/cw-base-overlay-v2\/apply-symmetric-batch/);
 assert.match(server, /\/api\/bicycle-traversal-overrides/);
 assert.match(server, /validatePublishedDirectionReviewOverlay/);
 assert.match(server, /rebaseDirectionReviewState/);
+assert.match(server, /rebasedSourceChanges/);
+assert.match(server, /sourceGeometryChanged/);
+assert.doesNotMatch(
+  server,
+  /previous\.sourceGeometryDigest\s*!==\s*segment\.sourceGeometryDigest[\s\S]{0,160}continue;/,
+  "source-geometry changes must revalidate explicit mappings instead of dropping them",
+);
 assert.match(server, /must review both bicycleTraversal directions together/);
 
 console.log("Direction Review editor wiring ok");

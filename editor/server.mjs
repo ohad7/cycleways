@@ -2286,19 +2286,24 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
   const next = structuredClone(proposalOverlay);
   const context = await readDirectionReviewGraphContext();
   const owners = directionReviewDirectedOwners(proposalOverlay);
-  const preserved = { unavailable: 0, publishedAsDraft: 0, drafts: 0, skippedSourceChanges: 0 };
+  const preserved = {
+    unavailable: 0,
+    publishedAsDraft: 0,
+    drafts: 0,
+    rebasedSourceChanges: 0,
+    skippedSourceChanges: 0,
+  };
 
   for (const segment of Object.values(next.segments || {})) {
     const previous = stagedOverlay?.segments?.[String(segment.segmentId)];
     if (!previous) continue;
-    if (previous.sourceGeometryDigest !== segment.sourceGeometryDigest) {
-      preserved.skippedSourceChanges += 1;
-      continue;
-    }
+    const sourceGeometryChanged = previous.sourceGeometryDigest !== segment.sourceGeometryDigest;
+    let preservedSourceChangedRecord = false;
     for (const alignmentKey of ["aToB", "bToA"]) {
       const previousSlot = previous.alignments?.[alignmentKey];
       const nextSlot = segment.alignments[alignmentKey];
       if (previousSlot?.published?.disposition === "unavailable") {
+        if (sourceGeometryChanged) continue;
         nextSlot.published = structuredClone(previousSlot.published);
         nextSlot.draft = null;
         preserved.unavailable += 1;
@@ -2311,6 +2316,7 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
       if (!previousRecord) continue;
       const refs = directionReviewRecordRefs(previous, alignmentKey, previousRecord);
       if (refs.length === 0) continue;
+      if (sourceGeometryChanged) preservedSourceChangedRecord = true;
       const validation = validateDirectionReviewRefsWithContext(
         next,
         segment,
@@ -2329,6 +2335,7 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
             ? "previously-published"
             : "previous-draft",
           previousCandidateKind: previousSlot.draft?.candidate?.kind,
+          sourceGeometryChanged,
           previousReview: previousSlot.published?.review
             ? structuredClone(previousSlot.published.review)
             : undefined,
@@ -2342,6 +2349,10 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
       );
       if (previousSlot.published?.disposition === "accepted") preserved.publishedAsDraft += 1;
       else preserved.drafts += 1;
+    }
+    if (sourceGeometryChanged) {
+      if (preservedSourceChangedRecord) preserved.rebasedSourceChanges += 1;
+      else preserved.skippedSourceChanges += 1;
     }
   }
   return { overlay: parseCwOverlayV2(next), preserved };
