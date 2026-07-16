@@ -73,6 +73,31 @@ Remaining release work in this plan is unchanged:
 - [ ] Promote code and policy-bound assets atomically at Gate D. Until then the
   released V1/V2 manifest remains policy-less and must not be called protected.
 
+## 2026-07-16 closeout — exception-only ongoing authoring
+
+- [x] Automatically publish a newly edge-authored segment in both directions
+  when its explicit alignment and exact reverse are current, conflict-free,
+  continuous, endpoint-valid, and entirely `allowed`.
+- [x] Keep automatic matches and every one-way, asymmetric, unknown,
+  conditional, invalid, or conflicting result in Direction Review.
+- [x] Record a referenced-evidence digest on accepted alignments and preserve
+  acceptance across unrelated graph rebuilds only when that digest and source
+  geometry remain unchanged and revalidation passes.
+- [x] Preserve regenerated proposal candidate provenance for unchanged drafts
+  so repeated evidence refreshes do not disable the verified symmetric batch.
+- [x] Batch-publish the remaining mechanically verified legacy symmetric
+  segments, then leave only the true exception queues for manual decisions.
+- [x] Rebuild staged assets and rerun the Road 99/full-ride, shared routing,
+  approach/rejoin, migration, and editor regression gates.
+
+Closeout build result: 219 legacy symmetric segments were published in one
+reviewed batch, segment 352 is published by the new bidirectional-authoring
+rule, and segment 174 retains its two explicit reviewed carriageway mappings.
+The staged overlay now has 221 fully accepted segments (442 alignments) and 64
+exception segments: 34 direction-evidence, 11 invalid-existing, 13
+single-direction, and 6 unresolved. The corrected ride is 10,182.168 m, uses
+accepted segments 174 and 352, and contains no non-allowed traversal.
+
 ## Delivery rules
 
 - Work from the repository root.

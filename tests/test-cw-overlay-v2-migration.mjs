@@ -10,6 +10,13 @@ const graph = {
       coordinates: [[35, 33], [35.01, 33]],
       tags: { highway: "residential" },
     },
+    {
+      id: "new-east",
+      fromNodeId: "c",
+      toNodeId: "d",
+      coordinates: [[35, 33], [35.01, 33]],
+      tags: { highway: "cycleway" },
+    },
   ],
 };
 const mapSource = {
@@ -134,9 +141,11 @@ const withNewAuthoringSegment = buildMigrationProposal({
       "9": {
         segmentId: 9,
         segmentName: "New cycleway",
+        source: "edge_pick",
         status: "accepted_edge_set",
+        updatedAt: "2026-07-16T12:00:00.000Z",
         edgeRefs: [
-          { edgeId: "east", direction: "forward", sequenceIndex: 0, fromFraction: 0, toFraction: 1 },
+          { edgeId: "new-east", direction: "forward", sequenceIndex: 0, fromFraction: 0, toFraction: 1 },
         ],
       },
     },
@@ -151,17 +160,57 @@ assert.equal(withNewAuthoringSegment.report.activeV1Mappings, 1);
 assert.equal(withNewAuthoringSegment.report.activeAuthoringSegments, 2);
 assert.equal(withNewAuthoringSegment.report.newAuthoringSegments, 1);
 assert.equal(withNewAuthoringSegment.report.proposedSegments, 2);
+assert.equal(withNewAuthoringSegment.report.automaticallyPublishedAuthoringSegments, 1);
 assert.equal(
-  withNewAuthoringSegment.overlay.segments["9"].alignments.aToB.draft.candidate.kind,
-  "new-authoring",
+  withNewAuthoringSegment.overlay.segments["9"].alignments.aToB.published.disposition,
+  "accepted",
 );
 assert.equal(
   withNewAuthoringSegment.overlay.segments["9"].migration.sourceMappingOrigin,
   "authoring-v1",
 );
 assert.equal(
-  withNewAuthoringSegment.overlay.segments["9"].alignments.bToA.draft.candidate.kind,
-  "exact-reverse",
+  withNewAuthoringSegment.overlay.segments["9"].alignments.bToA.published.realization.type,
+  "reverseOf",
+);
+assert.equal(
+  withNewAuthoringSegment.overlay.segments["9"].alignments.aToB.published.review.acceptanceBasis,
+  "automatic-bidirectional-authoring",
+);
+
+const conflictingAuthoringSegment = buildMigrationProposal({
+  overlayV1,
+  authoringOverlayV1: {
+    schemaVersion: 1,
+    segments: {
+      ...overlayV1.segments,
+      "9": {
+        segmentId: 9,
+        segmentName: "Conflicting cycleway",
+        source: "edge_pick",
+        status: "accepted_edge_set",
+        updatedAt: "2026-07-16T12:00:00.000Z",
+        edgeRefs: [
+          { edgeId: "east", direction: "forward", sequenceIndex: 0, fromFraction: 0, toFraction: 1 },
+        ],
+      },
+    },
+  },
+  publicIndexV1,
+  mapSource: mapSourceWithNewSegment,
+  graph,
+  policyAudit,
+  graphDigest: "graph-digest",
+});
+assert.equal(conflictingAuthoringSegment.report.automaticallyPublishedAuthoringSegments, 0);
+assert.equal(
+  conflictingAuthoringSegment.overlay.segments["9"].alignments.aToB.draft.candidate.kind,
+  "new-authoring",
+);
+assert.ok(
+  conflictingAuthoringSegment.report.queue.some(
+    (item) => item.segmentId === 9 && item.code === "automatic_authoring_ownership_conflict",
+  ),
 );
 
 console.log("CW Overlay V2 migration ok");

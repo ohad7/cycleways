@@ -6,8 +6,8 @@
   "derivedFrom": "tests/fixtures/bicycle-traversal/road-99-ride.json",
   "coordinateReplan": {
     "requiredSegmentIds": [174, 352],
-    "acceptedFingerprint": "sha256-b9e13f4854c557d483726ac8d03433a3f83b9d19cee469d24eb8b1fc0f50e7d4",
-    "observedCandidateFingerprint": "sha256-b9e13f4854c557d483726ac8d03433a3f83b9d19cee469d24eb8b1fc0f50e7d4",
+    "acceptedFingerprint": "sha256-d1fff0e598b86d436af0521a452c560f5710c1cc8e0180be88a3a63e5765ea2e",
+    "observedCandidateFingerprint": "sha256-d1fff0e598b86d436af0521a452c560f5710c1cc8e0180be88a3a63e5765ea2e",
     "coordinates": [
       {
         "lat": 33.21348766745349,

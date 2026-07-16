@@ -47,6 +47,7 @@ import {
 } from "./lib/crossingReview.mjs";
 import {
   acceptAlignmentDraft,
+  alignmentEvidenceDigest,
   alignmentMappingDigest,
   applyReviewedMigrationBatch,
   applyReviewedSymmetricMigrationBatch,
@@ -2239,6 +2240,29 @@ function validateDirectionReviewRefsWithContext(
   });
 }
 
+function directionReviewEvidenceDigest(refs, context) {
+  return alignmentEvidenceDigest(refs, context.edgeLookup, context.policyDigest);
+}
+
+async function directionReviewEvidenceDigests(overlay, segmentIds) {
+  const context = await readDirectionReviewGraphContext();
+  const selected = new Set((segmentIds || []).map(Number));
+  const evidenceDigests = {};
+  for (const segment of Object.values(overlay.segments || {})) {
+    if (!selected.has(segment.segmentId)) continue;
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      const slot = segment.alignments?.[alignmentKey];
+      const record = slot?.published || slot?.draft;
+      const refs = directionReviewRecordRefs(segment, alignmentKey, record);
+      if (refs.length === 0) continue;
+      evidenceDigests[String(segment.segmentId)] ||= {};
+      evidenceDigests[String(segment.segmentId)][alignmentKey] =
+        directionReviewEvidenceDigest(refs, context);
+    }
+  }
+  return evidenceDigests;
+}
+
 async function validatePublishedDirectionReviewOverlay(overlay) {
   const context = await readDirectionReviewGraphContext();
   const owners = directionReviewDirectedOwners(overlay);
@@ -2288,6 +2312,8 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
   const owners = directionReviewDirectedOwners(proposalOverlay);
   const preserved = {
     unavailable: 0,
+    published: 0,
+    evidenceBackfilled: 0,
     publishedAsDraft: 0,
     drafts: 0,
     rebasedSourceChanges: 0,
@@ -2297,6 +2323,31 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
   for (const segment of Object.values(next.segments || {})) {
     const previous = stagedOverlay?.segments?.[String(segment.segmentId)];
     if (!previous) continue;
+    const automaticProposal = ["aToB", "bToA"].every(
+      (alignmentKey) =>
+        segment.alignments?.[alignmentKey]?.published?.review?.acceptanceBasis ===
+        "automatic-bidirectional-authoring",
+    );
+    const automaticProposalMatchesPrevious = automaticProposal && ["aToB", "bToA"].every(
+      (alignmentKey) => {
+        const proposalRecord = segment.alignments?.[alignmentKey]?.published;
+        const previousSlot = previous.alignments?.[alignmentKey];
+        const previousRecord = previousSlot?.published || previousSlot?.draft;
+        const proposalRefs = directionReviewRecordRefs(segment, alignmentKey, proposalRecord);
+        const previousRefs = directionReviewRecordRefs(previous, alignmentKey, previousRecord);
+        if (proposalRefs.length === 0 || previousRefs.length === 0) return false;
+        return alignmentMappingDigest(
+          segment.segmentId,
+          alignmentKey,
+          { type: "explicit", edgeRefs: proposalRefs },
+        ) === alignmentMappingDigest(
+          segment.segmentId,
+          alignmentKey,
+          { type: "explicit", edgeRefs: previousRefs },
+        );
+      },
+    );
+    if (automaticProposalMatchesPrevious) continue;
     const sourceGeometryChanged = previous.sourceGeometryDigest !== segment.sourceGeometryDigest;
     let preservedSourceChangedRecord = false;
     for (const alignmentKey of ["aToB", "bToA"]) {
@@ -2325,21 +2376,78 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
         context,
         owners,
       );
+      const evidenceDigest = directionReviewEvidenceDigest(refs, context);
+      const previousReview = previousSlot?.published?.review ||
+        previousSlot?.draft?.candidate?.previousReview;
+      const wasPreviouslyAccepted =
+        previousSlot?.published?.disposition === "accepted" || Boolean(previousReview);
+      if (wasPreviouslyAccepted && !sourceGeometryChanged) {
+        const previousEvidenceDigest = previousReview?.evidenceDigest;
+        if (
+          validation.ok &&
+          (!previousEvidenceDigest || previousEvidenceDigest === evidenceDigest)
+        ) {
+          const realization = previousSlot?.published?.realization
+            ? structuredClone(previousSlot.published.realization)
+            : { type: "explicit", edgeRefs: normalizeAlignmentEdgeRefs(refs) };
+          const mappingDigest = alignmentMappingDigest(
+            segment.segmentId,
+            alignmentKey,
+            realization,
+          );
+          nextSlot.published = {
+            disposition: "accepted",
+            realization,
+            mappingDigest,
+            review: structuredClone(previousReview),
+          };
+          nextSlot.published.review = {
+            ...nextSlot.published.review,
+            graphDigest: next.graphDigest,
+            policyDigest: next.policyDigest,
+            sourceGeometryDigest: segment.sourceGeometryDigest,
+            mappingDigest,
+            evidenceDigest,
+            ...(previousRecord.review?.graphDigest !== next.graphDigest
+              ? { revalidatedFromGraphDigest: previousRecord.review?.graphDigest }
+              : {}),
+          };
+          nextSlot.draft = null;
+          preserved.published += 1;
+          if (!previousEvidenceDigest) preserved.evidenceBackfilled += 1;
+          continue;
+        }
+      }
+      const proposalRecord = nextSlot.draft;
+      const proposalRefs = directionReviewRecordRefs(segment, alignmentKey, proposalRecord);
+      const proposalMatches =
+        proposalRefs.length > 0 &&
+        alignmentMappingDigest(
+          segment.segmentId,
+          alignmentKey,
+          { type: "explicit", edgeRefs: proposalRefs },
+        ) === alignmentMappingDigest(
+          segment.segmentId,
+          alignmentKey,
+          { type: "explicit", edgeRefs: refs },
+        );
       nextSlot.published = null;
       nextSlot.draft = {
         disposition: "needs_review",
         realization: { type: "explicit", edgeRefs: normalizeAlignmentEdgeRefs(refs) },
         mappingDigest: undefined,
-        candidate: {
-          kind: previousSlot.published?.disposition === "accepted"
-            ? "previously-published"
-            : "previous-draft",
-          previousCandidateKind: previousSlot.draft?.candidate?.kind,
-          sourceGeometryChanged,
-          previousReview: previousSlot.published?.review
-            ? structuredClone(previousSlot.published.review)
-            : undefined,
-        },
+        candidate: proposalMatches && proposalRecord?.candidate
+          ? structuredClone(proposalRecord.candidate)
+          : {
+              kind: previousSlot.published?.disposition === "accepted"
+                ? "previously-published"
+                : "previous-draft",
+              previousCandidateKind: previousSlot.draft?.candidate?.kind,
+              sourceGeometryChanged,
+              previousReview: previousSlot.published?.review
+                ? structuredClone(previousSlot.published.review)
+                : undefined,
+            },
         validation,
       };
       nextSlot.draft.mappingDigest = alignmentMappingDigest(
@@ -2358,8 +2466,34 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
   return { overlay: parseCwOverlayV2(next), preserved };
 }
 
+async function backfillCurrentDirectionReviewEvidence(overlay) {
+  if (!overlay) return null;
+  const next = structuredClone(overlay);
+  const context = await readDirectionReviewGraphContext();
+  if (
+    context.graphDigest !== next.graphDigest ||
+    context.policyDigest !== next.policyDigest
+  ) {
+    return next;
+  }
+  for (const segment of Object.values(next.segments || {})) {
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      const published = segment.alignments?.[alignmentKey]?.published;
+      if (published?.disposition !== "accepted" || published.review?.evidenceDigest) continue;
+      const refs = directionReviewRecordRefs(segment, alignmentKey, published);
+      if (refs.length === 0) continue;
+      published.review.evidenceDigest = directionReviewEvidenceDigest(refs, context);
+    }
+  }
+  return parseCwOverlayV2(next);
+}
+
 async function refreshDirectionReviewEvidence(payload = {}) {
   const refreshId = ++directionReviewRefreshCounter;
+  const stagedBeforeRefreshValue = await readJsonFileOrNull(cwBaseOverlayV2StagedPath);
+  const stagedBeforeRefresh = stagedBeforeRefreshValue
+    ? await backfillCurrentDirectionReviewEvidence(parseCwOverlayV2(stagedBeforeRefreshValue))
+    : null;
   await ensureCurrentBaseRoutingArtifacts(`direction-review-${refreshId}`, payload);
   await runBuildDependencyStep(
     `direction-review-${refreshId}`,
@@ -2384,15 +2518,13 @@ async function refreshDirectionReviewEvidence(payload = {}) {
     ["scripts/migrate-cw-base-overlay-v2.mjs"],
   );
   directionReviewGraphCache = null;
-  const [proposalValue, stagedOverlay] = await Promise.all([
-    readJsonFileOrNull(cwBaseOverlayV2ProposalPath),
-    readJsonFileOrNull(cwBaseOverlayV2StagedPath),
-  ]);
+  const proposalValue = await readJsonFileOrNull(cwBaseOverlayV2ProposalPath);
   const proposalOverlay = proposalValue ? parseCwOverlayV2(proposalValue) : null;
   if (!proposalOverlay) throw new Error("Direction Review proposal was not produced");
-  const rebased = stagedOverlay
-    ? await rebaseDirectionReviewState(proposalOverlay, parseCwOverlayV2(stagedOverlay))
+  const rebased = stagedBeforeRefresh
+    ? await rebaseDirectionReviewState(proposalOverlay, stagedBeforeRefresh)
     : { overlay: proposalOverlay, preserved: { unavailable: 0, publishedAsDraft: 0, drafts: 0, skippedSourceChanges: 0 } };
+  await validatePublishedDirectionReviewOverlay(rebased.overlay);
   await writeJsonAtomic(cwBaseOverlayV2StagedPath, rebased.overlay);
   return { refreshId, ...rebased };
 }
@@ -2468,7 +2600,11 @@ async function applyDirectionReviewAlignmentAction(payload) {
         const reason = validation.reasons[0];
         throw new Error(`Alignment is not valid: ${reason?.reason || reason?.code || "review required"}`);
       }
-      next = acceptAlignmentDraft(working, segmentId, alignmentKey, payload);
+      const context = await readDirectionReviewGraphContext();
+      next = acceptAlignmentDraft(working, segmentId, alignmentKey, {
+        ...payload,
+        evidenceDigest: directionReviewEvidenceDigest(refs, context),
+      });
       break;
     }
     case "unavailable":
@@ -4436,7 +4572,11 @@ const server = createServer(async (request, response) => {
           JSON.parse(await readFile(cwBaseOverlayV2ProposalPath, "utf-8")),
         );
         const staged = await readJsonFileOrNull(cwBaseOverlayV2StagedPath);
-        const applied = applyReviewedMigrationBatch(proposal, payload.segmentIds, payload);
+        const evidenceDigests = await directionReviewEvidenceDigests(proposal, payload.segmentIds);
+        const applied = applyReviewedMigrationBatch(proposal, payload.segmentIds, {
+          ...payload,
+          evidenceDigests,
+        });
         if (staged) {
           const parsedStaged = parseCwOverlayV2(staged);
           const selected = new Set((payload.segmentIds || []).map(Number));
@@ -4471,7 +4611,10 @@ const server = createServer(async (request, response) => {
         const applied = applyReviewedSymmetricMigrationBatch(
           proposal,
           requestedIds,
-          payload,
+          {
+            ...payload,
+            evidenceDigests: await directionReviewEvidenceDigests(proposal, requestedIds),
+          },
         );
         const staged = await readJsonFileOrNull(cwBaseOverlayV2StagedPath);
         if (staged) {

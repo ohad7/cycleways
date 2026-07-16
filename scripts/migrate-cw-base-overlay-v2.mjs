@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
   ALIGNMENT_KEYS,
+  alignmentEvidenceDigest,
   alignmentMappingDigest,
   digestCwOverlayValue,
   parseCwOverlayV2,
@@ -222,6 +223,17 @@ export function buildMigrationProposal({
   const classifications = {};
   const queue = [];
   const ownership = new Map();
+  const candidateOwnership = new Map();
+  const automaticAuthoringCandidates = [];
+
+  const addCandidateOwnership = (segmentId, alignmentKey, refs) => {
+    for (const ref of refs) {
+      const key = `${ref.edgeId}|${ref.direction}|${ref.fromFraction}|${ref.toFraction}`;
+      const owners = candidateOwnership.get(key) || [];
+      owners.push({ segmentId, alignmentKey });
+      candidateOwnership.set(key, owners);
+    }
+  };
 
   for (const segmentId of [...activeIds].sort((a, b) => a - b)) {
     const isLegacySegment = legacyActiveIds.has(segmentId);
@@ -312,6 +324,28 @@ export function buildMigrationProposal({
       };
     }
 
+    addCandidateOwnership(segmentId, existingKey, refs);
+    if (reverseValidation.status === "valid") {
+      addCandidateOwnership(segmentId, oppositeKey, reversed.edgeRefs);
+    }
+    if (
+      !isLegacySegment &&
+      mapping.status === "accepted_edge_set" &&
+      mapping.source === "edge_pick" &&
+      classification === "symmetric_candidate" &&
+      typeof mapping.updatedAt === "string" &&
+      mapping.updatedAt.length >= 10
+    ) {
+      automaticAuthoringCandidates.push({
+        segmentId,
+        existingKey,
+        oppositeKey,
+        refs,
+        reversedRefs: reversed.edgeRefs,
+        mapping,
+      });
+    }
+
     for (const ref of refs) {
       const key = `${ref.edgeId}|${ref.direction}|${ref.fromFraction}|${ref.toFraction}`;
       const owners = ownership.get(key) || [];
@@ -323,6 +357,97 @@ export function buildMigrationProposal({
 
   for (const [directedKey, owners] of ownership) {
     if (owners.length > 1) queue.push({ code: "directed_ownership_conflict", directedKey, owners });
+  }
+
+  let automaticallyPublishedAuthoringSegments = 0;
+  for (const candidate of automaticAuthoringCandidates) {
+    const candidateKeys = [...candidate.refs, ...candidate.reversedRefs].map(
+      (ref) => `${ref.edgeId}|${ref.direction}|${ref.fromFraction}|${ref.toFraction}`,
+    );
+    const conflicts = candidateKeys.flatMap((directedKey) =>
+      (candidateOwnership.get(directedKey) || [])
+        .filter((owner) => owner.segmentId !== candidate.segmentId)
+        .map((owner) => ({ directedKey, owner })),
+    );
+    if (conflicts.length > 0) {
+      queue.push({
+        segmentId: candidate.segmentId,
+        code: "automatic_authoring_ownership_conflict",
+        conflicts,
+      });
+      continue;
+    }
+    const segment = segments[String(candidate.segmentId)];
+    const reviewedAt = candidate.mapping.updatedAt.slice(0, 10);
+    const batchId = `automatic-bidirectional-authoring-${candidate.segmentId}`;
+    const explicitRealization = { type: "explicit", edgeRefs: candidate.refs };
+    const explicitDigest = alignmentMappingDigest(
+      candidate.segmentId,
+      candidate.existingKey,
+      explicitRealization,
+    );
+    segment.alignments[candidate.existingKey] = {
+      published: {
+        disposition: "accepted",
+        realization: explicitRealization,
+        mappingDigest: explicitDigest,
+        review: {
+          reviewer: "editor-authored",
+          reviewedAt,
+          batchId,
+          rationale: "Explicitly authored mapping with a mechanically validated exact reverse",
+          acceptanceBasis: "automatic-bidirectional-authoring",
+          automated: true,
+          graphDigest,
+          policyDigest: policyAudit.policyDigest,
+          sourceGeometryDigest: segment.sourceGeometryDigest,
+          mappingDigest: explicitDigest,
+          evidenceDigest: alignmentEvidenceDigest(
+            candidate.refs,
+            graphById,
+            policyAudit.policyDigest,
+          ),
+        },
+      },
+      draft: null,
+    };
+    const reverseRealization = {
+      type: "reverseOf",
+      alignmentKey: candidate.existingKey,
+      referencedMappingDigest: explicitDigest,
+    };
+    const reverseDigest = alignmentMappingDigest(
+      candidate.segmentId,
+      candidate.oppositeKey,
+      reverseRealization,
+    );
+    segment.alignments[candidate.oppositeKey] = {
+      published: {
+        disposition: "accepted",
+        realization: reverseRealization,
+        mappingDigest: reverseDigest,
+        review: {
+          reviewer: "editor-authored",
+          reviewedAt,
+          batchId,
+          rationale: "Mechanically validated exact reverse of an explicitly authored mapping",
+          acceptanceBasis: "automatic-bidirectional-authoring",
+          automated: true,
+          graphDigest,
+          policyDigest: policyAudit.policyDigest,
+          sourceGeometryDigest: segment.sourceGeometryDigest,
+          mappingDigest: reverseDigest,
+          evidenceDigest: alignmentEvidenceDigest(
+            candidate.reversedRefs,
+            graphById,
+            policyAudit.policyDigest,
+          ),
+        },
+      },
+      draft: null,
+    };
+    segment.migration.automaticPublication = "bidirectional-authoring";
+    automaticallyPublishedAuthoringSegments += 1;
   }
 
   const overlay = {
@@ -347,6 +472,7 @@ export function buildMigrationProposal({
     activeV1Mappings: legacyActiveIds.size,
     activeAuthoringSegments: activeIds.size,
     newAuthoringSegments: activeIds.size - legacyActiveIds.size,
+    automaticallyPublishedAuthoringSegments,
     proposedSegments: Object.keys(segments).length,
     archivedV1Mappings: Object.keys(overlayV1.segments || {}).length - legacyActiveIds.size,
     classifications: Object.fromEntries(Object.entries(classifications).sort()),

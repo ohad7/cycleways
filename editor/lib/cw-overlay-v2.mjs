@@ -58,6 +58,41 @@ export function alignmentMappingDigest(segmentId, alignmentKey, realization) {
   return digestCwOverlayValue({ segmentId: Number(segmentId), alignmentKey, realization: normalized });
 }
 
+export function alignmentEvidenceDigest(edgeRefs, edgeLookup, policyDigest) {
+  const lookup = edgeLookup instanceof Map
+    ? edgeLookup
+    : new Map(Object.entries(edgeLookup || {}));
+  const evidence = orderedRefs(edgeRefs).map((ref) => {
+    const edge = lookup.get(String(ref.edgeId)) || {};
+    const traversal = edge.bicycleTraversal || edge.bicycleTraversalShadow || {};
+    const stateKey = ref.direction === "reverse" ? "reverse" : "forward";
+    const reasonKey = `${stateKey}Reason`;
+    return {
+      ref,
+      edge: {
+        edgeId: String(edge.edgeId || edge.id || ref.edgeId),
+        source: String(edge.source || ref.source || "osm"),
+        fromNodeId: edge.fromNodeId == null ? null : String(edge.fromNodeId),
+        toNodeId: edge.toNodeId == null ? null : String(edge.toNodeId),
+        coordinates: Array.isArray(edge.coordinates)
+          ? edge.coordinates.map((coordinate) => coordinate.slice(0, 3))
+          : [],
+        policyId: traversal.policyId || null,
+        policyDigest: traversal.policyDigest || policyDigest || null,
+        state: traversal[stateKey] || "unknown",
+        reason: traversal[reasonKey] || "missing_policy_evidence",
+      },
+    };
+  });
+  return digestCwOverlayValue({ policyDigest: policyDigest || null, evidence });
+}
+
+function reviewEvidenceDigest(review, segmentId, alignmentKey) {
+  return review?.evidenceDigest ||
+    review?.evidenceDigests?.[String(segmentId)]?.[alignmentKey] ||
+    undefined;
+}
+
 function assertCoordinate(value, label) {
   if (
     !Array.isArray(value) ||
@@ -422,6 +457,7 @@ export function acceptAlignmentDraft(overlay, segmentId, alignmentKey, review) {
       policyDigest: next.policyDigest,
       sourceGeometryDigest: segment.sourceGeometryDigest,
       mappingDigest,
+      evidenceDigest: reviewEvidenceDigest(review, segmentId, alignmentKey),
     },
   };
   slot.draft = null;
@@ -480,6 +516,7 @@ export function applyReviewedMigrationBatch(proposalOverlay, segmentIds, review)
           policyDigest: next.policyDigest,
           sourceGeometryDigest: segment.sourceGeometryDigest,
           mappingDigest,
+          evidenceDigest: reviewEvidenceDigest(review, segment.segmentId, alignmentKey),
         },
       };
       slot.draft = null;
@@ -555,6 +592,7 @@ export function applyReviewedSymmetricMigrationBatch(
         policyDigest: next.policyDigest,
         sourceGeometryDigest: segment.sourceGeometryDigest,
         mappingDigest: existingDigest,
+        evidenceDigest: reviewEvidenceDigest(review, segment.segmentId, existingKey),
       },
     };
     segment.alignments[existingKey] = { published: existingPublished, draft: null };
@@ -583,6 +621,7 @@ export function applyReviewedSymmetricMigrationBatch(
           policyDigest: next.policyDigest,
           sourceGeometryDigest: segment.sourceGeometryDigest,
           mappingDigest: reverseDigest,
+          evidenceDigest: reviewEvidenceDigest(review, segment.segmentId, reverseKey),
         },
       },
       draft: null,

@@ -6,7 +6,7 @@
     "cwBaseOverlayV1Sha256": "75cecddc5eed0aa264b3b04ec5ff744e8bf535ba2f5dc7cd028f338a5fc26c33",
     "baseEdgeShareRegistryV1FileSha256": "02bfa01e1a9fa65d838d9a957f2d053306cd58d61e15cf53bf15918d812deef4",
     "baseEdgeShareRegistryDigest": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d",
-    "logicalMapSourceSha256": "ee3a775992f59294042b05b1f4b738e01c0d8ddc0012cb9c840df42aa25c3f28",
+    "logicalMapSourceSha256": "e7e3f01bcda01722170e0e2669f3dfd0ff5e1ce77f3ceba73170909f2747f0a8",
     "baseRoutingManifestSha256": "7c7766c9759d0165976cf158b33acca0ae067f2768339aae95823af46983dd89"
   },
   "graphIdentity": {
@@ -52,7 +52,7 @@
       341
     ],
     "logicalStatusCounts": {
-      "active": 284,
+      "active": 285,
       "deprecated": 53,
       "legacy": 10
     },

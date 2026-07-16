@@ -61,6 +61,9 @@ assert.match(server, /validatePublishedDirectionReviewOverlay/);
 assert.match(server, /rebaseDirectionReviewState/);
 assert.match(server, /rebasedSourceChanges/);
 assert.match(server, /sourceGeometryChanged/);
+assert.match(server, /evidenceBackfilled/);
+assert.match(server, /directionReviewEvidenceDigest/);
+assert.match(server, /proposalMatches/);
 assert.doesNotMatch(
   server,
   /previous\.sourceGeometryDigest\s*!==\s*segment\.sourceGeometryDigest[\s\S]{0,160}continue;/,

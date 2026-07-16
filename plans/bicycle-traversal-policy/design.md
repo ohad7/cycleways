@@ -88,6 +88,44 @@ makes the override stale and blocks the build until it is removed or reviewed
 again. Saving or removing either kind of direction evidence marks graph and
 Direction Review evidence stale until the curator rebuilds.
 
+## 2026-07-16 amendment — author once, review exceptions
+
+Creating a CycleWays segment by explicitly selecting its base-edge sequence is
+already a curation decision. The editor must not ask for a second direction
+decision when that authored sequence and its exact reverse are mechanically
+proved safe and structurally valid.
+
+A newly authored mapping is published in both directions automatically only
+when all of the following hold:
+
+- the source mapping is an explicit editor edge selection, not an automatic
+  match;
+- the authored alignment passes endpoint and continuity validation;
+- every directed traversal in the authored alignment is `allowed`;
+- the exact reverse also passes with every traversal `allowed`; and
+- neither alignment conflicts with another segment's directed ownership.
+
+One-way, conditional, unknown, asymmetric, discontinuous, endpoint-mismatched,
+and ownership-conflicting cases remain in Direction Review. This is automatic
+publication of already-authored intent, not inference from road class or a
+blanket assumption that dirt roads are bidirectional.
+
+Review binding is scoped to the evidence used by an alignment. An acceptance
+records a digest of its normalized edge references, referenced edge geometry,
+and normalized directional policy. After a graph rebuild, an accepted
+alignment remains published when its source geometry and this evidence digest
+are unchanged and current validation still passes. A global graph digest
+change caused by an unrelated new edge must not force reacceptance. Changed or
+missing referenced evidence still moves the alignment back to review.
+Existing accepted records created before evidence digests were introduced are
+bootstrapped once by current full validation; subsequent refreshes use the
+recorded digest and therefore detect referenced geometry or policy changes.
+
+Proposal refresh also preserves migration provenance when the staged mapping
+still equals the regenerated proposal. This keeps mechanically proved legacy
+segments eligible for the one-time symmetric migration batch across repeated
+refreshes.
+
 ## Why this is a separate foundation
 
 The July 13 ride exposed an end-to-end data-loss defect:

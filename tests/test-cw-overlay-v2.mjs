@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   acceptAlignmentDraft,
+  alignmentEvidenceDigest,
   alignmentMappingDigest,
   applyReviewedMigrationBatch,
   applyReviewedSymmetricMigrationBatch,
@@ -199,6 +200,7 @@ function baseOverlay() {
     reviewer: "curator",
     reviewedAt: "2026-07-14",
     batchId: "symmetric-1",
+    evidenceDigests: { "7": { aToB: "forward-evidence", bToA: "reverse-evidence" } },
   });
   assert.equal(result.applied.length, 1);
   assert.equal(segment.alignments.aToB.published, null, "batch does not mutate input");
@@ -206,6 +208,14 @@ function baseOverlay() {
   assert.equal(
     result.overlay.segments["7"].alignments.bToA.published.realization.type,
     "reverseOf",
+  );
+  assert.equal(
+    result.overlay.segments["7"].alignments.aToB.published.review.evidenceDigest,
+    "forward-evidence",
+  );
+  assert.equal(
+    result.overlay.segments["7"].alignments.bToA.published.review.evidenceDigest,
+    "reverse-evidence",
   );
   assert.deepEqual(
     materializeAcceptedAlignment(result.overlay.segments["7"], "bToA").map((ref) => [ref.edgeId, ref.direction]),
@@ -227,8 +237,13 @@ function baseOverlay() {
     reviewer: "curator",
     reviewedAt: "2026-07-14",
     batchId: "manual-1",
+    evidenceDigest: "manual-evidence",
   });
   assert.equal(overlay.segments["7"].alignments.aToB.published.disposition, "accepted");
+  assert.equal(
+    overlay.segments["7"].alignments.aToB.published.review.evidenceDigest,
+    "manual-evidence",
+  );
   assert.equal(overlay.segments["7"].alignments.aToB.draft, null);
 
   overlay = deriveReverseAlignmentDraft(overlay, 7, "bToA", {
@@ -262,6 +277,44 @@ function baseOverlay() {
   assert.equal(
     overlay.segments["7"].alignments.bToA.published.userExplanation,
     "Choose another corridor for the return trip.",
+  );
+}
+
+{
+  const refs = explicit("edge-evidence").edgeRefs;
+  const edges = new Map([
+    ["edge-evidence", {
+      edgeId: "edge-evidence",
+      source: "manual",
+      fromNodeId: "a",
+      toNodeId: "b",
+      coordinates: [[35, 33], [35.01, 33]],
+      bicycleTraversal: {
+        policyId: "il-bicycle-v1",
+        policyDigest: "policy-digest",
+        forward: "allowed",
+        reverse: "allowed",
+        forwardReason: "manual-reviewed",
+        reverseReason: "manual-reviewed",
+      },
+    }],
+  ]);
+  const first = alignmentEvidenceDigest(refs, edges, "policy-digest");
+  edges.set("unrelated", {
+    edgeId: "unrelated",
+    coordinates: [[0, 0], [1, 1]],
+    bicycleTraversal: { forward: "prohibited", reverse: "prohibited" },
+  });
+  assert.equal(
+    alignmentEvidenceDigest(refs, edges, "policy-digest"),
+    first,
+    "unrelated graph changes do not invalidate referenced evidence",
+  );
+  edges.get("edge-evidence").bicycleTraversal.forward = "prohibited";
+  assert.notEqual(
+    alignmentEvidenceDigest(refs, edges, "policy-digest"),
+    first,
+    "referenced direction changes invalidate evidence",
   );
 }
 
