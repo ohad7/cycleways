@@ -2095,11 +2095,15 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T21:57:39.732Z",
-        "updatedAt": "2026-05-19T22:08:41.032Z",
+        "updatedAt": "2026-07-16T21:17:52.542Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #2 (אגמון החולה מבואה) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #2; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -2155,11 +2159,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T22:41:47.274Z",
-        "updatedAt": "2026-05-19T22:41:59.999Z",
+        "updatedAt": "2026-07-16T21:25:29.487Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #6 (בניאס שביל חום תעלה מזרחי) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #6; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -2219,11 +2227,14 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T04:46:47.954Z",
-        "updatedAt": "2026-05-20T04:46:55.834Z",
+        "updatedAt": "2026-07-16T21:02:16.798Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "manual"
         }
       },
       "geometry": {
@@ -4483,12 +4494,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-07-10T19:46:35.335Z",
-        "updatedAt": "2026-07-10T19:46:42.199Z",
+        "updatedAt": "2026-07-16T21:20:03.006Z",
         "splitFrom": "manual-osm-414115340-mrfcjlc7",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #27 (הירדן ההיסטורי) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #27; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
@@ -4688,12 +4703,16 @@
         "osmRouteClass": "path_track",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-07-10T19:46:35.335Z",
-        "updatedAt": "2026-07-10T19:46:42.199Z",
+        "updatedAt": "2026-07-16T21:20:03.006Z",
         "splitFrom": "manual-osm-414115340-mrfcjlc7",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #27 (הירדן ההיסטורי) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #27; batch direction-review-2026-07-17"
         }
       },
       "geometry": {
