@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-16T18:21:03.092Z",
+  "updatedAt": "2026-07-16T22:10:09.394Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -3847,249 +3847,24 @@
       "segmentId": 65,
       "segmentName": "כביש גישה אגמון החולה",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
-      "confidence": "high",
-      "coverageRatio": 1,
-      "avgDistanceMeters": 0.23,
+      "source": "reviewed_edge_set",
+      "confidence": "reviewed",
+      "coverageRatio": 0,
+      "avgDistanceMeters": null,
       "gapCount": 0,
-      "failureClass": "accepted",
+      "failureClass": "reviewed",
       "edgeRefs": [
         {
-          "edgeId": "e734631664_1",
+          "edgeId": "e1381547051_6",
           "source": "osm",
-          "direction": "reverse",
+          "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 734631664
-        },
-        {
-          "edgeId": "e734631665_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 734631665
-        },
-        {
-          "edgeId": "e734631666_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 734631666
-        },
-        {
-          "edgeId": "e734631666_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 3,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 734631666
-        },
-        {
-          "edgeId": "e1381547052_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1381547052
-        },
-        {
-          "edgeId": "e1381547052_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1381547052
-        },
-        {
-          "edgeId": "e1381547052_3",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 6,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1381547052
-        },
-        {
-          "edgeId": "e1381547052_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 7,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1381547052
-        },
-        {
-          "edgeId": "e1381547052_5",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 8,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1381547052
-        },
-        {
-          "edgeId": "manual-65-mpn2b7sa",
-          "source": "manual",
-          "direction": "reverse",
-          "sequenceIndex": 9,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-65-mpn2b7sa"
-        },
-        {
-          "edgeId": "e1381547051_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 10,
-          "fromFraction": 0,
-          "toFraction": 1,
           "osmWayId": 1381547051
-        },
-        {
-          "edgeId": "e1381547051_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 11,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1381547051
-        },
-        {
-          "edgeId": "e40857273_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 12,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 40857273
-        },
-        {
-          "edgeId": "e40857273_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 13,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 40857273
-        },
-        {
-          "edgeId": "e581405154_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 14,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 581405154
-        },
-        {
-          "edgeId": "e581405204_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 15,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 581405204
-        },
-        {
-          "edgeId": "e581405204_3",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 16,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 581405204
-        },
-        {
-          "edgeId": "e581405204_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 17,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 581405204
-        },
-        {
-          "edgeId": "e581405199_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 18,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 581405199
-        },
-        {
-          "edgeId": "e1421421710_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 19,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1421421710
-        },
-        {
-          "edgeId": "e581405157_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 20,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 581405157
-        },
-        {
-          "edgeId": "e581405186_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 21,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 581405186
-        },
-        {
-          "edgeId": "e1421420696_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 22,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1421420696
-        },
-        {
-          "edgeId": "e1421420696_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 23,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1421420696
-        },
-        {
-          "edgeId": "e1421420693_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 24,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1421420693
-        },
-        {
-          "edgeId": "e1421420685_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 25,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1421420685
         }
       ],
-      "updatedAt": "2026-05-26T20:04:01.606Z"
+      "updatedAt": "2026-07-16T22:10:09.384Z"
     },
     "67": {
       "segmentId": 67,

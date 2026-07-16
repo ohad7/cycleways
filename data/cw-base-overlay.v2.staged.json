@@ -7421,8 +7421,9 @@
     "65": {
       "alignments": {
         "aToB": {
-          "draft": {
-            "disposition": "needs_review",
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -7508,352 +7509,410 @@
                   "toFraction": 1
                 },
                 {
-                  "direction": "reverse",
-                  "edgeId": "manual-65-mpn2b7sa",
-                  "fromFraction": 0,
-                  "manualEdgeId": "manual-65-mpn2b7sa",
+                  "edgeId": "e1381547051_6",
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 9,
-                  "source": "manual",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547051
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e1381547051_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1381547051,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 10,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547051
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e1381547051_2",
-                  "fromFraction": 0,
-                  "osmWayId": 1381547051,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 11,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547051
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e40857273_1",
-                  "fromFraction": 0,
-                  "osmWayId": 40857273,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 12,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 40857273
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e40857273_2",
-                  "fromFraction": 0,
-                  "osmWayId": 40857273,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 13,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 40857273
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e581405154_1",
-                  "fromFraction": 0,
-                  "osmWayId": 581405154,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 14,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405154
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e581405204_2",
-                  "fromFraction": 0,
-                  "osmWayId": 581405204,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 15,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405204
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e581405204_3",
-                  "fromFraction": 0,
-                  "osmWayId": 581405204,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 16,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405204
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e581405204_4",
-                  "fromFraction": 0,
-                  "osmWayId": 581405204,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 17,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405204
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e581405199_1",
-                  "fromFraction": 0,
-                  "osmWayId": 581405199,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 18,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405199
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e1421421710_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1421421710,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 19,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421421710
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e581405157_1",
-                  "fromFraction": 0,
-                  "osmWayId": 581405157,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 20,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405157
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e581405186_1",
-                  "fromFraction": 0,
-                  "osmWayId": 581405186,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 21,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405186
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e1421420696_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1421420696,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 22,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421420696
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e1421420696_2",
-                  "fromFraction": 0,
-                  "osmWayId": 1421420696,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 23,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421420696
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e1421420693_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1421420693,
-                  "sequenceIndex": 24,
                   "source": "osm",
-                  "toFraction": 1
+                  "direction": "forward",
+                  "sequenceIndex": 24,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421420693
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e1421420685_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1421420685,
-                  "sequenceIndex": 25,
                   "source": "osm",
-                  "toFraction": 1
+                  "direction": "forward",
+                  "sequenceIndex": 25,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421420685
                 }
               ]
             },
-            "mappingDigest": "0b58fa18f54d404beb80efa257c4f42b3d32ff95ab5855c664208e49f40b9ddd",
-            "candidate": {
-              "classification": "direction_evidence_needed",
-              "kind": "v1-existing"
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "non_allowed_traversal",
-                  "edgeId": "manual-65-mpn2b7sa",
-                  "direction": "reverse",
-                  "state": "unknown",
-                  "reason": "manual-unreviewed"
-                }
-              ],
-              "traversalStates": {
-                "0:e734631664_1": "allowed",
-                "1:e734631665_1": "allowed",
-                "2:e734631666_2": "allowed",
-                "3:e734631666_1": "allowed",
-                "4:e1381547052_1": "allowed",
-                "5:e1381547052_2": "allowed",
-                "6:e1381547052_3": "allowed",
-                "7:e1381547052_4": "allowed",
-                "8:e1381547052_5": "allowed",
-                "9:manual-65-mpn2b7sa": "unknown",
-                "10:e1381547051_1": "allowed",
-                "11:e1381547051_2": "allowed",
-                "12:e40857273_1": "allowed",
-                "13:e40857273_2": "allowed",
-                "14:e581405154_1": "allowed",
-                "15:e581405204_2": "allowed",
-                "16:e581405204_3": "allowed",
-                "17:e581405204_4": "allowed",
-                "18:e581405199_1": "allowed",
-                "19:e1421421710_1": "allowed",
-                "20:e581405157_1": "allowed",
-                "21:e581405186_1": "allowed",
-                "22:e1421420696_1": "allowed",
-                "23:e1421420696_2": "allowed",
-                "24:e1421420693_1": "allowed",
-                "25:e1421420685_1": "allowed"
-              },
-              "terminals": {
-                "start": [
-                  35.5866411,
-                  33.1106124
-                ],
-                "end": [
-                  35.5721062,
-                  33.1113772
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 2.586844417024406,
-                "end": 2.1388013049190833
-              }
+            "mappingDigest": "34559679adbfaeb4c155383815c22622e71a0b7687c2971f11d2534730b59bd5",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-17",
+              "batchId": "direction-review-2026-07-17",
+              "graphDigest": "45b36389e410ac1419892fb559bf2e74d88756646082e97f822659ae910e180d",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "8c90388b45fc565637416ccd984c663954682d65374e4033f61984121c3ee029",
+              "mappingDigest": "34559679adbfaeb4c155383815c22622e71a0b7687c2971f11d2534730b59bd5",
+              "evidenceDigest": "475b99236f4671d56acc426f7f8401fb81f393838fd21bb058316a8ce62f67ce"
             }
-          },
-          "published": null
+          }
         },
         "bToA": {
-          "draft": {
-            "candidate": {
-              "classification": "direction_evidence_needed",
-              "kind": "opposite-alignment-required"
-            },
-            "disposition": "needs_review",
-            "validation": {
-              "reasons": [
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
                 {
-                  "code": "non_allowed_traversal",
+                  "edgeId": "e1421420685_1",
+                  "source": "osm",
                   "direction": "reverse",
-                  "edgeId": "e1421420693_1",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421420685
                 },
                 {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e1421420696_2",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e1421420696_1",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e581405186_1",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e1421421710_1",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e581405199_1",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e581405204_4",
-                  "reason": "osm-roundabout-implied-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e581405204_3",
-                  "reason": "osm-roundabout-implied-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e581405204_2",
-                  "reason": "osm-roundabout-implied-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
-                  "direction": "reverse",
-                  "edgeId": "e581405154_1",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
-                },
-                {
-                  "code": "non_allowed_traversal",
+                  "edgeId": "e581405159_1",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "manual-65-mpn2b7sa",
-                  "reason": "manual-unreviewed",
-                  "state": "unknown"
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405159
+                },
+                {
+                  "edgeId": "e1421420691_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 2,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421420691
+                },
+                {
+                  "edgeId": "e1421420691_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 3,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421420691
+                },
+                {
+                  "edgeId": "e1421421712_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 4,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1421421712
+                },
+                {
+                  "edgeId": "e581405157_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 5,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405157
+                },
+                {
+                  "edgeId": "e581405139_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 6,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405139
+                },
+                {
+                  "edgeId": "e581405204_6",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 7,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405204
+                },
+                {
+                  "edgeId": "e581405204_7",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 8,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405204
+                },
+                {
+                  "edgeId": "e581405127_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 9,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 581405127
+                },
+                {
+                  "edgeId": "e40857273_2",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 10,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 40857273
+                },
+                {
+                  "edgeId": "e40857273_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 11,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 40857273
+                },
+                {
+                  "edgeId": "e1381547051_2",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 12,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547051
+                },
+                {
+                  "edgeId": "e1381547051_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 13,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547051
+                },
+                {
+                  "edgeId": "e1381547051_6",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 14,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547051
+                },
+                {
+                  "edgeId": "e1381547052_5",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 15,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547052
+                },
+                {
+                  "edgeId": "e1381547052_4",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 16,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547052
+                },
+                {
+                  "edgeId": "e1381547052_3",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 17,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547052
+                },
+                {
+                  "edgeId": "e1381547052_2",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 18,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547052
+                },
+                {
+                  "edgeId": "e1381547052_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 19,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1381547052
+                },
+                {
+                  "edgeId": "e734631666_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 20,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 734631666
+                },
+                {
+                  "edgeId": "e734631666_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 21,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 734631666
+                },
+                {
+                  "edgeId": "e734631665_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 22,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 734631665
+                },
+                {
+                  "edgeId": "e734631664_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 23,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 734631664
                 }
-              ],
-              "status": "invalid",
-              "terminals": {
-                "end": [
-                  35.5866411,
-                  33.1106124
-                ],
-                "start": [
-                  35.5721062,
-                  33.1113772
-                ]
-              },
-              "traversalStates": {
-                "0:e1421420685_1": "allowed",
-                "10:e581405204_2": "prohibited",
-                "11:e581405154_1": "prohibited",
-                "12:e40857273_2": "allowed",
-                "13:e40857273_1": "allowed",
-                "14:e1381547051_2": "allowed",
-                "15:e1381547051_1": "allowed",
-                "16:manual-65-mpn2b7sa": "unknown",
-                "17:e1381547052_5": "allowed",
-                "18:e1381547052_4": "allowed",
-                "19:e1381547052_3": "allowed",
-                "1:e1421420693_1": "prohibited",
-                "20:e1381547052_2": "allowed",
-                "21:e1381547052_1": "allowed",
-                "22:e734631666_1": "allowed",
-                "23:e734631666_2": "allowed",
-                "24:e734631665_1": "allowed",
-                "25:e734631664_1": "allowed",
-                "2:e1421420696_2": "prohibited",
-                "3:e1421420696_1": "prohibited",
-                "4:e581405186_1": "prohibited",
-                "5:e581405157_1": "allowed",
-                "6:e1421421710_1": "prohibited",
-                "7:e581405199_1": "prohibited",
-                "8:e581405204_4": "prohibited",
-                "9:e581405204_3": "prohibited"
-              }
+              ]
+            },
+            "mappingDigest": "8768140bc746e2dc389e10f8e36f489885b282af62a2cd56b762651f2939d5cf",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-17",
+              "batchId": "direction-review-2026-07-17",
+              "graphDigest": "45b36389e410ac1419892fb559bf2e74d88756646082e97f822659ae910e180d",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "8c90388b45fc565637416ccd984c663954682d65374e4033f61984121c3ee029",
+              "mappingDigest": "8768140bc746e2dc389e10f8e36f489885b282af62a2cd56b762651f2939d5cf",
+              "evidenceDigest": "6afdb4089b37cd52d6727d27f9f0d07ac7f6267c33e08294c71e6ff8d55eccb1"
             }
-          },
-          "published": null
+          }
         }
       },
       "endpoints": {

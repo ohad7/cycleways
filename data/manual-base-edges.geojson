@@ -3644,39 +3644,6 @@
     },
     {
       "type": "Feature",
-      "id": "manual-65-mpn2b7sa",
-      "properties": {
-        "id": "manual-65-mpn2b7sa",
-        "manualEdgeId": "manual-65-mpn2b7sa",
-        "source": "manual",
-        "status": "active",
-        "roadType": "paved",
-        "createdAt": "2026-05-26T20:02:53.098Z",
-        "updatedAt": "2026-05-26T20:02:53.098Z",
-        "linkedSegmentId": 65,
-        "linkedSegmentName": "כביש גישה אגמון החולה",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.581274,
-            33.110514
-          ],
-          [
-            35.58132,
-            33.110584
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
       "id": "manual-osm-522855150-mq0nhinw",
       "properties": {
         "id": "manual-osm-522855150-mq0nhinw",
