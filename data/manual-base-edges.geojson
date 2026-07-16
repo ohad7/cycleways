@@ -16,7 +16,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T05:08:33.348Z",
-        "updatedAt": "2026-05-26T19:46:21.458Z"
+        "updatedAt": "2026-05-26T19:46:21.458Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -67,7 +72,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:26:17.763Z",
-        "updatedAt": "2026-05-19T06:26:47.490Z"
+        "updatedAt": "2026-05-19T06:26:47.490Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -131,7 +141,12 @@
         "createdAt": "2026-05-19T06:29:41.181Z",
         "updatedAt": "2026-05-19T06:32:41.994Z",
         "linkedSegmentId": 136,
-        "linkedSegmentName": "נחל חצור מחניים"
+        "linkedSegmentName": "נחל חצור מחניים",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -203,7 +218,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:30:15.415Z",
         "updatedAt": "2026-05-19T06:31:19.152Z",
-        "splitFrom": "manual-osm-79590066-mpc977g7"
+        "splitFrom": "manual-osm-79590066-mpc977g7",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -267,7 +287,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:30:15.415Z",
         "updatedAt": "2026-05-19T06:31:09.712Z",
-        "splitFrom": "manual-osm-79590066-mpc977g7"
+        "splitFrom": "manual-osm-79590066-mpc977g7",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -319,7 +344,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:36:19.348Z",
         "updatedAt": "2026-05-19T06:37:42.653Z",
-        "splitFrom": "manual-osm-65427287-mpc9f09g"
+        "splitFrom": "manual-osm-65427287-mpc9f09g",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -383,7 +413,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:36:19.348Z",
         "updatedAt": "2026-05-19T06:37:38.196Z",
-        "splitFrom": "manual-osm-65427287-mpc9f09g"
+        "splitFrom": "manual-osm-65427287-mpc9f09g",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -435,7 +470,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:36:51.340Z",
         "updatedAt": "2026-05-19T06:36:55.321Z",
-        "splitFrom": "manual-osm-841165614-mpc9foy4"
+        "splitFrom": "manual-osm-841165614-mpc9foy4",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -591,7 +631,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:36:51.340Z",
         "updatedAt": "2026-05-19T06:36:55.321Z",
-        "splitFrom": "manual-osm-841165614-mpc9foy4"
+        "splitFrom": "manual-osm-841165614-mpc9foy4",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -631,7 +676,12 @@
         "createdAt": "2026-05-19T06:37:26.589Z",
         "updatedAt": "2026-05-19T06:37:26.589Z",
         "linkedSegmentId": 150,
-        "linkedSegmentName": "בקעת יחמור"
+        "linkedSegmentName": "בקעת יחמור",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -703,7 +753,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:13:00.685Z",
         "updatedAt": "2026-05-19T07:13:07.052Z",
-        "splitFrom": "manual-osm-815935991-mpcaq6tp"
+        "splitFrom": "manual-osm-815935991-mpcaq6tp",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -755,7 +810,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:13:00.685Z",
         "updatedAt": "2026-05-19T07:13:07.052Z",
-        "splitFrom": "manual-osm-815935991-mpcaq6tp"
+        "splitFrom": "manual-osm-815935991-mpcaq6tp",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -799,7 +859,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:13:13.678Z",
         "updatedAt": "2026-05-19T07:13:29.851Z",
-        "splitFrom": "manual-osm-164242192-mpcaqgum"
+        "splitFrom": "manual-osm-164242192-mpcaqgum",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -843,7 +908,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:13:13.678Z",
         "updatedAt": "2026-05-19T07:13:33.484Z",
-        "splitFrom": "manual-osm-164242192-mpcaqgum"
+        "splitFrom": "manual-osm-164242192-mpcaqgum",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -879,7 +949,12 @@
         "createdAt": "2026-05-19T07:14:07.230Z",
         "updatedAt": "2026-05-19T07:14:07.230Z",
         "linkedSegmentId": 165,
-        "linkedSegmentName": "דרך מעבר להר הצפייה מטעים מטולה"
+        "linkedSegmentName": "דרך מעבר להר הצפייה מטעים מטולה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -951,7 +1026,12 @@
         "createdAt": "2026-05-19T07:41:47.163Z",
         "updatedAt": "2026-05-19T07:41:47.163Z",
         "linkedSegmentId": 223,
-        "linkedSegmentName": "האגם הנעלם"
+        "linkedSegmentName": "האגם הנעלם",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1027,7 +1107,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:11.642Z",
         "updatedAt": "2026-05-26T19:56:20.686Z",
-        "splitFrom": "manual-osm-526566324-mpcc9q0q"
+        "splitFrom": "manual-osm-526566324-mpcc9q0q",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1067,7 +1152,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:11.642Z",
         "updatedAt": "2026-05-19T07:56:17.365Z",
-        "splitFrom": "manual-osm-526566324-mpcc9q0q"
+        "splitFrom": "manual-osm-526566324-mpcc9q0q",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1099,7 +1189,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:24.543Z",
         "updatedAt": "2026-05-19T07:56:35.365Z",
-        "splitFrom": "manual-osm-958921321-mpcc9zz3"
+        "splitFrom": "manual-osm-958921321-mpcc9zz3",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1139,7 +1234,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:24.543Z",
         "updatedAt": "2026-05-19T07:56:35.365Z",
-        "splitFrom": "manual-osm-958921321-mpcc9zz3"
+        "splitFrom": "manual-osm-958921321-mpcc9zz3",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1171,7 +1271,12 @@
         "createdAt": "2026-05-19T07:57:00.694Z",
         "updatedAt": "2026-05-26T19:56:17.416Z",
         "linkedSegmentId": 243,
-        "linkedSegmentName": "סובב דפנה שדות"
+        "linkedSegmentName": "סובב דפנה שדות",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1239,7 +1344,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:59:43.139Z",
         "updatedAt": "2026-05-27T01:21:59.183Z",
-        "splitFrom": "manual-osm-660704151-mpcce97n"
+        "splitFrom": "manual-osm-660704151-mpcce97n",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1283,7 +1393,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:59:43.139Z",
         "updatedAt": "2026-05-27T01:21:37.127Z",
-        "splitFrom": "manual-osm-660704151-mpcce97n"
+        "splitFrom": "manual-osm-660704151-mpcce97n",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1311,7 +1426,12 @@
         "createdAt": "2026-05-19T08:00:18.753Z",
         "updatedAt": "2026-05-27T01:21:54.609Z",
         "linkedSegmentId": 221,
-        "linkedSegmentName": "דרך כפר סאלד מרכז"
+        "linkedSegmentName": "דרך כפר סאלד מרכז",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1355,7 +1475,12 @@
         "createdAt": "2026-05-19T09:31:25.514Z",
         "updatedAt": "2026-05-20T15:08:17.592Z",
         "linkedSegmentId": 157,
-        "linkedSegmentName": "שדות בית הלל - מזרח"
+        "linkedSegmentName": "שדות בית הלל - מזרח",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1551,7 +1676,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T09:31:30.273Z",
         "updatedAt": "2026-05-20T15:08:20.881Z",
-        "splitFrom": "manual-osm-366459807-mpcfoajl"
+        "splitFrom": "manual-osm-366459807-mpcfoajl",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1707,7 +1837,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T09:31:30.273Z",
         "updatedAt": "2026-05-20T15:08:24.173Z",
-        "splitFrom": "manual-osm-366459807-mpcfoajl"
+        "splitFrom": "manual-osm-366459807-mpcfoajl",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1902,7 +2037,12 @@
         "osmRouteClass": "road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T21:04:07.057Z",
-        "updatedAt": "2026-05-19T21:04:19.180Z"
+        "updatedAt": "2026-05-19T21:04:19.180Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -1949,7 +2089,12 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T21:57:39.732Z",
-        "updatedAt": "2026-05-19T22:08:41.032Z"
+        "updatedAt": "2026-05-19T22:08:41.032Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2004,7 +2149,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T22:41:47.274Z",
-        "updatedAt": "2026-05-19T22:41:59.999Z"
+        "updatedAt": "2026-05-19T22:41:59.999Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2063,7 +2213,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T04:46:47.954Z",
-        "updatedAt": "2026-05-20T04:46:55.834Z"
+        "updatedAt": "2026-05-20T04:46:55.834Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2114,7 +2269,12 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T05:24:13.277Z",
-        "updatedAt": "2026-06-02T15:35:17.737Z"
+        "updatedAt": "2026-06-02T15:35:17.737Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2190,7 +2350,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T13:50:55.955Z",
         "updatedAt": "2026-05-20T13:51:06.517Z",
-        "splitFrom": "manual-osm-1092567462-mpe4drrn"
+        "splitFrom": "manual-osm-1092567462-mpe4drrn",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2238,7 +2403,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T13:50:55.955Z",
         "updatedAt": "2026-05-20T13:51:06.517Z",
-        "splitFrom": "manual-osm-1092567462-mpe4drrn"
+        "splitFrom": "manual-osm-1092567462-mpe4drrn",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2282,7 +2452,12 @@
         "createdAt": "2026-05-20T13:52:08.543Z",
         "updatedAt": "2026-05-26T19:52:08.195Z",
         "linkedSegmentId": 164,
-        "linkedSegmentName": "שביל תל חי"
+        "linkedSegmentName": "שביל תל חי",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2310,7 +2485,12 @@
         "createdAt": "2026-05-20T14:05:25.034Z",
         "updatedAt": "2026-05-20T14:05:25.034Z",
         "linkedSegmentId": 174,
-        "linkedSegmentName": "כביש 99 קריית שמונה"
+        "linkedSegmentName": "כביש 99 קריית שמונה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2338,7 +2518,12 @@
         "createdAt": "2026-05-20T14:59:17.678Z",
         "updatedAt": "2026-05-20T14:59:17.678Z",
         "linkedSegmentId": 144,
-        "linkedSegmentName": "קרית שמונה תעשייה דרומי"
+        "linkedSegmentName": "קרית שמונה תעשייה דרומי",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2366,7 +2551,12 @@
         "createdAt": "2026-05-20T15:38:25.131Z",
         "updatedAt": "2026-05-20T15:38:25.131Z",
         "linkedSegmentId": 146,
-        "linkedSegmentName": "רחוב הנרייטה סאלד"
+        "linkedSegmentName": "רחוב הנרייטה סאלד",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2410,7 +2600,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T20:39:41.408Z",
         "updatedAt": "2026-05-20T20:48:42.415Z",
-        "splitFrom": "manual-osm-244191207-mpeizfq8"
+        "splitFrom": "manual-osm-244191207-mpeizfq8",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2450,7 +2645,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T20:39:41.408Z",
         "updatedAt": "2026-05-20T20:48:42.415Z",
-        "splitFrom": "manual-osm-244191207-mpeizfq8"
+        "splitFrom": "manual-osm-244191207-mpeizfq8",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2486,7 +2686,12 @@
         "createdAt": "2026-05-20T20:40:00.824Z",
         "updatedAt": "2026-05-20T20:48:48.742Z",
         "linkedSegmentId": 93,
-        "linkedSegmentName": "שביל אופניים 9779 תל אנפה"
+        "linkedSegmentName": "שביל אופניים 9779 תל אנפה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2518,7 +2723,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T22:15:06.145Z",
         "updatedAt": "2026-05-20T22:15:29.194Z",
-        "splitFrom": "manual-osm-550409482-mpeme4yp"
+        "splitFrom": "manual-osm-550409482-mpeme4yp",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2574,7 +2784,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T22:15:06.145Z",
         "updatedAt": "2026-05-20T22:15:29.194Z",
-        "splitFrom": "manual-osm-550409482-mpeme4yp"
+        "splitFrom": "manual-osm-550409482-mpeme4yp",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2626,7 +2841,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T22:15:10.451Z",
         "updatedAt": "2026-05-20T22:15:54.158Z",
-        "splitFrom": "manual-osm-550409483-mpeme8ab"
+        "splitFrom": "manual-osm-550409483-mpeme8ab",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2670,7 +2890,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T22:15:10.451Z",
         "updatedAt": "2026-05-20T22:15:54.158Z",
-        "splitFrom": "manual-osm-550409483-mpeme8ab"
+        "splitFrom": "manual-osm-550409483-mpeme8ab",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2730,7 +2955,12 @@
         "createdAt": "2026-05-20T22:16:14.299Z",
         "updatedAt": "2026-05-20T22:16:14.299Z",
         "linkedSegmentId": 105,
-        "linkedSegmentName": "שביל חום תל נעמה"
+        "linkedSegmentName": "שביל חום תל נעמה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2762,7 +2992,12 @@
         "accessStatus": "bike_allowed",
         "createdAt": "2026-05-20T22:30:45.060Z",
         "updatedAt": "2026-05-20T22:30:49.391Z",
-        "splitFrom": "manual-osm-611794183-mpemy9fo"
+        "splitFrom": "manual-osm-611794183-mpemy9fo",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2818,7 +3053,12 @@
         "accessStatus": "bike_allowed",
         "createdAt": "2026-05-20T22:30:45.060Z",
         "updatedAt": "2026-05-20T22:30:49.391Z",
-        "splitFrom": "manual-osm-611794183-mpemy9fo"
+        "splitFrom": "manual-osm-611794183-mpemy9fo",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2854,7 +3094,12 @@
         "createdAt": "2026-05-20T22:30:58.356Z",
         "updatedAt": "2026-05-20T22:30:58.356Z",
         "linkedSegmentId": 98,
-        "linkedSegmentName": "שביל אופניים 99 קיאקי הגושרים"
+        "linkedSegmentName": "שביל אופניים 99 קיאקי הגושרים",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2882,7 +3127,12 @@
         "createdAt": "2026-05-21T06:18:18.471Z",
         "updatedAt": "2026-05-21T06:18:18.471Z",
         "linkedSegmentId": 95,
-        "linkedSegmentName": "שביל אופניים 99 דפנה"
+        "linkedSegmentName": "שביל אופניים 99 דפנה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2916,7 +3166,12 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-23T22:32:46.701Z",
-        "updatedAt": "2026-05-23T22:32:46.701Z"
+        "updatedAt": "2026-05-23T22:32:46.701Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2942,7 +3197,12 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-23T22:33:07.142Z",
-        "updatedAt": "2026-05-23T22:33:07.142Z"
+        "updatedAt": "2026-05-23T22:33:07.142Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -2986,7 +3246,12 @@
         "createdAt": "2026-05-24T14:49:54.857Z",
         "updatedAt": "2026-05-24T14:50:23.552Z",
         "linkedSegmentId": 301,
-        "linkedSegmentName": "New segment - 2"
+        "linkedSegmentName": "New segment - 2",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3138,7 +3403,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-24T14:50:01.886Z",
         "updatedAt": "2026-05-24T14:50:17.607Z",
-        "splitFrom": "manual-osm-53815529-mpjw96hq"
+        "splitFrom": "manual-osm-53815529-mpjw96hq",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3202,7 +3472,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-05-24T14:50:01.886Z",
         "updatedAt": "2026-05-24T14:50:26.523Z",
-        "splitFrom": "manual-osm-53815529-mpjw96hq"
+        "splitFrom": "manual-osm-53815529-mpjw96hq",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3242,7 +3517,12 @@
         "createdAt": "2026-05-26T19:50:14.883Z",
         "updatedAt": "2026-05-26T19:50:14.883Z",
         "linkedSegmentId": 174,
-        "linkedSegmentName": "כביש 99 קריית שמונה"
+        "linkedSegmentName": "כביש 99 קריית שמונה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3270,7 +3550,12 @@
         "createdAt": "2026-05-26T20:02:53.098Z",
         "updatedAt": "2026-05-26T20:02:53.098Z",
         "linkedSegmentId": 65,
-        "linkedSegmentName": "כביש גישה אגמון החולה"
+        "linkedSegmentName": "כביש גישה אגמון החולה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3301,7 +3586,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-06-05T08:16:39.356Z",
-        "updatedAt": "2026-06-05T08:16:45.565Z"
+        "updatedAt": "2026-06-05T08:16:45.565Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3332,7 +3622,12 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-06-05T08:16:49.848Z",
-        "updatedAt": "2026-06-05T08:16:57.769Z"
+        "updatedAt": "2026-06-05T08:16:57.769Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3363,7 +3658,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-06-05T08:25:04.487Z",
-        "updatedAt": "2026-06-05T08:27:01.423Z"
+        "updatedAt": "2026-06-05T08:27:01.423Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3402,7 +3702,12 @@
         "osmRouteClass": "cycle",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-06-05T08:26:01.442Z",
-        "updatedAt": "2026-06-05T08:27:05.065Z"
+        "updatedAt": "2026-06-05T08:27:05.065Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3441,7 +3746,12 @@
         "osmRouteClass": "cycle",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-06-05T08:26:27.054Z",
-        "updatedAt": "2026-06-05T08:26:53.457Z"
+        "updatedAt": "2026-06-05T08:26:53.457Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3504,7 +3814,12 @@
         "osmRouteClass": "cycle",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-06-05T08:27:31.805Z",
-        "updatedAt": "2026-06-05T08:27:40.785Z"
+        "updatedAt": "2026-06-05T08:27:40.785Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3532,7 +3847,12 @@
         "createdAt": "2026-06-05T10:47:36.158Z",
         "updatedAt": "2026-06-05T10:47:36.158Z",
         "linkedSegmentId": 331,
-        "linkedSegmentName": "כביש 99 דפנה"
+        "linkedSegmentName": "כביש 99 דפנה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3560,7 +3880,12 @@
         "createdAt": "2026-06-05T12:15:05.314Z",
         "updatedAt": "2026-06-05T12:15:05.314Z",
         "linkedSegmentId": 336,
-        "linkedSegmentName": "שביל אופניים 99 דפנה"
+        "linkedSegmentName": "שביל אופניים 99 דפנה",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3586,7 +3911,12 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-06-05T21:41:14.818Z",
-        "updatedAt": "2026-06-05T21:41:14.818Z"
+        "updatedAt": "2026-06-05T21:41:14.818Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3624,7 +3954,12 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-06-05T21:42:13.841Z",
-        "updatedAt": "2026-06-05T21:42:24.989Z"
+        "updatedAt": "2026-06-05T21:42:24.989Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3704,7 +4039,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-06-10T13:12:03.021Z",
         "updatedAt": "2026-06-10T13:12:09.288Z",
-        "splitFrom": "manual-osm-386982531-mq838nnx"
+        "splitFrom": "manual-osm-386982531-mq838nnx",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3740,7 +4080,12 @@
         "accessStatus": "unspecified",
         "createdAt": "2026-06-10T13:12:03.021Z",
         "updatedAt": "2026-06-10T13:12:09.288Z",
-        "splitFrom": "manual-osm-386982531-mq838nnx"
+        "splitFrom": "manual-osm-386982531-mq838nnx",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3794,7 +4139,12 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-06-10T13:13:16.650Z",
-        "updatedAt": "2026-06-10T13:13:41.725Z"
+        "updatedAt": "2026-06-10T13:13:41.725Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -3934,7 +4284,12 @@
         "accessStatus": "bike_allowed",
         "createdAt": "2026-06-10T13:13:28.839Z",
         "updatedAt": "2026-06-10T13:13:36.875Z",
-        "splitFrom": "manual-osm-126342416-mq83ahvr"
+        "splitFrom": "manual-osm-126342416-mq83ahvr",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4014,7 +4369,12 @@
         "accessStatus": "bike_allowed",
         "createdAt": "2026-06-10T13:13:28.839Z",
         "updatedAt": "2026-06-10T13:13:50.309Z",
-        "splitFrom": "manual-osm-126342416-mq83ahvr"
+        "splitFrom": "manual-osm-126342416-mq83ahvr",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4042,7 +4402,12 @@
         "createdAt": "2026-07-10T19:33:52.515Z",
         "updatedAt": "2026-07-10T19:33:52.515Z",
         "linkedSegmentId": 45,
-        "linkedSegmentName": "ירדן מערב שדות כפר בלום"
+        "linkedSegmentName": "ירדן מערב שדות כפר בלום",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4134,7 +4499,12 @@
         "accessStatus": "bike_allowed",
         "createdAt": "2026-07-10T19:46:35.335Z",
         "updatedAt": "2026-07-10T19:46:42.199Z",
-        "splitFrom": "manual-osm-414115340-mrfcjlc7"
+        "splitFrom": "manual-osm-414115340-mrfcjlc7",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4334,7 +4704,12 @@
         "accessStatus": "bike_allowed",
         "createdAt": "2026-07-10T19:46:35.335Z",
         "updatedAt": "2026-07-10T19:46:42.199Z",
-        "splitFrom": "manual-osm-414115340-mrfcjlc7"
+        "splitFrom": "manual-osm-414115340-mrfcjlc7",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4362,7 +4737,12 @@
         "createdAt": "2026-07-10T19:47:06.597Z",
         "updatedAt": "2026-07-10T19:47:06.597Z",
         "linkedSegmentId": 348,
-        "linkedSegmentName": "מעבר הולכי רגל גשר להבות"
+        "linkedSegmentName": "מעבר הולכי רגל גשר להבות",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4397,7 +4777,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-07-10T20:17:10.676Z",
-        "updatedAt": "2026-07-10T20:17:15.497Z"
+        "updatedAt": "2026-07-10T20:17:15.497Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4428,7 +4813,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-07-10T20:17:19.494Z",
-        "updatedAt": "2026-07-10T20:17:24.179Z"
+        "updatedAt": "2026-07-10T20:17:24.179Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4459,7 +4849,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-07-10T20:17:27.182Z",
-        "updatedAt": "2026-07-10T20:17:37.484Z"
+        "updatedAt": "2026-07-10T20:17:37.484Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4494,7 +4889,12 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-07-10T20:17:42.905Z",
-        "updatedAt": "2026-07-10T20:17:50.601Z"
+        "updatedAt": "2026-07-10T20:17:50.601Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -4506,6 +4906,200 @@
           [
             35.617652,
             33.182663
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo",
+      "properties": {
+        "id": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo",
+        "manualEdgeId": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e139983381_1",
+        "copiedFromOsmWayId": 139983381,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-16T14:27:39.131Z",
+        "updatedAt": "2026-07-16T14:27:54.131Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        },
+        "splitFrom": "manual-osm-139983381-mrnlsjqz"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.605976,
+            33.225294
+          ],
+          [
+            35.605806,
+            33.225274
+          ],
+          [
+            35.604157,
+            33.225235
+          ],
+          [
+            35.603007,
+            33.225208
+          ],
+          [
+            35.602288,
+            33.225227
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-139983381-mrnlsjqz-b-mrnlsvbo",
+      "properties": {
+        "id": "manual-manual-osm-139983381-mrnlsjqz-b-mrnlsvbo",
+        "manualEdgeId": "manual-manual-osm-139983381-mrnlsjqz-b-mrnlsvbo",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e139983381_1",
+        "copiedFromOsmWayId": 139983381,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-16T14:27:39.131Z",
+        "updatedAt": "2026-07-16T14:27:54.131Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        },
+        "splitFrom": "manual-osm-139983381-mrnlsjqz"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.602288,
+            33.225227
+          ],
+          [
+            35.602162,
+            33.225376
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrnltwsa",
+      "properties": {
+        "id": "manual-edge-mrnltwsa",
+        "manualEdgeId": "manual-edge-mrnltwsa",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-16T14:28:42.682Z",
+        "updatedAt": "2026-07-16T14:30:43.397Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-16",
+          "rationale": "road 99 manual addition of pass to allow bicycle to reach bike path"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.602218,
+            33.224922
+          ],
+          [
+            35.602238,
+            33.224972
+          ],
+          [
+            35.60224,
+            33.225077
+          ],
+          [
+            35.602288,
+            33.225227
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrnlxmj5",
+      "properties": {
+        "id": "manual-edge-mrnlxmj5",
+        "manualEdgeId": "manual-edge-mrnlxmj5",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-16T14:31:36.017Z",
+        "updatedAt": "2026-07-16T14:32:29.850Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-16",
+          "rationale": "allow easy parallel path for bike without turning right and then left"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.602288,
+            33.225227
+          ],
+          [
+            35.60223,
+            33.225225
+          ],
+          [
+            35.602155,
+            33.225204
+          ],
+          [
+            35.602096,
+            33.225174
+          ],
+          [
+            35.60205,
+            33.225128
+          ],
+          [
+            35.602004,
+            33.225081
+          ],
+          [
+            35.601965,
+            33.225044
+          ],
+          [
+            35.60191,
+            33.22501
+          ],
+          [
+            35.601877,
+            33.224993
+          ],
+          [
+            35.601849,
+            33.224983
           ]
         ]
       }
