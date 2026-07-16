@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  applyManualBidirectionalReview,
   buildDirectionReviewEvidenceRows,
   buildDirectionReviewIssueRows,
   directionReviewSegmentResolved,
   filterDirectionReviewEvidenceRows,
   filterDirectionReviewRows,
+  manualBidirectionalResolutionCandidate,
 } from "../editor/lib/direction-review-issues.mjs";
 
 function slot({ published = null, reasons = [] } = {}) {
@@ -82,6 +84,71 @@ assert.equal(evidence[0].dependencies.length, 3, "both directions remain visible
 assert.deepEqual(
   filterDirectionReviewEvidenceRows(evidence, "second dirt").map((row) => row.edgeId),
   ["manual-a", "manual-b"],
+);
+assert.deepEqual(manualBidirectionalResolutionCandidate(overlay.segments["2"]), {
+  eligible: true,
+  edgeIds: ["manual-a"],
+  otherReasons: [],
+});
+assert.equal(manualBidirectionalResolutionCandidate(overlay.segments["4"]).eligible, false);
+
+const manualEdges = {
+  type: "FeatureCollection",
+  features: [
+    {
+      type: "Feature",
+      properties: {
+        manualEdgeId: "manual-a",
+        bicycleTraversal: { forward: "unknown", reverse: "unknown", reviewed: false },
+      },
+      geometry: { type: "LineString", coordinates: [[35, 33], [35.1, 33.1]] },
+    },
+    {
+      type: "Feature",
+      properties: {
+        manualEdgeId: "manual-b",
+        bicycleTraversal: { forward: "allowed", reverse: "allowed", reviewed: true },
+      },
+      geometry: { type: "LineString", coordinates: [[35.1, 33.1], [35.2, 33.2]] },
+    },
+  ],
+};
+const applied = applyManualBidirectionalReview(manualEdges, {
+  edgeIds: ["manual-a", "manual-b"],
+  reviewer: "Reviewer",
+  reviewedAt: "2026-07-17",
+  rationale: "Reviewed against the selected segment",
+  evidence: "Direction Review #2",
+  updatedAt: "2026-07-17T00:00:00.000Z",
+});
+assert.deepEqual(applied.updatedEdgeIds, ["manual-a"]);
+assert.deepEqual(applied.alreadyAllowedEdgeIds, ["manual-b"]);
+assert.deepEqual(applied.manualBaseEdges.features[0].properties.bicycleTraversal, {
+  forward: "allowed",
+  reverse: "allowed",
+  reviewed: true,
+  reviewer: "Reviewer",
+  reviewedAt: "2026-07-17",
+  rationale: "Reviewed against the selected segment",
+  evidence: "Direction Review #2",
+});
+assert.throws(
+  () => applyManualBidirectionalReview(manualEdges, {
+    edgeIds: ["missing"], reviewer: "R", reviewedAt: "2026-07-17",
+    rationale: "R", updatedAt: "2026-07-17T00:00:00.000Z",
+  }),
+  /Missing manual base edges/,
+);
+const conflictingManualEdges = structuredClone(manualEdges);
+conflictingManualEdges.features[0].properties.bicycleTraversal = {
+  forward: "allowed", reverse: "prohibited", reviewed: true,
+};
+assert.throws(
+  () => applyManualBidirectionalReview(conflictingManualEdges, {
+    edgeIds: ["manual-a"], reviewer: "R", reviewedAt: "2026-07-17",
+    rationale: "R", updatedAt: "2026-07-17T00:00:00.000Z",
+  }),
+  /allowed\/prohibited evidence/,
 );
 
 console.log("Direction Review issue queue ok");

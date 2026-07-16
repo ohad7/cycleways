@@ -14,10 +14,12 @@ import {
 import {
   DIRECTION_REVIEW_CLASSIFICATION_LABELS,
   DIRECTION_REVIEW_CLASSIFICATIONS,
+  applyManualBidirectionalReview,
   buildDirectionReviewEvidenceRows,
   buildDirectionReviewIssueRows,
   filterDirectionReviewEvidenceRows,
   filterDirectionReviewRows,
+  manualBidirectionalResolutionCandidate,
 } from "./lib/direction-review-issues.mjs";
 import {
   POI_TYPE_OPTIONS,
@@ -249,6 +251,7 @@ const state = {
     applying: false,
     busy: false,
     editing: false,
+    resolvingManualEvidence: false,
     queueView: "segments",
     queueFilter: "issues",
     queueQuery: "",
@@ -427,6 +430,8 @@ const els = {
   directionReviewBatch: document.getElementById("direction-review-batch"),
   directionReviewApplyMigration: document.getElementById("direction-review-apply-migration"),
   directionReviewApplySymmetricBatch: document.getElementById("direction-review-apply-symmetric-batch"),
+  directionReviewApproveManualBidirectional: document.getElementById("direction-review-approve-manual-bidirectional"),
+  directionReviewApproveManualHelp: document.getElementById("direction-review-approve-manual-help"),
   directionReviewEdit: document.getElementById("direction-review-edit"),
   directionReviewRevalidate: document.getElementById("direction-review-revalidate"),
   directionReviewUseReverse: document.getElementById("direction-review-use-reverse"),
@@ -5545,6 +5550,8 @@ function renderDirectionReview(segmentId) {
     els.directionReviewEdges.innerHTML = "";
     els.directionReviewApplyMigration.disabled = true;
     els.directionReviewApplySymmetricBatch.disabled = true;
+    els.directionReviewApproveManualBidirectional.hidden = true;
+    els.directionReviewApproveManualHelp.hidden = true;
     return;
   }
   const segment = review.overlay?.segments?.[String(segmentId)];
@@ -5555,6 +5562,8 @@ function renderDirectionReview(segmentId) {
     els.directionReviewEdges.innerHTML = "";
     els.directionReviewApplyMigration.disabled = true;
     els.directionReviewApplySymmetricBatch.disabled = true;
+    els.directionReviewApproveManualBidirectional.hidden = true;
+    els.directionReviewApproveManualHelp.hidden = true;
     return;
   }
   const slot = segment.alignments[review.alignmentKey];
@@ -5591,6 +5600,7 @@ function renderDirectionReview(segmentId) {
   const writable =
     !review.busy &&
     !review.applying &&
+    !review.resolvingManualEvidence &&
     review.profile === "staged-v2" &&
     !review.readOnly;
   const oppositeKey = review.alignmentKey === "aToB" ? "bToA" : "aToB";
@@ -5617,6 +5627,27 @@ function renderDirectionReview(segmentId) {
   els.directionReviewApplySymmetricBatch.textContent = symmetricIds.length > 0
     ? `Batch-approve ${symmetricIds.length} verified bidirectional segments`
     : "No verified bidirectional segments pending";
+  const manualApproval = manualBidirectionalResolutionCandidate(segment);
+  const showManualApproval = segment.migration?.classification === "direction_evidence_needed";
+  const missingManualEdges = manualApproval.edgeIds.filter(
+    (edgeId) => !manualBaseEdgeFeatures().some(
+      (feature) => String(manualBaseEdgeFeatureId(feature)) === edgeId,
+    ),
+  );
+  els.directionReviewApproveManualBidirectional.hidden = !showManualApproval;
+  els.directionReviewApproveManualHelp.hidden = !showManualApproval;
+  els.directionReviewApproveManualBidirectional.disabled =
+    !writable || !manualApproval.eligible || missingManualEdges.length > 0;
+  els.directionReviewApproveManualBidirectional.textContent = manualApproval.eligible
+    ? `Approve ${manualApproval.edgeIds.length} manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"} as bidirectional & accept segment`
+    : "Cannot auto-resolve this segment";
+  els.directionReviewApproveManualHelp.textContent = manualApproval.eligible
+    ? `Reviews only this segment's ${manualApproval.edgeIds.length} unknown manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"}, rebuilds V2 evidence, verifies both directions, and accepts this segment. Shared edges may remove blockers elsewhere, but other segments are not accepted.`
+    : manualApproval.otherReasons.length > 0
+      ? "This segment also has one-way, roundabout, continuity, or endpoint blockers. Review those explicitly."
+      : missingManualEdges.length > 0
+        ? `Missing manual edge data: ${missingManualEdges.join(", ")}`
+        : "This segment is not eligible for automatic manual-evidence resolution.";
 }
 
 function directionReviewSymmetricBatchIds() {
@@ -5738,6 +5769,92 @@ async function acceptSelectedDirectionReview() {
   }
   await runDirectionReviewAction("accept", review);
   state.directionReview.editing = false;
+}
+
+async function approveSelectedManualEdgesBidirectional() {
+  const segmentId = selectedSegmentId();
+  const segment = state.directionReview.overlay?.segments?.[String(segmentId)];
+  if (!segment) throw new Error("Select a Direction Review segment first.");
+  const approval = manualBidirectionalResolutionCandidate(segment);
+  if (!approval.eligible) {
+    throw new Error("This segment has blockers beyond unknown manual-edge direction evidence.");
+  }
+  const review = directionReviewReviewFields();
+  if (!review.reviewer || !review.reviewedAt || !review.batchId) {
+    throw new Error("Reviewer, review date, and batch ID are required.");
+  }
+
+  state.directionReview.resolvingManualEvidence = true;
+  renderAll();
+  try {
+    const now = new Date().toISOString();
+    const rationale =
+      `Reviewer confirmed CycleWays segment #${segmentId} (${segment.segmentName}) and its referenced manual edges are rideable in both directions.`;
+    const evidence = `Direction Review segment #${segmentId}; batch ${review.batchId}`;
+    const previousManualBaseEdges = state.baseOverlay.manualBaseEdges;
+    const appliedReview = applyManualBidirectionalReview(
+      state.baseOverlay.manualBaseEdges || emptyManualBaseEdges(),
+      {
+        edgeIds: approval.edgeIds,
+        reviewer: review.reviewer,
+        reviewedAt: review.reviewedAt,
+        rationale,
+        evidence,
+        updatedAt: now,
+      },
+    );
+    state.baseOverlay.manualBaseEdges = appliedReview.manualBaseEdges;
+    try {
+      await saveManualBaseEdges();
+    } catch (error) {
+      state.baseOverlay.manualBaseEdges = previousManualBaseEdges;
+      throw error;
+    }
+
+    const originalAlignmentKey = state.directionReview.alignmentKey;
+    setStatus(
+      `Saved bidirectional evidence for ${approval.edgeIds.length} manual edge${approval.edgeIds.length === 1 ? "" : "s"}. Rebuilding and verifying segment #${segmentId}...`,
+    );
+    await refreshDirectionReviewEvidence();
+    let refreshed = state.directionReview.overlay?.segments?.[String(segmentId)];
+    const acceptanceOrder = ["aToB", "bToA"].sort((left, right) => {
+      const leftExplicit = refreshed?.alignments?.[left]?.draft?.realization?.type === "explicit" ? 0 : 1;
+      const rightExplicit = refreshed?.alignments?.[right]?.draft?.realization?.type === "explicit" ? 0 : 1;
+      return leftExplicit - rightExplicit;
+    });
+    try {
+      for (const alignmentKey of acceptanceOrder) {
+        refreshed = state.directionReview.overlay?.segments?.[String(segmentId)];
+        const slot = refreshed?.alignments?.[alignmentKey];
+        if (slot?.published?.disposition === "accepted") continue;
+        if (!slot?.draft || slot.draft.validation?.status !== "valid") {
+          const firstReason = slot?.draft?.validation?.reasons?.[0];
+          throw new Error(
+            `Evidence was saved, but ${alignmentKey === "aToB" ? "A → B" : "B → A"} is still blocked: ${firstReason?.reason || firstReason?.code || "review required"}.`,
+          );
+        }
+        state.directionReview.alignmentKey = alignmentKey;
+        await runDirectionReviewAction("accept", review);
+      }
+    } finally {
+      state.directionReview.alignmentKey = originalAlignmentKey;
+    }
+    refreshed = state.directionReview.overlay?.segments?.[String(segmentId)];
+    if (!["aToB", "bToA"].every(
+      (alignmentKey) => refreshed?.alignments?.[alignmentKey]?.published?.disposition === "accepted",
+    )) {
+      throw new Error("Manual evidence was saved, but the segment did not finish accepting both directions.");
+    }
+    state.directionReview.editing = false;
+    refreshUnresolvedSegmentHighlights();
+    renderAll();
+    setStatus(
+      `Resolved segment #${segmentId}: reviewed ${approval.edgeIds.length} manual edge${approval.edgeIds.length === 1 ? "" : "s"} as bidirectional and accepted both directions.`,
+    );
+  } finally {
+    state.directionReview.resolvingManualEvidence = false;
+    renderAll();
+  }
 }
 
 async function markSelectedDirectionUnavailable() {
@@ -8972,6 +9089,9 @@ function wireEvents() {
   );
   els.directionReviewApplySymmetricBatch.addEventListener("click", () =>
     applySymmetricDirectionMigrationBatch().catch(showError),
+  );
+  els.directionReviewApproveManualBidirectional.addEventListener("click", () =>
+    approveSelectedManualEdgesBidirectional().catch(showError),
   );
   els.directionReviewEdit.addEventListener("click", () => toggleDirectionReviewEditing().catch(showError));
   els.directionReviewRevalidate.addEventListener("click", () =>

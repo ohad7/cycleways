@@ -35,6 +35,8 @@ for (const id of [
   "direction-review-queue-evidence",
   "direction-review-queue-previous",
   "direction-review-queue-next",
+  "direction-review-approve-manual-bidirectional",
+  "direction-review-approve-manual-help",
   "refresh-direction-review",
 ]) {
   assert.match(html, new RegExp(`id=["']${id}["']`), `editor is missing #${id}`);
@@ -75,6 +77,7 @@ assert.match(editor, /buildDirectionReviewIssueRows/);
 assert.match(editor, /buildDirectionReviewEvidenceRows/);
 assert.match(editor, /openDirectionReviewBaseEdge/);
 assert.match(editor, /collectIssueSegmentIds/);
+assert.match(editor, /approveSelectedManualEdgesBidirectional/);
 assert.doesNotMatch(
   server,
   /previous\.sourceGeometryDigest\s*!==\s*segment\.sourceGeometryDigest[\s\S]{0,160}continue;/,

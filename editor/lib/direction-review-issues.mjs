@@ -31,6 +31,106 @@ function blockingReasons(segment) {
   );
 }
 
+export function manualBidirectionalResolutionCandidate(segment) {
+  const reasons = blockingReasons(segment);
+  const manualReasons = reasons.filter(
+    (reason) =>
+      reason?.code === "non_allowed_traversal" &&
+      reason?.state === "unknown" &&
+      reason?.reason === "manual-unreviewed" &&
+      reason?.edgeId,
+  );
+  const otherReasons = reasons.filter((reason) => !manualReasons.includes(reason));
+  const edgeIds = [...new Set(manualReasons.map((reason) => String(reason.edgeId)))];
+  return {
+    eligible:
+      !directionReviewSegmentResolved(segment) &&
+      segment?.migration?.classification === "direction_evidence_needed" &&
+      edgeIds.length > 0 &&
+      otherReasons.length === 0,
+    edgeIds,
+    otherReasons,
+  };
+}
+
+function manualEdgeId(feature) {
+  return String(
+    feature?.properties?.manualEdgeId ||
+    feature?.properties?.id ||
+    feature?.id ||
+    "",
+  );
+}
+
+export function applyManualBidirectionalReview(
+  manualBaseEdges,
+  { edgeIds, reviewer, reviewedAt, rationale, evidence = "", updatedAt },
+) {
+  if (manualBaseEdges?.type !== "FeatureCollection" || !Array.isArray(manualBaseEdges.features)) {
+    throw new Error("Manual base edges must be a FeatureCollection");
+  }
+  for (const [field, value] of Object.entries({ reviewer, reviewedAt, rationale, updatedAt })) {
+    if (typeof value !== "string" || !value.trim()) {
+      throw new Error(`Bidirectional manual-edge review requires ${field}`);
+    }
+  }
+  const targets = new Set((edgeIds || []).map(String));
+  if (targets.size === 0) throw new Error("No manual edges were selected for review");
+  const found = new Set();
+  const updatedEdgeIds = [];
+  const alreadyAllowedEdgeIds = [];
+  const features = manualBaseEdges.features.map((feature) => {
+    const edgeId = manualEdgeId(feature);
+    if (!targets.has(edgeId)) return feature;
+    found.add(edgeId);
+    const traversal = feature?.properties?.bicycleTraversal || {};
+    const alreadyAllowed =
+      traversal.reviewed === true &&
+      traversal.forward === "allowed" &&
+      traversal.reverse === "allowed";
+    if (alreadyAllowed) {
+      alreadyAllowedEdgeIds.push(edgeId);
+      return feature;
+    }
+    const unknown =
+      (traversal.forward || "unknown") === "unknown" &&
+      (traversal.reverse || "unknown") === "unknown";
+    if (!unknown) {
+      throw new Error(
+        `${edgeId} now has ${traversal.forward || "unknown"}/${traversal.reverse || "unknown"} evidence`,
+      );
+    }
+    updatedEdgeIds.push(edgeId);
+    return {
+      ...feature,
+      properties: {
+        ...(feature.properties || {}),
+        updatedAt: updatedAt.trim(),
+        bicycleTraversal: {
+          forward: "allowed",
+          reverse: "allowed",
+          reviewed: true,
+          reviewer: reviewer.trim(),
+          reviewedAt: reviewedAt.trim(),
+          rationale: rationale.trim(),
+          ...(typeof evidence === "string" && evidence.trim()
+            ? { evidence: evidence.trim() }
+            : {}),
+        },
+      },
+    };
+  });
+  const missingEdgeIds = [...targets].filter((edgeId) => !found.has(edgeId));
+  if (missingEdgeIds.length > 0) {
+    throw new Error(`Missing manual base edges: ${missingEdgeIds.join(", ")}`);
+  }
+  return {
+    manualBaseEdges: { ...manualBaseEdges, features },
+    updatedEdgeIds,
+    alreadyAllowedEdgeIds,
+  };
+}
+
 export function buildDirectionReviewIssueRows(overlay) {
   return Object.values(overlay?.segments || {})
     .map((segment) => {

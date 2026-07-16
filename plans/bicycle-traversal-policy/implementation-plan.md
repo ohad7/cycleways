@@ -587,6 +587,12 @@ python3 -m unittest discover -s tests -p 'test_bicycle_traversal_policy.py'
   navigation, a deduplicated manual-evidence queue with dependent segments,
   and direct links from segment mappings and evidence items to Base Graph edge
   inspection.
+- [x] For a selected `direction_evidence_needed` segment whose only blockers
+  are unknown manual-edge direction states, provide one reviewed action that
+  marks just those edges bidirectional, rebuilds policy/V2 evidence, verifies
+  both alignments, and accepts only that segment. Keep the action disabled when
+  any OSM one-way, roundabout, continuity, endpoint, or conflicting evidence
+  also blocks the segment.
 - [ ] Create new logical segments and existing endpoint/geometry changes in the
   unpublished workspace. Add atomic Activate/Cancel behavior; an unfinished
   segment creates no public card, runtime mapping, or promotion blocker, and an
