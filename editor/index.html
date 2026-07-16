@@ -394,6 +394,35 @@
               <span id="base-overlay-status">Not loaded</span>
             </header>
 
+            <section class="direction-review-queue" aria-labelledby="direction-review-queue-title">
+              <div class="direction-review-queue-heading">
+                <h3 id="direction-review-queue-title">Direction Review queue</h3>
+                <span id="direction-review-queue-summary">Not loaded</span>
+              </div>
+              <div class="direction-review-queue-views" role="tablist" aria-label="Direction Review queue view">
+                <button id="direction-review-queue-segments" class="mini-button active" type="button" role="tab">Segments</button>
+                <button id="direction-review-queue-evidence" class="mini-button" type="button" role="tab">Base-edge evidence</button>
+              </div>
+              <div class="direction-review-queue-controls">
+                <select id="direction-review-queue-filter" class="text-input compact-select" aria-label="Direction Review classification">
+                  <option value="issues">All issues</option>
+                  <option value="direction_evidence_needed">Direction evidence needed</option>
+                  <option value="invalid_existing">Invalid existing mapping</option>
+                  <option value="single_direction_candidate">Single-direction candidate</option>
+                  <option value="unresolved">Unresolved</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="all">All segments</option>
+                </select>
+                <input id="direction-review-queue-search" class="text-input" type="search" placeholder="Search name, segment, or edge ID" aria-label="Search Direction Review queue" />
+              </div>
+              <div id="direction-review-queue-counts" class="direction-review-queue-counts"></div>
+              <div class="direction-review-queue-navigation">
+                <button id="direction-review-queue-previous" class="secondary-button" type="button">Previous</button>
+                <button id="direction-review-queue-next" class="secondary-button" type="button">Next</button>
+              </div>
+              <div id="direction-review-queue-list" class="direction-review-queue-list"></div>
+            </section>
+
             <section class="direction-review" aria-labelledby="direction-review-title">
               <div class="direction-review-heading">
                 <h3 id="direction-review-title">Direction Review (V2)</h3>

@@ -12,6 +12,14 @@ import {
   summarizeBaseEdgeDirectionLayer,
 } from "./lib/base-edge-direction-layer.mjs";
 import {
+  DIRECTION_REVIEW_CLASSIFICATION_LABELS,
+  DIRECTION_REVIEW_CLASSIFICATIONS,
+  buildDirectionReviewEvidenceRows,
+  buildDirectionReviewIssueRows,
+  filterDirectionReviewEvidenceRows,
+  filterDirectionReviewRows,
+} from "./lib/direction-review-issues.mjs";
+import {
   POI_TYPE_OPTIONS,
   poiColor,
   poiEmoji,
@@ -241,6 +249,10 @@ const state = {
     applying: false,
     busy: false,
     editing: false,
+    queueView: "segments",
+    queueFilter: "issues",
+    queueQuery: "",
+    queueSelectedEvidenceEdgeId: null,
   },
   connectorLens: {
     // "off" | "class" | "access" | "eligibility" | "cost"
@@ -396,6 +408,15 @@ const els = {
   baseOverlayReviewList: document.getElementById("base-overlay-review-list"),
   baseOverlayEdges: document.getElementById("base-overlay-edges"),
   directionReviewSource: document.getElementById("direction-review-source"),
+  directionReviewQueueSummary: document.getElementById("direction-review-queue-summary"),
+  directionReviewQueueSegments: document.getElementById("direction-review-queue-segments"),
+  directionReviewQueueEvidence: document.getElementById("direction-review-queue-evidence"),
+  directionReviewQueueFilter: document.getElementById("direction-review-queue-filter"),
+  directionReviewQueueSearch: document.getElementById("direction-review-queue-search"),
+  directionReviewQueueCounts: document.getElementById("direction-review-queue-counts"),
+  directionReviewQueuePrevious: document.getElementById("direction-review-queue-previous"),
+  directionReviewQueueNext: document.getElementById("direction-review-queue-next"),
+  directionReviewQueueList: document.getElementById("direction-review-queue-list"),
   directionReviewAToB: document.getElementById("direction-review-a-to-b"),
   directionReviewBToA: document.getElementById("direction-review-b-to-a"),
   directionReviewSlotStatuses: document.getElementById("direction-review-slot-statuses"),
@@ -738,6 +759,17 @@ function collectUnresolvedSegmentIds() {
 }
 
 function collectIssueSegmentIds() {
+  if (
+    state.directionReview.loaded &&
+    state.directionReview.profile === "staged-v2" &&
+    state.directionReview.overlay
+  ) {
+    return new Set(
+      buildDirectionReviewIssueRows(state.directionReview.overlay)
+        .filter((row) => !row.resolved)
+        .map((row) => row.segmentId),
+    );
+  }
   return collectUnresolvedSegmentIds();
 }
 
@@ -1614,7 +1646,9 @@ function updateWorkspaceLayerVisibility() {
   const showSegments = state.workspaceMode === "segments";
   const showSelectedSegment = state.workspaceMode !== "base";
   const showUnresolvedSegments =
-    state.workspaceMode === "segments" && state.showUnresolvedSegments && state.baseOverlay.loaded;
+    ["segments", "overlay"].includes(state.workspaceMode) &&
+    state.showUnresolvedSegments &&
+    state.baseOverlay.loaded;
   const showBaseWorkspaceGraph =
     state.baseOverlay.loaded && state.baseOverlay.enabled && state.workspaceMode !== "segments";
   const showBaseGraphVisual = showBaseWorkspaceGraph || showUnresolvedSegments || composing || editingEdges;
@@ -2089,6 +2123,7 @@ function renderDrawControls() {
   const segmentsMode = state.workspaceMode === "segments";
   const baseMode = state.workspaceMode === "base";
   const overlayMode = state.workspaceMode === "overlay";
+  const issuesMode = segmentsMode || overlayMode;
   const editButtons = [
     els.addSegment,
     els.modeSelect,
@@ -2112,7 +2147,7 @@ function renderDrawControls() {
     els.extendSegment.hidden = overlayMode || edgePicked;
     els.deleteVertex.hidden = overlayMode || edgePicked;
     els.splitSegment.hidden = overlayMode || edgePicked;
-    els.toggleUnresolvedSegments.hidden = !segmentsMode;
+    els.toggleUnresolvedSegments.hidden = !issuesMode;
     els.processChangedQueue.hidden = !segmentsMode;
     els.clearChangedQueue.hidden = !segmentsMode;
     els.toggleBaseOverlay.hidden = true;
@@ -2132,12 +2167,12 @@ function renderDrawControls() {
   els.drawFreehand.disabled = !composing;
   els.mapToolbar.classList.toggle("drawing", drawing);
   els.addSegment.disabled = !state.source || drawing || !segmentsMode;
-  els.toggleUnresolvedSegments.disabled = drawing || !segmentsMode || state.baseOverlay.loading;
+  els.toggleUnresolvedSegments.disabled = drawing || !issuesMode || state.baseOverlay.loading;
   els.toggleUnresolvedSegments.classList.toggle("active", state.showUnresolvedSegments);
-  els.toggleUnresolvedSegments.textContent =
-    state.showUnresolvedSegments
-      ? `Issues (${state.unresolvedSegmentIds.length})`
-      : "Issues";
+  const issueCount = state.showUnresolvedSegments
+    ? state.unresolvedSegmentIds.length
+    : collectIssueSegmentIds().size;
+  els.toggleUnresolvedSegments.textContent = `Issues (${issueCount})`;
   els.processChangedQueue.disabled =
     drawing ||
     !segmentsMode ||
@@ -4988,6 +5023,7 @@ function renderBaseOverlayPanel() {
   const loaded = state.baseOverlay.loaded;
   const enabled = state.baseOverlay.enabled;
   const reviewedEdgeRefs = normalizeOverlayEdgeRefs(displayedOverlayEdgeRefs());
+  renderDirectionReviewQueue();
   renderDirectionReview(segmentId);
 
   els.toggleBaseOverlay.classList.toggle("active", enabled);
@@ -5237,6 +5273,173 @@ function renderBaseOverlayPanel() {
   }
 }
 
+function directionReviewQueueRows() {
+  return buildDirectionReviewIssueRows(state.directionReview.overlay);
+}
+
+function filteredDirectionReviewQueueRows() {
+  return filterDirectionReviewRows(directionReviewQueueRows(), {
+    filter: state.directionReview.queueFilter,
+    query: state.directionReview.queueQuery,
+  });
+}
+
+function filteredDirectionReviewEvidenceQueueRows() {
+  let rows = buildDirectionReviewEvidenceRows(state.directionReview.overlay);
+  if (
+    DIRECTION_REVIEW_CLASSIFICATIONS.includes(state.directionReview.queueFilter) &&
+    state.directionReview.queueFilter !== "direction_evidence_needed"
+  ) {
+    rows = [];
+  } else if (["accepted"].includes(state.directionReview.queueFilter)) {
+    rows = [];
+  }
+  return filterDirectionReviewEvidenceRows(rows, state.directionReview.queueQuery);
+}
+
+function selectDirectionReviewQueueSegment(segmentId, fit = true) {
+  if (!selectSegmentById(segmentId, fit)) return;
+  state.directionReview.editing = false;
+  renderAll();
+}
+
+async function openDirectionReviewBaseEdge(edgeId) {
+  await setWorkspaceMode("base");
+  els.baseEdgeSearch.value = String(edgeId);
+  findBaseEdgeById();
+}
+
+function navigateDirectionReviewQueue(delta) {
+  if (state.directionReview.queueView === "evidence") {
+    const rows = filteredDirectionReviewEvidenceQueueRows();
+    if (rows.length === 0) return;
+    const currentIndex = rows.findIndex(
+      (row) => row.edgeId === state.directionReview.queueSelectedEvidenceEdgeId,
+    );
+    const nextIndex = currentIndex < 0
+      ? 0
+      : (currentIndex + delta + rows.length) % rows.length;
+    const row = rows[nextIndex];
+    state.directionReview.queueSelectedEvidenceEdgeId = row.edgeId;
+    const dependency = row.dependencies[0];
+    if (dependency) selectDirectionReviewQueueSegment(dependency.segmentId, true);
+    else renderAll();
+    return;
+  }
+  const rows = filteredDirectionReviewQueueRows();
+  if (rows.length === 0) return;
+  const currentIndex = rows.findIndex((row) => row.segmentId === selectedSegmentId());
+  const nextIndex = currentIndex < 0
+    ? 0
+    : (currentIndex + delta + rows.length) % rows.length;
+  selectDirectionReviewQueueSegment(rows[nextIndex].segmentId, true);
+}
+
+function renderDirectionReviewQueue() {
+  if (!els.directionReviewQueueList) return;
+  const review = state.directionReview;
+  if (!review.loaded || !review.overlay) {
+    els.directionReviewQueueSummary.textContent = "Not loaded";
+    els.directionReviewQueueCounts.innerHTML = "";
+    els.directionReviewQueueList.innerHTML =
+      '<div class="empty-state">Prepare or refresh Direction Review evidence.</div>';
+    els.directionReviewQueuePrevious.disabled = true;
+    els.directionReviewQueueNext.disabled = true;
+    return;
+  }
+
+  const allRows = directionReviewQueueRows();
+  const issueRows = allRows.filter((row) => !row.resolved);
+  const evidenceRows = buildDirectionReviewEvidenceRows(review.overlay);
+  const counts = Object.fromEntries(
+    DIRECTION_REVIEW_CLASSIFICATIONS.map((classification) => [
+      classification,
+      issueRows.filter((row) => row.classification === classification).length,
+    ]),
+  );
+  const acceptedCount = allRows.length - issueRows.length;
+  els.directionReviewQueueSummary.textContent =
+    `${issueRows.length} issues · ${evidenceRows.length} base edges`;
+  els.directionReviewQueueCounts.innerHTML = [
+    ...DIRECTION_REVIEW_CLASSIFICATIONS.map(
+      (classification) =>
+        `<span class="direction-review-queue-count">${escapeHtml(DIRECTION_REVIEW_CLASSIFICATION_LABELS[classification])}: ${counts[classification]}</span>`,
+    ),
+    `<span class="direction-review-queue-count">Accepted: ${acceptedCount}</span>`,
+  ].join("");
+  els.directionReviewQueueSegments.classList.toggle("active", review.queueView === "segments");
+  els.directionReviewQueueEvidence.classList.toggle("active", review.queueView === "evidence");
+  els.directionReviewQueueSegments.setAttribute("aria-selected", String(review.queueView === "segments"));
+  els.directionReviewQueueEvidence.setAttribute("aria-selected", String(review.queueView === "evidence"));
+  els.directionReviewQueueFilter.value = review.queueFilter;
+  if (els.directionReviewQueueSearch.value !== review.queueQuery) {
+    els.directionReviewQueueSearch.value = review.queueQuery;
+  }
+  els.directionReviewQueueList.innerHTML = "";
+
+  if (review.queueView === "evidence") {
+    const rows = filteredDirectionReviewEvidenceQueueRows();
+    els.directionReviewQueuePrevious.disabled = rows.length === 0;
+    els.directionReviewQueueNext.disabled = rows.length === 0;
+    if (rows.length === 0) {
+      els.directionReviewQueueList.innerHTML =
+        '<div class="empty-state">No base-edge evidence matches this filter.</div>';
+      return;
+    }
+    for (const row of rows) {
+      const item = document.createElement("div");
+      item.className = `direction-review-queue-item direction_evidence_needed${row.edgeId === review.queueSelectedEvidenceEdgeId ? " active" : ""}`;
+      item.dataset.edgeId = row.edgeId;
+      const names = [...new Set(row.dependencies.map((dependency) => `#${dependency.segmentId} ${dependency.segmentName}`))];
+      item.innerHTML = `
+        <span class="direction-review-queue-item-main">
+          <strong>${escapeHtml(row.edgeId)}</strong>
+          <small>${row.segmentCount} dependent segment${row.segmentCount === 1 ? "" : "s"} · ${escapeHtml(names.slice(0, 3).join(" · "))}${names.length > 3 ? ` · +${names.length - 3}` : ""}</small>
+        </span>
+        <span class="direction-review-evidence-actions">
+          <button type="button" class="secondary-button" aria-label="Open ${escapeHtml(row.edgeId)} in Base Graph">Open edge</button>
+        </span>`;
+      item.addEventListener("click", (event) => {
+        if (event.target.closest("button")) return;
+        review.queueSelectedEvidenceEdgeId = row.edgeId;
+        const dependency = row.dependencies[0];
+        if (dependency) selectDirectionReviewQueueSegment(dependency.segmentId, true);
+        else renderAll();
+      });
+      item.querySelector("button").addEventListener("click", () =>
+        openDirectionReviewBaseEdge(row.edgeId).catch(showError),
+      );
+      els.directionReviewQueueList.appendChild(item);
+    }
+    return;
+  }
+
+  const rows = filteredDirectionReviewQueueRows();
+  els.directionReviewQueuePrevious.disabled = rows.length === 0;
+  els.directionReviewQueueNext.disabled = rows.length === 0;
+  if (rows.length === 0) {
+    els.directionReviewQueueList.innerHTML =
+      '<div class="empty-state">No segments match this filter.</div>';
+    return;
+  }
+  for (const row of rows) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = `direction-review-queue-item ${row.classification}${row.segmentId === selectedSegmentId() ? " active" : ""}`;
+    item.dataset.segmentId = String(row.segmentId);
+    item.dataset.classification = row.classification;
+    const label = DIRECTION_REVIEW_CLASSIFICATION_LABELS[row.classification] || row.classification;
+    item.innerHTML = `
+      <span class="direction-review-queue-item-main">
+        <strong>#${row.segmentId} · ${escapeHtml(row.segmentName)}</strong>
+        <small>${escapeHtml(label)}${row.blockingEdgeIds.length > 0 ? ` · ${escapeHtml(row.blockingEdgeIds.slice(0, 2).join(", "))}${row.blockingEdgeIds.length > 2 ? ` +${row.blockingEdgeIds.length - 2}` : ""}` : ""}</small>
+      </span>
+      <span class="direction-review-queue-item-status">A→B ${escapeHtml(row.alignmentStatuses.aToB)}<br>B→A ${escapeHtml(row.alignmentStatuses.bToA)}</span>`;
+    item.addEventListener("click", () => selectDirectionReviewQueueSegment(row.segmentId, true));
+    els.directionReviewQueueList.appendChild(item);
+  }
+}
+
 function directionReviewRecord(segmentId, alignmentKey = state.directionReview.alignmentKey) {
   return state.directionReview.overlay?.segments?.[String(segmentId)]?.alignments?.[alignmentKey] || null;
 }
@@ -5299,6 +5502,14 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
       remove.addEventListener("click", () => removeDirectionReviewEdge(index).catch(showError));
       buttons.append(flip, remove);
     }
+    const openBaseEdge = document.createElement("button");
+    openBaseEdge.type = "button";
+    openBaseEdge.textContent = "↗";
+    openBaseEdge.title = `Open ${ref.edgeId} in Base Graph`;
+    openBaseEdge.addEventListener("click", () =>
+      openDirectionReviewBaseEdge(ref.edgeId).catch(showError),
+    );
+    buttons.appendChild(openBaseEdge);
     row.addEventListener("mouseenter", () => {
       state.baseOverlay.hoveredOverlayEdgeId = String(ref.edgeId);
       row.classList.add("hovered");
@@ -5449,6 +5660,7 @@ async function runDirectionReviewAction(action, extra = {}) {
     state.directionReview.overlay = payload.overlay;
     state.directionReview.source = payload.source || "staged";
     state.directionReview.readOnly = false;
+    refreshUnresolvedSegmentHighlights();
     setStatus(`${alignmentKey === "aToB" ? "A → B" : "B → A"}: ${action.replaceAll("-", " ")}.`);
     return payload;
   } finally {
@@ -5566,6 +5778,7 @@ async function applySelectedDirectionMigration() {
     state.directionReview.source = "staged";
     state.directionReview.readOnly = false;
     state.directionReview.editing = false;
+    refreshUnresolvedSegmentHighlights();
     setStatus(`Applied reviewed V1 direction for segment ${segmentId}.`);
   } finally {
     state.directionReview.applying = false;
@@ -5598,6 +5811,7 @@ async function applySymmetricDirectionMigrationBatch() {
     state.directionReview.source = "staged";
     state.directionReview.readOnly = false;
     state.directionReview.editing = false;
+    refreshUnresolvedSegmentHighlights();
     setStatus(`Batch-approved ${payload.applied?.length || 0} verified bidirectional segments.`);
   } finally {
     state.directionReview.applying = false;
@@ -7741,6 +7955,7 @@ async function loadBaseOverlayData() {
       state.directionReview.loaded = false;
     }
     state.baseOverlay.loaded = true;
+    refreshUnresolvedSegmentHighlights();
     setStatus(
       `Loaded ${graphEdges.features?.length || 0} base graph edges and ${matchSummary.sourceSegments || 0} segment matches.`,
     );
@@ -7773,7 +7988,7 @@ async function toggleBaseOverlay() {
 }
 
 async function toggleUnresolvedSegments() {
-  if (state.workspaceMode !== "segments" || state.baseOverlay.loading) return;
+  if (!["segments", "overlay"].includes(state.workspaceMode) || state.baseOverlay.loading) return;
   state.showUnresolvedSegments = !state.showUnresolvedSegments;
   if (!state.showUnresolvedSegments) {
     state.unresolvedSegmentIds = [];
@@ -8718,6 +8933,27 @@ function wireEvents() {
   els.workspaceSegments.addEventListener("click", () => setWorkspaceMode("segments").catch(showError));
   els.workspaceBase.addEventListener("click", () => setWorkspaceMode("base").catch(showError));
   els.workspaceOverlay.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
+  els.directionReviewQueueSegments.addEventListener("click", () => {
+    state.directionReview.queueView = "segments";
+    renderAll();
+  });
+  els.directionReviewQueueEvidence.addEventListener("click", () => {
+    state.directionReview.queueView = "evidence";
+    if (["accepted", "all", "issues"].includes(state.directionReview.queueFilter)) {
+      state.directionReview.queueFilter = "direction_evidence_needed";
+    }
+    renderAll();
+  });
+  els.directionReviewQueueFilter.addEventListener("change", () => {
+    state.directionReview.queueFilter = els.directionReviewQueueFilter.value;
+    renderAll();
+  });
+  els.directionReviewQueueSearch.addEventListener("input", () => {
+    state.directionReview.queueQuery = els.directionReviewQueueSearch.value;
+    renderDirectionReviewQueue();
+  });
+  els.directionReviewQueuePrevious.addEventListener("click", () => navigateDirectionReviewQueue(-1));
+  els.directionReviewQueueNext.addEventListener("click", () => navigateDirectionReviewQueue(1));
   els.directionReviewAToB.addEventListener("click", () => {
     state.directionReview.alignmentKey = "aToB";
     state.directionReview.editing = false;

@@ -1101,6 +1101,166 @@ button:disabled {
   background: color-mix(in srgb, #eff6ff 38%, white);
 }
 
+.direction-review-queue {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+  background: #fff;
+}
+
+.direction-review-queue-heading,
+.direction-review-queue-views,
+.direction-review-queue-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.direction-review-queue-heading h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.direction-review-queue-heading span {
+  color: #475569;
+  font-size: 0.75rem;
+}
+
+.direction-review-queue-views {
+  justify-content: flex-start;
+  margin: 10px 0 8px;
+}
+
+.direction-review-queue-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 8px;
+}
+
+.direction-review-queue-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 8px 0;
+}
+
+.direction-review-queue-count {
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.direction-review-queue-navigation {
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.direction-review-queue-navigation button {
+  min-height: 30px;
+  padding: 5px 10px;
+}
+
+.direction-review-queue-list {
+  max-height: 330px;
+  overflow: auto;
+  border: 1px solid #dbe3ea;
+  border-radius: 7px;
+}
+
+.direction-review-queue-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-bottom: 1px solid #edf2f7;
+  border-left: 4px solid #64748b;
+  background: #fff;
+  text-align: left;
+}
+
+.direction-review-queue-item:last-child {
+  border-bottom: 0;
+}
+
+button.direction-review-queue-item {
+  cursor: pointer;
+}
+
+.direction-review-queue-item:hover,
+.direction-review-queue-item.active {
+  background: #eff6ff;
+}
+
+.direction-review-queue-item.direction_evidence_needed {
+  border-left-color: #b45309;
+}
+
+.direction-review-queue-item.invalid_existing {
+  border-left-color: #b91c1c;
+}
+
+.direction-review-queue-item.single_direction_candidate {
+  border-left-color: #7c3aed;
+}
+
+.direction-review-queue-item.unresolved {
+  border-left-color: #475569;
+}
+
+.direction-review-queue-item.accepted {
+  border-left-color: #15803d;
+}
+
+.direction-review-queue-item-main,
+.direction-review-queue-item-main strong,
+.direction-review-queue-item-main small {
+  display: block;
+  min-width: 0;
+}
+
+.direction-review-queue-item-main strong,
+.direction-review-queue-item-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.direction-review-queue-item-main small {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.direction-review-queue-item-status {
+  color: #475569;
+  font: 700 10px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-align: right;
+}
+
+.direction-review-evidence-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.direction-review-evidence-actions button {
+  min-height: 28px;
+  padding: 4px 7px;
+}
+
+@media (max-width: 760px) {
+  .direction-review-queue-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
 .direction-review-heading,
 .direction-review-tabs {
   display: flex;

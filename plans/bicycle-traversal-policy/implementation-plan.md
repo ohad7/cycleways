@@ -582,6 +582,11 @@ python3 -m unittest discover -s tests -p 'test_bicycle_traversal_policy.py'
   that prerequisite and receives a clear error rather than an empty map.
 - [ ] Save through validated server APIs and keep migration/review queues
   resumable across editor restarts.
+- [x] Present the staged V2 queue as a first-class review surface: show derived
+  classification counts, searchable/filterable segment issues, next/previous
+  navigation, a deduplicated manual-evidence queue with dependent segments,
+  and direct links from segment mappings and evidence items to Base Graph edge
+  inspection.
 - [ ] Create new logical segments and existing endpoint/geometry changes in the
   unpublished workspace. Add atomic Activate/Cancel behavior; an unfinished
   segment creates no public card, runtime mapping, or promotion blocker, and an

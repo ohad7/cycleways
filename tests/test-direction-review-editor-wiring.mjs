@@ -28,6 +28,13 @@ for (const id of [
   "base-edge-search",
   "find-base-edge",
   "direction-review-apply-symmetric-batch",
+  "direction-review-queue-filter",
+  "direction-review-queue-search",
+  "direction-review-queue-list",
+  "direction-review-queue-segments",
+  "direction-review-queue-evidence",
+  "direction-review-queue-previous",
+  "direction-review-queue-next",
   "refresh-direction-review",
 ]) {
   assert.match(html, new RegExp(`id=["']${id}["']`), `editor is missing #${id}`);
@@ -64,6 +71,10 @@ assert.match(server, /sourceGeometryChanged/);
 assert.match(server, /evidenceBackfilled/);
 assert.match(server, /directionReviewEvidenceDigest/);
 assert.match(server, /proposalMatches/);
+assert.match(editor, /buildDirectionReviewIssueRows/);
+assert.match(editor, /buildDirectionReviewEvidenceRows/);
+assert.match(editor, /openDirectionReviewBaseEdge/);
+assert.match(editor, /collectIssueSegmentIds/);
 assert.doesNotMatch(
   server,
   /previous\.sourceGeometryDigest\s*!==\s*segment\.sourceGeometryDigest[\s\S]{0,160}continue;/,
