@@ -203,6 +203,24 @@ export function directedIntervalKey(ref) {
   ].join("|");
 }
 
+export function isFullBaseEdgeRef(ref) {
+  const fromFraction = Number(ref?.fromFraction ?? 0);
+  const toFraction = Number(ref?.toFraction ?? 1);
+  return (
+    Number.isFinite(fromFraction) &&
+    Number.isFinite(toFraction) &&
+    Math.abs(Math.min(fromFraction, toFraction)) <= 1e-9 &&
+    Math.abs(Math.max(fromFraction, toFraction) - 1) <= 1e-9
+  );
+}
+
+export function isCwAccessPrecedenceEligible(state, reason) {
+  return (
+    (state === "prohibited" && reason === "explicit-access-prohibited") ||
+    (state === "conditional" && reason === "explicit-access-conditional")
+  );
+}
+
 /** Validate one V2 alignment without reading or mutating the opposite slot. */
 export function validateDirectionReviewAlignment({
   segmentId,
@@ -216,6 +234,7 @@ export function validateDirectionReviewAlignment({
 }) {
   const reasons = [];
   const traversalStates = {};
+  const policyPrecedence = [];
   if (!Array.isArray(edgeRefs) || edgeRefs.length === 0) reasons.push({ code: "alignment_empty" });
   if (!evidenceCurrent) reasons.push({ code: "stale_evidence" });
   if (!endpointValidation?.ok) {
@@ -231,14 +250,31 @@ export function validateDirectionReviewAlignment({
     }
     const direction = ref.direction === "reverse" ? "reverse" : "forward";
     const traversal = edge.bicycleTraversal?.[direction] || "unknown";
+    const traversalReason =
+      edge.bicycleTraversal?.[`${direction}Reason`] || "missing_policy_evidence";
     traversalStates[`${index}:${String(ref.edgeId)}`] = traversal;
-    if (traversal !== "allowed") {
+    if (
+      isCwAccessPrecedenceEligible(traversal, traversalReason) &&
+      isFullBaseEdgeRef(ref)
+    ) {
+      policyPrecedence.push({
+        edgeId: String(ref.edgeId),
+        direction,
+        baseState: traversal,
+        baseReason: traversalReason,
+        effectiveState: "allowed",
+        reason: "accepted-cw-alignment",
+      });
+    } else if (traversal !== "allowed") {
       reasons.push({
         code: "non_allowed_traversal",
         edgeId: String(ref.edgeId),
         direction,
         state: traversal,
-        reason: edge.bicycleTraversal?.[`${direction}Reason`] || "missing_policy_evidence",
+        reason:
+          isCwAccessPrecedenceEligible(traversal, traversalReason) && !isFullBaseEdgeRef(ref)
+            ? "cw-precedence-requires-full-edge"
+            : traversalReason,
       });
     }
     const owner = directedOwners.get(directedIntervalKey(ref));
@@ -254,6 +290,7 @@ export function validateDirectionReviewAlignment({
     status: reasons.length === 0 ? "valid" : "invalid",
     reasons,
     traversalStates,
+    policyPrecedence,
     ...(endpointValidation?.terminals ? { terminals: endpointValidation.terminals } : {}),
     ...(endpointValidation?.distances ? { endpointDistancesMeters: endpointValidation.distances } : {}),
   };

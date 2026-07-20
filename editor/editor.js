@@ -12,6 +12,16 @@ import {
   summarizeBaseEdgeDirectionLayer,
 } from "./lib/base-edge-direction-layer.mjs";
 import {
+  BASE_NETWORK_PRESETS,
+  baseNetworkLegend,
+  baseNetworkLineColorExpression,
+  baseNetworkMapFilter,
+  baseNetworkRenderProperties,
+  normalizeBaseNetworkPreset,
+  normalizeBaseNetworkTheme,
+  summarizeBaseNetwork,
+} from "./lib/base-network-explorer.mjs";
+import {
   DIRECTION_REVIEW_CLASSIFICATION_LABELS,
   DIRECTION_REVIEW_CLASSIFICATIONS,
   buildDirectionReviewEvidenceRows,
@@ -242,6 +252,12 @@ const state = {
     overlay: emptyBaseOverlay(),
     cache: {},
   },
+  baseNetworkExplorer: {
+    mode: "explore",
+    preset: "all",
+    theme: "traversal",
+    showCycleways: true,
+  },
   directionReview: {
     loaded: false,
     source: null,
@@ -357,6 +373,16 @@ const els = {
   buildReport: document.getElementById("build-report"),
   baseGraphStatus: document.getElementById("base-graph-status"),
   baseGraphSummary: document.getElementById("base-graph-summary"),
+  baseNetworkModeExplore: document.getElementById("base-network-mode-explore"),
+  baseNetworkModeEdit: document.getElementById("base-network-mode-edit"),
+  baseNetworkPreset: document.getElementById("base-network-preset"),
+  baseNetworkTheme: document.getElementById("base-network-theme"),
+  baseNetworkShowCycleways: document.getElementById("base-network-show-cycleways"),
+  baseNetworkReset: document.getElementById("base-network-reset"),
+  baseNetworkLegend: document.getElementById("base-network-legend"),
+  baseNetworkMapSummary: document.getElementById("base-network-map-summary"),
+  baseNetworkResults: document.getElementById("base-network-results"),
+  baseNetworkEditActions: document.getElementById("base-network-edit-actions"),
   baseEdgeSearch: document.getElementById("base-edge-search"),
   findBaseEdge: document.getElementById("find-base-edge"),
   toggleBaseOneWayDirections: document.getElementById("toggle-base-one-way-directions"),
@@ -1106,6 +1132,8 @@ function baseGraphCollection() {
     cache.baseGraphCollection &&
     cache.baseGraphCollectionGraphEdges === state.baseOverlay.graphEdges &&
     cache.baseGraphCollectionManualEdges === state.baseOverlay.manualBaseEdges &&
+    cache.baseGraphCollectionTraversalOverrides === state.baseOverlay.traversalOverrides &&
+    cache.baseGraphCollectionDirectionReviewOverlay === state.directionReview.overlay &&
     cache.baseGraphCollectionLensMode === state.connectorLens.colorMode &&
     cache.baseGraphCollectionLensStrategy === state.connectorLens.strategy
   ) {
@@ -1118,16 +1146,48 @@ function baseGraphCollection() {
       : (state.baseOverlay.graphEdges.features || []).filter(
           (feature) => !overriddenEdgeIds.has(String(graphEdgeFeatureId(feature))),
         );
+  const overrideWayIds = new Set(
+    (state.baseOverlay.traversalOverrides?.overrides || [])
+      .map((item) => Number(item?.osmWayId))
+      .filter(Number.isFinite),
+  );
+  const acceptedCwDirections = new Set();
+  for (const segment of Object.values(state.directionReview.overlay?.segments || {})) {
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      const published = segment.alignments?.[alignmentKey]?.published;
+      if (published?.disposition !== "accepted") continue;
+      for (const ref of directionReviewRefsForRecord(segment, alignmentKey, published)) {
+        const fromFraction = Number(ref.fromFraction ?? 0);
+        const toFraction = Number(ref.toFraction ?? 1);
+        const fullEdge =
+          Number.isFinite(fromFraction) &&
+          Number.isFinite(toFraction) &&
+          Math.abs(Math.min(fromFraction, toFraction)) <= 1e-9 &&
+          Math.abs(Math.max(fromFraction, toFraction) - 1) <= 1e-9;
+        if (!fullEdge) continue;
+        acceptedCwDirections.add(
+          `${String(ref.edgeId)}|${ref.direction === "reverse" ? "reverse" : "forward"}`,
+        );
+      }
+    }
+  }
   const features = sourceFeatures.map((feature) => ({
     ...feature,
     properties: {
       ...feature.properties,
       connectorLensColor: connectorLensColor(feature.properties || {}),
+      ...baseNetworkRenderProperties(
+        feature.properties || {},
+        overrideWayIds,
+        acceptedCwDirections,
+      ),
     },
   }));
   cache.baseGraphCollection = { ...state.baseOverlay.graphEdges, features };
   cache.baseGraphCollectionGraphEdges = state.baseOverlay.graphEdges;
   cache.baseGraphCollectionManualEdges = state.baseOverlay.manualBaseEdges;
+  cache.baseGraphCollectionTraversalOverrides = state.baseOverlay.traversalOverrides;
+  cache.baseGraphCollectionDirectionReviewOverlay = state.directionReview.overlay;
   cache.baseGraphCollectionLensMode = state.connectorLens.colorMode;
   cache.baseGraphCollectionLensStrategy = state.connectorLens.strategy;
   return cache.baseGraphCollection;
@@ -1204,10 +1264,19 @@ function selectedBaseGraphEdge() {
 function selectedBaseGraphEdgeCollection() {
   if (!state.baseOverlay.enabled || state.workspaceMode !== "base") return EMPTY_FEATURE_COLLECTION;
   const feature = selectedBaseGraphEdge();
+  const osmWayId = Number(feature?.properties?.osmWayId);
+  const features =
+    feature && Number.isInteger(osmWayId) && osmWayId > 0
+      ? (baseGraphCollection().features || []).filter(
+          (candidate) => Number(candidate?.properties?.osmWayId) === osmWayId,
+        )
+      : feature
+        ? [feature]
+        : [];
   return feature
     ? {
         type: "FeatureCollection",
-        features: [feature],
+        features,
       }
     : EMPTY_FEATURE_COLLECTION;
 }
@@ -1721,7 +1790,10 @@ function updateWorkspaceLayerVisibility() {
   ]) {
     setLayerVisibility(layerId, showBaseEdit);
   }
-  setLayerVisibility("cw-overlay-network-layer", showOverlay);
+  setLayerVisibility(
+    "cw-overlay-network-layer",
+    showOverlay || (showBaseEdit && state.baseNetworkExplorer.showCycleways),
+  );
   setLayerVisibility(
     "cw-overlay-network-hit-layer",
     showOverlay && !editingPhysicalEdges,
@@ -1774,6 +1846,11 @@ function updateWorkspaceLayerVisibility() {
   ]) {
     setLayerVisibility(layerId, showCrossings);
   }
+  setLayerVisibility(
+    "vertices-layer",
+    state.workspaceMode !== "base" || state.baseNetworkExplorer.mode === "edit",
+  );
+  applyBaseNetworkMapPresentation();
   if (map.getLayer("selected-segment")) {
     const mutedSelectedSegment = showDirectionReview || editingPhysicalEdges;
     map.setPaintProperty("selected-segment", "line-color", mutedSelectedSegment ? "#64748b" : "#f2c94c");
@@ -2044,8 +2121,9 @@ function renderBaseModeForm() {
   const coords = feature?.geometry?.coordinates || [];
   const vertexIndex = state.baseOverlay.selectedManualVertexIndex;
   const drawing = isDrawing();
-  const canDeleteVertex = feature && !drawing && vertexIndex >= 0 && coords.length > 2;
-  const canSplit = feature && !drawing && vertexIndex > 0 && vertexIndex < coords.length - 1;
+  const editing = state.baseNetworkExplorer.mode === "edit";
+  const canDeleteVertex = editing && feature && !drawing && vertexIndex >= 0 && coords.length > 2;
+  const canSplit = editing && feature && !drawing && vertexIndex > 0 && vertexIndex < coords.length - 1;
 
   for (const input of [
     els.segmentName,
@@ -2061,7 +2139,7 @@ function renderBaseModeForm() {
   renderNameRelease(null, true);
   els.deleteVertex.disabled = !canDeleteVertex;
   els.splitSegment.disabled = !canSplit;
-  els.extendSegment.disabled = drawing || !feature;
+  els.extendSegment.disabled = !editing || drawing || !feature;
   els.addData.disabled = true;
 
   if (!feature) {
@@ -2164,6 +2242,7 @@ function renderDrawControls() {
   const drawing = isDrawing();
   const segmentsMode = state.workspaceMode === "segments";
   const baseMode = state.workspaceMode === "base";
+  const baseEditing = baseMode && state.baseNetworkExplorer.mode === "edit";
   const overlayMode = state.workspaceMode === "overlay";
   const issuesMode = segmentsMode || overlayMode;
   const editButtons = [
@@ -2185,10 +2264,10 @@ function renderDrawControls() {
   if (!drawing) {
     const edgePicked = isEdgePickedSelected();
     els.addSegment.hidden = !segmentsMode;
-    els.modeInsert.hidden = overlayMode || edgePicked;
-    els.extendSegment.hidden = overlayMode || edgePicked;
-    els.deleteVertex.hidden = overlayMode || edgePicked;
-    els.splitSegment.hidden = overlayMode || edgePicked;
+    els.modeInsert.hidden = overlayMode || edgePicked || (baseMode && !baseEditing);
+    els.extendSegment.hidden = overlayMode || edgePicked || (baseMode && !baseEditing);
+    els.deleteVertex.hidden = overlayMode || edgePicked || (baseMode && !baseEditing);
+    els.splitSegment.hidden = overlayMode || edgePicked || (baseMode && !baseEditing);
     els.toggleUnresolvedSegments.hidden = !issuesMode;
     els.processChangedQueue.hidden = !segmentsMode;
     els.clearChangedQueue.hidden = !segmentsMode;
@@ -2232,7 +2311,7 @@ function renderDrawControls() {
     drawing ||
     overlayMode ||
     (baseMode
-      ? !selectedManualBaseEdge()
+      ? !baseEditing || !selectedManualBaseEdge()
       : !selectedFeature());
   els.saveSource.disabled = !state.dirty || drawing;
   els.runBuild.disabled = drawing;
@@ -4320,6 +4399,205 @@ function renderBaseEdgeDirectionReview(feature, disabled) {
       : `Derived from OSM: ${forward}/${reverse} (${traversal.forwardReason || "unknown"}; ${traversal.reverseReason || "unknown"}). Create an override only when reviewed evidence shows the source data is wrong or incomplete.`;
 }
 
+function baseNetworkTraversalOverrides() {
+  return state.baseOverlay.traversalOverrides?.overrides || [];
+}
+
+function baseNetworkExplorerSummary() {
+  return summarizeBaseNetwork(
+    baseGraphCollection().features || [],
+    state.baseNetworkExplorer.preset,
+    baseNetworkTraversalOverrides(),
+    state.baseOverlay.overlay,
+  );
+}
+
+function fitBaseNetworkFeatures(features) {
+  const bounds = new mapboxgl.LngLatBounds();
+  let coordinateCount = 0;
+  for (const feature of features || []) {
+    for (const coordinate of feature?.geometry?.coordinates || []) {
+      if (!Array.isArray(coordinate) || coordinate.length < 2) continue;
+      bounds.extend([coordinate[0], coordinate[1]]);
+      coordinateCount += 1;
+    }
+  }
+  if (coordinateCount > 0) {
+    map.fitBounds(bounds, { padding: 80, maxZoom: 16, duration: 500 });
+  }
+}
+
+function renderBaseNetworkExplorerPanel() {
+  const explorer = state.baseNetworkExplorer;
+  els.baseNetworkModeExplore.classList.toggle("active", explorer.mode === "explore");
+  els.baseNetworkModeEdit.classList.toggle("active", explorer.mode === "edit");
+  els.baseNetworkModeExplore.disabled = isDrawing();
+  els.baseNetworkModeEdit.disabled = isDrawing() || state.baseOverlay.recalculating;
+  els.baseNetworkPreset.value = normalizeBaseNetworkPreset(explorer.preset);
+  els.baseNetworkTheme.value = normalizeBaseNetworkTheme(explorer.theme);
+  els.baseNetworkShowCycleways.checked = explorer.showCycleways;
+  els.baseNetworkPreset.disabled = !state.baseOverlay.loaded || state.baseOverlay.loading;
+  els.baseNetworkTheme.disabled = !state.baseOverlay.loaded || state.baseOverlay.loading;
+  els.baseNetworkShowCycleways.disabled = !state.baseOverlay.loaded || state.baseOverlay.loading;
+  els.baseNetworkReset.disabled = !state.baseOverlay.loaded || state.baseOverlay.loading;
+
+  els.baseNetworkLegend.innerHTML = baseNetworkLegend(explorer.theme)
+    .map(
+      (item) =>
+        `<span class="base-network-legend-item"><i class="base-network-legend-swatch" style="background:${item.color}" aria-hidden="true"></i>${escapeHtml(item.label)}</span>`,
+    )
+    .join("");
+
+  if (!state.baseOverlay.loaded) {
+    els.baseNetworkMapSummary.textContent = state.baseOverlay.loading
+      ? "Loading the base network…"
+      : "Load the graph to explore its data.";
+    els.baseNetworkResults.innerHTML = "";
+    return;
+  }
+
+  const summary = baseNetworkExplorerSummary();
+  const preset = BASE_NETWORK_PRESETS[normalizeBaseNetworkPreset(explorer.preset)];
+  els.baseNetworkMapSummary.textContent =
+    `${summary.edgeCount.toLocaleString()} edge${summary.edgeCount === 1 ? "" : "s"} · ` +
+    `${summary.subjectCount.toLocaleString()} source subject${summary.subjectCount === 1 ? "" : "s"} · ` +
+    `${summary.cwSegmentCount.toLocaleString()} related CW segment${summary.cwSegmentCount === 1 ? "" : "s"}. ` +
+    preset.description;
+
+  els.baseNetworkResults.innerHTML = "";
+  if (explorer.preset === "all") {
+    els.baseNetworkResults.innerHTML =
+      '<div class="empty-state">Choose a focused “Show” view to list its OSM ways. The complete graph is already visible on the map.</div>';
+    return;
+  }
+  if (summary.subjects.length === 0) {
+    els.baseNetworkResults.innerHTML = '<div class="empty-state">No base-network data matches this view.</div>';
+    return;
+  }
+
+  const selected = selectedBaseGraphEdge();
+  const selectedWayId = Number(selected?.properties?.osmWayId);
+  const selectedEdgeId = String(graphEdgeFeatureId(selected) || selectedManualBaseEdgeId() || "");
+  const limit = 200;
+  for (const subject of summary.subjects.slice(0, limit)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    const active = subject.osmWayId
+      ? subject.osmWayId === selectedWayId
+      : subject.edgeIds.includes(selectedEdgeId);
+    button.className = `base-network-result${active ? " active" : ""}`;
+    const identity = subject.osmWayId ? `OSM way ${subject.osmWayId}` : subject.edgeIds[0];
+    const cwText = subject.cwSegments.length
+      ? `<small class="base-network-cw-reference">${escapeHtml(
+          `CW ${subject.cwSegments
+            .map((segment) => `#${segment.segmentId} ${segment.segmentName}`)
+            .join(" · ")}`
+        )}</small>`
+      : "";
+    const precedenceText = subject.cwPrecedenceDirections.length
+      ? `<small class="base-network-cw-precedence">${escapeHtml(
+          `Effective access allowed by accepted CW alignment: ${subject.cwPrecedenceDirections.join(" + ")}`,
+        )}</small>`
+      : "";
+    button.innerHTML = `
+      <strong>${escapeHtml(subject.label)}</strong>
+      <span>${escapeHtml(identity)} · ${escapeHtml(subject.highway)} · ${subject.edgeIds.length} edge${subject.edgeIds.length === 1 ? "" : "s"}</span>
+      ${cwText}
+      ${precedenceText}
+    `;
+    button.addEventListener("click", () => {
+      const feature = subject.features[0];
+      selectBaseGraphEdge(feature, false);
+      fitBaseNetworkFeatures(subject.features);
+      setStatus(`Inspecting ${identity}${subject.cwSegments.length ? ` · related to ${subject.cwSegments.map((segment) => `CW #${segment.segmentId}`).join(", ")}` : ""}.`);
+    });
+    els.baseNetworkResults.appendChild(button);
+  }
+  if (summary.subjects.length > limit) {
+    const note = document.createElement("div");
+    note.className = "empty-state";
+    note.textContent = `Showing the first ${limit} of ${summary.subjects.length.toLocaleString()} subjects. Refine the view to inspect fewer results.`;
+    els.baseNetworkResults.appendChild(note);
+  }
+}
+
+function applyBaseNetworkMapPresentation() {
+  if (!map.getLayer("base-graph-edges-layer")) return;
+  const active = state.workspaceMode === "base";
+  const filter = active ? baseNetworkMapFilter(state.baseNetworkExplorer.preset) : null;
+  for (const layerId of ["base-graph-edges-layer", "base-graph-edges-hit-layer"]) {
+    if (map.getLayer(layerId)) map.setFilter(layerId, filter);
+  }
+
+  const showManualSource =
+    !active || state.baseNetworkExplorer.preset === "all" || state.baseNetworkExplorer.preset === "manual";
+  const hideManualFilter = ["==", ["get", "manualEdgeId"], "__base_network_hidden__"];
+  for (const layerId of ["manual-base-edges-layer", "manual-base-edges-hit-layer"]) {
+    if (map.getLayer(layerId)) map.setFilter(layerId, showManualSource ? null : hideManualFilter);
+  }
+
+  map.setPaintProperty(
+    "base-graph-edges-layer",
+    "line-color",
+    active
+      ? baseNetworkLineColorExpression(state.baseNetworkExplorer.theme)
+      : ["coalesce", ["get", "connectorLensColor"], ["get", "graphColor"], BASE_GRAPH_FALLBACK_LINE_COLOR],
+  );
+  if (!active) return;
+  map.setPaintProperty(
+    "base-graph-edges-layer",
+    "line-width",
+    active && state.baseNetworkExplorer.preset !== "all"
+      ? ["interpolate", ["linear"], ["zoom"], 9, 2.5, 13, 4.5, 16, 7]
+      : BASE_GRAPH_LINE_WIDTH,
+  );
+  map.setPaintProperty(
+    "base-graph-edges-layer",
+    "line-opacity",
+    active && state.baseNetworkExplorer.preset !== "all" ? 0.92 : BASE_GRAPH_LINE_OPACITY,
+  );
+}
+
+function setBaseNetworkMode(mode) {
+  if (!new Set(["explore", "edit"]).has(mode) || state.workspaceMode !== "base") return;
+  if (isDrawing()) {
+    setStatus("Finish or cancel the current edit before changing Base Network mode.", "error");
+    return;
+  }
+  state.baseNetworkExplorer.mode = mode;
+  if (mode === "explore" && state.mode !== "select") setMode("select");
+  renderAll();
+  setStatus(
+    mode === "explore"
+      ? "Base Network Explore: map views and inspection are read-only."
+      : "Base Network Edit / review: manual geometry and reviewed policy actions are enabled.",
+  );
+}
+
+function setBaseNetworkPreset(value, { fit = true } = {}) {
+  const preset = normalizeBaseNetworkPreset(value);
+  state.baseNetworkExplorer.preset = preset;
+  if (preset === "bicycle_no") state.baseNetworkExplorer.theme = "raw_access";
+  if (preset === "prohibited_both" || preset === "conditional") {
+    state.baseNetworkExplorer.theme = "traversal";
+  }
+  if (preset === "manual") state.baseNetworkExplorer.theme = "source";
+  renderAll();
+  if (fit && preset !== "all") fitBaseNetworkFeatures(baseNetworkExplorerSummary().matchingFeatures);
+  const summary = baseNetworkExplorerSummary();
+  setStatus(
+    `Showing ${summary.edgeCount.toLocaleString()} matching base edge${summary.edgeCount === 1 ? "" : "s"} in ${summary.subjectCount.toLocaleString()} source subject${summary.subjectCount === 1 ? "" : "s"}.`,
+  );
+}
+
+function resetBaseNetworkExplorer() {
+  state.baseNetworkExplorer.preset = "all";
+  state.baseNetworkExplorer.theme = "traversal";
+  state.baseNetworkExplorer.showCycleways = true;
+  renderAll();
+  setStatus("Base Network view reset to the complete traversal-policy map.");
+}
+
 function renderBaseGraphPanel() {
   if (state.workspaceMode !== "base") return;
 
@@ -4343,6 +4621,9 @@ function renderBaseGraphPanel() {
     ? baseGraphOneWayDirectionSummary()
     : { total: 0, confirmedOneWay: 0, needsReview: 0 };
 
+  renderBaseNetworkExplorerPanel();
+  const editingBaseNetwork = state.baseNetworkExplorer.mode === "edit";
+
   els.baseGraphStatus.textContent = recalculating ? "Recalculating" : loading ? "Loading" : loaded ? "Loaded" : "Not loaded";
   els.baseEdgeSearch.disabled = loading || recalculating || !loaded;
   els.findBaseEdge.disabled = loading || recalculating || !loaded;
@@ -4354,18 +4635,23 @@ function renderBaseGraphPanel() {
     : loading
       ? "Loading direction-policy evidence…"
       : "Load the Base Graph to inspect all direction-limited edges.";
-  els.newManualBaseEdge.disabled = loading || recalculating || isDrawing() || !loaded;
+  els.baseNetworkEditActions.hidden = !editingBaseNetwork;
+  for (const element of document.querySelectorAll(".base-network-edit-only")) {
+    element.hidden = !editingBaseNetwork;
+  }
+  els.newManualBaseEdge.disabled = !editingBaseNetwork || loading || recalculating || isDrawing() || !loaded;
   els.cloneBaseGraphEdge.disabled =
+    !editingBaseNetwork ||
     loading ||
     recalculating ||
     isDrawing() ||
     !loaded ||
     !selectedGraphEdge ||
     selectedGraphProperties.source === "manual";
-  els.deleteManualBaseEdge.disabled = loading || recalculating || isDrawing() || !selected;
+  els.deleteManualBaseEdge.disabled = !editingBaseNetwork || loading || recalculating || isDrawing() || !selected;
   els.splitManualBaseEdge.disabled =
-    loading || recalculating || isDrawing() || !selected || selectedVertex <= 0 || selectedVertex >= coords.length - 1;
-  els.recalculateOsmGraph.disabled = loading || recalculating || isDrawing() || !loaded;
+    !editingBaseNetwork || loading || recalculating || isDrawing() || !selected || selectedVertex <= 0 || selectedVertex >= coords.length - 1;
+  els.recalculateOsmGraph.disabled = !editingBaseNetwork || loading || recalculating || isDrawing() || !loaded;
   els.recalculateOsmGraph.textContent = recalculating ? "Recalculating..." : "Recalculate Graph + Matches";
   const canRefreshDirectionReview =
     loaded &&
@@ -4380,7 +4666,7 @@ function renderBaseGraphPanel() {
     : "Rebuild graph + refresh V2 evidence";
   renderBaseEdgeDirectionReview(
     selectedBaseFeature,
-    loading || recalculating || isDrawing() || !loaded,
+    !editingBaseNetwork || loading || recalculating || isDrawing() || !loaded,
   );
 
   if (loading) {
@@ -4390,7 +4676,7 @@ function renderBaseGraphPanel() {
   }
 
   if (!loaded) {
-    els.baseGraphSummary.innerHTML = `<div class="empty-state">Switch to Base Graph mode to load the graph artifacts.</div>`;
+    els.baseGraphSummary.innerHTML = `<div class="empty-state">Switch to Base Network to load the graph artifacts.</div>`;
     els.baseGraphHelp.textContent = "Manual edges are stored separately from OSM.";
     return;
   }
@@ -4414,7 +4700,9 @@ function renderBaseGraphPanel() {
     ? "Review both stored directions above. After geometry or policy changes, rebuild and refresh V2 evidence before revalidating an alignment."
     : selectedGraphEdge
       ? "Inspect normalized direction evidence above. Geometry remains generated from OSM; reviewed direction corrections are saved as source-way overrides."
-      : "Click any base graph edge to inspect it. Create a new manual edge, or copy a selected OSM edge to edit it.";
+      : editingBaseNetwork
+        ? "Click any base edge to inspect it. Create a manual edge, copy an OSM edge, or review selected policy evidence."
+        : "Click any colored base edge or choose a focused map view above. Switch to Edit / review only when you want to change data.";
 }
 
 function renderConnectorLensLegend() {
@@ -4723,8 +5011,10 @@ function applyConnectorStrategyChange(mutate) {
 
 function setConnectorColorMode(mode) {
   state.connectorLens.colorMode = mode;
+  state.baseNetworkExplorer.theme = mode === "off" ? "traversal" : "connector";
   updateMapSources();
   renderConnectorLensPanel();
+  renderBaseNetworkExplorerPanel();
 }
 
 function connectorNonNegativeNumber(rawValue, label) {
@@ -5589,6 +5879,14 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
   }
   for (const [index, ref] of refs.entries()) {
     const evidence = directionReviewEvidenceSummary(ref);
+    const precedenceApplies =
+      ["prohibited", "conditional"].includes(evidence.traversal.state) &&
+      (record?.disposition === "accepted" ||
+        (record?.validation?.policyPrecedence || []).some(
+          (item) =>
+            String(item.edgeId) === String(ref.edgeId) &&
+            item.direction === (ref.direction === "reverse" ? "reverse" : "forward"),
+        ));
     const row = document.createElement("div");
     row.className = "direction-review-edge";
     row.dataset.edgeId = String(ref.edgeId);
@@ -5596,7 +5894,7 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
       <span class="direction-review-edge-sequence">${index + 1}</span>
       <span class="direction-review-edge-main">
         <strong>${escapeHtml(String(ref.edgeId))} · ${escapeHtml(ref.direction === "reverse" ? "reverse" : "forward")}</strong>
-        <small><span class="direction-review-edge-state ${escapeHtml(evidence.traversal.state)}">${escapeHtml(evidence.traversal.state)}</span> · ${escapeHtml(evidence.traversal.reason)} · ${escapeHtml(evidence.raw)}</small>
+        <small><span class="direction-review-edge-state ${escapeHtml(evidence.traversal.state)}">${escapeHtml(evidence.traversal.state)}</span> · ${escapeHtml(evidence.traversal.reason)} · ${escapeHtml(evidence.raw)}${precedenceApplies ? " · accepted CW alignment will take precedence" : ""}</small>
       </span>
       <span class="direction-review-edge-buttons"></span>`;
     const buttons = row.querySelector(".direction-review-edge-buttons");
@@ -5704,6 +6002,7 @@ function renderDirectionReview(segmentId) {
     ? "direction-review-state-valid"
     : "direction-review-state-invalid";
   const endpointDistances = validation?.endpointDistancesMeters;
+  const precedenceCount = validation?.policyPrecedence?.length || 0;
   els.directionReviewSummary.innerHTML = `
     <dl class="base-overlay-metrics">
       <div><dt>Logical segment</dt><dd>${escapeHtml(segment.segmentName)} (#${segment.segmentId})</dd></div>
@@ -5714,6 +6013,7 @@ function renderDirectionReview(segmentId) {
       <div><dt>Directed refs</dt><dd>${refs.length}</dd></div>
       <div><dt>Validation</dt><dd class="${stateClass}">${escapeHtml(validation?.status || slot.published?.disposition || "unreviewed")}</dd></div>
       ${endpointDistances ? `<div><dt>Endpoint drift</dt><dd>${Math.round(endpointDistances.start)}m start · ${Math.round(endpointDistances.end)}m end</dd></div>` : ""}
+      ${precedenceCount ? `<div><dt>CW precedence</dt><dd>${precedenceCount} restricted/conditional directed edge${precedenceCount === 1 ? "" : "s"} will become allowed only after this alignment is accepted</dd></div>` : ""}
       ${reasonList ? `<div><dt>Blocking evidence</dt><dd>${escapeHtml(reasonList)}</dd></div>` : ""}
     </dl>`;
   const writable =
@@ -6174,7 +6474,7 @@ async function setWorkspaceMode(mode) {
     }
     setStatus(
       mode === "base"
-        ? "Base Graph mode: edit manual base edges."
+        ? "Base Network Explore: choose a map view or click an edge to inspect it."
         : mode === "overlay"
           ? "CW Overlay mode: select a segment, then choose graph edges."
           : mode === "roundabouts"
@@ -7045,19 +7345,19 @@ function selectBaseGraphEdge(feature, fit = false) {
 }
 
 function findBaseEdgeById() {
-  const edgeId = els.baseEdgeSearch.value.trim();
-  if (!edgeId) {
-    setStatus("Enter a base edge ID to find.", "error");
+  const query = els.baseEdgeSearch.value.trim();
+  if (!query) {
+    setStatus("Enter a base edge, manual edge, or OSM way ID to find.", "error");
     els.baseEdgeSearch.focus();
     return;
   }
   if (!state.baseOverlay.loaded) {
-    setStatus("Load the Base Graph before finding an edge.", "error");
+    setStatus("Load the Base Network before finding an edge.", "error");
     return;
   }
 
   const manualIndex = manualBaseEdgeFeatures().findIndex(
-    (feature) => String(manualBaseEdgeFeatureId(feature)) === edgeId,
+    (feature) => String(manualBaseEdgeFeatureId(feature)) === query,
   );
   if (manualIndex >= 0) {
     selectManualBaseEdgeByIndex(manualIndex, true);
@@ -7065,14 +7365,28 @@ function findBaseEdgeById() {
   }
 
   const graphFeature = (state.baseOverlay.graphEdges?.features || []).find(
-    (feature) => String(graphEdgeFeatureId(feature)) === edgeId,
+    (feature) => String(graphEdgeFeatureId(feature)) === query,
   );
   if (graphFeature) {
     selectBaseGraphEdge(graphFeature, true);
     return;
   }
 
-  setStatus(`Base edge ${edgeId} was not found in the loaded graph or manual edges.`, "error");
+  const wayMatch = query.match(/^(?:osm\s*way\s*|way\s*)?(\d+)$/i);
+  if (wayMatch) {
+    const osmWayId = Number(wayMatch[1]);
+    const wayFeatures = (baseGraphCollection().features || []).filter(
+      (feature) => Number(feature?.properties?.osmWayId) === osmWayId,
+    );
+    if (wayFeatures.length > 0) {
+      selectBaseGraphEdge(wayFeatures[0], false);
+      fitBaseNetworkFeatures(wayFeatures);
+      setStatus(`Selected OSM way ${osmWayId} · ${wayFeatures.length} base edge${wayFeatures.length === 1 ? "" : "s"}.`);
+      return;
+    }
+  }
+
+  setStatus(`${query} was not found in the loaded base network.`, "error");
   els.baseEdgeSearch.select();
 }
 
@@ -9193,6 +9507,20 @@ function wireEvents() {
   els.workspaceSegments.addEventListener("click", () => setWorkspaceMode("segments").catch(showError));
   els.workspaceBase.addEventListener("click", () => setWorkspaceMode("base").catch(showError));
   els.workspaceOverlay.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
+  els.baseNetworkModeExplore.addEventListener("click", () => setBaseNetworkMode("explore"));
+  els.baseNetworkModeEdit.addEventListener("click", () => setBaseNetworkMode("edit"));
+  els.baseNetworkPreset.addEventListener("change", () => setBaseNetworkPreset(els.baseNetworkPreset.value));
+  els.baseNetworkTheme.addEventListener("change", () => {
+    state.baseNetworkExplorer.theme = normalizeBaseNetworkTheme(els.baseNetworkTheme.value);
+    renderAll();
+    setStatus(`Base Network colors changed to ${els.baseNetworkTheme.selectedOptions[0]?.textContent || "the selected theme"}.`);
+  });
+  els.baseNetworkShowCycleways.addEventListener("change", () => {
+    state.baseNetworkExplorer.showCycleways = els.baseNetworkShowCycleways.checked;
+    renderAll();
+    setStatus(state.baseNetworkExplorer.showCycleways ? "CycleWays overlay shown." : "CycleWays overlay hidden.");
+  });
+  els.baseNetworkReset.addEventListener("click", resetBaseNetworkExplorer);
   els.directionReviewQueueSegments.addEventListener("click", () => {
     state.directionReview.queueView = "segments";
     renderAll();
@@ -9695,6 +10023,7 @@ function wireEvents() {
     if (state.mode !== "select") return;
     if (isEdgePickedSelected()) return;
     if (state.workspaceMode === "base") {
+      if (state.baseNetworkExplorer.mode !== "edit") return;
       state.baseOverlay.selectedManualVertexIndex = Number(event.features[0].properties.index);
     } else {
       state.selectedVertexIndex = Number(event.features[0].properties.index);
@@ -9710,6 +10039,7 @@ function wireEvents() {
 
   map.on("mousedown", "vertices-layer", (event) => {
     if (state.mode !== "select") return;
+    if (state.workspaceMode === "base" && state.baseNetworkExplorer.mode !== "edit") return;
     event.preventDefault();
     if (state.workspaceMode === "base") {
       state.draggingManualBaseVertex = true;

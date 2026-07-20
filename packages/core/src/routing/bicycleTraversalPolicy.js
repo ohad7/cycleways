@@ -9,6 +9,17 @@ function directionFor(fromDistance, toDistance) {
   return Number(toDistance) < Number(fromDistance) ? "reverse" : "forward";
 }
 
+export function hasAcceptedCwAlignmentForDirection(edge, direction) {
+  return Array.isArray(edge?.cwAlignments?.[direction]) && edge.cwAlignments[direction].length > 0;
+}
+
+export function isCwAccessPrecedenceEligible(state, reason) {
+  return (
+    (state === "prohibited" && reason === "explicit-access-prohibited") ||
+    (state === "conditional" && reason === "explicit-access-conditional")
+  );
+}
+
 export function bicycleTraversalVerdict(edge, fromDistance, toDistance, policy = {}) {
   const distanceMeters = Math.abs(Number(toDistance) - Number(fromDistance));
   const direction = directionFor(fromDistance, toDistance);
@@ -60,13 +71,29 @@ export function bicycleTraversalVerdict(edge, fromDistance, toDistance, policy =
   const state = BICYCLE_TRAVERSAL_STATES.includes(traversal[direction])
     ? traversal[direction]
     : "unknown";
+  const baseReason =
+    traversal[`${direction}Reason`] ||
+    (state === "unknown" ? "missing-traversal-state" : "normalized-policy");
+  if (
+    isCwAccessPrecedenceEligible(state, baseReason) &&
+    hasAcceptedCwAlignmentForDirection(edge, direction)
+  ) {
+    return {
+      allowed: true,
+      state: "allowed",
+      direction,
+      reason: "accepted-cw-alignment",
+      baseState: state,
+      baseReason,
+      policyId: traversal.policyId || policy.policyId || null,
+      policyDigest: traversal.policyDigest || policy.policyDigest || null,
+    };
+  }
   return {
     allowed: state === "allowed",
     state,
     direction,
-    reason:
-      traversal[`${direction}Reason`] ||
-      (state === "unknown" ? "missing-traversal-state" : "normalized-policy"),
+    reason: baseReason,
     policyId: traversal.policyId || policy.policyId || null,
     policyDigest: traversal.policyDigest || policy.policyDigest || null,
   };

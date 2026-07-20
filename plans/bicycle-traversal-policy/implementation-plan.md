@@ -4,6 +4,30 @@
 **Status:** implementation in progress
 **Design:** [`design.md`](./design.md)
 
+## 2026-07-20 amendment — reviewed CW access precedence
+
+- [x] Treat full-edge `explicit-access-prohibited` and
+  `explicit-access-conditional` traversals as valid review material in
+  Direction Review and record explicit `policyPrecedence` evidence. One-way,
+  roundabout, and manual-reviewed prohibitions remain blocking.
+- [x] Keep `unknown` and partial restricted edge refs invalid; require a base
+  edge split before a partial CW alignment can grant access.
+- [x] Apply precedence only from accepted V2 alignment membership in the exact
+  traversal direction; legacy `cwSegmentIds` remains non-authoritative.
+- [x] Emit effective runtime traversal as `allowed` with reason
+  `accepted-cw-alignment`, retaining the base state/reason as provenance.
+- [x] Make planner, restore, connector, approach, and rejoin validation consume
+  the same central effective verdict.
+- [x] Change the Base Network review preset from conditional-or-unknown to
+  conditional-only and calculate blocked/conditional views from effective
+  accepted-alignment policy.
+- [x] Verify the current #19 proposal: both directions are now valid symmetric
+  candidates, each applying precedence only to `e57116180_1`.
+- [ ] In the editor, refresh V2 evidence and explicitly accept segment #19 A→B
+  and B→A, then rebuild staged routing assets.
+- [ ] Re-run the original full-ride scenario and promotion audit with #19
+  accepted.
+
 ## Outcome
 
 Ship one policy-bound routing system in which:
@@ -1184,7 +1208,9 @@ npm run mobile:assets
   then the remainder.
 - [ ] For each of the 284 active old mappings, confirm stable logical endpoints
   and place the existing sequence in the correct direction slot. Revalidate it;
-  do not grandfather a forbidden/unknown traversal.
+  do not grandfather an unknown traversal. Full-edge explicit-access
+  prohibited/conditional traversals require an explicit accepted direction
+  under CW precedence; directionality remains blocking.
 - [ ] Bulk-accept only unambiguous policy-valid migration/exact-reverse batches
   through an explicit recorded curator action. Review every distinct opposite
   path, invalid mapping, manual edge, ambiguity, and unavailable direction
@@ -1193,9 +1219,10 @@ npm run mobile:assets
   complete accepted sequences. Scope share 370 membership only to its allowed
   direction and map the other carriageway as a separate sequence expected to
   include share 19 in its allowed direction.
-- [ ] Where source data is wrong or missing, fix OSM input/manual-edge policy or
-  add a reviewed override with evidence. Never use CycleWays acceptance as an
-  access override.
+- [ ] Where source data is wrong or missing outside a curated CW alignment, fix
+  OSM input/manual-edge policy or add a reviewed override with evidence. For a
+  full-edge curated alignment, the accepted V2 direction is the reviewed access
+  evidence; partial restricted coverage requires splitting the base edge first.
 - [ ] Give every `active + navigable` logical segment two reviewed slot
   dispositions: accepted/accepted or one accepted plus one unavailable. Otherwise
   record `display_only` explicitly or transition the logical segment out of

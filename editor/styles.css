@@ -565,6 +565,129 @@ button:disabled {
   gap: 8px;
 }
 
+.base-network-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.base-network-mode .active {
+  border-color: #0f766e;
+  background: #dff3ef;
+  color: #115e59;
+  font-weight: 800;
+}
+
+.base-network-explorer {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.base-network-explorer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.base-network-explorer-heading h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.base-network-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.base-network-control-grid .field-label {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.base-network-cw-toggle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.base-network-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.base-network-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.base-network-legend-swatch {
+  width: 18px;
+  height: 5px;
+  border-radius: 999px;
+}
+
+.base-network-results {
+  display: grid;
+  gap: 5px;
+  max-height: 34vh;
+  overflow: auto;
+}
+
+.base-network-result {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #dc2626;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.base-network-result:hover,
+.base-network-result.active {
+  border-color: #0f766e;
+  border-left-color: #0f766e;
+  background: #ecf8f5;
+}
+
+.base-network-result strong {
+  font-size: 12px;
+}
+
+.base-network-result span,
+.base-network-result small {
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.base-network-result .base-network-cw-reference {
+  color: #8f2424;
+  font-weight: 800;
+}
+
+.base-network-result .base-network-cw-precedence {
+  color: #0f766e;
+  font-weight: 800;
+}
+
 .base-overlay-metrics {
   display: grid;
   gap: 6px;

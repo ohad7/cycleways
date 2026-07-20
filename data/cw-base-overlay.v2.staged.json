@@ -1322,6 +1322,7 @@
                 "17:e958921301_5": "allowed",
                 "18:e958921314_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6143715,
@@ -1348,6 +1349,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -2214,8 +2216,9 @@
     "19": {
       "alignments": {
         "aToB": {
-          "draft": {
-            "disposition": "needs_review",
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -2249,81 +2252,66 @@
               ]
             },
             "mappingDigest": "1d8e2b1b955e5fbc29a7e55623637c6c6fac7a3a9ba604fbc5cd274e841f5b52",
-            "candidate": {
-              "classification": "invalid_existing",
-              "kind": "v1-existing"
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "non_allowed_traversal",
-                  "edgeId": "e57116180_1",
-                  "direction": "forward",
-                  "state": "prohibited",
-                  "reason": "explicit-access-prohibited"
-                }
-              ],
-              "traversalStates": {
-                "0:e57116180_1": "prohibited",
-                "1:e132065234_2": "allowed",
-                "2:e132065234_1": "allowed"
-              },
-              "terminals": {
-                "start": [
-                  35.659185,
-                  33.218817
-                ],
-                "end": [
-                  35.6547138,
-                  33.2254219
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 2.971384692256932,
-                "end": 3.206992200246647
-              }
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-20",
+              "batchId": "direction-review-2026-07-20",
+              "graphDigest": "b2b77fe121a4ff5b354e2ff92c3896315373adb168cbc23a568b2deff7486996",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "6211da27ba75e612fea253b439e329a19397f85b174b832a65991de9c2f32b60",
+              "mappingDigest": "1d8e2b1b955e5fbc29a7e55623637c6c6fac7a3a9ba604fbc5cd274e841f5b52",
+              "evidenceDigest": "72c0892e489d26f90cece84a05db1ecaf51f0152c4445ce787993519bd90c580"
             }
-          },
-          "published": null
+          }
         },
         "bToA": {
-          "draft": {
-            "candidate": {
-              "classification": "invalid_existing",
-              "kind": "opposite-alignment-required"
-            },
-            "disposition": "needs_review",
-            "validation": {
-              "reasons": [
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
                 {
-                  "code": "non_allowed_traversal",
+                  "direction": "forward",
+                  "edgeId": "e132065234_1",
+                  "fromFraction": 0,
+                  "osmWayId": 132065234,
+                  "sequenceIndex": 0,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e132065234_2",
+                  "fromFraction": 0,
+                  "osmWayId": 132065234,
+                  "sequenceIndex": 1,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
                   "direction": "reverse",
                   "edgeId": "e57116180_1",
-                  "reason": "explicit-access-prohibited",
-                  "state": "prohibited"
+                  "fromFraction": 0,
+                  "osmWayId": 57116180,
+                  "sequenceIndex": 2,
+                  "source": "osm",
+                  "toFraction": 1
                 }
-              ],
-              "status": "invalid",
-              "terminals": {
-                "end": [
-                  35.659185,
-                  33.218817
-                ],
-                "start": [
-                  35.6547138,
-                  33.2254219
-                ]
-              },
-              "traversalStates": {
-                "0:e132065234_1": "allowed",
-                "1:e132065234_2": "allowed",
-                "2:e57116180_1": "prohibited"
-              }
+              ]
+            },
+            "mappingDigest": "883d2024862d9595f3c6c461c8c0855de3e3addf0ce546a03276b121c5d7a708",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-20",
+              "batchId": "direction-review-2026-07-20",
+              "graphDigest": "b2b77fe121a4ff5b354e2ff92c3896315373adb168cbc23a568b2deff7486996",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "6211da27ba75e612fea253b439e329a19397f85b174b832a65991de9c2f32b60",
+              "mappingDigest": "883d2024862d9595f3c6c461c8c0855de3e3addf0ce546a03276b121c5d7a708",
+              "evidenceDigest": "a917a2ffce82891006275a40e4c5048593b150c890b7d3439f7f86c8a9c966a2"
             }
-          },
-          "published": null
+          }
         }
       },
       "endpoints": {
@@ -2350,7 +2338,7 @@
       },
       "lifecycleStatus": "active",
       "migration": {
-        "classification": "invalid_existing",
+        "classification": "symmetric_candidate",
         "endpointMatch": {
           "alignmentKey": "aToB",
           "distances": {
@@ -6445,6 +6433,7 @@
                 "7:e958921300_4": "allowed",
                 "8:e496275732_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6090096,
@@ -6471,6 +6460,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -7132,6 +7122,7 @@
                 "6:e690868796_1": "allowed",
                 "7:e690868796_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5722025,
@@ -7158,6 +7149,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -9564,6 +9556,7 @@
                 "18:e579016875_1": "allowed",
                 "19:e579016875_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5784904,
@@ -9590,6 +9583,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -10610,7 +10604,8 @@
               ],
               "traversalStates": {
                 "0:e139983381_1": "unknown"
-              }
+              },
+              "policyPrecedence": []
             }
           },
           "published": null
@@ -10623,6 +10618,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "missing_edge",
@@ -13807,6 +13803,7 @@
                 "31:e841158829_4": "allowed",
                 "32:e841158829_3": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6059048,
@@ -13833,6 +13830,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -15937,6 +15935,7 @@
                 "32:e228885122_2": "allowed",
                 "33:e511559202_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5774545,
@@ -15963,6 +15962,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -17828,6 +17828,7 @@
                 "4:e42950862_2": "allowed",
                 "5:e42950862_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5802589,
@@ -17927,6 +17928,7 @@
                 "4:e855779446_3": "allowed",
                 "5:e855779446_4": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5822265,
@@ -18515,6 +18517,7 @@
                 "6:e140001014_2": "allowed",
                 "7:e140001014_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5802589,
@@ -18541,6 +18544,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -19725,6 +19729,7 @@
                 "7:e815935993_3": "allowed",
                 "8:e815935993_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5724768,
@@ -19751,6 +19756,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -20633,6 +20639,7 @@
                 "2:e715694890_1": "allowed",
                 "3:e30887171_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5739807,
@@ -20659,6 +20666,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -20825,6 +20833,7 @@
                 "5:e30886111_1": "allowed",
                 "6:e815935989_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5662216,
@@ -20851,6 +20860,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -21674,6 +21684,7 @@
                 "8:e579967764_3": "allowed",
                 "9:e579967764_4": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5747503,
@@ -21700,6 +21711,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -21977,6 +21989,7 @@
                 "12:e511559214_12": "allowed",
                 "13:e511559214_11": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5766829,
@@ -22003,6 +22016,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -24256,6 +24270,7 @@
                 "2:e842376175_1": "allowed",
                 "3:e842376170_4": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6708172,
@@ -24282,6 +24297,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -25013,6 +25029,7 @@
                 "4:e656426865_1": "allowed",
                 "5:e842376173_1": "prohibited"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6606611,
@@ -25112,6 +25129,7 @@
                 "4:e1024904297_1": "allowed",
                 "5:e958921319_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6726382,
@@ -25246,6 +25264,7 @@
                 "3:e635023603_1": "allowed",
                 "4:e635023602_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6726382,
@@ -25272,6 +25291,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -26324,6 +26344,7 @@
                 "10:e1034600853_2": "allowed",
                 "11:manual-221-mpccf0ox": "unknown"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6542993,
@@ -26350,6 +26371,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -31231,6 +31253,7 @@
                 "4:e511559216_1": "allowed",
                 "5:e511559214_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.576678,
@@ -31257,6 +31280,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -32039,6 +32063,7 @@
               "traversalStates": {
                 "0:e841158829_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.572792,
@@ -32088,6 +32113,7 @@
               "traversalStates": {
                 "0:e841158829_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5729912,
@@ -33157,6 +33183,7 @@
                 "17:e315515987_9": "allowed",
                 "18:e33571617_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5695024,
@@ -33386,6 +33413,7 @@
                 "17:e511559197_2": "allowed",
                 "18:e1200367027_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.560884,
@@ -35048,6 +35076,7 @@
               "traversalStates": {
                 "0:e30903583_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6288245,
@@ -35097,6 +35126,7 @@
               "traversalStates": {
                 "0:e30903583_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6285158,
@@ -35314,6 +35344,7 @@
                 "0:e1024904299_1": "allowed",
                 "1:e1024904300_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6440005,
@@ -35373,6 +35404,7 @@
                 "0:e1024904300_1": "allowed",
                 "1:e1024904299_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6442295,
@@ -38076,6 +38108,7 @@
                 "3:e668076636_1": "allowed",
                 "4:e668076637_1": "prohibited"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.7223348,
@@ -38165,6 +38198,7 @@
                 "3:e940718179_2": "allowed",
                 "4:e940718180_1": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.7298985,
@@ -38558,6 +38592,7 @@
                 "5:e668076633_6": "prohibited",
                 "6:e668076633_5": "prohibited"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.7274967,
@@ -38667,6 +38702,7 @@
                 "5:e53819731_3": "allowed",
                 "6:e53819731_2": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.7298985,
@@ -39454,6 +39490,7 @@
                 "7:e1024609346_8": "prohibited",
                 "8:manual-osm-1036770657-mq0nscfb": "unknown"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6318405,
@@ -39480,6 +39517,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -39606,6 +39644,7 @@
               "traversalStates": {
                 "0:manual-osm-73965591-mq0ntkde": "unknown"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.631257,
@@ -39632,6 +39671,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -40031,6 +40071,7 @@
                 "2:manual-331-mq0svmxq": "unknown",
                 "3:e33058576_2": "prohibited"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.641015,
@@ -40057,6 +40098,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -40521,6 +40563,7 @@
                 "27:e46704986_5": "allowed",
                 "28:e46704986_6": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.6401902,
@@ -40547,6 +40590,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -41561,6 +41605,7 @@
                 "3:e976962520_2": "allowed",
                 "4:e841155119_1": "prohibited"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.572099,
@@ -41587,6 +41632,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -41702,6 +41748,7 @@
               "traversalStates": {
                 "0:manual-manual-osm-386982531-mq838nnx-a-mq838si0": "unknown"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.572545,
@@ -41728,6 +41775,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",
@@ -43093,6 +43141,7 @@
                 "13:e841160751_7": "allowed",
                 "14:e841160751_8": "allowed"
               },
+              "policyPrecedence": [],
               "terminals": {
                 "start": [
                   35.5675158,
@@ -43119,6 +43168,7 @@
             },
             "disposition": "needs_review",
             "validation": {
+              "policyPrecedence": [],
               "reasons": [
                 {
                   "code": "non_allowed_traversal",

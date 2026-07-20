@@ -272,8 +272,47 @@ console.log("orientAppendedEdgeRef ok");
     edgeRefs: [{ edgeId: "e1", direction: "reverse" }],
     edgeLookup,
   });
-  assert.equal(reverse.ok, false);
-  assert.equal(reverse.reasons[0].code, "non_allowed_traversal");
+  assert.equal(reverse.ok, false, "CW access precedence must not override one-way evidence");
+  assert.equal(reverse.reasons[0].reason, "osm-oneway");
+
+  const accessEdgeLookup = new Map([
+    ["access", { bicycleTraversal: {
+      reverse: "prohibited",
+      reverseReason: "explicit-access-prohibited",
+    } }],
+  ]);
+  const accessReverse = validateDirectionReviewAlignment({
+    segmentId: 99,
+    alignmentKey: "bToA",
+    edgeRefs: [{ edgeId: "access", direction: "reverse" }],
+    edgeLookup: accessEdgeLookup,
+  });
+  assert.equal(accessReverse.ok, true);
+  assert.deepEqual(accessReverse.policyPrecedence, [{
+    edgeId: "access",
+    direction: "reverse",
+    baseState: "prohibited",
+    baseReason: "explicit-access-prohibited",
+    effectiveState: "allowed",
+    reason: "accepted-cw-alignment",
+  }]);
+
+  const partialReverse = validateDirectionReviewAlignment({
+    segmentId: 99,
+    alignmentKey: "bToA",
+    edgeRefs: [{ edgeId: "access", direction: "reverse", fromFraction: 0.2, toFraction: 0.8 }],
+    edgeLookup: accessEdgeLookup,
+  });
+  assert.equal(partialReverse.ok, false);
+  assert.equal(partialReverse.reasons[0].reason, "cw-precedence-requires-full-edge");
+
+  const unknown = validateDirectionReviewAlignment({
+    segmentId: 99,
+    alignmentKey: "bToA",
+    edgeRefs: [{ edgeId: "unknown", direction: "reverse" }],
+    edgeLookup: new Map([["unknown", { bicycleTraversal: { reverse: "unknown" } }]]),
+  });
+  assert.equal(unknown.ok, false, "unknown evidence remains fail-closed");
 }
 
 {

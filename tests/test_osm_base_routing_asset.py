@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from processing.build_map import (
+    apply_accepted_cw_traversal_precedence,
     build_base_routing_asset,
     build_base_routing_shards,
     build_public_cw_base_index,
@@ -23,6 +24,34 @@ def write_json(path: Path, value):
 
 
 class BaseRoutingAssetTests(unittest.TestCase):
+    def test_accepted_cw_alignment_precedence_is_direction_scoped(self):
+        traversal = {
+            "policyId": "il-bicycle-v1",
+            "policyDigest": "digest",
+            "forward": "prohibited",
+            "reverse": "conditional",
+            "forwardReason": "explicit-access-prohibited",
+            "reverseReason": "conditional-access",
+        }
+        effective = apply_accepted_cw_traversal_precedence(
+            traversal,
+            {
+                "forward": [{"segmentId": 19, "alignmentKey": "aToB"}],
+                "reverse": [],
+            },
+        )
+        self.assertEqual(effective["forward"], "allowed")
+        self.assertEqual(effective["forwardReason"], "accepted-cw-alignment")
+        self.assertEqual(effective["forwardBaseState"], "prohibited")
+        self.assertEqual(effective["reverse"], "conditional")
+        self.assertEqual(traversal["forward"], "prohibited", "source policy must not be mutated")
+
+        unknown = apply_accepted_cw_traversal_precedence(
+            {**traversal, "forward": "unknown"},
+            {"forward": [{"segmentId": 19}], "reverse": []},
+        )
+        self.assertEqual(unknown["forward"], "unknown")
+
     def test_validate_outputs_flags_active_placeholder_segment_names(self):
         def segment(segment_id, status="active", deprecated=False):
             return {
@@ -203,6 +232,7 @@ class BaseRoutingAssetTests(unittest.TestCase):
                             "tags": {
                                 "highway": "residential",
                                 "osmRouteClass": "local_road",
+                                "bicycle": "no",
                             },
                         }
                     ],
@@ -272,6 +302,9 @@ class BaseRoutingAssetTests(unittest.TestCase):
             self.assertNotIn("cwSegmentIds", edge)
             self.assertEqual(edge["bicycleTraversal"]["forward"], "allowed")
             self.assertEqual(edge["bicycleTraversal"]["reverse"], "allowed")
+            self.assertEqual(edge["bicycleTraversal"]["forwardReason"], "accepted-cw-alignment")
+            self.assertEqual(edge["bicycleTraversal"]["reverseReason"], "accepted-cw-alignment")
+            self.assertEqual(edge["bicycleTraversal"]["forwardBaseState"], "prohibited")
             self.assertEqual(edge["cwAlignments"]["forward"][0]["alignmentKey"], "aToB")
             self.assertEqual(edge["cwAlignments"]["reverse"][0]["alignmentKey"], "bToA")
             self.assertEqual(validation["routingProfile"], "staged-v2")

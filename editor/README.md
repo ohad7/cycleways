@@ -83,10 +83,16 @@ local file, `MAPBOX_TOKEN`/`CYCLEWAYS_MAPBOX_TOKEN` in the server environment, o
 - Delete the selected vertex on legacy segments when the segment still has at least two coordinates.
 - Split a legacy segment at a selected internal vertex. Edge-picked segments split at an edge boundary (Split at edge boundary in the side panel).
 - Use the Segments workspace for canonical CycleWays source edits.
-- Use the Base Graph workspace to stage manual base edges on top of the read-only
-  OSM graph. Manual edges can be created, selected, reshaped by dragging vertices,
-  edited with Insert/Delete, split at an internal vertex, and folded into the graph
-  with Recalculate Graph + Matches. OSM graph edges can be selected for inspection
+- Use the Base Network workspace in its default **Explore** mode to visualize
+  and inspect the full base graph without changing data. Map views include raw
+  `bicycle=no`, normalized two-way prohibitions, conditional traversal,
+  manual edges, and reviewed overrides. Results are grouped by source OSM way,
+  show their CycleWays relationships, and can be searched by edge or OSM way ID.
+- Switch Base Network to **Edit / review** to stage manual base edges on top of
+  the read-only OSM graph or save a reviewed traversal override. Manual edges
+  can be created, selected, reshaped by dragging vertices, edited with
+  Insert/Delete, split at an internal vertex, and folded into the graph with
+  Recalculate Graph + Matches. OSM graph edges can be selected for inspection
   and copied into editable manual edges.
 - Use the CW Overlay workspace to inspect the selected segment's OSM graph match,
   accept auto matches, or click base graph edges to choose the saved mapping in

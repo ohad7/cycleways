@@ -33,6 +33,55 @@ const traversal = (forward, reverse) => ({
   assert.equal(validation.violations[0].state, "conditional");
 }
 
+{
+  const edge = {
+    id: "cw-restricted",
+    bicycleTraversal: {
+      ...traversal("prohibited", "conditional"),
+      forwardReason: "explicit-access-prohibited",
+      reverseReason: "explicit-access-conditional",
+    },
+    cwAlignments: {
+      forward: [{ segmentId: 19, alignmentKey: "aToB" }],
+      reverse: [{ segmentId: 19, alignmentKey: "bToA" }],
+    },
+  };
+  const forward = bicycleTraversalVerdict(edge, 0, 100, policy);
+  assert.equal(forward.allowed, true);
+  assert.equal(forward.reason, "accepted-cw-alignment");
+  assert.equal(forward.baseState, "prohibited");
+  const reverse = bicycleTraversalVerdict(edge, 100, 0, policy);
+  assert.equal(reverse.allowed, true);
+  assert.equal(reverse.baseState, "conditional");
+
+  edge.bicycleTraversal.reverse = "unknown";
+  assert.equal(
+    bicycleTraversalVerdict(edge, 100, 0, policy).allowed,
+    false,
+    "accepted CW membership must not convert unknown policy evidence",
+  );
+  edge.cwAlignments.forward = [];
+  assert.equal(
+    bicycleTraversalVerdict(edge, 0, 100, policy).allowed,
+    false,
+    "CW precedence is scoped to the accepted traversal direction",
+  );
+
+  const oneWay = {
+    id: "cw-oneway",
+    bicycleTraversal: {
+      ...traversal("allowed", "prohibited"),
+      reverseReason: "osm-oneway",
+    },
+    cwAlignments: { forward: [], reverse: [{ segmentId: 174, alignmentKey: "bToA" }] },
+  };
+  assert.equal(
+    bicycleTraversalVerdict(oneWay, 100, 0, policy).allowed,
+    false,
+    "accepted CW membership must not override one-way direction evidence",
+  );
+}
+
 const manager = new RouteManager();
 await manager.load(
   { type: "FeatureCollection", features: [] },

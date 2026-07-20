@@ -15,6 +15,7 @@ public runtime outputs into deterministic paths:
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import math
@@ -78,6 +79,64 @@ ROUTING_COMPAT_DIR = Path(__file__).resolve().parents[1] / "data" / "routing-com
 BASE_ROUTING_SHARD_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_MANIFEST_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_SIZE_DEGREES = 0.05
+
+
+def full_base_edge_ref(ref: dict[str, Any]) -> bool:
+    try:
+        from_fraction = float(ref.get("fromFraction", 0))
+        to_fraction = float(ref.get("toFraction", 1))
+    except (TypeError, ValueError):
+        return False
+    return (
+        abs(min(from_fraction, to_fraction)) <= 1e-9
+        and abs(max(from_fraction, to_fraction) - 1) <= 1e-9
+    )
+
+
+def cw_access_precedence_eligible(state: Any, reason: Any) -> bool:
+    return (
+        (state == "prohibited" and reason == "explicit-access-prohibited")
+        or (state == "conditional" and reason == "explicit-access-conditional")
+    )
+
+
+def apply_accepted_cw_traversal_precedence(
+    traversal: dict[str, Any],
+    alignments: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    effective = copy.deepcopy(traversal)
+    for direction in ("forward", "reverse"):
+        memberships = alignments.get(direction) if isinstance(alignments, dict) else []
+        base_state = effective.get(direction)
+        base_reason = effective.get(f"{direction}Reason") or "normalized-policy"
+        if (
+            not memberships
+            or not cw_access_precedence_eligible(base_state, base_reason)
+        ):
+            continue
+        effective[f"{direction}BaseState"] = base_state
+        effective[f"{direction}BaseReason"] = base_reason
+        effective[direction] = "allowed"
+        effective[f"{direction}Reason"] = "accepted-cw-alignment"
+        trace = effective.get("trace")
+        if isinstance(trace, dict) and isinstance(trace.get(direction), list):
+            trace[direction].append(
+                {
+                    "stage": "cycleways",
+                    "selected": "accepted-v2-alignment",
+                    "baseState": base_state,
+                    "baseReason": base_reason,
+                    "segmentIds": sorted(
+                        {
+                            int(value.get("segmentId"))
+                            for value in memberships
+                            if isinstance(value, dict)
+                            and isinstance(value.get("segmentId"), int)
+                        }
+                    ),
+                }
+            )
+    return effective
 BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION = 2
 BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION = 3
 BASE_ROUTING_COMPACT_SHARD_MAGIC = b"CWBS1"
@@ -2256,6 +2315,8 @@ def build_base_routing_asset(
                         "segmentId": segment_id,
                         "alignmentKey": mapping.get("alignmentKey"),
                         "mappingDigest": mapping.get("mappingDigest"),
+                        "fromFraction": float(edge_ref.get("fromFraction", 0)),
+                        "toFraction": float(edge_ref.get("toFraction", 1)),
                     }
                 )
                 edge_tags = (
@@ -2275,16 +2336,31 @@ def build_base_routing_asset(
                         manual=edge_tags,
                     )
                 )
-                if edge_policy[direction] != "allowed":
+                base_state = edge_policy[direction]
+                base_reason = edge_policy[f"{direction}Reason"]
+                access_precedence_eligible = cw_access_precedence_eligible(
+                    base_state,
+                    base_reason,
+                )
+                precedence_eligible = access_precedence_eligible and full_base_edge_ref(edge_ref)
+                if base_state != "allowed" and not precedence_eligible:
                     blockers.append(
                         {
                             "segmentId": segment_id,
                             "alignmentKey": mapping.get("alignmentKey"),
                             "edgeId": edge_id,
                             "direction": direction,
-                            "state": edge_policy[direction],
-                            "reason": edge_policy[f"{direction}Reason"],
-                            "issue": "accepted V2 alignment contains a non-allowed traversal",
+                            "state": base_state,
+                            "reason": (
+                                "cw-precedence-requires-full-edge"
+                                if access_precedence_eligible
+                                else base_reason
+                            ),
+                            "issue": (
+                                "accepted V2 alignment needs a base-edge split before CW precedence"
+                                if access_precedence_eligible
+                                else "accepted V2 alignment contains a non-allowed traversal"
+                            ),
                         }
                     )
                     has_edge_ref_blocker = True
@@ -2502,7 +2578,6 @@ def build_base_routing_asset(
             "roadType": tags.get("roadType"),
         }
         if routing_profile == "staged-v2":
-            runtime_edge["bicycleTraversal"] = traversal_shadow
             runtime_edge["cwAlignments"] = {
                 direction: sorted(
                     owners_by_directed_edge.get((edge["id"], direction), []),
@@ -2510,6 +2585,10 @@ def build_base_routing_asset(
                 )
                 for direction in ("forward", "reverse")
             }
+            runtime_edge["bicycleTraversal"] = apply_accepted_cw_traversal_precedence(
+                traversal_shadow,
+                runtime_edge["cwAlignments"],
+            )
         else:
             runtime_edge["cwSegmentIds"] = sorted(
                 set(owners_by_edge_id.get(edge["id"], []))

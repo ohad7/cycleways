@@ -24,7 +24,7 @@
 
           <div class="workspace-tabs" role="group" aria-label="Editor mode">
             <button id="workspace-segments" class="tool-button active" type="button">Segments</button>
-            <button id="workspace-base" class="tool-button" type="button">Base Graph</button>
+            <button id="workspace-base" class="tool-button" type="button">Base Network</button>
             <button id="workspace-overlay" class="tool-button" type="button">CW Overlay</button>
             <button id="workspace-roundabouts" class="tool-button" type="button">Roundabouts</button>
             <button id="workspace-crossings" class="tool-button" type="button">Crossings</button>
@@ -135,21 +135,65 @@
 
           <section id="base-graph-panel" class="panel workspace-panel" hidden>
             <header class="panel-header">
-              <h2>Base Graph</h2>
+              <h2>Base Network</h2>
               <span id="base-graph-status">Not loaded</span>
             </header>
 
-            <div id="base-graph-summary" class="base-overlay-summary">
-              <div class="empty-state">Switch to Base Graph mode to edit manual base edges.</div>
+            <div class="base-network-mode" role="group" aria-label="Base Network mode">
+              <button id="base-network-mode-explore" class="secondary-button active" type="button">Explore</button>
+              <button id="base-network-mode-edit" class="secondary-button" type="button">Edit / review</button>
             </div>
 
-            <label class="field-label" for="base-edge-search">Find base edge by ID</label>
+            <section class="base-network-explorer" aria-labelledby="base-network-explorer-title">
+              <div class="base-network-explorer-heading">
+                <h3 id="base-network-explorer-title">Map view</h3>
+                <button id="base-network-reset" class="mini-button" type="button">Reset</button>
+              </div>
+
+              <div class="base-network-control-grid">
+                <label class="field-label" for="base-network-preset">
+                  Show
+                  <select id="base-network-preset" class="text-input compact-select">
+                    <option value="all">All base edges</option>
+                    <option value="bicycle_no">Raw bicycle=no</option>
+                    <option value="prohibited_both">Blocked both directions</option>
+                    <option value="conditional">Conditional</option>
+                    <option value="manual">Manual edges</option>
+                    <option value="reviewed_overrides">Reviewed OSM overrides</option>
+                  </select>
+                </label>
+                <label class="field-label" for="base-network-theme">
+                  Color by
+                  <select id="base-network-theme" class="text-input compact-select">
+                    <option value="traversal">Bicycle traversal</option>
+                    <option value="raw_access">Raw bicycle/access</option>
+                    <option value="source">Source</option>
+                    <option value="neutral">Neutral</option>
+                    <option value="connector">Connector lens</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="checkbox-row base-network-cw-toggle" for="base-network-show-cycleways">
+                <input id="base-network-show-cycleways" type="checkbox" checked />
+                Show CycleWays overlay
+              </label>
+              <div id="base-network-legend" class="base-network-legend" aria-label="Active map legend"></div>
+              <p id="base-network-map-summary" class="base-overlay-bulk-summary">Load the graph to explore its data.</p>
+              <div id="base-network-results" class="base-network-results"></div>
+            </section>
+
+            <div id="base-graph-summary" class="base-overlay-summary">
+              <div class="empty-state">Switch to Base Network to load the graph.</div>
+            </div>
+
+            <label class="field-label" for="base-edge-search">Find base edge or OSM way</label>
             <div class="base-edge-search-row">
               <input
                 id="base-edge-search"
                 class="text-input"
                 type="search"
-                placeholder="e1024904326_1 or manual-edge-id"
+                placeholder="e1024904326_1, manual edge, or OSM way ID"
                 autocomplete="off"
                 autocapitalize="off"
                 spellcheck="false"
@@ -169,7 +213,7 @@
               <p id="base-one-way-direction-summary" class="base-overlay-bulk-summary"></p>
             </div>
 
-            <div class="action-row base-overlay-actions">
+            <div id="base-network-edit-actions" class="action-row base-overlay-actions">
               <button id="new-manual-base-edge" class="primary-button" type="button" disabled>New Edge</button>
               <button id="clone-base-graph-edge" class="secondary-button" type="button" disabled>Copy Selected</button>
               <button id="delete-manual-base-edge" class="secondary-button danger" type="button" disabled>Delete</button>
@@ -230,10 +274,10 @@
               <p id="manual-edge-direction-status" class="base-overlay-bulk-summary"></p>
             </fieldset>
 
-            <button id="recalculate-osm-graph" class="secondary-button base-overlay-bulk-button" type="button" disabled>
+            <button id="recalculate-osm-graph" class="secondary-button base-overlay-bulk-button base-network-edit-only" type="button" disabled>
               Recalculate Graph + Matches
             </button>
-            <button id="refresh-direction-review" class="primary-button base-overlay-bulk-button" type="button" disabled>
+            <button id="refresh-direction-review" class="primary-button base-overlay-bulk-button base-network-edit-only" type="button" disabled>
               Rebuild graph + refresh V2 evidence
             </button>
             <p id="base-graph-help" class="base-overlay-bulk-summary">Manual edges are stored separately from OSM.</p>

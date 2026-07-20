@@ -3,13 +3,39 @@
 **Date:** 2026-07-13  
 **Status:** accepted design — implementation in progress
 
+## 2026-07-20 amendment — accepted CW alignment is access evidence
+
+The earlier rule that “CycleWays ownership never grants access” is superseded.
+After reviewing segment #19 against the base network, a published, accepted V2
+CycleWays alignment is now stronger local evidence of bicycle access than the
+base-edge `explicit-access-prohibited` or `explicit-access-conditional`
+classification. Directionality and manual-review reasons are not overridden.
+
+This is deliberately narrower than an “ignore restrictions” switch:
+
+- precedence exists only for the exact accepted V2 traversal direction;
+- the alignment must cover the full base edge; a partial restricted edge must
+  first be split at the CW boundary;
+- legacy undirected membership and unaccepted drafts grant no access;
+- `prohibited`/`conditional` caused by those explicit access reasons may become
+  effectively `allowed`, retaining their base state/reason as provenance;
+- `unknown` remains fail-closed and is omitted from the current map-review
+  preset; and
+- non-CW routing continues to enforce the base policy unchanged.
+
+This makes `e57116180_1` eligible in both directions only after segment #19's
+two directional alignments are accepted. It does not open `e55788838_2`, which
+currently has no accepted CW alignment, and it does not let partial CW coverage
+open the remainder of a restricted edge.
+
 ## Summary
 
 CycleWays must treat bicycle traversal rules as a graph invariant, not as a
 route preference. Every route used for planning or navigation must be composed
-only of directed edge traversals permitted by one versioned policy. CycleWays
-membership, route cost, snapping preference, saved geometry, and a shared token
-may never widen that permission.
+only of directed edge traversals permitted by one versioned policy. Route cost,
+snapping preference, saved geometry, and a shared token may never widen that
+permission. The only CW exception is the reviewed, full-edge,
+direction-specific precedence defined above.
 
 The first rollout will:
 
@@ -202,12 +228,13 @@ edge anchors, so its recovery is best-effort: a missing V6 edge produces a
 clear unavailable result. A future token may add compact fallback coordinates,
 but no token-format bump is required to stop forbidden replay.
 
-### No consumer override
+### No end-user override
 
 The public planner and navigation UI will not offer “ignore one-way” or “route
 through restricted access.” A source correction may override OSM only through
-reviewed repository data with evidence and provenance. CycleWays membership is
-never such an override by itself.
+reviewed repository data with evidence and provenance. A published accepted V2
+alignment is such reviewed repository evidence; legacy membership, a draft, or
+a route request is not.
 
 ### Phase 1 is riding-only
 
@@ -435,10 +462,13 @@ Each direction is normalized to one of:
 - `unknown` — tags conflict, use an unsupported value, or lack required
   reviewed metadata.
 
-Consumer planning routes only through `allowed`. `conditional` and `unknown`
-are not silently converted to allowed. Missing tags are not automatically
-unknown: the versioned default-policy predicates must explicitly cover the
-source tag combination. An unmatched combination resolves to `unknown`.
+Consumer planning routes only through the effective `allowed` state. Base
+`explicit-access-prohibited` or `explicit-access-conditional` becomes
+effectively allowed only for a full-edge, direction-specific published V2
+alignment. One-way, roundabout, manual-reviewed, and `unknown` evidence is never converted to
+allowed. Missing tags are not automatically unknown: the versioned
+default-policy predicates must explicitly cover the source tag combination. An
+unmatched combination resolves to `unknown`.
 
 The build representation is descriptive:
 
@@ -532,11 +562,16 @@ Migration is an editor-owned, reviewable process rather than a bulk JSON rewrite
 3. **Place the existing sequence.** Compare its oriented endpoints with the
    logical endpoints and wrap it as either `aToB` or `bToA`. Revalidate every
    directed traversal, continuity, length, source-corridor coverage, and
-   direction-scoped ownership. A forbidden or unknown traversal downgrades that
-   alignment to `needs_review`; prior acceptance never overrides policy.
+   direction-scoped ownership. `unknown` and partial restricted traversals
+   downgrade the alignment to `needs_review`. A full-edge `prohibited` or
+   `conditional` traversal is reviewable with explicit CW-precedence evidence;
+   it becomes effective only when its reason is explicit access and the curator
+   accepts that direction. One-way and manual-review restrictions remain
+   blocking.
 4. **Propose the other direction.** First test an exact `reverseOf` candidate.
    Accepting that candidate is possible only when every reversed traversal is
-   allowed. Otherwise a direction-aware corridor matcher may propose a complete
+   base-allowed or is a full-edge explicit-access `prohibited`/`conditional` traversal the
+   curator explicitly accepts under CW precedence. Otherwise a direction-aware corridor matcher may propose a complete
    alternate base-edge sequence between the endpoint zones. It must search the
    permitted graph; it may not copy CW ownership to a nearby carriageway or
    replace only the visibly problematic edge.
@@ -552,7 +587,7 @@ Migration is an editor-owned, reviewable process rather than a bulk JSON rewrite
    it, or explicitly marks that direction unavailable with a rationale and
    evidence. Unambiguous symmetric candidates can be bulk-accepted only through
    an explicit editor action that records the migration batch and reviewer;
-   asymmetric, invalid, manual, conditional, and unknown cases are reviewed
+   asymmetric, invalid, manual, CW-precedence, and unknown cases are reviewed
    individually.
 7. **Close consumer impact.** Every catalog route and saved fixture using a
    changed alignment is regenerated and accepted, withdrawn, or made
@@ -979,10 +1014,12 @@ remotely fixed.
 
 The central verdict is applied defensively at every boundary below.
 
-1. **Network merge / adjacency:** add only allowed forward and reverse full-edge
-   entries.
-2. **Traversal cost:** reject a prohibited, conditional, or unknown traversal
-   before planner cost, connector cost, uphill cost, or endpoint exceptions.
+1. **Network merge / adjacency:** project base policy plus accepted V2
+   direction ownership into one effective traversal state, then add only
+   effective-allowed forward and reverse entries.
+2. **Traversal cost:** reject an effectively prohibited, conditional, or
+   unknown traversal before planner cost, connector cost, uphill cost, or
+   endpoint exceptions.
 3. **CycleWays preference and attribution:** read CycleWays membership for the
    actual traversal direction. A segment's accepted alignment in the other
    direction cannot reduce cost, increase CycleWays distance, create a segment
@@ -995,9 +1032,9 @@ The central verdict is applied defensively at every boundary below.
 7. **Exact V4 replay and V5/V6 expansion:** validate every full and partial
    stored traversal, connectivity, direction count, endpoint edge, and finite
    cost before committing manager state.
-8. **Connector and rejoin:** evaluate hard traversal permission before
-   connector eligibility. CycleWays membership and `snapAnyEndpoint` may alter
-   connector preference, never hard permission.
+8. **Connector and rejoin:** evaluate the same effective traversal permission
+   before connector eligibility. Accepted directed V2 membership may provide
+   CW precedence; `snapAnyEndpoint` may alter preference but never permission.
 9. **Effective-route transformations:** clipping, reverse, alternate starts,
    loop rotation, approach composition, and rejoin preserve/split the attested
    traversal signature; no synthetic geometry-only seam is accepted.
@@ -1597,7 +1634,9 @@ parallel because their correctness does not depend on choosing a carriageway.
 - Consumer navigation has no restriction override.
 - Phase 1 routes riding only; walking-required and unevaluated conditional
   access are excluded.
-- CycleWays ownership never grants access.
+- A full-edge, direction-specific published V2 alignment grants reviewed CW
+  precedence over base explicit-access `prohibited` or `conditional`; drafts, legacy
+  membership, partial coverage, and `unknown` do not.
 - One logical CycleWays segment has two independently reviewed directional
   alignment slots; divided carriageways do not create duplicate product
   segments by themselves.

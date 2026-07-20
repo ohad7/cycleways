@@ -99,6 +99,55 @@ assert.equal(
   "opposite-alignment-required",
 );
 
+const cwPrecedence = buildMigrationProposal({
+  overlayV1,
+  publicIndexV1,
+  mapSource,
+  graph,
+  policyAudit: {
+    ...policyAudit,
+    queues: {
+      restricted: [{ edgeId: "east", direction: "reverse", state: "prohibited", reason: "explicit-access-prohibited" }],
+      conditional: [],
+      unknown: [],
+    },
+  },
+  graphDigest: "graph-digest",
+});
+assert.equal(cwPrecedence.report.classifications.symmetric_candidate, 1);
+assert.equal(
+  cwPrecedence.overlay.segments["7"].alignments.bToA.draft.candidate.kind,
+  "exact-reverse",
+);
+assert.equal(
+  cwPrecedence.overlay.segments["7"].alignments.bToA.draft.validation.policyPrecedence[0].reason,
+  "accepted-cw-alignment",
+);
+
+const partialOverlay = structuredClone(overlayV1);
+partialOverlay.segments["7"].edgeRefs[0].fromFraction = 0.2;
+partialOverlay.segments["7"].edgeRefs[0].toFraction = 0.8;
+const partialRestricted = buildMigrationProposal({
+  overlayV1: partialOverlay,
+  publicIndexV1,
+  mapSource,
+  graph,
+  policyAudit: {
+    ...policyAudit,
+    queues: {
+      restricted: [{ edgeId: "east", direction: "forward", state: "prohibited", reason: "explicit-access-prohibited" }],
+      conditional: [],
+      unknown: [],
+    },
+  },
+  graphDigest: "graph-digest",
+});
+assert.equal(partialRestricted.report.classifications.unresolved, 1);
+assert.equal(
+  partialRestricted.overlay.segments["7"].alignments.aToB.draft.validation.reasons[0].reason,
+  "cw-precedence-requires-full-edge",
+);
+
 const evidenceNeeded = buildMigrationProposal({
   overlayV1,
   publicIndexV1,

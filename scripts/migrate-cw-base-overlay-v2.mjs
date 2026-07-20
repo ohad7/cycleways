@@ -10,6 +10,10 @@ import {
   parseCwOverlayV2,
   serializeCwOverlayV2,
 } from "../editor/lib/cw-overlay-v2.mjs";
+import {
+  isCwAccessPrecedenceEligible,
+  isFullBaseEdgeRef,
+} from "../editor/lib/edge-pick.mjs";
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -105,6 +109,7 @@ function nonAllowedLookup(policyAudit) {
 function validateRefs(refs, graphById, policyLookup) {
   const reasons = [];
   const traversalStates = {};
+  const policyPrecedence = [];
   let previous = null;
   for (const [index, ref] of refs.entries()) {
     const edge = graphById.get(ref.edgeId);
@@ -116,13 +121,30 @@ function validateRefs(refs, graphById, policyLookup) {
     }
     const policy = policyLookup.get(`${ref.edgeId}|${ref.direction}`);
     traversalStates[`${index}:${ref.edgeId}`] = policy?.state || "allowed";
-    if (policy) {
+    if (
+      policy &&
+      isCwAccessPrecedenceEligible(policy.state, policy.reason) &&
+      isFullBaseEdgeRef(ref)
+    ) {
+      policyPrecedence.push({
+        edgeId: ref.edgeId,
+        direction: ref.direction,
+        baseState: policy.state,
+        baseReason: policy.reason,
+        effectiveState: "allowed",
+        reason: "accepted-cw-alignment",
+      });
+    } else if (policy) {
       reasons.push({
         code: "non_allowed_traversal",
         edgeId: ref.edgeId,
         direction: ref.direction,
         state: policy.state,
-        reason: policy.reason,
+        reason:
+          isCwAccessPrecedenceEligible(policy.state, policy.reason) &&
+          !isFullBaseEdgeRef(ref)
+            ? "cw-precedence-requires-full-edge"
+            : policy.reason,
       });
     }
     const endpoints = orientedRefEndpoints(edge, ref);
@@ -152,6 +174,7 @@ function validateRefs(refs, graphById, policyLookup) {
     status: reasons.length === 0 ? "valid" : "invalid",
     reasons,
     traversalStates,
+    policyPrecedence,
     terminals: first && last ? { start: first.start, end: last.end } : null,
   };
 }
@@ -333,6 +356,8 @@ export function buildMigrationProposal({
       mapping.status === "accepted_edge_set" &&
       mapping.source === "edge_pick" &&
       classification === "symmetric_candidate" &&
+      existingValidation.policyPrecedence.length === 0 &&
+      reverseValidation.policyPrecedence.length === 0 &&
       typeof mapping.updatedAt === "string" &&
       mapping.updatedAt.length >= 10
     ) {

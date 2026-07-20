@@ -27,6 +27,13 @@ for (const id of [
   "base-one-way-direction-summary",
   "base-edge-search",
   "find-base-edge",
+  "base-network-mode-explore",
+  "base-network-mode-edit",
+  "base-network-preset",
+  "base-network-theme",
+  "base-network-show-cycleways",
+  "base-network-map-summary",
+  "base-network-results",
   "direction-review-apply-symmetric-batch",
   "direction-review-queue-filter",
   "direction-review-queue-search",
@@ -62,6 +69,9 @@ for (const token of [
   "applySymmetricDirectionMigrationBatch",
   "refreshDirectionReviewEvidence",
   "toggleBaseOverlayEdgeEditing",
+  "renderBaseNetworkExplorerPanel",
+  "applyBaseNetworkMapPresentation",
+  "setBaseNetworkPreset",
 ]) {
   assert.match(editor, new RegExp(token), `editor wiring is missing ${token}`);
 }
