@@ -3,6 +3,27 @@
 **Date:** 2026-07-13  
 **Status:** accepted design — implementation in progress
 
+## 2026-07-20 amendment — local roundabout reverse repair
+
+When an otherwise valid alignment has no exact reverse solely because a
+contiguous roundabout arc would be traversed against circulation, Direction
+Review may propose a repaired reverse. The correction is deliberately local:
+it finds the permitted roundabout-only path between the same entry and exit
+nodes, splices that arc into the exact reverse, and leaves every non-roundabout
+edge unchanged.
+
+The proposal is eligible only when every exact-reverse blocker is
+`osm-roundabout-implied-oneway`, all blocked refs are roundabout edges, and the
+complete repaired alignment passes endpoint, continuity, traversal, access,
+and ownership validation. Mixed one-way-road failures remain manual. Multiple
+independent roundabout runs may be repaired, but unrestricted road-network
+routing is never used as an automatic correction.
+
+The editor exposes this as a distinct `roundabout-repaired-reverse` proposal,
+shows the removed and replacement counts, marks replacement edge rows, and
+keeps acceptance manual. A persistent guide explains exact reverse,
+roundabout repair, authoring revision, and manual-required proposal classes.
+
 ## 2026-07-20 amendment — accepted CW alignment is access evidence
 
 The earlier rule that “CycleWays ownership never grants access” is superseded.
@@ -1644,6 +1665,11 @@ parallel because their correctness does not depend on choosing a carriageway.
   actual directed alignment traversal.
 - Current CycleWays mappings are revalidated and curated through a resumable
   editor migration; an automatic candidate is never silently published.
+- When a legacy segment's current authoring mapping differs from the frozen V1
+  compatibility mapping, Direction Review proposes the current mapping as an
+  `authoring-v1-revision`. Refresh adopts that proposal only over untouched
+  automatic drafts; accepted, unavailable, and manually edited V2 decisions
+  remain protected.
 - Missing legacy shard policy is unknown, not two-way.
 - Exact reverse is permitted only when derived from current traversals.
 - Opposite-direction and return-to-start actions are new directed planning

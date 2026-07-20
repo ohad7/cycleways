@@ -1897,8 +1897,8 @@ function updateManualBaseEditSources() {
 }
 
 function updateSelectedOverlayEdgeSources() {
-  if (!map.getSource("selected-overlay-edges")) return;
-  map.getSource("selected-overlay-edges").setData(selectedOverlayEdgeCollection());
+  map.getSource("selected-overlay-edges")?.setData(selectedOverlayEdgeCollection());
+  map.getSource("direction-review-alignments")?.setData(directionReviewAlignmentCollection());
 }
 
 function renderVertexSelectionState() {
@@ -5870,6 +5870,65 @@ function directionReviewEvidenceSummary(ref) {
   return { traversal, raw: raw.join(" · ") || properties.source || "no raw tags" };
 }
 
+function directionReviewProposalExplanation(record) {
+  const candidate = record?.candidate || {};
+  const kind = candidate.kind || (record?.disposition === "accepted" ? "accepted" : "unreviewed");
+  if (kind === "roundabout-repaired-reverse") {
+    const repairs = candidate.repairs || [];
+    const blocked = repairs.reduce((total, repair) => total + (repair.blockedEdgeRefs?.length || 0), 0);
+    const replacements = repairs.reduce(
+      (total, repair) => total + (repair.replacementEdgeRefs?.length || 0),
+      0,
+    );
+    return {
+      label: "Roundabout reverse repair",
+      detail: `Automatic draft: ${blocked} backward roundabout edge${blocked === 1 ? "" : "s"} replaced by ${replacements} permitted edge${replacements === 1 ? "" : "s"} between the same entry and exit. The complete alignment passed validation; inspect it before accepting.`,
+    };
+  }
+  if (kind === "exact-reverse") {
+    return {
+      label: "Exact reverse",
+      detail: "Automatic draft: every edge and traversal direction is the mechanical reverse of the opposite alignment. The complete reverse passed validation.",
+    };
+  }
+  if (kind === "authoring-revision") {
+    return {
+      label: "Authoring revision",
+      detail: "Automatic draft imported from the newly recalculated base-edge mapping. Existing accepted and manually edited V2 decisions are never silently replaced.",
+    };
+  }
+  if (kind === "opposite-alignment-required") {
+    return {
+      label: "Manual direction required",
+      detail: "No safe narrow automatic correction passed validation. Create a directed mapping manually or mark this direction unavailable.",
+    };
+  }
+  if (kind === "manual-editor") {
+    return {
+      label: "Manual editor mapping",
+      detail: "This draft was edited directly. Revalidate the complete path before accepting it.",
+    };
+  }
+  if (["v1-existing", "new-authoring"].includes(kind)) {
+    return {
+      label: kind === "v1-existing" ? "Existing V1 mapping" : "New authoring mapping",
+      detail: "Imported mapping awaiting direction-specific validation and review.",
+    };
+  }
+  if (["previous-draft", "previously-published"].includes(kind)) {
+    return {
+      label: "Preserved previous mapping",
+      detail: "Refresh preserved this earlier decision as a draft and revalidated it against the current graph and policy.",
+    };
+  }
+  return {
+    label: kind === "accepted" ? "Accepted mapping" : "Unreviewed mapping",
+    detail: kind === "accepted"
+      ? "This direction has been accepted."
+      : "No automatic proposal method is recorded for this direction.",
+  };
+}
+
 function renderDirectionReviewEdges(segment, alignmentKey, record) {
   els.directionReviewEdges.innerHTML = "";
   const refs = directionReviewRefsForRecord(segment, alignmentKey, record);
@@ -5877,6 +5936,13 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
     els.directionReviewEdges.innerHTML = '<div class="empty-state">No physical alignment is mapped for this direction.</div>';
     return refs;
   }
+  const repairedEdgeKeys = new Set(
+    (record?.candidate?.repairs || []).flatMap((repair) =>
+      (repair.replacementEdgeRefs || []).map(
+        (ref) => `${String(ref.edgeId)}|${ref.direction === "reverse" ? "reverse" : "forward"}`,
+      ),
+    ),
+  );
   for (const [index, ref] of refs.entries()) {
     const evidence = directionReviewEvidenceSummary(ref);
     const precedenceApplies =
@@ -5887,6 +5953,9 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
             String(item.edgeId) === String(ref.edgeId) &&
             item.direction === (ref.direction === "reverse" ? "reverse" : "forward"),
         ));
+    const roundaboutRepaired = repairedEdgeKeys.has(
+      `${String(ref.edgeId)}|${ref.direction === "reverse" ? "reverse" : "forward"}`,
+    );
     const row = document.createElement("div");
     row.className = "direction-review-edge";
     row.dataset.edgeId = String(ref.edgeId);
@@ -5894,7 +5963,7 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
       <span class="direction-review-edge-sequence">${index + 1}</span>
       <span class="direction-review-edge-main">
         <strong>${escapeHtml(String(ref.edgeId))} · ${escapeHtml(ref.direction === "reverse" ? "reverse" : "forward")}</strong>
-        <small><span class="direction-review-edge-state ${escapeHtml(evidence.traversal.state)}">${escapeHtml(evidence.traversal.state)}</span> · ${escapeHtml(evidence.traversal.reason)} · ${escapeHtml(evidence.raw)}${precedenceApplies ? " · accepted CW alignment will take precedence" : ""}</small>
+        <small><span class="direction-review-edge-state ${escapeHtml(evidence.traversal.state)}">${escapeHtml(evidence.traversal.state)}</span> · ${escapeHtml(evidence.traversal.reason)} · ${escapeHtml(evidence.raw)}${precedenceApplies ? " · accepted CW alignment will take precedence" : ""}${roundaboutRepaired ? " · roundabout auto-repair" : ""}</small>
       </span>
       <span class="direction-review-edge-buttons"></span>`;
     const buttons = row.querySelector(".direction-review-edge-buttons");
@@ -6003,6 +6072,7 @@ function renderDirectionReview(segmentId) {
     : "direction-review-state-invalid";
   const endpointDistances = validation?.endpointDistancesMeters;
   const precedenceCount = validation?.policyPrecedence?.length || 0;
+  const proposalExplanation = directionReviewProposalExplanation(record);
   els.directionReviewSummary.innerHTML = `
     <dl class="base-overlay-metrics">
       <div><dt>Logical segment</dt><dd>${escapeHtml(segment.segmentName)} (#${segment.segmentId})</dd></div>
@@ -6015,7 +6085,11 @@ function renderDirectionReview(segmentId) {
       ${endpointDistances ? `<div><dt>Endpoint drift</dt><dd>${Math.round(endpointDistances.start)}m start · ${Math.round(endpointDistances.end)}m end</dd></div>` : ""}
       ${precedenceCount ? `<div><dt>CW precedence</dt><dd>${precedenceCount} restricted/conditional directed edge${precedenceCount === 1 ? "" : "s"} will become allowed only after this alignment is accepted</dd></div>` : ""}
       ${reasonList ? `<div><dt>Blocking evidence</dt><dd>${escapeHtml(reasonList)}</dd></div>` : ""}
-    </dl>`;
+    </dl>
+    <div class="direction-review-proposal-callout">
+      <strong>Proposal method: ${escapeHtml(proposalExplanation.label)}</strong>
+      <span>${escapeHtml(proposalExplanation.detail)}</span>
+    </div>`;
   const writable =
     !review.busy &&
     !review.applying &&
@@ -8735,8 +8809,11 @@ async function refreshDirectionReviewEvidence() {
     const sourceRebaseText = Number(preserved.rebasedSourceChanges || 0) > 0
       ? ` ${Number(preserved.rebasedSourceChanges)} source-changed segment${Number(preserved.rebasedSourceChanges) === 1 ? "" : "s"} rebased without losing mappings.`
       : "";
+    const authoringRevisionText = Number(preserved.adoptedAuthoringRevisions || 0) > 0
+      ? ` ${Number(preserved.adoptedAuthoringRevisions)} recalculated authoring mapping${Number(preserved.adoptedAuthoringRevisions) === 1 ? "" : "s"} adopted into Direction Review.`
+      : "";
     setStatus(
-      `Direction Review evidence refreshed. ${Number(preserved.publishedAsDraft || 0)} accepted alignment${Number(preserved.publishedAsDraft || 0) === 1 ? "" : "s"} moved back to reviewed drafts; ${Number(preserved.drafts || 0)} working draft${Number(preserved.drafts || 0) === 1 ? "" : "s"} and ${Number(preserved.unavailable || 0)} unavailable decision${Number(preserved.unavailable || 0) === 1 ? "" : "s"} preserved.${sourceRebaseText}`,
+      `Direction Review evidence refreshed. ${Number(preserved.publishedAsDraft || 0)} accepted alignment${Number(preserved.publishedAsDraft || 0) === 1 ? "" : "s"} moved back to reviewed drafts; ${Number(preserved.drafts || 0)} working draft${Number(preserved.drafts || 0) === 1 ? "" : "s"} and ${Number(preserved.unavailable || 0)} unavailable decision${Number(preserved.unavailable || 0) === 1 ? "" : "s"} preserved.${sourceRebaseText}${authoringRevisionText}`,
     );
   } finally {
     state.directionReview.busy = false;

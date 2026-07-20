@@ -78,6 +78,38 @@ assert.equal(
   "exact-reverse",
 );
 
+const revisedAuthoringOverlay = structuredClone(overlayV1);
+revisedAuthoringOverlay.segments["7"] = {
+  ...revisedAuthoringOverlay.segments["7"],
+  source: "changed_queue_auto_match",
+  updatedAt: "2026-07-20T12:00:00.000Z",
+  edgeRefs: [
+    { edgeId: "new-east", direction: "forward", sequenceIndex: 0, fromFraction: 0, toFraction: 1 },
+  ],
+};
+const withLegacyAuthoringRevision = buildMigrationProposal({
+  overlayV1,
+  authoringOverlayV1: revisedAuthoringOverlay,
+  publicIndexV1,
+  mapSource,
+  graph,
+  policyAudit,
+  graphDigest: "graph-digest",
+});
+assert.equal(withLegacyAuthoringRevision.report.authoringRevisedSegments, 1);
+assert.equal(
+  withLegacyAuthoringRevision.overlay.segments["7"].migration.sourceMappingOrigin,
+  "authoring-v1-revision",
+);
+assert.equal(
+  withLegacyAuthoringRevision.overlay.segments["7"].alignments.aToB.draft.candidate.kind,
+  "authoring-revision",
+);
+assert.equal(
+  withLegacyAuthoringRevision.overlay.segments["7"].alignments.aToB.draft.realization.edgeRefs[0].edgeId,
+  "new-east",
+);
+
 const blocked = buildMigrationProposal({
   overlayV1,
   publicIndexV1,
@@ -97,6 +129,77 @@ assert.equal(blocked.report.classifications.single_direction_candidate, 1);
 assert.equal(
   blocked.overlay.segments["7"].alignments.bToA.draft.candidate.kind,
   "opposite-alignment-required",
+);
+
+const roundaboutGraph = {
+  edges: [
+    { id: "approach", fromNodeId: "a", toNodeId: "r0", coordinates: [[35, 33], [35.001, 33]], tags: { highway: "residential" } },
+    { id: "r1", fromNodeId: "r0", toNodeId: "r1", coordinates: [[35.001, 33], [35.001, 33.001]], tags: { highway: "tertiary", junction: "roundabout", osmId: 1001 } },
+    { id: "r2", fromNodeId: "r1", toNodeId: "r2", coordinates: [[35.001, 33.001], [35.002, 33.001]], tags: { highway: "tertiary", junction: "roundabout", osmId: 1001 } },
+    { id: "r3", fromNodeId: "r2", toNodeId: "r3", coordinates: [[35.002, 33.001], [35.002, 33]], tags: { highway: "tertiary", junction: "roundabout", osmId: 1001 } },
+    { id: "r4", fromNodeId: "r3", toNodeId: "r0", coordinates: [[35.002, 33], [35.001, 33]], tags: { highway: "tertiary", junction: "roundabout", osmId: 1001 } },
+    { id: "exit", fromNodeId: "r2", toNodeId: "b", coordinates: [[35.002, 33.001], [35.003, 33.001]], tags: { highway: "residential" } },
+  ],
+};
+const roundaboutOverlay = {
+  schemaVersion: 1,
+  segments: {
+    "10": {
+      segmentId: 10,
+      segmentName: "Roundabout route",
+      status: "accepted_edge_set",
+      edgeRefs: ["approach", "r1", "r2", "exit"].map((edgeId, sequenceIndex) => ({
+        edgeId,
+        direction: "forward",
+        sequenceIndex,
+        fromFraction: 0,
+        toFraction: 1,
+      })),
+    },
+  },
+};
+const roundaboutPolicy = {
+  ...policyAudit,
+  queues: {
+    restricted: ["r1", "r2", "r3", "r4"].map((edgeId) => ({
+      edgeId,
+      direction: "reverse",
+      state: "prohibited",
+      reason: "osm-roundabout-implied-oneway",
+    })),
+    conditional: [],
+    unknown: [],
+  },
+};
+const roundaboutRepair = buildMigrationProposal({
+  overlayV1: roundaboutOverlay,
+  publicIndexV1: { schemaVersion: 1, segments: { "10": [[10, 0]] } },
+  mapSource: {
+    features: [{
+      type: "Feature",
+      properties: { id: 10, name: "Roundabout route", status: "active" },
+      geometry: { type: "LineString", coordinates: [[35, 33], [35.003, 33.001]] },
+    }],
+  },
+  graph: roundaboutGraph,
+  policyAudit: roundaboutPolicy,
+  graphDigest: "roundabout-graph",
+});
+const repairedReverse = roundaboutRepair.overlay.segments["10"].alignments.bToA.draft;
+assert.equal(roundaboutRepair.report.classifications.roundabout_reverse_candidate, 1);
+assert.equal(repairedReverse.candidate.kind, "roundabout-repaired-reverse");
+assert.equal(repairedReverse.validation.status, "valid");
+assert.deepEqual(
+  repairedReverse.realization.edgeRefs.map(({ edgeId, direction }) => [edgeId, direction]),
+  [["exit", "reverse"], ["r3", "forward"], ["r4", "forward"], ["approach", "reverse"]],
+);
+assert.deepEqual(
+  repairedReverse.candidate.repairs[0].blockedEdgeRefs.map(({ edgeId }) => edgeId),
+  ["r2", "r1"],
+);
+assert.deepEqual(
+  repairedReverse.candidate.repairs[0].replacementEdgeRefs.map(({ edgeId }) => edgeId),
+  ["r3", "r4"],
 );
 
 const cwPrecedence = buildMigrationProposal({

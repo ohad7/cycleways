@@ -65000,6 +65000,39 @@
       "type": "Feature",
       "properties": {
         "id": 146,
+        "name": "רחוב הנרייטה סאלד [split archive 146]",
+        "status": "deprecated",
+        "roadType": "paved",
+        "styleUrl": "#sty-133",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "רחוב הנרייטה סאלד",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.573173,
+            33.199528
+          ],
+          [
+            35.569664,
+            33.200778
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 361,
         "name": "רחוב הנרייטה סאלד",
         "status": "active",
         "roadType": "paved",
@@ -65013,7 +65046,9 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "splitFrom": 146,
+        "splitFromName": "רחוב הנרייטה סאלד"
       },
       "geometry": {
         "type": "LineString",
@@ -65182,6 +65217,38 @@
             35.56975120665177,
             33.20067069217241,
             105
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 362,
+        "name": "רחוב הנרייטה סאלד - 2",
+        "status": "active",
+        "roadType": "paved",
+        "styleUrl": "#sty-133",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 146,
+        "splitFromName": "רחוב הנרייטה סאלד"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.56975120665177,
+            33.20067069217241,
+            105
           ],
           [
             35.56972720473584,
@@ -65272,33 +65339,33 @@
         "type": "LineString",
         "coordinates": [
           [
-            35.569479016290586,
-            33.20084388272748,
+            35.56898346033526,
+            33.20079308197491,
             105
           ],
           [
-            35.56932828507726,
-            33.200845710630745,
+            35.568974162918096,
+            33.200785302297646,
             105
           ],
           [
-            35.569165,
-            33.200832,
+            35.56895440590486,
+            33.20077217409083,
             113
           ],
           [
-            35.56914,
-            33.200835,
+            35.56893000018434,
+            33.200749807511485,
             121
           ],
           [
-            35.569077295247155,
-            33.20082752767428,
+            35.5689047688123,
+            33.20072706391275,
             113
           ],
           [
-            35.56899294294075,
-            33.20079957896097,
+            35.568854169280144,
+            33.200683638740614,
             113
           ],
           [

@@ -2634,15 +2634,15 @@
     },
     {
       "type": "Feature",
-      "id": "manual-146-mpe87zzf",
+      "id": "manual-manual-146-mpe87zzf-a-mrtexxm7",
       "properties": {
-        "id": "manual-146-mpe87zzf",
-        "manualEdgeId": "manual-146-mpe87zzf",
+        "id": "manual-manual-146-mpe87zzf-a-mrtexxm7",
+        "manualEdgeId": "manual-manual-146-mpe87zzf-a-mrtexxm7",
         "source": "manual",
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-05-20T15:38:25.131Z",
-        "updatedAt": "2026-07-16T21:36:26.191Z",
+        "updatedAt": "2026-07-20T16:02:30.127Z",
         "linkedSegmentId": 146,
         "linkedSegmentName": "רחוב הנרייטה סאלד",
         "bicycleTraversal": {
@@ -2653,7 +2653,8 @@
           "reviewedAt": "2026-07-17",
           "rationale": "Reviewer confirmed CycleWays segment #146 (רחוב הנרייטה סאלד) and its referenced manual edges are rideable in both directions.",
           "evidence": "Direction Review segment #146; batch direction-review-2026-07-17"
-        }
+        },
+        "splitFrom": "manual-146-mpe87zzf"
       },
       "geometry": {
         "type": "LineString",
@@ -2663,20 +2664,54 @@
             33.200673
           ],
           [
-            35.56973,
-            33.200737
+            35.569638,
+            33.200706
           ],
           [
-            35.569674,
-            33.200776
+            35.569591,
+            33.200759
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-146-mpe87zzf-b-mrtexxm7",
+      "properties": {
+        "id": "manual-manual-146-mpe87zzf-b-mrtexxm7",
+        "manualEdgeId": "manual-manual-146-mpe87zzf-b-mrtexxm7",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-05-20T15:38:25.131Z",
+        "updatedAt": "2026-07-20T16:02:30.127Z",
+        "linkedSegmentId": 146,
+        "linkedSegmentName": "רחוב הנרייטה סאלד",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-17",
+          "rationale": "Reviewer confirmed CycleWays segment #146 (רחוב הנרייטה סאלד) and its referenced manual edges are rideable in both directions.",
+          "evidence": "Direction Review segment #146; batch direction-review-2026-07-17"
+        },
+        "splitFrom": "manual-146-mpe87zzf"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.569591,
+            33.200759
           ],
           [
-            35.569557,
-            33.2008
+            35.569518,
+            33.200769
           ],
           [
-            35.569503,
-            33.200842
+            35.569343,
+            33.200769
           ]
         ]
       }
@@ -5455,6 +5490,59 @@
           [
             35.57475,
             33.222252
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-361-mrteylyn",
+      "properties": {
+        "id": "manual-361-mrteylyn",
+        "manualEdgeId": "manual-361-mrteylyn",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-20T16:03:01.679Z",
+        "updatedAt": "2026-07-20T16:03:21.664Z",
+        "linkedSegmentId": 361,
+        "linkedSegmentName": "רחוב הנרייטה סאלד",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.569343,
+            33.200769
+          ],
+          [
+            35.5693,
+            33.200764
+          ],
+          [
+            35.569251,
+            33.200755
+          ],
+          [
+            35.569208,
+            33.200755
+          ],
+          [
+            35.569136,
+            33.200781
+          ],
+          [
+            35.569042,
+            33.200789
+          ],
+          [
+            35.568987,
+            33.200797
           ]
         ]
       }

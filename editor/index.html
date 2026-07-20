@@ -474,6 +474,7 @@
                   <option value="issues">All issues</option>
                   <option value="direction_evidence_needed">Direction evidence needed</option>
                   <option value="invalid_existing">Invalid existing mapping</option>
+                  <option value="roundabout_reverse_candidate">Roundabout reverse ready</option>
                   <option value="single_direction_candidate">Single-direction candidate</option>
                   <option value="unresolved">Unresolved</option>
                   <option value="accepted">Accepted</option>
@@ -508,6 +509,16 @@
                 <span><i class="direction-review-swatch blocked"></i>non-allowed</span>
               </div>
               <div id="direction-review-edges" class="direction-review-edges"></div>
+              <details id="direction-review-auto-fix-guide" class="direction-review-auto-fix-guide">
+                <summary>How automatic direction proposals work</summary>
+                <dl>
+                  <div><dt>Exact reverse</dt><dd>Mechanically reverses every edge. Offered only when the complete reverse is permitted.</dd></div>
+                  <div><dt>Roundabout reverse repair</dt><dd>Keeps the route unchanged except for replacing a backward roundabout arc with the permitted arc between the same entry and exit.</dd></div>
+                  <div><dt>Authoring revision</dt><dd>Imports a newly recalculated base-edge mapping while protecting accepted or manually edited V2 work.</dd></div>
+                  <div><dt>Manual direction required</dt><dd>No narrow correction passed validation. Edit the direction or mark it unavailable.</dd></div>
+                </dl>
+                <p>Automatic proposals are drafts. Endpoint, continuity, access, direction, and ownership checks must all pass before Accept direction is enabled.</p>
+              </details>
               <div class="direction-review-actions">
                 <button id="direction-review-edit" class="secondary-button" type="button" disabled>Edit directed edges</button>
                 <button id="direction-review-revalidate" class="secondary-button" type="button" disabled>Revalidate</button>

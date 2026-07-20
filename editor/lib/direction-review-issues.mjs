@@ -1,6 +1,7 @@
 export const DIRECTION_REVIEW_CLASSIFICATIONS = Object.freeze([
   "direction_evidence_needed",
   "invalid_existing",
+  "roundabout_reverse_candidate",
   "single_direction_candidate",
   "unresolved",
 ]);
@@ -8,6 +9,7 @@ export const DIRECTION_REVIEW_CLASSIFICATIONS = Object.freeze([
 export const DIRECTION_REVIEW_CLASSIFICATION_LABELS = Object.freeze({
   direction_evidence_needed: "Direction evidence needed",
   invalid_existing: "Invalid existing mapping",
+  roundabout_reverse_candidate: "Roundabout reverse ready",
   single_direction_candidate: "Single-direction candidate",
   unresolved: "Unresolved",
   accepted: "Accepted",

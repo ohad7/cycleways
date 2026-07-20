@@ -1353,6 +1353,10 @@ button.direction-review-queue-item {
   border-left-color: #b91c1c;
 }
 
+.direction-review-queue-item.roundabout_reverse_candidate {
+  border-left-color: #0284c7;
+}
+
 .direction-review-queue-item.single_direction_candidate {
   border-left-color: #7c3aed;
 }
@@ -1363,6 +1367,60 @@ button.direction-review-queue-item {
 
 .direction-review-queue-item.accepted {
   border-left-color: #15803d;
+}
+
+.direction-review-proposal-callout {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 1px solid #bae6fd;
+  border-left: 4px solid #0284c7;
+  border-radius: 6px;
+  background: #f0f9ff;
+  color: #0c4a6e;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.direction-review-proposal-callout strong,
+.direction-review-proposal-callout span {
+  display: block;
+}
+
+.direction-review-auto-fix-guide {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-size: 11px;
+}
+
+.direction-review-auto-fix-guide summary {
+  cursor: pointer;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.direction-review-auto-fix-guide dl {
+  margin: 8px 0;
+}
+
+.direction-review-auto-fix-guide dl div {
+  margin-top: 6px;
+}
+
+.direction-review-auto-fix-guide dt {
+  font-weight: 700;
+}
+
+.direction-review-auto-fix-guide dd {
+  margin: 1px 0 0;
+  color: #475569;
+}
+
+.direction-review-auto-fix-guide p {
+  margin: 8px 0 0;
+  color: #334155;
 }
 
 .direction-review-queue-item-main,

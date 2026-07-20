@@ -64,6 +64,7 @@ import {
   directedIntervalKey,
   validateDirectionReviewAlignment,
 } from "./lib/edge-pick.mjs";
+import { shouldAdoptAuthoringRevisionSegment } from "./lib/direction-review-refresh.mjs";
 import { normalizeDirectionReviewWorkspace } from "./lib/direction-review-workspace.mjs";
 import {
   emptyDirectionReviewPendingApprovals,
@@ -2332,11 +2333,16 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
     drafts: 0,
     rebasedSourceChanges: 0,
     skippedSourceChanges: 0,
+    adoptedAuthoringRevisions: 0,
   };
 
   for (const segment of Object.values(next.segments || {})) {
     const previous = stagedOverlay?.segments?.[String(segment.segmentId)];
     if (!previous) continue;
+    if (shouldAdoptAuthoringRevisionSegment(segment, previous)) {
+      preserved.adoptedAuthoringRevisions += 1;
+      continue;
+    }
     const automaticProposal = ["aToB", "bToA"].every(
       (alignmentKey) =>
         segment.alignments?.[alignmentKey]?.published?.review?.acceptanceBasis ===
@@ -2537,7 +2543,16 @@ async function refreshDirectionReviewEvidence(payload = {}) {
   if (!proposalOverlay) throw new Error("Direction Review proposal was not produced");
   const rebased = stagedBeforeRefresh
     ? await rebaseDirectionReviewState(proposalOverlay, stagedBeforeRefresh)
-    : { overlay: proposalOverlay, preserved: { unavailable: 0, publishedAsDraft: 0, drafts: 0, skippedSourceChanges: 0 } };
+    : {
+        overlay: proposalOverlay,
+        preserved: {
+          unavailable: 0,
+          publishedAsDraft: 0,
+          drafts: 0,
+          skippedSourceChanges: 0,
+          adoptedAuthoringRevisions: 0,
+        },
+      };
   await validatePublishedDirectionReviewOverlay(rebased.overlay);
   await writeJsonAtomic(cwBaseOverlayV2StagedPath, rebased.overlay);
   return { refreshId, ...rebased };

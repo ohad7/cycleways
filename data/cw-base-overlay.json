@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-16T22:56:36.715Z",
+  "updatedAt": "2026-07-20T16:05:09.258Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -8702,65 +8702,6 @@
       ],
       "updatedAt": "2026-05-20T15:11:33.914Z"
     },
-    "146": {
-      "segmentId": 146,
-      "segmentName": "רחוב הנרייטה סאלד",
-      "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
-      "confidence": "high",
-      "coverageRatio": 1,
-      "avgDistanceMeters": 0.69,
-      "gapCount": 0,
-      "failureClass": "accepted",
-      "edgeRefs": [
-        {
-          "edgeId": "e1189433249_3",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1189433249
-        },
-        {
-          "edgeId": "e1189433249_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1189433249
-        },
-        {
-          "edgeId": "e1189433249_5",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1189433249
-        },
-        {
-          "edgeId": "e1189433249_6",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 3,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1189433249
-        },
-        {
-          "edgeId": "manual-146-mpe87zzf",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-146-mpe87zzf"
-        }
-      ],
-      "updatedAt": "2026-05-20T22:22:46.010Z"
-    },
     "147": {
       "segmentId": 147,
       "segmentName": "אגמון החולה גישה מזרח",
@@ -15777,45 +15718,18 @@
       "segmentId": 276,
       "segmentName": "קרית שמונה עלייה לפארק גאולוגי",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 2.46,
+      "avgDistanceMeters": 2.45,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e1200367027_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1200367027
-        },
-        {
-          "edgeId": "e511559197_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 511559197
-        },
-        {
-          "edgeId": "e511559197_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 511559197
-        },
-        {
           "edgeId": "e511559204_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 3,
+          "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559204
@@ -15824,7 +15738,7 @@
           "edgeId": "e511559204_2",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 4,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559204
@@ -15833,7 +15747,7 @@
           "edgeId": "e511559204_3",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 5,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559204
@@ -15842,7 +15756,7 @@
           "edgeId": "e511559204_4",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 6,
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559204
@@ -15851,7 +15765,7 @@
           "edgeId": "e511559204_5",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 7,
+          "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559204
@@ -15860,7 +15774,7 @@
           "edgeId": "e511559204_6",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 8,
+          "sequenceIndex": 5,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559204
@@ -15869,7 +15783,7 @@
           "edgeId": "e511559204_7",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 9,
+          "sequenceIndex": 6,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559204
@@ -15878,25 +15792,34 @@
           "edgeId": "e33059253_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 10,
+          "sequenceIndex": 7,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 33059253
         },
         {
-          "edgeId": "e352638078_4",
+          "edgeId": "e352638078_5",
           "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 11,
+          "direction": "forward",
+          "sequenceIndex": 8,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 352638078
         },
         {
-          "edgeId": "e352638078_3",
+          "edgeId": "e352638078_1",
           "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 12,
+          "direction": "forward",
+          "sequenceIndex": 9,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 352638078
+        },
+        {
+          "edgeId": "e352638078_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 10,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 352638078
@@ -15905,7 +15828,7 @@
           "edgeId": "e33059412_3",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 13,
+          "sequenceIndex": 11,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 33059412
@@ -15914,7 +15837,7 @@
           "edgeId": "e33059412_2",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 14,
+          "sequenceIndex": 12,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 33059412
@@ -15923,7 +15846,7 @@
           "edgeId": "e33570643_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 15,
+          "sequenceIndex": 13,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 33570643
@@ -15932,7 +15855,7 @@
           "edgeId": "e33570643_2",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 16,
+          "sequenceIndex": 14,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 33570643
@@ -15941,7 +15864,7 @@
           "edgeId": "e315515987_9",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 17,
+          "sequenceIndex": 15,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 315515987
@@ -15950,13 +15873,13 @@
           "edgeId": "e33571617_2",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 18,
+          "sequenceIndex": 16,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 33571617
         }
       ],
-      "updatedAt": "2026-05-20T14:04:02.287Z"
+      "updatedAt": "2026-07-20T16:05:04.489Z"
     },
     "277": {
       "segmentId": 277,
@@ -19528,6 +19451,56 @@
         }
       ],
       "updatedAt": "2026-07-16T22:56:36.700Z"
+    },
+    "361": {
+      "segmentId": 361,
+      "segmentName": "רחוב הנרייטה סאלד",
+      "status": "accepted_auto_match",
+      "source": "changed_queue_auto_match",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.72,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e1189433249_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1189433249
+        },
+        {
+          "edgeId": "e1189433249_4",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1189433249
+        },
+        {
+          "edgeId": "e1189433249_5",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1189433249
+        },
+        {
+          "edgeId": "e1189433249_6",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1189433249
+        }
+      ],
+      "updatedAt": "2026-07-20T16:05:06.931Z"
     }
   }
 }

@@ -57,12 +57,18 @@ const overlay = {
         bToA: slot({ reasons: [{ code: "non_allowed_traversal", edgeId: "osm-one-way", state: "prohibited", reason: "osm-oneway" }] }),
       },
     },
+    "5": {
+      segmentId: 5,
+      segmentName: "Roundabout repaired",
+      migration: { classification: "roundabout_reverse_candidate" },
+      alignments: { aToB: slot(), bToA: slot() },
+    },
   },
 };
 
 const rows = buildDirectionReviewIssueRows(overlay);
-assert.equal(rows.length, 4);
-assert.equal(rows.filter((row) => !row.resolved).length, 3);
+assert.equal(rows.length, 5);
+assert.equal(rows.filter((row) => !row.resolved).length, 4);
 assert.equal(directionReviewSegmentResolved(overlay.segments["1"]), true);
 assert.deepEqual(
   filterDirectionReviewRows(rows, { filter: "direction_evidence_needed" }).map((row) => row.segmentId),
@@ -75,6 +81,10 @@ assert.deepEqual(
 assert.deepEqual(
   filterDirectionReviewRows(rows, { filter: "accepted" }).map((row) => row.segmentId),
   [1],
+);
+assert.deepEqual(
+  filterDirectionReviewRows(rows, { filter: "roundabout_reverse_candidate" }).map((row) => row.segmentId),
+  [5],
 );
 
 const evidence = buildDirectionReviewEvidenceRows(overlay);

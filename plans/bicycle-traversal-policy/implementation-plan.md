@@ -4,6 +4,25 @@
 **Status:** implementation in progress
 **Design:** [`design.md`](./design.md)
 
+## 2026-07-20 amendment — roundabout reverse auto-correction
+
+- [x] Detect exact-reverse failures caused exclusively by contiguous
+  `osm-roundabout-implied-oneway` refs.
+- [x] Find the shortest permitted roundabout-only arc between the same entry
+  and exit nodes and splice it into the reverse without changing other edges.
+- [x] Revalidate the complete repaired alignment and emit an explicit
+  `roundabout-repaired-reverse` draft only when all hard checks pass.
+- [x] Add a `roundabout_reverse_candidate` queue classification and filter.
+- [x] Explain the current proposal method, mark replacement edge rows, and add
+  an in-editor guide to every automatic proposal class.
+- [x] Cover the repair with a synthetic roundabout regression and confirm that
+  ordinary one-way blockers remain manual.
+- [x] Dry-run current data: #276 produces a valid 16-edge B→A draft replacing
+  three forbidden reverse roundabout refs with two permitted forward refs;
+  #164 and #186 also produce fully validated review drafts.
+- [ ] Restart the editor, refresh V2 evidence, visually review #276, and accept
+  the repaired B→A direction.
+
 ## 2026-07-20 amendment — reviewed CW access precedence
 
 - [x] Treat full-edge `explicit-access-prohibited` and
@@ -1380,6 +1399,18 @@ Manual acceptance on web and iOS:
 - [ ] Start the accepted replacement in the SIM scenario, background/foreground
   it, and verify the route/navigation fingerprints survive only under the
   matching bundled contract.
+
+### 2026-07-20 authoring-remap refresh amendment
+
+- [x] Detect changed edge-reference mappings for legacy segments in the current
+  authoring overlay without mutating the frozen V1 compatibility bundle.
+- [x] Emit those mappings as reviewed `authoring-v1-revision` proposals.
+- [x] Adopt a revision on refresh only when both existing V2 slots are untouched
+  automatic drafts; preserve published and manually edited work.
+- [x] Refresh the visible Direction Review alignment source when hovering an
+  edge in the base-mapping list.
+- [ ] Restart the editor, refresh V2 evidence, and confirm #276 shows the new
+  17-edge A-to-B mapping as valid and the reverse as roundabout-blocked.
 
 ## Milestone gates
 

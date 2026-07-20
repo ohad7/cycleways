@@ -32,6 +32,10 @@ function orderedRefs(mapping) {
     }));
 }
 
+function mappingEdgeRefsDigest(mapping) {
+  return digestCwOverlayValue(orderedRefs(mapping));
+}
+
 function haversineMeters(a, b) {
   const radius = 6_371_000;
   const toRad = (value) => (Number(value) * Math.PI) / 180;
@@ -179,6 +183,183 @@ function validateRefs(refs, graphById, policyLookup) {
   };
 }
 
+function orientedNodeEndpoints(edge, direction) {
+  if (!edge?.fromNodeId || !edge?.toNodeId) return null;
+  return direction === "reverse"
+    ? { start: edge.toNodeId, end: edge.fromNodeId }
+    : { start: edge.fromNodeId, end: edge.toNodeId };
+}
+
+function graphEdgeDistanceMeters(edge) {
+  return (edge?.coordinates || []).slice(1).reduce(
+    (total, coordinate, index) =>
+      total + haversineMeters(edge.coordinates[index], coordinate),
+    0,
+  );
+}
+
+function graphEdgeRef(edge, direction, sequenceIndex = 0) {
+  const source = String(edge?.source || (String(edge?.id || "").startsWith("manual-") ? "manual" : "osm"));
+  const osmWayId = Number(edge?.tags?.osmId ?? edge?.osmWayId);
+  return {
+    edgeId: String(edge.id),
+    source,
+    direction,
+    sequenceIndex,
+    fromFraction: 0,
+    toFraction: 1,
+    ...(source === "osm" && Number.isFinite(osmWayId) ? { osmWayId } : {}),
+    ...(source === "manual" ? { manualEdgeId: String(edge.id) } : {}),
+  };
+}
+
+function candidateTraversalAllowed(edgeId, direction, policyLookup) {
+  const policy = policyLookup.get(`${edgeId}|${direction}`);
+  return !policy || isCwAccessPrecedenceEligible(policy.state, policy.reason);
+}
+
+function permittedRoundaboutPath(startNodeId, endNodeId, graphById, policyLookup) {
+  if (!startNodeId || !endNodeId || startNodeId === endNodeId) return null;
+  const adjacency = new Map();
+  const add = (nodeId, step) => {
+    const steps = adjacency.get(nodeId) || [];
+    steps.push(step);
+    adjacency.set(nodeId, steps);
+  };
+  for (const edge of graphById.values()) {
+    if (edge?.tags?.junction !== "roundabout") continue;
+    if (!edge.fromNodeId || !edge.toNodeId) continue;
+    const distanceMeters = Math.max(0.01, graphEdgeDistanceMeters(edge));
+    if (candidateTraversalAllowed(edge.id, "forward", policyLookup)) {
+      add(edge.fromNodeId, {
+        nextNodeId: edge.toNodeId,
+        distanceMeters,
+        ref: graphEdgeRef(edge, "forward"),
+      });
+    }
+    if (candidateTraversalAllowed(edge.id, "reverse", policyLookup)) {
+      add(edge.toNodeId, {
+        nextNodeId: edge.fromNodeId,
+        distanceMeters,
+        ref: graphEdgeRef(edge, "reverse"),
+      });
+    }
+  }
+
+  const distances = new Map([[startNodeId, 0]]);
+  const previous = new Map();
+  const pending = new Set([startNodeId]);
+  while (pending.size > 0) {
+    let nodeId = null;
+    let nodeDistance = Number.POSITIVE_INFINITY;
+    for (const candidate of pending) {
+      const distance = distances.get(candidate) ?? Number.POSITIVE_INFINITY;
+      if (distance < nodeDistance) {
+        nodeId = candidate;
+        nodeDistance = distance;
+      }
+    }
+    pending.delete(nodeId);
+    if (nodeId === endNodeId) break;
+    for (const step of adjacency.get(nodeId) || []) {
+      const nextDistance = nodeDistance + step.distanceMeters;
+      if (nextDistance >= (distances.get(step.nextNodeId) ?? Number.POSITIVE_INFINITY)) continue;
+      distances.set(step.nextNodeId, nextDistance);
+      previous.set(step.nextNodeId, { nodeId, step });
+      pending.add(step.nextNodeId);
+    }
+  }
+  if (!previous.has(endNodeId)) return null;
+  const refs = [];
+  let nodeId = endNodeId;
+  while (nodeId !== startNodeId) {
+    const entry = previous.get(nodeId);
+    if (!entry || refs.length > 64) return null;
+    refs.push(entry.step.ref);
+    nodeId = entry.nodeId;
+  }
+  refs.reverse();
+  return refs.length > 0 ? refs : null;
+}
+
+export function repairRoundaboutReverse(refs, reverseValidation, graphById, policyLookup) {
+  const reasons = reverseValidation?.reasons || [];
+  if (
+    reasons.length === 0 ||
+    reasons.some(
+      (reason) =>
+        reason.code !== "non_allowed_traversal" ||
+        reason.reason !== "osm-roundabout-implied-oneway",
+    )
+  ) {
+    return null;
+  }
+  const blockedKeys = new Set(
+    reasons.map((reason) => `${reason.edgeId}|${reason.direction}`),
+  );
+  const blockedIndices = refs
+    .map((ref, index) => blockedKeys.has(`${ref.edgeId}|${ref.direction}`) ? index : -1)
+    .filter((index) => index >= 0);
+  if (blockedIndices.length !== reasons.length) return null;
+
+  const runs = [];
+  for (const index of blockedIndices) {
+    const previousRun = runs.at(-1);
+    if (previousRun && index === previousRun.endIndex + 1) previousRun.endIndex = index;
+    else runs.push({ startIndex: index, endIndex: index });
+  }
+
+  const replacements = [];
+  for (const run of runs) {
+    const blockedRefs = refs.slice(run.startIndex, run.endIndex + 1);
+    const firstEdge = graphById.get(blockedRefs[0].edgeId);
+    const lastEdge = graphById.get(blockedRefs.at(-1).edgeId);
+    if (
+      blockedRefs.some((ref) => graphById.get(ref.edgeId)?.tags?.junction !== "roundabout")
+    ) {
+      return null;
+    }
+    const start = orientedNodeEndpoints(firstEdge, blockedRefs[0].direction);
+    const end = orientedNodeEndpoints(lastEdge, blockedRefs.at(-1).direction);
+    const replacementRefs = permittedRoundaboutPath(
+      start?.start,
+      end?.end,
+      graphById,
+      policyLookup,
+    );
+    if (!replacementRefs) return null;
+    replacements.push({
+      ...run,
+      entryNodeId: start.start,
+      exitNodeId: end.end,
+      blockedRefs,
+      replacementRefs,
+    });
+  }
+
+  const repairedRefs = [];
+  let index = 0;
+  for (const replacement of replacements) {
+    repairedRefs.push(...refs.slice(index, replacement.startIndex));
+    repairedRefs.push(...replacement.replacementRefs);
+    index = replacement.endIndex + 1;
+  }
+  repairedRefs.push(...refs.slice(index));
+  const normalizedRefs = repairedRefs.map((ref, sequenceIndex) => ({ ...ref, sequenceIndex }));
+  const validation = validateRefs(normalizedRefs, graphById, policyLookup);
+  if (validation.status !== "valid") return null;
+  return {
+    edgeRefs: normalizedRefs,
+    validation,
+    repairs: replacements.map((replacement) => ({
+      entryNodeId: replacement.entryNodeId,
+      exitNodeId: replacement.exitNodeId,
+      blockedEdgeRefs: replacement.blockedRefs.map(({ edgeId, direction }) => ({ edgeId, direction })),
+      replacementEdgeRefs: replacement.replacementRefs.map(({ edgeId, direction }) => ({ edgeId, direction })),
+    })),
+  };
+}
+
 function needsOnlyManualDirectionEvidence(validation) {
   const reasons = validation?.reasons || [];
   return (
@@ -248,6 +429,7 @@ export function buildMigrationProposal({
   const ownership = new Map();
   const candidateOwnership = new Map();
   const automaticAuthoringCandidates = [];
+  let authoringRevisedSegments = 0;
 
   const addCandidateOwnership = (segmentId, alignmentKey, refs) => {
     for (const ref of refs) {
@@ -260,9 +442,18 @@ export function buildMigrationProposal({
 
   for (const segmentId of [...activeIds].sort((a, b) => a - b)) {
     const isLegacySegment = legacyActiveIds.has(segmentId);
-    const mapping = isLegacySegment
-      ? overlayV1.segments?.[String(segmentId)]
-      : authoringOverlayV1.segments?.[String(segmentId)];
+    const legacyMapping = overlayV1.segments?.[String(segmentId)];
+    const authoringMapping = authoringOverlayV1.segments?.[String(segmentId)];
+    const hasAuthoringRevision = Boolean(
+      isLegacySegment &&
+      legacyMapping &&
+      authoringMapping &&
+      mappingEdgeRefsDigest(legacyMapping) !== mappingEdgeRefsDigest(authoringMapping)
+    );
+    const mapping = isLegacySegment && !hasAuthoringRevision
+      ? legacyMapping
+      : authoringMapping;
+    if (hasAuthoringRevision) authoringRevisedSegments += 1;
     const source = sourceById.get(segmentId);
     if (!mapping || !source || source.geometry?.type !== "LineString") {
       queue.push({ segmentId, code: !mapping ? "missing_v1_mapping" : "missing_logical_source" });
@@ -285,7 +476,12 @@ export function buildMigrationProposal({
     const existingRealization = { type: "explicit", edgeRefs: refs };
     const existingDigest = alignmentMappingDigest(segmentId, existingKey, existingRealization);
     const reversed = reverseRealization(refs);
-    const reverseValidation = validateRefs(reversed.edgeRefs, graphById, policyLookup);
+    const exactReverseValidation = validateRefs(reversed.edgeRefs, graphById, policyLookup);
+    const roundaboutRepair = existingValidation.status === "valid"
+      ? repairRoundaboutReverse(reversed.edgeRefs, exactReverseValidation, graphById, policyLookup)
+      : null;
+    const reverseRefs = roundaboutRepair?.edgeRefs || reversed.edgeRefs;
+    const reverseValidation = roundaboutRepair?.validation || exactReverseValidation;
     const classification =
       existingValidation.status !== "valid"
         ? endpoint.alignmentKey
@@ -293,8 +489,10 @@ export function buildMigrationProposal({
             ? "direction_evidence_needed"
             : "invalid_existing"
           : "unresolved"
-        : reverseValidation.status === "valid"
-          ? "symmetric_candidate"
+        : roundaboutRepair
+          ? "roundabout_reverse_candidate"
+          : reverseValidation.status === "valid"
+            ? "symmetric_candidate"
           : "single_direction_candidate";
     classifications[classification] = (classifications[classification] || 0) + 1;
 
@@ -311,7 +509,11 @@ export function buildMigrationProposal({
       migration: {
         classification,
         sourceSchemaVersion: 1,
-        sourceMappingOrigin: isLegacySegment ? "frozen-v1" : "authoring-v1",
+        sourceMappingOrigin: hasAuthoringRevision
+          ? "authoring-v1-revision"
+          : isLegacySegment
+            ? "frozen-v1"
+            : "authoring-v1",
         sourceMappingStatus: mapping.status,
         endpointMatch: endpoint,
       },
@@ -324,21 +526,45 @@ export function buildMigrationProposal({
       disposition: "needs_review",
       realization: existingRealization,
       mappingDigest: existingDigest,
-      candidate: { kind: isLegacySegment ? "v1-existing" : "new-authoring", classification },
+      candidate: {
+        kind: hasAuthoringRevision
+          ? "authoring-revision"
+          : isLegacySegment
+            ? "v1-existing"
+            : "new-authoring",
+        classification,
+      },
       validation: existingValidation,
     };
 
     if (reverseValidation.status === "valid") {
-      segment.alignments[oppositeKey].draft = {
-        disposition: "needs_review",
-        candidate: {
-          kind: "exact-reverse",
-          classification,
-          reverseOfAlignmentKey: existingKey,
-          referencedMappingDigest: existingDigest,
-        },
-        validation: reverseValidation,
-      };
+      if (roundaboutRepair) {
+        const realization = { type: "explicit", edgeRefs: reverseRefs };
+        segment.alignments[oppositeKey].draft = {
+          disposition: "needs_review",
+          realization,
+          mappingDigest: alignmentMappingDigest(segmentId, oppositeKey, realization),
+          candidate: {
+            kind: "roundabout-repaired-reverse",
+            classification,
+            reverseOfAlignmentKey: existingKey,
+            referencedMappingDigest: existingDigest,
+            repairs: roundaboutRepair.repairs,
+          },
+          validation: reverseValidation,
+        };
+      } else {
+        segment.alignments[oppositeKey].draft = {
+          disposition: "needs_review",
+          candidate: {
+            kind: "exact-reverse",
+            classification,
+            reverseOfAlignmentKey: existingKey,
+            referencedMappingDigest: existingDigest,
+          },
+          validation: reverseValidation,
+        };
+      }
     } else {
       segment.alignments[oppositeKey].draft = {
         disposition: "needs_review",
@@ -349,7 +575,7 @@ export function buildMigrationProposal({
 
     addCandidateOwnership(segmentId, existingKey, refs);
     if (reverseValidation.status === "valid") {
-      addCandidateOwnership(segmentId, oppositeKey, reversed.edgeRefs);
+      addCandidateOwnership(segmentId, oppositeKey, reverseRefs);
     }
     if (
       !isLegacySegment &&
@@ -497,6 +723,7 @@ export function buildMigrationProposal({
     activeV1Mappings: legacyActiveIds.size,
     activeAuthoringSegments: activeIds.size,
     newAuthoringSegments: activeIds.size - legacyActiveIds.size,
+    authoringRevisedSegments,
     automaticallyPublishedAuthoringSegments,
     proposedSegments: Object.keys(segments).length,
     archivedV1Mappings: Object.keys(overlayV1.segments || {}).length - legacyActiveIds.size,
