@@ -23,13 +23,22 @@
           </div>
 
           <div class="workspace-tabs" role="group" aria-label="Editor mode">
-            <button id="workspace-segments" class="tool-button active" type="button">Segments</button>
-            <button id="workspace-base" class="tool-button" type="button">Base Network</button>
-            <button id="workspace-overlay" class="tool-button" type="button">CW Overlay</button>
+            <button id="workspace-network" class="tool-button active" type="button">Network</button>
             <button id="workspace-roundabouts" class="tool-button" type="button">Roundabouts</button>
             <button id="workspace-crossings" class="tool-button" type="button">Crossings</button>
             <button id="workspace-video-sync" class="tool-button" type="button">Video Sync</button>
             <button id="workspace-route-catalog" class="tool-button" type="button">Route Catalog</button>
+          </div>
+
+          <div id="network-focus-controls" class="network-focus-controls" aria-label="Network focus">
+            <div class="network-focus-switch" role="group" aria-label="Focused network">
+              <button id="network-focus-cw" class="tool-button active" type="button" aria-pressed="true">CW network</button>
+              <button id="network-focus-base" class="tool-button" type="button" aria-pressed="false">Base network</button>
+            </div>
+            <label class="network-context-toggle" for="network-show-context">
+              <input id="network-show-context" type="checkbox" />
+              Show other network for context
+            </label>
           </div>
 
           <div class="map-toolbar">
@@ -85,10 +94,10 @@
 
       <aside class="details">
         <div class="details-scroll">
-          <section class="panel">
+          <section id="network-selection-panel" class="panel">
             <header class="panel-header segment-pinned-header">
               <div class="segment-pinned-title">
-                <h2>Segment</h2>
+                <h2 id="network-selection-title">Segment</h2>
                 <span id="segment-id-display" class="segment-id-display"></span>
               </div>
               <span id="selected-count">None selected</span>
@@ -131,6 +140,8 @@
               <button id="edit-segment-edges" class="mini-button" type="button">Add/remove edges</button>
               <button id="split-segment-edge" class="mini-button" type="button">Split at edge boundary</button>
             </div>
+
+            <div id="network-segment-routing" class="network-segment-routing" aria-live="polite"></div>
           </section>
 
           <section id="base-graph-panel" class="panel workspace-panel" hidden>
@@ -174,8 +185,8 @@
                 </label>
               </div>
 
-              <label class="checkbox-row base-network-cw-toggle" for="base-network-show-cycleways">
-                <input id="base-network-show-cycleways" type="checkbox" checked />
+              <label class="checkbox-row base-network-cw-toggle legacy-authoring-control" for="base-network-show-cycleways">
+                <input id="base-network-show-cycleways" type="checkbox" />
                 Show CycleWays overlay
               </label>
               <div id="base-network-legend" class="base-network-legend" aria-label="Active map legend"></div>
@@ -274,13 +285,13 @@
               <p id="manual-edge-direction-status" class="base-overlay-bulk-summary"></p>
             </fieldset>
 
-            <button id="recalculate-osm-graph" class="secondary-button base-overlay-bulk-button base-network-edit-only" type="button" disabled>
+            <button id="recalculate-osm-graph" class="secondary-button base-overlay-bulk-button base-network-edit-only legacy-authoring-control" type="button" disabled>
               Recalculate Graph + Matches
             </button>
-            <button id="refresh-direction-review" class="primary-button base-overlay-bulk-button base-network-edit-only" type="button" disabled>
+            <button id="refresh-direction-review" class="primary-button base-overlay-bulk-button base-network-edit-only legacy-authoring-control" type="button" disabled>
               Rebuild graph + refresh V2 evidence
             </button>
-            <p id="base-graph-help" class="base-overlay-bulk-summary">Manual edges are stored separately from OSM.</p>
+            <p id="base-graph-help" class="base-overlay-bulk-summary">Manual edges are stored separately from OSM. Saving an edit automatically refreshes affected routing evidence.</p>
           </section>
 
           <section id="connector-lens-panel" class="panel workspace-panel" hidden>
@@ -434,23 +445,23 @@
 
           <section id="cw-overlay-panel" class="panel workspace-panel" hidden>
             <header class="panel-header">
-              <h2>Base Overlay</h2>
+              <h2>Rideable paths and issues</h2>
               <span id="base-overlay-status">Not loaded</span>
             </header>
 
-            <section class="base-overlay-selected-mapping" aria-labelledby="base-overlay-selected-title">
-              <h3 id="base-overlay-selected-title">Selected segment mapping</h3>
+            <details class="base-overlay-selected-mapping" aria-labelledby="base-overlay-selected-title">
+              <summary id="base-overlay-selected-title">Inspect mapping</summary>
               <div id="base-overlay-summary" class="base-overlay-summary">
                 <div class="empty-state">Select a segment and enable Base Graph to review its OSM mapping.</div>
               </div>
 
               <div class="action-row base-overlay-actions">
-                <button id="edit-base-overlay-edges" class="secondary-button" type="button" disabled>Edit mapping edges</button>
-                <button id="accept-base-overlay" class="primary-button" type="button" disabled>Accept</button>
-                <button id="recalculate-selected-overlay" class="secondary-button" type="button" disabled>Recalculate Selected</button>
+                <button id="edit-base-overlay-edges" class="secondary-button" type="button" disabled>Edit mapping</button>
+                <button id="accept-base-overlay" class="primary-button legacy-authoring-control" type="button" disabled>Accept</button>
+                <button id="recalculate-selected-overlay" class="secondary-button legacy-authoring-control" type="button" disabled>Recalculate Selected</button>
                 <button id="snap-boundary-overlay" class="secondary-button" type="button" disabled>Snap Boundary</button>
                 <button id="mark-manual-base-overlay" class="secondary-button" type="button" disabled hidden>Manual</button>
-                <button id="clear-base-overlay" class="secondary-button danger" type="button" disabled>Clear</button>
+                <button id="clear-base-overlay" class="secondary-button danger legacy-authoring-control" type="button" disabled>Clear</button>
               </div>
 
               <div class="base-overlay-edge-section">
@@ -458,11 +469,11 @@
                 <p id="base-overlay-edge-edit-help" class="base-overlay-bulk-summary">Choose Edit mapping edges to add or remove base edges on the map.</p>
                 <div id="base-overlay-edges" class="base-overlay-edges"></div>
               </div>
-            </section>
+            </details>
 
             <section class="direction-review-queue" aria-labelledby="direction-review-queue-title">
               <div class="direction-review-queue-heading">
-                <h3 id="direction-review-queue-title">Direction Review queue</h3>
+                <h3 id="direction-review-queue-title">Issues</h3>
                 <span id="direction-review-queue-summary">Not loaded</span>
               </div>
               <div class="direction-review-queue-views" role="tablist" aria-label="Direction Review queue view">
@@ -472,10 +483,10 @@
               <div class="direction-review-queue-controls">
                 <select id="direction-review-queue-filter" class="text-input compact-select" aria-label="Direction Review classification">
                   <option value="issues">All issues</option>
-                  <option value="direction_evidence_needed">Direction evidence needed</option>
-                  <option value="invalid_existing">Invalid existing mapping</option>
-                  <option value="roundabout_reverse_candidate">Roundabout reverse ready</option>
-                  <option value="single_direction_candidate">Single-direction candidate</option>
+                  <option value="direction_evidence_needed">Base-edge evidence</option>
+                  <option value="invalid_existing">Blocked mappings</option>
+                  <option value="roundabout_reverse_candidate">Roundabout decisions</option>
+                  <option value="single_direction_candidate">Directional decisions</option>
                   <option value="unresolved">Unresolved</option>
                   <option value="accepted">Accepted</option>
                   <option value="all">All segments</option>
@@ -490,9 +501,9 @@
               <div id="direction-review-queue-list" class="direction-review-queue-list"></div>
             </section>
 
-            <section class="direction-review" aria-labelledby="direction-review-title">
+            <section id="direction-review-section" class="direction-review" aria-labelledby="direction-review-title">
               <div class="direction-review-heading">
-                <h3 id="direction-review-title">Direction Review (V2)</h3>
+                <h3 id="direction-review-title">Directional path decision</h3>
                 <span id="direction-review-source">Not prepared</span>
               </div>
               <div class="direction-review-tabs" role="tablist" aria-label="Physical alignment">
@@ -517,16 +528,16 @@
                   <div><dt>Authoring revision</dt><dd>Imports a newly recalculated base-edge mapping while protecting accepted or manually edited V2 work.</dd></div>
                   <div><dt>Manual direction required</dt><dd>No narrow correction passed validation. Edit the direction or mark it unavailable.</dd></div>
                 </dl>
-                <p>Automatic proposals are drafts. Endpoint, continuity, access, direction, and ownership checks must all pass before Accept direction is enabled.</p>
+                <p>Ordinary safe bidirectional paths are applied automatically. This section appears only when a direction differs, needs evidence, or is blocked.</p>
               </details>
               <div class="direction-review-actions">
                 <button id="direction-review-edit" class="secondary-button" type="button" disabled>Edit directed edges</button>
-                <button id="direction-review-revalidate" class="secondary-button" type="button" disabled>Revalidate</button>
+                <button id="direction-review-revalidate" class="secondary-button legacy-authoring-control" type="button" disabled>Revalidate</button>
                 <button id="direction-review-use-reverse" class="secondary-button" type="button" disabled>Use opposite path in reverse</button>
-                <button id="direction-review-accept" class="primary-button" type="button" disabled>Accept direction</button>
+                <button id="direction-review-accept" class="primary-button" type="button" disabled>Use this path</button>
                 <button id="direction-review-clear-draft" class="secondary-button danger" type="button" disabled>Clear draft</button>
               </div>
-              <div class="direction-review-apply">
+              <div class="direction-review-apply legacy-migration-controls">
                 <input id="direction-review-reviewer" class="text-input" type="text" placeholder="Reviewer" aria-label="Reviewer" />
                 <input id="direction-review-date" class="text-input" type="date" aria-label="Review date" />
                 <input id="direction-review-batch" class="text-input" type="text" placeholder="Batch ID" aria-label="Migration batch ID" />
@@ -558,14 +569,14 @@
               </details>
             </section>
 
-            <button id="bulk-accept-base-overlay" class="secondary-button base-overlay-bulk-button" type="button">
+            <button id="bulk-accept-base-overlay" class="secondary-button base-overlay-bulk-button legacy-authoring-control" type="button">
               Bulk Accept Full Auto Matches
             </button>
-            <p id="base-overlay-bulk-summary" class="base-overlay-bulk-summary">Load Base Graph to see bulk candidates.</p>
-            <div id="base-overlay-validation" class="base-overlay-validation"></div>
+            <p id="base-overlay-bulk-summary" class="base-overlay-bulk-summary legacy-authoring-control">Load Base Graph to see bulk candidates.</p>
+            <div id="base-overlay-validation" class="base-overlay-validation legacy-authoring-control"></div>
 
-            <div id="base-overlay-review-stats" class="base-overlay-review-stats"></div>
-            <div id="base-overlay-review-list" class="base-overlay-review-list"></div>
+            <div id="base-overlay-review-stats" class="base-overlay-review-stats legacy-authoring-control"></div>
+            <div id="base-overlay-review-list" class="base-overlay-review-list legacy-authoring-control"></div>
 
           </section>
 
@@ -633,7 +644,7 @@
             <div id="rc-detail" class="rc-detail" hidden></div>
           </section>
 
-          <section class="panel">
+          <section id="segment-data-panel" class="panel">
             <header class="panel-header">
               <h2>Data</h2>
               <button id="add-data" class="mini-button" type="button" disabled>Add</button>
@@ -641,7 +652,7 @@
             <div id="data-list" class="data-list"></div>
           </section>
 
-          <section class="panel">
+          <section id="segment-notes-panel" class="panel">
             <header class="panel-header">
               <h2>Notes</h2>
             </header>
@@ -658,12 +669,13 @@
 
         <section class="panel build-panel">
           <header class="panel-header">
-            <h2>Build</h2>
+            <h2>Release</h2>
+            <span id="release-state-summary">Authoring current</span>
           </header>
 
           <div class="action-row">
-            <button id="save-source" class="primary-button" type="button" disabled>Save Source</button>
-            <button id="run-build" class="secondary-button" type="button">Build</button>
+            <button id="save-source" class="primary-button legacy-authoring-control" type="button" disabled>Save Source</button>
+            <button id="run-build" class="secondary-button" type="button">Build release</button>
             <button id="promote-build" class="secondary-button" type="button" disabled>Promote</button>
           </div>
 

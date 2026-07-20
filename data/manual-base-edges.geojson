@@ -1482,13 +1482,16 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-05-19T08:00:18.753Z",
-        "updatedAt": "2026-05-27T01:21:54.609Z",
+        "updatedAt": "2026-07-20T21:31:27.656Z",
         "linkedSegmentId": 221,
         "linkedSegmentName": "דרך כפר סאלד מרכז",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-20",
+          "rationale": "kfar sald bidirectional road"
         }
       },
       "geometry": {
@@ -4502,12 +4505,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-06-10T13:13:28.839Z",
-        "updatedAt": "2026-06-10T13:13:50.309Z",
+        "updatedAt": "2026-07-20T21:38:16.262Z",
         "splitFrom": "manual-osm-126342416-mq83ahvr",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-20",
+          "rationale": "connecting section"
         }
       },
       "geometry": {
@@ -5770,6 +5776,63 @@
           [
             35.58026,
             33.235531
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-221-mrtqt1xd",
+      "properties": {
+        "id": "manual-221-mrtqt1xd",
+        "manualEdgeId": "manual-221-mrtqt1xd",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-20T21:34:37.825Z",
+        "updatedAt": "2026-07-20T21:34:37.825Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 221,
+        "linkedSegmentName": "דרך כפר סאלד מרכז"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.655604,
+            33.194052
+          ],
+          [
+            35.655666,
+            33.194024
+          ],
+          [
+            35.655727,
+            33.193996
+          ],
+          [
+            35.655857,
+            33.193961
+          ],
+          [
+            35.655998,
+            33.193954
+          ],
+          [
+            35.656137,
+            33.193957
+          ],
+          [
+            35.656273,
+            33.193963
           ]
         ]
       }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-20T19:34:33.591Z",
+  "updatedAt": "2026-07-20T21:35:38.803Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -3630,6 +3630,47 @@
       ],
       "updatedAt": "2026-05-20T21:53:32.541Z"
     },
+    "62": {
+      "segmentId": 62,
+      "segmentName": "כביש 9974",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 1.03,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e42939999_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 42939999
+        },
+        {
+          "edgeId": "e42939999_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 42939999
+        },
+        {
+          "edgeId": "manual-manual-osm-139983381-mrnlsjqz-b-mrnlsvbo",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-139983381-mrnlsjqz-b-mrnlsvbo"
+        }
+      ],
+      "updatedAt": "2026-07-20T21:30:16.555Z"
+    },
     "63": {
       "segmentId": 63,
       "segmentName": "כביש 9977 כפר גלעדי",
@@ -5946,6 +5987,29 @@
         }
       ],
       "updatedAt": "2026-06-02T18:36:30.237Z"
+    },
+    "97": {
+      "segmentId": 97,
+      "segmentName": "שביל אופניים 99 כפר יובל",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.43,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo"
+        }
+      ],
+      "updatedAt": "2026-07-20T21:27:19.238Z"
     },
     "98": {
       "segmentId": 98,
@@ -13167,10 +13231,10 @@
       "segmentId": 221,
       "segmentName": "דרך כפר סאלד מרכז",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.44,
+      "avgDistanceMeters": 0.46,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -13202,37 +13266,19 @@
           "osmWayId": 499503784
         },
         {
-          "edgeId": "e986737512_1",
-          "source": "osm",
+          "edgeId": "manual-221-mrtqt1xd",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 986737512
-        },
-        {
-          "edgeId": "e986737511_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 986737511
-        },
-        {
-          "edgeId": "e986737515_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 986737515
+          "manualEdgeId": "manual-221-mrtqt1xd"
         },
         {
           "edgeId": "e1034600852_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 6,
+          "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1034600852
@@ -13241,7 +13287,7 @@
           "edgeId": "e1034600852_2",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 7,
+          "sequenceIndex": 5,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1034600852
@@ -13250,7 +13296,7 @@
           "edgeId": "e165379093_2",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 8,
+          "sequenceIndex": 6,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 165379093
@@ -13259,7 +13305,7 @@
           "edgeId": "e165379093_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 9,
+          "sequenceIndex": 7,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 165379093
@@ -13268,7 +13314,7 @@
           "edgeId": "e1034600853_2",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 10,
+          "sequenceIndex": 8,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1034600853
@@ -13277,13 +13323,13 @@
           "edgeId": "manual-221-mpccf0ox",
           "source": "manual",
           "direction": "reverse",
-          "sequenceIndex": 11,
+          "sequenceIndex": 9,
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-221-mpccf0ox"
         }
       ],
-      "updatedAt": "2026-05-27T01:22:34.770Z"
+      "updatedAt": "2026-07-20T21:35:38.802Z"
     },
     "222": {
       "segmentId": 222,
@@ -15295,24 +15341,24 @@
       "segmentId": 269,
       "segmentName": "צומת יסוד שביל חיבור",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.04,
+      "avgDistanceMeters": 0.02,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
           "edgeId": "e841158829_2",
           "source": "osm",
-          "direction": "forward",
+          "direction": "reverse",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 841158829
         }
       ],
-      "updatedAt": "2026-05-20T06:08:16.533Z"
+      "updatedAt": "2026-07-20T21:29:26.759Z"
     },
     "270": {
       "segmentId": 270,

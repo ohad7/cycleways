@@ -2,7 +2,7 @@
 
 Date: 2026-07-20
 
-Status: Design complete; implementation not started
+Status: Approved
 
 ## Summary
 
@@ -582,4 +582,3 @@ the understandable result.
 - When Roundabouts and Crossings should cease being top-level lenses.
 - Whether Route Catalog and Video Sync should later adopt the same transaction
   coordinator.
-

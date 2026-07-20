@@ -53,6 +53,7 @@ import {
   applyReviewedSymmetricMigrationBatch,
   clearAlignmentDraft,
   deriveReverseAlignmentDraft,
+  digestCwOverlayValue,
   materializeAcceptedAlignment,
   normalizeAlignmentEdgeRefs,
   oppositeAlignmentKey,
@@ -76,6 +77,13 @@ import {
   applyManualBidirectionalReview,
   manualBidirectionalResolutionCandidate,
 } from "./lib/direction-review-issues.mjs";
+import {
+  automaticAcceptanceBasis,
+  automaticBidirectionalDecision,
+  automaticMatchQualityEligible,
+} from "./lib/network-auto-apply.mjs";
+import { networkSegmentStatus } from "./lib/network-authoring-status.mjs";
+import { repairRoundaboutReverse } from "../scripts/migrate-cw-base-overlay-v2.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -146,6 +154,8 @@ let requestCounter = 0;
 let buildCounter = 0;
 let osmGraphCounter = 0;
 let directionReviewRefreshCounter = 0;
+let networkAuthoringCounter = 0;
+const latestNetworkAuthoringRevisionBySegment = new Map();
 let promoteCounter = 0;
 let atomicWriteCounter = 0;
 let directionReviewGraphCache = null;
@@ -2029,7 +2039,7 @@ async function readDirectionReviewOverlay() {
   if (staged) {
     return {
       source: "staged",
-      readOnly: process.env.CW_OVERLAY_PROFILE !== "staged-v2",
+      readOnly: false,
       overlay: parseCwOverlayV2(staged),
     };
   }
@@ -2041,9 +2051,9 @@ async function readDirectionReviewOverlay() {
 }
 
 function requireStagedV2Profile() {
-  if (process.env.CW_OVERLAY_PROFILE !== "staged-v2") {
-    throw new Error("Direction Review writes require CW_OVERLAY_PROFILE=staged-v2");
-  }
+  // Overlay V2 is now the editor's mutable mapping authority. The old
+  // CW_OVERLAY_PROFILE switch remains a build/runtime compatibility concern,
+  // not a requirement for local authoring writes.
 }
 
 function compactBicycleTraversal(value) {
@@ -2077,6 +2087,7 @@ async function readDirectionReviewGraphContext() {
     const edgeId = String(edge?.id || "");
     if (!edgeId) continue;
     edgeLookup.set(edgeId, {
+      id: edgeId,
       edgeId,
       source: edge.source || "osm",
       fromNodeId: edge.fromNodeId ? String(edge.fromNodeId) : null,
@@ -2276,6 +2287,687 @@ async function directionReviewEvidenceDigests(overlay, segmentIds) {
     }
   }
   return evidenceDigests;
+}
+
+function networkAuthoringDirectedOwners(overlay, excludedSegmentId) {
+  const owners = new Map();
+  for (const segment of Object.values(overlay.segments || {})) {
+    if (Number(segment.segmentId) === Number(excludedSegmentId)) continue;
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      for (const ref of materializeAcceptedAlignment(segment, alignmentKey) || []) {
+        owners.set(directedIntervalKey(ref), {
+          segmentId: segment.segmentId,
+          segmentName: segment.segmentName,
+          alignmentKey,
+        });
+      }
+    }
+  }
+  return owners;
+}
+
+function networkAuthoringPolicyLookup(context) {
+  const lookup = new Map();
+  for (const edge of context.edgeLookup.values()) {
+    for (const direction of ["forward", "reverse"]) {
+      const state = edge.bicycleTraversal?.[direction] || "unknown";
+      if (state === "allowed") continue;
+      lookup.set(`${edge.edgeId}|${direction}`, {
+        state,
+        reason:
+          edge.bicycleTraversal?.[`${direction}Reason`] ||
+          "missing_policy_evidence",
+      });
+    }
+  }
+  return lookup;
+}
+
+function networkAuthoringEndpointScore(validation) {
+  const distances = validation?.endpointDistancesMeters || {};
+  const start = Number(distances.start);
+  const end = Number(distances.end);
+  return (Number.isFinite(start) ? start : Number.POSITIVE_INFINITY) +
+    (Number.isFinite(end) ? end : Number.POSITIVE_INFINITY);
+}
+
+function networkAuthoringRefsEqual(left, right) {
+  return JSON.stringify(normalizeAlignmentEdgeRefs(left || [])) ===
+    JSON.stringify(normalizeAlignmentEdgeRefs(right || []));
+}
+
+function networkAuthoringIntentionalAsymmetry(segment) {
+  const aRefs = materializeAcceptedAlignment(segment, "aToB");
+  const bRefs = materializeAcceptedAlignment(segment, "bToA");
+  if (!aRefs?.length || !bRefs?.length) return false;
+  if (networkAuthoringRefsEqual(reverseAlignmentRefs(aRefs), bRefs)) return false;
+  const bases = ["aToB", "bToA"].map(
+    (alignmentKey) =>
+      segment.alignments?.[alignmentKey]?.published?.review?.acceptanceBasis || "",
+  );
+  return bases.some((basis) => !String(basis).startsWith("automatic-"));
+}
+
+function networkAuthoringSegmentShell(feature, previous) {
+  const coordinates = feature.geometry.coordinates.map((coordinate) =>
+    coordinate.slice(0, 2),
+  );
+  const sourceGeometryDigest = digestCwOverlayValue(coordinates);
+  return {
+    ...(previous ? structuredClone(previous) : {}),
+    segmentId: Number(feature.properties.id),
+    segmentName: String(feature.properties.name || feature.properties.id),
+    lifecycleStatus: String(feature.properties.status || "active"),
+    navigable: true,
+    sourceGeometryDigest,
+    endpoints: {
+      a: {
+        coordinate: coordinates[0],
+        zoneMeters: Number(previous?.endpoints?.a?.zoneMeters || 30),
+        labels: { key: "A" },
+      },
+      b: {
+        coordinate: coordinates.at(-1),
+        zoneMeters: Number(previous?.endpoints?.b?.zoneMeters || 30),
+        labels: { key: "B" },
+      },
+    },
+    // Keep the last published path while evaluating a revised source shape.
+    // A failed proposal is surfaced as a draft/issue, but does not destroy the
+    // last routeable mapping. A successful proposal replaces both directions.
+    alignments: previous
+      ? structuredClone(previous.alignments)
+      : {
+          aToB: { published: null, draft: null },
+          bToA: { published: null, draft: null },
+        },
+  };
+}
+
+function networkAuthoringReview({
+  overlay,
+  segment,
+  alignmentKey,
+  realization,
+  refs,
+  intent,
+  revision,
+  context,
+  roundaboutRepair = null,
+}) {
+  const mappingDigest = alignmentMappingDigest(
+    segment.segmentId,
+    alignmentKey,
+    realization,
+  );
+  const acceptanceBasis = automaticAcceptanceBasis({ intent, roundaboutRepair });
+  return {
+    disposition: "accepted",
+    realization,
+    mappingDigest,
+    review: {
+      reviewer: intent === "explicit-selection" ? "ohad" : "editor-automatic",
+      reviewedAt: new Date().toISOString().slice(0, 10),
+      batchId: `network-authoring-${segment.segmentId}-${revision}`,
+      rationale: roundaboutRepair
+        ? "Validated authoring path with a deterministic legal roundabout reverse repair"
+        : intent === "explicit-selection"
+          ? "Explicit curator edge selection with a mechanically validated exact reverse"
+          : "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
+      acceptanceBasis,
+      automated: intent !== "explicit-selection",
+      graphDigest: overlay.graphDigest,
+      policyDigest: overlay.policyDigest,
+      sourceGeometryDigest: segment.sourceGeometryDigest,
+      mappingDigest,
+      evidenceDigest: directionReviewEvidenceDigest(refs, context),
+    },
+  };
+}
+
+function networkAuthoringDraft({ refs, candidate, validation }) {
+  const realization = refs?.length
+    ? { type: "explicit", edgeRefs: normalizeAlignmentEdgeRefs(refs) }
+    : null;
+  return {
+    disposition: "needs_review",
+    ...(realization ? { realization } : {}),
+    ...(realization
+      ? { mappingDigest: alignmentMappingDigest(candidate.segmentId, candidate.alignmentKey, realization) }
+      : {}),
+    candidate: {
+      kind: candidate.kind,
+      sourceRevision: candidate.sourceRevision,
+      ...(candidate.roundaboutRepairs
+        ? { repairs: candidate.roundaboutRepairs }
+        : {}),
+    },
+    validation,
+  };
+}
+
+function networkAuthoringValidationWithDecision(validation, decision) {
+  if (decision.outcome === "apply" || decision.code === "access_precedence") {
+    return validation;
+  }
+  if ((validation?.reasons || []).some((reason) => reason.code === decision.code)) {
+    return validation;
+  }
+  return {
+    ...(validation || {}),
+    ok: false,
+    status: "invalid",
+    reasons: [
+      ...(validation?.reasons || []),
+      { code: decision.code, reason: decision.message },
+    ],
+  };
+}
+
+async function writeNetworkAuthoringCompatibilityMapping({
+  segment,
+  refs,
+  intent,
+  match,
+}) {
+  const previous = await readCwBaseOverlay();
+  const next = normalizeCwBaseOverlay({
+    ...previous,
+    segments: {
+      ...(previous.segments || {}),
+      [String(segment.segmentId)]: {
+        segmentId: segment.segmentId,
+        segmentName: segment.segmentName,
+        status: intent === "explicit-selection" ? "accepted_edge_set" : "accepted_auto_match",
+        source: intent === "explicit-selection" ? "edge_pick" : "v2_compatibility_projection",
+        confidence: match?.confidence || (intent === "explicit-selection" ? "manual" : "high"),
+        coverageRatio: Number(match?.coverageRatio ?? 1),
+        avgDistanceMeters: match?.avgDistanceMeters ?? null,
+        gapCount: Number(match?.gapCount || 0),
+        failureClass: match?.failureClass || null,
+        edgeRefs: normalizeAlignmentEdgeRefs(refs),
+        updatedAt: new Date().toISOString(),
+      },
+    },
+  });
+  await writeJsonAtomic(cwBaseOverlayPath, next);
+  return next;
+}
+
+async function applyNetworkAuthoringSegmentMetadata(payload) {
+  const segmentId = Number(payload?.segmentId);
+  const requestedRevision = Number(payload?.revision || ++networkAuthoringCounter);
+  if (!Number.isInteger(segmentId)) throw new Error("Network metadata authoring requires a segmentId");
+  if (!Number.isFinite(requestedRevision)) throw new Error("Network metadata authoring requires a revision");
+
+  const previousRevision = latestNetworkAuthoringRevisionBySegment.get(segmentId) || 0;
+  if (requestedRevision <= previousRevision) {
+    return { superseded: true, segmentId, revision: requestedRevision };
+  }
+  latestNetworkAuthoringRevisionBySegment.set(segmentId, requestedRevision);
+
+  const [source, stagedValue, proposalValue, compatibilityValue] = await Promise.all([
+    readJsonFileOrNull(sourcePath),
+    readJsonFileOrNull(cwBaseOverlayV2StagedPath),
+    readJsonFileOrNull(cwBaseOverlayV2ProposalPath),
+    readCwBaseOverlay(),
+  ]);
+  const sourceFeature = source?.features?.find(
+    (feature) => Number(feature?.properties?.id) === segmentId,
+  );
+  if (!sourceFeature?.geometry || sourceFeature.geometry.type !== "LineString") {
+    throw new Error(`Source segment ${segmentId} was not found; save the source first`);
+  }
+
+  const overlay = parseCwOverlayV2(stagedValue || proposalValue);
+  const previousSegment = overlay.segments?.[String(segmentId)];
+  if (!previousSegment) {
+    return {
+      superseded: false,
+      skipped: true,
+      reason: "mapping-not-created",
+      segmentId,
+      revision: requestedRevision,
+      overlay,
+      compatibilityOverlay: compatibilityValue,
+    };
+  }
+
+  const nextOverlay = structuredClone(overlay);
+  const nextSegment = nextOverlay.segments[String(segmentId)];
+  nextSegment.segmentName = String(sourceFeature.properties?.name || segmentId);
+  nextSegment.lifecycleStatus = String(sourceFeature.properties?.status || "active");
+  nextSegment.navigable = !["deprecated", "legacy", "draft"].includes(nextSegment.lifecycleStatus);
+
+  const nextCompatibility = normalizeCwBaseOverlay({
+    ...compatibilityValue,
+    segments: compatibilityValue.segments?.[String(segmentId)]
+      ? {
+          ...compatibilityValue.segments,
+          [String(segmentId)]: {
+            ...compatibilityValue.segments[String(segmentId)],
+            segmentName: nextSegment.segmentName,
+            updatedAt: new Date().toISOString(),
+          },
+        }
+      : compatibilityValue.segments,
+  });
+  const parsed = parseCwOverlayV2(nextOverlay);
+  if (latestNetworkAuthoringRevisionBySegment.get(segmentId) !== requestedRevision) {
+    return { superseded: true, segmentId, revision: requestedRevision };
+  }
+
+  try {
+    await writeJsonAtomic(cwBaseOverlayV2StagedPath, parsed);
+    if (compatibilityValue.segments?.[String(segmentId)]) {
+      await writeJsonAtomic(cwBaseOverlayPath, nextCompatibility);
+    }
+  } catch (error) {
+    await Promise.all([
+      stagedValue
+        ? writeJsonAtomic(cwBaseOverlayV2StagedPath, stagedValue)
+        : unlink(cwBaseOverlayV2StagedPath).catch(() => {}),
+      writeJsonAtomic(cwBaseOverlayPath, compatibilityValue),
+    ]).catch((rollbackError) => {
+      log("error", "network metadata rollback failed", rollbackError?.message || String(rollbackError));
+    });
+    throw error;
+  }
+
+  return {
+    superseded: false,
+    segmentId,
+    revision: requestedRevision,
+    status: networkSegmentStatus(nextSegment),
+    overlay: parsed,
+    compatibilityOverlay: nextCompatibility,
+  };
+}
+
+async function applyNetworkAuthoringSegment(payload) {
+  const intent = payload?.intent === "explicit-selection"
+    ? "explicit-selection"
+    : "automatic-match";
+  const segmentId = Number(payload?.segmentId ?? payload?.feature?.properties?.id);
+  const requestedRevision = Number(payload?.revision || ++networkAuthoringCounter);
+  if (!Number.isInteger(segmentId)) throw new Error("Network authoring requires a segmentId");
+  if (!Number.isFinite(requestedRevision)) throw new Error("Network authoring requires a revision");
+
+  const previousRevision = latestNetworkAuthoringRevisionBySegment.get(segmentId) || 0;
+  if (requestedRevision <= previousRevision) {
+    return { superseded: true, segmentId, revision: requestedRevision };
+  }
+  latestNetworkAuthoringRevisionBySegment.set(segmentId, requestedRevision);
+
+  const [source, stagedValue, proposalValue, context] = await Promise.all([
+    readJsonFileOrNull(sourcePath),
+    readJsonFileOrNull(cwBaseOverlayV2StagedPath),
+    readJsonFileOrNull(cwBaseOverlayV2ProposalPath),
+    readDirectionReviewGraphContext(),
+  ]);
+  const sourceFeature = source?.features?.find(
+    (feature) => Number(feature?.properties?.id) === segmentId,
+  );
+  if (!sourceFeature?.geometry || sourceFeature.geometry.type !== "LineString") {
+    throw new Error(`Active source segment ${segmentId} was not found; save the source first`);
+  }
+  const suppliedDigest = payload?.feature?.geometry?.coordinates
+    ? digestCwOverlayValue(
+        payload.feature.geometry.coordinates.map((coordinate) => coordinate.slice(0, 2)),
+      )
+    : null;
+  const currentDigest = digestCwOverlayValue(
+    sourceFeature.geometry.coordinates.map((coordinate) => coordinate.slice(0, 2)),
+  );
+  if (suppliedDigest && suppliedDigest !== currentDigest) {
+    throw new Error(`Segment ${segmentId} source changed after this authoring request`);
+  }
+
+  const overlay = parseCwOverlayV2(stagedValue || proposalValue);
+  if (
+    overlay.graphDigest !== context.graphDigest ||
+    overlay.policyDigest !== context.policyDigest
+  ) {
+    const error = new Error("Base-network evidence changed; refresh authoring evidence and retry");
+    error.status = 409;
+    throw error;
+  }
+  const previousSegment = overlay.segments?.[String(segmentId)] || null;
+  const segment = networkAuthoringSegmentShell(sourceFeature, previousSegment);
+  const refs = normalizeAlignmentEdgeRefs(payload?.edgeRefs || []);
+  if (refs.length === 0) throw new Error("Network authoring requires at least one base edge");
+  if (intent === "automatic-match" && !automaticMatchQualityEligible(payload?.match)) {
+    // Continue so the blocked result is recorded as an inspectable proposal.
+  }
+
+  const owners = networkAuthoringDirectedOwners(overlay, segmentId);
+  const aValidation = validateDirectionReviewRefsWithContext(
+    overlay,
+    segment,
+    "aToB",
+    refs,
+    context,
+    owners,
+  );
+  const bValidation = validateDirectionReviewRefsWithContext(
+    overlay,
+    segment,
+    "bToA",
+    refs,
+    context,
+    owners,
+  );
+  const forwardKey = aValidation.ok || networkAuthoringEndpointScore(aValidation) <= networkAuthoringEndpointScore(bValidation)
+    ? "aToB"
+    : "bToA";
+  const oppositeKey = oppositeAlignmentKey(forwardKey);
+  const forwardValidation = forwardKey === "aToB" ? aValidation : bValidation;
+  const reverseRefs = reverseAlignmentRefs(refs);
+  let oppositeRefs = reverseRefs;
+  let reverseValidation = validateDirectionReviewRefsWithContext(
+    overlay,
+    segment,
+    oppositeKey,
+    reverseRefs,
+    context,
+    owners,
+  );
+  let roundaboutRepair = null;
+  if (!reverseValidation.ok) {
+    const repair = repairRoundaboutReverse(
+      reverseRefs,
+      reverseValidation,
+      context.edgeLookup,
+      networkAuthoringPolicyLookup(context),
+    );
+    if (repair?.edgeRefs?.length) {
+      const repairedValidation = validateDirectionReviewRefsWithContext(
+        overlay,
+        segment,
+        oppositeKey,
+        repair.edgeRefs,
+        context,
+        owners,
+      );
+      if (repairedValidation.ok) {
+        roundaboutRepair = repair;
+        oppositeRefs = normalizeAlignmentEdgeRefs(repair.edgeRefs);
+        reverseValidation = repairedValidation;
+      }
+    }
+  }
+
+  const decision = automaticBidirectionalDecision({
+    intent,
+    match: payload?.match,
+    forwardValidation,
+    reverseValidation,
+    intentionalAsymmetry: networkAuthoringIntentionalAsymmetry(previousSegment),
+    competingPathCount: Number(payload?.match?.competingPathCount || 0),
+    roundaboutRepair,
+  });
+
+  segment.migration = {
+    ...(segment.migration || {}),
+    classification: roundaboutRepair
+      ? "roundabout_reverse_candidate"
+      : decision.outcome === "apply"
+        ? "symmetric_candidate"
+        : decision.code === "access_precedence"
+          ? "access_precedence_needed"
+          : "unresolved",
+    sourceSchemaVersion: 2,
+    sourceMappingOrigin: "network-authoring-v2",
+    authoringRevision: requestedRevision,
+    lastOutcome: decision.outcome,
+    lastOutcomeCode: decision.code,
+  };
+
+  if (decision.outcome === "apply") {
+    const explicitRealization = { type: "explicit", edgeRefs: refs };
+    const explicitPublished = networkAuthoringReview({
+      overlay,
+      segment,
+      alignmentKey: forwardKey,
+      realization: explicitRealization,
+      refs,
+      intent,
+      revision: requestedRevision,
+      context,
+      roundaboutRepair: null,
+    });
+    const oppositeRealization = roundaboutRepair
+      ? { type: "explicit", edgeRefs: oppositeRefs }
+      : {
+          type: "reverseOf",
+          alignmentKey: forwardKey,
+          referencedMappingDigest: explicitPublished.mappingDigest,
+        };
+    const oppositePublished = networkAuthoringReview({
+      overlay,
+      segment,
+      alignmentKey: oppositeKey,
+      realization: oppositeRealization,
+      refs: oppositeRefs,
+      intent,
+      revision: requestedRevision,
+      context,
+      roundaboutRepair,
+    });
+    segment.alignments[forwardKey] = { published: explicitPublished, draft: null };
+    segment.alignments[oppositeKey] = { published: oppositePublished, draft: null };
+    segment.migration.automaticPublication = roundaboutRepair
+      ? "roundabout-reverse"
+      : "bidirectional-authoring";
+  } else {
+    const forwardResult = networkAuthoringValidationWithDecision(
+      forwardValidation,
+      decision,
+    );
+    const reverseResult = networkAuthoringValidationWithDecision(
+      reverseValidation,
+      decision,
+    );
+    segment.alignments[forwardKey].draft = networkAuthoringDraft({
+      refs,
+      candidate: {
+        kind: intent === "explicit-selection" ? "manual-editor" : "automatic-match",
+        segmentId,
+        alignmentKey: forwardKey,
+        sourceRevision: requestedRevision,
+      },
+      validation: forwardResult,
+    });
+    segment.alignments[oppositeKey].draft = networkAuthoringDraft({
+      refs: oppositeRefs,
+      candidate: {
+        kind: roundaboutRepair ? "roundabout-repaired-reverse" : "exact-reverse",
+        segmentId,
+        alignmentKey: oppositeKey,
+        sourceRevision: requestedRevision,
+        roundaboutRepairs: roundaboutRepair?.repairs,
+      },
+      validation: reverseResult,
+    });
+  }
+
+  const nextOverlay = structuredClone(overlay);
+  nextOverlay.segments[String(segmentId)] = segment;
+  const parsed = parseCwOverlayV2(nextOverlay);
+  if (latestNetworkAuthoringRevisionBySegment.get(segmentId) !== requestedRevision) {
+    return { superseded: true, segmentId, revision: requestedRevision };
+  }
+
+  const previousStaged = stagedValue;
+  const previousCompatibility = await readCwBaseOverlay();
+  let compatibilityOverlay = previousCompatibility;
+  try {
+    if (decision.outcome === "apply") {
+      await validatePublishedDirectionReviewOverlay(parsed);
+    }
+    await writeJsonAtomic(cwBaseOverlayV2StagedPath, parsed);
+    if (decision.outcome === "apply") {
+      compatibilityOverlay = await writeNetworkAuthoringCompatibilityMapping({
+        segment,
+        refs,
+        intent,
+        match: payload?.match,
+      });
+    }
+  } catch (error) {
+    await Promise.all([
+      previousStaged
+        ? writeJsonAtomic(cwBaseOverlayV2StagedPath, previousStaged)
+        : unlink(cwBaseOverlayV2StagedPath).catch(() => {}),
+      writeJsonAtomic(cwBaseOverlayPath, previousCompatibility),
+    ]).catch((rollbackError) => {
+      log("error", "network authoring rollback failed", rollbackError?.message || String(rollbackError));
+    });
+    throw error;
+  }
+
+  return {
+    superseded: false,
+    segmentId,
+    revision: requestedRevision,
+    decision,
+    status: networkSegmentStatus(segment, {
+      transientIssue: decision.outcome === "apply"
+        ? null
+        : { code: decision.code, message: decision.message },
+    }),
+    overlay: parsed,
+    compatibilityOverlay,
+  };
+}
+
+async function autoApplySafeDirectionReviewDrafts(overlay, { revision } = {}) {
+  const next = structuredClone(overlay);
+  const context = await readDirectionReviewGraphContext();
+  if (
+    next.graphDigest !== context.graphDigest ||
+    next.policyDigest !== context.policyDigest
+  ) {
+    return { overlay: next, applied: [], skipped: [{ code: "stale_evidence" }] };
+  }
+  const applied = [];
+  const skipped = [];
+  const allowedExistingKinds = new Set([
+    "v1-existing",
+    "new-authoring",
+    "authoring-revision",
+    "automatic-match",
+    "previous-draft",
+    "previously-published",
+  ]);
+  const allowedOppositeKinds = new Set([
+    "exact-reverse",
+    "roundabout-repaired-reverse",
+    "previous-draft",
+  ]);
+
+  for (const segment of Object.values(next.segments || {}).sort(
+    (left, right) => Number(left.segmentId) - Number(right.segmentId),
+  )) {
+    if (["aToB", "bToA"].some((key) => segment.alignments?.[key]?.published)) {
+      continue;
+    }
+    const explicitKey = ["aToB", "bToA"].find((key) => {
+      const draft = segment.alignments?.[key]?.draft;
+      return draft?.realization?.type === "explicit" &&
+        allowedExistingKinds.has(draft?.candidate?.kind);
+    });
+    if (!explicitKey) continue;
+    const oppositeKey = oppositeAlignmentKey(explicitKey);
+    const explicitDraft = segment.alignments[explicitKey].draft;
+    const oppositeDraft = segment.alignments[oppositeKey].draft;
+    if (!allowedOppositeKinds.has(oppositeDraft?.candidate?.kind)) continue;
+    const refs = directionReviewRecordRefs(segment, explicitKey, explicitDraft);
+    const oppositeRefs = directionReviewRecordRefs(segment, oppositeKey, oppositeDraft);
+    if (refs.length === 0 || oppositeRefs.length === 0) continue;
+
+    const owners = networkAuthoringDirectedOwners(next, segment.segmentId);
+    const forwardValidation = validateDirectionReviewRefsWithContext(
+      next,
+      segment,
+      explicitKey,
+      refs,
+      context,
+      owners,
+    );
+    const reverseValidation = validateDirectionReviewRefsWithContext(
+      next,
+      segment,
+      oppositeKey,
+      oppositeRefs,
+      context,
+      owners,
+    );
+    const roundaboutRepair = oppositeDraft?.candidate?.kind === "roundabout-repaired-reverse"
+      ? { repairs: oppositeDraft.candidate.repairs || [] }
+      : null;
+    const decision = automaticBidirectionalDecision({
+      intent: "migration-safe",
+      forwardValidation,
+      reverseValidation,
+      intentionalAsymmetry: false,
+      roundaboutRepair,
+    });
+    if (decision.outcome !== "apply") {
+      skipped.push({ segmentId: segment.segmentId, code: decision.code });
+      continue;
+    }
+
+    const explicitRealization = { type: "explicit", edgeRefs: refs };
+    const explicitPublished = networkAuthoringReview({
+      overlay: next,
+      segment,
+      alignmentKey: explicitKey,
+      realization: explicitRealization,
+      refs,
+      intent: "migration-safe",
+      revision: revision || `refresh-${Date.now()}`,
+      context,
+    });
+    const reverseIsExact = networkAuthoringRefsEqual(
+      reverseAlignmentRefs(refs),
+      oppositeRefs,
+    );
+    const oppositeRealization = reverseIsExact
+      ? {
+          type: "reverseOf",
+          alignmentKey: explicitKey,
+          referencedMappingDigest: explicitPublished.mappingDigest,
+        }
+      : { type: "explicit", edgeRefs: oppositeRefs };
+    const oppositePublished = networkAuthoringReview({
+      overlay: next,
+      segment,
+      alignmentKey: oppositeKey,
+      realization: oppositeRealization,
+      refs: oppositeRefs,
+      intent: "migration-safe",
+      revision: revision || `refresh-${Date.now()}`,
+      context,
+      roundaboutRepair,
+    });
+    segment.alignments[explicitKey] = { published: explicitPublished, draft: null };
+    segment.alignments[oppositeKey] = { published: oppositePublished, draft: null };
+    segment.migration = {
+      ...(segment.migration || {}),
+      automaticPublication: roundaboutRepair
+        ? "roundabout-reverse"
+        : "bidirectional-evidence",
+      lastOutcome: "apply",
+      lastOutcomeCode: decision.code,
+    };
+    applied.push({
+      segmentId: segment.segmentId,
+      alignmentKeys: [explicitKey, oppositeKey],
+      basis: automaticAcceptanceBasis({ intent: "migration-safe", roundaboutRepair }),
+    });
+  }
+  return { overlay: parseCwOverlayV2(next), applied, skipped };
 }
 
 async function validatePublishedDirectionReviewOverlay(overlay) {
@@ -2553,9 +3245,14 @@ async function refreshDirectionReviewEvidence(payload = {}) {
           adoptedAuthoringRevisions: 0,
         },
       };
+  const automatic = await autoApplySafeDirectionReviewDrafts(rebased.overlay, {
+    revision: refreshId,
+  });
+  rebased.overlay = automatic.overlay;
+  rebased.preserved.automaticallyPublished = automatic.applied.length;
   await validatePublishedDirectionReviewOverlay(rebased.overlay);
   await writeJsonAtomic(cwBaseOverlayV2StagedPath, rebased.overlay);
-  return { refreshId, ...rebased };
+  return { refreshId, ...rebased, automatic };
 }
 
 async function applyDirectionReviewAlignmentAction(payload) {
@@ -4685,6 +5382,34 @@ const server = createServer(async (request, response) => {
         profile: process.env.CW_OVERLAY_PROFILE || "production-v1",
         ...result,
       });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/network-authoring/segment") {
+      try {
+        const payload = await readRequestJson(request);
+        const result = await applyNetworkAuthoringSegment(payload);
+        sendJson(response, 200, { ok: true, source: "staged", ...result });
+      } catch (error) {
+        sendJson(response, error?.status || 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/network-authoring/segment-metadata") {
+      try {
+        const payload = await readRequestJson(request);
+        const result = await applyNetworkAuthoringSegmentMetadata(payload);
+        sendJson(response, 200, { ok: true, source: "staged", ...result });
+      } catch (error) {
+        sendJson(response, error?.status || 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       return;
     }
 

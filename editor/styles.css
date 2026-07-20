@@ -62,6 +62,137 @@ textarea {
   display: none;
 }
 
+.legacy-authoring-control,
+.legacy-migration-controls {
+  display: none !important;
+}
+
+.network-focus-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+}
+
+.network-focus-controls[hidden] {
+  display: none;
+}
+
+.network-focus-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #edf2ef;
+}
+
+.network-focus-switch .tool-button {
+  border-color: transparent;
+  background: transparent;
+}
+
+.network-focus-switch .tool-button.active {
+  border-color: var(--accent);
+  background: #fff;
+  color: var(--accent-dark);
+  box-shadow: 0 1px 3px rgba(31, 42, 46, 0.14);
+}
+
+.network-context-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.network-segment-routing {
+  margin-top: 12px;
+}
+
+.network-routing-card {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-left: 5px solid #64748b;
+  border-radius: 8px;
+  background: #f8faf9;
+}
+
+.network-routing-card.status-current {
+  border-left-color: #15803d;
+  background: #f0fdf4;
+}
+
+.network-routing-card.status-updating {
+  border-left-color: #0284c7;
+  background: #f0f9ff;
+}
+
+.network-routing-card.status-needs-decision {
+  border-left-color: #7c3aed;
+  background: #faf5ff;
+}
+
+.network-routing-card.status-blocked {
+  border-left-color: #b91c1c;
+  background: #fef2f2;
+}
+
+.network-routing-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.network-routing-heading strong {
+  font-size: 13px;
+}
+
+.network-routing-badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.network-routing-card p {
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.network-routing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.network-routing-actions button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.dirty-indicator.updating {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.dirty-indicator.failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .map-topbar {
   position: absolute;
   top: 12px;
@@ -119,6 +250,21 @@ textarea {
 
 .build-panel .action-row {
   gap: 6px;
+}
+
+#release-state-summary {
+  font-size: 11px;
+}
+
+@media (max-width: 1050px) {
+  .network-focus-controls {
+    order: 3;
+    width: 100%;
+    margin: 3px 0 0;
+    padding: 5px 0 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
 }
 
 .build-panel .primary-button,

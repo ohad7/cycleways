@@ -2,7 +2,14 @@
 
 Date: 2026-07-20
 
-Status: Planned
+Status: Core implementation complete; manual validation pending
+
+Implementation note (2026-07-20): the editor now uses the consolidated Network
+workspace, Overlay V2 direct authoring, coalesced autosave/refresh, strict safe
+bidirectional auto-application, progressive directional review, a unified
+segment status/issue projection, and explicit release Build/Promote gates.
+Legacy pipeline controls remain hidden compatibility wiring while existing V1
+build consumers are migrated.
 
 ## Outcome
 
@@ -526,4 +533,3 @@ rewrite:
 That slice proves the most important simplification—ordinary segments require
 no mapping or direction approval—before the separate workspaces and legacy
 buttons are removed.
-

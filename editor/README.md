@@ -73,46 +73,48 @@ local file, `MAPBOX_TOKEN`/`CYCLEWAYS_MAPBOX_TOKEN` in the server environment, o
 
 ## Current Editing Scope
 
-- Select a segment from the map, or open the Segments drawer when search/list selection is needed.
-- Add a new segment by clicking base graph edges in order, then pressing Done. The new segment's source `LineString` is stitched from the picked edges, and its CW base overlay mapping is auto-accepted when the chosen edges are continuous and unowned. If validation fails, the segment is still created with a `needs_edit` mapping (`failureClass` and message surfaced in the Segment side panel), and the user fixes it with the Add/remove edges control on the segment.
-- The compose toolbar exposes an escape-hatch "Draw freehand" button that reverts to the legacy point-drawing flow, for areas with no base coverage. When possible, add the missing path as a manual base edge in Base Graph mode (then run Recalculate Graph + Matches) before resuming Add Segment.
-- Extend a selected legacy (point-drawn) segment by clicking near its closest endpoint and drawing outward. Edge-picked segments do not expose Extend — they expose **Add/remove edges** and **Split at edge boundary** in the segment side panel instead.
-- Edit name, status, road type, todo, and notes.
-- Drag selected segment vertices on legacy point-drawn segments. Edge-picked segments hide vertex tools so the source geometry never drifts from the overlay mapping.
-- Insert a vertex on legacy segments by enabling insert mode and clicking near the selected line.
-- Delete the selected vertex on legacy segments when the segment still has at least two coordinates.
-- Split a legacy segment at a selected internal vertex. Edge-picked segments split at an edge boundary (Split at edge boundary in the side panel).
-- Use the Segments workspace for canonical CycleWays source edits.
-- Use the Base Network workspace in its default **Explore** mode to visualize
-  and inspect the full base graph without changing data. Map views include raw
-  `bicycle=no`, normalized two-way prohibitions, conditional traversal,
-  manual edges, and reviewed overrides. Results are grouped by source OSM way,
-  show their CycleWays relationships, and can be searched by edge or OSM way ID.
-- Switch Base Network to **Edit / review** to stage manual base edges on top of
-  the read-only OSM graph or save a reviewed traversal override. Manual edges
-  can be created, selected, reshaped by dragging vertices, edited with
-  Insert/Delete, split at an internal vertex, and folded into the graph with
-  Recalculate Graph + Matches. OSM graph edges can be selected for inspection
-  and copied into editable manual edges.
-- Use the CW Overlay workspace to inspect the selected segment's OSM graph match,
-  accept auto matches, or click base graph edges to choose the saved mapping in
-  `data/cw-base-overlay.json`.
-- Bulk-accept full, high-confidence auto matches while preserving existing
-  manual/edit overlay mappings.
-- Use the Base Overlay review queue to see accepted/unresolved counts and jump
-  directly to segments that are missing from, or only partially matched to, the
-  base network.
-- Add, edit, drag, and remove per-segment data markers.
-- Switch the base map between outdoors, satellite, streets, and light views.
-- Save the canonical source file.
-- Run the processor and export a Google Maps compatible KML.
-- Promote a fresh full build into the current site files.
+- **Network** is the primary authoring workspace. Switch between **CW network**
+  and **Base network** focus without changing the camera. **Show other network
+  for context** draws the non-focused network faintly without giving it normal
+  map-click ownership.
+- In CW focus, select a segment from the map or Segment drawer, edit its source
+  geometry and metadata, inspect its rideable base-edge path, and open the one
+  Issues queue for exceptions. A compact status reports Updating, Current,
+  Needs a decision, or Blocked with a concrete cause.
+- Add a segment by clicking base edges in order and pressing **Done**. Done is
+  the curator's decision: a continuous policy-safe path and its validated exact
+  reverse become current without another Accept or direction-review step.
+- Ordinary high-confidence, full-coverage bidirectional matches are applied
+  automatically. Directional controls appear only for distinct carriageways,
+  ambiguity, access-precedence decisions, unavailable directions, or defects.
+- **Inspect mapping** exposes exact edge references and diagnostics. Existing
+  current mappings can be edited directly; they do not need to be cleared or
+  unaccepted first.
+- Freehand drawing remains available where base coverage is missing. Add or
+  correct the physical path in Base focus when the base network itself is the
+  problem.
+- In Base focus, Explore visualizes the complete graph and filtered views such
+  as raw `bicycle=no`, normalized blocked directions, conditional traversal,
+  manual edges, and reviewed overrides. Search accepts an edge or OSM way ID.
+- Switch Base focus to **Edit / review** to create, copy, reshape, split, or
+  delete manual edges and to review traversal evidence. Newly drawn manual
+  edges default to reviewed bidirectional; copied edges inherit their source
+  policy. Saving a base edit automatically rebuilds the graph and refreshes
+  affected CW routing evidence.
+- Deliberate source edits autosave after completion. There is no routine Save,
+  Recalculate, Refresh V2, or per-direction Accept sequence. The editor keeps
+  the last valid published path while an invalid revision is shown as Blocked.
+- Build release remains explicit and is enabled only after authoring is current.
+  Promote remains fail-closed and requires a fresh release build with no issues.
+- Add, edit, drag, and remove per-segment data markers, and switch the base map
+  between outdoors, satellite, streets, and light views as before.
 
 All active data markers are shown on the map with the same icon set used by the
 site. Dragging a marker snaps its saved location back onto that marker's segment.
 
 Drawing mode keeps changes as a temporary draft until Done is pressed. Escape or
 Cancel discards the draft, and Backspace/Delete removes the last drafted point.
+After Done, the editor saves and refreshes routing evidence automatically.
 
 Splitting deprecates the original segment record and creates two active child
 segments. The deprecated parent keeps compact `routeAnchors` as `[lng, lat]`
@@ -144,7 +146,7 @@ geometry too. Accepted segments in `bike_roads` are drawn from their ordered,
 directed base edges so the line riders see matches the hidden routing graph.
 Build drapes processed source elevation onto that base-edge display path for the
 current public segment details. Unresolved segments keep their processed source
-geometry as a migration fallback; Segments mode remains the source geometry
+geometry as a migration fallback; CW network focus remains the source geometry
 editor.
 
 The public site loads `public-data/map-manifest.json` with `cache: "no-store"`
@@ -160,10 +162,12 @@ KML is an export format for Google Maps/Google Earth review. The editable source
 truth is `data/map-source.geojson`; generated artifacts should come from the processor,
 not manual edits.
 
-The CW base overlay authoring data is stored separately in
-`data/cw-base-overlay.json`. That file records how current CycleWays segments map
-onto generated base graph edges and is not a replacement for the canonical segment
-geometry.
+Directional CW mapping authority is stored in
+`data/cw-base-overlay.v2.staged.json`. It records each logical segment's A→B and
+B→A rideable base-edge paths, evidence, and provenance; it is not a replacement
+for canonical segment geometry. `data/cw-base-overlay.json` is maintained as a
+V1 compatibility projection for existing build and audit consumers, not as a
+curator approval stage.
 
 Manual base edges drawn in the editor are stored in
 `data/manual-base-edges.geojson`. They are part of the base graph input, not the
