@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-20T22:27:59.819Z",
+  "updatedAt": "2026-07-20T22:58:00.164Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -463,10 +463,10 @@
       "segmentId": 10,
       "segmentName": "גן הצפון",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.19,
+      "avgDistanceMeters": 0.15,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -615,43 +615,16 @@
           "manualEdgeId": "manual-manual-osm-529023380-mpdma4wt-b-mrtspole"
         },
         {
-          "edgeId": "manual-manual-osm-529023380-mpdma4wt-a-mrtspold",
+          "edgeId": "manual-10-mrtssyk8",
           "source": "manual",
-          "direction": "reverse",
+          "direction": "forward",
           "sequenceIndex": 16,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-529023380-mpdma4wt-a-mrtspold"
-        },
-        {
-          "edgeId": "e958921301_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 17,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 958921301
-        },
-        {
-          "edgeId": "e958921301_5",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 18,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 958921301
-        },
-        {
-          "edgeId": "e958921314_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 19,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 958921314
+          "manualEdgeId": "manual-10-mrtssyk8"
         }
       ],
-      "updatedAt": "2026-07-20T22:27:59.809Z"
+      "updatedAt": "2026-07-20T22:55:01.114Z"
     },
     "12": {
       "segmentId": 12,
@@ -17562,12 +17535,12 @@
     },
     "326": {
       "segmentId": 326,
-      "segmentName": "שביל אופניים 99 קיאקי הגושרים",
+      "segmentName": "שביל אופניים 99 מעיין ברוך",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.59,
+      "avgDistanceMeters": 0.56,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -17588,26 +17561,12 @@
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 958921316
-        }
-      ],
-      "updatedAt": "2026-06-02T15:42:28.149Z"
-    },
-    "327": {
-      "segmentId": 327,
-      "segmentName": "שביל אופניים 99 קיאקי הגושרים - 2",
-      "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
-      "confidence": "high",
-      "coverageRatio": 1,
-      "avgDistanceMeters": 0.17,
-      "gapCount": 0,
-      "failureClass": "accepted",
-      "edgeRefs": [
+        },
         {
           "edgeId": "e958921317_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 0,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 958921317
@@ -17616,22 +17575,45 @@
           "edgeId": "manual-98-mpemyjp0",
           "source": "manual",
           "direction": "reverse",
-          "sequenceIndex": 1,
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-98-mpemyjp0"
         },
         {
+          "edgeId": "manual-10-mrtsp2z0",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-10-mrtsp2z0"
+        }
+      ],
+      "updatedAt": "2026-07-20T22:58:00.163Z"
+    },
+    "327": {
+      "segmentId": 327,
+      "segmentName": "שביל אופניים 99 קיאקי הגושרים",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.12,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
           "edgeId": "manual-manual-osm-611794183-mpemy9fo-a-mpemycrz",
           "source": "manual",
           "direction": "reverse",
-          "sequenceIndex": 2,
+          "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-manual-osm-611794183-mpemy9fo-a-mpemycrz"
         }
       ],
-      "updatedAt": "2026-06-02T15:42:30.242Z"
+      "updatedAt": "2026-07-20T22:57:03.662Z"
     },
     "328": {
       "segmentId": 328,

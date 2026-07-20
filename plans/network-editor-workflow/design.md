@@ -651,7 +651,30 @@ starts a new Python process that reads and indexes the base-edge file for every
 request. A long-lived Python worker, or an equivalent server-resident matcher
 with the parsed graph cached by input digest, could remove that startup and
 loading cost. This is deliberately not part of the interaction-isolation
-change: per-stage timings will first confirm how much latency belongs to graph
-loading versus matching, persistence, and validation. Any later cache must be
-invalidated by the base-graph digest and must produce byte-equivalent match
-results to the command-line implementation.
+change.
+
+The command-line matcher now records versioned phase timings for graph JSON
+read/parse, edge filtering and bounds, spatial-index construction,
+connectivity-index construction, segment input parsing, segment matching, and
+result assembly. The editor server includes these timings in its structured
+completion log. A read-only repeated benchmark runs representative simple,
+manual-edge, roundabout, and actively edited segments through the exact
+production subprocess path and compares internal phase time with process wall
+time.
+
+A persistent worker is justified when the median reusable graph setup is both
+material in absolute time and at least half of median wall time. The benchmark's
+cached-time estimate is only an upper bound; implementation must still account
+for IPC, request parsing, digest validation, and match time. Any later cache must
+be invalidated by base-graph content/configuration digest, preserve cancellation
+semantics, and produce byte-equivalent match results to the command-line
+implementation.
+
+The first representative run (segments #62, #63, #276, and #319; one warmup and
+two measured runs each) confirms the worker threshold strongly: median wall time
+was 2,455.5 ms, of which 2,275.0 ms / 92.6% was reusable graph setup. Median
+graph JSON parsing was 506.3 ms, spatial-index construction 1,341.1 ms, and
+connectivity-index construction 341.9 ms. Segment matching itself ranged from
+0.9 to 3.5 ms. This establishes a digest-keyed long-lived matcher as the next
+performance implementation slice; the measured 180.6 ms cached median is an
+upper-bound estimate, not a latency guarantee.

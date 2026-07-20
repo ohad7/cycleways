@@ -73,6 +73,37 @@ def match_segment(segment_feature, edge_features, *, sample_spacing_m=18.0, max_
 
 
 class OsmMatcherRegressionTests(unittest.TestCase):
+    def test_single_segment_match_reports_graph_setup_and_match_timings(self):
+        performance = {"schemaVersion": 1, "phasesMs": {}}
+        source_segment = segment(77, [coord(0), coord(100)])
+        edges = [graph_edge("edge-1", [coord(0), coord(100)], "a", "b", 100)]
+
+        summary, _preview_features = build_single_segment_preview(
+            source_segment,
+            graph_collection(edges),
+            sample_spacing_m=18.0,
+            max_distance_m=8.0,
+            direction_limit_degrees=60.0,
+            direction_penalty_m=10.0,
+            grid_cell_m=90.0,
+            performance=performance,
+        )
+
+        self.assertEqual(summary["segmentId"], 77)
+        for phase in (
+            "edgeFilter",
+            "coordinateBounds",
+            "projectionSetup",
+            "spatialIndexBuild",
+            "connectivityIndexBuild",
+            "segmentMatch",
+        ):
+            self.assertIn(phase, performance["phasesMs"])
+            self.assertGreaterEqual(performance["phasesMs"][phase], 0)
+        self.assertEqual(performance["counts"]["graphEdges"], 1)
+        self.assertEqual(performance["counts"]["connectivityEdges"], 1)
+        self.assertGreater(performance["counts"]["segmentSamples"], 1)
+
     def test_closed_roundabout_with_one_attachment_keeps_the_complete_ring(self):
         a = [round(value, 7) for value in coord(0, 0)]
         b = [round(value, 7) for value in coord(100, 0)]

@@ -27,6 +27,19 @@ to the Python child process, and Build/Promote remain gated until both lanes are
 current. Persistent in-memory graph caching is recorded as a measured follow-up
 and is not included in this change.
 
+Implementation note (2026-07-21): the measured follow-up has started. The
+single-segment Python result reports graph read/parse, graph preparation and
+index construction, segment matching, and result-assembly durations. The editor
+server logs that report, and `npm run osm:match:benchmark` repeats representative
+segments using only temporary files. A long-lived worker remains a separate
+implementation decision after the benchmark establishes its likely savings.
+
+Benchmark result (2026-07-21): eight measured subprocess runs across segments
+#62, #63, #276, and #319 produced a 2,455.5 ms median wall time and 2,275.0 ms
+median reusable graph setup (92.6%). Median matching was 1.2 ms. The evidence
+meets the worker threshold; implement the digest-keyed persistent matcher as the
+next slice while retaining subprocess equivalence tests and fallback.
+
 ## Outcome
 
 Deliver one Network authoring workflow in which the curator switches explicitly
@@ -94,6 +107,23 @@ decisions, release validation, and runtime routing behavior.
   the second movement remains draggable, selection/camera remain stable, the
   stale matcher is cancelled, and the final revision becomes Current.
 - Run `npm run pretest` and `npm test`.
+
+## Matcher runtime measurement
+
+- Add versioned, non-semantic performance metadata to single-segment matcher
+  results; existing summary and preview output must remain unchanged.
+- Log the internal matcher phases alongside the end-to-end editor API duration.
+- Benchmark segments #62, #63, #276, and #319 through fresh production Python
+  subprocesses, with configurable warmup and measured run counts.
+- Use temporary segment/result files and leave source, overlay, base graph, and
+  evidence artifacts untouched.
+- Unit-test timing collection and benchmark aggregation independently of live
+  curator data.
+- Compare median reusable graph setup with median wall time. Proceed to a
+  digest-keyed worker only if the reusable share is material; retain the CLI as
+  the equivalence oracle and fallback.
+
+Status: complete. The worker decision threshold was met strongly.
 
 ## Expected file changes
 

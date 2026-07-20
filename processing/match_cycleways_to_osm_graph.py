@@ -16,6 +16,7 @@ import math
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 try:
@@ -41,6 +42,43 @@ MAX_EDGE_LENGTH_RATIO = 0.35
 MAX_EDGE_SUM_RATIO = 1.18
 MAX_EDGE_CONNECTION_GAP_M = 12.0
 MAX_CONNECTOR_BRIDGE_M = 45.0
+
+
+def record_performance_phase(
+    performance: dict[str, Any] | None,
+    name: str,
+    started_at: float,
+) -> None:
+    """Record one elapsed phase without changing matcher behavior."""
+    if performance is None:
+        return
+    performance.setdefault("phasesMs", {})[name] = round(
+        (perf_counter() - started_at) * 1000,
+        3,
+    )
+
+
+def finalize_single_segment_performance(
+    performance: dict[str, Any],
+    started_at: float,
+) -> None:
+    graph_setup_phases = (
+        "graphReadParse",
+        "edgeFilter",
+        "coordinateBounds",
+        "projectionSetup",
+        "spatialIndexBuild",
+        "connectivityIndexBuild",
+    )
+    phases = performance.get("phasesMs") or {}
+    performance["reusableGraphSetupMs"] = round(
+        sum(float(phases.get(name, 0)) for name in graph_setup_phases),
+        3,
+    )
+    performance["measuredThroughResultAssemblyMs"] = round(
+        (perf_counter() - started_at) * 1000,
+        3,
+    )
 
 
 def load_json(path: Path) -> Any:
@@ -1436,27 +1474,44 @@ def build_single_segment_preview(
     direction_limit_degrees: float,
     direction_penalty_m: float,
     grid_cell_m: float,
+    performance: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    phase_started_at = perf_counter()
     edge_features = [
         feature
         for feature in graph_edges_geojson.get("features", [])
         if feature.get("geometry", {}).get("type") == "LineString"
     ]
+    record_performance_phase(performance, "edgeFilter", phase_started_at)
+
+    phase_started_at = perf_counter()
     bounds = coordinate_bounds(
         [
             {"type": "FeatureCollection", "features": [segment_feature]},
             {"type": "FeatureCollection", "features": edge_features},
         ]
     )
+    record_performance_phase(performance, "coordinateBounds", phase_started_at)
+
+    phase_started_at = perf_counter()
     project = make_projection(bounds)
+    record_performance_phase(performance, "projectionSetup", phase_started_at)
+
+    phase_started_at = perf_counter()
     edge_index = EdgeSpatialIndex(
         edge_features,
         project,
         cell_size_m=grid_cell_m,
         max_distance_m=max_distance_m,
     )
+    record_performance_phase(performance, "spatialIndexBuild", phase_started_at)
+
+    phase_started_at = perf_counter()
     connectivity_index = EdgeConnectivityIndex(edge_features)
-    return match_segment(
+    record_performance_phase(performance, "connectivityIndexBuild", phase_started_at)
+
+    phase_started_at = perf_counter()
+    result = match_segment(
         segment_feature,
         edge_index,
         connectivity_index,
@@ -1467,6 +1522,18 @@ def build_single_segment_preview(
         direction_limit_degrees=direction_limit_degrees,
         direction_penalty_m=direction_penalty_m,
     )
+    record_performance_phase(performance, "segmentMatch", phase_started_at)
+    if performance is not None:
+        performance["counts"] = {
+            "graphFeatures": len(graph_edges_geojson.get("features", [])),
+            "graphEdges": len(edge_features),
+            "spatialSegments": len(edge_index.segments),
+            "spatialGridCells": len(edge_index.grid),
+            "connectivityEdges": len(connectivity_index.edge_by_id),
+            "connectivityNodes": len(connectivity_index.adjacency),
+            "segmentSamples": result[0].get("sampleCount", 0),
+        }
+    return result
 
 
 def parse_args() -> argparse.Namespace:
@@ -1512,12 +1579,26 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    measured_started_at = perf_counter()
+    performance: dict[str, Any] = {
+        "schemaVersion": 1,
+        "phasesMs": {},
+    }
+
+    phase_started_at = perf_counter()
     args = parse_args()
+    record_performance_phase(performance, "argumentParse", phase_started_at)
+
+    phase_started_at = perf_counter()
     graph_edges_geojson = load_json(args.graph_edges)
+    record_performance_phase(performance, "graphReadParse", phase_started_at)
     if args.single_segment_geojson:
         if not args.single_out_json:
             raise ValueError("--single-out-json is required with --single-segment-geojson")
+
+        phase_started_at = perf_counter()
         segment_feature = load_json(args.single_segment_geojson)
+        record_performance_phase(performance, "segmentReadParse", phase_started_at)
         summary, preview_features = build_single_segment_preview(
             segment_feature,
             graph_edges_geojson,
@@ -1526,7 +1607,10 @@ def main() -> None:
             direction_limit_degrees=args.direction_limit_degrees,
             direction_penalty_m=args.direction_penalty_m,
             grid_cell_m=args.grid_cell_m,
+            performance=performance,
         )
+
+        phase_started_at = perf_counter()
         result = {
             "generatedAt": datetime.now(timezone.utc).isoformat(),
             "summary": summary,
@@ -1534,7 +1618,10 @@ def main() -> None:
                 "type": "FeatureCollection",
                 "features": preview_features,
             },
+            "performance": performance,
         }
+        record_performance_phase(performance, "resultAssembly", phase_started_at)
+        finalize_single_segment_performance(performance, measured_started_at)
         write_json(args.single_out_json, result)
         print(
             "Matched CycleWays segment "

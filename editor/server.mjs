@@ -5294,6 +5294,7 @@ const server = createServer(async (request, response) => {
         segmentId: result.segmentId,
         coverageRatio: result.match?.summary?.coverageRatio,
         confidence: result.match?.summary?.confidence,
+        matcherPerformance: result.match?.performance,
       });
       sendJson(response, 200, { ok: true, ...result });
       return;
