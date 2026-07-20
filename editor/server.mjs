@@ -2620,7 +2620,10 @@ async function applyNetworkAuthoringSegment(payload) {
     sourceFeature.geometry.coordinates.map((coordinate) => coordinate.slice(0, 2)),
   );
   if (suppliedDigest && suppliedDigest !== currentDigest) {
-    throw new Error(`Segment ${segmentId} source changed after this authoring request`);
+    const error = new Error(`Segment ${segmentId} source changed after this authoring request`);
+    error.status = 409;
+    error.code = "SOURCE_REVISION_SUPERSEDED";
+    throw error;
   }
 
   const overlay = parseCwOverlayV2(stagedValue || proposalValue);
@@ -2630,6 +2633,7 @@ async function applyNetworkAuthoringSegment(payload) {
   ) {
     const error = new Error("Base-network evidence changed; refresh authoring evidence and retry");
     error.status = 409;
+    error.code = "BASE_EVIDENCE_SUPERSEDED";
     throw error;
   }
   const previousSegment = overlay.segments?.[String(segmentId)] || null;
@@ -5386,13 +5390,27 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname === "/api/network-authoring/segment") {
+      logApi(requestId, "POST /api/network-authoring/segment started");
       try {
         const payload = await readRequestJson(request);
         const result = await applyNetworkAuthoringSegment(payload);
-        sendJson(response, 200, { ok: true, source: "staged", ...result });
+        const durationMs = Date.now() - startedAt;
+        logApi(requestId, "POST /api/network-authoring/segment finished", {
+          durationMs,
+          segmentId: result.segmentId,
+          superseded: Boolean(result.superseded),
+          outcome: result.decision?.outcome || result.status?.key || null,
+        });
+        sendJson(response, 200, { ok: true, source: "staged", durationMs, ...result });
       } catch (error) {
+        log("warn", `api#${requestId} POST /api/network-authoring/segment failed`, {
+          durationMs: Date.now() - startedAt,
+          code: error?.code || null,
+          error: error instanceof Error ? error.message : String(error),
+        });
         sendJson(response, error?.status || 400, {
           ok: false,
+          code: error?.code || null,
           error: error instanceof Error ? error.message : String(error),
         });
       }
@@ -5400,13 +5418,26 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname === "/api/network-authoring/segment-metadata") {
+      logApi(requestId, "POST /api/network-authoring/segment-metadata started");
       try {
         const payload = await readRequestJson(request);
         const result = await applyNetworkAuthoringSegmentMetadata(payload);
-        sendJson(response, 200, { ok: true, source: "staged", ...result });
+        const durationMs = Date.now() - startedAt;
+        logApi(requestId, "POST /api/network-authoring/segment-metadata finished", {
+          durationMs,
+          segmentId: result.segmentId,
+          superseded: Boolean(result.superseded),
+        });
+        sendJson(response, 200, { ok: true, source: "staged", durationMs, ...result });
       } catch (error) {
+        log("warn", `api#${requestId} POST /api/network-authoring/segment-metadata failed`, {
+          durationMs: Date.now() - startedAt,
+          code: error?.code || null,
+          error: error instanceof Error ? error.message : String(error),
+        });
         sendJson(response, error?.status || 400, {
           ok: false,
+          code: error?.code || null,
           error: error instanceof Error ? error.message : String(error),
         });
       }
@@ -5484,18 +5515,30 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname === "/api/cw-base-overlay-v2/refresh-evidence") {
+      logApi(requestId, "POST /api/cw-base-overlay-v2/refresh-evidence started");
       try {
         requireStagedV2Profile();
         const payload = await readRequestJson(request);
         const result = await refreshDirectionReviewEvidence(payload);
+        const durationMs = Date.now() - startedAt;
+        logApi(requestId, "POST /api/cw-base-overlay-v2/refresh-evidence finished", {
+          durationMs,
+          refreshId: result.refreshId,
+          automatic: result.automatic?.applied?.length || 0,
+        });
         sendJson(response, 200, {
           ok: true,
           source: "staged",
+          durationMs,
           refreshId: result.refreshId,
           preserved: result.preserved,
           overlay: result.overlay,
         });
       } catch (error) {
+        log("warn", `api#${requestId} POST /api/cw-base-overlay-v2/refresh-evidence failed`, {
+          durationMs: Date.now() - startedAt,
+          error: error instanceof Error ? error.message : String(error),
+        });
         sendJson(response, 400, {
           ok: false,
           error: error instanceof Error ? error.message : String(error),

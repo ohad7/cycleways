@@ -2,7 +2,7 @@
 
 Date: 2026-07-20
 
-Status: Core implementation complete; manual validation pending
+Status: Core implementation complete; editing-loop hardening complete; manual validation pending
 
 Implementation note (2026-07-20): the editor now uses the consolidated Network
 workspace, Overlay V2 direct authoring, coalesced autosave/refresh, strict safe
@@ -10,6 +10,13 @@ bidirectional auto-application, progressive directional review, a unified
 segment status/issue projection, and explicit release Build/Promote gates.
 Legacy pipeline controls remain hidden compatibility wiring while existing V1
 build consumers are migrated.
+
+Implementation note (2026-07-21): Base Network no longer has a redundant
+Explore/Edit-review sub-mode. The autosave coordinator now snapshots source and
+edge selections, tracks independent per-object revisions, preserves a pending
+latest edit while older work finishes, auto-retries locally superseded work,
+and reports both live stage names and per-stage timings. The source-revision
+race observed on segment #319 is covered by coordinator tests.
 
 ## Outcome
 

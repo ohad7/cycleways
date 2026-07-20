@@ -28,8 +28,6 @@ for (const id of [
   "base-one-way-direction-summary",
   "base-edge-search",
   "find-base-edge",
-  "base-network-mode-explore",
-  "base-network-mode-edit",
   "base-network-preset",
   "base-network-theme",
   "base-network-show-cycleways",

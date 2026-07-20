@@ -36,6 +36,13 @@ import {
   networkSegmentStatus,
 } from "./lib/network-authoring-status.mjs";
 import {
+  authoringObjectRevision,
+  bumpAuthoringObjectRevision,
+  isCurrentAuthoringObjectRevision,
+  isRetryableAuthoringConflict,
+  summarizeAuthoringTimings,
+} from "./lib/network-authoring-coordinator.mjs";
+import {
   DIRECTION_REVIEW_CLASSIFICATION_LABELS,
   DIRECTION_REVIEW_CLASSIFICATIONS,
   buildDirectionReviewEvidenceRows,
@@ -298,7 +305,6 @@ const state = {
     cache: {},
   },
   baseNetworkExplorer: {
-    mode: "explore",
     preset: "all",
     theme: "traversal",
     showCycleways: storedNetworkContextVisible(),
@@ -331,6 +337,13 @@ const state = {
     transientIssues: new Map(),
     explicitEdgeRefsBySegment: new Map(),
     metadataSegmentIds: new Set(),
+    segmentRevisions: new Map(),
+    metadataRevisions: new Map(),
+    baseRevision: 0,
+    currentStage: null,
+    currentSegmentId: null,
+    runTimings: [],
+    lastTimingSummary: null,
   },
   connectorLens: {
     // "off" | "class" | "access" | "eligibility" | "cost"
@@ -438,8 +451,6 @@ const els = {
   releaseStateSummary: document.getElementById("release-state-summary"),
   baseGraphStatus: document.getElementById("base-graph-status"),
   baseGraphSummary: document.getElementById("base-graph-summary"),
-  baseNetworkModeExplore: document.getElementById("base-network-mode-explore"),
-  baseNetworkModeEdit: document.getElementById("base-network-mode-edit"),
   baseNetworkPreset: document.getElementById("base-network-preset"),
   baseNetworkTheme: document.getElementById("base-network-theme"),
   baseNetworkShowCycleways: document.getElementById("base-network-show-cycleways"),
@@ -728,6 +739,9 @@ function markDirty(isDirty = true) {
   state.dirty = isDirty;
   if (isDirty) {
     state.lastBuildReport = null;
+    // A new deliberate edit is a valid retry path. A prior terminal failure
+    // must never leave the editor permanently frozen.
+    state.authoring.lastError = null;
     scheduleAuthoringSync();
   }
   els.saveSource.disabled = !isDirty || isDrawing();
@@ -751,7 +765,10 @@ function authoringRevision() {
 
 function scheduleAuthoringSync({ baseChanged = false, delay = 700 } = {}) {
   if (!state.source) return;
-  if (baseChanged) state.authoring.pendingBaseRefresh = true;
+  if (baseChanged) {
+    state.authoring.pendingBaseRefresh = true;
+    state.authoring.baseRevision += 1;
+  }
   if (state.authoring.timer) window.clearTimeout(state.authoring.timer);
   state.authoring.timer = window.setTimeout(() => {
     state.authoring.timer = null;
@@ -779,7 +796,13 @@ function renderAuthoringState() {
   if (state.authoring.lastError) {
     els.dirtyIndicator.textContent = "Update failed";
   } else if (state.authoring.busy) {
-    els.dirtyIndicator.textContent = queued > 0 ? `Updating ${queued}` : "Updating…";
+    const objectText = state.authoring.currentSegmentId === null
+      ? ""
+      : ` #${state.authoring.currentSegmentId}`;
+    const stageText = state.authoring.currentStage
+      ? ` · ${state.authoring.currentStage}`
+      : "";
+    els.dirtyIndicator.textContent = `Updating${objectText}${stageText}`;
   } else if (state.dirty || state.authoring.timer) {
     els.dirtyIndicator.textContent = "Saving…";
   } else {
@@ -798,22 +821,54 @@ function renderAuthoringState() {
   updatePromoteButton();
 }
 
-async function applyNetworkAuthoringSegment(segmentId, revision) {
-  const record = state.activeFeatures.find(
-    ({ feature }) => Number(feature?.properties?.id) === Number(segmentId),
-  );
-  const feature = record?.feature;
+async function runAuthoringStage(stage, action, { segmentId = null } = {}) {
+  state.authoring.currentStage = stage;
+  state.authoring.currentSegmentId = segmentId;
+  renderAuthoringState();
+  const startedAt = performance.now();
+  try {
+    return await action();
+  } finally {
+    state.authoring.runTimings.push({
+      stage,
+      segmentId,
+      durationMs: Math.round(performance.now() - startedAt),
+    });
+  }
+}
+
+function formatAuthoringDuration(durationMs) {
+  const value = Math.max(0, Number(durationMs) || 0);
+  return value < 1000 ? `${Math.round(value)}ms` : `${(value / 1000).toFixed(1)}s`;
+}
+
+async function applyNetworkAuthoringSegment(job, revision) {
+  const { segmentId, feature, explicitRefs: queuedExplicitRefs } = job;
   if (!feature) return { skipped: true, reason: "inactive" };
 
-  const explicitRefs = state.authoring.explicitEdgeRefsBySegment.get(Number(segmentId));
+  const explicitRefs = queuedExplicitRefs;
   let summary = matchSummaryForSegment(segmentId);
   let edgeRefs = explicitRefs ? normalizeOverlayEdgeRefs(explicitRefs) : [];
   let intent = explicitRefs ? "explicit-selection" : "automatic-match";
+  let persistedMatch = null;
 
   if (!explicitRefs) {
-    summary = await recalculateSegmentMatch(feature);
-    edgeRefs = normalizeOverlayEdgeRefs(edgeRefsForAutoMatch(segmentId));
-    if (summary) await persistSelectedOverlayMatch(segmentId);
+    const recalculated = await runAuthoringStage(
+      "matching",
+      () => recalculateSegmentMatch(feature, { updateState: false }),
+      { segmentId },
+    );
+    summary = recalculated.summary;
+    edgeRefs = normalizeOverlayEdgeRefs(
+      edgeRefsForMatchResult(segmentId, summary, recalculated.preview),
+    );
+    if (summary) {
+      persistedMatch = await runAuthoringStage(
+        "saving match",
+        () => persistOverlayMatch(segmentId, summary, recalculated.preview, { updateState: false }),
+        { segmentId },
+      );
+    }
   }
 
   if (edgeRefs.length === 0) {
@@ -821,28 +876,46 @@ async function applyNetworkAuthoringSegment(segmentId, revision) {
       code: "alignment_empty",
       message: "The matcher did not produce a base-edge path.",
     });
-    return { skipped: true, reason: "no-edge-refs" };
+    return { skipped: true, reason: "no-edge-refs", persistedMatch };
   }
 
-  const response = await fetch("/api/network-authoring/segment", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      segmentId: Number(segmentId),
-      revision,
-      intent,
-      feature,
-      match: summary,
-      edgeRefs,
-    }),
-  });
-  const payload = await response.json();
-  if (!response.ok || !payload.ok) {
-    const error = new Error(payload.error || `Network authoring failed: ${response.status}`);
-    error.status = response.status;
-    throw error;
+  const payload = await runAuthoringStage(
+    "validating path",
+    async () => {
+      const response = await fetch("/api/network-authoring/segment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          segmentId: Number(segmentId),
+          revision,
+          intent,
+          feature,
+          match: summary,
+          edgeRefs,
+        }),
+      });
+      const responsePayload = await response.json();
+      if (!response.ok || !responsePayload.ok) {
+        const error = new Error(responsePayload.error || `Network authoring failed: ${response.status}`);
+        error.status = response.status;
+        error.code = responsePayload.code;
+        throw error;
+      }
+      return responsePayload;
+    },
+    { segmentId },
+  );
+  return { ...payload, persistedMatch };
+}
+
+function adoptNetworkAuthoringSegmentResult(segmentId, payload) {
+  if (!payload || payload.superseded) return;
+  if (payload.persistedMatch) {
+    state.baseOverlay.matchSummary = payload.persistedMatch.summary || state.baseOverlay.matchSummary;
+    state.baseOverlay.matchPreview = payload.persistedMatch.preview || state.baseOverlay.matchPreview;
+    invalidateBaseOverlayDerivedCache();
   }
-  if (payload.superseded) return payload;
+  if (payload.skipped) return;
   state.directionReview.loaded = true;
   state.directionReview.source = payload.source || "staged";
   state.directionReview.readOnly = false;
@@ -858,8 +931,6 @@ async function applyNetworkAuthoringSegment(segmentId, revision) {
       message: payload.decision?.message || "Review required",
     });
   }
-  state.authoring.explicitEdgeRefsBySegment.delete(Number(segmentId));
-  return payload;
 }
 
 async function applyNetworkAuthoringMetadata(segmentId, revision) {
@@ -872,16 +943,20 @@ async function applyNetworkAuthoringMetadata(segmentId, revision) {
   if (!response.ok || !payload.ok) {
     const error = new Error(payload.error || `Network metadata update failed: ${response.status}`);
     error.status = response.status;
+    error.code = payload.code;
     throw error;
   }
-  if (!payload.superseded && payload.overlay) {
+  return payload;
+}
+
+function adoptNetworkAuthoringMetadataResult(payload) {
+  if (!payload?.superseded && payload.overlay) {
     state.directionReview.loaded = true;
     state.directionReview.source = payload.source || "staged";
     state.directionReview.readOnly = false;
     state.directionReview.overlay = payload.overlay;
     if (payload.compatibilityOverlay) state.baseOverlay.overlay = payload.compatibilityOverlay;
   }
-  return payload;
 }
 
 async function runAuthoringSync() {
@@ -905,42 +980,134 @@ async function runAuthoringSync() {
   state.authoring.busy = true;
   state.authoring.rerun = false;
   state.authoring.lastError = null;
+  state.authoring.currentStage = null;
+  state.authoring.currentSegmentId = null;
+  state.authoring.runTimings = [];
+  const runStartedAt = performance.now();
   const revision = authoringRevision();
-  const segmentIds = [...state.changedSegmentIds].sort((left, right) => left - right);
-  const metadataSegmentIds = [...state.authoring.metadataSegmentIds]
+  const sourceSnapshot = structuredClone(state.source);
+  const segmentJobs = [...state.changedSegmentIds]
+    .sort((left, right) => left - right)
+    .map((segmentId) => ({
+      segmentId,
+      objectRevision: authoringObjectRevision(state.authoring.segmentRevisions, segmentId),
+      metadataRevision: authoringObjectRevision(state.authoring.metadataRevisions, segmentId),
+      feature: structuredClone(
+        sourceSnapshot.features?.find(
+          (feature) => Number(feature?.properties?.id) === Number(segmentId),
+        ) || null,
+      ),
+      explicitRefs: state.authoring.explicitEdgeRefsBySegment.has(Number(segmentId))
+        ? structuredClone(state.authoring.explicitEdgeRefsBySegment.get(Number(segmentId)))
+        : null,
+    }));
+  const metadataJobs = [...state.authoring.metadataSegmentIds]
     .filter((segmentId) => !state.changedSegmentIds.has(segmentId))
-    .sort((left, right) => left - right);
-  state.authoring.activeSegmentIds = new Set([...segmentIds, ...metadataSegmentIds]);
+    .sort((left, right) => left - right)
+    .map((segmentId) => ({
+      segmentId,
+      objectRevision: authoringObjectRevision(state.authoring.metadataRevisions, segmentId),
+    }));
+  const baseRevision = state.authoring.baseRevision;
+  state.authoring.activeSegmentIds = new Set([
+    ...segmentJobs.map((job) => job.segmentId),
+    ...metadataJobs.map((job) => job.segmentId),
+  ]);
   renderAll();
 
   const applied = [];
   const exceptions = [];
   try {
-    if (state.dirty) await saveSource({ quiet: true });
+    if (state.dirty) {
+      await runAuthoringStage(
+        "saving source",
+        () => saveSource({ quiet: true, source: sourceSnapshot }),
+      );
+    }
     if (state.authoring.pendingBaseRefresh) {
       state.baseOverlay.enabled = true;
-      if (!state.baseOverlay.loaded) await loadBaseOverlayData();
-      await refreshDirectionReviewEvidence({ quiet: true });
-      state.authoring.pendingBaseRefresh = false;
+      if (!state.baseOverlay.loaded) {
+        await runAuthoringStage("loading base network", () => loadBaseOverlayData());
+      }
+      await runAuthoringStage(
+        "rebuilding base evidence",
+        () => refreshDirectionReviewEvidence({ quiet: true }),
+      );
+      if (state.authoring.baseRevision === baseRevision) {
+        state.authoring.pendingBaseRefresh = false;
+      } else {
+        state.authoring.rerun = true;
+      }
     }
-    if ((segmentIds.length > 0 || metadataSegmentIds.length > 0) && !state.baseOverlay.loaded) {
+    if ((segmentJobs.length > 0 || metadataJobs.length > 0) && !state.baseOverlay.loaded) {
       state.baseOverlay.enabled = true;
-      await loadBaseOverlayData();
+      await runAuthoringStage("loading base network", () => loadBaseOverlayData());
     }
 
-    for (const segmentId of metadataSegmentIds) {
-      await applyNetworkAuthoringMetadata(segmentId, revision + segmentId);
-      state.authoring.metadataSegmentIds.delete(segmentId);
+    for (const job of metadataJobs) {
+      const result = await runAuthoringStage(
+        "updating metadata",
+        () => applyNetworkAuthoringMetadata(job.segmentId, revision + job.segmentId),
+        { segmentId: job.segmentId },
+      );
+      if (
+        !result?.superseded &&
+        isCurrentAuthoringObjectRevision(
+          state.authoring.metadataRevisions,
+          job.segmentId,
+          job.objectRevision,
+        )
+      ) {
+        adoptNetworkAuthoringMetadataResult(result);
+        state.authoring.metadataSegmentIds.delete(job.segmentId);
+      } else {
+        state.authoring.rerun = true;
+      }
     }
 
-    for (const segmentId of segmentIds) {
+    for (const job of segmentJobs) {
       try {
-        const result = await applyNetworkAuthoringSegment(segmentId, revision + segmentId);
-        if (result?.decision?.outcome === "apply") applied.push(segmentId);
-        else if (!result?.superseded) exceptions.push(segmentId);
-        state.changedSegmentIds.delete(segmentId);
+        const result = await applyNetworkAuthoringSegment(job, revision + job.segmentId);
+        const stillCurrent = isCurrentAuthoringObjectRevision(
+          state.authoring.segmentRevisions,
+          job.segmentId,
+          job.objectRevision,
+        );
+        if (!result?.superseded && stillCurrent) {
+          adoptNetworkAuthoringSegmentResult(job.segmentId, result);
+          if (result?.decision?.outcome === "apply") applied.push(job.segmentId);
+          else exceptions.push(job.segmentId);
+          state.changedSegmentIds.delete(job.segmentId);
+          if (job.explicitRefs) {
+            state.authoring.explicitEdgeRefsBySegment.delete(Number(job.segmentId));
+          }
+          if (
+            !result?.skipped &&
+            isCurrentAuthoringObjectRevision(
+              state.authoring.metadataRevisions,
+              job.segmentId,
+              job.metadataRevision,
+            )
+          ) {
+            state.authoring.metadataSegmentIds.delete(job.segmentId);
+          }
+        } else {
+          state.authoring.rerun = true;
+        }
       } catch (error) {
-        if (error?.status === 409) state.authoring.pendingBaseRefresh = true;
+        const locallySuperseded = !isCurrentAuthoringObjectRevision(
+          state.authoring.segmentRevisions,
+          job.segmentId,
+          job.objectRevision,
+        );
+        if (isRetryableAuthoringConflict(error, { locallySuperseded })) {
+          if (error?.code === "BASE_EVIDENCE_SUPERSEDED") {
+            state.authoring.pendingBaseRefresh = true;
+            state.authoring.baseRevision += 1;
+          }
+          state.authoring.rerun = true;
+          break;
+        }
         throw error;
       }
     }
@@ -950,7 +1117,21 @@ async function runAuthoringSync() {
       applied.length > 0 ? `${applied.length} current` : null,
       exceptions.length > 0 ? `${exceptions.length} need attention` : null,
     ].filter(Boolean);
-    setStatus(details.length > 0 ? `Authoring updated · ${details.join(" · ")}.` : "Authoring saved and current.");
+    const timing = summarizeAuthoringTimings(state.authoring.runTimings);
+    state.authoring.lastTimingSummary = timing;
+    console.info("[network-authoring] update finished", {
+      durationMs: Math.round(performance.now() - runStartedAt),
+      stages: state.authoring.runTimings,
+      ...timing,
+    });
+    const timingText = timing.slowestStage
+      ? ` · ${timing.slowestStage} ${formatAuthoringDuration(timing.slowestDurationMs)}`
+      : "";
+    setStatus(
+      details.length > 0
+        ? `Authoring updated · ${details.join(" · ")}${timingText}.`
+        : `Authoring saved and current${timingText}.`,
+    );
   } catch (error) {
     state.authoring.lastError = error instanceof Error ? error.message : String(error);
     showAlert("Authoring update failed. Your source edit is retained.", state.authoring.lastError);
@@ -959,10 +1140,18 @@ async function runAuthoringSync() {
   } finally {
     state.authoring.busy = false;
     state.authoring.activeSegmentIds = new Set();
+    state.authoring.currentStage = null;
+    state.authoring.currentSegmentId = null;
     renderAll();
     if (
       !state.authoring.lastError &&
-      (state.authoring.rerun || state.dirty || state.authoring.pendingBaseRefresh)
+      (
+        state.authoring.rerun ||
+        state.dirty ||
+        state.authoring.pendingBaseRefresh ||
+        state.changedSegmentIds.size > 0 ||
+        state.authoring.metadataSegmentIds.size > 0
+      )
     ) {
       scheduleAuthoringSync({ delay: 500 });
     }
@@ -1123,6 +1312,9 @@ function queueChangedSegment(segmentId) {
   const id = Number(segmentId);
   if (!Number.isInteger(id)) return;
   state.changedSegmentIds.add(id);
+  bumpAuthoringObjectRevision(state.authoring.segmentRevisions, id);
+  state.authoring.lastError = null;
+  if (state.authoring.busy) state.authoring.rerun = true;
 }
 
 function queueChangedFeature(feature) {
@@ -1131,7 +1323,12 @@ function queueChangedFeature(feature) {
 
 function queueNetworkMetadataFeature(feature) {
   const segmentId = Number(feature?.properties?.id);
-  if (Number.isInteger(segmentId)) state.authoring.metadataSegmentIds.add(segmentId);
+  if (Number.isInteger(segmentId)) {
+    state.authoring.metadataSegmentIds.add(segmentId);
+    bumpAuthoringObjectRevision(state.authoring.metadataRevisions, segmentId);
+    state.authoring.lastError = null;
+    if (state.authoring.busy) state.authoring.rerun = true;
+  }
 }
 
 function clearChangedSegmentQueue() {
@@ -2181,8 +2378,7 @@ function updateWorkspaceLayerVisibility() {
   }
   setLayerVisibility(
     "vertices-layer",
-    state.workspaceMode === "overlay" ||
-      (state.workspaceMode === "base" && state.baseNetworkExplorer.mode === "edit"),
+    state.workspaceMode === "overlay" || state.workspaceMode === "base",
   );
   applyBaseNetworkMapPresentation();
   if (map.getLayer("selected-segment")) {
@@ -2455,7 +2651,7 @@ function renderBaseModeForm() {
   const coords = feature?.geometry?.coordinates || [];
   const vertexIndex = state.baseOverlay.selectedManualVertexIndex;
   const drawing = isDrawing();
-  const editing = state.baseNetworkExplorer.mode === "edit";
+  const editing = state.workspaceMode === "base";
   const canDeleteVertex = editing && feature && !drawing && vertexIndex >= 0 && coords.length > 2;
   const canSplit = editing && feature && !drawing && vertexIndex > 0 && vertexIndex < coords.length - 1;
 
@@ -2687,7 +2883,7 @@ function renderDrawControls() {
   const drawing = isDrawing();
   const segmentsMode = state.workspaceMode === "overlay";
   const baseMode = state.workspaceMode === "base";
-  const baseEditing = baseMode && state.baseNetworkExplorer.mode === "edit";
+  const baseEditing = baseMode;
   const overlayMode = state.workspaceMode === "overlay";
   const issuesMode = overlayMode;
   const editButtons = [
@@ -2889,34 +3085,17 @@ function parseSequenceIndexes(value) {
   }
 }
 
-function edgeRefsForAutoMatch(segmentId) {
-  const cache = state.baseOverlay.cache || (state.baseOverlay.cache = {});
-  if (
-    !cache.autoEdgeRefsBySegment ||
-    cache.autoEdgeRefsMatchSummary !== state.baseOverlay.matchSummary ||
-    cache.autoEdgeRefsMatchPreview !== state.baseOverlay.matchPreview ||
-    cache.autoEdgeRefsManualEdges !== state.baseOverlay.manualBaseEdges
-  ) {
-    cache.autoEdgeRefsBySegment = new Map();
-    cache.autoEdgeRefsMatchSummary = state.baseOverlay.matchSummary;
-    cache.autoEdgeRefsMatchPreview = state.baseOverlay.matchPreview;
-    cache.autoEdgeRefsManualEdges = state.baseOverlay.manualBaseEdges;
-  }
-
-  const cacheKey = String(segmentId);
-  if (cache.autoEdgeRefsBySegment.has(cacheKey)) {
-    return cache.autoEdgeRefsBySegment.get(cacheKey);
-  }
-
-  const match = matchSummaryForSegment(segmentId);
-  if (!match) {
-    cache.autoEdgeRefsBySegment.set(cacheKey, []);
-    return [];
-  }
-
+function edgeRefsForMatchResult(segmentId, match, preview) {
+  if (!match) return [];
   const previewByEdge = new Map();
-  for (const feature of matchPreviewFeaturesForSegment(segmentId)) {
+  const previewFeatures = Array.isArray(preview)
+    ? preview
+    : Array.isArray(preview?.features)
+      ? preview.features
+      : [];
+  for (const feature of previewFeatures) {
     const properties = feature.properties || {};
+    if (Number(properties.segmentId) !== Number(segmentId)) continue;
     if (properties.kind !== "matchedEdge" || !properties.edgeId) continue;
     previewByEdge.set(String(properties.edgeId), properties);
   }
@@ -2955,7 +3134,33 @@ function edgeRefsForAutoMatch(segmentId) {
     });
   }
 
-  const resolvedRefs = resolveOverriddenAutoEdgeRefs(refs.sort((a, b) => a.sequenceIndex - b.sequenceIndex));
+  return resolveOverriddenAutoEdgeRefs(refs.sort((a, b) => a.sequenceIndex - b.sequenceIndex));
+}
+
+function edgeRefsForAutoMatch(segmentId) {
+  const cache = state.baseOverlay.cache || (state.baseOverlay.cache = {});
+  if (
+    !cache.autoEdgeRefsBySegment ||
+    cache.autoEdgeRefsMatchSummary !== state.baseOverlay.matchSummary ||
+    cache.autoEdgeRefsMatchPreview !== state.baseOverlay.matchPreview ||
+    cache.autoEdgeRefsManualEdges !== state.baseOverlay.manualBaseEdges
+  ) {
+    cache.autoEdgeRefsBySegment = new Map();
+    cache.autoEdgeRefsMatchSummary = state.baseOverlay.matchSummary;
+    cache.autoEdgeRefsMatchPreview = state.baseOverlay.matchPreview;
+    cache.autoEdgeRefsManualEdges = state.baseOverlay.manualBaseEdges;
+  }
+
+  const cacheKey = String(segmentId);
+  if (cache.autoEdgeRefsBySegment.has(cacheKey)) {
+    return cache.autoEdgeRefsBySegment.get(cacheKey);
+  }
+
+  const resolvedRefs = edgeRefsForMatchResult(
+    segmentId,
+    matchSummaryForSegment(segmentId),
+    matchPreviewFeaturesForSegment(segmentId),
+  );
   cache.autoEdgeRefsBySegment.set(cacheKey, resolvedRefs);
   return resolvedRefs;
 }
@@ -4890,10 +5095,6 @@ function fitBaseNetworkFeatures(features) {
 
 function renderBaseNetworkExplorerPanel() {
   const explorer = state.baseNetworkExplorer;
-  els.baseNetworkModeExplore.classList.toggle("active", explorer.mode === "explore");
-  els.baseNetworkModeEdit.classList.toggle("active", explorer.mode === "edit");
-  els.baseNetworkModeExplore.disabled = isDrawing();
-  els.baseNetworkModeEdit.disabled = isDrawing() || state.baseOverlay.recalculating;
   els.baseNetworkPreset.value = normalizeBaseNetworkPreset(explorer.preset);
   els.baseNetworkTheme.value = normalizeBaseNetworkTheme(explorer.theme);
   els.baseNetworkShowCycleways.checked = state.networkContextVisible;
@@ -5019,22 +5220,6 @@ function applyBaseNetworkMapPresentation() {
   );
 }
 
-function setBaseNetworkMode(mode) {
-  if (!new Set(["explore", "edit"]).has(mode) || state.workspaceMode !== "base") return;
-  if (isDrawing()) {
-    setStatus("Finish or cancel the current edit before changing Base Network mode.", "error");
-    return;
-  }
-  state.baseNetworkExplorer.mode = mode;
-  if (mode === "explore" && state.mode !== "select") setMode("select");
-  renderAll();
-  setStatus(
-    mode === "explore"
-      ? "Base Network Explore: map views and inspection are read-only."
-      : "Base Network Edit / review: manual geometry and reviewed policy actions are enabled.",
-  );
-}
-
 function setBaseNetworkPreset(value, { fit = true } = {}) {
   const preset = normalizeBaseNetworkPreset(value);
   state.baseNetworkExplorer.preset = preset;
@@ -5085,7 +5270,7 @@ function renderBaseGraphPanel() {
     : { total: 0, confirmedOneWay: 0, needsReview: 0 };
 
   renderBaseNetworkExplorerPanel();
-  const editingBaseNetwork = state.baseNetworkExplorer.mode === "edit";
+  const editingBaseNetwork = true;
 
   els.baseGraphStatus.textContent = recalculating ? "Recalculating" : loading ? "Loading" : loaded ? "Loaded" : "Not loaded";
   els.baseEdgeSearch.disabled = loading || recalculating || !loaded;
@@ -5162,9 +5347,7 @@ function renderBaseGraphPanel() {
     ? "Review both stored directions above. After geometry or policy changes, rebuild and refresh V2 evidence before revalidating an alignment."
     : selectedGraphEdge
       ? "Inspect normalized direction evidence above. Geometry remains generated from OSM; reviewed direction corrections are saved as source-way overrides."
-      : editingBaseNetwork
-        ? "Click any base edge to inspect it. Create a manual edge, copy an OSM edge, or review selected policy evidence."
-        : "Click any colored base edge or choose a focused map view above. Switch to Edit / review only when you want to change data.";
+      : "Click any base edge to inspect it. Create a manual edge, copy an OSM edge, or review selected policy evidence.";
 }
 
 function renderConnectorLensLegend() {
@@ -7032,7 +7215,7 @@ async function setWorkspaceMode(mode) {
     }
     setStatus(
       mode === "base"
-        ? "Base Network Explore: choose a map view or click an edge to inspect it."
+        ? "Base Network: choose a map view, inspect an edge, or use an explicit edit action."
         : mode === "overlay"
           ? "CW Overlay mode: select a segment, then choose graph edges."
           : mode === "roundabouts"
@@ -9455,7 +9638,7 @@ async function snapSelectedBoundaryOverlay() {
   );
 }
 
-async function recalculateSegmentMatch(feature) {
+async function recalculateSegmentMatch(feature, { updateState = true } = {}) {
   const segmentId = Number(feature?.properties?.id);
   if (!feature || !Number.isInteger(segmentId)) {
     throw new Error("Cannot recalculate a segment without a valid id.");
@@ -9469,8 +9652,14 @@ async function recalculateSegmentMatch(feature) {
   if (!response.ok || !payload.ok) {
     throw new Error(payload.error || `Selected match recalculation failed: ${response.status}`);
   }
-  replaceSelectedSegmentMatchResult(segmentId, payload.match.summary, payload.match.preview);
-  return payload.match.summary;
+  if (updateState) {
+    replaceSelectedSegmentMatchResult(segmentId, payload.match.summary, payload.match.preview);
+    return payload.match.summary;
+  }
+  return {
+    summary: payload.match.summary,
+    preview: payload.match.preview || EMPTY_FEATURE_COLLECTION,
+  };
 }
 
 async function recalculateSelectedOverlayMatch() {
@@ -9505,15 +9694,15 @@ async function recalculateSelectedOverlayMatch() {
   }
 }
 
-async function persistSelectedOverlayMatch(segmentId) {
-  const summary = matchSummaryForSegment(segmentId);
+async function persistOverlayMatch(
+  segmentId,
+  summary,
+  preview,
+  { updateState = true } = {},
+) {
   if (!summary) {
     throw new Error("Recalculate the selected segment before accepting it.");
   }
-  const preview = {
-    type: "FeatureCollection",
-    features: matchPreviewFeaturesForSegment(segmentId),
-  };
   const response = await fetch("/api/osm/persist-segment-match", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -9523,8 +9712,23 @@ async function persistSelectedOverlayMatch(segmentId) {
   if (!response.ok || !payload.ok) {
     throw new Error(payload.error || `Selected match persistence failed: ${response.status}`);
   }
-  state.baseOverlay.matchSummary = payload.summary || state.baseOverlay.matchSummary;
-  state.baseOverlay.matchPreview = payload.preview || state.baseOverlay.matchPreview;
+  if (updateState) {
+    state.baseOverlay.matchSummary = payload.summary || state.baseOverlay.matchSummary;
+    state.baseOverlay.matchPreview = payload.preview || state.baseOverlay.matchPreview;
+    invalidateBaseOverlayDerivedCache();
+  }
+  return payload;
+}
+
+async function persistSelectedOverlayMatch(segmentId) {
+  return persistOverlayMatch(
+    segmentId,
+    matchSummaryForSegment(segmentId),
+    {
+      type: "FeatureCollection",
+      features: matchPreviewFeaturesForSegment(segmentId),
+    },
+  );
 }
 
 async function saveBaseOverlay() {
@@ -9855,20 +10059,25 @@ async function clearSelectedBaseOverlayMapping() {
   setStatus(`Cleared base overlay mapping for ${featureName(feature)}.`);
 }
 
-async function saveSource({ quiet = false } = {}) {
+async function saveSource({ quiet = false, source = state.source } = {}) {
   if (!quiet) setStatus("Saving source...");
   clearAlert();
+  const serializedSource = JSON.stringify(source);
   try {
     const response = await fetch("/api/source", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(state.source),
+      body: serializedSource,
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
       throw new Error(payload.error || `Save failed: ${response.status}`);
     }
-    markDirty(false);
+    // A newer edit may have landed while this request was in flight. Only mark
+    // the document saved when the server received the exact current snapshot.
+    if (JSON.stringify(state.source) === serializedSource) {
+      markDirty(false);
+    }
     clearAlert();
     if (!quiet) {
       setStatus(payload.changed === false ? "Source already up to date." : "Source saved.");
@@ -10075,8 +10284,6 @@ function wireEvents() {
     renderAll();
     setStatus(state.networkContextVisible ? "Other network shown for context." : "Context network hidden.");
   });
-  els.baseNetworkModeExplore.addEventListener("click", () => setBaseNetworkMode("explore"));
-  els.baseNetworkModeEdit.addEventListener("click", () => setBaseNetworkMode("edit"));
   els.baseNetworkPreset.addEventListener("change", () => setBaseNetworkPreset(els.baseNetworkPreset.value));
   els.baseNetworkTheme.addEventListener("change", () => {
     state.baseNetworkExplorer.theme = normalizeBaseNetworkTheme(els.baseNetworkTheme.value);
@@ -10593,7 +10800,6 @@ function wireEvents() {
     if (state.mode !== "select") return;
     if (isEdgePickedSelected()) return;
     if (state.workspaceMode === "base") {
-      if (state.baseNetworkExplorer.mode !== "edit") return;
       state.baseOverlay.selectedManualVertexIndex = Number(event.features[0].properties.index);
     } else {
       state.selectedVertexIndex = Number(event.features[0].properties.index);
@@ -10609,7 +10815,6 @@ function wireEvents() {
 
   map.on("mousedown", "vertices-layer", (event) => {
     if (state.mode !== "select") return;
-    if (state.workspaceMode === "base" && state.baseNetworkExplorer.mode !== "edit") return;
     event.preventDefault();
     if (state.workspaceMode === "base") {
       state.draggingManualBaseVertex = true;

@@ -734,20 +734,6 @@ button:disabled {
   gap: 8px;
 }
 
-.base-network-mode {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.base-network-mode .active {
-  border-color: #0f766e;
-  background: #dff3ef;
-  color: #115e59;
-  font-weight: 800;
-}
-
 .base-network-explorer {
   display: grid;
   gap: 8px;

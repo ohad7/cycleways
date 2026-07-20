@@ -582,3 +582,32 @@ the understandable result.
 - When Roundabouts and Crossings should cease being top-level lenses.
 - Whether Route Catalog and Video Sync should later adopt the same transaction
   coordinator.
+
+## Editing-loop refinement — 2026-07-21
+
+Base Network focus is itself the editing boundary. The additional permanent
+**Explore / Edit-review** switch is removed: an ordinary map click still only
+selects and inspects, while mutations require a concrete action such as moving
+a selected manual vertex, New/Copy/Delete/Split, or Save direction policy.
+This keeps the safety boundary attached to the action that changes data instead
+of requiring a second workspace mode.
+
+Autosave uses a short trailing debounce and a latest-state-wins coordinator:
+
+- edits made before work begins collapse into one update;
+- there is at most one active update and one pending latest revision per object;
+- an edit made during an active update is never deleted when the older update
+  completes;
+- source features and explicit edge selections are immutable snapshots for the
+  lifetime of one update;
+- a locally superseded source revision is retried automatically rather than
+  shown as a terminal authoring failure; and
+- a base edit made during a full evidence refresh guarantees one later refresh
+  instead of being lost or creating an unbounded queue.
+
+The editor shows the current stage and selected segment while updating. Each
+completed browser-side run records per-stage durations, and server logs record
+request durations for source save, segment matching, match persistence, V2
+validation, metadata updates, and full evidence refresh. Performance work is
+chosen from these measurements; the first likely candidate is avoiding a new
+Python process and full graph load for every single-segment match.

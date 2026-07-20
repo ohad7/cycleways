@@ -31,6 +31,10 @@ assert.match(editor, /buildNetworkIssueRows/);
 assert.match(editor, /scheduleAuthoringSync/);
 assert.match(editor, /explicitEdgeRefsBySegment/);
 assert.match(editor, /queueNetworkMetadataFeature/);
+assert.match(editor, /segmentRevisions/);
+assert.match(editor, /isCurrentAuthoringObjectRevision/);
+assert.match(editor, /rebuilding base evidence/);
+assert.doesNotMatch(html, /base-network-mode-explore|base-network-mode-edit/);
 assert.match(editor, /\/api\/network-authoring\/segment-metadata/);
 assert.match(
   editor,
