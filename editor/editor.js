@@ -22,6 +22,15 @@ import {
   summarizeBaseNetwork,
 } from "./lib/base-network-explorer.mjs";
 import {
+  baseOverlayContinuityIssue,
+  recalculationResultMessage,
+} from "./lib/base-overlay-continuity.mjs";
+import {
+  copiedManualEdgeTraversal,
+  manualEdgeDirectionDefaultLabel,
+  newManualEdgeBidirectionalTraversal,
+} from "./lib/manual-edge-direction-defaults.mjs";
+import {
   DIRECTION_REVIEW_CLASSIFICATION_LABELS,
   DIRECTION_REVIEW_CLASSIFICATIONS,
   buildDirectionReviewEvidenceRows,
@@ -4346,6 +4355,7 @@ function renderBaseEdgeDirectionReview(feature, disabled) {
   }
 
   const traversal = properties.bicycleTraversal || {};
+  const directionDefaultLabel = manual ? manualEdgeDirectionDefaultLabel(traversal) : null;
   const forward = override?.states?.forward || traversal.forward || "unknown";
   const reverse = override?.states?.reverse || traversal.reverse || "unknown";
   const fullyReviewed = manual
@@ -4392,7 +4402,7 @@ function renderBaseEdgeDirectionReview(feature, disabled) {
   }`;
   els.manualEdgeDirectionStatus.textContent = manual
     ? fullyReviewed
-      ? `Reviewed by ${traversal.reviewer} on ${traversal.reviewedAt}. Rebuild before using this evidence in routing or Direction Review.`
+      ? `${directionDefaultLabel ? `${directionDefaultLabel}. ` : ""}Reviewed by ${traversal.reviewer} on ${traversal.reviewedAt}. Rebuild before using this evidence in routing or Direction Review.`
       : "Not fully reviewed. Unknown manual-edge directions remain blocked from every routing surface."
     : override
       ? `Reviewed override by ${override.reviewer} on ${override.reviewedAt}. Rebuild before it affects routing. OSM policy was ${traversal.forward || "unknown"}/${traversal.reverse || "unknown"} (${traversal.forwardReason || "unknown"}; ${traversal.reverseReason || "unknown"}).`
@@ -5459,6 +5469,7 @@ function renderBaseOverlayPanel() {
   const validation = validationForSegment(segmentId);
   const reviewedValidation =
     mapping?.status === "accepted_auto_match" ? validation : reviewedEdgeSetValidation(segmentId, reviewedEdgeRefs);
+  const continuityIssue = baseOverlayContinuityIssue(match, reviewedValidation.continuityGaps);
   const missingManualGraphEdges = missingManualGraphEdgeIdsForSegment(segmentId);
   const baseGraphStaleForSegment = isBaseGraphStale() || missingManualGraphEdges.length > 0;
   const snapPlan = boundarySnapPlan(match, selected);
@@ -5467,9 +5478,13 @@ function renderBaseOverlayPanel() {
       ? "base graph stale"
       : edgeRefIssues.length > 0
         ? "stale mapping"
-        : mappingStatus.replaceAll("_", " ");
+        : continuityIssue
+          ? "disconnected"
+          : mappingStatus.replaceAll("_", " ");
   const matchLine = match
-    ? `${formatPercent(match.coverageRatio)} coverage · ${match.confidence} · ${match.gapCount} gaps`
+    ? `${formatPercent(match.coverageRatio)} coverage · ${match.confidence} · ${match.gapCount} coverage gaps${
+        continuityIssue ? ` · ${continuityIssue.summary}` : ""
+      }`
     : "No auto match";
   const savedLine = mapping
     ? mapping.manualEdgeIds?.length
@@ -5512,21 +5527,16 @@ function renderBaseOverlayPanel() {
     Number.isFinite(Number(match?.edgeLengthRatio)) && Number(match.edgeLengthRatio) > 1
       ? `<div><dt>Edge length</dt><dd>${formatPercent(Number(match.edgeLengthRatio))} of segment length</dd></div>`
       : "";
-  const continuityLine =
-    reviewedValidation.continuityGaps.length > 0 || Number(match?.continuityGapCount || 0) > 0
-      ? `<div><dt>Continuity</dt><dd>${escapeHtml(
-          reviewedValidation.continuityGaps.length > 0
-            ? `${reviewedValidation.continuityGaps
-                .slice(0, 2)
-                .map((gap) => `${gap.fromEdgeId} -> ${gap.toEdgeId} ${Math.round(gap.distanceMeters)}m`)
-                .join(", ")}${
-                reviewedValidation.continuityGaps.length > 2
-                  ? ` +${reviewedValidation.continuityGaps.length - 2}`
-                  : ""
-              }`
-            : `${match.continuityGapCount} calculated gap${match.continuityGapCount === 1 ? "" : "s"}`,
-        )}</dd></div>`
-      : "";
+  const continuityLine = continuityIssue
+    ? `<div><dt>Continuity</dt><dd>${escapeHtml(continuityIssue.detail)}</dd></div>`
+    : "";
+  const continuityWarning = continuityIssue
+    ? `<div class="base-overlay-continuity-warning" role="alert">
+        <strong>Cannot accept: disconnected base-edge sequence</strong>
+        <span>${escapeHtml(continuityIssue.detail)}</span>
+        <small>Connect the listed base edges, rebuild if manual geometry changed, and then recalculate this segment.</small>
+      </div>`
+    : "";
   const duplicateLine =
     reviewedValidation.duplicateEdges.length > 0
       ? `<div><dt>Duplicate</dt><dd>${escapeHtml(
@@ -5544,6 +5554,7 @@ function renderBaseOverlayPanel() {
       : "";
 
   els.baseOverlaySummary.innerHTML = `
+    ${continuityWarning}
     <dl class="base-overlay-metrics">
       <div><dt>Auto match</dt><dd>${escapeHtml(matchLine)}</dd></div>
       <div><dt>Classification</dt><dd>${escapeHtml(match?.failureClass || "—")}</dd></div>
@@ -5562,8 +5573,12 @@ function renderBaseOverlayPanel() {
   els.acceptBaseOverlay.disabled =
     baseGraphStaleForSegment ||
     mappingLocked ||
+    Boolean(continuityIssue) ||
     state.baseOverlay.recalculating ||
     reviewedEdgeRefs.length === 0;
+  els.acceptBaseOverlay.title = continuityIssue
+    ? `Cannot accept until continuity is fixed: ${continuityIssue.detail}`
+    : "";
   els.recalculateSelectedOverlay.disabled =
     mappingLocked ||
     state.baseOverlay.loading ||
@@ -7508,6 +7523,11 @@ async function cloneSelectedBaseGraphEdgeAsManual() {
       accessStatus: properties.accessStatus,
       createdAt: now,
       updatedAt: now,
+      bicycleTraversal: copiedManualEdgeTraversal(properties.bicycleTraversal, {
+        reviewer: "ohad",
+        reviewedAt: localDateInputValue(),
+        sourceEdgeId: graphEdgeId || "source edge",
+      }),
     },
     geometry: {
       type: "LineString",
@@ -7576,6 +7596,10 @@ async function commitManualBaseEdgeDrawn() {
     roadType: linkedFeature?.properties?.roadType || "dirt",
     createdAt: now,
     updatedAt: now,
+    bicycleTraversal: newManualEdgeBidirectionalTraversal({
+      reviewer: "ohad",
+      reviewedAt: localDateInputValue(),
+    }),
   };
   if (hasLinkedSegment) {
     properties.linkedSegmentId = linkedSegmentId;
@@ -9018,9 +9042,8 @@ async function recalculateSelectedOverlayMatch() {
   setStatus(`Recalculating base match for ${featureName(feature)}...`);
   try {
     const summary = await recalculateSegmentMatch(feature);
-    setStatus(
-      `Recalculated ${featureName(feature)}: ${formatPercent(summary.coverageRatio)} coverage · ${summary.confidence} · ${summary.gapCount} gaps.`,
-    );
+    const result = recalculationResultMessage(featureName(feature), summary, formatPercent);
+    setStatus(result.message, result.level);
   } finally {
     state.baseOverlay.recalculating = false;
     renderAll();

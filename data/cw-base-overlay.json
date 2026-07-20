@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-20T16:05:09.258Z",
+  "updatedAt": "2026-07-20T18:47:29.842Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -3674,13 +3674,13 @@
     "63": {
       "segmentId": 63,
       "segmentName": "כביש 9977 כפר גלעדי",
-      "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "status": "needs_edit",
+      "source": "edge_review",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 4.22,
+      "avgDistanceMeters": 4.75,
       "gapCount": 0,
-      "failureClass": "accepted",
+      "failureClass": "disconnected_edges",
       "edgeRefs": [
         {
           "edgeId": "e290297022_6",
@@ -3728,34 +3728,25 @@
           "osmWayId": 42952310
         },
         {
-          "edgeId": "e248208200_1",
-          "source": "osm",
-          "direction": "forward",
+          "edgeId": "manual-edge-mrtjrg7a",
+          "source": "manual",
+          "direction": "reverse",
           "sequenceIndex": 5,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 248208200
+          "manualEdgeId": "manual-edge-mrtjrg7a"
         },
         {
-          "edgeId": "e690868796_1",
-          "source": "osm",
-          "direction": "forward",
+          "edgeId": "manual-edge-mrtjsvs1",
+          "source": "manual",
+          "direction": "reverse",
           "sequenceIndex": 6,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 690868796
-        },
-        {
-          "edgeId": "e690868796_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 7,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 690868796
+          "manualEdgeId": "manual-edge-mrtjsvs1"
         }
       ],
-      "updatedAt": "2026-05-24T06:10:56.016Z"
+      "updatedAt": "2026-07-20T18:47:29.824Z"
     },
     "64": {
       "segmentId": 64,
@@ -9459,74 +9450,6 @@
       ],
       "updatedAt": "2026-05-20T21:23:34.763Z"
     },
-    "159": {
-      "segmentId": 159,
-      "segmentName": "כביש 90 כפר גלעדי",
-      "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
-      "confidence": "high",
-      "coverageRatio": 1,
-      "avgDistanceMeters": 0.17,
-      "gapCount": 0,
-      "failureClass": "accepted",
-      "edgeRefs": [
-        {
-          "edgeId": "e855779446_4",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 855779446
-        },
-        {
-          "edgeId": "e855779446_3",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 855779446
-        },
-        {
-          "edgeId": "e855779449_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 855779449
-        },
-        {
-          "edgeId": "e855779450_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 3,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 855779450
-        },
-        {
-          "edgeId": "e42950862_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 42950862
-        },
-        {
-          "edgeId": "e42950862_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 42950862
-        }
-      ],
-      "updatedAt": "2026-05-20T13:58:46.012Z"
-    },
     "160": {
       "segmentId": 160,
       "segmentName": "כביש גישה שדה נחמיה",
@@ -9887,24 +9810,15 @@
       "source": "changed_queue_auto_match",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.19,
+      "avgDistanceMeters": 0.18,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e855779446_5",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 855779446
-        },
-        {
           "edgeId": "manual-manual-osm-1092567462-mpe4drrn-a-mpe4dzx1",
           "source": "manual",
           "direction": "forward",
-          "sequenceIndex": 1,
+          "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-manual-osm-1092567462-mpe4drrn-a-mpe4dzx1"
@@ -9913,7 +9827,7 @@
           "edgeId": "manual-164-mpe4fbrz",
           "source": "manual",
           "direction": "forward",
-          "sequenceIndex": 2,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-164-mpe4fbrz"
@@ -9922,7 +9836,7 @@
           "edgeId": "e551078426_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 3,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 551078426
@@ -9931,7 +9845,7 @@
           "edgeId": "e140001011_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 4,
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 140001011
@@ -9940,7 +9854,7 @@
           "edgeId": "e1200367016_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 5,
+          "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1200367016
@@ -9949,7 +9863,7 @@
           "edgeId": "e140001014_2",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 6,
+          "sequenceIndex": 5,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 140001014
@@ -9958,13 +9872,13 @@
           "edgeId": "e140001014_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 7,
+          "sequenceIndex": 6,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 140001014
         }
       ],
-      "updatedAt": "2026-05-26T19:53:50.206Z"
+      "updatedAt": "2026-07-20T18:29:18.829Z"
     },
     "165": {
       "segmentId": 165,

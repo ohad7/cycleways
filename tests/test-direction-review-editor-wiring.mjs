@@ -75,6 +75,9 @@ for (const token of [
   "applyBaseNetworkMapPresentation",
   "setBaseNetworkPreset",
   "directionReviewProposalExplanation",
+  "newManualEdgeBidirectionalTraversal",
+  "copiedManualEdgeTraversal",
+  "manualEdgeDirectionDefaultLabel",
 ]) {
   assert.match(editor, new RegExp(token), `editor wiring is missing ${token}`);
 }

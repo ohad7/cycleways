@@ -2433,7 +2433,7 @@
         "osmRouteClass": "road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T13:50:55.955Z",
-        "updatedAt": "2026-07-16T16:32:51.676Z",
+        "updatedAt": "2026-07-20T18:11:34.677Z",
         "splitFrom": "manual-osm-1092567462-mpe4drrn",
         "bicycleTraversal": {
           "forward": "allowed",
@@ -2448,24 +2448,24 @@
         "type": "LineString",
         "coordinates": [
           [
-            35.58028,
-            33.235618
+            35.58026,
+            33.235531
           ],
           [
-            35.580307,
-            33.235549
+            35.580271,
+            33.235491
           ],
           [
-            35.580312,
-            33.235519
+            35.580265,
+            33.23545
           ],
           [
-            35.580311,
-            33.235477
+            35.580232,
+            33.235361
           ],
           [
-            35.580306,
-            33.235431
+            35.580183,
+            33.235277
           ],
           [
             35.580104,
@@ -2489,7 +2489,7 @@
         "osmRouteClass": "road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T13:50:55.955Z",
-        "updatedAt": "2026-05-20T13:51:06.517Z",
+        "updatedAt": "2026-07-20T18:13:00.610Z",
         "splitFrom": "manual-osm-1092567462-mpe4drrn",
         "bicycleTraversal": {
           "forward": "unknown",
@@ -2501,8 +2501,8 @@
         "type": "LineString",
         "coordinates": [
           [
-            35.580104,
-            33.235075
+            35.58015,
+            33.235068
           ],
           [
             35.579567,
@@ -5543,6 +5543,227 @@
           [
             35.568987,
             33.200797
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrtjl8ea",
+      "properties": {
+        "id": "manual-edge-mrtjl8ea",
+        "manualEdgeId": "manual-edge-mrtjl8ea",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-20T18:12:35.650Z",
+        "updatedAt": "2026-07-20T18:12:35.650Z",
+        "bicycleTraversal": {
+          "forward": "unknown",
+          "reverse": "unknown",
+          "reviewed": false
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.580308,
+            33.235592
+          ],
+          [
+            35.580308,
+            33.235535
+          ],
+          [
+            35.580311,
+            33.235435
+          ],
+          [
+            35.58028,
+            33.235318
+          ],
+          [
+            35.580206,
+            33.23518
+          ],
+          [
+            35.58015,
+            33.235068
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrtjrg7a",
+      "properties": {
+        "id": "manual-edge-mrtjrg7a",
+        "manualEdgeId": "manual-edge-mrtjrg7a",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-20T18:17:25.702Z",
+        "updatedAt": "2026-07-20T18:56:09.159Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-20",
+          "rationale": "sidewalk"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.579867,
+            33.235734
+          ],
+          [
+            35.579608,
+            33.235807
+          ],
+          [
+            35.579441,
+            33.23586
+          ],
+          [
+            35.579275,
+            33.235941
+          ],
+          [
+            35.579155,
+            33.236032
+          ],
+          [
+            35.579068,
+            33.236132
+          ],
+          [
+            35.579013,
+            33.236254
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrtjsvs1",
+      "properties": {
+        "id": "manual-edge-mrtjsvs1",
+        "manualEdgeId": "manual-edge-mrtjsvs1",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-20T18:18:32.545Z",
+        "updatedAt": "2026-07-20T18:18:47.874Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-20",
+          "rationale": "sidewalk"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.58026,
+            33.235531
+          ],
+          [
+            35.580239,
+            33.235575
+          ],
+          [
+            35.580179,
+            33.235639
+          ],
+          [
+            35.580111,
+            33.235675
+          ],
+          [
+            35.579867,
+            33.235734
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrtjzhsv",
+      "properties": {
+        "id": "manual-edge-mrtjzhsv",
+        "manualEdgeId": "manual-edge-mrtjzhsv",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-20T18:23:41.023Z",
+        "updatedAt": "2026-07-20T19:03:03.430Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-20",
+          "rationale": "roundabout access"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.58026,
+            33.235531
+          ],
+          [
+            35.580448,
+            33.235547
+          ],
+          [
+            35.580506,
+            33.235569
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-159-mrtlf3pn",
+      "properties": {
+        "id": "manual-159-mrtlf3pn",
+        "manualEdgeId": "manual-159-mrtlf3pn",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "createdAt": "2026-07-20T19:03:48.875Z",
+        "updatedAt": "2026-07-20T19:04:05.022Z",
+        "linkedSegmentId": 159,
+        "linkedSegmentName": "כביש 90 כפר גלעדי",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-20",
+          "rationale": "roundabout access"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.580259,
+            33.235649
+          ],
+          [
+            35.58026,
+            33.235531
           ]
         ]
       }

@@ -309,6 +309,29 @@ h2 {
 .compose-edge-status .compose-ok { color: #166534; }
 .compose-edge-status .compose-bad { color: #b91c1c; font-weight: 600; }
 
+.base-overlay-continuity-warning {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 12px;
+  padding: 10px 11px;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #7f1d1d;
+  overflow-wrap: anywhere;
+}
+
+.base-overlay-continuity-warning strong,
+.base-overlay-continuity-warning span,
+.base-overlay-continuity-warning small {
+  display: block;
+}
+
+.base-overlay-continuity-warning small {
+  color: #991b1b;
+  line-height: 1.35;
+}
+
 .edge-pick-edit-controls {
   display: flex;
   flex-wrap: wrap;
