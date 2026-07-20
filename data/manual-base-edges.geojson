@@ -5127,11 +5127,14 @@
         "osmRouteClass": "cycle",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-07-16T14:27:39.131Z",
-        "updatedAt": "2026-07-16T14:27:54.131Z",
+        "updatedAt": "2026-07-20T19:37:22.328Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-20",
+          "rationale": "cycleway connection"
         },
         "splitFrom": "manual-osm-139983381-mrnlsjqz"
       },
@@ -5143,8 +5146,8 @@
             33.225227
           ],
           [
-            35.602162,
-            33.225376
+            35.602221,
+            33.225544
           ]
         ]
       }
