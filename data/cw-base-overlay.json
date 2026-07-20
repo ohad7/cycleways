@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-20T18:47:29.842Z",
+  "updatedAt": "2026-07-20T19:22:32.137Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -9449,6 +9449,83 @@
         }
       ],
       "updatedAt": "2026-05-20T21:23:34.763Z"
+    },
+    "159": {
+      "segmentId": 159,
+      "segmentName": "כביש 90 כפר גלעדי",
+      "status": "needs_edit",
+      "source": "edge_review",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.79,
+      "gapCount": 0,
+      "failureClass": "disconnected_edges",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-edge-mrtjzhsv",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-edge-mrtjzhsv"
+        },
+        {
+          "edgeId": "e855779446_7",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 855779446
+        },
+        {
+          "edgeId": "e855779446_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 855779446
+        },
+        {
+          "edgeId": "e577248902_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 577248902
+        },
+        {
+          "edgeId": "e855779450_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 855779450
+        },
+        {
+          "edgeId": "e42950862_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 42950862
+        },
+        {
+          "edgeId": "e42950862_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 42950862
+        }
+      ],
+      "updatedAt": "2026-07-20T19:22:32.110Z"
     },
     "160": {
       "segmentId": 160,

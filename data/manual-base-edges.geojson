@@ -5075,11 +5075,14 @@
         "osmRouteClass": "cycle",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-07-16T14:27:39.131Z",
-        "updatedAt": "2026-07-16T14:27:54.131Z",
+        "updatedAt": "2026-07-20T19:30:45.435Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-20",
+          "rationale": "cycleway"
         },
         "splitFrom": "manual-osm-139983381-mrnlsjqz"
       },
