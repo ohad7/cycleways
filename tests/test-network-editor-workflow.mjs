@@ -42,11 +42,21 @@ assert.match(
   "metadata edits must not rematch directional paths",
 );
 assert.match(editor, /Saving and checking its rideable path automatically/);
+assert.match(editor, /Saving geometry/);
+assert.match(editor, /route path queued/);
+assert.match(editor, /obsolete update cancelled/);
+assert.doesNotMatch(
+  editor,
+  /state\.authoring\.activeSegmentIds = new Set\([\s\S]{0,500}renderAll\(\)/,
+  "background reconciliation must not run the full editor renderer",
+);
 assert.match(styles, /\.legacy-authoring-control[\s\S]*display:\s*none/);
 assert.match(server, /POST[^\n]*\/api\/network-authoring\/segment|url\.pathname === "\/api\/network-authoring\/segment"/);
 assert.match(server, /url\.pathname === "\/api\/network-authoring\/segment-metadata"/);
 assert.match(server, /automaticBidirectionalDecision/);
 assert.match(server, /validatePublishedDirectionReviewOverlay\(parsed\)/);
 assert.match(server, /last published path while evaluating a revised source shape/);
+assert.match(server, /AUTHORING_REQUEST_ABORTED/);
+assert.match(server, /child\.kill\("SIGTERM"\)/);
 
 console.log("Consolidated Network editor workflow wiring ok");

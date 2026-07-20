@@ -102,7 +102,7 @@ export function networkSegmentStatus(segment, { updating = false, transientIssue
     return {
       key: "updating",
       label: "Updating",
-      summary: "Saving and checking the affected routing evidence…",
+      summary: "Editing remains available while the rideable path updates in the background…",
       issue: null,
       directional: false,
       edgeCount: 0,

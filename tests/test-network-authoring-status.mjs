@@ -50,6 +50,10 @@ assert.equal(gapStatus.key, "blocked");
 assert.equal(gapStatus.summary, "Disconnected base-edge sequence");
 assert.match(gapStatus.detail, /a → c \(15 m\)/);
 
+const updatingStatus = networkSegmentStatus(symmetric, { updating: true });
+assert.equal(updatingStatus.key, "updating");
+assert.match(updatingStatus.summary, /available.*background/i);
+
 const choice = structuredClone(gap);
 choice.segmentId = 174;
 choice.alignments.aToB.draft = { validation: { status: "valid", reasons: [], policyPrecedence: [] } };
@@ -61,4 +65,3 @@ assert.deepEqual(
 );
 
 console.log("Network authoring status model ok");
-

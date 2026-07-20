@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-20T21:47:07.701Z",
+  "updatedAt": "2026-07-20T22:27:59.819Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -606,25 +606,25 @@
           "osmWayId": 73965589
         },
         {
-          "edgeId": "manual-osm-529023380-mpdma4wt",
+          "edgeId": "manual-manual-osm-529023380-mpdma4wt-b-mrtspole",
           "source": "manual",
           "direction": "reverse",
           "sequenceIndex": 15,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-osm-529023380-mpdma4wt"
+          "manualEdgeId": "manual-manual-osm-529023380-mpdma4wt-b-mrtspole"
         },
         {
-          "edgeId": "e958921301_4",
-          "source": "osm",
-          "direction": "forward",
+          "edgeId": "manual-manual-osm-529023380-mpdma4wt-a-mrtspold",
+          "source": "manual",
+          "direction": "reverse",
           "sequenceIndex": 16,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 958921301
+          "manualEdgeId": "manual-manual-osm-529023380-mpdma4wt-a-mrtspold"
         },
         {
-          "edgeId": "e958921301_5",
+          "edgeId": "e958921301_4",
           "source": "osm",
           "direction": "forward",
           "sequenceIndex": 17,
@@ -633,16 +633,25 @@
           "osmWayId": 958921301
         },
         {
-          "edgeId": "e958921314_1",
+          "edgeId": "e958921301_5",
           "source": "osm",
           "direction": "forward",
           "sequenceIndex": 18,
           "fromFraction": 0,
           "toFraction": 1,
+          "osmWayId": 958921301
+        },
+        {
+          "edgeId": "e958921314_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 19,
+          "fromFraction": 0,
+          "toFraction": 1,
           "osmWayId": 958921314
         }
       ],
-      "updatedAt": "2026-06-02T15:42:25.971Z"
+      "updatedAt": "2026-07-20T22:27:59.809Z"
     },
     "12": {
       "segmentId": 12,
@@ -17304,10 +17313,10 @@
       "segmentId": 319,
       "segmentName": "נחל סער עין קניא",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.85,
+      "avgDistanceMeters": 0.04,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -17346,18 +17355,9 @@
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 668076636
-        },
-        {
-          "edgeId": "e668076637_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 668076637
         }
       ],
-      "updatedAt": "2026-05-26T05:24:45.770Z"
+      "updatedAt": "2026-07-20T22:13:28.781Z"
     },
     "320": {
       "segmentId": 320,
@@ -17418,10 +17418,10 @@
       "segmentId": 322,
       "segmentName": "כביש 9895 מזרח",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0,
+      "avgDistanceMeters": 0.07,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -17462,34 +17462,16 @@
           "osmWayId": 448570162
         },
         {
-          "edgeId": "e668076635_1",
-          "source": "osm",
-          "direction": "reverse",
+          "edgeId": "manual-319-mrts5n2z",
+          "source": "manual",
+          "direction": "forward",
           "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 668076635
-        },
-        {
-          "edgeId": "e668076633_6",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 668076633
-        },
-        {
-          "edgeId": "e668076633_5",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 6,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 668076633
+          "manualEdgeId": "manual-319-mrts5n2z"
         }
       ],
-      "updatedAt": "2026-05-26T05:22:34.234Z"
+      "updatedAt": "2026-07-20T22:18:34.696Z"
     },
     "323": {
       "segmentId": 323,

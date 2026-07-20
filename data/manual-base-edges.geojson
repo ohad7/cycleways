@@ -2340,10 +2340,10 @@
     },
     {
       "type": "Feature",
-      "id": "manual-osm-529023380-mpdma4wt",
+      "id": "manual-manual-osm-529023380-mpdma4wt-a-mrtspold",
       "properties": {
-        "id": "manual-osm-529023380-mpdma4wt",
-        "manualEdgeId": "manual-osm-529023380-mpdma4wt",
+        "id": "manual-manual-osm-529023380-mpdma4wt-a-mrtspold",
+        "manualEdgeId": "manual-manual-osm-529023380-mpdma4wt-a-mrtspold",
         "source": "manual",
         "status": "active",
         "roadType": "dirt",
@@ -2353,7 +2353,7 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T05:24:13.277Z",
-        "updatedAt": "2026-07-16T16:34:33.800Z",
+        "updatedAt": "2026-07-20T22:29:00.539Z",
         "bicycleTraversal": {
           "forward": "allowed",
           "reverse": "allowed",
@@ -2361,7 +2361,8 @@
           "reviewer": "ohad serfaty",
           "reviewedAt": "2026-07-16",
           "rationale": "gan htzaafon service road sidewalk"
-        }
+        },
+        "splitFrom": "manual-osm-529023380-mpdma4wt"
       },
       "geometry": {
         "type": "LineString",
@@ -2371,8 +2372,44 @@
             33.224729
           ],
           [
-            35.613421,
-            33.224696
+            35.61342,
+            33.22469
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-529023380-mpdma4wt-b-mrtspole",
+      "properties": {
+        "id": "manual-manual-osm-529023380-mpdma4wt-b-mrtspole",
+        "manualEdgeId": "manual-manual-osm-529023380-mpdma4wt-b-mrtspole",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e529023380_1",
+        "copiedFromOsmWayId": 529023380,
+        "highway": "service",
+        "osmRouteClass": "local_road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-05-20T05:24:13.277Z",
+        "updatedAt": "2026-07-20T22:28:53.460Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "gan htzaafon service road sidewalk"
+        },
+        "splitFrom": "manual-osm-529023380-mpdma4wt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.61342,
+            33.22469
           ],
           [
             35.613583,
@@ -3146,7 +3183,7 @@
         "osmRouteClass": "cycle",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-05-20T22:30:45.060Z",
-        "updatedAt": "2026-07-16T21:44:44.451Z",
+        "updatedAt": "2026-07-20T22:28:40.701Z",
         "splitFrom": "manual-osm-611794183-mpemy9fo",
         "bicycleTraversal": {
           "forward": "allowed",
@@ -3170,28 +3207,28 @@
             33.224756
           ],
           [
-            35.614181,
-            33.224786
+            35.614183,
+            33.224748
           ],
           [
-            35.61398,
-            33.224826
+            35.613963,
+            33.224796
           ],
           [
-            35.613645,
-            33.224925
+            35.613646,
+            33.224905
           ],
           [
-            35.613533,
-            33.224973
+            35.613561,
+            33.224935
           ],
           [
-            35.613404,
-            33.225019
+            35.613531,
+            33.22494
           ],
           [
-            35.613363,
-            33.225052
+            35.613489,
+            33.224947
           ]
         ]
       }
@@ -5992,6 +6029,157 @@
           [
             35.572792,
             33.045963
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-319-mrts5n2z",
+      "properties": {
+        "id": "manual-319-mrts5n2z",
+        "manualEdgeId": "manual-319-mrts5n2z",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-20T22:12:24.731Z",
+        "updatedAt": "2026-07-20T22:12:24.731Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 319,
+        "linkedSegmentName": "נחל סער עין קניא"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.730234,
+            33.228794
+          ],
+          [
+            35.730272,
+            33.228814
+          ],
+          [
+            35.730334,
+            33.228854
+          ],
+          [
+            35.730345,
+            33.228885
+          ],
+          [
+            35.73035,
+            33.228953
+          ],
+          [
+            35.730329,
+            33.229004
+          ],
+          [
+            35.730283,
+            33.229069
+          ],
+          [
+            35.730227,
+            33.229156
+          ],
+          [
+            35.729937,
+            33.229194
+          ],
+          [
+            35.729827,
+            33.229212
+          ],
+          [
+            35.729742,
+            33.229304
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-10-mrtsp2z0",
+      "properties": {
+        "id": "manual-10-mrtsp2z0",
+        "manualEdgeId": "manual-10-mrtsp2z0",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-20T22:27:31.789Z",
+        "updatedAt": "2026-07-20T22:28:23.917Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 10,
+        "linkedSegmentName": "גן הצפון"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.613488,
+            33.224947
+          ],
+          [
+            35.613435,
+            33.224987
+          ],
+          [
+            35.613363,
+            33.225052
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-10-mrtssyk8",
+      "properties": {
+        "id": "manual-10-mrtssyk8",
+        "manualEdgeId": "manual-10-mrtssyk8",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-20T22:30:32.696Z",
+        "updatedAt": "2026-07-20T22:30:32.696Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 10,
+        "linkedSegmentName": "גן הצפון"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.61342,
+            33.22469
+          ],
+          [
+            35.613489,
+            33.224947
           ]
         ]
       }

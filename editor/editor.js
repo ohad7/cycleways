@@ -37,7 +37,9 @@ import {
 } from "./lib/network-authoring-status.mjs";
 import {
   authoringObjectRevision,
+  authoringSourceIsCurrent,
   bumpAuthoringObjectRevision,
+  isAuthoringAbort,
   isCurrentAuthoringObjectRevision,
   isRetryableAuthoringConflict,
   summarizeAuthoringTimings,
@@ -330,8 +332,16 @@ const state = {
     timer: null,
     busy: false,
     rerun: false,
+    abortController: null,
     pendingBaseRefresh: false,
     revision: 0,
+    sourceRevision: 0,
+    lastSavedSourceRevision: 0,
+    sourceSaveTimer: null,
+    sourceSaveBusy: false,
+    sourceSaveRerun: false,
+    sourceSavePromise: null,
+    sourceSaveError: null,
     activeSegmentIds: new Set(),
     lastError: null,
     transientIssues: new Map(),
@@ -716,14 +726,13 @@ function promoteBlockerMessage(report) {
 
 function updatePromoteButton() {
   const promoteIssues = reportIssueDetails(state.lastBuildReport);
-  const authoringBusy =
-    state.authoring.busy ||
-    Boolean(state.authoring.timer) ||
-    state.changedSegmentIds.size > 0 ||
-    state.authoring.metadataSegmentIds.size > 0;
-  els.promoteBuild.disabled = isDrawing() || state.dirty || authoringBusy || !canPromoteReport(state.lastBuildReport);
+  const authoringBusy = sourcePersistencePending() || reconciliationPending();
+  const authoringFailed = state.authoring.sourceSaveError || state.authoring.lastError;
+  els.promoteBuild.disabled = isDrawing() || state.dirty || authoringBusy || authoringFailed || !canPromoteReport(state.lastBuildReport);
   els.promoteBuild.title = isDrawing()
     ? "Finish or cancel drawing before promoting"
+    : authoringFailed
+      ? "Retry the failed authoring operation before promoting"
     : authoringBusy
       ? "Wait for authoring changes to finish updating"
     : state.dirty
@@ -735,27 +744,28 @@ function updatePromoteButton() {
         : promoteBlockerMessage(state.lastBuildReport);
 }
 
-function markDirty(isDirty = true) {
+function markDirty(isDirty = true, { render = true } = {}) {
   state.dirty = isDirty;
   if (isDirty) {
     state.lastBuildReport = null;
-    // A new deliberate edit is a valid retry path. A prior terminal failure
-    // must never leave the editor permanently frozen.
+    state.authoring.sourceRevision += 1;
+    if (state.authoring.sourceSaveBusy) state.authoring.sourceSaveRerun = true;
+    state.authoring.sourceSaveError = null;
     state.authoring.lastError = null;
-    scheduleAuthoringSync();
+    interruptStaleAuthoringWork();
+    scheduleSourcePersistence({ render });
+    scheduleAuthoringSync({ render });
   }
   els.saveSource.disabled = !isDirty || isDrawing();
-  els.dirtyIndicator.textContent = isDirty ? "Saving…" : "Saved";
   els.dirtyIndicator.classList.toggle("dirty", isDirty);
-  updatePromoteButton();
+  if (render) renderAuthoringState();
 }
 
 function markDirtyForLiveEdit() {
-  if (!state.dirty) {
-    markDirty();
-  } else {
-    state.lastBuildReport = null;
-  }
+  // Reset both trailing timers for every movement. Persistence and route
+  // reconciliation begin only after the current gesture has gone idle.
+  const firstMovement = !state.dirty;
+  markDirty(true, { render: firstMovement });
 }
 
 function authoringRevision() {
@@ -763,38 +773,91 @@ function authoringRevision() {
   return Date.now() * 1000 + (state.authoring.revision % 1000);
 }
 
-function scheduleAuthoringSync({ baseChanged = false, delay = 700 } = {}) {
+function sourceEditInProgress() {
+  return Boolean(
+    isDrawing() ||
+    state.draggingVertex ||
+    state.draggingManualBaseVertex ||
+    state.draggingDataMarker
+  );
+}
+
+function sourcePersistencePending() {
+  return Boolean(
+    state.dirty ||
+    state.authoring.sourceSaveBusy ||
+    state.authoring.sourceSaveTimer
+  );
+}
+
+function reconciliationPending() {
+  return Boolean(
+    state.authoring.busy ||
+    state.authoring.timer ||
+    state.authoring.pendingBaseRefresh ||
+    state.changedSegmentIds.size > 0 ||
+    state.authoring.metadataSegmentIds.size > 0
+  );
+}
+
+function interruptStaleAuthoringWork() {
+  if (!state.authoring.busy) return;
+  state.authoring.rerun = true;
+  // A full base-evidence rebuild is an atomic shared operation. Let it finish;
+  // single-segment work is safe to cancel and replace with the latest draft.
+  if (state.authoring.currentStage === "rebuilding base evidence") return;
+  state.authoring.abortController?.abort();
+}
+
+function scheduleSourcePersistence({ delay = 180, render = true } = {}) {
+  if (!state.source || !state.dirty) return;
+  if (state.authoring.sourceSaveTimer) {
+    window.clearTimeout(state.authoring.sourceSaveTimer);
+  }
+  state.authoring.sourceSaveTimer = window.setTimeout(() => {
+    state.authoring.sourceSaveTimer = null;
+    saveSource({ quiet: true }).catch(showError);
+  }, delay);
+  if (render) renderAuthoringState();
+}
+
+function scheduleAuthoringSync({ baseChanged = false, delay = 1500, render = true } = {}) {
   if (!state.source) return;
   if (baseChanged) {
+    state.lastBuildReport = null;
     state.authoring.pendingBaseRefresh = true;
     state.authoring.baseRevision += 1;
+    interruptStaleAuthoringWork();
   }
   if (state.authoring.timer) window.clearTimeout(state.authoring.timer);
   state.authoring.timer = window.setTimeout(() => {
     state.authoring.timer = null;
     runAuthoringSync().catch(showError);
   }, delay);
-  renderAuthoringState();
+  if (render) renderAuthoringState();
 }
 
 function authoringSegmentUpdating(segmentId) {
-  return state.authoring.activeSegmentIds.has(Number(segmentId)) ||
-    (state.authoring.busy &&
-      (state.changedSegmentIds.has(Number(segmentId)) ||
-        state.authoring.metadataSegmentIds.has(Number(segmentId))));
+  const id = Number(segmentId);
+  return state.authoring.activeSegmentIds.has(id) ||
+    state.changedSegmentIds.has(id) ||
+    state.authoring.metadataSegmentIds.has(id);
 }
 
 function renderAuthoringState() {
   if (!els.dirtyIndicator) return;
-  const queued = new Set([
-    ...state.changedSegmentIds,
-    ...state.authoring.metadataSegmentIds,
-  ]).size;
-  const pending = state.authoring.busy || Boolean(state.authoring.timer) || state.dirty;
-  els.dirtyIndicator.classList.toggle("updating", pending && !state.authoring.lastError);
-  els.dirtyIndicator.classList.toggle("failed", Boolean(state.authoring.lastError));
-  if (state.authoring.lastError) {
+  const saving = sourcePersistencePending();
+  const reconciling = reconciliationPending();
+  const failed = state.authoring.sourceSaveError || state.authoring.lastError;
+  const pending = saving || reconciling;
+  els.dirtyIndicator.classList.toggle("updating", pending && !failed);
+  els.dirtyIndicator.classList.toggle("failed", Boolean(failed));
+  if (state.authoring.sourceSaveError) {
+    els.dirtyIndicator.textContent = "Save failed";
+  } else if (state.authoring.lastError) {
     els.dirtyIndicator.textContent = "Update failed";
+  } else if (saving) {
+    els.dirtyIndicator.textContent = "Saving geometry…";
   } else if (state.authoring.busy) {
     const objectText = state.authoring.currentSegmentId === null
       ? ""
@@ -802,18 +865,20 @@ function renderAuthoringState() {
     const stageText = state.authoring.currentStage
       ? ` · ${state.authoring.currentStage}`
       : "";
-    els.dirtyIndicator.textContent = `Updating${objectText}${stageText}`;
-  } else if (state.dirty || state.authoring.timer) {
-    els.dirtyIndicator.textContent = "Saving…";
+    els.dirtyIndicator.textContent = `Saved · updating${objectText}${stageText}`;
+  } else if (reconciling) {
+    els.dirtyIndicator.textContent = "Saved · route path queued";
   } else {
     els.dirtyIndicator.textContent = "Saved";
   }
   if (els.releaseStateSummary) {
     const issueCount = collectIssueSegmentIds().size;
-    els.releaseStateSummary.textContent = state.authoring.lastError
+    els.releaseStateSummary.textContent = failed
       ? "Authoring update failed"
-      : pending
-        ? "Authoring updating"
+      : saving
+        ? "Geometry saving"
+        : reconciling
+          ? "Route path updating in background"
         : issueCount > 0
           ? `${issueCount} authoring issue${issueCount === 1 ? "" : "s"}`
           : "Authoring current";
@@ -842,7 +907,7 @@ function formatAuthoringDuration(durationMs) {
   return value < 1000 ? `${Math.round(value)}ms` : `${(value / 1000).toFixed(1)}s`;
 }
 
-async function applyNetworkAuthoringSegment(job, revision) {
+async function applyNetworkAuthoringSegment(job, revision, { signal } = {}) {
   const { segmentId, feature, explicitRefs: queuedExplicitRefs } = job;
   if (!feature) return { skipped: true, reason: "inactive" };
 
@@ -855,7 +920,7 @@ async function applyNetworkAuthoringSegment(job, revision) {
   if (!explicitRefs) {
     const recalculated = await runAuthoringStage(
       "matching",
-      () => recalculateSegmentMatch(feature, { updateState: false }),
+      () => recalculateSegmentMatch(feature, { updateState: false, signal }),
       { segmentId },
     );
     summary = recalculated.summary;
@@ -865,7 +930,7 @@ async function applyNetworkAuthoringSegment(job, revision) {
     if (summary) {
       persistedMatch = await runAuthoringStage(
         "saving match",
-        () => persistOverlayMatch(segmentId, summary, recalculated.preview, { updateState: false }),
+        () => persistOverlayMatch(segmentId, summary, recalculated.preview, { updateState: false, signal }),
         { segmentId },
       );
     }
@@ -885,6 +950,7 @@ async function applyNetworkAuthoringSegment(job, revision) {
       const response = await fetch("/api/network-authoring/segment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal,
         body: JSON.stringify({
           segmentId: Number(segmentId),
           revision,
@@ -933,10 +999,11 @@ function adoptNetworkAuthoringSegmentResult(segmentId, payload) {
   }
 }
 
-async function applyNetworkAuthoringMetadata(segmentId, revision) {
+async function applyNetworkAuthoringMetadata(segmentId, revision, { signal } = {}) {
   const response = await fetch("/api/network-authoring/segment-metadata", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal,
     body: JSON.stringify({ segmentId: Number(segmentId), revision }),
   });
   const payload = await response.json();
@@ -959,21 +1026,43 @@ function adoptNetworkAuthoringMetadataResult(payload) {
   }
 }
 
+function renderAuthoringProgress({ derived = false } = {}) {
+  renderAuthoringState();
+  renderDrawControls();
+  renderNetworkSegmentRouting();
+  if (!derived || sourceEditInProgress()) return;
+
+  // Reconciliation may refresh route-derived layers, but it must never replace
+  // the selected source geometry or its vertex source while the curator edits.
+  renderBaseOverlayPanel();
+  setSourceData("selected-match-preview", selectedMatchCollection());
+  setSourceData("selected-overlay-edges", selectedOverlayEdgeCollection());
+  setSourceData("direction-review-alignments", directionReviewAlignmentCollection());
+  setSourceData("direction-review-endpoints", directionReviewEndpointCollection());
+  setSourceData("cw-overlay-network", cwOverlayNetworkCollection());
+}
+
 async function runAuthoringSync() {
   if (state.authoring.busy) {
     state.authoring.rerun = true;
     return;
   }
-  if (
-    isDrawing() ||
-    state.draggingVertex ||
-    state.draggingManualBaseVertex ||
-    state.draggingDataMarker ||
-    state.editingEdgePickEdges ||
-    state.editingOverlayEdges ||
-    state.directionReview.editing
-  ) {
+  if (state.authoring.sourceSaveError) return;
+  if (sourcePersistencePending()) {
+    scheduleAuthoringSync({ delay: 250 });
+    return;
+  }
+  if (sourceEditInProgress()) {
     scheduleAuthoringSync({ delay: 600 });
+    return;
+  }
+
+  const hasWork =
+    state.authoring.pendingBaseRefresh ||
+    state.changedSegmentIds.size > 0 ||
+    state.authoring.metadataSegmentIds.size > 0;
+  if (!hasWork) {
+    renderAuthoringProgress();
     return;
   }
 
@@ -983,7 +1072,10 @@ async function runAuthoringSync() {
   state.authoring.currentStage = null;
   state.authoring.currentSegmentId = null;
   state.authoring.runTimings = [];
+  const abortController = new AbortController();
+  state.authoring.abortController = abortController;
   const runStartedAt = performance.now();
+  const sourceRevision = state.authoring.sourceRevision;
   const revision = authoringRevision();
   const sourceSnapshot = structuredClone(state.source);
   const segmentJobs = [...state.changedSegmentIds]
@@ -1013,17 +1105,11 @@ async function runAuthoringSync() {
     ...segmentJobs.map((job) => job.segmentId),
     ...metadataJobs.map((job) => job.segmentId),
   ]);
-  renderAll();
+  renderAuthoringProgress();
 
   const applied = [];
   const exceptions = [];
   try {
-    if (state.dirty) {
-      await runAuthoringStage(
-        "saving source",
-        () => saveSource({ quiet: true, source: sourceSnapshot }),
-      );
-    }
     if (state.authoring.pendingBaseRefresh) {
       state.baseOverlay.enabled = true;
       if (!state.baseOverlay.loaded) {
@@ -1047,7 +1133,11 @@ async function runAuthoringSync() {
     for (const job of metadataJobs) {
       const result = await runAuthoringStage(
         "updating metadata",
-        () => applyNetworkAuthoringMetadata(job.segmentId, revision + job.segmentId),
+        () => applyNetworkAuthoringMetadata(
+          job.segmentId,
+          revision + job.segmentId,
+          { signal: abortController.signal },
+        ),
         { segmentId: job.segmentId },
       );
       if (
@@ -1067,7 +1157,11 @@ async function runAuthoringSync() {
 
     for (const job of segmentJobs) {
       try {
-        const result = await applyNetworkAuthoringSegment(job, revision + job.segmentId);
+        const result = await applyNetworkAuthoringSegment(
+          job,
+          revision + job.segmentId,
+          { signal: abortController.signal },
+        );
         const stillCurrent = isCurrentAuthoringObjectRevision(
           state.authoring.segmentRevisions,
           job.segmentId,
@@ -1111,8 +1205,10 @@ async function runAuthoringSync() {
         throw error;
       }
     }
-    refreshUnresolvedSegmentHighlights();
-    clearAlert();
+    if (!state.authoring.rerun && state.authoring.sourceRevision === sourceRevision) {
+      refreshUnresolvedSegmentHighlights();
+      clearAlert();
+    }
     const details = [
       applied.length > 0 ? `${applied.length} current` : null,
       exceptions.length > 0 ? `${exceptions.length} need attention` : null,
@@ -1127,33 +1223,49 @@ async function runAuthoringSync() {
     const timingText = timing.slowestStage
       ? ` · ${timing.slowestStage} ${formatAuthoringDuration(timing.slowestDurationMs)}`
       : "";
-    setStatus(
-      details.length > 0
-        ? `Authoring updated · ${details.join(" · ")}${timingText}.`
-        : `Authoring saved and current${timingText}.`,
-    );
+    if (!state.authoring.rerun && state.authoring.sourceRevision === sourceRevision) {
+      setStatus(
+        details.length > 0
+          ? `Route path updated · ${details.join(" · ")}${timingText}.`
+          : `Geometry saved and route path current${timingText}.`,
+      );
+    }
   } catch (error) {
+    if (isAuthoringAbort(error)) {
+      state.authoring.rerun = true;
+      console.info("[network-authoring] obsolete update cancelled", {
+        durationMs: Math.round(performance.now() - runStartedAt),
+        stages: state.authoring.runTimings,
+      });
+      return;
+    }
     state.authoring.lastError = error instanceof Error ? error.message : String(error);
-    showAlert("Authoring update failed. Your source edit is retained.", state.authoring.lastError);
-    setStatus("Authoring update failed. Retry from the status indicator or make another edit.", "error");
+    showAlert("Route-path update failed. Your source edit is saved.", state.authoring.lastError);
+    setStatus("Route-path update failed. Retry from the selected segment or make another edit.", "error");
     throw markAlertShown(error);
   } finally {
     state.authoring.busy = false;
+    if (state.authoring.abortController === abortController) {
+      state.authoring.abortController = null;
+    }
     state.authoring.activeSegmentIds = new Set();
     state.authoring.currentStage = null;
     state.authoring.currentSegmentId = null;
-    renderAll();
+    const canAdoptDerivedPresentation =
+      !state.authoring.rerun &&
+      state.authoring.sourceRevision === sourceRevision &&
+      !sourceEditInProgress();
+    renderAuthoringProgress({ derived: canAdoptDerivedPresentation });
     if (
       !state.authoring.lastError &&
       (
         state.authoring.rerun ||
-        state.dirty ||
         state.authoring.pendingBaseRefresh ||
         state.changedSegmentIds.size > 0 ||
         state.authoring.metadataSegmentIds.size > 0
       )
     ) {
-      scheduleAuthoringSync({ delay: 500 });
+      if (!state.authoring.timer) scheduleAuthoringSync({ delay: 500 });
     }
   }
 }
@@ -1314,7 +1426,7 @@ function queueChangedSegment(segmentId) {
   state.changedSegmentIds.add(id);
   bumpAuthoringObjectRevision(state.authoring.segmentRevisions, id);
   state.authoring.lastError = null;
-  if (state.authoring.busy) state.authoring.rerun = true;
+  interruptStaleAuthoringWork();
 }
 
 function queueChangedFeature(feature) {
@@ -1327,7 +1439,7 @@ function queueNetworkMetadataFeature(feature) {
     state.authoring.metadataSegmentIds.add(segmentId);
     bumpAuthoringObjectRevision(state.authoring.metadataRevisions, segmentId);
     state.authoring.lastError = null;
-    if (state.authoring.busy) state.authoring.rerun = true;
+    interruptStaleAuthoringWork();
   }
 }
 
@@ -2832,7 +2944,7 @@ function renderNetworkSegmentRouting() {
       <div class="network-routing-actions">
         <button type="button" class="secondary-button" data-network-action="inspect">Inspect mapping</button>
         <button type="button" class="secondary-button" data-network-action="base">${status.key === "blocked" ? "Show issue in Base network" : "Show in Base network"}</button>
-        ${state.authoring.lastError ? '<button type="button" class="primary-button" data-network-action="retry">Retry update</button>' : ""}
+        ${state.authoring.lastError || state.authoring.sourceSaveError ? '<button type="button" class="primary-button" data-network-action="retry">Retry update</button>' : ""}
       </div>
     </div>`;
   els.networkSegmentRouting
@@ -2853,7 +2965,9 @@ function renderNetworkSegmentRouting() {
     .querySelector('[data-network-action="retry"]')
     ?.addEventListener("click", () => {
       state.authoring.lastError = null;
-      scheduleAuthoringSync({ delay: 0 });
+      state.authoring.sourceSaveError = null;
+      if (state.dirty) scheduleSourcePersistence({ delay: 0 });
+      scheduleAuthoringSync({ delay: state.dirty ? 250 : 0 });
     });
 
   if (els.directionReviewSection) {
@@ -2955,16 +3069,12 @@ function renderDrawControls() {
       : !selectedFeature());
   els.saveSource.disabled = !state.dirty || drawing;
   const authoringPending =
-    state.dirty ||
-    state.authoring.busy ||
-    Boolean(state.authoring.timer) ||
-    state.authoring.pendingBaseRefresh ||
-    state.changedSegmentIds.size > 0 ||
-    state.authoring.metadataSegmentIds.size > 0;
-  els.runBuild.disabled = drawing || authoringPending || Boolean(state.authoring.lastError);
+    sourcePersistencePending() || reconciliationPending();
+  const authoringFailed = state.authoring.sourceSaveError || state.authoring.lastError;
+  els.runBuild.disabled = drawing || authoringPending || Boolean(authoringFailed);
   els.runBuild.title = drawing
     ? "Finish or cancel drawing before building"
-    : state.authoring.lastError
+    : authoringFailed
       ? "Retry the failed authoring update before building"
       : authoringPending
         ? "Wait for authoring changes to become current"
@@ -9638,7 +9748,7 @@ async function snapSelectedBoundaryOverlay() {
   );
 }
 
-async function recalculateSegmentMatch(feature, { updateState = true } = {}) {
+async function recalculateSegmentMatch(feature, { updateState = true, signal } = {}) {
   const segmentId = Number(feature?.properties?.id);
   if (!feature || !Number.isInteger(segmentId)) {
     throw new Error("Cannot recalculate a segment without a valid id.");
@@ -9646,11 +9756,15 @@ async function recalculateSegmentMatch(feature, { updateState = true } = {}) {
   const response = await fetch("/api/osm/recalculate-segment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal,
     body: JSON.stringify({ feature }),
   });
   const payload = await response.json();
   if (!response.ok || !payload.ok) {
-    throw new Error(payload.error || `Selected match recalculation failed: ${response.status}`);
+    const error = new Error(payload.error || `Selected match recalculation failed: ${response.status}`);
+    error.status = response.status;
+    error.code = payload.code;
+    throw error;
   }
   if (updateState) {
     replaceSelectedSegmentMatchResult(segmentId, payload.match.summary, payload.match.preview);
@@ -9698,7 +9812,7 @@ async function persistOverlayMatch(
   segmentId,
   summary,
   preview,
-  { updateState = true } = {},
+  { updateState = true, signal } = {},
 ) {
   if (!summary) {
     throw new Error("Recalculate the selected segment before accepting it.");
@@ -9706,11 +9820,15 @@ async function persistOverlayMatch(
   const response = await fetch("/api/osm/persist-segment-match", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal,
     body: JSON.stringify({ segmentId, summary, preview }),
   });
   const payload = await response.json();
   if (!response.ok || !payload.ok) {
-    throw new Error(payload.error || `Selected match persistence failed: ${response.status}`);
+    const error = new Error(payload.error || `Selected match persistence failed: ${response.status}`);
+    error.status = response.status;
+    error.code = payload.code;
+    throw error;
   }
   if (updateState) {
     state.baseOverlay.matchSummary = payload.summary || state.baseOverlay.matchSummary;
@@ -10059,34 +10177,117 @@ async function clearSelectedBaseOverlayMapping() {
   setStatus(`Cleared base overlay mapping for ${featureName(feature)}.`);
 }
 
-async function saveSource({ quiet = false, source = state.source } = {}) {
-  if (!quiet) setStatus("Saving source...");
-  clearAlert();
-  const serializedSource = JSON.stringify(source);
+async function persistSourceSnapshot(serializedSource) {
+  const response = await fetch("/api/source", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: serializedSource,
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error || `Save failed: ${response.status}`);
+  }
+  return payload;
+}
+
+async function saveSource({ quiet = false } = {}) {
+  if (state.authoring.sourceSaveTimer) {
+    window.clearTimeout(state.authoring.sourceSaveTimer);
+    state.authoring.sourceSaveTimer = null;
+  }
+  if (state.authoring.sourceSaveBusy) {
+    state.authoring.sourceSaveRerun = true;
+    await state.authoring.sourceSavePromise;
+    if (state.dirty && !state.authoring.sourceSaveError) {
+      return saveSource({ quiet });
+    }
+    return null;
+  }
+  if (!state.dirty) {
+    if (!quiet) setStatus("Source already up to date.");
+    renderAuthoringState();
+    return null;
+  }
+  if (sourceEditInProgress()) {
+    scheduleSourcePersistence();
+    return { deferred: true };
+  }
+
+  if (!quiet) setStatus("Saving geometry…");
+  state.authoring.sourceSaveBusy = true;
+  state.authoring.sourceSaveRerun = false;
+  state.authoring.sourceSaveError = null;
+  renderAuthoringState();
+
+  let attemptedSnapshotRevision = state.authoring.sourceRevision;
+  const operation = (async () => {
+    let payload = null;
+    do {
+      state.authoring.sourceSaveRerun = false;
+      const snapshotRevision = state.authoring.sourceRevision;
+      attemptedSnapshotRevision = snapshotRevision;
+      const snapshotSerializedSource = JSON.stringify(structuredClone(state.source));
+      const startedAt = performance.now();
+      payload = await persistSourceSnapshot(snapshotSerializedSource);
+      console.info("[network-authoring] geometry saved", {
+        durationMs: Math.round(performance.now() - startedAt),
+        revision: snapshotRevision,
+        changed: payload.changed !== false,
+      });
+
+      const currentSerializedSource = JSON.stringify(state.source);
+      if (authoringSourceIsCurrent({
+        currentRevision: state.authoring.sourceRevision,
+        snapshotRevision,
+        currentSerializedSource,
+        snapshotSerializedSource,
+      })) {
+        state.dirty = false;
+        state.authoring.lastSavedSourceRevision = snapshotRevision;
+      } else {
+        state.authoring.sourceSaveRerun = true;
+      }
+
+      if (state.authoring.sourceSaveRerun && state.authoring.sourceSaveTimer) {
+        window.clearTimeout(state.authoring.sourceSaveTimer);
+        state.authoring.sourceSaveTimer = null;
+      }
+    } while (state.authoring.sourceSaveRerun && state.dirty && !sourceEditInProgress());
+    return payload;
+  })();
+  state.authoring.sourceSavePromise = operation;
+
   try {
-    const response = await fetch("/api/source", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: serializedSource,
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || `Save failed: ${response.status}`);
+    const payload = await operation;
+    if (!state.authoring.lastError) clearAlert();
+    if (!quiet && !state.dirty) {
+      setStatus(payload?.changed === false ? "Geometry already saved." : "Geometry saved.");
     }
-    // A newer edit may have landed while this request was in flight. Only mark
-    // the document saved when the server received the exact current snapshot.
-    if (JSON.stringify(state.source) === serializedSource) {
-      markDirty(false);
-    }
-    clearAlert();
-    if (!quiet) {
-      setStatus(payload.changed === false ? "Source already up to date." : "Source saved.");
-    }
+    return payload;
   } catch (error) {
+    if (state.authoring.sourceRevision !== attemptedSnapshotRevision) {
+      state.authoring.sourceSaveRerun = true;
+      console.info("[network-authoring] obsolete geometry save failure ignored", {
+        attemptedRevision: attemptedSnapshotRevision,
+        currentRevision: state.authoring.sourceRevision,
+      });
+      return null;
+    }
     const message = error instanceof Error ? error.message : String(error);
-    showAlert("Save failed. Changes are still unsaved.", message);
-    setStatus("Save failed. Changes are still unsaved.", "error");
+    state.authoring.sourceSaveError = message;
+    showAlert("Geometry save failed. Your edit remains in this browser.", message);
+    setStatus("Geometry save failed. Continue editing or retry the save.", "error");
     throw markAlertShown(error);
+  } finally {
+    state.authoring.sourceSaveBusy = false;
+    state.authoring.sourceSavePromise = null;
+    els.saveSource.disabled = !state.dirty || isDrawing();
+    renderAuthoringProgress();
+    if (state.dirty && !state.authoring.sourceSaveError) {
+      scheduleSourcePersistence({ delay: sourceEditInProgress() ? 180 : 0 });
+    } else if (reconciliationPending() && !state.authoring.timer) {
+      scheduleAuthoringSync({ delay: 250 });
+    }
   }
 }
 
@@ -10201,16 +10402,12 @@ function buildOutputSummary(report) {
 
 async function runBuild() {
   if (
-    state.dirty ||
-    state.authoring.busy ||
-    state.authoring.timer ||
-    state.authoring.pendingBaseRefresh ||
-    state.changedSegmentIds.size > 0 ||
-    state.authoring.metadataSegmentIds.size > 0
+    sourcePersistencePending() ||
+    reconciliationPending()
   ) {
     throw new Error("Wait for the authoring update to finish before building a release.");
   }
-  if (state.authoring.lastError) {
+  if (state.authoring.sourceSaveError || state.authoring.lastError) {
     throw new Error("Retry the failed authoring update before building a release.");
   }
 
@@ -10903,6 +11100,7 @@ function wireEvents() {
     map.dragPan.enable();
     clearSelectedSegmentMatchResult();
     queueChangedFeature(movedFeature);
+    scheduleAuthoringSync();
     map.getSource("segments")?.setData(mapFeatureCollection());
     renderForm();
     renderDrawControls();

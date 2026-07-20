@@ -2,7 +2,7 @@
 
 Date: 2026-07-20
 
-Status: Core implementation complete; editing-loop hardening complete; manual validation pending
+Status: Core implementation complete; non-blocking editing lanes implemented; manual validation pending
 
 Implementation note (2026-07-20): the editor now uses the consolidated Network
 workspace, Overlay V2 direct authoring, coalesced autosave/refresh, strict safe
@@ -17,6 +17,15 @@ edge selections, tracks independent per-object revisions, preserves a pending
 latest edit while older work finishes, auto-retries locally superseded work,
 and reports both live stage names and per-stage timings. The source-revision
 race observed on segment #319 is covered by coordinator tests.
+
+Implementation note (2026-07-21): source persistence and route reconciliation
+now run as independent latest-state-wins lanes. Geometry saves after a short
+idle delay without waiting for matching; reconciliation waits for the saved
+revision and starts after a longer idle window. Background work no longer runs
+the full editor/map renderer, stale single-segment requests are cancelled down
+to the Python child process, and Build/Promote remain gated until both lanes are
+current. Persistent in-memory graph caching is recorded as a measured follow-up
+and is not included in this change.
 
 ## Outcome
 
@@ -42,6 +51,49 @@ decisions, release validation, and runtime routing behavior.
 - Add synthetic fixtures for workflow rules; do not make tests depend on the
   curator's changing live segment data.
 - Measure refresh duration before investing in incremental graph generation.
+
+## Completed slice — non-blocking editing lanes
+
+### Source persistence
+
+- Reset a short trailing save timer on every source movement.
+- Keep at most one save request active and one latest source snapshot pending.
+- Mark the source saved only when both its revision and serialized content
+  still match the persisted snapshot.
+- Keep a failed source edit in browser memory, allow further editing, and expose
+  a retry without running reconciliation against unsaved data.
+
+### Route reconciliation
+
+- Reset a separate 1.5-second idle timer on every edit.
+- Start only after source persistence is current.
+- Snapshot each changed feature, explicit edge selection, metadata revision,
+  and base-evidence revision.
+- Abort obsolete single-segment requests and terminate their Python matcher;
+  discard any stale response without changing client-derived state.
+- Preserve full base-evidence refresh as an atomic operation and queue one later
+  refresh when its inputs change.
+
+### Rendering and release behavior
+
+- Never call the full editor renderer at reconciliation start or completion.
+- Refresh only routing-derived map sources and relevant status/inspector UI for
+  a current result.
+- Never replace `segments`, `selected-segment-source`, or `vertices` from a
+  background completion.
+- Show source-save and route-update state separately.
+- Keep Build and Promote disabled for an unsaved source, queued reconciliation,
+  active work, or either lane's failure.
+
+### Validation
+
+- Unit-test revision, abort, latest-snapshot, and timing rules.
+- Static-test that reconciliation does not invoke the full renderer and that
+  server cancellation reaches the Python child process.
+- Browser-test consecutive vertex movements while matching is active; confirm
+  the second movement remains draggable, selection/camera remain stable, the
+  stale matcher is cancelled, and the final revision becomes Current.
+- Run `npm run pretest` and `npm test`.
 
 ## Expected file changes
 

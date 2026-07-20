@@ -611,3 +611,47 @@ request durations for source save, segment matching, match persistence, V2
 validation, metadata updates, and full evidence refresh. Performance work is
 chosen from these measurements; the first likely candidate is avoiding a new
 Python process and full graph load for every single-segment match.
+
+### Non-blocking editing lanes
+
+Source editing and route reconciliation are separate consistency lanes:
+
+1. **Draft geometry** is the immediate browser-authoritative shape. Dragging,
+   selection, and subsequent edits remain available regardless of background
+   status.
+2. **Source persistence** saves an immutable snapshot shortly after the gesture
+   becomes idle. It permits one request in flight and retains only the newest
+   later snapshot; successful persistence never waits for matching.
+3. **Route reconciliation** begins only after source persistence is current and
+   the author has paused. It matches, persists derived evidence, and validates
+   Overlay V2 against an immutable segment revision.
+4. **Release readiness** remains fail-closed until both lanes are current.
+
+The UI distinguishes `Saving geometry`, `Geometry saved · route path updating`,
+`Current`, and `Needs attention`. An automatic update may refresh only derived
+routing layers, issue state, and status. It must not replace the editable CW
+source, the selected-segment geometry, the vertex source, selection, camera, or
+workspace mode.
+
+Several movements before the idle boundary collapse into one reconciliation.
+If a movement occurs after reconciliation starts, the client aborts the
+obsolete request, the editor server terminates an active single-segment matcher
+process, and exactly one latest revision remains queued. Full base-evidence
+rebuilds remain atomic: a concurrent edit records a later refresh rather than
+interrupting the shared rebuild.
+
+Ordinary geometry persistence does not introduce an Accept or Done step.
+Acceptance remains reserved for genuine curator decisions that cannot be made
+mechanically.
+
+### Deferred matcher-runtime optimization
+
+The selected-segment matcher currently executes behind the editor server but
+starts a new Python process that reads and indexes the base-edge file for every
+request. A long-lived Python worker, or an equivalent server-resident matcher
+with the parsed graph cached by input digest, could remove that startup and
+loading cost. This is deliberately not part of the interaction-isolation
+change: per-stage timings will first confirm how much latency belongs to graph
+loading versus matching, persistence, and validation. Any later cache must be
+invalidated by the base-graph digest and must produce byte-equivalent match
+results to the command-line implementation.

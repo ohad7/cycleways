@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  AUTHORING_REQUEST_ABORTED,
   BASE_EVIDENCE_SUPERSEDED,
   SOURCE_REVISION_SUPERSEDED,
   authoringObjectRevision,
+  authoringSourceIsCurrent,
   bumpAuthoringObjectRevision,
+  isAuthoringAbort,
   isCurrentAuthoringObjectRevision,
   isRetryableAuthoringConflict,
   summarizeAuthoringTimings,
@@ -31,6 +34,28 @@ assert.equal(
   false,
 );
 assert.equal(isRetryableAuthoringConflict({ code: BASE_EVIDENCE_SUPERSEDED }), true);
+assert.equal(isAuthoringAbort({ name: "AbortError" }), true);
+assert.equal(isAuthoringAbort({ code: AUTHORING_REQUEST_ABORTED }), true);
+assert.equal(isAuthoringAbort(new Error("ordinary failure")), false);
+
+assert.equal(
+  authoringSourceIsCurrent({
+    currentRevision: 4,
+    snapshotRevision: 4,
+    currentSerializedSource: "latest",
+    snapshotSerializedSource: "latest",
+  }),
+  true,
+);
+assert.equal(
+  authoringSourceIsCurrent({
+    currentRevision: 5,
+    snapshotRevision: 4,
+    currentSerializedSource: "latest",
+    snapshotSerializedSource: "latest",
+  }),
+  false,
+);
 
 assert.deepEqual(
   summarizeAuthoringTimings([

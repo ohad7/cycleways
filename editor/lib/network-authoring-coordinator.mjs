@@ -1,5 +1,6 @@
 export const SOURCE_REVISION_SUPERSEDED = "SOURCE_REVISION_SUPERSEDED";
 export const BASE_EVIDENCE_SUPERSEDED = "BASE_EVIDENCE_SUPERSEDED";
+export const AUTHORING_REQUEST_ABORTED = "AUTHORING_REQUEST_ABORTED";
 
 export function bumpAuthoringObjectRevision(revisions, objectId) {
   const key = String(objectId);
@@ -19,6 +20,20 @@ export function isCurrentAuthoringObjectRevision(revisions, objectId, revision) 
 export function isRetryableAuthoringConflict(error, { locallySuperseded = false } = {}) {
   if (error?.code === BASE_EVIDENCE_SUPERSEDED) return true;
   return error?.code === SOURCE_REVISION_SUPERSEDED && locallySuperseded;
+}
+
+export function isAuthoringAbort(error) {
+  return error?.name === "AbortError" || error?.code === AUTHORING_REQUEST_ABORTED;
+}
+
+export function authoringSourceIsCurrent({
+  currentRevision,
+  snapshotRevision,
+  currentSerializedSource,
+  snapshotSerializedSource,
+}) {
+  return Number(currentRevision) === Number(snapshotRevision)
+    && currentSerializedSource === snapshotSerializedSource;
 }
 
 export function summarizeAuthoringTimings(timings) {

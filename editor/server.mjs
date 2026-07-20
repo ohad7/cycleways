@@ -4171,7 +4171,14 @@ async function handleOsmGraphRecalculate() {
   });
 }
 
-async function handleOsmSegmentRecalculate(payload) {
+function authoringRequestAbortedError() {
+  const error = new Error("Obsolete authoring request cancelled");
+  error.status = 499;
+  error.code = "AUTHORING_REQUEST_ABORTED";
+  return error;
+}
+
+async function handleOsmSegmentRecalculate(payload, { signal } = {}) {
   const graphId = ++osmGraphCounter;
   const startedAt = Date.now();
   const feature = payload?.feature;
@@ -4193,12 +4200,14 @@ async function handleOsmSegmentRecalculate(payload) {
   await mkdir(osmBuildDir, { recursive: true });
   await writeJsonAtomic(segmentPath, feature);
 
-  log("info", `osm-segment#${graphId} started`, {
-    segmentId,
-    command: `python3 ${args.join(" ")}`,
-  });
-
   try {
+    if (signal?.aborted) throw authoringRequestAbortedError();
+
+    log("info", `osm-segment#${graphId} started`, {
+      segmentId,
+      command: `python3 ${args.join(" ")}`,
+    });
+
     const result = await new Promise((resolvePromise, rejectPromise) => {
       const child = spawn("python3", args, {
         cwd: repoRoot,
@@ -4207,6 +4216,8 @@ async function handleOsmSegmentRecalculate(payload) {
 
       let stdout = "";
       let stderr = "";
+      let settled = false;
+      let cancelling = false;
       const stdoutLogger = createLineLogger("info", `osm-segment#${graphId} stdout`, (text) => {
         stdout += text;
       });
@@ -4223,6 +4234,31 @@ async function handleOsmSegmentRecalculate(payload) {
       }, 10000);
       heartbeat.unref();
 
+      const cleanup = () => {
+        clearInterval(heartbeat);
+        signal?.removeEventListener("abort", abortChild);
+      };
+      const rejectOnce = (error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        rejectPromise(error);
+      };
+      const resolveOnce = (value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolvePromise(value);
+      };
+      const abortChild = () => {
+        if (cancelling) return;
+        cancelling = true;
+        log("info", `osm-segment#${graphId} cancelling obsolete match`, { segmentId });
+        child.kill("SIGTERM");
+      };
+      signal?.addEventListener("abort", abortChild, { once: true });
+      if (signal?.aborted) abortChild();
+
       child.stdout.on("data", (chunk) => {
         stdoutLogger.write(chunk);
       });
@@ -4230,31 +4266,34 @@ async function handleOsmSegmentRecalculate(payload) {
         stderrLogger.write(chunk);
       });
       child.on("error", (error) => {
-        clearInterval(heartbeat);
         stdoutLogger.flush();
         stderrLogger.flush();
         log("error", `osm-segment#${graphId} failed to start`, error.message);
-        rejectPromise(error);
+        rejectOnce(error);
       });
       child.on("close", (code) => {
-        clearInterval(heartbeat);
         stdoutLogger.flush();
         stderrLogger.flush();
         const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+        if (signal?.aborted) {
+          log("info", `osm-segment#${graphId} cancelled`, { segmentId, durationSeconds });
+          rejectOnce(authoringRequestAbortedError());
+          return;
+        }
         if (code !== 0) {
           log("error", `osm-segment#${graphId} failed`, {
             segmentId,
             exitCode: code,
             durationSeconds,
           });
-          rejectPromise(new Error(stderr || stdout || `Segment recalculation failed with exit code ${code}`));
+          rejectOnce(new Error(stderr || stdout || `Segment recalculation failed with exit code ${code}`));
           return;
         }
         log("info", `osm-segment#${graphId} finished`, {
           segmentId,
           durationSeconds,
         });
-        resolvePromise({ graphId, segmentId, stdout, stderr, durationSeconds });
+        resolveOnce({ graphId, segmentId, stdout, stderr, durationSeconds });
       });
     });
     const match = JSON.parse(await readFile(outPath, "utf-8"));
@@ -5224,14 +5263,31 @@ const server = createServer(async (request, response) => {
     if (request.method === "POST" && url.pathname === "/api/osm/recalculate-segment") {
       logApi(requestId, "POST /api/osm/recalculate-segment started");
       const payload = await readRequestJson(request);
+      const abortController = new AbortController();
+      const abortOnDisconnect = () => {
+        if (!response.writableEnded) abortController.abort();
+      };
+      response.once("close", abortOnDisconnect);
       let result;
       try {
-        result = await handleOsmSegmentRecalculate(payload);
+        result = await handleOsmSegmentRecalculate(payload, { signal: abortController.signal });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        if (error?.code === "AUTHORING_REQUEST_ABORTED") {
+          logApi(requestId, "POST /api/osm/recalculate-segment cancelled", {
+            durationMs: Date.now() - startedAt,
+            segmentId: payload?.feature?.properties?.id,
+          });
+          if (!response.destroyed) {
+            sendJson(response, error.status || 499, { ok: false, code: error.code, error: message });
+          }
+          return;
+        }
         log("warn", `api#${requestId} POST /api/osm/recalculate-segment failed`, message);
-        sendJson(response, 400, { ok: false, error: message });
+        sendJson(response, error?.status || 400, { ok: false, code: error?.code || null, error: message });
         return;
+      } finally {
+        response.off("close", abortOnDisconnect);
       }
       logApi(requestId, "POST /api/osm/recalculate-segment finished", {
         durationMs: Date.now() - startedAt,
