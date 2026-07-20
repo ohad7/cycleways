@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-20T21:35:38.803Z",
+  "updatedAt": "2026-07-20T21:47:07.701Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -4777,25 +4777,34 @@
           "osmWayId": 976962520
         },
         {
-          "edgeId": "e976962520_2",
-          "source": "osm",
+          "edgeId": "manual-manual-osm-976962520-mrtr58f8-a-mrtr5dmm",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 9,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 976962520
+          "manualEdgeId": "manual-manual-osm-976962520-mrtr58f8-a-mrtr5dmm"
+        },
+        {
+          "edgeId": "manual-manual-osm-976962520-mrtr58f8-b-mrtr5dmm",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 10,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-976962520-mrtr58f8-b-mrtr5dmm"
         },
         {
           "edgeId": "e841155119_1",
           "source": "osm",
           "direction": "reverse",
-          "sequenceIndex": 10,
+          "sequenceIndex": 11,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 841155119
         }
       ],
-      "updatedAt": "2026-05-20T06:13:49.122Z"
+      "updatedAt": "2026-07-20T21:44:12.862Z"
     },
     "77": {
       "segmentId": 77,
@@ -18688,10 +18697,10 @@
       "segmentId": 342,
       "segmentName": "אחוזת הירדן",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.52,
+      "avgDistanceMeters": 0.16,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -18723,25 +18732,25 @@
           "osmWayId": 976962520
         },
         {
-          "edgeId": "e976962520_2",
-          "source": "osm",
+          "edgeId": "manual-manual-osm-976962520-mrtr58f8-a-mrtr5dmm",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 976962520
+          "manualEdgeId": "manual-manual-osm-976962520-mrtr58f8-a-mrtr5dmm"
         },
         {
-          "edgeId": "e841155119_1",
-          "source": "osm",
-          "direction": "reverse",
+          "edgeId": "manual-342-mrtr7sdk",
+          "source": "manual",
+          "direction": "forward",
           "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 841155119
+          "manualEdgeId": "manual-342-mrtr7sdk"
         }
       ],
-      "updatedAt": "2026-06-10T14:21:54.072Z"
+      "updatedAt": "2026-07-20T21:47:07.700Z"
     },
     "343": {
       "segmentId": 343,

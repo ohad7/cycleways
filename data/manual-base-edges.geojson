@@ -5836,6 +5836,165 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-976962520-mrtr58f8-a-mrtr5dmm",
+      "properties": {
+        "id": "manual-manual-osm-976962520-mrtr58f8-a-mrtr5dmm",
+        "manualEdgeId": "manual-manual-osm-976962520-mrtr58f8-a-mrtr5dmm",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e976962520_2",
+        "copiedFromOsmWayId": 976962520,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-20T21:44:06.116Z",
+        "updatedAt": "2026-07-20T21:44:12.862Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e976962520_2",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-976962520-mrtr58f8"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.572088,
+            33.04265
+          ],
+          [
+            35.572045,
+            33.042721
+          ],
+          [
+            35.572173,
+            33.045267
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-976962520-mrtr58f8-b-mrtr5dmm",
+      "properties": {
+        "id": "manual-manual-osm-976962520-mrtr58f8-b-mrtr5dmm",
+        "manualEdgeId": "manual-manual-osm-976962520-mrtr58f8-b-mrtr5dmm",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e976962520_2",
+        "copiedFromOsmWayId": 976962520,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-20T21:44:06.116Z",
+        "updatedAt": "2026-07-20T21:44:12.862Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e976962520_2",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-976962520-mrtr58f8"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.572173,
+            33.045267
+          ],
+          [
+            35.572505,
+            33.045753
+          ],
+          [
+            35.572803,
+            33.045718
+          ],
+          [
+            35.573064,
+            33.045851
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-342-mrtr7sdk",
+      "properties": {
+        "id": "manual-342-mrtr7sdk",
+        "manualEdgeId": "manual-342-mrtr7sdk",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-20T21:46:05.288Z",
+        "updatedAt": "2026-07-20T21:46:05.288Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 342,
+        "linkedSegmentName": "אחוזת הירדן"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.572173,
+            33.045267
+          ],
+          [
+            35.572171,
+            33.045314
+          ],
+          [
+            35.572167,
+            33.04536
+          ],
+          [
+            35.572171,
+            33.045499
+          ],
+          [
+            35.572169,
+            33.045599
+          ],
+          [
+            35.572208,
+            33.04569
+          ],
+          [
+            35.572333,
+            33.045775
+          ],
+          [
+            35.572428,
+            33.045846
+          ],
+          [
+            35.572792,
+            33.045963
+          ]
+        ]
+      }
     }
   ]
 }
