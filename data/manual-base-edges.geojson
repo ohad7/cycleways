@@ -8068,6 +8068,59 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-359-mrv18tjl",
+      "properties": {
+        "id": "manual-359-mrv18tjl",
+        "manualEdgeId": "manual-359-mrv18tjl",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T19:14:35.793Z",
+        "updatedAt": "2026-07-21T19:14:35.793Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 359,
+        "linkedSegmentName": "כביש גישה שדה אליעזר"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.571418,
+            33.04606
+          ],
+          [
+            35.57148,
+            33.046061
+          ],
+          [
+            35.571691,
+            33.046052
+          ],
+          [
+            35.571921,
+            33.046037
+          ],
+          [
+            35.5721,
+            33.046013
+          ],
+          [
+            35.572438,
+            33.045974
+          ]
+        ]
+      }
     }
   ]
 }

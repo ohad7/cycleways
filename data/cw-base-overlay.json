@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T19:12:15.365Z",
+  "updatedAt": "2026-07-21T19:18:14.991Z",
   "segments": {
     "2": {
       "segmentId": 2,
