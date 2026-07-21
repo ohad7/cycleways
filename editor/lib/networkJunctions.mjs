@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
+import {
+  materializeAcceptedAlignment,
+  normalizeAlignmentEdgeRefs,
+} from "./cw-overlay-v2.mjs";
 
 const REVIEW_STATES = new Set(["selected", "unavailable"]);
+const PUBLICATION_STATES = new Set(["detected", "published", "excluded"]);
+const NAVIGATION_KINDS = new Set(["roundabout", "intersection", "crossing", "plaza"]);
 
 function digest(value) {
   return `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
@@ -27,7 +33,7 @@ function haversineMeters(a, b) {
 }
 
 function traversalState(edge, direction) {
-  return edge?.bicycleTraversalShadow?.[direction] || "unknown";
+  return edge?.bicycleTraversalShadow?.[direction] || edge?.bicycleTraversal?.[direction] || "unknown";
 }
 
 function directionAllowed(edge, direction, acceptedCwDirections) {
@@ -57,13 +63,48 @@ function orderedRefs(mapping) {
   );
 }
 
+function alignmentRefs(segment, alignmentKey) {
+  const accepted = materializeAcceptedAlignment(segment, alignmentKey);
+  if (accepted?.length) return accepted;
+  const slot = segment?.alignments?.[alignmentKey];
+  const record = slot?.draft || slot?.published;
+  if (
+    record?.realization?.type === "explicit" ||
+    Array.isArray(record?.realization?.edgeRefs)
+  ) {
+    return normalizeAlignmentEdgeRefs(record.realization.edgeRefs);
+  }
+  if (record?.realization?.type === "reverseOf") {
+    const targetSlot = segment?.alignments?.[record.realization.alignmentKey];
+    const target = targetSlot?.published || targetSlot?.draft;
+    if (target?.realization?.type === "explicit") {
+      return normalizeAlignmentEdgeRefs(target.realization.edgeRefs)
+        .reverse()
+        .map((ref, sequenceIndex) => ({
+          ...ref,
+          direction: ref.direction === "reverse" ? "forward" : "reverse",
+          sequenceIndex,
+        }));
+    }
+  }
+  return [];
+}
+
 function acceptedCwDirectionSet(overlay) {
   const result = new Set();
   for (const segment of Object.values(overlay?.segments || {})) {
-    for (const alignment of Object.values(segment?.alignments || {})) {
-      const mapping = alignment?.published || alignment?.draft;
-      if (!mapping?.validation?.ok && mapping?.validation?.status !== "valid") continue;
-      for (const ref of orderedRefs(mapping)) result.add(`${ref.edgeId}|${ref.direction}`);
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      const slot = segment?.alignments?.[alignmentKey];
+      const mapping = slot?.published || slot?.draft;
+      if (!mapping) continue;
+      if (
+        mapping === slot?.draft &&
+        !mapping?.validation?.ok &&
+        mapping?.validation?.status !== "valid"
+      ) continue;
+      for (const ref of alignmentRefs(segment, alignmentKey)) {
+        result.add(`${ref.edgeId}|${ref.direction}`);
+      }
     }
   }
   return result;
@@ -169,20 +210,226 @@ function buildPorts(junctionId, ringNodes, ringEdgeIds, internalEdges, acceptedC
   return ports.sort((a, b) => a.id.localeCompare(b.id));
 }
 
+function customBoundaryPorts(
+  junctionId,
+  internalEdges,
+  allEdges,
+  acceptedCwDirections,
+  excludedPortIds = [],
+) {
+  const internalEdgeIds = new Set(internalEdges.map((edge) => String(edge.id)));
+  const excluded = new Set((excludedPortIds || []).map(String));
+  const externalNodes = new Set();
+  for (const edge of allEdges) {
+    if (internalEdgeIds.has(String(edge?.id))) continue;
+    if (edge?.fromNodeId) externalNodes.add(String(edge.fromNodeId));
+    if (edge?.toNodeId) externalNodes.add(String(edge.toNodeId));
+  }
+  const ports = [];
+  const add = (edge, nodeId, coordinate, direction, usage) => {
+    if (!nodeId || !externalNodes.has(String(nodeId))) return;
+    if (!directionAllowed(edge, direction, acceptedCwDirections)) return;
+    const id = `${edge.id}:${direction}:${usage}`;
+    if (excluded.has(id)) return;
+    ports.push({
+      id,
+      junctionId,
+      armId: String(nodeId),
+      edgeId: String(edge.id),
+      externalNodeId: String(nodeId),
+      ringNodeId: null,
+      coordinate: coordinate?.slice(0, 2) || null,
+      usage,
+      direction,
+      source: "custom-boundary",
+    });
+  };
+  for (const edge of internalEdges) {
+    add(edge, edge.fromNodeId, edge.coordinates?.[0], "forward", "entry");
+    add(edge, edge.fromNodeId, edge.coordinates?.[0], "reverse", "exit");
+    add(edge, edge.toNodeId, edge.coordinates?.at(-1), "reverse", "entry");
+    add(edge, edge.toNodeId, edge.coordinates?.at(-1), "forward", "exit");
+  }
+  return ports.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function geometryBounds(edges) {
+  const coordinates = edges.flatMap((edge) => edge?.coordinates || []);
+  if (!coordinates.length) return { bbox: null, center: null };
+  const lngs = coordinates.map((coordinate) => Number(coordinate?.[0])).filter(Number.isFinite);
+  const lats = coordinates.map((coordinate) => Number(coordinate?.[1])).filter(Number.isFinite);
+  if (!lngs.length || !lats.length) return { bbox: null, center: null };
+  const bbox = [Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)];
+  return {
+    bbox,
+    center: { lng: (bbox[0] + bbox[2]) / 2, lat: (bbox[1] + bbox[3]) / 2 },
+  };
+}
+
 function findPort(ports, ref, usage) {
   return ports.find(
     (port) => port.edgeId === ref?.edgeId && port.direction === ref?.direction && port.usage === usage,
   ) || null;
 }
 
-function segmentAssociations(overlay, internalEdgeIds, ports) {
+function directedStartNode(ref, edge) {
+  return ref?.direction === "reverse" ? edge?.toNodeId : edge?.fromNodeId;
+}
+
+function directedEndNode(ref, edge) {
+  return ref?.direction === "reverse" ? edge?.fromNodeId : edge?.toNodeId;
+}
+
+const ENDPOINT_DIRECTION_USES = Object.freeze({
+  a: Object.freeze([
+    { alignmentKey: "aToB", terminal: "start", usage: "depart", portUsage: "exit" },
+    { alignmentKey: "bToA", terminal: "end", usage: "arrive", portUsage: "entry" },
+  ]),
+  b: Object.freeze([
+    { alignmentKey: "aToB", terminal: "end", usage: "arrive", portUsage: "entry" },
+    { alignmentKey: "bToA", terminal: "start", usage: "depart", portUsage: "exit" },
+  ]),
+});
+
+function endpointArmAssociations(segment, junctionId, ports, edgeById) {
+  const armAttachments = [];
   const attachments = [];
+  const attachmentIssues = [];
+  const portsByArm = new Map();
+  const portEdgeIds = new Set(ports.map((port) => String(port.edgeId)));
+  for (const port of ports) {
+    portsByArm.set(port.armId, [...(portsByArm.get(port.armId) || []), port]);
+  }
+
+  for (const endpoint of ["a", "b"]) {
+    const uses = [];
+    for (const descriptor of ENDPOINT_DIRECTION_USES[endpoint]) {
+      const refs = alignmentRefs(segment, descriptor.alignmentKey);
+      if (!refs.length) continue;
+      const ref = descriptor.terminal === "start" ? refs[0] : refs.at(-1);
+      if (portEdgeIds.has(String(ref.edgeId))) continue;
+      const edge = edgeById.get(String(ref.edgeId));
+      if (!edge) continue;
+      const terminalNodeId = descriptor.terminal === "start"
+        ? directedStartNode(ref, edge)
+        : directedEndNode(ref, edge);
+      if (!terminalNodeId) continue;
+      uses.push({ ...descriptor, terminalNodeId: String(terminalNodeId) });
+    }
+    if (!uses.length) continue;
+
+    const matchingArmIds = [...new Set(
+      uses.flatMap((use) =>
+        [...portsByArm.keys()].filter((armId) => String(armId) === use.terminalNodeId),
+      ),
+    )];
+    if (matchingArmIds.length === 0) {
+      const stored = segment?.junctionAttachments?.[endpoint];
+      if (stored?.junctionId === junctionId) {
+        attachmentIssues.push({
+          code: "stale_arm_attachment",
+          junctionId,
+          segmentId: Number(segment.segmentId),
+          endpoint,
+          armId: stored.armId,
+        });
+      }
+      continue;
+    }
+    if (matchingArmIds.length > 1) {
+      attachmentIssues.push({
+        code: "ambiguous_arm_attachment",
+        junctionId,
+        segmentId: Number(segment.segmentId),
+        endpoint,
+        armIds: matchingArmIds.sort(),
+      });
+      continue;
+    }
+
+    const armId = matchingArmIds[0];
+    const armPorts = portsByArm.get(armId) || [];
+    const stored = segment?.junctionAttachments?.[endpoint];
+    if (
+      stored?.junctionId === junctionId &&
+      (String(stored.armId) !== String(armId) || String(stored.externalNodeId) !== String(armId))
+    ) {
+      attachmentIssues.push({
+        code: "stale_arm_attachment",
+        junctionId,
+        segmentId: Number(segment.segmentId),
+        endpoint,
+        armId: stored.armId,
+        derivedArmId: armId,
+      });
+    }
+    const coordinate = armPorts.find((port) => port.coordinate)?.coordinate || null;
+    const endpointCoordinate = segment?.endpoints?.[endpoint]?.coordinate;
+    armAttachments.push({
+      junctionId,
+      segmentId: Number(segment.segmentId),
+      segmentName: segment.segmentName,
+      endpoint,
+      armId,
+      externalNodeId: armId,
+      coordinate,
+      distanceMeters: coordinate && endpointCoordinate
+        ? Math.round(haversineMeters(coordinate, endpointCoordinate) * 10) / 10
+        : null,
+      source: stored?.junctionId === junctionId && String(stored.armId) === String(armId)
+        ? stored.source || "stored-terminal-node"
+        : "automatic-terminal-node",
+    });
+
+    for (const use of uses.filter((item) => item.terminalNodeId === String(armId))) {
+      const matchingPorts = armPorts.filter((port) => port.usage === use.portUsage);
+      if (matchingPorts.length !== 1) {
+        attachmentIssues.push({
+          code: matchingPorts.length ? "ambiguous_directional_port" : "missing_directional_port",
+          junctionId,
+          segmentId: Number(segment.segmentId),
+          endpoint,
+          alignmentKey: use.alignmentKey,
+          usage: use.usage,
+          armId,
+          portIds: matchingPorts.map((port) => port.id),
+        });
+        continue;
+      }
+      attachments.push({
+        junctionId,
+        segmentId: Number(segment.segmentId),
+        segmentName: segment.segmentName,
+        alignmentKey: use.alignmentKey,
+        endpoint,
+        usage: use.usage,
+        armId,
+        externalNodeId: armId,
+        portId: matchingPorts[0].id,
+        source: "arm-attachment",
+      });
+    }
+  }
+  return { armAttachments, attachments, attachmentIssues };
+}
+
+function segmentAssociations(overlay, internalEdgeIds, ports, edgeById, junctionId) {
+  const attachments = [];
+  const armAttachments = [];
+  const attachmentIssues = [];
   const throughAlignments = [];
   const segmentIds = new Set();
   for (const segment of Object.values(overlay?.segments || {})) {
+    const endpointAssociations = endpointArmAssociations(segment, junctionId, ports, edgeById);
+    if (endpointAssociations.armAttachments.length) {
+      segmentIds.add(Number(segment.segmentId));
+      armAttachments.push(...endpointAssociations.armAttachments);
+      attachments.push(...endpointAssociations.attachments);
+    }
+    attachmentIssues.push(...endpointAssociations.attachmentIssues);
     for (const [alignmentKey, alignment] of Object.entries(segment?.alignments || {})) {
       const mapping = alignment?.published || alignment?.draft;
-      const refs = orderedRefs(mapping);
+      const refs = alignmentRefs(segment, alignmentKey);
       const internalIndices = refs
         .map((ref, index) => internalEdgeIds.has(ref.edgeId) ? index : -1)
         .filter((index) => index >= 0);
@@ -231,6 +478,8 @@ function segmentAssociations(overlay, internalEdgeIds, ports) {
   return {
     segmentIds: [...segmentIds].sort((a, b) => a - b),
     attachments,
+    armAttachments,
+    attachmentIssues,
     throughAlignments,
   };
 }
@@ -257,6 +506,22 @@ function nearbySegmentEndpoints(overlay, center, maxDistanceMeters = 65) {
   return endpoints.sort((a, b) => a.distanceMeters - b.distanceMeters || a.segmentId - b.segmentId);
 }
 
+function junctionFingerprint(junction) {
+  return digest({
+    id: junction.id,
+    roundaboutFingerprint: junction.roundaboutFingerprint || null,
+    topologyFingerprint: junction.topologyFingerprint,
+    attachments: junction.attachments || [],
+    armAttachments: junction.armAttachments || [],
+    nearbyEndpoints: junction.nearbyEndpoints || [],
+    movements: (junction.movements || []).map((movement) => ({
+      id: movement.id,
+      status: movement.status,
+      edgeRefs: (movement.edgeRefs || []).map(({ edgeId, direction }) => ({ edgeId, direction })),
+    })),
+  });
+}
+
 function movementCoverage(ports, internalEdges, acceptedCwDirections) {
   const movements = [];
   const entries = ports.filter((port) => port.usage === "entry");
@@ -277,14 +542,165 @@ function movementCoverage(ports, internalEdges, acceptedCwDirections) {
   return movements;
 }
 
+export function normalizeNetworkJunctionRegistry(value = {}) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Network junction registry must be an object");
+  }
+  const records = value.junctions && typeof value.junctions === "object" && !Array.isArray(value.junctions)
+    ? value.junctions
+    : {};
+  const normalized = { schemaVersion: 1, junctions: {} };
+  for (const [id, input] of Object.entries(records)) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      throw new Error(`Junction ${id} must be an object`);
+    }
+    const sourceType = input.source?.type;
+    if (!['derived_roundabout', 'custom'].includes(sourceType)) {
+      throw new Error(`Junction ${id} has unsupported source type`);
+    }
+    const status = input.status || "detected";
+    if (!PUBLICATION_STATES.has(status)) throw new Error(`Junction ${id} has invalid status ${status}`);
+    const navigationKind = input.navigationKind || (sourceType === "derived_roundabout" ? "roundabout" : "intersection");
+    if (!NAVIGATION_KINDS.has(navigationKind)) {
+      throw new Error(`Junction ${id} has invalid navigation kind ${navigationKind}`);
+    }
+    const internalEdgeIds = sourceType === "custom"
+      ? [...new Set((input.source.internalEdgeIds || []).map(String).filter(Boolean))]
+      : [];
+    if (sourceType === "custom" && internalEdgeIds.length === 0) {
+      throw new Error(`Custom junction ${id} must reference at least one internal edge`);
+    }
+    const name = typeof input.name === "string" ? input.name.trim() : "";
+    normalized.junctions[id] = {
+      id,
+      name,
+      status,
+      navigationKind,
+      source: sourceType === "custom"
+        ? { type: "custom", internalEdgeIds }
+        : { type: "derived_roundabout", roundaboutId: String(input.source.roundaboutId || "") },
+      excludedPortIds: [...new Set((input.excludedPortIds || []).map(String).filter(Boolean))].sort(),
+      topologyFingerprint: typeof input.topologyFingerprint === "string" ? input.topologyFingerprint : null,
+      updatedAt: typeof input.updatedAt === "string" ? input.updatedAt : null,
+      reviewer: typeof input.reviewer === "string" ? input.reviewer : null,
+    };
+  }
+  return normalized;
+}
+
+function publicationState(candidate, record) {
+  const issues = [];
+  if (!record?.name) issues.push({ code: "junction_name_required" });
+  if ((candidate.armAttachments || []).length < 2) issues.push({ code: "two_junction_arms_required" });
+  if ((candidate.summary?.legalMovements || 0) < 1) issues.push({ code: "legal_junction_movement_required" });
+  issues.push(...(candidate.attachmentIssues || []));
+  const fingerprintCurrent = record?.status !== "published"
+    || (Boolean(record.topologyFingerprint) && record.topologyFingerprint === candidate.topologyFingerprint);
+  if (record?.status === "published" && !fingerprintCurrent) {
+    issues.push({ code: "published_junction_topology_stale" });
+  }
+  const requestedStatus = record?.status || "detected";
+  const effectiveStatus = requestedStatus === "published" && !fingerprintCurrent ? "stale" : requestedStatus;
+  return {
+    requestedStatus,
+    status: effectiveStatus,
+    canPublish: issues.length === 0,
+    issues,
+    fingerprintCurrent,
+  };
+}
+
+function withCuration(candidate, record = null) {
+  const publication = publicationState(candidate, record);
+  return {
+    ...candidate,
+    name: record?.name || null,
+    navigationKind: record?.navigationKind || (candidate.kind === "derived_roundabout" ? "roundabout" : "intersection"),
+    publication,
+    registryRecord: record,
+  };
+}
+
+function customJunctionCandidate(record, graph, overlay, acceptedCwDirections) {
+  const edges = Array.isArray(graph?.edges) ? graph.edges : [];
+  const edgeById = new Map(edges.map((edge) => [String(edge.id), edge]));
+  const missingInternalEdgeIds = record.source.internalEdgeIds.filter((edgeId) => !edgeById.has(edgeId));
+  const internalEdges = record.source.internalEdgeIds.map((edgeId) => edgeById.get(edgeId)).filter(Boolean);
+  const internalEdgeIds = new Set(internalEdges.map((edge) => String(edge.id)));
+  const proposedPorts = customBoundaryPorts(
+    record.id,
+    internalEdges,
+    edges,
+    acceptedCwDirections,
+    [],
+  );
+  const excludedPortIds = new Set(record.excludedPortIds || []);
+  const ports = proposedPorts.filter((port) => !excludedPortIds.has(port.id));
+  const associations = segmentAssociations(overlay, internalEdgeIds, ports, edgeById, record.id);
+  const { bbox, center } = geometryBounds(internalEdges);
+  const nearbyEndpoints = nearbySegmentEndpoints(overlay, center);
+  const segmentIds = [...new Set([
+    ...associations.segmentIds,
+    ...nearbyEndpoints.map((endpoint) => endpoint.segmentId),
+  ])].sort((a, b) => a - b);
+  const movements = movementCoverage(ports, internalEdges, acceptedCwDirections);
+  const topologyFingerprint = digest({
+    id: record.id,
+    edges: internalEdges.map((edge) => ({
+      id: String(edge.id),
+      from: edge.fromNodeId,
+      to: edge.toNodeId,
+      forward: traversalState(edge, "forward"),
+      reverse: traversalState(edge, "reverse"),
+    })),
+    ports: ports.map(({ id, armId, edgeId, direction, usage }) => ({ id, armId, edgeId, direction, usage })),
+  });
+  const candidate = {
+    id: record.id,
+    kind: "custom_bicycle",
+    roundaboutId: null,
+    roundaboutFingerprint: null,
+    classification: record.navigationKind,
+    center,
+    boundary: bbox,
+    ringEdgeIds: [],
+    internalEdgeIds: [...internalEdgeIds].sort(),
+    missingInternalEdgeIds,
+    ports,
+    proposedPorts,
+    ...associations,
+    attachmentIssues: [
+      ...associations.attachmentIssues,
+      ...missingInternalEdgeIds.map((edgeId) => ({ code: "missing_custom_junction_edge", edgeId })),
+    ],
+    segmentIds,
+    nearbyEndpoints,
+    movements,
+    topologyFingerprint,
+    summary: {
+      ports: ports.length,
+      armAttachments: associations.armAttachments.length,
+      directionalAttachments: associations.attachments.length,
+      movements: movements.length,
+      legalMovements: movements.filter((movement) => movement.status !== "unavailable").length,
+      unavailableMovements: movements.filter((movement) => movement.status === "unavailable").length,
+    },
+  };
+  candidate.fingerprint = junctionFingerprint(candidate);
+  return withCuration(candidate, record);
+}
+
 export function deriveNetworkJunctionCandidates({
   graph = {},
   roundaboutCandidates = {},
   roundaboutReviews = {},
   overlay = {},
+  curatedJunctions = {},
 } = {}) {
   const edges = Array.isArray(graph?.edges) ? graph.edges : [];
+  const edgeById = new Map(edges.map((edge) => [String(edge.id), edge]));
   const acceptedCwDirections = acceptedCwDirectionSet(overlay);
+  const registry = normalizeNetworkJunctionRegistry(curatedJunctions);
   const acceptedRoundaboutIds = new Set(
     Object.entries(roundaboutReviews?.reviews || {})
       .filter(([, review]) => review?.status === "accepted")
@@ -304,7 +720,7 @@ export function deriveNetworkJunctionCandidates({
     const internalEdgeIds = new Set(internalEdges.map((edge) => edge.id));
     const id = `junction-${roundabout.id}`;
     const ports = buildPorts(id, ringNodes, ringEdgeIds, internalEdges, acceptedCwDirections);
-    const associations = segmentAssociations(overlay, internalEdgeIds, ports);
+    const associations = segmentAssociations(overlay, internalEdgeIds, ports, edgeById, id);
     const nearbyEndpoints = nearbySegmentEndpoints(overlay, roundabout.center);
     const segmentIds = [...new Set([
       ...associations.segmentIds,
@@ -312,7 +728,7 @@ export function deriveNetworkJunctionCandidates({
     ])].sort((a, b) => a - b);
     if (!segmentIds.length) continue;
     const movements = movementCoverage(ports, internalEdges, acceptedCwDirections);
-    const fingerprintBasis = {
+    const topologyFingerprint = digest({
       id,
       roundaboutFingerprint: roundabout.fingerprint,
       edges: internalEdges.map((edge) => ({
@@ -322,18 +738,19 @@ export function deriveNetworkJunctionCandidates({
         forward: traversalState(edge, "forward"),
         reverse: traversalState(edge, "reverse"),
       })),
-      attachments: associations.attachments,
-      nearbyEndpoints,
-      movements: movements.map((movement) => ({
-        id: movement.id,
-        status: movement.status,
-        edgeRefs: movement.edgeRefs.map(({ edgeId, direction }) => ({ edgeId, direction })),
+      ports: ports.map(({ id: portId, armId, edgeId, direction, usage }) => ({
+        id: portId,
+        armId,
+        edgeId,
+        direction,
+        usage,
       })),
-    };
-    junctions.push({
+    });
+    const junction = {
       id,
       kind: "derived_roundabout",
       roundaboutId: roundabout.id,
+      roundaboutFingerprint: roundabout.fingerprint,
       classification: roundabout.classification,
       center: roundabout.center,
       boundary: roundabout.bbox,
@@ -344,14 +761,23 @@ export function deriveNetworkJunctionCandidates({
       segmentIds,
       nearbyEndpoints,
       movements,
-      fingerprint: digest(fingerprintBasis),
+      topologyFingerprint,
       summary: {
         ports: ports.length,
+        armAttachments: associations.armAttachments.length,
+        directionalAttachments: associations.attachments.length,
         movements: movements.length,
         legalMovements: movements.filter((movement) => movement.status !== "unavailable").length,
         unavailableMovements: movements.filter((movement) => movement.status === "unavailable").length,
       },
-    });
+    };
+    junction.fingerprint = junctionFingerprint(junction);
+    const record = registry.junctions[id] || null;
+    junctions.push(withCuration(junction, record));
+  }
+  for (const record of Object.values(registry.junctions)) {
+    if (record.source.type !== "custom") continue;
+    junctions.push(customJunctionCandidate(record, graph, overlay, acceptedCwDirections));
   }
   junctions.sort((a, b) => a.id.localeCompare(b.id));
   return {
@@ -363,6 +789,172 @@ export function deriveNetworkJunctionCandidates({
       ports: junctions.reduce((sum, junction) => sum + junction.ports.length, 0),
       movements: junctions.reduce((sum, junction) => sum + junction.movements.length, 0),
       unavailableMovements: junctions.reduce((sum, junction) => sum + junction.summary.unavailableMovements, 0),
+      armAttachments: junctions.reduce((sum, junction) => sum + junction.summary.armAttachments, 0),
+      directionalAttachments: junctions.reduce((sum, junction) => sum + junction.summary.directionalAttachments, 0),
+    },
+  };
+}
+
+export function mergeNetworkJunctionRegistry(candidatesPayload = {}, graph = {}, overlay = {}, registryValue = {}) {
+  const registry = normalizeNetworkJunctionRegistry(registryValue);
+  const acceptedCwDirections = acceptedCwDirectionSet(overlay);
+  const junctions = (candidatesPayload.junctions || [])
+    .filter((candidate) => candidate.kind !== "custom_bicycle")
+    .map((candidate) => withCuration(candidate, registry.junctions[candidate.id] || null));
+  for (const record of Object.values(registry.junctions)) {
+    if (record.source.type !== "custom") continue;
+    junctions.push(customJunctionCandidate(record, graph, overlay, acceptedCwDirections));
+  }
+  junctions.sort((left, right) => left.id.localeCompare(right.id));
+  return {
+    ...candidatesPayload,
+    junctions,
+    summary: {
+      ...(candidatesPayload.summary || {}),
+      relevantJunctions: junctions.length,
+      ports: junctions.reduce((sum, junction) => sum + junction.ports.length, 0),
+      movements: junctions.reduce((sum, junction) => sum + junction.movements.length, 0),
+      unavailableMovements: junctions.reduce((sum, junction) => sum + junction.summary.unavailableMovements, 0),
+      armAttachments: junctions.reduce((sum, junction) => sum + junction.summary.armAttachments, 0),
+      directionalAttachments: junctions.reduce((sum, junction) => sum + junction.summary.directionalAttachments, 0),
+    },
+  };
+}
+
+export function reconcileOverlayJunctionArmAttachments(
+  overlay,
+  candidatesPayload,
+  { segmentIds = null } = {},
+) {
+  const selected = segmentIds == null ? null : new Set(segmentIds.map(Number));
+  const next = structuredClone(overlay);
+  const bySegmentEndpoint = new Map();
+  for (const junction of candidatesPayload?.junctions || []) {
+    for (const attachment of junction.armAttachments || []) {
+      if (selected && !selected.has(Number(attachment.segmentId))) continue;
+      const key = `${Number(attachment.segmentId)}|${attachment.endpoint}`;
+      bySegmentEndpoint.set(key, [...(bySegmentEndpoint.get(key) || []), attachment]);
+    }
+  }
+  const applied = [];
+  const removed = [];
+  const issues = [];
+  for (const segment of Object.values(next.segments || {})) {
+    if (selected && !selected.has(Number(segment.segmentId))) continue;
+    segment.junctionAttachments ||= {};
+    for (const endpoint of ["a", "b"]) {
+      const key = `${Number(segment.segmentId)}|${endpoint}`;
+      const matches = bySegmentEndpoint.get(key) || [];
+      const current = segment.junctionAttachments[endpoint];
+      if (matches.length === 1) {
+        const match = matches[0];
+        const value = {
+          junctionId: match.junctionId,
+          armId: match.armId,
+          externalNodeId: match.externalNodeId,
+          source: current?.source === "curator" ? "curator" : "automatic-terminal-node",
+        };
+        segment.junctionAttachments[endpoint] = value;
+        applied.push({ segmentId: Number(segment.segmentId), endpoint, ...value });
+      } else if (matches.length > 1) {
+        issues.push({
+          code: "ambiguous_junction_attachment",
+          segmentId: Number(segment.segmentId),
+          endpoint,
+          junctionIds: matches.map((item) => item.junctionId).sort(),
+        });
+      } else if (current?.source !== "curator") {
+        if (current) removed.push({ segmentId: Number(segment.segmentId), endpoint, ...current });
+        delete segment.junctionAttachments[endpoint];
+      }
+    }
+    if (Object.keys(segment.junctionAttachments).length === 0) delete segment.junctionAttachments;
+  }
+  return { overlay: next, applied, removed, issues };
+}
+
+export function deriveJunctionArmAttachmentCandidates({
+  overlay,
+  graph = {},
+  junctions = [],
+  segmentIds = null,
+} = {}) {
+  const selected = segmentIds == null ? null : new Set(segmentIds.map(Number));
+  const edgeById = new Map((graph?.edges || []).map((edge) => [String(edge.id), edge]));
+  const selectedSegments = Object.values(overlay?.segments || {}).filter(
+    (segment) => !selected || selected.has(Number(segment.segmentId)),
+  );
+  return {
+    schemaVersion: 1,
+    junctions: junctions.map((junction) => {
+      const armAttachments = [];
+      const attachments = [];
+      const attachmentIssues = [];
+      for (const segment of selectedSegments) {
+        const associations = endpointArmAssociations(
+          segment,
+          junction.id,
+          junction.ports || [],
+          edgeById,
+        );
+        armAttachments.push(...associations.armAttachments);
+        attachments.push(...associations.attachments);
+        attachmentIssues.push(...associations.attachmentIssues);
+      }
+      return { ...junction, armAttachments, attachments, attachmentIssues };
+    }),
+  };
+}
+
+export function refreshNetworkJunctionArmAssociations(candidatesPayload, overlay, graph = {}) {
+  const edgeById = new Map((graph?.edges || []).map((edge) => [String(edge.id), edge]));
+  const junctions = (candidatesPayload?.junctions || []).map((candidate) => {
+    const armAttachments = [];
+    const attachments = (candidate.attachments || []).filter(
+      (attachment) => attachment.source !== "arm-attachment",
+    );
+    const attachmentIssues = [];
+    for (const segment of Object.values(overlay?.segments || {})) {
+      const associations = endpointArmAssociations(
+        segment,
+        candidate.id,
+        candidate.ports || [],
+        edgeById,
+      );
+      armAttachments.push(...associations.armAttachments);
+      attachments.push(...associations.attachments);
+      attachmentIssues.push(...associations.attachmentIssues);
+    }
+    const nearbyEndpoints = nearbySegmentEndpoints(overlay, candidate.center);
+    const segmentIds = [...new Set([
+      ...(candidate.throughAlignments || []).map((item) => Number(item.segmentId)),
+      ...attachments.map((item) => Number(item.segmentId)),
+      ...armAttachments.map((item) => Number(item.segmentId)),
+      ...nearbyEndpoints.map((item) => Number(item.segmentId)),
+    ])].filter(Number.isInteger).sort((a, b) => a - b);
+    const junction = {
+      ...candidate,
+      armAttachments,
+      attachments,
+      attachmentIssues,
+      nearbyEndpoints,
+      segmentIds,
+      summary: {
+        ...(candidate.summary || {}),
+        armAttachments: armAttachments.length,
+        directionalAttachments: attachments.length,
+      },
+    };
+    junction.fingerprint = junctionFingerprint(junction);
+    return withCuration(junction, candidate.registryRecord || null);
+  });
+  return {
+    ...candidatesPayload,
+    junctions,
+    summary: {
+      ...(candidatesPayload?.summary || {}),
+      armAttachments: junctions.reduce((sum, junction) => sum + junction.armAttachments.length, 0),
+      directionalAttachments: junctions.reduce((sum, junction) => sum + junction.attachments.length, 0),
     },
   };
 }
@@ -427,6 +1019,7 @@ export function networkJunctionGeoJson(joined, graph = {}) {
   const ports = [];
   const movements = [];
   const arrows = [];
+  const armAttachments = [];
   for (const item of joined?.items || []) {
     const junction = item.candidate;
     for (const edgeId of junction.internalEdgeIds) {
@@ -461,6 +1054,14 @@ export function networkJunctionGeoJson(joined, graph = {}) {
       if (!port.coordinate) continue;
       ports.push({ type: "Feature", geometry: { type: "Point", coordinates: port.coordinate }, properties: { ...port } });
     }
+    for (const attachment of junction.armAttachments || []) {
+      if (!attachment.coordinate) continue;
+      armAttachments.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: attachment.coordinate },
+        properties: { ...attachment },
+      });
+    }
     for (const movement of junction.movements) {
       const coordinates = [];
       for (const ref of movement.edgeRefs || []) {
@@ -483,5 +1084,49 @@ export function networkJunctionGeoJson(joined, graph = {}) {
     ports: { type: "FeatureCollection", features: ports },
     movements: { type: "FeatureCollection", features: movements },
     arrows: { type: "FeatureCollection", features: arrows },
+    armAttachments: { type: "FeatureCollection", features: armAttachments },
+    publishedFootprint: networkJunctionPublicGeoJson(joined, graph),
   };
+}
+
+export function networkJunctionPublicGeoJson(joined, graph = {}) {
+  const edgeById = new Map((graph?.edges || []).map((edge) => [String(edge.id), edge]));
+  const features = [];
+  for (const item of joined?.items || []) {
+    const junction = item.candidate;
+    if (junction.publication?.status !== "published") continue;
+    const attachedArms = new Set((junction.armAttachments || []).map((attachment) => String(attachment.armId)));
+    const portById = new Map((junction.ports || []).map((port) => [String(port.id), port]));
+    const footprintEdgeIds = new Set();
+    for (const movement of junction.movements || []) {
+      if (movement.status === "unavailable") continue;
+      const entry = portById.get(String(movement.entryPortId));
+      const exit = portById.get(String(movement.exitPortId));
+      if (!entry || !exit || !attachedArms.has(String(entry.armId)) || !attachedArms.has(String(exit.armId))) continue;
+      for (const ref of movement.edgeRefs || []) footprintEdgeIds.add(String(ref.edgeId));
+    }
+    for (const edgeId of [...footprintEdgeIds].sort()) {
+      const edge = edgeById.get(edgeId);
+      if (!edge?.coordinates?.length) continue;
+      features.push({
+        type: "Feature",
+        id: `${junction.id}:${edgeId}`,
+        geometry: {
+          type: "LineString",
+          coordinates: edge.coordinates.map((coordinate) => coordinate.slice(0, 2)),
+        },
+        properties: {
+          id: `${junction.id}:${edgeId}`,
+          junctionId: junction.id,
+          name: junction.name,
+          navigationKind: junction.navigationKind,
+          networkRole: "junction",
+          roadType: "paved",
+          interactive: false,
+          edgeId,
+        },
+      });
+    }
+  }
+  return { type: "FeatureCollection", features };
 }

@@ -140,6 +140,7 @@ def apply_accepted_cw_traversal_precedence(
 BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION = 2
 BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION = 3
 BASE_ROUTING_COMPACT_SHARD_JUNCTION_FORMAT_VERSION = 4
+BASE_ROUTING_COMPACT_SHARD_NAMED_JUNCTION_FORMAT_VERSION = 5
 BASE_ROUTING_COMPACT_SHARD_MAGIC = b"CWBS1"
 BASE_ROUTING_COMPACT_COORDINATE_SCALE = 1_000_000
 BASE_ROUTING_COMPACT_DISTANCE_SCALE = 10
@@ -285,7 +286,7 @@ def pack_compact_base_routing_shard(shard_asset: dict[str, Any]) -> bytes:
         for edge in edges
     )
     format_version = (
-        BASE_ROUTING_COMPACT_SHARD_JUNCTION_FORMAT_VERSION
+        BASE_ROUTING_COMPACT_SHARD_NAMED_JUNCTION_FORMAT_VERSION
         if source_routing_schema_version >= 3 and has_junction_membership
         else BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION
         if source_routing_schema_version >= 3
@@ -419,6 +420,8 @@ def pack_compact_base_routing_shard(shard_asset: dict[str, Any]) -> bytes:
                     for membership in memberships:
                         write_nullable_string_index(payload, string_index, membership.get("junctionId"))
                         write_nullable_string_index(payload, string_index, membership.get("fingerprint"))
+                        if format_version >= BASE_ROUTING_COMPACT_SHARD_NAMED_JUNCTION_FORMAT_VERSION:
+                            write_nullable_string_index(payload, string_index, membership.get("junctionName"))
 
     return bytes(payload)
 
@@ -457,7 +460,7 @@ def compact_shard_string_table(
         if isinstance(junctions, dict):
             for direction in ("forward", "reverse"):
                 for membership in junctions.get(direction) or []:
-                    for key in ("junctionId", "fingerprint"):
+                    for key in ("junctionId", "fingerprint", "junctionName"):
                         value = membership.get(key) if isinstance(membership, dict) else None
                         if isinstance(value, str) and value != "":
                             strings.add(value)
@@ -3742,6 +3745,7 @@ def build_network_junctions(
     runtime_edges = base_routing_asset.get("edges") if isinstance(base_routing_asset.get("edges"), list) else []
     edge_by_id = {str(edge.get("id")): edge for edge in runtime_edges if isinstance(edge, dict)}
     runtime_junctions: list[dict[str, Any]] = []
+    public_geometry_features: list[dict[str, Any]] = []
     seen_junction_ids: set[str] = set()
     compiled_directed_edges: set[tuple[str, str, str]] = set()
 
@@ -3752,8 +3756,104 @@ def build_network_junctions(
             blocking_issues.append({"code": "invalid_junction_identity", "junctionId": junction_id})
             continue
         seen_junction_ids.add(junction_id)
+        publication = junction.get("publication") if isinstance(junction.get("publication"), dict) else {}
+        requested_publication = str(publication.get("requestedStatus") or "detected")
+        publication_status = str(publication.get("status") or requested_publication)
+        if requested_publication == "published" and publication_status != "published":
+            blocking_issues.append({
+                "code": "published_junction_stale",
+                "junctionId": junction_id,
+            })
+            continue
+        if publication_status != "published":
+            continue
+        junction_name = str(junction.get("name") or "").strip()
+        if not junction_name or not publication.get("canPublish"):
+            blocking_issues.append({
+                "code": "invalid_published_junction",
+                "junctionId": junction_id,
+                "issues": publication.get("issues") or [],
+            })
+            continue
         movement_reviews = ((reviews.get(junction_id) or {}).get("movements") or {})
+        candidate_ports = {
+            str(port.get("id") or ""): port
+            for port in junction.get("ports") or []
+            if isinstance(port, dict) and port.get("id")
+        }
+        segment_ids = {
+            int(segment_id)
+            for segment_id in junction.get("segmentIds") or []
+            if str(segment_id).isdigit()
+        }
+        runtime_arm_attachments: list[dict[str, Any]] = []
+        for attachment in junction.get("armAttachments") or []:
+            segment_id = int(attachment.get("segmentId") or 0)
+            endpoint = str(attachment.get("endpoint") or "")
+            arm_id = str(attachment.get("armId") or "")
+            external_node_id = str(attachment.get("externalNodeId") or "")
+            if (
+                segment_id not in segment_ids
+                or endpoint not in ("a", "b")
+                or not arm_id
+                or arm_id != external_node_id
+            ):
+                blocking_issues.append({
+                    "code": "invalid_junction_arm_attachment",
+                    "junctionId": junction_id,
+                    "segmentId": segment_id,
+                    "endpoint": endpoint,
+                })
+                continue
+            runtime_arm_attachments.append({
+                "segmentId": segment_id,
+                "endpoint": endpoint,
+                "armId": arm_id,
+                "externalNodeId": external_node_id,
+            })
+
+        runtime_directional_attachments: list[dict[str, Any]] = []
+        for attachment in junction.get("attachments") or []:
+            if attachment.get("source") != "arm-attachment":
+                continue
+            segment_id = int(attachment.get("segmentId") or 0)
+            alignment_key = str(attachment.get("alignmentKey") or "")
+            endpoint = str(attachment.get("endpoint") or "")
+            usage = str(attachment.get("usage") or "")
+            port_id = str(attachment.get("portId") or "")
+            port = candidate_ports.get(port_id)
+            expected_port_usage = "entry" if usage == "arrive" else "exit"
+            if (
+                segment_id not in segment_ids
+                or alignment_key not in ("aToB", "bToA")
+                or endpoint not in ("a", "b")
+                or usage not in ("arrive", "depart")
+                or not port
+                or port.get("usage") != expected_port_usage
+                or str(port.get("armId") or "") != str(attachment.get("armId") or "")
+            ):
+                blocking_issues.append({
+                    "code": "invalid_junction_directional_attachment",
+                    "junctionId": junction_id,
+                    "segmentId": segment_id,
+                    "alignmentKey": alignment_key,
+                    "portId": port_id,
+                })
+                continue
+            runtime_directional_attachments.append({
+                "segmentId": segment_id,
+                "alignmentKey": alignment_key,
+                "endpoint": endpoint,
+                "usage": usage,
+                "armId": str(attachment.get("armId")),
+                "portId": port_id,
+            })
         runtime_movements: list[dict[str, Any]] = []
+        public_edge_ids: set[str] = set()
+        attached_arm_ids = {
+            str(attachment.get("armId") or "")
+            for attachment in junction.get("armAttachments") or []
+        }
         for movement in junction.get("movements") or []:
             movement_id = str(movement.get("id") or "")
             review = movement_reviews.get(movement_id)
@@ -3818,16 +3918,31 @@ def build_network_junctions(
                 "distanceMeters": movement.get("distanceMeters"),
                 "edgeRefs": runtime_refs,
             })
+            entry_port = candidate_ports.get(str(movement.get("entryPortId") or ""))
+            exit_port = candidate_ports.get(str(movement.get("exitPortId") or ""))
+            if (
+                entry_port
+                and exit_port
+                and str(entry_port.get("armId") or "") in attached_arm_ids
+                and str(exit_port.get("armId") or "") in attached_arm_ids
+            ):
+                public_edge_ids.update(str(ref.get("edgeId") or "") for ref in movement.get("edgeRefs") or [])
         runtime_junctions.append({
             "id": junction_id,
+            "name": junction_name,
             "kind": junction.get("kind"),
+            "navigationKind": junction.get("navigationKind"),
             "roundaboutId": junction.get("roundaboutId"),
             "classification": junction.get("classification"),
             "fingerprint": fingerprint,
-            "segmentIds": junction.get("segmentIds") or [],
+            "segmentIds": sorted(segment_ids),
+            "armAttachments": runtime_arm_attachments,
+            "directionalAttachments": runtime_directional_attachments,
             "ports": [
                 {
                     "id": port.get("id"),
+                    "armId": port.get("armId"),
+                    "externalNodeId": port.get("externalNodeId"),
                     "usage": port.get("usage"),
                     "direction": port.get("direction"),
                     "edgeShareId": edge_by_id.get(str(port.get("edgeId") or ""), {}).get("shareId"),
@@ -3836,12 +3951,38 @@ def build_network_junctions(
             ],
             "movements": runtime_movements,
         })
+        for edge_id in sorted(public_edge_ids):
+            edge = edge_by_id.get(edge_id)
+            coordinates = edge.get("coordinates") if isinstance(edge, dict) else None
+            if not isinstance(coordinates, list) or len(coordinates) < 2:
+                continue
+            public_geometry_features.append({
+                "type": "Feature",
+                "id": f"{junction_id}:{edge_id}",
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": [coordinate[:2] for coordinate in coordinates],
+                },
+                "properties": {
+                    "id": f"{junction_id}:{edge_id}",
+                    "junctionId": junction_id,
+                    "name": junction_name,
+                    "navigationKind": junction.get("navigationKind"),
+                    "networkRole": "junction",
+                    "roadType": "paved",
+                    "interactive": False,
+                    "edgeId": edge_id,
+                },
+            })
 
     for edge in runtime_edges:
         edge_id = str(edge.get("id") or "")
         edge["cwJunctions"] = {
             direction: [
-                {"junctionId": junction_id, "fingerprint": next(
+                {"junctionId": junction_id, "junctionName": next(
+                    (item["name"] for item in runtime_junctions if item["id"] == junction_id),
+                    None,
+                ), "fingerprint": next(
                     (item["fingerprint"] for item in runtime_junctions if item["id"] == junction_id),
                     None,
                 )}
@@ -3859,13 +4000,23 @@ def build_network_junctions(
     if not runtime_junctions:
         output_path.unlink(missing_ok=True)
         return {
-            "summary": {"junctions": 0, "movements": 0, "compiledDirectedEdges": 0},
+            "summary": {
+                "junctions": 0,
+                "movements": 0,
+                "compiledDirectedEdges": 0,
+                "armAttachments": 0,
+                "directionalAttachments": 0,
+            },
             "blockingIssues": [],
         }, None
     payload = {
         "schemaVersion": 1,
         "graphVersion": base_routing_asset.get("graphVersion"),
         "junctions": runtime_junctions,
+        "publicGeometry": {
+            "type": "FeatureCollection",
+            "features": public_geometry_features,
+        },
     }
     write_json(output_path, payload, compact=True)
     return {
@@ -3873,6 +4024,10 @@ def build_network_junctions(
             "junctions": len(runtime_junctions),
             "movements": sum(len(junction["movements"]) for junction in runtime_junctions),
             "compiledDirectedEdges": len(compiled_directed_edges),
+            "armAttachments": sum(len(junction["armAttachments"]) for junction in runtime_junctions),
+            "directionalAttachments": sum(
+                len(junction["directionalAttachments"]) for junction in runtime_junctions
+            ),
         },
         "blockingIssues": [],
     }, output_path

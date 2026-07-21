@@ -55,6 +55,7 @@ import {
 import { capabilitiesForMode, MAP_MODE_PLANNER } from "./mapCapabilities.js";
 import { buildOrientZoom } from "./buildOrientCamera.js";
 import { circlePolygon } from "@cycleways/core/utils/geoCircle.js";
+import { publicRouteNetworkGeoJson } from "@cycleways/core/domain/routeNetwork.js";
 
 const ROUTE_CIRCULAR_ENDPOINT_MAX_METERS = 80;
 
@@ -84,6 +85,7 @@ function MapSurface({
   focusedMarker,
   focusedSegment,
   geoJsonData,
+  networkJunctionsData = null,
   cwAlignmentGeometry = null,
   elevationHover,
   hideBuiltRoute = false,
@@ -319,7 +321,7 @@ function MapSurface({
       variant: networkPresentationVariant,
     };
     const features = prepareRouteNetworkFeatures(
-      geoJsonData,
+      publicRouteNetworkGeoJson(geoJsonData, networkJunctionsData),
       networkPresentationOptions,
     );
     networkSegmentsRef.current = buildNetworkSegments(features);
@@ -398,6 +400,7 @@ function MapSurface({
     };
   }, [
     geoJsonData,
+    networkJunctionsData,
     networkBaseMapProfile,
     networkColorScheme,
     networkPresentationVariant,

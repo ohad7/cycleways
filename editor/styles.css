@@ -1031,6 +1031,38 @@ button:disabled {
   background: #f8faf9;
 }
 
+.junction-authoring-card {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.junction-authoring-card h3,
+.junction-authoring-card p {
+  margin-top: 0;
+}
+
+.junction-publication-card {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #c4b5fd;
+  border-radius: 10px;
+  background: #f5f3ff;
+}
+
+.junction-publication-state {
+  font-weight: 700;
+  color: #5b21b6;
+}
+
+.junction-port-list {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+
 .manual-edge-direction-review[hidden] {
   display: none;
 }

@@ -318,6 +318,19 @@ export function buildRouteCues(navigationRoute, options = {}) {
   const spans = Array.isArray(navigationRoute?.segmentSpans)
     ? navigationRoute.segmentSpans
     : [];
+  for (const cue of cues) {
+    if (cue.type !== "roundabout") continue;
+    const junctionSpan = spans.find((span) =>
+      span.networkRole === "junction"
+      && span.junctionName
+      && cue.distanceMeters >= Number(span.startMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
+      && cue.distanceMeters <= Number(span.endMeters) + ROUNDABOUT_SUPPRESSION_PAD_M,
+    );
+    if (junctionSpan) {
+      cue.junctionId = junctionSpan.junctionId || null;
+      cue.junctionName = junctionSpan.junctionName;
+    }
+  }
   const turnCues = cues.filter((c) => c.type === "turn");
   for (const span of spans) {
     if (!span.name || span.startMeters <= 0) continue;

@@ -15,6 +15,7 @@
     "osm:fetch": "python3 processing/fetch_osm_network.py && python3 processing/detect_osm_intersections.py && python3 processing/build_osm_base_graph.py && python3 processing/match_cycleways_to_osm_graph.py",
     "osm:roundabouts": "python3 processing/build_roundabouts.py",
     "network:junctions": "node scripts/build-network-junctions.mjs",
+    "network:junctions:apply-attachments": "node scripts/build-network-junctions.mjs --write-overlay-attachments",
     "test:network-junctions": "node tests/test-network-junctions.mjs && node tests/test-network-junctions-current-data.mjs && node tests/test-network-junction-editor-wiring.mjs && python3 -m unittest tests.test_network_junction_build",
     "crossings:candidates": "python3 processing/build_crossing_candidates.py",
     "osm:intersections": "python3 processing/detect_osm_intersections.py",

@@ -23,7 +23,7 @@ import { buildSegmentSpans } from "@cycleways/core/route-manager.js";
 }
 {
   const spans = buildSegmentSpans([
-    { fromDistance: 0, toDistance: 25, distanceMeters: 25, junctionMemberships: [{ junctionId: "j1" }], edge: { routeClass: "manual" } },
+    { fromDistance: 0, toDistance: 25, distanceMeters: 25, junctionMemberships: [{ junctionId: "j1", junctionName: "Test Junction" }], edge: { routeClass: "manual" } },
   ], new Map());
   assert.deepEqual(spans[0], {
     startMeters: 0,
@@ -32,6 +32,8 @@ import { buildSegmentSpans } from "@cycleways/core/route-manager.js";
     cwSegmentId: null,
     onNetwork: true,
     networkRole: "junction",
+    junctionId: "j1",
+    junctionName: "Test Junction",
     routeClass: "manual",
   });
 }

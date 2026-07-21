@@ -199,7 +199,7 @@ function App() {
     recentRoutes,
     handleRestoreDraft,
     handleDismissDraft,
-  } = useCyclewaysApp({ enableRouteDirectionAnimation: false });
+  } = useCyclewaysApp({ enableRouteDirectionAnimation: false, includeNetworkJunctions: true });
 
   const [panel, setPanel] = useState(INITIAL_PANEL_STATE);
   const [networkStyleIndex, setNetworkStyleIndex] = useState(() =>
@@ -1229,6 +1229,7 @@ function App() {
                   elevationHover={mapUi.elevationHover}
                   focusedSegment={routeState.focusedSegment}
                   geoJsonData={state.assets.geoJsonData}
+                  networkJunctionsData={state.assets.networkJunctionsData}
                   cwAlignmentGeometry={state.assets.cwAlignmentGeometryData}
                   hideBuiltRoute={panel.state === "discover" && Boolean(hoveredRouteSlug)}
                   hoveredSegment={routeState.hoveredSegment}

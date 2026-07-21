@@ -40,8 +40,13 @@ import {
   roundaboutReviewGeoJson,
 } from "./lib/roundaboutReview.mjs";
 import {
+  deriveJunctionArmAttachmentCandidates,
   joinNetworkJunctionReviews,
+  mergeNetworkJunctionRegistry,
   networkJunctionGeoJson,
+  normalizeNetworkJunctionRegistry,
+  reconcileOverlayJunctionArmAttachments,
+  refreshNetworkJunctionArmAssociations,
 } from "./lib/networkJunctions.mjs";
 import {
   CROSSING_REVIEW_STATUSES,
@@ -140,6 +145,7 @@ const roundaboutCandidatesPath = resolve(osmBuildDir, "roundabout-candidates.jso
 const roundaboutReviewPath = resolve(dataDir, "roundabout-review.json");
 const networkJunctionCandidatesPath = resolve(buildDir, "network-junctions/candidates.json");
 const networkJunctionReviewPath = resolve(dataDir, "network-junction-review.json");
+const networkJunctionRegistryPath = resolve(dataDir, "network-junctions.json");
 const crossingCandidatesPath = resolve(buildDir, "crossings/candidates.json");
 const crossingReviewPath = resolve(dataDir, "crossing-review.json");
 const baseEdgeShareRegistryPath = resolve(dataDir, "base-edge-share-ids.json");
@@ -2402,6 +2408,31 @@ function networkAuthoringSegmentShell(feature, previous) {
   };
 }
 
+async function reconcileNetworkAuthoringJunctionAttachments(
+  overlay,
+  segmentId,
+  context,
+) {
+  let candidates;
+  try {
+    candidates = JSON.parse(await readFile(networkJunctionCandidatesPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return { overlay, applied: [], removed: [], issues: [] };
+    }
+    throw error;
+  }
+  const derived = deriveJunctionArmAttachmentCandidates({
+    overlay,
+    graph: { edges: [...context.edgeLookup.values()] },
+    junctions: candidates.junctions || [],
+    segmentIds: [segmentId],
+  });
+  return reconcileOverlayJunctionArmAttachments(overlay, derived, {
+    segmentIds: [segmentId],
+  });
+}
+
 function networkAuthoringReview({
   overlay,
   segment,
@@ -2843,7 +2874,12 @@ async function applyNetworkAuthoringSegment(payload) {
 
   const nextOverlay = structuredClone(overlay);
   nextOverlay.segments[String(segmentId)] = segment;
-  const parsed = parseCwOverlayV2(nextOverlay);
+  const attachmentReconciliation = await reconcileNetworkAuthoringJunctionAttachments(
+    nextOverlay,
+    segmentId,
+    context,
+  );
+  const parsed = parseCwOverlayV2(attachmentReconciliation.overlay);
   if (latestNetworkAuthoringRevisionBySegment.get(segmentId) !== requestedRevision) {
     return { superseded: true, segmentId, revision: requestedRevision };
   }
@@ -2888,6 +2924,9 @@ async function applyNetworkAuthoringSegment(payload) {
     }),
     overlay: parsed,
     compatibilityOverlay,
+    junctionAttachments: attachmentReconciliation.applied,
+    junctionAttachmentsRemoved: attachmentReconciliation.removed,
+    junctionAttachmentIssues: attachmentReconciliation.issues,
   };
 }
 
@@ -3959,11 +3998,29 @@ async function readNetworkJunctionState() {
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
-  const graph = JSON.parse(await readFile(osmBaseGraphPath, "utf-8"));
+  let registry = { schemaVersion: 1, junctions: {} };
+  try {
+    registry = normalizeNetworkJunctionRegistry(
+      JSON.parse(await readFile(networkJunctionRegistryPath, "utf-8")),
+    );
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  const [graph, overlayValue] = await Promise.all([
+    readFile(osmBaseGraphPath, "utf-8").then(JSON.parse),
+    readJsonFileOrNull(cwBaseOverlayV2StagedPath),
+  ]);
+  if (overlayValue) {
+    candidates = mergeNetworkJunctionRegistry(candidates, graph, overlayValue, registry);
+    candidates = refreshNetworkJunctionArmAssociations(candidates, overlayValue, graph);
+  }
   const joined = joinNetworkJunctionReviews(candidates, reviews);
   return {
     candidates,
     reviews,
+    registry,
+    graph,
+    overlay: overlayValue,
     joined,
     geojson: networkJunctionGeoJson(joined, graph),
   };
@@ -5274,6 +5331,106 @@ const server = createServer(async (request, response) => {
           items: state.joined.items,
           geojson: state.geojson,
           sourceDigests: state.candidates.sourceDigests,
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/network-junctions") {
+      try {
+        const body = await readRequestJson(request);
+        const state = await readNetworkJunctionState();
+        const nextRegistry = structuredClone(state.registry);
+        nextRegistry.schemaVersion = 1;
+        nextRegistry.junctions ||= {};
+        let junctionId = typeof body?.junctionId === "string" ? body.junctionId : "";
+        if (body?.action === "create") {
+          const internalEdgeIds = [...new Set((body.internalEdgeIds || []).map(String).filter(Boolean))];
+          if (!internalEdgeIds.length) {
+            throw Object.assign(new Error("Select at least one internal base edge"), { status: 400 });
+          }
+          const edgeById = new Map((state.graph?.edges || []).map((edge) => [String(edge.id), edge]));
+          const missing = internalEdgeIds.filter((edgeId) => !edgeById.has(edgeId));
+          if (missing.length) {
+            throw Object.assign(new Error(`Selected base edges are not in the current graph: ${missing.join(", ")}`), { status: 400 });
+          }
+          const unknown = internalEdgeIds.filter((edgeId) => {
+            const traversal = edgeById.get(edgeId)?.bicycleTraversalShadow || edgeById.get(edgeId)?.bicycleTraversal || {};
+            return !["allowed", "prohibited", "conditional"].includes(traversal.forward)
+              || !["allowed", "prohibited", "conditional"].includes(traversal.reverse);
+          });
+          if (unknown.length) {
+            throw Object.assign(new Error(`Review direction policy before creating the junction: ${unknown.join(", ")}`), { status: 400 });
+          }
+          junctionId = `junction-custom-${Date.now().toString(36)}`;
+          nextRegistry.junctions[junctionId] = {
+            id: junctionId,
+            name: String(body.name || "").trim(),
+            status: "detected",
+            navigationKind: String(body.navigationKind || "intersection"),
+            source: { type: "custom", internalEdgeIds },
+            excludedPortIds: [],
+            topologyFingerprint: null,
+            updatedAt: new Date().toISOString(),
+            reviewer: "ohad",
+          };
+        } else if (body?.action === "save") {
+          const candidate = state.candidates.junctions?.find((item) => item.id === junctionId);
+          if (!candidate) throw Object.assign(new Error("Unknown junction"), { status: 400 });
+          const previous = nextRegistry.junctions[junctionId];
+          const status = String(body.status || previous?.status || "detected");
+          const source = previous?.source || (candidate.kind === "custom_bicycle"
+            ? { type: "custom", internalEdgeIds: candidate.internalEdgeIds }
+            : { type: "derived_roundabout", roundaboutId: candidate.roundaboutId });
+          nextRegistry.junctions[junctionId] = {
+            id: junctionId,
+            name: String(body.name ?? previous?.name ?? candidate.name ?? "").trim(),
+            status,
+            navigationKind: String(body.navigationKind || previous?.navigationKind || candidate.navigationKind || "intersection"),
+            source,
+            excludedPortIds: candidate.kind === "custom_bicycle"
+              ? [...new Set((body.excludedPortIds ?? previous?.excludedPortIds ?? []).map(String).filter(Boolean))].sort()
+              : [],
+            topologyFingerprint: status === "published" ? candidate.topologyFingerprint : previous?.topologyFingerprint || null,
+            updatedAt: new Date().toISOString(),
+            reviewer: "ohad",
+          };
+          normalizeNetworkJunctionRegistry(nextRegistry);
+          let prospective = mergeNetworkJunctionRegistry(
+            state.candidates,
+            state.graph,
+            state.overlay,
+            nextRegistry,
+          );
+          prospective = refreshNetworkJunctionArmAssociations(prospective, state.overlay, state.graph);
+          const prospectiveCandidate = prospective.junctions.find((item) => item.id === junctionId);
+          if (status === "published") {
+            nextRegistry.junctions[junctionId].topologyFingerprint = prospectiveCandidate.topologyFingerprint;
+            prospective = mergeNetworkJunctionRegistry(state.candidates, state.graph, state.overlay, nextRegistry);
+            prospective = refreshNetworkJunctionArmAssociations(prospective, state.overlay, state.graph);
+            const publishCandidate = prospective.junctions.find((item) => item.id === junctionId);
+            if (!publishCandidate?.publication?.canPublish) {
+              const codes = (publishCandidate?.publication?.issues || []).map((issue) => issue.code).join(", ");
+              throw Object.assign(new Error(`Cannot publish junction: ${codes || "validation failed"}`), { status: 400 });
+            }
+          }
+        } else {
+          throw Object.assign(new Error("Junction action must be create or save"), { status: 400 });
+        }
+        const normalized = normalizeNetworkJunctionRegistry(nextRegistry);
+        await writeJsonAtomic(networkJunctionRegistryPath, normalized);
+        const nextState = await readNetworkJunctionState();
+        sendJson(response, 200, {
+          ok: true,
+          junctionId,
+          summary: nextState.joined.summary,
+          blockingIssues: nextState.joined.blockingIssues,
+          orphaned: nextState.joined.orphaned,
+          items: nextState.joined.items,
+          geojson: nextState.geojson,
+          sourceDigests: nextState.candidates.sourceDigests,
         });
       } catch (error) {
         sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });

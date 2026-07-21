@@ -274,6 +274,7 @@ const state = {
   splittingEdgePickAt: null,
   roundabouts: {
     loading: false,
+    junctionsLoading: false,
     loaded: false,
     error: null,
     data: null,
@@ -281,6 +282,11 @@ const state = {
     selectedId: null,
     junctionsData: null,
     selectedMovementId: null,
+  },
+  junctionAuthoring: {
+    selecting: false,
+    selectedEdgeIds: new Set(),
+    saving: false,
   },
   crossings: {
     loading: false,
@@ -398,6 +404,12 @@ const els = {
   roundaboutsFilter: document.getElementById("roundabouts-filter"),
   roundaboutsList: document.getElementById("roundabouts-list"),
   roundaboutsDetail: document.getElementById("roundabouts-detail"),
+  selectJunctionEdges: document.getElementById("select-junction-edges"),
+  clearJunctionEdges: document.getElementById("clear-junction-edges"),
+  junctionEdgeSelectionSummary: document.getElementById("junction-edge-selection-summary"),
+  newJunctionName: document.getElementById("new-junction-name"),
+  newJunctionNavigationKind: document.getElementById("new-junction-navigation-kind"),
+  createJunctionFromEdges: document.getElementById("create-junction-from-edges"),
   crossingsPanel: document.getElementById("crossings-panel"),
   crossingsStatus: document.getElementById("crossings-status"),
   crossingsCoverage: document.getElementById("crossings-coverage"),
@@ -990,6 +1002,9 @@ function adoptNetworkAuthoringSegmentResult(segmentId, payload) {
   state.directionReview.overlay = payload.overlay;
   if (payload.compatibilityOverlay) {
     state.baseOverlay.overlay = payload.compatibilityOverlay;
+  }
+  if (payload.junctionAttachments?.length || payload.junctionAttachmentsRemoved?.length) {
+    loadNetworkJunctionContext().catch(showError);
   }
   if (payload.decision?.outcome === "apply") {
     state.authoring.transientIssues.delete(Number(segmentId));
@@ -1908,6 +1923,17 @@ function selectedBaseGraphEdgeCollection() {
     : EMPTY_FEATURE_COLLECTION;
 }
 
+function junctionAuthoringEdgeCollection() {
+  const selected = state.junctionAuthoring.selectedEdgeIds;
+  if (!selected.size) return EMPTY_FEATURE_COLLECTION;
+  return {
+    type: "FeatureCollection",
+    features: (baseGraphCollection().features || []).filter((feature) =>
+      selected.has(String(graphEdgeFeatureId(feature))),
+    ),
+  };
+}
+
 function selectedBaseEdgePermittedDirectionCollection() {
   if (!state.baseOverlay.enabled || state.workspaceMode !== "base") {
     return EMPTY_FEATURE_COLLECTION;
@@ -2212,7 +2238,8 @@ function cwOverlayNetworkCollection() {
     cache.cwOverlayNetworkOverlay === state.baseOverlay.overlay &&
     cache.cwOverlayNetworkGraphEdges === state.baseOverlay.graphEdges &&
     cache.cwOverlayNetworkManualEdges === state.baseOverlay.manualBaseEdges &&
-    cache.cwOverlayNetworkActiveFeatures === state.activeFeatures
+    cache.cwOverlayNetworkActiveFeatures === state.activeFeatures &&
+    cache.cwOverlayNetworkJunctions === state.roundabouts.junctionsData
   ) {
     return cache.cwOverlayNetworkCollection;
   }
@@ -2251,6 +2278,27 @@ function cwOverlayNetworkCollection() {
     }
   }
 
+  const junctionById = new Map(
+    (state.roundabouts.junctionsData?.items || []).map((item) => [item.candidate?.id, item.candidate]),
+  );
+  for (const feature of state.roundabouts.junctionsData?.geojson?.publishedFootprint?.features || []) {
+    const junctionId = String(feature.properties?.junctionId || "");
+    const junction = junctionById.get(junctionId);
+    features.push({
+      ...feature,
+      id: `cw-junction-${junctionId}-${feature.properties?.edgeId || features.length}`,
+      properties: {
+        ...(feature.properties || {}),
+        id: `cw-junction-${junctionId}-${feature.properties?.edgeId || features.length}`,
+        networkRole: "junction",
+        overlayJunctionId: junctionId,
+        overlayRoundaboutId: junction?.roundaboutId || null,
+        overlaySegmentIds: (junction?.segmentIds || []).join(","),
+        roadType: "junction",
+      },
+    });
+  }
+
   cache.cwOverlayNetworkCollection = {
     type: "FeatureCollection",
     features,
@@ -2259,6 +2307,7 @@ function cwOverlayNetworkCollection() {
   cache.cwOverlayNetworkGraphEdges = state.baseOverlay.graphEdges;
   cache.cwOverlayNetworkManualEdges = state.baseOverlay.manualBaseEdges;
   cache.cwOverlayNetworkActiveFeatures = state.activeFeatures;
+  cache.cwOverlayNetworkJunctions = state.roundabouts.junctionsData;
   return cache.cwOverlayNetworkCollection;
 }
 
@@ -2288,6 +2337,7 @@ function updateMapSources() {
   setSourceData("base-graph-edges", baseGraphCollection());
   setSourceData("base-graph-one-way-directions", baseGraphOneWayDirectionCollection());
   setSourceData("selected-base-graph-edge", selectedBaseGraphEdgeCollection());
+  setSourceData("junction-authoring-edges", junctionAuthoringEdgeCollection());
   setSourceData(
     "selected-base-edge-permitted-direction",
     selectedBaseEdgePermittedDirectionCollection(),
@@ -2482,6 +2532,7 @@ function updateWorkspaceLayerVisibility() {
   }
   setLayerVisibility("compose-edge-pick-layer", composing);
   setLayerVisibility("compose-edge-pick-labels", composing);
+  setLayerVisibility("junction-authoring-edges-layer", showBaseEdit && state.junctionAuthoring.selectedEdgeIds.size > 0);
   for (const layerId of [
     "roundabout-corridors-layer",
     "roundabout-lines-corridor-layer",
@@ -2494,6 +2545,7 @@ function updateWorkspaceLayerVisibility() {
   ]) {
     setLayerVisibility(layerId, showRoundabouts);
   }
+  setLayerVisibility("junction-arm-attachments-layer", showOverlay);
   for (const layerId of [
     "crossing-corridors-layer",
     "crossing-context-layer",
@@ -2947,6 +2999,20 @@ function renderNetworkSegmentRouting() {
     updating: authoringSegmentUpdating(segmentId),
     transientIssue,
   });
+  const junctionConnections = Object.entries(selectedV2Segment()?.junctionAttachments || {}).map(
+    ([endpoint, attachment]) => {
+      const junction = (state.roundabouts.junctionsData?.items || []).find(
+        (item) => item.candidate?.id === attachment.junctionId,
+      )?.candidate;
+      const related = junction?.segmentIds?.length
+        ? ` · connects ${junction.segmentIds.map((id) => `#${id}`).join(", ")}`
+        : "";
+      return `Endpoint ${endpoint.toUpperCase()} connected to junction arm${related}`;
+    },
+  );
+  const junctionLine = junctionConnections.length
+    ? `<p class="network-junction-connection"><strong>${escapeHtml(junctionConnections.join("; "))}</strong><br>Arrival and departure ports are automatic.</p>`
+    : "";
   els.networkSegmentRouting.hidden = false;
   els.networkSegmentRouting.innerHTML = `
     <div class="network-routing-card status-${escapeHtml(status.key)}">
@@ -2955,6 +3021,7 @@ function renderNetworkSegmentRouting() {
         <span class="network-routing-badge">${escapeHtml(status.label)}</span>
       </div>
       <p><strong>${escapeHtml(status.summary)}</strong>${status.detail ? `<br>${escapeHtml(status.detail)}` : ""}</p>
+      ${junctionLine}
       <div class="network-routing-actions">
         <button type="button" class="secondary-button" data-network-action="inspect">Inspect mapping</button>
         <button type="button" class="secondary-button" data-network-action="base">${status.key === "blocked" ? "Show issue in Base network" : "Show in Base network"}</button>
@@ -4728,22 +4795,39 @@ function renderWorkspaceChrome() {
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
 }
 
+async function loadNetworkJunctionContext() {
+  if (state.roundabouts.junctionsLoading) return;
+  state.roundabouts.junctionsLoading = true;
+  try {
+    const response = await fetch("/api/network-junctions");
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "Could not load junction topology");
+    }
+    state.roundabouts.junctionsData = payload;
+    updateRoundaboutSources();
+  } finally {
+    state.roundabouts.junctionsLoading = false;
+  }
+}
+
 async function loadRoundaboutReview() {
   state.roundabouts.loading = true;
   state.roundabouts.error = null;
   renderRoundaboutsPanel();
   try {
-    const [response, junctionResponse] = await Promise.all([
+    const [response] = await Promise.all([
       fetch("/api/roundabouts/review"),
-      fetch("/api/network-junctions"),
+      loadNetworkJunctionContext(),
     ]);
-    const [payload, junctionPayload] = await Promise.all([response.json(), junctionResponse.json()]);
+    const payload = await response.json();
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load roundabouts");
-    if (!junctionResponse.ok || !junctionPayload.ok) throw new Error(junctionPayload.error || "Could not load junction topology");
     state.roundabouts.data = payload;
-    state.roundabouts.junctionsData = junctionPayload;
     state.roundabouts.loaded = true;
-    const ids = roundaboutFilteredItems().map((item) => item.candidate?.id).filter(Boolean);
+    const ids = [
+      ...roundaboutFilteredItems().map((item) => item.candidate?.id).filter(Boolean),
+      ...(state.roundabouts.junctionsData?.items || []).map((item) => item.candidate?.id).filter(Boolean),
+    ];
     if (!ids.includes(state.roundabouts.selectedId)) state.roundabouts.selectedId = ids[0] || null;
     updateRoundaboutSources();
   } catch (error) {
@@ -4781,9 +4865,7 @@ function updateRoundaboutLayerFilters() {
   for (const layerId of ["roundabout-corridors-layer", "roundabout-lines-corridor-layer", "roundabout-lines-layer", "roundabout-points-layer"]) {
     if (map.getLayer(layerId)) map.setFilter(layerId, filter);
   }
-  const selectedJunction = (state.roundabouts.junctionsData?.items || []).find(
-    (item) => item.candidate?.roundaboutId === state.roundabouts.selectedId,
-  )?.candidate;
+  const selectedJunction = selectedNetworkJunction();
   const junctionFilter = selectedJunction
     ? ["==", ["get", "junctionId"], selectedJunction.id]
     : ["==", ["get", "junctionId"], "__none__"];
@@ -4794,6 +4876,15 @@ function updateRoundaboutLayerFilters() {
     ? ["all", junctionFilter, ["==", ["get", "movementId"], state.roundabouts.selectedMovementId]]
     : junctionFilter;
   if (map.getLayer("junction-movements-layer")) map.setFilter("junction-movements-layer", movementFilter);
+  if (map.getLayer("junction-arm-attachments-layer")) {
+    const segmentId = selectedSegmentId();
+    map.setFilter(
+      "junction-arm-attachments-layer",
+      Number.isInteger(segmentId)
+        ? ["==", ["get", "segmentId"], segmentId]
+        : ["==", ["get", "segmentId"], -1],
+    );
+  }
 }
 
 function updateRoundaboutSources() {
@@ -4806,6 +4897,7 @@ function updateRoundaboutSources() {
   setSourceData("junction-ports", junctionGeojson.ports || EMPTY_FEATURE_COLLECTION);
   setSourceData("junction-movements", junctionGeojson.movements || EMPTY_FEATURE_COLLECTION);
   setSourceData("junction-arrows", junctionGeojson.arrows || EMPTY_FEATURE_COLLECTION);
+  setSourceData("junction-arm-attachments", junctionGeojson.armAttachments || EMPTY_FEATURE_COLLECTION);
   updateRoundaboutLayerFilters();
 }
 
@@ -4814,6 +4906,33 @@ function fitRoundaboutCandidate(candidate) {
   if (!Array.isArray(bbox) || bbox.length !== 4) return;
   const bounds = new mapboxgl.LngLatBounds([bbox[0], bbox[1]], [bbox[2], bbox[3]]);
   map.fitBounds(bounds, { padding: 110, maxZoom: 18, duration: 400 });
+}
+
+function fitJunctionCandidate(candidate) {
+  const bbox = candidate?.boundary || candidate?.bbox;
+  if (!Array.isArray(bbox) || bbox.length !== 4) return;
+  const bounds = new mapboxgl.LngLatBounds([bbox[0], bbox[1]], [bbox[2], bbox[3]]);
+  map.fitBounds(bounds, { padding: 110, maxZoom: 19, duration: 400 });
+}
+
+function selectedNetworkJunction() {
+  return (state.roundabouts.junctionsData?.items || []).find((item) =>
+    item.candidate?.id === state.roundabouts.selectedId
+    || item.candidate?.roundaboutId === state.roundabouts.selectedId,
+  )?.candidate || null;
+}
+
+function selectNetworkJunction(junctionId, { movementId = null, fit = true } = {}) {
+  const junction = (state.roundabouts.junctionsData?.items || []).find(
+    (item) => item.candidate?.id === junctionId,
+  )?.candidate;
+  if (!junction) return false;
+  state.roundabouts.selectedId = junction.id;
+  state.roundabouts.selectedMovementId = movementId;
+  updateRoundaboutLayerFilters();
+  renderRoundaboutsPanel();
+  if (fit) fitJunctionCandidate(junction);
+  return true;
 }
 
 function selectJunctionByRoundaboutId(roundaboutId, { movementId = null, fit = true } = {}) {
@@ -4838,6 +4957,11 @@ function selectJunctionFromMapFeature(feature) {
       )?.candidate
     : null;
   const roundaboutId = junction?.roundaboutId || String(properties.id || "");
+  if (junction && !junction.roundaboutId) {
+    return selectNetworkJunction(junction.id, {
+      movementId: properties.movementId ? String(properties.movementId) : null,
+    });
+  }
   if (!roundaboutId) return false;
   const movementId = properties.movementId
     ? String(properties.movementId)
@@ -4879,9 +5003,7 @@ async function saveRoundaboutReview(status) {
 }
 
 async function saveJunctionMovementReview(status) {
-  const junction = (state.roundabouts.junctionsData?.items || []).find(
-    (item) => item.candidate?.roundaboutId === state.roundabouts.selectedId,
-  )?.candidate;
+  const junction = selectedNetworkJunction();
   const movement = junction?.movements?.find(
     (item) => item.id === state.roundabouts.selectedMovementId,
   );
@@ -4911,6 +5033,122 @@ function moveRoundaboutSelection(delta) {
   state.roundabouts.selectedId = items[nextIndex].candidate.id;
   renderRoundaboutsPanel();
   fitRoundaboutCandidate(items[nextIndex].candidate);
+}
+
+function junctionPublicationIssueLabel(issue) {
+  const labels = {
+    junction_name_required: "Add a public junction name",
+    two_junction_arms_required: "Connect at least two CW arms",
+    legal_junction_movement_required: "At least one legal inter-arm movement is required",
+    published_junction_topology_stale: "Base geometry or ports changed; review and republish",
+    missing_custom_junction_edge: "A referenced custom base edge is missing",
+    ambiguous_directional_port: "Choose one directional port for an attached arm",
+    missing_directional_port: "An attached arm is missing an allowed port",
+  };
+  return labels[issue?.code] || String(issue?.code || "Junction validation issue").replaceAll("_", " ");
+}
+
+function junctionPublicationHtml(junction) {
+  if (!junction) return "";
+  const publication = junction.publication || { status: "detected", issues: [] };
+  const excluded = new Set(junction.registryRecord?.excludedPortIds || []);
+  const portRows = junction.kind === "custom_bicycle"
+    ? (junction.proposedPorts || junction.ports || []).map((port) => `
+        <label class="checkbox-row">
+          <input type="checkbox" data-junction-port="${escapeHtml(port.id)}" ${excluded.has(port.id) ? "" : "checked"} />
+          ${escapeHtml(port.usage)} · ${escapeHtml(port.edgeId)} · ${escapeHtml(port.direction)}
+        </label>`).join("")
+    : "";
+  const issues = (publication.issues || []).map((issue) => `<li>${escapeHtml(junctionPublicationIssueLabel(issue))}</li>`).join("");
+  const publishBlocked = (publication.issues || []).some((issue) => issue.code !== "junction_name_required");
+  return `<section class="junction-publication-card">
+    <h3>CW network publication</h3>
+    <p class="junction-publication-state">${escapeHtml(publication.status || "detected")}</p>
+    <label class="field-label">Public junction name</label>
+    <input class="text-input" data-junction-name type="text" value="${escapeHtml(junction.name || "")}" placeholder="צומת חורשת טל" />
+    <label class="field-label">Navigation kind</label>
+    <select class="text-input compact-select" data-junction-navigation-kind>
+      ${["intersection", "roundabout", "crossing", "plaza"].map((kind) => `<option value="${kind}" ${junction.navigationKind === kind ? "selected" : ""}>${kind}</option>`).join("")}
+    </select>
+    ${portRows ? `<details><summary>Boundary ports (${junction.ports?.length || 0} active)</summary><div class="junction-port-list">${portRows}</div><p>Unknown or prohibited directions must be corrected in Base Network; they cannot be forced here.</p></details>` : ""}
+    ${issues ? `<ul>${issues}</ul>` : `<p>Ready to publish.</p>`}
+    <div class="action-row">
+      <button type="button" data-junction-publication="detected" class="secondary-button">Save draft</button>
+      <button type="button" data-junction-publication="published" class="primary-button" ${publishBlocked ? "disabled" : ""}>Publish as CW junction</button>
+      <button type="button" data-junction-publication="excluded" class="secondary-button danger">Exclude</button>
+    </div>
+  </section>`;
+}
+
+async function saveJunctionRegistry(status) {
+  const junction = selectedNetworkJunction();
+  if (!junction) return;
+  const name = els.roundaboutsDetail.querySelector("[data-junction-name]")?.value || "";
+  const navigationKind = els.roundaboutsDetail.querySelector("[data-junction-navigation-kind]")?.value || junction.navigationKind;
+  const excludedPortIds = [...els.roundaboutsDetail.querySelectorAll("[data-junction-port]")]
+    .filter((input) => !input.checked)
+    .map((input) => input.dataset.junctionPort);
+  const response = await fetch("/api/network-junctions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "save",
+      junctionId: junction.id,
+      name,
+      navigationKind,
+      status,
+      excludedPortIds,
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not save junction");
+  state.roundabouts.junctionsData = payload;
+  state.roundabouts.selectedId = junction.roundaboutId || junction.id;
+  updateRoundaboutSources();
+  renderRoundaboutsPanel();
+  setStatus(status === "published"
+    ? `${name} is now part of the published CW network.`
+    : status === "excluded"
+      ? "Junction excluded from the CW network."
+      : "Junction draft saved.");
+}
+
+function bindJunctionPublicationActions() {
+  for (const button of els.roundaboutsDetail.querySelectorAll("[data-junction-publication]")) {
+    button.addEventListener("click", () => saveJunctionRegistry(button.dataset.junctionPublication).catch(showError));
+  }
+}
+
+function renderCustomJunctionDetail(junction) {
+  const attachmentLabelByPort = new Map();
+  for (const attachment of junction.attachments || []) {
+    attachmentLabelByPort.set(attachment.portId, [
+      ...(attachmentLabelByPort.get(attachment.portId) || []),
+      `#${attachment.segmentId} ${attachment.segmentName || ""}`.trim(),
+    ]);
+  }
+  const portById = new Map((junction.ports || []).map((port) => [port.id, port]));
+  const movementRows = (junction.movements || []).map((movement) => {
+    const entry = portById.get(movement.entryPortId);
+    const exit = portById.get(movement.exitPortId);
+    const from = (attachmentLabelByPort.get(entry?.id) || [entry?.edgeId || "entry"]).join(", ");
+    const to = (attachmentLabelByPort.get(exit?.id) || [exit?.edgeId || "exit"]).join(", ");
+    return `<button type="button" class="junction-movement-row${movement.id === state.roundabouts.selectedMovementId ? " active" : ""}" data-movement="${escapeHtml(movement.id)}"><strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong><span>${movement.status === "unavailable" ? "No legal path" : `Legal · ${Number(movement.distanceMeters).toFixed(1)} m · ${movement.edgeRefs.length} edges`}</span></button>`;
+  }).join("");
+  els.roundaboutsDetail.innerHTML = `
+    <h3>${escapeHtml(junction.name || junction.id)}</h3>
+    <p>Custom bicycle junction · ${(junction.internalEdgeIds || []).length} internal base edges</p>
+    ${junctionPublicationHtml(junction)}
+    <section class="junction-coverage"><h3>Movement coverage</h3><p>${junction.segmentIds.map((id) => `#${id}`).join(", ") || "No attached CW segments"} · ${junction.summary.legalMovements}/${junction.summary.movements} legal</p><p>${junction.armAttachments?.length || 0} logical arm attachments · ${junction.attachments?.filter((attachment) => attachment.source === "arm-attachment").length || 0} directional port attachments</p><div class="junction-movement-list">${movementRows || '<div class="empty-state">No inter-arm movements yet.</div>'}</div></section>
+  `;
+  bindJunctionPublicationActions();
+  for (const button of els.roundaboutsDetail.querySelectorAll("[data-movement]")) {
+    button.addEventListener("click", () => {
+      state.roundabouts.selectedMovementId = button.dataset.movement;
+      updateRoundaboutLayerFilters();
+      renderRoundaboutsPanel();
+    });
+  }
 }
 
 function renderRoundaboutsPanel() {
@@ -4960,6 +5198,24 @@ function renderRoundaboutsPanel() {
     });
     els.roundaboutsList.appendChild(button);
   }
+  const customJunctions = (state.roundabouts.junctionsData?.items || [])
+    .map((item) => item.candidate)
+    .filter((junction) => junction.kind === "custom_bicycle");
+  for (const junction of customJunctions) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `roundabout-review-item state-${junction.publication?.status || "detected"}${junction.id === state.roundabouts.selectedId ? " active" : ""}`;
+    button.innerHTML = `<strong>${escapeHtml(junction.name || "Unnamed custom junction")}</strong><span>custom · ${escapeHtml(junction.publication?.status || "detected")} · ${(junction.segmentIds || []).map((id) => `#${id}`).join(" · ")}</span>`;
+    button.addEventListener("click", () => selectNetworkJunction(junction.id));
+    els.roundaboutsList.appendChild(button);
+  }
+  const directlySelectedJunction = (state.roundabouts.junctionsData?.items || []).find(
+    (item) => item.candidate?.id === state.roundabouts.selectedId,
+  )?.candidate;
+  if (directlySelectedJunction?.kind === "custom_bicycle") {
+    renderCustomJunctionDetail(directlySelectedJunction);
+    return;
+  }
   const selected = data.items?.find((item) => item.candidate.id === state.roundabouts.selectedId);
   if (!selected) {
     els.roundaboutsDetail.innerHTML = `<div class="empty-state">No candidates in this filter.</div>`;
@@ -5001,7 +5257,8 @@ function renderRoundaboutsPanel() {
   els.roundaboutsDetail.innerHTML = `
     <h3>${escapeHtml(candidate.id)}</h3>
     <p>${escapeHtml(candidate.classification)} · radius ${Number(candidate.radiusM).toFixed(1)} m</p>
-    ${junction ? `<section class="junction-coverage"><h3>Movement coverage</h3><p>${junction.segmentIds.map((id) => `#${id}`).join(", ")} · ${junction.summary.legalMovements}/${junction.summary.movements} legal</p><p>Orange ports enter; green ports exit. Arrows show one-way base edges.</p><div class="junction-movement-list">${movementRows || '<div class="empty-state">No inter-arm movements.</div>'}</div>${movementActions}</section>` : '<p class="empty-state">This reviewed roundabout does not currently affect a CW alignment.</p>'}
+    ${junctionPublicationHtml(junction)}
+    ${junction ? `<section class="junction-coverage"><h3>Movement coverage</h3><p>${junction.segmentIds.map((id) => `#${id}`).join(", ")} · ${junction.summary.legalMovements}/${junction.summary.movements} legal</p><p>${junction.armAttachments?.length || 0} logical arm attachments · ${junction.attachments?.filter((attachment) => attachment.source === "arm-attachment").length || 0} directional port attachments</p><p>Orange ports enter; green ports exit. Arrows show one-way base edges.</p><div class="junction-movement-list">${movementRows || '<div class="empty-state">No inter-arm movements.</div>'}</div>${movementActions}</section>` : '<p class="empty-state">This reviewed roundabout does not currently affect a CW alignment.</p>'}
     <p>${osmLinks || (candidate.sourceNodeId ? `<a href="https://www.openstreetmap.org/node/${encodeURIComponent(candidate.sourceNodeId)}" target="_blank" rel="noreferrer">node ${escapeHtml(candidate.sourceNodeId)}</a>` : "")}</p>
     <p>Warnings: ${escapeHtml((candidate.warnings || []).join(", ") || "none")}</p>
     <textarea class="text-input textarea" rows="3" maxlength="1000" placeholder="Optional review note">${escapeHtml(selected.review?.note || "")}</textarea>
@@ -5014,6 +5271,7 @@ function renderRoundaboutsPanel() {
       <button type="button" data-move="1" class="secondary-button">Next</button>
     </div>
   `;
+  bindJunctionPublicationActions();
   for (const button of els.roundaboutsDetail.querySelectorAll("[data-review]")) {
     button.addEventListener("click", () => saveRoundaboutReview(button.dataset.review).catch(showError));
   }
@@ -5568,6 +5826,15 @@ function renderBaseGraphPanel() {
     !editingBaseNetwork || loading || recalculating || isDrawing() || !selected || selectedVertex <= 0 || selectedVertex >= coords.length - 1;
   els.recalculateOsmGraph.disabled = !editingBaseNetwork || loading || recalculating || isDrawing() || !loaded;
   els.recalculateOsmGraph.textContent = recalculating ? "Recalculating..." : "Recalculate Graph + Matches";
+  const junctionSelectionCount = state.junctionAuthoring.selectedEdgeIds.size;
+  els.selectJunctionEdges.disabled = !loaded || loading || recalculating || isDrawing();
+  els.selectJunctionEdges.classList.toggle("active", state.junctionAuthoring.selecting);
+  els.selectJunctionEdges.textContent = state.junctionAuthoring.selecting ? "Finish selecting" : "Select junction edges";
+  els.clearJunctionEdges.disabled = junctionSelectionCount === 0 || state.junctionAuthoring.saving;
+  els.createJunctionFromEdges.disabled = junctionSelectionCount === 0 || state.junctionAuthoring.saving;
+  els.junctionEdgeSelectionSummary.textContent = junctionSelectionCount
+    ? `${junctionSelectionCount} internal base edge${junctionSelectionCount === 1 ? "" : "s"} selected. Click an edge again to remove it.`
+    : "No internal edges selected.";
   const canRefreshDirectionReview =
     loaded &&
     !loading &&
@@ -5615,6 +5882,66 @@ function renderBaseGraphPanel() {
     : selectedGraphEdge
       ? "Inspect normalized direction evidence above. Geometry remains generated from OSM; reviewed direction corrections are saved as source-way overrides."
       : "Click any base edge to inspect it. Create a manual edge, copy an OSM edge, or review selected policy evidence.";
+}
+
+function toggleJunctionEdgeSelection(feature) {
+  const edgeId = String(graphEdgeFeatureId(feature) || manualBaseEdgeFeatureId(feature) || "");
+  if (!edgeId) return;
+  if (state.junctionAuthoring.selectedEdgeIds.has(edgeId)) {
+    state.junctionAuthoring.selectedEdgeIds.delete(edgeId);
+  } else {
+    state.junctionAuthoring.selectedEdgeIds.add(edgeId);
+  }
+  updateMapSources();
+  renderBaseGraphPanel();
+}
+
+function toggleJunctionEdgeSelectionMode() {
+  state.junctionAuthoring.selecting = !state.junctionAuthoring.selecting;
+  renderAll();
+  setStatus(state.junctionAuthoring.selecting
+    ? "Select every reviewed base edge inside the bicycle junction. Click selected edges again to remove them."
+    : `${state.junctionAuthoring.selectedEdgeIds.size} junction edge(s) selected.`);
+}
+
+function clearJunctionEdgeSelection() {
+  state.junctionAuthoring.selectedEdgeIds.clear();
+  state.junctionAuthoring.selecting = false;
+  updateMapSources();
+  renderAll();
+}
+
+async function createJunctionFromSelectedEdges() {
+  if (!state.junctionAuthoring.selectedEdgeIds.size) return;
+  state.junctionAuthoring.saving = true;
+  renderBaseGraphPanel();
+  try {
+    const response = await fetch("/api/network-junctions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "create",
+        name: els.newJunctionName.value,
+        navigationKind: els.newJunctionNavigationKind.value,
+        internalEdgeIds: [...state.junctionAuthoring.selectedEdgeIds],
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not create junction");
+    state.roundabouts.junctionsData = payload;
+    state.roundabouts.selectedId = payload.junctionId;
+    state.roundabouts.selectedMovementId = null;
+    clearJunctionEdgeSelection();
+    els.newJunctionName.value = "";
+    await setWorkspaceMode("roundabouts");
+    updateRoundaboutSources();
+    renderRoundaboutsPanel();
+    const junction = payload.items?.find((item) => item.candidate?.id === payload.junctionId)?.candidate;
+    if (junction) fitJunctionCandidate(junction);
+    setStatus("Custom junction created as a detected draft. Review its ports and movements before publishing.");
+  } finally {
+    state.junctionAuthoring.saving = false;
+  }
 }
 
 function renderConnectorLensLegend() {
@@ -9539,6 +9866,11 @@ async function loadBaseOverlayData() {
     } catch {
       state.directionReview.loaded = false;
     }
+    try {
+      await loadNetworkJunctionContext();
+    } catch (error) {
+      state.roundabouts.error = error instanceof Error ? error.message : String(error);
+    }
     state.baseOverlay.loaded = true;
     refreshUnresolvedSegmentHighlights();
     setStatus(
@@ -10774,6 +11106,9 @@ function wireEvents() {
     renderAll();
   });
   els.newManualBaseEdge.addEventListener("click", startManualBaseEdgeDraw);
+  els.selectJunctionEdges.addEventListener("click", toggleJunctionEdgeSelectionMode);
+  els.clearJunctionEdges.addEventListener("click", clearJunctionEdgeSelection);
+  els.createJunctionFromEdges.addEventListener("click", () => createJunctionFromSelectedEdges().catch(showError));
   els.findBaseEdge.addEventListener("click", findBaseEdgeById);
   els.baseEdgeSearch.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
@@ -10874,7 +11209,31 @@ function wireEvents() {
   map.on("click", "cw-overlay-network-hit-layer", (event) => {
     if (state.workspaceMode !== "overlay" || state.mode !== "select") return;
     if (state.editingOverlayEdges || state.directionReview.editing) return;
+    if (
+      map.getLayer("junction-arm-attachments-layer") &&
+      map.queryRenderedFeatures(event.point, { layers: ["junction-arm-attachments-layer"] }).length
+    ) return;
     const feature = event.features?.[0];
+    const junctionId = String(feature?.properties?.overlayJunctionId || "");
+    if (junctionId) {
+      const junction = (state.roundabouts.junctionsData?.items || []).find(
+        (item) => item.candidate?.id === junctionId,
+      )?.candidate;
+      if (!junction) return;
+      setWorkspaceMode("roundabouts")
+        .then(() => {
+          if (junction.roundaboutId) {
+            selectJunctionByRoundaboutId(junction.roundaboutId, { fit: false });
+          } else {
+            selectNetworkJunction(junction.id, { fit: false });
+          }
+          setStatus(
+            `Selected ${junction.name || "junction"} connecting ${(junction.segmentIds || []).map((id) => `#${id}`).join(", ")}.`,
+          );
+        })
+        .catch(showError);
+      return;
+    }
     const segmentId = Number(feature?.properties?.overlaySegmentId);
     if (!Number.isInteger(segmentId) || !selectSegmentById(segmentId)) return;
     state.suppressNextSegmentClick = true;
@@ -10882,6 +11241,20 @@ function wireEvents() {
       state.suppressNextSegmentClick = false;
     }, 0);
     setStatus(`Selected mapped CW segment ${feature.properties.overlaySegmentName || segmentId}.`);
+  });
+
+  map.on("click", "junction-arm-attachments-layer", (event) => {
+    if (state.workspaceMode !== "overlay") return;
+    const properties = event.features?.[0]?.properties || {};
+    setStatus(
+      `Endpoint ${String(properties.endpoint || "").toUpperCase()} is connected to a junction arm; arrival and departure ports are automatic.`,
+    );
+  });
+  map.on("mouseenter", "junction-arm-attachments-layer", () => {
+    if (state.workspaceMode === "overlay") map.getCanvas().style.cursor = "pointer";
+  });
+  map.on("mouseleave", "junction-arm-attachments-layer", () => {
+    if (state.workspaceMode === "overlay") map.getCanvas().style.cursor = "";
   });
 
   for (const layerId of ["crossing-actions-layer", "crossing-arrows-layer", "crossing-corridors-layer"]) {
@@ -10970,6 +11343,10 @@ function wireEvents() {
       return;
     }
     if (state.workspaceMode === "base") {
+      if (state.junctionAuthoring.selecting) {
+        toggleJunctionEdgeSelection(event.features[0]);
+        return;
+      }
       selectBaseGraphEdge(event.features[0]);
     } else {
       toggleSelectedOverlayBaseEdge(event.features[0]).catch(showError);
@@ -11044,6 +11421,10 @@ function wireEvents() {
     }
     const manualIndex = Number(event.features[0].properties.manualIndex);
     if (state.workspaceMode === "base") {
+      if (state.junctionAuthoring.selecting) {
+        toggleJunctionEdgeSelection(event.features[0]);
+        return;
+      }
       selectManualBaseEdgeByIndex(manualIndex);
       return;
     }
@@ -11409,6 +11790,12 @@ async function addMapLayers() {
       data: { type: "FeatureCollection", features: [] },
     });
   }
+  if (!map.getSource("junction-authoring-edges")) {
+    map.addSource("junction-authoring-edges", {
+      type: "geojson",
+      data: EMPTY_FEATURE_COLLECTION,
+    });
+  }
   if (!map.getSource("selected-base-edge-permitted-direction")) {
     map.addSource("selected-base-edge-permitted-direction", {
       type: "geojson",
@@ -11486,7 +11873,7 @@ async function addMapLayers() {
       map.addSource(sourceId, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
     }
   }
-  for (const sourceId of ["junction-internal", "junction-ports", "junction-movements", "junction-arrows"]) {
+  for (const sourceId of ["junction-internal", "junction-ports", "junction-movements", "junction-arrows", "junction-arm-attachments"]) {
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
     }
@@ -11598,6 +11985,8 @@ async function addMapLayers() {
           "#ae9067",
           "road",
           "#8f2424",
+          "junction",
+          "#7c3aed",
           "#0288d1",
         ],
         "line-width": 3,
@@ -11643,6 +12032,8 @@ async function addMapLayers() {
           "#ae9067",
           "road",
           "#8f2424",
+          "junction",
+          "#7c3aed",
           "#0288d1",
         ],
         "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.8, 14, 5.4, 16, 7.4],
@@ -12009,6 +12400,20 @@ async function addMapLayers() {
         "line-color": "#000000",
         "line-width": ["interpolate", ["linear"], ["zoom"], 10, 12, 14, 16, 16, 20],
         "line-opacity": 0.01,
+      },
+    });
+  }
+
+  if (!map.getLayer("junction-authoring-edges-layer")) {
+    map.addLayer({
+      id: "junction-authoring-edges-layer",
+      type: "line",
+      source: "junction-authoring-edges",
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": "#a855f7",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 7, 14, 11, 17, 16],
+        "line-opacity": 0.95,
       },
     });
   }
@@ -12450,6 +12855,19 @@ async function addMapLayers() {
         "text-color": "#111827",
         "text-halo-color": "#ffffff",
         "text-halo-width": 1.5,
+      },
+    });
+    map.addLayer({
+      id: "junction-arm-attachments-layer",
+      type: "circle",
+      source: "junction-arm-attachments",
+      filter: ["==", ["get", "segmentId"], -1],
+      layout: { visibility: "none" },
+      paint: {
+        "circle-radius": 8,
+        "circle-color": "#7c3aed",
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 3,
       },
     });
   }

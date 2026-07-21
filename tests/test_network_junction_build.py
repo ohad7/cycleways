@@ -17,16 +17,53 @@ class NetworkJunctionBuildTests(unittest.TestCase):
                 "schemaVersion": 1,
                 "junctions": [{
                     "id": "junction-1",
+                    "name": "Test Junction",
+                    "navigationKind": "intersection",
+                    "publication": {"requestedStatus": "published", "status": "published", "canPublish": True, "issues": []},
                     "fingerprint": "sha256:j1",
                     "kind": "derived_roundabout",
                     "roundaboutId": "osm-ways:1",
                     "classification": "roundabout",
                     "segmentIds": [10, 11],
-                    "ports": [],
+                    "ports": [{
+                        "id": "port-a-entry",
+                        "armId": "arm-a",
+                        "externalNodeId": "arm-a",
+                        "edgeId": "e1",
+                        "usage": "entry",
+                        "direction": "forward",
+                    }, {
+                        "id": "port-b-exit",
+                        "armId": "arm-b",
+                        "externalNodeId": "arm-b",
+                        "edgeId": "e1",
+                        "usage": "exit",
+                        "direction": "forward",
+                    }],
+                    "armAttachments": [{
+                        "segmentId": 10,
+                        "endpoint": "b",
+                        "armId": "arm-a",
+                        "externalNodeId": "arm-a",
+                    }, {
+                        "segmentId": 11,
+                        "endpoint": "a",
+                        "armId": "arm-b",
+                        "externalNodeId": "arm-b",
+                    }],
+                    "attachments": [{
+                        "source": "arm-attachment",
+                        "segmentId": 10,
+                        "alignmentKey": "aToB",
+                        "endpoint": "b",
+                        "usage": "arrive",
+                        "armId": "arm-a",
+                        "portId": "port-a-entry",
+                    }],
                     "movements": [{
                         "id": "a->b",
-                        "entryPortId": "a",
-                        "exitPortId": "b",
+                        "entryPortId": "port-a-entry",
+                        "exitPortId": "port-b-exit",
                         "status": "unique",
                         "distanceMeters": 12,
                         "edgeRefs": [{"edgeId": "e1", "direction": "forward"}],
@@ -40,15 +77,23 @@ class NetworkJunctionBuildTests(unittest.TestCase):
                     "id": "e1",
                     "shareId": 99,
                     "bicycleTraversal": {"forward": "allowed", "reverse": "prohibited"},
+                    "coordinates": [[35.0, 33.0], [35.001, 33.001]],
                 }],
             }
             validation, result = build_network_junctions(candidates, reviews, asset, output)
             self.assertEqual(result, output)
             self.assertEqual(validation["summary"]["compiledDirectedEdges"], 1)
+            self.assertEqual(validation["summary"]["armAttachments"], 2)
+            self.assertEqual(validation["summary"]["directionalAttachments"], 1)
             self.assertEqual(asset["edges"][0]["cwJunctions"]["forward"][0]["junctionId"], "junction-1")
             self.assertEqual(asset["edges"][0]["cwJunctions"]["reverse"], [])
             runtime = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(runtime["junctions"][0]["movements"][0]["edgeRefs"][0]["edgeShareId"], 99)
+            self.assertEqual(runtime["junctions"][0]["armAttachments"][0]["segmentId"], 10)
+            self.assertEqual(runtime["junctions"][0]["directionalAttachments"][0]["portId"], "port-a-entry")
+            self.assertEqual(runtime["junctions"][0]["name"], "Test Junction")
+            self.assertEqual(runtime["publicGeometry"]["features"][0]["properties"]["networkRole"], "junction")
+            self.assertEqual(asset["edges"][0]["cwJunctions"]["forward"][0]["junctionName"], "Test Junction")
 
             reviews.write_text(json.dumps({
                 "schemaVersion": 1,

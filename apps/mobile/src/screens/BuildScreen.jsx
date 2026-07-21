@@ -153,7 +153,10 @@ import DevCameraOverlay from "../planner/DevCameraOverlay.jsx";
 import DevJourneyControls from "../planner/DevJourneyControls.jsx";
 import Icon from "../planner/Icon.jsx";
 import { palette } from "../planner/theme.js";
-import { prepareRouteNetworkFeatures } from "@cycleways/core/domain/routeNetwork.js";
+import {
+  prepareRouteNetworkFeatures,
+  publicRouteNetworkGeoJson,
+} from "@cycleways/core/domain/routeNetwork.js";
 import {
   getPlannerBuildModel,
   getRoutePlannerPresentation,
@@ -424,6 +427,7 @@ export default function BuildScreen({ navigation, route }) {
     enableRouteDirectionAnimation: false,
     includeRoundabouts: true,
     includeCrossings: true,
+    includeNetworkJunctions: true,
   });
 
   const routeGeometry = useMemo(
@@ -2103,7 +2107,7 @@ export default function BuildScreen({ navigation, route }) {
     return {
       type: "FeatureCollection",
       features: prepareRouteNetworkFeatures(
-        state.assets.geoJsonData,
+        publicRouteNetworkGeoJson(state.assets.geoJsonData, state.assets.networkJunctionsData),
         networkPresentationOptions,
       ),
     };

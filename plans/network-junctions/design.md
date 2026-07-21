@@ -2,11 +2,11 @@
 
 Date: 2026-07-21
 
-Status: Implemented for derived roundabout junctions; curated bicycle-junction authoring remains a rollout extension
+Status: Implemented on 2026-07-21; curator publication and real-device validation remain rollout gates
 
 ## Summary
 
-Introduce a first-class **network junction**: a bounded, unnamed part of the
+Introduce a first-class **network junction**: a bounded part of the
 CycleWays network that connects named CW segments through directed base-edge
 ports and legal movement paths.
 
@@ -16,8 +16,8 @@ edges. It adds the missing logical role between named corridors:
 
 1. **Base edges** represent physical geometry, access, and directionality.
 2. **CW segments** represent named rider-recognizable corridors.
-3. **Network junctions** represent unnamed infrastructure used to move safely
-   between corridors.
+3. **Network junctions** represent named landmarks with internally unnamed
+   infrastructure used to move safely between corridors.
 
 This model covers ordinary OSM roundabouts with paired one-way approach lanes,
 curated bicycle-specific paths through car-oriented intersections, existing
@@ -182,6 +182,28 @@ decision, or deliberately selected bicycle path.
   edges, explicit ports, a selected movement realization, or a movement marked
   unavailable.
 
+### Candidate and publication state
+
+Topology discovery and CycleWays publication are separate decisions:
+
+- `detected` is a derived or custom draft that can be previewed and validated
+  but is not part of the released CycleWays network;
+- `published` is a named curator decision and is compiled into routing and the
+  public web/mobile network layer;
+- `excluded` is an explicit decision that the topology is not CycleWays
+  infrastructure; and
+- `stale` is a previously published record whose referenced geometry, ports,
+  attachments, or required movements changed.
+
+Publishing requires a non-empty public `name`, at least two attached logical
+arms, at least one legal inter-arm movement, no unresolved attachment issue,
+and a current topology fingerprint. Detection alone never silently publishes
+road infrastructure.
+
+The public name is a landmark label such as `צומת רגר` or `צומת חורשת טל`.
+Junction-internal route spans remain road-name-less. Navigation may use the
+junction name as context, but must not present it as the name of a corridor.
+
 ## Authority and invariants
 
 ### Physical authority
@@ -198,7 +220,8 @@ decision, or deliberately selected bicycle path.
 
 - CW segments own names, corridor metadata, and their direction-specific paths
   outside a junction.
-- Network junctions own unnamed connectivity between segment ports.
+- Published network junctions own a public landmark name and internally unnamed
+  connectivity between segment ports.
 - Crossing records own safety narration such as “cross to the other side”.
 - Roundabout classification remains the authority for roundabout cue semantics.
 
@@ -264,6 +287,41 @@ An automatic attachment requires:
 
 Ambiguous attachments become one junction issue. They do not generate several
 independent segment acceptance tasks.
+
+### Arm attachment is the ordinary authoring unit
+
+For the common case, a logical CW endpoint attaches once to the stable external
+**junction arm**, not separately to its directional entry and exit ports. The
+arm is identified by exact base-graph continuity at the terminal node of the
+accepted segment mapping. The source endpoint coordinate expresses curator
+intent and may remain within its endpoint zone; visual proximity alone is not
+enough to create connectivity.
+
+An automatic arm attachment is stored on the Overlay V2 segment endpoint:
+
+```json
+{
+  "junctionAttachments": {
+    "b": {
+      "junctionId": "junction-osm-ways:842376170",
+      "armId": "west-arm-node",
+      "externalNodeId": "west-arm-node",
+      "source": "automatic-terminal-node"
+    }
+  }
+}
+```
+
+The junction compiler expands that one attachment into direction-specific
+evidence. For endpoint B, A-to-B normally arrives through the arm's entry port
+and B-to-A departs through its exit port. Endpoint A uses the inverse alignment
+roles. A unique entry and exit port pair is automatic and needs no curator
+acceptance.
+
+Explicit port selection remains an exception for divided approaches, custom
+sidewalk junctions, or topology where an arm exposes multiple materially
+different entry or exit ports. Such a choice is edited in the Junctions
+workspace and does not make ordinary segment editing directional.
 
 ## Movement calculation
 
@@ -340,8 +398,14 @@ Overlay V2 gains a terminal attachment alongside the explicit edge refs:
 }
 ```
 
-The attachment is part of mapping validation and fingerprints. It does not
-weaken ordinary endpoint validation for segments without a junction.
+The direction-specific terminal attachment is compiled from the logical arm
+attachment whenever the arm has one unique legal entry and exit port. It is
+part of mapping validation and fingerprints. It does not weaken ordinary
+endpoint validation for segments without a junction.
+
+The named segment mapping stops at the arm's external graph node. The approach,
+ring, and exit edges inside the boundary belong only to the unnamed junction;
+they are not duplicated into every attached segment.
 
 ### Junction in the middle of one segment
 
@@ -429,14 +493,34 @@ data and recalculates through the normal versioned route workflow.
 
 ## Naming and navigation presentation
 
-Junction-internal route spans are:
+Published junctions have a public landmark name. Junction-internal route spans
+are:
 
 - `onNetwork: true`;
 - `networkRole: "junction"`; and
-- intentionally unnamed.
+- intentionally unnamed as road spans, while carrying `junctionId` and
+  `junctionName` context.
 
 The itinerary does not show a fake segment card for the junction. A maneuver
-leaving the junction names the destination CW segment when available.
+may identify the junction as a landmark and leaving it names the destination CW
+segment when available.
+
+## Public network presentation
+
+Only `published` junctions are painted as part of the released CW network.
+Their display footprint is the deduplicated union of directed base-edge
+realizations used by legal movements between attached CW arms. It must not
+paint unrelated approach roads merely because they are near the physical
+intersection.
+
+The build publishes this footprint with `networkRole: "junction"`, stable
+`junctionId`, `name`, and `navigationKind`. Web and mobile merge those features
+into their shared network presentation while keeping them non-segment
+interactive: selecting one must not fabricate a CW segment card.
+
+The Junctions editor shows publication state, the reason a draft is blocked,
+and an exact footprint preview. CW Network mode paints only published
+junctions; Junctions mode can also show detected/draft topology for review.
 
 Accepted roundabout classification continues to produce one roundabout cue.
 Junction traversal evidence may eventually replace geometric entry/exit
@@ -505,13 +589,50 @@ The ordinary curator flow is:
 
 1. Switch to Base network and create or correct the physical bicycle edges.
 2. Review their base-edge directions once.
-3. Select the internal edges and choose **Create bicycle junction**.
-4. Let the editor detect nearby CW endpoint directions and proposed ports.
-5. Inspect the movement matrix.
-6. Correct only missing ports, unavailable movements, or a preferred path.
+3. Multi-select the internal edges and choose **Create junction from selected
+   edges**.
+4. Give the draft a stable public name and navigation kind.
+5. Let the editor detect boundary nodes, nearby CW endpoint directions, and
+   proposed entry/exit ports.
+6. Inspect the movement matrix and public-map footprint.
+7. Correct only missing/extra ports, unavailable movements, or a preferred
+   path.
+8. Publish when validation is clean.
 
 There is no requirement to paste JSON or accept every mechanically proved
 movement one by one.
+
+The junction never owns freehand geometry. OSM and reviewed manual base edges
+remain the physical authority; the junction stores edge references, port
+decisions, presentation metadata, and publication state. Editing or deleting a
+referenced edge makes the junction stale.
+
+### Custom boundary and port discovery
+
+For a custom selected internal subgraph, every node where an internal edge
+meets an external graph edge is a candidate logical arm. Allowed traversal from
+the boundary into the selected subgraph produces an entry port; allowed
+traversal out produces an exit port. One bidirectional physical edge therefore
+normally produces paired entry/exit ports on one arm.
+
+The curator can include or exclude proposed ports. Prohibited or unknown
+directions cannot be forced into a published port: their base-edge policy must
+be corrected first. Explicit port selection is an escape hatch for divided
+approaches and parallel sidewalk choices, not a required ordinary step.
+
+### Ordinary derived-junction endpoint workflow
+
+1. The curator moves the CW endpoint to the physical junction arm and finishes
+   the edit.
+2. Normal authoring rematches the named segment only up to the arm boundary.
+3. If the accepted mapping terminal is the exact external node of one junction
+   arm, the editor stores the arm attachment automatically.
+4. The compiler derives the arriving entry port and departing exit port.
+5. The CW map renders the junction's unnamed internal network between the
+   attached named segments.
+
+The curator is interrupted only if more than one junction arm or more than one
+directional port is possible.
 
 ### Issues integration
 
@@ -592,6 +713,11 @@ be current before promotion.
   required.
 - Current failures include one-way approach/exit lanes, so ring-only reversal
   is insufficient.
+- Segment #204 endpoint B, #210 endpoint B, and #211 endpoint A terminate at
+  the three external arm nodes. Each is one logical arm attachment expanded to
+  one arrival and one departure attachment.
+- Named segment mappings stop outside the junction; no roundabout or approach
+  edge is duplicated into those mappings.
 - The derived junction must expose all six inter-segment movements and select a
   legal local realization for each.
 - Real-data tests must preserve the verified legal replacements of roughly
@@ -617,6 +743,9 @@ be current before promotion.
 - The first release retains them while the junction is built and compared.
 - Deprecation occurs only after all intended movements and existing routes have
   parity.
+- The curator draws/reviews the real sidewalk base edges, selects them, creates
+  a custom junction named `צומת חורשת טל`, reviews proposed boundary ports, and
+  publishes only after the footprint and route matrix are correct.
 
 ### Dafna entrance: segments 330 and 334
 

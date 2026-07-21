@@ -63,3 +63,14 @@ export function prepareRouteNetworkFeatures(geoJsonData, presentationOptions = {
       };
     });
 }
+
+export function publicRouteNetworkGeoJson(geoJsonData, networkJunctionsData = null) {
+  const segmentFeatures = Array.isArray(geoJsonData?.features) ? geoJsonData.features : [];
+  const junctionFeatures = Array.isArray(networkJunctionsData?.publicGeometry?.features)
+    ? networkJunctionsData.publicGeometry.features
+    : [];
+  return {
+    type: "FeatureCollection",
+    features: [...segmentFeatures, ...junctionFeatures],
+  };
+}

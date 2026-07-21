@@ -1,6 +1,6 @@
 const textDecoder = new TextDecoder();
 const MAGIC = "CWBS1";
-const SUPPORTED_VERSIONS = new Set([1, 2, 3, 4]);
+const SUPPORTED_VERSIONS = new Set([1, 2, 3, 4, 5]);
 const COORDINATE_SCALE = 1_000_000;
 const DISTANCE_SCALE = 10;
 
@@ -211,6 +211,7 @@ class CompactBaseRoutingShardDecoder {
       memberships.push({
         junctionId: this.readNullableString(strings),
         fingerprint: this.readNullableString(strings),
+        ...(this.version >= 5 ? { junctionName: this.readNullableString(strings) } : {}),
       });
     }
     return memberships;

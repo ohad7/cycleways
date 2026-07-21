@@ -118,7 +118,7 @@ assert.deepEqual(decodedPolicyShard.edges[0].cwAlignments, {
 });
 
 const junctionShardPayload = encodeCompactShard({
-  formatVersion: 4,
+  formatVersion: 5,
   schemaVersion: 1,
   sourceRoutingSchemaVersion: 3,
   id: "g-junction",
@@ -130,11 +130,11 @@ const junctionShardPayload = encodeCompactShard({
     highway: "path", accessStatus: "open", roadType: null, cwSegmentIds: [], elevation: null,
     bicycleTraversal: { policyId: "p", policyDigest: "d", forward: "allowed", reverse: "allowed", forwardReason: "manual", reverseReason: "manual" },
     cwAlignments: { forward: [], reverse: [] },
-    cwJunctions: { forward: [{ junctionId: "junction-7", fingerprint: "sha256:j7" }], reverse: [] },
+    cwJunctions: { forward: [{ junctionId: "junction-7", fingerprint: "sha256:j7", junctionName: "Test Junction" }], reverse: [] },
   }],
 });
 assert.deepEqual(decodeCompactBaseRoutingShard(junctionShardPayload).edges[0].cwJunctions, {
-  forward: [{ junctionId: "junction-7", fingerprint: "sha256:j7" }],
+  forward: [{ junctionId: "junction-7", fingerprint: "sha256:j7", junctionName: "Test Junction" }],
   reverse: [],
 });
 
@@ -204,8 +204,8 @@ function encodeCompactShard(shard) {
           membership.alignmentKey,
           membership.mappingDigest,
         ]),
-        ...(edge.cwJunctions?.forward || []).flatMap((membership) => [membership.junctionId, membership.fingerprint]),
-        ...(edge.cwJunctions?.reverse || []).flatMap((membership) => [membership.junctionId, membership.fingerprint]),
+        ...(edge.cwJunctions?.forward || []).flatMap((membership) => [membership.junctionId, membership.fingerprint, membership.junctionName]),
+        ...(edge.cwJunctions?.reverse || []).flatMap((membership) => [membership.junctionId, membership.fingerprint, membership.junctionName]),
       ]),
     ]),
   ]
@@ -292,6 +292,9 @@ function encodeCompactShard(shard) {
         for (const membership of memberships) {
           writeNullableStringIndex(bytes, stringIndex, membership.junctionId);
           writeNullableStringIndex(bytes, stringIndex, membership.fingerprint);
+          if ((shard.formatVersion || 1) >= 5) {
+            writeNullableStringIndex(bytes, stringIndex, membership.junctionName);
+          }
         }
       }
     }

@@ -14,6 +14,7 @@ import {
     { properties: { name: "A" }, geometry: { coordinates: [[0, 0], [1, 1]] } },
     { properties: { name: "B" }, geometry: { coordinates: [[0, 0]] } }, // too short
     { properties: {}, geometry: { coordinates: [[0, 0], [1, 1]] } }, // unnamed
+    { properties: { name: "J", networkRole: "junction", interactive: false }, geometry: { coordinates: [[0, 0], [1, 1]] } },
   ]);
   assert.equal(segs.length, 1, "only the valid named multi-point segment survives");
   assert.equal(segs[0].segmentName, "A");

@@ -466,10 +466,23 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
         exitBearingDeg: 180,
         complete: true,
       }],
+      segmentSpans: [
+        { startMeters: 0, endMeters: 70, name: null, networkRole: null },
+        {
+          startMeters: 70,
+          endMeters: 140,
+          name: null,
+          networkRole: "junction",
+          junctionId: "junction-r1",
+          junctionName: "צומת רגר",
+        },
+        { startMeters: 140, endMeters: 333, name: null, networkRole: null },
+      ],
     },
   );
   const cues = buildRouteCues(route);
   assert.deepEqual(findType(cues, "roundabout").map((cue) => cue.direction), ["right"]);
+  assert.equal(findType(cues, "roundabout")[0].junctionName, "צומת רגר");
   assert.equal(findType(cues, "turn").length + findType(cues, "bend").length, 0);
 }
 

@@ -94,6 +94,7 @@ export function useCyclewaysApp({
   enableRouteDirectionAnimation = true,
   includeRoundabouts = false,
   includeCrossings = false,
+  includeNetworkJunctions = false,
 } = {}) {
   const [state, setState] = useState({
     status: "loading",
@@ -275,6 +276,7 @@ export function useCyclewaysApp({
           baseRoutingMode: "shards",
           includeRoundabouts,
           includeCrossings,
+          includeNetworkJunctions,
         });
         if (controller.signal.aborted) return;
         setState({
@@ -299,7 +301,7 @@ export function useCyclewaysApp({
     return () => {
       controller.abort();
     };
-  }, [includeCrossings, includeRoundabouts]);
+  }, [includeCrossings, includeNetworkJunctions, includeRoundabouts]);
 
   useEffect(() => {
     if (state.status !== "ready") return undefined;

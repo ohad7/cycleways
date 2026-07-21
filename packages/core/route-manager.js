@@ -3926,6 +3926,8 @@ function buildSegmentSpans(traversals, segmentNamesById) {
     const junctionMemberships = Array.isArray(traversal.junctionMemberships)
       ? traversal.junctionMemberships
       : [];
+    const junctionId = junctionMemberships[0]?.junctionId ?? null;
+    const junctionName = junctionMemberships[0]?.junctionName ?? null;
     const networkRole = name != null
       ? "segment"
       : junctionMemberships.length > 0
@@ -3937,7 +3939,10 @@ function buildSegmentSpans(traversals, segmentNamesById) {
     const start = cursor;
     cursor += length;
     const prev = spans[spans.length - 1];
-    if (prev && prev.name === name && prev.onNetwork === onNetwork && prev.networkRole === networkRole) {
+    if (
+      prev && prev.name === name && prev.onNetwork === onNetwork && prev.networkRole === networkRole
+      && prev.junctionId === junctionId && prev.junctionName === junctionName
+    ) {
       prev.endMeters = cursor;
       continue;
     }
@@ -3948,6 +3953,8 @@ function buildSegmentSpans(traversals, segmentNamesById) {
       cwSegmentId,
       onNetwork,
       networkRole,
+      junctionId,
+      junctionName,
       routeClass,
     });
   }

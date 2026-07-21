@@ -8,6 +8,7 @@ import { DATA_MARKERS_LAYER_ID } from "./mapLayers.js";
 
 export function buildNetworkSegments(features) {
   return (features || [])
+    .filter((feature) => feature?.properties?.interactive !== false && feature?.properties?.networkRole !== "junction")
     .map((feature) => {
       const coordinates = (feature.geometry?.coordinates || [])
         .map((coord) => ({

@@ -201,7 +201,10 @@ function cuePhrase(event, state, locale) {
     case "roundabout": {
       const phrase = roundaboutText(cue.direction, locale);
       const then = thenManeuverText(cue.thenManeuver, locale, "roundabout");
-      return phrase ? `${prefix}${phrase}${then}` : null;
+      const junctionContext = cue.junctionName
+        ? locale === "he-IL" ? `ב${cue.junctionName}, ` : `At ${cue.junctionName}, `
+        : "";
+      return phrase ? `${prefix}${junctionContext}${phrase}${then}` : null;
     }
     case "bend":
       return null;

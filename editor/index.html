@@ -226,6 +226,26 @@
               <button id="split-manual-base-edge" class="secondary-button" type="button" disabled>Split</button>
             </div>
 
+            <section class="junction-authoring-card" aria-labelledby="junction-authoring-title">
+              <h3 id="junction-authoring-title">Create bicycle junction</h3>
+              <p>Select the reviewed base edges that form the internal sidewalk or bicycle intersection.</p>
+              <div class="action-row">
+                <button id="select-junction-edges" class="secondary-button" type="button" disabled>Select junction edges</button>
+                <button id="clear-junction-edges" class="secondary-button" type="button" disabled>Clear</button>
+              </div>
+              <p id="junction-edge-selection-summary" class="base-overlay-bulk-summary">No internal edges selected.</p>
+              <label class="field-label" for="new-junction-name">Public junction name</label>
+              <input id="new-junction-name" class="text-input" type="text" placeholder="צומת חורשת טל" />
+              <label class="field-label" for="new-junction-navigation-kind">Navigation kind</label>
+              <select id="new-junction-navigation-kind" class="text-input compact-select">
+                <option value="intersection">Intersection</option>
+                <option value="roundabout">Roundabout</option>
+                <option value="crossing">Crossing</option>
+                <option value="plaza">Plaza</option>
+              </select>
+              <button id="create-junction-from-edges" class="primary-button" type="button" disabled>Create junction from selected edges</button>
+            </section>
+
             <fieldset id="manual-edge-direction-review" class="manual-edge-direction-review" hidden>
               <legend>Base edge direction policy</legend>
               <p id="base-edge-direction-help" class="manual-edge-direction-help">

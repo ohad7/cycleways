@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T05:11:38.829Z",
+  "updatedAt": "2026-07-21T07:36:19.299Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -12450,10 +12450,10 @@
       "segmentId": 204,
       "segmentName": "כביש 9970 צומת רגר דרך ביטחונית",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.83,
+      "avgDistanceMeters": 0.58,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -12474,27 +12474,9 @@
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 842376174
-        },
-        {
-          "edgeId": "e842376175_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 842376175
-        },
-        {
-          "edgeId": "e842376170_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 3,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 842376170
         }
       ],
-      "updatedAt": "2026-05-20T18:59:04.949Z"
+      "updatedAt": "2026-07-21T07:35:03.070Z"
     },
     "205": {
       "segmentId": 205,
@@ -12736,7 +12718,7 @@
       "segmentId": 210,
       "segmentName": "כביש 99 תל דן צומת רג׳ר",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
       "avgDistanceMeters": 0.03,
@@ -12787,62 +12769,26 @@
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 656426865
-        },
-        {
-          "edgeId": "e842376173_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 842376173
         }
       ],
-      "updatedAt": "2026-05-20T21:41:33.771Z"
+      "updatedAt": "2026-07-21T07:33:35.609Z"
     },
     "211": {
       "segmentId": 211,
       "segmentName": "כביש 99 צומת רג׳ר כביש ביטחון",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.33,
+      "avgDistanceMeters": 0.19,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e842376170_5",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 842376170
-        },
-        {
-          "edgeId": "e842376170_6",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 842376170
-        },
-        {
-          "edgeId": "e842376176_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 842376176
-        },
-        {
           "edgeId": "e635023603_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 3,
+          "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 635023603
@@ -12851,13 +12797,13 @@
           "edgeId": "e635023602_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 4,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 635023602
         }
       ],
-      "updatedAt": "2026-05-20T18:41:28.687Z"
+      "updatedAt": "2026-07-21T07:36:19.298Z"
     },
     "212": {
       "segmentId": 212,

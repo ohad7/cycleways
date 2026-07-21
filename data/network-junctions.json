@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "junctions": {
+    "junction-osm-ways:842376170": {
+      "id": "junction-osm-ways:842376170",
+      "name": "צומת רג׳ר",
+      "status": "published",
+      "navigationKind": "roundabout",
+      "source": {
+        "type": "derived_roundabout",
+        "roundaboutId": "osm-ways:842376170"
+      },
+      "excludedPortIds": [],
+      "topologyFingerprint": "sha256:a47f28f19dd84fed496a5ad66f623659cf4a86469ee6f7925344238c32002a10",
+      "updatedAt": "2026-07-21T08:56:27.124Z",
+      "reviewer": "ohad"
+    }
+  }
+}

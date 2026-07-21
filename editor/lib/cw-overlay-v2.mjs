@@ -248,6 +248,30 @@ function validateSegment(segment, key) {
       throw new Error(`segment ${key} endpoint ${endpointKey} has invalid zoneMeters`);
     }
   }
+  if (
+    segment.junctionAttachments != null &&
+    (!segment.junctionAttachments ||
+      typeof segment.junctionAttachments !== "object" ||
+      Array.isArray(segment.junctionAttachments))
+  ) {
+    throw new Error(`segment ${key} junctionAttachments must be an object`);
+  }
+  for (const [endpointKey, attachment] of Object.entries(segment.junctionAttachments || {})) {
+    if (!["a", "b"].includes(endpointKey)) {
+      throw new Error(`segment ${key} has an invalid junction attachment endpoint ${endpointKey}`);
+    }
+    if (!attachment || typeof attachment !== "object") {
+      throw new Error(`segment ${key} endpoint ${endpointKey} junction attachment is invalid`);
+    }
+    for (const field of ["junctionId", "armId", "externalNodeId", "source"]) {
+      if (!String(attachment[field] || "")) {
+        throw new Error(`segment ${key} endpoint ${endpointKey} junction attachment is missing ${field}`);
+      }
+    }
+    if (String(attachment.armId) !== String(attachment.externalNodeId)) {
+      throw new Error(`segment ${key} endpoint ${endpointKey} junction arm does not match its external node`);
+    }
+  }
   for (const alignmentKey of ALIGNMENT_KEYS) {
     const slot = segment.alignments?.[alignmentKey];
     if (!slot || !("published" in slot) || !("draft" in slot)) {

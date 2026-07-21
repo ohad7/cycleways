@@ -446,6 +446,17 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   );
   assert.deepEqual(roundaboutThenTurn.cueNextManeuver, { type: "turn", direction: "right" });
 
+  const namedJunction = getNavigationPresentation({
+    ...riding,
+    status: "navigating",
+    activeCue: {
+      cue: { type: "roundabout", direction: "right", junctionName: "צומת רגר" },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+  });
+  assert.equal(namedJunction.cuePrimaryText, "בצומת רגר, בכיכר, פנו ימינה");
+
   const cruising = getNavigationPresentation({
     status: "navigating",
     offRoute: false,

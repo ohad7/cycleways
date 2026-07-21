@@ -2,7 +2,7 @@
 
 Date: 2026-07-21
 
-Status: Derived-junction slice implemented on 2026-07-21; curated authoring and connector deprecation remain gated rollout work
+Status: Implemented on 2026-07-21; manual curator and web/iOS rollout validation remain
 
 ## Implementation status
 
@@ -23,15 +23,30 @@ Implemented:
 - connector eligibility, main-route cost, and unnamed
   `networkRole: "junction"` route spans; and
 - web/mobile manifest loading and offline asset synchronization.
+- exact-terminal-node junction-arm discovery for ordinary segment endpoints,
+  Overlay V2 arm-attachment persistence, automatic entry/exit expansion, and
+  attachment validation;
+- unnamed junction rendering and arm-connection feedback in CW Network mode;
+  and
+- Rager regression coverage proving three logical arm attachments, six
+  directional attachments, and six legal inter-segment movements.
+- a source-controlled junction registry that separates detected topology from
+  explicit detected/published/excluded/stale curator state;
+- guided custom bicycle-junction creation from a reviewed OSM/manual base-edge
+  subgraph, automatic boundary-port proposals, and explicit port exclusions;
+- named publication validation, exact public-footprint preview, and fail-closed
+  stale-topology handling;
+- shared web/mobile rendering of only published junction footprints without
+  making them selectable as CW segments; and
+- named junction context on roundabout itinerary and voice instructions while
+  preserving unnamed internal route spans.
 
-Rollout-gated follow-up:
+Rollout-gated follow-up or later enhancement:
 
-- the editor flow for drawing a completely custom junction boundary and
-  explicitly correcting proposed ports;
 - authoritative custom movement selection during search (derived unique paths
   already use the same legal directed graph and require no override);
-- Overlay V2 terminal attachments where paired carriageway ports cannot be
-  inferred from current topology;
+- explicit Overlay V2 port overrides where paired carriageway ports cannot be
+  inferred from one logical arm;
 - deprecating connector segments #328/#329 after automated and manual parity;
   and
 - route/share movement attestation beyond the full base-edge attestation that
@@ -156,6 +171,10 @@ For each relevant segment endpoint/direction:
 Add tests for one logical endpoint with distinct incoming/outgoing carriageway
 ports.
 
+Implementation refinement: use one exact-node arm attachment as the ordinary
+authoring record and compile its arrival/departure port attachments. Do not
+require the named segment mapping to overlap junction-internal edges.
+
 ### Task 2.4 — Calculate movement coverage
 
 Implement deterministic allowed-path search within the junction subgraph.
@@ -246,6 +265,11 @@ Add map sources/layers for:
 Preserve selected object and camera while changing CW/Base focus. Ensure the
 focused network owns hit testing.
 
+In CW focus, render junction-internal edges with an unnamed-network treatment
+when at least one current arm attachment makes the junction part of the CW
+network. Show the selected segment's arm connection without requiring entry or
+exit port selection.
+
 ### Task 3.4 — Add the movement matrix
 
 Show one matrix cell per meaningful arrival/departure pair. Selecting a cell
@@ -269,13 +293,19 @@ Provide curator actions only when meaningful:
 
 From Base network focus:
 
-1. select reviewed internal manual/OSM edges;
-2. create a bicycle junction;
-3. auto-detect nearby direction-specific segment ports;
-4. show proposed coverage; and
-5. save only explicit corrections/preferences.
+1. multi-select reviewed internal manual/OSM edges in Base Network;
+2. create a named draft junction from those references;
+3. auto-detect boundary arms and direction-specific segment ports;
+4. allow proposed ports to be included/excluded;
+5. show movement coverage and the exact public footprint; and
+6. save only explicit corrections/preferences.
 
 Do not require JSON authoring or per-movement acceptance of unique valid paths.
+
+Persist source records in `data/network-junctions.json`. Derived records refer
+to a roundabout id; custom records refer to internal base-edge ids. Both use the
+same name, navigation kind, publication state, fingerprint, and port override
+model.
 
 ### Task 3.6 — Group segment issues by junction
 
@@ -283,7 +313,15 @@ Direction Review and Build issue rows caused by one junction should link to one
 junction-level issue. Segment inspectors retain a concise backlink describing
 the affected movement.
 
-## Phase 4 — Overlay terminal attachments and unnamed membership
+### Task 3.7 — Add named publication control
+
+Add detected, published, excluded, and stale presentation states. Publishing
+requires a name, two logical arms, legal inter-arm coverage, current topology,
+and no attachment blockers. Show validation reasons beside the action. A
+detected candidate remains a preview and never enters the released network by
+proximity alone.
+
+## Phase 4 — Overlay terminal attachments and published junction membership
 
 ### Task 4.1 — Extend Overlay V2 terminal validation
 
@@ -391,14 +429,22 @@ Initially:
 Only migrate cue matching to junction traversal records after parity fixtures
 prove no regression.
 
-### Task 6.3 — Present junctions as unnamed infrastructure
+### Task 6.3 — Present named landmarks with unnamed internal spans
 
 Verify itinerary, cards, map labels, voice, and segment spans:
 
-- no fake “junction segment” name;
+- a public junction landmark name without a fake “junction segment” name;
 - destination CW segment name appears after the movement when available;
 - existing #358 name continues across its roundabout; and
 - migrated 328/329 names disappear only after their deprecation is released.
+
+### Task 6.4 — Publish one shared web/mobile footprint
+
+Build the public footprint from the deduplicated movement edges connecting
+attached arms. Include it in `network-junctions.json` with stable ids and
+presentation metadata. Merge it into web and native network rendering without
+making it selectable as a named CW segment. Add map-asset, web wiring, native
+wiring, and asset-sync tests.
 
 ## Phase 7 — Real-data rollout
 

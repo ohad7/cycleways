@@ -55,7 +55,10 @@ function nextManeuverDescriptor(cue) {
 
 function primaryManeuverText(cue) {
   if (cue?.type === "turn") return `פנה ${directionWord(cue.direction)}`;
-  if (cue?.type === "roundabout") return roundaboutPhrase(cue.direction) || "המשך במסלול";
+  if (cue?.type === "roundabout") {
+    const phrase = roundaboutPhrase(cue.direction) || "המשך במסלול";
+    return cue.junctionName ? `ב${cue.junctionName}, ${phrase}` : phrase;
+  }
   if (cue?.type === "crossing") return "חצו לצד השני של הכביש";
   return cueDisplay(cue).text;
 }
@@ -118,8 +121,9 @@ function cueDisplay(cue) {
         : { text: "עיקול שמאלה", icon: "arrow-back-outline" };
     case "roundabout": {
       const text = roundaboutPhrase(cue.direction);
-      return text
-        ? { text: `${text}${thenManeuverPhrase(cue)}`, icon: "reload-outline" }
+      const namedText = text && cue.junctionName ? `ב${cue.junctionName}, ${text}` : text;
+      return namedText
+        ? { text: `${namedText}${thenManeuverPhrase(cue)}`, icon: "reload-outline" }
         : { text: "המשך במסלול", icon: "navigate-outline" };
     }
     case "crossing":
