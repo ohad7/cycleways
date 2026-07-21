@@ -5141,6 +5141,8 @@ function junctionPublicationHtml(junction) {
     : "";
   const issues = (publication.issues || []).map((issue) => `<li>${escapeHtml(junctionPublicationIssueLabel(issue))}</li>`).join("");
   const publishBlocked = (publication.issues || []).some((issue) => issue.code !== "junction_name_required");
+  const canDeleteDraft = junction.kind === "custom_bicycle"
+    && junction.registryRecord?.status !== "published";
   return `<section class="junction-publication-card">
     <h3>CW network publication</h3>
     <p class="junction-publication-state">${escapeHtml(publication.status || "detected")}</p>
@@ -5156,6 +5158,7 @@ function junctionPublicationHtml(junction) {
       <button type="button" data-junction-publication="detected" class="secondary-button">Save draft</button>
       <button type="button" data-junction-publication="published" class="primary-button" ${publishBlocked ? "disabled" : ""}>Publish as CW junction</button>
       <button type="button" data-junction-publication="excluded" class="secondary-button danger">Exclude</button>
+      ${canDeleteDraft ? '<button type="button" data-junction-delete-draft class="secondary-button danger">Delete draft</button>' : ""}
     </div>
   </section>`;
 }
@@ -5193,10 +5196,35 @@ async function saveJunctionRegistry(status) {
       : "Junction draft saved.");
 }
 
+async function deleteSelectedJunctionDraft() {
+  const junction = selectedNetworkJunction();
+  if (!junction || junction.kind !== "custom_bicycle") return;
+  const label = junction.name || junction.id;
+  if (!window.confirm(`Delete draft ${label}? This removes the junction definition but does not delete its base edges.`)) {
+    return;
+  }
+  const response = await fetch("/api/network-junctions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "delete", junctionId: junction.id }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not delete junction draft");
+  state.roundabouts.junctionsData = payload;
+  const nextCustom = (payload.items || []).find((item) => item.candidate?.kind === "custom_bicycle");
+  state.roundabouts.selectedId = nextCustom?.candidate?.id || roundaboutFilteredItems()[0]?.candidate?.id || null;
+  state.roundabouts.selectedMovementId = null;
+  updateRoundaboutSources();
+  renderRoundaboutsPanel();
+  setStatus(`Deleted junction draft ${label}. Base edges were not changed.`);
+}
+
 function bindJunctionPublicationActions() {
   for (const button of els.roundaboutsDetail.querySelectorAll("[data-junction-publication]")) {
     button.addEventListener("click", () => saveJunctionRegistry(button.dataset.junctionPublication).catch(showError));
   }
+  els.roundaboutsDetail.querySelector("[data-junction-delete-draft]")
+    ?.addEventListener("click", () => deleteSelectedJunctionDraft().catch(showError));
 }
 
 function renderCustomJunctionDetail(junction) {

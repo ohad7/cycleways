@@ -5477,8 +5477,20 @@ const server = createServer(async (request, response) => {
               throw Object.assign(new Error(`Cannot publish junction: ${codes || "validation failed"}`), { status: 400 });
             }
           }
+        } else if (body?.action === "delete") {
+          const previous = nextRegistry.junctions[junctionId];
+          if (!previous) {
+            throw Object.assign(new Error("Unknown junction draft"), { status: 400 });
+          }
+          if (previous.source?.type !== "custom") {
+            throw Object.assign(new Error("Only custom junction drafts can be deleted"), { status: 400 });
+          }
+          if (previous.status === "published") {
+            throw Object.assign(new Error("Published junctions cannot be deleted; exclude them first"), { status: 409 });
+          }
+          delete nextRegistry.junctions[junctionId];
         } else {
-          throw Object.assign(new Error("Junction action must be create or save"), { status: 400 });
+          throw Object.assign(new Error("Junction action must be create, save, or delete"), { status: 400 });
         }
         const normalized = normalizeNetworkJunctionRegistry(nextRegistry);
         await writeJsonAtomic(networkJunctionRegistryPath, normalized);

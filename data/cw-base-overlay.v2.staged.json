@@ -38820,171 +38820,99 @@
     "330": {
       "alignments": {
         "aToB": {
-          "draft": {
-            "disposition": "needs_review",
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
                 {
-                  "direction": "forward",
                   "edgeId": "e363859827_1",
-                  "fromFraction": 0,
-                  "osmWayId": 363859827,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 0,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 363859827
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e842438981_1",
-                  "fromFraction": 0,
-                  "osmWayId": 842438981,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 1,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 842438981
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e842438982_1",
-                  "fromFraction": 0,
-                  "osmWayId": 842438982,
+                  "source": "osm",
+                  "direction": "forward",
                   "sequenceIndex": 2,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 842438982
                 },
                 {
-                  "direction": "forward",
                   "edgeId": "e815936019_1",
-                  "fromFraction": 0,
-                  "osmWayId": 815936019,
-                  "sequenceIndex": 3,
                   "source": "osm",
-                  "toFraction": 1
+                  "direction": "forward",
+                  "sequenceIndex": 3,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 815936019
                 },
                 {
-                  "direction": "forward",
-                  "edgeId": "manual-osm-815936019-mq0nu44u",
-                  "fromFraction": 0,
-                  "manualEdgeId": "manual-osm-815936019-mq0nu44u",
-                  "sequenceIndex": 4,
+                  "edgeId": "manual-osm-815936019-mrufh8no",
                   "source": "manual",
-                  "toFraction": 1
+                  "direction": "forward",
+                  "sequenceIndex": 4,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "manualEdgeId": "manual-osm-815936019-mrufh8no"
                 }
               ]
             },
-            "mappingDigest": "3a3194e3de6a6400f3e630594527dde9de01142376ce436d9f443b7aefe8cfa2",
-            "candidate": {
-              "classification": "unresolved",
-              "kind": "v1-existing"
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "endpoint_zone_failure",
-                  "ok": false
-                },
-                {
-                  "code": "missing_edge",
-                  "edgeId": "manual-osm-815936019-mq0nu44u"
-                }
-              ],
-              "traversalStates": {
-                "0:e363859827_1": "allowed",
-                "1:e842438981_1": "allowed",
-                "2:e842438982_1": "allowed",
-                "3:e815936019_1": "allowed",
-                "4:manual-osm-815936019-mq0nu44u": "unknown"
-              },
-              "policyPrecedence": []
+            "mappingDigest": "cd1dae2aab7a5296aef8c52ce3923e0afbcc53168e857355e8c9896041efb4a3",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-21",
+              "batchId": "network-authoring-330-1784627718803331",
+              "rationale": "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
+              "acceptanceBasis": "automatic-bidirectional-match",
+              "automated": true,
+              "graphDigest": "14ad00b1ac2ae341cb98a025e514ceda6b7f86136555ba68904851220a4ff68e",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "b33cf92d1ea84d3ed2c511080aa5482afe115e676be6e9dd4e5da1eaa9a2bbbc",
+              "mappingDigest": "cd1dae2aab7a5296aef8c52ce3923e0afbcc53168e857355e8c9896041efb4a3",
+              "evidenceDigest": "b4d37cf4fe18be2948f3e812555396c2f28edcdbfb7dfd90ef3d912b91064b09"
             }
           },
-          "published": null
+          "draft": null
         },
         "bToA": {
-          "draft": {
-            "disposition": "needs_review",
+          "published": {
+            "disposition": "accepted",
             "realization": {
-              "type": "explicit",
-              "edgeRefs": [
-                {
-                  "direction": "reverse",
-                  "edgeId": "manual-osm-815936019-mq0nu44u",
-                  "fromFraction": 0,
-                  "manualEdgeId": "manual-osm-815936019-mq0nu44u",
-                  "sequenceIndex": 0,
-                  "source": "manual",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "reverse",
-                  "edgeId": "e815936019_1",
-                  "fromFraction": 0,
-                  "osmWayId": 815936019,
-                  "sequenceIndex": 1,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "reverse",
-                  "edgeId": "e842438982_1",
-                  "fromFraction": 0,
-                  "osmWayId": 842438982,
-                  "sequenceIndex": 2,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "reverse",
-                  "edgeId": "e842438981_1",
-                  "fromFraction": 0,
-                  "osmWayId": 842438981,
-                  "sequenceIndex": 3,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "reverse",
-                  "edgeId": "e363859827_1",
-                  "fromFraction": 0,
-                  "osmWayId": 363859827,
-                  "sequenceIndex": 4,
-                  "source": "osm",
-                  "toFraction": 1
-                }
-              ]
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "cd1dae2aab7a5296aef8c52ce3923e0afbcc53168e857355e8c9896041efb4a3"
             },
-            "mappingDigest": "4546b750df467cc53a6af87155c1d97d4256b65fa215587a991d1d1f0c1a953a",
-            "candidate": {
-              "kind": "previous-draft",
-              "previousCandidateKind": "previous-draft",
-              "sourceGeometryChanged": false
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "endpoint_zone_failure",
-                  "ok": false
-                },
-                {
-                  "code": "missing_edge",
-                  "edgeId": "manual-osm-815936019-mq0nu44u"
-                }
-              ],
-              "traversalStates": {
-                "0:manual-osm-815936019-mq0nu44u": "unknown",
-                "1:e815936019_1": "allowed",
-                "2:e842438982_1": "allowed",
-                "3:e842438981_1": "allowed",
-                "4:e363859827_1": "allowed"
-              },
-              "policyPrecedence": []
+            "mappingDigest": "ba9f4348765235f939304330b1d0370acbf0fea85eb81780aeb220282c7b59e7",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-21",
+              "batchId": "network-authoring-330-1784627718803331",
+              "rationale": "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
+              "acceptanceBasis": "automatic-bidirectional-match",
+              "automated": true,
+              "graphDigest": "14ad00b1ac2ae341cb98a025e514ceda6b7f86136555ba68904851220a4ff68e",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "b33cf92d1ea84d3ed2c511080aa5482afe115e676be6e9dd4e5da1eaa9a2bbbc",
+              "mappingDigest": "ba9f4348765235f939304330b1d0370acbf0fea85eb81780aeb220282c7b59e7",
+              "evidenceDigest": "8c31e175af12fd2d1b5705a6977fc8f145a59c4dfcdfe16b1424c00b99ccf57f"
             }
           },
-          "published": null
+          "draft": null
         }
       },
       "endpoints": {
@@ -38993,37 +38921,41 @@
             35.6401902,
             33.2276173
           ],
+          "zoneMeters": 30,
           "labels": {
             "key": "A"
-          },
-          "zoneMeters": 30
+          }
         },
         "b": {
           "coordinate": [
-            35.63125555414237,
-            33.22421782325485
+            35.63129649995821,
+            33.224154105717375
           ],
+          "zoneMeters": 30,
           "labels": {
             "key": "B"
-          },
-          "zoneMeters": 30
+          }
         }
       },
       "lifecycleStatus": "active",
       "migration": {
-        "classification": "unresolved",
+        "classification": "symmetric_candidate",
         "endpointMatch": {
           "alignmentKey": null,
           "reason": "missing_terminals"
         },
-        "sourceMappingOrigin": "frozen-v1",
+        "sourceMappingOrigin": "network-authoring-v2",
         "sourceMappingStatus": "accepted_auto_match",
-        "sourceSchemaVersion": 1
+        "sourceSchemaVersion": 2,
+        "authoringRevision": 1784627718803331,
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-authoring"
       },
       "navigable": true,
       "segmentId": 330,
       "segmentName": "שביל אופניים דפנה",
-      "sourceGeometryDigest": "be2d348f0eeb3b61f409ae96de5135e0c90006d165752b12dbca65866106802f"
+      "sourceGeometryDigest": "b33cf92d1ea84d3ed2c511080aa5482afe115e676be6e9dd4e5da1eaa9a2bbbc"
     },
     "331": {
       "alignments": {
@@ -42709,6 +42641,307 @@
       "segmentId": 361,
       "segmentName": "רחוב הנרייטה סאלד",
       "sourceGeometryDigest": "a8e61fda4db8a14b8acd73b94b56ea8ad97fb5d1d923d2d5f003ead98169f7c1"
+    },
+    "363": {
+      "segmentId": 363,
+      "segmentName": "New segment - 2",
+      "lifecycleStatus": "active",
+      "navigable": true,
+      "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c",
+      "endpoints": {
+        "a": {
+          "coordinate": [
+            35.6309581,
+            33.2241527
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "A"
+          }
+        },
+        "b": {
+          "coordinate": [
+            35.631292,
+            33.224137
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "B"
+          }
+        }
+      },
+      "alignments": {
+        "aToB": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "e73965591_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 73965591
+                },
+                {
+                  "edgeId": "manual-osm-1036770657-mrufgc46",
+                  "source": "manual",
+                  "direction": "reverse",
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "manualEdgeId": "manual-osm-1036770657-mrufgc46"
+                }
+              ]
+            },
+            "mappingDigest": "24d72979e379d67607d692a3623ca6fe9cdcb32b4f25259d17ea289476d009c8",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-21",
+              "batchId": "network-authoring-363-1784627744445365",
+              "rationale": "Explicit curator edge selection with a mechanically validated exact reverse",
+              "acceptanceBasis": "explicit-authoring-safe-reverse",
+              "automated": false,
+              "graphDigest": "14ad00b1ac2ae341cb98a025e514ceda6b7f86136555ba68904851220a4ff68e",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c",
+              "mappingDigest": "24d72979e379d67607d692a3623ca6fe9cdcb32b4f25259d17ea289476d009c8",
+              "evidenceDigest": "f8dbb6ebea19f3395016f10d8b1cb7be6cd322bd358d925ceac08b2ebc2c4815"
+            }
+          },
+          "draft": null
+        },
+        "bToA": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "24d72979e379d67607d692a3623ca6fe9cdcb32b4f25259d17ea289476d009c8"
+            },
+            "mappingDigest": "e3b7dfc48b455cf1220b6b247b33bf5d00582eadadf06bd1640e438965338791",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-21",
+              "batchId": "network-authoring-363-1784627744445365",
+              "rationale": "Explicit curator edge selection with a mechanically validated exact reverse",
+              "acceptanceBasis": "explicit-authoring-safe-reverse",
+              "automated": false,
+              "graphDigest": "14ad00b1ac2ae341cb98a025e514ceda6b7f86136555ba68904851220a4ff68e",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c",
+              "mappingDigest": "e3b7dfc48b455cf1220b6b247b33bf5d00582eadadf06bd1640e438965338791",
+              "evidenceDigest": "4bfe8488b17a51c2a43c832d050a857ddab3ce27c1adbf6e0499132e02bd37dd"
+            }
+          },
+          "draft": null
+        }
+      },
+      "migration": {
+        "classification": "symmetric_candidate",
+        "sourceSchemaVersion": 2,
+        "sourceMappingOrigin": "network-authoring-v2",
+        "authoringRevision": 1784627744445365,
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-authoring"
+      }
+    },
+    "364": {
+      "segmentId": 364,
+      "segmentName": "שביל אופניים דפנה רחבה",
+      "lifecycleStatus": "active",
+      "navigable": true,
+      "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c",
+      "endpoints": {
+        "a": {
+          "coordinate": [
+            35.6309581,
+            33.2241527
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "A"
+          }
+        },
+        "b": {
+          "coordinate": [
+            35.631292,
+            33.224137
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "B"
+          }
+        }
+      },
+      "alignments": {
+        "aToB": {
+          "published": null,
+          "draft": {
+            "disposition": "needs_review",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "e73965591_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 73965591
+                },
+                {
+                  "edgeId": "manual-osm-1036770657-mrufgc46",
+                  "source": "manual",
+                  "direction": "reverse",
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "manualEdgeId": "manual-osm-1036770657-mrufgc46"
+                }
+              ]
+            },
+            "mappingDigest": "17907e865712fb0c5d85498cc49b2475487c6b05b40e040d99ff71d32f36319d",
+            "candidate": {
+              "kind": "manual-editor",
+              "sourceRevision": 1784628211868365
+            },
+            "validation": {
+              "ok": false,
+              "status": "invalid",
+              "reasons": [
+                {
+                  "code": "directed_ownership_conflict",
+                  "edgeId": "e73965591_1",
+                  "owner": {
+                    "segmentId": 363,
+                    "segmentName": "New segment - 2",
+                    "alignmentKey": "aToB"
+                  }
+                },
+                {
+                  "code": "directed_ownership_conflict",
+                  "edgeId": "manual-osm-1036770657-mrufgc46",
+                  "owner": {
+                    "segmentId": 363,
+                    "segmentName": "New segment - 2",
+                    "alignmentKey": "aToB"
+                  }
+                }
+              ],
+              "traversalStates": {
+                "0:e73965591_1": "allowed",
+                "1:manual-osm-1036770657-mrufgc46": "allowed"
+              },
+              "policyPrecedence": [],
+              "terminals": {
+                "start": [
+                  35.6309581,
+                  33.2241527
+                ],
+                "end": [
+                  35.631292,
+                  33.224137
+                ]
+              },
+              "endpointDistancesMeters": {
+                "start": 0,
+                "end": 0
+              }
+            }
+          }
+        },
+        "bToA": {
+          "published": null,
+          "draft": {
+            "disposition": "needs_review",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "manual-osm-1036770657-mrufgc46",
+                  "source": "manual",
+                  "direction": "forward",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "manualEdgeId": "manual-osm-1036770657-mrufgc46"
+                },
+                {
+                  "edgeId": "e73965591_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 73965591
+                }
+              ]
+            },
+            "mappingDigest": "bd9ffbad26ba24d55dae6d4b9ed49053b38ab171228d1423255fcb09b685aee7",
+            "candidate": {
+              "kind": "exact-reverse",
+              "sourceRevision": 1784628211868365
+            },
+            "validation": {
+              "ok": false,
+              "status": "invalid",
+              "reasons": [
+                {
+                  "code": "directed_ownership_conflict",
+                  "edgeId": "manual-osm-1036770657-mrufgc46",
+                  "owner": {
+                    "segmentId": 363,
+                    "segmentName": "New segment - 2",
+                    "alignmentKey": "bToA"
+                  }
+                },
+                {
+                  "code": "directed_ownership_conflict",
+                  "edgeId": "e73965591_1",
+                  "owner": {
+                    "segmentId": 363,
+                    "segmentName": "New segment - 2",
+                    "alignmentKey": "bToA"
+                  }
+                }
+              ],
+              "traversalStates": {
+                "0:manual-osm-1036770657-mrufgc46": "allowed",
+                "1:e73965591_1": "allowed"
+              },
+              "policyPrecedence": [],
+              "terminals": {
+                "start": [
+                  35.631292,
+                  33.224137
+                ],
+                "end": [
+                  35.6309581,
+                  33.2241527
+                ]
+              },
+              "endpointDistancesMeters": {
+                "start": 0,
+                "end": 0
+              }
+            }
+          }
+        }
+      },
+      "migration": {
+        "classification": "unresolved",
+        "sourceSchemaVersion": 2,
+        "sourceMappingOrigin": "network-authoring-v2",
+        "authoringRevision": 1784628211868365,
+        "lastOutcome": "needs-decision",
+        "lastOutcomeCode": "directed_ownership_conflict"
+      }
     }
   }
 }

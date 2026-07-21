@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T09:05:17.093Z",
+  "updatedAt": "2026-07-21T10:04:00.373Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -17690,9 +17690,9 @@
     },
     "330": {
       "segmentId": 330,
-      "segmentName": "New segment - 2",
+      "segmentName": "שביל אופניים דפנה",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
       "avgDistanceMeters": 0.03,
@@ -17736,16 +17736,16 @@
           "osmWayId": 815936019
         },
         {
-          "edgeId": "manual-osm-815936019-mq0nu44u",
+          "edgeId": "manual-osm-815936019-mrufh8no",
           "source": "manual",
           "direction": "forward",
           "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-osm-815936019-mq0nu44u"
+          "manualEdgeId": "manual-osm-815936019-mrufh8no"
         }
       ],
-      "updatedAt": "2026-06-05T10:45:12.876Z"
+      "updatedAt": "2026-07-21T09:55:21.425Z"
     },
     "331": {
       "segmentId": 331,
@@ -19348,6 +19348,71 @@
         }
       ],
       "updatedAt": "2026-07-20T16:05:06.931Z"
+    },
+    "363": {
+      "segmentId": 363,
+      "segmentName": "New segment - 2",
+      "status": "accepted_edge_set",
+      "source": "edge_pick",
+      "confidence": "manual",
+      "coverageRatio": 1,
+      "avgDistanceMeters": null,
+      "gapCount": 0,
+      "failureClass": null,
+      "edgeRefs": [
+        {
+          "edgeId": "e73965591_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 73965591
+        },
+        {
+          "edgeId": "manual-osm-1036770657-mrufgc46",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-osm-1036770657-mrufgc46"
+        }
+      ],
+      "updatedAt": "2026-07-21T09:55:44.569Z"
+    },
+    "364": {
+      "segmentId": 364,
+      "segmentName": "שביל אופניים דפנה רחבה",
+      "source": "edge_pick",
+      "status": "needs_edit",
+      "edgeRefs": [
+        {
+          "edgeId": "e73965591_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 73965591
+        },
+        {
+          "edgeId": "manual-osm-1036770657-mrufgc46",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-osm-1036770657-mrufgc46"
+        }
+      ],
+      "confidence": "manual",
+      "coverageRatio": 1,
+      "avgDistanceMeters": null,
+      "gapCount": 0,
+      "failureClass": "edge_pick_conflict",
+      "failureMessage": "Edge e73965591_1 is already owned by segment New segment - 2.",
+      "updatedAt": "2026-07-21T10:04:00.372Z"
     }
   }
 }
