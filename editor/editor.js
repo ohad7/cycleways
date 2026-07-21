@@ -36,6 +36,7 @@ import {
   networkSegmentNeedsDirections,
   networkSegmentStatus,
 } from "./lib/network-authoring-status.mjs";
+import { cwNetworkRenderEdgeRefs } from "./lib/cw-network-rendering.mjs";
 import {
   authoringObjectRevision,
   authoringSourceIsCurrent,
@@ -2321,6 +2322,7 @@ function cwOverlayNetworkCollection() {
     cache.cwOverlayNetworkGraphEdges === state.baseOverlay.graphEdges &&
     cache.cwOverlayNetworkManualEdges === state.baseOverlay.manualBaseEdges &&
     cache.cwOverlayNetworkActiveFeatures === state.activeFeatures &&
+    cache.cwOverlayNetworkDirectionOverlay === state.directionReview.overlay &&
     cache.cwOverlayNetworkJunctions === state.roundabouts.junctionsData
   ) {
     return cache.cwOverlayNetworkCollection;
@@ -2332,15 +2334,15 @@ function cwOverlayNetworkCollection() {
       .map(({ feature }) => [Number(feature.properties?.id), feature])
       .filter(([segmentId]) => Number.isInteger(segmentId)),
   );
-  for (const mapping of Object.values(state.baseOverlay.overlay?.segments || {})) {
-    const segmentId = Number(mapping?.segmentId);
-    const segment = activeById.get(segmentId);
-    if (!isCurrentV1Mapping(mapping) || !segment || !Array.isArray(mapping.edgeRefs)) {
-      continue;
-    }
-
-    const segmentName = mapping.segmentName || featureName(segment);
-    for (const [edgeIndex, edgeRef] of normalizeOverlayEdgeRefs(mapping.edgeRefs).entries()) {
+  for (const [segmentId, segment] of activeById.entries()) {
+    const mapping = state.baseOverlay.overlay?.segments?.[String(segmentId)] || null;
+    const directionSegment = state.directionReview.overlay?.segments?.[String(segmentId)] || null;
+    const renderMapping = cwNetworkRenderEdgeRefs({
+      directionSegment,
+      compatibilityMapping: mapping,
+    });
+    const segmentName = directionSegment?.segmentName || mapping?.segmentName || featureName(segment);
+    for (const [edgeIndex, edgeRef] of renderMapping.edgeRefs.entries()) {
       const edgeId = String(edgeRef?.edgeId || "");
       const edgeFeature = graphFeatureForEdgeId(edgeId);
       if (!edgeId || edgeFeature?.geometry?.type !== "LineString") continue;
@@ -2354,6 +2356,8 @@ function cwOverlayNetworkCollection() {
           overlaySegmentId: segmentId,
           overlaySegmentName: segmentName,
           overlaySequenceIndex: edgeRef.sequenceIndex ?? edgeIndex,
+          overlayAlignmentKeys: (edgeRef.alignmentKeys || []).join(","),
+          overlaySource: renderMapping.source,
           roadType: segment.properties?.roadType || edgeFeature.properties?.roadType || "paved",
         },
       });
@@ -2389,6 +2393,7 @@ function cwOverlayNetworkCollection() {
   cache.cwOverlayNetworkGraphEdges = state.baseOverlay.graphEdges;
   cache.cwOverlayNetworkManualEdges = state.baseOverlay.manualBaseEdges;
   cache.cwOverlayNetworkActiveFeatures = state.activeFeatures;
+  cache.cwOverlayNetworkDirectionOverlay = state.directionReview.overlay;
   cache.cwOverlayNetworkJunctions = state.roundabouts.junctionsData;
   return cache.cwOverlayNetworkCollection;
 }
@@ -11551,7 +11556,10 @@ function wireEvents() {
       return;
     }
     const segmentId = Number(feature?.properties?.overlaySegmentId);
-    if (!Number.isInteger(segmentId) || !selectSegmentById(segmentId)) return;
+    // Direct map selection must preserve the curator's current working view.
+    // Explicit navigation surfaces (issue queues and the segment drawer) can
+    // still request a fit when their purpose is to locate a segment.
+    if (!Number.isInteger(segmentId) || !selectSegmentById(segmentId, false)) return;
     state.suppressNextSegmentClick = true;
     window.setTimeout(() => {
       state.suppressNextSegmentClick = false;

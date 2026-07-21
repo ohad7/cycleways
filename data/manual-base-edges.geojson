@@ -2641,39 +2641,6 @@
     },
     {
       "type": "Feature",
-      "id": "manual-144-mpe6tooe",
-      "properties": {
-        "id": "manual-144-mpe6tooe",
-        "manualEdgeId": "manual-144-mpe6tooe",
-        "source": "manual",
-        "status": "active",
-        "roadType": "paved",
-        "createdAt": "2026-05-20T14:59:17.678Z",
-        "updatedAt": "2026-05-20T14:59:17.678Z",
-        "linkedSegmentId": 144,
-        "linkedSegmentName": "קרית שמונה תעשייה דרומי",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.576678,
-            33.19932
-          ],
-          [
-            35.576831,
-            33.199437
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
       "id": "manual-manual-146-mpe87zzf-a-mrtexxm7",
       "properties": {
         "id": "manual-manual-146-mpe87zzf-a-mrtexxm7",
@@ -6408,6 +6375,1097 @@
           [
             35.631687,
             33.223886
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-1189433249-mrurjvvd-a-mrurkzh4",
+      "properties": {
+        "id": "manual-manual-osm-1189433249-mrurjvvd-a-mrurkzh4",
+        "manualEdgeId": "manual-manual-osm-1189433249-mrurjvvd-a-mrurkzh4",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e1189433249_1",
+        "copiedFromOsmWayId": 1189433249,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-21T14:43:15.865Z",
+        "updatedAt": "2026-07-21T14:44:07.191Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e1189433249_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-1189433249-mrurjvvd"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.579445,
+            33.199112
+          ],
+          [
+            35.578965,
+            33.199138
+          ],
+          [
+            35.577918,
+            33.1992
+          ],
+          [
+            35.577544,
+            33.199227
+          ],
+          [
+            35.577076,
+            33.199365
+          ],
+          [
+            35.577012,
+            33.199383
+          ],
+          [
+            35.576937,
+            33.199391
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-1189433249-mrurjvvd-b-mrurkzh4",
+      "properties": {
+        "id": "manual-manual-osm-1189433249-mrurjvvd-b-mrurkzh4",
+        "manualEdgeId": "manual-manual-osm-1189433249-mrurjvvd-b-mrurkzh4",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e1189433249_1",
+        "copiedFromOsmWayId": 1189433249,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-21T14:43:15.865Z",
+        "updatedAt": "2026-07-21T14:44:07.191Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e1189433249_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-1189433249-mrurjvvd"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576937,
+            33.199391
+          ],
+          [
+            35.576855,
+            33.199348
+          ],
+          [
+            35.576818,
+            33.199314
+          ],
+          [
+            35.576746,
+            33.199317
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-1189433249-mrurmojo",
+      "properties": {
+        "id": "manual-osm-1189433249-mrurmojo",
+        "manualEdgeId": "manual-osm-1189433249-mrurmojo",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e1189433249_2",
+        "copiedFromOsmWayId": 1189433249,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-21T14:45:26.340Z",
+        "updatedAt": "2026-07-21T14:45:26.340Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e1189433249_2",
+          "origin": "inherited-osm-policy"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576746,
+            33.199317
+          ],
+          [
+            35.576677,
+            33.19932
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-1189433249-mruro462-a-mrurob6o",
+      "properties": {
+        "id": "manual-manual-osm-1189433249-mruro462-a-mrurob6o",
+        "manualEdgeId": "manual-manual-osm-1189433249-mruro462-a-mrurob6o",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e1189433249_3",
+        "copiedFromOsmWayId": 1189433249,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-21T14:46:33.242Z",
+        "updatedAt": "2026-07-21T14:46:42.336Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e1189433249_3",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-1189433249-mruro462"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576677,
+            33.19932
+          ],
+          [
+            35.576616,
+            33.199323
+          ],
+          [
+            35.576415,
+            33.199496
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-1189433249-mruro462-b-mrurob6o",
+      "properties": {
+        "id": "manual-manual-osm-1189433249-mruro462-b-mrurob6o",
+        "manualEdgeId": "manual-manual-osm-1189433249-mruro462-b-mrurob6o",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e1189433249_3",
+        "copiedFromOsmWayId": 1189433249,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-21T14:46:33.242Z",
+        "updatedAt": "2026-07-21T14:46:42.336Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e1189433249_3",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-1189433249-mruro462"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576415,
+            33.199496
+          ],
+          [
+            35.576255,
+            33.199523
+          ],
+          [
+            35.576118,
+            33.199506
+          ],
+          [
+            35.575978,
+            33.199456
+          ],
+          [
+            35.575888,
+            33.199416
+          ],
+          [
+            35.575537,
+            33.199282
+          ],
+          [
+            35.57541,
+            33.19922
+          ],
+          [
+            35.575384,
+            33.19923
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-62-mrurqq42-a-mrurz090",
+      "properties": {
+        "id": "manual-manual-62-mrurqq42-a-mrurz090",
+        "manualEdgeId": "manual-manual-62-mrurqq42-a-mrurz090",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:48:34.994Z",
+        "updatedAt": "2026-07-21T14:55:01.380Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974",
+        "splitFrom": "manual-62-mrurqq42"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576415,
+            33.199496
+          ],
+          [
+            35.576381,
+            33.199586
+          ],
+          [
+            35.576381,
+            33.199646
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-62-mrurqq42-b-mrurz090",
+      "properties": {
+        "id": "manual-manual-62-mrurqq42-b-mrurz090",
+        "manualEdgeId": "manual-manual-62-mrurqq42-b-mrurz090",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:48:34.994Z",
+        "updatedAt": "2026-07-21T14:55:01.380Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974",
+        "splitFrom": "manual-62-mrurqq42"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576381,
+            33.199646
+          ],
+          [
+            35.576381,
+            33.199671
+          ],
+          [
+            35.576458,
+            33.199728
+          ],
+          [
+            35.576536,
+            33.199785
+          ],
+          [
+            35.576617,
+            33.199823
+          ],
+          [
+            35.576663,
+            33.199863
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-356713703-mrurrauz-a-mrurrfpo",
+      "properties": {
+        "id": "manual-manual-osm-356713703-mrurrauz-a-mrurrfpo",
+        "manualEdgeId": "manual-manual-osm-356713703-mrurrauz-a-mrurrfpo",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e356713703_1",
+        "copiedFromOsmWayId": 356713703,
+        "highway": "tertiary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T14:49:01.883Z",
+        "updatedAt": "2026-07-21T14:49:08.172Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e356713703_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-356713703-mrurrauz"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576422,
+            33.200599
+          ],
+          [
+            35.576454,
+            33.200496
+          ],
+          [
+            35.576486,
+            33.200415
+          ],
+          [
+            35.576599,
+            33.200218
+          ],
+          [
+            35.576647,
+            33.200137
+          ],
+          [
+            35.576668,
+            33.200069
+          ],
+          [
+            35.576674,
+            33.199966
+          ],
+          [
+            35.576668,
+            33.199903
+          ],
+          [
+            35.576663,
+            33.199863
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-356713703-mrurrauz-b-mrurrfpo",
+      "properties": {
+        "id": "manual-manual-osm-356713703-mrurrauz-b-mrurrfpo",
+        "manualEdgeId": "manual-manual-osm-356713703-mrurrauz-b-mrurrfpo",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e356713703_1",
+        "copiedFromOsmWayId": 356713703,
+        "highway": "tertiary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T14:49:01.883Z",
+        "updatedAt": "2026-07-21T14:49:08.172Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e356713703_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-356713703-mrurrauz"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576663,
+            33.199863
+          ],
+          [
+            35.576642,
+            33.199818
+          ],
+          [
+            35.576602,
+            33.199766
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-356713695-mrursjhy-a-mrursmfd",
+      "properties": {
+        "id": "manual-manual-osm-356713695-mrursjhy-a-mrursmfd",
+        "manualEdgeId": "manual-manual-osm-356713695-mrursjhy-a-mrursmfd",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e356713695_1",
+        "copiedFromOsmWayId": 356713695,
+        "highway": "tertiary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T14:49:59.734Z",
+        "updatedAt": "2026-07-21T14:50:03.529Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e356713695_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-356713695-mrursjhy"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576792,
+            33.199776
+          ],
+          [
+            35.576768,
+            33.199829
+          ],
+          [
+            35.576752,
+            33.199872
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-356713695-mrursjhy-b-mrursmfd",
+      "properties": {
+        "id": "manual-manual-osm-356713695-mrursjhy-b-mrursmfd",
+        "manualEdgeId": "manual-manual-osm-356713695-mrursjhy-b-mrursmfd",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e356713695_1",
+        "copiedFromOsmWayId": 356713695,
+        "highway": "tertiary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T14:49:59.734Z",
+        "updatedAt": "2026-07-21T14:50:03.529Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e356713695_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-356713695-mrursjhy"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576752,
+            33.199872
+          ],
+          [
+            35.576744,
+            33.199919
+          ],
+          [
+            35.576741,
+            33.200024
+          ],
+          [
+            35.57673,
+            33.20009
+          ],
+          [
+            35.576714,
+            33.200144
+          ],
+          [
+            35.576687,
+            33.2002
+          ],
+          [
+            35.576537,
+            33.200442
+          ],
+          [
+            35.576422,
+            33.200599
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-62-mrurtw0g",
+      "properties": {
+        "id": "manual-62-mrurtw0g",
+        "manualEdgeId": "manual-62-mrurtw0g",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:51:02.608Z",
+        "updatedAt": "2026-07-21T14:51:02.608Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576663,
+            33.199863
+          ],
+          [
+            35.576752,
+            33.199872
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-62-mruruu54",
+      "properties": {
+        "id": "manual-62-mruruu54",
+        "manualEdgeId": "manual-62-mruruu54",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:51:46.840Z",
+        "updatedAt": "2026-07-21T14:51:46.840Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576752,
+            33.199872
+          ],
+          [
+            35.576841,
+            33.199866
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-62-mrurw4aw-a-mrus26hs",
+      "properties": {
+        "id": "manual-manual-62-mrurw4aw-a-mrus26hs",
+        "manualEdgeId": "manual-manual-62-mrurw4aw-a-mrus26hs",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:52:46.664Z",
+        "updatedAt": "2026-07-21T14:57:29.439Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974",
+        "splitFrom": "manual-62-mrurw4aw"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576937,
+            33.199391
+          ],
+          [
+            35.576998,
+            33.199463
+          ],
+          [
+            35.577022,
+            33.199486
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-62-mrurw4aw-b-mrus26hs",
+      "properties": {
+        "id": "manual-manual-62-mrurw4aw-b-mrus26hs",
+        "manualEdgeId": "manual-manual-62-mrurw4aw-b-mrus26hs",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:52:46.664Z",
+        "updatedAt": "2026-07-21T14:57:29.439Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974",
+        "splitFrom": "manual-62-mrurw4aw"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.577022,
+            33.199486
+          ],
+          [
+            35.577053,
+            33.199516
+          ],
+          [
+            35.577039,
+            33.199553
+          ],
+          [
+            35.57704,
+            33.199595
+          ],
+          [
+            35.577055,
+            33.199642
+          ],
+          [
+            35.577081,
+            33.199667
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-62-mrurwn62-a-mrus1j5b",
+      "properties": {
+        "id": "manual-manual-62-mrurwn62-a-mrus1j5b",
+        "manualEdgeId": "manual-manual-62-mrurwn62-a-mrus1j5b",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:53:11.114Z",
+        "updatedAt": "2026-07-21T14:57:01.710Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974",
+        "splitFrom": "manual-62-mrurwn62"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.577081,
+            33.199667
+          ],
+          [
+            35.577015,
+            33.199778
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-62-mrurwn62-b-mrus1j5b",
+      "properties": {
+        "id": "manual-manual-62-mrurwn62-b-mrus1j5b",
+        "manualEdgeId": "manual-manual-62-mrurwn62-b-mrus1j5b",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:53:11.114Z",
+        "updatedAt": "2026-07-21T14:57:04.611Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974",
+        "splitFrom": "manual-62-mrurwn62"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.577014,
+            33.199778
+          ],
+          [
+            35.576997,
+            33.199806
+          ],
+          [
+            35.576959,
+            33.199801
+          ],
+          [
+            35.576911,
+            33.199803
+          ],
+          [
+            35.576862,
+            33.199833
+          ],
+          [
+            35.576841,
+            33.199866
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-62-mrurx62x",
+      "properties": {
+        "id": "manual-62-mrurx62x",
+        "manualEdgeId": "manual-62-mrurx62x",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T14:53:35.625Z",
+        "updatedAt": "2026-07-21T14:53:42.255Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 62,
+        "linkedSegmentName": "כביש 9974"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.577081,
+            33.199667
+          ],
+          [
+            35.577124,
+            33.199689
+          ],
+          [
+            35.57717,
+            33.199714
+          ],
+          [
+            35.577205,
+            33.199737
+          ],
+          [
+            35.577256,
+            33.199757
+          ],
+          [
+            35.577312,
+            33.199799
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-511559208-mrurzvmm-a-mrus07a9",
+      "properties": {
+        "id": "manual-manual-osm-511559208-mrurzvmm-a-mrus07a9",
+        "manualEdgeId": "manual-manual-osm-511559208-mrurzvmm-a-mrus07a9",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e511559208_1",
+        "copiedFromOsmWayId": 511559208,
+        "highway": "secondary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T14:55:42.046Z",
+        "updatedAt": "2026-07-21T14:55:57.152Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e511559208_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-511559208-mrurzvmm"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576546,
+            33.199728
+          ],
+          [
+            35.57642,
+            33.199657
+          ],
+          [
+            35.576381,
+            33.199646
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-511559208-mrurzvmm-b-mrus07a9",
+      "properties": {
+        "id": "manual-manual-osm-511559208-mrurzvmm-b-mrus07a9",
+        "manualEdgeId": "manual-manual-osm-511559208-mrurzvmm-b-mrus07a9",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e511559208_1",
+        "copiedFromOsmWayId": 511559208,
+        "highway": "secondary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T14:55:42.046Z",
+        "updatedAt": "2026-07-21T14:55:57.152Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e511559208_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-511559208-mrurzvmm"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576381,
+            33.199646
+          ],
+          [
+            35.576352,
+            33.199638
+          ],
+          [
+            35.576266,
+            33.199625
+          ],
+          [
+            35.576175,
+            33.199616
+          ],
+          [
+            35.576046,
+            33.199589
+          ],
+          [
+            35.575692,
+            33.199481
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-511559210-mrus0wjd-a-mrus11d2",
+      "properties": {
+        "id": "manual-manual-osm-511559210-mrus0wjd-a-mrus11d2",
+        "manualEdgeId": "manual-manual-osm-511559210-mrus0wjd-a-mrus11d2",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e511559210_1",
+        "copiedFromOsmWayId": 511559210,
+        "highway": "tertiary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T14:56:29.881Z",
+        "updatedAt": "2026-07-21T14:56:36.134Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e511559210_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-511559210-mrus0wjd"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.577313,
+            33.199799
+          ],
+          [
+            35.577186,
+            33.199808
+          ],
+          [
+            35.577101,
+            33.199793
+          ],
+          [
+            35.577014,
+            33.199778
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-511559210-mrus0wjd-b-mrus11d2",
+      "properties": {
+        "id": "manual-manual-osm-511559210-mrus0wjd-b-mrus11d2",
+        "manualEdgeId": "manual-manual-osm-511559210-mrus0wjd-b-mrus11d2",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e511559210_1",
+        "copiedFromOsmWayId": 511559210,
+        "highway": "tertiary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T14:56:29.881Z",
+        "updatedAt": "2026-07-21T14:56:36.134Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e511559210_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-511559210-mrus0wjd"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.577014,
+            33.199778
+          ],
+          [
+            35.576921,
+            33.199767
+          ],
+          [
+            35.576821,
+            33.199768
           ]
         ]
       }

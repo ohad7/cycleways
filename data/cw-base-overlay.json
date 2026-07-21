@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T10:32:17.351Z",
+  "updatedAt": "2026-07-21T14:57:29.452Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -8610,19 +8610,28 @@
           "osmWayId": 580457040
         },
         {
-          "edgeId": "e356713703_1",
-          "source": "osm",
+          "edgeId": "manual-manual-osm-356713703-mrurrauz-a-mrurrfpo",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 29,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 356713703
+          "manualEdgeId": "manual-manual-osm-356713703-mrurrauz-a-mrurrfpo"
+        },
+        {
+          "edgeId": "manual-manual-osm-356713703-mrurrauz-b-mrurrfpo",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 30,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-356713703-mrurrauz-b-mrurrfpo"
         },
         {
           "edgeId": "e228885122_10",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 30,
+          "sequenceIndex": 31,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 228885122
@@ -8631,7 +8640,7 @@
           "edgeId": "manual-osm-228885122-mpd4ezyp",
           "source": "manual",
           "direction": "forward",
-          "sequenceIndex": 31,
+          "sequenceIndex": 32,
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-osm-228885122-mpd4ezyp"
@@ -8640,7 +8649,7 @@
           "edgeId": "e228885122_2",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 32,
+          "sequenceIndex": 33,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 228885122
@@ -8649,13 +8658,13 @@
           "edgeId": "e511559202_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 33,
+          "sequenceIndex": 34,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559202
         }
       ],
-      "updatedAt": "2026-05-20T15:42:05.241Z"
+      "updatedAt": "2026-07-21T14:49:08.172Z"
     },
     "144": {
       "segmentId": 144,
@@ -8696,25 +8705,34 @@
           "osmWayId": 1200367035
         },
         {
-          "edgeId": "e1189433249_1",
-          "source": "osm",
+          "edgeId": "manual-manual-osm-1189433249-mrurjvvd-a-mrurkzh4",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 1189433249
+          "manualEdgeId": "manual-manual-osm-1189433249-mrurjvvd-a-mrurkzh4"
         },
         {
-          "edgeId": "e1189433249_2",
-          "source": "osm",
+          "edgeId": "manual-manual-osm-1189433249-mrurjvvd-b-mrurkzh4",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 1189433249
+          "manualEdgeId": "manual-manual-osm-1189433249-mrurjvvd-b-mrurkzh4"
+        },
+        {
+          "edgeId": "manual-osm-1189433249-mrurmojo",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-osm-1189433249-mrurmojo"
         }
       ],
-      "updatedAt": "2026-05-20T15:11:33.914Z"
+      "updatedAt": "2026-07-21T14:45:26.340Z"
     },
     "147": {
       "segmentId": 147,
@@ -19311,25 +19329,25 @@
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e1189433249_3",
-          "source": "osm",
+          "edgeId": "manual-manual-osm-1189433249-mruro462-a-mrurob6o",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 1189433249
+          "manualEdgeId": "manual-manual-osm-1189433249-mruro462-a-mrurob6o"
         },
         {
-          "edgeId": "e1189433249_4",
-          "source": "osm",
+          "edgeId": "manual-manual-osm-1189433249-mruro462-b-mrurob6o",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 1189433249
+          "manualEdgeId": "manual-manual-osm-1189433249-mruro462-b-mrurob6o"
         },
         {
-          "edgeId": "e1189433249_5",
+          "edgeId": "e1189433249_4",
           "source": "osm",
           "direction": "forward",
           "sequenceIndex": 2,
@@ -19338,16 +19356,25 @@
           "osmWayId": 1189433249
         },
         {
-          "edgeId": "e1189433249_6",
+          "edgeId": "e1189433249_5",
           "source": "osm",
           "direction": "forward",
           "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1189433249
+        },
+        {
+          "edgeId": "e1189433249_6",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1189433249
         }
       ],
-      "updatedAt": "2026-07-20T16:05:06.931Z"
+      "updatedAt": "2026-07-21T14:46:42.336Z"
     },
     "364": {
       "segmentId": 364,

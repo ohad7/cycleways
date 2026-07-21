@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { cwNetworkRenderEdgeRefs } from "../editor/lib/cw-network-rendering.mjs";
 
-const [html, editor, styles, server] = await Promise.all([
+const [html, editor, styles, server, compatibilityOverlay, directionOverlay] = await Promise.all([
   readFile(new URL("../editor/index.html", import.meta.url), "utf8"),
   readFile(new URL("../editor/editor.js", import.meta.url), "utf8"),
   readFile(new URL("../editor/styles.css", import.meta.url), "utf8"),
   readFile(new URL("../editor/server.mjs", import.meta.url), "utf8"),
+  readFile(new URL("../data/cw-base-overlay.json", import.meta.url), "utf8").then(JSON.parse),
+  readFile(new URL("../data/cw-base-overlay.v2.staged.json", import.meta.url), "utf8").then(JSON.parse),
 ]);
 
 for (const id of [
@@ -26,14 +29,81 @@ assert.doesNotMatch(editor, /els\.workspaceBase/);
 assert.doesNotMatch(editor, /els\.workspaceOverlay/);
 assert.match(editor, /showOverlay && !editingPhysicalEdges/);
 assert.match(editor, /state\.workspaceMode === "base" \|\| editingPhysicalEdges/);
+assert.match(
+  editor,
+  /map\.on\("click", "cw-overlay-network-hit-layer",[\s\S]{0,1800}selectSegmentById\(segmentId, false\)/,
+  "selecting a CW edge directly on the map must preserve the viewport",
+);
 assert.match(editor, /persistNetworkViewPreferences/);
 assert.match(editor, /buildNetworkIssueRows/);
 assert.match(editor, /isCurrentV1Mapping/);
 assert.match(
   editor,
-  /function cwOverlayNetworkCollection\(\)[\s\S]{0,1800}!isCurrentV1Mapping\(mapping\)/,
-  "CW network rendering must include both automatic and explicitly chosen current V1 mappings",
+  /function cwOverlayNetworkCollection\(\)[\s\S]{0,2200}cwNetworkRenderEdgeRefs\(/,
+  "CW network rendering must resolve visible geometry from the directional source of truth",
 );
+assert.match(
+  editor,
+  /function cwOverlayNetworkCollection\(\)[\s\S]{0,2200}state\.directionReview\.overlay/,
+  "CW network rendering must react to Overlay V2 updates",
+);
+
+const road99Rendering = cwNetworkRenderEdgeRefs({
+  directionSegment: directionOverlay.segments["174"],
+  compatibilityMapping: compatibilityOverlay.segments["174"],
+});
+assert.equal(road99Rendering.source, "v2");
+assert.ok(
+  road99Rendering.edgeRefs.some((ref) => ref.edgeId === "e626743324_8"),
+  "#174 must render its accepted A→B carriageway even while V1 says needs_edit",
+);
+assert.ok(
+  road99Rendering.edgeRefs.some((ref) => ref.edgeId === "manual-edge-mrnlxmj5"),
+  "#174 must render its distinct accepted B→A carriageway",
+);
+
+const segment159Rendering = cwNetworkRenderEdgeRefs({
+  directionSegment: directionOverlay.segments["159"],
+  compatibilityMapping: compatibilityOverlay.segments["159"],
+});
+assert.equal(segment159Rendering.source, "v2");
+assert.ok(segment159Rendering.edgeRefs.length > 0, "V2-only segment #159 must remain visible");
+
+const sharedEdgeRendering = cwNetworkRenderEdgeRefs({
+  directionSegment: {
+    navigable: true,
+    alignments: {
+      aToB: {
+        published: {
+          disposition: "accepted",
+          realization: {
+            type: "explicit",
+            edgeRefs: [{ edgeId: "shared", direction: "forward", sequenceIndex: 0 }],
+          },
+        },
+      },
+      bToA: {
+        published: {
+          disposition: "accepted",
+          realization: { type: "reverseOf", alignmentKey: "aToB" },
+        },
+      },
+    },
+  },
+  compatibilityMapping: null,
+});
+assert.deepEqual(sharedEdgeRendering.edgeRefs.map((ref) => ref.edgeId), ["shared"]);
+assert.deepEqual(sharedEdgeRendering.edgeRefs[0].alignmentKeys, ["aToB", "bToA"]);
+
+const v2ReviewingRendering = cwNetworkRenderEdgeRefs({
+  directionSegment: { navigable: true, alignments: {} },
+  compatibilityMapping: {
+    status: "accepted_edge_set",
+    edgeRefs: [{ edgeId: "stale-v1", direction: "forward", sequenceIndex: 0 }],
+  },
+});
+assert.equal(v2ReviewingRendering.source, "v2");
+assert.deepEqual(v2ReviewingRendering.edgeRefs, [], "V1 must not override an existing V2 review state");
 assert.match(editor, /scheduleAuthoringSync/);
 assert.match(editor, /explicitEdgeRefsBySegment/);
 assert.match(editor, /queueNetworkMetadataFeature/);
