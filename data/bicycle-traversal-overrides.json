@@ -4,6 +4,45 @@
   "description": "Reviewed whole-source-way bicycle traversal overrides. Empty until evidence is curated.",
   "overrides": [
     {
+      "osmWayId": 30886111,
+      "sourceGeometryDigest": "83efde3f27d6fe4ef7dd5066812e49d8ec4842aee6bcbd95f6ee48ecf7b1015f",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "metula fixes",
+      "evidence": "metula fixes",
+      "reviewer": "ohad",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T20:17:27.800Z"
+    },
+    {
+      "osmWayId": 30886162,
+      "sourceGeometryDigest": "21d57fb833a85138e73ed6b5ad0ac2fd41613655ee263c9389c37753129bf879",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "metula fixes",
+      "evidence": "metula fixes",
+      "reviewer": "ohad",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T20:18:59.850Z"
+    },
+    {
+      "osmWayId": 30887171,
+      "sourceGeometryDigest": "df1776937f4b571adcaea2b09c74e56751c18dd3a3814cffd0d01aca078f8b93",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "metula fixes",
+      "evidence": "metula fixes",
+      "reviewer": "ohad",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T20:19:30.099Z"
+    },
+    {
       "osmWayId": 33058576,
       "sourceGeometryDigest": "1e427cdd372bef9777a6ff036b3b4abb77e1849ac228f2ba6f4eedce1cc16389",
       "states": {
@@ -28,6 +67,71 @@
       "reviewer": "ohad serfaty",
       "reviewedAt": "2026-07-21",
       "updatedAt": "2026-07-21T05:15:39.243Z"
+    },
+    {
+      "osmWayId": 715694889,
+      "sourceGeometryDigest": "daf8fa26b4856266b9064ea2d0723e37d3b727bdea7dfee15581582e22d929fb",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "metula fixes",
+      "evidence": "metula fixes",
+      "reviewer": "ohad",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T20:19:57.703Z"
+    },
+    {
+      "osmWayId": 715694892,
+      "sourceGeometryDigest": "c0d272dc2a2aaf0d0f23bd913e5dd0907e45900b1e1644fe633d199db47c8a12",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "metula fixes",
+      "evidence": "metula fixes",
+      "reviewer": "ohad",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T20:16:44.288Z"
+    },
+    {
+      "osmWayId": 715694895,
+      "sourceGeometryDigest": "8b301680fd98c5d9d6ef1b5a191c4e3d9aa0aaa52c0783089fc66395f3ac7198",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "metula fixes",
+      "evidence": "metula fixes",
+      "reviewer": "ohad",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T20:18:32.341Z"
+    },
+    {
+      "osmWayId": 715694896,
+      "sourceGeometryDigest": "1aa0d1f5c5d53eec6718ce4019d2c4f0e0ee76d49cc845bc8568dd25fd51a294",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "metula fixes",
+      "evidence": "metula fixes",
+      "reviewer": "ohad serfaty",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T20:16:05.596Z"
+    },
+    {
+      "osmWayId": 815935989,
+      "sourceGeometryDigest": "b08bd05dc0db69fe78705e90840d9f3085f2e813972c20b0b66dae99cc149be0",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "metula fixes",
+      "evidence": "metula fixes",
+      "reviewer": "ohad",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T20:18:00.128Z"
     }
   ]
 }
