@@ -130,6 +130,16 @@ assert.doesNotMatch(
   /if \(state\.draggingManualBaseVertex\)[\s\S]{0,500}renderAll\(\)/,
   "manual base-edge drag completion must not run the full editor renderer",
 );
+const deleteVertexBody = editor.match(
+  /function deleteSelectedVertex\(\) \{([\s\S]*?)\n\}\n\nasync function deleteSelectedManualBaseVertex/,
+)?.[1] || "";
+assert.match(deleteVertexBody, /markDirty\(true, \{ render: false \}\)/);
+assert.match(deleteVertexBody, /updateSelectedSegmentEditSources\(\)/);
+assert.doesNotMatch(
+  deleteVertexBody,
+  /renderAll\(\)/,
+  "deleting a CW vertex must not rebuild the full editor UI on the main thread",
+);
 assert.match(server, /readBaseGraphEditorPatch/);
 assert.match(server, /graphPatch: result\.graphPatch/);
 assert.doesNotMatch(

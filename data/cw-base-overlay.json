@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T14:57:29.452Z",
+  "updatedAt": "2026-07-21T15:05:13.799Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -8670,10 +8670,10 @@
       "segmentId": 144,
       "segmentName": "קרית שמונה תעשייה דרומי",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.59,
+      "avgDistanceMeters": 0.63,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -8712,27 +8712,9 @@
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-manual-osm-1189433249-mrurjvvd-a-mrurkzh4"
-        },
-        {
-          "edgeId": "manual-manual-osm-1189433249-mrurjvvd-b-mrurkzh4",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-1189433249-mrurjvvd-b-mrurkzh4"
-        },
-        {
-          "edgeId": "manual-osm-1189433249-mrurmojo",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-osm-1189433249-mrurmojo"
         }
       ],
-      "updatedAt": "2026-07-21T14:45:26.340Z"
+      "updatedAt": "2026-07-21T15:00:16.971Z"
     },
     "147": {
       "segmentId": 147,
@@ -14996,69 +14978,33 @@
       "segmentId": 263,
       "segmentName": "רחוב הוורדים דרום קריית שמונה",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.26,
+      "avgDistanceMeters": 0.15,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "manual-144-mpe6tooe",
+          "edgeId": "manual-62-mrurx62x",
           "source": "manual",
           "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-144-mpe6tooe"
-        },
-        {
-          "edgeId": "e228885122_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 228885122
-        },
-        {
-          "edgeId": "e228885122_5",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 228885122
-        },
-        {
-          "edgeId": "e228885122_6",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 3,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 228885122
-        },
-        {
-          "edgeId": "e511559216_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 511559216
+          "manualEdgeId": "manual-62-mrurx62x"
         },
         {
           "edgeId": "e511559214_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 5,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 511559214
         }
       ],
-      "updatedAt": "2026-05-20T22:22:48.011Z"
+      "updatedAt": "2026-07-21T15:05:13.799Z"
     },
     "264": {
       "segmentId": 264,
@@ -19321,27 +19267,18 @@
       "segmentId": 361,
       "segmentName": "רחוב הנרייטה סאלד",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.72,
+      "avgDistanceMeters": 0.76,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "manual-manual-osm-1189433249-mruro462-a-mrurob6o",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-1189433249-mruro462-a-mrurob6o"
-        },
-        {
           "edgeId": "manual-manual-osm-1189433249-mruro462-b-mrurob6o",
           "source": "manual",
           "direction": "forward",
-          "sequenceIndex": 1,
+          "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
           "manualEdgeId": "manual-manual-osm-1189433249-mruro462-b-mrurob6o"
@@ -19350,7 +19287,7 @@
           "edgeId": "e1189433249_4",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 2,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1189433249
@@ -19359,7 +19296,7 @@
           "edgeId": "e1189433249_5",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 3,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1189433249
@@ -19368,13 +19305,13 @@
           "edgeId": "e1189433249_6",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 4,
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 1189433249
         }
       ],
-      "updatedAt": "2026-07-21T14:46:42.336Z"
+      "updatedAt": "2026-07-21T15:00:47.560Z"
     },
     "364": {
       "segmentId": 364,

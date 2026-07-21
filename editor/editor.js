@@ -8299,9 +8299,13 @@ function deleteSelectedVertex() {
   state.selectedVertexIndex = -1;
   clearSelectedSegmentMatchResult();
   queueChangedFeature(feature);
-  markDirty();
-  renderAll();
-  setStatus("Vertex deleted.");
+  markDirty(true, { render: false });
+  updateSelectedSegmentEditSources();
+  renderForm();
+  renderDrawControls();
+  renderNetworkSegmentRouting();
+  renderAuthoringState();
+  setStatus("Vertex deleted. Saving and updating its rideable path in the background.");
 }
 
 async function deleteSelectedManualBaseVertex() {
