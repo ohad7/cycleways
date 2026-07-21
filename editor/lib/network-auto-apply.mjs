@@ -46,6 +46,33 @@ function validationBlocked(validation) {
   );
 }
 
+/**
+ * Preserve the result of each directional validator. A decision about the
+ * pair (for example, because only the reverse is prohibited) must not turn
+ * the independently valid direction into an invalid draft.
+ */
+export function validationWithAutomaticDecision(validation, decision) {
+  if (
+    validation?.ok ||
+    decision?.outcome === "apply" ||
+    decision?.code === "access_precedence"
+  ) {
+    return validation;
+  }
+  if ((validation?.reasons || []).some((reason) => reason.code === decision?.code)) {
+    return validation;
+  }
+  return {
+    ...(validation || {}),
+    ok: false,
+    status: "invalid",
+    reasons: [
+      ...(validation?.reasons || []),
+      { code: decision?.code, reason: decision?.message },
+    ],
+  };
+}
+
 function precedenceCount(validation) {
   return Array.isArray(validation?.policyPrecedence)
     ? validation.policyPrecedence.length

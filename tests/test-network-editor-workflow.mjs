@@ -40,6 +40,11 @@ assert.match(editor, /activeSegments: state\.source \? activeSegmentDescriptors\
 assert.match(editor, /overlaySource: "source-unresolved"/);
 assert.match(editor, /cw-overlay-network-unresolved-layer/);
 assert.match(editor, /const showCwNetwork = showOverlay \|\| showRoundabouts/);
+assert.match(editor, /directionReviewValidationCanAccept/);
+assert.match(editor, /Revalidate & use this path/);
+assert.match(editor, /No directional path record yet/);
+assert.match(editor, /Generate proposed paths/);
+assert.match(editor, /queueChangedFeature\(feature\)/);
 assert.match(editor, /isCurrentV1Mapping/);
 assert.match(
   editor,
@@ -111,6 +116,13 @@ assert.deepEqual(v2ReviewingRendering.edgeRefs, [], "V1 must not override an exi
 assert.match(editor, /scheduleAuthoringSync/);
 assert.match(editor, /explicitEdgeRefsBySegment/);
 assert.match(editor, /queueNetworkMetadataFeature/);
+assert.match(editor, /function queueStaleNetworkLifecycleMetadata/);
+assert.match(editor, /const staleLifecycleIds = queueStaleNetworkLifecycleMetadata\(\)/);
+assert.match(
+  editor,
+  /if \(!isActiveLineFeature\(job\.feature\)\) \{[\s\S]{0,900}applyNetworkAuthoringMetadata/,
+  "queued geometry work must release an inactive segment instead of rematching it",
+);
 assert.match(editor, /segmentRevisions/);
 assert.match(editor, /isCurrentAuthoringObjectRevision/);
 assert.match(editor, /rebuilding base evidence/);
@@ -160,6 +172,12 @@ assert.match(server, /function segmentOwnsDirectedIntervals/);
 assert.match(server, /if \(!segmentOwnsDirectedIntervals\(segment\)\) continue/);
 assert.match(server, /automaticallyAppliedSegmentIds/);
 assert.match(server, /delete compatibilitySegments\[String\(segmentId\)\]/);
+assert.match(server, /revalidateDirectionReviewDrafts\(nextOverlay, affectedSegmentIds\)/);
+assert.match(
+  server,
+  /\["deprecated", "legacy", "draft"\]\.includes\(sourceStatus\)[\s\S]{0,240}applyNetworkAuthoringSegmentMetadata/,
+  "the segment endpoint must defensively redirect stale inactive routing requests",
+);
 assert.match(server, /"manual-editor"/);
 assert.match(server, /validatePublishedDirectionReviewOverlay\(parsed\)/);
 assert.match(server, /last published path while evaluating a revised source shape/);

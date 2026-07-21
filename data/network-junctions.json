@@ -58,6 +58,20 @@
       "topologyFingerprint": "sha256:e2e9ac4db8a274bf9cab91fe35e712a8c9482daf9ba8d42c053e70560f72fcf1",
       "updatedAt": "2026-07-21T15:11:51.293Z",
       "reviewer": "ohad"
+    },
+    "junction-osm-ways:841155428": {
+      "id": "junction-osm-ways:841155428",
+      "name": "ככר כניסה שדה אליעזר",
+      "status": "published",
+      "navigationKind": "roundabout",
+      "source": {
+        "type": "derived_roundabout",
+        "roundaboutId": "osm-ways:841155428"
+      },
+      "excludedPortIds": [],
+      "topologyFingerprint": "sha256:6b39c6002f9e78713e39f119234f3d29960e41e17279420300c24151c3ae183c",
+      "updatedAt": "2026-07-21T19:09:39.652Z",
+      "reviewer": "ohad"
     }
   }
 }

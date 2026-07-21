@@ -92,6 +92,10 @@ import {
   CONNECTOR_ACCESS_LEGEND,
   CONNECTOR_EXCLUDED_COLOR,
 } from "./lib/connectorColors.mjs";
+import {
+  parseStoredMapView,
+  serializeMapView,
+} from "./lib/map-view-storage.mjs";
 
 const CONNECTOR_CLASS_KEYS = ["cw_network", "road", "local_road", "cycle", "path_track", "manual", "other"];
 const CONNECTOR_ACCESS_KEYS = ["restricted", "conditional"];
@@ -104,6 +108,11 @@ const CONNECTOR_VERDICT_COLORS = {
 const MAPBOX_TOKEN_STORAGE_KEY = "cycleways.mapboxToken";
 const NETWORK_FOCUS_STORAGE_KEY = "cycleways.editor.networkFocus";
 const NETWORK_CONTEXT_STORAGE_KEY = "cycleways.editor.networkContext";
+const MAP_VIEW_STORAGE_KEY = "cycleways.editor.mapView";
+const DEFAULT_MAP_VIEW = {
+  center: [35.617497, 33.183536],
+  zoom: 11.5,
+};
 
 function storedNetworkFocus() {
   try {
@@ -130,6 +139,26 @@ function persistNetworkViewPreferences() {
     window.localStorage.setItem(NETWORK_CONTEXT_STORAGE_KEY, String(state.networkContextVisible));
   } catch {
     // View preferences are optional in restricted browser contexts.
+  }
+}
+
+function storedMapView() {
+  try {
+    return parseStoredMapView(window.localStorage.getItem(MAP_VIEW_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function persistMapView(mapInstance) {
+  try {
+    const value = serializeMapView({
+      center: mapInstance.getCenter(),
+      zoom: mapInstance.getZoom(),
+    });
+    if (value) window.localStorage.setItem(MAP_VIEW_STORAGE_KEY, value);
+  } catch {
+    // Map view persistence is optional in restricted browser contexts.
   }
 }
 
@@ -579,6 +608,7 @@ const els = {
   directionReviewApproveManualBidirectional: document.getElementById("direction-review-approve-manual-bidirectional"),
   directionReviewFinalizeManualQueue: document.getElementById("direction-review-finalize-manual-queue"),
   directionReviewApproveManualHelp: document.getElementById("direction-review-approve-manual-help"),
+  directionReviewGenerate: document.getElementById("direction-review-generate"),
   directionReviewEdit: document.getElementById("direction-review-edit"),
   directionReviewRevalidate: document.getElementById("direction-review-revalidate"),
   directionReviewUseReverse: document.getElementById("direction-review-use-reverse"),
@@ -593,14 +623,17 @@ const els = {
 
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
+const initialMapView = storedMapView() || DEFAULT_MAP_VIEW;
+
 const map = new mapboxgl.Map({
   container: "map",
   style: mapStyleDefinition(state.mapStyle).style,
-  center: [35.617497, 33.183536],
-  zoom: 11.5,
+  center: initialMapView.center,
+  zoom: initialMapView.zoom,
 });
 
 map.addControl(new mapboxgl.NavigationControl(), "bottom-left");
+map.on("moveend", () => persistMapView(map));
 
 els.mapStyle.value = state.mapStyle;
 
@@ -1265,6 +1298,39 @@ async function runAuthoringSync() {
 
     for (const job of segmentJobs) {
       try {
+        if (!isActiveLineFeature(job.feature)) {
+          const result = await runAuthoringStage(
+            "releasing inactive path",
+            () => applyNetworkAuthoringMetadata(
+              job.segmentId,
+              revision + job.segmentId,
+              { signal: abortController.signal },
+            ),
+            { segmentId: job.segmentId },
+          );
+          const stillCurrent = isCurrentAuthoringObjectRevision(
+            state.authoring.segmentRevisions,
+            job.segmentId,
+            job.objectRevision,
+          );
+          if (!result?.superseded && stillCurrent) {
+            adoptNetworkAuthoringMetadataResult(result);
+            state.changedSegmentIds.delete(job.segmentId);
+            state.authoring.explicitEdgeRefsBySegment.delete(Number(job.segmentId));
+            if (
+              isCurrentAuthoringObjectRevision(
+                state.authoring.metadataRevisions,
+                job.segmentId,
+                job.metadataRevision,
+              )
+            ) {
+              state.authoring.metadataSegmentIds.delete(job.segmentId);
+            }
+          } else {
+            state.authoring.rerun = true;
+          }
+          continue;
+        }
         const result = await applyNetworkAuthoringSegment(
           job,
           revision + job.segmentId,
@@ -1557,6 +1623,40 @@ function queueNetworkMetadataFeature(feature) {
     state.authoring.lastError = null;
     interruptStaleAuthoringWork();
   }
+}
+
+function queueStaleNetworkLifecycleMetadata() {
+  if (
+    !state.source ||
+    !state.directionReview.loaded ||
+    state.directionReview.readOnly ||
+    !state.directionReview.overlay
+  ) {
+    return [];
+  }
+
+  const sourceById = new Map(
+    (state.source.features || [])
+      .filter((feature) => Number.isInteger(Number(feature?.properties?.id)))
+      .map((feature) => [Number(feature.properties.id), feature]),
+  );
+  const queued = [];
+  for (const segment of Object.values(state.directionReview.overlay.segments || {})) {
+    const segmentId = Number(segment?.segmentId);
+    const feature = sourceById.get(segmentId);
+    if (!feature) continue;
+    const sourceStatus = String(feature.properties?.status || "active");
+    const sourceNavigable = isActiveLineFeature(feature);
+    if (
+      String(segment.lifecycleStatus || "active") === sourceStatus &&
+      Boolean(segment.navigable) === sourceNavigable
+    ) {
+      continue;
+    }
+    queueNetworkMetadataFeature(feature);
+    queued.push(segmentId);
+  }
+  return queued;
 }
 
 function clearChangedSegmentQueue() {
@@ -3167,7 +3267,8 @@ function renderNetworkSegmentRouting() {
     });
 
   if (els.directionReviewSection) {
-    els.directionReviewSection.hidden = !networkSegmentNeedsDirections(selectedV2Segment(), {
+    const directionSegment = selectedV2Segment();
+    els.directionReviewSection.hidden = Boolean(directionSegment) && !networkSegmentNeedsDirections(directionSegment, {
       updating: authoringSegmentUpdating(segmentId),
       transientIssue,
     });
@@ -7464,6 +7565,23 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
   return refs;
 }
 
+function directionReviewValidationCanAccept(segment, validation) {
+  if (validation?.status === "valid") return true;
+  const reasons = validation?.reasons || [];
+  const decisionCode = String(segment?.migration?.lastOutcomeCode || "");
+  return Boolean(
+    decisionCode &&
+    reasons.length > 0 &&
+    reasons.every(
+      (reason) =>
+        String(reason?.code || "") === decisionCode &&
+        !reason?.edgeId &&
+        !reason?.fromEdgeId &&
+        !reason?.toEdgeId,
+    )
+  );
+}
+
 function renderDirectionReview(segmentId) {
   if (!els.directionReviewSummary) return;
   const review = state.directionReview;
@@ -7487,6 +7605,7 @@ function renderDirectionReview(segmentId) {
   els.directionReviewSource.textContent = review.loaded
     ? `Current routing evidence${review.readOnly ? " · read-only" : ""}`
     : "Routing evidence not loaded";
+  els.directionReviewGenerate.hidden = true;
   if (!review.loaded) {
     els.directionReviewSummary.innerHTML =
       '<div class="empty-state">Routing evidence will load automatically when the Network workspace opens.</div>';
@@ -7500,10 +7619,41 @@ function renderDirectionReview(segmentId) {
   }
   const segment = review.overlay?.segments?.[String(segmentId)];
   if (!segment) {
-    els.directionReviewSummary.innerHTML =
-      '<div class="empty-state">This segment does not yet have a directional path record.</div>';
-    els.directionReviewSlotStatuses.innerHTML = "";
+    const match = matchSummaryForSegment(segmentId);
+    const updating = authoringSegmentUpdating(segmentId);
+    const matchDetails = match
+      ? `<dl class="base-overlay-metrics">
+          <div><dt>Automatic match</dt><dd>${escapeHtml(match.reviewStatus || match.failureClass || "available")}</dd></div>
+          <div><dt>Coverage</dt><dd>${Math.round(Number(match.coverageRatio || 0) * 100)}%</dd></div>
+          <div><dt>Base edges</dt><dd>${Number(match.edgeSequenceCount || match.edgeSequence?.length || 0)}</dd></div>
+          <div><dt>Continuity gaps</dt><dd>${Number(match.gapCount || match.continuityGapCount || 0)}</dd></div>
+          ${Number.isFinite(Number(match.avgDistanceMeters)) ? `<div><dt>Average drift</dt><dd>${Number(match.avgDistanceMeters).toFixed(1)} m</dd></div>` : ""}
+          ${match.reviewReason ? `<div><dt>Why review is needed</dt><dd>${escapeHtml(match.reviewReason)}</dd></div>` : ""}
+        </dl>`
+      : '<p>No automatic base-edge match is currently available. Generate a proposal to recalculate it.</p>';
+    els.directionReviewSummary.innerHTML = `
+      <div class="direction-review-proposal-callout">
+        <strong>${updating ? "Generating proposed paths…" : "No directional path record yet"}</strong>
+        <span>${updating ? "The background authoring worker is matching and validating both directions." : "Create the first A→B and B→A drafts from the current segment geometry and base graph."}</span>
+      </div>
+      ${matchDetails}`;
+    els.directionReviewSlotStatuses.innerHTML = ["aToB", "bToA"]
+      .map((alignmentKey) => `
+        <div class="direction-review-slot-status${alignmentKey === review.alignmentKey ? " active" : ""}">
+          <strong>${alignmentKey === "aToB" ? "A → B" : "B → A"}</strong>
+          <span>${updating ? "generating" : "not generated"}</span>
+        </div>`)
+      .join("");
     els.directionReviewEdges.innerHTML = "";
+    els.directionReviewGenerate.hidden = false;
+    els.directionReviewGenerate.disabled = !pendingWritable || updating;
+    els.directionReviewGenerate.textContent = updating ? "Generating proposed paths…" : "Generate proposed paths";
+    els.directionReviewEdit.disabled = true;
+    els.directionReviewRevalidate.disabled = true;
+    els.directionReviewUseReverse.disabled = true;
+    els.directionReviewAccept.disabled = true;
+    els.directionReviewClearDraft.disabled = true;
+    els.directionReviewMarkUnavailable.disabled = true;
     els.directionReviewApplyMigration.disabled = true;
     els.directionReviewApplySymmetricBatch.disabled = true;
     els.directionReviewApproveManualBidirectional.hidden = true;
@@ -7563,8 +7713,15 @@ function renderDirectionReview(segmentId) {
   const draftCanMaterialize =
     Boolean(slot.draft?.realization) ||
     (slot.draft?.candidate?.kind === "exact-reverse" && canReverse);
+  const canAcceptAfterRevalidation = directionReviewValidationCanAccept(segment, validation);
   els.directionReviewAccept.disabled =
-    !writable || !slot.draft || validation?.status !== "valid" || !draftCanMaterialize;
+    !writable || !slot.draft || !canAcceptAfterRevalidation || !draftCanMaterialize;
+  els.directionReviewAccept.textContent = validation?.status === "valid"
+    ? "Use this path"
+    : "Revalidate & use this path";
+  els.directionReviewAccept.title = canAcceptAfterRevalidation && validation?.status !== "valid"
+    ? "This direction will be validated independently before it is accepted."
+    : "";
   els.directionReviewClearDraft.disabled = !writable || !slot.draft;
   els.directionReviewMarkUnavailable.disabled = !writable;
   const canApply =
@@ -7739,6 +7896,25 @@ async function acceptSelectedDirectionReview() {
   });
   await runDirectionReviewAction("accept", review);
   state.directionReview.editing = false;
+}
+
+function generateSelectedDirectionReview() {
+  const feature = selectedFeature();
+  const segmentId = Number(feature?.properties?.id);
+  if (!feature || !Number.isInteger(segmentId)) {
+    throw new Error("Select an active CW segment first.");
+  }
+  if (selectedV2Segment()) {
+    setStatus(`Segment #${segmentId} already has directional paths.`);
+    return;
+  }
+  state.directionReview.alignmentKey = "aToB";
+  state.directionReview.editing = false;
+  state.authoring.lastError = null;
+  queueChangedFeature(feature);
+  scheduleAuthoringSync({ delay: 0 });
+  renderAll();
+  setStatus(`Generating A→B and B→A path proposals for #${segmentId} in the background.`);
 }
 
 async function approveSelectedManualEdgesBidirectional() {
@@ -10085,6 +10261,10 @@ async function loadBaseOverlayData() {
           const pendingPayload = await pendingResponse.json();
           state.directionReview.pendingManualApprovals = pendingPayload.queue;
         }
+        const staleLifecycleIds = queueStaleNetworkLifecycleMetadata();
+        if (staleLifecycleIds.length > 0) {
+          scheduleAuthoringSync({ delay: 0, render: false });
+        }
       }
     } catch {
       state.directionReview.loaded = false;
@@ -11388,6 +11568,13 @@ function wireEvents() {
   els.directionReviewFinalizeManualQueue.addEventListener("click", () =>
     finalizeQueuedManualDirectionReviews().catch(showError),
   );
+  els.directionReviewGenerate.addEventListener("click", () => {
+    try {
+      generateSelectedDirectionReview();
+    } catch (error) {
+      showError(error);
+    }
+  });
   els.directionReviewEdit.addEventListener("click", () => toggleDirectionReviewEditing().catch(showError));
   els.directionReviewRevalidate.addEventListener("click", () =>
     runDirectionReviewAction("revalidate").catch(showError),

@@ -4,6 +4,7 @@ import {
   automaticBidirectionalDecision,
   automaticMatchQualityEligible,
   reverseDirectedEdgeRefs,
+  validationWithAutomaticDecision,
 } from "../editor/lib/network-auto-apply.mjs";
 
 const match = {
@@ -28,6 +29,31 @@ assert.deepEqual(
 assert.equal(
   automaticBidirectionalDecision({ match, forwardValidation: valid, reverseValidation: valid }).outcome,
   "apply",
+);
+const reverseOnlyFailure = automaticBidirectionalDecision({
+  match,
+  forwardValidation: valid,
+  reverseValidation: {
+    ok: false,
+    status: "invalid",
+    reasons: [{ code: "non_allowed_traversal", edgeId: "one-way", reason: "osm-oneway" }],
+  },
+});
+assert.deepEqual(
+  validationWithAutomaticDecision(valid, reverseOnlyFailure),
+  valid,
+  "a reverse-only blocker must not invalidate the valid forward direction",
+);
+assert.deepEqual(
+  validationWithAutomaticDecision(
+    {
+      ok: false,
+      status: "invalid",
+      reasons: [{ code: "non_allowed_traversal", edgeId: "one-way", reason: "osm-oneway" }],
+    },
+    reverseOnlyFailure,
+  ).reasons,
+  [{ code: "non_allowed_traversal", edgeId: "one-way", reason: "osm-oneway" }],
 );
 assert.equal(
   automaticBidirectionalDecision({

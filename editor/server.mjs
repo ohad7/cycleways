@@ -90,6 +90,7 @@ import {
   automaticAcceptanceBasis,
   automaticBidirectionalDecision,
   automaticMatchQualityEligible,
+  validationWithAutomaticDecision,
 } from "./lib/network-auto-apply.mjs";
 import { networkSegmentStatus } from "./lib/network-authoring-status.mjs";
 import { repairRoundaboutReverse } from "../scripts/migrate-cw-base-overlay-v2.mjs";
@@ -2507,24 +2508,6 @@ function networkAuthoringDraft({ refs, candidate, validation }) {
   };
 }
 
-function networkAuthoringValidationWithDecision(validation, decision) {
-  if (decision.outcome === "apply" || decision.code === "access_precedence") {
-    return validation;
-  }
-  if ((validation?.reasons || []).some((reason) => reason.code === decision.code)) {
-    return validation;
-  }
-  return {
-    ...(validation || {}),
-    ok: false,
-    status: "invalid",
-    reasons: [
-      ...(validation?.reasons || []),
-      { code: decision.code, reason: decision.message },
-    ],
-  };
-}
-
 async function writeNetworkAuthoringCompatibilityMapping({
   segment,
   refs,
@@ -2615,13 +2598,16 @@ async function applyNetworkAuthoringSegmentMetadata(payload) {
         ),
       )
       .map((candidate) => Number(candidate.segmentId));
+  const ownershipRefreshedOverlay = affectedSegmentIds.length > 0
+    ? await revalidateDirectionReviewDrafts(nextOverlay, affectedSegmentIds)
+    : nextOverlay;
   const automatic = affectedSegmentIds.length > 0
-    ? await autoApplySafeDirectionReviewDrafts(nextOverlay, {
+    ? await autoApplySafeDirectionReviewDrafts(ownershipRefreshedOverlay, {
         revision: requestedRevision,
         segmentIds: affectedSegmentIds,
         includeManualEditor: true,
       })
-    : { overlay: nextOverlay, applied: [], skipped: [] };
+    : { overlay: ownershipRefreshedOverlay, applied: [], skipped: [] };
 
   const compatibilitySegments = {
     ...(compatibilityValue.segments || {}),
@@ -2704,12 +2690,6 @@ async function applyNetworkAuthoringSegment(payload) {
   if (!Number.isInteger(segmentId)) throw new Error("Network authoring requires a segmentId");
   if (!Number.isFinite(requestedRevision)) throw new Error("Network authoring requires a revision");
 
-  const previousRevision = latestNetworkAuthoringRevisionBySegment.get(segmentId) || 0;
-  if (requestedRevision <= previousRevision) {
-    return { superseded: true, segmentId, revision: requestedRevision };
-  }
-  latestNetworkAuthoringRevisionBySegment.set(segmentId, requestedRevision);
-
   const [source, stagedValue, proposalValue, context] = await Promise.all([
     readJsonFileOrNull(sourcePath),
     readJsonFileOrNull(cwBaseOverlayV2StagedPath),
@@ -2719,9 +2699,25 @@ async function applyNetworkAuthoringSegment(payload) {
   const sourceFeature = source?.features?.find(
     (feature) => Number(feature?.properties?.id) === segmentId,
   );
-  if (!sourceFeature?.geometry || sourceFeature.geometry.type !== "LineString") {
+  if (!sourceFeature) {
     throw new Error(`Active source segment ${segmentId} was not found; save the source first`);
   }
+  const sourceStatus = String(sourceFeature.properties?.status || "active");
+  if (["deprecated", "legacy", "draft"].includes(sourceStatus)) {
+    return applyNetworkAuthoringSegmentMetadata({
+      segmentId,
+      revision: requestedRevision,
+    });
+  }
+  if (!sourceFeature.geometry || sourceFeature.geometry.type !== "LineString") {
+    throw new Error(`Active source segment ${segmentId} was not found; save the source first`);
+  }
+
+  const previousRevision = latestNetworkAuthoringRevisionBySegment.get(segmentId) || 0;
+  if (requestedRevision <= previousRevision) {
+    return { superseded: true, segmentId, revision: requestedRevision };
+  }
+  latestNetworkAuthoringRevisionBySegment.set(segmentId, requestedRevision);
   const suppliedDigest = payload?.feature?.geometry?.coordinates
     ? digestCwOverlayValue(
         payload.feature.geometry.coordinates.map((coordinate) => coordinate.slice(0, 2)),
@@ -2900,11 +2896,11 @@ async function applyNetworkAuthoringSegment(payload) {
       ? "roundabout-reverse"
       : "bidirectional-authoring";
   } else {
-    const forwardResult = networkAuthoringValidationWithDecision(
+    const forwardResult = validationWithAutomaticDecision(
       forwardValidation,
       decision,
     );
-    const reverseResult = networkAuthoringValidationWithDecision(
+    const reverseResult = validationWithAutomaticDecision(
       reverseValidation,
       decision,
     );
@@ -3131,6 +3127,38 @@ async function autoApplySafeDirectionReviewDrafts(
     });
   }
   return { overlay: parseCwOverlayV2(next), applied, skipped };
+}
+
+async function revalidateDirectionReviewDrafts(overlay, segmentIds) {
+  const next = structuredClone(overlay);
+  const selected = new Set((segmentIds || []).map(Number));
+  const context = await readDirectionReviewGraphContext();
+  if (
+    next.graphDigest !== context.graphDigest ||
+    next.policyDigest !== context.policyDigest
+  ) {
+    return next;
+  }
+
+  for (const segment of Object.values(next.segments || {})) {
+    if (!selected.has(Number(segment.segmentId))) continue;
+    const owners = networkAuthoringDirectedOwners(next, segment.segmentId);
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      const draft = segment.alignments?.[alignmentKey]?.draft;
+      if (!draft) continue;
+      const refs = directionReviewRecordRefs(segment, alignmentKey, draft);
+      if (refs.length === 0) continue;
+      draft.validation = validateDirectionReviewRefsWithContext(
+        next,
+        segment,
+        alignmentKey,
+        refs,
+        context,
+        owners,
+      );
+    }
+  }
+  return next;
 }
 
 async function validatePublishedDirectionReviewOverlay(overlay) {

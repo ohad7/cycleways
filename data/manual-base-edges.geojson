@@ -8011,6 +8011,63 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-358-mrv13z70",
+      "properties": {
+        "id": "manual-358-mrv13z70",
+        "manualEdgeId": "manual-358-mrv13z70",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-21T19:10:49.836Z",
+        "updatedAt": "2026-07-21T19:10:49.836Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 358,
+        "linkedSegmentName": "רחוב פנימי שדה אליעזר"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.562114,
+            33.04706
+          ],
+          [
+            35.562162,
+            33.047036
+          ],
+          [
+            35.562222,
+            33.047017
+          ],
+          [
+            35.562278,
+            33.047012
+          ],
+          [
+            35.562426,
+            33.047005
+          ],
+          [
+            35.562547,
+            33.047008
+          ],
+          [
+            35.562634,
+            33.047009
+          ]
+        ]
+      }
     }
   ]
 }
