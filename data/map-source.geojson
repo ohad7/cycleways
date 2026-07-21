@@ -37773,6 +37773,51 @@
       "type": "Feature",
       "properties": {
         "id": 84,
+        "name": "עין תאו [split archive 84]",
+        "status": "deprecated",
+        "roadType": "dirt",
+        "styleUrl": "#sty-74",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "עין תאו",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.574261,
+            33.14592
+          ],
+          [
+            35.570844,
+            33.141407
+          ],
+          [
+            35.57026,
+            33.134365
+          ],
+          [
+            35.56938,
+            33.129268
+          ],
+          [
+            35.568957,
+            33.122161
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 370,
         "name": "עין תאו",
         "status": "active",
         "roadType": "dirt",
@@ -37813,7 +37858,9 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "splitFrom": 84,
+        "splitFromName": "עין תאו"
       },
       "geometry": {
         "type": "LineString",
@@ -38456,6 +38503,38 @@
           [
             35.570365,
             33.125823,
+            82
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 371,
+        "name": "כביש 899",
+        "status": "active",
+        "roadType": "road",
+        "styleUrl": "#sty-74",
+        "stroke": "#ae9067",
+        "sourceStroke": "#ae9067",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 84,
+        "splitFromName": "עין תאו"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.570343026633225,
+            33.125820214938585,
             82
           ],
           [
@@ -57605,7 +57684,7 @@
         "id": 48,
         "name": "כביש 90 צומת אגמון החולה",
         "status": "active",
-        "roadType": "dirt",
+        "roadType": "road",
         "styleUrl": "#sty-114",
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",

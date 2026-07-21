@@ -7837,6 +7837,180 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-794389848-mruulw7x-a-mruum50e",
+      "properties": {
+        "id": "manual-manual-osm-794389848-mruulw7x-a-mruum50e",
+        "manualEdgeId": "manual-manual-osm-794389848-mruulw7x-a-mruum50e",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e794389848_5",
+        "copiedFromOsmWayId": 794389848,
+        "highway": "primary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T16:08:48.477Z",
+        "updatedAt": "2026-07-21T16:08:59.870Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e794389848_5",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-794389848-mruulw7x"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.569082,
+            33.123543
+          ],
+          [
+            35.569093,
+            33.124083
+          ],
+          [
+            35.56911,
+            33.124284
+          ],
+          [
+            35.569127,
+            33.124418
+          ],
+          [
+            35.569167,
+            33.124565
+          ],
+          [
+            35.569221,
+            33.124706
+          ],
+          [
+            35.569268,
+            33.124804
+          ],
+          [
+            35.56933,
+            33.124911
+          ],
+          [
+            35.569433,
+            33.125062
+          ],
+          [
+            35.569565,
+            33.125207
+          ],
+          [
+            35.569699,
+            33.125344
+          ],
+          [
+            35.569821,
+            33.12545
+          ],
+          [
+            35.569955,
+            33.125545
+          ],
+          [
+            35.570139,
+            33.125648
+          ],
+          [
+            35.570387,
+            33.125748
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-794389848-mruulw7x-b-mruum50e",
+      "properties": {
+        "id": "manual-manual-osm-794389848-mruulw7x-b-mruum50e",
+        "manualEdgeId": "manual-manual-osm-794389848-mruulw7x-b-mruum50e",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "copiedFromEdgeId": "e794389848_5",
+        "copiedFromOsmWayId": 794389848,
+        "highway": "primary",
+        "osmRouteClass": "road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T16:08:48.477Z",
+        "updatedAt": "2026-07-21T16:08:59.870Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/prohibited direction policy from e794389848_5",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-794389848-mruulw7x"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.570387,
+            33.125748
+          ],
+          [
+            35.570456,
+            33.125767
+          ],
+          [
+            35.570511,
+            33.125781
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-371-mruumvxa",
+      "properties": {
+        "id": "manual-371-mruumvxa",
+        "manualEdgeId": "manual-371-mruumvxa",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-21T16:09:34.750Z",
+        "updatedAt": "2026-07-21T16:11:26.782Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "prohibited",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "road crossing"
+        },
+        "linkedSegmentId": 371,
+        "linkedSegmentName": "עין תאו - 2"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.570387,
+            33.125748
+          ],
+          [
+            35.570365,
+            33.125823
+          ]
+        ]
+      }
     }
   ]
 }
