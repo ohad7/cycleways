@@ -2234,9 +2234,18 @@ function directionReviewEndpointValidation(segment, alignmentKey, refs, edgeLook
   };
 }
 
+function segmentOwnsDirectedIntervals(segment) {
+  return Boolean(
+    segment &&
+    segment.navigable !== false &&
+    !["deprecated", "legacy", "draft"].includes(String(segment.lifecycleStatus || "active")),
+  );
+}
+
 function directionReviewDirectedOwners(overlay) {
   const owners = new Map();
   for (const segment of Object.values(overlay.segments || {})) {
+    if (!segmentOwnsDirectedIntervals(segment)) continue;
     for (const alignmentKey of ["aToB", "bToA"]) {
       for (const ref of materializeAcceptedAlignment(segment, alignmentKey) || []) {
         owners.set(directedIntervalKey(ref), {
@@ -2317,6 +2326,7 @@ function networkAuthoringDirectedOwners(overlay, excludedSegmentId) {
   const owners = new Map();
   for (const segment of Object.values(overlay.segments || {})) {
     if (Number(segment.segmentId) === Number(excludedSegmentId)) continue;
+    if (!segmentOwnsDirectedIntervals(segment)) continue;
     for (const alignmentKey of ["aToB", "bToA"]) {
       for (const ref of materializeAcceptedAlignment(segment, alignmentKey) || []) {
         owners.set(directedIntervalKey(ref), {
@@ -2462,7 +2472,9 @@ function networkAuthoringReview({
         ? "Validated authoring path with a deterministic legal roundabout reverse repair"
         : intent === "explicit-selection"
           ? "Explicit curator edge selection with a mechanically validated exact reverse"
-          : "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
+          : intent === "migration-safe"
+            ? "Previously completed path revalidated after its ownership blocker was released"
+            : "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
       acceptanceBasis,
       automated: intent !== "explicit-selection",
       graphDigest: overlay.graphDigest,
@@ -2588,29 +2600,76 @@ async function applyNetworkAuthoringSegmentMetadata(payload) {
   nextSegment.lifecycleStatus = String(sourceFeature.properties?.status || "active");
   nextSegment.navigable = !["deprecated", "legacy", "draft"].includes(nextSegment.lifecycleStatus);
 
+  const releasedOwnerId = nextSegment.navigable ? null : segmentId;
+  const affectedSegmentIds = releasedOwnerId == null
+    ? []
+    : Object.values(nextOverlay.segments || {})
+      .filter((candidate) =>
+        segmentOwnsDirectedIntervals(candidate) &&
+        ["aToB", "bToA"].some((alignmentKey) =>
+          (candidate.alignments?.[alignmentKey]?.draft?.validation?.reasons || []).some(
+            (reason) =>
+              reason.code === "directed_ownership_conflict" &&
+              Number(reason.owner?.segmentId) === releasedOwnerId,
+          ),
+        ),
+      )
+      .map((candidate) => Number(candidate.segmentId));
+  const automatic = affectedSegmentIds.length > 0
+    ? await autoApplySafeDirectionReviewDrafts(nextOverlay, {
+        revision: requestedRevision,
+        segmentIds: affectedSegmentIds,
+        includeManualEditor: true,
+      })
+    : { overlay: nextOverlay, applied: [], skipped: [] };
+
+  const compatibilitySegments = {
+    ...(compatibilityValue.segments || {}),
+  };
+  if (!nextSegment.navigable) {
+    delete compatibilitySegments[String(segmentId)];
+  } else if (compatibilitySegments[String(segmentId)]) {
+    compatibilitySegments[String(segmentId)] = {
+      ...compatibilitySegments[String(segmentId)],
+      segmentName: nextSegment.segmentName,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  for (const applied of automatic.applied) {
+    const appliedSegment = automatic.overlay.segments?.[String(applied.segmentId)];
+    const refs = materializeAcceptedAlignment(appliedSegment, "aToB") || [];
+    if (refs.length === 0) continue;
+    const previousMapping = compatibilitySegments[String(applied.segmentId)] || {};
+    const nextMapping = {
+      ...previousMapping,
+      segmentId: Number(applied.segmentId),
+      segmentName: appliedSegment.segmentName,
+      status: previousMapping.source === "edge_pick" ? "accepted_edge_set" : "accepted_auto_match",
+      source: previousMapping.source === "edge_pick" ? "edge_pick" : "v2_compatibility_projection",
+      confidence: previousMapping.confidence || "high",
+      coverageRatio: Number(previousMapping.coverageRatio ?? 1),
+      avgDistanceMeters: previousMapping.avgDistanceMeters ?? null,
+      gapCount: 0,
+      failureClass: null,
+      edgeRefs: normalizeAlignmentEdgeRefs(refs),
+      updatedAt: new Date().toISOString(),
+    };
+    delete nextMapping.failureMessage;
+    compatibilitySegments[String(applied.segmentId)] = nextMapping;
+  }
   const nextCompatibility = normalizeCwBaseOverlay({
     ...compatibilityValue,
-    segments: compatibilityValue.segments?.[String(segmentId)]
-      ? {
-          ...compatibilityValue.segments,
-          [String(segmentId)]: {
-            ...compatibilityValue.segments[String(segmentId)],
-            segmentName: nextSegment.segmentName,
-            updatedAt: new Date().toISOString(),
-          },
-        }
-      : compatibilityValue.segments,
+    segments: compatibilitySegments,
   });
-  const parsed = parseCwOverlayV2(nextOverlay);
+  const parsed = parseCwOverlayV2(automatic.overlay);
   if (latestNetworkAuthoringRevisionBySegment.get(segmentId) !== requestedRevision) {
     return { superseded: true, segmentId, revision: requestedRevision };
   }
 
   try {
+    await validatePublishedDirectionReviewOverlay(parsed);
     await writeJsonAtomic(cwBaseOverlayV2StagedPath, parsed);
-    if (compatibilityValue.segments?.[String(segmentId)]) {
-      await writeJsonAtomic(cwBaseOverlayPath, nextCompatibility);
-    }
+    await writeJsonAtomic(cwBaseOverlayPath, nextCompatibility);
   } catch (error) {
     await Promise.all([
       stagedValue
@@ -2630,6 +2689,9 @@ async function applyNetworkAuthoringSegmentMetadata(payload) {
     status: networkSegmentStatus(nextSegment),
     overlay: parsed,
     compatibilityOverlay: nextCompatibility,
+    releasedOwnership: releasedOwnerId != null,
+    automaticallyAppliedSegmentIds: automatic.applied.map((item) => item.segmentId),
+    automaticSkipped: automatic.skipped,
   };
 }
 
@@ -2930,8 +2992,14 @@ async function applyNetworkAuthoringSegment(payload) {
   };
 }
 
-async function autoApplySafeDirectionReviewDrafts(overlay, { revision } = {}) {
+async function autoApplySafeDirectionReviewDrafts(
+  overlay,
+  { revision, segmentIds, includeManualEditor = false } = {},
+) {
   const next = structuredClone(overlay);
+  const selectedSegmentIds = segmentIds == null
+    ? null
+    : new Set(segmentIds.map(Number));
   const context = await readDirectionReviewGraphContext();
   if (
     next.graphDigest !== context.graphDigest ||
@@ -2949,6 +3017,7 @@ async function autoApplySafeDirectionReviewDrafts(overlay, { revision } = {}) {
     "previous-draft",
     "previously-published",
   ]);
+  if (includeManualEditor) allowedExistingKinds.add("manual-editor");
   const allowedOppositeKinds = new Set([
     "exact-reverse",
     "roundabout-repaired-reverse",
@@ -2958,6 +3027,8 @@ async function autoApplySafeDirectionReviewDrafts(overlay, { revision } = {}) {
   for (const segment of Object.values(next.segments || {}).sort(
     (left, right) => Number(left.segmentId) - Number(right.segmentId),
   )) {
+    if (selectedSegmentIds && !selectedSegmentIds.has(Number(segment.segmentId))) continue;
+    if (!segmentOwnsDirectedIntervals(segment)) continue;
     if (["aToB", "bToA"].some((key) => segment.alignments?.[key]?.published)) {
       continue;
     }
@@ -3044,6 +3115,9 @@ async function autoApplySafeDirectionReviewDrafts(overlay, { revision } = {}) {
     segment.alignments[oppositeKey] = { published: oppositePublished, draft: null };
     segment.migration = {
       ...(segment.migration || {}),
+      classification: roundaboutRepair
+        ? "roundabout_reverse_candidate"
+        : "symmetric_candidate",
       automaticPublication: roundaboutRepair
         ? "roundabout-reverse"
         : "bidirectional-evidence",
@@ -3064,6 +3138,7 @@ async function validatePublishedDirectionReviewOverlay(overlay) {
   const owners = directionReviewDirectedOwners(overlay);
   const seenDirectedIntervals = new Map();
   for (const segment of Object.values(overlay.segments || {})) {
+    if (!segmentOwnsDirectedIntervals(segment)) continue;
     for (const alignmentKey of ["aToB", "bToA"]) {
       const published = segment.alignments?.[alignmentKey]?.published;
       if (published?.disposition !== "accepted") continue;

@@ -12,7 +12,7 @@ export const DIRECTION_REVIEW_CLASSIFICATION_LABELS = Object.freeze({
   roundabout_reverse_candidate: "Roundabout reverse ready",
   single_direction_candidate: "Single-direction candidate",
   unresolved: "Unresolved",
-  accepted: "Accepted",
+  accepted: "Current",
 });
 
 function decided(slot) {
@@ -135,6 +135,10 @@ export function applyManualBidirectionalReview(
 
 export function buildDirectionReviewIssueRows(overlay) {
   return Object.values(overlay?.segments || {})
+    .filter((segment) =>
+      segment?.navigable !== false &&
+      !["deprecated", "legacy", "draft"].includes(String(segment?.lifecycleStatus || "active")),
+    )
     .map((segment) => {
       const resolved = directionReviewSegmentResolved(segment);
       const classification = resolved

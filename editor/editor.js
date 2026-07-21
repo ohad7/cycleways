@@ -3,6 +3,7 @@ import {
   validateEdgePickMapping,
   conflictingSegmentForEdge,
   orientAppendedEdgeRef,
+  isCurrentV1Mapping,
 } from "./lib/edge-pick.mjs";
 import { migrateOverlayEdgeReplacement } from "./lib/overlay-edge-migration.mjs";
 import { filterRoundaboutItems } from "./lib/roundaboutReview.mjs";
@@ -222,10 +223,10 @@ const EXTEND_ENDPOINT_THRESHOLD_PX = 44;
 const SPACE_SNAP_EDIT_THRESHOLD_PX = 34;
 const MAX_BOUNDARY_SNAP_DISTANCE_M = 180;
 const MAX_EDGE_CONNECTION_GAP_M = 12;
-const ACCEPTED_LENGTH_WARNING_MIN_RATIO = 0.9;
-const ACCEPTED_LENGTH_WARNING_MAX_RATIO = 1.35;
-const ACCEPTED_LENGTH_BLOCK_MIN_RATIO = 0.8;
-const ACCEPTED_LENGTH_BLOCK_MAX_RATIO = 2.0;
+const CURRENT_MAPPING_LENGTH_WARNING_MIN_RATIO = 0.9;
+const CURRENT_MAPPING_LENGTH_WARNING_MAX_RATIO = 1.35;
+const CURRENT_MAPPING_LENGTH_BLOCK_MIN_RATIO = 0.8;
+const CURRENT_MAPPING_LENGTH_BLOCK_MAX_RATIO = 2.0;
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
 
 function featureFlagValue(key, defaultValue) {
@@ -1104,6 +1105,9 @@ function adoptNetworkAuthoringMetadataResult(payload) {
     state.directionReview.readOnly = false;
     state.directionReview.overlay = payload.overlay;
     if (payload.compatibilityOverlay) state.baseOverlay.overlay = payload.compatibilityOverlay;
+    for (const segmentId of payload.automaticallyAppliedSegmentIds || []) {
+      state.authoring.transientIssues.delete(Number(segmentId));
+    }
   }
 }
 
@@ -2331,7 +2335,7 @@ function cwOverlayNetworkCollection() {
   for (const mapping of Object.values(state.baseOverlay.overlay?.segments || {})) {
     const segmentId = Number(mapping?.segmentId);
     const segment = activeById.get(segmentId);
-    if (mapping?.status !== "accepted_auto_match" || !segment || !Array.isArray(mapping.edgeRefs)) {
+    if (!isCurrentV1Mapping(mapping) || !segment || !Array.isArray(mapping.edgeRefs)) {
       continue;
     }
 
@@ -3775,7 +3779,7 @@ function edgeRefContinuityGaps(edgeRefs) {
 
 function emptyOverlayValidationReport() {
   return {
-    accepted: 0,
+    current: 0,
     stale: 0,
     disconnected: 0,
     lengthMismatch: 0,
@@ -3806,30 +3810,30 @@ function sourceFeatureForSegmentId(segmentId) {
   return state.activeFeatures.find(({ feature }) => Number(feature.properties?.id) === id)?.feature || null;
 }
 
-function acceptedMappingLengthIssue(mapping) {
+function currentMappingLengthIssue(mapping) {
   if (!mapping?.edgeRefs?.length) return null;
   const sourceFeature = sourceFeatureForSegmentId(mapping.segmentId);
   const sourceCoords = sourceFeature?.geometry?.coordinates || [];
   if (sourceCoords.length < 2) return null;
 
-  const acceptedLengthMeters = mapping.edgeRefs.reduce((total, edgeRef) => {
+  const mappedLengthMeters = mapping.edgeRefs.reduce((total, edgeRef) => {
     const coords = orientedEdgeRefCoords(edgeRef);
     return total + (coords.length >= 2 ? routeLengthMeters(coords) : 0);
   }, 0);
   const sourceLengthMeters = routeLengthMeters(sourceCoords);
-  if (acceptedLengthMeters <= 0 || sourceLengthMeters <= 0) return null;
+  if (mappedLengthMeters <= 0 || sourceLengthMeters <= 0) return null;
 
-  const ratio = acceptedLengthMeters / sourceLengthMeters;
+  const ratio = mappedLengthMeters / sourceLengthMeters;
   const issue = {
-    acceptedLengthMeters,
+    mappedLengthMeters,
     sourceLengthMeters,
     ratio,
-    reason: `${Math.round(acceptedLengthMeters)}m accepted vs ${Math.round(sourceLengthMeters)}m source`,
+    reason: `${Math.round(mappedLengthMeters)}m mapped vs ${Math.round(sourceLengthMeters)}m source`,
   };
-  if (ratio < ACCEPTED_LENGTH_BLOCK_MIN_RATIO || ratio > ACCEPTED_LENGTH_BLOCK_MAX_RATIO) {
+  if (ratio < CURRENT_MAPPING_LENGTH_BLOCK_MIN_RATIO || ratio > CURRENT_MAPPING_LENGTH_BLOCK_MAX_RATIO) {
     return { ...issue, severity: "blocker" };
   }
-  if (ratio < ACCEPTED_LENGTH_WARNING_MIN_RATIO || ratio > ACCEPTED_LENGTH_WARNING_MAX_RATIO) {
+  if (ratio < CURRENT_MAPPING_LENGTH_WARNING_MIN_RATIO || ratio > CURRENT_MAPPING_LENGTH_WARNING_MAX_RATIO) {
     return { ...issue, severity: "warning" };
   }
   return null;
@@ -3854,11 +3858,11 @@ function baseOverlayValidationReport() {
   const activeIds = activeSegmentIdSet();
   const mappings = Object.values(state.baseOverlay.overlay?.segments || {}).filter(
     (mapping) =>
-      mapping?.status === "accepted_auto_match" &&
+      isCurrentV1Mapping(mapping) &&
       Array.isArray(mapping.edgeRefs) &&
       activeIds.has(Number(mapping.segmentId)),
   );
-  report.accepted = mappings.length;
+  report.current = mappings.length;
 
   for (const mapping of mappings) {
     const segmentValidation = overlayValidationForSegment(report, mapping.segmentId);
@@ -3872,7 +3876,7 @@ function baseOverlayValidationReport() {
       report.disconnected += 1;
     }
 
-    segmentValidation.lengthIssue = acceptedMappingLengthIssue(mapping);
+    segmentValidation.lengthIssue = currentMappingLengthIssue(mapping);
     if (segmentValidation.lengthIssue) {
       report.lengthMismatch += 1;
     }
@@ -3938,15 +3942,15 @@ function validationForSegment(segmentId) {
 function reviewedEdgeSetValidation(segmentId, edgeRefs) {
   const activeIds = activeSegmentIdSet();
   const duplicateEdges = [];
-  const acceptedMappings = Object.values(state.baseOverlay.overlay?.segments || {}).filter(
+  const currentMappings = Object.values(state.baseOverlay.overlay?.segments || {}).filter(
     (mapping) =>
-      mapping?.status === "accepted_auto_match" &&
+      isCurrentV1Mapping(mapping) &&
       Array.isArray(mapping.edgeRefs) &&
       activeIds.has(Number(mapping.segmentId)) &&
       Number(mapping.segmentId) !== Number(segmentId),
   );
   const ownersByEdge = new Map();
-  for (const mapping of acceptedMappings) {
+  for (const mapping of currentMappings) {
     for (const ref of mapping.edgeRefs) {
       const edgeId = String(ref.edgeId || "");
       if (!edgeId) continue;
@@ -4169,15 +4173,15 @@ function renderComposeStatus() {
 
 async function saveEdgePickedMapping(segmentId, feature, edgeRefs) {
   const continuityGaps = edgeRefContinuityGaps(edgeRefs);
-  const acceptedMappings = new Map();
+  const currentMappings = new Map();
   for (const mapping of Object.values(state.baseOverlay.overlay?.segments || {})) {
-    if (!mapping || (mapping.status !== "accepted_edge_set" && mapping.status !== "accepted_auto_match")) continue;
+    if (!isCurrentV1Mapping(mapping)) continue;
     if (Number(mapping.segmentId) === Number(segmentId)) continue;
     for (const ref of mapping.edgeRefs || []) {
-      acceptedMappings.set(String(ref.edgeId), { segmentId: mapping.segmentId, segmentName: mapping.segmentName });
+      currentMappings.set(String(ref.edgeId), { segmentId: mapping.segmentId, segmentName: mapping.segmentName });
     }
   }
-  const validation = validateEdgePickMapping({ segmentId, edgeRefs, acceptedMappings, continuityGaps });
+  const validation = validateEdgePickMapping({ segmentId, edgeRefs, currentMappings, continuityGaps });
 
   const coords = stitchCoordsFromEdgeRefs(edgeRefs, baseEdgeGeometryLookup());
   if (coords.length >= 2) {
@@ -4495,7 +4499,7 @@ function overlayNetworkStatus(match) {
       resolved: false,
     };
   }
-  if (mapping?.status === "accepted_auto_match") {
+  if (isCurrentV1Mapping(mapping)) {
     const edgeRefIssues = overlayMappingEdgeRefIssues(mapping);
     if (edgeRefIssues.length > 0) {
       return {
@@ -4545,7 +4549,7 @@ function overlayNetworkStatus(match) {
     }
     return {
       key: "accepted",
-      label: "Accepted",
+      label: "Current",
       reason: `${mapping.edgeRefs?.length || 0} saved base edge refs`,
       resolved: true,
     };
@@ -4562,7 +4566,7 @@ function overlayNetworkStatus(match) {
     return {
       key: "needs_edit",
       label: "Review draft",
-      reason: `${mapping.edgeRefs?.length || 0} reviewed base edge refs waiting for accept`,
+      reason: `${mapping.edgeRefs?.length || 0} base edge refs need correction`,
       resolved: false,
     };
   }
@@ -4627,7 +4631,7 @@ function overlayNetworkStatus(match) {
   return {
     key: "not_saved",
     label: "Not saved",
-    reason: "No accepted overlay mapping is saved",
+    reason: "No current overlay mapping is saved",
     resolved: false,
   };
 }
@@ -4685,7 +4689,7 @@ function baseOverlayReviewRows() {
 function baseOverlayReviewCounts(rows = baseOverlayReviewRows()) {
   const counts = {
     total: rows.length,
-    accepted: 0,
+    current: 0,
     issues: 0,
     unresolved: 0,
     missingBaseEdge: 0,
@@ -4700,7 +4704,7 @@ function baseOverlayReviewCounts(rows = baseOverlayReviewRows()) {
 
   for (const row of rows) {
     if (row.status.resolved) {
-      counts.accepted += 1;
+      counts.current += 1;
       continue;
     }
     counts.issues += 1;
@@ -4777,7 +4781,7 @@ function renderBaseOverlayReviewQueue() {
   const counts = baseOverlayReviewCounts(rows);
   const validation = baseOverlayValidationReport();
   const stats = [
-    ["Accepted", counts.accepted],
+    ["Current", counts.current],
     ["Issues", counts.issues],
     ["Missing", counts.missingBaseEdge],
     ["Gaps", counts.partialGap],
@@ -4815,7 +4819,7 @@ function renderBaseOverlayReviewQueue() {
 
   const issueRows = rows.filter((row) => !row.status.resolved);
   if (issueRows.length === 0) {
-    els.baseOverlayReviewList.innerHTML = `<div class="empty-state">All active CW segments have accepted base overlay mappings.</div>`;
+    els.baseOverlayReviewList.innerHTML = `<div class="empty-state">All active CW segments have current base overlay mappings.</div>`;
     return;
   }
 
@@ -5798,7 +5802,7 @@ function renderBaseNetworkExplorerPanel() {
       : "";
     const precedenceText = subject.cwPrecedenceDirections.length
       ? `<small class="base-network-cw-precedence">${escapeHtml(
-          `Effective access allowed by accepted CW alignment: ${subject.cwPrecedenceDirections.join(" + ")}`,
+          `Effective access allowed by current CW alignment: ${subject.cwPrecedenceDirections.join(" + ")}`,
         )}</small>`
       : "";
     button.innerHTML = `
@@ -6842,7 +6846,7 @@ function renderBaseOverlayPanel() {
   const edgeRefIssues = overlayMappingEdgeRefIssues(mapping);
   const validation = validationForSegment(segmentId);
   const reviewedValidation =
-    mapping?.status === "accepted_auto_match" ? validation : reviewedEdgeSetValidation(segmentId, reviewedEdgeRefs);
+    isCurrentV1Mapping(mapping) ? validation : reviewedEdgeSetValidation(segmentId, reviewedEdgeRefs);
   const continuityIssue = baseOverlayContinuityIssue(match, reviewedValidation.continuityGaps);
   const missingManualGraphEdges = missingManualGraphEdgeIdsForSegment(segmentId);
   const baseGraphStaleForSegment = isBaseGraphStale() || missingManualGraphEdges.length > 0;
@@ -6906,7 +6910,7 @@ function renderBaseOverlayPanel() {
     : "";
   const continuityWarning = continuityIssue
     ? `<div class="base-overlay-continuity-warning" role="alert">
-        <strong>Cannot accept: disconnected base-edge sequence</strong>
+        <strong>Cannot apply: disconnected base-edge sequence</strong>
         <span>${escapeHtml(continuityIssue.detail)}</span>
         <small>Connect the listed base edges, rebuild if manual geometry changed, and then recalculate this segment.</small>
       </div>`
@@ -6951,7 +6955,7 @@ function renderBaseOverlayPanel() {
     state.baseOverlay.recalculating ||
     reviewedEdgeRefs.length === 0;
   els.acceptBaseOverlay.title = continuityIssue
-    ? `Cannot accept until continuity is fixed: ${continuityIssue.detail}`
+    ? `Cannot apply until continuity is fixed: ${continuityIssue.detail}`
     : "";
   els.recalculateSelectedOverlay.disabled =
     mappingLocked ||
@@ -6985,7 +6989,7 @@ function renderBaseOverlayPanel() {
   els.baseOverlayEdgeEditHelp.textContent = baseGraphStaleForSegment
     ? "Recalculate the base graph before editing mapping edges."
     : mappingLocked
-      ? "Clear the accepted mapping before editing its base edges."
+      ? "Clear the current mapping before editing its base edges."
       : state.editingOverlayEdges
         ? "Editing is active: click any base edge on the map to add or remove it from this segment."
         : "Choose Edit mapping edges to make map clicks modify this segment instead of selecting other CW segments.";
@@ -7141,7 +7145,7 @@ function renderDirectionReviewQueue() {
       issueRows.filter((row) => row.classification === classification).length,
     ]),
   );
-  const acceptedCount = allRows.length - issueRows.length;
+  const currentCount = allRows.length - issueRows.length;
   const pendingManualCount = Object.keys(
     review.pendingManualApprovals?.items || {},
   ).length;
@@ -7152,7 +7156,7 @@ function renderDirectionReviewQueue() {
       (classification) =>
         `<span class="direction-review-queue-count">${escapeHtml(DIRECTION_REVIEW_CLASSIFICATION_LABELS[classification])}: ${counts[classification]}</span>`,
     ),
-    `<span class="direction-review-queue-count">Accepted: ${acceptedCount}</span>`,
+    `<span class="direction-review-queue-count">Current: ${currentCount}</span>`,
     ...(pendingManualCount > 0
       ? [`<span class="direction-review-queue-count">Queued: ${pendingManualCount}</span>`]
       : []),
@@ -7238,7 +7242,7 @@ function directionReviewSlotLabel(slot) {
   const published = slot?.published;
   const draft = slot?.draft;
   if (draft) return `${draft.candidate?.kind || "draft"} · ${draft.validation?.status || "pending"}`;
-  if (published?.disposition === "accepted") return "accepted";
+  if (published?.disposition === "accepted") return "current";
   if (published?.disposition === "unavailable") {
     return `unavailable · ${published.unavailableReasonCode}`;
   }
@@ -7271,7 +7275,7 @@ function directionReviewProposalExplanation(record) {
     );
     return {
       label: "Roundabout reverse repair",
-      detail: `Automatic draft: ${blocked} backward roundabout edge${blocked === 1 ? "" : "s"} replaced by ${replacements} permitted edge${replacements === 1 ? "" : "s"} between the same entry and exit. The complete alignment passed validation; inspect it before accepting.`,
+      detail: `Automatic draft: ${blocked} backward roundabout edge${blocked === 1 ? "" : "s"} replaced by ${replacements} permitted edge${replacements === 1 ? "" : "s"} between the same entry and exit. The complete alignment passed validation; inspect it before using this path.`,
     };
   }
   if (kind === "exact-reverse") {
@@ -7283,7 +7287,7 @@ function directionReviewProposalExplanation(record) {
   if (kind === "authoring-revision") {
     return {
       label: "Authoring revision",
-      detail: "Automatic draft imported from the newly recalculated base-edge mapping. Existing accepted and manually edited V2 decisions are never silently replaced.",
+      detail: "Automatic draft imported from the newly recalculated base-edge mapping. Existing current and manually edited V2 decisions are never silently replaced.",
     };
   }
   if (kind === "opposite-alignment-required") {
@@ -7295,7 +7299,7 @@ function directionReviewProposalExplanation(record) {
   if (kind === "manual-editor") {
     return {
       label: "Manual editor mapping",
-      detail: "This draft was edited directly. Revalidate the complete path before accepting it.",
+      detail: "This draft was edited directly. Revalidate the complete path before using it.",
     };
   }
   if (["v1-existing", "new-authoring"].includes(kind)) {
@@ -7311,9 +7315,9 @@ function directionReviewProposalExplanation(record) {
     };
   }
   return {
-    label: kind === "accepted" ? "Accepted mapping" : "Unreviewed mapping",
+    label: kind === "accepted" ? "Current mapping" : "Unreviewed mapping",
     detail: kind === "accepted"
-      ? "This direction has been accepted."
+      ? "This direction is current."
       : "No automatic proposal method is recorded for this direction.",
   };
 }
@@ -7352,7 +7356,7 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
       <span class="direction-review-edge-sequence">${index + 1}</span>
       <span class="direction-review-edge-main">
         <strong>${escapeHtml(String(ref.edgeId))} · ${escapeHtml(ref.direction === "reverse" ? "reverse" : "forward")}</strong>
-        <small><span class="direction-review-edge-state ${escapeHtml(evidence.traversal.state)}">${escapeHtml(evidence.traversal.state)}</span> · ${escapeHtml(evidence.traversal.reason)} · ${escapeHtml(evidence.raw)}${precedenceApplies ? " · accepted CW alignment will take precedence" : ""}${roundaboutRepaired ? " · roundabout auto-repair" : ""}</small>
+        <small><span class="direction-review-edge-state ${escapeHtml(evidence.traversal.state)}">${escapeHtml(evidence.traversal.state)}</span> · ${escapeHtml(evidence.traversal.reason)} · ${escapeHtml(evidence.raw)}${precedenceApplies ? " · current CW alignment takes precedence" : ""}${roundaboutRepaired ? " · roundabout auto-repair" : ""}</small>
       </span>
       <span class="direction-review-edge-buttons"></span>`;
     const buttons = row.querySelector(".direction-review-edge-buttons");
@@ -7465,13 +7469,13 @@ function renderDirectionReview(segmentId) {
     <dl class="base-overlay-metrics">
       <div><dt>Logical segment</dt><dd>${escapeHtml(segment.segmentName)} (#${segment.segmentId})</dd></div>
       <div><dt>Alignment</dt><dd>${review.alignmentKey === "aToB" ? "A → B" : "B → A"}</dd></div>
-      <div><dt>Published</dt><dd>${escapeHtml(slot.published?.disposition || "none")}</dd></div>
+      <div><dt>Current path</dt><dd>${escapeHtml(directionReviewSlotLabel({ published: slot.published }))}</dd></div>
       <div><dt>Draft</dt><dd>${escapeHtml(slot.draft?.candidate?.kind || slot.draft?.disposition || "none")}</dd></div>
       <div><dt>Classification</dt><dd>${escapeHtml(segment.migration?.classification || "—")}</dd></div>
       <div><dt>Directed refs</dt><dd>${refs.length}</dd></div>
-      <div><dt>Validation</dt><dd class="${stateClass}">${escapeHtml(validation?.status || slot.published?.disposition || "unreviewed")}</dd></div>
+      <div><dt>Validation</dt><dd class="${stateClass}">${escapeHtml(validation?.status || (slot.published?.disposition === "accepted" ? "current" : slot.published?.disposition) || "unreviewed")}</dd></div>
       ${endpointDistances ? `<div><dt>Endpoint drift</dt><dd>${Math.round(endpointDistances.start)}m start · ${Math.round(endpointDistances.end)}m end</dd></div>` : ""}
-      ${precedenceCount ? `<div><dt>CW precedence</dt><dd>${precedenceCount} restricted/conditional directed edge${precedenceCount === 1 ? "" : "s"} will become allowed only after this alignment is accepted</dd></div>` : ""}
+      ${precedenceCount ? `<div><dt>CW precedence</dt><dd>${precedenceCount} restricted/conditional directed edge${precedenceCount === 1 ? "" : "s"} will become allowed when this path is used</dd></div>` : ""}
       ${reasonList ? `<div><dt>Blocking evidence</dt><dd>${escapeHtml(reasonList)}</dd></div>` : ""}
     </dl>
     <div class="direction-review-proposal-callout">
@@ -7529,7 +7533,7 @@ function renderDirectionReview(segmentId) {
       ? `Still queued. Last finalization error: ${queuedManualApproval.lastError}`
       : `Queued ${new Date(queuedManualApproval.queuedAt).toLocaleString()}. Continue reviewing; rebuild and finalize the whole queue once when ready.`
     : manualApproval.eligible
-      ? `Uses reviewer ohad and today's date by default. Saves this segment's ${manualApproval.edgeIds.length} manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"} immediately and queues acceptance. Use the batch finalizer once after reviewing several segments.`
+      ? `Uses reviewer ohad and today's date by default. Saves this segment's ${manualApproval.edgeIds.length} manual edge${manualApproval.edgeIds.length === 1 ? "" : "s"} immediately and queues the direction update. Use the batch finalizer once after reviewing several segments.`
     : manualApproval.otherReasons.length > 0
       ? "This segment also has one-way, roundabout, continuity, or endpoint blockers. Review those explicitly."
       : missingManualEdges.length > 0
@@ -7610,7 +7614,7 @@ async function toggleDirectionReviewEditing() {
   if (state.directionReview.editing) {
     state.directionReview.editing = false;
     renderAll();
-    setStatus("Finished directed-edge editing. Revalidate, then accept when all checks pass.");
+    setStatus("Finished directed-edge editing. Revalidate, then use this path when all checks pass.");
     return;
   }
   state.editingOverlayEdges = false;
@@ -8608,20 +8612,20 @@ async function commitNewSegmentEdgesDrawn() {
   const segmentId = nextSegmentId();
   const continuityGaps = edgeRefContinuityGaps(edgeRefs);
 
-  const acceptedMappings = new Map();
+  const currentMappings = new Map();
   for (const mapping of Object.values(state.baseOverlay.overlay?.segments || {})) {
-    if (!mapping || (mapping.status !== "accepted_edge_set" && mapping.status !== "accepted_auto_match")) {
+    if (!isCurrentV1Mapping(mapping)) {
       continue;
     }
     for (const ref of mapping.edgeRefs || []) {
-      acceptedMappings.set(String(ref.edgeId), { segmentId: mapping.segmentId, segmentName: mapping.segmentName });
+      currentMappings.set(String(ref.edgeId), { segmentId: mapping.segmentId, segmentName: mapping.segmentName });
     }
   }
 
   const validation = validateEdgePickMapping({
     segmentId,
     edgeRefs,
-    acceptedMappings,
+    currentMappings,
     continuityGaps,
   });
 
@@ -10080,7 +10084,7 @@ async function processChangedSegmentQueue() {
   state.processingChangedQueue = true;
   renderDrawControls();
   const queuedIds = [...state.changedSegmentIds].sort((a, b) => a - b);
-  const accepted = [];
+  const madeCurrent = [];
   const unresolved = [];
   const failed = [];
 
@@ -10132,7 +10136,7 @@ async function processChangedSegmentQueue() {
             },
           };
           state.changedSegmentIds.delete(segmentId);
-          accepted.push(segmentId);
+          madeCurrent.push(segmentId);
         } else {
           unresolved.push(segmentId);
         }
@@ -10148,7 +10152,7 @@ async function processChangedSegmentQueue() {
     refreshUnresolvedSegmentHighlights();
     renderAll();
     const details = [
-      `${accepted.length} accepted`,
+      `${madeCurrent.length} current`,
       unresolved.length > 0 ? `${unresolved.length} still unresolved` : null,
       failed.length > 0 ? `${failed.length} failed` : null,
       `${state.changedSegmentIds.size} left in queue`,
@@ -10252,7 +10256,7 @@ async function refreshDirectionReviewEvidence({
       : "";
     if (!quiet) {
       setStatus(
-        `Routing evidence current. ${Number(preserved.publishedAsDraft || 0)} accepted alignment${Number(preserved.publishedAsDraft || 0) === 1 ? "" : "s"} need review; ${Number(preserved.drafts || 0)} working draft${Number(preserved.drafts || 0) === 1 ? "" : "s"} and ${Number(preserved.unavailable || 0)} unavailable decision${Number(preserved.unavailable || 0) === 1 ? "" : "s"} preserved.${automaticText}${sourceRebaseText}${authoringRevisionText}`,
+        `Routing evidence current. ${Number(preserved.publishedAsDraft || 0)} previously current alignment${Number(preserved.publishedAsDraft || 0) === 1 ? "" : "s"} need review; ${Number(preserved.drafts || 0)} working draft${Number(preserved.drafts || 0) === 1 ? "" : "s"} and ${Number(preserved.unavailable || 0)} unavailable decision${Number(preserved.unavailable || 0) === 1 ? "" : "s"} preserved.${automaticText}${sourceRebaseText}${authoringRevisionText}`,
       );
     }
   } finally {
@@ -10475,7 +10479,7 @@ async function persistOverlayMatch(
   { updateState = true, signal } = {},
 ) {
   if (!summary) {
-    throw new Error("Recalculate the selected segment before accepting it.");
+    throw new Error("Recalculate the selected segment before applying it.");
   }
   const response = await fetch("/api/osm/persist-segment-match", {
     method: "POST",

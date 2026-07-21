@@ -202,6 +202,29 @@ Every selected CW segment has one user-facing status:
 Internal draft, published, accepted, migration, and evidence-digest fields can
 remain in the stored schema. They do not become competing user-facing states.
 
+### V1 compatibility status semantics
+
+The persisted V1 values `accepted_auto_match` and `accepted_edge_set` are legacy
+names for two kinds of **current** mapping: one selected automatically and one
+selected explicitly. Rendering, validation, edge ownership, and diagnostics
+must treat both identically. Neither value creates a curator-facing segment
+acceptance gate, and active UI labels use **Current**, **Apply**, or **Use this
+path** instead of exposing the stored word `accepted`.
+
+This does not remove genuine semantic review. A curator still chooses among
+ambiguous directional paths and separately reviews roundabout or crossing
+classifications. Those decisions may retain `accepted` as an internal schema
+value and audit disposition.
+
+### Lifecycle releases ownership
+
+Only active, navigable segments own directed base-edge intervals. Deprecating a
+segment removes its V1 current-mapping projection while preserving its V2
+history, then revalidates active drafts that were blocked specifically by that
+segment. A previously completed explicit edge selection becomes current
+automatically when releasing the deprecated owner removes its only blocker;
+the curator does not repeat Done or make a second acceptance decision.
+
 Examples:
 
 ```text

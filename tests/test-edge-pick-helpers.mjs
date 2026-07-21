@@ -4,9 +4,15 @@ import {
   validateEdgePickMapping,
   conflictingSegmentForEdge,
   orientAppendedEdgeRef,
+  isCurrentV1Mapping,
   directedIntervalKey,
   validateDirectionReviewAlignment,
 } from "../editor/lib/edge-pick.mjs";
+
+// V1 status names are compatibility storage; both saved mapping kinds are current.
+assert.equal(isCurrentV1Mapping({ status: "accepted_auto_match" }), true);
+assert.equal(isCurrentV1Mapping({ status: "accepted_edge_set" }), true);
+assert.equal(isCurrentV1Mapping({ status: "needs_edit" }), false);
 
 // stitchCoordsFromEdgeRefs ---------------------------------------------------
 
@@ -78,7 +84,7 @@ console.log("stitchCoordsFromEdgeRefs ok");
   const result = validateEdgePickMapping({
     segmentId: 99,
     edgeRefs: [],
-    acceptedMappings: new Map(),
+    currentMappings: new Map(),
     continuityGaps: [],
   });
   assert.equal(result.ok, false);
@@ -90,7 +96,7 @@ console.log("stitchCoordsFromEdgeRefs ok");
   const result = validateEdgePickMapping({
     segmentId: 99,
     edgeRefs: [{ edgeId: "e1", direction: "forward", sequenceIndex: 0 }],
-    acceptedMappings: new Map(),
+    currentMappings: new Map(),
     continuityGaps: [],
   });
   assert.equal(result.ok, true);
@@ -104,7 +110,7 @@ console.log("stitchCoordsFromEdgeRefs ok");
       { edgeId: "e1", direction: "forward", sequenceIndex: 0 },
       { edgeId: "e2", direction: "forward", sequenceIndex: 1 },
     ],
-    acceptedMappings: new Map(),
+    currentMappings: new Map(),
     continuityGaps: [{ sequenceIndex: 0, fromEdgeId: "e1", toEdgeId: "e2", distanceMeters: 42 }],
   });
   assert.equal(result.ok, false);
@@ -114,13 +120,13 @@ console.log("stitchCoordsFromEdgeRefs ok");
 
 // Edge owned by another accepted segment produces edge_pick_conflict.
 {
-  const accepted = new Map([
+  const current = new Map([
     ["e1", { segmentId: 7, segmentName: "Foo" }],
   ]);
   const result = validateEdgePickMapping({
     segmentId: 99,
     edgeRefs: [{ edgeId: "e1", direction: "forward", sequenceIndex: 0 }],
-    acceptedMappings: accepted,
+    currentMappings: current,
     continuityGaps: [],
   });
   assert.equal(result.ok, false);
@@ -130,13 +136,13 @@ console.log("stitchCoordsFromEdgeRefs ok");
 
 // Edge owned only by the *current* segment does not conflict (self-edits).
 {
-  const accepted = new Map([
+  const current = new Map([
     ["e1", { segmentId: 99, segmentName: "Self" }],
   ]);
   const result = validateEdgePickMapping({
     segmentId: 99,
     edgeRefs: [{ edgeId: "e1", direction: "forward", sequenceIndex: 0 }],
-    acceptedMappings: accepted,
+    currentMappings: current,
     continuityGaps: [],
   });
   assert.equal(result.ok, true);

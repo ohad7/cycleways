@@ -503,7 +503,7 @@
                   <option value="roundabout_reverse_candidate">Roundabout decisions</option>
                   <option value="single_direction_candidate">Directional decisions</option>
                   <option value="unresolved">Unresolved</option>
-                  <option value="accepted">Accepted</option>
+                  <option value="accepted">Current</option>
                   <option value="all">All segments</option>
                 </select>
                 <input id="direction-review-queue-search" class="text-input" type="search" placeholder="Search name, segment, or edge ID" aria-label="Search Direction Review queue" />
@@ -540,7 +540,7 @@
                 <dl>
                   <div><dt>Exact reverse</dt><dd>Mechanically reverses every edge. Offered only when the complete reverse is permitted.</dd></div>
                   <div><dt>Roundabout reverse repair</dt><dd>Keeps the route unchanged except for replacing a backward roundabout arc with the permitted arc between the same entry and exit.</dd></div>
-                  <div><dt>Authoring revision</dt><dd>Imports a newly recalculated base-edge mapping while protecting accepted or manually edited V2 work.</dd></div>
+                  <div><dt>Authoring revision</dt><dd>Imports a newly recalculated base-edge mapping while protecting current or manually edited directional work.</dd></div>
                   <div><dt>Manual direction required</dt><dd>No narrow correction passed validation. Edit the direction or mark it unavailable.</dd></div>
                 </dl>
                 <p>Ordinary safe bidirectional paths are applied automatically. This section appears only when a direction differs, needs evidence, or is blocked.</p>

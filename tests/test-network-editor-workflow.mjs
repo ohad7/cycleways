@@ -28,6 +28,12 @@ assert.match(editor, /showOverlay && !editingPhysicalEdges/);
 assert.match(editor, /state\.workspaceMode === "base" \|\| editingPhysicalEdges/);
 assert.match(editor, /persistNetworkViewPreferences/);
 assert.match(editor, /buildNetworkIssueRows/);
+assert.match(editor, /isCurrentV1Mapping/);
+assert.match(
+  editor,
+  /function cwOverlayNetworkCollection\(\)[\s\S]{0,1800}!isCurrentV1Mapping\(mapping\)/,
+  "CW network rendering must include both automatic and explicitly chosen current V1 mappings",
+);
 assert.match(editor, /scheduleAuthoringSync/);
 assert.match(editor, /explicitEdgeRefsBySegment/);
 assert.match(editor, /queueNetworkMetadataFeature/);
@@ -62,9 +68,15 @@ assert.doesNotMatch(
   "background reconciliation must not run the full editor renderer",
 );
 assert.match(styles, /\.legacy-authoring-control[\s\S]*display:\s*none/);
+assert.match(html, /<option value="accepted">Current<\/option>/);
 assert.match(server, /POST[^\n]*\/api\/network-authoring\/segment|url\.pathname === "\/api\/network-authoring\/segment"/);
 assert.match(server, /url\.pathname === "\/api\/network-authoring\/segment-metadata"/);
 assert.match(server, /automaticBidirectionalDecision/);
+assert.match(server, /function segmentOwnsDirectedIntervals/);
+assert.match(server, /if \(!segmentOwnsDirectedIntervals\(segment\)\) continue/);
+assert.match(server, /automaticallyAppliedSegmentIds/);
+assert.match(server, /delete compatibilitySegments\[String\(segmentId\)\]/);
+assert.match(server, /"manual-editor"/);
 assert.match(server, /validatePublishedDirectionReviewOverlay\(parsed\)/);
 assert.match(server, /last published path while evaluating a revised source shape/);
 assert.match(server, /AUTHORING_REQUEST_ABORTED/);

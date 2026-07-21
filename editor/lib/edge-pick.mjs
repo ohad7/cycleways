@@ -44,12 +44,12 @@ export function stitchCoordsFromEdgeRefs(edgeRefs, edgeLookup) {
  *   - segmentId: number of the segment being validated (used to exclude itself
  *     from the conflict check).
  *   - edgeRefs: ordered EdgeRef list.
- *   - acceptedMappings: Map<edgeIdString, { segmentId, segmentName }> built
+ *   - currentMappings: Map<edgeIdString, { segmentId, segmentName }> built
  *     from the current overlay (only accepted_edge_set / accepted_auto_match
  *     mappings should be included by the caller).
  *   - continuityGaps: pre-computed gaps from editor.js' edgeRefContinuityGaps.
  */
-export function validateEdgePickMapping({ segmentId, edgeRefs, acceptedMappings, continuityGaps }) {
+export function validateEdgePickMapping({ segmentId, edgeRefs, currentMappings, continuityGaps }) {
   if (!edgeRefs || edgeRefs.length === 0) {
     return {
       ok: false,
@@ -70,7 +70,7 @@ export function validateEdgePickMapping({ segmentId, edgeRefs, acceptedMappings,
 
   const conflicts = [];
   for (const ref of edgeRefs) {
-    const owner = acceptedMappings.get(String(ref.edgeId));
+    const owner = currentMappings.get(String(ref.edgeId));
     if (owner && Number(owner.segmentId) !== Number(segmentId)) {
       conflicts.push({ edgeId: String(ref.edgeId), segmentId: owner.segmentId, segmentName: owner.segmentName });
     }
@@ -87,13 +87,22 @@ export function validateEdgePickMapping({ segmentId, edgeRefs, acceptedMappings,
   return { ok: true };
 }
 
-const ACCEPTED_STATUSES = new Set(["accepted_edge_set", "accepted_auto_match"]);
+// V1 compatibility names. Both represent a current mapping; neither is a
+// curator-facing acceptance step in the consolidated Network workflow.
+export const V1_CURRENT_MAPPING_STATUSES = new Set([
+  "accepted_edge_set",
+  "accepted_auto_match",
+]);
+
+export function isCurrentV1Mapping(mapping) {
+  return Boolean(mapping && V1_CURRENT_MAPPING_STATUSES.has(mapping.status));
+}
 
 /**
- * Find an accepted overlay mapping (other than excludeSegmentId) that already
+ * Find a current overlay mapping (other than excludeSegmentId) that already
  * references this edgeId. Returns { segmentId, segmentName } or null.
  *
- * Mappings with status outside ACCEPTED_STATUSES (e.g. needs_edit) are not
+ * Mappings with a non-current status (e.g. needs_edit) are not
  * considered committed owners and do not produce a conflict.
  */
 function edgeEndpoints(edge, direction) {
@@ -184,7 +193,7 @@ export function orientAppendedEdgeRef(chainRefs, newEdge, edgeLookup) {
 export function conflictingSegmentForEdge(edgeId, excludeSegmentId, overlaySegments) {
   const target = String(edgeId);
   for (const mapping of Object.values(overlaySegments || {})) {
-    if (!mapping || !ACCEPTED_STATUSES.has(mapping.status)) continue;
+    if (!isCurrentV1Mapping(mapping)) continue;
     if (Number(mapping.segmentId) === Number(excludeSegmentId)) continue;
     if (!Array.isArray(mapping.edgeRefs)) continue;
     if (mapping.edgeRefs.some((ref) => String(ref.edgeId) === target)) {

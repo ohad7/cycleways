@@ -104521,14 +104521,28 @@
       "properties": {
         "id": 363,
         "name": "New segment - 2",
-        "status": "active",
+        "status": "deprecated",
         "roadType": "paved",
         "quality": {
           "overall": 3,
           "safety": 3,
           "comfort": 3,
           "scenery": 3
-        }
+        },
+        "routeAnchors": [
+          [
+            35.6309581,
+            33.2241527
+          ],
+          [
+            35.631161,
+            33.224134
+          ],
+          [
+            35.631292,
+            33.224137
+          ]
+        ]
       },
       "geometry": {
         "type": "LineString",

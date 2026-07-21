@@ -26,7 +26,7 @@ assert.equal(issue.detail, "e248208200_1 → manual-edge-mrtjsvs1 (15 m)");
 const result = recalculationResultMessage("#63", disconnected, (value) => `${value * 100}%`);
 assert.equal(result.level, "error");
 assert.match(result.message, /0 coverage gaps · 1 continuity gap/);
-assert.match(result.message, /Cannot accept this mapping/);
+assert.match(result.message, /Cannot apply this mapping/);
 assert.match(result.message, /e248208200_1 → manual-edge-mrtjsvs1 \(15 m\)/);
 
 const connected = recalculationResultMessage(

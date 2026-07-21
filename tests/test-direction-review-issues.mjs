@@ -63,11 +63,20 @@ const overlay = {
       migration: { classification: "roundabout_reverse_candidate" },
       alignments: { aToB: slot(), bToA: slot() },
     },
+    "6": {
+      segmentId: 6,
+      segmentName: "Deprecated history",
+      lifecycleStatus: "deprecated",
+      navigable: false,
+      migration: { classification: "symmetric_candidate" },
+      alignments: { aToB: slot({ published: accepted }), bToA: slot({ published: accepted }) },
+    },
   },
 };
 
 const rows = buildDirectionReviewIssueRows(overlay);
 assert.equal(rows.length, 5);
+assert.equal(rows.some((row) => row.segmentId === 6), false);
 assert.equal(rows.filter((row) => !row.resolved).length, 4);
 assert.equal(directionReviewSegmentResolved(overlay.segments["1"]), true);
 assert.deepEqual(

@@ -61,6 +61,21 @@ refresh returns a compact generated-manual-edge patch instead of reloading all
 base graph, match, overlay, manual-edge, override, and junction assets. Full
 asset reload remains available for explicit refresh and workspace loading.
 
+Implementation note (2026-07-21): the V1 compatibility mapping statuses are
+now centralized as one **current mapping** predicate. Automatic matches and
+explicitly chosen edge sets are rendered, validated, and checked for ownership
+the same way, preventing manually mapped segments from disappearing after a
+reload. Active segment UI uses Current/apply/use terminology; hidden legacy
+cutover controls and stored `accepted` dispositions remain for compatibility,
+while roundabout and crossing review decisions remain separate.
+
+Implementation note (2026-07-21): lifecycle metadata changes now release edge
+ownership transactionally. Deprecated/draft/legacy V2 records are excluded
+from ownership and published-overlay conflict validation, their V1 current
+projection is removed, and active drafts blocked by the released segment are
+revalidated. A previously completed explicit selection is projected as current
+when it becomes mechanically valid, without another curator action.
+
 ## Outcome
 
 Deliver one Network authoring workflow in which the curator switches explicitly

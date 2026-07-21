@@ -42645,8 +42645,8 @@
     "363": {
       "segmentId": 363,
       "segmentName": "New segment - 2",
-      "lifecycleStatus": "active",
-      "navigable": true,
+      "lifecycleStatus": "deprecated",
+      "navigable": false,
       "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c",
       "endpoints": {
         "a": {
@@ -42780,9 +42780,8 @@
       },
       "alignments": {
         "aToB": {
-          "published": null,
-          "draft": {
-            "disposition": "needs_review",
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -42807,140 +42806,56 @@
               ]
             },
             "mappingDigest": "17907e865712fb0c5d85498cc49b2475487c6b05b40e040d99ff71d32f36319d",
-            "candidate": {
-              "kind": "manual-editor",
-              "sourceRevision": 1784628211868365
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e73965591_1",
-                  "owner": {
-                    "segmentId": 363,
-                    "segmentName": "New segment - 2",
-                    "alignmentKey": "aToB"
-                  }
-                },
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "manual-osm-1036770657-mrufgc46",
-                  "owner": {
-                    "segmentId": 363,
-                    "segmentName": "New segment - 2",
-                    "alignmentKey": "aToB"
-                  }
-                }
-              ],
-              "traversalStates": {
-                "0:e73965591_1": "allowed",
-                "1:manual-osm-1036770657-mrufgc46": "allowed"
-              },
-              "policyPrecedence": [],
-              "terminals": {
-                "start": [
-                  35.6309581,
-                  33.2241527
-                ],
-                "end": [
-                  35.631292,
-                  33.224137
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 0,
-                "end": 0
-              }
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-21",
+              "batchId": "network-authoring-364-1784629903311000",
+              "rationale": "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "14ad00b1ac2ae341cb98a025e514ceda6b7f86136555ba68904851220a4ff68e",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c",
+              "mappingDigest": "17907e865712fb0c5d85498cc49b2475487c6b05b40e040d99ff71d32f36319d",
+              "evidenceDigest": "f8dbb6ebea19f3395016f10d8b1cb7be6cd322bd358d925ceac08b2ebc2c4815"
             }
-          }
+          },
+          "draft": null
         },
         "bToA": {
-          "published": null,
-          "draft": {
-            "disposition": "needs_review",
+          "published": {
+            "disposition": "accepted",
             "realization": {
-              "type": "explicit",
-              "edgeRefs": [
-                {
-                  "edgeId": "manual-osm-1036770657-mrufgc46",
-                  "source": "manual",
-                  "direction": "forward",
-                  "sequenceIndex": 0,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "manualEdgeId": "manual-osm-1036770657-mrufgc46"
-                },
-                {
-                  "edgeId": "e73965591_1",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 1,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 73965591
-                }
-              ]
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "17907e865712fb0c5d85498cc49b2475487c6b05b40e040d99ff71d32f36319d"
             },
-            "mappingDigest": "bd9ffbad26ba24d55dae6d4b9ed49053b38ab171228d1423255fcb09b685aee7",
-            "candidate": {
-              "kind": "exact-reverse",
-              "sourceRevision": 1784628211868365
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "manual-osm-1036770657-mrufgc46",
-                  "owner": {
-                    "segmentId": 363,
-                    "segmentName": "New segment - 2",
-                    "alignmentKey": "bToA"
-                  }
-                },
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e73965591_1",
-                  "owner": {
-                    "segmentId": 363,
-                    "segmentName": "New segment - 2",
-                    "alignmentKey": "bToA"
-                  }
-                }
-              ],
-              "traversalStates": {
-                "0:manual-osm-1036770657-mrufgc46": "allowed",
-                "1:e73965591_1": "allowed"
-              },
-              "policyPrecedence": [],
-              "terminals": {
-                "start": [
-                  35.631292,
-                  33.224137
-                ],
-                "end": [
-                  35.6309581,
-                  33.2241527
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 0,
-                "end": 0
-              }
+            "mappingDigest": "57ccdae03eabc6849bd0bda7baeaa4f4fce769da4d381dd068c93a29c4ffa6b7",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-21",
+              "batchId": "network-authoring-364-1784629903311000",
+              "rationale": "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "14ad00b1ac2ae341cb98a025e514ceda6b7f86136555ba68904851220a4ff68e",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c",
+              "mappingDigest": "57ccdae03eabc6849bd0bda7baeaa4f4fce769da4d381dd068c93a29c4ffa6b7",
+              "evidenceDigest": "4bfe8488b17a51c2a43c832d050a857ddab3ce27c1adbf6e0499132e02bd37dd"
             }
-          }
+          },
+          "draft": null
         }
       },
       "migration": {
-        "classification": "unresolved",
+        "classification": "symmetric_candidate",
         "sourceSchemaVersion": 2,
         "sourceMappingOrigin": "network-authoring-v2",
         "authoringRevision": 1784628211868365,
-        "lastOutcome": "needs-decision",
-        "lastOutcomeCode": "directed_ownership_conflict"
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-evidence"
       }
     }
   }

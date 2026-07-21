@@ -47,7 +47,7 @@ export function recalculationResultMessage(segmentName, summary, formatCoverage)
   const continuity = baseOverlayContinuityIssue(summary);
   if (!continuity) return { message: `${prefix}.`, level: "info", continuity: null };
   return {
-    message: `${prefix} · ${continuity.summary}. Cannot accept this mapping: ${continuity.detail}. Connect the base edges and recalculate.`,
+    message: `${prefix} · ${continuity.summary}. Cannot apply this mapping: ${continuity.detail}. Connect the base edges and recalculate.`,
     level: "error",
     continuity,
   };
