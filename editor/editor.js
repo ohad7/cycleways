@@ -277,8 +277,10 @@ const state = {
     loaded: false,
     error: null,
     data: null,
-    filter: "all",
+    filter: "relevant",
     selectedId: null,
+    junctionsData: null,
+    selectedMovementId: null,
   },
   crossings: {
     loading: false,
@@ -2485,6 +2487,10 @@ function updateWorkspaceLayerVisibility() {
     "roundabout-lines-corridor-layer",
     "roundabout-lines-layer",
     "roundabout-points-layer",
+    "junction-internal-layer",
+    "junction-movements-layer",
+    "junction-arrows-layer",
+    "junction-ports-layer",
   ]) {
     setLayerVisibility(layerId, showRoundabouts);
   }
@@ -4727,12 +4733,17 @@ async function loadRoundaboutReview() {
   state.roundabouts.error = null;
   renderRoundaboutsPanel();
   try {
-    const response = await fetch("/api/roundabouts/review");
-    const payload = await response.json();
+    const [response, junctionResponse] = await Promise.all([
+      fetch("/api/roundabouts/review"),
+      fetch("/api/network-junctions"),
+    ]);
+    const [payload, junctionPayload] = await Promise.all([response.json(), junctionResponse.json()]);
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load roundabouts");
+    if (!junctionResponse.ok || !junctionPayload.ok) throw new Error(junctionPayload.error || "Could not load junction topology");
     state.roundabouts.data = payload;
+    state.roundabouts.junctionsData = junctionPayload;
     state.roundabouts.loaded = true;
-    const ids = (payload.items || []).map((item) => item.candidate?.id).filter(Boolean);
+    const ids = roundaboutFilteredItems().map((item) => item.candidate?.id).filter(Boolean);
     if (!ids.includes(state.roundabouts.selectedId)) state.roundabouts.selectedId = ids[0] || null;
     updateRoundaboutSources();
   } catch (error) {
@@ -4745,6 +4756,17 @@ async function loadRoundaboutReview() {
 }
 
 function roundaboutFilteredItems() {
+  const junctionItems = state.roundabouts.junctionsData?.items || [];
+  const relevantRoundaboutIds = new Set(junctionItems.map((item) => item.candidate?.roundaboutId));
+  if (state.roundabouts.filter === "relevant") {
+    return (state.roundabouts.data?.items || []).filter((item) => relevantRoundaboutIds.has(item.candidate?.id));
+  }
+  if (state.roundabouts.filter === "movement-issues") {
+    const issueRoundaboutIds = new Set(
+      junctionItems.filter((item) => item.issues?.length).map((item) => item.candidate?.roundaboutId),
+    );
+    return (state.roundabouts.data?.items || []).filter((item) => issueRoundaboutIds.has(item.candidate?.id));
+  }
   return filterRoundaboutItems(
     state.roundabouts.data?.items || [],
     state.roundabouts.filter,
@@ -4759,6 +4781,19 @@ function updateRoundaboutLayerFilters() {
   for (const layerId of ["roundabout-corridors-layer", "roundabout-lines-corridor-layer", "roundabout-lines-layer", "roundabout-points-layer"]) {
     if (map.getLayer(layerId)) map.setFilter(layerId, filter);
   }
+  const selectedJunction = (state.roundabouts.junctionsData?.items || []).find(
+    (item) => item.candidate?.roundaboutId === state.roundabouts.selectedId,
+  )?.candidate;
+  const junctionFilter = selectedJunction
+    ? ["==", ["get", "junctionId"], selectedJunction.id]
+    : ["==", ["get", "junctionId"], "__none__"];
+  for (const layerId of ["junction-internal-layer", "junction-ports-layer", "junction-arrows-layer"]) {
+    if (map.getLayer(layerId)) map.setFilter(layerId, junctionFilter);
+  }
+  const movementFilter = selectedJunction && state.roundabouts.selectedMovementId
+    ? ["all", junctionFilter, ["==", ["get", "movementId"], state.roundabouts.selectedMovementId]]
+    : junctionFilter;
+  if (map.getLayer("junction-movements-layer")) map.setFilter("junction-movements-layer", movementFilter);
 }
 
 function updateRoundaboutSources() {
@@ -4766,6 +4801,11 @@ function updateRoundaboutSources() {
   setSourceData("roundabout-lines", geojson.lines || EMPTY_FEATURE_COLLECTION);
   setSourceData("roundabout-points", geojson.points || EMPTY_FEATURE_COLLECTION);
   setSourceData("roundabout-corridors", geojson.corridors || EMPTY_FEATURE_COLLECTION);
+  const junctionGeojson = state.roundabouts.junctionsData?.geojson || {};
+  setSourceData("junction-internal", junctionGeojson.internalEdges || EMPTY_FEATURE_COLLECTION);
+  setSourceData("junction-ports", junctionGeojson.ports || EMPTY_FEATURE_COLLECTION);
+  setSourceData("junction-movements", junctionGeojson.movements || EMPTY_FEATURE_COLLECTION);
+  setSourceData("junction-arrows", junctionGeojson.arrows || EMPTY_FEATURE_COLLECTION);
   updateRoundaboutLayerFilters();
 }
 
@@ -4774,6 +4814,39 @@ function fitRoundaboutCandidate(candidate) {
   if (!Array.isArray(bbox) || bbox.length !== 4) return;
   const bounds = new mapboxgl.LngLatBounds([bbox[0], bbox[1]], [bbox[2], bbox[3]]);
   map.fitBounds(bounds, { padding: 110, maxZoom: 18, duration: 400 });
+}
+
+function selectJunctionByRoundaboutId(roundaboutId, { movementId = null, fit = true } = {}) {
+  const item = state.roundabouts.data?.items?.find(
+    (entry) => entry.candidate?.id === roundaboutId,
+  );
+  if (!item) return false;
+  state.roundabouts.selectedId = roundaboutId;
+  state.roundabouts.selectedMovementId = movementId;
+  updateRoundaboutLayerFilters();
+  renderRoundaboutsPanel();
+  if (fit) fitRoundaboutCandidate(item.candidate);
+  return true;
+}
+
+function selectJunctionFromMapFeature(feature) {
+  const properties = feature?.properties || {};
+  const junctionId = String(properties.junctionId || "");
+  const junction = junctionId
+    ? (state.roundabouts.junctionsData?.items || []).find(
+        (item) => item.candidate?.id === junctionId,
+      )?.candidate
+    : null;
+  const roundaboutId = junction?.roundaboutId || String(properties.id || "");
+  if (!roundaboutId) return false;
+  const movementId = properties.movementId
+    ? String(properties.movementId)
+    : state.roundabouts.selectedId === roundaboutId
+      ? state.roundabouts.selectedMovementId
+      : null;
+  return selectJunctionByRoundaboutId(roundaboutId, {
+    movementId,
+  });
 }
 
 async function saveRoundaboutReview(status) {
@@ -4805,6 +4878,31 @@ async function saveRoundaboutReview(status) {
   if (selected) fitRoundaboutCandidate(selected.candidate);
 }
 
+async function saveJunctionMovementReview(status) {
+  const junction = (state.roundabouts.junctionsData?.items || []).find(
+    (item) => item.candidate?.roundaboutId === state.roundabouts.selectedId,
+  )?.candidate;
+  const movement = junction?.movements?.find(
+    (item) => item.id === state.roundabouts.selectedMovementId,
+  );
+  if (!junction || !movement) return;
+  const response = await fetch("/api/network-junctions/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      junctionId: junction.id,
+      movementId: movement.id,
+      junctionFingerprint: junction.fingerprint,
+      status,
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not save junction movement");
+  state.roundabouts.junctionsData = payload;
+  updateRoundaboutSources();
+  renderRoundaboutsPanel();
+}
+
 function moveRoundaboutSelection(delta) {
   const items = roundaboutFilteredItems();
   if (!items.length) return;
@@ -4831,13 +4929,13 @@ function renderRoundaboutsPanel() {
   }
   const data = state.roundabouts.data;
   if (!data) return;
-  els.roundaboutsStatus.textContent = data.sourceFresh ? "Current snapshot" : "Stale — recalculate";
+  els.roundaboutsStatus.textContent = data.sourceFresh ? "Current topology" : "Roundabout source stale — recalculate";
   const coverage = data.coverage || {};
   els.roundaboutsCoverage.innerHTML = `
-    <strong>Saved source coverage</strong>
-    <span>Tagged ways: ${escapeHtml(coverage.roundaboutWays || "unknown")}</span>
-    <span>Circular ways: ${escapeHtml(coverage.circularWays || "unknown")}</span>
-    <span>Mini nodes: ${escapeHtml(coverage.miniRoundaboutNodes || "unknown")}</span>
+    <strong>CycleWays junction coverage</strong>
+    <span>Relevant: ${escapeHtml(state.roundabouts.junctionsData?.summary?.total ?? 0)}</span>
+    <span>Unavailable movements: ${escapeHtml(state.roundabouts.junctionsData?.summary?.unavailableMovements ?? 0)}</span>
+    <span>Reviewed roundabouts: ${escapeHtml(data.summary?.accepted ?? 0)}</span>
   `;
   els.roundaboutsSummary.innerHTML = Object.entries(data.summary || {})
     .map(([key, value]) => `<div class="base-overlay-stat"><strong>${value}</strong><span>${escapeHtml(key)}</span></div>`)
@@ -4847,14 +4945,18 @@ function renderRoundaboutsPanel() {
   els.roundaboutsList.innerHTML = "";
   for (const item of items) {
     const candidate = item.candidate;
+    const junction = (state.roundabouts.junctionsData?.items || []).find(
+      (junctionItem) => junctionItem.candidate?.roundaboutId === candidate.id,
+    )?.candidate;
+    const segmentLabel = junction?.segmentIds?.length
+      ? ` · ${junction.segmentIds.map((id) => `#${id}`).join(" · ")}`
+      : "";
     const button = document.createElement("button");
     button.type = "button";
     button.className = `roundabout-review-item state-${item.state}${candidate.id === state.roundabouts.selectedId ? " active" : ""}`;
-    button.innerHTML = `<strong>${escapeHtml(candidate.id)}</strong><span>${escapeHtml(candidate.classification)} · ${escapeHtml(item.state)}${candidate.warnings?.length ? ` · ⚠ ${candidate.warnings.length}` : ""}</span>`;
+    button.innerHTML = `<strong>${escapeHtml(candidate.id)}</strong><span>${escapeHtml(candidate.classification)} · ${escapeHtml(item.state)}${escapeHtml(segmentLabel)}${candidate.warnings?.length ? ` · ⚠ ${candidate.warnings.length}` : ""}</span>`;
     button.addEventListener("click", () => {
-      state.roundabouts.selectedId = candidate.id;
-      renderRoundaboutsPanel();
-      fitRoundaboutCandidate(candidate);
+      selectJunctionByRoundaboutId(candidate.id);
     });
     els.roundaboutsList.appendChild(button);
   }
@@ -4864,12 +4966,42 @@ function renderRoundaboutsPanel() {
     return;
   }
   const candidate = selected.candidate;
+  const junction = (state.roundabouts.junctionsData?.items || []).find(
+    (item) => item.candidate?.roundaboutId === candidate.id,
+  )?.candidate || null;
   const osmLinks = (candidate.memberWayIds || [])
     .map((id) => `<a href="https://www.openstreetmap.org/way/${encodeURIComponent(id)}" target="_blank" rel="noreferrer">way ${escapeHtml(id)}</a>`)
     .join(" · ");
+  const attachmentLabelByPort = new Map();
+  for (const attachment of junction?.attachments || []) {
+    const labels = attachmentLabelByPort.get(attachment.portId) || [];
+    labels.push(`#${attachment.segmentId} ${attachment.segmentName || ""}`.trim());
+    attachmentLabelByPort.set(attachment.portId, labels);
+  }
+  const portById = new Map((junction?.ports || []).map((port) => [port.id, port]));
+  const movementRows = (junction?.movements || []).map((movement) => {
+    const entry = portById.get(movement.entryPortId);
+    const exit = portById.get(movement.exitPortId);
+    const from = (attachmentLabelByPort.get(entry?.id) || [entry?.edgeId || "entry"]).join(", ");
+    const to = (attachmentLabelByPort.get(exit?.id) || [exit?.edgeId || "exit"]).join(", ");
+    return `<button type="button" class="junction-movement-row${movement.id === state.roundabouts.selectedMovementId ? " active" : ""}" data-movement="${escapeHtml(movement.id)}">
+      <strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong>
+      <span>${movement.status === "unavailable" ? "No legal path" : `Legal · ${Number(movement.distanceMeters).toFixed(1)} m · ${movement.edgeRefs.length} edges`}</span>
+    </button>`;
+  }).join("");
+  const selectedMovement = junction?.movements?.find(
+    (movement) => movement.id === state.roundabouts.selectedMovementId,
+  );
+  const movementActions = selectedMovement ? `
+    <div class="action-row junction-movement-actions">
+      <button type="button" data-movement-review="selected" class="secondary-button">Choose this path</button>
+      <button type="button" data-movement-review="automatic" class="secondary-button">Use automatic path</button>
+      <button type="button" data-movement-review="unavailable" class="secondary-button danger">Mark unavailable</button>
+    </div>` : "";
   els.roundaboutsDetail.innerHTML = `
     <h3>${escapeHtml(candidate.id)}</h3>
     <p>${escapeHtml(candidate.classification)} · radius ${Number(candidate.radiusM).toFixed(1)} m</p>
+    ${junction ? `<section class="junction-coverage"><h3>Movement coverage</h3><p>${junction.segmentIds.map((id) => `#${id}`).join(", ")} · ${junction.summary.legalMovements}/${junction.summary.movements} legal</p><p>Orange ports enter; green ports exit. Arrows show one-way base edges.</p><div class="junction-movement-list">${movementRows || '<div class="empty-state">No inter-arm movements.</div>'}</div>${movementActions}</section>` : '<p class="empty-state">This reviewed roundabout does not currently affect a CW alignment.</p>'}
     <p>${osmLinks || (candidate.sourceNodeId ? `<a href="https://www.openstreetmap.org/node/${encodeURIComponent(candidate.sourceNodeId)}" target="_blank" rel="noreferrer">node ${escapeHtml(candidate.sourceNodeId)}</a>` : "")}</p>
     <p>Warnings: ${escapeHtml((candidate.warnings || []).join(", ") || "none")}</p>
     <textarea class="text-input textarea" rows="3" maxlength="1000" placeholder="Optional review note">${escapeHtml(selected.review?.note || "")}</textarea>
@@ -4884,6 +5016,16 @@ function renderRoundaboutsPanel() {
   `;
   for (const button of els.roundaboutsDetail.querySelectorAll("[data-review]")) {
     button.addEventListener("click", () => saveRoundaboutReview(button.dataset.review).catch(showError));
+  }
+  for (const button of els.roundaboutsDetail.querySelectorAll("[data-movement]")) {
+    button.addEventListener("click", () => {
+      state.roundabouts.selectedMovementId = button.dataset.movement;
+      updateRoundaboutLayerFilters();
+      renderRoundaboutsPanel();
+    });
+  }
+  for (const button of els.roundaboutsDetail.querySelectorAll("[data-movement-review]")) {
+    button.addEventListener("click", () => saveJunctionMovementReview(button.dataset.movementReview).catch(showError));
   }
   for (const button of els.roundaboutsDetail.querySelectorAll("[data-move]")) {
     button.addEventListener("click", () => moveRoundaboutSelection(Number(button.dataset.move)));
@@ -7344,7 +7486,7 @@ async function setWorkspaceMode(mode) {
         : mode === "overlay"
           ? "CW Overlay mode: select a segment, then choose graph edges."
           : mode === "roundabouts"
-            ? "Roundabouts mode: review classifications from the saved OSM snapshot."
+            ? "Junctions mode: inspect CW-relevant topology, legal movements, and roundabout classification."
             : "Crossings mode: review directed side-change mappings; arrows run from entry to exit.",
     );
     if (mode === "base") {
@@ -10760,6 +10902,30 @@ function wireEvents() {
     });
   }
 
+  for (const layerId of [
+    "roundabout-corridors-layer",
+    "roundabout-lines-corridor-layer",
+    "roundabout-lines-layer",
+    "roundabout-points-layer",
+    "junction-internal-layer",
+    "junction-movements-layer",
+    "junction-ports-layer",
+    "junction-arrows-layer",
+  ]) {
+    map.on("click", layerId, (event) => {
+      if (state.workspaceMode !== "roundabouts") return;
+      if (selectJunctionFromMapFeature(event.features?.[0])) {
+        setStatus("Junction selected. Choose a movement to highlight its legal path.");
+      }
+    });
+    map.on("mouseenter", layerId, () => {
+      if (state.workspaceMode === "roundabouts") map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", layerId, () => {
+      if (state.workspaceMode === "roundabouts") map.getCanvas().style.cursor = "";
+    });
+  }
+
   map.on("click", "base-graph-edges-hit-layer", (event) => {
     if (state.mode !== "select" && !isComposingNewSegmentEdges()) return;
     if (
@@ -11316,6 +11482,11 @@ async function addMapLayers() {
     });
   }
   for (const sourceId of ["roundabout-lines", "roundabout-points", "roundabout-corridors"]) {
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
+    }
+  }
+  for (const sourceId of ["junction-internal", "junction-ports", "junction-movements", "junction-arrows"]) {
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, { type: "geojson", data: EMPTY_FEATURE_COLLECTION });
     }
@@ -12228,6 +12399,57 @@ async function addMapLayers() {
         "circle-color": reviewColor,
         "circle-stroke-color": "#ffffff",
         "circle-stroke-width": 2,
+      },
+    });
+  }
+  if (!map.getLayer("junction-internal-layer")) {
+    map.addLayer({
+      id: "junction-internal-layer",
+      type: "line",
+      source: "junction-internal",
+      layout: { "line-cap": "round", "line-join": "round", visibility: "none" },
+      paint: {
+        "line-color": ["case", ["get", "ring"], "#7c3aed", "#64748b"],
+        "line-width": ["case", ["get", "ring"], 6, 4],
+        "line-opacity": 0.72,
+      },
+    });
+    map.addLayer({
+      id: "junction-movements-layer",
+      type: "line",
+      source: "junction-movements",
+      layout: { "line-cap": "round", "line-join": "round", visibility: "none" },
+      paint: { "line-color": "#06b6d4", "line-width": 8, "line-opacity": 0.9 },
+    });
+    map.addLayer({
+      id: "junction-ports-layer",
+      type: "circle",
+      source: "junction-ports",
+      layout: { visibility: "none" },
+      paint: {
+        "circle-radius": 7,
+        "circle-color": ["match", ["get", "usage"], "entry", "#f97316", "exit", "#22c55e", "#ffffff"],
+        "circle-stroke-color": "#0f172a",
+        "circle-stroke-width": 2,
+      },
+    });
+    map.addLayer({
+      id: "junction-arrows-layer",
+      type: "symbol",
+      source: "junction-arrows",
+      layout: {
+        visibility: "none",
+        "symbol-placement": "line",
+        "symbol-spacing": 45,
+        "text-field": "➤",
+        "text-size": 18,
+        "text-rotation-alignment": "map",
+        "text-keep-upright": false,
+      },
+      paint: {
+        "text-color": "#111827",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.5,
       },
     });
   }

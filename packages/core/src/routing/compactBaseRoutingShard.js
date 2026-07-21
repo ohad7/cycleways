@@ -1,6 +1,6 @@
 const textDecoder = new TextDecoder();
 const MAGIC = "CWBS1";
-const SUPPORTED_VERSIONS = new Set([1, 2, 3]);
+const SUPPORTED_VERSIONS = new Set([1, 2, 3, 4]);
 const COORDINATE_SCALE = 1_000_000;
 const DISTANCE_SCALE = 10;
 
@@ -126,6 +126,12 @@ class CompactBaseRoutingShardDecoder {
           reverse: this.readAlignmentMemberships(strings),
         };
       }
+      if (this.version >= 4) {
+        edge.cwJunctions = {
+          forward: this.readJunctionMemberships(strings),
+          reverse: this.readJunctionMemberships(strings),
+        };
+      }
       edges.push(edge);
     }
     return edges;
@@ -193,6 +199,18 @@ class CompactBaseRoutingShardDecoder {
         segmentId: this.readVarUint(),
         alignmentKey: this.readNullableString(strings),
         mappingDigest: this.readNullableString(strings),
+      });
+    }
+    return memberships;
+  }
+
+  readJunctionMemberships(strings) {
+    const count = this.readVarUint();
+    const memberships = [];
+    for (let index = 0; index < count; index++) {
+      memberships.push({
+        junctionId: this.readNullableString(strings),
+        fingerprint: this.readNullableString(strings),
       });
     }
     return memberships;

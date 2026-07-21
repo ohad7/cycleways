@@ -117,6 +117,27 @@ assert.deepEqual(decodedPolicyShard.edges[0].cwAlignments, {
   reverse: [],
 });
 
+const junctionShardPayload = encodeCompactShard({
+  formatVersion: 4,
+  schemaVersion: 1,
+  sourceRoutingSchemaVersion: 3,
+  id: "g-junction",
+  bounds: [35, 33, 35.01, 33.01],
+  nodes: [{ id: "j1", coord: [35, 33] }, { id: "j2", coord: [35.01, 33.01] }],
+  edges: [{
+    id: "junction-edge", shareId: 44, from: "j1", to: "j2", distanceMeters: 20,
+    coordinates: [[35, 33], [35.01, 33.01]], source: "manual", routeClass: "manual",
+    highway: "path", accessStatus: "open", roadType: null, cwSegmentIds: [], elevation: null,
+    bicycleTraversal: { policyId: "p", policyDigest: "d", forward: "allowed", reverse: "allowed", forwardReason: "manual", reverseReason: "manual" },
+    cwAlignments: { forward: [], reverse: [] },
+    cwJunctions: { forward: [{ junctionId: "junction-7", fingerprint: "sha256:j7" }], reverse: [] },
+  }],
+});
+assert.deepEqual(decodeCompactBaseRoutingShard(junctionShardPayload).edges[0].cwJunctions, {
+  forward: [{ junctionId: "junction-7", fingerprint: "sha256:j7" }],
+  reverse: [],
+});
+
 let requestedUrl = "";
 const previousFetch = globalThis.fetch;
 globalThis.fetch = async (url) => {
@@ -183,6 +204,8 @@ function encodeCompactShard(shard) {
           membership.alignmentKey,
           membership.mappingDigest,
         ]),
+        ...(edge.cwJunctions?.forward || []).flatMap((membership) => [membership.junctionId, membership.fingerprint]),
+        ...(edge.cwJunctions?.reverse || []).flatMap((membership) => [membership.junctionId, membership.fingerprint]),
       ]),
     ]),
   ]
@@ -259,6 +282,16 @@ function encodeCompactShard(shard) {
           writeVarUint(bytes, membership.segmentId);
           writeNullableStringIndex(bytes, stringIndex, membership.alignmentKey);
           writeNullableStringIndex(bytes, stringIndex, membership.mappingDigest);
+        }
+      }
+    }
+    if ((shard.formatVersion || 1) >= 4) {
+      for (const direction of ["forward", "reverse"]) {
+        const memberships = edge.cwJunctions?.[direction] || [];
+        writeVarUint(bytes, memberships.length);
+        for (const membership of memberships) {
+          writeNullableStringIndex(bytes, stringIndex, membership.junctionId);
+          writeNullableStringIndex(bytes, stringIndex, membership.fingerprint);
         }
       }
     }

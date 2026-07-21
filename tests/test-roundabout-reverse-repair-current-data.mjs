@@ -32,6 +32,7 @@ assert.equal(reverse.candidate.kind, "roundabout-repaired-reverse");
 assert.equal(reverse.validation.status, "valid");
 assert.equal(reverse.realization.edgeRefs.length, 16);
 assert.deepEqual(reverse.candidate.repairs, [{
+  junctionId: "junction-osm-352638078",
   entryNodeId: "nd08b5972028b7807",
   exitNodeId: "n569a568a691d4206",
   blockedEdgeRefs: [

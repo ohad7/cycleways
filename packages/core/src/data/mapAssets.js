@@ -9,6 +9,7 @@ const DEFAULT_MAP_ASSETS = {
   cwAlignmentGeometry: null,
   legacyRoutingCompatibility: null,
   crossings: null,
+  networkJunctions: null,
   assetBasePath: MAP_MANIFEST_PATH,
 };
 
@@ -53,6 +54,7 @@ export async function loadMapAssets(options = {}) {
     baseRoutingMode = "shards",
     includeRoundabouts = false,
     includeCrossings = false,
+    includeNetworkJunctions = false,
     ...fetchOptions
   } = options;
   const manifest = await loadMapManifest(fetchOptions);
@@ -69,6 +71,7 @@ export async function loadMapAssets(options = {}) {
     baseRoutingShardManifestData,
     roundaboutsData,
     crossingsData,
+    networkJunctionsData,
     cwAlignmentGeometryData,
     legacyCwBaseIndexData,
     legacyRoutingCompatibilityMetadata,
@@ -95,6 +98,12 @@ export async function loadMapAssets(options = {}) {
       : Promise.resolve(null),
     includeCrossings && manifest.crossings
       ? getJsonAsset(assetPathWithVersion(manifest.crossings, manifest.version), {
+          basePath: manifestBasePath,
+          ...fetchOptions,
+        })
+      : Promise.resolve(null),
+    includeNetworkJunctions && manifest.networkJunctions
+      ? getJsonAsset(assetPathWithVersion(manifest.networkJunctions, manifest.version), {
           basePath: manifestBasePath,
           ...fetchOptions,
         })
@@ -144,6 +153,7 @@ export async function loadMapAssets(options = {}) {
     baseRoutingShardManifestPath,
     roundaboutsData,
     crossingsData,
+    networkJunctionsData,
     cwAlignmentGeometryData,
     legacyRoutingCompatibility,
     baseRoutingMode: useRoutingShards ? "shards" : "legacy",
@@ -160,6 +170,7 @@ export function summarizeMapAssets({
   cwBaseIndexData,
   roundaboutsData,
   crossingsData,
+  networkJunctionsData,
   cwAlignmentGeometryData,
   legacyRoutingCompatibility,
 }) {
@@ -192,5 +203,7 @@ export function summarizeMapAssets({
     roundabouts: Array.isArray(roundaboutsData?.roundabouts) ? roundaboutsData.roundabouts.length : 0,
     crossingsFile: manifest.crossings || null,
     crossings: Array.isArray(crossingsData?.crossings) ? crossingsData.crossings.length : 0,
+    networkJunctionsFile: manifest.networkJunctions || null,
+    networkJunctions: Array.isArray(networkJunctionsData?.junctions) ? networkJunctionsData.junctions.length : 0,
   };
 }

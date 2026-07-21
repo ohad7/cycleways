@@ -1,0 +1,24 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const [html, client, server] = await Promise.all([
+  readFile(new URL("../editor/index.html", import.meta.url), "utf8"),
+  readFile(new URL("../editor/editor.js", import.meta.url), "utf8"),
+  readFile(new URL("../editor/server.mjs", import.meta.url), "utf8"),
+]);
+
+assert.match(html, /id="workspace-roundabouts"[^>]*>Junctions</);
+assert.match(html, /value="relevant">Relevant junctions</);
+assert.match(html, /value="movement-issues">Movement issues</);
+assert.match(client, /fetch\("\/api\/network-junctions"\)/);
+assert.match(client, /junction-movements-layer/);
+assert.match(client, /junction-arrows-layer/);
+assert.match(client, /selectJunctionFromMapFeature/);
+assert.match(client, /Junction selected\. Choose a movement/);
+assert.match(client, /junction\.segmentIds\.map/);
+assert.match(client, /Orange ports enter; green ports exit/);
+assert.match(server, /url\.pathname === "\/api\/network-junctions"/);
+assert.match(server, /url\.pathname === "\/api\/network-junctions\/review"/);
+assert.match(client, /data-movement-review="unavailable"/);
+assert.match(server, /network junction refresh/);
+console.log("network junction editor wiring ok");

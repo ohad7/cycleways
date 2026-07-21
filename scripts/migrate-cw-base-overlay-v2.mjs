@@ -282,7 +282,214 @@ function permittedRoundaboutPath(startNodeId, endNodeId, graphById, policyLookup
   return refs.length > 0 ? refs : null;
 }
 
+const roundaboutJunctionCache = new WeakMap();
+
+function roundaboutJunctions(graphById) {
+  const cached = roundaboutJunctionCache.get(graphById);
+  if (cached) return cached;
+  const rings = new Map();
+  for (const edge of graphById.values()) {
+    if (edge?.tags?.junction !== "roundabout") continue;
+    const wayId = String(edge?.tags?.osmId ?? edge?.osmWayId ?? edge.id);
+    const junction = rings.get(wayId) || {
+      id: `junction-osm-${wayId}`,
+      wayId,
+      ringEdgeIds: new Set(),
+      ringNodeIds: new Set(),
+      internalEdgeIds: new Set(),
+    };
+    junction.ringEdgeIds.add(edge.id);
+    junction.internalEdgeIds.add(edge.id);
+    if (edge.fromNodeId) junction.ringNodeIds.add(edge.fromNodeId);
+    if (edge.toNodeId) junction.ringNodeIds.add(edge.toNodeId);
+    rings.set(wayId, junction);
+  }
+  for (const junction of rings.values()) {
+    for (const edge of graphById.values()) {
+      if (
+        junction.ringNodeIds.has(edge?.fromNodeId) ||
+        junction.ringNodeIds.has(edge?.toNodeId)
+      ) {
+        junction.internalEdgeIds.add(edge.id);
+      }
+    }
+  }
+  const junctions = [...rings.values()];
+  roundaboutJunctionCache.set(graphById, junctions);
+  return junctions;
+}
+
+function junctionForBlockedRefs(blockedRefs, graphById) {
+  const blockedEdgeIds = new Set(blockedRefs.map((ref) => ref.edgeId));
+  const matches = roundaboutJunctions(graphById).filter((junction) =>
+    [...blockedEdgeIds].every((edgeId) => junction.internalEdgeIds.has(edgeId)),
+  );
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function permittedJunctionPath(
+  startNodeId,
+  endNodeId,
+  junction,
+  graphById,
+  policyLookup,
+) {
+  if (!startNodeId || !endNodeId || startNodeId === endNodeId) return null;
+  const adjacency = new Map();
+  const add = (nodeId, step) => {
+    const steps = adjacency.get(nodeId) || [];
+    steps.push(step);
+    adjacency.set(nodeId, steps);
+  };
+  for (const edgeId of junction.internalEdgeIds) {
+    const edge = graphById.get(edgeId);
+    if (!edge?.fromNodeId || !edge?.toNodeId) continue;
+    const distanceMeters = Math.max(0.01, graphEdgeDistanceMeters(edge));
+    if (candidateTraversalAllowed(edge.id, "forward", policyLookup)) {
+      add(edge.fromNodeId, {
+        nextNodeId: edge.toNodeId,
+        distanceMeters,
+        ref: graphEdgeRef(edge, "forward"),
+      });
+    }
+    if (candidateTraversalAllowed(edge.id, "reverse", policyLookup)) {
+      add(edge.toNodeId, {
+        nextNodeId: edge.fromNodeId,
+        distanceMeters,
+        ref: graphEdgeRef(edge, "reverse"),
+      });
+    }
+  }
+  for (const steps of adjacency.values()) {
+    steps.sort((left, right) =>
+      left.distanceMeters - right.distanceMeters ||
+      left.ref.edgeId.localeCompare(right.ref.edgeId) ||
+      left.ref.direction.localeCompare(right.ref.direction),
+    );
+  }
+
+  const distances = new Map([[startNodeId, 0]]);
+  const previous = new Map();
+  const pending = new Set([startNodeId]);
+  while (pending.size > 0) {
+    let nodeId = null;
+    let nodeDistance = Number.POSITIVE_INFINITY;
+    for (const candidate of pending) {
+      const distance = distances.get(candidate) ?? Number.POSITIVE_INFINITY;
+      if (
+        distance < nodeDistance ||
+        (distance === nodeDistance && String(candidate).localeCompare(String(nodeId)) < 0)
+      ) {
+        nodeId = candidate;
+        nodeDistance = distance;
+      }
+    }
+    pending.delete(nodeId);
+    if (nodeId === endNodeId) break;
+    for (const step of adjacency.get(nodeId) || []) {
+      const nextDistance = nodeDistance + step.distanceMeters;
+      if (nextDistance >= (distances.get(step.nextNodeId) ?? Number.POSITIVE_INFINITY)) continue;
+      distances.set(step.nextNodeId, nextDistance);
+      previous.set(step.nextNodeId, { nodeId, step });
+      pending.add(step.nextNodeId);
+    }
+  }
+  if (!previous.has(endNodeId)) return null;
+  const refs = [];
+  let nodeId = endNodeId;
+  while (nodeId !== startNodeId) {
+    const entry = previous.get(nodeId);
+    if (!entry || refs.length > 128) return null;
+    refs.push(entry.step.ref);
+    nodeId = entry.nodeId;
+  }
+  refs.reverse();
+  return refs.length > 0 ? refs : null;
+}
+
+export function repairNetworkJunctionReverse(refs, reverseValidation, graphById, policyLookup) {
+  const reasons = reverseValidation?.reasons || [];
+  if (
+    reasons.length === 0 ||
+    reasons.some(
+      (reason) =>
+        reason.code !== "non_allowed_traversal" ||
+        !["osm-oneway", "osm-roundabout-implied-oneway"].includes(reason.reason),
+    )
+  ) {
+    return null;
+  }
+  const blockedKeys = new Set(reasons.map((reason) => `${reason.edgeId}|${reason.direction}`));
+  const blockedIndices = refs
+    .map((ref, index) => blockedKeys.has(`${ref.edgeId}|${ref.direction}`) ? index : -1)
+    .filter((index) => index >= 0);
+  if (blockedIndices.length !== reasons.length) return null;
+
+  const runs = [];
+  for (const index of blockedIndices) {
+    const previousRun = runs.at(-1);
+    if (previousRun && index === previousRun.endIndex + 1) previousRun.endIndex = index;
+    else runs.push({ startIndex: index, endIndex: index });
+  }
+  const replacements = [];
+  for (const run of runs) {
+    const blockedRefs = refs.slice(run.startIndex, run.endIndex + 1);
+    const junction = junctionForBlockedRefs(blockedRefs, graphById);
+    if (!junction) return null;
+    const firstEdge = graphById.get(blockedRefs[0].edgeId);
+    const lastEdge = graphById.get(blockedRefs.at(-1).edgeId);
+    const start = orientedNodeEndpoints(firstEdge, blockedRefs[0].direction);
+    const end = orientedNodeEndpoints(lastEdge, blockedRefs.at(-1).direction);
+    const replacementRefs = permittedJunctionPath(
+      start?.start,
+      end?.end,
+      junction,
+      graphById,
+      policyLookup,
+    );
+    if (!replacementRefs) return null;
+    replacements.push({
+      ...run,
+      junctionId: junction.id,
+      entryNodeId: start.start,
+      exitNodeId: end.end,
+      blockedRefs,
+      replacementRefs,
+    });
+  }
+
+  const repairedRefs = [];
+  let index = 0;
+  for (const replacement of replacements) {
+    repairedRefs.push(...refs.slice(index, replacement.startIndex));
+    repairedRefs.push(...replacement.replacementRefs);
+    index = replacement.endIndex + 1;
+  }
+  repairedRefs.push(...refs.slice(index));
+  const normalizedRefs = repairedRefs.map((ref, sequenceIndex) => ({ ...ref, sequenceIndex }));
+  const validation = validateRefs(normalizedRefs, graphById, policyLookup);
+  if (validation.status !== "valid") return null;
+  return {
+    edgeRefs: normalizedRefs,
+    validation,
+    repairs: replacements.map((replacement) => ({
+      junctionId: replacement.junctionId,
+      entryNodeId: replacement.entryNodeId,
+      exitNodeId: replacement.exitNodeId,
+      blockedEdgeRefs: replacement.blockedRefs.map(({ edgeId, direction }) => ({ edgeId, direction })),
+      replacementEdgeRefs: replacement.replacementRefs.map(({ edgeId, direction }) => ({ edgeId, direction })),
+    })),
+  };
+}
+
 export function repairRoundaboutReverse(refs, reverseValidation, graphById, policyLookup) {
+  const junctionRepair = repairNetworkJunctionReverse(
+    refs,
+    reverseValidation,
+    graphById,
+    policyLookup,
+  );
+  if (junctionRepair) return junctionRepair;
   const reasons = reverseValidation?.reasons || [];
   if (
     reasons.length === 0 ||
@@ -463,8 +670,15 @@ export function buildMigrationProposal({
     const a = sourceCoordinates[0];
     const b = sourceCoordinates.at(-1);
     const sourceGeometryDigest = digestCwOverlayValue(sourceCoordinates);
-    const refs = orderedRefs(mapping);
-    const existingValidation = validateRefs(refs, graphById, policyLookup);
+    let refs = orderedRefs(mapping);
+    let existingValidation = validateRefs(refs, graphById, policyLookup);
+    const existingJunctionRepair = existingValidation.status === "invalid"
+      ? repairNetworkJunctionReverse(refs, existingValidation, graphById, policyLookup)
+      : null;
+    if (existingJunctionRepair) {
+      refs = existingJunctionRepair.edgeRefs;
+      existingValidation = existingJunctionRepair.validation;
+    }
     const endpoint = endpointMatch(existingValidation, a, b, endpointZoneMeters);
     if (!endpoint.alignmentKey) {
       existingValidation.status = "invalid";
@@ -489,7 +703,7 @@ export function buildMigrationProposal({
             ? "direction_evidence_needed"
             : "invalid_existing"
           : "unresolved"
-        : roundaboutRepair
+        : existingJunctionRepair || roundaboutRepair
           ? "roundabout_reverse_candidate"
           : reverseValidation.status === "valid"
             ? "symmetric_candidate"
@@ -527,12 +741,15 @@ export function buildMigrationProposal({
       realization: existingRealization,
       mappingDigest: existingDigest,
       candidate: {
-        kind: hasAuthoringRevision
+        kind: existingJunctionRepair
+          ? "junction-repaired-existing"
+          : hasAuthoringRevision
           ? "authoring-revision"
           : isLegacySegment
             ? "v1-existing"
             : "new-authoring",
         classification,
+        ...(existingJunctionRepair ? { repairs: existingJunctionRepair.repairs } : {}),
       },
       validation: existingValidation,
     };

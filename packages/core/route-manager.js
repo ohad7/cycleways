@@ -1300,6 +1300,17 @@ class RouteManager {
                 : [],
             }
           : null,
+      cwJunctions:
+        edgeData.cwJunctions && typeof edgeData.cwJunctions === "object"
+          ? {
+              forward: Array.isArray(edgeData.cwJunctions.forward)
+                ? edgeData.cwJunctions.forward.map((value) => ({ ...value }))
+                : [],
+              reverse: Array.isArray(edgeData.cwJunctions.reverse)
+                ? edgeData.cwJunctions.reverse.map((value) => ({ ...value }))
+                : [],
+            }
+          : null,
       shardIds: Array.isArray(edgeData.shardIds)
         ? [...new Set(edgeData.shardIds.map(String).filter(Boolean))].sort()
         : [],
@@ -1375,6 +1386,11 @@ class RouteManager {
     return this._cwMembershipsForDirection(edge, direction);
   }
 
+  _junctionMembershipsForTraversal(edge, fromDistance, toDistance) {
+    const direction = Number(toDistance) < Number(fromDistance) ? "reverse" : "forward";
+    return Array.isArray(edge?.cwJunctions?.[direction]) ? edge.cwJunctions[direction] : [];
+  }
+
   _activeConnectorStrategy() {
     return this._connectorStrategy || DEFAULT_CONNECTOR_STRATEGY;
   }
@@ -1384,7 +1400,8 @@ class RouteManager {
   }
 
   _connectorEvaluationEdge(edge, fromDistance, toDistance) {
-    if (!edge?.cwAlignments) return edge;
+    if (!edge?.cwAlignments && !edge?.cwJunctions) return edge;
+    const junctionMemberships = this._junctionMembershipsForTraversal(edge, fromDistance, toDistance);
     return {
       ...edge,
       // Connector classification is traversal-direction scoped in V3.  Strip
@@ -1396,6 +1413,9 @@ class RouteManager {
         fromDistance,
         toDistance,
       ).map((value) => value.segmentId),
+      cwJunctions: junctionMemberships.length
+        ? { forward: junctionMemberships, reverse: [] }
+        : null,
     };
   }
 
@@ -1458,7 +1478,10 @@ class RouteManager {
     if (connector) {
       return this._connectorCostMultiplierFor(edge, fromDistance, toDistance);
     }
-    if (this._cwMembershipsForTraversal(edge, fromDistance, toDistance).length > 0) return 1;
+    if (
+      this._cwMembershipsForTraversal(edge, fromDistance, toDistance).length > 0 ||
+      this._junctionMembershipsForTraversal(edge, fromDistance, toDistance).length > 0
+    ) return 1;
     if (edge.routeClass === "cycle") return 1.35;
     if (edge.routeClass === "path_track" || edge.routeClass === "manual") {
       return 1.6;
@@ -2488,6 +2511,11 @@ class RouteManager {
       direction: toDistance < fromDistance ? "reverse" : "forward",
       policyVerdict,
       cwMemberships: this._cwMembershipsForTraversal(
+        edge,
+        fromDistance,
+        toDistance,
+      ).map((value) => ({ ...value })),
+      junctionMemberships: this._junctionMembershipsForTraversal(
         edge,
         fromDistance,
         toDistance,
@@ -3895,13 +3923,21 @@ function buildSegmentSpans(traversals, segmentNamesById) {
       : traversal.edge?.cwSegmentIds ?? [];
     const cwSegmentId = ids.length > 0 ? Number(ids[0]) : null;
     const name = cwSegmentId != null ? segmentNamesById.get(cwSegmentId) ?? null : null;
-    const onNetwork = name != null;
+    const junctionMemberships = Array.isArray(traversal.junctionMemberships)
+      ? traversal.junctionMemberships
+      : [];
+    const networkRole = name != null
+      ? "segment"
+      : junctionMemberships.length > 0
+        ? "junction"
+        : null;
+    const onNetwork = networkRole != null;
     const routeClass =
       traversal.edge?.routeClass ?? traversal.edge?.highway ?? null;
     const start = cursor;
     cursor += length;
     const prev = spans[spans.length - 1];
-    if (prev && prev.name === name && prev.onNetwork === onNetwork) {
+    if (prev && prev.name === name && prev.onNetwork === onNetwork && prev.networkRole === networkRole) {
       prev.endMeters = cursor;
       continue;
     }
@@ -3911,6 +3947,7 @@ function buildSegmentSpans(traversals, segmentNamesById) {
       name,
       cwSegmentId,
       onNetwork,
+      networkRole,
       routeClass,
     });
   }

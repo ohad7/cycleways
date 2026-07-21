@@ -40,6 +40,10 @@ import {
   roundaboutReviewGeoJson,
 } from "./lib/roundaboutReview.mjs";
 import {
+  joinNetworkJunctionReviews,
+  networkJunctionGeoJson,
+} from "./lib/networkJunctions.mjs";
+import {
   CROSSING_REVIEW_STATUSES,
   crossingIssue,
   crossingReviewGeoJson,
@@ -134,6 +138,8 @@ const baseGraphInputPathByKey = new Map([
 ]);
 const roundaboutCandidatesPath = resolve(osmBuildDir, "roundabout-candidates.json");
 const roundaboutReviewPath = resolve(dataDir, "roundabout-review.json");
+const networkJunctionCandidatesPath = resolve(buildDir, "network-junctions/candidates.json");
+const networkJunctionReviewPath = resolve(dataDir, "network-junction-review.json");
 const crossingCandidatesPath = resolve(buildDir, "crossings/candidates.json");
 const crossingReviewPath = resolve(dataDir, "crossing-review.json");
 const baseEdgeShareRegistryPath = resolve(dataDir, "base-edge-share-ids.json");
@@ -2677,8 +2683,33 @@ async function applyNetworkAuthoringSegment(payload) {
     ? "aToB"
     : "bToA";
   const oppositeKey = oppositeAlignmentKey(forwardKey);
-  const forwardValidation = forwardKey === "aToB" ? aValidation : bValidation;
-  const reverseRefs = reverseAlignmentRefs(refs);
+  let forwardRefs = refs;
+  let forwardValidation = forwardKey === "aToB" ? aValidation : bValidation;
+  let forwardJunctionRepair = null;
+  if (!forwardValidation.ok) {
+    const repair = repairRoundaboutReverse(
+      forwardRefs,
+      forwardValidation,
+      context.edgeLookup,
+      networkAuthoringPolicyLookup(context),
+    );
+    if (repair?.edgeRefs?.length) {
+      const repairedValidation = validateDirectionReviewRefsWithContext(
+        overlay,
+        segment,
+        forwardKey,
+        repair.edgeRefs,
+        context,
+        owners,
+      );
+      if (repairedValidation.ok) {
+        forwardJunctionRepair = repair;
+        forwardRefs = normalizeAlignmentEdgeRefs(repair.edgeRefs);
+        forwardValidation = repairedValidation;
+      }
+    }
+  }
+  const reverseRefs = reverseAlignmentRefs(forwardRefs);
   let oppositeRefs = reverseRefs;
   let reverseValidation = validateDirectionReviewRefsWithContext(
     overlay,
@@ -2725,7 +2756,7 @@ async function applyNetworkAuthoringSegment(payload) {
 
   segment.migration = {
     ...(segment.migration || {}),
-    classification: roundaboutRepair
+    classification: forwardJunctionRepair || roundaboutRepair
       ? "roundabout_reverse_candidate"
       : decision.outcome === "apply"
         ? "symmetric_candidate"
@@ -2740,17 +2771,17 @@ async function applyNetworkAuthoringSegment(payload) {
   };
 
   if (decision.outcome === "apply") {
-    const explicitRealization = { type: "explicit", edgeRefs: refs };
+    const explicitRealization = { type: "explicit", edgeRefs: forwardRefs };
     const explicitPublished = networkAuthoringReview({
       overlay,
       segment,
       alignmentKey: forwardKey,
       realization: explicitRealization,
-      refs,
+      refs: forwardRefs,
       intent,
       revision: requestedRevision,
       context,
-      roundaboutRepair: null,
+      roundaboutRepair: forwardJunctionRepair,
     });
     const oppositeRealization = roundaboutRepair
       ? { type: "explicit", edgeRefs: oppositeRefs }
@@ -2785,12 +2816,15 @@ async function applyNetworkAuthoringSegment(payload) {
       decision,
     );
     segment.alignments[forwardKey].draft = networkAuthoringDraft({
-      refs,
+      refs: forwardRefs,
       candidate: {
-        kind: intent === "explicit-selection" ? "manual-editor" : "automatic-match",
+        kind: forwardJunctionRepair
+          ? "junction-repaired-existing"
+          : intent === "explicit-selection" ? "manual-editor" : "automatic-match",
         segmentId,
         alignmentKey: forwardKey,
         sourceRevision: requestedRevision,
+        roundaboutRepairs: forwardJunctionRepair?.repairs,
       },
       validation: forwardResult,
     });
@@ -3907,6 +3941,34 @@ async function readRoundaboutReviewState() {
   };
 }
 
+async function readNetworkJunctionState() {
+  let candidates;
+  try {
+    candidates = JSON.parse(await readFile(networkJunctionCandidatesPath, "utf-8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      const missing = new Error("Junction candidates are missing. Run npm run network:junctions.");
+      missing.status = 409;
+      throw missing;
+    }
+    throw error;
+  }
+  let reviews = { schemaVersion: 1, reviews: {} };
+  try {
+    reviews = JSON.parse(await readFile(networkJunctionReviewPath, "utf-8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  const graph = JSON.parse(await readFile(osmBaseGraphPath, "utf-8"));
+  const joined = joinNetworkJunctionReviews(candidates, reviews);
+  return {
+    candidates,
+    reviews,
+    joined,
+    geojson: networkJunctionGeoJson(joined, graph),
+  };
+}
+
 async function readCrossingReviewState() {
   let candidates;
   try {
@@ -4147,6 +4209,7 @@ async function handleBuild(payload) {
   });
 
   await ensureCurrentBaseRoutingArtifacts(buildId, payload);
+  await runBuildDependencyStep(buildId, "network junction refresh", "npm", ["run", "network:junctions"]);
 
   return await new Promise((resolvePromise, rejectPromise) => {
     const child = spawn("python3", args, {
@@ -4556,6 +4619,10 @@ function validationBlockers(report) {
   if ((crossings.blockingIssues || []).length > 0) {
     blockers.push(`${crossings.blockingIssues.length} crossing review blockers`);
   }
+  const junctions = validation.networkJunctions || {};
+  if ((junctions.blockingIssues || []).length > 0) {
+    blockers.push(`${junctions.blockingIssues.length} network junction blockers`);
+  }
 
   return blockers;
 }
@@ -4690,6 +4757,7 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
       manifest.kml,
       manifest.roundabouts,
       manifest.crossings,
+      manifest.networkJunctions,
       manifest.routeCatalog,
       manifest.featuredRoutesBase,
       manifest.legacyRoutingCompatibility?.cwBaseIndex,
@@ -4728,6 +4796,9 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
       : []),
     ...(!manifest.crossings
       ? await existingVersionedFiles(publicDataDir, /^crossings(?:\.[0-9a-f]{12})?\.json$/)
+      : []),
+    ...(!manifest.networkJunctions
+      ? await existingVersionedFiles(publicDataDir, /^network-junctions(?:\.[0-9a-f]{12})?\.json$/)
       : []),
   ].filter((filePath) => !protectedPaths.has(filePath));
 
@@ -4795,6 +4866,13 @@ export function buildPromoteTargets(manifest, {
       label: "public crossings",
       source: resolveManifestPath(buildPublicDataDir, manifest.crossings),
       target: resolveManifestPath(publicDataDir, manifest.crossings),
+    });
+  }
+  if (manifest.networkJunctions) {
+    targets.push({
+      label: "public network junctions",
+      source: resolveManifestPath(buildPublicDataDir, manifest.networkJunctions),
+      target: resolveManifestPath(publicDataDir, manifest.networkJunctions),
     });
   }
   if (manifest.legacyRoutingCompatibility?.cwBaseIndex) {
@@ -5178,6 +5256,75 @@ const server = createServer(async (request, response) => {
           items: state.joined.items,
           orphaned: state.joined.orphaned,
           geojson: state.geojson,
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/network-junctions") {
+      try {
+        const state = await readNetworkJunctionState();
+        sendJson(response, 200, {
+          ok: true,
+          summary: state.joined.summary,
+          blockingIssues: state.joined.blockingIssues,
+          orphaned: state.joined.orphaned,
+          items: state.joined.items,
+          geojson: state.geojson,
+          sourceDigests: state.candidates.sourceDigests,
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/network-junctions/review") {
+      try {
+        const body = await readRequestJson(request);
+        const state = await readNetworkJunctionState();
+        const junction = state.candidates.junctions?.find((item) => item?.id === body?.junctionId);
+        const movement = junction?.movements?.find((item) => item?.id === body?.movementId);
+        if (!junction || !movement) {
+          throw Object.assign(new Error("Unknown junction movement"), { status: 400 });
+        }
+        if (body?.junctionFingerprint !== junction.fingerprint) {
+          throw Object.assign(new Error("Junction topology changed; reload before saving"), { status: 409 });
+        }
+        if (!["selected", "unavailable", "automatic"].includes(body?.status)) {
+          throw Object.assign(new Error("Movement status must be selected, unavailable, or automatic"), { status: 400 });
+        }
+        const nextReviews = structuredClone(state.reviews);
+        nextReviews.schemaVersion = 1;
+        nextReviews.reviews ||= {};
+        nextReviews.reviews[junction.id] ||= { movements: {} };
+        nextReviews.reviews[junction.id].movements ||= {};
+        if (body.status === "automatic") {
+          delete nextReviews.reviews[junction.id].movements[movement.id];
+          if (Object.keys(nextReviews.reviews[junction.id].movements).length === 0) {
+            delete nextReviews.reviews[junction.id];
+          }
+        } else {
+          nextReviews.reviews[junction.id].movements[movement.id] = {
+            status: body.status,
+            junctionFingerprint: junction.fingerprint,
+            reviewedAt: new Date().toISOString(),
+            reviewer: "ohad",
+            ...(body.status === "selected" ? { edgeRefs: movement.edgeRefs } : {}),
+          };
+        }
+        await writeJsonAtomic(networkJunctionReviewPath, nextReviews);
+        const nextState = await readNetworkJunctionState();
+        sendJson(response, 200, {
+          ok: true,
+          summary: nextState.joined.summary,
+          blockingIssues: nextState.joined.blockingIssues,
+          orphaned: nextState.joined.orphaned,
+          items: nextState.joined.items,
+          geojson: nextState.geojson,
+          sourceDigests: nextState.candidates.sourceDigests,
         });
       } catch (error) {
         sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });

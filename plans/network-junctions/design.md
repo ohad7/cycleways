@@ -2,7 +2,7 @@
 
 Date: 2026-07-21
 
-Status: Proposed for implementation
+Status: Implemented for derived roundabout junctions; curated bicycle-junction authoring remains a rollout extension
 
 ## Summary
 

@@ -24,6 +24,13 @@ assert.deepEqual(
 );
 assert.deepEqual(
   evaluateConnectorEdge(
+    { routeClass: "manual", cwJunctions: { forward: [{ junctionId: "j1" }], reverse: [] } },
+    S,
+  ),
+  { allowed: true, multiplier: 0.8 },
+);
+assert.deepEqual(
+  evaluateConnectorEdge(
     { routeClass: "cycle", accessStatus: "restricted", cwSegmentIds: [10] },
     { ...S, classMultipliers: { ...S.classMultipliers, cw_network: "0.75" } },
   ),

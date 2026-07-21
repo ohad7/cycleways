@@ -1296,6 +1296,43 @@ button:disabled {
   margin: 0.65rem 0;
 }
 
+.junction-coverage {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--border-color, #d6dbe3);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.035);
+}
+
+.junction-movement-list {
+  display: grid;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.junction-movement-row {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  border: 1px solid #d6dbe3;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.junction-movement-row span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.junction-movement-row.active {
+  border-color: #0891b2;
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.18);
+}
+
 .roundabout-review-item {
   display: grid;
   gap: 0.15rem;

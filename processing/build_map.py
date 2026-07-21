@@ -139,6 +139,7 @@ def apply_accepted_cw_traversal_precedence(
     return effective
 BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION = 2
 BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION = 3
+BASE_ROUTING_COMPACT_SHARD_JUNCTION_FORMAT_VERSION = 4
 BASE_ROUTING_COMPACT_SHARD_MAGIC = b"CWBS1"
 BASE_ROUTING_COMPACT_COORDINATE_SCALE = 1_000_000
 BASE_ROUTING_COMPACT_DISTANCE_SCALE = 10
@@ -279,8 +280,14 @@ def pack_compact_base_routing_shard(shard_asset: dict[str, Any]) -> bytes:
     source_routing_schema_version = int(
         shard_asset.get("sourceRoutingSchemaVersion") or 0
     )
+    has_junction_membership = any(
+        isinstance(edge, dict) and isinstance(edge.get("cwJunctions"), dict)
+        for edge in edges
+    )
     format_version = (
-        BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION
+        BASE_ROUTING_COMPACT_SHARD_JUNCTION_FORMAT_VERSION
+        if source_routing_schema_version >= 3 and has_junction_membership
+        else BASE_ROUTING_COMPACT_SHARD_POLICY_FORMAT_VERSION
         if source_routing_schema_version >= 3
         else BASE_ROUTING_COMPACT_SHARD_FORMAT_VERSION
     )
@@ -404,6 +411,14 @@ def pack_compact_base_routing_shard(shard_asset: dict[str, Any]) -> bytes:
                         string_index,
                         membership.get("mappingDigest"),
                     )
+            if format_version >= BASE_ROUTING_COMPACT_SHARD_JUNCTION_FORMAT_VERSION:
+                junctions = edge.get("cwJunctions") if isinstance(edge.get("cwJunctions"), dict) else {}
+                for direction in ("forward", "reverse"):
+                    memberships = junctions.get(direction) if isinstance(junctions.get(direction), list) else []
+                    write_varuint(payload, len(memberships))
+                    for membership in memberships:
+                        write_nullable_string_index(payload, string_index, membership.get("junctionId"))
+                        write_nullable_string_index(payload, string_index, membership.get("fingerprint"))
 
     return bytes(payload)
 
@@ -435,6 +450,14 @@ def compact_shard_string_table(
             for direction in ("forward", "reverse"):
                 for membership in alignments.get(direction) or []:
                     for key in ("alignmentKey", "mappingDigest"):
+                        value = membership.get(key) if isinstance(membership, dict) else None
+                        if isinstance(value, str) and value != "":
+                            strings.add(value)
+        junctions = edge.get("cwJunctions")
+        if isinstance(junctions, dict):
+            for direction in ("forward", "reverse"):
+                for membership in junctions.get(direction) or []:
+                    for key in ("junctionId", "fingerprint"):
                         value = membership.get(key) if isinstance(membership, dict) else None
                         if isinstance(value, str) and value != "":
                             strings.add(value)
@@ -3451,6 +3474,7 @@ def write_runtime_manifest(
     validation: dict[str, Any],
     output_roundabouts: Path | None = None,
     output_crossings: Path | None = None,
+    output_junctions: Path | None = None,
     output_cw_alignment_geometry: Path | None = None,
     legacy_compatibility: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
@@ -3466,6 +3490,8 @@ def write_runtime_manifest(
         version_inputs.append(output_roundabouts)
     if output_crossings and output_crossings.exists():
         version_inputs.append(output_crossings)
+    if output_junctions and output_junctions.exists():
+        version_inputs.append(output_junctions)
     if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
         version_inputs.append(output_cw_alignment_geometry)
     if legacy_compatibility:
@@ -3520,6 +3546,10 @@ def write_runtime_manifest(
             immutable_crossings = versioned_file(output_crossings)
             shutil.copyfile(output_crossings, immutable_crossings)
             output_crossings = immutable_crossings
+        if output_junctions and output_junctions.exists():
+            immutable_junctions = versioned_file(output_junctions)
+            shutil.copyfile(output_junctions, immutable_junctions)
+            output_junctions = immutable_junctions
 
     def public_relative(path: Path) -> str:
         return path.relative_to(public_data_dir).as_posix()
@@ -3557,6 +3587,9 @@ def write_runtime_manifest(
                 "sourceFallbackSegments"
             ),
             "cwBaseIndexSegments": validation.get("cwBaseIndex", {}).get("segments"),
+            "networkJunctions": validation.get("networkJunctions", {}).get("summary", {}).get("junctions", 0),
+            "networkJunctionMovements": validation.get("networkJunctions", {}).get("summary", {}).get("movements", 0),
+            "networkJunctionDirectedEdges": validation.get("networkJunctions", {}).get("summary", {}).get("compiledDirectedEdges", 0),
         },
     }
     if output_roundabouts and output_roundabouts.exists():
@@ -3565,6 +3598,9 @@ def write_runtime_manifest(
     if output_crossings and output_crossings.exists():
         manifest["crossings"] = public_relative(output_crossings)
         manifest["hashes"]["crossings"] = file_digest(output_crossings)
+    if output_junctions and output_junctions.exists():
+        manifest["networkJunctions"] = public_relative(output_junctions)
+        manifest["hashes"]["networkJunctions"] = file_digest(output_junctions)
     if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
         manifest["cwAlignmentGeometry"] = public_relative(output_cw_alignment_geometry)
         manifest["hashes"]["cwAlignmentGeometry"] = file_digest(
@@ -3600,6 +3636,8 @@ def write_runtime_manifest(
         runtime["roundabouts"] = str(output_roundabouts)
     if output_crossings and output_crossings.exists():
         runtime["crossings"] = str(output_crossings)
+    if output_junctions and output_junctions.exists():
+        runtime["networkJunctions"] = str(output_junctions)
     if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
         runtime["cwAlignmentGeometry"] = str(output_cw_alignment_geometry)
     return runtime, manifest_path
@@ -3685,6 +3723,159 @@ def build_reviewed_roundabouts(
         "sourceFresh": source_fresh,
     }
     return validation, output_path
+
+
+def build_network_junctions(
+    candidates_path: Path,
+    reviews_path: Path,
+    base_routing_asset: dict[str, Any],
+    output_path: Path,
+) -> tuple[dict[str, Any], Path | None]:
+    candidates = load_json(candidates_path, {})
+    reviews_payload = load_json(reviews_path, {"schemaVersion": 1, "reviews": {}})
+    blocking_issues: list[dict[str, Any]] = []
+    if candidates.get("schemaVersion") != 1:
+        blocking_issues.append({"code": "invalid_junction_candidate_schema"})
+    if reviews_payload.get("schemaVersion") != 1:
+        blocking_issues.append({"code": "invalid_junction_review_schema"})
+    reviews = reviews_payload.get("reviews") if isinstance(reviews_payload.get("reviews"), dict) else {}
+    runtime_edges = base_routing_asset.get("edges") if isinstance(base_routing_asset.get("edges"), list) else []
+    edge_by_id = {str(edge.get("id")): edge for edge in runtime_edges if isinstance(edge, dict)}
+    runtime_junctions: list[dict[str, Any]] = []
+    seen_junction_ids: set[str] = set()
+    compiled_directed_edges: set[tuple[str, str, str]] = set()
+
+    for junction in candidates.get("junctions") or []:
+        junction_id = str(junction.get("id") or "")
+        fingerprint = str(junction.get("fingerprint") or "")
+        if not junction_id or not fingerprint or junction_id in seen_junction_ids:
+            blocking_issues.append({"code": "invalid_junction_identity", "junctionId": junction_id})
+            continue
+        seen_junction_ids.add(junction_id)
+        movement_reviews = ((reviews.get(junction_id) or {}).get("movements") or {})
+        runtime_movements: list[dict[str, Any]] = []
+        for movement in junction.get("movements") or []:
+            movement_id = str(movement.get("id") or "")
+            review = movement_reviews.get(movement_id)
+            if review and review.get("junctionFingerprint") != fingerprint:
+                blocking_issues.append({
+                    "code": "stale_junction_movement_review",
+                    "junctionId": junction_id,
+                    "movementId": movement_id,
+                })
+                continue
+            status = "unavailable" if review and review.get("status") == "unavailable" else movement.get("status")
+            if status == "ambiguous" and not (review and review.get("status") == "selected"):
+                blocking_issues.append({
+                    "code": "ambiguous_junction_movement",
+                    "junctionId": junction_id,
+                    "movementId": movement_id,
+                })
+                continue
+            if status == "unavailable":
+                runtime_movements.append({
+                    "id": movement_id,
+                    "entryPortId": movement.get("entryPortId"),
+                    "exitPortId": movement.get("exitPortId"),
+                    "status": "unavailable",
+                })
+                continue
+            runtime_refs: list[dict[str, Any]] = []
+            for ref in movement.get("edgeRefs") or []:
+                edge_id = str(ref.get("edgeId") or "")
+                direction = "reverse" if ref.get("direction") == "reverse" else "forward"
+                edge = edge_by_id.get(edge_id)
+                if edge is None or not edge.get("shareId"):
+                    blocking_issues.append({
+                        "code": "missing_junction_runtime_edge",
+                        "junctionId": junction_id,
+                        "movementId": movement_id,
+                        "edgeId": edge_id,
+                    })
+                    continue
+                traversal = edge.get("bicycleTraversal") or {}
+                if traversal.get(direction) != "allowed":
+                    blocking_issues.append({
+                        "code": "junction_movement_not_allowed",
+                        "junctionId": junction_id,
+                        "movementId": movement_id,
+                        "edgeId": edge_id,
+                        "direction": direction,
+                    })
+                    continue
+                runtime_refs.append({
+                    "edgeShareId": edge.get("shareId"),
+                    "direction": direction,
+                })
+                compiled_directed_edges.add((edge_id, direction, junction_id))
+            if len(runtime_refs) != len(movement.get("edgeRefs") or []):
+                continue
+            runtime_movements.append({
+                "id": movement_id,
+                "entryPortId": movement.get("entryPortId"),
+                "exitPortId": movement.get("exitPortId"),
+                "status": "allowed",
+                "distanceMeters": movement.get("distanceMeters"),
+                "edgeRefs": runtime_refs,
+            })
+        runtime_junctions.append({
+            "id": junction_id,
+            "kind": junction.get("kind"),
+            "roundaboutId": junction.get("roundaboutId"),
+            "classification": junction.get("classification"),
+            "fingerprint": fingerprint,
+            "segmentIds": junction.get("segmentIds") or [],
+            "ports": [
+                {
+                    "id": port.get("id"),
+                    "usage": port.get("usage"),
+                    "direction": port.get("direction"),
+                    "edgeShareId": edge_by_id.get(str(port.get("edgeId") or ""), {}).get("shareId"),
+                }
+                for port in junction.get("ports") or []
+            ],
+            "movements": runtime_movements,
+        })
+
+    for edge in runtime_edges:
+        edge_id = str(edge.get("id") or "")
+        edge["cwJunctions"] = {
+            direction: [
+                {"junctionId": junction_id, "fingerprint": next(
+                    (item["fingerprint"] for item in runtime_junctions if item["id"] == junction_id),
+                    None,
+                )}
+                for candidate_edge_id, candidate_direction, junction_id in sorted(compiled_directed_edges)
+                if candidate_edge_id == edge_id and candidate_direction == direction
+            ]
+            for direction in ("forward", "reverse")
+        }
+
+    if blocking_issues:
+        codes = ", ".join(issue["code"] for issue in blocking_issues[:6])
+        raise ValueError(
+            f"Network junction publication blocked by {len(blocking_issues)} issue(s): {codes}"
+        )
+    if not runtime_junctions:
+        output_path.unlink(missing_ok=True)
+        return {
+            "summary": {"junctions": 0, "movements": 0, "compiledDirectedEdges": 0},
+            "blockingIssues": [],
+        }, None
+    payload = {
+        "schemaVersion": 1,
+        "graphVersion": base_routing_asset.get("graphVersion"),
+        "junctions": runtime_junctions,
+    }
+    write_json(output_path, payload, compact=True)
+    return {
+        "summary": {
+            "junctions": len(runtime_junctions),
+            "movements": sum(len(junction["movements"]) for junction in runtime_junctions),
+            "compiledDirectedEdges": len(compiled_directed_edges),
+        },
+        "blockingIssues": [],
+    }, output_path
 
 
 def build_reviewed_crossings(
@@ -3975,6 +4166,12 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         args.base_edge_share_id_proposal.resolve(),
         args.routing_profile,
     )
+    junction_validation, output_junctions = build_network_junctions(
+        args.network_junction_candidates.resolve(),
+        args.network_junction_reviews.resolve(),
+        base_routing_asset,
+        public_data_dir / "network-junctions.json",
+    )
     site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
         compact_geojson_for_site(geojson_data),
         base_routing_asset,
@@ -4020,6 +4217,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         args.topology_threshold,
     )
     validation["baseRouting"] = base_routing_validation
+    validation["networkJunctions"] = junction_validation
     validation["cyclewaysDisplayGeometry"] = display_geometry_validation
     validation["cwBaseIndex"] = cw_base_index_validation
     validation["cwAlignmentGeometry"] = cw_alignment_geometry_validation
@@ -4059,6 +4257,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         validation,
         output_roundabouts,
         output_crossings,
+        output_junctions,
         output_cw_alignment_geometry,
         legacy_compatibility,
     )
@@ -4168,6 +4367,12 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         args.base_edge_share_id_proposal.resolve(),
         args.routing_profile,
     )
+    junction_validation, output_junctions = build_network_junctions(
+        args.network_junction_candidates.resolve(),
+        args.network_junction_reviews.resolve(),
+        base_routing_asset,
+        public_data_dir / "network-junctions.json",
+    )
     site_geojson_data, display_geometry_validation = build_public_cycleways_display_geojson(
         compact_geojson_for_site(geojson_data),
         base_routing_asset,
@@ -4214,6 +4419,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         args.topology_threshold,
     )
     validation["baseRouting"] = base_routing_validation
+    validation["networkJunctions"] = junction_validation
     validation["cyclewaysDisplayGeometry"] = display_geometry_validation
     validation["cwBaseIndex"] = cw_base_index_validation
     validation["cwAlignmentGeometry"] = cw_alignment_geometry_validation
@@ -4253,6 +4459,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         validation,
         output_roundabouts,
         output_crossings,
+        output_junctions,
         output_cw_alignment_geometry,
         legacy_compatibility,
     )
@@ -4371,6 +4578,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--crossing-reviews",
         type=Path,
         default=Path("data/crossing-review.json"),
+    )
+    parser.add_argument(
+        "--network-junction-candidates",
+        type=Path,
+        default=Path("build/network-junctions/candidates.json"),
+    )
+    parser.add_argument(
+        "--network-junction-reviews",
+        type=Path,
+        default=Path("data/network-junction-review.json"),
     )
     parser.add_argument(
         "--overpass-response",

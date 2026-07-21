@@ -2,7 +2,40 @@
 
 Date: 2026-07-21
 
-Status: Proposed; implement after design review
+Status: Derived-junction slice implemented on 2026-07-21; curated authoring and connector deprecation remain gated rollout work
+
+## Implementation status
+
+Implemented:
+
+- deterministic relevant-junction generation, one-hop roundabout topology expansion,
+  directional ports, legal movement coverage, preview GeoJSON, and source fingerprints;
+- real-data regression coverage for Rager, #358, Kiryat Shmona, Horshat Tal,
+  and Dafna;
+- junction-bounded approach + ring + exit repair in migration and live network
+  authoring, while retaining the existing roundabout repair contract;
+- an exception-only review schema with stale-selection validation;
+- the renamed Junctions editor workspace, relevant/movement filters, internal
+  topology, entry/exit ports, one-way arrows, and selectable movement paths;
+- Build refresh, validation, versioned runtime publication, Promote copying,
+  and stale/invalid fail-closed behavior;
+- direction-scoped `cwJunctions` compact-shard encoding and shared-core decode;
+- connector eligibility, main-route cost, and unnamed
+  `networkRole: "junction"` route spans; and
+- web/mobile manifest loading and offline asset synchronization.
+
+Rollout-gated follow-up:
+
+- the editor flow for drawing a completely custom junction boundary and
+  explicitly correcting proposed ports;
+- authoritative custom movement selection during search (derived unique paths
+  already use the same legal directed graph and require no override);
+- Overlay V2 terminal attachments where paired carriageway ports cannot be
+  inferred from current topology;
+- deprecating connector segments #328/#329 after automated and manual parity;
+  and
+- route/share movement attestation beyond the full base-edge attestation that
+  remains authoritative today.
 
 Goal: Implement `plans/network-junctions/design.md` without weakening bicycle
 traversal policy or changing unrelated base-network routing.
