@@ -71,13 +71,19 @@ const overlay = {
       migration: { classification: "symmetric_candidate" },
       alignments: { aToB: slot({ published: accepted }), bToA: slot({ published: accepted }) },
     },
+    "7": {
+      segmentId: 7,
+      segmentName: "Automatic boundary overmatch",
+      migration: { classification: "unresolved", lastOutcomeCode: "match_quality" },
+      alignments: { aToB: slot(), bToA: slot() },
+    },
   },
 };
 
 const rows = buildDirectionReviewIssueRows(overlay);
-assert.equal(rows.length, 5);
+assert.equal(rows.length, 6);
 assert.equal(rows.some((row) => row.segmentId === 6), false);
-assert.equal(rows.filter((row) => !row.resolved).length, 4);
+assert.equal(rows.filter((row) => !row.resolved).length, 5);
 assert.equal(directionReviewSegmentResolved(overlay.segments["1"]), true);
 assert.deepEqual(
   filterDirectionReviewRows(rows, { filter: "direction_evidence_needed" }).map((row) => row.segmentId),
@@ -94,6 +100,10 @@ assert.deepEqual(
 assert.deepEqual(
   filterDirectionReviewRows(rows, { filter: "roundabout_reverse_candidate" }).map((row) => row.segmentId),
   [5],
+);
+assert.deepEqual(
+  filterDirectionReviewRows(rows, { filter: "mapping_confidence_review" }).map((row) => row.segmentId),
+  [7],
 );
 
 const activeRows = buildDirectionReviewIssueRows(overlay, {

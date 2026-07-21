@@ -30,6 +30,27 @@ assert.equal(
   automaticBidirectionalDecision({ match, forwardValidation: valid, reverseValidation: valid }).outcome,
   "apply",
 );
+assert.equal(
+  automaticBidirectionalDecision({
+    intent: "explicit-selection",
+    match: { ...match, failureClass: "overmatched_edge", reviewStatus: "inspect_edge_sequence" },
+    forwardValidation: valid,
+    reverseValidation: valid,
+  }).outcome,
+  "apply",
+  "an explicit curator path must supersede automatic mapping-confidence uncertainty",
+);
+assert.equal(
+  automaticBidirectionalDecision({
+    intent: "explicit-selection",
+    match,
+    forwardValidation: valid,
+    reverseValidation: valid,
+    competingPathCount: 3,
+  }).outcome,
+  "apply",
+  "explicitly choosing one path must resolve automatic path ambiguity",
+);
 const reverseOnlyFailure = automaticBidirectionalDecision({
   match,
   forwardValidation: valid,

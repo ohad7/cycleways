@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T19:18:14.991Z",
+  "updatedAt": "2026-07-21T19:51:55.513Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -18414,6 +18414,115 @@
       "failureMessage": null,
       "updatedAt": "2026-07-16T18:21:03.043Z"
     },
+    "354": {
+      "segmentId": 354,
+      "segmentName": "בקעת יחמור",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.45,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-150-mpc9gg59",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-150-mpc9gg59"
+        },
+        {
+          "edgeId": "manual-manual-osm-65427287-mpc9f09g-a-mpc9f4b7",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-65427287-mpc9f09g-a-mpc9f4b7"
+        },
+        {
+          "edgeId": "e65427287_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 65427287
+        },
+        {
+          "edgeId": "e446650264_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 446650264
+        },
+        {
+          "edgeId": "e446650264_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 446650264
+        }
+      ],
+      "updatedAt": "2026-07-21T19:50:14.323Z"
+    },
+    "356": {
+      "segmentId": 356,
+      "segmentName": "כביש מערכת שדה אליעזר",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.52,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e422006361_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 422006361
+        },
+        {
+          "edgeId": "e422006361_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 422006361
+        },
+        {
+          "edgeId": "e841165614_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841165614
+        },
+        {
+          "edgeId": "manual-manual-osm-841165614-mpc9foy4-b-mpc9fs0p",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-841165614-mpc9foy4-b-mpc9fs0p"
+        }
+      ],
+      "updatedAt": "2026-07-21T19:51:31.700Z"
+    },
     "358": {
       "segmentId": 358,
       "segmentName": "רחוב פנימי שדה אליעזר",
@@ -18421,7 +18530,7 @@
       "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.3,
+      "avgDistanceMeters": 0.21,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -18543,7 +18652,7 @@
           "osmWayId": 841160751
         }
       ],
-      "updatedAt": "2026-07-21T19:12:15.364Z"
+      "updatedAt": "2026-07-21T19:51:55.513Z"
     },
     "361": {
       "segmentId": 361,

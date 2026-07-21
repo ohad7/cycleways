@@ -1,5 +1,6 @@
 export const DIRECTION_REVIEW_CLASSIFICATIONS = Object.freeze([
   "direction_evidence_needed",
+  "mapping_confidence_review",
   "invalid_existing",
   "roundabout_reverse_candidate",
   "single_direction_candidate",
@@ -8,6 +9,7 @@ export const DIRECTION_REVIEW_CLASSIFICATIONS = Object.freeze([
 
 export const DIRECTION_REVIEW_CLASSIFICATION_LABELS = Object.freeze({
   direction_evidence_needed: "Direction evidence needed",
+  mapping_confidence_review: "Mapping coverage review",
   invalid_existing: "Invalid existing mapping",
   roundabout_reverse_candidate: "Roundabout reverse ready",
   single_direction_candidate: "Single-direction candidate",
@@ -169,9 +171,14 @@ export function buildDirectionReviewIssueRows(overlay, { activeSegments = null }
     )
     .map((segment) => {
       const resolved = directionReviewSegmentResolved(segment);
+      const bothDraftsValid = ["aToB", "bToA"].every(
+        (alignmentKey) => segment.alignments?.[alignmentKey]?.draft?.validation?.status === "valid",
+      );
       const classification = resolved
         ? "accepted"
-        : String(segment?.migration?.classification || "unresolved");
+        : segment?.migration?.lastOutcomeCode === "match_quality" && bothDraftsValid
+          ? "mapping_confidence_review"
+          : String(segment?.migration?.classification || "unresolved");
       const reasons = blockingReasons(segment);
       return {
         segmentId: Number(segment.segmentId),

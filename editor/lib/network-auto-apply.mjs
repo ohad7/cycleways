@@ -107,7 +107,7 @@ export function automaticBidirectionalDecision({
       message: "This segment already has intentionally different directional paths.",
     };
   }
-  if (Number(competingPathCount) > 1) {
+  if (intent === "automatic-match" && Number(competingPathCount) > 1) {
     return {
       outcome: "needs-decision",
       code: "ambiguous_parallel_path",

@@ -357,12 +357,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:36:19.348Z",
-        "updatedAt": "2026-05-19T06:37:42.653Z",
+        "updatedAt": "2026-07-21T19:45:44.267Z",
         "splitFrom": "manual-osm-65427287-mpc9f09g",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "dirt road"
         }
       },
       "geometry": {
@@ -644,12 +647,15 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:36:51.340Z",
-        "updatedAt": "2026-05-19T06:36:55.321Z",
+        "updatedAt": "2026-07-21T19:46:37.448Z",
         "splitFrom": "manual-osm-841165614-mpc9foy4",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "dirt road"
         }
       },
       "geometry": {
@@ -688,13 +694,16 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-19T06:37:26.589Z",
-        "updatedAt": "2026-05-19T06:37:26.589Z",
+        "updatedAt": "2026-07-21T19:42:58.843Z",
         "linkedSegmentId": 150,
         "linkedSegmentName": "בקעת יחמור",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "dirt road"
         }
       },
       "geometry": {

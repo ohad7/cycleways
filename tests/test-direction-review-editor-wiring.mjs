@@ -101,6 +101,13 @@ assert.match(editor, /approveSelectedManualEdgesBidirectional/);
 assert.match(editor, /finalizeQueuedManualDirectionReviews/);
 assert.match(server, /manual-bidirectional-finalize/);
 assert.match(editor, /reviewer \|\|= "ohad"/);
+assert.match(html, /value="mapping_confidence_review">Mapping coverage review/);
+assert.match(
+  editor,
+  /if \(finishing\) \{[\s\S]{0,500}explicitEdgeRefsBySegment\.set[\s\S]{0,500}scheduleAuthoringSync/,
+  "finishing explicit mapping inspection must submit the selected edge sequence",
+);
+assert.match(editor, /Finish editing to use this exact path/);
 assert.match(editor, /localDateInputValue/);
 assert.match(editor, /showOverlay && !editingPhysicalEdges/);
 assert.match(editor, /editingPhysicalEdges = state\.editingOverlayEdges \|\| state\.directionReview\.editing/);

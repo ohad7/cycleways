@@ -500,6 +500,7 @@
                 <select id="direction-review-queue-filter" class="text-input compact-select" aria-label="Direction Review classification">
                   <option value="issues">All issues</option>
                   <option value="direction_evidence_needed">Base-edge evidence</option>
+                  <option value="mapping_confidence_review">Mapping coverage review</option>
                   <option value="invalid_existing">Blocked mappings</option>
                   <option value="roundabout_reverse_candidate">Roundabout decisions</option>
                   <option value="single_direction_candidate">Directional decisions</option>
@@ -542,6 +543,7 @@
                   <div><dt>Exact reverse</dt><dd>Mechanically reverses every edge. Offered only when the complete reverse is permitted.</dd></div>
                   <div><dt>Roundabout reverse repair</dt><dd>Keeps the route unchanged except for replacing a backward roundabout arc with the permitted arc between the same entry and exit.</dd></div>
                   <div><dt>Authoring revision</dt><dd>Imports a newly recalculated base-edge mapping while protecting current or manually edited directional work.</dd></div>
+                  <div><dt>Mapping coverage review</dt><dd>An automatic path may be directionally valid but include too much of a boundary edge. Inspect it with Add/remove edges; finishing that edit records your exact path choice.</dd></div>
                   <div><dt>Manual direction required</dt><dd>No narrow correction passed validation. Edit the direction or mark it unavailable.</dd></div>
                 </dl>
                 <p>Ordinary safe bidirectional paths are applied automatically. This section appears only when a direction differs, needs evidence, or is blocked.</p>

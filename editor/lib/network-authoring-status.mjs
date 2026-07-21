@@ -11,7 +11,7 @@ const ISSUE_LABELS = {
   alignment_empty: "No base-edge path",
   continuity_gap: "Disconnected base-edge sequence",
   endpoint_zone_failure: "Endpoint drift",
-  match_quality: "Automatic match needs correction",
+  match_quality: "Automatic mapping coverage needs review",
   missing_edge: "Referenced base edge is missing",
   stale_evidence: "Routing evidence is updating",
   non_allowed_traversal: "Base-edge direction or access needs review",

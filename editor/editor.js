@@ -4567,12 +4567,21 @@ async function toggleBaseOverlayEdgeEditing() {
     throw new Error("Recalculate the base graph before editing mapping edges.");
   }
   state.directionReview.editing = false;
-  state.editingOverlayEdges = !state.editingOverlayEdges;
+  const finishing = state.editingOverlayEdges;
+  state.editingOverlayEdges = !finishing;
+  if (finishing) {
+    const edgeRefs = normalizeOverlayEdgeRefs(displayedOverlayEdgeRefs());
+    if (edgeRefs.length > 0) {
+      state.authoring.explicitEdgeRefsBySegment.set(Number(segmentId), edgeRefs);
+      queueChangedSegment(segmentId);
+      scheduleAuthoringSync({ delay: 0, render: false });
+    }
+  }
   renderAll();
   setStatus(
     state.editingOverlayEdges
-      ? `Editing ${featureName(selected)}: click any base edge to add or remove it.`
-      : `Finished editing mapping edges for ${featureName(selected)}.`,
+      ? `Editing ${featureName(selected)}: click any base edge to add or remove it. Finish editing to use this exact path.`
+      : `Using the selected path for ${featureName(selected)}. Both directions are being validated automatically.`,
   );
 }
 
@@ -7467,6 +7476,12 @@ function directionReviewProposalExplanation(record) {
     return {
       label: "Manual editor mapping",
       detail: "This draft was edited directly. Revalidate the complete path before using it.",
+    };
+  }
+  if (kind === "automatic-match") {
+    return {
+      label: "Automatic mapping proposal",
+      detail: "The edge sequence was chosen automatically. Direction and access checks may pass even when boundary-edge coverage is uncertain. Inspect it with Add/remove edges; finishing that edit makes the inspected path the curator's explicit choice.",
     };
   }
   if (["v1-existing", "new-authoring"].includes(kind)) {
