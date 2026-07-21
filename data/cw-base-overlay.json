@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-20T22:58:00.164Z",
+  "updatedAt": "2026-07-21T05:11:38.829Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -5986,21 +5986,30 @@
       "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.43,
+      "avgDistanceMeters": 0.93,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo",
+          "edgeId": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-b-mrtu12md",
           "source": "manual",
           "direction": "reverse",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo"
+          "manualEdgeId": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-b-mrtu12md"
+        },
+        {
+          "edgeId": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-a-mrtu12md",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-a-mrtu12md"
         }
       ],
-      "updatedAt": "2026-07-20T21:27:19.238Z"
+      "updatedAt": "2026-07-21T05:11:38.828Z"
     },
     "98": {
       "segmentId": 98,

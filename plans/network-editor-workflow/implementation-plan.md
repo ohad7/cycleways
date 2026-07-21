@@ -40,6 +40,20 @@ median reusable graph setup (92.6%). Median matching was 1.2 ms. The evidence
 meets the worker threshold; implement the digest-keyed persistent matcher as the
 next slice while retaining subprocess equivalence tests and fallback.
 
+Implementation note (2026-07-21): base-edge reconciliation is now topology-only.
+It rebuilds the 2D graph without full-network CW matching, runs traversal audit
+and V2 migration against that graph, and leaves elevation regeneration to
+release Build. Exact input-byte digests embedded by the graph builder detect and
+retry an edit that lands while a build is running. Builder phase timings are
+printed in structured form and stored with the graph summary.
+
+Measured result (2026-07-21): the production topology build completes in
+11.9 seconds for 23,241 raw ways, 100 manual edges, 37,631 nodes, and 48,861
+edges. One-shot buffered JSON writes reduced artifact output from 9.6 to
+1.5 seconds. Together with the measured 2.2-second policy audit and 0.7-second
+migration, the authoring refresh is expected to take roughly 15 seconds instead
+of the previous 50-second elevation-coupled path.
+
 ## Outcome
 
 Deliver one Network authoring workflow in which the curator switches explicitly
@@ -124,6 +138,23 @@ decisions, release validation, and runtime routing behavior.
   the equivalence oracle and fallback.
 
 Status: complete. The worker decision threshold was met strongly.
+
+## Base-edge reconciliation performance
+
+- Add `osm:topology` for the graph builder alone; retain `osm:graph` as the
+  explicit topology-plus-full-match diagnostic command.
+- Use the topology graph as Direction Review's graph context and migration
+  source.
+- Keep elevated graph freshness enforcement inside release Build only.
+- Embed exact input-byte digests in every topology artifact and its summary.
+- Compare recorded and current digests after the build, retrying a bounded
+  number of times when editing overlaps the build.
+- Report graph setup, OSM edge construction, manual edge construction,
+  topology finalization, summary, and artifact-write timings.
+- Regression-test the authoring/release dependency split, digest comparison,
+  retry wiring, and performance metadata without mutating curator data.
+
+Status: implemented; manual editor latency validation pending.
 
 ## Expected file changes
 

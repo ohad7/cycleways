@@ -15,6 +15,7 @@ import math
 from collections import Counter, defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 try:
@@ -50,6 +51,37 @@ SOURCE_PRIORITY = {
 }
 
 
+def record_performance_phase(
+    performance: dict[str, Any] | None,
+    name: str,
+    started_at: float,
+) -> None:
+    if performance is None:
+        return
+    performance.setdefault("phasesMs", {})[name] = round(
+        (perf_counter() - started_at) * 1000,
+        3,
+    )
+
+
+def load_json_snapshot(path: Path, fallback: Any) -> tuple[Any, dict[str, Any]]:
+    """Parse and digest the same bytes so a build can prove its exact inputs."""
+    if not path.exists():
+        return fallback, {
+            "path": str(path),
+            "exists": False,
+            "bytes": 0,
+            "digest": None,
+        }
+    contents = path.read_bytes()
+    return json.loads(contents), {
+        "path": str(path),
+        "exists": True,
+        "bytes": len(contents),
+        "digest": f"sha256:{hashlib.sha256(contents).hexdigest()}",
+    }
+
+
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
@@ -57,12 +89,15 @@ def load_json(path: Path) -> Any:
 
 def write_json(path: Path, data: Any, *, compact: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        if compact:
-            json.dump(data, handle, ensure_ascii=False, separators=(",", ":"))
-        else:
-            json.dump(data, handle, ensure_ascii=False, indent=2)
-        handle.write("\n")
+    # json.dump performs a very large number of Python-level write() calls for
+    # these 10-80 MB artifacts. Serializing once and using one buffered write is
+    # materially faster in the editor rebuild loop at an acceptable memory cost.
+    content = (
+        json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+        if compact
+        else json.dumps(data, ensure_ascii=False, indent=2)
+    )
+    path.write_text(f"{content}\n", encoding="utf-8")
 
 
 def haversine_m(a: list[float], b: list[float]) -> float:
@@ -585,7 +620,9 @@ def build_graph(
     node_merge_tolerance_m: float,
     split_tolerance_m: float,
     min_edge_length_m: float,
+    performance: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    phase_started_at = perf_counter()
     features = [
         feature
         for feature in raw_geojson.get("features", [])
@@ -626,7 +663,9 @@ def build_graph(
     skipped_short_edges = 0
     split_counts = []
     seen_override_way_ids: set[int] = set()
+    record_performance_phase(performance, "graphSetup", phase_started_at)
 
+    phase_started_at = perf_counter()
     for feature in sorted(features, key=lambda item: int(item.get("properties", {}).get("osmId") or 0)):
         properties = feature.get("properties") or {}
         way_id = int(properties.get("osmId") or 0)
@@ -758,7 +797,9 @@ def build_graph(
             "Bicycle traversal overrides reference missing OSM ways: "
             + ", ".join(str(value) for value in missing_override_way_ids[:10])
         )
+    record_performance_phase(performance, "osmEdgeBuild", phase_started_at)
 
+    phase_started_at = perf_counter()
     for manual_index, feature in enumerate(manual_features):
         properties = feature.get("properties") or {}
         coords = [
@@ -825,7 +866,9 @@ def build_graph(
                 "properties": public_properties,
             }
         )
+    record_performance_phase(performance, "manualEdgeBuild", phase_started_at)
 
+    phase_started_at = perf_counter()
     node_by_id = {node["id"]: node for node in node_index.nodes}
     adjacency: dict[str, set[str]] = defaultdict(set)
     for edge in edge_records:
@@ -856,6 +899,7 @@ def build_graph(
         }
         for node in public_nodes
     ]
+    record_performance_phase(performance, "topologyFinalize", phase_started_at)
 
     generated_at = datetime.now(timezone.utc).isoformat()
     graph = {
@@ -883,6 +927,7 @@ def build_graph(
         "metadata": graph["metadata"],
         "features": node_features,
     }
+    phase_started_at = perf_counter()
     summary = graph_summary(
         raw_geojson,
         intersections_geojson,
@@ -894,6 +939,14 @@ def build_graph(
         skipped_short_edges,
         graph["metadata"],
     )
+    record_performance_phase(performance, "summaryBuild", phase_started_at)
+    if performance is not None:
+        performance["counts"] = {
+            "rawWays": len(features),
+            "manualEdges": len(manual_features),
+            "nodes": len(public_nodes),
+            "edges": len(edge_records),
+        }
     return graph, node_geojson, edge_geojson, summary
 
 
@@ -985,6 +1038,9 @@ def graph_summary(
 
 
 def main() -> int:
+    measured_started_at = perf_counter()
+    performance: dict[str, Any] = {"schemaVersion": 1, "phasesMs": {}}
+    phase_started_at = perf_counter()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--input-geojson",
@@ -1050,19 +1106,52 @@ def main() -> int:
         default=DEFAULT_MIN_EDGE_LENGTH_M,
     )
     args = parser.parse_args()
+    record_performance_phase(performance, "argumentParse", phase_started_at)
 
-    raw_geojson = load_json(args.input_geojson)
-    intersections_geojson = load_json(args.intersections_geojson)
-    manual_edges_geojson = (
-        load_json(args.manual_edges_geojson)
-        if args.manual_edges_geojson.exists()
-        else {"type": "FeatureCollection", "features": []}
+    phase_started_at = perf_counter()
+    raw_geojson, raw_input = load_json_snapshot(
+        args.input_geojson,
+        {"type": "FeatureCollection", "features": []},
     )
-    traversal_overrides = (
-        load_json(args.bicycle_traversal_overrides)
-        if args.bicycle_traversal_overrides.exists()
-        else {"schemaVersion": 1, "policyId": POLICY_ID, "overrides": []}
+    record_performance_phase(performance, "rawOsmReadParse", phase_started_at)
+
+    phase_started_at = perf_counter()
+    intersections_geojson, intersections_input = load_json_snapshot(
+        args.intersections_geojson,
+        {"type": "FeatureCollection", "features": []},
     )
+    record_performance_phase(performance, "intersectionsReadParse", phase_started_at)
+
+    phase_started_at = perf_counter()
+    manual_edges_geojson, manual_input = load_json_snapshot(
+        args.manual_edges_geojson,
+        {"type": "FeatureCollection", "features": []},
+    )
+    record_performance_phase(performance, "manualEdgesReadParse", phase_started_at)
+
+    phase_started_at = perf_counter()
+    traversal_overrides, overrides_input = load_json_snapshot(
+        args.bicycle_traversal_overrides,
+        {"schemaVersion": 1, "policyId": POLICY_ID, "overrides": []},
+    )
+    record_performance_phase(performance, "traversalOverridesReadParse", phase_started_at)
+
+    build_inputs = {
+        "schemaVersion": 1,
+        "files": {
+            "rawOsmWays": raw_input,
+            "osmIntersections": intersections_input,
+            "manualBaseEdges": manual_input,
+            "bicycleTraversalOverrides": overrides_input,
+        },
+        "settings": {
+            "nodeMergeToleranceMeters": args.node_merge_tolerance_m,
+            "splitToleranceMeters": args.split_tolerance_m,
+            "minEdgeLengthMeters": args.min_edge_length_m,
+        },
+    }
+
+    phase_started_at = perf_counter()
     graph, nodes, edges, summary = build_graph(
         raw_geojson,
         intersections_geojson,
@@ -1071,15 +1160,40 @@ def main() -> int:
         node_merge_tolerance_m=args.node_merge_tolerance_m,
         split_tolerance_m=args.split_tolerance_m,
         min_edge_length_m=args.min_edge_length_m,
+        performance=performance,
     )
+    record_performance_phase(performance, "buildGraph", phase_started_at)
+
+    for artifact in (graph, nodes, edges):
+        artifact.setdefault("metadata", {})["buildInputs"] = build_inputs
+    summary["buildInputs"] = build_inputs
+    summary["performance"] = performance
+
+    phase_started_at = perf_counter()
     write_json(args.output_graph, graph, compact=True)
+    record_performance_phase(performance, "graphOutputWrite", phase_started_at)
+
+    phase_started_at = perf_counter()
     write_json(args.output_nodes, nodes, compact=True)
+    record_performance_phase(performance, "nodesOutputWrite", phase_started_at)
+
+    phase_started_at = perf_counter()
     write_json(args.output_edges, edges, compact=True)
+    record_performance_phase(performance, "edgesOutputWrite", phase_started_at)
+    performance["measuredThroughPrimaryOutputsMs"] = round(
+        (perf_counter() - measured_started_at) * 1000,
+        3,
+    )
+
+    phase_started_at = perf_counter()
     write_json(args.summary, summary)
+    record_performance_phase(performance, "summaryOutputWrite", phase_started_at)
+    performance["totalMs"] = round((perf_counter() - measured_started_at) * 1000, 3)
     print(
         f"Wrote OSM base graph with {summary['nodes']} nodes and "
         f"{summary['edges']} edges to {args.output_graph}"
     )
+    print("BASE_GRAPH_PERFORMANCE " + json.dumps(performance, ensure_ascii=False, separators=(",", ":")))
     return 0
 
 

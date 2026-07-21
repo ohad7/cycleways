@@ -154,13 +154,15 @@ Useful partial rebuild commands:
 
 ```bash
 npm run osm:intersections
+npm run osm:topology
 npm run osm:graph
 npm run osm:match
 ```
 
-`npm run osm:graph` rebuilds graph artifacts and match artifacts from existing
-OSM fetch/intersection data. The local editor uses the same recalculation path
-after manual base-edge edits.
+`npm run osm:topology` rebuilds only graph artifacts from existing OSM,
+intersection, manual-edge, and traversal-override data. The local editor uses
+this faster path after manual base-edge edits. `npm run osm:graph` additionally
+rebuilds all CW match artifacts for explicit diagnostics.
 
 ## Implemented Data Contract
 

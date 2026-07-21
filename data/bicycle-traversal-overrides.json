@@ -2,5 +2,32 @@
   "schemaVersion": 1,
   "policyId": "il-bicycle-v1",
   "description": "Reviewed whole-source-way bicycle traversal overrides. Empty until evidence is curated.",
-  "overrides": []
+  "overrides": [
+    {
+      "osmWayId": 33058576,
+      "sourceGeometryDigest": "1e427cdd372bef9777a6ff036b3b4abb77e1849ac228f2ba6f4eedce1cc16389",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "dafna entrance",
+      "evidence": "reference",
+      "reviewer": "ohad",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T05:20:28.125Z"
+    },
+    {
+      "osmWayId": 366274660,
+      "sourceGeometryDigest": "b56dc7833b5029e572ea12303ec448cff4c517071652aba10bfc234784342913",
+      "states": {
+        "forward": "allowed",
+        "reverse": "allowed"
+      },
+      "rationale": "dafna entrance override",
+      "evidence": "reference",
+      "reviewer": "ohad serfaty",
+      "reviewedAt": "2026-07-21",
+      "updatedAt": "2026-07-21T05:15:39.243Z"
+    }
+  ]
 }

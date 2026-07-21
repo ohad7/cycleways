@@ -4003,13 +4003,16 @@
         "status": "active",
         "roadType": "road",
         "createdAt": "2026-06-05T10:47:36.158Z",
-        "updatedAt": "2026-06-05T10:47:36.158Z",
+        "updatedAt": "2026-07-21T05:14:24.401Z",
         "linkedSegmentId": 331,
         "linkedSegmentName": "כביש 99 דפנה",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "dafna entrance"
         }
       },
       "geometry": {
@@ -4200,12 +4203,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-06-10T13:12:03.021Z",
-        "updatedAt": "2026-06-10T13:12:09.288Z",
+        "updatedAt": "2026-07-21T05:26:05.891Z",
         "splitFrom": "manual-osm-386982531-mq838nnx",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "field entrance"
         }
       },
       "geometry": {
@@ -5105,10 +5111,10 @@
     },
     {
       "type": "Feature",
-      "id": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo",
+      "id": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-a-mrtu12md",
       "properties": {
-        "id": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo",
-        "manualEdgeId": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo",
+        "id": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-a-mrtu12md",
+        "manualEdgeId": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-a-mrtu12md",
         "source": "manual",
         "status": "active",
         "roadType": "paved",
@@ -5118,7 +5124,7 @@
         "osmRouteClass": "cycle",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-07-16T14:27:39.131Z",
-        "updatedAt": "2026-07-20T19:30:45.435Z",
+        "updatedAt": "2026-07-20T23:04:55.442Z",
         "bicycleTraversal": {
           "forward": "allowed",
           "reverse": "allowed",
@@ -5127,7 +5133,7 @@
           "reviewedAt": "2026-07-20",
           "rationale": "cycleway"
         },
-        "splitFrom": "manual-osm-139983381-mrnlsjqz"
+        "splitFrom": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo"
       },
       "geometry": {
         "type": "LineString",
@@ -5137,8 +5143,44 @@
             33.225294
           ],
           [
-            35.605806,
-            33.225274
+            35.605662,
+            33.225249
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-b-mrtu12md",
+      "properties": {
+        "id": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-b-mrtu12md",
+        "manualEdgeId": "manual-manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo-b-mrtu12md",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e139983381_1",
+        "copiedFromOsmWayId": 139983381,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-16T14:27:39.131Z",
+        "updatedAt": "2026-07-20T23:05:04.593Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-20",
+          "rationale": "cycleway"
+        },
+        "splitFrom": "manual-manual-osm-139983381-mrnlsjqz-a-mrnlsvbo"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.605661,
+            33.225249
           ],
           [
             35.604157,
@@ -6180,6 +6222,107 @@
           [
             35.613489,
             33.224947
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-56-mrtu42lk",
+      "properties": {
+        "id": "manual-56-mrtu42lk",
+        "manualEdgeId": "manual-56-mrtu42lk",
+        "source": "manual",
+        "status": "active",
+        "roadType": "road",
+        "createdAt": "2026-07-20T23:07:10.760Z",
+        "updatedAt": "2026-07-20T23:07:15.158Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 56,
+        "linkedSegmentName": "כביש 9888 נחל עיון"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.605662,
+            33.225249
+          ],
+          [
+            35.605664,
+            33.225197
+          ],
+          [
+            35.605665,
+            33.22517
+          ],
+          [
+            35.605666,
+            33.225146
+          ],
+          [
+            35.605691,
+            33.225135
+          ],
+          [
+            35.605727,
+            33.225128
+          ],
+          [
+            35.605774,
+            33.225104
+          ],
+          [
+            35.60585,
+            33.225074
+          ],
+          [
+            35.605883,
+            33.225067
+          ],
+          [
+            35.605889,
+            33.224973
+          ],
+          [
+            35.60589,
+            33.224892
+          ],
+          [
+            35.605845,
+            33.224863
+          ],
+          [
+            35.605787,
+            33.224823
+          ],
+          [
+            35.605764,
+            33.224772
+          ],
+          [
+            35.605772,
+            33.224683
+          ],
+          [
+            35.605794,
+            33.224603
+          ],
+          [
+            35.605802,
+            33.22457
+          ],
+          [
+            35.605804,
+            33.224511
           ]
         ]
       }

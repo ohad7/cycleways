@@ -678,3 +678,34 @@ connectivity-index construction 341.9 ms. Segment matching itself ranged from
 0.9 to 3.5 ms. This establishes a digest-keyed long-lived matcher as the next
 performance implementation slice; the measured 180.6 ms cached median is an
 upper-bound estimate, not a latency guarantee.
+
+### Topology-only base-edge authoring refresh — 2026-07-21
+
+Changing a manual base edge invalidates topology and direction evidence, but it
+does not require elevation profiles. The editing loop therefore prepares the
+2D base graph, audits bicycle traversal against that graph, and migrates/rebases
+Overlay V2 against the same graph. Elevated graph generation remains a release
+Build dependency and a source for elevation/crossing artifacts; it is not part
+of Direction Review reconciliation.
+
+The topology builder records SHA-256 digests of the exact input bytes it parsed
+for raw OSM ways, intersections, manual edges, and traversal overrides. The
+server compares those recorded inputs with current inputs after every build. If
+an edge is edited while Python is running, the output is rejected as stale and
+the latest inputs are rebuilt. Timestamp comparison remains only as a one-time
+compatibility fallback for artifacts created before input manifests existed.
+
+Automatic authoring runs only `osm:topology`; it does not rematch all CW
+segments. Direction Review validates all accepted mappings directly against the
+new graph, while a changed CW segment can obtain a fresh match through the
+single-segment path. `osm:graph` remains the explicit graph-plus-full-match
+command for diagnostics that need complete match artifacts.
+
+The first real topology measurement identified Python's incremental
+`json.dump()` writes as an avoidable cost: the graph, node, and edge artifacts
+took 9.6 seconds to write. Serializing each artifact once and performing one
+buffered write reduced those outputs to 1.5 seconds and the complete topology
+build from 21.8 to 11.9 seconds. With a 2.2-second topology-policy audit and a
+0.7-second migration proposal, the expected base-edge reconciliation is now
+approximately 15 seconds. OSM edge construction remains the dominant phase at
+8.7 seconds and is the next candidate for an incremental topology design.

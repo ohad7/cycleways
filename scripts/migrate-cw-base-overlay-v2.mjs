@@ -745,7 +745,7 @@ function main() {
     authoringOverlay: argument("--authoring-overlay-v1", "data/cw-base-overlay.json"),
     index: argument("--index-v1", "data/routing-compat/cw-base-index-v1.json"),
     source: argument("--map-source", "data/map-source.geojson"),
-    graph: argument("--graph", "build/osm/osm-base-graph-elevated.json"),
+    graph: argument("--graph", "build/osm/osm-base-graph.json"),
     policy: argument("--policy-audit", "build/bicycle-traversal-policy-audit.json"),
     output: argument("--output", "build/cw-base-overlay-v2.proposal.json"),
     report: argument("--report", "build/cw-base-overlay-v2.migration-report.json"),

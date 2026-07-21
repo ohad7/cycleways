@@ -1115,10 +1115,18 @@ async function runAuthoringSync() {
       if (!state.baseOverlay.loaded) {
         await runAuthoringStage("loading base network", () => loadBaseOverlayData());
       }
-      await runAuthoringStage(
-        "rebuilding base evidence",
-        () => refreshDirectionReviewEvidence({ quiet: true }),
-      );
+      try {
+        await runAuthoringStage(
+          "rebuilding base evidence",
+          () => refreshDirectionReviewEvidence({ quiet: true }),
+        );
+      } catch (error) {
+        if (error?.code === "BASE_EVIDENCE_SUPERSEDED") {
+          state.authoring.rerun = true;
+          return;
+        }
+        throw error;
+      }
       if (state.authoring.baseRevision === baseRevision) {
         state.authoring.pendingBaseRefresh = false;
       } else {
@@ -3101,12 +3109,19 @@ function isBaseGraphStale() {
   const metadata = state.baseOverlay.graphEdges?.metadata || {};
   return Boolean(
     metadata.graphStaleBecauseManualBaseEdgesChanged ||
-    metadata.graphStaleBecauseTraversalOverridesChanged
+    metadata.graphStaleBecauseTraversalOverridesChanged ||
+    metadata.graphStaleBecauseTopologyInputsChanged
   );
 }
 
 function baseGraphStaleReason() {
   const metadata = state.baseOverlay.graphEdges?.metadata || {};
+  if (metadata.graphStaleBecauseTopologyInputsChanged) {
+    const inputs = Array.isArray(metadata.graphStaleInputs) && metadata.graphStaleInputs.length > 0
+      ? metadata.graphStaleInputs.join(", ")
+      : "OSM topology inputs";
+    return `${inputs} changed after the graph build`;
+  }
   if (metadata.graphStaleBecauseTraversalOverridesChanged) {
     const graphTime = metadata.graphEdgesModifiedAt
       ? new Date(metadata.graphEdgesModifiedAt).toLocaleString()
@@ -9570,7 +9585,10 @@ async function refreshDirectionReviewEvidence({ quiet = false } = {}) {
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || `Direction Review refresh failed: ${response.status}`);
+      const error = new Error(payload.error || `Direction Review refresh failed: ${response.status}`);
+      error.status = response.status;
+      error.code = payload.code;
+      throw error;
     }
     state.baseOverlay.loaded = false;
     state.baseOverlay.graphEdges = null;

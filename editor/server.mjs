@@ -84,6 +84,11 @@ import {
 } from "./lib/network-auto-apply.mjs";
 import { networkSegmentStatus } from "./lib/network-authoring-status.mjs";
 import { repairRoundaboutReverse } from "../scripts/migrate-cw-base-overlay-v2.mjs";
+import {
+  BASE_GRAPH_INPUTS,
+  baseGraphFreshnessReason,
+  compareBaseGraphBuildInputs,
+} from "./lib/base-graph-build-freshness.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -102,6 +107,7 @@ const osmBuildDir = resolve(buildDir, "osm");
 const osmRawWaysPath = resolve(osmBuildDir, "osm-raw-ways.geojson");
 const osmIntersectionsPath = resolve(osmBuildDir, "osm-intersections.geojson");
 const osmBaseGraphPath = resolve(osmBuildDir, "osm-base-graph.json");
+const osmBaseGraphSummaryPath = resolve(osmBuildDir, "osm-base-graph-summary.json");
 const osmElevatedBaseGraphPath = resolve(osmBuildDir, "osm-base-graph-elevated.json");
 const reportPath = resolve(buildDir, "report.json");
 const buildManifestPath = resolve(buildPublicDataDir, "map-manifest.json");
@@ -120,6 +126,12 @@ const directionReviewPendingApprovalsPath = resolve(
 const bicycleTraversalPolicyAuditPath = resolve(buildDir, "bicycle-traversal-policy-audit.json");
 const bicycleTraversalOverridesPath = resolve(dataDir, "bicycle-traversal-overrides.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
+const baseGraphInputPathByKey = new Map([
+  ["rawOsmWays", osmRawWaysPath],
+  ["osmIntersections", osmIntersectionsPath],
+  ["manualBaseEdges", manualBaseEdgesPath],
+  ["bicycleTraversalOverrides", bicycleTraversalOverridesPath],
+]);
 const roundaboutCandidatesPath = resolve(osmBuildDir, "roundabout-candidates.json");
 const roundaboutReviewPath = resolve(dataDir, "roundabout-review.json");
 const crossingCandidatesPath = resolve(buildDir, "crossings/candidates.json");
@@ -2070,14 +2082,14 @@ function compactBicycleTraversal(value) {
 
 async function readDirectionReviewGraphContext() {
   const [graphStat, auditStat] = await Promise.all([
-    stat(osmElevatedBaseGraphPath),
+    stat(osmBaseGraphPath),
     stat(bicycleTraversalPolicyAuditPath),
   ]);
   const cacheKey = `${graphStat.mtimeMs}:${graphStat.size}:${auditStat.mtimeMs}:${auditStat.size}`;
   if (directionReviewGraphCache?.cacheKey === cacheKey) return directionReviewGraphCache;
 
   const [graphBytes, auditBytes] = await Promise.all([
-    readFile(osmElevatedBaseGraphPath),
+    readFile(osmBaseGraphPath),
     readFile(bicycleTraversalPolicyAuditPath),
   ]);
   const graph = JSON.parse(graphBytes);
@@ -3210,7 +3222,7 @@ async function refreshDirectionReviewEvidence(payload = {}) {
   const stagedBeforeRefresh = stagedBeforeRefreshValue
     ? await backfillCurrentDirectionReviewEvidence(parseCwOverlayV2(stagedBeforeRefreshValue))
     : null;
-  await ensureCurrentBaseRoutingArtifacts(`direction-review-${refreshId}`, payload);
+  await ensureCurrentBaseTopologyArtifacts(`direction-review-${refreshId}`);
   await runBuildDependencyStep(
     `direction-review-${refreshId}`,
     "bicycle traversal policy audit",
@@ -3218,7 +3230,7 @@ async function refreshDirectionReviewEvidence(payload = {}) {
     [
       "processing/bicycle_traversal_policy.py",
       "--graph",
-      "build/osm/osm-base-graph-elevated.json",
+      "build/osm/osm-base-graph.json",
       "--output",
       "build/bicycle-traversal-policy-audit.json",
       "--overlay",
@@ -3231,7 +3243,11 @@ async function refreshDirectionReviewEvidence(payload = {}) {
     `direction-review-${refreshId}`,
     "CW Overlay V2 migration proposal",
     "node",
-    ["scripts/migrate-cw-base-overlay-v2.mjs"],
+    [
+      "scripts/migrate-cw-base-overlay-v2.mjs",
+      "--graph",
+      "build/osm/osm-base-graph.json",
+    ],
   );
   directionReviewGraphCache = null;
   const proposalValue = await readJsonFileOrNull(cwBaseOverlayV2ProposalPath);
@@ -3775,6 +3791,82 @@ async function fileDigest(pathname) {
   return digest.digest("hex");
 }
 
+async function baseGraphInputFileSnapshot(key, pathname) {
+  try {
+    const contents = await readFile(pathname);
+    return {
+      key,
+      path: repoRelative(pathname),
+      exists: true,
+      bytes: contents.length,
+      digest: `sha256:${createHash("sha256").update(contents).digest("hex")}`,
+    };
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    return {
+      key,
+      path: repoRelative(pathname),
+      exists: false,
+      bytes: 0,
+      digest: null,
+    };
+  }
+}
+
+async function currentBaseGraphBuildInputs() {
+  const files = {};
+  await Promise.all(
+    BASE_GRAPH_INPUTS.map(async ({ key }) => {
+      const pathname = baseGraphInputPathByKey.get(key);
+      files[key] = await baseGraphInputFileSnapshot(key, pathname);
+    }),
+  );
+  return { schemaVersion: 1, files };
+}
+
+async function inspectBaseGraphFreshness() {
+  const graphStat = await statOrNull(osmBaseGraphPath);
+  if (!graphStat) {
+    return {
+      fresh: false,
+      comparable: false,
+      reason: "missing base graph",
+      mismatches: [],
+    };
+  }
+
+  const [summary, currentInputs] = await Promise.all([
+    readJsonFileOrNull(osmBaseGraphSummaryPath),
+    currentBaseGraphBuildInputs(),
+  ]);
+  const comparison = compareBaseGraphBuildInputs(summary?.buildInputs, currentInputs);
+  if (comparison.comparable) {
+    return {
+      ...comparison,
+      reason: baseGraphFreshnessReason(comparison),
+    };
+  }
+
+  // One-time compatibility path for graph artifacts produced before exact
+  // input digests were embedded. Rebuild whenever timestamps say they are old.
+  const inputStats = await Promise.all(
+    BASE_GRAPH_INPUTS.map(async ({ key, label }) => ({
+      key,
+      label,
+      stat: await statOrNull(baseGraphInputPathByKey.get(key)),
+    })),
+  );
+  const staleInputs = inputStats.filter((input) => isStaleAgainst(graphStat, input.stat));
+  return {
+    comparable: false,
+    fresh: staleInputs.length === 0 && Boolean(summary),
+    mismatches: staleInputs,
+    reason: staleInputs.length > 0
+      ? `stale relative to ${staleInputs.map((input) => input.label).join(", ")}`
+      : "legacy graph without input digests",
+  };
+}
+
 async function readRoundaboutReviewState() {
   let candidates;
   try {
@@ -3945,33 +4037,41 @@ async function runBuildDependencyStep(buildId, label, command, args) {
   });
 }
 
-async function ensureCurrentBaseRoutingArtifacts(buildId, payload) {
-  const graphInputs = [
-    ["raw OSM ways", osmRawWaysPath],
-    ["OSM intersections", osmIntersectionsPath],
-    ["manual base edges", manualBaseEdgesPath],
-    ["bicycle traversal overrides", bicycleTraversalOverridesPath],
-  ];
-  const inputStats = await Promise.all(
-    graphInputs.map(async ([label, pathname]) => ({
-      label,
-      pathname,
-      stat: await statOrNull(pathname),
-    })),
-  );
-  let graphStat = await statOrNull(osmBaseGraphPath);
-  const staleGraphInputs = inputStats.filter((input) => isStaleAgainst(graphStat, input.stat));
-  if (!graphStat || staleGraphInputs.length > 0) {
-    log("info", `build#${buildId} refreshing base graph before Build`, {
-      reason: !graphStat
-        ? "missing base graph"
-        : `stale relative to ${staleGraphInputs.map((input) => input.label).join(", ")}`,
+async function ensureCurrentBaseTopologyArtifacts(buildId) {
+  const maxAttempts = 3;
+  let freshness = await inspectBaseGraphFreshness();
+  if (freshness.fresh) return { rebuilt: false, freshness };
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    log("info", `build#${buildId} refreshing base topology`, {
+      reason: freshness.reason,
+      attempt,
+      maxAttempts,
     });
-    await runBuildDependencyStep(buildId, "base graph refresh", "npm", ["run", "osm:graph"]);
-    graphStat = await statOrNull(osmBaseGraphPath);
+    await runBuildDependencyStep(buildId, "base topology refresh", "npm", ["run", "osm:topology"]);
+    directionReviewGraphCache = null;
+    freshness = await inspectBaseGraphFreshness();
+    if (freshness.fresh) return { rebuilt: true, freshness, attempts: attempt };
+    log("warn", `build#${buildId} base inputs changed while topology was rebuilding`, {
+      reason: freshness.reason,
+      attempt,
+      maxAttempts,
+    });
   }
+
+  const error = new Error(
+    `Base-network inputs kept changing while topology was rebuilding: ${freshness.reason}`,
+  );
+  error.status = 409;
+  error.code = "BASE_EVIDENCE_SUPERSEDED";
+  throw error;
+}
+
+async function ensureCurrentBaseRoutingArtifacts(buildId, payload) {
+  await ensureCurrentBaseTopologyArtifacts(buildId);
+  const graphStat = await statOrNull(osmBaseGraphPath);
   if (!graphStat) {
-    throw new Error("Base graph refresh did not produce build/osm/osm-base-graph.json.");
+    throw new Error("Base topology refresh did not produce build/osm/osm-base-graph.json.");
   }
 
   let elevatedStat = await statOrNull(osmElevatedBaseGraphPath);
@@ -5377,21 +5477,44 @@ const server = createServer(async (request, response) => {
         stat(manualBaseEdgesPath).catch(() => null),
         stat(bicycleTraversalOverridesPath).catch(() => null),
       ]);
+      let digestComparison = null;
+      try {
+        digestComparison = compareBaseGraphBuildInputs(
+          graphEdges.metadata?.buildInputs,
+          await currentBaseGraphBuildInputs(),
+        );
+      } catch (error) {
+        log("warn", `api#${requestId} GET /api/osm/graph-edges skipped build-input digests`, error?.message || String(error));
+      }
+      const staleDigestKeys = new Set(
+        digestComparison?.comparable
+          ? digestComparison.mismatches.map((item) => item.key)
+          : [],
+      );
       graphEdges.metadata = {
         ...(graphEdges.metadata || {}),
         graphEdgesModifiedAt: graphStat.mtime.toISOString(),
         manualBaseEdgesModifiedAt: manualStat?.mtime?.toISOString() || null,
         bicycleTraversalOverridesModifiedAt: overrideStat?.mtime?.toISOString() || null,
-        graphStaleBecauseManualBaseEdgesChanged: Boolean(manualStat && manualStat.mtimeMs > graphStat.mtimeMs),
-        graphStaleBecauseTraversalOverridesChanged: Boolean(
-          overrideStat && overrideStat.mtimeMs > graphStat.mtimeMs,
-        ),
+        graphStaleBecauseManualBaseEdgesChanged: digestComparison?.comparable
+          ? staleDigestKeys.has("manualBaseEdges")
+          : Boolean(manualStat && manualStat.mtimeMs > graphStat.mtimeMs),
+        graphStaleBecauseTraversalOverridesChanged: digestComparison?.comparable
+          ? staleDigestKeys.has("bicycleTraversalOverrides")
+          : Boolean(overrideStat && overrideStat.mtimeMs > graphStat.mtimeMs),
+        graphStaleBecauseTopologyInputsChanged: digestComparison?.comparable
+          ? staleDigestKeys.has("rawOsmWays") || staleDigestKeys.has("osmIntersections")
+          : false,
+        graphStaleInputs: digestComparison?.comparable
+          ? digestComparison.mismatches.map((item) => item.label)
+          : [],
       };
       logApi(requestId, "GET /api/osm/graph-edges loaded", {
         features: graphEdges.features?.length || 0,
         stale:
           graphEdges.metadata.graphStaleBecauseManualBaseEdgesChanged ||
-          graphEdges.metadata.graphStaleBecauseTraversalOverridesChanged,
+          graphEdges.metadata.graphStaleBecauseTraversalOverridesChanged ||
+          graphEdges.metadata.graphStaleBecauseTopologyInputsChanged,
       });
       sendJson(response, 200, graphEdges);
       return;
@@ -5594,10 +5717,12 @@ const server = createServer(async (request, response) => {
       } catch (error) {
         log("warn", `api#${requestId} POST /api/cw-base-overlay-v2/refresh-evidence failed`, {
           durationMs: Date.now() - startedAt,
+          code: error?.code || null,
           error: error instanceof Error ? error.message : String(error),
         });
-        sendJson(response, 400, {
+        sendJson(response, error?.status || 400, {
           ok: false,
+          code: error?.code || null,
           error: error instanceof Error ? error.message : String(error),
         });
       }

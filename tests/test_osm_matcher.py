@@ -1,11 +1,13 @@
+import hashlib
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from processing.build_osm_base_graph import build_graph, line_length_m
+from processing.build_osm_base_graph import build_graph, line_length_m, load_json_snapshot
 from processing.bicycle_traversal_policy import POLICY_ID, source_geometry_digest
 from processing.match_cycleways_to_osm_graph import (
     build_preview,
@@ -73,6 +75,54 @@ def match_segment(segment_feature, edge_features, *, sample_spacing_m=18.0, max_
 
 
 class OsmMatcherRegressionTests(unittest.TestCase):
+    def test_base_graph_input_snapshot_digests_the_parsed_bytes(self):
+        contents = b'{"type":"FeatureCollection","features":[]}\n'
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "input.geojson"
+            path.write_bytes(contents)
+            value, snapshot = load_json_snapshot(path, {})
+
+        self.assertEqual(value["type"], "FeatureCollection")
+        self.assertTrue(snapshot["exists"])
+        self.assertEqual(snapshot["bytes"], len(contents))
+        self.assertEqual(
+            snapshot["digest"],
+            f"sha256:{hashlib.sha256(contents).hexdigest()}",
+        )
+
+    def test_base_graph_reports_internal_build_phases(self):
+        performance = {"schemaVersion": 1, "phasesMs": {}}
+        raw_osm = graph_collection(
+            [
+                line_feature(
+                    "osm-123",
+                    [coord(0), coord(100)],
+                    {"osmId": 123, "highway": "track"},
+                )
+            ]
+        )
+        _graph, _nodes, _edges, summary = build_graph(
+            raw_osm,
+            graph_collection([]),
+            graph_collection([]),
+            node_merge_tolerance_m=2.0,
+            split_tolerance_m=8.0,
+            min_edge_length_m=1.0,
+            performance=performance,
+        )
+
+        self.assertEqual(summary["edges"], 1)
+        for phase in (
+            "graphSetup",
+            "osmEdgeBuild",
+            "manualEdgeBuild",
+            "topologyFinalize",
+            "summaryBuild",
+        ):
+            self.assertIn(phase, performance["phasesMs"])
+            self.assertGreaterEqual(performance["phasesMs"][phase], 0)
+        self.assertEqual(performance["counts"]["edges"], 1)
+
     def test_single_segment_match_reports_graph_setup_and_match_timings(self):
         performance = {"schemaVersion": 1, "phasesMs": {}}
         source_segment = segment(77, [coord(0), coord(100)])
