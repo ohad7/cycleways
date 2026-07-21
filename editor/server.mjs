@@ -74,7 +74,10 @@ import {
   directedIntervalKey,
   validateDirectionReviewAlignment,
 } from "./lib/edge-pick.mjs";
-import { shouldAdoptAuthoringRevisionSegment } from "./lib/direction-review-refresh.mjs";
+import {
+  restoreStagedOnlyActiveSegments,
+  shouldAdoptAuthoringRevisionSegment,
+} from "./lib/direction-review-refresh.mjs";
 import { normalizeDirectionReviewWorkspace } from "./lib/direction-review-workspace.mjs";
 import {
   emptyDirectionReviewPendingApprovals,
@@ -3205,11 +3208,13 @@ async function validatePublishedDirectionReviewOverlay(overlay) {
   }
 }
 
-async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay) {
-  const next = structuredClone(proposalOverlay);
+async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay, source) {
+  const restored = restoreStagedOnlyActiveSegments(proposalOverlay, stagedOverlay, source);
+  const next = restored.overlay;
   const context = await readDirectionReviewGraphContext();
-  const owners = directionReviewDirectedOwners(proposalOverlay);
+  const owners = directionReviewDirectedOwners(next);
   const preserved = {
+    stagedOnlySegments: restored.restoredSegmentIds.length,
     unavailable: 0,
     published: 0,
     evidenceBackfilled: 0,
@@ -3394,7 +3399,10 @@ async function backfillCurrentDirectionReviewEvidence(overlay) {
 
 async function refreshDirectionReviewEvidence(payload = {}) {
   const refreshId = ++directionReviewRefreshCounter;
-  const stagedBeforeRefreshValue = await readJsonFileOrNull(cwBaseOverlayV2StagedPath);
+  const [stagedBeforeRefreshValue, source] = await Promise.all([
+    readJsonFileOrNull(cwBaseOverlayV2StagedPath),
+    readJsonFileOrNull(sourcePath),
+  ]);
   const stagedBeforeRefresh = stagedBeforeRefreshValue
     ? await backfillCurrentDirectionReviewEvidence(parseCwOverlayV2(stagedBeforeRefreshValue))
     : null;
@@ -3430,10 +3438,11 @@ async function refreshDirectionReviewEvidence(payload = {}) {
   const proposalOverlay = proposalValue ? parseCwOverlayV2(proposalValue) : null;
   if (!proposalOverlay) throw new Error("Direction Review proposal was not produced");
   const rebased = stagedBeforeRefresh
-    ? await rebaseDirectionReviewState(proposalOverlay, stagedBeforeRefresh)
+    ? await rebaseDirectionReviewState(proposalOverlay, stagedBeforeRefresh, source)
     : {
         overlay: proposalOverlay,
         preserved: {
+          stagedOnlySegments: 0,
           unavailable: 0,
           publishedAsDraft: 0,
           drafts: 0,

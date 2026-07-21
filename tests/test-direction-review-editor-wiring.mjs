@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { shouldAdoptAuthoringRevisionSegment } from "../editor/lib/direction-review-refresh.mjs";
+import {
+  restoreStagedOnlyActiveSegments,
+  shouldAdoptAuthoringRevisionSegment,
+} from "../editor/lib/direction-review-refresh.mjs";
 
 const [html, editor, server] = await Promise.all([
   readFile(new URL("../editor/index.html", import.meta.url), "utf8"),
@@ -170,5 +173,43 @@ assert.equal(
   ),
   false,
 );
+
+const stagedOnly = {
+  segmentId: 359,
+  segmentName: "Old name",
+  lifecycleStatus: "active",
+  navigable: true,
+  sourceGeometryDigest: "old-digest",
+  endpoints: {
+    a: { coordinate: [1, 2], zoneMeters: 25, labels: { key: "A" } },
+    b: { coordinate: [3, 4], zoneMeters: 35, labels: { key: "B" } },
+  },
+  alignments: {
+    aToB: { published: { disposition: "accepted" }, draft: null },
+    bToA: { published: { disposition: "accepted" }, draft: null },
+  },
+};
+const restored = restoreStagedOnlyActiveSegments(
+  { segments: {} },
+  { segments: { "359": stagedOnly, "360": { ...stagedOnly, segmentId: 360 } } },
+  {
+    features: [
+      {
+        properties: { id: 359, name: "Current name", status: "active" },
+        geometry: { type: "LineString", coordinates: [[10, 20, 1], [30, 40, 2]] },
+      },
+      {
+        properties: { id: 360, status: "deprecated" },
+        geometry: { type: "LineString", coordinates: [[1, 2], [3, 4]] },
+      },
+    ],
+  },
+);
+assert.deepEqual(restored.restoredSegmentIds, [359]);
+assert.equal(restored.overlay.segments["359"].segmentName, "Current name");
+assert.deepEqual(restored.overlay.segments["359"].endpoints.a.coordinate, [10, 20]);
+assert.deepEqual(restored.overlay.segments["359"].endpoints.b.coordinate, [30, 40]);
+assert.equal(restored.overlay.segments["359"].alignments.aToB.published.disposition, "accepted");
+assert.equal(restored.overlay.segments["360"], undefined);
 
 console.log("Direction Review editor wiring ok");

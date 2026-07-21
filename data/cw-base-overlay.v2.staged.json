@@ -3,7 +3,7 @@
   "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
   "policyId": "il-bicycle-v1",
   "proposal": {
-    "authoringOverlayDigest": "8f60a776818a3d9e5c1da275c97b9d0ce01149d7c4cc27ce757942ae78c1f58f",
+    "authoringOverlayDigest": "0cbd8e7d2c1902e3bd4d170c182f085a0b8d13ee2953880b95efec83a8144568",
     "nonAuthoritative": true,
     "source": "cw-base-overlay-v1",
     "sourceIndexDigest": "402e63dae845f3b29eabd7e5910eb5e43304c78d80efb66f83b4206a5990aa56",
@@ -40993,35 +40993,9 @@
       "sourceGeometryDigest": "50b553ed02594e4897bd91f4e1a393d94c6e0f4a10666fc5d208a8a60688cf68"
     },
     "354": {
-      "segmentId": 354,
-      "segmentName": "בקעת יחמור",
-      "lifecycleStatus": "active",
-      "navigable": true,
-      "sourceGeometryDigest": "908fd984d12231a846ec5c1eac51f4d39fd120555683f2493f9dc6c7839aed29",
-      "endpoints": {
-        "a": {
-          "coordinate": [
-            35.556227135843045,
-            33.04923498605608
-          ],
-          "zoneMeters": 30,
-          "labels": {
-            "key": "A"
-          }
-        },
-        "b": {
-          "coordinate": [
-            35.54555299919596,
-            33.08299042298512
-          ],
-          "zoneMeters": 30,
-          "labels": {
-            "key": "B"
-          }
-        }
-      },
       "alignments": {
         "aToB": {
+          "draft": null,
           "published": {
             "disposition": "accepted",
             "realization": {
@@ -41088,10 +41062,10 @@
               "mappingDigest": "25ef5343a137c56c45010cf3b14465f5702bd064a08de06c9edbec4aeec5dc61",
               "evidenceDigest": "02232636e10151af9d1fd950de18779bd9417f97cf179c2d45a2e6a8b683d70d"
             }
-          },
-          "draft": null
+          }
         },
         "bToA": {
+          "draft": null,
           "published": {
             "disposition": "accepted",
             "realization": {
@@ -41113,50 +41087,57 @@
               "mappingDigest": "658a9c3bcbb56098d421e72e3cbbe8ba9efdcf290690869289742c4e0f85e98b",
               "evidenceDigest": "84add33bc6ef00b8b65d55e4a36d961b5507a5bcdbdbdb876615862ebde9be6b"
             }
-          },
-          "draft": null
+          }
         }
       },
-      "migration": {
-        "classification": "symmetric_candidate",
-        "sourceSchemaVersion": 2,
-        "sourceMappingOrigin": "network-authoring-v2",
-        "authoringRevision": 1784663411629358,
-        "lastOutcome": "apply",
-        "lastOutcomeCode": "exact_safe_reverse",
-        "automaticPublication": "bidirectional-authoring"
-      }
-    },
-    "356": {
-      "segmentId": 356,
-      "segmentName": "כביש מערכת שדה אליעזר",
-      "lifecycleStatus": "active",
-      "navigable": true,
-      "sourceGeometryDigest": "b2438ab8419246233e33683cf6849249cc71f50dc62f71f26166068aa129949a",
       "endpoints": {
         "a": {
           "coordinate": [
-            35.5593743475045,
-            33.04885984066118
+            35.556227135843045,
+            33.04923498605608
           ],
-          "zoneMeters": 30,
           "labels": {
             "key": "A"
-          }
+          },
+          "zoneMeters": 30
         },
         "b": {
           "coordinate": [
-            35.55627765538375,
-            33.04920487725259
+            35.54555299919596,
+            33.08299042298512
           ],
-          "zoneMeters": 30,
           "labels": {
             "key": "B"
-          }
+          },
+          "zoneMeters": 30
         }
       },
+      "lifecycleStatus": "active",
+      "migration": {
+        "classification": "symmetric_candidate",
+        "endpointMatch": {
+          "alignmentKey": "aToB",
+          "distances": {
+            "endA": 3886.8505648820774,
+            "endB": 4.99727432340508,
+            "startA": 4.433049665432004,
+            "startB": 3887.241690711569
+          },
+          "reason": "matched"
+        },
+        "sourceMappingOrigin": "authoring-v1",
+        "sourceMappingStatus": "accepted_auto_match",
+        "sourceSchemaVersion": 1
+      },
+      "navigable": true,
+      "segmentId": 354,
+      "segmentName": "בקעת יחמור",
+      "sourceGeometryDigest": "908fd984d12231a846ec5c1eac51f4d39fd120555683f2493f9dc6c7839aed29"
+    },
+    "356": {
       "alignments": {
         "aToB": {
+          "draft": null,
           "published": {
             "disposition": "accepted",
             "realization": {
@@ -41214,10 +41195,10 @@
               "mappingDigest": "8d652bfcd9b127d4287a9b819a5d148772cd14e35925c659be70c5fac100a43b",
               "evidenceDigest": "1eb3da34c8cd332d3fdcf177490c3a870a9891b7ce0865b0054793e02ceb73eb"
             }
-          },
-          "draft": null
+          }
         },
         "bToA": {
+          "draft": null,
           "published": {
             "disposition": "accepted",
             "realization": {
@@ -41239,23 +41220,57 @@
               "mappingDigest": "d3f4ad864c8ec48b879befd20ec8a37486f31f1795f396924032dc158f37532c",
               "evidenceDigest": "90af5ab5fad0c0f1c13a9b59be135784bf8d879ed4e8a14e09e26c5761aa3c7e"
             }
-          },
-          "draft": null
+          }
         }
       },
+      "endpoints": {
+        "a": {
+          "coordinate": [
+            35.5593743475045,
+            33.04885984066118
+          ],
+          "labels": {
+            "key": "A"
+          },
+          "zoneMeters": 30
+        },
+        "b": {
+          "coordinate": [
+            35.55627765538375,
+            33.04920487725259
+          ],
+          "labels": {
+            "key": "B"
+          },
+          "zoneMeters": 30
+        }
+      },
+      "lifecycleStatus": "active",
       "migration": {
         "classification": "symmetric_candidate",
-        "sourceSchemaVersion": 2,
-        "sourceMappingOrigin": "network-authoring-v2",
-        "authoringRevision": 1784663488927361,
-        "lastOutcome": "apply",
-        "lastOutcomeCode": "exact_safe_reverse",
-        "automaticPublication": "bidirectional-authoring"
-      }
+        "endpointMatch": {
+          "alignmentKey": "aToB",
+          "distances": {
+            "endA": 293.8616073504184,
+            "endB": 2.7824514118889674,
+            "startA": 2.099977125564025,
+            "startB": 291.58985191359255
+          },
+          "reason": "matched"
+        },
+        "sourceMappingOrigin": "authoring-v1",
+        "sourceMappingStatus": "accepted_auto_match",
+        "sourceSchemaVersion": 1
+      },
+      "navigable": true,
+      "segmentId": 356,
+      "segmentName": "כביש מערכת שדה אליעזר",
+      "sourceGeometryDigest": "b2438ab8419246233e33683cf6849249cc71f50dc62f71f26166068aa129949a"
     },
     "358": {
       "alignments": {
         "aToB": {
+          "draft": null,
           "published": {
             "disposition": "accepted",
             "realization": {
@@ -41394,10 +41409,10 @@
               "mappingDigest": "647cb1138fee7d1484a1d25b8d1ae16000ba3638d11a1a81d34ecc04246f9680",
               "evidenceDigest": "cc75da2ab597da2538737bd58bd45e8187a906009f5d39d653fe9b23333e641c"
             }
-          },
-          "draft": null
+          }
         },
         "bToA": {
+          "draft": null,
           "published": {
             "disposition": "accepted",
             "realization": {
@@ -41419,8 +41434,7 @@
               "mappingDigest": "b374283825e0f4b8a4e544c97867ba759a6a9b1bb12622a21ae0381dc78eec06",
               "evidenceDigest": "9ae5b010bd2a24c1df1aa90ccd4f5b2142a46af8826a802cfdc0d8287d6fcfea"
             }
-          },
-          "draft": null
+          }
         }
       },
       "endpoints": {
@@ -41429,20 +41443,20 @@
             35.56751372602824,
             33.046314208986416
           ],
-          "zoneMeters": 30,
           "labels": {
             "key": "A"
-          }
+          },
+          "zoneMeters": 30
         },
         "b": {
           "coordinate": [
             35.5593916655138,
             33.04884105517441
           ],
-          "zoneMeters": 30,
           "labels": {
             "key": "B"
-          }
+          },
+          "zoneMeters": 30
         }
       },
       "lifecycleStatus": "active",
@@ -41452,29 +41466,187 @@
           "alignmentKey": "aToB",
           "distances": {
             "endA": 808.8575319246954,
-            "endB": 0.3720203248540323,
+            "endB": 1.4694257588516937,
             "startA": 3.0187987881537843,
-            "startB": 809.6996046767313
+            "startB": 807.9555341376102
           },
           "reason": "matched"
         },
-        "sourceMappingOrigin": "network-authoring-v2",
+        "sourceMappingOrigin": "authoring-v1",
         "sourceMappingStatus": "accepted_auto_match",
-        "sourceSchemaVersion": 2,
-        "authoringRevision": 1784663512776365,
-        "lastOutcome": "apply",
-        "lastOutcomeCode": "exact_safe_reverse",
-        "automaticPublication": "bidirectional-authoring"
+        "sourceSchemaVersion": 1
       },
       "navigable": true,
       "segmentId": 358,
       "segmentName": "רחוב פנימי שדה אליעזר",
-      "sourceGeometryDigest": "e3cf691f81633ab1046fc3fb52d7284356a476daebed78d3a7217f1cde0349a5",
-      "junctionAttachments": {
+      "sourceGeometryDigest": "e3cf691f81633ab1046fc3fb52d7284356a476daebed78d3a7217f1cde0349a5"
+    },
+    "359": {
+      "segmentId": 359,
+      "segmentName": "כביש גישה שדה אליעזר",
+      "lifecycleStatus": "active",
+      "navigable": true,
+      "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370",
+      "endpoints": {
         "a": {
+          "coordinate": [
+            35.57275505632265,
+            33.04596275889037
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "A"
+          }
+        },
+        "b": {
+          "coordinate": [
+            35.56801275,
+            33.04603625
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "B"
+          }
+        }
+      },
+      "alignments": {
+        "aToB": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "e841158829_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158829
+                },
+                {
+                  "edgeId": "manual-359-mrv18tjl",
+                  "source": "manual",
+                  "direction": "reverse",
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "manualEdgeId": "manual-359-mrv18tjl"
+                },
+                {
+                  "edgeId": "e841158834_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 2,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158834
+                },
+                {
+                  "edgeId": "e841158834_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 3,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158834
+                },
+                {
+                  "edgeId": "e841158834_3",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 4,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158834
+                },
+                {
+                  "edgeId": "e841158834_4",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 5,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158834
+                },
+                {
+                  "edgeId": "e841158834_5",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 6,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158834
+                },
+                {
+                  "edgeId": "e841158834_6",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 7,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 841158834
+                }
+              ]
+            },
+            "mappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-21",
+              "batchId": "network-authoring-359-1785000000000001",
+              "rationale": "Explicit curator edge selection with a mechanically validated exact reverse",
+              "acceptanceBasis": "explicit-authoring-safe-reverse",
+              "automated": false,
+              "graphDigest": "f61917f635d4e4e2b7763907312bc3d460b027245814a822c7f1b4dc204bf070",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370",
+              "mappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494",
+              "evidenceDigest": "e207dd8afe842e9f5682f09e975c5af9c5cc1208b4f5fe3905e98d8fbb457abd"
+            }
+          },
+          "draft": null
+        },
+        "bToA": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494"
+            },
+            "mappingDigest": "53b37f5e17570d02e088f212bb24f96992c79837de80cbcb5957d4f51a5a15db",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-21",
+              "batchId": "network-authoring-359-1785000000000001",
+              "rationale": "Explicit curator edge selection with a mechanically validated exact reverse",
+              "acceptanceBasis": "explicit-authoring-safe-reverse",
+              "automated": false,
+              "graphDigest": "f61917f635d4e4e2b7763907312bc3d460b027245814a822c7f1b4dc204bf070",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370",
+              "mappingDigest": "53b37f5e17570d02e088f212bb24f96992c79837de80cbcb5957d4f51a5a15db",
+              "evidenceDigest": "e87c0ad148fb34a2ec7c2490962a639561817ed717678c21e99e364627938958"
+            }
+          },
+          "draft": null
+        }
+      },
+      "migration": {
+        "classification": "symmetric_candidate",
+        "sourceSchemaVersion": 2,
+        "sourceMappingOrigin": "network-authoring-v2",
+        "authoringRevision": 1785000000000001,
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-authoring"
+      },
+      "junctionAttachments": {
+        "b": {
           "junctionId": "junction-osm-ways:841155428",
-          "armId": "nb49361f7a52f8960",
-          "externalNodeId": "nb49361f7a52f8960",
+          "armId": "n4d810850944b62ad",
+          "externalNodeId": "n4d810850944b62ad",
           "source": "automatic-terminal-node"
         }
       }

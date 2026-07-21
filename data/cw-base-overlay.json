@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T19:51:55.513Z",
+  "updatedAt": "2026-07-21T20:00:23.087Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -18653,6 +18653,92 @@
         }
       ],
       "updatedAt": "2026-07-21T19:51:55.513Z"
+    },
+    "359": {
+      "segmentId": 359,
+      "segmentName": "כביש גישה שדה אליעזר",
+      "status": "accepted_edge_set",
+      "source": "edge_pick",
+      "confidence": "manual",
+      "coverageRatio": 1,
+      "avgDistanceMeters": null,
+      "gapCount": 0,
+      "failureClass": null,
+      "edgeRefs": [
+        {
+          "edgeId": "e841158829_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841158829
+        },
+        {
+          "edgeId": "manual-359-mrv18tjl",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-359-mrv18tjl"
+        },
+        {
+          "edgeId": "e841158834_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841158834
+        },
+        {
+          "edgeId": "e841158834_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841158834
+        },
+        {
+          "edgeId": "e841158834_3",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841158834
+        },
+        {
+          "edgeId": "e841158834_4",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841158834
+        },
+        {
+          "edgeId": "e841158834_5",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841158834
+        },
+        {
+          "edgeId": "e841158834_6",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 841158834
+        }
+      ],
+      "updatedAt": "2026-07-21T19:58:45.915Z"
     },
     "361": {
       "segmentId": 361,
