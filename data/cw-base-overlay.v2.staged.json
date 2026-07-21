@@ -3,7 +3,7 @@
   "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
   "policyId": "il-bicycle-v1",
   "proposal": {
-    "authoringOverlayDigest": "0cbd8e7d2c1902e3bd4d170c182f085a0b8d13ee2953880b95efec83a8144568",
+    "authoringOverlayDigest": "c9430bcbf3f1416079bd327b2c0d425500c35acc223c3e55c4bd7dcd552d0b5d",
     "nonAuthoritative": true,
     "source": "cw-base-overlay-v1",
     "sourceIndexDigest": "402e63dae845f3b29eabd7e5910eb5e43304c78d80efb66f83b4206a5990aa56",
@@ -41482,174 +41482,174 @@
       "sourceGeometryDigest": "e3cf691f81633ab1046fc3fb52d7284356a476daebed78d3a7217f1cde0349a5"
     },
     "359": {
-      "segmentId": 359,
-      "segmentName": "כביש גישה שדה אליעזר",
-      "lifecycleStatus": "active",
-      "navigable": true,
-      "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370",
+      "alignments": {
+        "aToB": {
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
+            "mappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494",
+            "realization": {
+              "edgeRefs": [
+                {
+                  "direction": "reverse",
+                  "edgeId": "e841158829_1",
+                  "fromFraction": 0,
+                  "osmWayId": 841158829,
+                  "sequenceIndex": 0,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "reverse",
+                  "edgeId": "manual-359-mrv18tjl",
+                  "fromFraction": 0,
+                  "manualEdgeId": "manual-359-mrv18tjl",
+                  "sequenceIndex": 1,
+                  "source": "manual",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841158834_1",
+                  "fromFraction": 0,
+                  "osmWayId": 841158834,
+                  "sequenceIndex": 2,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841158834_2",
+                  "fromFraction": 0,
+                  "osmWayId": 841158834,
+                  "sequenceIndex": 3,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841158834_3",
+                  "fromFraction": 0,
+                  "osmWayId": 841158834,
+                  "sequenceIndex": 4,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841158834_4",
+                  "fromFraction": 0,
+                  "osmWayId": 841158834,
+                  "sequenceIndex": 5,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841158834_5",
+                  "fromFraction": 0,
+                  "osmWayId": 841158834,
+                  "sequenceIndex": 6,
+                  "source": "osm",
+                  "toFraction": 1
+                },
+                {
+                  "direction": "forward",
+                  "edgeId": "e841158834_6",
+                  "fromFraction": 0,
+                  "osmWayId": 841158834,
+                  "sequenceIndex": 7,
+                  "source": "osm",
+                  "toFraction": 1
+                }
+              ],
+              "type": "explicit"
+            },
+            "review": {
+              "acceptanceBasis": "automatic-bidirectional-authoring",
+              "automated": true,
+              "batchId": "automatic-bidirectional-authoring-359",
+              "evidenceDigest": "e207dd8afe842e9f5682f09e975c5af9c5cc1208b4f5fe3905e98d8fbb457abd",
+              "graphDigest": "f61917f635d4e4e2b7763907312bc3d460b027245814a822c7f1b4dc204bf070",
+              "mappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "rationale": "Explicitly authored mapping with a mechanically validated exact reverse",
+              "reviewedAt": "2026-07-21",
+              "reviewer": "editor-authored",
+              "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370"
+            }
+          }
+        },
+        "bToA": {
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
+            "mappingDigest": "53b37f5e17570d02e088f212bb24f96992c79837de80cbcb5957d4f51a5a15db",
+            "realization": {
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494",
+              "type": "reverseOf"
+            },
+            "review": {
+              "acceptanceBasis": "automatic-bidirectional-authoring",
+              "automated": true,
+              "batchId": "automatic-bidirectional-authoring-359",
+              "evidenceDigest": "e87c0ad148fb34a2ec7c2490962a639561817ed717678c21e99e364627938958",
+              "graphDigest": "f61917f635d4e4e2b7763907312bc3d460b027245814a822c7f1b4dc204bf070",
+              "mappingDigest": "53b37f5e17570d02e088f212bb24f96992c79837de80cbcb5957d4f51a5a15db",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "rationale": "Mechanically validated exact reverse of an explicitly authored mapping",
+              "reviewedAt": "2026-07-21",
+              "reviewer": "editor-authored",
+              "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370"
+            }
+          }
+        }
+      },
       "endpoints": {
         "a": {
           "coordinate": [
             35.57275505632265,
             33.04596275889037
           ],
-          "zoneMeters": 30,
           "labels": {
             "key": "A"
-          }
+          },
+          "zoneMeters": 30
         },
         "b": {
           "coordinate": [
             35.56801275,
             33.04603625
           ],
-          "zoneMeters": 30,
           "labels": {
             "key": "B"
-          }
+          },
+          "zoneMeters": 30
         }
       },
-      "alignments": {
-        "aToB": {
-          "published": {
-            "disposition": "accepted",
-            "realization": {
-              "type": "explicit",
-              "edgeRefs": [
-                {
-                  "edgeId": "e841158829_1",
-                  "source": "osm",
-                  "direction": "reverse",
-                  "sequenceIndex": 0,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 841158829
-                },
-                {
-                  "edgeId": "manual-359-mrv18tjl",
-                  "source": "manual",
-                  "direction": "reverse",
-                  "sequenceIndex": 1,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "manualEdgeId": "manual-359-mrv18tjl"
-                },
-                {
-                  "edgeId": "e841158834_1",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 2,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 841158834
-                },
-                {
-                  "edgeId": "e841158834_2",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 3,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 841158834
-                },
-                {
-                  "edgeId": "e841158834_3",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 4,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 841158834
-                },
-                {
-                  "edgeId": "e841158834_4",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 5,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 841158834
-                },
-                {
-                  "edgeId": "e841158834_5",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 6,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 841158834
-                },
-                {
-                  "edgeId": "e841158834_6",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 7,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 841158834
-                }
-              ]
-            },
-            "mappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494",
-            "review": {
-              "reviewer": "ohad",
-              "reviewedAt": "2026-07-21",
-              "batchId": "network-authoring-359-1785000000000001",
-              "rationale": "Explicit curator edge selection with a mechanically validated exact reverse",
-              "acceptanceBasis": "explicit-authoring-safe-reverse",
-              "automated": false,
-              "graphDigest": "f61917f635d4e4e2b7763907312bc3d460b027245814a822c7f1b4dc204bf070",
-              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-              "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370",
-              "mappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494",
-              "evidenceDigest": "e207dd8afe842e9f5682f09e975c5af9c5cc1208b4f5fe3905e98d8fbb457abd"
-            }
-          },
-          "draft": null
-        },
-        "bToA": {
-          "published": {
-            "disposition": "accepted",
-            "realization": {
-              "type": "reverseOf",
-              "alignmentKey": "aToB",
-              "referencedMappingDigest": "0ff7cae61443f66dadad57fa15e337320c81708529bb210449c831f95082b494"
-            },
-            "mappingDigest": "53b37f5e17570d02e088f212bb24f96992c79837de80cbcb5957d4f51a5a15db",
-            "review": {
-              "reviewer": "ohad",
-              "reviewedAt": "2026-07-21",
-              "batchId": "network-authoring-359-1785000000000001",
-              "rationale": "Explicit curator edge selection with a mechanically validated exact reverse",
-              "acceptanceBasis": "explicit-authoring-safe-reverse",
-              "automated": false,
-              "graphDigest": "f61917f635d4e4e2b7763907312bc3d460b027245814a822c7f1b4dc204bf070",
-              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-              "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370",
-              "mappingDigest": "53b37f5e17570d02e088f212bb24f96992c79837de80cbcb5957d4f51a5a15db",
-              "evidenceDigest": "e87c0ad148fb34a2ec7c2490962a639561817ed717678c21e99e364627938958"
-            }
-          },
-          "draft": null
-        }
-      },
+      "lifecycleStatus": "active",
       "migration": {
+        "automaticPublication": "bidirectional-authoring",
         "classification": "symmetric_candidate",
-        "sourceSchemaVersion": 2,
-        "sourceMappingOrigin": "network-authoring-v2",
-        "authoringRevision": 1785000000000001,
-        "lastOutcome": "apply",
-        "lastOutcomeCode": "exact_safe_reverse",
-        "automaticPublication": "bidirectional-authoring"
+        "endpointMatch": {
+          "alignmentKey": "aToB",
+          "distances": {
+            "endA": 467.87043364621087,
+            "endB": 25.78688658858944,
+            "startA": 3.443423454215734,
+            "startB": 445.5356676859669
+          },
+          "reason": "matched"
+        },
+        "sourceMappingOrigin": "authoring-v1",
+        "sourceMappingStatus": "accepted_edge_set",
+        "sourceSchemaVersion": 1
       },
-      "junctionAttachments": {
-        "b": {
-          "junctionId": "junction-osm-ways:841155428",
-          "armId": "n4d810850944b62ad",
-          "externalNodeId": "n4d810850944b62ad",
-          "source": "automatic-terminal-node"
-        }
-      }
+      "navigable": true,
+      "segmentId": 359,
+      "segmentName": "כביש גישה שדה אליעזר",
+      "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370"
     },
     "361": {
       "alignments": {
@@ -42755,6 +42755,199 @@
       "segmentId": 370,
       "segmentName": "עין תאו",
       "sourceGeometryDigest": "e3d66529fc7fc81418a74fd5958263d740f91f572dae4a336640f6dfaba6e600"
+    },
+    "371": {
+      "segmentId": 371,
+      "segmentName": "כביש 899",
+      "lifecycleStatus": "active",
+      "navigable": true,
+      "sourceGeometryDigest": "87476c6eadc466dacdbfe0df15684757bd01d81cc89a4064177b50dab526b5d0",
+      "endpoints": {
+        "a": {
+          "coordinate": [
+            35.570343026633225,
+            33.125820214938585
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "A"
+          }
+        },
+        "b": {
+          "coordinate": [
+            35.56810156968547,
+            33.11809853442121
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "B"
+          }
+        }
+      },
+      "alignments": {
+        "aToB": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "e41932037_4",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 41932037
+                },
+                {
+                  "edgeId": "e41932037_5",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 41932037
+                },
+                {
+                  "edgeId": "e579016875_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 2,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 579016875
+                },
+                {
+                  "edgeId": "e579016875_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 3,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 579016875
+                }
+              ]
+            },
+            "mappingDigest": "dac79fb552fcdef19e3cf86e15f5f652a428c3120d585ad90a6072638ba540e1",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-21",
+              "batchId": "direction-review-2026-07-21",
+              "rationale": "Restored curator-selected southbound carriageway after refresh-loss bug",
+              "graphDigest": "f61917f635d4e4e2b7763907312bc3d460b027245814a822c7f1b4dc204bf070",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "87476c6eadc466dacdbfe0df15684757bd01d81cc89a4064177b50dab526b5d0",
+              "mappingDigest": "dac79fb552fcdef19e3cf86e15f5f652a428c3120d585ad90a6072638ba540e1",
+              "evidenceDigest": "dff93c55ed7d568f2a9a656afa5bfa0ccdaed27cd5f718e288cb0a012bb40b33"
+            }
+          },
+          "draft": null
+        },
+        "bToA": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "e579016875_2",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 579016875
+                },
+                {
+                  "edgeId": "e579016875_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 579016875
+                },
+                {
+                  "edgeId": "e794389848_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 2,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 794389848
+                },
+                {
+                  "edgeId": "e794389848_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 3,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 794389848
+                },
+                {
+                  "edgeId": "e794389848_3",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 4,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 794389848
+                },
+                {
+                  "edgeId": "e794389848_4",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 5,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 794389848
+                },
+                {
+                  "edgeId": "manual-manual-osm-794389848-mruulw7x-a-mruum50e",
+                  "source": "manual",
+                  "direction": "forward",
+                  "sequenceIndex": 6,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "manualEdgeId": "manual-manual-osm-794389848-mruulw7x-a-mruum50e"
+                },
+                {
+                  "edgeId": "manual-371-mruumvxa",
+                  "source": "manual",
+                  "direction": "forward",
+                  "sequenceIndex": 7,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "manualEdgeId": "manual-371-mruumvxa"
+                }
+              ]
+            },
+            "mappingDigest": "202cdd55d6de588e1ced58c4ae223cd5a5576a1030439ae03ba1d3a421982ad7",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-21",
+              "batchId": "direction-review-2026-07-21",
+              "rationale": "Restored curator-selected northbound carriageway after refresh-loss bug",
+              "graphDigest": "f61917f635d4e4e2b7763907312bc3d460b027245814a822c7f1b4dc204bf070",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "87476c6eadc466dacdbfe0df15684757bd01d81cc89a4064177b50dab526b5d0",
+              "mappingDigest": "202cdd55d6de588e1ced58c4ae223cd5a5576a1030439ae03ba1d3a421982ad7",
+              "evidenceDigest": "348aed341db75a1151c99d442dc9a2efb38c59ab2cec05b1be0b8235a2f78f3a"
+            }
+          },
+          "draft": null
+        }
+      },
+      "migration": {
+        "classification": "unresolved",
+        "sourceSchemaVersion": 2,
+        "sourceMappingOrigin": "network-authoring-v2",
+        "authoringRevision": 1785000000000371,
+        "lastOutcome": "needs-decision",
+        "lastOutcomeCode": "non_allowed_traversal"
+      }
     }
   }
 }
