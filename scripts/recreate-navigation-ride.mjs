@@ -16,7 +16,7 @@ const { values } = parseArgs({
     root: { type: "string", default: "build/public-data" },
     fixture: {
       type: "string",
-      default: "tests/fixtures/bicycle-traversal/road-99-ride.json",
+      default: "tests/fixtures/bicycle-traversal/road-99-ride-candidate.json",
     },
     "geojson-output": { type: "string" },
     check: { type: "boolean", default: false },
@@ -53,7 +53,8 @@ const session = await createShardedRouteSession(
   loadShard,
   { cwBaseIndex, paddingShards: 1 },
 );
-const points = fixture.coordinateReplan.coordinates.map((point, index) => ({
+const replan = fixture.acceptedReplacement || fixture.coordinateReplan;
+const points = replan.coordinates.map((point, index) => ({
   ...point,
   id: `reported-ride-${index}`,
 }));
@@ -61,7 +62,7 @@ const route = await session.restorePoints(points);
 const slices = route?.routingValidation?.traversalSlices || [];
 const forbidden = slices.filter((slice) => slice.policyState !== "allowed");
 const traversedShareIds = new Set(slices.map((slice) => Number(slice.edgeShareId)));
-const requiredSegments = (fixture.coordinateReplan.requiredSegmentIds || []).map((value) => {
+const requiredSegments = (replan.requiredSegmentIds || []).map((value) => {
   const segmentId = Number(value);
   const segment = cwBaseIndex.segments?.[String(segmentId)];
   const acceptedShareIds = [...new Set(
@@ -96,7 +97,7 @@ for (const required of requiredSegments) {
   if (!required.published) blockers.push(`required-segment-unpublished:${required.segmentId}`);
   else if (!required.traversed) blockers.push(`required-segment-not-traversed:${required.segmentId}`);
 }
-const acceptedFingerprint = fixture.coordinateReplan.acceptedFingerprint;
+const acceptedFingerprint = replan.acceptedFingerprint;
 const actualFingerprint = route?.routingValidation?.contentFingerprint || null;
 if (!acceptedFingerprint) {
   blockers.push("replacement-fingerprint-unaccepted");
@@ -109,6 +110,7 @@ const report = {
   status: blockers.length === 0 ? "ready" : "blocked",
   root,
   fixture: path.resolve(values.fixture),
+  replanSource: fixture.acceptedReplacement ? "acceptedReplacement" : "coordinateReplan",
   blockers,
   requiredSegments,
   route: route

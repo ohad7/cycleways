@@ -1,12 +1,15 @@
 {
   "schemaVersion": 1,
   "capturedAt": "2026-07-14",
-  "status": "candidate_pending_manual_direction_review",
+  "status": "accepted_after_manual_direction_review",
+  "reviewedAt": "2026-07-22",
+  "reviewer": "ohad",
+  "reviewRationale": "Accepted after reviewing the corrected Road 99 alignments, manual base edges, and segment 352 connection in the editor.",
   "description": "A direction-safe reconstruction of the reported iOS ride. It preserves the original corridor, uses Road 99 westbound legally, and avoids both the original first-control U-turn and the 5.6 m via-point spur.",
   "derivedFrom": "tests/fixtures/bicycle-traversal/road-99-ride.json",
   "coordinateReplan": {
     "requiredSegmentIds": [174, 352],
-    "acceptedFingerprint": "sha256-d1fff0e598b86d436af0521a452c560f5710c1cc8e0180be88a3a63e5765ea2e",
+    "acceptedFingerprint": "sha256-76c95587abb454c06abccdb387db3749963ff3d4744033891e9000d0686fe44d",
     "observedCandidateFingerprint": "sha256-d1fff0e598b86d436af0521a452c560f5710c1cc8e0180be88a3a63e5765ea2e",
     "coordinates": [
       {

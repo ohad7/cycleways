@@ -1,11 +1,13 @@
 {
   "schemaVersion": 1,
   "policyId": "il-bicycle-v1",
-  "status": "awaiting-v3-curation",
+  "status": "ready",
   "entries": [
     {
       "slug": "banias-gan-hatsafon",
-      "acceptedFingerprint": null
+      "acceptedFingerprint": "sha256-2b1f5831b1cbc7f17f794cbe0ca0920b3682803bb0d7a23306c9b9d4fd657d5c",
+      "distanceMeters": 14747.07439688716,
+      "distanceToleranceMeters": 1
     },
     {
       "slug": "sovev-beit-hillel",
@@ -15,7 +17,9 @@
     },
     {
       "slug": "historic-jordan",
-      "acceptedFingerprint": null
+      "acceptedFingerprint": "sha256-8efd2d020981003bf7760d3f3ca52b3eac1e57c24531a90cf8d0c65417f35b31",
+      "distanceMeters": 23865.06928664072,
+      "distanceToleranceMeters": 1
     },
     {
       "slug": "kovshey-hagolan",
@@ -23,10 +27,17 @@
       "distanceMeters": 12547.662667277027,
       "distanceToleranceMeters": 1
     },
-    { "slug": "sovev-dafna", "acceptedFingerprint": null },
+    {
+      "slug": "sovev-dafna",
+      "acceptedFingerprint": "sha256-8b2e99bf6f594ef3124a6cd0acbce92fed8f9607109c14d709c962050fdef6f0",
+      "distanceMeters": 7060.070319676508,
+      "distanceToleranceMeters": 1
+    },
     {
       "slug": "roman-roads",
-      "acceptedFingerprint": null
+      "acceptedFingerprint": "sha256-8213d4259f58af06e9bb215eb8b9b237279bc176f1f74e39b835c07fec88e576",
+      "distanceMeters": 27305.286060883496,
+      "distanceToleranceMeters": 1
     },
     {
       "slug": "sovev-shear-yeshuv",
@@ -36,7 +47,9 @@
     },
     {
       "slug": "naftali-dishon-yosha",
-      "acceptedFingerprint": null
+      "acceptedFingerprint": "sha256-17ed93aca0441f0dc57e5b87509683902a05611adf7847cc98dc4c3632792433",
+      "distanceMeters": 54260.91394064241,
+      "distanceToleranceMeters": 1
     }
   ]
 }
