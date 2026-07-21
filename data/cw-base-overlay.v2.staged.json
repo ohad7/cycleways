@@ -24284,7 +24284,15 @@
       "navigable": true,
       "segmentId": 204,
       "segmentName": "כביש 9970 צומת רגר דרך ביטחונית",
-      "sourceGeometryDigest": "616a5aabdcc090addd244b66a357b5c58cff40af4e09b830e6f02c88adcc37a3"
+      "sourceGeometryDigest": "616a5aabdcc090addd244b66a357b5c58cff40af4e09b830e6f02c88adcc37a3",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-osm-ways:842376170",
+          "armId": "nbb2f85342c9ce810",
+          "externalNodeId": "nbb2f85342c9ce810",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "205": {
       "alignments": {
@@ -24988,7 +24996,15 @@
       "navigable": true,
       "segmentId": 210,
       "segmentName": "כביש 99 תל דן צומת רג׳ר",
-      "sourceGeometryDigest": "c611cb992973bb369f9c13c7b83959d4b26e0dee3dc4d3ea5820cc17945313de"
+      "sourceGeometryDigest": "c611cb992973bb369f9c13c7b83959d4b26e0dee3dc4d3ea5820cc17945313de",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-osm-ways:842376170",
+          "armId": "n6e0b16dd8d033448",
+          "externalNodeId": "n6e0b16dd8d033448",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "211": {
       "alignments": {
@@ -25105,7 +25121,15 @@
       "navigable": true,
       "segmentId": 211,
       "segmentName": "כביש 99 צומת רג׳ר כביש ביטחון",
-      "sourceGeometryDigest": "71b7642736d96df110db4837821a3007bcb5d45401025357e1e69d55157b7e1e"
+      "sourceGeometryDigest": "71b7642736d96df110db4837821a3007bcb5d45401025357e1e69d55157b7e1e",
+      "junctionAttachments": {
+        "a": {
+          "junctionId": "junction-osm-ways:842376170",
+          "armId": "n280a0d9546c098cd",
+          "externalNodeId": "n280a0d9546c098cd",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "212": {
       "alignments": {
@@ -38955,7 +38979,15 @@
       "navigable": true,
       "segmentId": 330,
       "segmentName": "שביל אופניים דפנה",
-      "sourceGeometryDigest": "b33cf92d1ea84d3ed2c511080aa5482afe115e676be6e9dd4e5da1eaa9a2bbbc"
+      "sourceGeometryDigest": "b33cf92d1ea84d3ed2c511080aa5482afe115e676be6e9dd4e5da1eaa9a2bbbc",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrujg8lc",
+          "armId": "n71c55fa830078477",
+          "externalNodeId": "n71c55fa830078477",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "331": {
       "alignments": {
@@ -40161,7 +40193,15 @@
       "navigable": true,
       "segmentId": 337,
       "segmentName": "שביל אופניים אנדרטת אסון המסוקים",
-      "sourceGeometryDigest": "622c3a49e5741ca738338bd43a048ab97dc0be2cdfb07c40b9dfbc2ba0eae099"
+      "sourceGeometryDigest": "622c3a49e5741ca738338bd43a048ab97dc0be2cdfb07c40b9dfbc2ba0eae099",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrujg8lc",
+          "armId": "ne6e24bb13e38127b",
+          "externalNodeId": "ne6e24bb13e38127b",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "338": {
       "alignments": {
@@ -40423,7 +40463,15 @@
       "navigable": true,
       "segmentId": 339,
       "segmentName": "שביל אופניים 918 דפנה",
-      "sourceGeometryDigest": "19e3fcd7636101dbe25dcd9765bbf05231113cf1d7ae98e054052f8db9bfc86c"
+      "sourceGeometryDigest": "19e3fcd7636101dbe25dcd9765bbf05231113cf1d7ae98e054052f8db9bfc86c",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrujg8lc",
+          "armId": "ne6e24bb13e38127b",
+          "externalNodeId": "ne6e24bb13e38127b",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "340": {
       "alignments": {
@@ -42856,6 +42904,14 @@
         "lastOutcome": "apply",
         "lastOutcomeCode": "exact_safe_reverse",
         "automaticPublication": "bidirectional-evidence"
+      },
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrujg8lc",
+          "armId": "n71c55fa830078477",
+          "externalNodeId": "n71c55fa830078477",
+          "source": "automatic-terminal-node"
+        }
       }
     }
   }

@@ -90,9 +90,18 @@ function alignmentRefs(segment, alignmentKey) {
   return [];
 }
 
+function activeNavigableSegment(segment) {
+  return Boolean(
+    segment &&
+    segment.navigable !== false &&
+    !["deprecated", "legacy", "draft"].includes(String(segment.lifecycleStatus || "active")),
+  );
+}
+
 function acceptedCwDirectionSet(overlay) {
   const result = new Set();
   for (const segment of Object.values(overlay?.segments || {})) {
+    if (!activeNavigableSegment(segment)) continue;
     for (const alignmentKey of ["aToB", "bToA"]) {
       const slot = segment?.alignments?.[alignmentKey];
       const mapping = slot?.published || slot?.draft;
@@ -291,7 +300,13 @@ const ENDPOINT_DIRECTION_USES = Object.freeze({
   ]),
 });
 
-function endpointArmAssociations(segment, junctionId, ports, edgeById) {
+function endpointArmAssociations(
+  segment,
+  junctionId,
+  ports,
+  edgeById,
+  { allowMultipleDirectionalPorts = false } = {},
+) {
   const armAttachments = [];
   const attachments = [];
   const attachmentIssues = [];
@@ -383,7 +398,7 @@ function endpointArmAssociations(segment, junctionId, ports, edgeById) {
 
     for (const use of uses.filter((item) => item.terminalNodeId === String(armId))) {
       const matchingPorts = armPorts.filter((port) => port.usage === use.portUsage);
-      if (matchingPorts.length !== 1) {
+      if (matchingPorts.length === 0 || (matchingPorts.length > 1 && !allowMultipleDirectionalPorts)) {
         attachmentIssues.push({
           code: matchingPorts.length ? "ambiguous_directional_port" : "missing_directional_port",
           junctionId,
@@ -396,31 +411,48 @@ function endpointArmAssociations(segment, junctionId, ports, edgeById) {
         });
         continue;
       }
-      attachments.push({
-        junctionId,
-        segmentId: Number(segment.segmentId),
-        segmentName: segment.segmentName,
-        alignmentKey: use.alignmentKey,
-        endpoint,
-        usage: use.usage,
-        armId,
-        externalNodeId: armId,
-        portId: matchingPorts[0].id,
-        source: "arm-attachment",
-      });
+      for (const port of matchingPorts) {
+        attachments.push({
+          junctionId,
+          segmentId: Number(segment.segmentId),
+          segmentName: segment.segmentName,
+          alignmentKey: use.alignmentKey,
+          endpoint,
+          usage: use.usage,
+          armId,
+          externalNodeId: armId,
+          portId: port.id,
+          source: "arm-attachment",
+          ...(matchingPorts.length > 1 ? { alternative: true } : {}),
+        });
+      }
     }
   }
   return { armAttachments, attachments, attachmentIssues };
 }
 
-function segmentAssociations(overlay, internalEdgeIds, ports, edgeById, junctionId) {
+function segmentAssociations(
+  overlay,
+  internalEdgeIds,
+  ports,
+  edgeById,
+  junctionId,
+  { allowMultipleDirectionalPorts = false } = {},
+) {
   const attachments = [];
   const armAttachments = [];
   const attachmentIssues = [];
   const throughAlignments = [];
   const segmentIds = new Set();
   for (const segment of Object.values(overlay?.segments || {})) {
-    const endpointAssociations = endpointArmAssociations(segment, junctionId, ports, edgeById);
+    if (!activeNavigableSegment(segment)) continue;
+    const endpointAssociations = endpointArmAssociations(
+      segment,
+      junctionId,
+      ports,
+      edgeById,
+      { allowMultipleDirectionalPorts },
+    );
     if (endpointAssociations.armAttachments.length) {
       segmentIds.add(Number(segment.segmentId));
       armAttachments.push(...endpointAssociations.armAttachments);
@@ -523,13 +555,51 @@ function junctionFingerprint(junction) {
 }
 
 function movementCoverage(ports, internalEdges, acceptedCwDirections) {
+  const edgeById = new Map(internalEdges.map((edge) => [String(edge.id), edge]));
+  const constrainedPath = (entry, exit) => {
+    const entryEdge = edgeById.get(String(entry.edgeId));
+    const exitEdge = edgeById.get(String(exit.edgeId));
+    if (!entryEdge || !exitEdge) return null;
+    if (!directionAllowed(entryEdge, entry.direction, acceptedCwDirections)) return null;
+    if (!directionAllowed(exitEdge, exit.direction, acceptedCwDirections)) return null;
+    const entryRef = directedRef(entryEdge, entry.direction);
+    const exitRef = directedRef(exitEdge, exit.direction);
+    const entryStart = directedStartNode(entryRef, entryEdge);
+    const entryEnd = directedEndNode(entryRef, entryEdge);
+    const exitStart = directedStartNode(exitRef, exitEdge);
+    const exitEnd = directedEndNode(exitRef, exitEdge);
+    if (
+      String(entryStart) !== String(entry.externalNodeId) ||
+      String(exitEnd) !== String(exit.externalNodeId)
+    ) return null;
+    if (entryRef.edgeId === exitRef.edgeId && entryRef.direction === exitRef.direction) {
+      return {
+        edgeRefs: [{ ...entryRef, sequenceIndex: 0 }],
+        distanceMeters: Math.round(edgeLength(entryEdge) * 10) / 10,
+      };
+    }
+    const middleEdges = internalEdges.filter(
+      (edge) => ![entryRef.edgeId, exitRef.edgeId].includes(String(edge.id)),
+    );
+    const middle = String(entryEnd) === String(exitStart)
+      ? { edgeRefs: [], distanceMeters: 0 }
+      : shortestPath(entryEnd, exitStart, middleEdges, acceptedCwDirections);
+    if (!middle) return null;
+    return {
+      edgeRefs: [entryRef, ...(middle.edgeRefs || []), exitRef]
+        .map((ref, sequenceIndex) => ({ ...ref, sequenceIndex })),
+      distanceMeters: Math.round((
+        edgeLength(entryEdge) + Number(middle.distanceMeters || 0) + edgeLength(exitEdge)
+      ) * 10) / 10,
+    };
+  };
   const movements = [];
   const entries = ports.filter((port) => port.usage === "entry");
   const exits = ports.filter((port) => port.usage === "exit");
   for (const entry of entries) {
     for (const exit of exits) {
       if (entry.armId === exit.armId) continue;
-      const path = shortestPath(entry.externalNodeId, exit.externalNodeId, internalEdges, acceptedCwDirections);
+      const path = constrainedPath(entry, exit);
       movements.push({
         id: `${entry.id}->${exit.id}`,
         entryPortId: entry.id,
@@ -636,7 +706,14 @@ function customJunctionCandidate(record, graph, overlay, acceptedCwDirections) {
   );
   const excludedPortIds = new Set(record.excludedPortIds || []);
   const ports = proposedPorts.filter((port) => !excludedPortIds.has(port.id));
-  const associations = segmentAssociations(overlay, internalEdgeIds, ports, edgeById, record.id);
+  const associations = segmentAssociations(
+    overlay,
+    internalEdgeIds,
+    ports,
+    edgeById,
+    record.id,
+    { allowMultipleDirectionalPorts: true },
+  );
   const { bbox, center } = geometryBounds(internalEdges);
   const nearbyEndpoints = nearbySegmentEndpoints(overlay, center);
   const segmentIds = [...new Set([
@@ -884,7 +961,9 @@ export function deriveJunctionArmAttachmentCandidates({
   const selected = segmentIds == null ? null : new Set(segmentIds.map(Number));
   const edgeById = new Map((graph?.edges || []).map((edge) => [String(edge.id), edge]));
   const selectedSegments = Object.values(overlay?.segments || {}).filter(
-    (segment) => !selected || selected.has(Number(segment.segmentId)),
+    (segment) =>
+      activeNavigableSegment(segment) &&
+      (!selected || selected.has(Number(segment.segmentId))),
   );
   return {
     schemaVersion: 1,
@@ -898,6 +977,7 @@ export function deriveJunctionArmAttachmentCandidates({
           junction.id,
           junction.ports || [],
           edgeById,
+          { allowMultipleDirectionalPorts: junction.kind === "custom_bicycle" },
         );
         armAttachments.push(...associations.armAttachments);
         attachments.push(...associations.attachments);
@@ -917,11 +997,13 @@ export function refreshNetworkJunctionArmAssociations(candidatesPayload, overlay
     );
     const attachmentIssues = [];
     for (const segment of Object.values(overlay?.segments || {})) {
+      if (!activeNavigableSegment(segment)) continue;
       const associations = endpointArmAssociations(
         segment,
         candidate.id,
         candidate.ports || [],
         edgeById,
+        { allowMultipleDirectionalPorts: candidate.kind === "custom_bicycle" },
       );
       armAttachments.push(...associations.armAttachments);
       attachments.push(...associations.attachments);

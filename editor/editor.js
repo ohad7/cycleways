@@ -5129,7 +5129,15 @@ function junctionPublicationIssueLabel(issue) {
     ambiguous_directional_port: "Choose one directional port for an attached arm",
     missing_directional_port: "An attached arm is missing an allowed port",
   };
-  return labels[issue?.code] || String(issue?.code || "Junction validation issue").replaceAll("_", " ");
+  const base = labels[issue?.code] || String(issue?.code || "Junction validation issue").replaceAll("_", " ");
+  const segment = Number.isInteger(Number(issue?.segmentId)) ? `#${Number(issue.segmentId)}` : null;
+  const direction = issue?.alignmentKey === "aToB" ? "A → B" : issue?.alignmentKey === "bToA" ? "B → A" : null;
+  const usage = issue?.usage === "arrive" ? "arrival" : issue?.usage === "depart" ? "departure" : null;
+  const context = [segment, direction, usage].filter(Boolean).join(" · ");
+  const ports = (issue?.portIds || []).length > 1
+    ? ` (${issue.portIds.join(" or ")})`
+    : "";
+  return `${base}${context ? ` — ${context}` : ""}${ports}`;
 }
 
 function junctionPublicationHtml(junction) {
@@ -5145,11 +5153,24 @@ function junctionPublicationHtml(junction) {
     : "";
   const issues = (publication.issues || []).map((issue) => `<li>${escapeHtml(junctionPublicationIssueLabel(issue))}</li>`).join("");
   const publishBlocked = (publication.issues || []).some((issue) => issue.code !== "junction_name_required");
+  const isPublished = publication.status === "published";
+  const publicationLabel = isPublished
+    ? "Published in the CW network"
+    : publication.status === "stale"
+      ? "Published topology needs review"
+      : publication.status === "excluded"
+        ? "Excluded from the CW network"
+        : "Draft — not yet shown in the CW network";
+  const publishLabel = isPublished
+    ? "Save published junction"
+    : publication.status === "stale"
+      ? "Review and republish"
+      : "Add to CW network";
   const canDeleteDraft = junction.kind === "custom_bicycle"
     && junction.registryRecord?.status !== "published";
   return `<section class="junction-publication-card">
     <h3>CW network publication</h3>
-    <p class="junction-publication-state">${escapeHtml(publication.status || "detected")}</p>
+    <p class="junction-publication-state">${escapeHtml(publicationLabel)}</p>
     <label class="field-label">Public junction name</label>
     <input class="text-input" data-junction-name type="text" value="${escapeHtml(junction.name || "")}" placeholder="צומת חורשת טל" />
     <label class="field-label">Navigation kind</label>
@@ -5157,10 +5178,10 @@ function junctionPublicationHtml(junction) {
       ${["intersection", "roundabout", "crossing", "plaza"].map((kind) => `<option value="${kind}" ${junction.navigationKind === kind ? "selected" : ""}>${kind}</option>`).join("")}
     </select>
     ${portRows ? `<details><summary>Boundary ports (${junction.ports?.length || 0} active)</summary><div class="junction-port-list">${portRows}</div><p>Unknown or prohibited directions must be corrected in Base Network; they cannot be forced here.</p></details>` : ""}
-    ${issues ? `<ul>${issues}</ul>` : `<p>Ready to publish.</p>`}
+    ${issues ? `<p><strong>Resolve before adding this junction:</strong></p><ul>${issues}</ul>` : isPublished ? `<p>This junction's movement footprint is part of the CW network.</p>` : `<p>Ready to add. Publishing will paint its legal movement footprint and make it available to routing.</p>`}
     <div class="action-row">
-      <button type="button" data-junction-publication="detected" class="secondary-button">Save draft</button>
-      <button type="button" data-junction-publication="published" class="primary-button" ${publishBlocked ? "disabled" : ""}>Publish as CW junction</button>
+      ${isPublished ? "" : '<button type="button" data-junction-publication="detected" class="secondary-button">Save draft</button>'}
+      <button type="button" data-junction-publication="published" class="primary-button" ${publishBlocked ? "disabled" : ""}>${escapeHtml(publishLabel)}</button>
       <button type="button" data-junction-publication="excluded" class="secondary-button danger">Exclude</button>
       ${canDeleteDraft ? '<button type="button" data-junction-delete-draft class="secondary-button danger">Delete draft</button>' : ""}
     </div>
@@ -5190,6 +5211,7 @@ async function saveJunctionRegistry(status) {
   const payload = await response.json();
   if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not save junction");
   state.roundabouts.junctionsData = payload;
+  if (payload.overlay) state.directionReview.overlay = payload.overlay;
   state.roundabouts.selectedId = junction.roundaboutId || junction.id;
   updateRoundaboutSources();
   renderRoundaboutsPanel();
@@ -5231,6 +5253,12 @@ function bindJunctionPublicationActions() {
     ?.addEventListener("click", () => deleteSelectedJunctionDraft().catch(showError));
 }
 
+function junctionAttachedSegmentIds(junction) {
+  return [...new Set(
+    (junction?.armAttachments || []).map((attachment) => Number(attachment.segmentId)),
+  )].filter(Number.isInteger).sort((a, b) => a - b);
+}
+
 function renderCustomJunctionDetail(junction) {
   const attachmentLabelByPort = new Map();
   for (const attachment of junction.attachments || []) {
@@ -5250,6 +5278,7 @@ function renderCustomJunctionDetail(junction) {
   const internalEdgeRows = (junction.internalEdgeIds || [])
     .map((edgeId) => `<li><code>${escapeHtml(edgeId)}</code></li>`)
     .join("");
+  const attachedSegmentIds = junctionAttachedSegmentIds(junction);
   els.roundaboutsDetail.innerHTML = `
     <h3>${escapeHtml(junction.name || junction.id)}</h3>
     <p>Custom bicycle junction · ${(junction.internalEdgeIds || []).length} internal base edges</p>
@@ -5258,7 +5287,7 @@ function renderCustomJunctionDetail(junction) {
       <ul>${internalEdgeRows || "<li>None</li>"}</ul>
     </details>
     ${junctionPublicationHtml(junction)}
-    <section class="junction-coverage"><h3>Movement coverage</h3><p>${junction.segmentIds.map((id) => `#${id}`).join(", ") || "No attached CW segments"} · ${junction.summary.legalMovements}/${junction.summary.movements} legal</p><p>${junction.armAttachments?.length || 0} logical arm attachments · ${junction.attachments?.filter((attachment) => attachment.source === "arm-attachment").length || 0} directional port attachments</p><div class="junction-movement-list">${movementRows || '<div class="empty-state">No inter-arm movements yet.</div>'}</div></section>
+    <section class="junction-coverage"><h3>Movement coverage</h3><p>Connected CW segments: ${attachedSegmentIds.map((id) => `#${id}`).join(", ") || "none"} · ${junction.summary.legalMovements}/${junction.summary.movements} legal movements</p><p>${junction.armAttachments?.length || 0} logical arm attachments · ${junction.attachments?.filter((attachment) => attachment.source === "arm-attachment").length || 0} directional port options</p><div class="junction-movement-list">${movementRows || '<div class="empty-state">No inter-arm movements yet.</div>'}</div></section>
   `;
   bindJunctionPublicationActions();
   for (const button of els.roundaboutsDetail.querySelectorAll("[data-movement]")) {
@@ -5321,10 +5350,14 @@ function renderRoundaboutsPanel() {
     .map((item) => item.candidate)
     .filter((junction) => junction.kind === "custom_bicycle");
   for (const junction of customJunctions) {
+    const attachedSegmentIds = junctionAttachedSegmentIds(junction);
     const button = document.createElement("button");
     button.type = "button";
     button.className = `roundabout-review-item state-${junction.publication?.status || "detected"}${junction.id === state.roundabouts.selectedId ? " active" : ""}`;
-    button.innerHTML = `<strong>${escapeHtml(junction.name || "Unnamed custom junction")}</strong><span>custom · ${escapeHtml(junction.publication?.status || "detected")} · ${(junction.segmentIds || []).map((id) => `#${id}`).join(" · ")}</span>`;
+    const attachmentSummary = attachedSegmentIds.length
+      ? `connected ${attachedSegmentIds.map((id) => `#${id}`).join(" · ")}`
+      : "no connected CW segments";
+    button.innerHTML = `<strong>${escapeHtml(junction.name || "Unnamed custom junction")}</strong><span>custom · ${escapeHtml(junction.publication?.status || "detected")} · ${escapeHtml(attachmentSummary)}</span>`;
     button.addEventListener("click", () => selectNetworkJunction(junction.id));
     els.roundaboutsList.appendChild(button);
   }
@@ -11511,7 +11544,7 @@ function wireEvents() {
             selectNetworkJunction(junction.id, { fit: false });
           }
           setStatus(
-            `Selected ${junction.name || "junction"} connecting ${(junction.segmentIds || []).map((id) => `#${id}`).join(", ")}.`,
+            `Selected ${junction.name || "junction"} connecting ${junctionAttachedSegmentIds(junction).map((id) => `#${id}`).join(", ") || "no CW segments"}.`,
           );
         })
         .catch(showError);

@@ -5481,6 +5481,8 @@ const server = createServer(async (request, response) => {
         const nextRegistry = structuredClone(state.registry);
         nextRegistry.schemaVersion = 1;
         nextRegistry.junctions ||= {};
+        let reconciledOverlay = null;
+        let attachmentReconciliation = null;
         let junctionId = typeof body?.junctionId === "string" ? body.junctionId : "";
         if (body?.action === "create") {
           const internalEdgeIds = [...new Set((body.internalEdgeIds || []).map(String).filter(Boolean))];
@@ -5552,6 +5554,29 @@ const server = createServer(async (request, response) => {
               throw Object.assign(new Error(`Cannot publish junction: ${codes || "validation failed"}`), { status: 400 });
             }
           }
+          if (state.overlay && (status === "published" || previous?.status === "published")) {
+            const affectedSegmentIds = [...new Set([
+              ...(candidate.armAttachments || []).map((attachment) => Number(attachment.segmentId)),
+              ...(prospectiveCandidate?.armAttachments || []).map((attachment) => Number(attachment.segmentId)),
+            ])].filter(Number.isInteger);
+            const publishedCandidates = {
+              ...prospective,
+              junctions: (prospective.junctions || []).filter(
+                (item) => item.publication?.status === "published",
+              ),
+            };
+            attachmentReconciliation = reconcileOverlayJunctionArmAttachments(
+              state.overlay,
+              publishedCandidates,
+              { segmentIds: affectedSegmentIds },
+            );
+            if (attachmentReconciliation.issues.length > 0) {
+              const codes = attachmentReconciliation.issues.map((issue) => issue.code).join(", ");
+              throw Object.assign(new Error(`Cannot update junction attachments: ${codes}`), { status: 400 });
+            }
+            reconciledOverlay = parseCwOverlayV2(attachmentReconciliation.overlay);
+            await validatePublishedDirectionReviewOverlay(reconciledOverlay);
+          }
         } else if (body?.action === "delete") {
           const previous = nextRegistry.junctions[junctionId];
           if (!previous) {
@@ -5568,7 +5593,22 @@ const server = createServer(async (request, response) => {
           throw Object.assign(new Error("Junction action must be create, save, or delete"), { status: 400 });
         }
         const normalized = normalizeNetworkJunctionRegistry(nextRegistry);
-        await writeJsonAtomic(networkJunctionRegistryPath, normalized);
+        try {
+          await writeJsonAtomic(networkJunctionRegistryPath, normalized);
+          if (reconciledOverlay) {
+            await writeJsonAtomic(cwBaseOverlayV2StagedPath, reconciledOverlay);
+          }
+        } catch (error) {
+          await Promise.all([
+            writeJsonAtomic(networkJunctionRegistryPath, state.registry),
+            state.overlay
+              ? writeJsonAtomic(cwBaseOverlayV2StagedPath, state.overlay)
+              : Promise.resolve(),
+          ]).catch((rollbackError) => {
+            log("error", "network junction publication rollback failed", rollbackError?.message || String(rollbackError));
+          });
+          throw error;
+        }
         const nextState = await readNetworkJunctionState();
         sendJson(response, 200, {
           ok: true,
@@ -5578,7 +5618,10 @@ const server = createServer(async (request, response) => {
           orphaned: nextState.joined.orphaned,
           items: nextState.joined.items,
           geojson: nextState.geojson,
+          overlay: nextState.overlay,
           sourceDigests: nextState.candidates.sourceDigests,
+          junctionAttachmentsApplied: attachmentReconciliation?.applied || [],
+          junctionAttachmentsRemoved: attachmentReconciliation?.removed || [],
         });
       } catch (error) {
         sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });

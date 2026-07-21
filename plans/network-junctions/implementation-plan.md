@@ -558,3 +558,35 @@ Before promotion, validate in the editor and on both web and iOS:
   segment failures.
 - Build fails closed on stale or invalid required movements and promotion
   publishes only current validated junction data.
+
+## 2026-07-21 implementation amendment — custom publication completion
+
+Implemented:
+
+- preserve multiple valid directional port alternatives for explicitly
+  selected custom junctions while retaining strict ambiguity handling for
+  derived junctions;
+- exclude deprecated/non-navigable segments from candidate attachments;
+- constrain movement pathfinding to its declared entry and exit port edges;
+- show explicit draft/published state and a single **Add to CW network** action;
+- label custom-junction summaries with terminally connected CW segments rather
+  than mixing in merely nearby segments;
+- reconcile affected Overlay V2 `junctionAttachments` during junction publish
+  or published-junction updates and return the updated overlay to the client;
+- avoid presenting a draft-save action that can accidentally unpublish a
+  published junction; and
+- add fixture coverage for parallel custom edges, attachment alternatives,
+  deprecated nearby segments, and movement endpoint correctness.
+
+Manual validation after restarting the editor:
+
+1. Open **Junctions**, select `צומת חורשת טל`, and confirm its three selected
+   internal base edges are visible.
+2. Confirm the attached active segments are 330, 337, 339, and 364, with no
+   attachment to deprecated 363.
+3. Inspect each offered movement and confirm it follows the highlighted entry
+   and exit alternative.
+4. Confirm the state reads **Published in the CW network** and the CW Network
+   map contains the complete unnamed junction footprint.
+5. Run Build before promotion, then test at least one route through the
+   junction in each direction on web and iOS.

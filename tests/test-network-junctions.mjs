@@ -105,6 +105,74 @@ assert.equal(customCandidates.junctions[0].armAttachments.length, 2);
 assert.equal(customCandidates.junctions[0].summary.legalMovements, 2);
 assert.equal(customCandidates.junctions[0].publication.canPublish, true);
 
+const parallelGraph = { edges: [
+  edge("outside-west", "x", "west"),
+  edge("upper", "west", "east"),
+  edge("lower", "east", "west"),
+  edge("outside-east", "east", "y"),
+] };
+const parallelOverlay = { segments: {
+  20: {
+    segmentId: 20,
+    segmentName: "West active",
+    lifecycleStatus: "active",
+    navigable: true,
+    endpoints: { a: { coordinate: [0, 0] }, b: { coordinate: [0.001, 0.001] } },
+    alignments: {
+      aToB: { published: { disposition: "accepted", realization: { type: "explicit", edgeRefs: [{ edgeId: "outside-west", direction: "forward", sequenceIndex: 0 }] } } },
+      bToA: { published: { disposition: "accepted", realization: { type: "reverseOf", alignmentKey: "aToB" } } },
+    },
+  },
+  21: {
+    segmentId: 21,
+    segmentName: "East active",
+    lifecycleStatus: "active",
+    navigable: true,
+    endpoints: { a: { coordinate: [0, 0] }, b: { coordinate: [0.001, 0.001] } },
+    alignments: {
+      aToB: { published: { disposition: "accepted", realization: { type: "explicit", edgeRefs: [{ edgeId: "outside-east", direction: "reverse", sequenceIndex: 0 }] } } },
+      bToA: { published: { disposition: "accepted", realization: { type: "reverseOf", alignmentKey: "aToB" } } },
+    },
+  },
+  22: {
+    segmentId: 22,
+    segmentName: "Deprecated duplicate",
+    lifecycleStatus: "deprecated",
+    navigable: false,
+    endpoints: { a: { coordinate: [0, 0] }, b: { coordinate: [0.001, 0.001] } },
+    alignments: {
+      aToB: { published: { disposition: "accepted", realization: { type: "explicit", edgeRefs: [{ edgeId: "outside-west", direction: "forward", sequenceIndex: 0 }] } } },
+      bToA: { published: { disposition: "accepted", realization: { type: "reverseOf", alignmentKey: "aToB" } } },
+    },
+  },
+} };
+const parallelRegistry = normalizeNetworkJunctionRegistry({ schemaVersion: 1, junctions: {
+  "junction-custom-parallel": {
+    name: "Parallel bicycle junction",
+    status: "detected",
+    navigationKind: "intersection",
+    source: { type: "custom", internalEdgeIds: ["upper", "lower"] },
+  },
+} });
+const parallel = deriveNetworkJunctionCandidates({
+  graph: parallelGraph,
+  overlay: parallelOverlay,
+  curatedJunctions: parallelRegistry,
+}).junctions[0];
+assert.equal(parallel.publication.canPublish, true);
+assert.equal(parallel.attachmentIssues.length, 0);
+assert.deepEqual(parallel.armAttachments.map((item) => item.segmentId).sort((a, b) => a - b), [20, 21]);
+assert.ok(parallel.attachments.some((attachment) => attachment.alternative));
+const parallelPorts = new Map(parallel.ports.map((port) => [port.id, port]));
+for (const movement of parallel.movements.filter((item) => item.status !== "unavailable")) {
+  const entry = parallelPorts.get(movement.entryPortId);
+  const exit = parallelPorts.get(movement.exitPortId);
+  assert.equal(movement.edgeRefs[0].edgeId, entry.edgeId);
+  assert.equal(movement.edgeRefs[0].direction, entry.direction);
+  assert.equal(movement.edgeRefs.at(-1).edgeId, exit.edgeId);
+  assert.equal(movement.edgeRefs.at(-1).direction, exit.direction);
+}
+
 const customRoundaboutRegistry = normalizeNetworkJunctionRegistry({ schemaVersion: 1, junctions: {
   "junction-custom-roundabout": {
     name: "Test bicycle roundabout",

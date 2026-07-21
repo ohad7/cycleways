@@ -812,3 +812,30 @@ unrelated source editing.
 - Crossings remain separate safety/narration records.
 - Directionality is never ignored, including for a roundabout inside one
   segment.
+
+## 2026-07-21 custom-junction publication refinement
+
+A custom junction is an explicitly selected bicycle subgraph, so two legal
+directed boundary ports at the same logical arm are valid alternatives rather
+than an attachment ambiguity. This differs from automatic road-roundabout
+discovery: a derived junction continues to fail closed when it cannot choose a
+single directional port from topology alone.
+
+The following invariants apply to custom publication:
+
+- only active, navigable CW segments participate in arm discovery;
+- deprecated segments never block or acquire a junction attachment;
+- each calculated movement starts on its declared entry port edge and ends on
+  its declared exit port edge, even when parallel internal paths connect the
+  same external nodes;
+- the draft screen distinguishes “not in the CW network” from “published” and
+  exposes one primary **Add to CW network** action when all requirements pass;
+- publishing writes the junction registry decision and the affected Overlay V2
+  terminal attachments as one server operation; and
+- saving an already published junction keeps it published unless the curator
+  explicitly selects an exclusion workflow.
+
+The public footprint is the union of the selected internal base edges used by
+legal movements between attached arms. Parallel bicycle alternatives may all
+appear in that footprint when they are independently legal and deliberately
+included in the custom subgraph.

@@ -37,7 +37,7 @@ assert.deepEqual(
 );
 assert.deepEqual(
   candidates.junctions.find((junction) => junction.roundaboutId === "osm-ways:1024609346").segmentIds,
-  [74, 96, 328, 329, 330, 337, 339],
+  [74, 96, 330, 337, 339, 364],
 );
 assert.deepEqual(
   candidates.junctions.find((junction) => junction.roundaboutId === "osm-ways:1230594681").segmentIds,
@@ -49,4 +49,33 @@ const fieldJunctionRun = fieldReverseRefs.slice(8, 13).map(({ edgeId, direction 
 assert.deepEqual(fieldJunctionRun, [
   "e841155413_1:forward", "e841155426_5:forward", "e841155426_6:forward", "e841155426_7:forward", "e841155417_1:forward",
 ]);
-console.log("current-data Rager and #358 junction regressions ok");
+
+const horshatTal = candidates.junctions.find((junction) => junction.id === "junction-custom-mrujg8lc");
+assert.equal(horshatTal.name, "צומת חורשת טל");
+assert.equal(horshatTal.publication.status, "published");
+assert.equal(horshatTal.publication.canPublish, true);
+assert.deepEqual(horshatTal.internalEdgeIds, [
+  "manual-74-mrufpgtj",
+  "manual-74-mrufztbk",
+  "manual-74-mrug3gou",
+]);
+assert.deepEqual(
+  horshatTal.armAttachments.map(({ segmentId, endpoint }) => ({ segmentId, endpoint })),
+  [
+    { segmentId: 330, endpoint: "b" },
+    { segmentId: 337, endpoint: "b" },
+    { segmentId: 339, endpoint: "b" },
+    { segmentId: 364, endpoint: "b" },
+  ],
+);
+assert.equal(horshatTal.summary.legalMovements, 4);
+assert.equal(horshatTal.summary.unavailableMovements, 0);
+for (const [segmentId, endpoint] of [[330, "b"], [337, "b"], [339, "b"], [364, "b"]]) {
+  assert.equal(
+    overlay.segments[String(segmentId)].junctionAttachments?.[endpoint]?.junctionId,
+    "junction-custom-mrujg8lc",
+  );
+}
+assert.equal(overlay.segments["363"].junctionAttachments, undefined);
+
+console.log("current-data Rager, #358, and Horshat Tal junction regressions ok");
