@@ -64,4 +64,17 @@ assert.deepEqual(
   [63, 174],
 );
 
+const activeRows = buildNetworkIssueRows(
+  { segments: { "62": symmetric, "999": gap } },
+  {
+    activeSegments: [
+      { segmentId: 62, segmentName: "Simple" },
+      { segmentId: 366, segmentName: "Split child" },
+    ],
+  },
+);
+assert.deepEqual(activeRows.map((row) => row.segmentId), [366]);
+assert.equal(activeRows[0].status.key, "blocked");
+assert.equal(activeRows[0].status.summary, "No base-edge path");
+
 console.log("Network authoring status model ok");

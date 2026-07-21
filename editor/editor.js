@@ -1423,6 +1423,13 @@ function activeSegmentIdSet() {
   );
 }
 
+function activeSegmentDescriptors() {
+  return state.activeFeatures.map(({ feature }) => ({
+    segmentId: Number(feature.properties?.id),
+    segmentName: featureName(feature),
+  }));
+}
+
 function isActiveSegmentId(segmentId) {
   return activeSegmentIdSet().has(Number(segmentId));
 }
@@ -1511,6 +1518,7 @@ function collectIssueSegmentIds() {
     const ids = new Set(
       buildNetworkIssueRows(state.directionReview.overlay, {
         transientBySegmentId: state.authoring.transientIssues,
+        activeSegments: state.source ? activeSegmentDescriptors() : null,
       }).map((row) => row.segmentId),
     );
     for (const segmentId of state.authoring.transientIssues.keys()) {
@@ -2342,6 +2350,22 @@ function cwOverlayNetworkCollection() {
       compatibilityMapping: mapping,
     });
     const segmentName = directionSegment?.segmentName || mapping?.segmentName || featureName(segment);
+    if (renderMapping.edgeRefs.length === 0 && segment.geometry?.type === "LineString") {
+      features.push({
+        ...segment,
+        id: `cw-overlay-unresolved-${segmentId}`,
+        properties: {
+          ...(segment.properties || {}),
+          id: `cw-overlay-unresolved-${segmentId}`,
+          overlaySegmentId: segmentId,
+          overlaySegmentName: segmentName,
+          overlaySource: "source-unresolved",
+          overlayUnresolved: true,
+          roadType: segment.properties?.roadType || "paved",
+        },
+      });
+      continue;
+    }
     for (const [edgeIndex, edgeRef] of renderMapping.edgeRefs.entries()) {
       const edgeId = String(edgeRef?.edgeId || "");
       const edgeFeature = graphFeatureForEdgeId(edgeId);
@@ -2524,6 +2548,7 @@ function updateWorkspaceLayerVisibility() {
     Boolean(directionReviewSegment()) &&
     !state.editingOverlayEdges;
   const showRoundabouts = state.workspaceMode === "roundabouts";
+  const showCwNetwork = showOverlay || showRoundabouts || (showBaseEdit && state.networkContextVisible);
 
   setLayerVisibility("segments-layer", showSegments);
   setLayerVisibility("selected-segment", showSelectedSegment);
@@ -2581,8 +2606,9 @@ function updateWorkspaceLayerVisibility() {
   }
   setLayerVisibility(
     "cw-overlay-network-layer",
-    showOverlay || (showBaseEdit && state.networkContextVisible),
+    showCwNetwork,
   );
+  setLayerVisibility("cw-overlay-network-unresolved-layer", showCwNetwork);
   setLayerVisibility(
     "cw-overlay-network-hit-layer",
     showOverlay && !editingPhysicalEdges,
@@ -7100,7 +7126,9 @@ function renderBaseOverlayPanel() {
 }
 
 function directionReviewQueueRows() {
-  return buildDirectionReviewIssueRows(state.directionReview.overlay);
+  return buildDirectionReviewIssueRows(state.directionReview.overlay, {
+    activeSegments: state.source ? activeSegmentDescriptors() : null,
+  });
 }
 
 function filteredDirectionReviewQueueRows() {
@@ -12354,6 +12382,7 @@ async function addMapLayers() {
       id: "cw-overlay-network-layer",
       type: "line",
       source: "cw-overlay-network",
+      filter: ["!=", ["get", "overlayUnresolved"], true],
       layout: {
         "line-join": "round",
         "line-cap": "round",
@@ -12373,6 +12402,26 @@ async function addMapLayers() {
         ],
         "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.8, 14, 5.4, 16, 7.4],
         "line-opacity": 0.82,
+      },
+    });
+  }
+
+  if (!map.getLayer("cw-overlay-network-unresolved-layer")) {
+    map.addLayer({
+      id: "cw-overlay-network-unresolved-layer",
+      type: "line",
+      source: "cw-overlay-network",
+      filter: ["==", ["get", "overlayUnresolved"], true],
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+        visibility: "none",
+      },
+      paint: {
+        "line-color": "#dc2626",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4.5, 14, 6.5, 16, 8.5],
+        "line-opacity": 0.9,
+        "line-dasharray": [2, 1.5],
       },
     });
   }

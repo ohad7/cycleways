@@ -7469,6 +7469,374 @@
           ]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-365-mrusqltb",
+      "properties": {
+        "id": "manual-365-mrusqltb",
+        "manualEdgeId": "manual-365-mrusqltb",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T15:16:29.039Z",
+        "updatedAt": "2026-07-21T15:16:29.039Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 365,
+        "linkedSegmentName": "פארק הזהב קריית שמונה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.576841,
+            33.199866
+          ],
+          [
+            35.576828,
+            33.199898
+          ],
+          [
+            35.576826,
+            33.199956
+          ],
+          [
+            35.576822,
+            33.200039
+          ],
+          [
+            35.576811,
+            33.20012
+          ],
+          [
+            35.57679,
+            33.200188
+          ],
+          [
+            35.576773,
+            33.200273
+          ],
+          [
+            35.576697,
+            33.200398
+          ],
+          [
+            35.576616,
+            33.200486
+          ],
+          [
+            35.576544,
+            33.20063
+          ],
+          [
+            35.576467,
+            33.200849
+          ],
+          [
+            35.576408,
+            33.201085
+          ],
+          [
+            35.576236,
+            33.201824
+          ],
+          [
+            35.576116,
+            33.202357
+          ],
+          [
+            35.576105,
+            33.202416
+          ],
+          [
+            35.576054,
+            33.202622
+          ],
+          [
+            35.575962,
+            33.203134
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-365-mrusre1x-a-mrusrqu6",
+      "properties": {
+        "id": "manual-manual-365-mrusre1x-a-mrusrqu6",
+        "manualEdgeId": "manual-manual-365-mrusre1x-a-mrusrqu6",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T15:17:05.637Z",
+        "updatedAt": "2026-07-21T15:17:22.206Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 365,
+        "linkedSegmentName": "פארק הזהב קריית שמונה",
+        "splitFrom": "manual-365-mrusre1x"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.575962,
+            33.203134
+          ],
+          [
+            35.575875,
+            33.203119
+          ],
+          [
+            35.575818,
+            33.203089
+          ],
+          [
+            35.575768,
+            33.203129
+          ],
+          [
+            35.575688,
+            33.203156
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-365-mrusre1x-b-mrusrqu6",
+      "properties": {
+        "id": "manual-manual-365-mrusre1x-b-mrusrqu6",
+        "manualEdgeId": "manual-manual-365-mrusre1x-b-mrusrqu6",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T15:17:05.637Z",
+        "updatedAt": "2026-07-21T15:17:22.206Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 365,
+        "linkedSegmentName": "פארק הזהב קריית שמונה",
+        "splitFrom": "manual-365-mrusre1x"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.575688,
+            33.203156
+          ],
+          [
+            35.575582,
+            33.20314
+          ],
+          [
+            35.575488,
+            33.203144
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-580466865-mrust40y-a-mrust8vf",
+      "properties": {
+        "id": "manual-manual-osm-580466865-mrust40y-a-mrust8vf",
+        "manualEdgeId": "manual-manual-osm-580466865-mrust40y-a-mrust8vf",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e580466865_1",
+        "copiedFromOsmWayId": 580466865,
+        "highway": "residential",
+        "osmRouteClass": "local_road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T15:18:25.954Z",
+        "updatedAt": "2026-07-21T15:18:32.234Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e580466865_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-580466865-mrust40y"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574834,
+            33.207974
+          ],
+          [
+            35.574911,
+            33.207992
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-osm-580466865-mrust40y-b-mrust8vf",
+      "properties": {
+        "id": "manual-manual-osm-580466865-mrust40y-b-mrust8vf",
+        "manualEdgeId": "manual-manual-osm-580466865-mrust40y-b-mrust8vf",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e580466865_1",
+        "copiedFromOsmWayId": 580466865,
+        "highway": "residential",
+        "osmRouteClass": "local_road",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T15:18:25.954Z",
+        "updatedAt": "2026-07-21T15:18:32.234Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e580466865_1",
+          "origin": "inherited-osm-policy"
+        },
+        "splitFrom": "manual-osm-580466865-mrust40y"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574911,
+            33.207992
+          ],
+          [
+            35.575092,
+            33.20803
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-365-mrusv1vh",
+      "properties": {
+        "id": "manual-365-mrusv1vh",
+        "manualEdgeId": "manual-365-mrusv1vh",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T15:19:56.477Z",
+        "updatedAt": "2026-07-21T15:19:56.477Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 365,
+        "linkedSegmentName": "פארק הזהב קריית שמונה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574906,
+            33.207991
+          ],
+          [
+            35.57493,
+            33.207925
+          ],
+          [
+            35.574973,
+            33.207796
+          ],
+          [
+            35.575015,
+            33.207583
+          ],
+          [
+            35.575048,
+            33.207351
+          ],
+          [
+            35.575107,
+            33.207031
+          ],
+          [
+            35.575176,
+            33.206606
+          ],
+          [
+            35.575245,
+            33.206286
+          ],
+          [
+            35.575313,
+            33.205932
+          ],
+          [
+            35.575386,
+            33.205594
+          ],
+          [
+            35.575445,
+            33.205252
+          ],
+          [
+            35.575551,
+            33.204803
+          ],
+          [
+            35.575617,
+            33.204535
+          ],
+          [
+            35.575693,
+            33.204153
+          ],
+          [
+            35.575793,
+            33.203747
+          ],
+          [
+            35.575881,
+            33.203469
+          ],
+          [
+            35.575962,
+            33.203134
+          ]
+        ]
+      }
     }
   ]
 }

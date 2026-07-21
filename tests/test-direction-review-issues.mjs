@@ -96,6 +96,26 @@ assert.deepEqual(
   [5],
 );
 
+const activeRows = buildDirectionReviewIssueRows(overlay, {
+  activeSegments: [
+    { segmentId: 1, segmentName: "Accepted road" },
+    { segmentId: 366, segmentName: "Split child" },
+  ],
+});
+assert.deepEqual(activeRows.map((row) => row.segmentId), [366, 1]);
+assert.deepEqual(
+  activeRows.find((row) => row.segmentId === 366),
+  {
+    segmentId: 366,
+    segmentName: "Split child",
+    classification: "unresolved",
+    resolved: false,
+    reasons: [],
+    blockingEdgeIds: [],
+    alignmentStatuses: { aToB: "unreviewed", bToA: "unreviewed" },
+  },
+);
+
 const evidence = buildDirectionReviewEvidenceRows(overlay);
 assert.deepEqual(evidence.map((row) => row.edgeId), ["manual-a", "manual-b"]);
 assert.equal(evidence[0].segmentCount, 2);

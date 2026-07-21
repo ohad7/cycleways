@@ -133,8 +133,36 @@ export function applyManualBidirectionalReview(
   };
 }
 
-export function buildDirectionReviewIssueRows(overlay) {
-  return Object.values(overlay?.segments || {})
+function activeSegmentDescriptor(value) {
+  const segmentId = Number(value?.segmentId ?? value?.properties?.id ?? value?.id);
+  if (!Number.isInteger(segmentId)) return null;
+  return {
+    segmentId,
+    segmentName: String(
+      value?.segmentName ?? value?.properties?.name ?? value?.name ?? segmentId,
+    ),
+  };
+}
+
+export function buildDirectionReviewIssueRows(overlay, { activeSegments = null } = {}) {
+  const overlaySegments = new Map(
+    Object.values(overlay?.segments || {}).map((segment) => [Number(segment.segmentId), segment]),
+  );
+  const segments = Array.isArray(activeSegments)
+    ? activeSegments
+        .map(activeSegmentDescriptor)
+        .filter(Boolean)
+        .map((descriptor) => overlaySegments.get(descriptor.segmentId) || {
+          segmentId: descriptor.segmentId,
+          segmentName: descriptor.segmentName,
+          lifecycleStatus: "active",
+          navigable: true,
+          alignments: {},
+          migration: { classification: "unresolved" },
+        })
+    : [...overlaySegments.values()];
+
+  return segments
     .filter((segment) =>
       segment?.navigable !== false &&
       !["deprecated", "legacy", "draft"].includes(String(segment?.lifecycleStatus || "active")),

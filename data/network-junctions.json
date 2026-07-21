@@ -32,6 +32,32 @@
       "topologyFingerprint": "sha256:93d2272524151234f4ffed129f227b116ac5b3445641c1c3c08c564a676f22e9",
       "updatedAt": "2026-07-21T11:06:45.200Z",
       "reviewer": "ohad"
+    },
+    "junction-custom-mrusibww": {
+      "id": "junction-custom-mrusibww",
+      "name": "ככר איזור תעשייה דרומי",
+      "status": "published",
+      "navigationKind": "roundabout",
+      "source": {
+        "type": "custom",
+        "internalEdgeIds": [
+          "manual-manual-osm-1189433249-mrurjvvd-b-mrurkzh4",
+          "manual-osm-1189433249-mrurmojo",
+          "manual-manual-osm-1189433249-mruro462-a-mrurob6o",
+          "manual-manual-62-mrurqq42-a-mrurz090",
+          "manual-manual-62-mrurqq42-b-mrurz090",
+          "manual-62-mrurtw0g",
+          "manual-62-mruruu54",
+          "manual-manual-62-mrurwn62-b-mrus1j5b",
+          "manual-manual-62-mrurwn62-a-mrus1j5b",
+          "manual-manual-62-mrurw4aw-b-mrus26hs",
+          "manual-manual-62-mrurw4aw-a-mrus26hs"
+        ]
+      },
+      "excludedPortIds": [],
+      "topologyFingerprint": "sha256:e2e9ac4db8a274bf9cab91fe35e712a8c9482daf9ba8d42c053e70560f72fcf1",
+      "updatedAt": "2026-07-21T15:11:51.293Z",
+      "reviewer": "ohad"
     }
   }
 }

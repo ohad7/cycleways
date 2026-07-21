@@ -36,6 +36,10 @@ assert.match(
 );
 assert.match(editor, /persistNetworkViewPreferences/);
 assert.match(editor, /buildNetworkIssueRows/);
+assert.match(editor, /activeSegments: state\.source \? activeSegmentDescriptors\(\) : null/);
+assert.match(editor, /overlaySource: "source-unresolved"/);
+assert.match(editor, /cw-overlay-network-unresolved-layer/);
+assert.match(editor, /const showCwNetwork = showOverlay \|\| showRoundabouts/);
 assert.match(editor, /isCurrentV1Mapping/);
 assert.match(
   editor,

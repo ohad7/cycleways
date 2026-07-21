@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T15:05:13.799Z",
+  "updatedAt": "2026-07-21T15:48:11.022Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -8336,335 +8336,6 @@
         }
       ],
       "updatedAt": "2026-05-19T06:35:11.496Z"
-    },
-    "143": {
-      "segmentId": 143,
-      "segmentName": "פארק הזהב קריית שמונה",
-      "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
-      "confidence": "high",
-      "coverageRatio": 1,
-      "avgDistanceMeters": 0.97,
-      "gapCount": 0,
-      "failureClass": "accepted",
-      "edgeRefs": [
-        {
-          "edgeId": "e232568775_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 0,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 232568775
-        },
-        {
-          "edgeId": "e232568775_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 232568775
-        },
-        {
-          "edgeId": "e1200773862_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1200773862
-        },
-        {
-          "edgeId": "e1200773863_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 3,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1200773863
-        },
-        {
-          "edgeId": "e580480434_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580480434
-        },
-        {
-          "edgeId": "e580480452_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580480452
-        },
-        {
-          "edgeId": "e580480452_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 6,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580480452
-        },
-        {
-          "edgeId": "e1143185478_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 7,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1143185478
-        },
-        {
-          "edgeId": "e1200773860_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 8,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1200773860
-        },
-        {
-          "edgeId": "e580466865_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 9,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580466865
-        },
-        {
-          "edgeId": "e580466865_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 10,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580466865
-        },
-        {
-          "edgeId": "e1200773859_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 11,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1200773859
-        },
-        {
-          "edgeId": "e1143185477_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 12,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 1143185477
-        },
-        {
-          "edgeId": "e580474263_3",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 13,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580474263
-        },
-        {
-          "edgeId": "e580474263_2",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 14,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580474263
-        },
-        {
-          "edgeId": "e580474263_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 15,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580474263
-        },
-        {
-          "edgeId": "e580474330_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 16,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580474330
-        },
-        {
-          "edgeId": "e580474313_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 17,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580474313
-        },
-        {
-          "edgeId": "e580457032_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 18,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580457032
-        },
-        {
-          "edgeId": "e356713688_1",
-          "source": "osm",
-          "direction": "reverse",
-          "sequenceIndex": 19,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 356713688
-        },
-        {
-          "edgeId": "e579970643_3",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 20,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 579970643
-        },
-        {
-          "edgeId": "e579970643_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 21,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 579970643
-        },
-        {
-          "edgeId": "e580457041_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 22,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580457041
-        },
-        {
-          "edgeId": "e580457040_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 23,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580457040
-        },
-        {
-          "edgeId": "e580457040_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 24,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580457040
-        },
-        {
-          "edgeId": "e580457040_3",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 25,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580457040
-        },
-        {
-          "edgeId": "e580457040_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 26,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580457040
-        },
-        {
-          "edgeId": "e580457040_5",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 27,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580457040
-        },
-        {
-          "edgeId": "e580457040_6",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 28,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 580457040
-        },
-        {
-          "edgeId": "manual-manual-osm-356713703-mrurrauz-a-mrurrfpo",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 29,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-356713703-mrurrauz-a-mrurrfpo"
-        },
-        {
-          "edgeId": "manual-manual-osm-356713703-mrurrauz-b-mrurrfpo",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 30,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-manual-osm-356713703-mrurrauz-b-mrurrfpo"
-        },
-        {
-          "edgeId": "e228885122_10",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 31,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 228885122
-        },
-        {
-          "edgeId": "manual-osm-228885122-mpd4ezyp",
-          "source": "manual",
-          "direction": "forward",
-          "sequenceIndex": 32,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "manualEdgeId": "manual-osm-228885122-mpd4ezyp"
-        },
-        {
-          "edgeId": "e228885122_2",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 33,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 228885122
-        },
-        {
-          "edgeId": "e511559202_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 34,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 511559202
-        }
-      ],
-      "updatedAt": "2026-07-21T14:49:08.172Z"
     },
     "144": {
       "segmentId": 144,
@@ -19344,6 +19015,278 @@
       "gapCount": 0,
       "failureClass": null,
       "updatedAt": "2026-07-21T10:32:17.350Z"
+    },
+    "365": {
+      "segmentId": 365,
+      "segmentName": "שביל האיצטדיון",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.83,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e232568775_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 232568775
+        },
+        {
+          "edgeId": "e232568775_2",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 232568775
+        },
+        {
+          "edgeId": "e1200773862_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200773862
+        },
+        {
+          "edgeId": "e1200773863_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200773863
+        },
+        {
+          "edgeId": "e580480434_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580480434
+        },
+        {
+          "edgeId": "e580480452_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580480452
+        },
+        {
+          "edgeId": "e580480452_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580480452
+        },
+        {
+          "edgeId": "e1143185478_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1143185478
+        },
+        {
+          "edgeId": "e1200773860_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 8,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200773860
+        },
+        {
+          "edgeId": "e580466865_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 9,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580466865
+        },
+        {
+          "edgeId": "manual-manual-osm-580466865-mrust40y-b-mrust8vf",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 10,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-580466865-mrust40y-b-mrust8vf"
+        },
+        {
+          "edgeId": "manual-manual-osm-580466865-mrust40y-a-mrust8vf",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 11,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-osm-580466865-mrust40y-a-mrust8vf"
+        },
+        {
+          "edgeId": "e1200773859_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 12,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1200773859
+        }
+      ],
+      "updatedAt": "2026-07-21T15:47:07.373Z"
+    },
+    "367": {
+      "segmentId": 367,
+      "segmentName": "פארק הזהב קריית שמונה",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 1.01,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "e1143185477_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 1143185477
+        },
+        {
+          "edgeId": "e580474263_3",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 1,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580474263
+        },
+        {
+          "edgeId": "e580474263_2",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 2,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580474263
+        },
+        {
+          "edgeId": "e580474263_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 3,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580474263
+        },
+        {
+          "edgeId": "e580474330_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 4,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580474330
+        },
+        {
+          "edgeId": "e580474313_1",
+          "source": "osm",
+          "direction": "forward",
+          "sequenceIndex": 5,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580474313
+        },
+        {
+          "edgeId": "e580457032_1",
+          "source": "osm",
+          "direction": "reverse",
+          "sequenceIndex": 6,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "osmWayId": 580457032
+        },
+        {
+          "edgeId": "manual-manual-365-mrusre1x-b-mrusrqu6",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 7,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-365-mrusre1x-b-mrusrqu6"
+        },
+        {
+          "edgeId": "manual-manual-365-mrusre1x-a-mrusrqu6",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 8,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-manual-365-mrusre1x-a-mrusrqu6"
+        }
+      ],
+      "updatedAt": "2026-07-21T15:47:18.804Z"
+    },
+    "368": {
+      "segmentId": 368,
+      "segmentName": "שביל אופניים רחוב הירדן דרום",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0.31,
+      "gapCount": 0,
+      "failureClass": "accepted",
+      "edgeRefs": [
+        {
+          "edgeId": "manual-365-mrusqltb",
+          "source": "manual",
+          "direction": "reverse",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-365-mrusqltb"
+        }
+      ],
+      "updatedAt": "2026-07-21T15:43:16.652Z"
+    },
+    "369": {
+      "segmentId": 369,
+      "segmentName": "רחוב הירדן מקטע מרכזי",
+      "status": "accepted_edge_set",
+      "source": "edge_pick",
+      "confidence": "manual",
+      "coverageRatio": 1,
+      "avgDistanceMeters": null,
+      "gapCount": 0,
+      "failureClass": null,
+      "edgeRefs": [
+        {
+          "edgeId": "manual-365-mrusv1vh",
+          "source": "manual",
+          "direction": "forward",
+          "sequenceIndex": 0,
+          "fromFraction": 0,
+          "toFraction": 1,
+          "manualEdgeId": "manual-365-mrusv1vh"
+        }
+      ],
+      "updatedAt": "2026-07-21T15:48:11.022Z"
     }
   }
 }

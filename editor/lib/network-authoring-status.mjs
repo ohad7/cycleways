@@ -168,15 +168,48 @@ export function networkSegmentNeedsDirections(segment, options) {
   return networkSegmentStatus(segment, options).directional;
 }
 
-export function buildNetworkIssueRows(overlay, { transientBySegmentId = new Map() } = {}) {
-  return Object.values(overlay?.segments || {})
-    .map((segment) => {
+function activeSegmentDescriptor(value) {
+  const segmentId = Number(value?.segmentId ?? value?.properties?.id ?? value?.id);
+  if (!Number.isInteger(segmentId)) return null;
+  return {
+    segmentId,
+    segmentName: String(
+      value?.segmentName ?? value?.properties?.name ?? value?.name ?? segmentId,
+    ),
+  };
+}
+
+export function buildNetworkIssueRows(
+  overlay,
+  { transientBySegmentId = new Map(), activeSegments = null } = {},
+) {
+  const overlaySegments = new Map(
+    Object.values(overlay?.segments || {}).map((segment) => [Number(segment.segmentId), segment]),
+  );
+  const segments = Array.isArray(activeSegments)
+    ? activeSegments
+        .map(activeSegmentDescriptor)
+        .filter(Boolean)
+        .map((descriptor) => ({
+          descriptor,
+          segment: overlaySegments.get(descriptor.segmentId) || null,
+        }))
+    : [...overlaySegments.values()].map((segment) => ({
+        descriptor: {
+          segmentId: Number(segment.segmentId),
+          segmentName: String(segment.segmentName || segment.segmentId),
+        },
+        segment,
+      }));
+
+  return segments
+    .map(({ descriptor, segment }) => {
       const status = networkSegmentStatus(segment, {
-        transientIssue: transientBySegmentId.get(Number(segment.segmentId)) || null,
+        transientIssue: transientBySegmentId.get(descriptor.segmentId) || null,
       });
       return {
-        segmentId: Number(segment.segmentId),
-        segmentName: String(segment.segmentName || segment.segmentId),
+        segmentId: descriptor.segmentId,
+        segmentName: String(segment?.segmentName || descriptor.segmentName),
         status,
       };
     })
