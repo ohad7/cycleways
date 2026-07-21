@@ -5086,15 +5086,15 @@
     },
     {
       "type": "Feature",
-      "id": "manual-174-mrnqv5lm",
+      "id": "manual-manual-174-mrnqv5lm-a-mrv460yh",
       "properties": {
-        "id": "manual-174-mrnqv5lm",
-        "manualEdgeId": "manual-174-mrnqv5lm",
+        "id": "manual-manual-174-mrnqv5lm-a-mrv460yh",
+        "manualEdgeId": "manual-manual-174-mrnqv5lm-a-mrv460yh",
         "source": "manual",
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-07-16T16:49:38.842Z",
-        "updatedAt": "2026-07-16T18:36:52.000Z",
+        "updatedAt": "2026-07-21T20:36:24.281Z",
         "linkedSegmentId": 352,
         "linkedSegmentName": "שביל אופניים יובלים",
         "bicycleTraversal": {
@@ -5104,7 +5104,8 @@
           "reviewer": "ohad serfaty",
           "reviewedAt": "2026-07-16",
           "rationale": "yuvalim"
-        }
+        },
+        "splitFrom": "manual-174-mrnqv5lm"
       },
       "geometry": {
         "type": "LineString",
@@ -5314,8 +5315,41 @@
             33.22212
           ],
           [
-            35.574942,
-            33.222148
+            35.574967,
+            33.222134
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-174-mrnqv5lm-b-mrv460yh",
+      "properties": {
+        "id": "manual-manual-174-mrnqv5lm-b-mrv460yh",
+        "manualEdgeId": "manual-manual-174-mrnqv5lm-b-mrv460yh",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-16T16:49:38.842Z",
+        "updatedAt": "2026-07-21T20:36:24.281Z",
+        "linkedSegmentId": 352,
+        "linkedSegmentName": "שביל אופניים יובלים",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad serfaty",
+          "reviewedAt": "2026-07-16",
+          "rationale": "yuvalim"
+        },
+        "splitFrom": "manual-174-mrnqv5lm"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574967,
+            33.222134
           ],
           [
             35.57475,
@@ -5334,13 +5368,16 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-07-20T16:03:01.679Z",
-        "updatedAt": "2026-07-20T16:03:21.664Z",
+        "updatedAt": "2026-07-21T20:56:25.794Z",
         "linkedSegmentId": 361,
         "linkedSegmentName": "רחוב הנרייטה סאלד",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "manual-361-mrteylyn"
         }
       },
       "geometry": {
@@ -8127,6 +8164,522 @@
           [
             35.572438,
             33.045974
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-185-mrv47qe6-a-mrv4h25z",
+      "properties": {
+        "id": "manual-manual-185-mrv47qe6-a-mrv4h25z",
+        "manualEdgeId": "manual-manual-185-mrv47qe6-a-mrv4h25z",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T20:37:43.902Z",
+        "updatedAt": "2026-07-21T20:44:59.063Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 185,
+        "linkedSegmentName": "רחוב הנשיא קריית שמונה",
+        "splitFrom": "manual-185-mrv47qe6"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574967,
+            33.222134
+          ],
+          [
+            35.574896,
+            33.22201
+          ],
+          [
+            35.57481,
+            33.221909
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-manual-185-mrv47qe6-b-mrv4h25z",
+      "properties": {
+        "id": "manual-manual-185-mrv47qe6-b-mrv4h25z",
+        "manualEdgeId": "manual-manual-185-mrv47qe6-b-mrv4h25z",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T20:37:43.902Z",
+        "updatedAt": "2026-07-21T20:44:59.063Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 185,
+        "linkedSegmentName": "רחוב הנשיא קריית שמונה",
+        "splitFrom": "manual-185-mrv47qe6"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.57481,
+            33.221909
+          ],
+          [
+            35.574837,
+            33.221823
+          ],
+          [
+            35.575034,
+            33.221836
+          ],
+          [
+            35.575301,
+            33.221864
+          ],
+          [
+            35.575597,
+            33.221911
+          ],
+          [
+            35.575752,
+            33.221952
+          ],
+          [
+            35.575845,
+            33.221968
+          ],
+          [
+            35.575912,
+            33.221949
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-140001014-mrv4ijnx",
+      "properties": {
+        "id": "manual-osm-140001014-mrv4ijnx",
+        "manualEdgeId": "manual-osm-140001014-mrv4ijnx",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e140001014_1",
+        "copiedFromOsmWayId": 140001014,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T20:46:08.397Z",
+        "updatedAt": "2026-07-21T20:47:58.141Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e140001014_1",
+          "origin": "inherited-osm-policy"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574698,
+            33.222281
+          ],
+          [
+            35.574685,
+            33.2223
+          ],
+          [
+            35.574667,
+            33.222349
+          ],
+          [
+            35.574651,
+            33.222403
+          ],
+          [
+            35.574651,
+            33.222475
+          ],
+          [
+            35.574678,
+            33.222578
+          ],
+          [
+            35.57479,
+            33.222793
+          ],
+          [
+            35.574898,
+            33.22296
+          ],
+          [
+            35.574962,
+            33.223058
+          ],
+          [
+            35.575037,
+            33.223157
+          ],
+          [
+            35.575182,
+            33.223323
+          ],
+          [
+            35.575386,
+            33.223588
+          ],
+          [
+            35.575918,
+            33.224346
+          ],
+          [
+            35.576329,
+            33.224953
+          ],
+          [
+            35.576859,
+            33.225853
+          ],
+          [
+            35.577024,
+            33.226049
+          ],
+          [
+            35.577427,
+            33.227806
+          ],
+          [
+            35.577607,
+            33.228901
+          ],
+          [
+            35.577715,
+            33.22912
+          ],
+          [
+            35.57768,
+            33.229495
+          ],
+          [
+            35.577767,
+            33.229766
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-164-mrv4jl1t",
+      "properties": {
+        "id": "manual-164-mrv4jl1t",
+        "manualEdgeId": "manual-164-mrv4jl1t",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T20:46:56.849Z",
+        "updatedAt": "2026-07-21T20:46:56.849Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 164,
+        "linkedSegmentName": "שביל תל חי"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574751,
+            33.222252
+          ],
+          [
+            35.574699,
+            33.222281
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-164-mrv4jz9e",
+      "properties": {
+        "id": "manual-164-mrv4jz9e",
+        "manualEdgeId": "manual-164-mrv4jz9e",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T20:47:15.266Z",
+        "updatedAt": "2026-07-21T20:47:15.266Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 164,
+        "linkedSegmentName": "שביל תל חי"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574699,
+            33.222281
+          ],
+          [
+            35.57453,
+            33.222066
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-164-mrv4knzf",
+      "properties": {
+        "id": "manual-164-mrv4knzf",
+        "manualEdgeId": "manual-164-mrv4knzf",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T20:47:47.307Z",
+        "updatedAt": "2026-07-21T20:47:47.307Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 164,
+        "linkedSegmentName": "שביל תל חי"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574811,
+            33.22191
+          ],
+          [
+            35.574529,
+            33.222066
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrv4s3cc",
+      "properties": {
+        "id": "manual-edge-mrv4s3cc",
+        "manualEdgeId": "manual-edge-mrv4s3cc",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-21T20:53:33.804Z",
+        "updatedAt": "2026-07-21T20:53:33.804Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.569593,
+            33.200761
+          ],
+          [
+            35.569626,
+            33.200963
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrv4serg",
+      "properties": {
+        "id": "manual-edge-mrv4serg",
+        "manualEdgeId": "manual-edge-mrv4serg",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-21T20:53:48.604Z",
+        "updatedAt": "2026-07-21T20:53:48.604Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.569626,
+            33.200962
+          ],
+          [
+            35.569338,
+            33.200977
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrv4t2tf",
+      "properties": {
+        "id": "manual-edge-mrv4t2tf",
+        "manualEdgeId": "manual-edge-mrv4t2tf",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-21T20:54:19.779Z",
+        "updatedAt": "2026-07-21T20:54:19.779Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.569344,
+            33.200769
+          ],
+          [
+            35.569339,
+            33.200977
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-edge-mrv4tvdz",
+      "properties": {
+        "id": "manual-edge-mrv4tvdz",
+        "manualEdgeId": "manual-edge-mrv4tvdz",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "createdAt": "2026-07-21T20:54:56.807Z",
+        "updatedAt": "2026-07-21T20:54:56.807Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.569339,
+            33.200976
+          ],
+          [
+            35.56929,
+            33.201014
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-334-mrv50njd",
+      "properties": {
+        "id": "manual-334-mrv50njd",
+        "manualEdgeId": "manual-334-mrv50njd",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T21:00:13.225Z",
+        "updatedAt": "2026-07-21T21:00:13.225Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-22",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 334,
+        "linkedSegmentName": "קיבוץ דפנה שביל המייסדים"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.640191,
+            33.227617
+          ],
+          [
+            35.64021,
+            33.227779
+          ],
+          [
+            35.640223,
+            33.22782
+          ],
+          [
+            35.640268,
+            33.22787
           ]
         ]
       }

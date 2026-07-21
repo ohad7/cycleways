@@ -72,6 +72,48 @@
       "topologyFingerprint": "sha256:6b39c6002f9e78713e39f119234f3d29960e41e17279420300c24151c3ae183c",
       "updatedAt": "2026-07-21T19:09:39.652Z",
       "reviewer": "ohad"
+    },
+    "junction-custom-mrv4nhe2": {
+      "id": "junction-custom-mrv4nhe2",
+      "name": "צומת מצודות",
+      "status": "published",
+      "navigationKind": "intersection",
+      "source": {
+        "type": "custom",
+        "internalEdgeIds": [
+          "manual-164-mrv4jz9e",
+          "manual-164-mrv4knzf",
+          "manual-manual-185-mrv47qe6-a-mrv4h25z",
+          "manual-manual-174-mrnqv5lm-b-mrv460yh",
+          "manual-164-mrv4jl1t"
+        ]
+      },
+      "excludedPortIds": [],
+      "topologyFingerprint": "sha256:5ae6e1ebf21bed7be9396cae1e0e8a3b4fcb1bddfe88cc285bfe59c767c9627c",
+      "updatedAt": "2026-07-21T20:51:17.153Z",
+      "reviewer": "ohad"
+    },
+    "junction-custom-mrv4x7um": {
+      "id": "junction-custom-mrv4x7um",
+      "name": "צומת יצחק שדה",
+      "status": "published",
+      "navigationKind": "intersection",
+      "source": {
+        "type": "custom",
+        "internalEdgeIds": [
+          "manual-361-mrteylyn",
+          "manual-edge-mrv4t2tf",
+          "manual-manual-146-mpe87zzf-b-mrtexxm7",
+          "manual-edge-mrv4tvdz",
+          "manual-edge-mrv4serg",
+          "manual-edge-mrv4s3cc",
+          "manual-manual-146-mpe87zzf-a-mrtexxm7"
+        ]
+      },
+      "excludedPortIds": [],
+      "topologyFingerprint": "sha256:f70bc0694c18a691e04881699a27c59bdc331294acb55c653a377381716811de",
+      "updatedAt": "2026-07-21T20:57:45.220Z",
+      "reviewer": "ohad"
     }
   }
 }

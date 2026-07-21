@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T20:07:50.739Z",
+  "updatedAt": "2026-07-21T20:52:12.378Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -9307,7 +9307,7 @@
       "segmentId": 164,
       "segmentName": "שביל תל חי",
       "status": "accepted_auto_match",
-      "source": "changed_queue_auto_match",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
       "avgDistanceMeters": 0.18,
@@ -9369,16 +9369,16 @@
           "osmWayId": 140001014
         },
         {
-          "edgeId": "e140001014_1",
-          "source": "osm",
+          "edgeId": "manual-osm-140001014-mrv4ijnx",
+          "source": "manual",
           "direction": "reverse",
           "sequenceIndex": 6,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 140001014
+          "manualEdgeId": "manual-osm-140001014-mrv4ijnx"
         }
       ],
-      "updatedAt": "2026-07-20T18:29:18.829Z"
+      "updatedAt": "2026-07-21T20:50:24.068Z"
     },
     "165": {
       "segmentId": 165,
@@ -10766,72 +10766,27 @@
       "segmentId": 185,
       "segmentName": "רחוב הנשיא קריית שמונה",
       "status": "accepted_auto_match",
-      "source": "reviewed_edge_set",
+      "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.28,
+      "avgDistanceMeters": 0.09,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "e635023598_1",
-          "source": "osm",
+          "edgeId": "manual-manual-185-mrv47qe6-b-mrv4h25z",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 635023598
-        },
-        {
-          "edgeId": "e178325846_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 1,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 178325846
-        },
-        {
-          "edgeId": "e635023597_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 2,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 635023597
-        },
-        {
-          "edgeId": "e635023596_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 3,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 635023596
-        },
-        {
-          "edgeId": "e635023601_4",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 4,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 635023601
-        },
-        {
-          "edgeId": "e579967756_1",
-          "source": "osm",
-          "direction": "forward",
-          "sequenceIndex": 5,
-          "fromFraction": 0,
-          "toFraction": 1,
-          "osmWayId": 579967756
+          "manualEdgeId": "manual-manual-185-mrv47qe6-b-mrv4h25z"
         },
         {
           "edgeId": "e579967764_1",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 6,
+          "sequenceIndex": 1,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 579967764
@@ -10840,7 +10795,7 @@
           "edgeId": "e579967764_2",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 7,
+          "sequenceIndex": 2,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 579967764
@@ -10849,7 +10804,7 @@
           "edgeId": "e579967764_3",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 8,
+          "sequenceIndex": 3,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 579967764
@@ -10858,13 +10813,13 @@
           "edgeId": "e579967764_4",
           "source": "osm",
           "direction": "forward",
-          "sequenceIndex": 9,
+          "sequenceIndex": 4,
           "fromFraction": 0,
           "toFraction": 1,
           "osmWayId": 579967764
         }
       ],
-      "updatedAt": "2026-05-20T14:14:46.036Z"
+      "updatedAt": "2026-07-21T20:50:44.803Z"
     },
     "186": {
       "segmentId": 186,
@@ -18393,26 +18348,25 @@
     "352": {
       "segmentId": 352,
       "segmentName": "שביל אופניים יובלים",
-      "source": "edge_pick",
-      "status": "accepted_edge_set",
+      "status": "accepted_auto_match",
+      "source": "v2_compatibility_projection",
+      "confidence": "high",
+      "coverageRatio": 1,
+      "avgDistanceMeters": 0,
+      "gapCount": 0,
+      "failureClass": "accepted",
       "edgeRefs": [
         {
-          "edgeId": "manual-174-mrnqv5lm",
+          "edgeId": "manual-manual-174-mrnqv5lm-a-mrv460yh",
           "source": "manual",
           "direction": "forward",
           "sequenceIndex": 0,
           "fromFraction": 0,
           "toFraction": 1,
-          "manualEdgeId": "manual-174-mrnqv5lm"
+          "manualEdgeId": "manual-manual-174-mrnqv5lm-a-mrv460yh"
         }
       ],
-      "confidence": "manual",
-      "coverageRatio": 1,
-      "avgDistanceMeters": null,
-      "gapCount": 0,
-      "failureClass": null,
-      "failureMessage": null,
-      "updatedAt": "2026-07-16T18:21:03.043Z"
+      "updatedAt": "2026-07-21T20:39:06.621Z"
     },
     "354": {
       "segmentId": 354,
@@ -18747,7 +18701,7 @@
       "source": "v2_compatibility_projection",
       "confidence": "high",
       "coverageRatio": 1,
-      "avgDistanceMeters": 0.76,
+      "avgDistanceMeters": 0.77,
       "gapCount": 0,
       "failureClass": "accepted",
       "edgeRefs": [
@@ -18788,7 +18742,7 @@
           "osmWayId": 1189433249
         }
       ],
-      "updatedAt": "2026-07-21T15:00:47.560Z"
+      "updatedAt": "2026-07-21T20:52:12.378Z"
     },
     "364": {
       "segmentId": 364,
