@@ -3,7 +3,7 @@
   "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
   "policyId": "il-bicycle-v1",
   "proposal": {
-    "authoringOverlayDigest": "8432cb93daac1d8ced77d04c32fe7e590de0823ab0596db11ec146b624fca265",
+    "authoringOverlayDigest": "823ad8f42dddd3770fae6062723ec773997c8285a42eb2082a16781b3297acd8",
     "nonAuthoritative": true,
     "source": "cw-base-overlay-v1",
     "sourceIndexDigest": "402e63dae845f3b29eabd7e5910eb5e43304c78d80efb66f83b4206a5990aa56",
@@ -37428,7 +37428,7 @@
         "sourceMappingStatus": "accepted_auto_match",
         "sourceSchemaVersion": 1
       },
-      "navigable": true,
+      "navigable": false,
       "segmentId": 328,
       "segmentName": "צומת חורשת טל",
       "sourceGeometryDigest": "2e27550df6639760e7a1ecb9411c9ac015ff1c696d3040fbef232e83301c9fec"
@@ -37537,7 +37537,7 @@
         "sourceMappingStatus": "accepted_auto_match",
         "sourceSchemaVersion": 1
       },
-      "navigable": true,
+      "navigable": false,
       "segmentId": 329,
       "segmentName": "רחבת כניסה מטעי דפנה",
       "sourceGeometryDigest": "3ff057d631cfdb332a0b975e55d1f2295af25db4ba1d25f53d97c3fb8073c94e"
@@ -37937,284 +37937,546 @@
     "334": {
       "alignments": {
         "aToB": {
-          "draft": {
-            "disposition": "needs_review",
-            "candidate": {
-              "kind": "manual-editor"
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "endpoint_zone_failure",
-                  "ok": false,
-                  "terminals": {
-                    "start": [
-                      35.6400183,
-                      33.230824
-                    ],
-                    "end": [
-                      35.6400586,
-                      33.2336755
-                    ]
-                  },
-                  "distances": {
-                    "start": 356.927071028486,
-                    "end": 0
-                  },
-                  "startZoneMeters": 30,
-                  "endZoneMeters": 30
-                }
-              ],
-              "traversalStates": {
-                "0:e627581046_2": "allowed",
-                "1:e627581046_3": "allowed",
-                "2:e1505032338_1": "allowed",
-                "3:e1217588030_1": "allowed",
-                "4:e1217588030_2": "allowed",
-                "5:e1217588030_3": "allowed",
-                "6:e1505032342_1": "allowed",
-                "7:e46704986_1": "allowed",
-                "8:e46704986_2": "allowed",
-                "9:e46704986_3": "allowed",
-                "10:e46704986_4": "allowed",
-                "11:e46704986_5": "allowed",
-                "12:e46704986_6": "allowed"
-              },
-              "policyPrecedence": [],
-              "terminals": {
-                "start": [
-                  35.6400183,
-                  33.230824
-                ],
-                "end": [
-                  35.6400586,
-                  33.2336755
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 356.927071028486,
-                "end": 0
-              }
-            },
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
                 {
+                  "edgeId": "manual-334-mrv50njd",
+                  "source": "manual",
                   "direction": "forward",
-                  "edgeId": "e627581046_2",
-                  "fromFraction": 0,
-                  "osmWayId": 627581046,
                   "sequenceIndex": 0,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1230594681_7",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e627581046_3",
-                  "fromFraction": 0,
-                  "osmWayId": 627581046,
                   "sequenceIndex": 1,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1230594681_8",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e1505032338_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1505032338,
                   "sequenceIndex": 2,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1230594681_1",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e1217588030_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1217588030,
                   "sequenceIndex": 3,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1230594681_2",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e1217588030_2",
-                  "fromFraction": 0,
-                  "osmWayId": 1217588030,
                   "sequenceIndex": 4,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1231893593_1",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e1217588030_3",
-                  "fromFraction": 0,
-                  "osmWayId": 1217588030,
                   "sequenceIndex": 5,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1024904307_1",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e1505032342_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1505032342,
                   "sequenceIndex": 6,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1024904307_2",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e46704986_1",
-                  "fromFraction": 0,
-                  "osmWayId": 46704986,
                   "sequenceIndex": 7,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1034146154_1",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e46704986_2",
-                  "fromFraction": 0,
-                  "osmWayId": 46704986,
                   "sequenceIndex": 8,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e1034146154_2",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e46704986_3",
-                  "fromFraction": 0,
-                  "osmWayId": 46704986,
                   "sequenceIndex": 9,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e46704981_8",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e46704986_4",
-                  "fromFraction": 0,
-                  "osmWayId": 46704986,
                   "sequenceIndex": 10,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
+                  "edgeId": "e46704981_9",
+                  "source": "osm",
                   "direction": "forward",
-                  "edgeId": "e46704986_5",
-                  "fromFraction": 0,
-                  "osmWayId": 46704986,
                   "sequenceIndex": 11,
-                  "source": "osm",
+                  "fromFraction": 0,
                   "toFraction": 1
                 },
                 {
-                  "direction": "forward",
-                  "edgeId": "e46704986_6",
-                  "fromFraction": 0,
-                  "osmWayId": 46704986,
-                  "sequenceIndex": 12,
+                  "edgeId": "e46704981_1",
                   "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 12,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704981_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 13,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1034146157_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 14,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704982_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 15,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704982_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 16,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704982_3",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 17,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e627581046_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 18,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e627581046_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 19,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e627581046_3",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 20,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1505032338_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 21,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1217588030_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 22,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1217588030_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 23,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1217588030_3",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 24,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1505032342_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 25,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704986_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 26,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704986_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 27,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704986_3",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 28,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704986_4",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 29,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704986_5",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 30,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704986_6",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 31,
+                  "fromFraction": 0,
                   "toFraction": 1
                 }
               ]
             },
-            "mappingDigest": "0248091fc0c5696f21e2c64119d95e3cbb952a0822448d89c69f530e2caa81d4"
-          },
-          "published": null
+            "mappingDigest": "484457a63c4adaa04e59febaeb8014299c797c1ba14ed5d874b60928b5645c1f",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-22",
+              "batchId": "direction-review-2026-07-22",
+              "rationale": "Curator-requested reconstruction using manual-334-mrv50njd and legal traversal through all three intersections",
+              "graphDigest": "14639cd64dd77a9973a01c8f185dee27764f6496304e4fbf11a8eda8b604caac",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "98d2e23bae19914206a8844130553f4d4ac9245ff759539d73fb9e5c484a5db2",
+              "mappingDigest": "484457a63c4adaa04e59febaeb8014299c797c1ba14ed5d874b60928b5645c1f",
+              "evidenceDigest": "bef2ba887ee357b58860b4760d65beb62e9c75dbee25d51b6abd48b950b110c5"
+            }
+          }
         },
         "bToA": {
-          "draft": {
-            "candidate": {
-              "classification": "invalid_existing",
-              "kind": "opposite-alignment-required"
-            },
-            "disposition": "needs_review",
-            "validation": {
-              "policyPrecedence": [],
-              "reasons": [
+          "draft": null,
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
                 {
-                  "code": "non_allowed_traversal",
+                  "edgeId": "e46704986_6",
+                  "source": "osm",
                   "direction": "reverse",
-                  "edgeId": "e1505032342_1",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1
                 },
                 {
-                  "code": "non_allowed_traversal",
+                  "edgeId": "e46704986_5",
+                  "source": "osm",
                   "direction": "reverse",
-                  "edgeId": "e1217588030_3",
-                  "reason": "osm-roundabout-implied-oneway",
-                  "state": "prohibited"
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1
                 },
                 {
-                  "code": "non_allowed_traversal",
+                  "edgeId": "e46704986_4",
+                  "source": "osm",
                   "direction": "reverse",
-                  "edgeId": "e1217588030_2",
-                  "reason": "osm-roundabout-implied-oneway",
-                  "state": "prohibited"
+                  "sequenceIndex": 2,
+                  "fromFraction": 0,
+                  "toFraction": 1
                 },
                 {
-                  "code": "non_allowed_traversal",
+                  "edgeId": "e46704986_3",
+                  "source": "osm",
                   "direction": "reverse",
-                  "edgeId": "e1217588030_1",
-                  "reason": "osm-roundabout-implied-oneway",
-                  "state": "prohibited"
+                  "sequenceIndex": 3,
+                  "fromFraction": 0,
+                  "toFraction": 1
                 },
                 {
-                  "code": "non_allowed_traversal",
+                  "edgeId": "e46704986_2",
+                  "source": "osm",
                   "direction": "reverse",
-                  "edgeId": "e1505032338_1",
-                  "reason": "osm-oneway",
-                  "state": "prohibited"
+                  "sequenceIndex": 4,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704986_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 5,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1505032343_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 6,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1217588030_5",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 7,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1217588030_6",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 8,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1217588030_7",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 9,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1505032341_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 10,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1505032341_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 11,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e627581046_3",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 12,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e627581046_2",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 13,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e627581046_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 14,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704982_3",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 15,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704982_2",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 16,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704982_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 17,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1034146158_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 18,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704981_4",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 19,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704981_5",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 20,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e46704981_6",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 21,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1034146153_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 22,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1024904307_2",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 23,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1024904307_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 24,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1231893592_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 25,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1230594681_4",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 26,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1230594681_5",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 27,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "e1230594681_6",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 28,
+                  "fromFraction": 0,
+                  "toFraction": 1
+                },
+                {
+                  "edgeId": "manual-334-mrv50njd",
+                  "source": "manual",
+                  "direction": "reverse",
+                  "sequenceIndex": 29,
+                  "fromFraction": 0,
+                  "toFraction": 1
                 }
-              ],
-              "status": "invalid",
-              "terminals": {
-                "end": [
-                  35.6401902,
-                  33.2276173
-                ],
-                "start": [
-                  35.6400586,
-                  33.2336755
-                ]
-              },
-              "traversalStates": {
-                "0:e46704986_6": "allowed",
-                "10:e1505032338_1": "prohibited",
-                "11:e627581046_3": "allowed",
-                "12:e627581046_2": "allowed",
-                "13:e627581046_1": "allowed",
-                "14:e46704982_3": "allowed",
-                "15:e46704982_2": "allowed",
-                "16:e46704982_1": "allowed",
-                "17:e1034146158_1": "allowed",
-                "18:e46704981_4": "allowed",
-                "19:e46704981_5": "allowed",
-                "1:e46704986_5": "allowed",
-                "20:e46704981_6": "allowed",
-                "21:e1034146153_1": "allowed",
-                "22:e1024904307_2": "allowed",
-                "23:e1024904307_1": "allowed",
-                "24:e1231893592_1": "allowed",
-                "25:e1230594681_4": "allowed",
-                "26:e1230594681_5": "allowed",
-                "27:e1505032345_1": "allowed",
-                "28:e33058576_1": "allowed",
-                "2:e46704986_4": "allowed",
-                "3:e46704986_3": "allowed",
-                "4:e46704986_2": "allowed",
-                "5:e46704986_1": "allowed",
-                "6:e1505032342_1": "prohibited",
-                "7:e1217588030_3": "prohibited",
-                "8:e1217588030_2": "prohibited",
-                "9:e1217588030_1": "prohibited"
-              }
+              ]
+            },
+            "mappingDigest": "36f0a88f4afd3c338e7aedf721090c95f326bc24a9343cdf8149b09481ba7680",
+            "review": {
+              "reviewer": "ohad",
+              "reviewedAt": "2026-07-22",
+              "batchId": "direction-review-2026-07-22",
+              "rationale": "Curator-requested reconstruction using manual-334-mrv50njd and legal traversal through all three intersections",
+              "graphDigest": "14639cd64dd77a9973a01c8f185dee27764f6496304e4fbf11a8eda8b604caac",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "98d2e23bae19914206a8844130553f4d4ac9245ff759539d73fb9e5c484a5db2",
+              "mappingDigest": "36f0a88f4afd3c338e7aedf721090c95f326bc24a9343cdf8149b09481ba7680",
+              "evidenceDigest": "8905e9cb5ac7b182e1459465b0fad292914812b716e30a2cec80402fe8e8f2ee"
             }
-          },
-          "published": null
+          }
         }
       },
       "endpoints": {
@@ -38259,7 +38521,7 @@
       "navigable": true,
       "segmentId": 334,
       "segmentName": "קיבוץ דפנה שביל המייסדים",
-      "sourceGeometryDigest": "7fed833dbf581275cf51af2b0c171f4b62c9a65111c22b0f7f70f92fa36fe7fd"
+      "sourceGeometryDigest": "98d2e23bae19914206a8844130553f4d4ac9245ff759539d73fb9e5c484a5db2"
     },
     "335": {
       "alignments": {
