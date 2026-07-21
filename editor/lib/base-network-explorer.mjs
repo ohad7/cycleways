@@ -24,6 +24,11 @@ export const BASE_NETWORK_PRESETS = Object.freeze({
     label: "Manual edges",
     description: "Show manual base-network features.",
   },
+  manual_unreviewed: {
+    id: "manual_unreviewed",
+    label: "Unreviewed manual edges",
+    description: "Show manual edges that remain blocked because their direction policy has not been reviewed.",
+  },
   reviewed_overrides: {
     id: "reviewed_overrides",
     label: "Reviewed OSM overrides",
@@ -82,6 +87,18 @@ export function traversalCategory(properties) {
   return categoryForTraversalStates(traversalStates(properties));
 }
 
+export function isUnreviewedManualEdge(properties) {
+  const manual = properties?.source === "manual" || Boolean(properties?.manualEdgeId);
+  if (!manual) return false;
+  const traversal = properties?.bicycleTraversal || {};
+  const states = traversalStates(properties);
+  return (
+    traversal.reviewed !== true ||
+    states.forward === "unknown" ||
+    states.reverse === "unknown"
+  );
+}
+
 export function effectiveTraversalStates(properties, acceptedCwDirections = new Set()) {
   const edgeId = String(properties?.edgeId || properties?.manualEdgeId || properties?.id || "");
   const states = traversalStates(properties);
@@ -119,6 +136,7 @@ export function baseNetworkRenderProperties(
     explorerRawBicycle: rawTagValue(properties, "bicycle"),
     explorerRawAccess: rawTagValue(properties, "access"),
     explorerHasOverride: Number.isInteger(osmWayId) && overrideWayIds.has(osmWayId),
+    explorerManualUnreviewed: isUnreviewedManualEdge(properties),
     explorerCwPrecedenceForward:
       baseStates.forward !== effectiveStates.forward,
     explorerCwPrecedenceReverse:
@@ -135,6 +153,7 @@ export function matchesBaseNetworkPreset(feature, presetValue, traversalOverride
   if (preset === "prohibited_both") return category === "blocked";
   if (preset === "conditional") return category === "conditional";
   if (preset === "manual") return properties.source === "manual";
+  if (preset === "manual_unreviewed") return isUnreviewedManualEdge(properties);
   if (preset === "reviewed_overrides") {
     const wayId = Number(properties.osmWayId);
     const ids =
@@ -256,6 +275,9 @@ export function baseNetworkMapFilter(presetValue) {
     return ["==", ["get", "explorerTraversalCategory"], "conditional"];
   }
   if (preset === "manual") return ["==", ["get", "source"], "manual"];
+  if (preset === "manual_unreviewed") {
+    return ["==", ["get", "explorerManualUnreviewed"], true];
+  }
   if (preset === "reviewed_overrides") return ["==", ["get", "explorerHasOverride"], true];
   return null;
 }

@@ -2220,10 +2220,19 @@ class RouteManager {
     });
     if (directedEdges.some((entry) => entry === null)) return null;
 
+    const firstDirectedEdge = directedEdges[0];
+    const lastDirectedEdge = directedEdges[directedEdges.length - 1];
+    const startSharesFirstEdge =
+      firstDirectedEdge.edge.shareId === startPoint.baseEdgeShareId;
+    const endSharesLastEdge =
+      lastDirectedEdge.edge.shareId === endPoint.baseEdgeShareId;
     if (
-      directedEdges[0].edge.shareId !== startPoint.baseEdgeShareId ||
-      directedEdges[directedEdges.length - 1].edge.shareId !==
-        endPoint.baseEdgeShareId
+      (!startSharesFirstEdge &&
+        this._baseAnchorEndpointNode(startPoint) !==
+          this._baseDirectedStartNode(firstDirectedEdge.edge, firstDirectedEdge.direction)) ||
+      (!endSharesLastEdge &&
+        this._baseAnchorEndpointNode(endPoint) !==
+          this._baseDirectedEndNode(lastDirectedEdge.edge, lastDirectedEdge.direction))
     ) {
       return null;
     }
@@ -2245,17 +2254,27 @@ class RouteManager {
     const traversals = directedEdges.map(({ edge, direction }, index) => {
       const first = index === 0;
       const last = index === directedEdges.length - 1;
+      const startDistance = startSharesFirstEdge
+        ? this._baseSnapDistanceOnEdge(startPoint, edge)
+        : direction === "reverse"
+          ? edge.lengthMeters
+          : 0;
+      const endDistance = endSharesLastEdge
+        ? this._baseSnapDistanceOnEdge(endPoint, edge)
+        : direction === "reverse"
+          ? 0
+          : edge.lengthMeters;
       if (first && last) {
         return this._baseTraversal(
           edge,
-          this._baseSnapDistanceOnEdge(startPoint, edge),
-          this._baseSnapDistanceOnEdge(endPoint, edge),
+          startDistance,
+          endDistance,
         );
       }
       if (first) {
         return this._baseTraversal(
           edge,
-          this._baseSnapDistanceOnEdge(startPoint, edge),
+          startDistance,
           direction === "reverse" ? 0 : edge.lengthMeters,
         );
       }
@@ -2263,7 +2282,7 @@ class RouteManager {
         return this._baseTraversal(
           edge,
           direction === "reverse" ? edge.lengthMeters : 0,
-          this._baseSnapDistanceOnEdge(endPoint, edge),
+          endDistance,
         );
       }
       return this._baseTraversal(
@@ -2292,6 +2311,16 @@ class RouteManager {
 
   _baseDirectedEndNode(edge, direction) {
     return direction === "reverse" ? edge.from : edge.to;
+  }
+
+  _baseAnchorEndpointNode(point) {
+    const edge = this.baseRoutingEdgesByShareId.get(Number(point?.baseEdgeShareId));
+    if (!edge) return null;
+    const distance = this._baseSnapDistanceOnEdge(point, edge);
+    const toleranceMeters = Math.max(0.02, edge.lengthMeters / 1_000_000 + 0.01);
+    if (distance <= toleranceMeters) return edge.from;
+    if (edge.lengthMeters - distance <= toleranceMeters) return edge.to;
+    return null;
   }
 
   _baseSnapDistanceOnEdge(point, edge) {

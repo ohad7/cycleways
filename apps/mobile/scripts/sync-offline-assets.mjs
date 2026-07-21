@@ -408,6 +408,7 @@ export function manifestReferencedJsonAssets(manifest = {}) {
   add(manifest.cwAlignmentGeometry);
   add(manifest.legacyRoutingCompatibility?.cwBaseIndex);
   add(manifest.legacyRoutingCompatibility?.metadata);
+  add(manifest.routeAnchorCompatibility?.path);
   add(manifest.routeCatalog);
   return dedupeLogicalAssets(assets);
 }
@@ -449,6 +450,7 @@ async function verifyManifestAssetHashes(manifest) {
     legacyCwBaseIndex: manifest.legacyRoutingCompatibility?.cwBaseIndex,
     legacyRoutingCompatibilityMetadata:
       manifest.legacyRoutingCompatibility?.metadata,
+    routeAnchorCompatibility: manifest.routeAnchorCompatibility?.path,
     routeCatalog: manifest.routeCatalog,
   };
   for (const [key, relative] of Object.entries(references)) {

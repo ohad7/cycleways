@@ -227,12 +227,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:30:15.415Z",
-        "updatedAt": "2026-05-19T06:31:19.152Z",
+        "updatedAt": "2026-07-21T23:34:24.656Z",
         "splitFrom": "manual-osm-79590066-mpc977g7",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -429,12 +432,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:36:19.348Z",
-        "updatedAt": "2026-05-19T06:37:38.196Z",
+        "updatedAt": "2026-07-21T23:33:27.872Z",
         "splitFrom": "manual-osm-65427287-mpc9f09g",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -486,12 +492,15 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T06:36:51.340Z",
-        "updatedAt": "2026-05-19T06:36:55.321Z",
+        "updatedAt": "2026-07-21T23:30:48.779Z",
         "splitFrom": "manual-osm-841165614-mpc9foy4",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -889,12 +898,15 @@
         "osmRouteClass": "local_road",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:13:13.678Z",
-        "updatedAt": "2026-05-19T07:13:29.851Z",
+        "updatedAt": "2026-07-21T23:31:21.044Z",
         "splitFrom": "manual-osm-164242192-mpcaqgum",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -1149,12 +1161,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-19T07:56:11.642Z",
-        "updatedAt": "2026-05-26T19:56:20.686Z",
+        "updatedAt": "2026-07-21T23:35:01.859Z",
         "splitFrom": "manual-osm-526566324-mpcc9q0q",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -2106,58 +2121,6 @@
     },
     {
       "type": "Feature",
-      "id": "manual-osm-228885122-mpd4ezyp",
-      "properties": {
-        "id": "manual-osm-228885122-mpd4ezyp",
-        "manualEdgeId": "manual-osm-228885122-mpd4ezyp",
-        "source": "manual",
-        "status": "active",
-        "roadType": "road",
-        "copiedFromEdgeId": "e228885122_1",
-        "copiedFromOsmWayId": 228885122,
-        "highway": "secondary",
-        "osmRouteClass": "road",
-        "accessStatus": "unspecified",
-        "createdAt": "2026-05-19T21:04:07.057Z",
-        "updatedAt": "2026-05-19T21:04:19.180Z",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.576545,
-            33.199726
-          ],
-          [
-            35.576502,
-            33.199666
-          ],
-          [
-            35.576488,
-            33.19962
-          ],
-          [
-            35.576488,
-            33.199575
-          ],
-          [
-            35.576511,
-            33.199514
-          ],
-          [
-            35.576557,
-            33.199463
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
       "id": "manual-osm-34354099-mpd6buvo",
       "properties": {
         "id": "manual-osm-34354099-mpd6buvo",
@@ -2525,59 +2488,6 @@
     },
     {
       "type": "Feature",
-      "id": "manual-manual-osm-1092567462-mpe4drrn-b-mpe4dzx2",
-      "properties": {
-        "id": "manual-manual-osm-1092567462-mpe4drrn-b-mpe4dzx2",
-        "manualEdgeId": "manual-manual-osm-1092567462-mpe4drrn-b-mpe4dzx2",
-        "source": "manual",
-        "status": "active",
-        "roadType": "road",
-        "copiedFromEdgeId": "e1092567462_1",
-        "copiedFromOsmWayId": 1092567462,
-        "highway": "trunk",
-        "osmRouteClass": "road",
-        "accessStatus": "unspecified",
-        "createdAt": "2026-05-20T13:50:55.955Z",
-        "updatedAt": "2026-07-20T18:13:00.610Z",
-        "splitFrom": "manual-osm-1092567462-mpe4drrn",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.58015,
-            33.235068
-          ],
-          [
-            35.579567,
-            33.233937
-          ],
-          [
-            35.579508,
-            33.23385
-          ],
-          [
-            35.579478,
-            33.233804
-          ],
-          [
-            35.57944,
-            33.233766
-          ],
-          [
-            35.579361,
-            33.233706
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
       "id": "manual-164-mpe4fbrz",
       "properties": {
         "id": "manual-164-mpe4fbrz",
@@ -2747,12 +2657,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T20:39:41.408Z",
-        "updatedAt": "2026-05-20T20:48:42.415Z",
+        "updatedAt": "2026-07-21T23:33:53.781Z",
         "splitFrom": "manual-osm-244191207-mpeizfq8",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -2943,12 +2856,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T22:15:06.145Z",
-        "updatedAt": "2026-05-20T22:15:29.194Z",
+        "updatedAt": "2026-07-21T23:31:51.630Z",
         "splitFrom": "manual-osm-550409482-mpeme4yp",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -3000,12 +2916,15 @@
         "osmRouteClass": "path_track",
         "accessStatus": "unspecified",
         "createdAt": "2026-05-20T22:15:10.451Z",
-        "updatedAt": "2026-05-20T22:15:54.158Z",
+        "updatedAt": "2026-07-21T23:32:23.525Z",
         "splitFrom": "manual-osm-550409483-mpeme8ab",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -3224,12 +3143,15 @@
         "osmRouteClass": "cycle",
         "accessStatus": "bike_allowed",
         "createdAt": "2026-05-20T22:30:45.060Z",
-        "updatedAt": "2026-05-20T22:30:49.391Z",
+        "updatedAt": "2026-07-21T23:27:27.552Z",
         "splitFrom": "manual-osm-611794183-mpemy9fo",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -3301,11 +3223,14 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-23T22:32:46.701Z",
-        "updatedAt": "2026-05-23T22:32:46.701Z",
+        "updatedAt": "2026-07-21T23:26:24.940Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -3332,11 +3257,14 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-05-23T22:33:07.142Z",
-        "updatedAt": "2026-05-23T22:33:07.142Z",
+        "updatedAt": "2026-07-21T23:30:08.324Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -3815,11 +3743,14 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-06-05T21:41:14.818Z",
-        "updatedAt": "2026-06-05T21:41:14.818Z",
+        "updatedAt": "2026-07-21T23:26:59.525Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -3858,11 +3789,14 @@
         "status": "active",
         "roadType": "dirt",
         "createdAt": "2026-06-05T21:42:13.841Z",
-        "updatedAt": "2026-06-05T21:42:24.989Z",
+        "updatedAt": "2026-07-21T23:18:05.717Z",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access and intended start of Sovev Dafna route."
         }
       },
       "geometry": {
@@ -4669,13 +4603,16 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-07-10T19:47:06.597Z",
-        "updatedAt": "2026-07-10T19:47:06.597Z",
+        "updatedAt": "2026-07-21T23:25:29.405Z",
         "linkedSegmentId": 348,
         "linkedSegmentName": "מעבר הולכי רגל גשר להבות",
         "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Verified rideable access"
         }
       },
       "geometry": {
@@ -5410,53 +5347,6 @@
           [
             35.568987,
             33.200797
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "id": "manual-edge-mrtjl8ea",
-      "properties": {
-        "id": "manual-edge-mrtjl8ea",
-        "manualEdgeId": "manual-edge-mrtjl8ea",
-        "source": "manual",
-        "status": "active",
-        "roadType": "dirt",
-        "createdAt": "2026-07-20T18:12:35.650Z",
-        "updatedAt": "2026-07-20T18:12:35.650Z",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.580308,
-            33.235592
-          ],
-          [
-            35.580308,
-            33.235535
-          ],
-          [
-            35.580311,
-            33.235435
-          ],
-          [
-            35.58028,
-            33.235318
-          ],
-          [
-            35.580206,
-            33.23518
-          ],
-          [
-            35.58015,
-            33.235068
           ]
         ]
       }

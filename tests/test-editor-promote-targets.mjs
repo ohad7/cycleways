@@ -16,6 +16,9 @@ const manifest = {
     cwBaseIndex: "routing-compat/cw-base-index-v1.json",
     metadata: "routing-compat/cw-base-index-v1.metadata.json",
   },
+  routeAnchorCompatibility: {
+    path: "routing-compat/route-anchor-compatibility.abc123def456.json",
+  },
   roundabouts: "roundabouts.json",
   crossings: "crossings.json",
 };
@@ -27,6 +30,7 @@ assert.ok(byLabel.has("public CW base index"));
 assert.ok(byLabel.has("public CW alignment geometry"));
 assert.ok(byLabel.has("legacy routing compatibility index"));
 assert.ok(byLabel.has("legacy routing compatibility metadata"));
+assert.ok(byLabel.has("historical route anchor compatibility"));
 assert.equal(targets.at(-1).label, "public manifest");
 
 const releaseTargets = buildPromoteTargets({
@@ -42,6 +46,13 @@ assert.equal(releaseTargets.at(-1).label, "public manifest");
 assert.equal(
   byLabel.get("public CW base index").source,
   path.join(repoRoot, "build/public-data/cw-base-index.json"),
+);
+assert.equal(
+  byLabel.get("historical route anchor compatibility").target,
+  path.join(
+    repoRoot,
+    "public-data/routing-compat/route-anchor-compatibility.abc123def456.json",
+  ),
 );
 
 assert.equal(

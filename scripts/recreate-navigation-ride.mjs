@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { createRequire } from "node:module";
@@ -18,6 +18,7 @@ const { values } = parseArgs({
       type: "string",
       default: "tests/fixtures/bicycle-traversal/road-99-ride.json",
     },
+    "geojson-output": { type: "string" },
     check: { type: "boolean", default: false },
   },
 });
@@ -124,5 +125,34 @@ const report = {
       }
     : null,
 };
+if (values["geojson-output"] && Array.isArray(route?.geometry) && route.geometry.length >= 2) {
+  await writeFile(
+    path.resolve(values["geojson-output"]),
+    `${JSON.stringify({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {
+            scenario: "road-99-reported-ride",
+            kind: "current-policy-recreation",
+            distanceMeters: route.distance,
+            traversalCount: slices.length,
+            stroke: "#16833f",
+            "stroke-width": 6,
+            "stroke-opacity": 0.9,
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: route.geometry.map((point) => [
+              Number(point.lng),
+              Number(point.lat),
+            ]),
+          },
+        },
+      ],
+    }, null, 2)}\n`,
+  );
+}
 console.log(JSON.stringify(report, null, 2));
 if (values.check && blockers.length > 0) process.exitCode = 1;

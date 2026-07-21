@@ -326,6 +326,8 @@ export function useCyclewaysApp({
                 cwBaseIndex: state.assets.cwBaseIndexData,
                 legacyRoutingCompatibility:
                   state.assets.legacyRoutingCompatibility,
+                routeAnchorCompatibility:
+                  state.assets.routeAnchorCompatibilityData,
                 onStatus: (status) => {
                   if (!disposed) {
                     setRoutingShardStatus(status);

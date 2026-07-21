@@ -19,6 +19,7 @@ import {
   baseNetworkLineColorExpression,
   baseNetworkMapFilter,
   baseNetworkRenderProperties,
+  isUnreviewedManualEdge,
   normalizeBaseNetworkPreset,
   normalizeBaseNetworkTheme,
   summarizeBaseNetwork,
@@ -2005,18 +2006,38 @@ function baseGraphCollection() {
       }
     }
   }
-  const features = sourceFeatures.map((feature) => ({
-    ...feature,
-    properties: {
-      ...feature.properties,
-      connectorLensColor: connectorLensColor(feature.properties || {}),
-      ...baseNetworkRenderProperties(
-        feature.properties || {},
-        overrideWayIds,
-        acceptedCwDirections,
-      ),
-    },
-  }));
+  const currentManualEdges = new Map(
+    manualBaseEdgeFeatures().map((feature) => [
+      String(manualBaseEdgeFeatureId(feature)),
+      feature,
+    ]),
+  );
+  const features = sourceFeatures.map((feature) => {
+    const properties = feature.properties || {};
+    const edgeId = String(properties.manualEdgeId || graphEdgeFeatureId(feature) || "");
+    const currentManual = properties.source === "manual"
+      ? currentManualEdges.get(edgeId)
+      : null;
+    const effectiveProperties = currentManual
+      ? {
+          ...properties,
+          manualEdgeId: edgeId,
+          bicycleTraversal: currentManual.properties?.bicycleTraversal,
+        }
+      : properties;
+    return {
+      ...feature,
+      properties: {
+        ...effectiveProperties,
+        connectorLensColor: connectorLensColor(effectiveProperties),
+        ...baseNetworkRenderProperties(
+          effectiveProperties,
+          overrideWayIds,
+          acceptedCwDirections,
+        ),
+      },
+    };
+  });
   cache.baseGraphCollection = { ...state.baseOverlay.graphEdges, features };
   cache.baseGraphCollectionGraphEdges = state.baseOverlay.graphEdges;
   cache.baseGraphCollectionManualEdges = state.baseOverlay.manualBaseEdges;
@@ -2197,6 +2218,7 @@ function manualBaseEdgeCollection() {
         ...(feature.properties || {}),
         manualIndex,
         manualEdgeId: feature.properties?.manualEdgeId || feature.properties?.id || feature.id,
+        explorerManualUnreviewed: isUnreviewedManualEdge(feature.properties || {}),
         selected: manualIndex === state.baseOverlay.selectedManualEdgeIndex,
       },
     })),
@@ -5889,9 +5911,13 @@ function baseNetworkTraversalOverrides() {
 }
 
 function baseNetworkExplorerSummary() {
+  const preset = normalizeBaseNetworkPreset(state.baseNetworkExplorer.preset);
+  const features = preset === "manual" || preset === "manual_unreviewed"
+    ? manualBaseEdgeCollection().features || []
+    : baseGraphCollection().features || [];
   return summarizeBaseNetwork(
-    baseGraphCollection().features || [],
-    state.baseNetworkExplorer.preset,
+    features,
+    preset,
     baseNetworkTraversalOverrides(),
     state.baseOverlay.overlay,
   );
@@ -6011,10 +6037,18 @@ function applyBaseNetworkMapPresentation() {
   }
 
   const showManualSource =
-    !active || state.baseNetworkExplorer.preset === "all" || state.baseNetworkExplorer.preset === "manual";
+    !active ||
+    state.baseNetworkExplorer.preset === "all" ||
+    state.baseNetworkExplorer.preset === "manual" ||
+    state.baseNetworkExplorer.preset === "manual_unreviewed";
   const hideManualFilter = ["==", ["get", "manualEdgeId"], "__base_network_hidden__"];
+  const manualFilter = !showManualSource
+    ? hideManualFilter
+    : active && state.baseNetworkExplorer.preset === "manual_unreviewed"
+      ? ["==", ["get", "explorerManualUnreviewed"], true]
+      : null;
   for (const layerId of ["manual-base-edges-layer", "manual-base-edges-hit-layer"]) {
-    if (map.getLayer(layerId)) map.setFilter(layerId, showManualSource ? null : hideManualFilter);
+    if (map.getLayer(layerId)) map.setFilter(layerId, manualFilter);
   }
 
   map.setPaintProperty(
@@ -6023,6 +6057,23 @@ function applyBaseNetworkMapPresentation() {
     active
       ? baseNetworkLineColorExpression(state.baseNetworkExplorer.theme)
       : ["coalesce", ["get", "connectorLensColor"], ["get", "graphColor"], BASE_GRAPH_FALLBACK_LINE_COLOR],
+  );
+  map.setPaintProperty(
+    "manual-base-edges-layer",
+    "line-color",
+    state.baseNetworkExplorer.preset === "manual_unreviewed" ? "#7c3aed" : BASE_GRAPH_LINE_COLOR,
+  );
+  map.setPaintProperty(
+    "manual-base-edges-layer",
+    "line-width",
+    state.baseNetworkExplorer.preset === "manual_unreviewed"
+      ? ["interpolate", ["linear"], ["zoom"], 9, 3.5, 13, 6, 16, 9]
+      : BASE_GRAPH_LINE_WIDTH,
+  );
+  map.setPaintProperty(
+    "manual-base-edges-layer",
+    "line-opacity",
+    state.baseNetworkExplorer.preset === "manual_unreviewed" ? 0.96 : BASE_GRAPH_LINE_OPACITY,
   );
   if (!active) return;
   map.setPaintProperty(
@@ -6047,6 +6098,7 @@ function setBaseNetworkPreset(value, { fit = true } = {}) {
     state.baseNetworkExplorer.theme = "traversal";
   }
   if (preset === "manual") state.baseNetworkExplorer.theme = "source";
+  if (preset === "manual_unreviewed") state.baseNetworkExplorer.theme = "traversal";
   renderAll();
   if (fit && preset !== "all") fitBaseNetworkFeatures(baseNetworkExplorerSummary().matchingFeatures);
   const summary = baseNetworkExplorerSummary();

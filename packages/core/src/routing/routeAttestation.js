@@ -258,7 +258,10 @@ function normalizeMembership(values) {
 
 function normalizeWaypointOccurrences(values) {
   return (Array.isArray(values) ? values : []).map((value, index) => ({
-    occurrenceId: String(value?.occurrenceId || value?.id || `occurrence-${index}`),
+    // UI point IDs are deliberately random and are not encoded in shared
+    // routes. Ordinal identity is sufficient to distinguish repeated waypoint
+    // occurrences and keeps the content fingerprint reproducible.
+    occurrenceId: `occurrence-${index}`,
     requestedCoordinate: {
       lat: Number(value?.requestedCoordinate?.lat ?? value?.lat),
       lng: Number(value?.requestedCoordinate?.lng ?? value?.lng),

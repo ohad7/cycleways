@@ -3,6 +3,41 @@
 **Date:** 2026-07-13  
 **Status:** accepted design — implementation in progress
 
+## 2026-07-22 amendment — historical V6 anchor recovery
+
+The earlier conclusion that a V6 token becomes unrecoverable whenever one of
+its referenced base edges disappears is superseded. Released V6 tokens are a
+durable user contract: removing or splitting an edge may invalidate exact
+replay, but it must not erase the route's waypoint intent.
+
+Each released graph version used by a known shared route therefore has an
+immutable, graph-hash-keyed anchor archive. The archive binds that graph hash
+to the exact historical share-ID registry digest and stores the historical
+polyline for each referenced anchor edge. It is generated from the Git commit
+that published the token and verified against that commit's registry and
+routing shards; coordinates are not inferred from the current graph.
+
+The security and traversal boundary remains strict:
+
+- current canonical identity is still required for exact replay;
+- historical geometry is used only to interpolate the token's stored fraction
+  into a waypoint coordinate, never as a traversable route;
+- the recovered waypoints are snapped and replanned on the current V3 graph
+  under the current bicycle traversal policy;
+- this fallback is marked `replanned-current-policy` and `requiresReview`, so
+  it cannot silently auto-start or resume navigation;
+- an unknown graph hash, missing registry snapshot, digest disagreement,
+  share-ID rebinding, or incomplete anchor geometry fails closed; and
+- promotion validates and bundles the archive as a versioned runtime asset for
+  both web and mobile.
+
+Featured catalog routes are migrated to fresh current-graph tokens after
+review. Their historical tokens remain recoverable through this path, but the
+catalog itself must not depend indefinitely on fallback or bypass the offered
+route fingerprint gate. Before a future release replaces public routing
+pointers, its released-token anchors and registry snapshot must be captured in
+the compatibility archive.
+
 ## 2026-07-20 amendment — local roundabout reverse repair
 
 When an otherwise valid alignment has no exact reverse solely because a
@@ -996,6 +1031,18 @@ load it with the rest of the routing contract. Missing or mismatched legacy data
 fails exact expansion closed; recovery may proceed only from independently
 recoverable anchors.
 
+Historical anchor recovery preserves authored route intent, not merely the
+first and last coordinate of each old token. The compatibility archive stores
+the historical coordinates of the token's original route points plus
+conditional shaping points for spans whose released traversal was a deliberate
+detour. Recovery first replans the original points on the current policy graph.
+It activates a detour only when a still-current CycleWays segment named by that
+span is missing from the resulting traversal; retired segment IDs do not force
+obsolete geometry. This keeps ordinary routes editable and compact while
+preserving deliberate visits such as Sovev Dafna's #335 → #246 → #247 spur.
+All recovered geometry remains review-required until encoded and accepted as a
+current-graph route.
+
 An old V6 span expands against the frozen sequence (or its requested exact
 reverse) and then passes normal identity, direction, and policy validation; the
 compatibility mapping never makes a forbidden reverse valid. New V6 sharing may
@@ -1494,6 +1541,8 @@ Promotion is blocked when:
   CycleWays direction;
 - a catalog/featured route still offered for navigation cannot restore or
   replan under the policy (it may instead be explicitly withdrawn/display-only);
+- a migrated historical route omits any of its referenced CycleWays segments
+  that still exists in the current directed index;
 - shard/policy versions are mixed;
 - a route fixture contains a non-allowed traversal; or
 - the correctness review queue contains any unresolved item.

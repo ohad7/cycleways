@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   baseNetworkLineColorExpression,
   baseNetworkMapFilter,
@@ -7,6 +8,7 @@ import {
   filterBaseNetworkFeatures,
   groupBaseNetworkSubjects,
   indexCyclewaysEdges,
+  isUnreviewedManualEdge,
   summarizeBaseNetwork,
   traversalCategory,
 } from "../editor/lib/base-network-explorer.mjs";
@@ -69,6 +71,12 @@ const features = [
   edge("manual-1", null, {
     source: "manual",
     manualEdgeId: "manual-1",
+    bicycleTraversal: { forward: "unknown", reverse: "unknown", reviewed: false },
+  }),
+  edge("manual-reviewed", null, {
+    source: "manual",
+    manualEdgeId: "manual-reviewed",
+    bicycleTraversal: { forward: "allowed", reverse: "allowed", reviewed: true },
   }),
 ];
 
@@ -76,6 +84,8 @@ assert.equal(traversalCategory(features[0].properties), "blocked");
 assert.equal(traversalCategory(features[2].properties), "direction_limited");
 assert.equal(traversalCategory(features[3].properties), "conditional");
 assert.equal(traversalCategory(features[4].properties), "unknown");
+assert.equal(isUnreviewedManualEdge(features[6].properties), true);
+assert.equal(isUnreviewedManualEdge(features[7].properties), false);
 
 const renderProperties = baseNetworkRenderProperties(features[0].properties, [{ osmWayId: 10 }]);
 assert.equal(renderProperties.explorerRawBicycle, "no");
@@ -124,6 +134,12 @@ assert.deepEqual(
 );
 assert.deepEqual(
   filterBaseNetworkFeatures(features, "manual").map((feature) => feature.properties.edgeId),
+  ["manual-1", "manual-reviewed"],
+);
+assert.deepEqual(
+  filterBaseNetworkFeatures(features, "manual_unreviewed").map(
+    (feature) => feature.properties.edgeId,
+  ),
   ["manual-1"],
 );
 
@@ -156,7 +172,15 @@ assert.deepEqual(baseNetworkMapFilter("bicycle_no"), [
   "no",
 ]);
 assert.equal(baseNetworkMapFilter("all"), null);
+assert.deepEqual(baseNetworkMapFilter("manual_unreviewed"), [
+  "==",
+  ["get", "explorerManualUnreviewed"],
+  true,
+]);
 assert.ok(Array.isArray(baseNetworkLineColorExpression("traversal")));
 assert.equal(baseNetworkLineColorExpression("neutral"), "#2563eb");
+
+const editorHtml = readFileSync(new URL("../editor/index.html", import.meta.url), "utf8");
+assert.match(editorHtml, /<option value="manual_unreviewed">Unreviewed manual edges<\/option>/);
 
 console.log("Base Network explorer helpers ok");

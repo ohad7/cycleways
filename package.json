@@ -27,6 +27,7 @@
     "osm:elevation": "python3 processing/build_osm_base_graph_elevation.py",
     "featured:snapshots": "node scripts/build-featured-route-snapshots.mjs",
     "featured:snapshots:check": "node scripts/build-featured-route-snapshots.mjs --check",
+    "featured:migrate-current": "node scripts/migrate-featured-routes-to-current-graph.mjs",
     "route:inspect": "node scripts/inspect-base-route.mjs",
     "route:compare-shards": "node scripts/compare-base-route-shards.mjs",
     "pretest": "npm run test:sticker-studio && npm run test:roundabouts && npm run test:crossings && node tests/test-junctions-near-route.mjs && node tests/test-overlay-edge-migration.mjs && node tests/test-via-point-spur.mjs && node tests/test-base-network-explorer.mjs && node tests/test-base-overlay-continuity.mjs && node tests/test-manual-edge-direction-defaults.mjs && node tests/test-network-auto-apply.mjs && node tests/test-network-authoring-status.mjs && node tests/test-network-authoring-coordinator.mjs && node tests/test-network-editor-workflow.mjs && node tests/test-base-graph-build-freshness.mjs && node tests/test-direction-review-topology-refresh.mjs && node tests/test-osm-matcher-benchmark.mjs && node tests/test-bicycle-traversal-runtime.mjs && node tests/test-cw-overlay-v2-migration.mjs && node tests/test-roundabout-reverse-repair-current-data.mjs && node tests/test-direction-review-issues.mjs && node tests/test-direction-review-pending.mjs && node tests/test-direction-review-editor-wiring.mjs",

@@ -26,6 +26,9 @@ assert.deepEqual(
       cwBaseIndex: "routing-compat/cw-v1.json",
       metadata: "routing-compat/cw-v1.metadata.json",
     },
+    routeAnchorCompatibility: {
+      path: "routing-compat/route-anchor-compatibility.abc123.json",
+    },
   }),
   [
     {
@@ -38,6 +41,7 @@ assert.deepEqual(
     { logicalPath: "public-data/route-catalog.abc123.json" },
     { logicalPath: "public-data/routing-compat/cw-v1.json" },
     { logicalPath: "public-data/routing-compat/cw-v1.metadata.json" },
+    { logicalPath: "public-data/routing-compat/route-anchor-compatibility.abc123.json" },
     { logicalPath: "public-data/routing/manifest.json" },
     { logicalPath: "public-data/segments.json" },
   ],

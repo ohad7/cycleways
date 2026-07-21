@@ -3,13 +3,40 @@
   "policyId": "il-bicycle-v1",
   "status": "awaiting-v3-curation",
   "entries": [
-    { "slug": "banias-gan-hatsafon", "acceptedFingerprint": null },
-    { "slug": "sovev-beit-hillel", "acceptedFingerprint": null },
-    { "slug": "historic-jordan", "acceptedFingerprint": null },
-    { "slug": "kovshey-hagolan", "acceptedFingerprint": null },
+    {
+      "slug": "banias-gan-hatsafon",
+      "acceptedFingerprint": null
+    },
+    {
+      "slug": "sovev-beit-hillel",
+      "acceptedFingerprint": "sha256-f9f15898239ba6eb2104b1e7f01737f5250b67b7d0557b0932e2a3d9be6888e9",
+      "distanceMeters": 6478.210389868009,
+      "distanceToleranceMeters": 1
+    },
+    {
+      "slug": "historic-jordan",
+      "acceptedFingerprint": null
+    },
+    {
+      "slug": "kovshey-hagolan",
+      "acceptedFingerprint": "sha256-c8c1863e19d2760ad70addaf3660e39871caad4d6d364a40e9de0bf3ee336231",
+      "distanceMeters": 12547.662667277027,
+      "distanceToleranceMeters": 1
+    },
     { "slug": "sovev-dafna", "acceptedFingerprint": null },
-    { "slug": "roman-roads", "acceptedFingerprint": null },
-    { "slug": "sovev-shear-yeshuv", "acceptedFingerprint": null },
-    { "slug": "naftali-dishon-yosha", "acceptedFingerprint": null }
+    {
+      "slug": "roman-roads",
+      "acceptedFingerprint": null
+    },
+    {
+      "slug": "sovev-shear-yeshuv",
+      "acceptedFingerprint": "sha256-d4394ff0df0b39aeddcbc8c21fef6f7c04a124b14078f034a4dc95d6f7a6b78f",
+      "distanceMeters": 5795.583387502861,
+      "distanceToleranceMeters": 1
+    },
+    {
+      "slug": "naftali-dishon-yosha",
+      "acceptedFingerprint": null
+    }
   ]
 }

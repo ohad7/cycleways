@@ -2,12 +2,22 @@ import { createHash } from "node:crypto";
 
 export const CW_OVERLAY_V2_SCHEMA_VERSION = 2;
 export const ALIGNMENT_KEYS = Object.freeze(["aToB", "bToA"]);
+export const INACTIVE_SEGMENT_LIFECYCLE_STATUSES = Object.freeze([
+  "deprecated",
+  "draft",
+  "legacy",
+]);
 export const UNAVAILABLE_REASON_CODES = new Set([
   "no_canonical_alignment",
   "outside_logical_corridor",
   "editorially_not_offered",
 ]);
 const STATES = new Set(["allowed", "prohibited", "conditional", "unknown"]);
+
+export function isActiveCwOverlaySegment(segment) {
+  const lifecycleStatus = String(segment?.lifecycleStatus || "active").toLowerCase();
+  return !INACTIVE_SEGMENT_LIFECYCLE_STATUSES.includes(lifecycleStatus);
+}
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);

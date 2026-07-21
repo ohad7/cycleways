@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { createShardedRouteSession } from "../packages/core/src/routing/shardedRouteSession.js";
+import { historicalRouteIntentKey } from "../packages/core/src/routing/routeAnchorCompatibility.js";
 
 const require = createRequire(import.meta.url);
 const RouteManager = require("../packages/core/route-manager.js");
@@ -81,7 +82,11 @@ const payload = {
   spans: [{ type: "cw", segmentId: 174, reversed: true }],
 };
 
-async function createSession(legacyRoutingCompatibility) {
+async function createSession(
+  legacyRoutingCompatibility,
+  routeAnchorCompatibility = null,
+  currentCwBaseIndex = { schemaVersion: 2, segments: {} },
+) {
   return createShardedRouteSession(
     RouteManager,
     { type: "FeatureCollection", features: [] },
@@ -90,8 +95,9 @@ async function createSession(legacyRoutingCompatibility) {
     async () => shard,
     {
       paddingShards: 0,
-      cwBaseIndex: { schemaVersion: 2, segments: {} },
+      cwBaseIndex: currentCwBaseIndex,
       legacyRoutingCompatibility,
+      routeAnchorCompatibility,
     },
   );
 }
@@ -120,5 +126,66 @@ const tampered = structuredClone(compatibility);
 tampered.manifest.registryDigest = "tampered";
 const rejected = await createSession(tampered);
 assert.equal(await rejected.restoreHybridRoutePayload(payload), null);
+
+const archivedGraphHash = "a1b2c3d4";
+const archivedPayload = {
+  ...payload,
+  graphVersion: `h${archivedGraphHash}`,
+  graphVersionHash: Number.parseInt(archivedGraphHash, 16),
+  routePoints: [
+    { id: "A", baseEdgeShareId: 8, baseEdgeFraction: 0.1 },
+    { id: "B", baseEdgeShareId: 8, baseEdgeFraction: 0.9 },
+  ],
+};
+const routeAnchorCompatibility = {
+  schemaVersion: 1,
+  graphVersions: {
+    [archivedGraphHash]: {
+      registryDigest: "a".repeat(64),
+      archivedEdges: {
+        8: {
+          edgeId: "retired-one-way",
+          coordinates: [[35, 33], [35.01, 33]],
+        },
+      },
+      routeIntents: {
+        [historicalRouteIntentKey(archivedPayload)]: {
+          routeSlugs: ["fixture"],
+          points: [[35.001, 33], [35.009, 33]],
+          detours: [{
+            afterPointIndex: 0,
+            segmentIds: [335],
+            points: [[35.005, 33]],
+          }],
+        },
+      },
+    },
+  },
+};
+const archived = await createSession(
+  null,
+  routeAnchorCompatibility,
+  { schemaVersion: 2, segments: { 335: {} } },
+);
+const archivedRestore = await archived.restoreHybridRoutePayload(archivedPayload);
+assert.ok(archivedRestore, "a known historical V6 graph recovers retired edge anchors");
+assert.equal(archivedRestore.requiresReview, true);
+assert.equal(archivedRestore.restoreDisposition, "replanned-current-policy-route-intent");
+assert.equal(archivedRestore.routingValidation.traversalSlices[0].policyState, "allowed");
+assert.equal(archivedRestore.points.length, 3, "a missing current CW visit activates its archived detour");
+
+const retiredSegmentRestore = await createSession(null, routeAnchorCompatibility);
+const retiredSnapshot = await retiredSegmentRestore.restoreHybridRoutePayload(archivedPayload);
+assert.equal(retiredSnapshot.points.length, 2, "a retired CW segment does not force obsolete shaping");
+assert.equal(retiredSnapshot.restoreDisposition, "replanned-current-policy");
+
+const unknownArchive = structuredClone(routeAnchorCompatibility);
+delete unknownArchive.graphVersions[archivedGraphHash];
+const unknown = await createSession(null, unknownArchive);
+assert.equal(
+  await unknown.restoreHybridRoutePayload(archivedPayload),
+  null,
+  "an unregistered graph hash cannot use historical anchor geometry",
+);
 
 console.log("policy route restore ok");

@@ -9,6 +9,9 @@ const manifest = {
   baseRoutingShards: "base-routing-shards.test/manifest.json",
   roundabouts: "roundabouts.json",
   crossings: "crossings.json",
+  routeAnchorCompatibility: {
+    path: "routing-compat/route-anchor-compatibility.test.json",
+  },
 };
 const assetsByPath = new Map([
   ["public-data/map-manifest.json", manifest],
@@ -17,6 +20,10 @@ const assetsByPath = new Map([
   ["public-data/cw-base-index.json", { segments: { 1: [[100, 0]] } }],
   ["public-data/roundabouts.json", { roundabouts: [{ id: "r1" }] }],
   ["public-data/crossings.json", { crossings: [{ id: "c1" }] }],
+  [
+    "public-data/routing-compat/route-anchor-compatibility.test.json",
+    { schemaVersion: 1, graphVersions: { abcdef12: { archivedEdges: {} } } },
+  ],
   [
     "public-data/base-routing-shards.test/manifest.json",
     { shards: [{ id: "g1_1", path: "shards/g1_1.json" }] },
@@ -55,12 +62,21 @@ try {
   assert.ok(requestedPaths.includes("public-data/cw-base-index.json?v=shard-test"));
   assert.ok(requestedPaths.includes("public-data/roundabouts.json?v=shard-test"));
   assert.ok(requestedPaths.includes("public-data/crossings.json?v=shard-test"));
+  assert.ok(
+    requestedPaths.includes(
+      "public-data/routing-compat/route-anchor-compatibility.test.json?v=shard-test",
+    ),
+  );
   assert.equal(shardedAssets.roundaboutsData.roundabouts.length, 1);
   assert.ok(!requestedPaths.includes("public-data/base-routing-network.json"));
   assert.equal(summarizeMapAssets(shardedAssets).baseRoutingShards, 1);
   assert.equal(summarizeMapAssets(shardedAssets).cwBaseIndexSegments, 1);
   assert.equal(summarizeMapAssets(shardedAssets).roundabouts, 1);
   assert.equal(summarizeMapAssets(shardedAssets).crossings, 1);
+  assert.equal(
+    summarizeMapAssets(shardedAssets).routeAnchorCompatibilityGraphVersions,
+    1,
+  );
 
   requestedPaths.length = 0;
   const legacyAssets = await loadMapAssets({ baseRoutingMode: "legacy", includeRoundabouts: true });

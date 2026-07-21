@@ -6,6 +6,11 @@ import {
 import { decodeRoutePayload } from "../utils/route-encoding.js";
 import { junctionsNearRoute } from "./junctionsNearRoute.js";
 import {
+  buildCumulativeDistances,
+  pointAtFraction,
+} from "../domain/routeGeometryMath.js";
+import { historicalRouteIntentKey } from "./routeAnchorCompatibility.js";
+import {
   addPoint,
   createRouteManager,
   dragPoint,
@@ -68,6 +73,7 @@ class ShardedRouteSession {
     this.cwBaseIndex = options.cwBaseIndex || null;
     this.legacyRoutingCompatibility =
       options.legacyRoutingCompatibility || null;
+    this.routeAnchorCompatibility = options.routeAnchorCompatibility || null;
     this.manager = null;
     this.routeRequestGeneration = 0;
     this.pendingRouteProposal = null;
@@ -373,6 +379,8 @@ class ShardedRouteSession {
     return this.recoverShareAnchorPoints(payload.routePoints, {
       identityProven,
       requiresReview: true,
+      anchorCompatibility: this.routeAnchorCompatibilityForPayload(payload),
+      routeIntentKey: historicalRouteIntentKey(payload),
     });
   }
 
@@ -400,12 +408,19 @@ class ShardedRouteSession {
     return this.recoverShareAnchorPoints(payload.routePoints, {
       identityProven,
       requiresReview: true,
+      anchorCompatibility: this.routeAnchorCompatibilityForPayload(payload),
+      routeIntentKey: historicalRouteIntentKey(payload),
     });
   }
 
   async recoverShareAnchorPoints(
     anchors,
-    { identityProven = false, requiresReview = false } = {},
+    {
+      identityProven = false,
+      requiresReview = false,
+      anchorCompatibility = null,
+      routeIntentKey = null,
+    } = {},
   ) {
     if (!Array.isArray(anchors) || anchors.length === 0) return null;
     const resolved = anchors.every(hasLngLat)
@@ -417,20 +432,174 @@ class ShardedRouteSession {
       : identityProven &&
           typeof this.manager?.resolveShareAnchorPoints === "function"
         ? this.manager.resolveShareAnchorPoints(anchors)
-        : null;
+        : this.resolveCompatibleShareAnchorPoints(
+            anchors,
+            anchorCompatibility,
+            routeIntentKey,
+          );
     if (!resolved) {
       // Anchors carry only baseEdgeShareId+baseEdgeFraction (no lat/lng), so
       // without a current-graph resolution they cannot be re-routed.
       return null;
     }
-    const snapshot = await this.restorePoints(resolved);
+    let snapshot = await this.restorePoints(resolved);
+    const archivedIntent = routeIntentKey
+      ? anchorCompatibility?.routeIntents?.[routeIntentKey]
+      : null;
+    const shapedPoints = this.conditionalHistoricalDetourPoints(
+      archivedIntent,
+      snapshot,
+    );
+    let appliedRouteIntent = false;
+    if (shapedPoints) {
+      const shapedSnapshot = await this.restorePoints(shapedPoints);
+      if (shapedSnapshot) {
+        snapshot = shapedSnapshot;
+        appliedRouteIntent = true;
+      }
+      const strongShapedPoints = this.conditionalHistoricalDetourPoints(
+        archivedIntent,
+        snapshot,
+        { strong: true },
+      );
+      if (strongShapedPoints) {
+        const strongSnapshot = await this.restorePoints(strongShapedPoints);
+        if (strongSnapshot) {
+          snapshot = strongSnapshot;
+          appliedRouteIntent = true;
+        }
+      }
+    }
     return snapshot && requiresReview
       ? {
           ...snapshot,
           requiresReview: true,
-          restoreDisposition: "replanned-current-policy",
+          restoreDisposition: appliedRouteIntent
+            ? "replanned-current-policy-route-intent"
+            : "replanned-current-policy",
         }
       : snapshot;
+  }
+
+  conditionalHistoricalDetourPoints(archivedIntent, snapshot, { strong = false } = {}) {
+    if (
+      !Array.isArray(archivedIntent?.points) ||
+      archivedIntent.points.length < 2 ||
+      !Array.isArray(archivedIntent?.detours) ||
+      archivedIntent.detours.length === 0 ||
+      !snapshot
+    ) {
+      return null;
+    }
+    const visitedSegmentIds = new Set(
+      (snapshot.routingValidation?.traversalSlices || []).flatMap((slice) =>
+        (slice.cwMembership || []).map((membership) => Number(membership.segmentId)),
+      ),
+    );
+    const currentSegmentIds = new Set(
+      Object.keys(this.cwBaseIndex?.segments || {}).map(Number),
+    );
+    const neededByPoint = new Map();
+    for (const detour of archivedIntent.detours) {
+      const segmentIds = (detour?.segmentIds || []).map(Number);
+      const missingCurrentSegment = segmentIds.some(
+        (segmentId) =>
+          currentSegmentIds.has(segmentId) && !visitedSegmentIds.has(segmentId),
+      );
+      const needsDetour = strong
+        ? missingCurrentSegment
+        : segmentIds.length === 0 || missingCurrentSegment;
+      const detourPoints = strong && Array.isArray(detour?.strongPoints)
+        ? detour.strongPoints
+        : detour?.points;
+      if (!needsDetour || !Array.isArray(detourPoints) || detourPoints.length === 0) {
+        continue;
+      }
+      const afterPointIndex = Number(detour.afterPointIndex);
+      if (!Number.isSafeInteger(afterPointIndex) || afterPointIndex < 0) continue;
+      const existing = neededByPoint.get(afterPointIndex) || [];
+      existing.push(...detourPoints);
+      neededByPoint.set(afterPointIndex, existing);
+    }
+    if (neededByPoint.size === 0) return null;
+
+    const points = [];
+    for (const [index, coordinate] of archivedIntent.points.entries()) {
+      points.push(this.historicalIntentPoint(coordinate, points.length));
+      for (const detourCoordinate of neededByPoint.get(index) || []) {
+        points.push(this.historicalIntentPoint(detourCoordinate, points.length));
+      }
+    }
+    return points.every((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng))
+      ? points
+      : null;
+  }
+
+  historicalIntentPoint(point, index) {
+    return {
+      id: `historical-route-intent-${index}`,
+      lat: Number(point?.[1] ?? point?.lat),
+      lng: Number(point?.[0] ?? point?.lng),
+      historicalRouteIntent: true,
+    };
+  }
+
+  resolveCompatibleShareAnchorPoints(anchors, compatibility, routeIntentKey = null) {
+    if (!compatibility || typeof this.manager?.resolveShareAnchorPoints !== "function") {
+      return null;
+    }
+    const archivedIntent = routeIntentKey
+      ? compatibility.routeIntents?.[routeIntentKey]
+      : null;
+    if (Array.isArray(archivedIntent?.points) && archivedIntent.points.length >= 2) {
+      const points = archivedIntent.points.map((point, index) =>
+        this.historicalIntentPoint(point, index));
+      if (points.every((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng))) {
+        return points;
+      }
+    }
+    const points = anchors.map((anchor, index) => {
+      const current = this.manager.resolveShareAnchorPoints([anchor])?.[0] || null;
+      if (current) return current;
+      const shareId = Number(anchor?.baseEdgeShareId ?? anchor?.edgeShareId);
+      const edge = compatibility.archivedEdges?.[String(shareId)];
+      const polyline = (edge?.coordinates || [])
+        .map((coordinate) => ({
+          lng: Number(coordinate?.[0] ?? coordinate?.lng),
+          lat: Number(coordinate?.[1] ?? coordinate?.lat),
+        }))
+        .filter((coordinate) => Number.isFinite(coordinate.lng) && Number.isFinite(coordinate.lat));
+      if (polyline.length < 2) return null;
+      const fraction = Math.max(
+        0,
+        Math.min(1, Number(anchor?.baseEdgeFraction ?? anchor?.edgeFraction) || 0),
+      );
+      const point = pointAtFraction(
+        polyline,
+        buildCumulativeDistances(polyline),
+        fraction,
+      );
+      return {
+        id: anchor?.id || `route-point-${index}`,
+        lat: point.lat,
+        lng: point.lng,
+        historicalBaseEdgeId: edge.edgeId || null,
+        historicalBaseEdgeShareId: shareId,
+        historicalBaseEdgeFraction: fraction,
+      };
+    });
+    return points.every(Boolean) ? points : null;
+  }
+
+  routeAnchorCompatibilityForPayload(payload) {
+    const hash = legacyGraphHash(payload);
+    const compatibility = this.routeAnchorCompatibility;
+    if (!hash || Number(compatibility?.schemaVersion) !== 1) return null;
+    const graphVersion = compatibility.graphVersions?.[hash];
+    if (!graphVersion || !/^[0-9a-f]{64}$/.test(String(graphVersion.registryDigest || ""))) {
+      return null;
+    }
+    return graphVersion;
   }
 
   currentOrLegacyPayloadIdentityProven(payload) {

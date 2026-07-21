@@ -4,7 +4,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { decodeCompactBaseRoutingShard } from "../packages/core/src/routing/compactBaseRoutingShard.js";
-import { parseCwOverlayV2 } from "../editor/lib/cw-overlay-v2.mjs";
+import {
+  isActiveCwOverlaySegment,
+  parseCwOverlayV2,
+} from "../editor/lib/cw-overlay-v2.mjs";
 
 const { values } = parseArgs({
   options: {
@@ -14,6 +17,10 @@ const { values } = parseArgs({
     "registry-proposal": {
       type: "string",
       default: "build/base-edge-share-ids.proposal.json",
+    },
+    "registry-history-dir": {
+      type: "string",
+      default: "data/routing-registry-history",
     },
     "report-only": { type: "boolean", default: false },
   },
@@ -55,7 +62,7 @@ async function validateShareRegistry(contract) {
   const expected = contract.baseEdgeShareRegistryDigest;
   if (expected === registryDigest) {
     stats.shareRegistrySource = "released";
-    return;
+    return registry;
   }
   if (!proposal || expected !== proposalDigest) {
     block("share-registry-contract-disagreement", {
@@ -63,7 +70,7 @@ async function validateShareRegistry(contract) {
       registryDigest,
       proposalDigest,
     });
-    return;
+    return null;
   }
   const releasedEdges = registry.edges || {};
   const proposedEdges = proposal.edges || {};
@@ -82,6 +89,180 @@ async function validateShareRegistry(contract) {
   if (new Set(ids).size !== ids.length) block("share-registry-duplicate-id", null);
   stats.shareRegistrySource = "proposal";
   stats.shareRegistryNewIds = Object.keys(proposedEdges).length - Object.keys(releasedEdges).length;
+  return proposal;
+}
+
+async function validateRouteAnchorCompatibility(currentRegistry) {
+  const descriptor = manifest?.routeAnchorCompatibility;
+  if (!descriptor?.path) {
+    block("route-anchor-compatibility-unbundled", null);
+    return;
+  }
+  const actualDigest = await digest(descriptor.path);
+  const expectedDigest = String(
+    descriptor.sha256 || manifest.hashes?.routeAnchorCompatibility || "",
+  );
+  if (!expectedDigest || actualDigest !== expectedDigest) {
+    block("route-anchor-compatibility-hash-disagreement", {
+      expected: expectedDigest,
+      actual: actualDigest,
+    });
+    return;
+  }
+  const compatibility = await json(descriptor.path);
+  if (
+    Number(compatibility.schemaVersion) !== 1 ||
+    compatibility.fractionBasis !== "distance-along-historical-edge-v1"
+  ) {
+    block("route-anchor-compatibility-contract-invalid", {
+      schemaVersion: compatibility.schemaVersion,
+      fractionBasis: compatibility.fractionBasis,
+    });
+    return;
+  }
+  const graphVersions = compatibility.graphVersions || {};
+  const advertised = descriptor.graphVersionHashes || {};
+  const archivedLineage = Object.fromEntries(
+    Object.entries(graphVersions).map(([hash, record]) => [hash, record.registryDigest]),
+  );
+  const lineageKeys = new Set([
+    ...Object.keys(advertised),
+    ...Object.keys(archivedLineage),
+  ]);
+  if (
+    [...lineageKeys].some(
+      (graphHash) => String(advertised[graphHash] || "") !== String(archivedLineage[graphHash] || ""),
+    )
+  ) {
+    block("route-anchor-compatibility-lineage-disagreement", {
+      advertised,
+      archived: archivedLineage,
+    });
+  }
+
+  const currentByShareId = new Map(
+    Object.entries(currentRegistry?.edges || {}).map(([edgeId, shareId]) => [
+      String(shareId),
+      edgeId,
+    ]),
+  );
+  const historyDir = path.resolve(values["registry-history-dir"]);
+  const checkedRegistries = new Map();
+  let archivedEdges = 0;
+  let routeIntents = 0;
+  for (const [graphHash, record] of Object.entries(graphVersions)) {
+    const registryDigest = String(record?.registryDigest || "");
+    if (!/^[0-9a-f]{8}$/.test(graphHash) || !/^[0-9a-f]{64}$/.test(registryDigest)) {
+      block("route-anchor-compatibility-lineage-invalid", { graphHash, registryDigest });
+      continue;
+    }
+    let historicalRegistry = checkedRegistries.get(registryDigest);
+    if (!historicalRegistry) {
+      const registryPath = path.join(historyDir, `${registryDigest}.json`);
+      let registryBytes;
+      try {
+        registryBytes = await readFile(registryPath);
+        const registryActualDigest = createHash("sha256").update(registryBytes).digest("hex");
+        if (registryActualDigest !== registryDigest) {
+          block("route-anchor-history-registry-hash-mismatch", {
+            registryDigest,
+            actual: registryActualDigest,
+          });
+          continue;
+        }
+        historicalRegistry = JSON.parse(registryBytes.toString("utf8"));
+        checkedRegistries.set(registryDigest, historicalRegistry);
+      } catch (error) {
+        block("route-anchor-history-registry-missing", {
+          registryDigest,
+          error: error.message,
+        });
+        continue;
+      }
+    }
+    for (const [shareId, edge] of Object.entries(record.archivedEdges || {})) {
+      archivedEdges += 1;
+      const edgeId = String(edge?.edgeId || "");
+      if (String(historicalRegistry.edges?.[edgeId]) !== shareId) {
+        block("route-anchor-history-binding-invalid", {
+          graphHash,
+          shareId,
+          edgeId,
+          historicalShareId: historicalRegistry.edges?.[edgeId] ?? null,
+        });
+      }
+      const currentEdgeId = currentByShareId.get(shareId);
+      if (currentEdgeId && currentEdgeId !== edgeId) {
+        block("route-anchor-share-id-rebound", {
+          graphHash,
+          shareId,
+          historicalEdgeId: edgeId,
+          currentEdgeId,
+        });
+      }
+      const coordinates = edge?.coordinates || [];
+      if (
+        coordinates.length < 2 ||
+        coordinates.some(
+          (coordinate) =>
+            !Array.isArray(coordinate) ||
+            !Number.isFinite(Number(coordinate[0])) ||
+            !Number.isFinite(Number(coordinate[1])),
+        )
+      ) {
+        block("route-anchor-geometry-invalid", { graphHash, shareId, edgeId });
+      }
+    }
+    const intents = record.routeIntents || {};
+    if (Object.keys(intents).length === 0) {
+      block("route-anchor-intents-missing", { graphHash });
+    }
+    for (const [intentKey, intent] of Object.entries(intents)) {
+      routeIntents += 1;
+      const points = intent?.points || [];
+      const detours = intent?.detours || [];
+      if (
+        !/^sha256-[0-9a-f]{64}$/.test(intentKey) ||
+        points.length < 2 ||
+        points.some(
+          (point) =>
+            !Array.isArray(point) ||
+            !Number.isFinite(Number(point[0])) ||
+            !Number.isFinite(Number(point[1])),
+        )
+        || !Array.isArray(detours)
+        || detours.some((detour) =>
+          !Number.isSafeInteger(Number(detour?.afterPointIndex))
+          || Number(detour.afterPointIndex) < 0
+          || Number(detour.afterPointIndex) >= points.length - 1
+          || !Array.isArray(detour?.segmentIds)
+          || detour.segmentIds.some((segmentId) => !Number.isSafeInteger(Number(segmentId)))
+          || !Array.isArray(detour?.points)
+          || detour.points.length === 0
+          || detour.points.some((point) =>
+            !Array.isArray(point)
+            || !Number.isFinite(Number(point[0]))
+            || !Number.isFinite(Number(point[1]))
+          )
+          || (detour.strongPoints !== undefined && (
+            !Array.isArray(detour.strongPoints)
+            || detour.strongPoints.length === 0
+            || detour.strongPoints.some((point) =>
+              !Array.isArray(point)
+              || !Number.isFinite(Number(point[0]))
+              || !Number.isFinite(Number(point[1]))
+            )
+          ))
+        )
+      ) {
+        block("route-anchor-intent-invalid", { graphHash, intentKey });
+      }
+    }
+  }
+  stats.routeAnchorCompatibilityGraphVersions = Object.keys(graphVersions).length;
+  stats.routeAnchorCompatibilityArchivedEdges = archivedEdges;
+  stats.routeAnchorCompatibilityRegistries = checkedRegistries.size;
+  stats.routeAnchorCompatibilityRouteIntents = routeIntents;
 }
 
 let manifest;
@@ -105,7 +286,8 @@ try {
 
 if (manifest && shardManifest && overlay && cwIndex) {
   const contract = shardManifest.routingContract || {};
-  await validateShareRegistry(contract);
+  const currentRegistry = await validateShareRegistry(contract);
+  await validateRouteAnchorCompatibility(currentRegistry);
   if (
     Number(shardManifest.sourceRoutingSchemaVersion) !== 3 ||
     Number(contract.baseRoutingSchemaVersion) !== 3 ||
@@ -153,6 +335,7 @@ if (manifest && shardManifest && overlay && cwIndex) {
       legacyCwBaseIndex: manifest.legacyRoutingCompatibility?.cwBaseIndex,
       legacyRoutingCompatibilityMetadata:
         manifest.legacyRoutingCompatibility?.metadata,
+      routeAnchorCompatibility: manifest.routeAnchorCompatibility?.path,
     }[key];
     if (!relative) continue;
     const actual = await digest(relative);
@@ -164,6 +347,15 @@ if (manifest && shardManifest && overlay && cwIndex) {
   let unresolvedSlots = 0;
   for (const segment of Object.values(overlay.segments || {})) {
     const indexSegment = cwIndex.segments?.[String(segment.segmentId)];
+    if (!isActiveCwOverlaySegment(segment)) {
+      if (indexSegment) {
+        block("inactive-segment-published-in-index", {
+          segmentId: segment.segmentId,
+          lifecycleStatus: segment.lifecycleStatus,
+        });
+      }
+      continue;
+    }
     let accepted = 0;
     for (const alignmentKey of ["aToB", "bToA"]) {
       const published = segment.alignments?.[alignmentKey]?.published;

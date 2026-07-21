@@ -8,6 +8,7 @@ const DEFAULT_MAP_ASSETS = {
   cwBaseIndex: null,
   cwAlignmentGeometry: null,
   legacyRoutingCompatibility: null,
+  routeAnchorCompatibility: null,
   crossings: null,
   networkJunctions: null,
   assetBasePath: MAP_MANIFEST_PATH,
@@ -75,6 +76,7 @@ export async function loadMapAssets(options = {}) {
     cwAlignmentGeometryData,
     legacyCwBaseIndexData,
     legacyRoutingCompatibilityMetadata,
+    routeAnchorCompatibilityData,
   ] = await Promise.all([
     getJsonAsset(manifest.segments, { basePath: manifestBasePath, ...fetchOptions }),
     getJsonAsset(manifest.bikeRoads, { basePath: manifestBasePath, ...fetchOptions }),
@@ -132,6 +134,15 @@ export async function loadMapAssets(options = {}) {
           { basePath: manifestBasePath, ...fetchOptions },
         )
       : Promise.resolve(null),
+    manifest.routeAnchorCompatibility?.path
+      ? getJsonAsset(
+          assetPathWithVersion(
+            manifest.routeAnchorCompatibility.path,
+            manifest.version,
+          ),
+          { basePath: manifestBasePath, ...fetchOptions },
+        )
+      : Promise.resolve(null),
   ]);
 
   const legacyRoutingCompatibility = legacyCwBaseIndexData &&
@@ -156,6 +167,7 @@ export async function loadMapAssets(options = {}) {
     networkJunctionsData,
     cwAlignmentGeometryData,
     legacyRoutingCompatibility,
+    routeAnchorCompatibilityData,
     baseRoutingMode: useRoutingShards ? "shards" : "legacy",
   };
 }
@@ -173,6 +185,7 @@ export function summarizeMapAssets({
   networkJunctionsData,
   cwAlignmentGeometryData,
   legacyRoutingCompatibility,
+  routeAnchorCompatibilityData,
 }) {
   const features = geoJsonData?.features || [];
   const coordinateCount = features.reduce((total, feature) => {
@@ -199,6 +212,9 @@ export function summarizeMapAssets({
       cwAlignmentGeometryData?.features?.length || 0,
     legacyRoutingCompatibility:
       legacyRoutingCompatibility?.metadata?.releaseId || null,
+    routeAnchorCompatibilityGraphVersions: Object.keys(
+      routeAnchorCompatibilityData?.graphVersions || {},
+    ).length,
     roundaboutsFile: manifest.roundabouts || null,
     roundabouts: Array.isArray(roundaboutsData?.roundabouts) ? roundaboutsData.roundabouts.length : 0,
     crossingsFile: manifest.crossings || null,

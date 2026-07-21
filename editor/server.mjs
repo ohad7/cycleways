@@ -5025,6 +5025,7 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
       manifest.featuredRoutesBase,
       manifest.legacyRoutingCompatibility?.cwBaseIndex,
       manifest.legacyRoutingCompatibility?.metadata,
+      manifest.routeAnchorCompatibility?.path,
     ]
       .filter(Boolean)
       .map((entry) => resolveManifestPath(publicDataDir, entry)),
@@ -5049,6 +5050,7 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(publicDataDir, /^cw-base-index\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(publicDataDir, /^cw-alignment-geometry\.[0-9a-f]{12}\.json$/)),
+    ...(await existingVersionedFiles(resolve(publicDataDir, "routing-compat"), /^route-anchor-compatibility\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-shards\.[0-9a-f]{12}$/)),
     ...(await existingVersionedFiles(publicDataDir, /^route-catalog\.[0-9a-f]{12}\.json$/)),
     ...(await existingVersionedFiles(publicDataDir, /^featured-routes\.[0-9a-f]{12}$/)),
@@ -5161,6 +5163,19 @@ export function buildPromoteTargets(manifest, {
       target: resolveManifestPath(
         publicDataDir,
         manifest.legacyRoutingCompatibility.metadata,
+      ),
+    });
+  }
+  if (manifest.routeAnchorCompatibility?.path) {
+    targets.push({
+      label: "historical route anchor compatibility",
+      source: resolveManifestPath(
+        buildPublicDataDir,
+        manifest.routeAnchorCompatibility.path,
+      ),
+      target: resolveManifestPath(
+        publicDataDir,
+        manifest.routeAnchorCompatibility.path,
       ),
     });
   }
@@ -5353,9 +5368,13 @@ async function handlePromote(payload = {}) {
     throw new Error("Promote requires a CW base index in the build manifest.");
   }
   if (strictTraversalBuild) {
-    if (!manifest.cwAlignmentGeometry || !manifest.legacyRoutingCompatibility) {
+    if (
+      !manifest.cwAlignmentGeometry ||
+      !manifest.legacyRoutingCompatibility ||
+      !manifest.routeAnchorCompatibility
+    ) {
       throw new Error(
-        "Strict traversal promote requires alignment geometry and the legacy compatibility bundle.",
+        "Strict traversal promote requires alignment geometry, legacy compatibility, and historical route anchors.",
       );
     }
     await runStrictTraversalPromotionAudit(promoteId, builtOverlayPath);

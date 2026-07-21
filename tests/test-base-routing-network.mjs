@@ -179,6 +179,37 @@ await replayManager.load(geoJsonData, segmentsData, baseRoutingNetwork);
 assert.equal(replayManager.restoreBaseRouteFromPayload(sameEdgePayload), true);
 assertNear(replayManager.getRouteInfo().distance, routeInfo.distance);
 
+// A waypoint exactly on a graph node may remain anchored to either incident
+// edge. Exact replay must accept the adjacent traversal without inventing a
+// zero-length edge in the shared payload.
+const outgoingAtAdjacentAnchor = {
+  type: "base_route_v4",
+  routePoints: [
+    { baseEdgeShareId: 1, baseEdgeFraction: 1 },
+    { baseEdgeShareId: 2, baseEdgeFraction: 1 },
+  ],
+  legs: [{ edgeShareIds: [2], directions: ["forward"] }],
+};
+assert.equal(
+  replayManager.restoreBaseRouteFromPayload(outgoingAtAdjacentAnchor),
+  true,
+);
+assertNear(replayManager.getRouteInfo().distance, 93);
+
+const incomingAtAdjacentAnchor = {
+  type: "base_route_v4",
+  routePoints: [
+    { baseEdgeShareId: 1, baseEdgeFraction: 0 },
+    { baseEdgeShareId: 2, baseEdgeFraction: 0 },
+  ],
+  legs: [{ edgeShareIds: [1], directions: ["forward"] }],
+};
+assert.equal(
+  replayManager.restoreBaseRouteFromPayload(incomingAtAdjacentAnchor),
+  true,
+);
+assertNear(replayManager.getRouteInfo().distance, 93);
+
 const elevatedClipManager = new RouteManager();
 await elevatedClipManager.load(geoJsonData, segmentsData, {
   schemaVersion: 2,

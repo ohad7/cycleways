@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
 import { buildMigrationProposal } from "../scripts/migrate-cw-base-overlay-v2.mjs";
+import { isActiveCwOverlaySegment } from "../editor/lib/cw-overlay-v2.mjs";
+
+assert.equal(isActiveCwOverlaySegment({ lifecycleStatus: "active" }), true);
+assert.equal(isActiveCwOverlaySegment({}), true);
+assert.equal(isActiveCwOverlaySegment({ lifecycleStatus: "deprecated" }), false);
+assert.equal(isActiveCwOverlaySegment({ lifecycleStatus: "draft" }), false);
+assert.equal(isActiveCwOverlaySegment({ lifecycleStatus: "legacy" }), false);
 
 const graph = {
   edges: [

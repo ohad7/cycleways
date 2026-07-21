@@ -76,6 +76,9 @@ ACCEPTED_MAPPING_LENGTH_BLOCK_MIN_RATIO = 0.8
 ACCEPTED_MAPPING_LENGTH_BLOCK_MAX_RATIO = 2.0
 PUBLIC_DATA_DIR = "public-data"
 ROUTING_COMPAT_DIR = Path(__file__).resolve().parents[1] / "data" / "routing-compat"
+ROUTING_REGISTRY_HISTORY_DIR = (
+    Path(__file__).resolve().parents[1] / "data" / "routing-registry-history"
+)
 BASE_ROUTING_SHARD_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_MANIFEST_SCHEMA_VERSION = 1
 BASE_ROUTING_SHARD_SIZE_DEGREES = 0.05
@@ -3500,6 +3503,7 @@ def write_runtime_manifest(
     output_junctions: Path | None = None,
     output_cw_alignment_geometry: Path | None = None,
     legacy_compatibility: dict[str, Any] | None = None,
+    route_anchor_compatibility: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     base_routing_shard_manifest = output_base_routing_shards / "manifest.json"
     version_inputs = [
@@ -3523,6 +3527,8 @@ def write_runtime_manifest(
             for key, value in legacy_compatibility.items()
             if key.endswith("Path")
         )
+    if route_anchor_compatibility:
+        version_inputs.append(Path(route_anchor_compatibility["path"]))
     version = combined_digest(version_inputs)[:12]
     manifest_path = public_data_dir / "map-manifest.json"
 
@@ -3573,6 +3579,14 @@ def write_runtime_manifest(
             immutable_junctions = versioned_file(output_junctions)
             shutil.copyfile(output_junctions, immutable_junctions)
             output_junctions = immutable_junctions
+        if route_anchor_compatibility:
+            route_anchor_path = Path(route_anchor_compatibility["path"])
+            immutable_route_anchor_path = versioned_file(route_anchor_path)
+            shutil.copyfile(route_anchor_path, immutable_route_anchor_path)
+            route_anchor_compatibility = {
+                **route_anchor_compatibility,
+                "path": str(immutable_route_anchor_path),
+            }
 
     def public_relative(path: Path) -> str:
         return path.relative_to(public_data_dir).as_posix()
@@ -3645,6 +3659,17 @@ def write_runtime_manifest(
         manifest["hashes"]["legacyRoutingCompatibilityMetadata"] = file_digest(
             metadata_path
         )
+    if route_anchor_compatibility:
+        route_anchor_path = Path(route_anchor_compatibility["path"])
+        manifest["routeAnchorCompatibility"] = {
+            "schemaVersion": 1,
+            "path": public_relative(route_anchor_path),
+            "sha256": file_digest(route_anchor_path),
+            "graphVersionHashes": route_anchor_compatibility["graphVersionHashes"],
+        }
+        manifest["hashes"]["routeAnchorCompatibility"] = file_digest(
+            route_anchor_path
+        )
     write_json(manifest_path, manifest)
     runtime = {
         "version": version,
@@ -3663,6 +3688,10 @@ def write_runtime_manifest(
         runtime["networkJunctions"] = str(output_junctions)
     if output_cw_alignment_geometry and output_cw_alignment_geometry.exists():
         runtime["cwAlignmentGeometry"] = str(output_cw_alignment_geometry)
+    if route_anchor_compatibility:
+        runtime["routeAnchorCompatibility"] = str(
+            route_anchor_compatibility["path"]
+        )
     return runtime, manifest_path
 
 
@@ -3694,6 +3723,111 @@ def stage_legacy_routing_compatibility(
         "metadataPath": str(target_metadata),
         "registryDigest": registry_digest,
         "graphVersionHashes": {graph_hash: registry_digest},
+    }
+
+
+def stage_route_anchor_compatibility(
+    public_data_dir: Path, routing_profile: str
+) -> dict[str, Any] | None:
+    if routing_profile != "staged-v2":
+        return None
+    source_path = ROUTING_COMPAT_DIR / "route-anchor-compatibility.json"
+    payload = load_json(source_path, {})
+    if payload.get("schemaVersion") != 1:
+        raise ValueError("route-anchor compatibility archive is missing or invalid")
+    graph_versions = payload.get("graphVersions")
+    if not isinstance(graph_versions, dict) or not graph_versions:
+        raise ValueError("route-anchor compatibility archive has no graph versions")
+    graph_version_hashes: dict[str, str] = {}
+    for graph_hash, record in sorted(graph_versions.items()):
+        if not re.fullmatch(r"[0-9a-f]{8}", str(graph_hash)):
+            raise ValueError(f"route-anchor compatibility graph hash is invalid: {graph_hash}")
+        registry_digest = str((record or {}).get("registryDigest") or "")
+        if not re.fullmatch(r"[0-9a-f]{64}", registry_digest):
+            raise ValueError(
+                f"route-anchor compatibility registry digest is invalid: {graph_hash}"
+            )
+        registry_path = ROUTING_REGISTRY_HISTORY_DIR / f"{registry_digest}.json"
+        if not registry_path.exists() or file_digest(registry_path) != registry_digest:
+            raise ValueError(
+                f"route-anchor compatibility registry history is missing: {registry_digest}"
+            )
+        archived_edges = (record or {}).get("archivedEdges")
+        if not isinstance(archived_edges, dict) or not archived_edges:
+            raise ValueError(
+                f"route-anchor compatibility graph has no archived edges: {graph_hash}"
+            )
+        for share_id, edge in archived_edges.items():
+            coordinates = (edge or {}).get("coordinates")
+            if (
+                not str(share_id).isdigit()
+                or not isinstance(coordinates, list)
+                or len(coordinates) < 2
+            ):
+                raise ValueError(
+                    f"route-anchor compatibility edge is invalid: {graph_hash}/{share_id}"
+                )
+        route_intents = (record or {}).get("routeIntents")
+        if not isinstance(route_intents, dict) or not route_intents:
+            raise ValueError(
+                f"route-anchor compatibility graph has no route intents: {graph_hash}"
+            )
+        for intent_key, intent in route_intents.items():
+            points = (intent or {}).get("points")
+            detours = (intent or {}).get("detours", [])
+            if (
+                not re.fullmatch(r"sha256-[0-9a-f]{64}", str(intent_key))
+                or not isinstance(points, list)
+                or len(points) < 2
+                or any(
+                    not isinstance(point, list)
+                    or len(point) < 2
+                    or not all(isinstance(value, (int, float)) for value in point[:2])
+                    for point in points
+                )
+                or not isinstance(detours, list)
+                or any(
+                    not isinstance(detour, dict)
+                    or not isinstance(detour.get("afterPointIndex"), int)
+                    or detour.get("afterPointIndex") < 0
+                    or detour.get("afterPointIndex") >= len(points) - 1
+                    or not isinstance(detour.get("segmentIds", []), list)
+                    or any(not isinstance(segment_id, int) for segment_id in detour.get("segmentIds", []))
+                    or not isinstance(detour.get("points"), list)
+                    or not detour.get("points")
+                    or any(
+                        not isinstance(point, list)
+                        or len(point) < 2
+                        or not all(isinstance(value, (int, float)) for value in point[:2])
+                        for point in detour.get("points", [])
+                    )
+                    or (
+                        "strongPoints" in detour
+                        and (
+                            not isinstance(detour.get("strongPoints"), list)
+                            or not detour.get("strongPoints")
+                            or any(
+                                not isinstance(point, list)
+                                or len(point) < 2
+                                or not all(isinstance(value, (int, float)) for value in point[:2])
+                                for point in detour.get("strongPoints", [])
+                            )
+                        )
+                    )
+                    for detour in detours
+                )
+            ):
+                raise ValueError(
+                    f"route-anchor compatibility intent is invalid: {graph_hash}/{intent_key}"
+                )
+        graph_version_hashes[str(graph_hash)] = registry_digest
+    target_dir = public_data_dir / "routing-compat"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = target_dir / source_path.name
+    shutil.copyfile(source_path, target_path)
+    return {
+        "path": str(target_path),
+        "graphVersionHashes": graph_version_hashes,
     }
 
 
@@ -4421,6 +4555,9 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
     legacy_compatibility = stage_legacy_routing_compatibility(
         public_data_dir, args.routing_profile
     )
+    route_anchor_compatibility = stage_route_anchor_compatibility(
+        public_data_dir, args.routing_profile
+    )
     runtime_outputs, manifest_path = write_runtime_manifest(
         public_data_dir,
         output_geojson,
@@ -4435,6 +4572,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         output_junctions,
         output_cw_alignment_geometry,
         legacy_compatibility,
+        route_anchor_compatibility,
     )
     emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {
@@ -4623,6 +4761,9 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
     legacy_compatibility = stage_legacy_routing_compatibility(
         public_data_dir, args.routing_profile
     )
+    route_anchor_compatibility = stage_route_anchor_compatibility(
+        public_data_dir, args.routing_profile
+    )
     runtime_outputs, manifest_path = write_runtime_manifest(
         public_data_dir,
         output_geojson,
@@ -4637,6 +4778,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         output_junctions,
         output_cw_alignment_geometry,
         legacy_compatibility,
+        route_anchor_compatibility,
     )
     emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {

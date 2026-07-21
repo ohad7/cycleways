@@ -4,6 +4,45 @@
 **Status:** implementation in progress
 **Design:** [`design.md`](./design.md)
 
+## 2026-07-22 amendment — historical V6 anchor compatibility
+
+- [x] Inventory the graph hashes in the published featured-route tokens and
+  identify the Git commit, registry, and routing shards that originally
+  published each token.
+- [x] Generate an immutable graph-version archive containing verified anchor
+  edge geometry and exact, digest-addressed historical registry snapshots.
+- [x] Resolve a missing historical V6 anchor from that archive and replan its
+  coordinate intent through the current policy graph, while preserving
+  fail-closed behavior for unknown or unverifiable graph versions.
+- [x] Preserve historical route intent with original anchor coordinates and
+  conditional detour shaping. Retry only the spans whose still-current CW
+  segment IDs disappeared from the initial current-policy replan; ignore
+  retired IDs instead of forcing obsolete geometry.
+- [x] Keep exact replay, navigation auto-start, and resume gated on current
+  identity and traversal validation; archived geometry never becomes route
+  geometry.
+- [x] Add the archive to staged builds, runtime manifest hashing, web loading,
+  mobile offline bundling, promotion targets, cleanup protection, and strict
+  promotion integrity checks.
+- [x] Add core restore, mobile asset-list, and editor promotion-target
+  regressions.
+- [x] Rebuild staged V3 assets and prove that all six formerly undecodable
+  catalog V6 tokens now recover as current-policy replans rather than decode
+  failures.
+- [x] Generate exact current-graph replacement tokens and a comparison report
+  for all featured routes, including a gate for omitted historical segment IDs
+  that remain in the current CW index.
+- [x] Correct the Sovev Dafna migration so its start intent and the
+  #335 → #246 → #247 sequence survive current-policy replanning.
+- [ ] Manually review the material Sovev Dafna geometry/distance change and the
+  other routes still classified as material; do not update accepted corpus
+  fingerprints before that review.
+- [ ] Record accepted current fingerprints, rerun the Road 99 regression, and
+  pass the complete offered-route, reported-ride, strict traversal, build, and
+  promotion dry-run gates without a waiver.
+- [ ] Add release-process automation that captures newly published token
+  anchors before a later graph generation can remove them.
+
 ## 2026-07-20 amendment — roundabout reverse auto-correction
 
 - [x] Detect exact-reverse failures caused exclusively by contiguous

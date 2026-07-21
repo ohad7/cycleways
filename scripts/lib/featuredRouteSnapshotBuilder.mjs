@@ -13,6 +13,7 @@ import { resolve } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  buildShareInfo,
   createRouteManager,
   restoreRouteFromParam,
 } from "@cycleways/core/routing/routeActions.js";
@@ -89,6 +90,7 @@ export async function getBaseRoutingDecodeAssets({
   let cwBaseIndex = null;
   let legacyCwBaseIndex = null;
   let legacyRoutingCompatibility = null;
+  let routeAnchorCompatibility = null;
   let shardManifest = null;
   let shardsDir = null;
   try {
@@ -146,11 +148,25 @@ export async function getBaseRoutingDecodeAssets({
   } catch (err) {
     log("warn", `legacy cw-base-index unavailable for route decode: ${err.message}`);
   }
+  try {
+    const anchorCompatibility = resolvedManifest.routeAnchorCompatibility;
+    if (anchorCompatibility?.path) {
+      const bytes = await readFile(resolve(publicDataRoot, anchorCompatibility.path));
+      const actual = createHash("sha256").update(bytes).digest("hex");
+      if (anchorCompatibility.sha256 && actual !== anchorCompatibility.sha256) {
+        throw new Error("route-anchor compatibility hash mismatch");
+      }
+      routeAnchorCompatibility = JSON.parse(bytes.toString("utf-8"));
+    }
+  } catch (err) {
+    log("warn", `route-anchor compatibility unavailable for route decode: ${err.message}`);
+  }
   const value = {
     baseRoutingNetwork,
     cwBaseIndex,
     legacyCwBaseIndex,
     legacyRoutingCompatibility,
+    routeAnchorCompatibility,
     shardManifest,
     shardsDir,
   };
@@ -210,6 +226,7 @@ export async function loadRouteStateForSlug(slug, {
   publicDataRoot = publicDataDir,
   manifest = null,
   allowSnapshotFallback = true,
+  includeCurrentShareInfo = false,
   snapshotDir = featuredRoutesDir,
   log = defaultLog,
 } = {}) {
@@ -228,6 +245,7 @@ export async function loadRouteStateForSlug(slug, {
     cwBaseIndex,
     legacyCwBaseIndex,
     legacyRoutingCompatibility,
+    routeAnchorCompatibility,
     shardManifest,
     shardsDir,
   } = await getBaseRoutingDecodeAssets({
@@ -236,6 +254,7 @@ export async function loadRouteStateForSlug(slug, {
     manifest,
   });
   let routeState = null;
+  let managerForShare = null;
   let decodeSource = null;
   let decodeError = null;
   try {
@@ -254,9 +273,10 @@ export async function loadRouteStateForSlug(slug, {
         segmentsData,
         shardManifest,
         loadShard,
-        { cwBaseIndex, legacyRoutingCompatibility },
+        { cwBaseIndex, legacyRoutingCompatibility, routeAnchorCompatibility },
       );
       routeState = await session.restoreRouteParam(routeToken);
+      managerForShare = session.manager;
     } else {
       const manager = await createRouteManager(
         RouteManagerClass,
@@ -269,6 +289,7 @@ export async function loadRouteStateForSlug(slug, {
         ? legacyCwBaseIndex
         : cwBaseIndex;
       routeState = restoreRouteFromParam(manager, routeToken, segmentsData, restoreCwBaseIndex);
+      managerForShare = manager;
     }
     if (routeState) decodeSource = "live";
   } catch (err) {
@@ -296,7 +317,22 @@ export async function loadRouteStateForSlug(slug, {
   // does not surface the format, and decodeRoutePayload is a cheap pure parse
   // (no routing/manager work), so the second call is intentional and harmless.
   const routeFormat = decodeRoutePayload(routeToken).type;
-  return { routeState, routeToken, routeFormat, decodeSource };
+  const currentShareInfo = includeCurrentShareInfo && managerForShare
+    ? buildShareInfo(
+        routeState,
+        segmentsData,
+        managerForShare,
+        { href: "https://www.cycleways.app/" },
+        cwBaseIndex,
+      )
+    : null;
+  return {
+    routeState,
+    routeToken,
+    routeFormat,
+    decodeSource,
+    currentShareInfo,
+  };
 }
 
 // Thin wrapper preserving the original editor/server.mjs contract: returns just
