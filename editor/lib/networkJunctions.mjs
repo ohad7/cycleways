@@ -663,7 +663,9 @@ function customJunctionCandidate(record, graph, overlay, acceptedCwDirections) {
     classification: record.navigationKind,
     center,
     boundary: bbox,
-    ringEdgeIds: [],
+    ringEdgeIds: record.navigationKind === "roundabout"
+      ? [...internalEdgeIds].sort()
+      : [],
     internalEdgeIds: [...internalEdgeIds].sort(),
     missingInternalEdgeIds,
     ports,
@@ -1032,6 +1034,8 @@ export function networkJunctionGeoJson(joined, graph = {}) {
           junctionId: junction.id,
           edgeId,
           ring: junction.ringEdgeIds.includes(edgeId),
+          navigationKind: junction.navigationKind,
+          publicationStatus: junction.publication?.status || "detected",
           forward: traversalState(edge, "forward"),
           reverse: traversalState(edge, "reverse"),
         },

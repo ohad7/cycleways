@@ -287,6 +287,7 @@ const state = {
   junctionAuthoring: {
     selecting: false,
     selectedEdgeIds: new Set(),
+    toggledThisClick: null,
     saving: false,
   },
   crossings: {
@@ -4953,7 +4954,7 @@ function updateRoundaboutLayerFilters() {
   }
   const movementFilter = selectedJunction && state.roundabouts.selectedMovementId
     ? ["all", junctionFilter, ["==", ["get", "movementId"], state.roundabouts.selectedMovementId]]
-    : junctionFilter;
+    : ["==", ["get", "movementId"], "__none__"];
   if (map.getLayer("junction-movements-layer")) map.setFilter("junction-movements-layer", movementFilter);
   if (map.getLayer("junction-arm-attachments-layer")) {
     const segmentId = selectedSegmentId();
@@ -5214,9 +5215,16 @@ function renderCustomJunctionDetail(junction) {
     const to = (attachmentLabelByPort.get(exit?.id) || [exit?.edgeId || "exit"]).join(", ");
     return `<button type="button" class="junction-movement-row${movement.id === state.roundabouts.selectedMovementId ? " active" : ""}" data-movement="${escapeHtml(movement.id)}"><strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong><span>${movement.status === "unavailable" ? "No legal path" : `Legal · ${Number(movement.distanceMeters).toFixed(1)} m · ${movement.edgeRefs.length} edges`}</span></button>`;
   }).join("");
+  const internalEdgeRows = (junction.internalEdgeIds || [])
+    .map((edgeId) => `<li><code>${escapeHtml(edgeId)}</code></li>`)
+    .join("");
   els.roundaboutsDetail.innerHTML = `
     <h3>${escapeHtml(junction.name || junction.id)}</h3>
     <p>Custom bicycle junction · ${(junction.internalEdgeIds || []).length} internal base edges</p>
+    <details class="junction-internal-edge-list" open>
+      <summary>Internal base edges (${(junction.internalEdgeIds || []).length})</summary>
+      <ul>${internalEdgeRows || "<li>None</li>"}</ul>
+    </details>
     ${junctionPublicationHtml(junction)}
     <section class="junction-coverage"><h3>Movement coverage</h3><p>${junction.segmentIds.map((id) => `#${id}`).join(", ") || "No attached CW segments"} · ${junction.summary.legalMovements}/${junction.summary.movements} legal</p><p>${junction.armAttachments?.length || 0} logical arm attachments · ${junction.attachments?.filter((attachment) => attachment.source === "arm-attachment").length || 0} directional port attachments</p><div class="junction-movement-list">${movementRows || '<div class="empty-state">No inter-arm movements yet.</div>'}</div></section>
   `;
@@ -5905,15 +5913,7 @@ function renderBaseGraphPanel() {
     !editingBaseNetwork || loading || recalculating || isDrawing() || !selected || selectedVertex <= 0 || selectedVertex >= coords.length - 1;
   els.recalculateOsmGraph.disabled = !editingBaseNetwork || loading || recalculating || isDrawing() || !loaded;
   els.recalculateOsmGraph.textContent = recalculating ? "Recalculating..." : "Recalculate Graph + Matches";
-  const junctionSelectionCount = state.junctionAuthoring.selectedEdgeIds.size;
-  els.selectJunctionEdges.disabled = !loaded || loading || recalculating || isDrawing();
-  els.selectJunctionEdges.classList.toggle("active", state.junctionAuthoring.selecting);
-  els.selectJunctionEdges.textContent = state.junctionAuthoring.selecting ? "Finish selecting" : "Select junction edges";
-  els.clearJunctionEdges.disabled = junctionSelectionCount === 0 || state.junctionAuthoring.saving;
-  els.createJunctionFromEdges.disabled = junctionSelectionCount === 0 || state.junctionAuthoring.saving;
-  els.junctionEdgeSelectionSummary.textContent = junctionSelectionCount
-    ? `${junctionSelectionCount} internal base edge${junctionSelectionCount === 1 ? "" : "s"} selected. Click an edge again to remove it.`
-    : "No internal edges selected.";
+  renderJunctionAuthoringControls();
   const canRefreshDirectionReview =
     loaded &&
     !loading &&
@@ -5963,21 +5963,59 @@ function renderBaseGraphPanel() {
       : "Click any base edge to inspect it. Create a manual edge, copy an OSM edge, or review selected policy evidence.";
 }
 
+function renderJunctionAuthoringControls() {
+  const count = state.junctionAuthoring.selectedEdgeIds.size;
+  const unavailable =
+    !state.baseOverlay.loaded ||
+    state.baseOverlay.loading ||
+    isDrawing();
+  els.selectJunctionEdges.disabled = unavailable;
+  els.selectJunctionEdges.classList.toggle("active", state.junctionAuthoring.selecting);
+  els.selectJunctionEdges.textContent = state.junctionAuthoring.selecting
+    ? "Finish selecting"
+    : "Select junction edges";
+  els.clearJunctionEdges.disabled = count === 0 || state.junctionAuthoring.saving;
+  els.createJunctionFromEdges.disabled = count === 0 || state.junctionAuthoring.saving;
+  setLayerVisibility(
+    "junction-authoring-edges-layer",
+    state.workspaceMode === "base" && count > 0,
+  );
+  els.junctionEdgeSelectionSummary.textContent = count
+    ? `${count} internal base edge${count === 1 ? "" : "s"} selected. Click an edge again to remove it.`
+    : state.junctionAuthoring.selecting
+      ? "Selection active. Click each internal base edge on the map."
+      : "No internal edges selected.";
+}
+
 function toggleJunctionEdgeSelection(feature) {
   const edgeId = String(graphEdgeFeatureId(feature) || manualBaseEdgeFeatureId(feature) || "");
   if (!edgeId) return;
+  // A generated manual edge exists in both selectable map layers. Mapbox sends
+  // one click to both handlers, so process an edge id only once per dispatch.
+  if (!state.junctionAuthoring.toggledThisClick) {
+    state.junctionAuthoring.toggledThisClick = new Set();
+    window.setTimeout(() => {
+      state.junctionAuthoring.toggledThisClick = null;
+    }, 0);
+  }
+  if (state.junctionAuthoring.toggledThisClick.has(edgeId)) return;
+  state.junctionAuthoring.toggledThisClick.add(edgeId);
   if (state.junctionAuthoring.selectedEdgeIds.has(edgeId)) {
     state.junctionAuthoring.selectedEdgeIds.delete(edgeId);
   } else {
     state.junctionAuthoring.selectedEdgeIds.add(edgeId);
   }
-  updateMapSources();
-  renderBaseGraphPanel();
+  setSourceData("junction-authoring-edges", junctionAuthoringEdgeCollection());
+  renderJunctionAuthoringControls();
+  setStatus(
+    `${state.junctionAuthoring.selectedEdgeIds.size} junction edge(s) selected. ` +
+    "Continue clicking edges or choose Finish selecting.",
+  );
 }
 
 function toggleJunctionEdgeSelectionMode() {
   state.junctionAuthoring.selecting = !state.junctionAuthoring.selecting;
-  renderAll();
+  renderJunctionAuthoringControls();
   setStatus(state.junctionAuthoring.selecting
     ? "Select every reviewed base edge inside the bicycle junction. Click selected edges again to remove them."
     : `${state.junctionAuthoring.selectedEdgeIds.size} junction edge(s) selected.`);
@@ -5986,8 +6024,8 @@ function toggleJunctionEdgeSelectionMode() {
 function clearJunctionEdgeSelection() {
   state.junctionAuthoring.selectedEdgeIds.clear();
   state.junctionAuthoring.selecting = false;
-  updateMapSources();
-  renderAll();
+  setSourceData("junction-authoring-edges", EMPTY_FEATURE_COLLECTION);
+  renderJunctionAuthoringControls();
 }
 
 async function createJunctionFromSelectedEdges() {
@@ -11521,6 +11559,14 @@ function wireEvents() {
     ) {
       return;
     }
+    if (state.workspaceMode === "base" && state.junctionAuthoring.selecting) {
+      state.suppressNextSegmentClick = true;
+      window.setTimeout(() => {
+        state.suppressNextSegmentClick = false;
+      }, 0);
+      toggleJunctionEdgeSelection(event.features[0]);
+      return;
+    }
     if (
       !state.editingOverlayEdges &&
       !state.directionReview.editing &&
@@ -11556,10 +11602,6 @@ function wireEvents() {
       return;
     }
     if (state.workspaceMode === "base") {
-      if (state.junctionAuthoring.selecting) {
-        toggleJunctionEdgeSelection(event.features[0]);
-        return;
-      }
       selectBaseGraphEdge(event.features[0]);
     } else {
       toggleSelectedOverlayBaseEdge(event.features[0]).catch(showError);
@@ -11586,6 +11628,14 @@ function wireEvents() {
 
   map.on("click", "manual-base-edges-hit-layer", (event) => {
     if (state.mode !== "select" && !isComposingNewSegmentEdges()) return;
+    if (state.workspaceMode === "base" && state.junctionAuthoring.selecting) {
+      state.suppressNextSegmentClick = true;
+      window.setTimeout(() => {
+        state.suppressNextSegmentClick = false;
+      }, 0);
+      toggleJunctionEdgeSelection(event.features[0]);
+      return;
+    }
     if (
       !state.editingOverlayEdges &&
       !state.directionReview.editing &&
@@ -11634,10 +11684,6 @@ function wireEvents() {
     }
     const manualIndex = Number(event.features[0].properties.manualIndex);
     if (state.workspaceMode === "base") {
-      if (state.junctionAuthoring.selecting) {
-        toggleJunctionEdgeSelection(event.features[0]);
-        return;
-      }
       selectManualBaseEdgeByIndex(manualIndex);
       return;
     }

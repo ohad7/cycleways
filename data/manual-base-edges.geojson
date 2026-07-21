@@ -6285,15 +6285,14 @@
         "status": "active",
         "roadType": "paved",
         "createdAt": "2026-07-21T09:19:43.664Z",
-        "updatedAt": "2026-07-21T09:24:22.890Z",
+        "updatedAt": "2026-07-21T09:34:44.787Z",
         "bicycleTraversal": {
           "forward": "allowed",
           "reverse": "allowed",
           "reviewed": true,
           "reviewer": "ohad",
           "reviewedAt": "2026-07-21",
-          "rationale": "Curator-authored manual edge; bidirectional default",
-          "origin": "manual-authoring-default"
+          "rationale": "Curator-authored manual edge; bidirectional default"
         },
         "linkedSegmentId": 74,
         "linkedSegmentName": "נחל טל מטעי דפנה"

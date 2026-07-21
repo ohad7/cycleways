@@ -20,6 +20,20 @@ assert.match(client, /networkRole: "junction"/);
 assert.match(client, /Arrival and departure ports are automatic/);
 assert.match(client, /Publish as CW junction/);
 assert.match(client, /createJunctionFromSelectedEdges/);
+assert.match(client, /renderJunctionAuthoringControls/);
+assert.match(client, /junctionAuthoring\.toggledThisClick/);
+assert.match(client, /junction-internal-edge-list/);
+assert.match(client, /\["==", \["get", "movementId"\], "__none__"\]/);
+assert.equal(
+  (client.match(/state\.workspaceMode === "base" && state\.junctionAuthoring\.selecting/g) || []).length >= 2,
+  true,
+  "both OSM and manual hit layers must give junction selection first priority",
+);
+assert.doesNotMatch(
+  client,
+  /function toggleJunctionEdgeSelection\(feature\)[\s\S]{0,1600}updateMapSources\(\)/,
+  "selecting one junction edge must not refresh every map source",
+);
 assert.match(client, /data-junction-port/);
 assert.match(client, /selectJunctionFromMapFeature/);
 assert.match(client, /Junction selected\. Choose a movement/);

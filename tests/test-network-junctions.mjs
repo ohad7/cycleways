@@ -104,4 +104,24 @@ assert.equal(customCandidates.junctions[0].kind, "custom_bicycle");
 assert.equal(customCandidates.junctions[0].armAttachments.length, 2);
 assert.equal(customCandidates.junctions[0].summary.legalMovements, 2);
 assert.equal(customCandidates.junctions[0].publication.canPublish, true);
+
+const customRoundaboutRegistry = normalizeNetworkJunctionRegistry({ schemaVersion: 1, junctions: {
+  "junction-custom-roundabout": {
+    name: "Test bicycle roundabout",
+    status: "detected",
+    navigationKind: "roundabout",
+    source: { type: "custom", internalEdgeIds: ["sidewalk"] },
+  },
+} });
+const customRoundaboutCandidates = deriveNetworkJunctionCandidates({
+  graph: customGraph,
+  overlay: customOverlay,
+  curatedJunctions: customRoundaboutRegistry,
+});
+assert.deepEqual(customRoundaboutCandidates.junctions[0].ringEdgeIds, ["sidewalk"]);
+const customRoundaboutGeoJson = networkJunctionGeoJson(
+  joinNetworkJunctionReviews(customRoundaboutCandidates, { schemaVersion: 1, reviews: {} }),
+  customGraph,
+);
+assert.equal(customRoundaboutGeoJson.internalEdges.features[0].properties.ring, true);
 console.log("network junction derivation and review joining ok");

@@ -14,6 +14,23 @@
       "topologyFingerprint": "sha256:a47f28f19dd84fed496a5ad66f623659cf4a86469ee6f7925344238c32002a10",
       "updatedAt": "2026-07-21T08:56:27.124Z",
       "reviewer": "ohad"
+    },
+    "junction-custom-mrugr2nk": {
+      "id": "junction-custom-mrugr2nk",
+      "name": "צומת חורשת טל",
+      "status": "detected",
+      "navigationKind": "roundabout",
+      "source": {
+        "type": "custom",
+        "internalEdgeIds": [
+          "manual-74-mrufztbk",
+          "manual-74-mrug3gou"
+        ]
+      },
+      "excludedPortIds": [],
+      "topologyFingerprint": null,
+      "updatedAt": "2026-07-21T09:40:55.472Z",
+      "reviewer": "ohad"
     }
   }
 }
