@@ -19,7 +19,9 @@ assert.equal(rager.attachments.filter((attachment) => attachment.source === "arm
 assert.equal(rager.attachmentIssues.length, 0);
 assert.equal(rager.summary.legalMovements, 6);
 assert.equal(rager.summary.unavailableMovements, 0);
-assert.equal(rager.publication.status, "detected");
+assert.equal(rager.publication.status, "published");
+assert.equal(rager.name, "צומת רג׳ר");
+assert.equal(rager.publication.canPublish, true);
 for (const [segmentId, endpoint] of [[204, "b"], [210, "b"], [211, "a"]]) {
   assert.equal(
     overlay.segments[String(segmentId)].junctionAttachments?.[endpoint]?.junctionId,

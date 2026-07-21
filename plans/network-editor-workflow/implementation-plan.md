@@ -54,6 +54,13 @@ edges. One-shot buffered JSON writes reduced artifact output from 9.6 to
 migration, the authoring refresh is expected to take roughly 15 seconds instead
 of the previous 50-second elevation-coupled path.
 
+Implementation note (2026-07-21): manual base-edge vertex edits now use a
+dedicated latest-snapshot persistence lane. Consecutive releases coalesce,
+background topology work never invokes `renderAll()`, and automatic evidence
+refresh returns a compact generated-manual-edge patch instead of reloading all
+base graph, match, overlay, manual-edge, override, and junction assets. Full
+asset reload remains available for explicit refresh and workspace loading.
+
 ## Outcome
 
 Deliver one Network authoring workflow in which the curator switches explicitly
@@ -89,6 +96,8 @@ decisions, release validation, and runtime routing behavior.
   still match the persisted snapshot.
 - Keep a failed source edit in browser memory, allow further editing, and expose
   a retry without running reconciliation against unsaved data.
+- Apply the same rules independently to manual base-edge geometry, including a
+  separate dirty revision, active request, latest pending snapshot, and error.
 
 ### Route reconciliation
 
@@ -108,6 +117,9 @@ decisions, release validation, and runtime routing behavior.
   a current result.
 - Never replace `segments`, `selected-segment-source`, or `vertices` from a
   background completion.
+- Never call the full editor renderer or reload the complete base graph after
+  automatic manual-edge reconciliation; merge the compact manual graph patch
+  and refresh only derived route/status sources.
 - Show source-save and route-update state separately.
 - Keep Build and Promote disabled for an unsaved source, queued reconciliation,
   active work, or either lane's failure.

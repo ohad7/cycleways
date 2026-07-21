@@ -640,6 +640,16 @@ process, and exactly one latest revision remains queued. Full base-evidence
 rebuilds remain atomic: a concurrent edit records a later refresh rather than
 interrupting the shared rebuild.
 
+Manual base-edge geometry uses the same lane contract. Vertex movement updates
+only the local manual-edge and vertex map sources. Mouse release queues a short
+trailing save; one request may be active and only the newest later snapshot is
+retained. Reconciliation starts only after that snapshot is current. Its
+browser response contains the updated V2 evidence and a compact replacement
+patch for generated manual graph edges, rather than triggering a reload and
+JSON parse of the complete base graph. Automatic reconciliation must not call
+the full editor renderer. The existing OSM graph can remain painted while the
+manual-edge layer shows the authoritative local draft.
+
 Ordinary geometry persistence does not introduce an Accept or Done step.
 Acceptance remains reserved for genuine curator decisions that cannot be made
 mechanically.

@@ -100058,7 +100058,7 @@
       "properties": {
         "id": 328,
         "name": "צומת חורשת טל",
-        "status": "active",
+        "status": "deprecated",
         "roadType": "paved",
         "quality": {
           "overall": 3,
@@ -100067,7 +100067,21 @@
           "scenery": 3
         },
         "splitFrom": 300,
-        "splitFromName": "צומת חורשת טל"
+        "splitFromName": "צומת חורשת טל",
+        "routeAnchors": [
+          [
+            35.63182296498752,
+            33.22376333851297
+          ],
+          [
+            35.631495,
+            33.223929
+          ],
+          [
+            35.631271510480104,
+            33.22417634033158
+          ]
+        ]
       },
       "geometry": {
         "type": "LineString",
@@ -100145,7 +100159,7 @@
       "properties": {
         "id": 329,
         "name": "רחבת כניסה מטעי דפנה",
-        "status": "active",
+        "status": "deprecated",
         "roadType": "paved",
         "quality": {
           "overall": 3,
@@ -100154,7 +100168,21 @@
           "scenery": 3
         },
         "splitFrom": 300,
-        "splitFromName": "צומת חורשת טל"
+        "splitFromName": "צומת חורשת טל",
+        "routeAnchors": [
+          [
+            35.6312335482165,
+            33.22417589918132
+          ],
+          [
+            35.63103775287357,
+            33.22414245056977
+          ],
+          [
+            35.630975020054336,
+            33.22415000741729
+          ]
+        ]
       },
       "geometry": {
         "type": "LineString",

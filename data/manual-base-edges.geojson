@@ -3317,47 +3317,6 @@
     },
     {
       "type": "Feature",
-      "id": "manual-95-mpf3njl3",
-      "properties": {
-        "id": "manual-95-mpf3njl3",
-        "manualEdgeId": "manual-95-mpf3njl3",
-        "source": "manual",
-        "status": "active",
-        "roadType": "paved",
-        "createdAt": "2026-05-21T06:18:18.471Z",
-        "updatedAt": "2026-05-21T06:18:18.471Z",
-        "linkedSegmentId": 95,
-        "linkedSegmentName": "שביל אופניים 99 דפנה",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.631413,
-            33.224105
-          ],
-          [
-            35.631404,
-            33.224058
-          ],
-          [
-            35.631406,
-            33.224023
-          ],
-          [
-            35.631416,
-            33.223981
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
       "id": "manual-edge-mpixcfal",
       "properties": {
         "id": "manual-edge-mpixcfal",
@@ -3793,202 +3752,6 @@
           [
             35.635087,
             33.233485
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "id": "manual-osm-1036770657-mq0nscfb",
-      "properties": {
-        "id": "manual-osm-1036770657-mq0nscfb",
-        "manualEdgeId": "manual-osm-1036770657-mq0nscfb",
-        "source": "manual",
-        "status": "active",
-        "roadType": "dirt",
-        "copiedFromEdgeId": "e1036770657_1",
-        "copiedFromOsmWayId": 1036770657,
-        "highway": "track",
-        "osmRouteClass": "path_track",
-        "accessStatus": "unspecified",
-        "createdAt": "2026-06-05T08:25:04.487Z",
-        "updatedAt": "2026-06-05T08:27:01.423Z",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.631444,
-            33.224138
-          ],
-          [
-            35.631381,
-            33.224148
-          ],
-          [
-            35.631333,
-            33.224158
-          ],
-          [
-            35.631257,
-            33.224182
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "id": "manual-osm-73965591-mq0ntkde",
-      "properties": {
-        "id": "manual-osm-73965591-mq0ntkde",
-        "manualEdgeId": "manual-osm-73965591-mq0ntkde",
-        "source": "manual",
-        "status": "active",
-        "roadType": "dirt",
-        "copiedFromEdgeId": "e73965591_1",
-        "copiedFromOsmWayId": 73965591,
-        "highway": "track",
-        "osmRouteClass": "cycle",
-        "accessStatus": "bike_allowed",
-        "createdAt": "2026-06-05T08:26:01.442Z",
-        "updatedAt": "2026-06-05T08:27:05.065Z",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.631257,
-            33.224182
-          ],
-          [
-            35.631143,
-            33.224156
-          ],
-          [
-            35.631039,
-            33.224142
-          ],
-          [
-            35.630958,
-            33.224153
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "id": "manual-osm-815936019-mq0nu44u",
-      "properties": {
-        "id": "manual-osm-815936019-mq0nu44u",
-        "manualEdgeId": "manual-osm-815936019-mq0nu44u",
-        "source": "manual",
-        "status": "active",
-        "roadType": "paved",
-        "copiedFromEdgeId": "e815936019_2",
-        "copiedFromOsmWayId": 815936019,
-        "highway": "path",
-        "osmRouteClass": "cycle",
-        "accessStatus": "bike_allowed",
-        "createdAt": "2026-06-05T08:26:27.054Z",
-        "updatedAt": "2026-07-16T21:43:20.599Z",
-        "bicycleTraversal": {
-          "forward": "allowed",
-          "reverse": "allowed",
-          "reviewed": true,
-          "reviewer": "ohad",
-          "reviewedAt": "2026-07-17",
-          "rationale": "Reviewer confirmed CycleWays segment #330 (שביל אופניים דפנה) and its referenced manual edges are rideable in both directions.",
-          "evidence": "Direction Review segment #330; batch direction-review-2026-07-17"
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.631631,
-            33.22436
-          ],
-          [
-            35.631585,
-            33.224358
-          ],
-          [
-            35.63153,
-            33.224368
-          ],
-          [
-            35.631483,
-            33.22437
-          ],
-          [
-            35.631441,
-            33.224366
-          ],
-          [
-            35.631399,
-            33.224356
-          ],
-          [
-            35.631347,
-            33.224338
-          ],
-          [
-            35.631312,
-            33.224316
-          ],
-          [
-            35.63126,
-            33.224273
-          ],
-          [
-            35.631257,
-            33.224182
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "id": "manual-osm-850531549-mq0nvi3h",
-      "properties": {
-        "id": "manual-osm-850531549-mq0nvi3h",
-        "manualEdgeId": "manual-osm-850531549-mq0nvi3h",
-        "source": "manual",
-        "status": "active",
-        "roadType": "paved",
-        "copiedFromEdgeId": "e850531549_1",
-        "copiedFromOsmWayId": 850531549,
-        "highway": "path",
-        "osmRouteClass": "cycle",
-        "accessStatus": "bike_allowed",
-        "createdAt": "2026-06-05T08:27:31.805Z",
-        "updatedAt": "2026-06-05T08:27:40.785Z",
-        "bicycleTraversal": {
-          "forward": "unknown",
-          "reverse": "unknown",
-          "reviewed": false
-        }
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            35.630737,
-            33.223983
-          ],
-          [
-            35.630958,
-            33.224153
           ]
         ]
       }
@@ -6323,6 +6086,329 @@
           [
             35.605804,
             33.224511
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-1036770657-mrufgc46",
+      "properties": {
+        "id": "manual-osm-1036770657-mrufgc46",
+        "manualEdgeId": "manual-osm-1036770657-mrufgc46",
+        "source": "manual",
+        "status": "active",
+        "roadType": "dirt",
+        "copiedFromEdgeId": "e1036770657_1",
+        "copiedFromOsmWayId": 1036770657,
+        "highway": "track",
+        "osmRouteClass": "path_track",
+        "accessStatus": "unspecified",
+        "createdAt": "2026-07-21T09:04:34.902Z",
+        "updatedAt": "2026-07-21T09:24:26.240Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e1036770657_1",
+          "origin": "inherited-osm-policy"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.631292,
+            33.224137
+          ],
+          [
+            35.631196,
+            33.224132
+          ],
+          [
+            35.631161,
+            33.224134
+          ],
+          [
+            35.631111,
+            33.224135
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-osm-815936019-mrufh8no",
+      "properties": {
+        "id": "manual-osm-815936019-mrufh8no",
+        "manualEdgeId": "manual-osm-815936019-mrufh8no",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "copiedFromEdgeId": "e815936019_2",
+        "copiedFromOsmWayId": 815936019,
+        "highway": "path",
+        "osmRouteClass": "cycle",
+        "accessStatus": "bike_allowed",
+        "createdAt": "2026-07-21T09:05:17.076Z",
+        "updatedAt": "2026-07-21T09:24:03.815Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Inherited allowed/allowed direction policy from e815936019_2",
+          "origin": "inherited-osm-policy"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.631631,
+            33.22436
+          ],
+          [
+            35.631588,
+            33.224339
+          ],
+          [
+            35.631542,
+            33.22433
+          ],
+          [
+            35.631494,
+            33.224315
+          ],
+          [
+            35.63145,
+            33.224298
+          ],
+          [
+            35.631404,
+            33.224274
+          ],
+          [
+            35.631384,
+            33.224263
+          ],
+          [
+            35.63136,
+            33.22425
+          ],
+          [
+            35.631338,
+            33.224233
+          ],
+          [
+            35.631333,
+            33.224226
+          ],
+          [
+            35.631328,
+            33.224218
+          ],
+          [
+            35.631315,
+            33.224202
+          ],
+          [
+            35.631292,
+            33.224137
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-74-mrufpgtj",
+      "properties": {
+        "id": "manual-74-mrufpgtj",
+        "manualEdgeId": "manual-74-mrufpgtj",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T09:11:40.903Z",
+        "updatedAt": "2026-07-21T09:11:40.903Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 74,
+        "linkedSegmentName": "נחל טל מטעי דפנה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.63184,
+            33.223772
+          ],
+          [
+            35.631761,
+            33.223773
+          ],
+          [
+            35.631712,
+            33.223774
+          ],
+          [
+            35.631697,
+            33.223814
+          ],
+          [
+            35.631689,
+            33.223856
+          ],
+          [
+            35.631687,
+            33.223886
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-74-mrufztbk",
+      "properties": {
+        "id": "manual-74-mrufztbk",
+        "manualEdgeId": "manual-74-mrufztbk",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T09:19:43.664Z",
+        "updatedAt": "2026-07-21T09:24:22.890Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 74,
+        "linkedSegmentName": "נחל טל מטעי דפנה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.631686,
+            33.223886
+          ],
+          [
+            35.631625,
+            33.223871
+          ],
+          [
+            35.63153,
+            33.223844
+          ],
+          [
+            35.63146,
+            33.223897
+          ],
+          [
+            35.631386,
+            33.22393
+          ],
+          [
+            35.631342,
+            33.223947
+          ],
+          [
+            35.631309,
+            33.224079
+          ],
+          [
+            35.631291,
+            33.224137
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "manual-74-mrug3gou",
+      "properties": {
+        "id": "manual-74-mrug3gou",
+        "manualEdgeId": "manual-74-mrug3gou",
+        "source": "manual",
+        "status": "active",
+        "roadType": "paved",
+        "createdAt": "2026-07-21T09:22:33.918Z",
+        "updatedAt": "2026-07-21T09:24:20.107Z",
+        "bicycleTraversal": {
+          "forward": "allowed",
+          "reverse": "allowed",
+          "reviewed": true,
+          "reviewer": "ohad",
+          "reviewedAt": "2026-07-21",
+          "rationale": "Curator-authored manual edge; bidirectional default",
+          "origin": "manual-authoring-default"
+        },
+        "linkedSegmentId": 74,
+        "linkedSegmentName": "נחל טל מטעי דפנה"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.631292,
+            33.224137
+          ],
+          [
+            35.631421,
+            33.224176
+          ],
+          [
+            35.63149,
+            33.224205
+          ],
+          [
+            35.631579,
+            33.224207
+          ],
+          [
+            35.631653,
+            33.224202
+          ],
+          [
+            35.631702,
+            33.224203
+          ],
+          [
+            35.631755,
+            33.224122
+          ],
+          [
+            35.631781,
+            33.22408
+          ],
+          [
+            35.631752,
+            33.224028
+          ],
+          [
+            35.631719,
+            33.223969
+          ],
+          [
+            35.631691,
+            33.223914
+          ],
+          [
+            35.631687,
+            33.223886
           ]
         ]
       }

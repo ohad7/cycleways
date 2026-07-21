@@ -42,6 +42,7 @@ import {
   isAuthoringAbort,
   isCurrentAuthoringObjectRevision,
   isRetryableAuthoringConflict,
+  mergeBaseGraphFeaturePatch,
   summarizeAuthoringTimings,
 } from "./lib/network-authoring-coordinator.mjs";
 import {
@@ -350,6 +351,17 @@ const state = {
     sourceSaveRerun: false,
     sourceSavePromise: null,
     sourceSaveError: null,
+    manualSaveTimer: null,
+    manualSaveBusy: false,
+    manualSaveRerun: false,
+    manualSavePromise: null,
+    manualSaveError: null,
+    manualDirty: false,
+    manualRevision: 0,
+    lastSavedManualRevision: 0,
+    changedManualEdgeIds: new Set(),
+    pendingBaseManualEdgeIds: new Set(),
+    pendingBaseOsmWayIds: new Set(),
     activeSegmentIds: new Set(),
     lastError: null,
     transientIssues: new Map(),
@@ -741,7 +753,7 @@ function promoteBlockerMessage(report) {
 function updatePromoteButton() {
   const promoteIssues = reportIssueDetails(state.lastBuildReport);
   const authoringBusy = sourcePersistencePending() || reconciliationPending();
-  const authoringFailed = state.authoring.sourceSaveError || state.authoring.lastError;
+  const authoringFailed = authoringPersistenceError() || state.authoring.lastError;
   els.promoteBuild.disabled = isDrawing() || state.dirty || authoringBusy || authoringFailed || !canPromoteReport(state.lastBuildReport);
   els.promoteBuild.title = isDrawing()
     ? "Finish or cancel drawing before promoting"
@@ -800,8 +812,15 @@ function sourcePersistencePending() {
   return Boolean(
     state.dirty ||
     state.authoring.sourceSaveBusy ||
-    state.authoring.sourceSaveTimer
+    state.authoring.sourceSaveTimer ||
+    state.authoring.manualDirty ||
+    state.authoring.manualSaveBusy ||
+    state.authoring.manualSaveTimer
   );
+}
+
+function authoringPersistenceError() {
+  return state.authoring.sourceSaveError || state.authoring.manualSaveError;
 }
 
 function reconciliationPending() {
@@ -835,12 +854,54 @@ function scheduleSourcePersistence({ delay = 180, render = true } = {}) {
   if (render) renderAuthoringState();
 }
 
-function scheduleAuthoringSync({ baseChanged = false, delay = 1500, render = true } = {}) {
+function markManualBaseEdgesDirty(edgeIds = [], { render = true } = {}) {
+  state.lastBuildReport = null;
+  state.authoring.manualDirty = true;
+  state.authoring.manualRevision += 1;
+  state.authoring.manualSaveError = null;
+  state.authoring.lastError = null;
+  for (const edgeId of edgeIds || []) {
+    if (edgeId) state.authoring.changedManualEdgeIds.add(String(edgeId));
+  }
+  if (state.authoring.manualSaveBusy) state.authoring.manualSaveRerun = true;
+  markBaseGraphStaleBecauseManualEdgesChanged();
+  interruptStaleAuthoringWork();
+  if (render) renderAuthoringState();
+}
+
+function scheduleManualBasePersistence({ delay = 320, render = true } = {}) {
+  if (!state.authoring.manualDirty) return;
+  if (state.authoring.manualSaveTimer) {
+    window.clearTimeout(state.authoring.manualSaveTimer);
+  }
+  state.authoring.manualSaveTimer = window.setTimeout(() => {
+    state.authoring.manualSaveTimer = null;
+    persistManualBaseEdges({ quiet: true }).catch(showError);
+  }, delay);
+  if (render) renderAuthoringState();
+}
+
+function queueManualBaseEdgePersistence(edgeIds = [], { delay = 320 } = {}) {
+  markManualBaseEdgesDirty(edgeIds, { render: false });
+  scheduleManualBasePersistence({ delay });
+}
+
+function scheduleAuthoringSync({
+  baseChanged = false,
+  changedOsmWayIds = [],
+  delay = 1500,
+  render = true,
+} = {}) {
   if (!state.source) return;
   if (baseChanged) {
     state.lastBuildReport = null;
     state.authoring.pendingBaseRefresh = true;
     state.authoring.baseRevision += 1;
+    for (const osmWayId of changedOsmWayIds || []) {
+      if (Number.isInteger(Number(osmWayId))) {
+        state.authoring.pendingBaseOsmWayIds.add(Number(osmWayId));
+      }
+    }
     interruptStaleAuthoringWork();
   }
   if (state.authoring.timer) window.clearTimeout(state.authoring.timer);
@@ -862,12 +923,14 @@ function renderAuthoringState() {
   if (!els.dirtyIndicator) return;
   const saving = sourcePersistencePending();
   const reconciling = reconciliationPending();
-  const failed = state.authoring.sourceSaveError || state.authoring.lastError;
+  const failed = authoringPersistenceError() || state.authoring.lastError;
   const pending = saving || reconciling;
   els.dirtyIndicator.classList.toggle("updating", pending && !failed);
   els.dirtyIndicator.classList.toggle("failed", Boolean(failed));
   if (state.authoring.sourceSaveError) {
     els.dirtyIndicator.textContent = "Save failed";
+  } else if (state.authoring.manualSaveError) {
+    els.dirtyIndicator.textContent = "Base-edge save failed";
   } else if (state.authoring.lastError) {
     els.dirtyIndicator.textContent = "Update failed";
   } else if (saving) {
@@ -1064,7 +1127,7 @@ async function runAuthoringSync() {
     state.authoring.rerun = true;
     return;
   }
-  if (state.authoring.sourceSaveError) return;
+  if (authoringPersistenceError()) return;
   if (sourcePersistencePending()) {
     scheduleAuthoringSync({ delay: 250 });
     return;
@@ -1094,9 +1157,12 @@ async function runAuthoringSync() {
   const runStartedAt = performance.now();
   const sourceRevision = state.authoring.sourceRevision;
   const revision = authoringRevision();
-  const sourceSnapshot = structuredClone(state.source);
-  const segmentJobs = [...state.changedSegmentIds]
-    .sort((left, right) => left - right)
+  const changedSegmentIds = [...state.changedSegmentIds]
+    .sort((left, right) => left - right);
+  const sourceSnapshot = changedSegmentIds.length > 0
+    ? structuredClone(state.source)
+    : null;
+  const segmentJobs = changedSegmentIds
     .map((segmentId) => ({
       segmentId,
       objectRevision: authoringObjectRevision(state.authoring.segmentRevisions, segmentId),
@@ -1118,6 +1184,8 @@ async function runAuthoringSync() {
       objectRevision: authoringObjectRevision(state.authoring.metadataRevisions, segmentId),
     }));
   const baseRevision = state.authoring.baseRevision;
+  const baseManualEdgeIds = new Set(state.authoring.pendingBaseManualEdgeIds);
+  const baseOsmWayIds = new Set(state.authoring.pendingBaseOsmWayIds);
   state.authoring.activeSegmentIds = new Set([
     ...segmentJobs.map((job) => job.segmentId),
     ...metadataJobs.map((job) => job.segmentId),
@@ -1135,7 +1203,10 @@ async function runAuthoringSync() {
       try {
         await runAuthoringStage(
           "rebuilding base evidence",
-          () => refreshDirectionReviewEvidence({ quiet: true }),
+          () => refreshDirectionReviewEvidence({
+            quiet: true,
+            changedOsmWayIds: [...baseOsmWayIds],
+          }),
         );
       } catch (error) {
         if (error?.code === "BASE_EVIDENCE_SUPERSEDED") {
@@ -1146,6 +1217,12 @@ async function runAuthoringSync() {
       }
       if (state.authoring.baseRevision === baseRevision) {
         state.authoring.pendingBaseRefresh = false;
+        for (const edgeId of baseManualEdgeIds) {
+          state.authoring.pendingBaseManualEdgeIds.delete(edgeId);
+        }
+        for (const osmWayId of baseOsmWayIds) {
+          state.authoring.pendingBaseOsmWayIds.delete(osmWayId);
+        }
       } else {
         state.authoring.rerun = true;
       }
@@ -3025,7 +3102,7 @@ function renderNetworkSegmentRouting() {
       <div class="network-routing-actions">
         <button type="button" class="secondary-button" data-network-action="inspect">Inspect mapping</button>
         <button type="button" class="secondary-button" data-network-action="base">${status.key === "blocked" ? "Show issue in Base network" : "Show in Base network"}</button>
-        ${state.authoring.lastError || state.authoring.sourceSaveError ? '<button type="button" class="primary-button" data-network-action="retry">Retry update</button>' : ""}
+        ${state.authoring.lastError || authoringPersistenceError() ? '<button type="button" class="primary-button" data-network-action="retry">Retry update</button>' : ""}
       </div>
     </div>`;
   els.networkSegmentRouting
@@ -3047,8 +3124,10 @@ function renderNetworkSegmentRouting() {
     ?.addEventListener("click", () => {
       state.authoring.lastError = null;
       state.authoring.sourceSaveError = null;
+      state.authoring.manualSaveError = null;
       if (state.dirty) scheduleSourcePersistence({ delay: 0 });
-      scheduleAuthoringSync({ delay: state.dirty ? 250 : 0 });
+      if (state.authoring.manualDirty) scheduleManualBasePersistence({ delay: 0 });
+      scheduleAuthoringSync({ delay: state.dirty || state.authoring.manualDirty ? 250 : 0 });
     });
 
   if (els.directionReviewSection) {
@@ -3151,7 +3230,7 @@ function renderDrawControls() {
   els.saveSource.disabled = !state.dirty || drawing;
   const authoringPending =
     sourcePersistencePending() || reconciliationPending();
-  const authoringFailed = state.authoring.sourceSaveError || state.authoring.lastError;
+  const authoringFailed = authoringPersistenceError() || state.authoring.lastError;
   els.runBuild.disabled = drawing || authoringPending || Boolean(authoringFailed);
   els.runBuild.title = drawing
     ? "Finish or cancel drawing before building"
@@ -8088,9 +8167,11 @@ async function insertManualBaseVertexAtClick(lngLat, point) {
     updatedAt: new Date().toISOString(),
   };
   state.baseOverlay.selectedManualVertexIndex = best.index + 1;
-  await saveManualBaseEdges();
-  renderAll();
-  setStatus(`Inserted manual base vertex ${state.baseOverlay.selectedManualVertexIndex + 1}.`);
+  const edgeId = manualBaseEdgeFeatureId(feature);
+  queueManualBaseEdgePersistence(edgeId ? [edgeId] : []);
+  updateManualBaseEditSources();
+  renderDrawControls();
+  setStatus(`Inserted manual base vertex ${state.baseOverlay.selectedManualVertexIndex + 1}. Saving in the background.`);
 }
 
 function deleteSelectedVertex() {
@@ -8130,9 +8211,11 @@ async function deleteSelectedManualBaseVertex() {
     updatedAt: new Date().toISOString(),
   };
   state.baseOverlay.selectedManualVertexIndex = -1;
-  await saveManualBaseEdges();
-  renderAll();
-  setStatus("Manual base vertex deleted.");
+  const edgeId = manualBaseEdgeFeatureId(feature);
+  queueManualBaseEdgePersistence(edgeId ? [edgeId] : []);
+  updateManualBaseEditSources();
+  renderDrawControls();
+  setStatus("Manual base vertex deleted. Saving in the background.");
 }
 
 function dataColorExpression() {
@@ -10042,20 +10125,28 @@ async function recalculateOsmGraph() {
   }
 }
 
-async function refreshDirectionReviewEvidence({ quiet = false } = {}) {
+async function refreshDirectionReviewEvidence({
+  quiet = false,
+  incremental = quiet,
+  changedOsmWayIds = [],
+} = {}) {
   if (state.baseOverlay.loading || state.baseOverlay.recalculating || state.directionReview.busy) return;
   if (state.directionReview.readOnly) {
     throw new Error("Overlay V2 authoring data is not writable.");
   }
   state.baseOverlay.recalculating = true;
   state.directionReview.busy = true;
-  renderAll();
+  if (incremental) renderAuthoringState();
+  else renderAll();
   if (!quiet) setStatus("Updating base topology and affected routing evidence...");
   try {
     const response = await fetch("/api/cw-base-overlay-v2/refresh-evidence", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({
+        presentation: incremental ? "incremental" : "full",
+        changedOsmWayIds,
+      }),
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
@@ -10064,15 +10155,25 @@ async function refreshDirectionReviewEvidence({ quiet = false } = {}) {
       error.code = payload.code;
       throw error;
     }
-    state.baseOverlay.loaded = false;
-    state.baseOverlay.graphEdges = null;
-    state.baseOverlay.matchSummary = null;
-    state.baseOverlay.matchPreview = null;
     state.directionReview.overlay = payload.overlay;
     state.directionReview.source = payload.source || "staged";
     state.directionReview.readOnly = false;
-    invalidateBaseOverlayDerivedCache();
-    await loadBaseOverlayData();
+    if (incremental) {
+      state.baseOverlay.graphEdges = mergeBaseGraphFeaturePatch(
+        state.baseOverlay.graphEdges,
+        payload.graphPatch,
+      );
+      state.baseOverlay.loaded = true;
+      invalidateBaseOverlayDerivedCache();
+      refreshUnresolvedSegmentHighlights();
+    } else {
+      state.baseOverlay.loaded = false;
+      state.baseOverlay.graphEdges = null;
+      state.baseOverlay.matchSummary = null;
+      state.baseOverlay.matchPreview = null;
+      invalidateBaseOverlayDerivedCache();
+      await loadBaseOverlayData();
+    }
     const preserved = payload.preserved || {};
     const sourceRebaseText = Number(preserved.rebasedSourceChanges || 0) > 0
       ? ` ${Number(preserved.rebasedSourceChanges)} source-changed segment${Number(preserved.rebasedSourceChanges) === 1 ? "" : "s"} rebased without losing mappings.`
@@ -10091,7 +10192,8 @@ async function refreshDirectionReviewEvidence({ quiet = false } = {}) {
   } finally {
     state.directionReview.busy = false;
     state.baseOverlay.recalculating = false;
-    renderAll();
+    if (incremental) renderAuthoringState();
+    else renderAll();
   }
 }
 
@@ -10354,19 +10456,130 @@ async function saveBaseOverlay() {
   state.baseOverlay.overlay = payload.overlay || state.baseOverlay.overlay;
 }
 
-async function saveManualBaseEdges() {
+async function persistManualBaseEdgesSnapshot(serializedManualBaseEdges) {
   const response = await fetch("/api/manual-base-edges", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(state.baseOverlay.manualBaseEdges || emptyManualBaseEdges()),
+    body: serializedManualBaseEdges,
   });
   const payload = await response.json();
   if (!response.ok || !payload.ok) {
     throw new Error(payload.error || `Manual base edge save failed: ${response.status}`);
   }
-  state.baseOverlay.manualBaseEdges = payload.manualBaseEdges || state.baseOverlay.manualBaseEdges;
-  markBaseGraphStaleBecauseManualEdgesChanged();
-  scheduleAuthoringSync({ baseChanged: true, delay: 900 });
+  return payload;
+}
+
+async function persistManualBaseEdges({ quiet = false } = {}) {
+  if (state.authoring.manualSaveTimer) {
+    window.clearTimeout(state.authoring.manualSaveTimer);
+    state.authoring.manualSaveTimer = null;
+  }
+  if (state.authoring.manualSaveBusy) {
+    state.authoring.manualSaveRerun = true;
+    await state.authoring.manualSavePromise;
+    if (state.authoring.manualDirty && !state.authoring.manualSaveError) {
+      return persistManualBaseEdges({ quiet });
+    }
+    return null;
+  }
+  if (!state.authoring.manualDirty) return null;
+  if (sourceEditInProgress()) {
+    scheduleManualBasePersistence();
+    return { deferred: true };
+  }
+
+  state.authoring.manualSaveBusy = true;
+  state.authoring.manualSaveRerun = false;
+  state.authoring.manualSaveError = null;
+  renderAuthoringState();
+
+  let attemptedRevision = state.authoring.manualRevision;
+  const savedEdgeIds = new Set();
+  const operation = (async () => {
+    let payload = null;
+    do {
+      state.authoring.manualSaveRerun = false;
+      const snapshotRevision = state.authoring.manualRevision;
+      attemptedRevision = snapshotRevision;
+      const snapshot = structuredClone(
+        state.baseOverlay.manualBaseEdges || emptyManualBaseEdges(),
+      );
+      const serializedSnapshot = JSON.stringify(snapshot);
+      const snapshotEdgeIds = [...state.authoring.changedManualEdgeIds];
+      const startedAt = performance.now();
+      payload = await persistManualBaseEdgesSnapshot(serializedSnapshot);
+      console.info("[network-authoring] base geometry saved", {
+        durationMs: Math.round(performance.now() - startedAt),
+        revision: snapshotRevision,
+        changedEdgeIds: snapshotEdgeIds,
+      });
+
+      const currentSerialized = JSON.stringify(
+        state.baseOverlay.manualBaseEdges || emptyManualBaseEdges(),
+      );
+      if (authoringSourceIsCurrent({
+        currentRevision: state.authoring.manualRevision,
+        snapshotRevision,
+        currentSerializedSource: currentSerialized,
+        snapshotSerializedSource: serializedSnapshot,
+      })) {
+        state.baseOverlay.manualBaseEdges = payload.manualBaseEdges || snapshot;
+        state.authoring.manualDirty = false;
+        state.authoring.lastSavedManualRevision = snapshotRevision;
+        for (const edgeId of snapshotEdgeIds) savedEdgeIds.add(edgeId);
+        state.authoring.changedManualEdgeIds.clear();
+      } else {
+        state.authoring.manualSaveRerun = true;
+      }
+    } while (
+      state.authoring.manualSaveRerun &&
+      state.authoring.manualDirty &&
+      !sourceEditInProgress()
+    );
+    return payload;
+  })();
+  state.authoring.manualSavePromise = operation;
+
+  try {
+    const payload = await operation;
+    if (!state.authoring.manualDirty) {
+      for (const edgeId of savedEdgeIds) {
+        state.authoring.pendingBaseManualEdgeIds.add(edgeId);
+      }
+      scheduleAuthoringSync({ baseChanged: true, delay: 1500, render: false });
+      if (!state.authoring.lastError) clearAlert();
+      if (!quiet) setStatus("Base-edge geometry saved. Routing evidence is updating.");
+    }
+    return payload;
+  } catch (error) {
+    if (state.authoring.manualRevision !== attemptedRevision) {
+      state.authoring.manualSaveRerun = true;
+      console.info("[network-authoring] obsolete base geometry save failure ignored", {
+        attemptedRevision,
+        currentRevision: state.authoring.manualRevision,
+      });
+      return null;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    state.authoring.manualSaveError = message;
+    showAlert("Base-edge geometry save failed. Your edit remains in this browser.", message);
+    setStatus("Base-edge save failed. Continue editing or retry the save.", "error");
+    throw markAlertShown(error);
+  } finally {
+    state.authoring.manualSaveBusy = false;
+    state.authoring.manualSavePromise = null;
+    renderAuthoringProgress();
+    if (state.authoring.manualDirty && !state.authoring.manualSaveError) {
+      scheduleManualBasePersistence({ delay: sourceEditInProgress() ? 320 : 0 });
+    } else if (reconciliationPending() && !state.authoring.timer) {
+      scheduleAuthoringSync({ delay: 250 });
+    }
+  }
+}
+
+async function saveManualBaseEdges({ changedEdgeIds = [] } = {}) {
+  markManualBaseEdgesDirty(changedEdgeIds, { render: false });
+  return persistManualBaseEdges();
 }
 
 async function saveSelectedManualEdgeDirectionPolicy() {
@@ -10431,7 +10644,7 @@ async function saveSelectedManualEdgeDirectionPolicy() {
     }
     state.baseOverlay.traversalOverrides = payload.overrides;
     markBaseGraphStaleBecauseTraversalOverridesChanged();
-    scheduleAuthoringSync({ baseChanged: true, delay: 900 });
+    scheduleAuthoringSync({ baseChanged: true, changedOsmWayIds: [osmWayId], delay: 900 });
     renderAll();
     setStatus(
       `Saved reviewed ${forward}/${reverse} override for OSM way ${osmWayId}. Routing evidence will update automatically.`,
@@ -10490,7 +10703,7 @@ async function clearSelectedOsmDirectionOverride() {
   }
   state.baseOverlay.traversalOverrides = payload.overrides;
   markBaseGraphStaleBecauseTraversalOverridesChanged();
-  scheduleAuthoringSync({ baseChanged: true, delay: 900 });
+  scheduleAuthoringSync({ baseChanged: true, changedOsmWayIds: [osmWayId], delay: 900 });
   renderAll();
   setStatus(`Removed the reviewed override for OSM way ${osmWayId}. OSM-derived policy is updating.`);
 }
@@ -10899,7 +11112,7 @@ async function runBuild() {
   ) {
     throw new Error("Wait for the authoring update to finish before building a release.");
   }
-  if (state.authoring.sourceSaveError || state.authoring.lastError) {
+  if (authoringPersistenceError() || state.authoring.lastError) {
     throw new Error("Retry the failed authoring update before building a release.");
   }
 
@@ -11648,14 +11861,13 @@ function wireEvents() {
     }
 
     if (state.draggingManualBaseVertex) {
+      const changedEdgeId = selectedManualBaseEdgeId();
       state.draggingManualBaseVertex = false;
       map.dragPan.enable();
-      saveManualBaseEdges()
-        .then(() => {
-          renderAll();
-          setStatus("Manual base vertex moved. Routing evidence is updating automatically.");
-        })
-        .catch(showError);
+      queueManualBaseEdgePersistence(changedEdgeId ? [changedEdgeId] : []);
+      updateManualBaseEditSources();
+      renderAuthoringState();
+      setStatus("Manual base vertex moved. Saving the latest geometry in the background.");
       return;
     }
 

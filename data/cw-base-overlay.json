@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "CycleWays segment mappings onto the OSM/manual base graph.",
-  "updatedAt": "2026-07-21T07:36:19.299Z",
+  "updatedAt": "2026-07-21T09:05:17.093Z",
   "segments": {
     "2": {
       "segmentId": 2,
@@ -16551,13 +16551,13 @@
           "osmWayId": 1024609346
         },
         {
-          "edgeId": "e1036770657_1",
-          "source": "osm",
+          "edgeId": "manual-osm-1036770657-mrufgc46",
+          "source": "manual",
           "direction": "forward",
           "sequenceIndex": 8,
           "fromFraction": 0,
           "toFraction": 1,
-          "osmWayId": 1036770657
+          "manualEdgeId": "manual-osm-1036770657-mrufgc46"
         },
         {
           "edgeId": "e73965591_1",
@@ -16569,7 +16569,7 @@
           "osmWayId": 73965591
         }
       ],
-      "updatedAt": "2026-05-21T06:38:27.438Z"
+      "updatedAt": "2026-07-21T09:04:34.902Z"
     },
     "301": {
       "segmentId": 301,
@@ -17663,7 +17663,7 @@
           "manualEdgeId": "manual-osm-1036770657-mq0nscfb"
         }
       ],
-      "updatedAt": "2026-06-05T08:29:06.398Z"
+      "updatedAt": "2026-07-21T08:59:35.921Z"
     },
     "329": {
       "segmentId": 329,
@@ -17686,7 +17686,7 @@
           "manualEdgeId": "manual-osm-73965591-mq0ntkde"
         }
       ],
-      "updatedAt": "2026-06-05T08:29:08.434Z"
+      "updatedAt": "2026-07-21T09:00:12.914Z"
     },
     "330": {
       "segmentId": 330,

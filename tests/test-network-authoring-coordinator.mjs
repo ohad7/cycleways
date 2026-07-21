@@ -9,6 +9,7 @@ import {
   isAuthoringAbort,
   isCurrentAuthoringObjectRevision,
   isRetryableAuthoringConflict,
+  mergeBaseGraphFeaturePatch,
   summarizeAuthoringTimings,
 } from "../editor/lib/network-authoring-coordinator.mjs";
 
@@ -65,5 +66,33 @@ assert.deepEqual(
   ]),
   { totalMs: 902, slowestStage: "match segment", slowestDurationMs: 843 },
 );
+
+const graph = {
+  type: "FeatureCollection",
+  metadata: { generatedAt: "old", retained: true },
+  features: [
+    { id: "osm-1", properties: { edgeId: "osm-1", source: "osm" } },
+    { id: "manual-old", properties: { edgeId: "manual-old", source: "manual" } },
+  ],
+};
+const patched = mergeBaseGraphFeaturePatch(graph, {
+  replaceSources: ["manual"],
+  metadata: { generatedAt: "new", graphStaleBecauseManualBaseEdgesChanged: false },
+  features: [
+    { id: "manual-new", properties: { edgeId: "manual-new", source: "manual" } },
+  ],
+});
+assert.deepEqual(patched.features.map((feature) => feature.id), ["osm-1", "manual-new"]);
+assert.equal(patched.metadata.generatedAt, "new");
+assert.equal(patched.metadata.retained, true);
+assert.equal(patched.metadata.graphStaleBecauseManualBaseEdgesChanged, false);
+const osmPatched = mergeBaseGraphFeaturePatch(patched, {
+  replaceSources: [],
+  features: [
+    { id: "osm-1", properties: { edgeId: "osm-1", source: "osm", reviewed: true } },
+  ],
+});
+assert.equal(osmPatched.features.filter((feature) => feature.id === "osm-1").length, 1);
+assert.equal(osmPatched.features.find((feature) => feature.id === "osm-1").properties.reviewed, true);
 
 console.log("Network authoring coordinator rules ok");

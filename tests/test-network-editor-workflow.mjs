@@ -45,6 +45,17 @@ assert.match(editor, /Saving and checking its rideable path automatically/);
 assert.match(editor, /Saving geometry/);
 assert.match(editor, /route path queued/);
 assert.match(editor, /obsolete update cancelled/);
+assert.match(editor, /queueManualBaseEdgePersistence/);
+assert.match(editor, /manualSaveRerun/);
+assert.match(editor, /presentation: incremental \? "incremental" : "full"/);
+assert.match(editor, /mergeBaseGraphFeaturePatch/);
+assert.doesNotMatch(
+  editor,
+  /if \(state\.draggingManualBaseVertex\)[\s\S]{0,500}renderAll\(\)/,
+  "manual base-edge drag completion must not run the full editor renderer",
+);
+assert.match(server, /readBaseGraphEditorPatch/);
+assert.match(server, /graphPatch: result\.graphPatch/);
 assert.doesNotMatch(
   editor,
   /state\.authoring\.activeSegmentIds = new Set\([\s\S]{0,500}renderAll\(\)/,

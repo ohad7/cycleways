@@ -36,6 +36,33 @@ export function authoringSourceIsCurrent({
     && currentSerializedSource === snapshotSerializedSource;
 }
 
+export function mergeBaseGraphFeaturePatch(graphEdges, patch) {
+  if (!graphEdges || !patch || !Array.isArray(patch.features)) return graphEdges;
+  const replaceSources = new Set(
+    (Array.isArray(patch.replaceSources) ? patch.replaceSources : [])
+      .map(String),
+  );
+  const replacementIds = new Set(
+    patch.features
+      .map((feature) => String(feature?.properties?.edgeId || feature?.properties?.id || feature?.id || ""))
+      .filter(Boolean),
+  );
+  const retained = (graphEdges.features || []).filter((feature) => {
+    const properties = feature?.properties || {};
+    const edgeId = String(properties.edgeId || properties.id || feature?.id || "");
+    if (replacementIds.has(edgeId)) return false;
+    return !replaceSources.has(String(properties.source || "osm"));
+  });
+  return {
+    ...graphEdges,
+    metadata: {
+      ...(graphEdges.metadata || {}),
+      ...(patch.metadata || {}),
+    },
+    features: [...retained, ...patch.features],
+  };
+}
+
 export function summarizeAuthoringTimings(timings) {
   const rows = Array.isArray(timings) ? timings : [];
   const totalMs = rows.reduce((total, row) => total + Math.max(0, Number(row?.durationMs) || 0), 0);

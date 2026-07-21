@@ -3345,7 +3345,13 @@ async function refreshDirectionReviewEvidence(payload = {}) {
   rebased.preserved.automaticallyPublished = automatic.applied.length;
   await validatePublishedDirectionReviewOverlay(rebased.overlay);
   await writeJsonAtomic(cwBaseOverlayV2StagedPath, rebased.overlay);
-  return { refreshId, ...rebased, automatic };
+  const graphPatch = payload?.presentation === "incremental"
+    ? await readBaseGraphEditorPatch({
+        replaceSources: ["manual"],
+        osmWayIds: payload?.changedOsmWayIds,
+      })
+    : null;
+  return { refreshId, ...rebased, automatic, graphPatch };
 }
 
 async function applyDirectionReviewAlignmentAction(payload) {
@@ -4726,6 +4732,61 @@ function annotateGraphEdgesWithCyclewaysMembership(graphEdges, overlay) {
   };
 }
 
+async function readBaseGraphEditorPatch({
+  replaceSources = ["manual"],
+  osmWayIds = [],
+} = {}) {
+  const sourceSet = new Set(replaceSources.map(String));
+  const osmWayIdSet = new Set(
+    (osmWayIds || []).map(Number).filter((value) => Number.isInteger(value)),
+  );
+  const graphEdges = JSON.parse(await readFile(osmGraphEdgesPath, "utf-8"));
+  const directionContext = await readDirectionReviewGraphContext();
+  let patch = {
+    type: "FeatureCollection",
+    replaceSources: [...sourceSet],
+    metadata: {
+      ...(graphEdges.metadata || {}),
+      directionReviewGraphDigest: directionContext.graphDigest,
+      directionReviewPolicyDigest: directionContext.policyDigest,
+      directionReviewPolicyId: directionContext.policyId,
+      graphStaleBecauseManualBaseEdgesChanged: false,
+      graphStaleBecauseTraversalOverridesChanged: false,
+      graphStaleBecauseTopologyInputsChanged: false,
+      graphStaleInputs: [],
+    },
+    features: (graphEdges.features || [])
+      .filter((feature) => {
+        const properties = feature?.properties || {};
+        return sourceSet.has(String(properties.source || "osm")) ||
+          osmWayIdSet.has(Number(properties.osmWayId));
+      })
+      .map((feature) => {
+        const properties = feature?.properties || {};
+        const edgeId = String(properties.edgeId || properties.id || feature?.id || "");
+        const evidence = directionContext.edgeLookup.get(edgeId);
+        return evidence?.bicycleTraversal
+          ? {
+              ...feature,
+              properties: {
+                ...properties,
+                bicycleTraversal: evidence.bicycleTraversal,
+              },
+            }
+          : feature;
+      }),
+  };
+  try {
+    patch = annotateGraphEdgesWithCyclewaysMembership(
+      patch,
+      await readCwBaseOverlay(),
+    );
+  } catch (error) {
+    log("warn", "base graph editor patch skipped CW annotation", error?.message || String(error));
+  }
+  return patch;
+}
+
 async function copyFileAtomic(source, target) {
   await mkdir(dirname(target), { recursive: true });
   const tmpPath = uniqueAtomicTmpPath(target);
@@ -6017,6 +6078,7 @@ const server = createServer(async (request, response) => {
           refreshId: result.refreshId,
           preserved: result.preserved,
           overlay: result.overlay,
+          graphPatch: result.graphPatch,
         });
       } catch (error) {
         log("warn", `api#${requestId} POST /api/cw-base-overlay-v2/refresh-evidence failed`, {
