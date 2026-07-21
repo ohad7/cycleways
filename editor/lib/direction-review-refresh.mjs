@@ -47,9 +47,18 @@ export function restoreStagedOnlyActiveSegments(proposalOverlay, stagedOverlay, 
       .map((feature) => [Number(feature?.properties?.id), feature]),
   );
   const restoredSegmentIds = [];
+  const preservedJunctionAttachmentSegmentIds = [];
 
   for (const [key, previous] of Object.entries(stagedOverlay?.segments || {})) {
-    if (next.segments?.[key]) continue;
+    if (next.segments?.[key]) {
+      if (previous?.junctionAttachments) {
+        next.segments[key].junctionAttachments = structuredClone(previous.junctionAttachments);
+        preservedJunctionAttachmentSegmentIds.push(Number(previous.segmentId));
+      } else {
+        delete next.segments[key].junctionAttachments;
+      }
+      continue;
+    }
     const feature = sourceById.get(Number(previous?.segmentId));
     if (!feature) continue;
     const lifecycleStatus = String(feature.properties?.status || "active");
@@ -78,5 +87,5 @@ export function restoreStagedOnlyActiveSegments(proposalOverlay, stagedOverlay, 
     restoredSegmentIds.push(Number(previous.segmentId));
   }
 
-  return { overlay: next, restoredSegmentIds };
+  return { overlay: next, restoredSegmentIds, preservedJunctionAttachmentSegmentIds };
 }

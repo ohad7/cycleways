@@ -189,11 +189,31 @@ const stagedOnly = {
     bToA: { published: { disposition: "accepted" }, draft: null },
   },
 };
+const existingProposalSegment = {
+  ...structuredClone(stagedOnly),
+  segmentId: 358,
+};
+const existingStagedSegment = {
+  ...structuredClone(stagedOnly),
+  segmentId: 358,
+  junctionAttachments: {
+    b: {
+      junctionId: "junction-test",
+      armId: "arm-b",
+      externalNodeId: "arm-b",
+      source: "automatic-terminal-node",
+    },
+  },
+};
 const restored = restoreStagedOnlyActiveSegments(
-  { segments: {} },
-  { segments: { "359": stagedOnly, "360": { ...stagedOnly, segmentId: 360 } } },
+  { segments: { "358": existingProposalSegment } },
+  { segments: { "358": existingStagedSegment, "359": stagedOnly, "360": { ...stagedOnly, segmentId: 360 } } },
   {
     features: [
+      {
+        properties: { id: 358, name: "Existing", status: "active" },
+        geometry: { type: "LineString", coordinates: [[1, 2], [3, 4]] },
+      },
       {
         properties: { id: 359, name: "Current name", status: "active" },
         geometry: { type: "LineString", coordinates: [[10, 20, 1], [30, 40, 2]] },
@@ -211,5 +231,10 @@ assert.deepEqual(restored.overlay.segments["359"].endpoints.a.coordinate, [10, 2
 assert.deepEqual(restored.overlay.segments["359"].endpoints.b.coordinate, [30, 40]);
 assert.equal(restored.overlay.segments["359"].alignments.aToB.published.disposition, "accepted");
 assert.equal(restored.overlay.segments["360"], undefined);
+assert.deepEqual(restored.preservedJunctionAttachmentSegmentIds, [358]);
+assert.equal(
+  restored.overlay.segments["358"].junctionAttachments.b.junctionId,
+  "junction-test",
+);
 
 console.log("Direction Review editor wiring ok");

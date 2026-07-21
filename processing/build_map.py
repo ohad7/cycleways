@@ -3145,22 +3145,35 @@ def build_public_cycleways_display_geojson(
     overlay_path: Path,
     segments_data: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Replace accepted public CycleWays feature geometry with overlay edge geometry."""
+    """Build public logical CycleWays geometry.
+
+    V1 uses its accepted flat mapping as the preferred display line. V2 keeps
+    the curated logical LineString: its two accepted alignments may follow
+    different physical carriageways, and choosing either one would make the
+    public corridor display direction-dependent. Direction-detail rendering is
+    published separately by ``build_public_cw_alignment_geometry``.
+    """
     if not overlay_path.exists():
         raise FileNotFoundError(f"CW base overlay not found: {overlay_path}")
 
     overlay = load_json(overlay_path, {})
+    overlay_schema_version = int(overlay.get("schemaVersion") or 1)
+    uses_editorial_v2_geometry = overlay_schema_version == 2
     active_ids = active_segment_ids(segments_data)
-    accepted_mappings_by_segment_id = {
-        mapping["segmentId"]: mapping
-        for mapping in (overlay.get("segments") or {}).values()
-        if (
-            isinstance(mapping, dict)
-            and isinstance(mapping.get("segmentId"), int)
-            and mapping.get("segmentId") in active_ids
-            and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
-        )
-    }
+    accepted_mappings_by_segment_id = (
+        {}
+        if uses_editorial_v2_geometry
+        else {
+            mapping["segmentId"]: mapping
+            for mapping in (overlay.get("segments") or {}).values()
+            if (
+                isinstance(mapping, dict)
+                and isinstance(mapping.get("segmentId"), int)
+                and mapping.get("segmentId") in active_ids
+                and mapping.get("status") in ("accepted_auto_match", "accepted_edge_set")
+            )
+        }
+    )
     runtime_edges_by_id = {
         edge["id"]: edge
         for edge in base_routing_asset.get("edges", [])
@@ -3171,6 +3184,7 @@ def build_public_cycleways_display_geojson(
     derived_segment_ids: list[int] = []
     source_fallback_segment_ids: list[int] = []
     source_fallback_names: list[str] = []
+    editorial_segment_ids: list[int] = []
     rendered_segment_ids: set[int] = set()
 
     for feature in source_geojson.get("features", []):
@@ -3189,10 +3203,14 @@ def build_public_cycleways_display_geojson(
         if not mapping:
             output_features.append(feature_copy)
             if segment_id in active_ids:
-                source_fallback_segment_ids.append(segment_id)
-                source_fallback_names.append(
-                    str(feature.get("properties", {}).get("name") or segment_id)
-                )
+                if uses_editorial_v2_geometry:
+                    editorial_segment_ids.append(segment_id)
+                    rendered_segment_ids.add(segment_id)
+                else:
+                    source_fallback_segment_ids.append(segment_id)
+                    source_fallback_names.append(
+                        str(feature.get("properties", {}).get("name") or segment_id)
+                    )
             continue
 
         assembled_coordinates: list[list[float]] = []
@@ -3243,6 +3261,8 @@ def build_public_cycleways_display_geojson(
         "sourceFallbackSegments": len(source_fallback_segment_ids),
         "sourceFallbackSegmentIds": sorted(source_fallback_segment_ids),
         "sourceFallbackNames": source_fallback_names[:20],
+        "editorialSegments": len(editorial_segment_ids),
+        "editorialSegmentIds": sorted(editorial_segment_ids),
         "unrenderedAcceptedSegmentIds": [],
     }
     return output, validation

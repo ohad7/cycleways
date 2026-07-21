@@ -15473,7 +15473,15 @@
       "navigable": true,
       "segmentId": 144,
       "segmentName": "קרית שמונה תעשייה דרומי",
-      "sourceGeometryDigest": "70b4f43063b533b07710451b99c747b284ad6e80ba6cfa690a50336bd26ce754"
+      "sourceGeometryDigest": "70b4f43063b533b07710451b99c747b284ad6e80ba6cfa690a50336bd26ce754",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrusibww",
+          "armId": "n8daefae2bbf7f6c7",
+          "externalNodeId": "n8daefae2bbf7f6c7",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "147": {
       "alignments": {
@@ -17608,7 +17616,15 @@
       "navigable": true,
       "segmentId": 164,
       "segmentName": "שביל תל חי",
-      "sourceGeometryDigest": "bfbdf6ecdb700aceca1182cdedf4b24975e8ea59b36a5f4b510d8f0d6c2d15e4"
+      "sourceGeometryDigest": "bfbdf6ecdb700aceca1182cdedf4b24975e8ea59b36a5f4b510d8f0d6c2d15e4",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrv4nhe2",
+          "armId": "nf6b6dd827c535746",
+          "externalNodeId": "nf6b6dd827c535746",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "165": {
       "alignments": {
@@ -20546,7 +20562,15 @@
       "navigable": true,
       "segmentId": 185,
       "segmentName": "רחוב הנשיא קריית שמונה",
-      "sourceGeometryDigest": "ab0f72bcea8d699148cb1b3c4fb34db8039e583aa8ade2125a7ef476a841ca98"
+      "sourceGeometryDigest": "ab0f72bcea8d699148cb1b3c4fb34db8039e583aa8ade2125a7ef476a841ca98",
+      "junctionAttachments": {
+        "a": {
+          "junctionId": "junction-custom-mrv4nhe2",
+          "armId": "n90b9cf833579c3f2",
+          "externalNodeId": "n90b9cf833579c3f2",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "186": {
       "alignments": {
@@ -23114,7 +23138,15 @@
       "navigable": true,
       "segmentId": 204,
       "segmentName": "כביש 9970 צומת רגר דרך ביטחונית",
-      "sourceGeometryDigest": "616a5aabdcc090addd244b66a357b5c58cff40af4e09b830e6f02c88adcc37a3"
+      "sourceGeometryDigest": "616a5aabdcc090addd244b66a357b5c58cff40af4e09b830e6f02c88adcc37a3",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-osm-ways:842376170",
+          "armId": "nbb2f85342c9ce810",
+          "externalNodeId": "nbb2f85342c9ce810",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "205": {
       "alignments": {
@@ -23818,7 +23850,15 @@
       "navigable": true,
       "segmentId": 210,
       "segmentName": "כביש 99 תל דן צומת רג׳ר",
-      "sourceGeometryDigest": "c611cb992973bb369f9c13c7b83959d4b26e0dee3dc4d3ea5820cc17945313de"
+      "sourceGeometryDigest": "c611cb992973bb369f9c13c7b83959d4b26e0dee3dc4d3ea5820cc17945313de",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-osm-ways:842376170",
+          "armId": "n6e0b16dd8d033448",
+          "externalNodeId": "n6e0b16dd8d033448",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "211": {
       "alignments": {
@@ -23935,7 +23975,15 @@
       "navigable": true,
       "segmentId": 211,
       "segmentName": "כביש 99 צומת רג׳ר כביש ביטחון",
-      "sourceGeometryDigest": "71b7642736d96df110db4837821a3007bcb5d45401025357e1e69d55157b7e1e"
+      "sourceGeometryDigest": "71b7642736d96df110db4837821a3007bcb5d45401025357e1e69d55157b7e1e",
+      "junctionAttachments": {
+        "a": {
+          "junctionId": "junction-osm-ways:842376170",
+          "armId": "n280a0d9546c098cd",
+          "externalNodeId": "n280a0d9546c098cd",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "212": {
       "alignments": {
@@ -29742,7 +29790,15 @@
       "navigable": true,
       "segmentId": 263,
       "segmentName": "רחוב הוורדים דרום קריית שמונה",
-      "sourceGeometryDigest": "f52ecd8fa050ef0344b9307fc1ffccc887f1ea0102ca3b8baf383217db976757"
+      "sourceGeometryDigest": "f52ecd8fa050ef0344b9307fc1ffccc887f1ea0102ca3b8baf383217db976757",
+      "junctionAttachments": {
+        "a": {
+          "junctionId": "junction-custom-mrusibww",
+          "armId": "nfa75e8e3bb0cdc98",
+          "externalNodeId": "nfa75e8e3bb0cdc98",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "264": {
       "alignments": {
@@ -31645,7 +31701,15 @@
       "navigable": true,
       "segmentId": 276,
       "segmentName": "קרית שמונה עלייה לפארק גאולוגי",
-      "sourceGeometryDigest": "82c544c00332178ca9a8cc9c02ccc26356b7da604b55620516db42736b4ef975"
+      "sourceGeometryDigest": "82c544c00332178ca9a8cc9c02ccc26356b7da604b55620516db42736b4ef975",
+      "junctionAttachments": {
+        "a": {
+          "junctionId": "junction-custom-mrv4x7um",
+          "armId": "nab3eb65d695c8c29",
+          "externalNodeId": "nab3eb65d695c8c29",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "277": {
       "alignments": {
@@ -37684,7 +37748,15 @@
       "navigable": true,
       "segmentId": 330,
       "segmentName": "שביל אופניים דפנה",
-      "sourceGeometryDigest": "b33cf92d1ea84d3ed2c511080aa5482afe115e676be6e9dd4e5da1eaa9a2bbbc"
+      "sourceGeometryDigest": "b33cf92d1ea84d3ed2c511080aa5482afe115e676be6e9dd4e5da1eaa9a2bbbc",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrujg8lc",
+          "armId": "n71c55fa830078477",
+          "externalNodeId": "n71c55fa830078477",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "331": {
       "alignments": {
@@ -38948,7 +39020,15 @@
       "navigable": true,
       "segmentId": 337,
       "segmentName": "שביל אופניים אנדרטת אסון המסוקים",
-      "sourceGeometryDigest": "622c3a49e5741ca738338bd43a048ab97dc0be2cdfb07c40b9dfbc2ba0eae099"
+      "sourceGeometryDigest": "622c3a49e5741ca738338bd43a048ab97dc0be2cdfb07c40b9dfbc2ba0eae099",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrujg8lc",
+          "armId": "ne6e24bb13e38127b",
+          "externalNodeId": "ne6e24bb13e38127b",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "338": {
       "alignments": {
@@ -39210,7 +39290,15 @@
       "navigable": true,
       "segmentId": 339,
       "segmentName": "שביל אופניים 918 דפנה",
-      "sourceGeometryDigest": "19e3fcd7636101dbe25dcd9765bbf05231113cf1d7ae98e054052f8db9bfc86c"
+      "sourceGeometryDigest": "19e3fcd7636101dbe25dcd9765bbf05231113cf1d7ae98e054052f8db9bfc86c",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrujg8lc",
+          "armId": "ne6e24bb13e38127b",
+          "externalNodeId": "ne6e24bb13e38127b",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "340": {
       "alignments": {
@@ -40696,7 +40784,15 @@
       "navigable": true,
       "segmentId": 352,
       "segmentName": "שביל אופניים יובלים",
-      "sourceGeometryDigest": "0c380ec155f1629edd2dd4d408f9e91cab141b6add64bcc0c74dcaa3bbedb724"
+      "sourceGeometryDigest": "0c380ec155f1629edd2dd4d408f9e91cab141b6add64bcc0c74dcaa3bbedb724",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrv4nhe2",
+          "armId": "nb8dd6ed5749271b4",
+          "externalNodeId": "nb8dd6ed5749271b4",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "354": {
       "alignments": {
@@ -41191,7 +41287,15 @@
       "navigable": true,
       "segmentId": 358,
       "segmentName": "רחוב פנימי שדה אליעזר",
-      "sourceGeometryDigest": "e3cf691f81633ab1046fc3fb52d7284356a476daebed78d3a7217f1cde0349a5"
+      "sourceGeometryDigest": "e3cf691f81633ab1046fc3fb52d7284356a476daebed78d3a7217f1cde0349a5",
+      "junctionAttachments": {
+        "a": {
+          "junctionId": "junction-osm-ways:841155428",
+          "armId": "nb49361f7a52f8960",
+          "externalNodeId": "nb49361f7a52f8960",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "359": {
       "alignments": {
@@ -41361,7 +41465,15 @@
       "navigable": true,
       "segmentId": 359,
       "segmentName": "כביש גישה שדה אליעזר",
-      "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370"
+      "sourceGeometryDigest": "97b3f4c20acdc5075f622239630dc91ef6647ed9482cdc568e169a7e501f8370",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-osm-ways:841155428",
+          "armId": "n4d810850944b62ad",
+          "externalNodeId": "n4d810850944b62ad",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "361": {
       "alignments": {
@@ -41496,7 +41608,21 @@
       "navigable": true,
       "segmentId": 361,
       "segmentName": "רחוב הנרייטה סאלד",
-      "sourceGeometryDigest": "c70568524af7a65632c1d8521a4e86767940bc1328996623ececc31f60dd6650"
+      "sourceGeometryDigest": "c70568524af7a65632c1d8521a4e86767940bc1328996623ececc31f60dd6650",
+      "junctionAttachments": {
+        "a": {
+          "junctionId": "junction-custom-mrusibww",
+          "armId": "n4f60576be226896d",
+          "externalNodeId": "n4f60576be226896d",
+          "source": "automatic-terminal-node"
+        },
+        "b": {
+          "junctionId": "junction-custom-mrv4x7um",
+          "armId": "n616d5d54ff8cf15c",
+          "externalNodeId": "n616d5d54ff8cf15c",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "364": {
       "alignments": {
@@ -41612,7 +41738,15 @@
       "navigable": true,
       "segmentId": 364,
       "segmentName": "שביל אופניים דפנה רחבה",
-      "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c"
+      "sourceGeometryDigest": "1906c4f938c3253728734e22c3f1fa7dcd654ab254b4bffd6b24a85395f36e5c",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrujg8lc",
+          "armId": "n71c55fa830078477",
+          "externalNodeId": "n71c55fa830078477",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "365": {
       "alignments": {
@@ -42116,7 +42250,15 @@
       "navigable": true,
       "segmentId": 368,
       "segmentName": "שביל אופניים רחוב הירדן דרום",
-      "sourceGeometryDigest": "ec9c758b9b9d98725a6c77c8de0cea0e34bb9ca23236542be09d969e4157559c"
+      "sourceGeometryDigest": "ec9c758b9b9d98725a6c77c8de0cea0e34bb9ca23236542be09d969e4157559c",
+      "junctionAttachments": {
+        "b": {
+          "junctionId": "junction-custom-mrusibww",
+          "armId": "ncf4eb7ab05d3a6d0",
+          "externalNodeId": "ncf4eb7ab05d3a6d0",
+          "source": "automatic-terminal-node"
+        }
+      }
     },
     "369": {
       "alignments": {

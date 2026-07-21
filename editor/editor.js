@@ -8,6 +8,7 @@ import {
 import { migrateOverlayEdgeReplacement } from "./lib/overlay-edge-migration.mjs";
 import { filterRoundaboutItems } from "./lib/roundaboutReview.mjs";
 import { filterCrossingItems } from "./lib/crossingReview.mjs";
+import { junctionPublicationIsBlocked } from "./lib/junction-publication.mjs";
 import {
   buildBaseEdgeDirectionLayer,
   summarizeBaseEdgeDirectionLayer,
@@ -5293,7 +5294,7 @@ function junctionPublicationHtml(junction) {
         </label>`).join("")
     : "";
   const issues = (publication.issues || []).map((issue) => `<li>${escapeHtml(junctionPublicationIssueLabel(issue))}</li>`).join("");
-  const publishBlocked = (publication.issues || []).some((issue) => issue.code !== "junction_name_required");
+  const publishBlocked = junctionPublicationIsBlocked(publication.issues || []);
   const isPublished = publication.status === "published";
   const publicationLabel = isPublished
     ? "Published in the CW network"

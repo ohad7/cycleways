@@ -28,12 +28,25 @@ for (const [segmentId, endpoint] of [[204, "b"], [210, "b"], [211, "a"]]) {
     "junction-osm-ways:842376170",
   );
 }
-const field = candidates.junctions.find((junction) => junction.roundaboutId === "osm-ways:841155426");
-assert.deepEqual(field.segmentIds, [358]);
-assert.ok(field.throughAlignments.some((alignment) => alignment.segmentId === 358));
+const fieldEntrance = candidates.junctions.find(
+  (junction) => junction.roundaboutId === "osm-ways:841155428",
+);
+assert.deepEqual(fieldEntrance.segmentIds, [358, 359]);
+assert.deepEqual(
+  fieldEntrance.armAttachments.map(({ segmentId, endpoint }) => ({ segmentId, endpoint })),
+  [{ segmentId: 358, endpoint: "a" }, { segmentId: 359, endpoint: "b" }],
+);
+assert.equal(fieldEntrance.publication.status, "published");
+assert.equal(fieldEntrance.publication.canPublish, true);
+for (const [segmentId, endpoint] of [[358, "a"], [359, "b"]]) {
+  assert.equal(
+    overlay.segments[String(segmentId)].junctionAttachments?.[endpoint]?.junctionId,
+    "junction-osm-ways:841155428",
+  );
+}
 assert.deepEqual(
   candidates.junctions.find((junction) => junction.roundaboutId === "osm-ways:228885122").segmentIds,
-  [143, 144, 263, 361],
+  [144, 263, 361, 368],
 );
 assert.deepEqual(
   candidates.junctions.find((junction) => junction.roundaboutId === "osm-ways:1024609346").segmentIds,
@@ -43,12 +56,6 @@ assert.deepEqual(
   candidates.junctions.find((junction) => junction.roundaboutId === "osm-ways:1230594681").segmentIds,
   [330, 333, 334],
 );
-
-const fieldReverseRefs = overlay.segments["358"].alignments.bToA.published.realization.edgeRefs;
-const fieldJunctionRun = fieldReverseRefs.slice(8, 13).map(({ edgeId, direction }) => `${edgeId}:${direction}`);
-assert.deepEqual(fieldJunctionRun, [
-  "e841155413_1:forward", "e841155426_5:forward", "e841155426_6:forward", "e841155426_7:forward", "e841155417_1:forward",
-]);
 
 const horshatTal = candidates.junctions.find((junction) => junction.id === "junction-custom-mrujg8lc");
 assert.equal(horshatTal.name, "צומת חורשת טל");
@@ -76,6 +83,6 @@ for (const [segmentId, endpoint] of [[330, "b"], [337, "b"], [339, "b"], [364, "
     "junction-custom-mrujg8lc",
   );
 }
-assert.equal(overlay.segments["363"].junctionAttachments, undefined);
+assert.equal(overlay.segments["363"]?.junctionAttachments, undefined);
 
-console.log("current-data Rager, #358, and Horshat Tal junction regressions ok");
+console.log("current-data Rager, Sde Eliezer, and Horshat Tal junction regressions ok");

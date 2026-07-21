@@ -810,6 +810,69 @@ class BaseRoutingAssetTests(unittest.TestCase):
             self.assertEqual(validation["derivedSegmentIds"], [7])
             self.assertEqual(validation["sourceFallbackSegmentIds"], [8])
 
+    def test_v2_public_display_keeps_logical_editorial_geometry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            overlay_path = root / "cw-base-overlay-v2.json"
+            write_json(
+                overlay_path,
+                {
+                    "schemaVersion": 2,
+                    "segments": {
+                        "7": {
+                            "segmentId": 7,
+                            "alignments": {
+                                "aToB": {
+                                    "published": {
+                                        "disposition": "accepted",
+                                        "realization": {
+                                            "type": "explicit",
+                                            "edgeRefs": [{"edgeId": "east-lane", "direction": "forward", "sequenceIndex": 0}],
+                                        },
+                                    }
+                                },
+                                "bToA": {
+                                    "published": {
+                                        "disposition": "accepted",
+                                        "realization": {
+                                            "type": "explicit",
+                                            "edgeRefs": [{"edgeId": "west-lane", "direction": "forward", "sequenceIndex": 0}],
+                                        },
+                                    }
+                                },
+                            },
+                        }
+                    },
+                },
+            )
+            logical_coordinates = [[35, 33, 10], [35.002, 33, 12]]
+            source_geojson = {
+                "type": "FeatureCollection",
+                "features": [{
+                    "type": "Feature",
+                    "properties": {"id": 7, "name": "logical corridor"},
+                    "geometry": {"type": "LineString", "coordinates": logical_coordinates},
+                }],
+            }
+            routing_asset = {
+                "edges": [
+                    {"id": "east-lane", "coordinates": [[35, 33], [35.002, 33]]},
+                    {"id": "west-lane", "coordinates": [[35.0021, 33], [35.0001, 33]]},
+                ]
+            }
+
+            public_geojson, validation = build_public_cycleways_display_geojson(
+                source_geojson,
+                routing_asset,
+                overlay_path,
+                {"logical corridor": {"id": 7, "status": "active"}},
+            )
+
+            self.assertEqual(public_geojson["features"][0]["geometry"]["coordinates"], logical_coordinates)
+            self.assertEqual(validation["derivedSegmentIds"], [])
+            self.assertEqual(validation["sourceFallbackSegmentIds"], [])
+            self.assertEqual(validation["editorialSegmentIds"], [7])
+
     def test_runtime_manifest_uses_public_data_stable_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             out_dir = Path(directory)

@@ -40,7 +40,6 @@ import {
   roundaboutReviewGeoJson,
 } from "./lib/roundaboutReview.mjs";
 import {
-  deriveJunctionArmAttachmentCandidates,
   joinNetworkJunctionReviews,
   mergeNetworkJunctionRegistry,
   networkJunctionGeoJson,
@@ -2424,7 +2423,7 @@ function networkAuthoringSegmentShell(feature, previous) {
 
 async function reconcileNetworkAuthoringJunctionAttachments(
   overlay,
-  segmentId,
+  segmentIds,
   context,
 ) {
   let candidates;
@@ -2436,14 +2435,23 @@ async function reconcileNetworkAuthoringJunctionAttachments(
     }
     throw error;
   }
-  const derived = deriveJunctionArmAttachmentCandidates({
+  const registryValue = await readJsonFileOrNull(networkJunctionRegistryPath);
+  const graph = { edges: [...context.edgeLookup.values()] };
+  let current = mergeNetworkJunctionRegistry(
+    candidates,
+    graph,
     overlay,
-    graph: { edges: [...context.edgeLookup.values()] },
-    junctions: candidates.junctions || [],
-    segmentIds: [segmentId],
-  });
-  return reconcileOverlayJunctionArmAttachments(overlay, derived, {
-    segmentIds: [segmentId],
+    registryValue || { schemaVersion: 1, junctions: {} },
+  );
+  current = refreshNetworkJunctionArmAssociations(current, overlay, graph);
+  const published = {
+    ...current,
+    junctions: (current.junctions || []).filter(
+      (junction) => junction.publication?.requestedStatus === "published",
+    ),
+  };
+  return reconcileOverlayJunctionArmAttachments(overlay, published, {
+    segmentIds,
   });
 }
 
@@ -2650,7 +2658,13 @@ async function applyNetworkAuthoringSegmentMetadata(payload) {
     ...compatibilityValue,
     segments: compatibilitySegments,
   });
-  const parsed = parseCwOverlayV2(automatic.overlay);
+  const context = await readDirectionReviewGraphContext();
+  const attachmentReconciliation = await reconcileNetworkAuthoringJunctionAttachments(
+    automatic.overlay,
+    null,
+    context,
+  );
+  const parsed = parseCwOverlayV2(attachmentReconciliation.overlay);
   if (latestNetworkAuthoringRevisionBySegment.get(segmentId) !== requestedRevision) {
     return { superseded: true, segmentId, revision: requestedRevision };
   }
@@ -2681,6 +2695,9 @@ async function applyNetworkAuthoringSegmentMetadata(payload) {
     releasedOwnership: releasedOwnerId != null,
     automaticallyAppliedSegmentIds: automatic.applied.map((item) => item.segmentId),
     automaticSkipped: automatic.skipped,
+    junctionAttachments: attachmentReconciliation.applied,
+    junctionAttachmentsRemoved: attachmentReconciliation.removed,
+    junctionAttachmentIssues: attachmentReconciliation.issues,
   };
 }
 
@@ -2937,7 +2954,7 @@ async function applyNetworkAuthoringSegment(payload) {
   nextOverlay.segments[String(segmentId)] = segment;
   const attachmentReconciliation = await reconcileNetworkAuthoringJunctionAttachments(
     nextOverlay,
-    segmentId,
+    [segmentId],
     context,
   );
   const parsed = parseCwOverlayV2(attachmentReconciliation.overlay);
@@ -3215,6 +3232,7 @@ async function rebaseDirectionReviewState(proposalOverlay, stagedOverlay, source
   const owners = directionReviewDirectedOwners(next);
   const preserved = {
     stagedOnlySegments: restored.restoredSegmentIds.length,
+    junctionAttachmentSegments: restored.preservedJunctionAttachmentSegmentIds.length,
     unavailable: 0,
     published: 0,
     evidenceBackfilled: 0,
@@ -3453,8 +3471,23 @@ async function refreshDirectionReviewEvidence(payload = {}) {
   const automatic = await autoApplySafeDirectionReviewDrafts(rebased.overlay, {
     revision: refreshId,
   });
-  rebased.overlay = automatic.overlay;
+  const context = await readDirectionReviewGraphContext();
+  const attachmentReconciliation = await reconcileNetworkAuthoringJunctionAttachments(
+    automatic.overlay,
+    null,
+    context,
+  );
+  if (attachmentReconciliation.issues.length > 0) {
+    const error = new Error(
+      `Cannot refresh junction attachments: ${attachmentReconciliation.issues.map((issue) => issue.code).join(", ")}`,
+    );
+    error.code = "JUNCTION_ATTACHMENT_CONFLICT";
+    throw error;
+  }
+  rebased.overlay = attachmentReconciliation.overlay;
   rebased.preserved.automaticallyPublished = automatic.applied.length;
+  rebased.preserved.junctionAttachments = attachmentReconciliation.applied.length;
+  rebased.preserved.junctionAttachmentsRemoved = attachmentReconciliation.removed.length;
   await validatePublishedDirectionReviewOverlay(rebased.overlay);
   await writeJsonAtomic(cwBaseOverlayV2StagedPath, rebased.overlay);
   const graphPatch = payload?.presentation === "incremental"

@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { junctionPublicationIsBlocked } from "../editor/lib/junction-publication.mjs";
+
+assert.equal(junctionPublicationIsBlocked([{ code: "junction_name_required" }]), false);
+assert.equal(junctionPublicationIsBlocked([{ code: "published_junction_topology_stale" }]), false);
+assert.equal(junctionPublicationIsBlocked([{ code: "two_junction_arms_required" }]), true);
 
 const [html, client, server] = await Promise.all([
   readFile(new URL("../editor/index.html", import.meta.url), "utf8"),
@@ -19,6 +24,8 @@ assert.match(client, /junction-arm-attachments-layer/);
 assert.match(client, /networkRole: "junction"/);
 assert.match(client, /Arrival and departure ports are automatic/);
 assert.match(client, /Add to CW network/);
+assert.match(client, /junctionPublicationIsBlocked/);
+assert.match(client, /Review and republish/);
 assert.match(client, /Draft — not yet shown in the CW network/);
 assert.match(client, /function junctionAttachedSegmentIds/);
 assert.match(client, /connected \$\{attachedSegmentIds\.map/);

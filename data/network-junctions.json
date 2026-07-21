@@ -12,7 +12,7 @@
       },
       "excludedPortIds": [],
       "topologyFingerprint": "sha256:a47f28f19dd84fed496a5ad66f623659cf4a86469ee6f7925344238c32002a10",
-      "updatedAt": "2026-07-21T11:07:49.502Z",
+      "updatedAt": "2026-07-21T21:26:56.909Z",
       "reviewer": "ohad"
     },
     "junction-custom-mrujg8lc": {
@@ -30,7 +30,7 @@
       },
       "excludedPortIds": [],
       "topologyFingerprint": "sha256:93d2272524151234f4ffed129f227b116ac5b3445641c1c3c08c564a676f22e9",
-      "updatedAt": "2026-07-21T11:06:45.200Z",
+      "updatedAt": "2026-07-21T21:26:29.850Z",
       "reviewer": "ohad"
     },
     "junction-custom-mrusibww": {
@@ -55,8 +55,8 @@
         ]
       },
       "excludedPortIds": [],
-      "topologyFingerprint": "sha256:e2e9ac4db8a274bf9cab91fe35e712a8c9482daf9ba8d42c053e70560f72fcf1",
-      "updatedAt": "2026-07-21T15:11:51.293Z",
+      "topologyFingerprint": "sha256:4768ccf3b287bc055303ddaf1804c1f498bacdce374cc7ef436c42cd30d8b2d8",
+      "updatedAt": "2026-07-21T21:26:12.273Z",
       "reviewer": "ohad"
     },
     "junction-osm-ways:841155428": {
@@ -70,7 +70,7 @@
       },
       "excludedPortIds": [],
       "topologyFingerprint": "sha256:6b39c6002f9e78713e39f119234f3d29960e41e17279420300c24151c3ae183c",
-      "updatedAt": "2026-07-21T19:09:39.652Z",
+      "updatedAt": "2026-07-21T21:26:49.644Z",
       "reviewer": "ohad"
     },
     "junction-custom-mrv4nhe2": {
@@ -90,7 +90,7 @@
       },
       "excludedPortIds": [],
       "topologyFingerprint": "sha256:5ae6e1ebf21bed7be9396cae1e0e8a3b4fcb1bddfe88cc285bfe59c767c9627c",
-      "updatedAt": "2026-07-21T20:51:17.153Z",
+      "updatedAt": "2026-07-21T21:26:35.809Z",
       "reviewer": "ohad"
     },
     "junction-custom-mrv4x7um": {
@@ -112,7 +112,7 @@
       },
       "excludedPortIds": [],
       "topologyFingerprint": "sha256:f70bc0694c18a691e04881699a27c59bdc331294acb55c653a377381716811de",
-      "updatedAt": "2026-07-21T20:57:45.220Z",
+      "updatedAt": "2026-07-21T21:26:41.768Z",
       "reviewer": "ohad"
     }
   }
