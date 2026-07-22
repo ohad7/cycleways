@@ -54,6 +54,16 @@ import {
   joinCrossingReviews,
 } from "./lib/crossingReview.mjs";
 import {
+  buildCrossingReviewSites,
+  buildJunctionCrossingProposal,
+  crossingReviewSiteGeoJson,
+  decorateCrossingReview,
+} from "./lib/crossing-junctions.mjs";
+import {
+  buildCrossingFromGuideline,
+  crossingMatcherFeature,
+} from "./lib/crossing-guideline.mjs";
+import {
   acceptAlignmentDraft,
   alignmentEvidenceDigest,
   alignmentMappingDigest,
@@ -4313,13 +4323,75 @@ async function readCrossingReviewState() {
   } catch {
     sourceFresh = false;
   }
+  const [junctionState, shareRegistry] = await Promise.all([
+    readNetworkJunctionState(),
+    readFile(baseEdgeShareRegistryPath, "utf-8").then(JSON.parse),
+  ]);
   const joined = joinCrossingReviews(candidates, reviews);
+  const siteResult = buildCrossingReviewSites({
+    joined,
+    junctionItems: junctionState.joined.items,
+    shareRegistry,
+  });
+  const decorated = decorateCrossingReview(joined, siteResult);
+  const decoratedJoined = decorateCrossingsWithCwAlignments(
+    { ...joined, ...decorated },
+    junctionState.overlay,
+    shareRegistry,
+  );
+  const crossingCwIds = new Map([
+    ...decoratedJoined.items.map((item) => [item.candidate?.id, item.cwSegmentIds || []]),
+    ...decoratedJoined.manualItems.map((item) => [item.crossing?.id, item.cwSegmentIds || []]),
+  ]);
+  const reviewSites = siteResult.reviewSites.map((site) => ({
+    ...site,
+    cwSegmentIds: [...new Set(
+      (site.crossingIds || []).flatMap((id) => crossingCwIds.get(id) || []),
+    )].sort((a, b) => a - b),
+  }));
+  const geojson = crossingReviewGeoJson(decoratedJoined);
+  geojson.sites = crossingReviewSiteGeoJson(reviewSites);
   return {
     candidates,
     reviews,
-    joined,
+    joined: decoratedJoined,
     sourceFresh,
-    geojson: crossingReviewGeoJson(joined),
+    geojson,
+    reviewSites,
+    junctionState,
+    shareRegistry,
+  };
+}
+
+function decorateCrossingsWithCwAlignments(joined, overlay, shareRegistry) {
+  const edgeIdByShareId = new Map(
+    Object.entries(shareRegistry?.edges || {}).map(([edgeId, shareId]) => [Number(shareId), edgeId]),
+  );
+  const segmentIdsByEdgeId = new Map();
+  for (const segment of Object.values(overlay?.segments || {})) {
+    const segmentId = Number(segment?.segmentId);
+    if (!Number.isInteger(segmentId)) continue;
+    for (const alignmentKey of ["aToB", "bToA"]) {
+      for (const ref of materializeAcceptedAlignment(segment, alignmentKey) || []) {
+        const ids = segmentIdsByEdgeId.get(String(ref.edgeId)) || new Set();
+        ids.add(segmentId);
+        segmentIdsByEdgeId.set(String(ref.edgeId), ids);
+      }
+    }
+  }
+  const cwSegmentIds = (crossing) => [...new Set(
+    (crossing?.mappings || []).flatMap((mapping) =>
+      ["before", "action", "after"].flatMap((section) =>
+        (mapping.match?.[section] || []).flatMap((slice) =>
+          [...(segmentIdsByEdgeId.get(edgeIdByShareId.get(Number(slice.edgeShareId))) || [])],
+        ),
+      ),
+    ),
+  )].sort((a, b) => a - b);
+  return {
+    ...joined,
+    items: (joined.items || []).map((item) => ({ ...item, cwSegmentIds: cwSegmentIds(item.candidate) })),
+    manualItems: (joined.manualItems || []).map((item) => ({ ...item, cwSegmentIds: cwSegmentIds(item.crossing) })),
   };
 }
 
@@ -4335,6 +4407,8 @@ function crossingReviewResponse(state) {
     manualItems: state.joined.manualItems,
     orphaned: state.joined.orphaned,
     geojson: state.geojson,
+    reviewSites: state.reviewSites,
+    junctionGeojson: state.junctionState.geojson,
   };
 }
 
@@ -6113,6 +6187,80 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/crossings/match-guideline") {
+      try {
+        const body = await readRequestJson(request);
+        const state = await readCrossingReviewState();
+        if (!state.sourceFresh) {
+          throw Object.assign(new Error("Crossing evidence is stale; rebuild the base graph before matching a guideline"), { status: 409 });
+        }
+        const feature = crossingMatcherFeature(body?.guideline, 1);
+        const match = await osmSegmentMatcherWorker.match(feature);
+        const existing = (state.reviews.manualCrossings || []).find(
+          (crossing) => crossing.id === body?.id,
+        );
+        const proposal = buildCrossingFromGuideline({
+          id: body?.id,
+          guideline: body?.guideline,
+          match,
+          graph: state.junctionState.graph,
+          shareRegistry: state.shareRegistry,
+          crossedRoadName: body?.crossedRoadName,
+          guidancePolicy: body?.guidancePolicy,
+          includeReverse: body?.includeReverse !== false,
+          existingAudit: existing?.audit || null,
+        });
+        const issue = crossingIssue(proposal.crossing);
+        if (issue) throw Object.assign(new Error(`Guideline produced an invalid crossing: ${issue}`), { status: 400 });
+        sendJson(response, 200, {
+          ok: true,
+          ...proposal,
+          geojson: crossingReviewGeoJson({
+            items: [],
+            manualItems: [{ crossing: proposal.crossing, state: "manual" }],
+          }),
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/crossings/from-junction") {
+      try {
+        const body = await readRequestJson(request);
+        const state = await readCrossingReviewState();
+        if (!state.sourceFresh) {
+          throw Object.assign(new Error("Crossing candidates are stale; regenerate before creating junction guidance"), { status: 409 });
+        }
+        const junction = state.junctionState.joined.items.find(
+          (item) => item.candidate?.id === body?.junctionId,
+        )?.candidate;
+        if (!junction) throw Object.assign(new Error("Unknown junction"), { status: 400 });
+        if (junction.publication?.status !== "published") {
+          throw Object.assign(new Error("Publish the junction in the CW network before adding crossing guidance"), { status: 409 });
+        }
+        if (body?.junctionFingerprint !== junction.fingerprint) {
+          throw Object.assign(new Error("Junction topology changed; reload before creating crossing guidance"), { status: 409 });
+        }
+        const proposal = buildJunctionCrossingProposal({
+          junction,
+          movementId: String(body?.movementId || ""),
+          graph: state.junctionState.graph,
+          shareRegistry: state.shareRegistry,
+          continuationDirection: String(body?.continuationDirection || ""),
+        });
+        sendJson(response, 200, {
+          ok: true,
+          proposal,
+          message: "Review the movement on the map. Guidance is not published until you confirm it.",
+        });
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/crossings/review") {
       try {
         const body = await readRequestJson(request);
@@ -6201,6 +6349,71 @@ const server = createServer(async (request, response) => {
         if (manualItem?.state !== "manual") {
           throw Object.assign(new Error("Manual crossing does not pass publication validation"), { status: 400 });
         }
+        await writeJsonAtomic(crossingReviewPath, nextReviews);
+        sendJson(response, 200, crossingReviewResponse(await readCrossingReviewState()));
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/crossings/manual/name") {
+      try {
+        const body = await readRequestJson(request);
+        const id = typeof body?.id === "string" ? body.id : "";
+        const name = typeof body?.name === "string" ? body.name.trim() : null;
+        if (!id.startsWith("manual-crossing-") || name === null || name.length > 160) {
+          throw Object.assign(new Error("Invalid crossing name update"), { status: 400 });
+        }
+        const state = await readCrossingReviewState();
+        const existing = (state.reviews.manualCrossings || []).find((item) => item.id === id);
+        if (!existing) {
+          throw Object.assign(new Error(`Manual crossing ${id} was not found`), { status: 404 });
+        }
+        const now = new Date().toISOString();
+        const nextCrossing = {
+          ...existing,
+          crossedRoad: {
+            ...(existing.crossedRoad || {}),
+            name: name || null,
+          },
+          audit: {
+            createdAt: existing.audit?.createdAt || now,
+            updatedAt: now,
+          },
+        };
+        const manualCrossings = (state.reviews.manualCrossings || [])
+          .map((item) => item.id === id ? nextCrossing : item);
+        const nextReviews = {
+          schemaVersion: 1,
+          reviews: state.reviews.reviews || {},
+          manualCrossings,
+        };
+        await writeJsonAtomic(crossingReviewPath, nextReviews);
+        sendJson(response, 200, crossingReviewResponse(await readCrossingReviewState()));
+      } catch (error) {
+        sendJson(response, error?.status || 500, { ok: false, error: error?.message || String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/crossings/manual/delete") {
+      try {
+        const body = await readRequestJson(request);
+        const id = typeof body?.id === "string" ? body.id : "";
+        if (!id.startsWith("manual-crossing-")) {
+          throw Object.assign(new Error("Invalid manual crossing ID"), { status: 400 });
+        }
+        const state = await readCrossingReviewState();
+        const manualCrossings = state.reviews.manualCrossings || [];
+        if (!manualCrossings.some((item) => item.id === id)) {
+          throw Object.assign(new Error(`Manual crossing ${id} was not found`), { status: 404 });
+        }
+        const nextReviews = {
+          schemaVersion: 1,
+          reviews: state.reviews.reviews || {},
+          manualCrossings: manualCrossings.filter((item) => item.id !== id),
+        };
         await writeJsonAtomic(crossingReviewPath, nextReviews);
         sendJson(response, 200, crossingReviewResponse(await readCrossingReviewState()));
       } catch (error) {

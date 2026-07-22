@@ -49,7 +49,10 @@ def mapping_issue(mapping: Any, *, representation: str = "action-path") -> str |
         return "invalid_mapping_match"
     for section in ("before", "action", "after"):
         slices = match.get(section)
-        allow_empty = representation == "junction-transition" and section == "action"
+        allow_empty = (
+            (representation == "junction-transition" and section == "action")
+            or (representation == "edge-path" and section != "action")
+        )
         if (
             not isinstance(slices, list)
             or (not slices and not allow_empty)
@@ -64,6 +67,8 @@ def mapping_issue(mapping: Any, *, representation: str = "action-path") -> str |
             return f"duplicate_mapping_{section}_slice"
     if representation == "junction-transition" and match.get("action"):
         return "invalid_transition_action"
+    if representation == "edge-path" and (match.get("before") or match.get("after")):
+        return "invalid_edge_path_context"
     if not valid_coordinate(mapping.get("entry")) or not valid_coordinate(mapping.get("exit")):
         return "invalid_mapping_anchors"
     if representation == "junction-transition":
@@ -92,12 +97,12 @@ def crossing_issue(crossing: Any, *, require_fingerprint: bool) -> str | None:
     if crossing.get("kind") != "side-change":
         return "invalid_crossing_kind"
     representation = crossing.get("representation", "action-path")
-    if representation not in {"action-path", "junction-transition"}:
+    if representation not in {"action-path", "junction-transition", "edge-path"}:
         return "invalid_crossing_representation"
     guidance_policy = crossing.get("guidancePolicy", "always")
     if guidance_policy not in {"always", "user-option"}:
         return "invalid_crossing_guidance_policy"
-    if guidance_policy == "user-option" and representation != "junction-transition":
+    if guidance_policy == "user-option" and representation not in {"junction-transition", "edge-path"}:
         return "invalid_optional_crossing_representation"
     if not valid_coordinate(crossing.get("center")):
         return "invalid_crossing_center"
@@ -135,6 +140,10 @@ def _runtime_crossing(candidate: dict[str, Any], mappings: list[dict[str, Any]])
             for key in ("source", "sourceIds", "name", "highway")
             if key in crossed_road
         }
+    if candidate.get("reviewSiteId"):
+        result["reviewSiteId"] = candidate["reviewSiteId"]
+    if isinstance(candidate.get("context"), dict):
+        result["context"] = candidate["context"]
     return result
 
 

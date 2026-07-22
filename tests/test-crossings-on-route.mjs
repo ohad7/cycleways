@@ -165,4 +165,26 @@ assert.deepEqual(
   "the matcher never infers a transition from a nearby or unrelated turn",
 );
 
+const edgePathArtifact = {
+  schemaVersion: 1,
+  graphVersion: "graph-1",
+  traversalPolicyDigest: "policy-digest-1",
+  crossings: [{
+    id: "crossing-edge-path",
+    kind: "side-change",
+    representation: "edge-path",
+    guidancePolicy: "always",
+    mappings: [{
+      id: "mapping-edge-path",
+      match: { before: [], action: [routeSlice(2, 800_000, 200_000)], after: [] },
+      entry: { lat: 33, lng: 35.00042 },
+      exit: { lat: 33, lng: 35.00058 },
+    }],
+  }],
+};
+const edgePathMatches = crossingsOnRoute(edgePathArtifact, attestation, geometry);
+assert.equal(edgePathMatches.length, 2);
+assert.equal(edgePathMatches[0].crossingRepresentation, "edge-path");
+assert.ok(edgePathMatches[0].entryMeters < edgePathMatches[0].exitMeters);
+
 console.log("crossings-on-route tests passed");

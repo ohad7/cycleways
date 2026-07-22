@@ -3,95 +3,1230 @@
   "reviews": {},
   "manualCrossings": [
     {
-      "id": "manual-crossing-margaliot-dirt-to-sideline",
+      "id": "manual-crossing-2a29c17d6ad26bb8",
       "kind": "side-change",
-      "representation": "junction-transition",
-      "guidancePolicy": "user-option",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.605887,
+            33.225057
+          ],
+          [
+            35.605889,
+            33.224895
+          ]
+        ]
+      },
       "center": {
-        "lat": 33.2205053,
-        "lng": 35.548282
+        "lat": 33.224973,
+        "lng": 35.605889
       },
       "bbox": [
-        35.5477011,
-        33.2204367,
-        35.5483479,
-        33.2207388
+        35.605883647963836,
+        33.22489500871959,
+        35.605889962855315,
+        33.225056848566524
       ],
       "crossedRoad": {
-        "source": "osm",
-        "sourceIds": [
-          815914964,
-          815914965
-        ],
-        "name": "כביש 9977",
-        "highway": "secondary"
+        "source": "curated",
+        "sourceIds": [],
+        "name": "צומת בית הלל צפון",
+        "highway": "road"
       },
-      "sourceEdgeFingerprint": "sha256:be68e6919bf9c97997967ba29143c95691cf87128b80ce3af3d7834d82859f3e",
+      "sourceEdgeFingerprint": "sha256:c614c63a116f0691a6729dd2e11c9cfc5642c112f18147e6ecef49a281b8a6fb",
       "audit": {
-        "createdAt": "2026-07-15T00:00:00Z",
-        "updatedAt": "2026-07-15T00:00:00Z"
+        "createdAt": "2026-07-22T15:21:40.157Z",
+        "updatedAt": "2026-07-22T15:22:09.871Z"
       },
-      "warnings": [
-        "physical-side-change-reviewed-on-centerline-graph"
-      ],
+      "warnings": [],
       "mappings": [
         {
-          "id": "mapping-margaliot-dirt-to-sideline",
-          "direction": "dirt-to-north",
+          "id": "mapping-2a29c17d6ad26bb8-forward",
+          "direction": "forward",
           "match": {
-            "before": [
+            "before": [],
+            "action": [
               {
-                "edgeShareId": 17233,
-                "fromFractionQ": 1000000,
-                "toFractionQ": 0
+                "edgeShareId": 48874,
+                "fromFractionQ": 345471,
+                "toFractionQ": 523795
               }
             ],
-            "action": [],
-            "after": [
-              {
-                "edgeShareId": 42656,
-                "fromFractionQ": 1000000,
-                "toFractionQ": 0
-              }
-            ]
+            "after": []
           },
           "entry": {
-            "lat": 33.2205053,
-            "lng": 35.548282
+            "lat": 33.225056848566524,
+            "lng": 35.605883647963836
           },
           "exit": {
-            "lat": 33.2205053,
-            "lng": 35.548282
+            "lat": 33.22489500871959,
+            "lng": 35.605889962855315
           },
-          "continuation": {
-            "type": "turn",
-            "direction": "left"
-          },
-          "beforeGeometry": [
+          "geometry": [
             {
-              "lat": 33.2204367,
-              "lng": 35.5477011
+              "lat": 33.225056848566524,
+              "lng": 35.605883647963836
             },
             {
-              "lat": 33.2205053,
-              "lng": 35.548282
-            }
-          ],
-          "afterGeometry": [
-            {
-              "lat": 33.2205053,
-              "lng": 35.548282
+              "lat": 33.224973,
+              "lng": 35.605889
             },
             {
-              "lat": 33.2207388,
-              "lng": 35.5483479
+              "lat": 33.22489500871959,
+              "lng": 35.605889962855315
             }
           ],
           "policy": {
             "state": "allowed",
             "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
           },
-          "sourceEdgeFingerprint": "sha256:711b2bf3dba252edf36b9f45a9656158bf3ecda3c9c439b8fab4121697bafb6b"
+          "sourceEdgeFingerprint": "sha256:c614c63a116f0691a6729dd2e11c9cfc5642c112f18147e6ecef49a281b8a6fb"
+        },
+        {
+          "id": "mapping-2a29c17d6ad26bb8-reverse",
+          "direction": "reverse",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48874,
+                "fromFractionQ": 523795,
+                "toFractionQ": 345471
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22489500871959,
+            "lng": 35.605889962855315
+          },
+          "exit": {
+            "lat": 33.225056848566524,
+            "lng": 35.605883647963836
+          },
+          "geometry": [
+            {
+              "lat": 33.22489500871959,
+              "lng": 35.605889962855315
+            },
+            {
+              "lat": 33.224973,
+              "lng": 35.605889
+            },
+            {
+              "lat": 33.225056848566524,
+              "lng": 35.605883647963836
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:c614c63a116f0691a6729dd2e11c9cfc5642c112f18147e6ecef49a281b8a6fb"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-5d41a17b54fa4152",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574959,
+            33.222116
+          ],
+          [
+            35.574894,
+            33.222006
+          ],
+          [
+            35.574822,
+            33.221919
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.22201,
+        "lng": 35.574896
+      },
+      "bbox": [
+        35.574819698854,
+        33.22192039051458,
+        35.574957128977346,
+        33.22211676046747
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "צומת מצודות מעבר 3",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:6e6343eaa781d1998a9bb8fc9810205e4cb8d84e718e3d1cf22fa50a14b84ae0",
+      "audit": {
+        "createdAt": "2026-07-22T15:02:42.660Z",
+        "updatedAt": "2026-07-22T15:03:20.234Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-5d41a17b54fa4152-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48894,
+                "fromFractionQ": 73063,
+                "toFractionQ": 946490
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22211676046747,
+            "lng": 35.574957128977346
+          },
+          "exit": {
+            "lat": 33.22192039051458,
+            "lng": 35.574819698854
+          },
+          "geometry": [
+            {
+              "lat": 33.22211676046747,
+              "lng": 35.574957128977346
+            },
+            {
+              "lat": 33.22201,
+              "lng": 35.574896
+            },
+            {
+              "lat": 33.22192039051458,
+              "lng": 35.574819698854
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:6e6343eaa781d1998a9bb8fc9810205e4cb8d84e718e3d1cf22fa50a14b84ae0"
+        },
+        {
+          "id": "mapping-5d41a17b54fa4152-reverse",
+          "direction": "reverse",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48894,
+                "fromFractionQ": 946490,
+                "toFractionQ": 73063
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22192039051458,
+            "lng": 35.574819698854
+          },
+          "exit": {
+            "lat": 33.22211676046747,
+            "lng": 35.574957128977346
+          },
+          "geometry": [
+            {
+              "lat": 33.22192039051458,
+              "lng": 35.574819698854
+            },
+            {
+              "lat": 33.22201,
+              "lng": 35.574896
+            },
+            {
+              "lat": 33.22211676046747,
+              "lng": 35.574957128977346
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:6e6343eaa781d1998a9bb8fc9810205e4cb8d84e718e3d1cf22fa50a14b84ae0"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-8125f0d677165200",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.586749,
+            33.220965
+          ],
+          [
+            35.586725,
+            33.220917
+          ],
+          [
+            35.58674,
+            33.220866
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.2209129,
+        "lng": 35.5867305
+      },
+      "bbox": [
+        35.5867305,
+        33.22086606358427,
+        35.5867470416919,
+        33.22096583785339
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "תעשייה דרומי מעבר מערב",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:ed57ee5898d7d1e19aff772675f0d44ceda212f2efa3e6247d5f1c7d88d61eaf",
+      "audit": {
+        "createdAt": "2026-07-22T15:14:02.754Z",
+        "updatedAt": "2026-07-22T15:14:16.562Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-8125f0d677165200-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48700,
+                "fromFractionQ": 305523,
+                "toFractionQ": 1000000
+              },
+              {
+                "edgeShareId": 32078,
+                "fromFractionQ": 0,
+                "toFractionQ": 600619
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22096583785339,
+            "lng": 35.5867470416919
+          },
+          "exit": {
+            "lat": 33.22086606358427,
+            "lng": 35.58674016975775
+          },
+          "geometry": [
+            {
+              "lat": 33.22096583785339,
+              "lng": 35.5867470416919
+            },
+            {
+              "lat": 33.220952,
+              "lng": 35.5867387
+            },
+            {
+              "lat": 33.2209129,
+              "lng": 35.5867305
+            },
+            {
+              "lat": 33.2208734,
+              "lng": 35.5867363
+            },
+            {
+              "lat": 33.22086606358427,
+              "lng": 35.58674016975775
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:ed57ee5898d7d1e19aff772675f0d44ceda212f2efa3e6247d5f1c7d88d61eaf"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-84c7091f130ee3c7",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.580282,
+            33.235533
+          ],
+          [
+            35.580385,
+            33.23554
+          ],
+          [
+            35.580449,
+            33.235547
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.235547,
+        "lng": 35.580448
+      },
+      "bbox": [
+        35.58028201527022,
+        33.23553287364002,
+        35.58044883136523,
+        33.23554731534543
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "תל חי דרום",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:35eae4e5def095a1ffc80e571bfac5cb737616540aedacb89651921a8a18a8f9",
+      "audit": {
+        "createdAt": "2026-07-22T15:17:56.417Z",
+        "updatedAt": "2026-07-22T15:18:06.532Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-84c7091f130ee3c7-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48885,
+                "fromFractionQ": 87610,
+                "toFractionQ": 751758
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.23553287364002,
+            "lng": 35.58028201527022
+          },
+          "exit": {
+            "lat": 33.23554731534543,
+            "lng": 35.58044883136523
+          },
+          "geometry": [
+            {
+              "lat": 33.23553287364002,
+              "lng": 35.58028201527022
+            },
+            {
+              "lat": 33.235547,
+              "lng": 35.580448
+            },
+            {
+              "lat": 33.23554731534543,
+              "lng": 35.58044883136523
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:35eae4e5def095a1ffc80e571bfac5cb737616540aedacb89651921a8a18a8f9"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-b11ab7291f06f7a4",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.586957,
+            33.221026
+          ],
+          [
+            35.586884,
+            33.221051
+          ],
+          [
+            35.586824,
+            33.221031
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.2210444,
+        "lng": 35.5868757
+      },
+      "bbox": [
+        35.58682390714307,
+        33.221031138031925,
+        35.586961474171005,
+        33.2210444
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "תעשייה דרומי מעבר צפון",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:a30edbeac6c63bbade8e3735919fd8ef7e70dcd254108901ca5abda7fe9f28c7",
+      "audit": {
+        "createdAt": "2026-07-22T15:13:24.573Z",
+        "updatedAt": "2026-07-22T15:13:52.262Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-b11ab7291f06f7a4-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 32084,
+                "fromFractionQ": 183142,
+                "toFractionQ": 836106
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22103212898104,
+            "lng": 35.586961474171005
+          },
+          "exit": {
+            "lat": 33.221031138031925,
+            "lng": 35.58682390714307
+          },
+          "geometry": [
+            {
+              "lat": 33.22103212898104,
+              "lng": 35.586961474171005
+            },
+            {
+              "lat": 33.2210331,
+              "lng": 35.5869596
+            },
+            {
+              "lat": 33.2210435,
+              "lng": 35.5869185
+            },
+            {
+              "lat": 33.2210444,
+              "lng": 35.5868757
+            },
+            {
+              "lat": 33.221036,
+              "lng": 35.5868341
+            },
+            {
+              "lat": 33.221031138031925,
+              "lng": 35.58682390714307
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:a30edbeac6c63bbade8e3735919fd8ef7e70dcd254108901ca5abda7fe9f28c7"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-cb0d0fc55c669815",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.574958,
+            33.222143
+          ],
+          [
+            35.574709,
+            33.222274
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.222252,
+        "lng": 35.57475
+      },
+      "bbox": [
+        35.57470977752,
+        33.222140101544,
+        35.574955779364004,
+        33.222274989460004
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "צומת מצודות מעבר 2",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:03181d6a6bb6fc653e3bd08be08063eb5cdfeb90c00c2fe8674f3c32b1022ef0",
+      "audit": {
+        "createdAt": "2026-07-22T14:40:41.665Z",
+        "updatedAt": "2026-07-22T15:01:38.384Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-cb0d0fc55c669815-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48893,
+                "fromFractionQ": 51708,
+                "toFractionQ": 1000000
+              },
+              {
+                "edgeShareId": 48861,
+                "fromFractionQ": 0,
+                "toFractionQ": 792740
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.222140101544,
+            "lng": 35.574955779364004
+          },
+          "exit": {
+            "lat": 33.222274989460004,
+            "lng": 35.57470977752
+          },
+          "geometry": [
+            {
+              "lat": 33.222140101544,
+              "lng": 35.574955779364004
+            },
+            {
+              "lat": 33.222252,
+              "lng": 35.57475
+            },
+            {
+              "lat": 33.222274989460004,
+              "lng": 35.57470977752
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:03181d6a6bb6fc653e3bd08be08063eb5cdfeb90c00c2fe8674f3c32b1022ef0"
+        },
+        {
+          "id": "mapping-cb0d0fc55c669815-reverse",
+          "direction": "reverse",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48861,
+                "fromFractionQ": 792740,
+                "toFractionQ": 0
+              },
+              {
+                "edgeShareId": 48893,
+                "fromFractionQ": 1000000,
+                "toFractionQ": 51708
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.222274989460004,
+            "lng": 35.57470977752
+          },
+          "exit": {
+            "lat": 33.222140101544,
+            "lng": 35.574955779364004
+          },
+          "geometry": [
+            {
+              "lat": 33.222274989460004,
+              "lng": 35.57470977752
+            },
+            {
+              "lat": 33.222252,
+              "lng": 35.57475
+            },
+            {
+              "lat": 33.222140101544,
+              "lng": 35.574955779364004
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:03181d6a6bb6fc653e3bd08be08063eb5cdfeb90c00c2fe8674f3c32b1022ef0"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-cecb215e9e56d229",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.587048,
+            33.220868
+          ],
+          [
+            35.587051,
+            33.220899
+          ],
+          [
+            35.58705,
+            33.220944
+          ],
+          [
+            35.587036,
+            33.22097
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.2209233,
+        "lng": 35.5870542
+      },
+      "bbox": [
+        35.5870364561829,
+        33.22086865318298,
+        35.5870542,
+        33.22097020813559
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "תעשייה דרומי מעבר מזרח",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:f4cb276411de36d3f18a44ea7b0112e32d860eb1350a767371da1a644d903127",
+      "audit": {
+        "createdAt": "2026-07-22T15:15:05.249Z",
+        "updatedAt": "2026-07-22T15:15:10.751Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-cecb215e9e56d229-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 32082,
+                "fromFractionQ": 142947,
+                "toFractionQ": 856595
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22086865318298,
+            "lng": 35.58704560491255
+          },
+          "exit": {
+            "lat": 33.22097020813559,
+            "lng": 35.5870364561829
+          },
+          "geometry": [
+            {
+              "lat": 33.22086865318298,
+              "lng": 35.58704560491255
+            },
+            {
+              "lat": 33.2208879,
+              "lng": 35.587053
+            },
+            {
+              "lat": 33.2209233,
+              "lng": 35.5870542
+            },
+            {
+              "lat": 33.2209577,
+              "lng": 35.5870445
+            },
+            {
+              "lat": 33.22097020813559,
+              "lng": 35.5870364561829
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:f4cb276411de36d3f18a44ea7b0112e32d860eb1350a767371da1a644d903127"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-d9bdc7eefa80ee94",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.5803,
+            33.23581
+          ],
+          [
+            35.580266,
+            33.235773
+          ],
+          [
+            35.58025,
+            33.235741
+          ],
+          [
+            35.580249,
+            33.235677
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.2357484,
+        "lng": 35.5802516
+      },
+      "bbox": [
+        35.5802453,
+        33.2356773908772,
+        35.58029783964872,
+        33.235811781972714
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "תל חי מערב",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:d510687f7a9f9a0f6928ff1318bd0ad8f95973beec9708e2ef57550cc5149bf7",
+      "audit": {
+        "createdAt": "2026-07-22T15:18:38.627Z",
+        "updatedAt": "2026-07-22T15:18:45.406Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-d9bdc7eefa80ee94-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 44243,
+                "fromFractionQ": 129187,
+                "toFractionQ": 854765
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.235811781972714,
+            "lng": 35.58029783964872
+          },
+          "exit": {
+            "lat": 33.2356773908772,
+            "lng": 35.580251001296965
+          },
+          "geometry": [
+            {
+              "lat": 33.235811781972714,
+              "lng": 35.58029783964872
+            },
+            {
+              "lat": 33.2357942,
+              "lng": 35.5802774
+            },
+            {
+              "lat": 33.2357484,
+              "lng": 35.5802516
+            },
+            {
+              "lat": 33.2356981,
+              "lng": 35.5802453
+            },
+            {
+              "lat": 33.2356773908772,
+              "lng": 35.580251001296965
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:d510687f7a9f9a0f6928ff1318bd0ad8f95973beec9708e2ef57550cc5149bf7"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-dafa126f65637f0e",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.586825,
+            33.22079
+          ],
+          [
+            35.586863,
+            33.220773
+          ],
+          [
+            35.58694,
+            33.220777
+          ],
+          [
+            35.586968,
+            33.220786
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.2207738,
+        "lng": 35.586886
+      },
+      "bbox": [
+        35.586824091966946,
+        33.2207738,
+        35.58696668315693,
+        33.22078894871559
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "תעשייה דרומי מעבר דרום",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:a572de846e74f4c005d501d0d441a3598d9124f54b0fd0711ca40bee48753ba2",
+      "audit": {
+        "createdAt": "2026-07-22T15:14:48.686Z",
+        "updatedAt": "2026-07-22T15:14:53.971Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-dafa126f65637f0e-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 32080,
+                "fromFractionQ": 146961,
+                "toFractionQ": 776446
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22078854129974,
+            "lng": 35.586824091966946
+          },
+          "exit": {
+            "lat": 33.22078894871559,
+            "lng": 35.58696668315693
+          },
+          "geometry": [
+            {
+              "lat": 33.22078854129974,
+              "lng": 35.586824091966946
+            },
+            {
+              "lat": 33.2207801,
+              "lng": 35.5868432
+            },
+            {
+              "lat": 33.2207738,
+              "lng": 35.586886
+            },
+            {
+              "lat": 33.2207771,
+              "lng": 35.5869293
+            },
+            {
+              "lat": 33.22078894871559,
+              "lng": 35.58696668315693
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:a572de846e74f4c005d501d0d441a3598d9124f54b0fd0711ca40bee48753ba2"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-e0fa964c0f7f13c2",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.581971,
+            33.222035
+          ],
+          [
+            35.581873,
+            33.222083
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.22208344580963,
+        "lng": 35.58187330956133
+      },
+      "bbox": [
+        35.58187330956133,
+        33.22203571054504,
+        35.581971482086615,
+        33.22208344580963
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "כביש 99 אופרייט",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:cdfbd93007ca4f7e30ea5d53bb06781305605d1172df19a7f3b8e02dfd3ed540",
+      "audit": {
+        "createdAt": "2026-07-22T15:06:43.554Z",
+        "updatedAt": "2026-07-22T15:07:12.372Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-e0fa964c0f7f13c2-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48892,
+                "fromFractionQ": 403523,
+                "toFractionQ": 412460
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22203571054504,
+            "lng": 35.581971482086615
+          },
+          "exit": {
+            "lat": 33.22208344580963,
+            "lng": 35.58187330956133
+          },
+          "geometry": [
+            {
+              "lat": 33.22203571054504,
+              "lng": 35.581971482086615
+            },
+            {
+              "lat": 33.22208344580963,
+              "lng": 35.58187330956133
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:cdfbd93007ca4f7e30ea5d53bb06781305605d1172df19a7f3b8e02dfd3ed540"
+        },
+        {
+          "id": "mapping-e0fa964c0f7f13c2-reverse",
+          "direction": "reverse",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48892,
+                "fromFractionQ": 412460,
+                "toFractionQ": 403523
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22208344580963,
+            "lng": 35.58187330956133
+          },
+          "exit": {
+            "lat": 33.22203571054504,
+            "lng": 35.581971482086615
+          },
+          "geometry": [
+            {
+              "lat": 33.22208344580963,
+              "lng": 35.58187330956133
+            },
+            {
+              "lat": 33.22203571054504,
+              "lng": 35.581971482086615
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:cdfbd93007ca4f7e30ea5d53bb06781305605d1172df19a7f3b8e02dfd3ed540"
+        }
+      ]
+    },
+    {
+      "id": "manual-crossing-f3b6769fafc98bf3",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.575169,
+            33.222161
+          ],
+          [
+            35.57507,
+            33.222124
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.222125440915164,
+        "lng": 35.575069322745506
+      },
+      "bbox": [
+        35.575069322745506,
+        33.222125440915164,
+        35.57516994674079,
+        33.22215898224693
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "צומת מצודות מעבר 1",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:7cedd797f597e4bc904a95ad7179211e12de0689dc93f30671d018b07fd16ed5",
+      "audit": {
+        "createdAt": "2026-07-22T14:37:55.279Z",
+        "updatedAt": "2026-07-22T15:01:30.295Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-f3b6769fafc98bf3-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48892,
+                "fromFractionQ": 983178,
+                "toFractionQ": 991710
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.22215898224693,
+            "lng": 35.57516994674079
+          },
+          "exit": {
+            "lat": 33.222125440915164,
+            "lng": 35.575069322745506
+          },
+          "geometry": [
+            {
+              "lat": 33.22215898224693,
+              "lng": 35.57516994674079
+            },
+            {
+              "lat": 33.222125440915164,
+              "lng": 35.575069322745506
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:7cedd797f597e4bc904a95ad7179211e12de0689dc93f30671d018b07fd16ed5"
+        },
+        {
+          "id": "mapping-f3b6769fafc98bf3-reverse",
+          "direction": "reverse",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 48892,
+                "fromFractionQ": 991710,
+                "toFractionQ": 983178
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.222125440915164,
+            "lng": 35.575069322745506
+          },
+          "exit": {
+            "lat": 33.22215898224693,
+            "lng": 35.57516994674079
+          },
+          "geometry": [
+            {
+              "lat": 33.222125440915164,
+              "lng": 35.575069322745506
+            },
+            {
+              "lat": 33.22215898224693,
+              "lng": 35.57516994674079
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:7cedd797f597e4bc904a95ad7179211e12de0689dc93f30671d018b07fd16ed5"
         }
       ]
     }

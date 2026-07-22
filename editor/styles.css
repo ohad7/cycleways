@@ -457,6 +457,90 @@ h2 {
   color: var(--accent-dark);
 }
 
+.junction-crossing-actions,
+.crossing-junction-draft {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+}
+
+.crossing-layer-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 10px 0 4px;
+  font-size: 0.8rem;
+}
+
+.crossing-layer-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.crossing-name-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.crossings-list-heading {
+  margin: 16px 0 6px;
+  font-size: 0.9rem;
+}
+
+.crossing-direction-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+
+.crossing-direction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid #7c2d12;
+  border-radius: 999px;
+  color: #431407;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.crossing-direction-chip.tone-0 { background: #fed7aa; }
+.crossing-direction-chip.tone-1 { background: #fef08a; }
+
+.crossing-guideline-authoring {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+}
+
+.crossing-guideline-authoring [hidden] {
+  display: none !important;
+}
+
+.crossing-guideline-options {
+  display: grid;
+  gap: 8px;
+  font-size: 0.76rem;
+}
+
+.crossing-guideline-options label:not(.checkbox-row) {
+  display: grid;
+  gap: 4px;
+}
+
 .map-toolbar.drawing .toolbar-group-create,
 .map-toolbar.drawing .toolbar-group-edit,
 .map-toolbar.drawing .toolbar-group-view {

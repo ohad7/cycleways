@@ -1,8 +1,8 @@
 # Reviewed road-crossing maneuvers
 
 **Date:** 2026-07-14
-**Revision:** 2026-07-22 — added junction-first, map-first curation rollout
-**Status:** runtime core implemented; scalable candidate curation and first data rollout planned
+**Revision:** 2026-07-22 — replaced junction-first authoring with coordinate-authored, CW-first crossings
+**Status:** runtime core implemented; coordinate-guideline authoring is the current editor model
 **Origin:** M1/S2 in `plans/navigation-ride-feedback-3/discussion.md`
 
 ## Outcome
@@ -95,6 +95,112 @@ At the time, the record could not reach a bundled mobile artifact because of
 the stable-share/candidate gates above. Those gates are now resolved: a clean
 2026-07-22 Build publishes the manual record. The remaining gate is scalable
 curation and explicit first-slice review, not runtime or publication code.
+
+## Coordinate-authored crossing amendment — 2026-07-22
+
+### Decision
+
+The curator authors a crossing with the same mental model as a CW segment: a
+short coordinate guideline expresses real-world intent and the editor maps it
+onto the current directed base network. The guideline is the editable source;
+stable fractional base-edge slices are the derived routing authority.
+
+A crossing is therefore one directed base-edge slice or a short contiguous
+sequence of slices that physically carries the rider across a road. A junction
+or roundabout may contain that path, but does not own it. Junction, roundabout,
+CW-segment and route relationships are derived from edge overlap.
+
+The ordinary curator model is deliberately narrow:
+
+1. Crossings mode always shows the base network, with the CW network as
+   context.
+2. The curator draws two or more guideline coordinates.
+3. The existing network matcher proposes the directed base-edge path.
+4. The first and last guideline coordinates are projected onto the matched
+   edges and stored as millionth-resolution fractional boundaries.
+5. The editor previews the mapped trace and its legal direction(s).
+6. Explicit confirmation writes the crossing; Build remains publication
+   authority.
+
+The editor never physically splits a base edge merely to time crossing
+guidance. It edits topology only when routing connectivity itself is wrong.
+
+### New authored representation
+
+New guideline-authored records use `representation: "edge-path"`. Each mapping
+contains a non-empty ordered `action` slice sequence and empty `before` and
+`after` arrays. Entry, exit and display geometry are derived from that same
+path. Navigation matches the action path directly and derives neighboring
+maneuvers from the actual route.
+
+```json
+{
+  "id": "manual-crossing-*",
+  "kind": "side-change",
+  "representation": "edge-path",
+  "guideline": {
+    "type": "LineString",
+    "coordinates": [[35.0, 33.0], [35.0002, 33.0001]]
+  },
+  "mappings": [{
+    "id": "mapping-*",
+    "direction": "forward",
+    "match": {
+      "before": [],
+      "action": [{
+        "edgeShareId": 123,
+        "fromFractionQ": 380000,
+        "toFractionQ": 610000
+      }],
+      "after": []
+    }
+  }]
+}
+```
+
+If every action edge legally supports the opposite traversal, the editor may
+offer a reverse mapping from the same guideline. It never invents a reverse
+path across prohibited or unknown direction policy.
+
+### Scope and prioritization
+
+The primary list contains curated crossings only, with crossings affecting
+accepted CW alignments ordered first. Other curated crossings remain visible
+because approach, rejoin and ordinary base-network routes use the same
+matcher. Graph-wide detected candidates remain build diagnostics rather than
+items in the ordinary authoring workspace.
+
+Each curated crossing is its own editor item, even when legacy topology data
+associates it with a junction containing other candidates or movements. The
+primary detail never displays generated pending proposals, evidence tags, raw
+fractional mappings, mapping overrides or Accept/Reject controls. Those belong
+to offline diagnostics. Junction relationships may remain stored for backward
+compatibility and may drive the optional map context layer, but do not group or
+own crossings in the editor.
+
+The Crossings map shows both the CW network and base-edge network by default.
+Each has a direct toggle so the curator can hide the CW overlay when it covers
+the exact base path, or hide base edges when reviewing the public network
+context. Junction context and one-way direction arrows are separate toggles
+and default off, keeping the ordinary crossing view visually quiet. Aggregate
+detector counts and detector-state filters are not part of this focused
+curation surface.
+
+The selected crossing uses a warm high-contrast treatment independent of the
+blue/green network layers. A one-direction crossing is one orange lane. A
+bidirectional crossing is separated into parallel orange and yellow lanes with
+dark casing and large direction-oriented arrows. The list and detail card also
+say one-way or bidirectional explicitly; color reinforces direction but is not
+the only cue.
+
+All curated crossings remain visible in the Crossings workspace. Unselected
+crossings use thin muted stone paths and small arrows; only the selected
+crossing receives the dark-cased orange/yellow lanes and prominent arrows.
+Generated detector candidates are excluded from both tiers.
+
+Existing `action-path` and `junction-transition` records remain valid for
+backward compatibility. The editor does not require their expert
+`before/action/after` mapping UI for new work.
 
 ## Curation rollout amendment — 2026-07-22
 
@@ -249,6 +355,21 @@ Creation begins from the relevant object:
 Review writes are lightweight and immediate. They do not rebuild the graph.
 The panel previews the resulting instruction and affected routes; Build remains
 the authoritative publication and validation step.
+
+The first delivered slice groups exact junction-associated candidates into one
+review site per physical junction (standalone crossings remain separate) and
+adds **Add crossing guidance** to published non-roundabout
+junction movements. It creates an unsaved, map-visible proposal and requires
+explicit confirmation in Crossings. Confirmed records retain junction and
+movement fingerprints, which Build validates. Automatic side-change proposals,
+route-impact overlays and roundabout approach/departure creation remain later
+parts of this design.
+
+Selecting a junction review site fits the complete junction boundary, retains
+the other site markers for orientation, and displays only the currently
+selected crossing proposal and its exact legal movements. The normal review
+loop is therefore junction-by-junction and proposal-by-proposal rather than a
+raw candidate queue drawn across the map.
 
 ### Instruction detail at an accepted crossing
 

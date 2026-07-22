@@ -29,7 +29,8 @@ export function crossingMappingIssue(mapping, { representation = "action-path" }
   if (!mapping.match || typeof mapping.match !== "object") return "invalid_mapping_match";
   for (const section of ["before", "action", "after"]) {
     const slices = mapping.match[section];
-    const allowEmpty = representation === "junction-transition" && section === "action";
+    const allowEmpty = (representation === "junction-transition" && section === "action")
+      || (representation === "edge-path" && section !== "action");
     if (!Array.isArray(slices) || (!slices.length && !allowEmpty) || !slices.every(validCrossingSlice)) {
       return `invalid_mapping_${section}`;
     }
@@ -38,6 +39,10 @@ export function crossingMappingIssue(mapping, { representation = "action-path" }
   }
   if (representation === "junction-transition" && mapping.match.action.length > 0) {
     return "invalid_transition_action";
+  }
+  if (representation === "edge-path"
+    && (mapping.match.before.length > 0 || mapping.match.after.length > 0)) {
+    return "invalid_edge_path_context";
   }
   if (!validCrossingCoordinate(mapping.entry) || !validCrossingCoordinate(mapping.exit)) {
     return "invalid_mapping_anchors";
@@ -68,14 +73,15 @@ export function crossingIssue(crossing, { requireFingerprint = false } = {}) {
   }
   if (crossing.kind !== "side-change") return "invalid_crossing_kind";
   const representation = crossing.representation || "action-path";
-  if (!new Set(["action-path", "junction-transition"]).has(representation)) {
+  if (!new Set(["action-path", "junction-transition", "edge-path"]).has(representation)) {
     return "invalid_crossing_representation";
   }
   const guidancePolicy = crossing.guidancePolicy || "always";
   if (!new Set(["always", "user-option"]).has(guidancePolicy)) {
     return "invalid_crossing_guidance_policy";
   }
-  if (guidancePolicy === "user-option" && representation !== "junction-transition") {
+  if (guidancePolicy === "user-option"
+    && !new Set(["junction-transition", "edge-path"]).has(representation)) {
     return "invalid_optional_crossing_representation";
   }
   if (!validCrossingCoordinate(crossing.center)) return "invalid_crossing_center";
@@ -106,6 +112,8 @@ function runtimeCrossing(candidate, mappings) {
       if (key in candidate.crossedRoad) result.crossedRoad[key] = candidate.crossedRoad[key];
     }
   }
+  if (candidate.reviewSiteId) result.reviewSiteId = candidate.reviewSiteId;
+  if (candidate.context && typeof candidate.context === "object") result.context = candidate.context;
   return result;
 }
 
@@ -267,8 +275,15 @@ export function crossingReviewGeoJson(joined) {
       representation: crossing.representation || "action-path",
       guidancePolicy: crossing.guidancePolicy || "always",
     };
-    for (const mapping of crossing.mappings || []) {
-      const mappingProperties = { ...properties, mappingId: mapping.id, direction: mapping.direction || "explicit" };
+    const mappings = crossing.mappings || [];
+    for (const [directionIndex, mapping] of mappings.entries()) {
+      const mappingProperties = {
+        ...properties,
+        mappingId: mapping.id,
+        direction: mapping.direction || "explicit",
+        directionIndex,
+        directionCount: mappings.length,
+      };
       const routeGeometry = Array.isArray(mapping.geometry) ? mapping.geometry : null;
       if (routeGeometry?.length >= 2) {
         action.push({ type: "Feature", geometry: { type: "LineString", coordinates: routeGeometry.map(({ lat, lng }) => [lng, lat]) }, properties: mappingProperties });
@@ -292,6 +307,12 @@ export function crossingReviewGeoJson(joined) {
     }
     if (Array.isArray(crossing.corridorGeometry) && crossing.corridorGeometry.length >= 2) {
       corridors.push({ type: "Feature", geometry: { type: "LineString", coordinates: crossing.corridorGeometry.map(({ lat, lng }) => [lng, lat]) }, properties });
+    } else if (crossing.guideline?.type === "LineString" && crossing.guideline.coordinates?.length >= 2) {
+      corridors.push({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: crossing.guideline.coordinates },
+        properties: { ...properties, kind: "guideline" },
+      });
     }
   }
   return {

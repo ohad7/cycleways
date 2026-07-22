@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  crossingReviewGeoJson,
   crossingIssue,
   joinCrossingReviews,
 } from "../editor/lib/crossingReview.mjs";
@@ -43,6 +44,57 @@ assert.equal(crossingIssue(transition), "invalid_transition_action");
 transition.mappings[0].match.action = [];
 delete transition.mappings[0].continuation;
 assert.equal(crossingIssue(transition), "invalid_transition_continuation");
+
+const edgePath = {
+  id: "manual-crossing-edge-path",
+  kind: "side-change",
+  representation: "edge-path",
+  guidancePolicy: "user-option",
+  center: { lat: 33.2, lng: 35.5 },
+  mappings: [{
+    id: "mapping-edge-path",
+    match: {
+      before: [],
+      action: [{ edgeShareId: 7, fromFractionQ: 200_000, toFractionQ: 800_000 }],
+      after: [],
+    },
+    entry: { lat: 33.2, lng: 35.5 },
+    exit: { lat: 33.2, lng: 35.5001 },
+  }],
+};
+assert.equal(crossingIssue(edgePath), null);
+edgePath.mappings[0].match.before.push({ edgeShareId: 6, fromFractionQ: 0, toFractionQ: 1_000_000 });
+assert.equal(crossingIssue(edgePath), "invalid_edge_path_context");
+
+const bidirectionalGeoJson = crossingReviewGeoJson({
+  manualItems: [{
+    state: "manual",
+    crossing: {
+      ...edgePath,
+      mappings: [
+        { ...edgePath.mappings[0], id: "mapping-forward", direction: "forward" },
+        {
+          ...edgePath.mappings[0],
+          id: "mapping-reverse",
+          direction: "reverse",
+          entry: edgePath.mappings[0].exit,
+          exit: edgePath.mappings[0].entry,
+        },
+      ],
+    },
+  }],
+});
+assert.deepEqual(
+  bidirectionalGeoJson.arrows.features.map((feature) => ({
+    index: feature.properties.directionIndex,
+    count: feature.properties.directionCount,
+    direction: feature.properties.direction,
+  })),
+  [
+    { index: 0, count: 2, direction: "forward" },
+    { index: 1, count: 2, direction: "reverse" },
+  ],
+);
 
 const staleAccepted = structuredClone(fixture.reviews);
 staleAccepted.reviews["crossing-accepted"].candidateFingerprint = "sha256:old";

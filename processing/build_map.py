@@ -4322,6 +4322,50 @@ def build_network_junctions(
     }, output_path
 
 
+def crossing_edge_path_fingerprint(
+    crossing: dict[str, Any],
+    edge_by_share: dict[int, dict[str, Any]],
+    policy_digest: str,
+) -> str | None:
+    guideline = crossing.get("guideline")
+    mappings = crossing.get("mappings") or []
+    action = ((mappings[0].get("match") or {}).get("action") or []) if mappings else []
+    if (
+        not isinstance(guideline, dict)
+        or guideline.get("type") != "LineString"
+        or not isinstance(guideline.get("coordinates"), list)
+        or not action
+    ):
+        return None
+    normalized_slices: list[dict[str, int]] = []
+    source_edges: list[dict[str, Any]] = []
+    for item in action:
+        share_id = item.get("edgeShareId")
+        edge = edge_by_share.get(share_id)
+        if edge is None:
+            return None
+        start = item.get("fromFractionQ")
+        end = item.get("toFractionQ")
+        normalized_slices.append({
+            "edgeShareId": share_id,
+            "fromFractionQ": start,
+            "toFractionQ": end,
+        })
+        source_edges.append({
+            "edgeId": edge.get("id"),
+            "direction": "forward" if end > start else "reverse",
+            "sourceGeometryDigest": edge.get("sourceGeometryDigest"),
+        })
+    payload = {
+        "guideline": guideline["coordinates"],
+        "slices": normalized_slices,
+        "edges": source_edges,
+        "policyDigest": policy_digest,
+    }
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
 def build_reviewed_crossings(
     candidates_path: Path,
     review_path: Path,
@@ -4329,6 +4373,7 @@ def build_reviewed_crossings(
     share_registry_path: Path,
     graph_version: str,
     output_path: Path,
+    junctions_path: Path | None = None,
 ) -> tuple[dict[str, Any], Path | None]:
     empty_summary = {
         "total": 0, "accepted": 0, "rejected": 0, "pending": 0,
@@ -4365,10 +4410,23 @@ def build_reviewed_crossings(
         share_id = share_by_edge.get(edge.get("id"))
         if isinstance(share_id, int):
             edge_by_share[share_id] = edge
+    manual_crossing_by_id = {
+        item.get("crossing", {}).get("id"): item.get("crossing")
+        for item in joined.get("manualItems") or []
+        if item.get("state") == "manual" and isinstance(item.get("crossing"), dict)
+    }
 
     seen_mapping_ids: set[str] = set()
     seen_mapping_signatures: dict[str, str] = {}
     action_signatures: dict[str, str] = {}
+    junction_by_id: dict[str, dict[str, Any]] = {}
+    if junctions_path and junctions_path.exists():
+        junction_payload = load_json(junctions_path, {})
+        junction_by_id = {
+            str(junction.get("id")): junction
+            for junction in junction_payload.get("junctions") or []
+            if isinstance(junction, dict) and junction.get("id")
+        }
 
     def slice_position(edge: dict[str, Any], share_id: int, fraction_q: int) -> tuple[Any, ...]:
         if fraction_q == 0:
@@ -4378,6 +4436,42 @@ def build_reviewed_crossings(
         return ("edge", share_id, fraction_q)
 
     for crossing in joined["runtimeCrossings"]:
+        if crossing.get("representation") == "edge-path":
+            source_crossing = manual_crossing_by_id.get(crossing.get("id"))
+            expected_fingerprint = crossing_edge_path_fingerprint(
+                source_crossing or {}, edge_by_share, POLICY_DIGEST
+            )
+            if expected_fingerprint is None:
+                joined["blockingIssues"].append({
+                    "code": "invalid_crossing_guideline_source", "id": crossing.get("id"),
+                })
+            elif source_crossing.get("sourceEdgeFingerprint") != expected_fingerprint:
+                joined["blockingIssues"].append({
+                    "code": "stale_crossing_edge_path", "id": crossing.get("id"),
+                })
+        context = crossing.get("context") if isinstance(crossing.get("context"), dict) else None
+        if context and context.get("junctionId"):
+            junction_id = str(context.get("junctionId"))
+            movement_id = str(context.get("movementId") or "")
+            junction = junction_by_id.get(junction_id)
+            if junction is None:
+                joined["blockingIssues"].append({
+                    "code": "missing_crossing_junction", "id": crossing.get("id"),
+                    "junctionId": junction_id,
+                })
+            elif context.get("junctionFingerprint") != junction.get("fingerprint"):
+                joined["blockingIssues"].append({
+                    "code": "stale_crossing_junction", "id": crossing.get("id"),
+                    "junctionId": junction_id,
+                })
+            elif not any(
+                str(movement.get("id")) == movement_id and movement.get("status") == "allowed"
+                for movement in junction.get("movements") or []
+            ):
+                joined["blockingIssues"].append({
+                    "code": "missing_crossing_junction_movement", "id": crossing.get("id"),
+                    "junctionId": junction_id, "movementId": movement_id,
+                })
         for mapping in crossing.get("mappings") or []:
             mapping_id = mapping.get("id")
             if mapping_id in seen_mapping_ids:
@@ -4685,6 +4779,7 @@ def build_from_kml(args: argparse.Namespace) -> dict[str, Any]:
         args.base_edge_share_ids.resolve(),
         str(base_routing_asset.get("graphVersion") or ""),
         public_data_dir / "crossings.json",
+        output_junctions,
     )
     validation["crossings"] = crossing_validation
     legacy_compatibility = stage_legacy_routing_compatibility(
@@ -4894,6 +4989,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         args.base_edge_share_ids.resolve(),
         str(base_routing_asset.get("graphVersion") or ""),
         public_data_dir / "crossings.json",
+        output_junctions,
     )
     validation["crossings"] = crossing_validation
     legacy_compatibility = stage_legacy_routing_compatibility(

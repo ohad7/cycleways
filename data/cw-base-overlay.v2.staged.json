@@ -6236,227 +6236,108 @@
     "56": {
       "alignments": {
         "aToB": {
-          "draft": null,
           "published": {
             "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
                 {
-                  "direction": "reverse",
                   "edgeId": "e523294959_1",
-                  "fromFraction": 0,
-                  "osmWayId": 523294959,
+                  "source": "osm",
+                  "direction": "reverse",
                   "sequenceIndex": 0,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 523294959
                 },
                 {
-                  "direction": "reverse",
                   "edgeId": "e30903257_4",
-                  "fromFraction": 0,
-                  "osmWayId": 30903257,
+                  "source": "osm",
+                  "direction": "reverse",
                   "sequenceIndex": 1,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 30903257
                 },
                 {
-                  "direction": "reverse",
                   "edgeId": "e30903257_3",
-                  "fromFraction": 0,
-                  "osmWayId": 30903257,
+                  "source": "osm",
+                  "direction": "reverse",
                   "sequenceIndex": 2,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 30903257
                 },
                 {
-                  "direction": "reverse",
                   "edgeId": "e30903257_2",
-                  "fromFraction": 0,
-                  "osmWayId": 30903257,
+                  "source": "osm",
+                  "direction": "reverse",
                   "sequenceIndex": 3,
-                  "source": "osm",
-                  "toFraction": 1
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 30903257
                 },
                 {
-                  "direction": "reverse",
                   "edgeId": "e30903257_1",
-                  "fromFraction": 0,
-                  "osmWayId": 30903257,
-                  "sequenceIndex": 4,
                   "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e1165357805_1",
-                  "fromFraction": 0,
-                  "osmWayId": 1165357805,
-                  "sequenceIndex": 5,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e958921300_3",
-                  "fromFraction": 0,
-                  "osmWayId": 958921300,
-                  "sequenceIndex": 6,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e958921300_4",
-                  "fromFraction": 0,
-                  "osmWayId": 958921300,
-                  "sequenceIndex": 7,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
                   "direction": "reverse",
-                  "edgeId": "e496275732_2",
+                  "sequenceIndex": 4,
                   "fromFraction": 0,
-                  "osmWayId": 496275732,
-                  "sequenceIndex": 8,
-                  "source": "osm",
-                  "toFraction": 1
+                  "toFraction": 1,
+                  "osmWayId": 30903257
+                },
+                {
+                  "edgeId": "manual-56-mrtu42lk",
+                  "source": "manual",
+                  "direction": "reverse",
+                  "sequenceIndex": 5,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "manualEdgeId": "manual-56-mrtu42lk"
                 }
               ]
             },
-            "mappingDigest": "b44f6ce4152f17e6313fdaafc0852010d0b51c91e9a1de9b9a95c443c1f5137a",
+            "mappingDigest": "4604e793aa06b99a6a39c275b40b543f805499a31fa47706de4160a5ea4df823",
             "review": {
               "reviewer": "editor-automatic",
-              "reviewedAt": "2026-07-21",
-              "batchId": "network-authoring-56-1",
+              "reviewedAt": "2026-07-22",
+              "batchId": "network-authoring-56-1784733677635059",
               "rationale": "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
-              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "acceptanceBasis": "automatic-bidirectional-match",
               "automated": true,
               "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
               "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-              "sourceGeometryDigest": "21cf26b234a91124034d22e71ba4373f4a847abbc5a5d32e86bce3c8eaf32634",
-              "mappingDigest": "b44f6ce4152f17e6313fdaafc0852010d0b51c91e9a1de9b9a95c443c1f5137a",
-              "evidenceDigest": "00b20702a75255efe6e0ddc0289cd5df52b6b124763abaab2bc3deef7b8a1d25",
-              "revalidatedFromGraphDigest": "8086bf8b092a8cf8205340742224f8460ed06fe8c47a0d5e87e833bbe7fab6b0"
+              "sourceGeometryDigest": "b198de33374e6657e3c796877ac7dba880c9e6da2094e5de7cd1550dadb95aac",
+              "mappingDigest": "4604e793aa06b99a6a39c275b40b543f805499a31fa47706de4160a5ea4df823",
+              "evidenceDigest": "9e34237ec7ea9b5cf4949977ab87a30705b78e799a90e2dbd013d9f6183eeeac"
             }
-          }
+          },
+          "draft": null
         },
         "bToA": {
-          "draft": null,
           "published": {
             "disposition": "accepted",
             "realization": {
-              "type": "explicit",
-              "edgeRefs": [
-                {
-                  "direction": "forward",
-                  "edgeId": "e496275732_2",
-                  "fromFraction": 0,
-                  "osmWayId": 496275732,
-                  "sequenceIndex": 0,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e958921300_5",
-                  "fromFraction": 0,
-                  "osmWayId": 958921300,
-                  "sequenceIndex": 1,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e958921300_6",
-                  "fromFraction": 0,
-                  "osmWayId": 958921300,
-                  "sequenceIndex": 2,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e958921300_1",
-                  "fromFraction": 0,
-                  "osmWayId": 958921300,
-                  "sequenceIndex": 3,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e958921303_1",
-                  "fromFraction": 0,
-                  "osmWayId": 958921303,
-                  "sequenceIndex": 4,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e30903257_1",
-                  "fromFraction": 0,
-                  "osmWayId": 30903257,
-                  "sequenceIndex": 5,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e30903257_2",
-                  "fromFraction": 0,
-                  "osmWayId": 30903257,
-                  "sequenceIndex": 6,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e30903257_3",
-                  "fromFraction": 0,
-                  "osmWayId": 30903257,
-                  "sequenceIndex": 7,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e30903257_4",
-                  "fromFraction": 0,
-                  "osmWayId": 30903257,
-                  "sequenceIndex": 8,
-                  "source": "osm",
-                  "toFraction": 1
-                },
-                {
-                  "direction": "forward",
-                  "edgeId": "e523294959_1",
-                  "fromFraction": 0,
-                  "osmWayId": 523294959,
-                  "sequenceIndex": 9,
-                  "source": "osm",
-                  "toFraction": 1
-                }
-              ]
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "4604e793aa06b99a6a39c275b40b543f805499a31fa47706de4160a5ea4df823"
             },
-            "mappingDigest": "f06fba7e2356693d393123adeb2c3757ae8bb59ee88f103bc4e683e45e03fade",
+            "mappingDigest": "c26cd035c4c6733f80adb4ac5523ec718e91e45f82caedc77e40e6bc935707f9",
             "review": {
               "reviewer": "editor-automatic",
-              "reviewedAt": "2026-07-21",
-              "batchId": "network-authoring-56-1",
-              "rationale": "Validated authoring path with a deterministic legal roundabout reverse repair",
-              "acceptanceBasis": "automatic-roundabout-reverse",
+              "reviewedAt": "2026-07-22",
+              "batchId": "network-authoring-56-1784733677635059",
+              "rationale": "High-confidence full-coverage automatic match with a mechanically validated exact reverse",
+              "acceptanceBasis": "automatic-bidirectional-match",
               "automated": true,
               "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
               "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-              "sourceGeometryDigest": "21cf26b234a91124034d22e71ba4373f4a847abbc5a5d32e86bce3c8eaf32634",
-              "mappingDigest": "f06fba7e2356693d393123adeb2c3757ae8bb59ee88f103bc4e683e45e03fade",
-              "evidenceDigest": "559e807ff508802eedecd7b7e5b752a046e5f2f25b05dec564534e26b445e095",
-              "revalidatedFromGraphDigest": "8086bf8b092a8cf8205340742224f8460ed06fe8c47a0d5e87e833bbe7fab6b0"
+              "sourceGeometryDigest": "b198de33374e6657e3c796877ac7dba880c9e6da2094e5de7cd1550dadb95aac",
+              "mappingDigest": "c26cd035c4c6733f80adb4ac5523ec718e91e45f82caedc77e40e6bc935707f9",
+              "evidenceDigest": "72eac8b23f8138adb7b70b86f375f09f475e4b54cdc7159dfe72f9f51ac3a58c"
             }
-          }
+          },
+          "draft": null
         }
       },
       "endpoints": {
@@ -6465,25 +6346,25 @@
             35.60899720338557,
             33.21954996588886
           ],
+          "zoneMeters": 30,
           "labels": {
             "key": "A"
-          },
-          "zoneMeters": 30
+          }
         },
         "b": {
           "coordinate": [
-            35.60596950745233,
-            33.225286159767606
+            35.605663476314135,
+            33.2252250724671
           ],
+          "zoneMeters": 30,
           "labels": {
             "key": "B"
-          },
-          "zoneMeters": 30
+          }
         }
       },
       "lifecycleStatus": "active",
       "migration": {
-        "classification": "roundabout_reverse_candidate",
+        "classification": "symmetric_candidate",
         "endpointMatch": {
           "alignmentKey": "aToB",
           "distances": {
@@ -6494,14 +6375,18 @@
           },
           "reason": "matched"
         },
-        "sourceMappingOrigin": "frozen-v1",
+        "sourceMappingOrigin": "network-authoring-v2",
         "sourceMappingStatus": "accepted_auto_match",
-        "sourceSchemaVersion": 1
+        "sourceSchemaVersion": 2,
+        "authoringRevision": 1784733677635059,
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-authoring"
       },
       "navigable": true,
       "segmentId": 56,
       "segmentName": "כביש 9888 נחל עיון",
-      "sourceGeometryDigest": "21cf26b234a91124034d22e71ba4373f4a847abbc5a5d32e86bce3c8eaf32634"
+      "sourceGeometryDigest": "b198de33374e6657e3c796877ac7dba880c9e6da2094e5de7cd1550dadb95aac"
     },
     "58": {
       "alignments": {

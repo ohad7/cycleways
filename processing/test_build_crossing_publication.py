@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from bicycle_traversal_policy import POLICY_DIGEST
-from build_map import build_reviewed_crossings, file_digest
+from build_map import build_reviewed_crossings, crossing_edge_path_fingerprint, file_digest
 
 
 def write(path, value):
@@ -12,6 +12,73 @@ def write(path, value):
 
 
 class CrossingPublicationTests(unittest.TestCase):
+    def test_edge_path_geometry_fingerprint_must_be_current(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            graph_path = root / "graph.json"
+            registry_path = root / "registry.json"
+            candidates_path = root / "candidates.json"
+            reviews_path = root / "reviews.json"
+            output_path = root / "crossings.json"
+            edge = {
+                "id": "edge-1", "fromNodeId": "a", "toNodeId": "b",
+                "sourceGeometryDigest": "geometry-1",
+                "bicycleTraversalShadow": {
+                    "policyDigest": POLICY_DIGEST, "forward": "allowed", "reverse": "allowed",
+                },
+            }
+            graph = {"edges": [edge]}
+            registry = {"schemaVersion": 1, "edges": {"edge-1": 1}}
+            crossing = {
+                "id": "manual-crossing-edge-path",
+                "kind": "side-change",
+                "representation": "edge-path",
+                "guidancePolicy": "always",
+                "guideline": {"type": "LineString", "coordinates": [[35.0, 33.0], [35.0001, 33.0001]]},
+                "center": {"lat": 33.0, "lng": 35.0},
+                "audit": {"createdAt": "2026-07-22T00:00:00Z", "updatedAt": "2026-07-22T00:00:00Z"},
+                "mappings": [{
+                    "id": "mapping-edge-path",
+                    "match": {
+                        "before": [],
+                        "action": [{"edgeShareId": 1, "fromFractionQ": 200_000, "toFractionQ": 800_000}],
+                        "after": [],
+                    },
+                    "entry": {"lat": 33.0, "lng": 35.0},
+                    "exit": {"lat": 33.0001, "lng": 35.0001},
+                }],
+            }
+            crossing["sourceEdgeFingerprint"] = crossing_edge_path_fingerprint(
+                crossing, {1: edge}, POLICY_DIGEST
+            )
+            write(graph_path, graph)
+            write(registry_path, registry)
+            candidates = {
+                "schemaVersion": 1,
+                "sourceGraphDigest": f"sha256:{file_digest(graph_path)}",
+                "edgeShareRegistryDigest": f"sha256:{file_digest(registry_path)}",
+                "traversalPolicyDigest": POLICY_DIGEST,
+                "crossings": [],
+            }
+            write(candidates_path, candidates)
+            write(reviews_path, {
+                "schemaVersion": 1, "reviews": {}, "manualCrossings": [crossing],
+            })
+            validation, result = build_reviewed_crossings(
+                candidates_path, reviews_path, graph_path, registry_path, "graph-v3", output_path
+            )
+            self.assertEqual(result, output_path)
+            self.assertEqual(validation["blockingIssues"], [])
+
+            graph["edges"][0]["sourceGeometryDigest"] = "geometry-2"
+            write(graph_path, graph)
+            candidates["sourceGraphDigest"] = f"sha256:{file_digest(graph_path)}"
+            write(candidates_path, candidates)
+            with self.assertRaisesRegex(ValueError, "stale_crossing_edge_path"):
+                build_reviewed_crossings(
+                    candidates_path, reviews_path, graph_path, registry_path, "graph-v3", output_path
+                )
+
     def test_only_confirmed_allowed_mapping_is_published(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -120,6 +187,7 @@ class CrossingPublicationTests(unittest.TestCase):
             candidates_path = root / "candidates.json"
             reviews_path = root / "reviews.json"
             output_path = root / "crossings.json"
+            junctions_path = root / "junctions.json"
             graph = {"edges": [
                 {
                     "id": "approach", "fromNodeId": "junction", "toNodeId": "south",
@@ -152,6 +220,11 @@ class CrossingPublicationTests(unittest.TestCase):
                     "kind": "side-change",
                     "representation": "junction-transition",
                     "guidancePolicy": "user-option",
+                    "context": {
+                        "junctionId": "junction-1",
+                        "movementId": "movement-1",
+                        "junctionFingerprint": "sha256:junction-current",
+                    },
                     "center": {"lat": 33.2, "lng": 35.5},
                     "sourceEdgeFingerprint": "sha256:transition",
                     "audit": {"createdAt": "2026-07-15T00:00:00Z", "updatedAt": "2026-07-15T00:00:00Z"},
@@ -168,8 +241,17 @@ class CrossingPublicationTests(unittest.TestCase):
                     }],
                 }],
             })
+            write(junctions_path, {
+                "schemaVersion": 1,
+                "junctions": [{
+                    "id": "junction-1",
+                    "fingerprint": "sha256:junction-current",
+                    "movements": [{"id": "movement-1", "status": "allowed"}],
+                }],
+            })
             validation, result = build_reviewed_crossings(
-                candidates_path, reviews_path, graph_path, registry_path, "graph-v3", output_path
+                candidates_path, reviews_path, graph_path, registry_path, "graph-v3", output_path,
+                junctions_path,
             )
             self.assertEqual(result, output_path)
             self.assertEqual(validation["blockingIssues"], [])
@@ -177,6 +259,14 @@ class CrossingPublicationTests(unittest.TestCase):
             self.assertEqual(published["representation"], "junction-transition")
             self.assertEqual(published["guidancePolicy"], "user-option")
             self.assertEqual(published["mappings"][0]["match"]["action"], [])
+            junctions = json.loads(junctions_path.read_text())
+            junctions["junctions"][0]["fingerprint"] = "sha256:junction-changed"
+            write(junctions_path, junctions)
+            with self.assertRaisesRegex(ValueError, "stale_crossing_junction"):
+                build_reviewed_crossings(
+                    candidates_path, reviews_path, graph_path, registry_path, "graph-v3", output_path,
+                    junctions_path,
+                )
 
 
 if __name__ == "__main__":

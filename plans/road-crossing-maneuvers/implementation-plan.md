@@ -1,7 +1,7 @@
 # Reviewed road-crossing maneuvers — implementation plan
 
 **Date:** 2026-07-14
-**Status:** runtime core implemented; junction-first curation rollout and first crossing data release planned
+**Status:** coordinate-authored crossing workflow implemented; manual release Build remains curator validation
 **Design:** `plans/road-crossing-maneuvers/design.md`
 
 ## Goal
@@ -15,6 +15,73 @@ roundabout workflow:
 4. match those mappings against attested routes for main, approach and rejoin
    navigation; and
 5. replace false opposite-turn pairs with one first-class crossing cue.
+
+## Coordinate-authored crossing implementation — 2026-07-22
+
+This supersedes junction-first creation as the ordinary authoring path. The
+junction review implementation remains useful context and compatibility code,
+but new crossings begin with a coordinate guideline.
+
+### Task 26 — support compact edge-path crossings
+
+- [x] Add backward-compatible `edge-path` validation in JavaScript, Python and
+      the mobile/web route matcher.
+- [x] Require a non-empty directed action path and empty before/after arrays.
+- [x] Preserve existing `action-path` and `junction-transition` behavior.
+- [x] Validate share identity, fractions, continuity and bicycle traversal in
+      Build.
+
+### Task 27 — map a guideline to fractional base-edge slices
+
+- [x] Reuse the persistent CW segment matcher for crossing guidelines.
+- [x] Project the guideline endpoints onto the first and last matched edges.
+- [x] Store partial first/last slices and complete intermediate slices without
+      mutating the base graph.
+- [x] Offer the reverse traversal only when every edge permits it.
+- [x] Fingerprint guideline coordinates, edge geometry, fractions and policy.
+
+### Task 28 — replace primary Crossing editor workflow
+
+- [x] Show Base Network and CW Network in Crossings by default, with direct
+      independent toggles.
+- [x] Keep junction highlighting and one-way direction arrows off by default
+      and expose each as an independent layer toggle.
+- [x] Add New crossing, map-coordinate drawing, undo, cancel and match preview.
+- [x] Ask only for the crossed-road name, guidance policy and whether to include
+      a legal reverse traversal.
+- [x] Preview the mapped base path and fractions before explicit confirmation.
+- [x] List curated crossings only, ordered with CW crossings first; keep
+      graph-wide candidate counts and states out of the primary workspace.
+- [x] Remove aggregate detector statistics, the coverage explainer and the
+      multi-purpose detector filter from the primary workflow.
+- [x] Permit redrawing an authored crossing from its saved guideline.
+- [x] Permit renaming a curated crossing without rematching its geometry or
+      requiring generated-candidate freshness.
+- [x] Complete curated crossing CRUD with a guarded delete action, predictable
+      post-delete selection, and explicit reminder that Build publishes removal.
+- [x] Reset new-crossing details instead of reusing a prior redraw, and make the
+      Advanced JSON action reveal the editor it populates.
+- [x] Represent every curated crossing as an independent list and map item;
+      never merge it with generated candidates through junction review sites.
+- [x] Remove candidate evidence, warnings, raw slices, mapping overrides,
+      review notes and Accept/Reject controls from the primary detail.
+- [x] Render selected mappings with dark-cased orange/yellow lanes, separated
+      offsets and larger arrows; label one-way/bidirectional explicitly in the
+      list and detail so direction is never color-only.
+- [x] Keep the new-crossing name editable through path preview and apply its
+      current value on Save without rematching geometry.
+- [x] Keep every curated crossing visible as a muted clickable map path while
+      reserving the warm high-contrast highlight for the selected crossing.
+
+### Task 29 — validation
+
+- [x] Unit-test single-edge fractional, multi-edge, reverse and prohibited
+      reverse proposals.
+- [x] Test editor/server wiring, schema parity and manual record validation.
+- [x] Run crossing regressions, the real-graph matcher endpoint and the full
+      repository suite.
+- [ ] Perform a curator-created crossing, Build and navigation replay as the
+      final manual release check.
 
 This plan changes navigation semantics but not route search costs or route
 geometry.
@@ -143,15 +210,44 @@ The current reference ride is approximately 10,082.9 m after later CW network
 curation. That replay, not the historical 10,111.6 m table, is the release
 baseline for Tasks 24–25.
 
+### Junction-centered curation implementation record — 2026-07-22
+
+The first junction slice is implemented. The editor now joins generated and
+manual crossings to junction movements by exact stable-share/base-edge overlap
+inside the junction boundary, groups them into one deterministic review site
+per physical junction, and shows the selected junction geometry, ports and
+legal movement in Crossings. Selecting a row fits the complete junction;
+selecting a proposal within it isolates that proposal and its exact movement
+evidence while leaving the other site markers visible.
+The current primary workspace goes one step further: it exposes curated
+crossings only and keeps the complete generated-candidate queue as build
+diagnostic data rather than an ordinary editor list.
+
+A selected legal movement in a published, non-roundabout bicycle junction now
+offers **Add crossing guidance**. The server converts its current directed
+edge path into an unsaved proposal: a two-edge movement becomes an optional
+`junction-transition`, while a longer movement retains its internal action
+slices as an unconditional `action-path`. The curator chooses left/right,
+reviews the highlighted trace in Crossings, and must explicitly confirm or
+cancel. Nothing is written by proposal creation.
+
+Confirmed junction crossings carry the junction and movement identity plus the
+current junction fingerprint. Build rejects a missing junction, changed
+fingerprint or unavailable movement, in addition to the existing edge,
+continuity and traversal-policy gates. Roundabout movements are intentionally
+refused by this action until the separate approach/departure authoring flow is
+implemented.
+
 ### Task 18 — produce topology and route-impact associations
 
-- [ ] Add deterministic optional context for exact junction movement,
-      roundabout identity/phase, accepted CW alignment and OSM/road-class
-      evidence.
+- [x] Add deterministic optional context for exact junction movements and
+      roundabout identity using stable-share/base-edge overlap plus the
+      junction boundary.
+- [ ] Add roundabout phase, accepted CW alignment and route-corpus context.
 - [ ] Add an offline route-impact audit over reference, featured and catalog
       route attestations without treating matches as accepted crossings.
-- [ ] Bind junction context to its topology fingerprint so changes stale only
-      affected accepted crossings.
+- [x] Bind confirmed junction context to its junction fingerprint and movement;
+      Build rejects changed or missing evidence.
 - [ ] Validate that action-path intervals do not overlap a roundabout ring.
 - [ ] Record deterministic per-scope counts in the candidate payload.
 - [ ] Keep context advisory; exact directed mappings remain runtime authority.
@@ -179,24 +275,26 @@ baseline for Tasks 24–25.
 
 ### Task 20 — add generated crossing review sites
 
-- [ ] Add non-authoritative `reviewSites` to the editor response.
-- [ ] Prefer exact junction/roundabout context; otherwise group overlapping
-      action signatures by corridor and deterministic anchor.
-- [ ] Permit spatial grouping for display only, never mapping merge/acceptance.
-- [ ] Derive site state: needs review, partially reviewed, confirmed, no
+- [x] Add non-authoritative `reviewSites` to the editor response.
+- [x] Prefer exact junction/roundabout context and retain deterministic
+      standalone sites otherwise.
+- [x] Keep site grouping display-only; exact mappings remain review and runtime
+      authority.
+- [x] Derive site state: needs review, partially reviewed, confirmed, no
       guidance, stale or conflict.
-- [ ] Preserve accepted crossing identity independently of site organization.
-- [ ] Add presets for reference routes, CW network, junctions, roundabouts,
-      OSM-tagged, major roads, manual and all base network.
+- [x] Preserve accepted crossing identity independently of site organization.
+- [ ] Add a separate expert diagnostic surface only if candidate inspection is
+      needed again; the primary workspace intentionally has no detector presets.
 
 ### Task 21 — replace the raw list with a map-first site workflow
 
-- [ ] Default to high-impact sites on the map, not all raw mapping rows.
-- [ ] Keep all candidates available as an explicit audit layer.
-- [ ] Show corridor, base directions, junction ports/movement, roundabout
-      context, CW arms, mapping traces and affected routes together.
-- [ ] Present mappings as visible directed movements with variants, not
-      primarily share IDs and hashes.
+- [x] Default to curated crossing sites on the map, not raw mapping rows.
+- [x] Keep generated candidates in the response and build diagnostics without
+      exposing them in the primary authoring list.
+- [x] Show corridor, base directions, junction ports/movements and mapping
+      traces together; affected-route and CW-arm overlays remain pending.
+- [x] Present review sites and their visible directed movements before expert
+      share IDs and hashes.
 - [ ] Add **No guidance**, **Cross road**, **Cross then turn** and
       **Repair movement** actions.
 - [ ] Preview exact Hebrew wording and unconditional/optional policy.
@@ -205,9 +303,9 @@ baseline for Tasks 24–25.
 
 ### Task 22 — guided creation from junctions, roundabouts and base network
 
-- [ ] Add **Add crossing guidance** to a selected legal Junctions movement.
-- [ ] Pre-fill `junction-transition` and let the curator confirm crossed road,
-      direction, continuation and policy.
+- [x] Add **Add crossing guidance** to a selected legal Junctions movement.
+- [x] Pre-fill a current directed mapping, let the curator choose continuation,
+      preview it in Crossings and explicitly confirm or cancel.
 - [ ] Add roundabout-adjacent creation from an approach/departure while keeping
       its action outside the ring.
 - [ ] Replace manual JSON as the primary path with ordered map selection of

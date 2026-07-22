@@ -56,6 +56,33 @@ class CrossingReviewTests(unittest.TestCase):
             "invalid_transition_continuation",
         )
 
+    def test_edge_path_uses_action_without_context(self):
+        crossing = {
+            "id": "manual-crossing-edge-path",
+            "kind": "side-change",
+            "representation": "edge-path",
+            "guidancePolicy": "user-option",
+            "center": {"lat": 33.2, "lng": 35.5},
+            "mappings": [{
+                "id": "mapping-edge-path",
+                "match": {
+                    "before": [],
+                    "action": [{"edgeShareId": 7, "fromFractionQ": 200_000, "toFractionQ": 800_000}],
+                    "after": [],
+                },
+                "entry": {"lat": 33.2, "lng": 35.5},
+                "exit": {"lat": 33.2, "lng": 35.5001},
+            }],
+        }
+        self.assertIsNone(crossing_issue(crossing, require_fingerprint=False))
+        crossing["mappings"][0]["match"]["after"] = [
+            {"edgeShareId": 8, "fromFractionQ": 0, "toFractionQ": 1_000_000}
+        ]
+        self.assertEqual(
+            crossing_issue(crossing, require_fingerprint=False),
+            "invalid_edge_path_context",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
