@@ -72,6 +72,15 @@ but new crossings begin with a coordinate guideline.
       current value on Save without rematching geometry.
 - [x] Keep every curated crossing visible as a muted clickable map path while
       reserving the warm high-contrast highlight for the selected crossing.
+- [x] Support compound turn/roundabout/crossing → crossing speech so the
+      follow-up suppression rule never hides an unspoken crossing.
+- [x] Replay the reported ride with one persistent voice session and either the
+      published crossing artifact or an explicit current-review fallback.
+- [x] Compose reviewed crossings wholly contained by a roundabout into one
+      crossing-and-exit announcement, retain missed-announcement fallbacks, and
+      carry the named CW exit into speech.
+- [x] Carry a named CW segment entered directly after a crossing into the
+      crossing announcement.
 
 ### Task 29 — validation
 

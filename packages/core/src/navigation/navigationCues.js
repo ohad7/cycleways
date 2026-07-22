@@ -67,6 +67,31 @@ function maneuverCompletionMeters(cue) {
     : Number(cue?.distanceMeters);
 }
 
+function applyRoundaboutCrossingComplexes(cornerCues) {
+  const roundabouts = cornerCues.filter((cue) => cue.type === "roundabout");
+  const crossings = cornerCues.filter((cue) => cue.type === "crossing");
+  for (const roundabout of roundabouts) {
+    const entryMeters = Number(roundabout.distanceMeters);
+    const exitMeters = Number(roundabout.exitDistanceMeters);
+    if (!Number.isFinite(entryMeters) || !Number.isFinite(exitMeters)) continue;
+    const contained = crossings.filter((crossing) =>
+      Number(crossing.distanceMeters) >= entryMeters - 0.5
+      && maneuverCompletionMeters(crossing) <= exitMeters + 0.5,
+    );
+    if (contained.length === 0) continue;
+    roundabout.containedCrossingIds = contained
+      .map((crossing) => crossing.crossingId)
+      .filter(Boolean);
+    roundabout.containsReviewedCrossing = true;
+    for (const crossing of contained) {
+      // Keep the crossing cue as a safety fallback. The voice planner suppresses
+      // it only after the roundabout complex was actually announced.
+      crossing.compoundPreviousType = "roundabout";
+      crossing.compoundPreviousDistanceMeters = roundabout.distanceMeters;
+    }
+  }
+}
+
 function cueGeometryWithoutNearDuplicates(geometry) {
   if (geometry.length === 0) return [];
   const result = [geometry[0]];
@@ -417,6 +442,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
   }
   cornerCues.sort((a, b) => a.distanceMeters - b.distanceMeters);
   cornerCues = mergeSamePhysicalTurns(cornerCues);
+  applyRoundaboutCrossingComplexes(cornerCues);
 
   // Link close decision pairs without removing the follow-up cue. For a
   // roundabout followed by another maneuver, proximity starts at the
@@ -432,6 +458,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
       isCompoundManeuver(current) &&
       isCompoundManeuver(next) &&
       !current.thenManeuver &&
+      !Number.isFinite(Number(next.compoundPreviousDistanceMeters)) &&
       gapMeters >= 0 &&
       gapMeters <= COMPOUND_TURN_WINDOW_M
     ) {
@@ -505,7 +532,23 @@ export function buildRouteCues(navigationRoute, options = {}) {
       (traversal) =>
         span.startMeters >= Number(traversal.entryMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
         && span.startMeters <= Number(traversal.exitMeters) + ROUNDABOUT_SUPPRESSION_PAD_M,
-    )) continue;
+    )) {
+      const traversal = roundaboutTraversals.find(
+        (candidate) =>
+          span.startMeters >= Number(candidate.entryMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
+          && span.startMeters <= Number(candidate.exitMeters) + ROUNDABOUT_SUPPRESSION_PAD_M
+          && span.endMeters > Number(candidate.exitMeters) + 0.5,
+      );
+      const roundaboutCue = traversal
+        ? cues.find((cue) =>
+            cue.type === "roundabout" && cue.roundaboutId === traversal.roundaboutId,
+          )
+        : null;
+      if (roundaboutCue?.containsReviewedCrossing) {
+        roundaboutCue.ontoSegmentName = span.name;
+      }
+      continue;
+    }
     const crossingAtSpan = crossingTraversals.find((crossing) => {
       const tolerance = crossing.crossingRepresentation === "junction-transition"
         ? SPAN_MERGE_TOLERANCE_M
@@ -519,12 +562,14 @@ export function buildRouteCues(navigationRoute, options = {}) {
           && cue.crossingId === crossingAtSpan.crossingId
           && Math.abs(cue.distanceMeters - Number(crossingAtSpan.entryMeters)) < 0.1,
       );
-      if (crossingCue?.thenManeuver?.type === "turn") {
+      if (crossingCue) {
         crossingCue.ontoSegmentName = span.name;
-        crossingCue.thenManeuver = {
-          ...crossingCue.thenManeuver,
-          ontoSegmentName: span.name,
-        };
+        if (crossingCue.thenManeuver?.type === "turn") {
+          crossingCue.thenManeuver = {
+            ...crossingCue.thenManeuver,
+            ontoSegmentName: span.name,
+          };
+        }
       }
       continue;
     }

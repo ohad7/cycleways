@@ -1012,6 +1012,13 @@ Hebrew:
 - final: `חצו בזהירות לצד השני של הכביש`
 - crossing then roundabout: `חצו בזהירות לצד השני של הכביש, ואז בכיכר המשיכו ישר`
 - crossing then turn: `חצו בזהירות לצד השני של הכביש, ואז פנו ימינה`
+- crossing then crossing: `חצו בזהירות לצד השני של הכביש, ואז חצו בזהירות גם את הכביש הבא`
+- turn or roundabout then crossing: append `ואז חצו בזהירות גם את הכביש הבא`
+- reviewed crossings fully contained by one roundabout traversal form a single
+  junction movement: `בכיכר, חצו בזהירות את הכביש, ולאחר מכן פנו שמאלה אל
+  שביל אופניים יובלים`;
+- a crossing that exits directly onto a named CW segment identifies the entry:
+  `חצו בזהירות לצד השני של הכביש, והיכנסו אל שביל תל חי`.
 
 The road name may appear as secondary card context but is not inserted into
 voice in version 1; awkward or missing road names must not affect the safety
@@ -1019,9 +1026,19 @@ instruction.
 
 English fallback: `Cross carefully to the other side of the road`.
 
-The usual 120 m preview and 35 m final windows apply. A following compound cue
-is suppressed only after the source utterance was actually accepted, preserving
-the existing safety rule.
+The usual 120 m preview and 35 m final windows apply. Every maneuver type that
+can cover a following crossing must include that crossing in its spoken text.
+A following compound cue is suppressed only after the source utterance was
+actually accepted, preserving the existing safety rule and preventing an
+unspoken crossing from being hidden.
+
+Roundabout-crossing composition is based on route intervals, not general
+proximity: every absorbed crossing interval must be wholly contained between
+the roundabout entry and exit. The individual crossing cues remain in the cue
+list and are marked as covered by the roundabout announcement. If that
+announcement is missed, the crossing cues remain speakable. The named
+destination is the CW segment that begins inside the junction and continues
+beyond the roundabout exit.
 
 ### Card, icon, haptics and camera
 

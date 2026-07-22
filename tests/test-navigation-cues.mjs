@@ -789,4 +789,85 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   );
 }
 
+// Reviewed crossings wholly inside a roundabout traversal form one physical
+// junction movement. The roundabout announcement covers them, while their cues
+// remain available if that announcement was missed.
+{
+  const geometry = [
+    { lat: 33, lng: 35 },
+    { lat: 33.003, lng: 35 },
+  ];
+  const baseline = routeFrom(geometry);
+  const route = routeFrom(geometry, {
+    junctions: [{
+      kind: "roundabout",
+      roundaboutId: "crossing-complex",
+      lat: 33.001,
+      lng: 35,
+      entryMeters: 100,
+      exitMeters: 180,
+      entryBearingDeg: 0,
+      exitBearingDeg: 270,
+      complete: true,
+    }],
+    crossings: [
+      {
+        kind: "crossing",
+        crossingId: "inside-1",
+        mappingId: "inside-1-forward",
+        entryMeters: 120,
+        exitMeters: 132,
+        complete: true,
+      },
+      {
+        kind: "crossing",
+        crossingId: "inside-2",
+        mappingId: "inside-2-forward",
+        entryMeters: 148,
+        exitMeters: 160,
+        complete: true,
+      },
+    ],
+    segmentSpans: [
+      { startMeters: 0, endMeters: 155, name: "Road 99" },
+      { startMeters: 155, endMeters: baseline.distanceMeters, name: "שביל אופניים יובלים" },
+    ],
+  });
+  const cues = buildRouteCues(route);
+  const roundabout = findType(cues, "roundabout")[0];
+  const crossings = findType(cues, "crossing");
+  assert.equal(roundabout.containsReviewedCrossing, true);
+  assert.deepEqual(roundabout.containedCrossingIds, ["inside-1", "inside-2"]);
+  assert.equal(roundabout.ontoSegmentName, "שביל אופניים יובלים");
+  assert.deepEqual(
+    crossings.map((cue) => [cue.compoundPreviousType, cue.compoundPreviousDistanceMeters]),
+    [["roundabout", 100], ["roundabout", 100]],
+  );
+}
+
+// A crossing whose exit is the start of a named CW segment says where the
+// rider is entering, even without guidance-v1 way-name data.
+{
+  const geometry = [
+    { lat: 33, lng: 35 },
+    { lat: 33.003, lng: 35 },
+  ];
+  const baseline = routeFrom(geometry);
+  const route = routeFrom(geometry, {
+    crossings: [{
+      kind: "crossing",
+      crossingId: "enter-tel-hai",
+      mappingId: "enter-tel-hai-forward",
+      entryMeters: 100,
+      exitMeters: 120,
+      complete: true,
+    }],
+    segmentSpans: [
+      { startMeters: 0, endMeters: 120, name: "Approach" },
+      { startMeters: 120, endMeters: baseline.distanceMeters, name: "שביל תל חי" },
+    ],
+  });
+  assert.equal(findType(buildRouteCues(route), "crossing")[0].ontoSegmentName, "שביל תל חי");
+}
+
 console.log("navigation cue tests passed");

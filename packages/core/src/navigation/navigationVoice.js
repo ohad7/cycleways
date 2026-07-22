@@ -78,6 +78,23 @@ function roundaboutText(direction, locale) {
   return phrases[direction] || null;
 }
 
+function roundaboutCrossingText(direction, locale) {
+  if (locale === "he-IL") {
+    const action = direction === "straight"
+      ? "המשיכו ישר"
+      : direction === "u-turn"
+        ? "הסתובבו חזרה"
+        : `פנו ${directionText(direction, locale)}`;
+    return `בכיכר, חצו בזהירות את הכביש, ולאחר מכן ${action}`;
+  }
+  const action = direction === "straight"
+    ? "continue straight"
+    : direction === "u-turn"
+      ? "turn back"
+      : `turn ${directionText(direction, locale)}`;
+  return `At the roundabout, carefully cross the road, then ${action}`;
+}
+
 function thenManeuverText(maneuver, locale, sourceType) {
   if (!maneuver) return "";
   if (maneuver.type === "roundabout") {
@@ -103,6 +120,11 @@ function thenManeuverText(maneuver, locale, sourceType) {
     return locale === "he-IL"
       ? ` ומיד ${directionText(maneuver.direction, locale)}${onto}`
       : `, then turn ${directionText(maneuver.direction, locale)}${onto}`;
+  }
+  if (maneuver.type === "crossing") {
+    return locale === "he-IL"
+      ? ", ואז חצו בזהירות גם את הכביש הבא"
+      : ", then carefully cross the next road";
   }
   return "";
 }
@@ -211,14 +233,19 @@ function cuePhrase(event, state, locale) {
   switch (cue.type) {
     case "crossing": {
       const then = thenManeuverText(cue.thenManeuver, locale, "crossing");
-      const ontoName = guidanceSpeechName(cue.ontoGuidance);
+      const guidanceName = guidanceSpeechName(cue.ontoGuidance);
+      const ontoName = guidanceName || cue.ontoSegmentName;
       const directHorizon = ontoName
         ? formatNavigationHorizonMeters(cue.continueOnWayMeters, locale)
         : "";
       const onto = ontoName
         ? locale === "he-IL"
-          ? `, והמשיכו על ${ontoName}${directHorizon ? ` במשך ${directHorizon}` : ""}`
-          : `, and continue on ${ontoName}${directHorizon ? ` for ${directHorizon}` : ""}`
+          ? guidanceName
+            ? `, והמשיכו על ${ontoName}${directHorizon ? ` במשך ${directHorizon}` : ""}`
+            : `, והיכנסו אל ${ontoName}`
+          : guidanceName
+            ? `, and continue on ${ontoName}${directHorizon ? ` for ${directHorizon}` : ""}`
+            : `, and enter ${ontoName}`
         : "";
       const phrase = locale === "he-IL"
         ? "חצו בזהירות לצד השני של הכביש"
@@ -250,9 +277,11 @@ function cuePhrase(event, state, locale) {
         : `${prefix}turn ${directionText(cue.direction, locale)}${onto}${then}${continueOnWayText(cue, locale)}`;
     }
     case "roundabout": {
-      const phrase = roundaboutText(cue.direction, locale);
+      const phrase = cue.containsReviewedCrossing
+        ? roundaboutCrossingText(cue.direction, locale)
+        : roundaboutText(cue.direction, locale);
       const then = thenManeuverText(cue.thenManeuver, locale, "roundabout");
-      const ontoName = guidanceSpeechName(cue.ontoGuidance);
+      const ontoName = guidanceSpeechName(cue.ontoGuidance) || cue.ontoSegmentName;
       const onto = ontoName
         ? locale === "he-IL" ? ` אל ${ontoName}` : ` onto ${ontoName}`
         : "";

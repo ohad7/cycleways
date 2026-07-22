@@ -9,9 +9,11 @@ import { decodeCompactBaseRoutingShard } from "../packages/core/src/routing/comp
 import { decodeMessagePack } from "../packages/core/src/routing/messagePack.js";
 import { validateRouteAttestation } from "../packages/core/src/routing/routeAttestation.js";
 import { roundaboutsOnRoute } from "../packages/core/src/routing/roundaboutsOnRoute.js";
+import { crossingsOnRoute } from "../packages/core/src/routing/crossingsOnRoute.js";
 import { navigationRouteFromRouteState } from "../packages/core/src/navigation/navigationRoute.js";
 import { buildRouteCues } from "../packages/core/src/navigation/navigationCues.js";
 import { createNavigationVoicePlanner } from "../packages/core/src/navigation/navigationVoice.js";
+import { joinCrossingReviews } from "../editor/lib/crossingReview.mjs";
 import {
   reportedRideFingerprintDisposition,
   reportedRideTraversalPathFingerprint,
@@ -27,6 +29,8 @@ const { values } = parseArgs({
       default: "tests/fixtures/bicycle-traversal/road-99-ride-candidate.json",
     },
     "geojson-output": { type: "string" },
+    "crossings-source": { type: "string", default: "auto" },
+    "crossing-review": { type: "string", default: "data/crossing-review.json" },
     check: { type: "boolean", default: false },
   },
 });
@@ -70,6 +74,37 @@ const points = replan.coordinates.map((point, index) => ({
   id: `reported-ride-${index}`,
 }));
 const route = await session.restorePoints(points);
+const crossingSourceMode = values["crossings-source"];
+if (!new Set(["auto", "published", "review", "none"]).has(crossingSourceMode)) {
+  throw new Error(`unsupported crossings source: ${crossingSourceMode}`);
+}
+let crossingArtifact = null;
+let crossingArtifactSource = "none";
+let crossingArtifactIssues = [];
+if (route && crossingSourceMode !== "none" && manifest.crossings
+  && (crossingSourceMode === "auto" || crossingSourceMode === "published")) {
+  crossingArtifact = JSON.parse(await readFile(path.join(root, manifest.crossings), "utf8"));
+  crossingArtifactSource = "published";
+} else if (route && (crossingSourceMode === "review"
+  || (crossingSourceMode === "auto" && !manifest.crossings))) {
+  const reviewData = JSON.parse(await readFile(path.resolve(values["crossing-review"]), "utf8"));
+  const joinedCrossings = joinCrossingReviews(
+    { schemaVersion: 1, coverage: { baseGraph: "current-review" }, crossings: [] },
+    reviewData,
+  );
+  crossingArtifactIssues = joinedCrossings.blockingIssues || [];
+  const validationContext = route.routingValidation?.validationContext || {};
+  crossingArtifact = {
+    schemaVersion: 1,
+    graphVersion: validationContext.graphVersion,
+    traversalPolicyDigest: validationContext.policyDigest,
+    crossings: joinedCrossings.runtimeCrossings,
+  };
+  crossingArtifactSource = "current-review-unpublished";
+}
+const routeCrossings = route
+  ? crossingsOnRoute(crossingArtifact, route.routingValidation, route.geometry)
+  : null;
 const nearbyJunctions = route && typeof session.junctionsNearRoute === "function"
   ? await session.junctionsNearRoute(route.geometry)
   : null;
@@ -82,6 +117,7 @@ const navigationRouteState = route
       junctions: Array.isArray(nearbyJunctions)
         ? [...nearbyJunctions, ...routeRoundabouts]
         : nearbyJunctions,
+      crossings: routeCrossings,
     }
   : null;
 const slices = route?.routingValidation?.traversalSlices || [];
@@ -143,6 +179,25 @@ if (fingerprintDisposition === "unaccepted") {
 const navigationCues = navigationRouteState
   ? buildRouteCues(navigationRouteFromRouteState(navigationRouteState, { param: "reported-ride" }))
   : [];
+const replayVoicePlanner = createNavigationVoicePlanner({ locale: "he-IL", cooldownMs: 0 });
+const spokenInstructions = [];
+for (const [index, cue] of navigationCues.entries()) {
+  const planned = replayVoicePlanner.plan(
+    { kind: "cue", cueType: cue.type, phase: "final", cue },
+    { activeCue: { cue, phase: "final", distanceToCueMeters: 20 } },
+    1000 + index * 1000,
+  );
+  if (!planned.utterance) continue;
+  spokenInstructions.push({
+    distanceMeters: Math.round(Number(cue.distanceMeters) * 10) / 10,
+    type: cue.type,
+    direction: cue.direction || null,
+    crossedRoadName: cue.crossedRoadName || null,
+    thenType: cue.thenManeuver?.type || null,
+    thenDirection: cue.thenManeuver?.direction || null,
+    spokenText: planned.utterance.text,
+  });
+}
 
 const report = {
   schemaVersion: 1,
@@ -169,7 +224,42 @@ const report = {
       navigationEvidence: {
         nearbyJunctions: Array.isArray(nearbyJunctions) ? nearbyJunctions.length : null,
         roundaboutTraversals: routeRoundabouts.length,
+        crossingArtifactSource,
+        crossingArtifactCount: crossingArtifact?.crossings?.length ?? null,
+        crossingArtifactIssues,
+        matchedCrossings: Array.isArray(routeCrossings) ? routeCrossings.map((crossing) => ({
+          id: crossing.crossingId,
+          mappingId: crossing.mappingId,
+          name: crossing.crossedRoadName || null,
+          entryMeters: Math.round(Number(crossing.entryMeters) * 10) / 10,
+          exitMeters: Math.round(Number(crossing.exitMeters) * 10) / 10,
+        })) : null,
+        maneuverCues: navigationCues
+          .filter((cue) => ["turn", "roundabout", "crossing", "enter-segment"].includes(cue.type))
+          .map((cue) => ({
+            type: cue.type,
+            distanceMeters: Math.round(Number(cue.distanceMeters) * 10) / 10,
+            completionMeters: Math.round(Number(
+              cue.exitDistanceMeters ?? cue.completionDistanceMeters ?? cue.distanceMeters,
+            ) * 10) / 10,
+            direction: cue.direction || null,
+            roundaboutId: cue.roundaboutId || null,
+            crossingId: cue.crossingId || null,
+            ontoSegmentName: cue.ontoSegmentName || cue.ontoGuidance?.name || null,
+            thenType: cue.thenManeuver?.type || null,
+            thenDirection: cue.thenManeuver?.direction || null,
+            thenOntoSegmentName:
+              cue.thenManeuver?.ontoSegmentName || cue.thenManeuver?.ontoGuidance?.name || null,
+          })),
+        segmentSpans: (route.segmentSpans || []).map((span) => ({
+          segmentId: span.segmentId ?? null,
+          name: span.name || null,
+          networkRole: span.networkRole || null,
+          startMeters: Math.round(Number(span.startMeters) * 10) / 10,
+          endMeters: Math.round(Number(span.endMeters) * 10) / 10,
+        })),
       },
+      spokenInstructions,
       guidanceSpans: (route.guidanceSpans || []).map((span) => ({
         startMeters: Math.round(Number(span.startMeters) * 10) / 10,
         endMeters: Math.round(Number(span.endMeters) * 10) / 10,

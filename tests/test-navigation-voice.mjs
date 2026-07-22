@@ -535,6 +535,60 @@ assert.equal(compassWord(null, "he-IL"), null);
   ).utterance;
   assert.match(english.text, /Cross carefully to the other side of the road/);
 
+  const crossingPairCue = {
+    type: "crossing",
+    distanceMeters: 550,
+    thenManeuver: { type: "crossing" },
+  };
+  const crossingPair = createNavigationVoicePlanner().plan(
+    { kind: "cue", cueType: "crossing", phase: "final", cue: crossingPairCue },
+    { activeCue: { distanceToCueMeters: 10, cue: crossingPairCue, phase: "final" } },
+    1500,
+  ).utterance;
+  assert.equal(
+    crossingPair.text,
+    "חצו בזהירות לצד השני של הכביש, ואז חצו בזהירות גם את הכביש הבא",
+  );
+
+  const roundaboutThenCrossingCue = {
+    type: "roundabout",
+    direction: "left",
+    distanceMeters: 575,
+    thenManeuver: { type: "crossing" },
+  };
+  const roundaboutThenCrossing = createNavigationVoicePlanner().plan(
+    { kind: "cue", cueType: "roundabout", phase: "final", cue: roundaboutThenCrossingCue },
+    { activeCue: { distanceToCueMeters: 10, cue: roundaboutThenCrossingCue, phase: "final" } },
+    1750,
+  ).utterance;
+  assert.equal(
+    roundaboutThenCrossing.text,
+    "בכיכר, פנו שמאלה, ואז חצו בזהירות גם את הכביש הבא",
+  );
+
+  const crossingRoundaboutComplexCue = {
+    type: "roundabout",
+    direction: "left",
+    distanceMeters: 580,
+    exitDistanceMeters: 650,
+    containsReviewedCrossing: true,
+    ontoSegmentName: "שביל אופניים יובלים",
+  };
+  const crossingRoundaboutComplex = createNavigationVoicePlanner().plan(
+    {
+      kind: "cue",
+      cueType: "roundabout",
+      phase: "final",
+      cue: crossingRoundaboutComplexCue,
+    },
+    { activeCue: { distanceToCueMeters: 10, cue: crossingRoundaboutComplexCue, phase: "final" } },
+    1800,
+  ).utterance;
+  assert.equal(
+    crossingRoundaboutComplex.text,
+    "בכיכר, חצו בזהירות את הכביש, ולאחר מכן פנו שמאלה אל שביל אופניים יובלים",
+  );
+
   const intersectionCue = {
     type: "crossing",
     distanceMeters: 600,
@@ -577,6 +631,21 @@ assert.equal(compassWord(null, "he-IL"), null);
   assert.equal(
     direct.text,
     "חצו בזהירות לצד השני של הכביש, והמשיכו על שביל תל חי במשך 1.5 קילומטר",
+  );
+
+  const legacyNamedCrossing = {
+    type: "crossing",
+    distanceMeters: 750,
+    ontoSegmentName: "שביל תל חי",
+  };
+  const legacyDirect = createNavigationVoicePlanner().plan(
+    { kind: "cue", cueType: "crossing", phase: "final", cue: legacyNamedCrossing },
+    { activeCue: { distanceToCueMeters: 10, cue: legacyNamedCrossing, phase: "final" } },
+    3500,
+  ).utterance;
+  assert.equal(
+    legacyDirect.text,
+    "חצו בזהירות לצד השני של הכביש, והיכנסו אל שביל תל חי",
   );
 }
 
