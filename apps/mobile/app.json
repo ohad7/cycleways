@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.cycleways.mobile",
-      "buildNumber": "9",
+      "buildNumber": "10",
       "associatedDomains": [
         "applinks:www.cycleways.app"
       ],
