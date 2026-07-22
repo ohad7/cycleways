@@ -2,6 +2,16 @@
   "כביש 9974": {
     "id": 62,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-9974",
+      "sectionLabel": "כביש 9974",
+      "guidanceIdentity": "way:road-9974",
+      "name": "כביש 9974",
+      "spokenName": "כביש תשעת אלפים תשע מאות שבעים וארבע",
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -83,6 +93,15 @@
   "שדות כפר יובל": {
     "id": 121,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "kfar-yuval-fields",
+      "guidanceIdentity": "way:kfar-yuval-fields",
+      "name": "שדות כפר יובל",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -331,6 +350,14 @@
   "גן הצפון": {
     "id": 10,
     "status": "active",
+    "guidance": {
+      "role": "standalone",
+      "name": "גן הצפון",
+      "kind": "other",
+      "guidanceIdentity": "standalone:10",
+      "spokenName": null,
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -2335,6 +2362,16 @@
   "שביל אופניים 99 מעיין ברוך": {
     "id": 326,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "sectionLabel": "מעיין ברוך",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -2375,6 +2412,16 @@
   "שביל אופניים 99 כפר יובל": {
     "id": 97,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "sectionLabel": "כפר יובל",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -4104,6 +4151,15 @@
   "שביל תל חי": {
     "id": 164,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "tel-hai-trail",
+      "guidanceIdentity": "way:tel-hai-trail",
+      "name": "שביל תל חי",
+      "spokenName": null,
+      "kind": "trail",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -4480,6 +4536,16 @@
   "כביש 99 קריית שמונה": {
     "id": 174,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-99",
+      "sectionLabel": "קריית שמונה",
+      "guidanceIdentity": "way:road-99",
+      "name": "כביש 99",
+      "spokenName": "כביש תשעים ותשע",
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -4682,6 +4748,16 @@
   "כביש 90 כפר גלעדי": {
     "id": 159,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-90",
+      "sectionLabel": "כפר גלעדי",
+      "guidanceIdentity": "way:road-90",
+      "name": "כביש 90",
+      "spokenName": "כביש תשעים",
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -4718,6 +4794,15 @@
   "כבישון עגל": {
     "id": 176,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "agal-road",
+      "guidanceIdentity": "way:agal-road",
+      "name": "כבישון עגל",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -4736,6 +4821,16 @@
   "כביש 9974 כפר יובל": {
     "id": 175,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-9974",
+      "sectionLabel": "כפר יובל",
+      "guidanceIdentity": "way:road-9974",
+      "name": "כביש 9974",
+      "spokenName": "כביש תשעת אלפים תשע מאות שבעים וארבע",
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,
@@ -6500,6 +6595,15 @@
   "שביל אופניים יובלים": {
     "id": 352,
     "status": "active",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "yuvalim-cycleway",
+      "guidanceIdentity": "way:yuvalim-cycleway",
+      "name": "שביל אופניים יובלים",
+      "spokenName": null,
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "quality": {
       "overall": 3,
       "safety": 3,

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "shardSchemaVersion": 1,
-  "generatedAt": "2026-07-22T08:19:55.337309Z",
+  "generatedAt": "2026-07-22T16:46:25.892966Z",
   "sourceRoutingSchemaVersion": 3,
   "defaultFormat": "compact",
   "routeShare": {
@@ -20,9 +20,9 @@
     "representedEdges": 48895,
     "edgeReferences": 51100,
     "duplicatedSourceEdges": 2031,
-    "compactShardBytes": 67469009,
-    "messagePackShardBytes": 55985553,
-    "compactBinaryShardBytes": 5518292
+    "compactShardBytes": 67467910,
+    "messagePackShardBytes": 55984489,
+    "compactBinaryShardBytes": 5518262
   },
   "shards": [
     {
@@ -1044,8 +1044,8 @@
       "formats": {
         "compact": {
           "path": "shards/g712_664.cwb",
-          "bytes": 232334,
-          "sha256": "5c25e1e7bf3baeb4c0690d083566258fcadd9cb49b6614bdc507d9b7e1cc50f2"
+          "bytes": 232304,
+          "sha256": "0efde3202014c685b34bba9300724cbec3329f01b232eb17a74938f01919c336"
         }
       },
       "bounds": [
@@ -1056,9 +1056,9 @@
       ],
       "nodes": 1744,
       "edges": 2293,
-      "compactBytes": 2914484,
-      "messagePackBytes": 2423730,
-      "compactBinaryBytes": 232334
+      "compactBytes": 2913385,
+      "messagePackBytes": 2422666,
+      "compactBinaryBytes": 232304
     },
     {
       "id": "g712_665",
@@ -2671,7 +2671,7 @@
       "compactBinaryBytes": 1572
     }
   ],
-  "graphVersion": "01a0caaf859d603f2f6422ab97df00d62a45ff17fcfa7363f8023d7da0342867",
+  "graphVersion": "5c3103e5484482574ae44243a5a2327504e430fc75bda23c3de2be04a5a3674b",
   "policyId": "il-bicycle-v1",
   "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
   "routingContract": {
@@ -2679,7 +2679,7 @@
     "baseRoutingSchemaVersion": 3,
     "policyId": "il-bicycle-v1",
     "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-    "routingContextDigest": "01a0caaf859d603f2f6422ab97df00d62a45ff17fcfa7363f8023d7da0342867",
+    "routingContextDigest": "5c3103e5484482574ae44243a5a2327504e430fc75bda23c3de2be04a5a3674b",
     "strictTraversalPolicy": true,
     "baseEdgeShareRegistryDigest": "a6a7d71dab4a6f1f3d675cfca05d831dcf5b63e9c277782aa57be878bc5a3a92",
     "legacyCompatibilityRegistryDigest": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d",

@@ -29,14 +29,14 @@
     },
     {
       "slug": "sovev-dafna",
-      "acceptedFingerprint": "sha256-e0804de7d1903fb18eb8a6efd87e193972d1018651f4a9ac093d476d6d25254d",
+      "acceptedFingerprint": "sha256-8db04feab0d1fadcecd93af4bd1b26e0117e55bb516391053314b135c504f7a2",
       "distanceMeters": 7060.005395590143,
       "distanceToleranceMeters": 1
     },
     {
       "slug": "roman-roads",
-      "acceptedFingerprint": "sha256-4351774052ab0bfb09fe6dd90c0fd7f1660062459200b9d062f4e5640a77d468",
-      "distanceMeters": 27305.310241855503,
+      "acceptedFingerprint": "sha256-7303d3f2f1b4564ee3b6eb8dd3df384416ae6ed90ba356c61b23aefb76f74b87",
+      "distanceMeters": 27305.3102418555,
       "distanceToleranceMeters": 1
     },
     {
@@ -47,7 +47,7 @@
     },
     {
       "slug": "naftali-dishon-yosha",
-      "acceptedFingerprint": "sha256-e16ede5939c942c2fdc5fc38f4218fdba1e601f9490c1fb8707f77a610317891",
+      "acceptedFingerprint": "sha256-b72df0cedbd0a874b29de68df97ebfbe95aafac0d01e7c4a9d07b6ed5ad7e42a",
       "distanceMeters": 54260.75538567177,
       "distanceToleranceMeters": 1
     }
