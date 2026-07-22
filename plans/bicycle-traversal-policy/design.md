@@ -65,6 +65,14 @@ polyline for each referenced anchor edge. It is generated from the Git commit
 that published the token and verified against that commit's registry and
 routing shards; coordinates are not inferred from the current graph.
 
+The inventory includes released user-owned route tokens used as regression
+fixtures, not only featured catalog routes. The reported Road 99 ride exposed
+the missing case: its `f03acd80` graph identity was valid, but its retired edge
+IDs were absent from both the current graph and the catalog-derived archive.
+Once legacy identity is proven, failure to resolve an anchor in the current
+graph must therefore continue to the independently verified historical archive
+instead of ending recovery early.
+
 The security and traversal boundary remains strict:
 
 - current canonical identity is still required for exact replay;

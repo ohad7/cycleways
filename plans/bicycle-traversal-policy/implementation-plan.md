@@ -53,6 +53,12 @@
 - [x] Rebuild staged V3 assets and prove that all six formerly undecodable
   catalog V6 tokens now recover as current-policy replans rather than decode
   failures.
+- [x] Archive the released reported Road 99 ride token and its independently
+  verified `f03acd80` graph anchors, including non-catalog user-owned routes in
+  the compatibility inventory.
+- [x] Continue from failed current-edge anchor resolution to the historical
+  archive after legacy identity is proven, and cover the retired-edge case with
+  a focused restore regression.
 - [x] Generate exact current-graph replacement tokens and a comparison report
   for all featured routes, including a gate for omitted historical segment IDs
   that remain in the current CW index.
@@ -61,9 +67,10 @@
 - [ ] Manually review the material Sovev Dafna geometry/distance change and the
   other routes still classified as material; do not update accepted corpus
   fingerprints before that review.
-- [ ] Record accepted current fingerprints, rerun the Road 99 regression, and
-  pass the complete offered-route, reported-ride, strict traversal, build, and
-  promotion dry-run gates without a waiver.
+- [ ] Record accepted current fingerprints and pass the complete offered-route,
+  strict traversal, build, and promotion dry-run gates without a waiver. The
+  reported Road 99 token now restores under current policy; its complete cue
+  and crossing audit remains part of the ride-feedback validation.
 - [ ] Add release-process automation that captures newly published token
   anchors before a later graph generation can remove them.
 

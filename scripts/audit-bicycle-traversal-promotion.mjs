@@ -305,7 +305,10 @@ if (manifest && shardManifest && overlay && cwIndex) {
     });
   }
   if (Number(cwIndex.schemaVersion) !== 2) block("cw-index-not-v2", cwIndex.schemaVersion);
-  if (!alignmentGeometry || Number(alignmentGeometry.schemaVersion) !== 1) {
+  if (
+    !alignmentGeometry ||
+    ![1, 2].includes(Number(alignmentGeometry.schemaVersion))
+  ) {
     block("alignment-geometry-missing", null);
   }
   if (!manifest.legacyRoutingCompatibility) {
@@ -407,12 +410,31 @@ if (manifest && shardManifest && overlay && cwIndex) {
   stats.unresolvedSlots = unresolvedSlots;
   stats.acceptedAlignments = acceptedAlignmentKeys.size;
 
-  const geometryKeys = new Set(
-    (alignmentGeometry?.features || []).map(
-      (feature) =>
-        `${feature.properties?.segmentId}:${feature.properties?.alignmentKey}`,
-    ),
-  );
+  const geometryKeys = new Set();
+  for (const feature of alignmentGeometry?.features || []) {
+    const segmentId = feature.properties?.segmentId;
+    const alignmentKey = feature.properties?.alignmentKey;
+    const declaredKeys = Array.isArray(feature.properties?.alignmentKeys)
+      ? feature.properties.alignmentKeys
+      : String(feature.properties?.alignmentKeys || "")
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+    const alignmentKeys = alignmentKey === "both"
+      ? (declaredKeys.length > 0 ? declaredKeys : ["aToB", "bToA"])
+      : [alignmentKey];
+    for (const key of alignmentKeys) {
+      if (segmentId == null || !["aToB", "bToA"].includes(key)) {
+        block("alignment-geometry-key-invalid", {
+          segmentId,
+          alignmentKey,
+          alignmentKeys: declaredKeys,
+        });
+        continue;
+      }
+      geometryKeys.add(`${segmentId}:${key}`);
+    }
+  }
   for (const key of acceptedAlignmentKeys) {
     if (!geometryKeys.has(key)) block("accepted-alignment-missing-geometry", key);
   }
