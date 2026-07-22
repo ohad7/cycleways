@@ -1,10 +1,12 @@
 # Navigation Way Names Design
 
 **Date:** 2026-07-15
-**Status:** Proposed design
-**Related designs:** `map-editor-workflow`, `editor-name-release`,
-`waypoint-routing`, `segment-name-display`, `front-page-overhaul`,
-`rn-mobile-native-ui`, `turn-by-turn-improvements`, and `nav-ui-redesign`
+**Last reviewed:** 2026-07-22
+**Status:** Proposed design; revalidated against the current repository
+**Related designs:** `bicycle-traversal-policy`, `network-editor-workflow`,
+`network-junctions`, `route-sharing-v4`, `waypoint-routing`,
+`segment-name-display`, `front-page-overhaul`, `rn-mobile-native-ui`,
+`turn-by-turn-improvements`, and `nav-ui-redesign`
 
 ## Summary
 
@@ -44,6 +46,30 @@ The route keeps two parallel views of the same traversal:
 
 Internal boundaries inside the same named way become invisible to navigation.
 They remain available when the user inspects or expands a route section.
+
+## 2026-07-22 repository re-review
+
+The central decision remains valid and the feature itself has not been
+implemented: segment identity and rider-facing way identity still need to be
+separate. The repository changes since the original design alter the
+integration contract, not that product decision.
+
+This revision incorporates five architectural facts that now exist:
+
+- routing uses policy-bound, direction-scoped CycleWays alignment memberships;
+- published network junctions are on-network but road-name-less spans with a
+  separate landmark name;
+- the public network map combines logical segment overview geometry, accepted
+  physical alignment geometry, and non-segment-interactive junction geometry;
+- current route sharing uses V6 graph anchors, with historical anchor recovery
+  followed by current-policy replanning when exact replay is unavailable; and
+- Promote publishes the map, route catalog, and featured-route snapshots as
+  one hash-bound release bundle and switches the public manifest last.
+
+The guidance layer must be built on those contracts. It must not restore the
+old assumptions that a segment has one undirected physical path, that every
+on-network span is a segment, that map identity is a visible name, or that
+featured snapshots can be promoted independently of the map release.
 
 ## Goals
 
@@ -102,8 +128,9 @@ segments, for example:
 - `טיילת עמי`.
 
 A named way has a stable identity independent of its display name. Member
-segments form one connected, non-branching geographic chain or ring. A route
-may traverse that chain in either direction.
+segments form one connected, non-branching logical chain or ring. A route may
+traverse only the directions allowed by current routing policy; way membership
+does not imply bidirectional access.
 
 ### Standalone named feature
 
@@ -115,7 +142,8 @@ the exact stable segment ID rather than a reusable named-way ID.
 
 A connector or section for which CycleWays has no rider-recognizable proper
 name. It may still have a facility kind such as `bridge`, `connector`, `road`,
-`track`, or `path` and can use that kind as a presentation fallback.
+`dirt-road`, `trail`, or `path` and can use that kind as a presentation
+fallback.
 
 ### Section label
 
@@ -125,6 +153,21 @@ planning and warning disambiguation but is not spoken as the road name.
 
 It is explicitly curated. The build must not derive it by subtracting the way
 name from the current internal name.
+
+### Physical alignment
+
+A reviewed, direction-scoped realization of one logical CycleWays segment on
+the base graph. A segment may have one shared bidirectional trace or different
+`aToB` and `bToA` traces. Alignment keys and mapping digests are routing and
+diagnostic evidence; they do not create separate rider-facing way identities.
+
+### Network junction
+
+A published, bounded set of legal movements between CycleWays arms. Its
+internal edges are CycleWays network infrastructure but are not a road or
+corridor. A junction may have a public landmark name such as `צומת רגר`, yet
+its internal route span remains road-name-less and carries the landmark only as
+context. A network junction is not a `standalone` guidance feature.
 
 ### Guidance span
 
@@ -154,10 +197,12 @@ The new guidance layer is additive. Public and runtime consumers receive both:
 | Guidance identity | What does the rider call the facility being followed? | planning itinerary, map labels, navigation UI, voice |
 | Facility semantics | What kind of surface/facility is under the rider now? | styling, fallback copy, condition cues |
 
-The long-term map/planner direction is ID-based segment lookup and focus, but
-that migration is not required before introducing guidance names. During the
-additive stage, the current unique name can remain the exact lookup key while
-the UI renders the resolved guidance name.
+The current shared map representation already puts stable segment IDs on both
+logical overview and physical alignment features, and route-building hit tests
+already return that ID. All new guidance lookup, exact focus, and whole-way
+highlighting therefore use stable segment ID. Existing name-keyed hover/filter
+adapters may remain temporarily for legacy callers, but repeated guidance text
+must never enter those filters.
 
 ## Decision 2: Canonical named-way registry plus explicit segment roles
 
@@ -170,6 +215,7 @@ Conceptual registry shape:
 ```json
 {
   "schemaVersion": 1,
+  "enforcement": "migration",
   "ways": {
     "road-99": {
       "name": "כביש 99",
@@ -240,9 +286,16 @@ the fallback deterministic and makes migration completeness measurable.
 - Every referenced way ID exists in the registry.
 - Every active segment has at most one guidance role and one named-way
   membership.
-- Active members of a named way form one connected component.
-- That component is non-branching: endpoint degree is at most two, allowing a
-  chain or a ring.
+- Active members of a named way form one connected logical component.
+- That component is non-branching: member degree is at most two, allowing a
+  chain or a ring. Directional legality is validated separately.
+- Member adjacency comes from reviewed topology: accepted direction-scoped
+  alignment terminals and, where applicable, published network-junction arm
+  attachments and legal movements. Source endpoint equality is a migration
+  fallback for a legacy or unmatched member, not the preferred authority.
+- A junction can connect consecutive members of a way without becoming a
+  member of that way. Proximity, centroid order, and equal visible text never
+  create adjacency.
 - Two different way IDs may share a visible name, but they are never merged by
   name alone.
 - A way can contain one segment. A single-segment way is valid when the segment
@@ -300,32 +353,44 @@ Reference classifications:
 
 ## Decision 4: Preserve exact segment spans and add guidance spans
 
-`segmentSpans` remain the exact route-distance index for CycleWays ownership.
-They should evolve toward stable ID-first records while retaining the current
-name for compatibility:
+`segmentSpans` remains the compatibility name for the exact route-distance
+index, but the list now has to describe three cases: segment ownership,
+network-junction membership, and off-network traversal. It must not collapse a
+direction-scoped membership set to its first segment.
 
 ```text
-segment span
+exact route span
   startMeters / endMeters
-  segmentId
-  internalName
+  networkRole: segment | junction | null
+  segmentMemberships[] { segmentId, alignmentKey, mappingDigest }
+  junctionMemberships[] { junctionId, fingerprint, junctionName }
+  segmentIds[]
+  segmentId / internalName (only when exactly one segment is authoritative)
+  junctionId / junctionName (only when one junction is authoritative)
   onCycleways
   routeClass / surface context
 ```
+
+The existing `cwSegmentId`, `name`, and `onNetwork` fields can remain as
+temporary aliases. A singular segment alias must be null when multiple accepted
+memberships cannot be reduced without loss. Exact warning, POI, quality, and
+diagnostic association uses stable IDs and distance ranges, not that alias.
 
 A separate derived `guidanceSpans` list is added:
 
 ```text
 guidance span
   startMeters / endMeters
-  role
+  networkRole: segment | junction | null
+  resolutionStatus: resolved | unnamed | unreviewed | junction | off-network | conflict
+  role (named-way | standalone | unnamed, for segment spans only)
   guidanceIdentity
   wayId (named-way only)
   name (resolved visual name, nullable)
   spokenName (nullable override)
   kind
-  segmentIds[]
-  sectionLabels[]
+  segmentIds[] / sectionLabels[]
+  junctionId / junctionName (context only)
   onCycleways
   routeClass / surface context
 ```
@@ -333,54 +398,88 @@ guidance span
 `guidanceIdentity` is stable and never equal to display text:
 
 - `way:<wayId>` for a named way;
-- `standalone:<segmentId>` for a standalone named feature;
-- `null` for intentionally unnamed spans.
+- `standalone:<segmentId>` for a standalone named feature; and
+- `null` for intentionally unnamed, junction, off-network, unreviewed, or
+  conflicting spans.
 
 Adjacent traversal pieces merge into a guidance span only when guidance
-identity **and current facility semantics** match. This allows the current
-surface/class badge to change without implying that the rider left the named
-way.
+identity, resolution status, network role, junction context, and current
+facility semantics match. For planner summaries, compatible child spans with
+the same non-null identity can form one higher-level route run even when exact
+surface or class changes. The child spans remain attached so the UI can show
+mixed surfaces, junction context, and warnings honestly.
 
-For planner summaries, adjacent guidance spans with the same non-null guidance
-identity are grouped into a higher-level route run even if their exact surface
-or class changes. The child spans remain attached to that run, so the UI can
-show mixed surfaces and warnings honestly.
+### Direction-scoped and multiple memberships
 
-### Multiple CycleWays memberships
-
-The current route builder can take the first CycleWays membership on an edge.
-Guidance identity must instead consider every accepted direction-scoped
-membership covering the traversal:
+The current base graph carries `cwAlignments.forward/reverse` membership
+records with segment ID, alignment key, and mapping digest. Guidance resolution
+must inspect every membership for the actual traversal direction:
 
 - if all memberships resolve to the same guidance identity, the traversal is
-  unambiguous;
-- if they resolve to different identities, the build/report flags a guidance
-  conflict rather than choosing the first name;
+  guidance-unambiguous and retains every exact segment ID;
+- if they resolve to different identities, validation reports a structured
+  conflict rather than choosing array position zero; and
 - until corrected, runtime uses a conservative facility-class fallback and
   does not speak either conflicting name.
 
+Legacy undirected `cwSegmentIds` may be read only through the existing
+compatibility path. New guidance logic must not turn that fallback into the
+authority for a current V3 route.
+
+### Network-junction spans
+
+A direction-scoped `cwJunctions` membership makes a span part of CycleWays even
+when it has no segment membership. Such a span has `networkRole: junction`,
+`onCycleways: true`, no guidance identity, and optional `junctionId` and
+`junctionName` landmark context.
+
+If a valid traversal carries both segment membership and junction context, as
+with a junction in the middle of one logical segment, `networkRole` remains
+`segment` and the segment guidance identity remains current; junction evidence
+is retained only as context.
+
+The same precedence protects staged connector migration: while a connector
+segment is still active, its explicit guidance role remains visible. It becomes
+a junction-only, no-row span only after the segment is deprecated and route/
+share/navigation parity has passed under the network-junction design.
+
+The junction span is retained exactly but does not become an itinerary row or
+a fake unnamed segment. If the route enters and exits on the same guidance
+identity, the route run may bridge across the junction while retaining the
+junction child span. If the identities differ, the junction remains contextual
+space between the two runs; topology decides the maneuver and the destination
+way supplies the “onto” wording. A junction name may decorate that maneuver as
+a landmark but never becomes the current road name.
+
+A published junction in the middle of one logical segment does not split that
+segment's guidance continuity. Starting or ending inside a junction may show
+location context such as the junction landmark, but still does not create a
+way identity. Conflicting simultaneous junction memberships are validation
+errors rather than first-membership wins.
+
 ### `onCycleways` is independent of naming
 
-The current model often treats “has a segment name” as equivalent to “is on the
-CycleWays network.” The new model separates:
+The new model separates CycleWays membership, guidance-name availability,
+network role, and facility class. A CycleWays segment can be intentionally
+unnamed; a network junction is on CycleWays but road-name-less; and an
+off-network base road may eventually have a reviewed name without becoming a
+CycleWays span.
 
-- CycleWays ownership;
-- guidance-name availability;
-- facility class.
+### Route transformations and restoration
 
-A named base road may be off the CycleWays overlay, and a CycleWays segment may
-be intentionally unnamed.
+Clip-to-start and rotate-loop transforms apply the same distance remapping to
+exact and guidance spans. A reverse route reverses distance ranges but resolves
+their contents from the reversed attestation's opposite-direction memberships
+or from a fresh directed route; it must not reverse forward names/membership
+arrays. Approach and rejoin legs derive their own context from their own
+traversals. No transform rebuilds identity from visible names.
 
-### Route transformations
-
-Reverse, clip-to-start, rotate-loop, approach, and rejoin route transforms must
-apply the same distance remapping to segment spans and guidance spans. They may
-not rebuild guidance membership from visible names after transformation.
-
-Navigation route fingerprints/snapshots include the resolved guidance metadata
-or a guidance-data version. Restoring an older snapshot without compatible
-guidance data regenerates cues from the immutable route plus current metadata
-rather than replaying stale segment-name cues.
+Guidance metadata is not added to V6 route URLs or traversal attestation.
+Exact current-graph replay and historical-anchor recovery continue to use
+stable base-edge/segment evidence; a current-policy replan then derives current
+guidance from its new traversal. Effective navigation plans and persisted cue
+state do carry a guidance schema/digest, so incompatible old cue state is
+regenerated or discarded rather than replaying stale segment-name speech.
 
 ## Decision 5: Guidance semantics depend on topology plus identity
 
@@ -396,6 +495,8 @@ must turn, keep, cross, or continue. Guidance identity supplies the wording.
 | Straight transition to a different named way with no decision | Current-way UI updates; no fake turn and normally no voice |
 | Enter a named standalone bridge | “חצו את גשר עינות ירדן”; merge with a coincident turn when necessary |
 | Exit a standalone bridge | Speak only if the exit contains a real decision |
+| Pass through a junction and remain on the same way | Keep the same current way; use junction context only when a real decision needs it |
+| Pass through a junction onto a different way | The maneuver names the destination way and may identify the junction as a landmark |
 | Enter an intentionally unnamed span | Use a kind/class fallback only when useful; never speak the internal name |
 | Surface/safety change inside one named way | Separate condition cue; never model it as a road-name transition |
 
@@ -410,6 +511,12 @@ the rider does not receive two competing instructions. The bridge context cue
 must never mask a maneuver. Other standalone kinds remain itinerary/current-
 facility context until that kind has explicit guidance copy.
 
+Network-junction spans never produce a generic `enter-feature` event merely
+because the route crossed the junction boundary. Existing roundabout and
+reviewed crossing cues remain their own topology and safety authorities.
+Guidance decorates those cues with the before/after way and optional
+`junctionName`; it does not replace, duplicate, or suppress them.
+
 ### Name fallback order
 
 1. Reviewed named-way or standalone visual/spoken name.
@@ -418,12 +525,17 @@ facility context until that kind has explicit guidance copy.
 4. Generic `המשך במסלול`.
 
 The internal segment name is not a fallback once guidance naming is enabled.
+A junction landmark name is optional maneuver/location context and is not
+inserted into this current-road fallback chain.
 
 ### Current-road presentation
 
 - Named way: show its name. Add a class/surface badge only when it adds useful
   information; avoid redundant copy such as `כביש 99 · כביש`.
 - Standalone feature: show its name with an appropriate kind icon/label.
+- Network junction: keep the preceding/following way when continuity is known;
+  otherwise show a neutral facility/location state, optionally with the
+  junction landmark as secondary context.
 - Unnamed span: show the best facility-class fallback.
 - Next-road context uses the next different guidance identity, not the next
   internal segment.
@@ -445,6 +557,8 @@ route run
   surfaceClasses[]
   segmentIds[]
   sectionLabels[]
+  junctionContexts[]
+  entryJunctionContext (when a different-way transition precedes the run)
   warningCount / poiCount
   hasMixedSurface
 ```
@@ -458,6 +572,10 @@ Itinerary rules:
 - Consecutive segments in the same named way produce one collapsed row.
 - Standalone named features always receive a row, even when short, because
   they are recognizable landmarks.
+- Network-junction spans never receive a fake facility row. They remain exact
+  contextual children: they can bridge one same-way occurrence, or attach as
+  entry context to the following run and decorate the associated maneuver when
+  the before/after identities differ.
 - Short unnamed connectors without warnings or meaningful condition changes
   may be visually folded between neighboring rows.
 - A material unnamed run, or any unnamed run with warnings/POIs, receives a
@@ -476,8 +594,16 @@ surface mix, warnings, and itinerary are rider-facing.
 
 ### Network browsing before a route is built
 
-The CycleWays network remains a clean line overlay. It does not render every
-internal segment name as persistent map text.
+The shared CycleWays network keeps its existing representation handoff:
+
+- logical source segments provide overview geometry at lower zoom;
+- accepted physical alignments provide directional detail at higher zoom; and
+- published junction footprints remain visible but non-segment-interactive.
+
+Logical and physical features for one segment resolve through the same stable
+segment ID. An alignment key can remain in diagnostics and route-point snapping
+but does not appear as a separate rider-facing section. The network does not
+render every internal or guidance name as persistent map text.
 
 Mapbox's base labels remain the general road-label source. CycleWays provides
 the authoritative on-demand detail card when a user hovers or focuses an exact
@@ -513,15 +639,22 @@ Intentionally unnamed section:
 <exact section metrics / warnings>
 ```
 
-The exact hovered/focused segment remains strongly highlighted. Other members
-of the same named way are not automatically highlighted on every hover because
-a long way can dominate the map. The card offers `הצגת כל הדרך`; activating it
-applies a lighter whole-way context highlight without changing the exact
-selected segment.
+Hovering either the logical overview or one physical alignment opens the same
+logical segment card. A published junction footprint does not fabricate a
+segment card. The exact segment remains strongly highlighted in the currently
+visible representation. Other members of the same named way are not
+automatically highlighted on every hover because a long way can dominate the
+map.
 
-Map focus/filtering moves to stable segment ID when practical. Until then, the
-existing unique internal name remains the hidden focus key; the repeated
-guidance name must never be used as a Mapbox equality filter for exact focus.
+The card offers `הצגת כל הדרך`; activating it applies a lighter highlight to
+the logical and physical features for every active member segment ID without
+changing exact selection. It does not select junction footprints simply
+because they connect member arms.
+
+Exact focus/filter state for this feature moves to stable segment ID as part of
+the implementation. The existing internal-name callback/filter can remain only
+as a compatibility adapter; neither repeated guidance names nor junction names
+may be used as exact Mapbox equality keys.
 
 ### Built-route labels on the map
 
@@ -532,6 +665,8 @@ Once a route exists, the map renders sparse **route-only** guidance labels:
   visible length;
 - standalone features use a midpoint label/icon;
 - unnamed runs receive no proper-name label;
+- junction landmark names are not emitted as way-label candidates; a separate
+  landmark or maneuver treatment may show them when useful;
 - collision handling and a large spacing keep labels subordinate to the route
   line and base map;
 - internal section labels are never drawn repeatedly along the map.
@@ -553,8 +688,9 @@ shows:
 
 Selecting a row highlights only that route-distance run, not every occurrence
 of the named way and not its full regional geometry. Expanding the row reveals
-section labels and exact local warnings. An explicit whole-way action can show
-the full named way when desired.
+section labels, retained junction context, and exact local warnings. A
+junction is contextual detail rather than an extra itinerary row. An explicit
+whole-way action can show the full named way when desired.
 
 The existing GPX/share summary that lists every `selectedSegments` name is
 replaced by this itinerary. POI and warning cards use:
@@ -613,8 +749,14 @@ condition changes in the background.
 
 ## Editor experience
 
-Add a `הכוונה ושם דרך` section to the segment editor with three explicit role
-choices:
+Add a `הכוונה ושם דרך` section to the selected-segment inspector in the
+existing Network workspace's **CW network** focus. It is not a new top-level
+workspace and does not revive the old separate mapping/direction workflow.
+Switching to **Base network** focus may show the selected way's alignment and
+junction evidence as context, while guidance classification remains owned by
+the logical segment.
+
+The section has three explicit role choices:
 
 - `חלק מדרך בעלת שם` — autocomplete/select a registry way, with create-new;
 - `מאפיין עצמאי בעל שם` — enter public name and kind;
@@ -633,9 +775,18 @@ Named-way management provides:
 - a list of section labels for quick consistency review.
 
 Because the data is spatially sequential, the editor can propose the unique
-contiguous chain between two selected members. The proposal is previewed and
-confirmed; location is an authoring aid, not an implicit production naming
+contiguous chain between two selected members. It traverses the same reviewed
+logical adjacency graph used by validation, including accepted alignment
+terminals and published junction arm connections. The proposal is previewed
+and confirmed; location is an authoring aid, not an implicit production naming
 algorithm.
+
+The current editor automatically persists deliberate source edits and runs
+revision-aware background reconciliation. Guidance edits must participate in
+that coordinator. Operations that create/edit a registry way and assign source
+segments are one optimistic, server-validated transaction across both
+canonical files; a superseded revision cannot partially apply. Build and
+Promote remain explicit release actions.
 
 ### Editor validation
 
@@ -648,6 +799,7 @@ Blocking after activation:
 - one segment assigned to multiple ways;
 - conflicting guidance identities on overlapping accepted traversal
   memberships;
+- ambiguous multiple junction memberships used as one route span;
 - empty active named way.
 
 Warnings:
@@ -657,7 +809,9 @@ Warnings:
 - standalone name duplicates an adjacent named way and may be misclassified;
 - visual and spoken names differ;
 - unusually short/long unnamed connector;
-- same visible name is used by multiple nearby way IDs.
+- same visible name is used by multiple nearby way IDs;
+- a named-way adjacency that has only legacy source-endpoint evidence or lacks
+  a legal direction expected by the curator.
 
 ## Generated and runtime data
 
@@ -672,8 +826,8 @@ the repeated guidance name as an object key.
 
 ### Processed CycleWays GeoJSON
 
-Publish stable `id` plus compact resolved fields required for map cards and
-focus context:
+Publish stable `id` plus compact resolved fields on the logical segment feature
+for map cards and focus context:
 
 - `guidanceRole`;
 - `navigationWayId` when applicable;
@@ -681,39 +835,72 @@ focus context:
 - `navigationKind`;
 - `sectionLabel` when present.
 
-Exact map hit-testing and focus continue to use segment ID/internal key.
+The shared map composer already copies logical segment properties onto accepted
+physical alignment features by segment ID, so the build does not maintain a
+second independently editable name on every direction. Exact hit-testing and
+focus use segment ID. `alignmentKey` remains physical/routing context only.
+Published junction geometry retains `networkRole: junction`, `junctionId`, and
+its landmark name, but never receives segment guidance fields.
 
 ### Named-way asset
 
-Publish a compact registry for web and native, bundled with the same asset
-version as segment metadata. Generated membership indexes include:
+Publish a compact `navigation-ways.json` runtime asset for web and native.
+`map-manifest.json` references it as `navigationWays`, includes its SHA-256 in
+`hashes` and `releaseIndex.mapAssetHashes`, and includes its content in the map
+version. Generated membership indexes include:
 
 - way ID → active segment IDs;
 - segment ID → resolved guidance record.
 
 The source registry remains the canonical editable form; indexes are generated.
+The asset also carries schema version, guidance digest, coverage summary, and
+readiness. Native offline sync discovers it explicitly from the manifest and
+verifies the manifest hash like the other JSON assets.
 
 ### Route/catalog snapshots
 
-Route state and catalog snapshots retain exact segment spans and add guidance
-spans or enough versioned evidence to rebuild them deterministically. Snapshot
-builders regenerate route itineraries when the guidance-data version changes.
+Live route state and featured-route snapshots retain exact spans and guidance
+spans, plus the guidance schema/digest used to resolve them. Snapshot projection
+and loading must actually round-trip those fields; retaining them in an
+in-memory route manager is insufficient. A snapshot records its map version and
+guidance asset hash. The release manifest binds the route-catalog digest and
+every featured-snapshot digest into the release bundle, so a snapshot does not
+self-reference the final `releaseBundleDigest`.
 
 Shared route URLs remain based on route points, stable segment IDs, and/or
 stable base-edge share IDs. Guidance names are presentation metadata and do not
-become part of URL identity.
+become part of URL identity. Exact V6 replay, historical-anchor recovery, and
+current-policy replanning all derive guidance from the resulting current
+traversal rather than trusting names stored in a token.
 
 ### Base-routing shards
 
-CycleWays-aligned base traversals resolve guidance through stable segment IDs.
-Unaligned base edges continue to use route-class fallback in the first
-release.
+CycleWays-aligned base traversals resolve guidance through their current
+direction-scoped `cwAlignments` records. Junction-internal traversals resolve
+their on-network role through direction-scoped `cwJunctions` records. The
+guidance registry remains a separate release asset rather than duplicating
+mutable display text into every shard. Unaligned base edges continue to use
+route-class fallback in the first release.
 
 A later shard schema may carry normalized OSM `name`/`ref` and an edge guidance
 identity. That extension must use connected topology and curated overrides; it
 must not group every edge with the same OSM text globally. The runtime guidance
 span contract is intentionally source-neutral so the later extension does not
 require another UI redesign.
+
+### Build and release bundle
+
+Build stages content-versioned map artifacts and computes one map version from
+all relevant inputs, including the guidance asset. Promote then prepares the
+route catalog and every featured snapshot against that staged map, computes the
+release index and `releaseBundleDigest`, copies the complete target set into the
+public publication slots, and switches `map-manifest.json` last.
+
+The public filenames may be stable aliases. Consistency comes from the manifest
+version, per-asset hashes, release index, and manifest-last switch—not from
+assuming that every public filename is immutable. A guidance release is
+therefore not followed by a separate snapshot promotion; both are one atomic
+release preparation and promotion.
 
 ## Migration and rollout strategy
 
@@ -733,7 +920,11 @@ Classify and visually review at least:
 - `גשר עינות ירדן` as a standalone feature;
 - representative unnamed road, dirt, and path connectors;
 - a segment split inside a named way;
-- an overlapping CycleWays-membership case.
+- an overlapping direction-scoped CycleWays-membership case;
+- one same-way and one different-way transition through a published junction;
+- a published junction in the middle of one segment; and
+- a current V6 route, an exact restore, and a historical-anchor current-policy
+  replan.
 
 This corpus becomes the navigation and planner fixture set.
 
@@ -743,8 +934,13 @@ Do not partially switch production cues from segment names to guidance names.
 Enable the new behavior only when:
 
 - every active CycleWays segment has an explicit valid role;
-- named-way connectivity validation passes;
-- accepted overlap conflicts are resolved or explicitly suppressed;
+- topology-backed named-way connectivity validation passes;
+- accepted overlap conflicts are resolved or carry an explicit reviewed
+  resolution that remains deterministic at runtime; a generic suppression does
+  not authorize guessed speech;
+- ambiguous junction membership and junction/way presentation cases pass;
+- the promoted release bundle contains a matching guidance asset, route
+  catalog, and featured snapshots;
 - web/mobile planner fixtures and navigation scenarios pass.
 
 After activation, promotion blocks new active unclassified segments. Drafts
@@ -752,8 +948,10 @@ may remain unreviewed.
 
 ### Compatibility cleanup
 
-After guidance behavior is stable, separately migrate map focus, segment
-metadata joins, POI association, and route state toward numeric segment IDs.
+Exact public-map focus for this feature migrates to numeric segment ID during
+implementation because the logical and physical map features already expose
+it. After guidance behavior is stable, remaining name-keyed metadata joins,
+POI association, diagnostics, and storage adapters can migrate separately.
 Only after those migrations should the repository consider renaming the old
 `name` concept to an explicitly internal/editor label or allowing repeated
 internal labels.
@@ -770,6 +968,8 @@ internal labels.
 - Road 99 and its parallel cycleway remain distinct.
 - Multiple accepted CycleWays memberships resolve deterministically or report a
   conflict.
+- Direct alignment-terminal adjacency and adjacency through published junction
+  arms produce the expected named-way chain; proximity alone does not.
 
 ### Route-model tests
 
@@ -780,6 +980,13 @@ internal labels.
 - Standalone bridges remain separate runs.
 - Unnamed spans never inherit an internal segment name.
 - Surface/class changes update local context without changing way continuity.
+- Same-way travel through a junction remains one route run with retained
+  junction context; different-way travel produces two runs and no junction row.
+- A junction in the middle of one segment does not split its guidance identity.
+- Featured snapshot build and load round-trip exact spans, guidance spans, and
+  the guidance asset hash.
+- Exact V6 restore and historical-anchor current-policy replan both derive
+  guidance from the resulting direction-scoped traversal.
 
 ### Navigation tests
 
@@ -792,6 +999,9 @@ internal labels.
 - The Road 99 cycleway is spoken as the cycleway, never the road.
 - Unnamed connector guidance uses class/generic fallback.
 - Safety/surface transitions remain available inside one named way.
+- A roundabout/crossing through a named junction remains one topology cue,
+  names the destination way when available, and may add the junction landmark
+  without calling it the road.
 - Old persisted navigation state regenerates rather than replaying stale
   segment-name cues.
 
@@ -799,9 +1009,13 @@ internal labels.
 
 - Hover/focus selects and highlights one exact segment even when many segments
   share a guidance name.
+- Logical overview and physical alignment hits for that segment open the same
+  ID-backed card; a junction footprint opens no segment card.
 - The card title is the guidance name; section label and metrics describe the
   exact segment.
 - Whole-way context is opt-in.
+- Whole-way context covers logical and physical member features but does not
+  absorb connecting junction footprints.
 - The Build itinerary groups contiguous runs and expands to exact sections.
 - Selecting a run highlights only that route occurrence.
 - Route summary, warnings, and POIs no longer expose raw internal names as
@@ -815,6 +1029,8 @@ internal labels.
 - Selecting a run/section highlights the correct route range and manages sheet
   visibility without hiding the selection.
 - The mobile summary groups runs and preserves exact warnings.
+- Published junction spans remain on-network context without becoming planner
+  rows or segment interactions.
 - Route-only labels remain sparse, with standalone landmarks prioritized.
 - Starting navigation preserves the itinerary's resolved guidance names.
 
@@ -853,8 +1069,16 @@ voice and tested separately from visual copy.
 
 ### Existing name-keyed joins remain fragile
 
-The additive design avoids breaking them immediately, but all new guidance
-logic keys by stable IDs. A later ID-first cleanup remains an explicit follow-up.
+All new guidance logic keys by stable IDs, and exact public-map focus moves to
+ID as part of this work. Remaining legacy name-keyed joins stay behind explicit
+adapters and are a later cleanup.
+
+### Release-bundle drift can create internally inconsistent copy
+
+The guidance asset, route catalog, and featured snapshots are prepared in one
+promotion transaction. Their hashes are bound by the release index and the
+manifest switches last. Activation rejects an incomplete/unsupported guidance
+asset for the whole session rather than mixing per-span behavior.
 
 ## Final product principles
 
@@ -862,9 +1086,12 @@ logic keys by stable IDs. A later ID-first cleanup remains an explicit follow-up
 - Guidance names describe continuous navigable facilities.
 - Named-way membership is optional; explicit guidance classification is not.
 - A name is presentation, never identity.
+- Direction-scoped traversal evidence determines which memberships apply.
+- Junctions are named landmarks with road-name-less internal spans, not ways.
 - Topology decides maneuvers; guidance identity decides wording.
 - Planner summaries group contiguous route occurrences, never global name
   matches.
 - Exact segment detail remains one expansion or inspection away.
+- Guidance data and derived snapshots ship in one manifest-bound release.
 - Web and native share semantics while using interaction patterns appropriate
   to hover/desktop and touch/mobile.
