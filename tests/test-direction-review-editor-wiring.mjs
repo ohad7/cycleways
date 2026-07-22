@@ -118,7 +118,7 @@ assert.match(editor, /!state\.directionReview\.editing &&[\s\S]{0,100}cwOverlayN
 assert.match(editor, /Boolean\(directionReviewSegment\(\)\)/);
 assert.match(
   editor,
-  /direction-review-alignments["']\)\?\.setData\(directionReviewAlignmentCollection\(\)\)/,
+  /setSourceData\(["']direction-review-alignments["'], directionReviewAlignmentCollection\)/,
   "base-overlay edge hover must refresh the visible Direction Review layer",
 );
 assert.match(editor, /editingPhysicalEdges \? 0\.2/);

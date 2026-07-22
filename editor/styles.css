@@ -437,6 +437,26 @@ h2 {
   min-width: 0;
 }
 
+.activity-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.activity-control label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.activity-control a {
+  color: var(--accent-dark);
+}
+
 .map-toolbar.drawing .toolbar-group-create,
 .map-toolbar.drawing .toolbar-group-edit,
 .map-toolbar.drawing .toolbar-group-view {

@@ -13,6 +13,7 @@ from processing.match_cycleways_to_osm_graph import (
     build_preview,
     build_single_segment_preview,
 )
+from processing.osm_segment_matcher_worker import PreparedSegmentMatcher
 
 
 BASE_LNG = 35.0
@@ -153,6 +154,60 @@ class OsmMatcherRegressionTests(unittest.TestCase):
         self.assertEqual(performance["counts"]["graphEdges"], 1)
         self.assertEqual(performance["counts"]["connectivityEdges"], 1)
         self.assertGreater(performance["counts"]["segmentSamples"], 1)
+
+    def test_prepared_matcher_reuses_indexes_without_changing_results(self):
+        source_segment = segment(77, [coord(0), coord(100)])
+        edge_features = [
+            graph_edge("edge-1", [coord(-10), coord(110)], "a", "b", 120)
+        ]
+        graph = graph_collection(edge_features)
+        expected_summary, expected_preview = build_single_segment_preview(
+            source_segment,
+            graph,
+            sample_spacing_m=18.0,
+            max_distance_m=8.0,
+            direction_limit_degrees=60.0,
+            direction_penalty_m=10.0,
+            grid_cell_m=90.0,
+        )
+
+        matcher = PreparedSegmentMatcher(
+            graph,
+            graph_digest="sha256:test",
+            sample_spacing_m=18.0,
+            max_distance_m=8.0,
+            direction_limit_degrees=60.0,
+            direction_penalty_m=10.0,
+            grid_cell_m=90.0,
+        )
+        actual_summary, actual_preview, performance = matcher.match(source_segment)
+
+        self.assertEqual(actual_summary, expected_summary)
+        self.assertEqual(actual_preview, expected_preview)
+        self.assertTrue(performance["worker"]["cacheHit"])
+        self.assertEqual(performance["worker"]["graphDigest"], "sha256:test")
+        self.assertLess(performance["reusableGraphSetupMs"], 0.001)
+        self.assertGreaterEqual(matcher.setup_performance["reusableGraphSetupMs"], 0)
+
+    def test_prepared_matcher_falls_back_for_segment_outside_graph_bounds(self):
+        graph = graph_collection(
+            [graph_edge("edge-1", [coord(0), coord(100)], "a", "b", 100)]
+        )
+        outside_segment = segment(88, [coord(150), coord(250)])
+        matcher = PreparedSegmentMatcher(
+            graph,
+            graph_digest="sha256:test",
+            sample_spacing_m=18.0,
+            max_distance_m=8.0,
+            direction_limit_degrees=60.0,
+            direction_penalty_m=10.0,
+            grid_cell_m=90.0,
+        )
+
+        _summary, _preview, performance = matcher.match(outside_segment)
+
+        self.assertFalse(performance["worker"]["cacheHit"])
+        self.assertGreaterEqual(performance["reusableGraphSetupMs"], 0)
 
     def test_closed_roundabout_with_one_attachment_keeps_the_complete_ring(self):
         a = [round(value, 7) for value in coord(0, 0)]

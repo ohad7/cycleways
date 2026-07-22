@@ -98,6 +98,8 @@ import {
   parseStoredMapView,
   serializeMapView,
 } from "./lib/map-view-storage.mjs";
+import { updateGeoJsonSource } from "./lib/map-source-updater.mjs";
+import { createEditorActivityTracker } from "./lib/editor-activity-client.mjs";
 
 const CONNECTOR_CLASS_KEYS = ["cw_network", "road", "local_road", "cycle", "path_track", "manual", "other"];
 const CONNECTOR_ACCESS_KEYS = ["restricted", "conditional"];
@@ -260,6 +262,7 @@ const CURRENT_MAPPING_LENGTH_WARNING_MAX_RATIO = 1.35;
 const CURRENT_MAPPING_LENGTH_BLOCK_MIN_RATIO = 0.8;
 const CURRENT_MAPPING_LENGTH_BLOCK_MAX_RATIO = 2.0;
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
+const editorActivity = createEditorActivityTracker();
 
 function featureFlagValue(key, defaultValue) {
   const globalValue = window.CYCLEWAYS_FEATURE_FLAGS?.[key];
@@ -372,6 +375,7 @@ const state = {
     queueFilter: "issues",
     queueQuery: "",
     queueSelectedEvidenceEdgeId: null,
+    cache: {},
   },
   authoring: {
     timer: null,
@@ -401,6 +405,7 @@ const state = {
     activeSegmentIds: new Set(),
     lastError: null,
     transientIssues: new Map(),
+    issueRevision: 0,
     explicitEdgeRefsBySegment: new Map(),
     metadataSegmentIds: new Set(),
     segmentRevisions: new Map(),
@@ -512,6 +517,7 @@ const els = {
   editSegmentEdges: document.getElementById("edit-segment-edges"),
   splitSegmentEdge: document.getElementById("split-segment-edge"),
   mapStyle: document.getElementById("map-style"),
+  activityTimingEnabled: document.getElementById("activity-timing-enabled"),
   saveSource: document.getElementById("save-source"),
   runBuild: document.getElementById("run-build"),
   promoteBuild: document.getElementById("promote-build"),
@@ -640,6 +646,7 @@ map.addControl(new mapboxgl.NavigationControl(), "bottom-left");
 map.on("moveend", () => persistMapView(map));
 
 els.mapStyle.value = state.mapStyle;
+els.activityTimingEnabled.checked = editorActivity.enabled;
 
 function getInitialMapStyle() {
   try {
@@ -1008,13 +1015,24 @@ async function runAuthoringStage(stage, action, { segmentId = null } = {}) {
   state.authoring.currentSegmentId = segmentId;
   renderAuthoringState();
   const startedAt = performance.now();
+  let outcome = "success";
   try {
     return await action();
+  } catch (error) {
+    outcome = isAuthoringAbort(error) ? "aborted" : "error";
+    throw error;
   } finally {
+    const durationMs = Math.round(performance.now() - startedAt);
     state.authoring.runTimings.push({
       stage,
       segmentId,
-      durationMs: Math.round(performance.now() - startedAt),
+      durationMs,
+    });
+    editorActivity.timing("authoring_stage", durationMs, {
+      stage,
+      segmentId,
+      outcome,
+      workspace: state.workspaceMode,
     });
   }
 }
@@ -1058,6 +1076,7 @@ async function applyNetworkAuthoringSegment(job, revision, { signal } = {}) {
       code: "alignment_empty",
       message: "The matcher did not produce a base-edge path.",
     });
+    state.authoring.issueRevision += 1;
     return { skipped: true, reason: "no-edge-refs", persistedMatch };
   }
 
@@ -1111,11 +1130,13 @@ function adoptNetworkAuthoringSegmentResult(segmentId, payload) {
   }
   if (payload.decision?.outcome === "apply") {
     state.authoring.transientIssues.delete(Number(segmentId));
+    state.authoring.issueRevision += 1;
   } else {
     state.authoring.transientIssues.set(Number(segmentId), {
       code: payload.decision?.code || "direction_validation",
       message: payload.decision?.message || "Review required",
     });
+    state.authoring.issueRevision += 1;
   }
 }
 
@@ -1145,6 +1166,9 @@ function adoptNetworkAuthoringMetadataResult(payload) {
     if (payload.compatibilityOverlay) state.baseOverlay.overlay = payload.compatibilityOverlay;
     for (const segmentId of payload.automaticallyAppliedSegmentIds || []) {
       state.authoring.transientIssues.delete(Number(segmentId));
+    }
+    if ((payload.automaticallyAppliedSegmentIds || []).length > 0) {
+      state.authoring.issueRevision += 1;
     }
   }
 }
@@ -2562,16 +2586,83 @@ function normalizeOverlayEdgeRefs(edgeRefs) {
     }));
 }
 
+function baseGraphMapSourceRequired() {
+  const editingPhysicalEdges = state.editingOverlayEdges || state.directionReview.editing;
+  const editingPickedEdges =
+    (state.editingEdgePickEdges || state.splittingEdgePickAt !== null) && isEdgePickedSelected();
+  return Boolean(
+    state.baseOverlay.loaded &&
+      (state.workspaceMode === "base" ||
+        state.networkContextVisible ||
+        editingPhysicalEdges ||
+        state.showUnresolvedSegments ||
+        isComposingNewSegmentEdges() ||
+        editingPickedEdges)
+  );
+}
+
+function baseDirectionMapSourceRequired() {
+  return Boolean(
+    state.workspaceMode === "crossings" ||
+      (state.workspaceMode === "base" && state.baseOverlay.showOneWayDirections)
+  );
+}
+
 function updateMapSources() {
   if (!map.getSource("segments")) return;
-  setSourceData("segments", mapFeatureCollection());
-  setSourceData("selected-segment-source", selectedFeatureCollection());
-  setSourceData("vertices", vertexCollection());
-  setSourceData("data-markers", dataMarkerCollection());
+  setSourceData("segments", mapFeatureCollection, [
+    state.workspaceMode,
+    state.activeFeatures,
+    state.authoring.sourceRevision,
+  ]);
+  setSourceData("selected-segment-source", selectedFeatureCollection, [
+    state.workspaceMode,
+    state.networkContextVisible,
+    selectedRecord(),
+    state.selectedIndex,
+    state.authoring.sourceRevision,
+  ]);
+  setSourceData("vertices", vertexCollection, [
+    state.workspaceMode,
+    selectedRecord(),
+    state.selectedVertexIndex,
+    state.baseOverlay.selectedManualEdgeIndex,
+    state.baseOverlay.selectedManualVertexIndex,
+    state.authoring.sourceRevision,
+    state.authoring.manualRevision,
+  ]);
+  setSourceData("data-markers", dataMarkerCollection, [
+    state.workspaceMode,
+    state.activeFeatures,
+    selectedSourceIndex(),
+    state.selectedDataIndex,
+    state.authoring.sourceRevision,
+  ]);
   setSourceData("draw-line", drawLineCollection());
   setSourceData("draw-points", drawPointCollection());
-  setSourceData("base-graph-edges", baseGraphCollection());
-  setSourceData("base-graph-one-way-directions", baseGraphOneWayDirectionCollection());
+  setSourceData(
+    "base-graph-edges",
+    baseGraphMapSourceRequired() ? baseGraphCollection : EMPTY_FEATURE_COLLECTION,
+    [
+      baseGraphMapSourceRequired(),
+      state.baseOverlay.graphEdges,
+      state.baseOverlay.manualBaseEdges,
+      state.baseOverlay.traversalOverrides,
+      state.directionReview.overlay,
+      state.connectorLens.colorMode,
+      state.connectorLens.strategy,
+    ],
+  );
+  setSourceData(
+    "base-graph-one-way-directions",
+    baseDirectionMapSourceRequired() ? baseGraphOneWayDirectionCollection : EMPTY_FEATURE_COLLECTION,
+    [
+      baseDirectionMapSourceRequired(),
+      state.baseOverlay.graphEdges,
+      state.baseOverlay.manualBaseEdges,
+      state.baseOverlay.traversalOverrides,
+    ],
+  );
   setSourceData("selected-base-graph-edge", selectedBaseGraphEdgeCollection());
   setSourceData("junction-authoring-edges", junctionAuthoringEdgeCollection());
   setSourceData(
@@ -2597,15 +2688,24 @@ function updateMapSources() {
   updateWorkspaceLayerVisibility();
 }
 
-function setSourceData(sourceId, data) {
-  const source = map.getSource(sourceId);
-  if (!source) return;
-  const cached = state.mapSourceDataCache.get(sourceId);
-  if (cached?.source === source && cached.data === data) {
-    return;
-  }
-  source.setData(data);
-  state.mapSourceDataCache.set(sourceId, { source, data });
+function setSourceData(sourceId, data, revisionKey) {
+  return updateGeoJsonSource({
+    cache: state.mapSourceDataCache,
+    getSource: (id) => map.getSource(id),
+    sourceId,
+    buildData: data,
+    revisionKey,
+    onResult: (result) => {
+      const durationMs = Number(result.buildDurationMs || 0) + Number(result.setDataDurationMs || 0);
+      if (result.status === "updated" && durationMs >= 8) {
+        editorActivity.timing("map_source_update", durationMs, {
+          sourceId,
+          cacheStatus: result.status,
+          workspace: state.workspaceMode,
+        });
+      }
+    },
+  });
 }
 
 function setLayerVisibility(layerId, visible) {
@@ -2823,28 +2923,48 @@ function updateUnresolvedSegmentLayerFilter() {
 
 function updateSelectedSegmentEditSources() {
   if (!map.getSource("selected-segment-source")) return;
-  map.getSource("selected-segment-source").setData(selectedFeatureCollection());
-  map.getSource("vertices").setData(vertexCollection());
+  setSourceData("selected-segment-source", selectedFeatureCollection);
+  setSourceData("vertices", vertexCollection);
 }
 
 function updateDataMarkerSources() {
   if (!map.getSource("data-markers")) return;
-  map.getSource("data-markers").setData(dataMarkerCollection());
+  setSourceData("data-markers", dataMarkerCollection);
+}
+
+function updateDrawSources() {
+  setSourceData("draw-line", drawLineCollection);
+  setSourceData("draw-points", drawPointCollection);
+  setSourceData("compose-edge-pick", composeEdgePickCollection);
 }
 
 function updateManualBaseEditSources() {
   if (!map.getSource("manual-base-edges")) return;
-  map.getSource("manual-base-edges").setData(manualBaseEdgeCollection());
-  map.getSource("manual-base-edge-endpoints")?.setData(manualBaseEdgeEndpointCollection());
-  map.getSource("vertices").setData(vertexCollection());
+  setSourceData("manual-base-edges", manualBaseEdgeCollection);
+  setSourceData("manual-base-edge-endpoints", manualBaseEdgeEndpointCollection);
+  setSourceData("vertices", vertexCollection);
   if (map.getLayer("selected-manual-base-edge")) {
     map.setFilter("selected-manual-base-edge", selectedManualBaseEdgeFilter());
   }
 }
 
 function updateSelectedOverlayEdgeSources() {
-  map.getSource("selected-overlay-edges")?.setData(selectedOverlayEdgeCollection());
-  map.getSource("direction-review-alignments")?.setData(directionReviewAlignmentCollection());
+  setSourceData("selected-overlay-edges", selectedOverlayEdgeCollection);
+  setSourceData("direction-review-alignments", directionReviewAlignmentCollection);
+}
+
+function updateSegmentSelectionMapSources() {
+  setSourceData("selected-segment-source", selectedFeatureCollection);
+  setSourceData("vertices", vertexCollection);
+  setSourceData("data-markers", dataMarkerCollection);
+  setSourceData("selected-match-preview", selectedMatchCollection);
+  setSourceData("selected-overlay-edges", selectedOverlayEdgeCollection);
+  setSourceData("direction-review-alignments", directionReviewAlignmentCollection);
+  setSourceData("direction-review-endpoints", directionReviewEndpointCollection);
+  if (map.getLayer("segments-layer")) {
+    map.setFilter("segments-layer", unselectedFilter());
+  }
+  updateWorkspaceLayerVisibility();
 }
 
 function renderVertexSelectionState() {
@@ -3480,11 +3600,20 @@ function markBaseGraphStaleBecauseManualEdgesChanged() {
 }
 
 function graphEdgeIdSet() {
-  return new Set(
+  const cache = state.baseOverlay.cache || (state.baseOverlay.cache = {});
+  if (
+    cache.graphEdgeIdSet &&
+    cache.graphEdgeIdSetGraphEdges === state.baseOverlay.graphEdges
+  ) {
+    return cache.graphEdgeIdSet;
+  }
+  cache.graphEdgeIdSet = new Set(
     (state.baseOverlay.graphEdges?.features || [])
       .map((feature) => String(graphEdgeFeatureId(feature)))
       .filter(Boolean),
   );
+  cache.graphEdgeIdSetGraphEdges = state.baseOverlay.graphEdges;
+  return cache.graphEdgeIdSet;
 }
 
 function missingManualGraphEdgeIdsForSegment(segmentId) {
@@ -7291,9 +7420,35 @@ function renderBaseOverlayPanel() {
 }
 
 function directionReviewQueueRows() {
-  return buildDirectionReviewIssueRows(state.directionReview.overlay, {
+  const cache = state.directionReview.cache || (state.directionReview.cache = {});
+  if (
+    cache.issueRows &&
+    cache.issueRowsOverlay === state.directionReview.overlay &&
+    cache.issueRowsActiveFeatures === state.activeFeatures &&
+    cache.issueRowsRevision === state.authoring.issueRevision
+  ) {
+    return cache.issueRows;
+  }
+  cache.issueRows = buildDirectionReviewIssueRows(state.directionReview.overlay, {
     activeSegments: state.source ? activeSegmentDescriptors() : null,
   });
+  cache.issueRowsOverlay = state.directionReview.overlay;
+  cache.issueRowsActiveFeatures = state.activeFeatures;
+  cache.issueRowsRevision = state.authoring.issueRevision;
+  return cache.issueRows;
+}
+
+function directionReviewEvidenceRows() {
+  const cache = state.directionReview.cache || (state.directionReview.cache = {});
+  if (
+    cache.evidenceRows &&
+    cache.evidenceRowsOverlay === state.directionReview.overlay
+  ) {
+    return cache.evidenceRows;
+  }
+  cache.evidenceRows = buildDirectionReviewEvidenceRows(state.directionReview.overlay);
+  cache.evidenceRowsOverlay = state.directionReview.overlay;
+  return cache.evidenceRows;
 }
 
 function filteredDirectionReviewQueueRows() {
@@ -7304,7 +7459,7 @@ function filteredDirectionReviewQueueRows() {
 }
 
 function filteredDirectionReviewEvidenceQueueRows() {
-  let rows = buildDirectionReviewEvidenceRows(state.directionReview.overlay);
+  let rows = directionReviewEvidenceRows();
   if (
     DIRECTION_REVIEW_CLASSIFICATIONS.includes(state.directionReview.queueFilter) &&
     state.directionReview.queueFilter !== "direction_evidence_needed"
@@ -7369,7 +7524,7 @@ function renderDirectionReviewQueue() {
 
   const allRows = directionReviewQueueRows();
   const issueRows = allRows.filter((row) => !row.resolved);
-  const evidenceRows = buildDirectionReviewEvidenceRows(review.overlay);
+  const evidenceRows = directionReviewEvidenceRows();
   const counts = Object.fromEntries(
     DIRECTION_REVIEW_CLASSIFICATIONS.map((classification) => [
       classification,
@@ -7621,14 +7776,14 @@ function renderDirectionReviewEdges(segment, alignmentKey, record) {
     row.addEventListener("mouseenter", () => {
       state.baseOverlay.hoveredOverlayEdgeId = String(ref.edgeId);
       row.classList.add("hovered");
-      updateMapSources();
+      updateSelectedOverlayEdgeSources();
     });
     row.addEventListener("mouseleave", () => {
       if (String(state.baseOverlay.hoveredOverlayEdgeId) === String(ref.edgeId)) {
         state.baseOverlay.hoveredOverlayEdgeId = null;
       }
       row.classList.remove("hovered");
-      updateMapSources();
+      updateSelectedOverlayEdgeSources();
     });
     els.directionReviewEdges.appendChild(row);
   }
@@ -8139,11 +8294,74 @@ async function applySymmetricDirectionMigrationBatch() {
 
 function renderAll() {
   let stage = "summary";
+  let outcome = "success";
+  const startedAt = performance.now();
+  let stageStartedAt = startedAt;
+  const advanceStage = (nextStage) => {
+    const durationMs = performance.now() - stageStartedAt;
+    if (durationMs >= 8) {
+      editorActivity.timing("render_stage", durationMs, {
+        outcome,
+        stage,
+        workspace: state.workspaceMode,
+      });
+    }
+    stage = nextStage;
+    stageStartedAt = performance.now();
+  };
   try {
     els.sourceSummary.textContent = `${state.activeFeatures.length} active · ${state.source.features.length} records`;
-    stage = "workspace chrome";
+    advanceStage("workspace chrome");
     renderWorkspaceChrome();
-    stage = "draw controls";
+    advanceStage("draw controls");
+    renderDrawControls();
+    advanceStage("segment list");
+    renderList();
+    advanceStage("segment form");
+    renderForm();
+    advanceStage("segment routing");
+    renderNetworkSegmentRouting();
+    advanceStage("segment data");
+    renderDataList();
+    advanceStage("base graph panel");
+    renderBaseGraphPanel();
+    advanceStage("base overlay panel");
+    renderBaseOverlayPanel();
+    advanceStage("connector panel");
+    renderConnectorLensPanel();
+    advanceStage("junction panel");
+    renderRoundaboutsPanel();
+    advanceStage("crossing panel");
+    renderCrossingsPanel();
+    advanceStage("compose status");
+    renderComposeStatus();
+    advanceStage("authoring status");
+    renderAuthoringState();
+    advanceStage("map sources");
+    updateMapSources();
+  } catch (error) {
+    outcome = "error";
+    const message = error instanceof Error ? error.message : String(error);
+    showError(new Error(`Editor render failed during ${stage}: ${message}`));
+    throw error;
+  } finally {
+    advanceStage("complete");
+    const durationMs = performance.now() - startedAt;
+    if (durationMs >= 8 || outcome === "error") {
+      editorActivity.timing("render_all", durationMs, {
+        outcome,
+        stage,
+        workspace: state.workspaceMode,
+      });
+    }
+  }
+}
+
+function renderSegmentSelectionState() {
+  const startedAt = performance.now();
+  let stage = "draw controls";
+  let outcome = "success";
+  try {
     renderDrawControls();
     stage = "segment list";
     renderList();
@@ -8153,26 +8371,25 @@ function renderAll() {
     renderNetworkSegmentRouting();
     stage = "segment data";
     renderDataList();
-    stage = "base graph panel";
-    renderBaseGraphPanel();
     stage = "base overlay panel";
     renderBaseOverlayPanel();
-    stage = "connector panel";
-    renderConnectorLensPanel();
-    stage = "junction panel";
-    renderRoundaboutsPanel();
-    stage = "crossing panel";
-    renderCrossingsPanel();
     stage = "compose status";
     renderComposeStatus();
     stage = "authoring status";
     renderAuthoringState();
-    stage = "map sources";
-    updateMapSources();
+    stage = "selection map sources";
+    updateSegmentSelectionMapSources();
   } catch (error) {
+    outcome = "error";
     const message = error instanceof Error ? error.message : String(error);
-    showError(new Error(`Editor render failed during ${stage}: ${message}`));
+    showError(new Error(`Editor selection render failed during ${stage}: ${message}`));
     throw error;
+  } finally {
+    editorActivity.timing("render_selection", performance.now() - startedAt, {
+      outcome,
+      stage,
+      workspace: state.workspaceMode,
+    });
   }
 }
 
@@ -8186,7 +8403,11 @@ function selectFeatureByActiveIndex(index, fit = false) {
   state.editingOverlayEdges = false;
   state.selectedVertexIndex = -1;
   state.selectedDataIndex = -1;
-  renderAll();
+  renderSegmentSelectionState();
+  editorActivity.action("select_segment", {
+    segmentId: selectedSegmentId(),
+    workspace: state.workspaceMode,
+  });
   const feature = selectedFeature();
   if (feature) {
     setStatus(`Selected ${featureName(feature)}`);
@@ -8249,6 +8470,7 @@ async function setWorkspaceMode(mode) {
   const selectedBaseEdgeId =
     graphEdgeFeatureId(selectedBaseGraphEdge()) || selectedManualBaseEdgeId();
   state.workspaceMode = mode;
+  editorActivity.action("change_workspace", { workspace: mode });
   persistNetworkViewPreferences();
   if (mode !== "overlay") state.editingOverlayEdges = false;
   if (previousMode === "video-sync" && mode !== "video-sync") {
@@ -9421,7 +9643,7 @@ function removeLastDrawStep() {
     state.draw.edgeRefs = state.draw.edgeRefs
       .slice(0, -1)
       .map((ref, i) => ({ ...ref, sequenceIndex: i }));
-    updateMapSources();
+    updateDrawSources();
     renderDrawControls();
     renderComposeStatus();
     setStatus(`Removed last edge ${removed.edgeId} from draft.`);
@@ -9429,7 +9651,7 @@ function removeLastDrawStep() {
   }
   if (state.draw.coords.length === 0) return;
   state.draw.coords.pop();
-  updateMapSources();
+  updateDrawSources();
   renderDrawControls();
   setStatus("Removed last drawn point.");
 }
@@ -9463,7 +9685,7 @@ function handleDrawClick(event) {
     state.draw.endpoint = closest.endpoint;
     state.draw.hoverEndpoint = closest.endpoint;
     state.draw.hoverCoord = null;
-    updateMapSources();
+    updateDrawSources();
     renderDrawControls();
     setStatus(
       `Extending ${state.draw.type === "manualBaseEdgeExtend" ? "manual base edge" : "segment"} from the ${
@@ -9475,7 +9697,7 @@ function handleDrawClick(event) {
 
   state.draw.coords.push(coordFromLngLat(event.lngLat));
   state.draw.hoverCoord = null;
-  updateMapSources();
+  updateDrawSources();
   renderDrawControls();
   setStatus(
     state.draw.type === "new"
@@ -9504,7 +9726,7 @@ function updateDrawHover(event) {
     !state.draw.hoverEndpoint
       ? ""
       : "crosshair";
-  updateMapSources();
+  updateDrawSources();
 }
 
 function projectMeters(lng, lat, originLat) {
@@ -10758,27 +10980,43 @@ async function recalculateSegmentMatch(feature, { updateState = true, signal } =
   if (!feature || !Number.isInteger(segmentId)) {
     throw new Error("Cannot recalculate a segment without a valid id.");
   }
-  const response = await fetch("/api/osm/recalculate-segment", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    signal,
-    body: JSON.stringify({ feature }),
-  });
-  const payload = await response.json();
-  if (!response.ok || !payload.ok) {
-    const error = new Error(payload.error || `Selected match recalculation failed: ${response.status}`);
-    error.status = response.status;
-    error.code = payload.code;
+  const startedAt = performance.now();
+  let outcome = "success";
+  let matcherRuntime = "unknown";
+  try {
+    const response = await fetch("/api/osm/recalculate-segment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({ feature }),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      const error = new Error(payload.error || `Selected match recalculation failed: ${response.status}`);
+      error.status = response.status;
+      error.code = payload.code;
+      throw error;
+    }
+    matcherRuntime = payload.matcherRuntime || matcherRuntime;
+    if (updateState) {
+      replaceSelectedSegmentMatchResult(segmentId, payload.match.summary, payload.match.preview);
+      return payload.match.summary;
+    }
+    return {
+      summary: payload.match.summary,
+      preview: payload.match.preview || EMPTY_FEATURE_COLLECTION,
+    };
+  } catch (error) {
+    outcome = isAuthoringAbort(error) ? "aborted" : "error";
     throw error;
+  } finally {
+    editorActivity.timing("segment_recalculation", performance.now() - startedAt, {
+      matcherRuntime,
+      outcome,
+      segmentId,
+      workspace: state.workspaceMode,
+    });
   }
-  if (updateState) {
-    replaceSelectedSegmentMatchResult(segmentId, payload.match.summary, payload.match.preview);
-    return payload.match.summary;
-  }
-  return {
-    summary: payload.match.summary,
-    preview: payload.match.preview || EMPTY_FEATURE_COLLECTION,
-  };
 }
 
 async function recalculateSelectedOverlayMatch() {
@@ -11816,6 +12054,15 @@ function wireEvents() {
   );
   els.addData.addEventListener("click", addDataMarker);
   els.mapStyle.addEventListener("change", () => switchMapStyle(els.mapStyle.value));
+  els.activityTimingEnabled.addEventListener("change", () => {
+    editorActivity.setEnabled(els.activityTimingEnabled.checked);
+    setStatus(
+      els.activityTimingEnabled.checked
+        ? "Local performance timing enabled. Geometry and editor text are not recorded."
+        : "Local performance timing disabled.",
+    );
+  });
+  window.addEventListener("pagehide", () => editorActivity.flush().catch(() => {}));
   els.toggleUnresolvedSegments.addEventListener("click", () => toggleUnresolvedSegments().catch(showError));
   els.processChangedQueue.addEventListener("click", () => processChangedSegmentQueue().catch(showError));
   els.clearChangedQueue.addEventListener("click", clearChangedSegmentQueue);
@@ -12328,7 +12575,7 @@ function wireEvents() {
     clearSelectedSegmentMatchResult();
     queueChangedFeature(movedFeature);
     scheduleAuthoringSync();
-    map.getSource("segments")?.setData(mapFeatureCollection());
+    setSourceData("segments", mapFeatureCollection);
     renderForm();
     renderDrawControls();
     setStatus("Vertex moved.");

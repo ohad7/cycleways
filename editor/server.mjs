@@ -102,6 +102,8 @@ import {
   baseGraphFreshnessReason,
   compareBaseGraphBuildInputs,
 } from "./lib/base-graph-build-freshness.mjs";
+import { OsmSegmentMatcherWorker } from "./lib/osm-segment-matcher-worker.mjs";
+import { EditorActivityLog } from "./lib/editor-activity-log.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
@@ -128,6 +130,10 @@ const osmGraphEdgesPath = resolve(osmBuildDir, "osm-base-edges.geojson");
 const osmMatchSummaryPath = resolve(osmBuildDir, "cw-osm-match-summary.json");
 const osmMatchPreviewPath = resolve(osmBuildDir, "cw-osm-match-preview.geojson");
 const osmMatchesPath = resolve(osmBuildDir, "cw-osm-matches.json");
+const osmSegmentMatcherWorkerPath = resolve(
+  repoRoot,
+  "processing/osm_segment_matcher_worker.py",
+);
 const cwBaseOverlayPath = resolve(dataDir, "cw-base-overlay.json");
 const cwBaseOverlayV2StagedPath = resolve(dataDir, "cw-base-overlay.v2.staged.json");
 const cwBaseOverlayV2ProposalPath = resolve(buildDir, "cw-base-overlay-v2.proposal.json");
@@ -167,6 +173,7 @@ const promotedManifestPath = resolve(publicDataDir, "map-manifest.json");
 const videoKeyframesDraftDir = resolve(editorRoot, ".drafts/route-videos");
 const videoKeyframesPublicDir = resolve(publicDataDir, "route-videos");
 const routeCatalogDraftPath = resolve(editorRoot, ".drafts/route-catalog.json");
+const editorActivityPath = resolve(editorRoot, ".drafts/activity/events.ndjson");
 const routeCatalogPublicPath = resolve(publicDataDir, "route-catalog.json");
 const featuredRoutesDir = resolve(publicDataDir, "featured-routes");
 const promotionFeaturedRoutesDir = resolve(buildDir, "promotion-featured-routes");
@@ -206,6 +213,14 @@ let atomicWriteCounter = 0;
 let directionReviewGraphCache = null;
 let osmWaySourceDigestCache = null;
 const devReloadClients = new Set();
+const osmSegmentMatcherWorkerEnabled = process.env.EDITOR_MATCHER_WORKER !== "0";
+const osmSegmentMatcherWorker = new OsmSegmentMatcherWorker({
+  cwd: repoRoot,
+  graphPath: osmGraphEdgesPath,
+  workerScript: osmSegmentMatcherWorkerPath,
+  log,
+});
+const editorActivityLog = new EditorActivityLog({ path: editorActivityPath });
 
 async function currentPromotedRouteCatalogPath() {
   const manifest = await readJsonOrNull(promotedManifestPath);
@@ -4630,6 +4645,46 @@ async function handleOsmGraphRecalculate() {
   });
 }
 
+async function handleOsmSegmentRecalculate(payload, { signal } = {}) {
+  const startedAt = Date.now();
+  const feature = payload?.feature;
+  validateSourceGeojson({ type: "FeatureCollection", features: [feature] });
+  const segmentId = feature.properties.id;
+  if (!osmSegmentMatcherWorkerEnabled) {
+    return handleOsmSegmentRecalculateSubprocess(payload, { signal });
+  }
+
+  try {
+    const match = await osmSegmentMatcherWorker.match(feature, { signal });
+    const graphId = ++osmGraphCounter;
+    const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(3);
+    log("info", `osm-segment#${graphId} persistent worker finished`, {
+      segmentId,
+      durationSeconds,
+      cacheHit: match.performance?.worker?.cacheHit,
+      graphDigest: match.performance?.worker?.graphDigest,
+      matcherMs: match.performance?.measuredThroughResultAssemblyMs,
+    });
+    return {
+      graphId,
+      segmentId,
+      stdout: "",
+      stderr: "",
+      durationSeconds,
+      matcherRuntime: "persistent-worker",
+      match,
+    };
+  } catch (error) {
+    if (error?.code === "AUTHORING_REQUEST_ABORTED") throw error;
+    log("warn", "persistent matcher unavailable; using one-shot subprocess", {
+      segmentId,
+      code: error?.code || null,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return handleOsmSegmentRecalculateSubprocess(payload, { signal });
+  }
+}
+
 function authoringRequestAbortedError() {
   const error = new Error("Obsolete authoring request cancelled");
   error.status = 499;
@@ -4637,7 +4692,7 @@ function authoringRequestAbortedError() {
   return error;
 }
 
-async function handleOsmSegmentRecalculate(payload, { signal } = {}) {
+async function handleOsmSegmentRecalculateSubprocess(payload, { signal } = {}) {
   const graphId = ++osmGraphCounter;
   const startedAt = Date.now();
   const feature = payload?.feature;
@@ -5730,6 +5785,24 @@ const server = createServer(async (request, response) => {
   try {
     if (request.method === "GET" && url.pathname === "/api/dev/events" && devReloadEnabled) {
       handleDevReloadEvents(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/editor-activity" && request.method === "POST") {
+      const payload = await readRequestJson(request, 512 * 1024);
+      const accepted = await editorActivityLog.append(payload?.events || []);
+      sendJson(response, 202, { ok: true, localOnly: true, accepted });
+      return;
+    }
+
+    if (url.pathname === "/api/editor-activity/summary" && request.method === "GET") {
+      sendJson(response, 200, await editorActivityLog.summary());
+      return;
+    }
+
+    if (url.pathname === "/api/editor-activity" && request.method === "DELETE") {
+      await editorActivityLog.clear();
+      sendJson(response, 200, { ok: true, localOnly: true });
       return;
     }
 
@@ -7237,5 +7310,15 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   server.listen(port, "127.0.0.1", () => {
     console.log(`Map editor running at http://127.0.0.1:${port}/editor/`);
     startDevReloadWatcher();
+    if (osmSegmentMatcherWorkerEnabled) {
+      osmSegmentMatcherWorker.warm().catch((error) => {
+        log("warn", "matcher worker warmup failed; first match will use fallback", {
+          code: error?.code || null,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
   });
 }
+
+server.on("close", () => osmSegmentMatcherWorker.stop());

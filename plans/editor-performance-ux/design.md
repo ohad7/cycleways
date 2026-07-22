@@ -2,7 +2,8 @@
 
 Date: 2026-07-22
 
-Status: Proposed; design and review only
+Status: Implementation underway; persistent matching, high-cost scoped rendering,
+and local timing telemetry delivered
 
 ## Decision summary
 
