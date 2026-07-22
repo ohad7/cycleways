@@ -66,8 +66,9 @@ function primaryManeuverText(cue) {
 function nextManeuverText(cue) {
   const maneuver = nextManeuverDescriptor(cue);
   if (maneuver?.type === "turn") {
-    const onto = cue?.thenManeuver?.ontoSegmentName
-      ? ` אל ${cue.thenManeuver.ontoSegmentName}`
+    const ontoName = cue?.thenManeuver?.ontoGuidance?.name || cue?.thenManeuver?.ontoSegmentName;
+    const onto = ontoName
+      ? ` אל ${ontoName}`
       : "";
     return `ואז פנו ${directionWord(maneuver.direction)}${onto}`;
   }
@@ -83,7 +84,8 @@ function thenManeuverPhrase(cue) {
     ? { type: "turn", direction: cue.thenDirection }
     : null);
   if (maneuver?.type === "turn") {
-    const onto = maneuver.ontoSegmentName ? ` אל ${maneuver.ontoSegmentName}` : "";
+    const ontoName = maneuver.ontoGuidance?.name || maneuver.ontoSegmentName;
+    const onto = ontoName ? ` אל ${ontoName}` : "";
     return cue.type === "roundabout" || cue.type === "crossing"
       ? `, ואז פנו ${directionWord(maneuver.direction)}${onto}`
       : ` ומיד ${directionWord(maneuver.direction)}${onto}`;
@@ -101,8 +103,12 @@ function turnPrimaryText(cue) {
 }
 
 function turnText(cue) {
-  const onto = cue.ontoSegmentName ? ` אל ${cue.ontoSegmentName}` : "";
+  const ontoName = cue.ontoGuidance?.name || cue.ontoSegmentName;
+  const onto = ontoName ? ` אל ${ontoName}` : "";
   const then = thenManeuverPhrase(cue);
+  if (!ontoName && cue.stayOnGuidance?.name) {
+    return `פנה ${directionWord(cue.direction)} כדי להישאר על ${cue.stayOnGuidance.name}${then}`;
+  }
   return `פנה ${directionWord(cue.direction)}${onto}${then}`;
 }
 
@@ -166,17 +172,24 @@ export function roadClassChipLabel(routeClass) {
 
 function buildContextText(progress) {
   if (!progress?.hasAcquiredRoute) return "";
-  const here = progress.currentOnNetwork && progress.currentSegmentName
-    ? progress.currentSegmentName
+  const here = progress.currentGuidanceName
+    ? progress.currentGuidanceName
+    : progress.currentOnNetwork && progress.currentSegmentName
+      ? progress.currentSegmentName
     : routeClassLabel(progress.currentRouteClass);
-  const next = progress.nextSegmentName
-    ? ` · הבא: ${progress.nextSegmentName} בעוד ${formatDistanceMeters(progress.distanceToNextSegmentMeters)}`
+  const nextName = progress.nextGuidanceName || progress.nextSegmentName;
+  const nextDistance = progress.nextGuidanceName
+    ? progress.distanceToNextGuidanceMeters
+    : progress.distanceToNextSegmentMeters;
+  const next = nextName
+    ? ` · הבא: ${nextName} בעוד ${formatDistanceMeters(nextDistance)}`
     : "";
   return here ? `${here}${next}` : "";
 }
 
 function buildCurrentRoadText(progress) {
   if (!progress?.hasAcquiredRoute) return "";
+  if (progress.currentGuidanceName) return progress.currentGuidanceName;
   if (progress.currentSegmentName) return progress.currentSegmentName;
   return roadClassChipLabel(progress.currentRouteClass) || routeClassLabel(progress.currentRouteClass);
 }
@@ -307,9 +320,9 @@ export function getNavigationPresentation(state = {}) {
           : "status";
 
   const segmentChipText = (() => {
-    const name = progress?.currentSegmentName || null;
+    const name = progress?.currentGuidanceName || progress?.currentSegmentName || null;
     const label = roadClassChipLabel(progress?.currentRouteClass);
-    if (name && label) return `${name} · ${label}`;
+    if (name && label && !name.startsWith(label)) return `${name} · ${label}`;
     return name || label || null;
   })();
   const chip = offRoute
@@ -338,15 +351,23 @@ export function getNavigationPresentation(state = {}) {
   const cueSecondaryText = (() => {
     const c = active?.cue || null;
     if (!c) return "";
-    if (c.type === "turn" && c.ontoSegmentName) return `אל ${c.ontoSegmentName}`;
+    const ontoName = c.ontoGuidance?.name || c.ontoSegmentName;
+    if ((c.type === "turn" || c.type === "roundabout") && ontoName) {
+      const continuation = Number.isFinite(Number(c.continueOnWayMeters))
+        ? ` · המשיכו ${formatDistanceMeters(c.continueOnWayMeters)}`
+        : "";
+      return `אל ${ontoName}${continuation}`;
+    }
+    if (c.stayOnGuidance?.name) return `כדי להישאר על ${c.stayOnGuidance.name}`;
+    if (c.type === "crossing" && c.ontoGuidance?.name) return `המשיכו על ${c.ontoGuidance.name}`;
     if (c.type === "crossing" && c.crossedRoadName) return c.crossedRoadName;
     if (c.type === "enter-segment" && c.segmentName) return `אל ${c.segmentName}`;
     if (
-      progress?.nextSegmentName &&
-      Number.isFinite(progress?.distanceToNextSegmentMeters) &&
-      progress.distanceToNextSegmentMeters <= 300
+      (progress?.nextGuidanceName || progress?.nextSegmentName) &&
+      Number.isFinite(progress?.distanceToNextGuidanceMeters ?? progress?.distanceToNextSegmentMeters) &&
+      (progress?.distanceToNextGuidanceMeters ?? progress?.distanceToNextSegmentMeters) <= 300
     ) {
-      return `אל ${progress.nextSegmentName}`;
+      return `אל ${progress.nextGuidanceName || progress.nextSegmentName}`;
     }
     return "";
   })();
@@ -480,7 +501,8 @@ export function getNavigationPresentation(state = {}) {
     approachCueSecondaryText: (() => {
       const c = approachActive?.cue || null;
       if (!c) return "";
-      if (c.type === "turn" && c.ontoSegmentName) return `אל ${c.ontoSegmentName}`;
+      const ontoName = c.ontoGuidance?.name || c.ontoSegmentName;
+      if (c.type === "turn" && ontoName) return `אל ${ontoName}`;
       if (c.type === "crossing" && c.crossedRoadName) return c.crossedRoadName;
       if (c.type === "enter-segment" && c.segmentName) return `אל ${c.segmentName}`;
       return "";

@@ -14,7 +14,12 @@ import {
   approachTargetChoices,
   selectConnectorTarget,
 } from "./connectorTargeting.js";
-import { buildRouteCues, selectActiveCue } from "./navigationCues.js";
+import {
+  buildRouteCues,
+  CONTINUE_ON_WAY_MIN_HORIZON_M,
+  distanceToNextRouteChoiceMeters,
+  selectActiveCue,
+} from "./navigationCues.js";
 import { buildNavigationGeometry } from "./navigationRoute.js";
 import { createRouteProgressTracker } from "./routeProgress.js";
 import { validateRouteAttestation } from "../routing/routeAttestation.js";
@@ -277,6 +282,35 @@ export function createNavigationSession(navigationRoute, options = {}) {
         : null;
     mainCueKey = key;
     return event;
+  }
+
+  function acquisitionEventFor(acquisition, progress) {
+    const identity = progress?.currentGuidanceIdentity || null;
+    const name = progress?.currentGuidanceName || null;
+    const role = progress?.currentGuidanceRole || null;
+    const horizon = distanceToNextRouteChoiceMeters(
+      mainCues,
+      Number(progress?.progressMeters) || 0,
+    );
+    return {
+      kind: "acquired",
+      acquisition,
+      guidance: identity && name
+        ? {
+            guidanceIdentity: identity,
+            name,
+            spokenName: progress?.currentGuidanceSpokenName || null,
+            kind: progress?.currentGuidanceKind || null,
+            role,
+          }
+        : null,
+      guidanceHorizonMeters: horizon,
+      includeGuidanceDistance:
+        acquisition !== "reacquired" &&
+        role === "named-way" &&
+        horizon !== null &&
+        horizon >= CONTINUE_ON_WAY_MIN_HORIZON_M,
+    };
   }
 
   function approachCueFor(activeCue) {
@@ -711,11 +745,11 @@ export function createNavigationSession(navigationRoute, options = {}) {
         if (acquiredApproach) resetApproachRuntime();
         const activeCue = selectActiveCue(mainCues, mainProgress.progressMeters);
         const acquisitionEvent = recoveredFromOffRoute
-          ? { kind: "acquired", acquisition: "reacquired" }
+          ? acquisitionEventFor("reacquired", mainProgress)
           : joinedFromOwnedApproach
-          ? { kind: "acquired", acquisition: "join-route" }
+          ? acquisitionEventFor("join-route", mainProgress)
           : enteredEffectiveRoute
-          ? { kind: "acquired", acquisition: "initial" }
+          ? acquisitionEventFor("initial", mainProgress)
           : null;
         const wrongWayNow = mainProgress.wrongWay === true;
         const wrongWayStarted = wrongWayNow && !wasWrongWay;

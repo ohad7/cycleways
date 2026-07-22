@@ -114,6 +114,10 @@ function createNavigationRoute({
     startPlaceIds: arrayOfStrings(metadata?.startPlaceIds),
     passesNear: arrayOfStrings(metadata?.passesNear),
     segmentSpans: reconcileSegmentSpans(routeState?.segmentSpans, computedDistance),
+    guidanceSpans: reconcileSegmentSpans(routeState?.guidanceSpans, computedDistance),
+    guidanceMode: routeState?.guidanceMode === "guidance-v1"
+      ? "guidance-v1"
+      : "legacy",
     junctions: cloneJunctionList(routeState?.junctions),
     crossings: cloneCrossingList(routeState?.crossings),
     maneuverGeneratorVersion: "navigation-cues-v3",

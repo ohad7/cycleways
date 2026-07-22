@@ -528,6 +528,59 @@ import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
   assert.ok(p.distanceToNextSegmentMeters > 0, "distance to next segment");
 }
 
+// --- guidance context collapses internal segments and skips same identity ---
+{
+  const base = straightRoute();
+  const total = base.geometry.at(-1).distanceFromStartMeters;
+  const route = {
+    ...base,
+    guidanceMode: "guidance-v1",
+    guidanceSpans: [
+      {
+        startMeters: 0,
+        endMeters: 300,
+        guidanceIdentity: "way:road-9974",
+        name: "כביש 9974",
+        spokenName: "כביש תשעת אלפים תשע מאות שבעים וארבע",
+        role: "named-way",
+        kind: "road",
+        onCycleways: true,
+      },
+      {
+        startMeters: 300,
+        endMeters: 600,
+        guidanceIdentity: "way:road-9974",
+        name: "כביש 9974",
+        role: "named-way",
+        kind: "road",
+        onCycleways: true,
+      },
+      {
+        startMeters: 600,
+        endMeters: total,
+        guidanceIdentity: "way:cycleway-99",
+        name: "שביל אופניים 99",
+        role: "named-way",
+        kind: "cycleway",
+        onCycleways: true,
+      },
+    ],
+  };
+  const tracker = createRouteProgressTracker(route);
+  const progress = tracker.update({
+    lat: 33.1,
+    lng: 35.602,
+    accuracy: 5,
+    speed: 4,
+    timestamp: 1000,
+  });
+  assert.equal(progress.currentGuidanceIdentity, "way:road-9974");
+  assert.equal(progress.currentGuidanceName, "כביש 9974");
+  assert.equal(progress.nextGuidanceIdentity, "way:cycleway-99");
+  assert.equal(progress.nextGuidanceName, "שביל אופניים 99");
+  assert.ok(progress.distanceToNextGuidanceMeters > 350);
+}
+
 // --- segment context: approaching (pre-acquisition) path has all null/false ---
 {
   const base = straightRoute();

@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-15
 **Last reviewed:** 2026-07-22
-**Status:** Proposed design; revalidated against the current repository
+**Status:** Navigation vertical slice implemented; broader rollout proposed
 **Related designs:** `bicycle-traversal-policy`, `network-editor-workflow`,
 `network-junctions`, `route-sharing-v4`, `waypoint-routing`,
 `segment-name-display`, `front-page-overhaul`, `rn-mobile-native-ui`,
@@ -49,10 +49,14 @@ They remain available when the user inspects or expands a route section.
 
 ## 2026-07-22 repository re-review
 
-The central decision remains valid and the feature itself has not been
-implemented: segment identity and rider-facing way identity still need to be
-separate. The repository changes since the original design alter the
-integration contract, not that product decision.
+The central decision remains valid: segment identity and rider-facing way
+identity need to be separate. On 2026-07-22 the first navigation-only vertical
+slice was implemented for the reported-ride reference corpus: resolved
+guidance spans, topology-cue decoration, start/join naming, long-run distance
+confirmation, current/next-way presentation, and identity-based voice dedupe.
+The broader editor, planner itinerary, whole-network classification, release
+asset, and activation work remains future scope. The repository changes since
+the original design alter the integration contract, not the product decision.
 
 This revision incorporates five architectural facts that now exist:
 
@@ -504,6 +508,50 @@ The current generic `enter-segment` cue is replaced by guidance-aware events.
 A named-way boundary alone does not require speech. Standalone named features
 may produce semantic context cues such as `cross-feature`, with copy selected
 by `kind`.
+
+### Named-way confirmation and distance semantics
+
+The removal of generic `enter-segment` cues does not remove useful reassurance
+on long quiet sections. Navigation adds a distinct, guidance-aware
+`continue-on-way` confirmation. It is based on a stable guidance identity and a
+real route-instruction horizon, never on an internal segment boundary or the
+remaining length of one editorial segment.
+
+A confirmation may be emitted in exactly these situations:
+
+- route start or mid-route acquisition on a resolved named way when no route
+  choice is imminent;
+- immediately as additional wording on a real maneuver that enters a different
+  named way and is followed by a long quiet run; or
+- after a straight identity transition only when a later product policy opts
+  into that extra verbosity. The initial policy updates the current-way UI
+  silently for this case.
+
+Reacquisition may name the current way (`חזרנו למסלול, ממשיכים על …`) but does
+not repeat a long-run distance unless the effective route or guidance horizon
+changed. Internal segment boundaries, junction-only boundaries, surface
+changes, and warning ownership boundaries never create confirmations.
+
+The confirmation distance is measured from the confirmation point to the next
+route-choice maneuver or arrival: turn/keep, roundabout, reviewed crossing, or
+destination. Informational hazards may interrupt speech without shortening the
+route-choice horizon. If the next choice is less than 300 m away, the initial
+policy omits the distance confirmation and lets normal maneuver preview own the
+guidance. This threshold is one shared, fixture-tested product constant.
+
+Distance speech uses navigation rounding rather than measurement precision:
+roughly 50 m increments below 1 km and 0.1 km increments at or above 1 km.
+When a maneuver already names the destination way, the distance is appended to
+that utterance (`פנו … אל שביל תל חי, והמשיכו עליו 1.5 קילומטר`) and no second
+confirmation cue competes with it. At start/acquisition the independent wording
+is `המשיכו על <name> במשך <distance>`.
+
+The cue carries `guidanceIdentity`, visual `name`, optional `spokenName`,
+`horizonMeters`, and a reason (`route-start`, `join-route`, or
+`entered-by-maneuver`). Voice duplicate suppression keys by identity plus the
+effective route-choice horizon. A different facility with the same visible name
+is not suppressed, while two internal sections of one way cannot repeat the
+instruction.
 
 A standalone `bridge` produces one low-priority, final-phase `cross-feature`
 cue at its entrance. A coincident turn/crossing absorbs the bridge wording so

@@ -709,6 +709,47 @@ function offRouteRequestedSession() {
   assert.equal(state.cueEvent?.phase, "final");
 }
 
+// --- Initial acquisition carries resolved way and long-run horizon ----------
+{
+  const route = navigationRouteFromRouteState(
+    {
+      points: [
+        { id: "start", lat: 33.1, lng: 35.6 },
+        { id: "end", lat: 33.1, lng: 35.61 },
+      ],
+      geometry: [
+        { lat: 33.1, lng: 35.6 },
+        { lat: 33.1, lng: 35.61 },
+      ],
+      guidanceMode: "guidance-v1",
+      guidanceSpans: [{
+        startMeters: 0,
+        endMeters: 931.5,
+        guidanceIdentity: "way:road-99",
+        name: "כביש 99",
+        spokenName: "כביש תשעים ותשע",
+        role: "named-way",
+        kind: "road",
+        onCycleways: true,
+      }],
+    },
+    { param: "guidance-acquisition" },
+  );
+  route.requiresStartAcquisition = true;
+  const session = createNavigationSession(route);
+  session.dispatch({ type: NAV_ACTIONS.START });
+  session.dispatch({ type: NAV_ACTIONS.PERMISSION_GRANTED, background: false });
+  const state = session.dispatch({
+    type: NAV_ACTIONS.LOCATION,
+    fix: { lat: 33.1, lng: 35.6, accuracy: 5, speed: 4, timestamp: 1000 },
+  });
+  assert.equal(state.cueEvent?.kind, "acquired");
+  assert.equal(state.cueEvent?.acquisition, "initial");
+  assert.equal(state.cueEvent?.guidance?.guidanceIdentity, "way:road-99");
+  assert.equal(state.cueEvent?.includeGuidanceDistance, true);
+  assert.ok(state.cueEvent?.guidanceHorizonMeters > 900);
+}
+
 // --- no state is ever "on-connector" ---------------------------------------
 {
   const fixes = [

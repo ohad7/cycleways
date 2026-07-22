@@ -81,6 +81,7 @@ class RouteManager {
       policyDigest: null,
     };
     this.segmentNamesById = new Map();
+    this.segmentGuidanceById = new Map();
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
     this._connectorCostProfile = false;
@@ -103,6 +104,14 @@ class RouteManager {
       Object.entries(this.segmentsMetadata)
         .map(([name, metadata]) => [Number(metadata?.id), name])
         .filter(([segmentId]) => Number.isFinite(segmentId)),
+    );
+    this.segmentGuidanceById = new Map(
+      Object.values(this.segmentsMetadata)
+        .map((metadata) => [
+          Number(metadata?.id),
+          normalizeResolvedSegmentGuidance(metadata?.guidance, metadata?.id),
+        ])
+        .filter(([segmentId, guidance]) => Number.isFinite(segmentId) && guidance),
     );
 
     if (!geoJsonData?.features) {
@@ -458,7 +467,11 @@ class RouteManager {
         elevationLoss: routeInfo.downhillMeters,
         orderedCoordinates: routeInfo.orderedCoordinates,
         failure: routeInfo.failure || this.lastRouteFailure,
-        segmentSpans: buildSegmentSpans(routeInfo.traversals, this.segmentNamesById),
+        ...buildRouteSpans(
+          routeInfo.traversals,
+          this.segmentNamesById,
+          this.segmentGuidanceById,
+        ),
         routingValidation: this._baseRouteAttestation(
           routeInfo,
           this.routePoints,
@@ -477,6 +490,8 @@ class RouteManager {
       elevationLoss: elevation.loss,
       orderedCoordinates: this._getOrderedCoordinates(),
       segmentSpans: [],
+      guidanceSpans: [],
+      guidanceMode: "legacy",
     };
   }
 
@@ -498,7 +513,11 @@ class RouteManager {
       elevationLoss: routeInfo.downhillMeters,
       orderedCoordinates: routeInfo.orderedCoordinates,
       failure: null,
-      segmentSpans: buildSegmentSpans(routeInfo.traversals, this.segmentNamesById),
+      ...buildRouteSpans(
+        routeInfo.traversals,
+        this.segmentNamesById,
+        this.segmentGuidanceById,
+      ),
       routingValidation: this._baseRouteAttestation(
         routeInfo,
         candidate.routePoints,
@@ -3952,15 +3971,78 @@ class RouteManager {
   }
 }
 
+function normalizeResolvedSegmentGuidance(raw, segmentId) {
+  if (!raw || typeof raw !== "object") return null;
+  const role = raw.role;
+  if (!new Set(["named-way", "standalone", "unnamed"]).has(role)) return null;
+  const identity = raw.guidanceIdentity == null
+    ? null
+    : String(raw.guidanceIdentity);
+  if (role !== "unnamed" && !identity) return null;
+  return {
+    role,
+    guidanceIdentity: identity,
+    wayId: role === "named-way" && raw.wayId ? String(raw.wayId) : null,
+    name: raw.name ? String(raw.name) : null,
+    spokenName: raw.spokenName ? String(raw.spokenName) : null,
+    kind: raw.kind ? String(raw.kind) : "other",
+    sectionLabel: raw.sectionLabel ? String(raw.sectionLabel) : null,
+    resolutionStatus: role === "unnamed" ? "unnamed" : "resolved",
+    segmentId: Number(segmentId),
+  };
+}
+
+function normalizedMemberships(traversal) {
+  const raw = Array.isArray(traversal?.cwMemberships)
+    ? traversal.cwMemberships
+    : (traversal?.edge?.cwSegmentIds || []).map((segmentId) => ({ segmentId }));
+  const byKey = new Map();
+  for (const value of raw) {
+    const segmentId = Number(value?.segmentId);
+    if (!Number.isSafeInteger(segmentId) || segmentId <= 0) continue;
+    const membership = {
+      segmentId,
+      alignmentKey: value?.alignmentKey ? String(value.alignmentKey) : null,
+      mappingDigest: value?.mappingDigest ? String(value.mappingDigest) : null,
+    };
+    const key = `${segmentId}:${membership.alignmentKey || ""}:${membership.mappingDigest || ""}`;
+    byKey.set(key, membership);
+  }
+  return [...byKey.values()].sort((a, b) =>
+    a.segmentId - b.segmentId ||
+    String(a.alignmentKey).localeCompare(String(b.alignmentKey)) ||
+    String(a.mappingDigest).localeCompare(String(b.mappingDigest)),
+  );
+}
+
+function normalizedJunctionMemberships(traversal) {
+  const byKey = new Map();
+  for (const value of Array.isArray(traversal?.junctionMemberships)
+    ? traversal.junctionMemberships
+    : []) {
+    const junctionId = value?.junctionId ? String(value.junctionId) : null;
+    if (!junctionId) continue;
+    const membership = {
+      junctionId,
+      fingerprint: value?.fingerprint ? String(value.fingerprint) : null,
+      junctionName: value?.junctionName ? String(value.junctionName) : null,
+    };
+    byKey.set(`${junctionId}:${membership.fingerprint || ""}`, membership);
+  }
+  return [...byKey.values()].sort((a, b) =>
+    a.junctionId.localeCompare(b.junctionId) ||
+    String(a.fingerprint).localeCompare(String(b.fingerprint)),
+  );
+}
+
+function stableSpanKey(value) {
+  return JSON.stringify(value);
+}
+
 /**
- * Build an ordered list of segment spans from a base-routing traversal list.
- * Adjacent traversals sharing the same (name, onNetwork) tuple are merged into
- * a single span. Off-network traversals (no direction-scoped CW membership, or
- * an id not in segmentNamesById) produce a null-name, off-network span.
- *
- * @param {Array} traversals - ordered traversal objects from a computed route
- * @param {Map} segmentNamesById - map from numeric segment id → display name
- * @returns {Array<{startMeters,endMeters,name,cwSegmentId,onNetwork,routeClass}>}
+ * Build an ordered exact route-distance index. It retains every applicable
+ * direction-scoped membership; singular compatibility aliases are emitted only
+ * when one segment/junction is authoritative.
  */
 function buildSegmentSpans(traversals, segmentNamesById) {
   const spans = [];
@@ -3971,17 +4053,17 @@ function buildSegmentSpans(traversals, segmentNamesById) {
         (traversal.toDistance - traversal.fromDistance)) || 0,
     );
     if (length <= 0) continue;
-    const ids = Array.isArray(traversal.cwMemberships)
-      ? traversal.cwMemberships.map((value) => value.segmentId)
-      : traversal.edge?.cwSegmentIds ?? [];
-    const cwSegmentId = ids.length > 0 ? Number(ids[0]) : null;
+    const segmentMemberships = normalizedMemberships(traversal);
+    const segmentIds = [...new Set(segmentMemberships.map((value) => value.segmentId))];
+    const cwSegmentId = segmentIds.length === 1 ? segmentIds[0] : null;
     const name = cwSegmentId != null ? segmentNamesById.get(cwSegmentId) ?? null : null;
-    const junctionMemberships = Array.isArray(traversal.junctionMemberships)
-      ? traversal.junctionMemberships
-      : [];
-    const junctionId = junctionMemberships[0]?.junctionId ?? null;
-    const junctionName = junctionMemberships[0]?.junctionName ?? null;
-    const networkRole = name != null
+    const junctionMemberships = normalizedJunctionMemberships(traversal);
+    const junctionIds = [...new Set(junctionMemberships.map((value) => value.junctionId))];
+    const junctionId = junctionIds.length === 1 ? junctionIds[0] : null;
+    const junctionName = junctionId
+      ? junctionMemberships.find((value) => value.junctionId === junctionId)?.junctionName ?? null
+      : null;
+    const networkRole = segmentMemberships.length > 0
       ? "segment"
       : junctionMemberships.length > 0
         ? "junction"
@@ -3992,10 +4074,8 @@ function buildSegmentSpans(traversals, segmentNamesById) {
     const start = cursor;
     cursor += length;
     const prev = spans[spans.length - 1];
-    if (
-      prev && prev.name === name && prev.onNetwork === onNetwork && prev.networkRole === networkRole
-      && prev.junctionId === junctionId && prev.junctionName === junctionName
-    ) {
+    const membershipKey = stableSpanKey({ segmentMemberships, junctionMemberships, routeClass });
+    if (prev && prev._membershipKey === membershipKey && prev.networkRole === networkRole) {
       prev.endMeters = cursor;
       continue;
     }
@@ -4004,14 +4084,171 @@ function buildSegmentSpans(traversals, segmentNamesById) {
       endMeters: cursor,
       name,
       cwSegmentId,
+      segmentId: cwSegmentId,
+      internalName: name,
+      segmentIds,
+      segmentMemberships,
       onNetwork,
+      onCycleways: onNetwork,
       networkRole,
       junctionId,
       junctionName,
+      junctionMemberships,
       routeClass,
+      _membershipKey: membershipKey,
     });
   }
-  return spans;
+  return spans.map(({ _membershipKey, ...span }) => span);
+}
+
+function guidanceResolutionForTraversal(traversal, segmentGuidanceById) {
+  const memberships = normalizedMemberships(traversal);
+  const segmentIds = [...new Set(memberships.map((value) => value.segmentId))];
+  const junctionMemberships = normalizedJunctionMemberships(traversal);
+  if (segmentIds.length === 0) {
+    if (junctionMemberships.length > 0) {
+      const junctionIds = [...new Set(junctionMemberships.map((value) => value.junctionId))];
+      return {
+        networkRole: "junction",
+        resolutionStatus: "junction",
+        guidanceIdentity: null,
+        name: null,
+        spokenName: null,
+        role: null,
+        kind: null,
+        wayId: null,
+        segmentIds: [],
+        sectionLabels: [],
+        junctionId: junctionIds.length === 1 ? junctionIds[0] : null,
+        junctionName: junctionIds.length === 1
+          ? junctionMemberships.find((value) => value.junctionId === junctionIds[0])?.junctionName ?? null
+          : null,
+        onCycleways: true,
+      };
+    }
+    return {
+      networkRole: null,
+      resolutionStatus: "off-network",
+      guidanceIdentity: null,
+      name: null,
+      spokenName: null,
+      role: null,
+      kind: null,
+      wayId: null,
+      segmentIds: [],
+      sectionLabels: [],
+      junctionId: null,
+      junctionName: null,
+      onCycleways: false,
+    };
+  }
+
+  const resolutions = segmentIds.map((id) => segmentGuidanceById.get(id) || null);
+  if (resolutions.some((value) => value === null)) {
+    return {
+      networkRole: "segment",
+      resolutionStatus: "unreviewed",
+      guidanceIdentity: null,
+      name: null,
+      spokenName: null,
+      role: null,
+      kind: null,
+      wayId: null,
+      segmentIds,
+      sectionLabels: [],
+      junctionId: null,
+      junctionName: null,
+      onCycleways: true,
+    };
+  }
+  const identityKeys = [...new Set(resolutions.map((value) =>
+    value.guidanceIdentity || `role:${value.role}:${value.kind}`,
+  ))];
+  if (identityKeys.length !== 1) {
+    return {
+      networkRole: "segment",
+      resolutionStatus: "conflict",
+      guidanceIdentity: null,
+      name: null,
+      spokenName: null,
+      role: null,
+      kind: null,
+      wayId: null,
+      segmentIds,
+      sectionLabels: resolutions.map((value) => value.sectionLabel).filter(Boolean),
+      junctionId: null,
+      junctionName: null,
+      onCycleways: true,
+    };
+  }
+  const resolved = resolutions[0];
+  return {
+    networkRole: "segment",
+    resolutionStatus: resolved.resolutionStatus,
+    guidanceIdentity: resolved.guidanceIdentity,
+    name: resolved.name,
+    spokenName: resolved.spokenName,
+    role: resolved.role,
+    kind: resolved.kind,
+    wayId: resolved.wayId,
+    segmentIds,
+    sectionLabels: resolutions.map((value) => value.sectionLabel).filter(Boolean),
+    junctionId: null,
+    junctionName: null,
+    onCycleways: true,
+  };
+}
+
+function buildGuidanceSpans(traversals, segmentGuidanceById) {
+  const spans = [];
+  let cursor = 0;
+  for (const traversal of Array.isArray(traversals) ? traversals : []) {
+    const length = Math.abs(
+      (traversal.distanceMeters ?? (traversal.toDistance - traversal.fromDistance)) || 0,
+    );
+    if (length <= 0) continue;
+    const resolution = guidanceResolutionForTraversal(traversal, segmentGuidanceById);
+    const routeClass = traversal.edge?.routeClass ?? traversal.edge?.highway ?? null;
+    const start = cursor;
+    cursor += length;
+    const key = stableSpanKey({
+      guidanceIdentity: resolution.guidanceIdentity,
+      resolutionStatus: resolution.resolutionStatus,
+      networkRole: resolution.networkRole,
+      junctionId: resolution.junctionId,
+      routeClass,
+    });
+    const prev = spans[spans.length - 1];
+    if (prev && prev._guidanceKey === key) {
+      prev.endMeters = cursor;
+      prev.segmentIds = [...new Set([...prev.segmentIds, ...resolution.segmentIds])].sort((a, b) => a - b);
+      prev.sectionLabels = [...new Set([...prev.sectionLabels, ...resolution.sectionLabels])];
+      continue;
+    }
+    spans.push({
+      startMeters: start,
+      endMeters: cursor,
+      ...resolution,
+      routeClass,
+      _guidanceKey: key,
+    });
+  }
+  return spans.map(({ _guidanceKey, ...span }) => span);
+}
+
+function buildRouteSpans(traversals, segmentNamesById, segmentGuidanceById) {
+  const segmentSpans = buildSegmentSpans(traversals, segmentNamesById);
+  const candidateGuidanceSpans = buildGuidanceSpans(traversals, segmentGuidanceById);
+  const hasUnreviewed = candidateGuidanceSpans.some(
+    (span) => span.networkRole === "segment" && span.resolutionStatus === "unreviewed",
+  );
+  return {
+    segmentSpans,
+    guidanceSpans: hasUnreviewed ? [] : candidateGuidanceSpans,
+    guidanceMode: hasUnreviewed || candidateGuidanceSpans.length === 0
+      ? "legacy"
+      : "guidance-v1",
+  };
 }
 
 // CommonJS module: Node consumers (test suite, editor server, CLI scripts) load
@@ -4021,3 +4258,5 @@ function buildSegmentSpans(traversals, segmentNamesById) {
 // via a <script> tag).
 module.exports = RouteManager;
 module.exports.buildSegmentSpans = buildSegmentSpans;
+module.exports.buildGuidanceSpans = buildGuidanceSpans;
+module.exports.buildRouteSpans = buildRouteSpans;

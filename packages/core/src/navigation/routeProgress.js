@@ -93,12 +93,72 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
   const segmentSpans = Array.isArray(navigationRoute?.segmentSpans)
     ? navigationRoute.segmentSpans
     : [];
+  const guidanceSpans = navigationRoute?.guidanceMode === "guidance-v1"
+    && Array.isArray(navigationRoute?.guidanceSpans)
+    ? navigationRoute.guidanceSpans
+    : [];
+
+  function emptyGuidanceContext() {
+    return {
+      currentGuidanceIdentity: null,
+      currentGuidanceName: null,
+      currentGuidanceSpokenName: null,
+      currentGuidanceKind: null,
+      currentGuidanceRole: null,
+      currentOnCycleways: false,
+      nextGuidanceIdentity: null,
+      nextGuidanceName: null,
+      distanceToNextGuidanceMeters: null,
+    };
+  }
+
+  function guidanceContext(progressMeters) {
+    if (guidanceSpans.length === 0) return emptyGuidanceContext();
+    let idx = guidanceSpans.findIndex(
+      (span) => progressMeters >= span.startMeters && progressMeters < span.endMeters,
+    );
+    if (idx < 0) idx = guidanceSpans.length - 1;
+    let current = guidanceSpans[idx];
+    if (current?.networkRole === "junction" && !current.guidanceIdentity) {
+      const before = [...guidanceSpans.slice(0, idx)].reverse().find(
+        (span) => span.guidanceIdentity,
+      );
+      const after = guidanceSpans.slice(idx + 1).find(
+        (span) => span.guidanceIdentity,
+      );
+      if (before?.guidanceIdentity && before.guidanceIdentity === after?.guidanceIdentity) {
+        current = before;
+      }
+    }
+    let next = null;
+    for (let i = idx + 1; i < guidanceSpans.length; i += 1) {
+      const candidate = guidanceSpans[i];
+      if (!candidate.guidanceIdentity) continue;
+      if (candidate.guidanceIdentity === current?.guidanceIdentity) continue;
+      next = candidate;
+      break;
+    }
+    return {
+      currentGuidanceIdentity: current?.guidanceIdentity || null,
+      currentGuidanceName: current?.name || null,
+      currentGuidanceSpokenName: current?.spokenName || null,
+      currentGuidanceKind: current?.kind || null,
+      currentGuidanceRole: current?.role || null,
+      currentOnCycleways: current?.onCycleways === true,
+      nextGuidanceIdentity: next?.guidanceIdentity || null,
+      nextGuidanceName: next?.name || null,
+      distanceToNextGuidanceMeters: next
+        ? Math.max(0, Number(next.startMeters) - progressMeters)
+        : null,
+    };
+  }
 
   function segmentContext(progressMeters) {
     if (segmentSpans.length === 0) {
       return {
         currentSpanIndex: null, currentSegmentName: null, currentOnNetwork: false,
         currentRouteClass: null, nextSegmentName: null, distanceToNextSegmentMeters: null,
+        ...guidanceContext(progressMeters),
       };
     }
     let idx = segmentSpans.findIndex(
@@ -118,6 +178,7 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       currentRouteClass: cur.routeClass,
       nextSegmentName: nextName,
       distanceToNextSegmentMeters: nextStart === null ? null : Math.max(0, nextStart - progressMeters),
+      ...guidanceContext(progressMeters),
     };
   }
 

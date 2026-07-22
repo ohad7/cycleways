@@ -2,8 +2,8 @@
 
 **Date:** 2026-07-16
 **Last reviewed:** 2026-07-22
-**Status:** Proposed; revalidated against the current repository; feature
-implementation has not started
+**Status:** Navigation vertical slice implemented; broader editor, planner,
+release-asset, and whole-network rollout remains proposed
 **Design:** `plans/navigation-way-names/design.md`
 
 ## Re-review outcome
@@ -53,6 +53,30 @@ search costs, route geometry, traversal legality, CycleWays membership, or the
 stable identities used by shared routes.
 
 ## Delivery order
+
+### 2026-07-22 navigation vertical-slice status
+
+The approved first slice is implemented without activating the broader planner
+itinerary or whole-network naming rollout:
+
+- the canonical migration-mode registry exists and the reported-ride members
+  are explicitly classified in source data;
+- Build resolves those memberships into self-contained runtime segment
+  guidance metadata;
+- exact route spans retain complete direction-scoped membership sets and routes
+  derive guidance spans conservatively (an unreviewed on-network member keeps
+  the route on legacy naming behavior);
+- navigation suppresses same-way internal boundaries, decorates real topology
+  cues with the destination identity, names start/join/reacquisition context,
+  and appends long-run distance confirmations at the shared 300 m threshold;
+- current/next navigation presentation and voice dedupe prefer guidance
+  identity while legacy routes remain compatible; and
+- reverse effective routes deliberately fall back to legacy naming until their
+  opposite-direction memberships can be freshly resolved.
+
+The remaining tasks below still govern full registry validation, editor
+authoring, 100% classification, planner/map itinerary presentation, release
+asset activation, and reverse-guidance completion.
 
 Land the work in independently testable layers:
 
@@ -921,6 +945,21 @@ report is clean.
       silently.
 - [ ] Remove generic `enter-segment` production cues once guidance mode is
       active. The internal segment name is never a fallback.
+- [ ] Add the guidance-aware `continue-on-way` confirmation defined by the
+      design. Generate it only for route start/join or as wording attached to a
+      real maneuver entering a different identity; never generate it from an
+      internal segment boundary.
+- [ ] Measure confirmation distance to the next route-choice cue or arrival,
+      not to an exact segment boundary. Treat turn/keep, roundabout, reviewed
+      crossing, and arrival as horizon owners while allowing informational
+      warnings to interleave.
+- [ ] Use one shared 300 m minimum confirmation horizon and navigation-specific
+      distance rounding (50 m below 1 km, 0.1 km at or above 1 km).
+- [ ] Append a long-run confirmation to a maneuver that already names the
+      destination way instead of scheduling a competing second utterance.
+- [ ] Name the resolved current way on route start and mid-route join when the
+      next choice is not imminent. Reacquisition may name the way but does not
+      repeat distance unless the effective route/horizon changed.
 
 **Network-junction behavior**
 
@@ -958,6 +997,9 @@ report is clean.
 - [ ] Use visual `name` in UI and optional `spokenName` only in TTS.
 - [ ] Update voice duplicate suppression to compare guidance identity rather
       than visible name so two same-named ways remain distinct.
+- [ ] Include the effective route-choice horizon/reason in confirmation dedupe,
+      so restoration cannot replay the same long-run confirmation while a new
+      occurrence of the same way remains eligible.
 - [ ] Decide haptics explicitly: merged maneuvers keep their normal haptic;
       standalone bridge context alone has no maneuver haptic.
 
@@ -967,6 +1009,14 @@ report is clean.
 - [ ] `דרך הפטרולים` internal boundary: no cue.
 - [ ] True turn onto Road 99: name Road 99 once.
 - [ ] Decision while staying on Road 99: keep/stay wording as appropriate.
+- [ ] Start or join on a resolved way with at least 300 m to the next route
+      choice: name the way and speak the rounded distance once.
+- [ ] Turn onto `שביל תל חי` with a 1.5 km quiet horizon: name it in the turn and
+      append the distance; do not emit a second boundary cue.
+- [ ] The same start/join with a route choice under 300 m omits the long-run
+      confirmation.
+- [ ] Reacquisition on the same route occurrence names the way without
+      replaying the distance confirmation.
 - [ ] Road 99 roadway versus parallel cycleway: correct distinct name.
 - [ ] Same-way travel through a named junction: one continuous current way and
       no boundary cue.

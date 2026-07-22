@@ -1407,6 +1407,8 @@ function routeStateFromSnapshot(current, snapshot, options = {}) {
     activeDataPoints: snapshot.activeDataPoints,
     routeFailure: snapshot.routeFailure || null,
     segmentSpans: snapshot.segmentSpans || [],
+    guidanceSpans: snapshot.guidanceSpans || [],
+    guidanceMode: snapshot.guidanceMode || "legacy",
     routingValidation: snapshot.routingValidation || null,
     pendingPoints: preservePending ? current.pendingPoints : [],
     routingPhase:
@@ -1430,6 +1432,8 @@ function clearRouteStateFields() {
     activeDataPoints: [],
     routeFailure: null,
     segmentSpans: [],
+    guidanceSpans: [],
+    guidanceMode: "legacy",
     routingValidation: null,
     pendingPoints: [],
     routingPhase: "idle",

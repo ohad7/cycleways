@@ -24,9 +24,12 @@ const SAME_TURN_MERGE_WINDOW_M = 30;
 const SAME_TURN_MERGE_MAX_ANGLE_DEG = 135;
 const COMPOUND_TURN_WINDOW_M = 60;
 const SPAN_MERGE_TOLERANCE_M = 20;
+const JUNCTION_GUIDANCE_LOOKAHEAD_M = 60;
 const PREVIEW_MAX_M = 120; // upper bound of the preview window before a cue
 const ARRIVAL_PREVIEW_MAX_M = 200; // destination heads-up starts earlier
 const FINAL_MAX_M = 35; // within this, the cue is "final"
+export const CONTINUE_ON_WAY_MIN_HORIZON_M = 300;
+const ROUTE_CHOICE_TYPES = new Set(["turn", "roundabout", "crossing", "arrive"]);
 export const ROUNDABOUT_DIRECTION_THRESHOLDS = { straightMaxDeg: 40, uTurnMaxDeg: 130 };
 export const ROUNDABOUT_SUPPRESSION_PAD_M = 8;
 export const CROSSING_SUPPRESSION_PAD_M = 8;
@@ -139,6 +142,160 @@ function distanceToManeuver(meters, cue) {
   return Math.min(Math.abs(meters - start), Math.abs(meters - end));
 }
 
+export function distanceToNextRouteChoiceMeters(cues, progressMeters) {
+  const progress = Number(progressMeters);
+  if (!Number.isFinite(progress)) return null;
+  const next = (Array.isArray(cues) ? cues : [])
+    .filter((cue) => ROUTE_CHOICE_TYPES.has(cue?.type))
+    .filter((cue) => Number(cue.distanceMeters) > progress + 0.5)
+    .sort((a, b) => Number(a.distanceMeters) - Number(b.distanceMeters))[0];
+  return next ? Math.max(0, Number(next.distanceMeters) - progress) : null;
+}
+
+function guidancePayload(span) {
+  return {
+    guidanceIdentity: span.guidanceIdentity,
+    name: span.name || null,
+    spokenName: span.spokenName || null,
+    kind: span.kind || null,
+    role: span.role || null,
+  };
+}
+
+function guidanceAtDistance(guidanceSpans, meters, direction) {
+  const directIndex = guidanceSpans.findIndex((span) =>
+    meters >= Number(span.startMeters) && meters < Number(span.endMeters),
+  );
+  if (directIndex < 0) return null;
+  const direct = guidanceSpans[directIndex];
+  if (direct?.guidanceIdentity) return direct;
+
+  // A published junction is an intentional name-less bridge between route
+  // ways. Off-network and other unnamed spans are barriers: a maneuver inside
+  // one must not inherit an unrelated named way arbitrarily far ahead or
+  // behind on the route.
+  if (direct?.networkRole !== "junction") return null;
+  const step = direction === "before" ? -1 : 1;
+  let boundary = direction === "before"
+    ? Number(direct.startMeters)
+    : Number(direct.endMeters);
+  for (
+    let index = directIndex + step;
+    index >= 0 && index < guidanceSpans.length;
+    index += step
+  ) {
+    const span = guidanceSpans[index];
+    const adjacentBoundary = direction === "before"
+      ? Number(span.endMeters)
+      : Number(span.startMeters);
+    if (Math.abs(adjacentBoundary - boundary) > 0.5) return null;
+    if (span.guidanceIdentity) return span;
+    if (span.networkRole !== "junction") return null;
+    boundary = direction === "before"
+      ? Number(span.startMeters)
+      : Number(span.endMeters);
+  }
+  return null;
+}
+
+function decorateGuidanceTransition(cue, span) {
+  const guidance = guidancePayload(span);
+  if (cue.type === "crossing" && cue.thenManeuver?.type === "turn") {
+    cue.thenManeuver = {
+      ...cue.thenManeuver,
+      ontoGuidance: guidance,
+      ontoSegmentName: guidance.name,
+    };
+    cue.ontoGuidanceStartMeters = Number(span.startMeters);
+  } else {
+    cue.ontoGuidance = guidance;
+    cue.ontoSegmentName = guidance.name;
+    cue.ontoGuidanceStartMeters = Number(span.startMeters);
+  }
+}
+
+function applyGuidanceSemantics(cues, guidanceSpans) {
+  const maneuvers = cues.filter((cue) =>
+    cue.type === "turn" || cue.type === "roundabout" || cue.type === "crossing",
+  );
+  let previousIdentity = null;
+  for (const span of guidanceSpans) {
+    const identity = span.guidanceIdentity || null;
+    const changed = identity && identity !== previousIdentity;
+    if (changed && Number(span.startMeters) > 0) {
+      const near = maneuvers.find(
+        (cue) => distanceToManeuver(Number(span.startMeters), cue) <= SPAN_MERGE_TOLERANCE_M,
+      );
+      if (near) decorateGuidanceTransition(near, span);
+    }
+    if (identity) previousIdentity = identity;
+    else if (span.networkRole !== "junction") previousIdentity = null;
+  }
+
+  for (const cue of maneuvers) {
+    const before = guidanceAtDistance(
+      guidanceSpans,
+      Math.max(0, Number(cue.distanceMeters) - 0.5),
+      "before",
+    );
+    const after = guidanceAtDistance(
+      guidanceSpans,
+      maneuverCompletionMeters(cue) + 0.5,
+      "after",
+    );
+    if (!after?.guidanceIdentity) continue;
+    const alreadyDecorated = cue.ontoGuidance || cue.thenManeuver?.ontoGuidance;
+    const completion = maneuverCompletionMeters(cue);
+    const upcomingJunction = guidanceSpans.find((span) =>
+      span.networkRole === "junction" &&
+      Number(span.startMeters) >= completion - 0.5 &&
+      Number(span.startMeters) - completion <= JUNCTION_GUIDANCE_LOOKAHEAD_M,
+    );
+    const afterJunction = upcomingJunction
+      ? guidanceSpans.find((span) =>
+          Number(span.startMeters) >= Number(upcomingJunction.endMeters) - 0.5 &&
+          span.guidanceIdentity,
+        )
+      : null;
+    if (
+      !alreadyDecorated &&
+      afterJunction?.guidanceIdentity &&
+      before?.guidanceIdentity !== afterJunction.guidanceIdentity
+    ) {
+      decorateGuidanceTransition(cue, afterJunction);
+    } else if (!alreadyDecorated && before?.guidanceIdentity !== after.guidanceIdentity) {
+      decorateGuidanceTransition(cue, after);
+    } else if (
+      !alreadyDecorated &&
+      before?.guidanceIdentity === after.guidanceIdentity &&
+      (cue.type === "roundabout" || (cue.type === "turn" && cue.topologyConfirmed === true))
+    ) {
+      cue.stayOnGuidance = guidancePayload(after);
+    }
+  }
+
+  for (const cue of maneuvers) {
+    const destination = cue.thenManeuver?.ontoGuidance || cue.ontoGuidance;
+    if (!destination?.guidanceIdentity || destination.role !== "named-way") continue;
+    let horizonOrigin = maneuverCompletionMeters(cue);
+    if (cue.thenManeuver?.ontoGuidance) {
+      const coveredFollowUp = cues
+        .filter((candidate) => ROUTE_CHOICE_TYPES.has(candidate.type))
+        .filter((candidate) => Number(candidate.distanceMeters) > horizonOrigin + 0.5)
+        .sort((a, b) => Number(a.distanceMeters) - Number(b.distanceMeters))[0];
+      if (coveredFollowUp) horizonOrigin = maneuverCompletionMeters(coveredFollowUp);
+    }
+    if (Number.isFinite(Number(cue.ontoGuidanceStartMeters))) {
+      horizonOrigin = Math.max(horizonOrigin, Number(cue.ontoGuidanceStartMeters));
+    }
+    const horizon = distanceToNextRouteChoiceMeters(cues, horizonOrigin);
+    if (horizon !== null && horizon >= CONTINUE_ON_WAY_MIN_HORIZON_M) {
+      cue.continueOnWayMeters = horizon;
+      cue.continueOnWayGuidance = destination;
+    }
+  }
+}
+
 export function buildRouteCues(navigationRoute, options = {}) {
   const geometry = Array.isArray(navigationRoute?.geometry)
     ? navigationRoute.geometry
@@ -216,6 +373,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
       _geometryIndex: i,
       _geometryEndIndex: i,
       _nearestJunctionIndex: closestJunctionIndex,
+      topologyConfirmed: type === "turn" && plainJunctions !== null,
     });
   }
 
@@ -314,7 +472,9 @@ export function buildRouteCues(navigationRoute, options = {}) {
     cues.push({ type: "arrive", distanceMeters: totalMeters });
   }
 
-  // Enter-segment cues at named span boundaries, with merge/suppression.
+  // Legacy segment-name cues remain available for old/unclassified map data.
+  // Guidance mode decorates real topology cues and never turns an editorial
+  // segment boundary into a maneuver.
   const spans = Array.isArray(navigationRoute?.segmentSpans)
     ? navigationRoute.segmentSpans
     : [];
@@ -331,8 +491,15 @@ export function buildRouteCues(navigationRoute, options = {}) {
       cue.junctionName = junctionSpan.junctionName;
     }
   }
-  const turnCues = cues.filter((c) => c.type === "turn");
-  for (const span of spans) {
+  const guidanceSpans = navigationRoute?.guidanceMode === "guidance-v1"
+    && Array.isArray(navigationRoute?.guidanceSpans)
+    ? navigationRoute.guidanceSpans
+    : [];
+  if (guidanceSpans.length > 0) {
+    applyGuidanceSemantics(cues, guidanceSpans);
+  } else {
+    const turnCues = cues.filter((c) => c.type === "turn");
+    for (const span of spans) {
     if (!span.name || span.startMeters <= 0) continue;
     if (roundaboutTraversals.some(
       (traversal) =>
@@ -369,7 +536,8 @@ export function buildRouteCues(navigationRoute, options = {}) {
       near.ontoSegmentName = span.name; // merge into the turn
       continue;
     }
-    cues.push({ type: "enter-segment", distanceMeters: span.startMeters, segmentName: span.name });
+      cues.push({ type: "enter-segment", distanceMeters: span.startMeters, segmentName: span.name });
+    }
   }
 
   // Sort by distance; when distances tie, turn/arrive before enter-segment.

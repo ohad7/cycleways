@@ -31,6 +31,31 @@ export function formatSpeechDistanceMeters(meters, locale = DEFAULT_LANGUAGE) {
   return `${km.toFixed(km >= 10 ? 0 : 1)} kilometers`;
 }
 
+export function formatNavigationHorizonMeters(meters, locale = DEFAULT_LANGUAGE) {
+  const value = finite(meters);
+  if (value === null || value < 0) return "";
+  if (value < 1000) {
+    const rounded = Math.max(50, Math.round(value / 50) * 50);
+    return locale === "he-IL" ? `${rounded} מטרים` : `${rounded} meters`;
+  }
+  const roundedKm = Math.round((value / 1000) * 10) / 10;
+  return locale === "he-IL"
+    ? `${roundedKm.toFixed(roundedKm % 1 === 0 ? 0 : 1)} קילומטר`
+    : `${roundedKm.toFixed(roundedKm % 1 === 0 ? 0 : 1)} kilometers`;
+}
+
+function guidanceSpeechName(guidance) {
+  return guidance?.spokenName || guidance?.name || null;
+}
+
+function continueOnWayText(cue, locale) {
+  const distance = formatNavigationHorizonMeters(cue?.continueOnWayMeters, locale);
+  if (!distance || !cue?.continueOnWayGuidance?.guidanceIdentity) return "";
+  return locale === "he-IL"
+    ? `, והמשיכו עליו ${distance}`
+    : `, and continue on it for ${distance}`;
+}
+
 function directionText(direction, locale) {
   if (locale === "he-IL") return direction === "right" ? "ימינה" : "שמאלה";
   return direction === "right" ? "right" : "left";
@@ -64,10 +89,11 @@ function thenManeuverText(maneuver, locale, sourceType) {
     return locale === "he-IL" ? `, ואז ${normalized}` : `, then ${normalized}`;
   }
   if (maneuver.type === "turn") {
-    const onto = maneuver.ontoSegmentName
+    const ontoName = guidanceSpeechName(maneuver.ontoGuidance) || maneuver.ontoSegmentName;
+    const onto = ontoName
       ? locale === "he-IL"
-        ? ` אל ${maneuver.ontoSegmentName}`
-        : ` onto ${maneuver.ontoSegmentName}`
+        ? ` אל ${ontoName}`
+        : ` onto ${ontoName}`
       : "";
     if (sourceType === "roundabout" || sourceType === "crossing") {
       return locale === "he-IL"
@@ -138,19 +164,28 @@ function cuePhrase(event, state, locale) {
   }
   if (event.kind === "acquired") {
     const direction = compassWord(state?.progress?.bearingToNextDeg, locale);
+    const guidanceName = guidanceSpeechName(event.guidance);
+    const horizon = event.includeGuidanceDistance
+      ? formatNavigationHorizonMeters(event.guidanceHorizonMeters, locale)
+      : "";
+    const guidancePhrase = guidanceName
+      ? locale === "he-IL"
+        ? `, ממשיכים על ${guidanceName}${horizon ? ` במשך ${horizon}` : ""}`
+        : `, continuing on ${guidanceName}${horizon ? ` for ${horizon}` : ""}`
+      : "";
     if (event.acquisition === "join-route") {
       return locale === "he-IL"
-        ? `הגעת למסלול, הניווט במסלול מתחיל${direction ? `, ממשיכים ${direction}` : ""}`
-        : `You reached the route. Route navigation starts now${direction ? `, heading ${direction}` : ""}.`;
+        ? `הגעת למסלול, הניווט במסלול מתחיל${guidancePhrase || (direction ? `, ממשיכים ${direction}` : "")}`
+        : `You reached the route. Route navigation starts now${guidancePhrase || (direction ? `, heading ${direction}` : "")}.`;
     }
     if (event.acquisition === "reacquired") {
       return locale === "he-IL"
-        ? `חזרנו למסלול, ממשיכים בניווט${direction ? ` ${direction}` : ""}`
-        : `Back on route. Continuing navigation${direction ? `, heading ${direction}` : ""}.`;
+        ? `חזרנו למסלול${guidancePhrase || `, ממשיכים בניווט${direction ? ` ${direction}` : ""}`}`
+        : `Back on route${guidancePhrase || `. Continuing navigation${direction ? `, heading ${direction}` : ""}`}.`;
     }
     return locale === "he-IL"
-      ? `הַכֹּל מוּכָן, יוֹצְאִים לַדֶּרֶךְ${direction ? ` ${direction}` : ""}. רִכְבוּ בִּזְהִירוּת`
-      : `All set. Let's ride${direction ? `, heading ${direction}` : ""}. Ride safely.`;
+      ? `הַכֹּל מוּכָן, יוֹצְאִים לַדֶּרֶךְ${guidancePhrase || (direction ? ` ${direction}` : "")}. רִכְבוּ בִּזְהִירוּת`
+      : `All set. Let's ride${guidancePhrase || (direction ? `, heading ${direction}` : "")}. Ride safely.`;
   }
   if (event.kind === "wrong-way") {
     return locale === "he-IL"
@@ -176,16 +211,27 @@ function cuePhrase(event, state, locale) {
   switch (cue.type) {
     case "crossing": {
       const then = thenManeuverText(cue.thenManeuver, locale, "crossing");
+      const ontoName = guidanceSpeechName(cue.ontoGuidance);
+      const directHorizon = ontoName
+        ? formatNavigationHorizonMeters(cue.continueOnWayMeters, locale)
+        : "";
+      const onto = ontoName
+        ? locale === "he-IL"
+          ? `, והמשיכו על ${ontoName}${directHorizon ? ` במשך ${directHorizon}` : ""}`
+          : `, and continue on ${ontoName}${directHorizon ? ` for ${directHorizon}` : ""}`
+        : "";
       const phrase = locale === "he-IL"
         ? "חצו בזהירות לצד השני של הכביש"
         : "Cross carefully to the other side of the road";
-      return `${prefix}${phrase}${then}`;
+      return `${prefix}${phrase}${then || onto}${then ? continueOnWayText(cue, locale) : ""}`;
     }
     case "turn": {
-      const onto = cue.ontoSegmentName
+      const ontoName = guidanceSpeechName(cue.ontoGuidance) || cue.ontoSegmentName;
+      const stayName = guidanceSpeechName(cue.stayOnGuidance);
+      const onto = ontoName
         ? locale === "he-IL"
-          ? ` אל ${cue.ontoSegmentName}`
-          : ` onto ${cue.ontoSegmentName}`
+          ? ` אל ${ontoName}`
+          : ` onto ${ontoName}`
         : "";
       const then = thenManeuverText(
         cue.thenManeuver || (cue.thenDirection
@@ -194,17 +240,32 @@ function cuePhrase(event, state, locale) {
         locale,
         "turn",
       );
+      if (!ontoName && stayName) {
+        return locale === "he-IL"
+          ? `${prefix}פנה ${directionText(cue.direction, locale)} כדי להישאר על ${stayName}${then}`
+          : `${prefix}turn ${directionText(cue.direction, locale)} to stay on ${stayName}${then}`;
+      }
       return locale === "he-IL"
-        ? `${prefix}פנה ${directionText(cue.direction, locale)}${onto}${then}`
-        : `${prefix}turn ${directionText(cue.direction, locale)}${onto}${then}`;
+        ? `${prefix}פנה ${directionText(cue.direction, locale)}${onto}${then}${continueOnWayText(cue, locale)}`
+        : `${prefix}turn ${directionText(cue.direction, locale)}${onto}${then}${continueOnWayText(cue, locale)}`;
     }
     case "roundabout": {
       const phrase = roundaboutText(cue.direction, locale);
       const then = thenManeuverText(cue.thenManeuver, locale, "roundabout");
+      const ontoName = guidanceSpeechName(cue.ontoGuidance);
+      const onto = ontoName
+        ? locale === "he-IL" ? ` אל ${ontoName}` : ` onto ${ontoName}`
+        : "";
       const junctionContext = cue.junctionName
         ? locale === "he-IL" ? `ב${cue.junctionName}, ` : `At ${cue.junctionName}, `
         : "";
-      return phrase ? `${prefix}${junctionContext}${phrase}${then}` : null;
+      const stayName = guidanceSpeechName(cue.stayOnGuidance);
+      const stay = stayName
+        ? locale === "he-IL" ? `, והישארו על ${stayName}` : `, staying on ${stayName}`
+        : "";
+      return phrase
+        ? `${prefix}${junctionContext}${phrase}${onto}${stay}${then}${continueOnWayText(cue, locale)}`
+        : null;
     }
     case "bend":
       return null;
@@ -289,7 +350,9 @@ export function createNavigationVoicePlanner({
   const spokenIds = new Set(Array.isArray(memory?.spokenIds) ? memory.spokenIds : []);
   let lastSpokenAt = finite(memory?.lastSpokenAt);
   let lastUtterance = memory?.lastUtterance || null;
-  let lastSegmentNameSpoken = memory?.lastSegmentNameSpoken || null;
+  let lastGuidanceIdentitySpoken =
+    memory?.lastGuidanceIdentitySpoken ||
+    (memory?.lastSegmentNameSpoken ? `legacy:${memory.lastSegmentNameSpoken}` : null);
 
   function plan(cueEvent, state = {}, nowMs = Date.now(), settings = {}) {
     const voiceEnabled = settings.enabled !== undefined ? settings.enabled : enabled;
@@ -326,7 +389,7 @@ export function createNavigationVoicePlanner({
       cueEvent.kind === "cue" &&
       cueEvent.cue?.type === "enter-segment" &&
       cueEvent.cue.segmentName &&
-      cueEvent.cue.segmentName === lastSegmentNameSpoken
+      `legacy:${cueEvent.cue.segmentName}` === lastGuidanceIdentitySpoken
     ) {
       return { utterance: null, reason: "same-segment" };
     }
@@ -354,13 +417,20 @@ export function createNavigationVoicePlanner({
     spokenIds.add(utteranceId);
     lastSpokenAt = finite(nowMs);
     lastUtterance = utterance;
-    const spokenName =
-      cueEvent.cue?.ontoSegmentName ||
-      cueEvent.cue?.thenManeuver?.ontoSegmentName ||
+    const spokenIdentity =
+      cueEvent.guidance?.guidanceIdentity ||
+      cueEvent.cue?.ontoGuidance?.guidanceIdentity ||
+      cueEvent.cue?.thenManeuver?.ontoGuidance?.guidanceIdentity ||
+      cueEvent.cue?.stayOnGuidance?.guidanceIdentity ||
+      (cueEvent.cue?.ontoSegmentName
+        ? `legacy:${cueEvent.cue.ontoSegmentName}`
+        : cueEvent.cue?.thenManeuver?.ontoSegmentName
+          ? `legacy:${cueEvent.cue.thenManeuver.ontoSegmentName}`
+          : null) ||
       (cueEvent.cue?.type === "enter-segment"
-        ? cueEvent.cue.segmentName
+        ? `legacy:${cueEvent.cue.segmentName}`
         : null);
-    lastSegmentNameSpoken = spokenName || null;
+    lastGuidanceIdentitySpoken = spokenIdentity || null;
     return { utterance, reason: null };
   }
 
@@ -370,7 +440,10 @@ export function createNavigationVoicePlanner({
       spokenIds: Array.from(spokenIds),
       lastSpokenAt,
       lastUtterance,
-      lastSegmentNameSpoken,
+      lastGuidanceIdentitySpoken,
+      lastSegmentNameSpoken: lastGuidanceIdentitySpoken?.startsWith("legacy:")
+        ? lastGuidanceIdentitySpoken.slice("legacy:".length)
+        : null,
     };
   }
 
@@ -381,7 +454,11 @@ export function createNavigationVoicePlanner({
     }
     lastSpokenAt = finite(nextMemory?.lastSpokenAt);
     lastUtterance = nextMemory?.lastUtterance || null;
-    lastSegmentNameSpoken = nextMemory?.lastSegmentNameSpoken || null;
+    lastGuidanceIdentitySpoken =
+      nextMemory?.lastGuidanceIdentitySpoken ||
+      (nextMemory?.lastSegmentNameSpoken
+        ? `legacy:${nextMemory.lastSegmentNameSpoken}`
+        : null);
   }
 
   return { plan, snapshot, reset };

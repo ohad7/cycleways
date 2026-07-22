@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   compassWord,
   createNavigationVoicePlanner,
+  formatNavigationHorizonMeters,
   formatSpeechDistanceMeters,
 } from "@cycleways/core/navigation/navigationVoice.js";
 
@@ -26,6 +27,8 @@ const state = {
 assert.equal(formatSpeechDistanceMeters(96), "100 מטרים");
 assert.equal(formatSpeechDistanceMeters(1250), "1.3 קילומטר");
 assert.equal(formatSpeechDistanceMeters(null), "");
+assert.equal(formatNavigationHorizonMeters(326), "350 מטרים");
+assert.equal(formatNavigationHorizonMeters(1510), "1.5 קילומטר");
 
 {
   const planner = createNavigationVoicePlanner();
@@ -47,6 +50,60 @@ assert.equal(formatSpeechDistanceMeters(null), "");
   ).utterance;
   assert.ok(final, "final phase speaks despite prior preview");
   assert.equal(final.interruptsCurrentSpeech, true);
+}
+
+{
+  const planner = createNavigationVoicePlanner();
+  const cue = {
+    type: "turn",
+    direction: "right",
+    distanceMeters: 500,
+    ontoGuidance: {
+      guidanceIdentity: "way:tel-hai-trail",
+      name: "שביל תל חי",
+      spokenName: null,
+      role: "named-way",
+    },
+    continueOnWayMeters: 1510,
+    continueOnWayGuidance: {
+      guidanceIdentity: "way:tel-hai-trail",
+      name: "שביל תל חי",
+      role: "named-way",
+    },
+  };
+  const utterance = planner.plan(
+    { kind: "cue", cueType: "turn", phase: "final", cue },
+    { activeCue: { cue, phase: "final", distanceToCueMeters: 20 } },
+    1000,
+  ).utterance;
+  assert.equal(
+    utterance.text,
+    "פנה ימינה אל שביל תל חי, והמשיכו עליו 1.5 קילומטר",
+  );
+}
+
+{
+  const planner = createNavigationVoicePlanner();
+  const utterance = planner.plan(
+    {
+      kind: "acquired",
+      acquisition: "join-route",
+      guidance: {
+        guidanceIdentity: "way:road-99",
+        name: "כביש 99",
+        spokenName: "כביש תשעים ותשע",
+        role: "named-way",
+      },
+      guidanceHorizonMeters: 1480,
+      includeGuidanceDistance: true,
+    },
+    {},
+    1000,
+  ).utterance;
+  assert.equal(
+    utterance.text,
+    "הגעת למסלול, הניווט במסלול מתחיל, ממשיכים על כביש תשעים ותשע במשך 1.5 קילומטר",
+  );
 }
 
 {
@@ -495,6 +552,31 @@ assert.equal(compassWord(null, "he-IL"), null);
   assert.match(
     intersection.text,
     /חצו בזהירות לצד השני של הכביש, ואז פנו שמאלה אל דרך נוף מצפה עדי - מטולה דרום/,
+  );
+
+  const directNamedCrossing = {
+    type: "crossing",
+    distanceMeters: 700,
+    ontoGuidance: {
+      guidanceIdentity: "way:tel-hai-trail",
+      name: "שביל תל חי",
+      role: "named-way",
+    },
+    continueOnWayGuidance: {
+      guidanceIdentity: "way:tel-hai-trail",
+      name: "שביל תל חי",
+      role: "named-way",
+    },
+    continueOnWayMeters: 1510,
+  };
+  const direct = createNavigationVoicePlanner().plan(
+    { kind: "cue", cueType: "crossing", phase: "final", cue: directNamedCrossing },
+    { activeCue: { distanceToCueMeters: 10, cue: directNamedCrossing, phase: "final" } },
+    3000,
+  ).utterance;
+  assert.equal(
+    direct.text,
+    "חצו בזהירות לצד השני של הכביש, והמשיכו על שביל תל חי במשך 1.5 קילומטר",
   );
 }
 

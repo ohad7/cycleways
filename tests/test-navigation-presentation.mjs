@@ -249,6 +249,29 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.match(p.contextText, /שביל הירקון/);
   assert.match(p.contextText, /גשר איילון/);
 }
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    progress: {
+      remainingMeters: 1500,
+      hasAcquiredRoute: true,
+      currentSegmentName: "כביש 9974 כפר יובל",
+      currentGuidanceIdentity: "way:road-9974",
+      currentGuidanceName: "כביש 9974",
+      currentOnNetwork: true,
+      currentRouteClass: "road",
+      nextSegmentName: "כביש 9974",
+      distanceToNextSegmentMeters: 200,
+      nextGuidanceIdentity: "way:cycleway-99",
+      nextGuidanceName: "שביל אופניים 99",
+      distanceToNextGuidanceMeters: 900,
+      wrongWay: false,
+    },
+  });
+  assert.equal(p.currentRoadText, "כביש 9974");
+  assert.match(p.contextText, /הבא: שביל אופניים 99 בעוד 900 מ׳/);
+  assert.doesNotMatch(p.contextText, /כביש 9974 כפר יובל/);
+}
 // --- off-network context uses neutral copy, not "local roads" ---
 {
   const p = getNavigationPresentation({

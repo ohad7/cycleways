@@ -8,6 +8,10 @@ import { createShardedRouteSession } from "../packages/core/src/routing/shardedR
 import { decodeCompactBaseRoutingShard } from "../packages/core/src/routing/compactBaseRoutingShard.js";
 import { decodeMessagePack } from "../packages/core/src/routing/messagePack.js";
 import { validateRouteAttestation } from "../packages/core/src/routing/routeAttestation.js";
+import { roundaboutsOnRoute } from "../packages/core/src/routing/roundaboutsOnRoute.js";
+import { navigationRouteFromRouteState } from "../packages/core/src/navigation/navigationRoute.js";
+import { buildRouteCues } from "../packages/core/src/navigation/navigationCues.js";
+import { createNavigationVoicePlanner } from "../packages/core/src/navigation/navigationVoice.js";
 import {
   reportedRideFingerprintDisposition,
   reportedRideTraversalPathFingerprint,
@@ -33,6 +37,9 @@ const manifest = JSON.parse(await readFile(path.join(root, "map-manifest.json"),
 const geoJsonData = JSON.parse(await readFile(path.join(root, manifest.bikeRoads), "utf8"));
 const segmentsData = JSON.parse(await readFile(path.join(root, manifest.segments), "utf8"));
 const cwBaseIndex = JSON.parse(await readFile(path.join(root, manifest.cwBaseIndex), "utf8"));
+const roundaboutsData = manifest.roundabouts
+  ? JSON.parse(await readFile(path.join(root, manifest.roundabouts), "utf8"))
+  : null;
 const shardManifestPath = path.join(root, manifest.baseRoutingShards);
 const shardManifest = JSON.parse(await readFile(shardManifestPath, "utf8"));
 const shardRoot = path.dirname(shardManifestPath);
@@ -63,6 +70,20 @@ const points = replan.coordinates.map((point, index) => ({
   id: `reported-ride-${index}`,
 }));
 const route = await session.restorePoints(points);
+const nearbyJunctions = route && typeof session.junctionsNearRoute === "function"
+  ? await session.junctionsNearRoute(route.geometry)
+  : null;
+const routeRoundabouts = route
+  ? roundaboutsOnRoute(roundaboutsData?.roundabouts, route.geometry)
+  : [];
+const navigationRouteState = route
+  ? {
+      ...route,
+      junctions: Array.isArray(nearbyJunctions)
+        ? [...nearbyJunctions, ...routeRoundabouts]
+        : nearbyJunctions,
+    }
+  : null;
 const slices = route?.routingValidation?.traversalSlices || [];
 const forbidden = slices.filter((slice) => slice.policyState !== "allowed");
 const traversedShareIds = new Set(slices.map((slice) => Number(slice.edgeShareId)));
@@ -119,6 +140,10 @@ if (fingerprintDisposition === "unaccepted") {
   blockers.push("replacement-fingerprint-changed");
 }
 
+const navigationCues = navigationRouteState
+  ? buildRouteCues(navigationRouteFromRouteState(navigationRouteState, { param: "reported-ride" }))
+  : [];
+
 const report = {
   schemaVersion: 1,
   status: blockers.length === 0 ? "ready" : "blocked",
@@ -140,6 +165,50 @@ const report = {
       unsnappedPoints: (route.points || [])
         .map((point, index) => ({ index, lat: point.lat, lng: point.lng, unsnapped: point.unsnapped === true }))
         .filter((point) => point.unsnapped),
+      guidanceMode: route.guidanceMode || "legacy",
+      navigationEvidence: {
+        nearbyJunctions: Array.isArray(nearbyJunctions) ? nearbyJunctions.length : null,
+        roundaboutTraversals: routeRoundabouts.length,
+      },
+      guidanceSpans: (route.guidanceSpans || []).map((span) => ({
+        startMeters: Math.round(Number(span.startMeters) * 10) / 10,
+        endMeters: Math.round(Number(span.endMeters) * 10) / 10,
+        resolutionStatus: span.resolutionStatus,
+        guidanceIdentity: span.guidanceIdentity || null,
+        name: span.name || null,
+        segmentIds: span.segmentIds || [],
+      })),
+      guidanceCues: navigationCues
+        .filter((cue) =>
+          cue.ontoGuidance ||
+          cue.thenManeuver?.ontoGuidance ||
+          cue.stayOnGuidance ||
+          Number.isFinite(Number(cue.continueOnWayMeters)),
+        )
+        .map((cue) => ({
+          distanceMeters: Math.round(Number(cue.distanceMeters) * 10) / 10,
+          type: cue.type,
+          direction: cue.direction || null,
+          guidanceIdentity:
+            cue.thenManeuver?.ontoGuidance?.guidanceIdentity ||
+            cue.ontoGuidance?.guidanceIdentity ||
+            cue.stayOnGuidance?.guidanceIdentity ||
+            null,
+          name:
+            cue.thenManeuver?.ontoGuidance?.name ||
+            cue.ontoGuidance?.name ||
+            cue.stayOnGuidance?.name ||
+            null,
+          semantics: cue.stayOnGuidance ? "stay-on" : "enter",
+          continueOnWayMeters: Number.isFinite(Number(cue.continueOnWayMeters))
+            ? Math.round(Number(cue.continueOnWayMeters) * 10) / 10
+            : null,
+          spokenText: createNavigationVoicePlanner().plan(
+            { kind: "cue", cueType: cue.type, phase: "final", cue },
+            { activeCue: { cue, phase: "final", distanceToCueMeters: 20 } },
+            1000,
+          ).utterance?.text || null,
+        })),
       }
     : null,
 };

@@ -13,6 +13,8 @@ export function emptyRouteSnapshot() {
     activeDataPoints: [],
     routeFailure: null,
     segmentSpans: [],
+    guidanceSpans: [],
+    guidanceMode: "legacy",
     routingValidation: null,
   };
 }

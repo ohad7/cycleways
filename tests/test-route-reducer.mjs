@@ -68,18 +68,24 @@ console.log("Route reducer hover tests passed");
 // --- segmentSpans propagation through the reducer ---
 {
   const spans = [{ startMeters: 0, endMeters: 100, name: "X", cwSegmentId: 1, onNetwork: true, routeClass: "cycleway" }];
+  const guidanceSpans = [{ startMeters: 0, endMeters: 100, guidanceIdentity: "way:x", name: "X" }];
   const updated = routeReducer(initialRouteState, {
     type: "route/update",
     snapshot: {
       points: [], selectedSegments: [], geometry: [], distance: 0,
       elevationGain: 0, elevationLoss: 0, activeDataPoints: [],
-      routeFailure: null, segmentSpans: spans,
+      routeFailure: null, segmentSpans: spans, guidanceSpans, guidanceMode: "guidance-v1",
     },
   });
   assert.deepEqual(updated.segmentSpans, spans, "update copies segmentSpans");
+  assert.deepEqual(updated.guidanceSpans, guidanceSpans, "update copies guidanceSpans");
+  assert.equal(updated.guidanceMode, "guidance-v1");
   const cleared = routeReducer(updated, { type: "route/clear" });
   assert.deepEqual(cleared.segmentSpans, [], "clear resets segmentSpans");
+  assert.deepEqual(cleared.guidanceSpans, [], "clear resets guidanceSpans");
+  assert.equal(cleared.guidanceMode, "legacy");
   assert.deepEqual(initialRouteState.segmentSpans, [], "initial state has empty spans");
+  assert.deepEqual(initialRouteState.guidanceSpans, [], "initial state has empty guidance spans");
 }
 
 console.log("Route reducer segmentSpans tests passed");

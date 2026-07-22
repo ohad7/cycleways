@@ -160,6 +160,8 @@ export function snapshotRouteManager(manager, segmentsData) {
     elevationLoss: info.elevationLoss || 0,
     routeFailure: info.failure || null,
     segmentSpans: info.segmentSpans || [],
+    guidanceSpans: info.guidanceSpans || [],
+    guidanceMode: info.guidanceMode || "legacy",
     routingValidation: info.routingValidation
       ? cloneJsonValue(info.routingValidation)
       : null,
@@ -187,6 +189,8 @@ export function routeStateSnapshot(routeState) {
     })),
     routeFailure: routeState.routeFailure || null,
     segmentSpans: (routeState.segmentSpans || []).map((s) => ({ ...s })),
+    guidanceSpans: cloneJsonValue(routeState.guidanceSpans || []),
+    guidanceMode: routeState.guidanceMode || "legacy",
     routingValidation: routeState.routingValidation
       ? cloneJsonValue(routeState.routingValidation)
       : null,

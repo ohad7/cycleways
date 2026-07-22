@@ -8,6 +8,11 @@
         "name": "כביש 9974",
         "status": "active",
         "roadType": "paved",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-9974",
+          "sectionLabel": "כביש 9974"
+        },
         "styleUrl": "#sty-1",
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
@@ -678,6 +683,10 @@
         "name": "שדות כפר יובל",
         "status": "active",
         "roadType": "dirt",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "kfar-yuval-fields"
+        },
         "styleUrl": "#sty-3",
         "stroke": "#ae9067",
         "sourceStroke": "#ae9067",
@@ -5147,6 +5156,11 @@
         "name": "גן הצפון",
         "status": "active",
         "roadType": "paved",
+        "guidance": {
+          "role": "standalone",
+          "name": "גן הצפון",
+          "kind": "other"
+        },
         "styleUrl": "#sty-10",
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
@@ -42502,6 +42516,11 @@
         "name": "שביל אופניים 99 מעיין ברוך",
         "status": "active",
         "roadType": "paved",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99",
+          "sectionLabel": "מעיין ברוך"
+        },
         "styleUrl": "#sty-84",
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
@@ -42816,6 +42835,11 @@
         "name": "שביל אופניים 99 כפר יובל",
         "status": "active",
         "roadType": "paved",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99",
+          "sectionLabel": "כפר יובל"
+        },
         "styleUrl": "#sty-85",
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
@@ -69891,6 +69915,10 @@
         "name": "שביל תל חי",
         "status": "active",
         "roadType": "paved",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "tel-hai-trail"
+        },
         "styleUrl": "#sty-141",
         "stroke": "#0288d1",
         "sourceStroke": "#0288d1",
@@ -78224,6 +78252,11 @@
         "name": "כביש 99 קריית שמונה",
         "status": "active",
         "roadType": "road",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-99",
+          "sectionLabel": "קריית שמונה"
+        },
         "styleUrl": "#sty-157",
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
@@ -81574,6 +81607,11 @@
         "name": "כביש 90 כפר גלעדי",
         "status": "active",
         "roadType": "road",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-90",
+          "sectionLabel": "כפר גלעדי"
+        },
         "styleUrl": "#sty-166",
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
@@ -81929,6 +81967,10 @@
         "name": "כבישון עגל",
         "status": "active",
         "roadType": "road",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "agal-road"
+        },
         "styleUrl": "#sty-168",
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
@@ -81994,6 +82036,11 @@
         "name": "כביש 9974 כפר יובל",
         "status": "active",
         "roadType": "road",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-9974",
+          "sectionLabel": "כפר יובל"
+        },
         "styleUrl": "#sty-169",
         "stroke": "#8f2424",
         "sourceStroke": "#8f2424",
@@ -104526,6 +104573,10 @@
         "name": "שביל אופניים יובלים",
         "status": "active",
         "roadType": "paved",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "yuvalim-cycleway"
+        },
         "quality": {
           "overall": 3,
           "safety": 3,

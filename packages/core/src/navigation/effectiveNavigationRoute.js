@@ -159,6 +159,11 @@ export function reverseNavigationRoute(route) {
     end: route?.start ? { ...route.start } : null,
     activeDataPoints: remapReverseDataPoints(route?.activeDataPoints, total),
     segmentSpans: remapReverseSpans(route?.segmentSpans, total),
+    // Guidance memberships are direction-scoped. Until reverse construction
+    // can resolve the opposite traversal memberships, fall back conservatively
+    // instead of reversing forward rider-facing identities.
+    guidanceSpans: [],
+    guidanceMode: "legacy",
     junctions: cloneJunctions(route?.junctions),
     crossings: null,
   };
@@ -306,6 +311,9 @@ export function buildEffectiveNavigationRoute(sourceRoute, selection = {}) {
         segmentSpans: Array.isArray(sourceRoute?.segmentSpans)
           ? sourceRoute.segmentSpans.map((span) => ({ ...span }))
           : [],
+        guidanceSpans: Array.isArray(sourceRoute?.guidanceSpans)
+          ? sourceRoute.guidanceSpans.map((span) => ({ ...span }))
+          : [],
       };
   const total = totalMeters(directional);
   const requestedProgress = Math.max(
@@ -326,6 +334,7 @@ export function buildEffectiveNavigationRoute(sourceRoute, selection = {}) {
         ...directional,
         activeDataPoints: directional.activeDataPoints.map((point) => ({ ...point })),
         segmentSpans: directional.segmentSpans.map((span) => ({ ...span })),
+        guidanceSpans: directional.guidanceSpans.map((span) => ({ ...span })),
       },
       geometry,
       normalizedSelection,
@@ -388,6 +397,11 @@ export function buildEffectiveNavigationRoute(sourceRoute, selection = {}) {
         requestedProgress,
         closedTotal,
       ),
+      guidanceSpans: rotateSpans(
+        directional.guidanceSpans,
+        requestedProgress,
+        closedTotal,
+      ),
     };
   }
 
@@ -413,6 +427,11 @@ export function buildEffectiveNavigationRoute(sourceRoute, selection = {}) {
     ),
     segmentSpans: clipLinearSpans(
       directional.segmentSpans,
+      requestedProgress,
+      effective.distanceMeters,
+    ),
+    guidanceSpans: clipLinearSpans(
+      directional.guidanceSpans,
       requestedProgress,
       effective.distanceMeters,
     ),

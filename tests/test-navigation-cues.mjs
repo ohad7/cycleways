@@ -405,6 +405,135 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   assert.equal(selected.phase, "final");
 }
 
+// --- guidance-aware naming: topology owns cues, identity owns wording ------
+{
+  const route = {
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.605, distanceFromStartMeters: 500 },
+      { lat: 33.114, lng: 35.605, distanceFromStartMeters: 2050 },
+    ],
+    segmentSpans: [
+      { startMeters: 0, endMeters: 500, name: "Internal approach" },
+      { startMeters: 500, endMeters: 2050, name: "שביל תל חי section" },
+    ],
+    guidanceMode: "guidance-v1",
+    guidanceSpans: [
+      {
+        startMeters: 0, endMeters: 520, guidanceIdentity: "way:approach",
+        name: "דרך גישה", spokenName: null, role: "named-way", kind: "road",
+      },
+      {
+        startMeters: 520, endMeters: 570, guidanceIdentity: null,
+        name: null, role: null, kind: null, networkRole: "junction",
+      },
+      {
+        startMeters: 570, endMeters: 2050, guidanceIdentity: "way:tel-hai-trail",
+        name: "שביל תל חי", spokenName: null, role: "named-way", kind: "trail",
+      },
+    ],
+    activeDataPoints: [],
+  };
+  const cues = buildRouteCues(route);
+  const turn = cues.find((cue) => cue.type === "turn");
+  assert.equal(turn.ontoGuidance.guidanceIdentity, "way:tel-hai-trail");
+  assert.equal(turn.ontoGuidance.name, "שביל תל חי");
+  assert.ok(
+    near(turn.continueOnWayMeters, 1480, 1),
+    "distance starts where the rider exits the junction onto the named way",
+  );
+  assert.equal(findType(cues, "enter-segment").length, 0);
+}
+
+{
+  const route = {
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.605, distanceFromStartMeters: 500 },
+      { lat: 33.105, lng: 35.605, distanceFromStartMeters: 1050 },
+    ],
+    segmentSpans: [],
+    guidanceMode: "guidance-v1",
+    guidanceSpans: [{
+      startMeters: 0, endMeters: 1050, guidanceIdentity: "way:road-99",
+      name: "כביש 99", role: "named-way", kind: "road",
+    }],
+    junctions: [{ lat: 33.1, lng: 35.605 }],
+    activeDataPoints: [],
+  };
+  const turn = buildRouteCues(route).find((cue) => cue.type === "turn");
+  assert.equal(turn.ontoGuidance, undefined);
+  assert.equal(turn.stayOnGuidance.guidanceIdentity, "way:road-99");
+}
+
+{
+  const route = {
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 1000 },
+    ],
+    segmentSpans: [
+      { startMeters: 0, endMeters: 400, name: "כביש 9974 כפר יובל" },
+      { startMeters: 400, endMeters: 1000, name: "כביש 9974" },
+    ],
+    guidanceMode: "guidance-v1",
+    guidanceSpans: [
+      {
+        startMeters: 0, endMeters: 400, guidanceIdentity: "way:road-9974",
+        name: "כביש 9974", role: "named-way", kind: "road",
+      },
+      {
+        startMeters: 400, endMeters: 1000, guidanceIdentity: "way:road-9974",
+        name: "כביש 9974", role: "named-way", kind: "road",
+      },
+    ],
+    activeDataPoints: [],
+  };
+  const cues = buildRouteCues(route);
+  assert.equal(findType(cues, "enter-segment").length, 0, "same-way editorial split is silent");
+  assert.deepEqual(cues.map((cue) => cue.type), ["start", "arrive"]);
+}
+
+// A roundabout on an off-network approach must not borrow the next named way
+// from hundreds of meters later. Only a contiguous named span or an explicit
+// junction bridge can provide destination guidance.
+{
+  const base = routeFrom([
+    { lat: 33, lng: 35 },
+    { lat: 33, lng: 35.01 },
+  ]);
+  const route = {
+    ...base,
+    guidanceMode: "guidance-v1",
+    guidanceSpans: [
+      {
+        startMeters: 0, endMeters: 700, guidanceIdentity: null,
+        name: null, role: null, kind: null, resolutionStatus: "off-network",
+      },
+      {
+        startMeters: 700, endMeters: base.distanceMeters,
+        guidanceIdentity: "way:road-99", name: "כביש 99",
+        role: "named-way", kind: "road", resolutionStatus: "resolved",
+      },
+    ],
+    junctions: [{
+      kind: "roundabout",
+      roundaboutId: "off-network-roundabout",
+      lat: 33,
+      lng: 35.001,
+      entryMeters: 100,
+      exitMeters: 150,
+      entryBearingDeg: 90,
+      exitBearingDeg: 0,
+      complete: true,
+    }],
+  };
+  const roundabout = findType(buildRouteCues(route), "roundabout")[0];
+  assert.equal(roundabout.direction, "left");
+  assert.equal(roundabout.ontoGuidance, undefined);
+  assert.equal(roundabout.continueOnWayMeters, undefined);
+}
+
 // --- Real catalog route: junction data is baked in and gates the cues -----
 // sovev-beit-hillel used to produce 16 "turn" cues, 9 of them at plain road
 // curves (no junction within 30 m+). With junctions in the snapshot, every

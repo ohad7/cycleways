@@ -1362,6 +1362,90 @@ def source_segments_from_geojson(source_geojson: dict[str, Any]) -> dict[str, An
     return segments
 
 
+NAVIGATION_GUIDANCE_KINDS = {
+    "road",
+    "cycleway",
+    "dirt-road",
+    "trail",
+    "promenade",
+    "bridge",
+    "connector",
+    "path",
+    "other",
+}
+
+
+def resolve_navigation_guidance(
+    source_segments: dict[str, Any],
+    navigation_ways: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve source guidance memberships into self-contained runtime records.
+
+    Source GeoJSON remains the membership authority and navigation-ways.json
+    remains the naming authority. The public segments asset embeds the resolved
+    projection so route calculation does not need another mutable global asset.
+    """
+    if int(navigation_ways.get("schemaVersion", 0)) != 1:
+        raise ValueError("navigation ways schemaVersion must be 1")
+    ways = navigation_ways.get("ways")
+    if not isinstance(ways, dict):
+        raise ValueError("navigation ways must contain a ways object")
+
+    resolved_segments = {name: dict(value) for name, value in source_segments.items()}
+    for segment_name, segment in resolved_segments.items():
+        guidance = segment.get("guidance")
+        if guidance is None:
+            continue
+        if not isinstance(guidance, dict):
+            raise ValueError(f"segment {segment_name} guidance must be an object")
+        role = guidance.get("role")
+        resolved = dict(guidance)
+        if role == "named-way":
+            way_id = guidance.get("wayId")
+            way = ways.get(way_id)
+            if not isinstance(way, dict):
+                raise ValueError(f"segment {segment_name} references unknown way {way_id}")
+            kind = way.get("kind")
+            name = way.get("name")
+            if kind not in NAVIGATION_GUIDANCE_KINDS or not isinstance(name, str) or not name.strip():
+                raise ValueError(f"navigation way {way_id} has invalid name or kind")
+            resolved.update({
+                "guidanceIdentity": f"way:{way_id}",
+                "name": name.strip(),
+                "spokenName": way.get("spokenName") or None,
+                "kind": kind,
+                "resolutionStatus": "resolved",
+            })
+        elif role == "standalone":
+            segment_id = segment.get("id")
+            kind = guidance.get("kind")
+            name = guidance.get("name")
+            if not isinstance(segment_id, int) or segment_id <= 0:
+                raise ValueError(f"standalone segment {segment_name} requires a stable id")
+            if kind not in NAVIGATION_GUIDANCE_KINDS or not isinstance(name, str) or not name.strip():
+                raise ValueError(f"standalone segment {segment_name} has invalid name or kind")
+            resolved.update({
+                "guidanceIdentity": f"standalone:{segment_id}",
+                "name": name.strip(),
+                "spokenName": guidance.get("spokenName") or None,
+                "resolutionStatus": "resolved",
+            })
+        elif role == "unnamed":
+            kind = guidance.get("kind")
+            if kind not in NAVIGATION_GUIDANCE_KINDS:
+                raise ValueError(f"unnamed segment {segment_name} has invalid kind")
+            resolved.update({
+                "guidanceIdentity": None,
+                "name": None,
+                "spokenName": None,
+                "resolutionStatus": "unnamed",
+            })
+        else:
+            raise ValueError(f"segment {segment_name} has invalid guidance role {role}")
+        segment["guidance"] = resolved
+    return resolved_segments
+
+
 def is_active_source_feature(feature: dict[str, Any]) -> bool:
     geometry = feature.get("geometry")
     if not geometry or geometry.get("type") != "LineString":
@@ -4687,7 +4771,10 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         f"Loaded {len(source_geojson.get('features', []))} source records",
     )
 
-    source_segments = source_segments_from_geojson(source_geojson)
+    source_segments = resolve_navigation_guidance(
+        source_segments_from_geojson(source_geojson),
+        load_json(args.navigation_ways.resolve(), {}),
+    )
     output_kml = public_data_dir / "exports" / "map.kml"
     output_geojson = public_data_dir / "bike_roads.geojson"
     output_segments = public_data_dir / "segments.json"
@@ -4883,6 +4970,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--input-kml", type=Path, default=Path("input.kml"))
     parser.add_argument("--input-geojson", type=Path)
     parser.add_argument("--segments", type=Path, default=Path("public-data/segments.json"))
+    parser.add_argument(
+        "--navigation-ways",
+        type=Path,
+        default=Path("data/navigation-ways.json"),
+        help="Canonical rider-facing navigation way-name registry.",
+    )
     parser.add_argument("--out-dir", type=Path, default=Path("build"))
     parser.add_argument("--cache-file", type=Path, default=DEFAULT_CACHE_FILE)
     parser.add_argument(

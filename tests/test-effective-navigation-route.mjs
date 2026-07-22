@@ -97,6 +97,37 @@ function route({ circular = false } = {}) {
 }
 
 {
+  const source = route();
+  source.guidanceMode = "guidance-v1";
+  source.guidanceSpans = [
+    {
+      startMeters: 0,
+      endMeters: source.distanceMeters / 2,
+      guidanceIdentity: "way:a",
+      name: "A",
+    },
+    {
+      startMeters: source.distanceMeters / 2,
+      endMeters: source.distanceMeters,
+      guidanceIdentity: "way:b",
+      name: "B",
+    },
+  ];
+  const clipped = buildEffectiveNavigationRoute(source, {
+    direction: "forward",
+    startMode: "custom",
+    startProgressMeters: source.distanceMeters / 2,
+  });
+  assert.equal(clipped.guidanceMode, "guidance-v1");
+  assert.equal(clipped.guidanceSpans[0].guidanceIdentity, "way:b");
+  assert.equal(clipped.guidanceSpans[0].startMeters, 0);
+
+  const reversed = reverseNavigationRoute(source);
+  assert.equal(reversed.guidanceMode, "legacy");
+  assert.deepEqual(reversed.guidanceSpans, []);
+}
+
+{
   const source = route({ circular: true });
   const start = source.distanceMeters * 0.35;
   const effective = buildEffectiveNavigationRoute(source, {

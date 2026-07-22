@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "enforcement": "migration",
+  "ways": {
+    "road-99": {
+      "name": "כביש 99",
+      "kind": "road",
+      "ref": "99",
+      "aliases": [],
+      "spokenName": "כביש תשעים ותשע"
+    },
+    "yuvalim-cycleway": {
+      "name": "שביל אופניים יובלים",
+      "kind": "cycleway",
+      "aliases": [],
+      "spokenName": null
+    },
+    "tel-hai-trail": {
+      "name": "שביל תל חי",
+      "kind": "trail",
+      "aliases": [],
+      "spokenName": null
+    },
+    "road-90": {
+      "name": "כביש 90",
+      "kind": "road",
+      "ref": "90",
+      "aliases": [],
+      "spokenName": "כביש תשעים"
+    },
+    "agal-road": {
+      "name": "כבישון עגל",
+      "kind": "road",
+      "aliases": [],
+      "spokenName": null
+    },
+    "road-9974": {
+      "name": "כביש 9974",
+      "kind": "road",
+      "ref": "9974",
+      "aliases": [],
+      "spokenName": "כביש תשעת אלפים תשע מאות שבעים וארבע"
+    },
+    "kfar-yuval-fields": {
+      "name": "שדות כפר יובל",
+      "kind": "dirt-road",
+      "aliases": [],
+      "spokenName": null
+    },
+    "cycleway-99": {
+      "name": "שביל אופניים 99",
+      "kind": "cycleway",
+      "ref": "99",
+      "aliases": [],
+      "spokenName": "שביל אופניים תשעים ותשע"
+    }
+  }
+}
