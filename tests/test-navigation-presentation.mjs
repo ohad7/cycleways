@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   getNavigationPresentation,
   roadClassChipLabel,
+  shouldShowNavigationSurface,
 } from "@cycleways/core/navigation/navigationPresentation.js";
 
 // Navigating, no active maneuver cue -> "continue on route".
@@ -445,6 +446,25 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     { type: "roundabout", direction: "straight" },
   );
 
+  const crossingThenNamedRoundabout = getNavigationPresentation({
+    ...riding,
+    status: "navigating",
+    activeCue: {
+      cue: {
+        type: "crossing",
+        ontoGuidance: { name: "כביש 90" },
+        thenManeuver: { type: "roundabout", direction: "left" },
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+  });
+  assert.equal(
+    crossingThenNamedRoundabout.cueNextText,
+    "ואז בכיכר פנו שמאלה אל כביש 90",
+  );
+  assert.equal(crossingThenNamedRoundabout.cueSecondaryText, "");
+
   const roundaboutThenTurn = getNavigationPresentation({
     ...riding,
     status: "navigating",
@@ -583,6 +603,16 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(arrived.arrivalSummary.distanceText, "14.8 ק״מ");
   assert.equal(arrived.arrivalSummary.elapsedText, "1:12");
   assert.equal(arrived.arrivalSummary.avgSpeedText, "12.3 קמ״ש");
+  assert.equal(
+    shouldShowNavigationSurface({ status: "ended", endReason: "arrived" }),
+    true,
+    "arrival summary remains mounted until the rider dismisses it",
+  );
+  assert.equal(
+    shouldShowNavigationSurface({ status: "ended", endReason: "user" }),
+    false,
+    "manual finish dismisses the navigation surface",
+  );
 }
 
 // --- roadClassChipLabel: bare noun form ----------------------------------

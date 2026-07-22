@@ -100,10 +100,16 @@ function thenManeuverText(maneuver, locale, sourceType) {
   if (maneuver.type === "roundabout") {
     const phrase = roundaboutText(maneuver.direction, locale);
     if (!phrase) return "";
+    const ontoName = guidanceSpeechName(maneuver.ontoGuidance) || maneuver.ontoSegmentName;
+    const onto = ontoName
+      ? locale === "he-IL" ? ` אל ${ontoName}` : ` onto ${ontoName}`
+      : "";
     const normalized = locale === "he-IL"
       ? phrase.replace(/^בכיכר,\s*/, "בכיכר ")
       : phrase.replace(/^At the roundabout,\s*/, "at the roundabout, ");
-    return locale === "he-IL" ? `, ואז ${normalized}` : `, then ${normalized}`;
+    return locale === "he-IL"
+      ? `, ואז ${normalized}${onto}`
+      : `, then ${normalized}${onto}`;
   }
   if (maneuver.type === "turn") {
     const ontoName = guidanceSpeechName(maneuver.ontoGuidance) || maneuver.ontoSegmentName;
@@ -250,7 +256,15 @@ function cuePhrase(event, state, locale) {
       const phrase = locale === "he-IL"
         ? "חצו בזהירות לצד השני של הכביש"
         : "Cross carefully to the other side of the road";
-      return `${prefix}${phrase}${then || onto}${then ? continueOnWayText(cue, locale) : ""}`;
+      const thenNeedsDestination =
+        cue.thenManeuver?.type === "roundabout"
+        && !guidanceSpeechName(cue.thenManeuver?.ontoGuidance)
+        && !cue.thenManeuver?.ontoSegmentName
+        && Boolean(ontoName);
+      const thenDestination = thenNeedsDestination
+        ? locale === "he-IL" ? ` אל ${ontoName}` : ` onto ${ontoName}`
+        : "";
+      return `${prefix}${phrase}${then || onto}${thenDestination}${then ? continueOnWayText(cue, locale) : ""}`;
     }
     case "turn": {
       const ontoName = guidanceSpeechName(cue.ontoGuidance) || cue.ontoSegmentName;

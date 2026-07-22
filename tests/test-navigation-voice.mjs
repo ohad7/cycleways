@@ -528,6 +528,27 @@ assert.equal(compassWord(null, "he-IL"), null);
   assert.match(utterance.text, /חצו בזהירות לצד השני של הכביש/);
   assert.match(utterance.text, /ואז בכיכר המשיכו ישר/);
 
+  const namedRoundaboutCue = {
+    type: "crossing",
+    distanceMeters: 700,
+    ontoGuidance: {
+      guidanceIdentity: "way:road-90",
+      name: "כביש 90",
+      spokenName: "כביש תשעים",
+      role: "named-way",
+    },
+    thenManeuver: { type: "roundabout", direction: "left" },
+  };
+  const namedRoundabout = createNavigationVoicePlanner().plan(
+    { kind: "cue", cueType: "crossing", phase: "final", cue: namedRoundaboutCue },
+    { activeCue: { distanceToCueMeters: 10, cue: namedRoundaboutCue, phase: "final" } },
+    1000,
+  ).utterance;
+  assert.equal(
+    namedRoundabout.text,
+    "חצו בזהירות לצד השני של הכביש, ואז בכיכר פנו שמאלה אל כביש תשעים",
+  );
+
   const english = createNavigationVoicePlanner({ locale: "en-US" }).plan(
     { kind: "cue", cueType: "crossing", phase: "final", cue },
     { activeCue: { distanceToCueMeters: 10, cue, phase: "final" } },

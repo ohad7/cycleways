@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "roman-roads",
-  "generatedAt": "2026-07-22T06:36:36.160Z",
+  "generatedAt": "2026-07-22T16:47:53.382Z",
   "source": {
     "routeTokenHash": "sha256:0f8f1a20551a4d73879adc905e5a50cb5d63941fb911ffc163d2051455503cbd",
     "routeFormat": "hybrid_route_v6",
-    "mapVersion": "8112ad1dfe1f",
+    "mapVersion": "5ff4620a381b",
     "assetHashes": {
-      "bikeRoads": "3ec628517ac6e508af9bb0ed7aaf65a6c47b75af15bc6df0d79c1295b8bb2082",
-      "segments": "43f0f479a673d5d622775878ccd59e905f49fc3a2a7a1b5c52ab1a41d3c56331",
-      "cwBaseIndex": "9e9dd5e40dad66fa4c1461616cd4ed8db0a244d662be3278a90a35d0baeba52a",
-      "baseRoutingShards": "076ebf09ef093ca4c22aa5813c1108c976c3ee48bd7719b54e982289cd921bef"
+      "bikeRoads": "d7ff624f3c80034bc87c5307df7eedbd7aec6764f10d70a145137fcbbf88b6ca",
+      "segments": "fc73dcfa9c1a863b58768b535d4b64632890038786195f7b7de17a3a0ead5d5d",
+      "cwBaseIndex": "8bd30442bb74fac71856262b98e3d20ed83bdccd1b6a3fad9ced7a1bccf78357",
+      "baseRoutingShards": "072309fcbd6f8dba1069d2f3bfa7c93c8137330b391ce686c0669aec331fe916"
     }
   },
   "route": {

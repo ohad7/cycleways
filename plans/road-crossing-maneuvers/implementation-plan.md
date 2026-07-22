@@ -84,6 +84,8 @@ but new crossings begin with a coordinate guideline.
 - [x] Mirror roundabout-crossing composition, crossing → crossing and named CW
       entry semantics in the native maneuver card, including primary/secondary
       maneuver icons.
+- [x] Preserve the destination way name when crossing → roundabout is spoken as
+      one compound maneuver and the roundabout's follow-up cue is suppressed.
 - [x] Publish valid coordinate-authored manual crossings even when the optional
       generated-candidate queue is absent; retain missing detector coverage as
       a warning only.

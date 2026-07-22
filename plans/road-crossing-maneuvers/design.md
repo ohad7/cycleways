@@ -1017,6 +1017,10 @@ Hebrew:
 - preview: `בעוד 120 מטרים, חצו בזהירות לצד השני של הכביש`
 - final: `חצו בזהירות לצד השני של הכביש`
 - crossing then roundabout: `חצו בזהירות לצד השני של הכביש, ואז בכיכר המשיכו ישר`
+- when that compound maneuver enters a named way, keep the name in the same
+  utterance, for example `חצו בזהירות לצד השני של הכביש, ואז בכיכר פנו שמאלה
+  אל כביש תשעים`; the suppressed follow-up cue must not be the only owner of
+  the destination name;
 - crossing then turn: `חצו בזהירות לצד השני של הכביש, ואז פנו ימינה`
 - crossing then crossing: `חצו בזהירות לצד השני של הכביש, ואז חצו בזהירות גם את הכביש הבא`
 - turn or roundabout then crossing: append `ואז חצו בזהירות גם את הכביש הבא`

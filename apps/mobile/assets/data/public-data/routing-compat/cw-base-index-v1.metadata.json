@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "2026-07-13-v1",
+  "purpose": "Immutable expansion table for released V6 CycleWays spans",
+  "sourcePath": "public-data/cw-base-index.json",
+  "sourceSha256": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
+  "sourceMapSha256": "ee3a775992f59294042b05b1f4b738e01c0d8ddc0012cb9c840df42aa25c3f28",
+  "baseRoutingManifestSha256": "7c7766c9759d0165976cf158b33acca0ae067f2768339aae95823af46983dd89",
+  "baseEdgeShareRegistryFileSha256": "02bfa01e1a9fa65d838d9a957f2d053306cd58d61e15cf53bf15918d812deef4",
+  "baseEdgeShareRegistryDigest": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d",
+  "graphVersion": "2026-07-10T20:28:11.541285Z",
+  "legacyGraphVersionHash": "f03acd80",
+  "segmentCount": 284,
+  "overlayAuditRecordCount": 309,
+  "deprecatedArchiveRecordCount": 25,
+  "rules": {
+    "decodeReleasedV6CyclewaysSpansOnlyFromThisTable": true,
+    "includeDeprecatedOverlayArchives": false,
+    "allowOrdinaryBuildMutation": false
+  }
+}

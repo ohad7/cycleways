@@ -63,7 +63,10 @@ import {
   nextAppliedZoom,
   shouldReframeOverview,
 } from "@cycleways/core/navigation/cameraViewport.js";
-import { getNavigationPresentation } from "@cycleways/core/navigation/navigationPresentation.js";
+import {
+  getNavigationPresentation,
+  shouldShowNavigationSurface,
+} from "@cycleways/core/navigation/navigationPresentation.js";
 import { navigationLinePresentationForState } from "@cycleways/core/navigation/navigationLinePresentation.js";
 import { buildAppUrl } from "@cycleways/core/navigation/externalNav.js";
 import { scenarios as devScenarios } from "@cycleways/core/navigation/scenarios/index.js";
@@ -1253,12 +1256,7 @@ export default function BuildScreen({ navigation, route }) {
         : null,
   });
   const navStatus = nav.state?.status ?? "idle";
-  const isNavigating =
-    navStatus === "navigating" ||
-    navStatus === "approaching" ||
-    navStatus === "off-route" ||
-    navStatus === "paused" ||
-    navStatus === "requesting-permission";
+  const isNavigating = shouldShowNavigationSurface(nav.state);
 
   useEffect(() => {
     if (

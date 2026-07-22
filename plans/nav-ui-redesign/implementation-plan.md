@@ -47,6 +47,14 @@
 - Scenario timeline assertions should validate `cardMode` in addition to
   `cameraStage` and chips.
 
+## Arrival-surface correction — 2026-07-22
+
+- [x] Keep `ended` + `endReason: "arrived"` inside the native navigation
+      surface after the location/audio finalizer releases resources.
+- [x] Leave the arrival summary visible until the rider presses its `סיום`
+      button; a user-ended session still dismisses immediately.
+- [x] Cover the visibility decision in the pure navigation-presentation tests.
+
 ---
 
 ### Task 1: Smoothed rider speed in routeProgress

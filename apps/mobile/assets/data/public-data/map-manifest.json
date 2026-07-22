@@ -1,35 +1,110 @@
 {
-  "version": "8063067b9cee",
-  "generatedAt": "2026-07-12T11:58:00.580Z",
-  "bikeRoads": "bike_roads.geojson",
-  "segments": "segments.json",
-  "cwBaseIndex": "cw-base-index.json",
-  "kml": "exports/map.kml",
-  "baseRoutingShards": "base-routing-shards/manifest.json",
+  "version": "5ff4620a381b",
+  "generatedAt": "2026-07-22T16:46:33.520446Z",
+  "bikeRoads": "bike_roads.8112ad1dfe1f.geojson",
+  "segments": "segments.8112ad1dfe1f.json",
+  "cwBaseIndex": "cw-base-index.8112ad1dfe1f.json",
+  "kml": "exports/map.8112ad1dfe1f.kml",
+  "baseRoutingShards": "base-routing-shards.8112ad1dfe1f/manifest.json",
   "hashes": {
-    "bikeRoads": "179fea0aebc07c9b1582bdb07aaff12312849dc0efa940f3580b33845a0d546e",
-    "segments": "436aa19405dbf1ca4d6632d5ea72be06a8b8960cdd0039256517e50d39596ec5",
-    "cwBaseIndex": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
-    "kml": "aec00147ac141d84d82c3acb61a2ac37c317d6d38c323c9176369bdc451f022e",
-    "baseRoutingShards": "7c7766c9759d0165976cf158b33acca0ae067f2768339aae95823af46983dd89",
-    "roundabouts": "307c98e02ffd87d72c247b6816b32952cb06c78b41a3660ef36e4c9868858aeb"
+    "bikeRoads": "d7ff624f3c80034bc87c5307df7eedbd7aec6764f10d70a145137fcbbf88b6ca",
+    "segments": "fc73dcfa9c1a863b58768b535d4b64632890038786195f7b7de17a3a0ead5d5d",
+    "cwBaseIndex": "8bd30442bb74fac71856262b98e3d20ed83bdccd1b6a3fad9ced7a1bccf78357",
+    "kml": "fc7884ad53f24b9d1caafab27a26360db268490d5ed2d6a0acf63b3229600342",
+    "baseRoutingShards": "072309fcbd6f8dba1069d2f3bfa7c93c8137330b391ce686c0669aec331fe916",
+    "roundabouts": "307c98e02ffd87d72c247b6816b32952cb06c78b41a3660ef36e4c9868858aeb",
+    "crossings": "1602ed46f96c6af3dd1b69fa36069bc988150c0d369128fd83c52c8e4b4b0b40",
+    "networkJunctions": "ce5d4ed328f923a070a532a06c643d1a60aa955f3b9902b7f556bb6a03a17dd8",
+    "cwAlignmentGeometry": "5deb8d2dc9c8fde6c37d49d48ba6778d9db75fbf0bdff26fb98ed769dee07cda",
+    "legacyCwBaseIndex": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
+    "legacyRoutingCompatibilityMetadata": "114b2ed8b7cdd01022de97b783748ad7f10b1ee1282e0f1eaded1de9581948f3",
+    "routeAnchorCompatibility": "df5b7432365b934496caddcbb4c166543c67099291ba2f4392b8b2f47055911a",
+    "routeCatalog": "ee5f2248e01bed1a58e32d8780610dea18cc52d8ba5c006f0cf1f189ea061291",
+    "featuredRouteSnapshots": "386fa5679cc1f2f105c59ac61d931815d7b26027a499644713912b6c147060a8"
   },
   "elevation": {
     "skipElevation": false,
     "failures": 0
   },
   "validation": {
-    "featureCount": 284,
-    "segmentsCount": 347,
+    "featureCount": 291,
+    "segmentsCount": 367,
     "newSegments": 0,
     "routeCompatibilityWarnings": 0,
-    "routingEdges": 48368,
+    "routingEdges": 48895,
     "unresolvedRoutingSegments": 0,
     "baseRoutingWarnings": 0,
     "baseRoutingBlockers": 0,
-    "overlayDisplaySegments": 284,
+    "overlayDisplaySegments": 0,
     "sourceDisplayFallbackSegments": 0,
-    "cwBaseIndexSegments": 284
+    "cwBaseIndexSegments": 291,
+    "networkJunctions": 6,
+    "networkJunctionMovements": 431,
+    "networkJunctionDirectedEdges": 76
   },
-  "roundabouts": "roundabouts.json"
+  "roundabouts": "roundabouts.8112ad1dfe1f.json",
+  "crossings": "crossings.json",
+  "networkJunctions": "network-junctions.8112ad1dfe1f.json",
+  "cwAlignmentGeometry": "cw-alignment-geometry.8112ad1dfe1f.json",
+  "legacyRoutingCompatibility": {
+    "schemaVersion": 1,
+    "cwBaseIndex": "routing-compat/cw-base-index-v1.json",
+    "metadata": "routing-compat/cw-base-index-v1.metadata.json",
+    "cwBaseIndexSha256": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
+    "metadataSha256": "114b2ed8b7cdd01022de97b783748ad7f10b1ee1282e0f1eaded1de9581948f3",
+    "registryDigest": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d",
+    "graphVersionHashes": {
+      "f03acd80": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d"
+    }
+  },
+  "routeAnchorCompatibility": {
+    "schemaVersion": 1,
+    "path": "routing-compat/route-anchor-compatibility.8112ad1dfe1f.json",
+    "sha256": "df5b7432365b934496caddcbb4c166543c67099291ba2f4392b8b2f47055911a",
+    "graphVersionHashes": {
+      "00842732": "110ed6e380a7485c173c08c65104226f758fd0b54648e45b1e806953cebf4e10",
+      "065fabf6": "110ed6e380a7485c173c08c65104226f758fd0b54648e45b1e806953cebf4e10",
+      "26024ecc": "79eb7ad00c543c19c3a91a67ab9e3ae14ffa4643b13a03b8aeb11a45b2ca5d3b",
+      "3dbbac1c": "8d0977feb93fbfe83c0f7a8d262af0efe80fffa0908923d762571bec88079997",
+      "b2f75dc7": "94a00866aa138a7e61c18e5507c018b4e1d5325d8ed66bf6429ae522a4ddf052",
+      "c870989a": "94a00866aa138a7e61c18e5507c018b4e1d5325d8ed66bf6429ae522a4ddf052",
+      "f03acd80": "79eb7ad00c543c19c3a91a67ab9e3ae14ffa4643b13a03b8aeb11a45b2ca5d3b"
+    }
+  },
+  "releaseBundleDigest": "cfe306c51b53d6af700a5eb121d4b5d6ab39a9875b9ca1a6a5e7669e9fb3885d",
+  "releaseIndex": {
+    "schemaVersion": 1,
+    "mapVersion": "5ff4620a381b",
+    "policyId": "il-bicycle-v1",
+    "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+    "routingContextDigest": "5c3103e5484482574ae44243a5a2327504e430fc75bda23c3de2be04a5a3674b",
+    "baseEdgeShareRegistryDigest": "a6a7d71dab4a6f1f3d675cfca05d831dcf5b63e9c277782aa57be878bc5a3a92",
+    "mapAssetHashes": {
+      "bikeRoads": "d7ff624f3c80034bc87c5307df7eedbd7aec6764f10d70a145137fcbbf88b6ca",
+      "segments": "fc73dcfa9c1a863b58768b535d4b64632890038786195f7b7de17a3a0ead5d5d",
+      "cwBaseIndex": "8bd30442bb74fac71856262b98e3d20ed83bdccd1b6a3fad9ced7a1bccf78357",
+      "kml": "fc7884ad53f24b9d1caafab27a26360db268490d5ed2d6a0acf63b3229600342",
+      "baseRoutingShards": "072309fcbd6f8dba1069d2f3bfa7c93c8137330b391ce686c0669aec331fe916",
+      "roundabouts": "307c98e02ffd87d72c247b6816b32952cb06c78b41a3660ef36e4c9868858aeb",
+      "crossings": "1602ed46f96c6af3dd1b69fa36069bc988150c0d369128fd83c52c8e4b4b0b40",
+      "networkJunctions": "ce5d4ed328f923a070a532a06c643d1a60aa955f3b9902b7f556bb6a03a17dd8",
+      "cwAlignmentGeometry": "5deb8d2dc9c8fde6c37d49d48ba6778d9db75fbf0bdff26fb98ed769dee07cda",
+      "legacyCwBaseIndex": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
+      "legacyRoutingCompatibilityMetadata": "114b2ed8b7cdd01022de97b783748ad7f10b1ee1282e0f1eaded1de9581948f3",
+      "routeAnchorCompatibility": "df5b7432365b934496caddcbb4c166543c67099291ba2f4392b8b2f47055911a"
+    },
+    "routeCatalogSha256": "ee5f2248e01bed1a58e32d8780610dea18cc52d8ba5c006f0cf1f189ea061291",
+    "featuredRouteSnapshotHashes": {
+      "banias-gan-hatsafon": "38530fc9b9b97b93f75fdb9753b8792f46c2121004445430c321fd8a4d132b9e",
+      "historic-jordan": "367c4af21ed5e1dc864e87f898b42c53a0c92fc70e35056c17a54ee480d77401",
+      "kovshey-hagolan": "dba3d0c563247f9bd37b5bbbe106be3bc28ee8f28ed98f4d69091b557439f7a1",
+      "naftali-dishon-yosha": "4d7d92c7b3e86e0a56b944c4fd5cb6bcd4785d94d58213a84779d652e4d552f4",
+      "roman-roads": "e551d82e6fb0ed7d9168362d1368ae70cc2a429c0381a2ae495c881eef722990",
+      "sovev-beit-hillel": "a5c63960f4ef3067ea7798d860c5cb5ed3c8391d815becd8d19c4f47425a3d46",
+      "sovev-dafna": "7b5c330446381e316d5ca34d5ab5c1ef9980fddee728e0410235afec62576de4",
+      "sovev-shear-yeshuv": "25f7e7948913e7643cbbe142404db2ec5d9a84e722a8d4f24252d8821bb1f580"
+    }
+  },
+  "routeCatalog": "route-catalog.9905e86abda4.json",
+  "featuredRoutesBase": "featured-routes.b875b92b421b"
 }

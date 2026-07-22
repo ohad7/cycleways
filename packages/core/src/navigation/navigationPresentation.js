@@ -17,6 +17,22 @@ const STATUS_TEXT = {
 
 const HAZARD_FALLBACK = { text: "שים לב", icon: "alert-circle-outline" };
 
+const NAVIGATION_SURFACE_STATUSES = new Set([
+  "navigating",
+  "approaching",
+  "off-route",
+  "paused",
+  "requesting-permission",
+]);
+
+// Arrival stops location/audio resources immediately, but it does not dismiss
+// the foreground result. The rider owns that transition through the summary's
+// Finish button.
+export function shouldShowNavigationSurface(state = {}) {
+  return NAVIGATION_SURFACE_STATUSES.has(state?.status)
+    || (state?.status === "ended" && state?.endReason === "arrived");
+}
+
 // Turn text mirrors the voice phrase ("פנה שמאלה אל X ומיד ימינה"): the voice
 // planner suppresses the follow-up turn's own utterance after a compound
 // announcement, so the card is the rider's only reminder of the second leg.
@@ -93,7 +109,14 @@ function nextManeuverText(cue) {
   }
   if (maneuver?.type === "roundabout") {
     const phrase = roundaboutPhrase(maneuver.direction);
-    return phrase ? `ואז ${phrase.replace(/^בכיכר,\s*/, "בכיכר ")}` : "";
+    const ownName =
+      cue?.thenManeuver?.ontoGuidance?.name || cue?.thenManeuver?.ontoSegmentName;
+    const fallbackName = cue?.type === "crossing"
+      ? cue?.ontoGuidance?.name || cue?.ontoSegmentName
+      : null;
+    const ontoName = ownName || fallbackName;
+    const onto = ontoName ? ` אל ${ontoName}` : "";
+    return phrase ? `ואז ${phrase.replace(/^בכיכר,\s*/, "בכיכר ")}${onto}` : "";
   }
   if (maneuver?.type === "crossing") {
     return "ואז חצו בזהירות גם את הכביש הבא";
@@ -391,6 +414,9 @@ export function getNavigationPresentation(state = {}) {
       return `אל ${ontoName}${continuation}`;
     }
     if (c.stayOnGuidance?.name) return `כדי להישאר על ${c.stayOnGuidance.name}`;
+    if (c.type === "crossing" && c.thenManeuver?.type === "roundabout" && ontoName) {
+      return "";
+    }
     if (c.type === "crossing" && c.ontoGuidance?.name) return `המשיכו על ${c.ontoGuidance.name}`;
     if (c.type === "crossing" && c.ontoSegmentName) return `היכנסו אל ${c.ontoSegmentName}`;
     if (c.type === "crossing" && c.crossedRoadName) return c.crossedRoadName;

@@ -62,7 +62,10 @@ Core `ended` is a state transition, not native cleanup. Foreground automatic
 arrival and manual stop share one idempotent finalizer in
 `useNavigationSession`: stop the foreground watch, stop background updates,
 release keep-awake, stop pending speech, and clear the persisted active
-session. The headless runtime performs the equivalent clear+background-stop
+session. Resource cleanup does not dismiss the foreground arrival result:
+after automatic arrival the navigation surface remains mounted on its summary
+card until the rider presses `סיום`. The headless runtime performs the
+equivalent clear+background-stop
 path as soon as the core ends and stops processing the rest of that fix
 batch. When arrival happens under a locked screen, the ride ends headlessly
 after the arrival announcement and no summary is shown on unlock — accepted
