@@ -469,6 +469,51 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   );
   assert.deepEqual(roundaboutThenTurn.cueNextManeuver, { type: "turn", direction: "right" });
 
+  const crossingRoundaboutComplex = getNavigationPresentation({
+    ...riding,
+    status: "navigating",
+    activeCue: {
+      cue: {
+        type: "roundabout",
+        direction: "left",
+        containsReviewedCrossing: true,
+        ontoSegmentName: "שביל אופניים יובלים",
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+  });
+  assert.equal(
+    crossingRoundaboutComplex.cuePrimaryText,
+    "בכיכר, חצו בזהירות את הכביש",
+  );
+  assert.equal(
+    crossingRoundaboutComplex.cueNextText,
+    "ולאחר מכן פנו שמאלה אל שביל אופניים יובלים",
+  );
+  assert.equal(crossingRoundaboutComplex.cueSecondaryText, "");
+  assert.deepEqual(crossingRoundaboutComplex.cueManeuver, { type: "crossing" });
+  assert.deepEqual(
+    crossingRoundaboutComplex.cueNextManeuver,
+    { type: "roundabout", direction: "left" },
+  );
+
+  const roundaboutThenCrossing = getNavigationPresentation({
+    ...riding,
+    status: "navigating",
+    activeCue: {
+      cue: {
+        type: "roundabout",
+        direction: "straight",
+        thenManeuver: { type: "crossing" },
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+  });
+  assert.equal(roundaboutThenCrossing.cueNextText, "ואז חצו בזהירות גם את הכביש הבא");
+  assert.deepEqual(roundaboutThenCrossing.cueNextManeuver, { type: "crossing" });
+
   const namedJunction = getNavigationPresentation({
     ...riding,
     status: "navigating",
@@ -614,6 +659,25 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     "ואז פנו שמאלה אל דרך נוף מצפה עדי - מטולה דרום",
   );
   assert.deepEqual(p.cueNextManeuver, { type: "turn", direction: "left" });
+}
+
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: {
+        type: "crossing",
+        crossedRoadName: "צומת מצודות מעבר 2",
+        ontoSegmentName: "שביל תל חי",
+      },
+      phase: "final",
+      distanceToCueMeters: 20,
+    },
+    progress: { remainingMeters: 500 },
+  });
+  assert.equal(p.cuePrimaryText, "חצו לצד השני של הכביש");
+  assert.equal(p.cueSecondaryText, "היכנסו אל שביל תל חי");
 }
 
 // --- O5: off-route card shows the live distance back -----------------------

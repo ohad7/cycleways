@@ -81,12 +81,22 @@ but new crossings begin with a coordinate guideline.
       carry the named CW exit into speech.
 - [x] Carry a named CW segment entered directly after a crossing into the
       crossing announcement.
+- [x] Mirror roundabout-crossing composition, crossing → crossing and named CW
+      entry semantics in the native maneuver card, including primary/secondary
+      maneuver icons.
+- [x] Publish valid coordinate-authored manual crossings even when the optional
+      generated-candidate queue is absent; retain missing detector coverage as
+      a warning only.
 
 ### Task 29 — validation
 
 - [x] Unit-test single-edge fractional, multi-edge, reverse and prohibited
       reverse proposals.
 - [x] Test editor/server wiring, schema parity and manual record validation.
+- [x] Test native presentation for roundabout-contained crossings, consecutive
+      crossings and direct named CW entry.
+- [x] Test and run a disposable staged Build proving all 11 current manual
+      crossings publish with zero blocking crossing issues.
 - [x] Run crossing regressions, the real-graph matcher endpoint and the full
       repository suite.
 - [ ] Perform a curator-created crossing, Build and navigation replay as the

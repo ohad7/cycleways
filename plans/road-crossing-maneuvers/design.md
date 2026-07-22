@@ -831,6 +831,12 @@ not block the build mechanically.
 Build joins generated candidates with review decisions and publishes only
 confirmed mappings to `build/public-data/crossings.json`:
 
+Coordinate-authored manual crossings do not depend on the generated candidate
+queue. If `build/crossings/candidates.json` is absent, Build still validates
+and publishes every current manual crossing against the staged base graph and
+direction policy. Missing detector output remains an advisory coverage warning;
+it cannot silently remove curated crossings from web or mobile artifacts.
+
 ```json
 {
   "schemaVersion": 1,
@@ -1043,6 +1049,10 @@ beyond the roundabout exit.
 ### Card, icon, haptics and camera
 
 - Primary card text: `חצו לצד השני של הכביש`.
+- Native cards mirror compound voice semantics. A roundabout that owns a
+  reviewed crossing presents crossing as the primary action and its named exit
+  as the secondary action; crossing → crossing and crossing → named CW entry
+  likewise remain visible rather than existing only in speech.
 - A dedicated glyph shows two road edges and a transverse arrow; it does not
   reuse a turn arrow.
 - Haptics use the normal maneuver pattern: light preview, medium final.

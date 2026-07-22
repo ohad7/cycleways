@@ -38,6 +38,7 @@ function maneuverDescriptor(cue) {
     return { type: cue.type, direction: cue.direction };
   }
   if (cue?.type === "roundabout") {
+    if (cue.containsReviewedCrossing) return { type: "crossing" };
     return { type: "roundabout", direction: cue.direction };
   }
   if (cue?.type === "crossing") return { type: "crossing" };
@@ -45,17 +46,25 @@ function maneuverDescriptor(cue) {
 }
 
 function nextManeuverDescriptor(cue) {
+  if (cue?.type === "roundabout" && cue.containsReviewedCrossing) {
+    return { type: "roundabout", direction: cue.direction };
+  }
   const maneuver = cue?.thenManeuver || (cue?.thenDirection
     ? { type: "turn", direction: cue.thenDirection }
     : null);
-  return maneuver && (maneuver.type === "turn" || maneuver.type === "roundabout")
-    ? { type: maneuver.type, direction: maneuver.direction }
+  return maneuver && (
+    maneuver.type === "turn" || maneuver.type === "roundabout" || maneuver.type === "crossing"
+  )
+    ? maneuver.type === "crossing"
+      ? { type: "crossing" }
+      : { type: maneuver.type, direction: maneuver.direction }
     : null;
 }
 
 function primaryManeuverText(cue) {
   if (cue?.type === "turn") return `פנה ${directionWord(cue.direction)}`;
   if (cue?.type === "roundabout") {
+    if (cue.containsReviewedCrossing) return "בכיכר, חצו בזהירות את הכביש";
     const phrase = roundaboutPhrase(cue.direction) || "המשך במסלול";
     return cue.junctionName ? `ב${cue.junctionName}, ${phrase}` : phrase;
   }
@@ -64,6 +73,16 @@ function primaryManeuverText(cue) {
 }
 
 function nextManeuverText(cue) {
+  if (cue?.type === "roundabout" && cue.containsReviewedCrossing) {
+    const ontoName = cue.ontoGuidance?.name || cue.ontoSegmentName;
+    const onto = ontoName ? ` אל ${ontoName}` : "";
+    const action = cue.direction === "straight"
+      ? "המשיכו ישר"
+      : cue.direction === "u-turn"
+        ? "חזרו לאחור"
+        : `פנו ${directionWord(cue.direction)}`;
+    return `ולאחר מכן ${action}${onto}`;
+  }
   const maneuver = nextManeuverDescriptor(cue);
   if (maneuver?.type === "turn") {
     const ontoName = cue?.thenManeuver?.ontoGuidance?.name || cue?.thenManeuver?.ontoSegmentName;
@@ -75,6 +94,9 @@ function nextManeuverText(cue) {
   if (maneuver?.type === "roundabout") {
     const phrase = roundaboutPhrase(maneuver.direction);
     return phrase ? `ואז ${phrase.replace(/^בכיכר,\s*/, "בכיכר ")}` : "";
+  }
+  if (maneuver?.type === "crossing") {
+    return "ואז חצו בזהירות גם את הכביש הבא";
   }
   return "";
 }
@@ -93,6 +115,9 @@ function thenManeuverPhrase(cue) {
   if (maneuver?.type === "roundabout") {
     const phrase = roundaboutPhrase(maneuver.direction);
     return phrase ? `, ואז ${phrase.replace(/^בכיכר,\s*/, "בכיכר ")}` : "";
+  }
+  if (maneuver?.type === "crossing") {
+    return ", ואז חצו בזהירות גם את הכביש הבא";
   }
   return "";
 }
@@ -126,6 +151,12 @@ function cueDisplay(cue) {
         ? { text: "עיקול ימינה", icon: "arrow-forward-outline" }
         : { text: "עיקול שמאלה", icon: "arrow-back-outline" };
     case "roundabout": {
+      if (cue.containsReviewedCrossing) {
+        return {
+          text: `${primaryManeuverText(cue)} ${nextManeuverText(cue)}`,
+          icon: "crossing",
+        };
+      }
       const text = roundaboutPhrase(cue.direction);
       const namedText = text && cue.junctionName ? `ב${cue.junctionName}, ${text}` : text;
       return namedText
@@ -353,6 +384,7 @@ export function getNavigationPresentation(state = {}) {
     if (!c) return "";
     const ontoName = c.ontoGuidance?.name || c.ontoSegmentName;
     if ((c.type === "turn" || c.type === "roundabout") && ontoName) {
+      if (c.type === "roundabout" && c.containsReviewedCrossing) return "";
       const continuation = Number.isFinite(Number(c.continueOnWayMeters))
         ? ` · המשיכו ${formatDistanceMeters(c.continueOnWayMeters)}`
         : "";
@@ -360,6 +392,7 @@ export function getNavigationPresentation(state = {}) {
     }
     if (c.stayOnGuidance?.name) return `כדי להישאר על ${c.stayOnGuidance.name}`;
     if (c.type === "crossing" && c.ontoGuidance?.name) return `המשיכו על ${c.ontoGuidance.name}`;
+    if (c.type === "crossing" && c.ontoSegmentName) return `היכנסו אל ${c.ontoSegmentName}`;
     if (c.type === "crossing" && c.crossedRoadName) return c.crossedRoadName;
     if (c.type === "enter-segment" && c.segmentName) return `אל ${c.segmentName}`;
     if (

@@ -12,6 +12,67 @@ def write(path, value):
 
 
 class CrossingPublicationTests(unittest.TestCase):
+    def test_manual_crossing_publishes_without_candidate_queue(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            graph_path = root / "graph.json"
+            registry_path = root / "registry.json"
+            candidates_path = root / "missing-candidates.json"
+            reviews_path = root / "reviews.json"
+            output_path = root / "crossings.json"
+            edge = {
+                "id": "edge-1", "fromNodeId": "a", "toNodeId": "b",
+                "sourceGeometryDigest": "geometry-1",
+                "bicycleTraversalShadow": {
+                    "policyDigest": POLICY_DIGEST, "forward": "allowed", "reverse": "allowed",
+                },
+            }
+            graph = {"edges": [edge]}
+            registry = {"schemaVersion": 1, "edges": {"edge-1": 1}}
+            crossing = {
+                "id": "manual-crossing-without-candidates",
+                "kind": "side-change",
+                "representation": "edge-path",
+                "guidancePolicy": "always",
+                "guideline": {"type": "LineString", "coordinates": [[35.0, 33.0], [35.0001, 33.0001]]},
+                "center": {"lat": 33.0, "lng": 35.0},
+                "audit": {"createdAt": "2026-07-22T00:00:00Z", "updatedAt": "2026-07-22T00:00:00Z"},
+                "mappings": [{
+                    "id": "mapping-without-candidates",
+                    "match": {
+                        "before": [],
+                        "action": [{"edgeShareId": 1, "fromFractionQ": 200_000, "toFractionQ": 800_000}],
+                        "after": [],
+                    },
+                    "entry": {"lat": 33.0, "lng": 35.0},
+                    "exit": {"lat": 33.0001, "lng": 35.0001},
+                }],
+            }
+            crossing["sourceEdgeFingerprint"] = crossing_edge_path_fingerprint(
+                crossing, {1: edge}, POLICY_DIGEST
+            )
+            write(graph_path, graph)
+            write(registry_path, registry)
+            write(reviews_path, {
+                "schemaVersion": 1, "reviews": {}, "manualCrossings": [crossing],
+            })
+
+            validation, result = build_reviewed_crossings(
+                candidates_path, reviews_path, graph_path, registry_path, "graph-v3", output_path
+            )
+
+            self.assertEqual(result, output_path)
+            self.assertEqual(validation["summary"]["manual"], 1)
+            self.assertTrue(validation["sourceFresh"])
+            self.assertIn(
+                "missing_crossing_candidates",
+                [item["code"] for item in validation["warnings"]],
+            )
+            self.assertEqual(
+                [item["id"] for item in json.loads(output_path.read_text())["crossings"]],
+                ["manual-crossing-without-candidates"],
+            )
+
     def test_edge_path_geometry_fingerprint_must_be_current(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

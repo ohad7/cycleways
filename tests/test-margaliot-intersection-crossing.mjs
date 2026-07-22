@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import {
   buildNavigationGeometry,
 } from "@cycleways/core/navigation/navigationRoute.js";
@@ -7,89 +6,78 @@ import { buildRouteCues } from "@cycleways/core/navigation/navigationCues.js";
 import { createNavigationVoicePlanner } from "@cycleways/core/navigation/navigationVoice.js";
 import { buildRouteAttestation } from "@cycleways/core/routing/routeAttestation.js";
 import { crossingsOnRoute } from "@cycleways/core/routing/crossingsOnRoute.js";
-import { joinCrossingReviews } from "../editor/lib/crossingReview.mjs";
 
-const loadJson = async (relative) => JSON.parse(
-  await readFile(new URL(`../${relative}`, import.meta.url), "utf8"),
-);
+// This is a behavior regression, not a live-curation assertion. The original
+// Margaliot review record was intentionally removed, so keep the topology
+// self-contained and let publication/current-data tests own curated content.
+const BEFORE_SHARE = 10;
+const AFTER_LEFT_SHARE = 20;
+const AFTER_RIGHT_SHARE = 30;
+const center = { lat: 33.2205053, lng: 35.548282 };
+const crossing = {
+  id: "fixture-margaliot-dirt-to-sideline",
+  kind: "side-change",
+  representation: "junction-transition",
+  guidancePolicy: "user-option",
+  center,
+  crossedRoad: { name: "כביש 9977", highway: "secondary" },
+  mappings: [{
+    id: "fixture-margaliot-dirt-to-sideline-forward",
+    direction: "dirt-to-north",
+    match: {
+      before: [{ edgeShareId: BEFORE_SHARE, fromFractionQ: 1_000_000, toFractionQ: 0 }],
+      action: [],
+      after: [{ edgeShareId: AFTER_LEFT_SHARE, fromFractionQ: 1_000_000, toFractionQ: 0 }],
+    },
+    entry: center,
+    exit: center,
+    continuation: { type: "turn", direction: "left" },
+    policy: { state: "allowed", policyDigest: "fixture-policy" },
+  }],
+};
 
-const [graph, registry, reviews] = await Promise.all([
-  loadJson("build/osm/osm-base-graph-elevated.json"),
-  loadJson("data/base-edge-share-ids.json"),
-  loadJson("data/crossing-review.json"),
-]);
-
-const joined = joinCrossingReviews(
-  { schemaVersion: 1, coverage: { baseGraph: "complete" }, crossings: [] },
-  reviews,
-);
-assert.deepEqual(joined.blockingIssues, []);
-const crossing = joined.runtimeCrossings.find(
-  (item) => item.id === "manual-crossing-margaliot-dirt-to-sideline",
-);
-assert.ok(crossing, "the reviewed Margaliot transition is publishable");
-
-const edgeIdByShare = new Map(
-  Object.entries(registry.edges).map(([edgeId, shareId]) => [shareId, edgeId]),
-);
-const edgeById = new Map(graph.edges.map((edge) => [edge.id, edge]));
-const edgeForShare = (shareId) => edgeById.get(edgeIdByShare.get(shareId));
-const mapping = crossing.mappings[0];
-
-function coordinatesForSlice(slice) {
-  const edge = edgeForShare(slice.edgeShareId);
-  assert.ok(edge, `base edge for share ${slice.edgeShareId}`);
-  const coordinates = slice.toFractionQ > slice.fromFractionQ
-    ? edge.coordinates
-    : [...edge.coordinates].reverse();
-  return coordinates.map(([lng, lat]) => ({ lat, lng }));
-}
-
-function routeForSlices(slices) {
-  const rawGeometry = [];
-  for (const slice of slices) {
-    const points = coordinatesForSlice(slice);
-    rawGeometry.push(...(rawGeometry.length ? points.slice(1) : points));
-  }
+function routeFor({ geometry: rawGeometry, slices }) {
   const geometry = buildNavigationGeometry(rawGeometry);
-  const policyDigest = edgeForShare(slices[0].edgeShareId)
-    .bicycleTraversalShadow.policyDigest;
   const routingValidation = buildRouteAttestation({
     validationContext: {
       baseRoutingSchemaVersion: 3,
-      graphVersion: "margaliot-current-graph",
+      graphVersion: "margaliot-fixture-graph",
       policyId: "il-bicycle-v1",
-      policyDigest,
+      policyDigest: "fixture-policy",
       routingContextDigest: "margaliot-intersection-regression",
     },
-    traversalSlices: slices.map((slice) => {
-      const edge = edgeForShare(slice.edgeShareId);
-      const direction = slice.toFractionQ > slice.fromFractionQ ? "forward" : "reverse";
-      const opposite = direction === "forward" ? "reverse" : "forward";
-      return {
-        ...slice,
-        distanceMeters: edge.distanceMeters,
-        policyState: edge.bicycleTraversalShadow[direction],
-        policyReason: "reviewed-base-policy",
-        oppositePolicyState: edge.bicycleTraversalShadow[opposite],
-        oppositePolicyReason: "reviewed-base-policy",
-      };
-    }),
+    traversalSlices: slices.map((slice, index) => ({
+      ...slice,
+      distanceMeters: index === 0
+        ? geometry[1].distanceFromStartMeters
+        : geometry.at(-1).distanceFromStartMeters - geometry[1].distanceFromStartMeters,
+      policyState: "allowed",
+      policyReason: "fixture-policy",
+      oppositePolicyState: "allowed",
+      oppositePolicyReason: "fixture-policy",
+      shardIds: ["margaliot-fixture"],
+    })),
     waypointOccurrences: [],
-    legBoundaries: [],
+    legBoundaries: [{ startTraversal: 0, endTraversal: slices.length }],
     geometry,
   });
-  return { geometry, routingValidation, policyDigest };
+  return { geometry, routingValidation };
 }
 
-const transitionSlices = [
-  ...mapping.match.before,
-  ...mapping.match.after,
-];
-const transitionRoute = routeForSlices(transitionSlices);
+const transitionRoute = routeFor({
+  geometry: [
+    { lat: 33.2204367, lng: 35.5477011 },
+    center,
+    { lat: 33.2207388, lng: 35.5483479 },
+  ],
+  slices: [
+    { edgeShareId: BEFORE_SHARE, fromFractionQ: 1_000_000, toFractionQ: 0 },
+    { edgeShareId: AFTER_LEFT_SHARE, fromFractionQ: 1_000_000, toFractionQ: 0 },
+  ],
+});
 const artifact = {
   schemaVersion: 1,
-  traversalPolicyDigest: transitionRoute.policyDigest,
+  traversalPolicyDigest: "fixture-policy",
   crossings: [crossing],
 };
 const matches = crossingsOnRoute(
@@ -105,7 +93,7 @@ assert.equal(matches[0].guidancePolicy, "user-option");
 const routeTotal = transitionRoute.geometry.at(-1).distanceFromStartMeters;
 const namedRoute = {
   geometry: transitionRoute.geometry,
-  junctions: [{ ...crossing.center }],
+  junctions: [center],
   crossings: matches,
   segmentSpans: [
     {
@@ -159,10 +147,17 @@ const fallbackTurn = disabledCues.find((cue) => cue.type === "turn");
 assert.equal(fallbackTurn?.direction, "left");
 assert.equal(fallbackTurn?.ontoSegmentName, "דרך נוף מצפה עדי - מטולה דרום");
 
-const rightTurnRoute = routeForSlices([
-  mapping.match.before[0],
-  { edgeShareId: 42652, fromFractionQ: 0, toFractionQ: 1_000_000 },
-]);
+const rightTurnRoute = routeFor({
+  geometry: [
+    { lat: 33.2204367, lng: 35.5477011 },
+    center,
+    { lat: 33.2202, lng: 35.54835 },
+  ],
+  slices: [
+    { edgeShareId: BEFORE_SHARE, fromFractionQ: 1_000_000, toFractionQ: 0 },
+    { edgeShareId: AFTER_RIGHT_SHARE, fromFractionQ: 0, toFractionQ: 1_000_000 },
+  ],
+});
 assert.deepEqual(
   crossingsOnRoute(artifact, rightTurnRoute.routingValidation, rightTurnRoute.geometry),
   [],
@@ -170,7 +165,7 @@ assert.deepEqual(
 );
 const rightTurnCues = buildRouteCues({
   geometry: rightTurnRoute.geometry,
-  junctions: [{ ...crossing.center }],
+  junctions: [center],
   crossings: [],
   segmentSpans: [],
 });

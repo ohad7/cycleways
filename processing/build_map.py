@@ -4380,7 +4380,13 @@ def build_reviewed_crossings(
         "staleAccepted": 0, "staleRejected": 0, "manual": 0,
         "invalid": 0, "orphaned": 0, "warnings": 0,
     }
-    if not candidates_path.exists():
+    reviews = load_json(review_path, {"schemaVersion": 1, "reviews": {}, "manualCrossings": []})
+    manual_crossings = reviews.get("manualCrossings")
+    has_manual_crossings = isinstance(manual_crossings, list) and bool(manual_crossings)
+    expected_graph_digest = f"sha256:{file_digest(graph_path)}"
+    expected_registry_digest = f"sha256:{file_digest(share_registry_path)}"
+    candidates_missing = not candidates_path.exists()
+    if candidates_missing and not has_manual_crossings:
         output_path.unlink(missing_ok=True)
         return {
             "summary": empty_summary,
@@ -4389,11 +4395,17 @@ def build_reviewed_crossings(
             "blockingIssues": [],
             "sourceFresh": False,
         }, None
-    candidates = load_json(candidates_path, {})
-    reviews = load_json(review_path, {"schemaVersion": 1, "reviews": {}, "manualCrossings": []})
+    candidates = load_json(candidates_path, {}) if not candidates_missing else {
+        "schemaVersion": 1,
+        "sourceGraphDigest": expected_graph_digest,
+        "edgeShareRegistryDigest": expected_registry_digest,
+        "traversalPolicyDigest": POLICY_DIGEST,
+        "coverage": {"baseGraph": "manual-only"},
+        "crossings": [],
+    }
     joined = join_crossing_reviews(candidates, reviews)
-    expected_graph_digest = f"sha256:{file_digest(graph_path)}"
-    expected_registry_digest = f"sha256:{file_digest(share_registry_path)}"
+    if candidates_missing:
+        joined["warnings"].append({"code": "missing_crossing_candidates"})
     source_fresh = (
         candidates.get("sourceGraphDigest") == expected_graph_digest
         and candidates.get("edgeShareRegistryDigest") == expected_registry_digest
