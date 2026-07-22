@@ -1,8 +1,8 @@
 # Reviewed road-crossing maneuvers
 
 **Date:** 2026-07-14
-**Revision:** 2026-07-15 — added experimental, user-optional intersection side-change guidance
-**Status:** implementation complete; manual editor/device review and artifact promotion remain gated
+**Revision:** 2026-07-22 — added junction-first, map-first curation rollout
+**Status:** runtime core implemented; scalable candidate curation and first data rollout planned
 **Origin:** M1/S2 in `plans/navigation-ride-feedback-3/discussion.md`
 
 ## Outcome
@@ -17,10 +17,11 @@ not from a live guess based only on route geometry. A confirmed crossing may
 map to one directed base-edge slice, several edge slices, or multiple valid
 traversal variants while remaining one logical user-facing event.
 
-For the corrected Road 99 replay, the right/left pair at about
-3,822–3,838 m becomes one crossing cue. The following straight-roundabout cue
-remains present and independently announceable. The route itself remains the
-current directionally legal route of about 10,111.6 m.
+For the Road 99 replay, a reviewed side-change replaces the corresponding
+opposite-turn geometry while preserving the following real maneuver. Crossing
+guidance changes narration, not route choice or route length. The exact replay
+distance is deliberately recorded by the scenario test because subsequent CW
+network curation has superseded the historical 10,111.6 m baseline.
 
 ## Major decisions
 
@@ -52,8 +53,8 @@ review joining, multi-mapping records, manifest/offline publication, pure
 attestation matching for main/approach/rejoin routes, cue replacement, Hebrew
 and English voice, a dedicated card/icon, haptics, and camera participation.
 
-The first production data release is deliberately not part of this code commit.
-Two existing data gates must be resolved through their normal review workflows:
+The first production data release was deliberately not part of this code
+commit. At that time two data gates remained:
 
 - the elevated graph currently has 48,856 edges while the released stable
   edge-share registry contains 48,381, so candidate generation refuses to
@@ -66,7 +67,9 @@ With a temporary complete identity registry, the graph-wide detector produced
 1,656 logical review candidates and found the Road 99 location without a
 coordinate special case (`crossing:1092567462:33.2351-35.5800:48308`). This is
 diagnostic evidence only: it is not committed as an accepted crossing and
-cannot reach runtime until the editor and Build gates pass.
+could not reach runtime until the editor and Build gates passed. The stable
+share/direction gates were resolved before the 2026-07-22 re-review; current
+rollout status is recorded in the curation amendment below.
 
 The initial editor release supports independent mapping selection and validated
 advanced JSON repair/manual records while displaying all mappings, action
@@ -88,10 +91,211 @@ enabled produces one crossing with a reviewed left continuation and the
 destination segment name, while disabled restores the ordinary named left
 turn. It also confirms that the right branch does not match the crossing.
 
-The record is source-reviewed but cannot yet reach a bundled mobile artifact:
-the existing stable-share/candidate promotion gates described above still
-prevent a complete crossings build. This is a data-rollout gate, not missing
-runtime or UI implementation.
+At the time, the record could not reach a bundled mobile artifact because of
+the stable-share/candidate gates above. Those gates are now resolved: a clean
+2026-07-22 Build publishes the manual record. The remaining gate is scalable
+curation and explicit first-slice review, not runtime or publication code.
+
+## Curation rollout amendment — 2026-07-22
+
+### Re-review outcome
+
+The existing authority split remains correct:
+
+- network junctions own legal connectivity between ports;
+- roundabout reviews own roundabout classification and roundabout maneuver
+  semantics; and
+- crossing records own the safety statement that the rider must move to the
+  other side of a motor-road corridor.
+
+Crossings therefore remain a separate reviewed artifact. They gain explicit
+junction/roundabout context and share the map-first editor shell, but they do
+not become a boolean property of every junction or roundabout. A junction can
+contain both ordinary movements and one movement that requires a crossing,
+while a mid-block side change can require guidance with no junction nearby.
+
+The fresh 2026-07-22 graph-wide run proves that raw candidate count cannot be
+the curator experience:
+
+| Current diagnostic cut | Count |
+| --- | ---: |
+| Logical action-path candidates | 1,611 |
+| Directed mappings | 10,113 |
+| Explicit OSM crossing evidence | 107 |
+| Major-road corridor | 265 |
+| Touches an accepted CW alignment | 156 |
+| Within the diagnostic buffer of a relevant junction or roundabout | 171 |
+| Two or more of the signals above | approximately 164 |
+
+These are reproducible audit measurements, not acceptance thresholds. The
+junction/roundabout association currently uses a coarse spatial buffer and
+must become deterministic and topology-aware before it is authoritative
+editor metadata.
+
+The current reference replay is approximately 10,082.9 m. Its first curated
+data slice includes both the Tel Hai side-change and the later reported
+Road 99-area side-change; the older distance and cue-count table below is kept
+as an implementation record rather than a current acceptance baseline.
+
+### Curate review sites; publish exact mappings
+
+The editor's primary unit becomes a generated **crossing review site**. A site
+collects topologically related proposals so the curator can answer one
+real-world question on one map view. It is not runtime authority and is never
+matched by proximity during navigation.
+
+A site is associated in this order:
+
+1. an exact reviewed junction movement or junction boundary;
+2. an exact roundabout plus an entry/exit-side relationship;
+3. overlapping action signatures against one motor-road corridor; or
+4. a deterministic standalone corridor/anchor grouping.
+
+Proximity alone may group records for display but may not merge mappings or
+accept a logical crossing. Publication still requires the existing explicit
+directed `before/action/after` signature. Candidate and manual records gain
+optional editor/build context:
+
+```json
+{
+  "reviewSiteId": "junction:junction-osm-...:movement-group-...",
+  "context": {
+    "junctionId": "junction-osm-...",
+    "movementId": "entry-port->exit-port",
+    "roundaboutId": null,
+    "roundaboutPhase": null
+  }
+}
+```
+
+`context` strengthens visualization, route-impact reporting and staleness
+checks. The directed edge signature remains runtime authority. A crossing
+linked to a junction movement becomes stale when that movement's topology
+fingerprint changes. A roundabout-adjacent crossing may be `before-entry` or
+`after-exit`; its action interval must not overlap the reviewed roundabout.
+
+### Junction-first coverage, not junction-only discovery
+
+The default review queue is ordered by product impact:
+
+1. sites matched by a reference, featured or catalog route;
+2. sites used by accepted CW alignments or published junction movements;
+3. junction- and roundabout-associated sites;
+4. explicit OSM crossing tags and major-road sites;
+5. remaining base-network candidates relevant to ordinary, approach or rejoin
+   routing; and
+6. the full graph-wide audit layer.
+
+Pending low-priority sites remain visible and non-blocking. The editor never
+claims that an undecided location is safe or needs no guidance. This enables a
+useful release after the routed/CW queues are reviewed without forcing 1,611
+decisions or hiding possible crossings outside the CW network.
+
+The current action-path detector remains graph-wide. A second proposal source
+derives **junction-transition candidates** from relevant network-junction
+movements. It uses exact entry/exit ports, motor-road corridor and movement
+realization to propose cases where a cyclist changes sides even when a
+centerline graph has no lateral action edge. Proposals are never automatically
+accepted.
+
+Roundabout context contributes prioritization and safe compounding, not blanket
+classification. Most roundabout traversals are already described correctly by
+the roundabout cue. A crossing record is added only when a particular approach,
+departure or adjacent path genuinely moves the rider to the other road side.
+
+### Map-first curator workflow
+
+The Crossings lens becomes a specialized Base Network/Junctions overlay rather
+than a 1,611-row mapping-ID queue. The default map shows review sites, with raw
+candidate mappings appearing after a site is selected.
+
+For the selected site the editor draws simultaneously:
+
+- the crossed motor-road corridor and direction arrows;
+- junction boundary, ports and selected legal movement when applicable;
+- roundabout ring and entry/exit relationship when applicable;
+- CW arms and accepted alignment paths;
+- proposed `before`, `action` and `after` traces with large arrows; and
+- reference/catalog routes that actually traverse the proposal.
+
+The primary curator question is:
+
+> Does this supported rider movement require moving to the other side of the
+> motor road?
+
+The primary outcomes are:
+
+1. **No crossing guidance** — reject the selected proposal/movements;
+2. **Cross the road** — accept an unconditional action-path crossing;
+3. **Cross, then turn** — accept a directed continuation, optionally governed
+   by the intersection experiment; or
+4. **Repair movement** — use guided edge-trace authoring when the proposal is
+   conceptually right but its signature is wrong.
+
+The curator selects visible movement arrows, not opaque mapping hashes.
+Mappings describing the same directed movement are variants under one choice.
+Direction remains explicit: confirming one movement never infers its reverse.
+
+Creation begins from the relevant object:
+
+- **Junctions:** select a legal entry-to-exit movement and choose **Add crossing
+  guidance**; the editor proposes a `junction-transition` from its attested
+  before/after slices.
+- **Roundabouts:** select the adjacent approach/departure and create a crossing
+  outside the ring; the editor preserves the roundabout cue.
+- **Base Network:** select approach, action and departure for a standalone or
+  detector-missed action-path crossing.
+
+Review writes are lightweight and immediate. They do not rebuild the graph.
+The panel previews the resulting instruction and affected routes; Build remains
+the authoritative publication and validation step.
+
+### Instruction detail at an accepted crossing
+
+The crossing remains one semantic maneuver even when its physical trace has a
+sharp entry turn and a smaller departure turn. A mapping may carry an optional
+reviewed entry maneuver in addition to its existing continuation:
+
+```json
+{
+  "entryManeuver": { "type": "turn", "direction": "left" },
+  "continuation": { "type": "turn", "direction": "right" }
+}
+```
+
+When entry direction is absent, voice retains the generic
+`חצו בזהירות לצד השני של הכביש`. When confirmed, the reference wording is:
+
+> פנו שמאלה כדי לחצות בזהירות לצד השני של הכביש, ואז פנו ימינה אל שביל תל חי
+
+`slight right/left` is not a new schema direction in this rollout; ordinary
+`right/left` remains sufficient. Geometry may suggest entry direction, but the
+published value is bound to reviewed mapping evidence.
+
+### Coverage and release gates
+
+Review completeness is reported by scope, not as one misleading percentage:
+
+- reference/featured routes;
+- accepted CW network;
+- published junction movements;
+- OSM-tagged candidates;
+- major roads; and
+- all base-network candidates.
+
+The first release requires:
+
+1. both crossing sites in the reported ride reviewed and matched;
+2. every site traversed by the selected reference/featured-route corpus
+   decided;
+3. no stale or invalid accepted mapping;
+4. route geometry and traversal fingerprints unchanged;
+5. expected crossing/roundabout compound instructions verified; and
+6. manual editor plus device/audio validation recorded.
+
+Unrelated pending base-network sites remain non-blocking and unpublished. A
+future audit can expand coverage without changing the runtime contract or
+silently enabling geometry heuristics.
 
 ## Problem definition
 
@@ -754,7 +958,7 @@ pre-directionality route.
 | Original ~482 m crossing | Corrected route no longer reproduces the old path in the same form. | Retained as an offline detector and matcher fixture; no cue is invented on the current route. |
 | Original ~2,226 m Tel Hai cue | M4 removed the corrupted false pair. | No regression; only a separately confirmed mapping can add a crossing. |
 | Current ~3,822–3,838 m crossing | Right about 112°, left about 74°, then straight roundabout. | Confirm candidate in editor; runtime matches it; one crossing cue replaces the pair; straight-roundabout remains and compounds at about a 56 m gap. |
-| Route choice and length | Strict directed route, about 10,111.6 m. | Unchanged. |
+| Route choice and length | Historical strict directed replay, about 10,111.6 m. | Unchanged by crossing narration. |
 
 Expected cue delta at the remaining site: ordinary turn cues decrease from 19
 to 17 and one crossing cue is added. Roundabout count and route-content
@@ -788,8 +992,9 @@ Implementation is complete only when:
    multi-edge action intervals, without geometry classification.
 6. Main, approach and rejoin paths all carry valid route attestation and use
    the same matcher.
-7. The confirmed Road 99 crossing produces one crossing cue and preserves its
-   following roundabout on the unchanged 10,111.6 m route.
+7. Each confirmed reference-ride crossing produces one crossing cue, preserves
+   its following real maneuver, and leaves the current route geometry and
+   distance unchanged.
 8. Reverse-only/forward-only mapping behavior is covered and never inferred
    against bicycle policy.
 9. Voice, card, icon, haptic, camera, persistence and v3 fingerprint contracts

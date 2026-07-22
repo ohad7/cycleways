@@ -1,7 +1,7 @@
 # Reviewed road-crossing maneuvers — implementation plan
 
 **Date:** 2026-07-14
-**Status:** implementation complete; manual editor/device review and crossings artifact promotion remain gated
+**Status:** runtime core implemented; junction-first curation rollout and first crossing data release planned
 **Design:** `plans/road-crossing-maneuvers/design.md`
 
 ## Goal
@@ -53,15 +53,15 @@ Implementation refinements still open:
 - add the final committed Road 99 route/cue regression after its stable shares,
   direction policy, and crossing mapping can be reviewed rather than guessed.
 
-First-data-rollout blockers and manual gates:
+Historical first-data blockers were the 475 missing stable shares and the Road
+99 manual-edge direction review. Both are resolved on the 2026-07-22 graph;
+candidate generation and confirmed-only publication now complete normally.
+Current first-data gates are:
 
-- promote 475 missing stable share IDs (48,856 current graph edges versus
-  48,381 released registry entries), then regenerate candidates;
-- review the Road 99 manual base-edge direction policy;
-- accept/repair the Road 99 mapping in the Crossings editor and Build/Promote
-  the resulting artifact; and
-- perform the already-deferred editor plus simulator/device/audio validation
-  when local access is available.
+- replace the raw candidate queue with the prioritized site workflow below;
+- accept/repair the two reported-ride mappings in the Crossings editor;
+- build and replay a real artifact without injected test evidence; and
+- complete editor plus simulator/device/audio validation before Promote.
 
 The graph-wide diagnostic run using a temporary complete registry produced
 1,656 logical candidates and found Road 99 as
@@ -88,8 +88,9 @@ Implementation completed on 2026-07-15. Automated validation includes the
 reviewed Margaliot graph transition, both preference states, the 9977 right-turn
 negative control, durable preference defaults, crash-resume restoration, the
 focused crossing/navigation suites, production build and full repository test
-suite. Manual editor and device/audio checks remain deferred while working
-remotely, and publication remains behind the pre-existing stable-share gates.
+suite. Manual editor and device/audio checks remain deferred. The previous
+stable-share publication gate is resolved; the current gate is the reviewed
+first crossing data slice described below.
 
 ## Headless Road 99 impact validation — 2026-07-15
 
@@ -116,10 +117,139 @@ adjacent, directionally contiguous slices of the same stable edge without
 allowing unrelated intervening edges. The focused matcher test and a named Road
 99 impact regression lock this behavior into `npm run test:crossings`.
 
-This validates the expected instruction and proves the route itself is
-unchanged. It is not editor acceptance: the injected mapping remains
-unpublishable until stable-share promotion and manual direction review are
-completed.
+This historical replay validated the expected instruction and proved the route
+itself was unchanged. It was not editor acceptance at the time. The stable
+share and direction-review blockers have since been resolved; what remains is
+to curate the current mappings and replay them from a real built artifact.
+
+## Junction-first curation rollout — 2026-07-22
+
+The previous stable-share blocker is resolved on the current graph. A fresh
+local generator run completes with full graph/share coverage:
+
+- 1,611 logical candidates;
+- 10,113 directed mappings;
+- 0 accepted generated candidates;
+- 1 existing manual `junction-transition`; and
+- no Build blocker when the fresh candidate artifact is present.
+
+A clean temporary Build publishes the existing manual crossing and reports
+1,611 pending generated reviews. The obstacle is now curator scale and product
+prioritization, not generation or runtime publication. These tasks amend Tasks
+3–6 and the first-data rollout; existing matching/publication/cue tasks remain
+authoritative.
+
+The current reference ride is approximately 10,082.9 m after later CW network
+curation. That replay, not the historical 10,111.6 m table, is the release
+baseline for Tasks 24–25.
+
+### Task 18 — produce topology and route-impact associations
+
+- [ ] Add deterministic optional context for exact junction movement,
+      roundabout identity/phase, accepted CW alignment and OSM/road-class
+      evidence.
+- [ ] Add an offline route-impact audit over reference, featured and catalog
+      route attestations without treating matches as accepted crossings.
+- [ ] Bind junction context to its topology fingerprint so changes stale only
+      affected accepted crossings.
+- [ ] Validate that action-path intervals do not overlap a roundabout ring.
+- [ ] Record deterministic per-scope counts in the candidate payload.
+- [ ] Keep context advisory; exact directed mappings remain runtime authority.
+
+**Tests**
+
+- [ ] exact junction movement associated; nearby unrelated movement omitted;
+- [ ] before/after-roundabout association and overlap rejection;
+- [ ] CW-alignment and route-corpus association;
+- [ ] harmless input ordering leaves associations unchanged; and
+- [ ] junction topology changes stale only linked accepted evidence.
+
+### Task 19 — generate reviewed-only junction-transition proposals
+
+- [ ] Examine relevant entry-to-exit movements against nearby motor-road
+      corridors and signed side-of-corridor evidence.
+- [ ] Propose `junction-transition` only when the movement changes sides and no
+      physical action-path proposal represents the same event.
+- [ ] Carry entry/exit port ids, movement id, exact before/after directed slices
+      and suggested continuation direction.
+- [ ] Never auto-accept, infer reverse movement or classify every junction
+      movement as a crossing.
+- [ ] Deduplicate junction and action-path proposals for one movement.
+- [ ] Cover Margaliot, the reported Tel Hai site and ordinary-turn negatives.
+
+### Task 20 — add generated crossing review sites
+
+- [ ] Add non-authoritative `reviewSites` to the editor response.
+- [ ] Prefer exact junction/roundabout context; otherwise group overlapping
+      action signatures by corridor and deterministic anchor.
+- [ ] Permit spatial grouping for display only, never mapping merge/acceptance.
+- [ ] Derive site state: needs review, partially reviewed, confirmed, no
+      guidance, stale or conflict.
+- [ ] Preserve accepted crossing identity independently of site organization.
+- [ ] Add presets for reference routes, CW network, junctions, roundabouts,
+      OSM-tagged, major roads, manual and all base network.
+
+### Task 21 — replace the raw list with a map-first site workflow
+
+- [ ] Default to high-impact sites on the map, not all raw mapping rows.
+- [ ] Keep all candidates available as an explicit audit layer.
+- [ ] Show corridor, base directions, junction ports/movement, roundabout
+      context, CW arms, mapping traces and affected routes together.
+- [ ] Present mappings as visible directed movements with variants, not
+      primarily share IDs and hashes.
+- [ ] Add **No guidance**, **Cross road**, **Cross then turn** and
+      **Repair movement** actions.
+- [ ] Preview exact Hebrew wording and unconditional/optional policy.
+- [ ] Keep expert slices/fingerprints in collapsed diagnostics.
+- [ ] Save reviews immediately; require Build only for publication.
+
+### Task 22 — guided creation from junctions, roundabouts and base network
+
+- [ ] Add **Add crossing guidance** to a selected legal Junctions movement.
+- [ ] Pre-fill `junction-transition` and let the curator confirm crossed road,
+      direction, continuation and policy.
+- [ ] Add roundabout-adjacent creation from an approach/departure while keeping
+      its action outside the ring.
+- [ ] Replace manual JSON as the primary path with ordered map selection of
+      approach, action and departure; retain JSON for diagnostics/import.
+- [ ] Support multiple explicit directions/variants under one logical crossing.
+- [ ] Add edit/delete, stale-evidence explanation and pre-save undo.
+
+### Task 23 — support reviewed entry-maneuver wording
+
+- [ ] Add optional mapping `entryManeuver` with controlled `left`/`right` and
+      JavaScript/Python validation parity.
+- [ ] Suggest it from stable approach-to-action bearings but require review.
+- [ ] Preserve generic crossing wording when absent.
+- [ ] Carry it through publication, matching, cue, presentation, voice,
+      persistence and fingerprinting.
+- [ ] Combine entry, crossing, continuation and destination into one cue
+      without resurrecting suppressed geometry corners.
+- [ ] Add the Tel Hai geometry regression: left to cross, right onto the trail.
+
+### Task 24 — coverage dashboard and release gates
+
+- [ ] Report reviewed/pending/confirmed/stale counts separately for reference
+      routes, route catalog, CW alignments, published junction movements,
+      OSM-tagged candidates, major roads and the full graph.
+- [ ] Never present unreviewed as safe or “no guidance.”
+- [ ] Require all selected reference-route matches decided for first release;
+      keep unrelated pending candidates non-blocking.
+- [ ] Show affected-route and before/after cue previews before acceptance.
+- [ ] Keep stale accepted/invalid mappings blocking.
+
+### Task 25 — curate and validate the first data slice
+
+- [ ] Review the Tel Hai crossing movement from the reported route.
+- [ ] Review the crossing around 3.82 km and preserve its following roundabout.
+- [ ] Build a real artifact without synthetic evidence injection.
+- [ ] Assert unchanged route traversal fingerprint and distance tolerance.
+- [ ] Assert one semantic cue per crossing with correct entry, continuation and
+      destination guidance.
+- [ ] Assert roundabout cues remain independently available and compound safely.
+- [ ] Assert negative-control branches do not match.
+- [ ] Validate one crossing outside CW on an approach/rejoin route.
+- [ ] Complete editor and simulator/device/audio review before Promote.
 
 ## Delivery order
 
