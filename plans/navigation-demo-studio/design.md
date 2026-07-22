@@ -29,6 +29,12 @@ The defining promise is:
 > Real road. Real recorded GPS. Real CycleWays navigation. Replayed without
 > staging another ride.
 
+The operator experience is a hybrid: a concise CLI owns durable automation,
+while `review` opens a local web workspace for decisions that require human
+eyes and ears. The studio remembers project state, preserves every attempt, and
+always explains what failed, what became stale, and the smallest next action.
+The operator should not need to remember the pipeline or edit JSON by hand.
+
 ## Why this is the right design
 
 There are three separate problems hidden inside “record the Simulator while a
@@ -96,6 +102,184 @@ guidance, and stays coherent as the physical ride unfolds.
   hosted Mapbox Outdoors style.
 - It does not require the final film to be rendered in real time. Separate
   capture and deterministic post-production are intentional.
+
+## Studio operator experience
+
+### The operator's mental model: one project, many revisions
+
+The person using the studio should think in terms of a **demo project**, not a
+collection of scripts and temporary files. A project has:
+
+- one or more private source videos;
+- one selected route snapshot;
+- a cleaned but auditable GPS track;
+- named proof and editorial windows;
+- zero or more capture attempts;
+- zero or more edit decisions and renders;
+- one explicitly accepted capture/render for each deliverable;
+- a status that says what is ready, stale, blocked, or waiting for review.
+
+Import, capture, and render attempts are immutable. Retrying creates a new run;
+it never overwrites the previous result. The project records which attempt the
+operator currently accepts, so a bad retry cannot destroy a known-good film.
+
+Every derived artifact records its input digests. If the operator changes the
+route or GPS offset, the studio marks navigation validation, app capture, and
+renders stale. If only a title or caption changes, the expensive app capture
+remains valid and only the affected render becomes stale. This dependency-aware
+invalidation is central to a humane iteration loop.
+
+### CLI principles
+
+The CLI is the reliable engine and should feel like a guided production
+assistant rather than a bag of low-level commands.
+
+The main surface is:
+
+```text
+demo:studio new <name>                 create a project with a guided prompt
+demo:studio doctor                     check tools, disk, Simulator, voice, map
+demo:studio status                     show readiness/staleness and the next step
+demo:studio inspect                    inspect sources and GPS coverage
+demo:studio configure <field>          preview and save a validated edit
+demo:studio route set <slug>           choose, never silently guess, a route
+demo:studio review                     open the local visual review workspace
+demo:studio validate                   run data + navigation gates
+demo:studio capture proof              create a new immutable capture attempt
+demo:studio render proof               create a new immutable render attempt
+demo:studio accept <artifact-or-run>    select the approved attempt
+demo:studio reject <artifact-or-run>    retain but reject an attempt with notes
+demo:studio history                    explain revisions and invalidations
+demo:studio publish proof              export only an accepted passing render
+demo:studio make proof                 run all safe cached stages, stopping for decisions
+```
+
+Commands discover `project.json` from the current directory or accept an
+explicit `--project`. Interactive prompts are used only on a TTY; every command
+also supports deterministic non-interactive operation for automation.
+
+Every command ends with the same compact structure:
+
+```text
+RESULT   Captured proof attempt capture-003 (failed review gate)
+WHY      Map tiles were incomplete for 18 frames at 00:47
+KEPT     capture-002 remains the accepted capture
+NEXT     demo:studio review --run capture-003
+         or: demo:studio capture proof --retry-from capture-002
+```
+
+Long operations show the current stage, elapsed time, and where the full log is
+being written. `Ctrl-C` leaves the previous project state intact and records an
+aborted attempt with a resumable next step. Errors use stable codes for tests
+and automation, but lead with plain language for the operator.
+
+### Two review checkpoints are part of v1
+
+Some decisions cannot be made responsibly from terminal metrics. Therefore a
+minimal local web review workspace is required before the first publishable
+proof, not deferred until hero editing.
+
+**Pre-capture review** shows:
+
+- source video with the cleaned GPS position and selected route;
+- raw-versus-cleaned fix diagnostics and gaps;
+- route-distance graph and headless navigation/voice events;
+- a single global GPS/video offset control with landmark comparison;
+- proof-window in/out handles and pre-roll sufficiency;
+- gate warnings, waiver forms, and an explicit “ready for capture” action.
+
+**Post-capture review** shows:
+
+- frame-synchronized road and app video;
+- speech/caption/camera/navigation markers;
+- sync-flash and end-drift measurements;
+- quick audio/caption preview;
+- accept/reject with notes;
+- a clear indication of whether a proposed edit requires only rerendering or a
+  new app capture.
+
+The browser writes normal project decisions; it does not mutate video or bypass
+validation. The CLI and web workspace show the same status and suggested next
+action.
+
+### Status and staleness must be visible
+
+`status` presents a small dependency table rather than a raw artifact listing:
+
+| Stage | Example state | Meaning |
+| --- | --- | --- |
+| Source | ready | Media and telemetry were inspected |
+| Track | needs review | A 6.2 s GPS gap affects the chosen window |
+| Route | ready | Explicit route snapshot and digest selected |
+| Navigation | stale | GPS offset changed after validation |
+| Capture | accepted | `capture-002` is approved and still current |
+| Voice | ready | Selected voice stem matches accepted events |
+| Proof render | stale | Caption text changed; capture remains reusable |
+| Publish | blocked | Current render has not been accepted |
+
+The studio distinguishes:
+
+- **blocked:** a prerequisite or gate prevents progress;
+- **needs review:** software cannot make the judgment safely;
+- **ready:** inputs are current and the stage may run;
+- **running:** an attempt is in progress;
+- **failed/aborted:** the attempt ended, but earlier artifacts remain;
+- **stale:** it succeeded against older inputs and must not be published;
+- **accepted:** a human selected this current passing attempt.
+
+### A full real-world iteration scenario
+
+The intended experience is not a perfect happy path. A realistic project looks
+like this:
+
+1. The operator runs `new upper-galilee-proof`. The guided setup asks for the
+   GoPro file, intended route, output language, and whether the exact start/end
+   coordinates are safe to display. It creates the project and immediately
+   runs `doctor`.
+2. `doctor` finds `ffmpeg` and `exiftool`, but no booted Simulator and only
+   14 GB free. It explains that inspection can proceed, capture cannot, and a
+   4K intermediate may need more disk. It does not install or delete anything.
+3. `inspect` finds GPMF GPS but only 88% coverage. The terminal gives the
+   summary and suggests `review`. In the browser, missing GPS is concentrated
+   near the first minute; the operator trims that portion and keeps a continuous
+   three-minute section with a strong visible turn.
+4. The chosen catalog route is close overall, but validation shows a sustained
+   mismatch late in the window. The review workspace makes it obvious that the
+   current route snapshot uses a newer path. The operator chooses a different
+   source window instead of snapping the recorded GPS or hiding the mismatch.
+5. A recognizable bridge shows GPS is consistently 1.3 seconds behind the
+   picture. The operator adjusts the one allowed global offset. The project
+   records the old and new values, invalidates the normalized track and
+   downstream artifacts, then recompiles only those stages.
+6. Headless validation passes but warns that the proof begins too close to a
+   voice cue. The operator drags the in-point eight seconds earlier. This changes
+   the window and capture plan, not the GPS extraction or route snapshot.
+7. The first Simulator capture fails because several Mapbox tiles remain blank.
+   The run is preserved as `capture-001`, the error links to exact frames, and
+   the tool recommends warming the area and retrying. No successful artifact is
+   deleted.
+8. `capture-002` succeeds. Post-capture review shows the app and road remain in
+   sync, but the clean exported voice sounds different from the live iOS voice.
+   The operator changes voice configuration and regenerates only voice/captions;
+   the app video remains usable unless the voice timing contract changes.
+9. The first proof render is technically correct, but the app panel feels too
+   small on a conference-room screen. The operator changes the layout from
+   68/32 to 62/38 and moves captions. `status` shows only the proof render is
+   stale; rerendering takes minutes, not another real-time app capture.
+10. An English caption is awkward. The operator edits the reviewed translation
+    in the review workspace and rerenders. The Hebrew app UI and voice stem are
+    untouched.
+11. A newer app commit appears before publishing. `status` shows the accepted
+    capture's app-commit mismatch. The operator may deliberately publish the
+    previously accepted, fully attested build or recapture against the new
+    commit; the tool never silently treats it as current.
+12. The operator accepts `render-004` and runs `publish proof`. The studio
+    rechecks gates, privacy, metadata stripping, source/capture/edit digests,
+    and disclosure text, then exports the named deliverable and its shareable
+    redacted report. All earlier attempts remain available for comparison.
+
+This scenario defines the product bar for the studio itself: iteration should
+be safe, understandable, and proportional to what changed.
 
 ## Recommended film concept: “The road and the guide”
 
@@ -218,9 +402,13 @@ remain the reliable, portable deliverables.
 
 ```mermaid
 flowchart LR
+  P["Operator project + accepted revisions"] --> B
   A["GoPro MP4 with GPMF telemetry"] --> B["Ride ingest"]
   R["CycleWays route snapshot"] --> C["Demo bundle compiler"]
   B --> C
+  C --> Q["Pre-capture review"]
+  Q -->|"adjust source, offset, route, window"| P
+  Q -->|"accept"| V
   C --> V["Validated video proxy + timed GPS fixes"]
   C --> S["Dev-only capture scenario"]
   S --> N["Real navigation session, camera, UI, and voice planner"]
@@ -231,7 +419,12 @@ flowchart LR
   V --> F["Deterministic compositor"]
   I --> F
   E --> F
+  I --> W["Post-capture review"]
+  E --> W
+  W -->|"retry capture"| P
+  W -->|"edit decision"| F
   F --> O["Hero, proof, vertical, and review outputs"]
+  O -->|"accept or revise"| P
 ```
 
 The final pixels are composited after capture. The GoPro player and Simulator
@@ -248,7 +441,8 @@ Conceptual layout:
 
 ```text
 demo-work/<demo-id>/
-  manifest.json
+  project.json                    # operator choices + stage status
+  history.jsonl                   # append-only decisions and invalidations
   source/
     ride-proxy.mov
     ride-audio.wav
@@ -257,16 +451,22 @@ demo-work/<demo-id>/
   route/
     route-state.js
     route-report.json
-  capture/
-    app-clean.mov
-    navigation-events.json
-    voice.wav
-    voice.he.srt
-    voice.en.srt
-  edit/
-    hero.json
-    proof.json
-    vertical.json
+  captures/
+    capture-001/                  # failed/aborted attempts remain inspectable
+    capture-002/
+      app-clean.mov
+      navigation-events.json
+      review.json
+  decisions/
+    proof-window-v3.json
+    proof-edit-v4.json
+    translations-v2.json
+  renders/
+    render-001/
+    render-004/
+      voice.wav
+      voice.he.srt
+      voice.en.srt
   output/
     cycleways-hero-4k.mp4
     cycleways-proof-1080p.mp4
@@ -277,7 +477,13 @@ demo-work/<demo-id>/
 This proposed location is illustrative, not a decision to check generated
 media into the repository.
 
-### Manifest model
+### Project and manifest model
+
+`project.json` is written by `new`, CLI configuration commands, and the local
+review workspace. It contains operator intent plus pointers to accepted
+immutable attempts. `history.jsonl` records every decision and invalidation.
+Large derived facts stay in their own artifacts and are referenced by digest;
+the project file does not become a giant mutable cache.
 
 ```jsonc
 {
@@ -317,6 +523,10 @@ The real schema should allow either a single MP4 or the existing `list.txt`
 trim/concatenate workflow. A compiled bundle records the Git commit, route-data
 digest, app build, Simulator model/runtime, locale, source hashes, and tool
 versions. That makes a successful take reproducible months later.
+
+Changing the project produces a new revision with an explicit reason. The
+studio calculates which artifacts remain reusable. It never asks the operator
+to manually delete a cache or determine whether an old capture is still valid.
 
 ## Ride ingest
 
@@ -571,9 +781,22 @@ The compositor should:
 Avoid baking speed, titles, or crops into the one source app capture. One clean
 capture should be reusable across aspect ratios and language variants.
 
-## Review player
+## Review workspace
 
-Before final render, present a local review surface with:
+A minimal review workspace is a v1 requirement because both GPS/video
+calibration and capture acceptance are visual judgments. `demo:studio review`
+starts a loopback server, opens the project in a browser, and lands on the first
+unresolved decision. It never requires the operator to browse artifact folders.
+
+Before capture, present:
+
+- source video, route, raw/clean GPS, and route-distance plot on one playhead;
+- the global GPS/video offset control with before/after landmark comparison;
+- proof-window handles, GPS gaps, headless navigation cues, and voice markers;
+- gate explanations with the affected time range and safe choices;
+- an explicit “accept inputs for capture” action.
+
+After capture, present:
 
 - synchronized ride video and captured app video;
 - play/pause, frame step, and timeline zoom;
@@ -582,7 +805,13 @@ Before final render, present a local review surface with:
 - voice/caption preview;
 - warnings for gaps, off-route periods, dispatch lateness, missing map tiles,
   or unavailable speech;
-- beat in/out selection that writes the edit-decision JSON.
+- accept/reject/notes for capture and render attempts;
+- an impact preview such as “caption-only: rerender required” or “GPS offset:
+  validation and capture required”.
+
+Later editorial expansion adds hero beat selection, layout animation, English
+translation editing, and the meeting-oriented live replay desk. These grow from
+the same project/revision model rather than creating a second workflow.
 
 This is the best place for human judgment. A map can be technically aligned yet
 the selected road shot may be visually unconvincing because foliage hides the
@@ -629,6 +858,19 @@ A render is publishable only when all applicable gates pass.
 - Public output contains no GPS metadata or accidental private start/end
   information beyond the route intentionally shown.
 
+### Studio usability gates
+
+- A new operator can create, inspect, validate, capture, review, iterate, and
+  publish without hand-editing project JSON.
+- Interrupting or failing capture/render preserves prior accepted work and
+  leaves an actionable next step.
+- Every saved change previews and records its downstream impact.
+- A caption/layout change rerenders without recapturing; a GPS/route change
+  cannot accidentally reuse a stale capture.
+- `status`, CLI command results, and the review workspace agree about what is
+  current, stale, accepted, and blocked.
+- Publishing requires explicit human acceptance of a current passing render.
+
 ## Privacy and source handling
 
 GoPro GPS can reveal a home, school, or habitual start location. The studio
@@ -644,6 +886,7 @@ camera files, personal paths, or unreviewed fixes into source control.
 
 | Failure | Safe response |
 | --- | --- |
+| Required tool, disk, voice, or Simulator is unavailable | `doctor` marks only the affected stages blocked and prints a concrete check/remedy; inspection and review remain usable where possible |
 | No `gpmd`/GPS stream | Ask for a sidecar GPX/FIT/CSV, choose another source, or create a clearly labeled route-timeline simulation; do not infer a “real GPS” claim |
 | GPS starts late or ends early | Trim the visible take to covered time or reject it |
 | Route snapshot no longer matches the recorded ride | Use a deliberate historical snapshot or repair route data outside the demo workflow |
@@ -653,6 +896,9 @@ camera files, personal paths, or unreviewed fixes into source control.
 | Selected iOS voice is unavailable | Fail the clean voice render and require explicit voice selection; never silently substitute mid-project |
 | Simulator capture drops frames | Recapture the app stem; do not time-stretch the road footage to hide it |
 | Voice overlaps after an editorial cut | Extend pre/post-roll or cut between utterances; do not truncate spoken navigation mid-word |
+| Capture/render is interrupted | Preserve the partial run as aborted with its logs, keep prior accepted attempts, and offer the smallest safe retry |
+| A project input changes after capture | Mark only digest-dependent artifacts stale; explain why publication is blocked and what can still be reused |
+| A retry is worse than the previous attempt | Keep both immutable attempts and leave the accepted pointer unchanged until the operator explicitly switches it |
 
 ## Alternatives considered
 
@@ -716,17 +962,20 @@ in this planning change:
 - a ride-ingest/demo-bundle compiler alongside the existing video scripts;
 - generated demo-only scenario loading and media-clocked playback;
 - a clean capture entry mode and event/voice logging in the mobile dev build;
-- a local review/composition tool plus deterministic renderer.
+- a minimal v1 review workspace plus deterministic renderer, later expanded
+  into the editorial/live replay desk.
 
 No demo media, scenario, or control should enter production bundles by default.
 The existing Metro replacement of dev harness modules with
 `apps/mobile/src/dev/emptyDevHarness.js` is the precedent to preserve.
 
-A future implementation plan should define the file layout, manifest schema,
-tests, capture automation, and one thin vertical slice: ingest one short GoPro
-clip, validate one route, capture one continuous app take, and render one proof
-film. The hero editor and live replay desk should follow only after that slice
-is credible.
+A future implementation plan should define the project/revision model, file
+layout, manifest schema, tests, capture automation, minimum review workspace,
+and one thin vertical slice: create a project, diagnose it, ingest one short
+GoPro clip, visually approve its route/offset/window, capture one continuous app
+take, review it, iterate one edit without recapturing, and publish one proof
+film. The full hero editor and live replay desk should follow only after that
+slice is credible.
 
 ## Verified external platform facts
 
@@ -740,4 +989,3 @@ is credible.
 - GoPro documents GPMF as time-indexed telemetry inside the MP4 metadata track,
   including GPS streams, in the official
   [GPMF parser repository](https://github.com/gopro/gpmf-parser).
-

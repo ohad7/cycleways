@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CycleWays Navigation Demo Studio</title>
+    <link rel="stylesheet" href="/review.css">
+  </head>
+  <body>
+    <header>
+      <div><span class="eyebrow">CycleWays</span><h1>Navigation Demo Studio</h1></div>
+      <div id="project-meta" class="meta">Loading project…</div>
+    </header>
+    <main>
+      <section class="viewer-card">
+        <div class="viewer-grid">
+          <div class="video-wrap">
+            <video id="source-video" controls playsinline></video>
+            <div class="viewer-label">ROAD SOURCE</div>
+          </div>
+          <div class="map-wrap">
+            <svg id="route-map" viewBox="0 0 800 600" role="img" aria-label="Route and recorded GPS"></svg>
+            <video id="attempt-video" controls playsinline hidden></video>
+            <div id="secondary-label" class="viewer-label">ROUTE / GPS</div>
+          </div>
+        </div>
+        <div class="timeline">
+          <input id="playhead" type="range" min="0" max="1000" value="0">
+          <div><span id="time-readout">00:00.000</span><span id="marker-readout">No marker selected</span></div>
+        </div>
+      </section>
+      <aside>
+        <section class="panel"><h2>Review mode</h2><label>Attempt<select id="attempt-select"><option value="">Inputs: route and GPS</option></select></label><div id="sync-detail" class="impact">Pre-capture input review</div></section>
+        <section class="panel"><h2>Project status</h2><div id="status-list"></div><div id="next-action" class="next"></div></section>
+        <section class="panel"><h2>Calibrate inputs</h2>
+          <label>GPS / video offset <output id="offset-value">0.0 s</output><input id="offset" type="range" min="-10" max="10" step="0.1"></label>
+          <div class="two"><label>Proof in (s)<input id="proof-in" type="number" min="0" step="0.1"></label><label>Proof out (s)<input id="proof-out" type="number" min="0" step="0.1"></label></div>
+          <label>Landmark or edit reason<textarea id="reason" placeholder="Bridge rail aligns with GPS at 00:42"></textarea></label>
+          <div id="impact" class="impact">No unsaved changes</div>
+          <button id="save">Save revision</button><button id="accept-inputs" class="secondary">Accept inputs for capture</button>
+        </section>
+        <section class="panel"><h2>Diagnostics</h2><div id="diagnostics"></div></section>
+        <section class="panel"><h2>Attempts</h2><div id="attempts"></div></section>
+        <section class="panel"><h2>Proof edit</h2>
+          <label>Road panel <output id="split-value">68%</output><input id="road-fraction" type="range" min="0.58" max="0.72" step="0.01"></label>
+          <div class="two"><label>Road sound (dB)<input id="ambience-gain" type="number" min="-40" max="6" step="1"></label><label>Voice (dB)<input id="voice-gain" type="number" min="-12" max="12" step="1"></label></div>
+          <label>Caption language<select id="caption-language"><option value="he">Hebrew</option><option value="en">Reviewed English</option></select></label>
+          <div id="translations"></div>
+          <button id="save-edit">Save proof edit</button>
+        </section>
+      </aside>
+    </main>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/review.js"></script>
+  </body>
+</html>

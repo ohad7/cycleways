@@ -154,6 +154,8 @@ import { routeRestoreDecision } from "../navigation/routeRestorePolicy.js";
 import DevScenarioPicker from "../planner/DevScenarioPicker.jsx";
 import DevCameraOverlay from "../planner/DevCameraOverlay.jsx";
 import DevJourneyControls from "../planner/DevJourneyControls.jsx";
+import DevDemoCaptureSlate from "../planner/DevDemoCaptureSlate.jsx";
+import { useDemoCaptureSession } from "../navigation/useDemoCaptureSession.js";
 import Icon from "../planner/Icon.jsx";
 import { palette } from "../planner/theme.js";
 import {
@@ -377,6 +379,13 @@ export default function BuildScreen({ navigation, route }) {
   const routeNameParam = route?.params?.name ?? null;
   const openRideSetupParam = route?.params?.openRideSetup === true;
   const rideSetupSelectionParam = route?.params?.rideSetupSelection ?? null;
+  const demoCaptureParam = route?.params?.demoCapture ?? null;
+  const demoCaptureReadinessRef = useRef({ mapReady: false, navigationReady: false });
+  const demoMapStableTimerRef = useRef(null);
+  const demoCapture = useDemoCaptureSession(demoCaptureParam, {
+    readinessRef: demoCaptureReadinessRef,
+  });
+  const demoCaptureInstalledRunRef = useRef(null);
   const [routeRestoreAttempt, setRouteRestoreAttempt] = useState(0);
   const [routeRestoreStatus, setRouteRestoreStatus] = useState(
     routeTokenParam ? "waiting" : "idle",
@@ -1250,12 +1259,16 @@ export default function BuildScreen({ navigation, route }) {
     intersectionCrossingGuidanceEnabled,
     locationSource: __DEV__ ? devSourceProxy.current : undefined,
     computeConnector: computeNavigationConnector,
+    captureEventSink: demoCapture.active ? demoCapture.eventSink : null,
     resumeSessionId:
       confirmedRidePlan?.effectiveRoute?.id === navigationSessionRoute?.id
         ? resumeRideParam?.sessionId ?? null
         : null,
   });
   const navStatus = nav.state?.status ?? "idle";
+  demoCaptureReadinessRef.current.navigationReady = Boolean(
+    demoCapture.active && ["navigating", "approaching", "off-route"].includes(navStatus),
+  );
   const isNavigating = shouldShowNavigationSurface(nav.state);
 
   useEffect(() => {
@@ -1793,7 +1806,7 @@ export default function BuildScreen({ navigation, route }) {
       const window = bookmark
         ? bookmarkPlaybackWindow(resolved.fixes, bookmark)
         : { warmupEndIndex: -1, startIndex: 0, endIndex: resolved.fixes.length - 1 };
-      const playbackSource = createJourneyPlaybackSource(resolved.fixes, {
+      const playbackSource = scenario.demoCaptureSource || createJourneyPlaybackSource(resolved.fixes, {
         ...window,
         speed: playbackMode === "cam" ? 1 : devSpeed,
         onStateChange: (playback) => {
@@ -1890,6 +1903,19 @@ export default function BuildScreen({ navigation, route }) {
       rideSetupNow,
     ],
   );
+
+  useEffect(() => {
+    if (!__DEV__ || !demoCapture.active || !demoCapture.scenario) return;
+    if (demoCaptureInstalledRunRef.current === demoCaptureParam?.runId) return;
+    demoCaptureInstalledRunRef.current = demoCaptureParam?.runId;
+    demoCaptureReadinessRef.current.mapReady = false;
+    void handleDevScenarioSelect(demoCapture.scenario);
+  }, [
+    demoCapture.active,
+    demoCapture.scenario,
+    demoCaptureParam?.runId,
+    handleDevScenarioSelect,
+  ]);
 
   const handleDevPlaybackPauseResume = useCallback(() => {
     const source = devPlaybackRef.current?.source;
@@ -3315,6 +3341,16 @@ export default function BuildScreen({ navigation, route }) {
     },
     [handleViewportIdle, refreshPointScreenPositions],
   );
+  const handleDemoMapRendered = useCallback(() => {
+    if (!demoCapture.active) return;
+    if (demoMapStableTimerRef.current) clearTimeout(demoMapStableTimerRef.current);
+    demoMapStableTimerRef.current = setTimeout(() => {
+      demoCaptureReadinessRef.current.mapReady = true;
+    }, 750);
+  }, [demoCapture.active]);
+  useEffect(() => () => {
+    if (demoMapStableTimerRef.current) clearTimeout(demoMapStableTimerRef.current);
+  }, []);
 
   const fitRoute = useCallback(() => {
     stopFollowingLocation();
@@ -3563,6 +3599,8 @@ export default function BuildScreen({ navigation, route }) {
         scrollEnabled={!pointGestureActive}
         onPress={handleMapPress}
         onMapIdle={handleMapIdle}
+        onDidFinishLoadingMap={handleDemoMapRendered}
+        onDidFinishRenderingMapFully={handleDemoMapRendered}
         onCameraChanged={handleCameraChanged}
       >
         <Camera
@@ -3904,7 +3942,7 @@ export default function BuildScreen({ navigation, route }) {
       />
       {/* Dev-only simulate + record controls. __DEV__ is false in production
           builds so this entire block is dead-code-eliminated by Metro. */}
-      {__DEV__ && !isNavigating && !rideIntroVisible && !rideSettingsVisible ? (
+      {__DEV__ && !demoCapture.active && !isNavigating && !rideIntroVisible && !rideSettingsVisible ? (
         <View pointerEvents="box-none" style={styles.devControls}>
           <Pressable
             accessibilityLabel="Dev: simulate ride"
@@ -3931,10 +3969,10 @@ export default function BuildScreen({ navigation, route }) {
           ) : null}
         </View>
       ) : null}
-      {__DEV__ ? (
+      {__DEV__ && !demoCapture.active ? (
         <DevCameraOverlay diagnostics={devCameraDiagnostics} />
       ) : null}
-      {__DEV__ ? (
+      {__DEV__ && !demoCapture.active ? (
         <DevJourneyControls
           playback={devPlaybackState}
           onReplay={handleDevPlaybackReplay}
@@ -3942,7 +3980,7 @@ export default function BuildScreen({ navigation, route }) {
           onStep={handleDevPlaybackStep}
         />
       ) : null}
-      {__DEV__ ? (
+      {__DEV__ && !demoCapture.active ? (
         <DevScenarioPicker
           visible={devPickerVisible}
           title={
@@ -3957,6 +3995,9 @@ export default function BuildScreen({ navigation, route }) {
           onClose={() => setDevPickerVisible(false)}
           mode={devPickerMode}
         />
+      ) : null}
+      {__DEV__ && demoCapture.active ? (
+        <DevDemoCaptureSlate phase={demoCapture.phase} error={demoCapture.error} />
       ) : null}
       {isNavigating ? (
         navStatus === "approaching" ? (

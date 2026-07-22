@@ -89,7 +89,7 @@ function scheduleSessionRelease() {
 }
 
 // One settle per utterance, whichever callback fires first.
-function createSettler(utteranceId) {
+function createSettler(utteranceId, events = {}) {
   let settled = false;
   const timeout = setTimeout(
     () => settle("timeout", new Error("speech callbacks never fired")),
@@ -112,17 +112,20 @@ function createSettler(utteranceId) {
     });
     sessionPolicy.onUtteranceSettled(Date.now());
     scheduleSessionRelease();
+    if (outcome === "done") events.onDone?.();
+    else if (outcome === "stopped") events.onStopped?.();
+    else events.onError?.(error || new Error(outcome));
   }
   return settle;
 }
 
-export async function speakUtterance(utterance) {
+export async function speakUtterance(utterance, events = {}) {
   if (!utterance?.text) return false;
   stats.attempts += 1;
   await configureForNavigationAudio();
   utteranceCounter += 1;
   const utteranceId = utterance.utteranceId || `utterance-${utteranceCounter}`;
-  const settle = createSettler(utteranceId);
+  const settle = createSettler(utteranceId, events);
   try {
     if (utterance.interruptsCurrentSpeech) {
       await Speech.stop();
@@ -132,6 +135,7 @@ export async function speakUtterance(utterance) {
       language: utterance.language || "he-IL",
       rate: 0.92,
       volume: 1,
+      onStart: () => events.onStart?.(),
       onDone: () => settle("done"),
       onStopped: () => settle("stopped"),
       onError: (error) => settle("error", error),

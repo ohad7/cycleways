@@ -41,6 +41,7 @@ import {
   settleWithin,
   waitForLaunchSplashMinimum,
 } from "./src/splash/bootstrapTiming.js";
+import { parseDemoCaptureLaunch } from "./src/dev/demoCaptureLaunch.js";
 
 const APP_BOOTSTRAP_STARTED_AT = Date.now();
 void SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -111,6 +112,26 @@ export default function App() {
 
     async function applyLaunchUrl(url, { warm = false } = {}) {
       const requestId = ++launchRequestId;
+      let demoCapture = null;
+      try {
+        demoCapture = parseDemoCaptureLaunch(url, { enabled: __DEV__ });
+      } catch (error) {
+        if (mounted) setLaunchError({ message: String(error?.message || error) });
+        return { error, resolved: null };
+      }
+      if (demoCapture) {
+        await clearActiveNavigationSession();
+        await stopNavigationBackgroundUpdates();
+        resetNativeLocationHref();
+        if (!mounted || requestId !== launchRequestId) return;
+        const target = { screen: "Build", params: { demoCapture } };
+        if (warm && navigationRef.isReady()) {
+          navigationRef.navigate(target.screen, { ...target.params, openId: Date.now() });
+        } else {
+          initialTargetRef.current = target;
+        }
+        return { error: null, resolved: demoCapture };
+      }
       if (!warm) {
         const resumeRecord = await loadActiveNavigationSession();
         if (!mounted || requestId !== launchRequestId) return;

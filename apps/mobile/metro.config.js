@@ -26,6 +26,13 @@ const devHarnessModules = new Set([
   "../planner/DevScenarioPicker.jsx",
   "../planner/DevCameraOverlay.jsx",
   "../planner/DevJourneyControls.jsx",
+  "../dev/demoCaptureClient.js",
+  "../dev/demoCaptureLaunch.js",
+  "./src/dev/demoCaptureLaunch.js",
+  "../navigation/mediaClockPlaybackSource.js",
+  "../navigation/demoCaptureEvents.js",
+  "../navigation/useDemoCaptureSession.js",
+  "../planner/DevDemoCaptureSlate.jsx",
 ]);
 
 config.watchFolders = [workspaceRoot];
@@ -37,6 +44,13 @@ config.resolver.unstable_enablePackageExports = true;
 config.resolver.assetExts = [...config.resolver.assetExts, "cwb"];
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (context.dev === false && devHarnessModules.has(moduleName)) {
+    if (moduleName.includes("demoCapture") || moduleName.includes("mediaClockPlaybackSource")) {
+      return context.resolveRequest(
+        context,
+        path.resolve(projectRoot, "src/dev/emptyDemoCapture.js"),
+        platform,
+      );
+    }
     return context.resolveRequest(
       context,
       path.resolve(projectRoot, "src/dev/emptyDevHarness.js"),

@@ -77,6 +77,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
     intersectionCrossingGuidanceEnabled = true,
     locationSource,
     computeConnector,
+    captureEventSink = null,
     resumeSessionId = null,
     ...sessionOptions
   } = options;
@@ -87,6 +88,10 @@ export function useNavigationSession(navigationRoute, options = {}) {
   locationSourceRef.current = locationSource ?? createDefaultLocationSource();
   const computeConnectorRef = useRef(computeConnector);
   computeConnectorRef.current = computeConnector;
+  const captureEventSinkRef = useRef(captureEventSink);
+  captureEventSinkRef.current = captureEventSink;
+  const effectsSuppressedRef = useRef(false);
+  const dispatchMetaRef = useRef(null);
 
   const sessionRef = useRef(null);
   const sessionIdRef = useRef(`nav-${Date.now()}`);
@@ -220,15 +225,45 @@ export function useNavigationSession(navigationRoute, options = {}) {
         lastPersistRef.current = { atMs: null, status: null };
       }
 
-      if (next.cueEvent && hapticsEnabledRef.current) {
+      const captureMeta = dispatchMetaRef.current || {};
+      captureEventSinkRef.current?.("navigation-state", {
+        status: next.status || null,
+        offRoute: next.offRoute === true,
+        progressMeters: next.progress?.progressMeters ?? null,
+        remainingMeters: next.progress?.remainingMeters ?? null,
+        cueKind: next.cueEvent?.kind ?? null,
+        activeCueType: next.activeCue?.cue?.type ?? null,
+      }, {
+        mediaTimeMs: action?.fix?.timestamp ?? captureMeta.mediaTimeMs,
+        dispatchLatenessMs: captureMeta.dispatchLatenessMs,
+        warmup: captureMeta.warmup,
+      });
+
+      if (next.cueEvent && hapticsEnabledRef.current && !effectsSuppressedRef.current) {
         const plan = hapticPlannerRef.current.plan(next.cueEvent, eventNowMs);
         if (plan.kind) fireHaptic(plan.kind);
       }
-      if (next.cueEvent && voiceEnabledRef.current) {
+      if (next.cueEvent && voiceEnabledRef.current && !effectsSuppressedRef.current) {
         const plan = voicePlannerRef.current.plan(next.cueEvent, next, eventNowMs, {
           enabled: voiceEnabledRef.current,
         });
-        if (plan.utterance) void speakUtterance(plan.utterance);
+        if (plan.utterance) {
+          const speechPayload = {
+            utteranceId: plan.utterance.utteranceId || null,
+            text: plan.utterance.text,
+            language: plan.utterance.language || "he-IL",
+            rate: plan.utterance.rate ?? 0.92,
+            priority: plan.utterance.priority ?? null,
+            interruptsCurrentSpeech: plan.utterance.interruptsCurrentSpeech === true,
+          };
+          captureEventSinkRef.current?.("speech-request", speechPayload, { mediaTimeMs: action?.fix?.timestamp });
+          void speakUtterance(plan.utterance, {
+            onStart: () => captureEventSinkRef.current?.("speech-start", speechPayload),
+            onDone: () => captureEventSinkRef.current?.("speech-done", speechPayload),
+            onStopped: () => captureEventSinkRef.current?.("speech-done", { ...speechPayload, stopped: true }),
+            onError: (error) => captureEventSinkRef.current?.("speech-error", { ...speechPayload, error: String(error?.message || error) }),
+          });
+        }
       }
       if (
         shouldPersist(next) &&
@@ -251,15 +286,28 @@ export function useNavigationSession(navigationRoute, options = {}) {
   );
 
   const processLocationFix = useCallback(
-    (fix) => {
+    (fix, meta = {}) => {
       const key = fixKey(fix);
       if (key && key === lastProcessedFixKeyRef.current) {
         return sessionRef.current?.getState?.() || null;
       }
       if (key) lastProcessedFixKeyRef.current = key;
       latestFixRef.current = fix;
-
-      return dispatch({ type: NAV_ACTIONS.LOCATION, fix });
+      dispatchMetaRef.current = meta;
+      effectsSuppressedRef.current = meta.effectsSuppressed === true;
+      captureEventSinkRef.current?.("fix-dispatched", {
+        warmup: meta.warmup === true,
+      }, {
+        mediaTimeMs: fix?.timestamp,
+        dispatchLatenessMs: meta.dispatchLatenessMs,
+        warmup: meta.warmup,
+      });
+      try {
+        return dispatch({ type: NAV_ACTIONS.LOCATION, fix });
+      } finally {
+        effectsSuppressedRef.current = false;
+        dispatchMetaRef.current = null;
+      }
     },
     [dispatch],
   );
@@ -497,7 +545,7 @@ export function useNavigationSession(navigationRoute, options = {}) {
     watchActiveRef.current = true;
     locationSourceRef.current
       .startWatch({
-        onFix: (fix) => processLocationFix(fix),
+        onFix: (fix, meta) => processLocationFix(fix, meta),
         onError: (error) =>
           dispatch({
             type: NAV_ACTIONS.ERROR,
